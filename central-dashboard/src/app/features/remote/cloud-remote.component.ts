@@ -209,6 +209,8 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
       interval(60000)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => this.refreshState());
+      // ADR-078 — join the siteId room so io.to(siteId).emit('state-sync') reaches us
+      this.socketService.emit('dashboard-subscribe-site', { siteId: this.siteId });
       this.socketService.on<MatchStateSync>('state-sync')
         .pipe(takeUntil(this.destroy$))
         .subscribe((state) => this.onStateSync(state));
@@ -229,6 +231,9 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.siteId) {
+      this.socketService.emit('dashboard-unsubscribe-site', { siteId: this.siteId });
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -266,6 +271,10 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.updateLicenseState(state);
         this.updateRecordingState(state);
         this.initialPlayerState = state.playerState || null;
+        // ADR-078 — late-join: apply SaaS authoritative match state if present
+        if (state.matchState) {
+          this.onStateSync(state.matchState as unknown as MatchStateSync);
+        }
         this.isLoading = false;
       },
       error: (err) => {

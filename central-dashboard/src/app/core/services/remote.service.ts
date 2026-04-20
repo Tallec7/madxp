@@ -110,6 +110,15 @@ export interface RemoteState {
   }>;
   activeProfileId?: string | null;
   authenticatedProfileId?: string | null;
+  // ADR-078 — SaaS authoritative match state (late-join snapshot, null on Pi sites)
+  matchState?: {
+    seq: number;
+    score: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number } | null;
+    phase: string;
+    timer: { currentTime: number; isRunning: boolean; halfDuration: number; countDown: boolean };
+    options: Record<string, unknown> | null;
+    serverTs: number;
+  } | null;
 }
 
 export interface RemoteVideos {
