@@ -10,7 +10,22 @@
         }}
       </p>
     </div>
+    <button
+      *ngIf="isSuperAdmin"
+      type="button"
+      class="btn btn-primary"
+      (click)="openWizard()"
+      data-testid="create-template-btn"
+    >
+      + Nouveau template
+    </button>
   </div>
+
+  <app-create-template-wizard
+    *ngIf="wizardOpen"
+    (dismiss)="closeWizard()"
+    (created)="onTemplateCreated($event)"
+  ></app-create-template-wizard>
 
   <app-template-grid
     [templates]="templates"
@@ -125,13 +140,31 @@
               [(ngModel)]="videoTitle"
               [placeholder]="selectedTemplate.name"
             />
+            <button
+              *ngIf="isSuperAdmin"
+              type="button"
+              class="studio-mode-toggle"
+              [class.studio-mode-toggle--active]="studioAdminMode"
+              (click)="toggleStudioAdminMode()"
+              [attr.data-testid]="'studio-admin-toggle'"
+              [title]="studioAdminMode ? 'Retour au mode aperçu' : 'Passer en mode édition admin'"
+            >
+              {{ studioAdminMode ? '👤 Aperçu' : '🛠 Édition admin' }}
+            </button>
           </div>
 
           <app-studio-v2-editor
+            *ngIf="!studioAdminMode"
             [view]="studioView"
             (payloadChange)="onV2PayloadChange($event)"
             (readyChange)="onV2ReadyChange($event)"
           ></app-studio-v2-editor>
+
+          <app-admin-studio-panel
+            *ngIf="studioAdminMode && isSuperAdmin"
+            [view]="studioView"
+            (changed)="onStudioChanged()"
+          ></app-admin-studio-panel>
 
           <div class="render-progress" *ngIf="rendering">
             <div class="progress-bar">
