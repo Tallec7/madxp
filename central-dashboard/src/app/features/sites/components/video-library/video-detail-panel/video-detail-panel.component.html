@@ -37,19 +37,27 @@
       </div>
     </div>
 
-    <!-- Config roles -->
+    <!-- Config roles with remove buttons -->
     <div class="detail-section" *ngIf="video.configRoles?.size">
       <div class="detail-label">Utilisée dans</div>
       <div class="detail-roles">
-        <ng-container *ngIf="configVideoLabels.get(video.path) as labels; else genericRoles">
-          <span
-            *ngFor="let label of labels"
-            class="badge-cfg"
-            [class.badge-boucle]="label.startsWith('Boucle')"
-            [class.badge-match]="label.startsWith('Phase')"
-            [class.badge-action]="label.startsWith('Catégorie')"
-            >{{ label }}</span
-          >
+        <ng-container *ngIf="configVideoTargets.get(video.path)?.length; else genericRoles">
+          <div class="target-badge-row" *ngFor="let target of configVideoTargets.get(video.path)">
+            <span
+              class="badge-cfg"
+              [class.badge-boucle]="target.type === 'loop'"
+              [class.badge-match]="target.type === 'match'"
+              [class.badge-action]="target.type === 'category'"
+              >{{ target.icon }} {{ target.label }}</span
+            >
+            <button
+              class="remove-from-target-btn"
+              (click)="onRemoveFromTarget(video, target)"
+              [title]="'Retirer de ' + target.label"
+            >
+              ✕
+            </button>
+          </div>
         </ng-container>
         <ng-template #genericRoles>
           <span class="badge-cfg badge-boucle" *ngIf="video.configRoles?.has('boucle')"
@@ -106,6 +114,21 @@
       </div>
     </div>
 
+    <!-- Variantes 2nd écran — inline dans le panneau de détail -->
+    <div
+      class="detail-section"
+      *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id && !isClubLocked"
+    >
+      <div class="detail-label">Variantes 2nd écran</div>
+      <app-video-variant-panel
+        [videoId]="video.id!"
+        [siteDisplays]="siteDisplays"
+        [availableVideos]="availableVideos"
+        [autoOpen]="true"
+        (variantChanged)="variantChanged.emit($event)"
+      ></app-video-variant-panel>
+    </div>
+
     <!-- Actions -->
     <div class="detail-section detail-actions-section">
       <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isClubLocked">
@@ -115,11 +138,7 @@
         >
           + {{ 'videoLibrary.addTo' | translate }}
         </button>
-        <div
-          class="add-to-dropdown add-to-dropdown-up"
-          *ngIf="addToDropdownOpen"
-          [ngStyle]="addToDropdownStyle"
-        >
+        <div class="add-to-dropdown" *ngIf="addToDropdownOpen" [ngStyle]="addToDropdownStyle">
           <button
             class="add-to-option"
             *ngFor="let target of configTargets"
@@ -130,18 +149,6 @@
           </button>
         </div>
       </div>
-      <button
-        class="btn btn-sm detail-action-btn"
-        *ngIf="canUseSecondaryDisplay && video.source === 'cloud' && video.id && !isClubLocked"
-        (click)="onVariant(video, $event)"
-      >
-        📺
-        {{
-          video.hasSecondaryVariant
-            ? ('videoLibrary.manageSecondaryVariant' | translate)
-            : ('videoLibrary.addSecondaryVariant' | translate)
-        }}
-      </button>
       <button
         class="btn btn-sm btn-primary detail-action-btn"
         *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying"

@@ -431,6 +431,17 @@ td.col-name {
   border-radius: 3px;
   cursor: help;
   letter-spacing: 0.02em;
+
+  &--clickable {
+    cursor: pointer;
+    transition:
+      background 0.12s,
+      border-color 0.12s;
+    &:hover {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+  }
 }
 
 /* Config role badges */

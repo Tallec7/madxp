@@ -112,6 +112,7 @@
     [featureOverrides]="featureOverrides"
     [siteSponsors]="siteSponsors"
     [configTargets]="configTargets"
+    [configVideoTargets]="configVideoTargets"
     [isSuperAdmin]="isSuperAdmin"
     [isClubUser]="isClub"
     (videoUploaded)="onVideoUploaded($event)"
@@ -120,6 +121,7 @@
     (videoDeploy)="onVideoDeploy($event)"
     (videoDeleted)="loadContent()"
     (addToTarget)="onAddVideoToTarget($event)"
+    (removeFromTarget)="onRemoveFromTarget($event)"
   ></app-video-manager>
 
   <!-- Draft Indicator + History (Pi only) -->

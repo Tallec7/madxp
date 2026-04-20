@@ -26,8 +26,14 @@
         <span class="content-status-badge" [ngClass]="getContentStatusClass(video.contentStatus)">{{
           getContentStatusLabel(video.contentStatus)
         }}</span>
-        <span class="badge-2nd" *ngIf="video.variantCount"
-          >{{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
+        <span
+          class="badge-2nd badge-2nd--clickable"
+          *ngIf="video.variantCount"
+          [title]="
+            'Variantes : ' + (video.variantTypes?.join(', ') || '') + ' — Cliquer pour gérer'
+          "
+          (click)="onSelect(video); $event.stopPropagation()"
+          >📺 {{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
         >
         <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
         <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
@@ -228,10 +234,13 @@
         </td>
         <td class="col-variant">
           <span
-            class="badge-2nd"
+            class="badge-2nd badge-2nd--clickable"
             *ngIf="video.variantCount"
-            [title]="'Variantes: ' + (video.variantTypes?.join(', ') || '')"
-            >{{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
+            [title]="
+              'Variantes : ' + (video.variantTypes?.join(', ') || '') + ' — Cliquer pour gérer'
+            "
+            (click)="onSelect(video); $event.stopPropagation()"
+            >📺 {{ video.variantCount }}/{{ totalDisplays > 1 ? totalDisplays - 1 : 1 }}</span
           >
         </td>
         <td class="col-content-status">

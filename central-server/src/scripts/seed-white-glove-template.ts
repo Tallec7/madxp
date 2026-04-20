@@ -30,14 +30,23 @@ const DEMO_TEMPLATE = {
   composition_id: 'ButSimple',
   description:
     'Template perso club (ADR-075 V2) — personnalisation white-glove, réservée au tier Premium.',
-  props_schema: {
-    type: 'object',
-    properties: {
-      scorer: { type: 'string', title: 'Buteur' },
-      minute: { type: 'number', title: 'Minute' },
+  props_schema: [
+    {
+      key: 'scorer',
+      label: 'Buteur',
+      type: 'text',
+      required: true,
+      placeholder: 'Nom du joueur',
     },
-    required: ['scorer'],
-  },
+    {
+      key: 'minute',
+      label: 'Minute',
+      type: 'number',
+      required: false,
+      min: 0,
+      max: 120,
+    },
+  ],
   default_props: {
     scorer: 'Joueur Club',
     minute: 42,

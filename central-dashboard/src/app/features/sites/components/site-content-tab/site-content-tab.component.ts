@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, S
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { interval, Subscription, filter, take } from 'rxjs';
+import { VideoCategoryService } from '../../../../core/services/video-category.service';
+import { VideoCategory } from '../../../../core/models/video-category.model';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../core/services/site-command.service';
 import { SiteSponsorService } from '../../../../core/services/site-sponsor.service';
@@ -43,7 +45,7 @@ import { ConfigDraftComponent } from './config-draft/config-draft.component';
     ConfigEditorComponent,
     DeploymentStatusComponent,
     ConfigDraftComponent,
-    VideoVariantPanelComponent
+    VideoVariantPanelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './site-content-tab.component.html',
@@ -121,8 +123,14 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Time categories cache
   cachedTimeCategories: { id: string; name: string; icon: string; description: string }[] = [];
 
+  // DB-managed video categories
+  dbCategories: VideoCategory[] = [];
+
   // Config targets for "Add to" dropdown in video library
   configTargets: AddToTarget[] = [];
+
+  // Structured targets each video path currently belongs to (for "Remove from" ✕ badges)
+  configVideoTargets: Map<string, AddToTarget[]> = new Map();
 
   // Remote preview
   showRemotePreview = false;
@@ -187,7 +195,8 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private draftService: DraftService,
     private authService: AuthService,
     private gate: FeatureGateService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private videoCategoryService: VideoCategoryService,
   ) {}
 
   get isClub(): boolean {
@@ -210,6 +219,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     this.loadDraft();
     this.loadSiteSponsors();
     this.loadProfiles();
+    this.loadDbCategories();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -218,6 +228,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.loadDraft();
       this.loadSiteSponsors();
       this.loadProfiles();
+      this.loadDbCategories();
     }
   }
 
@@ -277,6 +288,23 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  loadDbCategories(): void {
+    if (!this.siteId) return;
+    this.videoCategoryService.list(this.siteId).subscribe({
+      next: cats => {
+        this.dbCategories = cats;
+        this.buildConfigTargets();
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  onDbCategoriesChanged(cats: VideoCategory[]): void {
+    this.dbCategories = cats;
+    this.buildConfigTargets();
+    this.cdr.markForCheck();
   }
 
   refreshFromPi(): void {
@@ -540,8 +568,13 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       } as never);
     } else if (target.type === 'category') {
       // Action category = categories[].videos[]
-      const cat = (this.config.categories || []).find(c => c.id === target.id);
-      if (!cat) return;
+      if (!this.config.categories) this.config.categories = [];
+      let cat = this.config.categories.find(c => c.id === target.id);
+      if (!cat) {
+        // Category comes from DB but doesn't exist in Pi config yet — create it
+        cat = { id: target.id, name: target.label, videos: [] } as never;
+        this.config.categories.push(cat as never);
+      }
       if (!cat.videos) cat.videos = [];
       const alreadyInCat = cat.videos.some(
         (v: { path?: string }) => v.path === configPath
@@ -559,6 +592,37 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
     this.markDirty();
     this.notificationService.success(`"${video.displayName}" ajoutée à "${target.label}"`);
+    this.rebuildConfigVideoRoles();
+  }
+
+  /** Remove a video from a specific config target (Boucle, Phase, Catégorie) */
+  onRemoveFromTarget(event: { video: VideoItem; target: AddToTarget }): void {
+    if (!this.config) return;
+    const { video, target } = event;
+    const configPath = this.resolveConfigPath(video);
+
+    if (target.type === 'loop') {
+      this.config.sponsors = (this.config.sponsors || []).filter(
+        (s: { path?: string }) => s.path !== configPath
+      );
+    } else if (target.type === 'match') {
+      const phase = (this.config.timeCategories || []).find(tc => tc.id === target.id);
+      if (phase?.loopVideos) {
+        phase.loopVideos = phase.loopVideos.filter(
+          (v: { path?: string }) => v.path !== configPath
+        );
+      }
+    } else if (target.type === 'category') {
+      const cat = (this.config.categories || []).find(c => c.id === target.id);
+      if (cat?.videos) {
+        cat.videos = cat.videos.filter(
+          (v: { path?: string }) => v.path !== configPath
+        );
+      }
+    }
+
+    this.markDirty();
+    this.notificationService.success(`"${video.displayName}" retirée de "${target.label}"`);
     this.rebuildConfigVideoRoles();
   }
 
@@ -608,14 +672,16 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       });
     }
 
-    // Action categories
+    // DB categories take precedence; config categories fill in anything not yet in DB
+    const seenIds = new Set<string>();
+    for (const cat of this.dbCategories) {
+      seenIds.add(cat.id);
+      targets.push({ type: 'category', id: cat.id, label: cat.name, icon: cat.icon ?? '🎬' });
+    }
     for (const cat of this.config.categories || []) {
-      targets.push({
-        type: 'category',
-        id: cat.id,
-        label: cat.name || cat.id,
-        icon: '🎬',
-      });
+      if (!seenIds.has(cat.id)) {
+        targets.push({ type: 'category', id: cat.id, label: cat.name || cat.id, icon: '🎬' });
+      }
     }
 
     this.configTargets = targets;
@@ -937,6 +1003,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   private rebuildConfigVideoRoles(): void {
     const roles = new Map<string, Set<string>>();
     const labels = new Map<string, string[]>();
+    const targets = new Map<string, AddToTarget[]>();
 
     // Build filename → cloud URL map so we can cross-reference local config paths with cloud URLs
     // This fixes the mismatch where configs contain local paths but the library uses cloud URLs
@@ -949,11 +1016,14 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       filenameToCloudUrl.set(fnLower.replace(/_/g, ' '), cloud.url);
     }
 
-    const addRole = (path: string, role: string, label: string): void => {
+    const addRole = (path: string, role: string, label: string, target: AddToTarget): void => {
       if (!roles.has(path)) roles.set(path, new Set());
       roles.get(path)!.add(role);
       if (!labels.has(path)) labels.set(path, []);
       if (!labels.get(path)!.includes(label)) labels.get(path)!.push(label);
+      if (!targets.has(path)) targets.set(path, []);
+      const pathTargets = targets.get(path)!;
+      if (!pathTargets.some(t => t.type === target.type && t.id === target.id)) pathTargets.push(target);
       // Also register under the cloud URL if the config path is a local path
       const filename = path.split('/').pop()?.toLowerCase();
       if (filename) {
@@ -963,24 +1033,34 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           roles.get(cloudUrl)!.add(role);
           if (!labels.has(cloudUrl)) labels.set(cloudUrl, []);
           if (!labels.get(cloudUrl)!.includes(label)) labels.get(cloudUrl)!.push(label);
+          if (!targets.has(cloudUrl)) targets.set(cloudUrl, []);
+          const urlTargets = targets.get(cloudUrl)!;
+          if (!urlTargets.some(t => t.type === target.type && t.id === target.id)) urlTargets.push(target);
         }
       }
     };
 
+    const phaseIcons: Record<string, string> = { before: '🏁', during: '▶️', after: '🏆' };
+
     if (this.config.sponsors) {
       for (const sponsor of this.config.sponsors) {
-        if (sponsor.path) addRole(sponsor.path, 'boucle', `Boucle : ${sponsor.name || sponsor.path.split('/').pop() || sponsor.path}`);
+        if (sponsor.path) addRole(
+          sponsor.path, 'boucle',
+          `Boucle : ${sponsor.name || sponsor.path.split('/').pop() || sponsor.path}`,
+          { type: 'loop', id: 'default', label: 'Boucle par défaut', icon: '🔄' },
+        );
       }
     }
     if (this.config.categories) {
       for (const cat of this.config.categories) {
+        const catTarget: AddToTarget = { type: 'category', id: cat.id, label: cat.name, icon: '🎬' };
         if (cat.videos) for (const video of cat.videos) {
-          if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name}`);
+          if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name}`, catTarget);
         }
         if (cat.subCategories) {
           for (const subcat of cat.subCategories) {
             if (subcat.videos) for (const video of subcat.videos) {
-              if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name} › ${subcat.name}`);
+              if (video.path) addRole(video.path, 'action', `Catégorie : ${cat.name} › ${subcat.name}`, catTarget);
             }
           }
         }
@@ -988,13 +1068,15 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }
     if (this.config.timeCategories) {
       for (const tc of this.config.timeCategories) {
+        const matchTarget: AddToTarget = { type: 'match', id: tc.id, label: tc.name, icon: tc.icon || phaseIcons[tc.id] || '📁' };
         if (tc.loopVideos) for (const video of tc.loopVideos) {
-          if (video.path) addRole(video.path, 'match', `Phase : ${tc.name}`);
+          if (video.path) addRole(video.path, 'match', `Phase : ${tc.name}`, matchTarget);
         }
       }
     }
     this.configVideoRoles = roles;
     this.configVideoLabels = labels;
+    this.configVideoTargets = targets;
   }
 
   private detectOrphanedVideoPaths(): void {
