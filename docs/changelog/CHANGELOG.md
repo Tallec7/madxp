@@ -1,3 +1,9 @@
+## [3.196.2](https://github.com/Tallec7/neopro/compare/v3.196.1...v3.196.2) (2026-04-20)
+
+### Performance Improvements
+
+- **kiosk:** reduce X server wait from 60s to 3s in watchdog ([#491](https://github.com/Tallec7/neopro/issues/491)) ([a08229e](https://github.com/Tallec7/neopro/commit/a08229ee1ff576a833763de8d23b4964a37a9fbf))
+
 ## [3.196.1](https://github.com/Tallec7/neopro/compare/v3.196.0...v3.196.1) (2026-04-20)
 
 ### Performance Improvements
