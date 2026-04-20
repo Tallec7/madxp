@@ -299,6 +299,17 @@ export {
   type UpdateTemplateInput,
 } from './remotion-templates.repository';
 export {
+  templateStudioRepository,
+  type CreateVariantInput,
+  type UpdateVariantInput,
+  type CreateLayerInput,
+  type UpdateLayerInput,
+  type CreateTextFieldInput,
+  type UpdateTextFieldInput,
+  type CreateImageSlotInput,
+  type UpdateImageSlotInput,
+} from './template-studio.repository';
+export {
   remotionRenderJobRepository,
   type RemotionRenderJob,
   type RenderJobStatus,

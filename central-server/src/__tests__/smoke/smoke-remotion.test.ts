@@ -222,3 +222,144 @@ describe('Remotion — ADR docs exist', () => {
     expect(readme).toMatch(/ADR-055/);
   });
 });
+
+describe('Template Studio v2 (ADR-075)', () => {
+  const migration = readFile('scripts/migrations/add-template-studio-v2.sql');
+  const types = readFile('types/template-studio.types.ts');
+  const repo = readFile('repositories/template-studio.repository.ts');
+  const reposIndex = readFile('repositories/index.ts');
+  const controller = readFile('controllers/template-studio.controller.ts');
+  const routes = readFile('routes/template-studio.routes.ts');
+  const validation = readFile('middleware/validation.ts');
+  const server = readFile('server.ts');
+  const runtime = fs.readFileSync(path.join(repoRoot, 'templates-remotion/src/runtime/TemplateRuntime.tsx'), 'utf8');
+  const animations = fs.readFileSync(path.join(repoRoot, 'templates-remotion/src/runtime/animations.ts'), 'utf8');
+  const root = fs.readFileSync(path.join(repoRoot, 'templates-remotion/src/Root.tsx'), 'utf8');
+
+  it('migration extends neopro_templates and creates 4 studio tables', () => {
+    expect(migration).toMatch(/ALTER TABLE neopro_templates/);
+    expect(migration).toMatch(/schema_version/);
+    expect(migration).toMatch(/duration_seconds/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS template_variants/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS template_layers/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS template_text_fields/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS template_image_slots/);
+    expect(migration).toMatch(/UNIQUE \(template_id, slot_key\)/);
+  });
+
+  it('types file declares Row types extending QueryResultRow', () => {
+    expect(types).toMatch(/QueryResultRow/);
+    expect(types).toMatch(/TemplateVariantRow[^;]*QueryResultRow/);
+    expect(types).toMatch(/TemplateLayerRow[^;]*QueryResultRow/);
+    expect(types).toMatch(/TemplateTextFieldRow[^;]*QueryResultRow/);
+    expect(types).toMatch(/TemplateImageSlotRow[^;]*QueryResultRow/);
+    expect(types).toMatch(/AnimationPreset/);
+  });
+
+  it('repository exposes findV2ById + CRUD for 4 resource types', () => {
+    expect(repo).toMatch(/async findV2ById\(/);
+    expect(repo).toMatch(/async listVariants\(/);
+    expect(repo).toMatch(/async createVariant\(/);
+    expect(repo).toMatch(/async updateVariant\(/);
+    expect(repo).toMatch(/async deleteVariant\(/);
+    expect(repo).toMatch(/async listLayers\(/);
+    expect(repo).toMatch(/async createLayer\(/);
+    expect(repo).toMatch(/async updateLayer\(/);
+    expect(repo).toMatch(/async deleteLayer\(/);
+    expect(repo).toMatch(/async listTextFields\(/);
+    expect(repo).toMatch(/async createTextField\(/);
+    expect(repo).toMatch(/async updateTextField\(/);
+    expect(repo).toMatch(/async deleteTextField\(/);
+    expect(repo).toMatch(/async listImageSlots\(/);
+    expect(repo).toMatch(/async createImageSlot\(/);
+    expect(repo).toMatch(/async updateImageSlot\(/);
+    expect(repo).toMatch(/async deleteImageSlot\(/);
+  });
+
+  it('repositories/index.ts exports templateStudioRepository', () => {
+    expect(reposIndex).toMatch(/templateStudioRepository/);
+  });
+
+  it('controller exports studio view + 12 CRUD handlers', () => {
+    expect(controller).toMatch(/export const getStudioView/);
+    for (const fn of [
+      'listVariants', 'createVariant', 'updateVariant', 'deleteVariant',
+      'listLayers', 'createLayer', 'updateLayer', 'deleteLayer',
+      'listTextFields', 'createTextField', 'updateTextField', 'deleteTextField',
+      'listImageSlots', 'createImageSlot', 'updateImageSlot', 'deleteImageSlot',
+    ]) {
+      expect(controller).toMatch(new RegExp(`export const ${fn}`));
+    }
+    // Unique slot_key → 409
+    expect(controller).toMatch(/23505/);
+  });
+
+  it('routes gate every endpoint with super_admin + validate + validateParams', () => {
+    expect(routes).toMatch(/requireRole\('super_admin'\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.id\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndVariantId\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndLayerId\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndFieldId\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndSlotId\)/);
+    expect(routes).toMatch(/validate\(schemas\.templateStudioVariantCreate\)/);
+    expect(routes).toMatch(/validate\(schemas\.templateStudioLayerCreate\)/);
+    expect(routes).toMatch(/validate\(schemas\.templateStudioTextFieldCreate\)/);
+    expect(routes).toMatch(/validate\(schemas\.templateStudioImageSlotCreate\)/);
+  });
+
+  it('validation.ts declares all 8 studio schemas + 4 compound param schemas', () => {
+    for (const s of [
+      'templateStudioVariantCreate', 'templateStudioVariantUpdate',
+      'templateStudioLayerCreate', 'templateStudioLayerUpdate',
+      'templateStudioTextFieldCreate', 'templateStudioTextFieldUpdate',
+      'templateStudioImageSlotCreate', 'templateStudioImageSlotUpdate',
+    ]) {
+      expect(validation).toMatch(new RegExp(s + '\\s*:'));
+    }
+    for (const p of ['idAndVariantId', 'idAndLayerId', 'idAndFieldId', 'idAndSlotId']) {
+      expect(validation).toMatch(new RegExp(p + '\\s*:'));
+    }
+  });
+
+  it('server.ts mounts templateStudioRoutes before legacy remotion-templates', () => {
+    expect(server).toMatch(/templateStudioRoutes/);
+    const studioIdx = server.indexOf('templateStudioRoutes');
+    const legacyIdx = server.indexOf('remotionTemplatesRoutes');
+    expect(studioIdx).toBeGreaterThan(-1);
+    expect(legacyIdx).toBeGreaterThan(-1);
+    // Mount order: studio must be registered before legacy for sub-resources.
+    const studioMount = server.indexOf("app.use('/api/remotion-templates', templateStudioRoutes");
+    const legacyMount = server.indexOf("app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes");
+    expect(studioMount).toBeGreaterThan(-1);
+    expect(legacyMount).toBeGreaterThan(-1);
+    expect(studioMount).toBeLessThan(legacyMount);
+  });
+
+  it('TemplateRuntime + animations exist with 6 presets', () => {
+    expect(runtime).toMatch(/TemplateRuntime/);
+    expect(runtime).toMatch(/OffthreadVideo/);
+    expect(runtime).toMatch(/AbsoluteFill/);
+    expect(animations).toMatch(/computeAnimation/);
+    for (const p of ['fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in']) {
+      expect(animations).toContain(`'${p}'`);
+    }
+    expect(animations).toMatch(/spring\(/);
+  });
+
+  it('Root.tsx registers TemplateRuntime composition', () => {
+    expect(root).toMatch(/id="TemplateRuntime"/);
+    expect(root).toMatch(/component=\{TemplateRuntime\}/);
+  });
+
+  it('controller records Prometheus supervision metrics on every endpoint', () => {
+    const metrics = readFile('services/metrics.service.ts');
+    expect(metrics).toMatch(/neopro_template_studio_operations_total/);
+    expect(metrics).toMatch(/recordTemplateStudioOperation\(/);
+    // Every status path (success, not_found, conflict, error) must be wired.
+    expect(controller).toMatch(/record\(/);
+    expect(controller).toMatch(/metricsService/);
+    for (const status of ['success', 'not_found', 'conflict', 'error']) {
+      expect(controller).toContain(`'${status}'`);
+    }
+  });
+});
