@@ -1,3 +1,9 @@
+## [3.207.1](https://github.com/Tallec7/neopro/compare/v3.207.0...v3.207.1) (2026-04-20)
+
+### Bug Fixes
+
+- **dashboard:** retire autofocus sur input video-categories-manager ([#520](https://github.com/Tallec7/neopro/issues/520)) ([5844535](https://github.com/Tallec7/neopro/commit/5844535d4d9919b380132a2c3d0febcf0f4f3f32)), closes [#518](https://github.com/Tallec7/neopro/issues/518)
+
 # [3.207.0](https://github.com/Tallec7/neopro/compare/v3.206.0...v3.207.0) (2026-04-20)
 
 ### Features
