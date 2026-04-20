@@ -99,7 +99,9 @@ sequenceDiagram
 
         Pi->>WS: emit('heartbeat', {siteId, timestamp, metrics, softwareVersion})
 
-        WS->>DB: INSERT INTO metrics (site_id, cpu_usage, memory_usage,<br/>temperature, disk_usage, uptime, recorded_at)
+        alt Dernier INSERT metrics > 5min (throttle)
+            WS->>DB: INSERT INTO metrics (site_id, cpu_usage, memory_usage,<br/>temperature, disk_usage, uptime, recorded_at)
+        end
         WS->>DB: UPDATE sites SET last_seen_at=NOW(), status='online',<br/>local_ip=$2, software_version=$3
 
         WS->>Alert: checkAlerts(siteId, metrics)

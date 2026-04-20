@@ -46,6 +46,12 @@ export interface SocketContext {
 
   /** Map of siteId → player state (ephemeral, in-memory — for cloud monitoring) */
   readonly playerStates: Map<string, PlayerState>;
+
+  /**
+   * Map of siteId → timestamp (ms) of last metrics INSERT.
+   * Used to throttle DB persistence (heartbeat every 30s, INSERT every 5min).
+   */
+  readonly lastMetricsInsertAt: Map<string, number>;
 }
 
 /**

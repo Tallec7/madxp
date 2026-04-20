@@ -129,6 +129,7 @@ class SocketService {
   private lastPongReceived: Map<string, number> = new Map();
   private recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }> = new Map();
   private playerStates: Map<string, import('../handlers/socket-context').PlayerState> = new Map();
+  private lastMetricsInsertAt: Map<string, number> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
@@ -144,6 +145,7 @@ class SocketService {
       lastPongReceived: this.lastPongReceived,
       recordingStates: this.recordingStates,
       playerStates: this.playerStates,
+      lastMetricsInsertAt: this.lastMetricsInsertAt,
     };
   }
 
@@ -1098,6 +1100,7 @@ class SocketService {
     this.lastPongReceived.clear();
     this.recordingStates.clear();
     this.playerStates.clear();
+    this.lastMetricsInsertAt.clear();
 
     if (this.redisClient) {
       try {
