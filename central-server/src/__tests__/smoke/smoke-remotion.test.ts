@@ -561,3 +561,95 @@ describe('Template Studio v2 — Sprint 4 migration + permissions (ADR-075)', ()
     expect(src).toMatch(/not\.toBe\(403\)/);
   });
 });
+
+describe('Template Studio v2 — Sprint 3 admin dashboard (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const studioAdminDir = path.join(
+    dashRoot,
+    'src/app/features/content/remotion-templates/studio-v2/admin',
+  );
+
+  const readAdmin = (rel: string): string =>
+    fs.readFileSync(path.join(studioAdminDir, rel), 'utf8');
+
+  const readDashFile = (rel: string): string =>
+    fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('data service exposes admin CRUD for variants/layers/textFields/imageSlots', () => {
+    const svc = readDashFile(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    // Variants
+    expect(svc).toMatch(/createVariant\(/);
+    expect(svc).toMatch(/updateVariant\(/);
+    expect(svc).toMatch(/deleteVariant\(/);
+    // Layers
+    expect(svc).toMatch(/createLayer\(/);
+    expect(svc).toMatch(/updateLayer\(/);
+    expect(svc).toMatch(/deleteLayer\(/);
+    // Text fields
+    expect(svc).toMatch(/createTextField\(/);
+    expect(svc).toMatch(/updateTextField\(/);
+    expect(svc).toMatch(/deleteTextField\(/);
+    // Image slots
+    expect(svc).toMatch(/createImageSlot\(/);
+    expect(svc).toMatch(/updateImageSlot\(/);
+    expect(svc).toMatch(/deleteImageSlot\(/);
+    // Template creation
+    expect(svc).toMatch(/createTemplate\(/);
+  });
+
+  it('orchestrator gates studio admin mode behind isSuperAdmin', () => {
+    const cmp = readDashFile(
+      'src/app/features/content/remotion-templates/remotion-templates.component.ts',
+    );
+    expect(cmp).toContain('isSuperAdmin');
+    expect(cmp).toContain('studioAdminMode');
+    expect(cmp).toContain('toggleStudioAdminMode');
+    // The toggle must refuse for non-super_admin
+    expect(cmp).toMatch(/if\s*\(\s*!this\.isSuperAdmin\s*\)\s*return/);
+  });
+
+  it('admin panels + wizard are declared as standalone components', () => {
+    const fieldEditor = readAdmin('admin-field-editor.component.ts');
+    expect(fieldEditor).toContain('standalone: true');
+    expect(fieldEditor).toMatch(/@Input.*field/);
+    expect(fieldEditor).toMatch(/@Output.*patch/);
+
+    const variants = readAdmin('admin-variants-panel.component.ts');
+    expect(variants).toContain('standalone: true');
+    expect(variants).toMatch(/@Output.*create/);
+    expect(variants).toMatch(/@Output.*delete/);
+
+    const layers = readAdmin('admin-layers-panel.component.ts');
+    expect(layers).toContain('standalone: true');
+    expect(layers).toMatch(/@Output.*create/);
+
+    const studioPanel = readAdmin('admin-studio-panel.component.ts');
+    expect(studioPanel).toContain('AdminFieldEditorComponent');
+    expect(studioPanel).toContain('AdminVariantsPanelComponent');
+    expect(studioPanel).toContain('AdminLayersPanelComponent');
+
+    const wizard = readAdmin('create-template-wizard.component.ts');
+    expect(wizard).toContain('standalone: true');
+    expect(wizard).toMatch(/WizardStep\s*=\s*1\s*\|\s*2\s*\|\s*3\s*\|\s*4/);
+  });
+
+  it('admin HTML renders toggle + wizard button behind isSuperAdmin', () => {
+    const html = readDashFile(
+      'src/app/features/content/remotion-templates/remotion-templates.component.html',
+    );
+    expect(html).toContain('studio-admin-toggle');
+    expect(html).toContain('create-template-btn');
+    expect(html).toContain('app-admin-studio-panel');
+    expect(html).toContain('app-create-template-wizard');
+    // Both entry points gated on isSuperAdmin
+    expect(html).toMatch(/\*ngIf="isSuperAdmin"/);
+  });
+
+  it('Karma specs exist for admin components', () => {
+    expect(fs.existsSync(path.join(studioAdminDir, 'admin-field-editor.component.spec.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(studioAdminDir, 'admin-variants-panel.component.spec.ts'))).toBe(true);
+    expect(fs.existsSync(path.join(studioAdminDir, 'create-template-wizard.component.spec.ts'))).toBe(true);
+  });
+});

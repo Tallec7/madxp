@@ -11,6 +11,8 @@ import { TemplatePreviewComponent } from './template-preview.component';
 import { TemplateSchemaEditorComponent } from './template-schema-editor.component';
 import { TemplateVersionsComponent } from './template-versions.component';
 import { StudioV2EditorComponent } from './studio-v2/studio-v2-editor.component';
+import { AdminStudioPanelComponent } from './studio-v2/admin/admin-studio-panel.component';
+import { CreateTemplateWizardComponent } from './studio-v2/admin/create-template-wizard.component';
 import type {
   RemotionTemplate,
   RenderJobPhase,
@@ -41,6 +43,8 @@ import { isV2Template } from './remotion-templates.types';
     TemplateSchemaEditorComponent,
     TemplateVersionsComponent,
     StudioV2EditorComponent,
+    AdminStudioPanelComponent,
+    CreateTemplateWizardComponent,
   ],
   templateUrl: './remotion-templates.component.html',
   styleUrls: ['./remotion-templates.component.scss'],
@@ -92,6 +96,46 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     return role === 'admin' || role === 'super_admin';
   }
 
+  /**
+   * ADR-075 Sprint 3 — le mode admin Studio (édition variants/layers/fields)
+   * est réservé au super_admin. Les admins simples peuvent éditer le schéma
+   * props legacy mais pas la composition V2.
+   */
+  get isSuperAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'super_admin';
+  }
+
+  // ADR-075 Sprint 3 — toggle entre mode "preview utilisateur" et "édition admin"
+  studioAdminMode = false;
+
+  toggleStudioAdminMode(): void {
+    if (!this.isSuperAdmin) return;
+    this.studioAdminMode = !this.studioAdminMode;
+  }
+
+  /** Re-charge la vue studio après une mutation admin (create/update/delete). */
+  onStudioChanged(): void {
+    if (this.selectedTemplate) this.loadStudioView(this.selectedTemplate.id);
+  }
+
+  // ADR-075 Sprint 3 — wizard création template (super_admin)
+  wizardOpen = false;
+
+  openWizard(): void {
+    if (!this.isSuperAdmin) return;
+    this.wizardOpen = true;
+  }
+
+  closeWizard(): void {
+    this.wizardOpen = false;
+  }
+
+  onTemplateCreated(tpl: RemotionTemplate): void {
+    this.wizardOpen = false;
+    this.templates = [tpl, ...this.templates];
+    this.selectTemplate(tpl);
+  }
+
   ngOnInit(): void {
     this.loadTemplates();
   }
@@ -123,6 +167,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.studioView = null;
     this.renderPayloadV2 = null;
     this.readyV2 = false;
+    this.studioAdminMode = false;
 
     if (isV2Template(tpl)) {
       this.loadStudioView(tpl.id);
