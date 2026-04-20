@@ -1,3 +1,9 @@
+## [3.197.4](https://github.com/Tallec7/neopro/compare/v3.197.3...v3.197.4) (2026-04-20)
+
+### Bug Fixes
+
+- **migration:** use gen_random_uuid() in template-studio-v2 (Railway PG) ([#498](https://github.com/Tallec7/neopro/issues/498)) ([5241e9b](https://github.com/Tallec7/neopro/commit/5241e9bce5d28ff248d97e98957c018f18156ea0))
+
 ## [3.197.3](https://github.com/Tallec7/neopro/compare/v3.197.2...v3.197.3) (2026-04-20)
 
 ### Bug Fixes
