@@ -1,3 +1,9 @@
+# [3.206.0](https://github.com/Tallec7/neopro/compare/v3.205.0...v3.206.0) (2026-04-20)
+
+### Features
+
+- **video-library:** refonte bibliothèque vidéo — catégories, variantes 2nd écran, retrait config ([7c5a551](https://github.com/Tallec7/neopro/commit/7c5a551bbbd2dad749720bad867701be1dbbe838))
+
 # [3.205.0](https://github.com/Tallec7/neopro/compare/v3.204.1...v3.205.0) (2026-04-20)
 
 ### Features
