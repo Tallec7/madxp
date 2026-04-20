@@ -33,6 +33,40 @@ describe('Smoke — hotspot PSK (ADR-074)', () => {
     expect(/hotspot-config\.routes|hotspotConfigRoutes/.test(server)).toBe(true);
   });
 
+  it('central-server — Pi route GET /:id/hotspot-config uses authenticateSiteApiKey (ADR-076)', () => {
+    const routes = read('central-server/src/routes/hotspot-config.routes.ts');
+    // Capture the block defining the router.get('/:id/hotspot-config', ...) up to the first closing ')'.
+    const match = routes.match(/router\.get\(\s*['"]\/:id\/hotspot-config['"][\s\S]*?\);/);
+    expect(match).not.toBeNull();
+    const block = match![0];
+    expect({
+      usesSiteApiKey: /authenticateSiteApiKey/.test(block),
+      noJwtAuthenticate: !/\bauthenticate\b(?!SiteApiKey)/.test(block),
+    }).toEqual({ usesSiteApiKey: true, noJwtAuthenticate: true });
+  });
+
+  it('central-server — legacy sites.routes.ts does NOT declare /:id/hotspot-config (ADR-076)', () => {
+    const routes = read('central-server/src/routes/sites.routes.ts');
+    expect(/['"]\/:id\/hotspot-config['"]/.test(routes)).toBe(false);
+  });
+
+  it('central-server — site-debug.controller does NOT export getHotspotConfig (ADR-076)', () => {
+    const controller = read('central-server/src/controllers/site-debug.controller.ts');
+    expect(/export\s+const\s+getHotspotConfig\b/.test(controller)).toBe(false);
+  });
+
+  it('central-server — admin-view endpoint is declared with JWT + admin/operator role (ADR-076)', () => {
+    const routes = read('central-server/src/routes/hotspot-config.routes.ts');
+    const match = routes.match(/router\.get\(\s*['"]\/:id\/hotspot-config\/admin-view['"][\s\S]*?\);/);
+    expect(match).not.toBeNull();
+    const block = match![0];
+    expect({
+      usesJwt: /\bauthenticate\b(?!SiteApiKey)/.test(block),
+      requiresAdminOrOperator: /requireRole\(\s*['"]admin['"],\s*['"]operator['"]\s*\)/.test(block),
+      hasRateLimit: /adminRateLimit|sensitiveRateLimit/.test(block),
+    }).toEqual({ usesJwt: true, requiresAdminOrOperator: true, hasRateLimit: true });
+  });
+
   it('central-server — rotateHotspotConfig dispatches rotate_psk via commandQueueService', () => {
     const controller = read('central-server/src/controllers/hotspot-config.controller.ts');
     expect({

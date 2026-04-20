@@ -41,6 +41,18 @@ GET    /api/sites/:id/debug-bundle → export JSON pour support
 POST   /api/sites/:id/fix-hotspot → diagnostiquer/réparer le hotspot
 ```
 
+## Hotspot config (ADR-074 / ADR-076)
+
+```
+GET    /api/sites/:id/hotspot-config             → Pi fetch (authenticateSiteApiKey)
+GET    /api/sites/:id/hotspot-config/admin-view  → dashboard admin (JWT admin|operator)
+POST   /api/sites/:id/hotspot-config/bootstrap   → Pi one-shot upload (authenticateSiteApiKey)
+POST   /api/sites/:id/hotspot-config/rotate      → rotation PSK (JWT admin|super_admin)
+```
+
+- Ne PAS réintroduire de route `GET /:id/hotspot-config` dans `sites.routes.ts` — collision avec la route Pi ADR-074 (Express résout au premier mount `sitesRoutes`, casse l'auth api_key du Pi — incident ADR-076, smoke test enforced).
+- Ne PAS ajouter `authenticate` JWT sur la route Pi `GET /:id/hotspot-config` — elle DOIT rester sur `authenticateSiteApiKey` (smoke test enforced).
+
 ## Contenu
 
 ```

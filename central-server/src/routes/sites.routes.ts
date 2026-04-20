@@ -61,15 +61,6 @@ router.get(
 );
 
 router.get(
-  '/:id/hotspot-config',
-  authenticate,
-  requireRole('admin', 'operator'),
-  adminRateLimit,
-  validateParams(paramSchemas.id),
-  sitesController.getHotspotConfig
-);
-
-router.get(
   '/:id/health-status',
   authenticate,
   requireRole('admin', 'operator'),

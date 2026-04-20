@@ -486,7 +486,6 @@ export const getSiteDisplays = async (req: AuthRequest, res: Response) => {
 export {
   getSiteLogs,
   getSystemInfo,
-  getHotspotConfig,
   getHealthStatus,
   runDiagnostics,
   getNetworkDiagnostics,

@@ -185,15 +185,12 @@ export class SiteMetricsService {
   }
 
   getHotspotConfig(id: string): Observable<{
-    success: boolean;
     configured: boolean;
     ssid?: string;
-    password?: string;
-    channel?: number;
-    isActive?: boolean;
-    message?: string;
+    psk?: string;
+    rotatedAt?: string;
   }> {
-    return this.api.get(`/sites/${id}/hotspot-config`);
+    return this.api.get(`/sites/${id}/hotspot-config/admin-view`);
   }
 
   getWifiBssidStatus(id: string): Observable<{

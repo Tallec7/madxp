@@ -284,12 +284,11 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         this.fetchingHotspotConfig = false;
         if (response.configured) {
           this.currentHotspotSsid = response.ssid || null;
-          this.currentHotspotPassword = response.password || null;
-          this.currentHotspotChannel = response.channel || null;
-          this.currentHotspotActive = response.isActive || false;
-          this.logger.info('Hotspot config fetched from Pi', {
+          this.currentHotspotPassword = response.psk || null;
+          this.logger.info('Hotspot config fetched from cloud (ADR-074)', {
             ssid: this.currentHotspotSsid,
-            hasPassword: !!this.currentHotspotPassword
+            hasPassword: !!this.currentHotspotPassword,
+            rotatedAt: response.rotatedAt,
           });
         }
       },
