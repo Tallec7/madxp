@@ -226,3 +226,54 @@ Audit terrain 2026-04-19 : incohérence détectée sur Pi NLF entre `/etc/hostap
 - Script fleet : `npm run hotspot:status` (ajoute ligne dans `central-server/package.json`).
 - Smoke tests enforced — voir `central-server/src/__tests__/smoke/smoke-hotspot-psk.test.ts`.
 - Invariants cross-repo dans `.claude/rules/hotspot-psk.md`.
+- Métriques Prometheus (incident 2026-04-20) :
+  - `neopro_hotspot_bootstrap_attempts_total{status}` — détecte un mur d'erreurs 500 au bootstrap
+    avant que la fleet en subisse les effets.
+  - `neopro_hotspot_rotation_attempts_total{status}` — couvre la rotation dashboard + la propagation Pi.
+  - `neopro_hotspot_psk_decrypt_errors_total` — signale qu'un PSK stocké ne peut plus être
+    déchiffré (clé `HOTSPOT_PSK_ENCRYPTION_KEY` perdue ou tournée sans re-encrypt).
+
+---
+
+## Incident resolution (2026-04-20)
+
+Bootstrap NLF bloqué en prod par une suite de régressions Railway cumulées. Fixée dans une
+chaîne de PRs le 2026-04-20 — résumé des 4 causes racines + corrections :
+
+| #   | Symptôme                                                   | Cause racine                                                                                                                      | Fix                                           |
+| --- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | `POST /hotspot-config` → 500 avec message inoffensif       | `HOTSPOT_PSK_ENCRYPTION_KEY` jamais setté en prod → `encryptPsk()` throw                                                          | `railway variables --set …` + doc             |
+| 2   | Healthcheck fail, route `/hotspot-config/admin-view` → 404 | Route `/:id` de `sites.routes` interceptait `/:id/hotspot-config` avant la route ADR-074 → `authenticate` 401                     | PR #495 (ADR-076 route collision cleanup)     |
+| 3   | Migrations non jouées au déploiement                       | Railway Custom Start Command overrode le `CMD` du Dockerfile                                                                      | PR #496 puis PR #497 (chain dans `npm start`) |
+| 4   | `migrate.js` crash → server ne boot jamais                 | `add-template-studio-v2.sql` utilisait `uuid_generate_v4()` non qualifié, `uuid-ossp` est dans le schema `extensions` sur Railway | PR #498 (switch `gen_random_uuid()`)          |
+
+### Timeline
+
+- 2026-04-20 T+00 : NLF Pi déployée, bootstrap renvoie 500 muet côté dashboard.
+- 2026-04-20 T+04h : root cause identifiée (env var manquante). Générée via `openssl rand -hex 32`,
+  setée via Railway CLI, sauvegardée dans 1Password (entrée `Neopro / HOTSPOT_PSK_ENCRYPTION_KEY`).
+- 2026-04-20 T+05h : healthcheck toujours KO → découverte chaîne migrate.js / Start Command / uuid-ossp.
+- 2026-04-20 T+06h : 4 PRs mergées, redeploy réussi, NLF bootstrappée à T+07h.
+
+### Post-mortem
+
+1. **Les env vars critiques ne sont pas validées au boot** — on ne découvre `HOTSPOT_PSK_ENCRYPTION_KEY`
+   manquant que lors du premier bootstrap Pi. Smoke test ajouté : en `NODE_ENV=production`, l'absence
+   de la clé doit faire échouer le boot (fail-fast).
+2. **Railway Custom Start Command est invisible depuis le repo** — le Dockerfile `CMD` était
+   ignoré sans trace. Doc mise à jour + commentaire explicite dans `central-server/Dockerfile`.
+3. **Les migrations silencieusement cassées pendant des semaines** — pas de `gen_random_uuid` dans
+   le CI = aucune détection. Smoke test ajouté : `smoke-deploy-ota.test.ts` bloque tout
+   `uuid_generate_v4()` non qualifié dans les migrations.
+4. **Runbook manquant** — pas de playbook pour "hotspot bootstrap 500" → grep + lecture de code
+   ad-hoc. Runbook créé : `docs/modops/RUNBOOK_HOTSPOT_PSK_INCIDENT.md`.
+
+### Vérification post-incident
+
+```sql
+-- 1 site bootstrappé (NLF), 6 legacy en attente de rollout ADR-073
+SELECT site_name, wifi_psk_encrypted IS NOT NULL AS has_cloud_psk, psk_rotated_at
+FROM sites WHERE site_type='pi' ORDER BY wifi_psk_encrypted IS NOT NULL DESC, site_name;
+```
+
+Ou via le script CLI : `npm run hotspot:status` depuis `central-server/`.

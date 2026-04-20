@@ -127,10 +127,12 @@ reset_wifi_hotspot() {
         print_success "SSID réinitialisé à NEOPRO-NOUVEAU"
     fi
 
-    # Remettre le mot de passe par défaut
+    # Remettre le mot de passe par défaut (pré-bootstrap uniquement — ADR-074)
+    # Ce PSK est identique sur toutes les images golden et sera écrasé par le
+    # sync-agent au premier contact cloud. Ne JAMAIS l'utiliser en production.
     if [ -f "/etc/hostapd/hostapd.conf" ]; then
         sed -i 's/^wpa_passphrase=.*/wpa_passphrase=NeoProWiFi2025/' /etc/hostapd/hostapd.conf
-        print_success "Mot de passe WiFi réinitialisé à NeoProWiFi2025"
+        print_success "PSK pré-bootstrap appliqué (sera rotaté au 1er sync cloud — ADR-074)"
     fi
 }
 
@@ -327,7 +329,7 @@ print_summary() {
     echo -e "${BLUE}Configuration actuelle :${NC}"
     echo "  • Hostname : neopro (neopro.local)"
     echo "  • WiFi SSID : NEOPRO-NOUVEAU"
-    echo "  • WiFi Password : NeoProWiFi2025"
+    echo "  • WiFi Password : NeoProWiFi2025 (pré-bootstrap uniquement — rotaté au 1er sync cloud ADR-074)"
     echo "  • Services : installés et activés"
     echo "  • Sync-agent : désactivé (à configurer par club)"
     echo ""
