@@ -1,3 +1,9 @@
+## [3.196.3](https://github.com/Tallec7/neopro/compare/v3.196.2...v3.196.3) (2026-04-20)
+
+### Bug Fixes
+
+- **hotspot:** correct column names in hotspot-bootstrap-status script ([#492](https://github.com/Tallec7/neopro/issues/492)) ([e62b017](https://github.com/Tallec7/neopro/commit/e62b0178db3dad3ebe1cc1c9e13fdc1c14f1c24e))
+
 ## [3.196.2](https://github.com/Tallec7/neopro/compare/v3.196.1...v3.196.2) (2026-04-20)
 
 ### Performance Improvements
