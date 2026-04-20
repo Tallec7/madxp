@@ -119,6 +119,33 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     if (this.selectedTemplate) this.loadStudioView(this.selectedTemplate.id);
   }
 
+  // ADR-075 V2 — filtre gallery "Mes templates perso" (white-glove scoping)
+  templateScopeFilter: 'all' | 'mine' | 'global' = 'all';
+
+  get currentUserSiteId(): string | null {
+    return this.authService.getCurrentUser()?.site_id ?? null;
+  }
+
+  get hasClubScopedTemplates(): boolean {
+    return this.templates.some((t) => !!t.site_id);
+  }
+
+  get filteredTemplates(): RemotionTemplate[] {
+    if (this.templateScopeFilter === 'all') return this.templates;
+    if (this.templateScopeFilter === 'global') {
+      return this.templates.filter((t) => !t.site_id);
+    }
+    // 'mine' : scoped au site courant (club/operator) OU tous les scopés (admin sans site_id)
+    const siteId = this.currentUserSiteId;
+    return this.templates.filter((t) =>
+      siteId ? t.site_id === siteId : !!t.site_id,
+    );
+  }
+
+  setTemplateScopeFilter(scope: 'all' | 'mine' | 'global'): void {
+    this.templateScopeFilter = scope;
+  }
+
   // ADR-075 Sprint 3 — wizard création template (super_admin)
   wizardOpen = false;
 

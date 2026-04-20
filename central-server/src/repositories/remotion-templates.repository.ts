@@ -31,6 +31,7 @@ export interface UpdateTemplateInput {
   description?: string | null;
   props_schema?: Record<string, unknown>[];
   default_props?: Record<string, unknown>;
+  site_id?: string | null;
 }
 
 export interface NeoProTemplateVersion extends QueryResultRow {
@@ -184,6 +185,10 @@ class RemotionTemplatesRepository {
     if (input.default_props !== undefined) {
       fields.push(`default_props = $${idx++}`);
       values.push(JSON.stringify(input.default_props));
+    }
+    if (input.site_id !== undefined) {
+      fields.push(`site_id = $${idx++}`);
+      values.push(input.site_id);
     }
 
     if (fields.length === 0) return this.findById(id);

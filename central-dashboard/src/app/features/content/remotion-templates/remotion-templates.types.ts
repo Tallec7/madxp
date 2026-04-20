@@ -29,6 +29,8 @@ export interface RemotionTemplate {
   created_at: string;
   /** ADR-075 — null/1 = legacy, 2 = data-driven studio. */
   schema_version?: number;
+  /** ADR-075 V2 — null = template global, UUID = scopé à un club (white-glove). */
+  site_id?: string | null;
 }
 
 // ── ADR-075 Template Studio v2 — types data-driven ─────────────────────────
