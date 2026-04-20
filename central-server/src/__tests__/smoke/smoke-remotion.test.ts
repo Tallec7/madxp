@@ -509,3 +509,55 @@ describe('Template Studio v2 — dashboard wiring (ADR-075 / ADR-077)', () => {
     expect(deps['@remotion/player']).toBeTruthy();
   });
 });
+
+describe('Template Studio v2 — Sprint 4 migration + permissions (ADR-075)', () => {
+  it('legacy shadow-seed migration exists for ButSimple/ButImgJoueur', () => {
+    const p = path.join(
+      centralSrc,
+      'scripts',
+      'migrations',
+      'seed-but-simple-but-img-joueur-v2-shadow.sql',
+    );
+    expect(fs.existsSync(p)).toBe(true);
+    const sql = fs.readFileSync(p, 'utf8');
+    // Targets both legacy composition_ids
+    expect(sql).toMatch(/composition_id\s*=\s*'ButSimple'/);
+    expect(sql).toMatch(/composition_id\s*=\s*'ButImgJoueur'/);
+    // Touches the 3 V2 tables
+    expect(sql).toMatch(/INSERT INTO template_variants/);
+    expect(sql).toMatch(/INSERT INTO template_text_fields/);
+    expect(sql).toMatch(/INSERT INTO template_image_slots/);
+    // Idempotent (ON CONFLICT or NOT EXISTS guards)
+    expect(sql).toMatch(/ON CONFLICT/);
+    expect(sql).toMatch(/NOT EXISTS/);
+    // Does NOT flip schema_version=2 automatically (safety — manual opt-in).
+    // Strip SQL line-comments before asserting so the documented manual flip
+    // command in the header comment doesn't trigger a false positive.
+    const sqlNoComments = sql
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('--'))
+      .join('\n');
+    expect(sqlNoComments).not.toMatch(/UPDATE\s+neopro_templates\s+SET\s+schema_version\s*=\s*2/);
+  });
+
+  it('permission test covers all studio routes × non-super_admin roles', () => {
+    const p = path.join(centralSrc, '__tests__', 'template-studio.permissions.test.ts');
+    expect(fs.existsSync(p)).toBe(true);
+    const src = fs.readFileSync(p, 'utf8');
+    // Routes (reads + writes)
+    expect(src).toMatch(/\/studio/);
+    expect(src).toMatch(/\/variants/);
+    expect(src).toMatch(/\/layers/);
+    expect(src).toMatch(/\/text-fields/);
+    expect(src).toMatch(/\/image-slots/);
+    // All non-super_admin roles are exercised
+    for (const role of ['admin', 'operator', 'club', 'viewer']) {
+      expect(src).toContain(`'${role}'`);
+    }
+    // 401 when no token, 403 for non-super_admin, super_admin passes auth
+    expect(src).toMatch(/toBe\(401\)/);
+    expect(src).toMatch(/toBe\(403\)/);
+    expect(src).toMatch(/super_admin/);
+    expect(src).toMatch(/not\.toBe\(403\)/);
+  });
+});
