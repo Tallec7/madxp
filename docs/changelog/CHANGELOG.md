@@ -1,3 +1,9 @@
+## [3.200.4](https://github.com/Tallec7/neopro/compare/v3.200.3...v3.200.4) (2026-04-20)
+
+### Bug Fixes
+
+- **remote:** ADR-078 — SaaS match state autoritatif + dashboard room subscription ([#509](https://github.com/Tallec7/neopro/issues/509)) ([98fb6ff](https://github.com/Tallec7/neopro/commit/98fb6ff747d135c8e6de5fd128b4e28d98229fcb))
+
 ## [3.200.3](https://github.com/Tallec7/neopro/compare/v3.200.2...v3.200.3) (2026-04-20)
 
 ### Bug Fixes
