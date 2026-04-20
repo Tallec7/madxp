@@ -18,7 +18,7 @@ COMMENT ON COLUMN neopro_templates.schema_version IS
 
 -- 2) Variantes (vidéos bg opaques, même structure, couleurs différentes)
 CREATE TABLE IF NOT EXISTS template_variants (
-  id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id            UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
   name                   VARCHAR(100) NOT NULL,
   background_video_url   TEXT NOT NULL,
@@ -31,7 +31,7 @@ COMMENT ON TABLE template_variants IS 'ADR-075 : variantes couleur/ton d''un tem
 
 -- 3) Couches alpha (MOV empilés en Z)
 CREATE TABLE IF NOT EXISTS template_layers (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
   name        VARCHAR(100) NOT NULL,
   video_url   TEXT NOT NULL,
@@ -51,7 +51,7 @@ COMMENT ON TABLE template_layers IS 'ADR-075 : couches alpha empilées en Z (Gab
 
 -- 4) Champs texte (slots éditables par l'user)
 CREATE TABLE IF NOT EXISTS template_text_fields (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id     UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
   slot_key        VARCHAR(64) NOT NULL,
   label           VARCHAR(200) NOT NULL,
@@ -82,7 +82,7 @@ COMMENT ON TABLE template_text_fields IS 'ADR-075 : champs texte éditables par 
 
 -- 5) Slots image (logos, photos joueur...)
 CREATE TABLE IF NOT EXISTS template_image_slots (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id     UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
   slot_key        VARCHAR(64) NOT NULL,
   label           VARCHAR(200) NOT NULL,
