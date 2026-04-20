@@ -702,10 +702,22 @@ server {
         add_header Content-Type text/plain;
     }
 
-    # Apple iOS Captive Portal
-    location /hotspot-detect.html {
+    # Apple iOS Captive Portal — servir la page brandée si disponible (ADR-079)
+    # Fallback vers "Success" minimal si captive-portal.html absent
+    location = /hotspot-detect.html {
+        try_files /captive-portal.html @captive_fallback;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+    location = /library/test/success.html {
+        try_files /captive-portal.html @captive_fallback;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+    location @captive_fallback {
+        default_type text/html;
         return 200 "<!DOCTYPE html><html><head><title>Success</title></head><body>Success</body></html>";
-        add_header Content-Type text/html;
+    }
+    location = /captive-portal.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
     }
 
     # ========================================================================

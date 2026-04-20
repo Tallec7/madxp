@@ -375,6 +375,9 @@ mkdir -p ${DEPLOY_DIR}/{webapp,server,sync-agent}
 # Copier le build Angular
 cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 
+# Copier la page captive portal (servie par nginx pour iOS/Android)
+[ -f "raspberry/captive-portal.html" ] && cp raspberry/captive-portal.html ${DEPLOY_DIR}/webapp/captive-portal.html
+
 # Modifier l'environnement dans le build pour pointer vers la config raspberry
 # (L'application utilisera automatiquement environment.raspberry.ts)
 
