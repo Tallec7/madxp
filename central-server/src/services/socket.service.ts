@@ -286,6 +286,18 @@ class SocketService {
 
         socket.join('dashboard');
 
+        // ADR-078 — dashboard remotes must join the siteId room to receive state-sync
+        socket.on('dashboard-subscribe-site', (data: { siteId?: string }) => {
+          if (data?.siteId && typeof data.siteId === 'string') {
+            socket.join(data.siteId);
+          }
+        });
+        socket.on('dashboard-unsubscribe-site', (data: { siteId?: string }) => {
+          if (data?.siteId && typeof data.siteId === 'string') {
+            socket.leave(data.siteId);
+          }
+        });
+
         socket.emit('authenticated', {
           message: 'Dashboard authentifié avec succès',
           userId: decoded.id,

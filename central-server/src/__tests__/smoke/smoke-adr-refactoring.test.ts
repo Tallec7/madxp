@@ -2258,6 +2258,73 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
     });
   });
 
+  // ADR-078 — SaaS match state autoritatif + dashboard room subscription
+  // Contexte: ADR-059 pub/sub ne couvrait pas les sites SaaS (pas de Pi owner) et
+  // la remote dashboard ne joignait jamais la room siteId. Résultat: divergence
+  // entre deux remotes SaaS du même site + state-sync silencieusement droppé.
+  describe('ADR-078 — SaaS state-sync authoritative + dashboard subscribe', () => {
+    it('saas-match-state.service.ts exists and exports singleton', () => {
+      const p = path.resolve(repoRoot, 'central-server/src/services/saas-match-state.service.ts');
+      expect(fs.existsSync(p)).toBe(true);
+      const content = fs.readFileSync(p, 'utf8');
+      expect({
+        exportsSingleton: /export const saasMatchStateService/.test(content),
+        snapshotMethod: /snapshot\s*\(siteId/.test(content),
+        peekMethod: /peek\s*\(siteId/.test(content),
+        hasSeq: /seq:/.test(content),
+      }).toEqual({ exportsSingleton: true, snapshotMethod: true, peekMethod: true, hasSeq: true });
+    });
+
+    it('remote.controller.ts broadcasts state-sync for SaaS + exposes matchState on /state', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/controllers/remote.controller.ts'),
+        'utf8'
+      );
+      expect({
+        importsSaasState: /saasMatchStateService/.test(content),
+        appliesMutation: /applySaasMatchMutation/.test(content),
+        broadcastsStateSync: /emit\(['"]state-sync['"]/.test(content),
+        exposesMatchState: /matchState:/.test(content),
+      }).toEqual({
+        importsSaasState: true,
+        appliesMutation: true,
+        broadcastsStateSync: true,
+        exposesMatchState: true,
+      });
+    });
+
+    it('central socket.service.ts handles dashboard-subscribe-site / unsubscribe', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-server/src/services/socket.service.ts'),
+        'utf8'
+      );
+      expect({
+        subscribe: /dashboard-subscribe-site/.test(content),
+        unsubscribe: /dashboard-unsubscribe-site/.test(content),
+      }).toEqual({ subscribe: true, unsubscribe: true });
+    });
+
+    it('cloud-remote.component.ts subscribes to siteId room + applies matchState on late-join', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/features/remote/cloud-remote.component.ts'),
+        'utf8'
+      );
+      expect({
+        subscribeEmit: /dashboard-subscribe-site/.test(content),
+        unsubscribeEmit: /dashboard-unsubscribe-site/.test(content),
+        appliesMatchState: /state\.matchState/.test(content),
+      }).toEqual({ subscribeEmit: true, unsubscribeEmit: true, appliesMatchState: true });
+    });
+
+    it('RemoteState interface includes optional matchState', () => {
+      const content = fs.readFileSync(
+        path.resolve(repoRoot, 'central-dashboard/src/app/core/services/remote.service.ts'),
+        'utf8'
+      );
+      expect(/matchState\??\s*:/.test(content)).toBe(true);
+    });
+  });
+
   // =========================================================================
   // ADR-060 — Fallback 3 couches (cloud → LAN → offline)
   // =========================================================================

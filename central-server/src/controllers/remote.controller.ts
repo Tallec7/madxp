@@ -21,6 +21,7 @@ import { configProfileRepository } from '../repositories/config-profile.reposito
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import socketService from '../services/socket.service';
 import { commandQueueService } from '../services/command-queue.service';
+import { saasMatchStateService } from '../services/saas-match-state.service';
 import logger from '../config/logger';
 import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
@@ -37,6 +38,64 @@ const getSubscriptionService = async () => {
   }
   return subscriptionService;
 };
+
+// ADR-078 — Map a remote command to the SaaS authoritative state mutation.
+// Returns true if a mutation was applied (state-sync broadcast needed).
+function applySaasMatchMutation(
+  siteId: string,
+  type: string,
+  data: Record<string, unknown> | undefined
+): boolean {
+  switch (type) {
+    case 'command/increment_home':
+      saasMatchStateService.incrementScore(siteId, 'home');
+      return true;
+    case 'command/decrement_home':
+      saasMatchStateService.decrementScore(siteId, 'home');
+      return true;
+    case 'command/increment_away':
+      saasMatchStateService.incrementScore(siteId, 'away');
+      return true;
+    case 'command/decrement_away':
+      saasMatchStateService.decrementScore(siteId, 'away');
+      return true;
+    case 'command/score_reset':
+    case 'score-reset':
+      saasMatchStateService.resetScore(siteId);
+      return true;
+    case 'command/set_phase':
+      saasMatchStateService.setPhase(siteId, (data?.phase as string) || 'neutral');
+      return true;
+    case 'phase-change':
+      saasMatchStateService.setPhase(siteId, (data?.phase as string) || 'neutral');
+      return true;
+    case 'command/timer_start':
+      saasMatchStateService.timerStart(siteId, data?.time as number | undefined);
+      return true;
+    case 'command/timer_pause':
+      saasMatchStateService.timerPause(siteId);
+      return true;
+    case 'command/timer_reset':
+      saasMatchStateService.timerReset(siteId, data?.time as number | undefined);
+      return true;
+    case 'score-update':
+      saasMatchStateService.setScore(siteId, {
+        homeTeam: data?.homeTeam as string | undefined,
+        awayTeam: data?.awayTeam as string | undefined,
+        homeScore: data?.homeScore as number | undefined,
+        awayScore: data?.awayScore as number | undefined,
+      });
+      return true;
+    case 'timer-update':
+      saasMatchStateService.updateTimer(siteId, {
+        currentTime: data?.time as number | undefined,
+        isRunning: data?.action === 'start' ? true : data?.action === 'pause' ? false : undefined,
+      });
+      return true;
+    default:
+      return false;
+  }
+}
 
 // Compteur brute-force en mémoire (par IP + siteId)
 const pinAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -203,6 +262,8 @@ export async function getRemoteState(req: Request, res: Response) {
       playerState: socketService.getPlayerState(siteId) || null,
       pendingConfigVersionId,
       pendingCommandsCount,
+      // ADR-078 — late-join: SaaS sites include authoritative match state
+      matchState: site.site_type === 'saas' ? saasMatchStateService.peek(siteId) : null,
     };
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
@@ -589,6 +650,25 @@ export async function sendRemoteCommand(req: Request, res: Response) {
     metricsService.recordCommand(type, 'sent');
     if (type.startsWith('command/')) {
       metricsService.recordMatchCommand(type.replace('command/', ''));
+    }
+
+    // ADR-078 — SaaS authoritative state-sync (mirror ADR-059 Pi pub/sub for sites without Pi)
+    try {
+      const site = await siteRepository.findById(siteId);
+      if (site && site.site_type === 'saas') {
+        const applied = applySaasMatchMutation(siteId, type, data);
+        if (applied) {
+          const snapshot = saasMatchStateService.snapshot(siteId);
+          io.to(siteId).emit('state-sync', snapshot);
+          metricsService.recordStateSyncRelay();
+        }
+      }
+    } catch (err) {
+      logger.warn('SaaS state-sync broadcast failed (non-fatal)', {
+        siteId,
+        type,
+        error: (err as Error).message,
+      });
     }
 
     logger.info('Cloud remote command sent', {

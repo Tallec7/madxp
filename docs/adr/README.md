@@ -94,6 +94,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-075](ADR-075-template-studio.md)                              | Template Studio — couches alpha + slots data-driven + wizard     | Accepté                  | Avr 2026 |
 | [ADR-076](ADR-076-hotspot-config-route-cleanup.md)                 | Hotspot config — cleanup routes post-ADR-074                     | Accepté                  | Avr 2026 |
 | [ADR-077](ADR-077-template-studio-preview-and-uploads.md)          | Template Studio — preview @remotion/player + upload-asset ouvert | Accepté                  | Avr 2026 |
+| [ADR-078](ADR-078-saas-match-state-authoritative.md)               | SaaS match state autoritatif + dashboard room subscription       | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -133,7 +134,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-078**)
+3. Numéroter séquentiellement (prochain : **ADR-079**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -156,4 +157,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 19 avril 2026_
+_Dernière mise à jour : 20 avril 2026_
