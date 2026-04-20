@@ -1,3 +1,9 @@
+## [3.197.2](https://github.com/Tallec7/neopro/compare/v3.197.1...v3.197.2) (2026-04-20)
+
+### Bug Fixes
+
+- **deploy:** auto-run DB migrations on Railway boot ([#496](https://github.com/Tallec7/neopro/issues/496)) ([1554e73](https://github.com/Tallec7/neopro/commit/1554e731a6511fc719fc4847d2a51362657493bf))
+
 ## [3.197.1](https://github.com/Tallec7/neopro/compare/v3.197.0...v3.197.1) (2026-04-20)
 
 ### Bug Fixes
