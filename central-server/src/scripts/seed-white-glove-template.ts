@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
+import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
-import { logger } from '../utils/logger';
+import logger from '../config/logger';
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ dotenv.config();
  * par le feature flag `template_studio_club_scoped`.
  */
 
-interface SiteRow {
+interface SiteRow extends QueryResultRow {
   id: string;
   site_name: string;
   subscription_plan: string | null;
