@@ -5,7 +5,7 @@
  * Usage:
  *   source central-server/.env && npx ts-node src/scripts/hotspot-bootstrap-status.ts
  *
- * Output: table { site_name, has_cloud_psk, psk_rotated_at, online, last_heartbeat }
+ * Output: table { site_name, has_cloud_psk, psk_rotated_at, online, last_seen_at }
  */
 
 import { QueryResultRow } from 'pg';
@@ -13,31 +13,33 @@ import pool, { query } from '../config/database';
 
 interface Row extends QueryResultRow {
   id: string;
-  name: string;
+  site_name: string;
+  club_name: string;
   has_cloud_psk: boolean;
   psk_rotated_at: Date | null;
-  is_online: boolean;
-  last_heartbeat: Date | null;
+  status: string;
+  last_seen_at: Date | null;
 }
 
 async function main(): Promise<void> {
   const result = await query<Row>(
     `SELECT
        id,
-       name,
+       site_name,
+       club_name,
        (wifi_psk_encrypted IS NOT NULL) AS has_cloud_psk,
        psk_rotated_at,
-       is_online,
-       last_heartbeat
+       status,
+       last_seen_at
      FROM sites
      WHERE site_type = 'pi'
-     ORDER BY has_cloud_psk ASC, name ASC`
+     ORDER BY has_cloud_psk ASC, site_name ASC`
   );
 
   const rows = result.rows;
   const total = rows.length;
   const bootstrapped = rows.filter((r) => r.has_cloud_psk).length;
-  const online = rows.filter((r) => r.is_online).length;
+  const online = rows.filter((r) => r.status === 'online').length;
 
   // eslint-disable-next-line no-console
   console.log(`\nADR-074 — Hotspot PSK Bootstrap Status`);
@@ -47,11 +49,12 @@ async function main(): Promise<void> {
   // eslint-disable-next-line no-console
   console.table(
     rows.map((r) => ({
-      site: r.name,
+      site: r.site_name,
+      club: r.club_name,
       cloud_psk: r.has_cloud_psk ? 'YES' : '—',
       rotated_at: r.psk_rotated_at ? r.psk_rotated_at.toISOString().slice(0, 16) : '—',
-      online: r.is_online ? 'YES' : '—',
-      last_hb: r.last_heartbeat ? r.last_heartbeat.toISOString().slice(0, 16) : '—',
+      status: r.status,
+      last_seen: r.last_seen_at ? r.last_seen_at.toISOString().slice(0, 16) : '—',
     }))
   );
 
