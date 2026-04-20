@@ -11,6 +11,7 @@ export interface NeoProTemplate extends QueryResultRow {
   thumbnail_url: string | null;
   published: boolean;
   created_by: string | null;
+  site_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -22,6 +23,7 @@ export interface CreateTemplateInput {
   props_schema?: Record<string, unknown>[];
   default_props?: Record<string, unknown>;
   created_by?: string | null;
+  site_id?: string | null;
 }
 
 export interface UpdateTemplateInput {
@@ -46,10 +48,27 @@ class RemotionTemplatesRepository {
     const where = publishedOnly ? 'WHERE published = true' : '';
     const result = await query<NeoProTemplate>(
       `SELECT id, name, composition_id, description, props_schema, default_props,
-              thumbnail_url, published, created_at
+              thumbnail_url, published, site_id, created_at
        FROM neopro_templates
        ${where}
        ORDER BY created_at DESC`
+    );
+    return result.rows;
+  }
+
+  /**
+   * ADR-075 V2 — list templates visible par un site : globaux (site_id IS NULL)
+   * OR scopés à ce site. Utilisé par la gallery côté dashboard club/operator.
+   */
+  async findVisibleForSite(siteId: string, publishedOnly = false): Promise<NeoProTemplate[]> {
+    const publishedClause = publishedOnly ? 'AND published = true' : '';
+    const result = await query<NeoProTemplate>(
+      `SELECT id, name, composition_id, description, props_schema, default_props,
+              thumbnail_url, published, site_id, created_at
+       FROM neopro_templates
+       WHERE (site_id IS NULL OR site_id = $1) ${publishedClause}
+       ORDER BY site_id NULLS LAST, created_at DESC`,
+      [siteId]
     );
     return result.rows;
   }
@@ -72,8 +91,8 @@ class RemotionTemplatesRepository {
 
   async create(input: CreateTemplateInput): Promise<NeoProTemplate> {
     const result = await query<NeoProTemplate>(
-      `INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, created_by, site_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         input.name,
@@ -82,6 +101,7 @@ class RemotionTemplatesRepository {
         JSON.stringify(input.props_schema ?? []),
         JSON.stringify(input.default_props ?? {}),
         input.created_by ?? null,
+        input.site_id ?? null,
       ]
     );
     return result.rows[0];

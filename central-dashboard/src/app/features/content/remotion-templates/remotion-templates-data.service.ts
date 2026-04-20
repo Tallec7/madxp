@@ -55,6 +55,20 @@ export class RemotionTemplatesDataService {
     });
   }
 
+  /**
+   * ADR-075 — Seed placeholders (1 variant + 1 text field + 1 image slot).
+   * Idempotent : ne crée que ce qui manque. Utilisé par l'UI pour débloquer le
+   * flip v1→v2 d'un template legacy sans passer par le wizard complet.
+   */
+  scaffoldStudio(
+    id: string,
+  ): Observable<{
+    templateId: string;
+    created: { variantsCreated: number; textFieldsCreated: number; imageSlotsCreated: number };
+  }> {
+    return this.api.post(`/remotion-templates/${id}/studio/scaffold`, {});
+  }
+
   uploadAsset(templateId: string, file: File, propKey: string): Observable<AssetUploadResult> {
     const formData = new FormData();
     formData.append('file', file);
