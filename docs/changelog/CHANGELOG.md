@@ -1,3 +1,9 @@
+## [3.202.2](https://github.com/Tallec7/neopro/compare/v3.202.1...v3.202.2) (2026-04-20)
+
+### Bug Fixes
+
+- **templates:** harden Studio preview against empty/whitespace video URLs + widen CSP ([#512](https://github.com/Tallec7/neopro/issues/512)) ([327b572](https://github.com/Tallec7/neopro/commit/327b572f69e89ee21f58d6204cea61bdb94c2e69))
+
 ## [3.202.1](https://github.com/Tallec7/neopro/compare/v3.202.0...v3.202.1) (2026-04-20)
 
 ### Bug Fixes
