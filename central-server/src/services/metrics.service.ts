@@ -707,6 +707,30 @@ const templateStudioOperationsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Hotspot PSK (ADR-074) =============
+
+const hotspotBootstrapAttemptsTotal = new Counter({
+  name: 'neopro_hotspot_bootstrap_attempts_total',
+  help: 'Hotspot PSK bootstrap attempts from Pi (ADR-074)',
+  // success | already_bootstrapped | forbidden | decrypt_error | error
+  labelNames: ['status'],
+  registers: [register],
+});
+
+const hotspotRotationAttemptsTotal = new Counter({
+  name: 'neopro_hotspot_rotation_attempts_total',
+  help: 'Hotspot PSK rotation attempts from dashboard (ADR-074)',
+  // success | command_dispatch_failed | error
+  labelNames: ['status'],
+  registers: [register],
+});
+
+const hotspotPskDecryptErrorsTotal = new Counter({
+  name: 'neopro_hotspot_psk_decrypt_errors_total',
+  help: 'Failed decryption attempts of sites.wifi_psk_encrypted — likely cause is HOTSPOT_PSK_ENCRYPTION_KEY rotated without re-encrypt (ADR-074)',
+  registers: [register],
+});
+
 // ============= Service Class =============
 
 class MetricsService {
@@ -1172,6 +1196,24 @@ class MetricsService {
     status: 'success' | 'not_found' | 'conflict' | 'error'
   ): void {
     templateStudioOperationsTotal.inc({ resource, operation, status });
+  }
+
+  // ============= Hotspot PSK (ADR-074) =============
+
+  recordHotspotBootstrapAttempt(
+    status: 'success' | 'already_bootstrapped' | 'forbidden' | 'decrypt_error' | 'error'
+  ): void {
+    hotspotBootstrapAttemptsTotal.inc({ status });
+  }
+
+  recordHotspotRotationAttempt(
+    status: 'success' | 'command_dispatch_failed' | 'error'
+  ): void {
+    hotspotRotationAttemptsTotal.inc({ status });
+  }
+
+  recordHotspotPskDecryptError(): void {
+    hotspotPskDecryptErrorsTotal.inc();
   }
 
   /**

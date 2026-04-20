@@ -116,6 +116,20 @@ if (NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
+// ADR-074 — fail-fast sur env vars critiques en production.
+// Sans HOTSPOT_PSK_ENCRYPTION_KEY toutes les routes /hotspot-config* retournent 500
+// au runtime (bootstrap Pi impossible). On préfère un crash boot explicite au
+// découvrir le manque lors du premier bootstrap en prod (incident 2026-04-20).
+if (NODE_ENV === 'production') {
+  const key = process.env.HOTSPOT_PSK_ENCRYPTION_KEY;
+  if (!key || !/^[0-9a-fA-F]{64}$/.test(key)) {
+    logger.error(
+      'HOTSPOT_PSK_ENCRYPTION_KEY missing or invalid in production — must be 64 hex chars (32 bytes). Generate via `openssl rand -hex 32`. See docs/modops/RUNBOOK_HOTSPOT_PSK_INCIDENT.md.'
+    );
+    process.exit(1);
+  }
+}
+
 // Security headers with Helmet
 // Comprehensive configuration for XSS, clickjacking, and other protections
 app.use(helmet({

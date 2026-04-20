@@ -63,12 +63,41 @@ DATABASE_URL=postgresql://user:password@host:port/dbname
 SUPABASE_URL=https://votre-projet.supabase.co
 SUPABASE_SERVICE_KEY=votre-service-role-key
 ALLOWED_ORIGINS=https://neopro-admin.kalonpartners.bzh
+HOTSPOT_PSK_ENCRYPTION_KEY=64-hex-chars-from-openssl-rand-hex-32
 ```
 
 **Important pour CORS cross-origin :**
 
 - `ALLOWED_ORIGINS` doit contenir l'URL exacte du frontend (sans slash final)
 - Plusieurs origines peuvent être séparées par des virgules
+
+**Important pour le hotspot PSK (ADR-074) :**
+
+- `HOTSPOT_PSK_ENCRYPTION_KEY` est **obligatoire en production** — sans elle, toutes les routes
+  `/api/sites/:id/hotspot-config*` retournent 500 (bootstrap Pi impossible).
+- Générer via `openssl rand -hex 32` (32 bytes = 64 hex chars).
+- **Sauvegarder la clé dans 1Password** avant de la setter sur Railway — la perdre rend
+  tous les PSK chiffrés en DB indéchiffrables (toute la flotte doit être re-bootstrappée).
+- Setter via `railway variables --set "HOTSPOT_PSK_ENCRYPTION_KEY=xxx"` dans le dossier
+  `central-server/` (le CLI doit être linké au projet Railway).
+
+### ⚠️ Railway gotchas (incident 2026-04-20)
+
+Railway peut outrepasser le `CMD` du Dockerfile avec une **Custom Start Command** définie dans
+le service settings. Si elle contient seulement `npm start` (valeur Railway par défaut),
+il faut s'assurer que le script `start` dans `central-server/package.json` chaîne explicitement
+les migrations avant le boot du serveur :
+
+```json
+"start": "node dist/scripts/migrate.js && node --max-old-space-size=512 --expose-gc dist/server.js"
+```
+
+Ne **jamais** compter sur `CMD` dans le Dockerfile pour faire tourner les migrations — Railway
+l'override silencieusement (voir PR #496/#497).
+
+**Extension `uuid-ossp` et schema Railway** : sur Railway, `uuid-ossp` est installée dans
+le schema `extensions` (pas dans le `search_path` par défaut). Les migrations doivent utiliser
+`gen_random_uuid()` (natif PG 13+) au lieu de `uuid_generate_v4()` (voir PR #498).
 
 **Configuration Supabase Storage :**
 

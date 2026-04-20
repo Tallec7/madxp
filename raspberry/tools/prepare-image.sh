@@ -104,6 +104,12 @@ EOF
     sed -i 's/127.0.1.1.*/127.0.1.1\tneopro.local neopro/' /etc/hosts
 
     # Généraliser la configuration WiFi
+    # NB: `wpa_passphrase` ci-dessous est un default de **pré-bootstrap uniquement**.
+    # Depuis ADR-074, le sync-agent écrase `hostapd.conf` au premier contact cloud
+    # avec le PSK cloud-canonical (`sites.wifi_psk_encrypted`). Ce default permet juste
+    # d'exposer le hotspot entre le flash et le premier sync (fenêtre ~quelques minutes).
+    # Ne JAMAIS utiliser ce PSK en production pour un club — il est identique sur toutes
+    # les images golden et donc public.
     cat > /etc/hostapd/hostapd.conf << 'EOF'
 interface=wlan0
 driver=nl80211

@@ -239,10 +239,51 @@ WHERE site_type = 'pi';
 
 ---
 
-## 6. Références
+## 6. Post-ADR-074 : Bootstrap cloud avant rotation
+
+**Depuis le merge ADR-074 (PR #489, 2026-04-20)**, la rotation PSK passe **toujours** par le
+cloud — `hotspotConfigService.encrypt()` + colonne `sites.wifi_psk_encrypted` chiffrée
+AES-256-GCM. La rotation locale SSH directe (section 2.3) est conservée en **fallback uniquement**.
+
+### Pré-requis avant toute rotation post-ADR-074
+
+1. **Clé de chiffrement Railway** : `HOTSPOT_PSK_ENCRYPTION_KEY` (64 hex chars) doit être
+   setée sur le service `central-server` — sauvegardée dans 1Password. Sans elle, toutes
+   les routes `/hotspot-config*` retournent 500. Voir
+   [RUNBOOK_HOTSPOT_PSK_INCIDENT.md](./RUNBOOK_HOTSPOT_PSK_INCIDENT.md) branche A.
+2. **Code ADR-074 déployé sur le Pi** : le sync-agent doit avoir la fonction
+   `syncHotspotFromCloud()` dans `agent.js` et le handler `rotate_psk` dans `commands/`.
+   OTA `build-and-deploy.sh` pousse ces fichiers depuis v3.197+.
+3. **Pi bootstrappée** : `sites.wifi_psk_encrypted IS NOT NULL`. Vérifier via
+   `npm run hotspot:status` (script `central-server/src/scripts/hotspot-bootstrap-status.ts`).
+
+### Flow de rotation post-ADR-074
+
+```
+1. Dashboard admin → POST /api/sites/:id/hotspot-config/rotate { psk: "<NouveauPSK>" }
+2. Cloud → chiffre PSK avec HOTSPOT_PSK_ENCRYPTION_KEY → UPDATE sites SET wifi_psk_encrypted=...
+3. Cloud → commandQueueService.sendOrQueue(id, 'rotate_psk', {})
+4. Pi → syncHotspotFromCloud() → GET /hotspot-config → réécrit hostapd.conf → restart hostapd
+5. Cloud met psk_rotated_at = NOW()
+```
+
+### Troubleshooting rotation bloquée
+
+| Symptôme                                                 | Probable cause                                   | Runbook                                                                         |
+| -------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `POST /rotate` → 500 muet                                | `HOTSPOT_PSK_ENCRYPTION_KEY` manquante           | [RUNBOOK_HOTSPOT_PSK_INCIDENT.md#branche-a](./RUNBOOK_HOTSPOT_PSK_INCIDENT.md)  |
+| `POST /rotate` → 200 mais Pi inchangé                    | Commande `rotate_psk` pas propagée               | [RUNBOOK_HOTSPOT_PSK_INCIDENT.md#branche-c](./RUNBOOK_HOTSPOT_PSK_INCIDENT.md)  |
+| `GET /hotspot-config` → 401 depuis le Pi                 | Route collision ADR-076 (regression possible)    | Vérifier `sites.routes.ts` ne remonte pas `/:id/hotspot-config`                 |
+| Dashboard affiche "non bootstrappé" mais colonne remplie | Mauvaise clé de chiffrement (PSK indéchiffrable) | [RUNBOOK_HOTSPOT_PSK_INCIDENT.md#branche-a3](./RUNBOOK_HOTSPOT_PSK_INCIDENT.md) |
+
+---
+
+## 7. Références
 
 - ADR : [ADR-073](../adr/ADR-073-hotspot-security-hardening.md)
+- ADR : [ADR-074](../adr/ADR-074-hotspot-psk-single-source-of-truth.md)
 - Modop support : [MODOP_SUPPORT_PSK.md](../guides/MODOP_SUPPORT_PSK.md)
 - Modop club : [MODOP_CLUB_PSK.md](../guides/MODOP_CLUB_PSK.md)
-- Code service : [raspberry/admin/services/hotspot-dashboard.service.js](../../raspberry/admin/services/hotspot-dashboard.service.js)
+- Runbook hotspot incidents : [RUNBOOK_HOTSPOT_PSK_INCIDENT.md](./RUNBOOK_HOTSPOT_PSK_INCIDENT.md)
 - Runbook urgence : [RUNBOOK_URGENCE.md](RUNBOOK_URGENCE.md)
+- Code service : [raspberry/admin/services/hotspot-dashboard.service.js](../../raspberry/admin/services/hotspot-dashboard.service.js)

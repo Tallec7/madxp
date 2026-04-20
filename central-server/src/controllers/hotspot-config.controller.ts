@@ -4,6 +4,7 @@ import { AuthRequest } from '../types';
 import { SiteAuthRequest } from '../middleware/auth';
 import { hotspotConfigRepository } from '../repositories/hotspot-config.repository';
 import { commandQueueService } from '../services/command-queue.service';
+import { metricsService } from '../services/metrics.service';
 import logger from '../config/logger';
 
 /**
@@ -15,6 +16,11 @@ import logger from '../config/logger';
  *   POST /api/sites/:id/hotspot-config/bootstrap   → Pi one-shot upload of existing local PSK
  *   POST /api/sites/:id/hotspot-config/rotate      → admin dashboard rotates PSK
  */
+
+const isDecryptError = (err: unknown): boolean => {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /unable to authenticate data|Unsupported state|bad decrypt|wrong final block length/i.test(msg);
+};
 
 export const getHotspotConfig = async (req: SiteAuthRequest, res: Response): Promise<void> => {
   try {
@@ -34,6 +40,9 @@ export const getHotspotConfig = async (req: SiteAuthRequest, res: Response): Pro
       rotatedAt: config.rotatedAt,
     });
   } catch (error) {
+    if (isDecryptError(error)) {
+      metricsService.recordHotspotPskDecryptError();
+    }
     logger.error('getHotspotConfig error', { error, siteId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -54,6 +63,9 @@ export const getHotspotConfigAdminView = async (req: AuthRequest, res: Response)
       rotatedAt: config.rotatedAt,
     });
   } catch (error) {
+    if (isDecryptError(error)) {
+      metricsService.recordHotspotPskDecryptError();
+    }
     logger.error('getHotspotConfigAdminView error', { error, siteId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -63,6 +75,7 @@ export const bootstrapHotspotConfig = async (req: SiteAuthRequest, res: Response
   try {
     const { id } = req.params;
     if (req.siteId !== id) {
+      metricsService.recordHotspotBootstrapAttempt('forbidden');
       res.status(403).json({ error: 'API key does not match site' });
       return;
     }
@@ -70,6 +83,7 @@ export const bootstrapHotspotConfig = async (req: SiteAuthRequest, res: Response
     const stored = await hotspotConfigRepository.bootstrap(id, ssid, psk);
     if (!stored) {
       const existing = await hotspotConfigRepository.findBySiteId(id);
+      metricsService.recordHotspotBootstrapAttempt('already_bootstrapped');
       res.status(409).json({
         error: 'Already bootstrapped',
         ssid: existing?.ssid,
@@ -77,9 +91,16 @@ export const bootstrapHotspotConfig = async (req: SiteAuthRequest, res: Response
       });
       return;
     }
+    metricsService.recordHotspotBootstrapAttempt('success');
     logger.info('Hotspot config bootstrapped (ADR-074)', { siteId: id, ssid });
     res.status(201).json({ success: true });
   } catch (error) {
+    if (isDecryptError(error)) {
+      metricsService.recordHotspotPskDecryptError();
+      metricsService.recordHotspotBootstrapAttempt('decrypt_error');
+    } else {
+      metricsService.recordHotspotBootstrapAttempt('error');
+    }
     logger.error('bootstrapHotspotConfig error', { error, siteId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -99,17 +120,21 @@ export const rotateHotspotConfig = async (req: AuthRequest, res: Response): Prom
 
     // ADR-074 — notify the Pi so it re-pulls the cloud config and rewrites hostapd.conf.
     // Use sendOrQueue so offline Pi get it on next reconnect (handleAuthenticated also syncs).
+    let dispatchStatus: 'success' | 'command_dispatch_failed' = 'success';
     try {
       await commandQueueService.sendOrQueue(id, 'rotate_psk', {});
     } catch (cmdErr) {
+      dispatchStatus = 'command_dispatch_failed';
       logger.warn('rotate_psk dispatch failed (rotation persisted)', {
         siteId: id,
         error: cmdErr instanceof Error ? cmdErr.message : String(cmdErr),
       });
     }
 
+    metricsService.recordHotspotRotationAttempt(dispatchStatus);
     res.json({ success: true, psk, generated: !providedPsk });
   } catch (error) {
+    metricsService.recordHotspotRotationAttempt('error');
     logger.error('rotateHotspotConfig error', { error, siteId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
