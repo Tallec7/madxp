@@ -1,3 +1,9 @@
+# [3.197.0](https://github.com/Tallec7/neopro/compare/v3.196.3...v3.197.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-074 Template Studio v2 — backbone data-driven (Sprint 1) ([#493](https://github.com/Tallec7/neopro/issues/493)) ([8b0aa16](https://github.com/Tallec7/neopro/commit/8b0aa16905e8f619d72a2ac5c156da782d2ada3c))
+
 ## [3.196.3](https://github.com/Tallec7/neopro/compare/v3.196.2...v3.196.3) (2026-04-20)
 
 ### Bug Fixes
