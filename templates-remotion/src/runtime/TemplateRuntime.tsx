@@ -65,7 +65,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {variant ? (
+      {variant && variant.backgroundVideoUrl ? (
         <OffthreadVideo
           src={variant.backgroundVideoUrl}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -73,6 +73,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
       ) : null}
 
       {sortedLayers.map((layer) => {
+        if (!layer.videoUrl) return null;
         const clipPath =
           `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ` +
           `${layer.mask.bottom * 100}% ${layer.mask.left * 100}%)`;
