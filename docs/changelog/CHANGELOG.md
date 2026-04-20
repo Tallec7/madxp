@@ -1,3 +1,9 @@
+## [3.196.1](https://github.com/Tallec7/neopro/compare/v3.196.0...v3.196.1) (2026-04-20)
+
+### Performance Improvements
+
+- **metrics:** throttle Pi metrics DB persistence to 5min/site ([#488](https://github.com/Tallec7/neopro/issues/488)) ([d1acb70](https://github.com/Tallec7/neopro/commit/d1acb700b024fd3dc69076ac1f551e1a9c587cac))
+
 # [3.196.0](https://github.com/Tallec7/neopro/compare/v3.195.0...v3.196.0) (2026-04-20)
 
 ### Features
