@@ -1,3 +1,9 @@
+# [3.202.0](https://github.com/Tallec7/neopro/compare/v3.201.0...v3.202.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 visual schema_version toggle (super_admin) ([#510](https://github.com/Tallec7/neopro/issues/510)) ([eb35d83](https://github.com/Tallec7/neopro/commit/eb35d836a8b8159c973966f2e23c2c5d4cc34da0))
+
 # [3.201.0](https://github.com/Tallec7/neopro/compare/v3.200.4...v3.201.0) (2026-04-20)
 
 ### Features
