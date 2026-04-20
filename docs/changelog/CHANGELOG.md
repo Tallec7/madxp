@@ -1,3 +1,9 @@
+## [3.200.3](https://github.com/Tallec7/neopro/compare/v3.200.2...v3.200.3) (2026-04-20)
+
+### Bug Fixes
+
+- **ci:** replace actions/github-script with gh CLI in frontend-health ([ed85133](https://github.com/Tallec7/neopro/commit/ed8513366e48eee4c511875bd168564254050057))
+
 ## [3.200.2](https://github.com/Tallec7/neopro/compare/v3.200.1...v3.200.2) (2026-04-20)
 
 ### Bug Fixes
