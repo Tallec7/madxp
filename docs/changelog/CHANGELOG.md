@@ -1,3 +1,9 @@
+## [3.200.2](https://github.com/Tallec7/neopro/compare/v3.200.1...v3.200.2) (2026-04-20)
+
+### Bug Fixes
+
+- **ci:** use npm install for central-dashboard in release.yml ([#508](https://github.com/Tallec7/neopro/issues/508)) ([00fda8a](https://github.com/Tallec7/neopro/commit/00fda8a7f5eb44b1849c7d03ad702290a75a1a60)), closes [#507](https://github.com/Tallec7/neopro/issues/507)
+
 ## [3.200.1](https://github.com/Tallec7/neopro/compare/v3.200.0...v3.200.1) (2026-04-20)
 
 ### Bug Fixes
