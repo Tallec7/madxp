@@ -1,3 +1,9 @@
+## [3.207.2](https://github.com/Tallec7/neopro/compare/v3.207.1...v3.207.2) (2026-04-20)
+
+### Bug Fixes
+
+- **templates:** allow admin/super_admin to render unpublished templates + silence Remotion license warning ([#521](https://github.com/Tallec7/neopro/issues/521)) ([1acbd47](https://github.com/Tallec7/neopro/commit/1acbd471a6925482272e8e3fa29f796eacbf8f51))
+
 ## [3.207.1](https://github.com/Tallec7/neopro/compare/v3.207.0...v3.207.1) (2026-04-20)
 
 ### Bug Fixes
