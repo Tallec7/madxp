@@ -1,3 +1,10 @@
+## [3.198.2](https://github.com/Tallec7/neopro/compare/v3.198.1...v3.198.2) (2026-04-20)
+
+### Bug Fixes
+
+- **saas:** decode JWT to extract real filename for analytics ([#503](https://github.com/Tallec7/neopro/issues/503)) ([789bcf1](https://github.com/Tallec7/neopro/commit/789bcf141269ec03f21e9fc58dd102acce943925))
+- **tv:** avoid loop flash during manual→manual video transitions ([#505](https://github.com/Tallec7/neopro/issues/505)) ([c590999](https://github.com/Tallec7/neopro/commit/c5909996a9ff9ae8ea3b7bea15c613fa716ff4c3))
+
 ## [3.198.1](https://github.com/Tallec7/neopro/compare/v3.198.0...v3.198.1) (2026-04-20)
 
 ### Bug Fixes
