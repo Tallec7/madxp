@@ -1,3 +1,9 @@
+# [3.196.0](https://github.com/Tallec7/neopro/compare/v3.195.0...v3.196.0) (2026-04-20)
+
+### Features
+
+- **hotspot:** ADR-074 — cloud-canonical PSK (phases 1-5a) ([#489](https://github.com/Tallec7/neopro/issues/489)) ([0f55be8](https://github.com/Tallec7/neopro/commit/0f55be8fb442129f4d20cbe15c6460641d89618f))
+
 # [3.195.0](https://github.com/Tallec7/neopro/compare/v3.194.1...v3.195.0) (2026-04-19)
 
 ### Features
