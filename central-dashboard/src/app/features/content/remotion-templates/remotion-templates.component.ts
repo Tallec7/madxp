@@ -10,14 +10,18 @@ import { TemplatePropsFormComponent } from './template-props-form.component';
 import { TemplatePreviewComponent } from './template-preview.component';
 import { TemplateSchemaEditorComponent } from './template-schema-editor.component';
 import { TemplateVersionsComponent } from './template-versions.component';
+import { StudioV2EditorComponent } from './studio-v2/studio-v2-editor.component';
 import type {
   RemotionTemplate,
   RenderJobPhase,
   RenderJobSnapshot,
   RenderResult,
+  RenderTemplateRequestV2,
   TemplatePropDef,
+  TemplateStudioView,
   TemplateVersion,
 } from './remotion-templates.types';
+import { isV2Template } from './remotion-templates.types';
 
 /**
  * Orchestrateur de la page Templates Remotion.
@@ -36,6 +40,7 @@ import type {
     TemplatePreviewComponent,
     TemplateSchemaEditorComponent,
     TemplateVersionsComponent,
+    StudioV2EditorComponent,
   ],
   templateUrl: './remotion-templates.component.html',
   styleUrls: ['./remotion-templates.component.scss'],
@@ -63,6 +68,12 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private currentJobId: string | null = null;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly POLL_INTERVAL_MS = 2000;
+
+  // ADR-075 Sprint 2 — studio v2 state
+  studioView: TemplateStudioView | null = null;
+  studioLoading = false;
+  renderPayloadV2: RenderTemplateRequestV2 | null = null;
+  readyV2 = false;
 
   // Admin UX (ADR-055)
   schemaEditorOpen = false;
@@ -109,6 +120,39 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.imageFiles = {};
     this.assetUploading = {};
     this.videoTitle = tpl.name;
+    this.studioView = null;
+    this.renderPayloadV2 = null;
+    this.readyV2 = false;
+
+    if (isV2Template(tpl)) {
+      this.loadStudioView(tpl.id);
+    }
+  }
+
+  get isV2(): boolean {
+    return !!this.selectedTemplate && isV2Template(this.selectedTemplate);
+  }
+
+  private loadStudioView(templateId: string): void {
+    this.studioLoading = true;
+    this.dataService.getStudioView(templateId).subscribe({
+      next: (view) => {
+        this.studioView = view;
+        this.studioLoading = false;
+      },
+      error: () => {
+        this.studioLoading = false;
+        this.notifications.error('Impossible de charger la vue Studio');
+      },
+    });
+  }
+
+  onV2PayloadChange(payload: RenderTemplateRequestV2): void {
+    this.renderPayloadV2 = payload;
+  }
+
+  onV2ReadyChange(ready: boolean): void {
+    this.readyV2 = ready;
   }
 
   closePanel(): void {
@@ -180,6 +224,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
 
   canRender(): boolean {
     if (!this.selectedTemplate) return false;
+    if (this.isV2) return this.readyV2 && !!this.renderPayloadV2;
     return this.selectedTemplate.props_schema
       .filter((p) => p.required && (!p.admin_only || this.isAdmin))
       .every((p) => this.isPropFilled(p));
@@ -200,25 +245,35 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
     this.renderStatusMessage = 'Envoi au serveur...';
     this.lastResult = null;
 
+    const title = this.videoTitle || this.selectedTemplate.name;
+
+    const onJob = (job: { job_id: string; progress: number }): void => {
+      this.currentJobId = job.job_id;
+      this.renderProgress = Math.max(5, job.progress);
+      this.renderStatusMessage = 'Render en file d\'attente...';
+      this.pollJob();
+    };
+    const onErr = (err: { error?: { detail?: string } }): void => {
+      this.rendering = false;
+      this.notifications.error(err?.error?.detail || 'Erreur lors du render');
+    };
+
+    if (this.isV2 && this.renderPayloadV2) {
+      this.dataService
+        .enqueueRenderV2(this.selectedTemplate.id, this.renderPayloadV2, title)
+        .subscribe({ next: onJob, error: onErr });
+      return;
+    }
+
     // Remplace les File images par leur dataURL pour les props finales.
     const props: Record<string, unknown> = { ...this.propValues };
     for (const [key, file] of Object.entries(this.imageFiles)) {
       props[key] = await this.fileToDataUrl(file);
     }
 
-    const title = this.videoTitle || this.selectedTemplate.name;
-    this.dataService.enqueueRender(this.selectedTemplate.id, props, title).subscribe({
-      next: (job) => {
-        this.currentJobId = job.job_id;
-        this.renderProgress = Math.max(5, job.progress);
-        this.renderStatusMessage = 'Render en file d\'attente...';
-        this.pollJob();
-      },
-      error: (err) => {
-        this.rendering = false;
-        this.notifications.error(err?.error?.detail || 'Erreur lors du render');
-      },
-    });
+    this.dataService
+      .enqueueRender(this.selectedTemplate.id, props, title)
+      .subscribe({ next: onJob, error: onErr });
   }
 
   private pollJob(): void {

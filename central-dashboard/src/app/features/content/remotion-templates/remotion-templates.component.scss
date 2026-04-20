@@ -92,6 +92,51 @@
   grid-template-columns: 320px 1fr;
   gap: 32px;
   align-items: start;
+
+  &--v2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.v2-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.v2-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .v2-title-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #4b5563;
+    white-space: nowrap;
+  }
+
+  .v2-title-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+
+    &:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+  }
+}
+
+.studio-loading {
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .props-column {
