@@ -36,6 +36,25 @@ export class RemotionTemplatesDataService {
   }
 
   /**
+   * ADR-077 — Upload image utilisateur (JPEG/PNG/WebP ≤ 10Mo) accessible à tout
+   * rôle authentifié (pas uniquement super_admin). L'URL retournée doit être
+   * injectée dans le payload render v2 sous `imageUploads[slotKey]`.
+   */
+  uploadUserImage(
+    templateId: string,
+    file: File,
+    slotKey: string,
+  ): Observable<{ url: string; slot_key: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('slot_key', slotKey);
+    return this.api.upload<{ url: string; slot_key: string }>(
+      `/remotion-templates/${templateId}/user-uploads`,
+      formData,
+    );
+  }
+
+  /**
    * Enqueue an async render job (ADR-054). Returns 202 with job_id; use
    * `pollRenderJob` to follow progress.
    */

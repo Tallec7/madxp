@@ -363,3 +363,57 @@ describe('Template Studio v2 (ADR-075)', () => {
     }
   });
 });
+
+describe('Template Studio v2 — user image uploads (ADR-077)', () => {
+  const upload = readFile('middleware/upload.ts');
+  const rateLimit = readFile('middleware/user-rate-limit.ts');
+  const validation = readFile('middleware/validation.ts');
+  const controller = readFile('controllers/remotion-templates.controller.ts');
+  const routes = readFile('routes/remotion-templates.routes.ts');
+
+  it('multer config uploadUserTemplateImage filters image/* with 10MB cap', () => {
+    expect(upload).toMatch(/uploadUserTemplateImage/);
+    expect(upload).toMatch(/image\/jpeg/);
+    expect(upload).toMatch(/image\/png/);
+    expect(upload).toMatch(/image\/webp/);
+    // 10 MB limit per ADR-077
+    expect(upload).toMatch(/10\s*\*\s*1024\s*\*\s*1024/);
+  });
+
+  it('templateUserUploadRateLimit caps to 20/hour', () => {
+    expect(rateLimit).toMatch(/templateUserUploadRateLimit/);
+    expect(rateLimit).toMatch(/60\s*\*\s*60\s*\*\s*1000/);
+    expect(rateLimit).toMatch(/template-user-upload/);
+  });
+
+  it('templateUserUploadBody Joi schema validates slot_key', () => {
+    expect(validation).toMatch(/templateUserUploadBody/);
+    expect(validation).toMatch(/slot_key/);
+  });
+
+  it('controller exposes uploadUserImageAsset with audit log', () => {
+    expect(controller).toMatch(/export const uploadUserImageAsset\b/);
+    expect(controller).toMatch(/template_user_image_uploaded/);
+    // FTP namespacing per ADR-077: template-assets/user-uploads/{siteId}/{userId}/
+    expect(controller).toMatch(/template-assets\/user-uploads/);
+  });
+
+  it('routes expose POST /:id/user-uploads open to club/operator/admin/super_admin', () => {
+    expect(routes).toMatch(/router\.post\(\s*['"]\/:id\/user-uploads['"]/);
+    expect(routes).toMatch(/templateUserUploadRateLimit/);
+    expect(routes).toMatch(/uploadUserTemplateImage\.single\(['"]file['"]\)/);
+    expect(routes).toMatch(/validate\(schemas\.templateUserUploadBody\)/);
+    // Must be open to all authenticated roles (ADR-077), not super_admin-only
+    const routeBlock = routes.slice(routes.indexOf("/:id/user-uploads"));
+    expect(routeBlock.slice(0, 500)).toMatch(/requireRole\([^)]*['"]club['"]/);
+  });
+
+  it('ADR-077 doc is checked in and listed in README', () => {
+    const adrDir = path.join(repoRoot, 'docs', 'adr');
+    expect(
+      fs.existsSync(path.join(adrDir, 'ADR-077-template-studio-preview-and-uploads.md'))
+    ).toBe(true);
+    const readme = fs.readFileSync(path.join(adrDir, 'README.md'), 'utf8');
+    expect(readme).toMatch(/ADR-077/);
+  });
+});
