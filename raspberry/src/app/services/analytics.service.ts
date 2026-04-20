@@ -427,6 +427,22 @@ export class AnalyticsService {
   }
 
   private getFilename(path: string): string {
+    // ADR-068: SaaS URLs de type `/api/videos/stream?token=<JWT>` — décoder le
+    // payload pour retrouver le vrai filename (sinon on envoie 300+ chars au
+    // serveur et video_plays.video_filename VARCHAR(255) explose en 500).
+    const tokenMatch = path.match(/\/api\/videos\/stream\?token=([^&]+)/);
+    if (tokenMatch) {
+      try {
+        const payloadB64 = decodeURIComponent(tokenMatch[1]).split('.')[1];
+        const payload = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+        if (typeof payload.path === 'string') {
+          const parts = payload.path.split('/');
+          return parts[parts.length - 1];
+        }
+      } catch {
+        // fallback sur l'extraction naïve
+      }
+    }
     const parts = path.split('/');
     return parts[parts.length - 1];
   }
