@@ -10,12 +10,12 @@
     <div class="vcm__form">
       <div class="vcm__form-row">
         <input
+          #nameInput
           class="vcm__input"
           type="text"
           placeholder="Nom de la catégorie"
           [(ngModel)]="form.name"
           (keyup.enter)="save()"
-          autofocus
         />
         <select class="vcm__select" [(ngModel)]="form.type" (ngModelChange)="onTypeChange()">
           @for (opt of typeOptions; track opt) {
