@@ -7,10 +7,27 @@ import type {
   RenderJobEnqueued,
   RenderJobSnapshot,
   RenderTemplateRequestV2,
+  TemplateImageSlot,
+  TemplateLayer,
   TemplatePropDef,
   TemplateStudioView,
+  TemplateTextField,
+  TemplateVariant,
   TemplateVersion,
 } from './remotion-templates.types';
+
+/** Payload create variant — id + templateId sont injectés par le serveur. */
+export type TemplateVariantCreate = Omit<TemplateVariant, 'id' | 'templateId'>;
+export type TemplateVariantUpdate = Partial<TemplateVariantCreate>;
+
+export type TemplateLayerCreate = Omit<TemplateLayer, 'id' | 'templateId'>;
+export type TemplateLayerUpdate = Partial<TemplateLayerCreate>;
+
+export type TemplateTextFieldCreate = Omit<TemplateTextField, 'id' | 'templateId'>;
+export type TemplateTextFieldUpdate = Partial<TemplateTextFieldCreate>;
+
+export type TemplateImageSlotCreate = Omit<TemplateImageSlot, 'id' | 'templateId'>;
+export type TemplateImageSlotUpdate = Partial<TemplateImageSlotCreate>;
 
 /**
  * Wrap des appels API `/api/remotion-templates/*`.
@@ -87,6 +104,16 @@ export class RemotionTemplatesDataService {
     return this.api.patch<RemotionTemplate>(`/remotion-templates/${id}`, patch);
   }
 
+  createTemplate(payload: {
+    name: string;
+    composition_id: string;
+    description?: string | null;
+    props_schema?: TemplatePropDef[];
+    default_props?: Record<string, unknown>;
+  }): Observable<RemotionTemplate> {
+    return this.api.post<RemotionTemplate>('/remotion-templates', payload);
+  }
+
   duplicateTemplate(id: string, name?: string): Observable<RemotionTemplate> {
     return this.api.post<RemotionTemplate>(`/remotion-templates/${id}/duplicate`, name ? { name } : {});
   }
@@ -125,5 +152,95 @@ export class RemotionTemplatesDataService {
       props: payload,
       title,
     });
+  }
+
+  // ── ADR-075 Template Studio v2 — Admin CRUD (super_admin only) ────────────
+
+  createVariant(templateId: string, payload: TemplateVariantCreate): Observable<TemplateVariant> {
+    return this.api.post<TemplateVariant>(`/remotion-templates/${templateId}/variants`, payload);
+  }
+
+  updateVariant(
+    templateId: string,
+    variantId: string,
+    patch: TemplateVariantUpdate,
+  ): Observable<TemplateVariant> {
+    return this.api.patch<TemplateVariant>(
+      `/remotion-templates/${templateId}/variants/${variantId}`,
+      patch,
+    );
+  }
+
+  deleteVariant(templateId: string, variantId: string): Observable<void> {
+    return this.api.delete<void>(`/remotion-templates/${templateId}/variants/${variantId}`);
+  }
+
+  createLayer(templateId: string, payload: TemplateLayerCreate): Observable<TemplateLayer> {
+    return this.api.post<TemplateLayer>(`/remotion-templates/${templateId}/layers`, payload);
+  }
+
+  updateLayer(
+    templateId: string,
+    layerId: string,
+    patch: TemplateLayerUpdate,
+  ): Observable<TemplateLayer> {
+    return this.api.patch<TemplateLayer>(
+      `/remotion-templates/${templateId}/layers/${layerId}`,
+      patch,
+    );
+  }
+
+  deleteLayer(templateId: string, layerId: string): Observable<void> {
+    return this.api.delete<void>(`/remotion-templates/${templateId}/layers/${layerId}`);
+  }
+
+  createTextField(
+    templateId: string,
+    payload: TemplateTextFieldCreate,
+  ): Observable<TemplateTextField> {
+    return this.api.post<TemplateTextField>(
+      `/remotion-templates/${templateId}/text-fields`,
+      payload,
+    );
+  }
+
+  updateTextField(
+    templateId: string,
+    fieldId: string,
+    patch: TemplateTextFieldUpdate,
+  ): Observable<TemplateTextField> {
+    return this.api.patch<TemplateTextField>(
+      `/remotion-templates/${templateId}/text-fields/${fieldId}`,
+      patch,
+    );
+  }
+
+  deleteTextField(templateId: string, fieldId: string): Observable<void> {
+    return this.api.delete<void>(`/remotion-templates/${templateId}/text-fields/${fieldId}`);
+  }
+
+  createImageSlot(
+    templateId: string,
+    payload: TemplateImageSlotCreate,
+  ): Observable<TemplateImageSlot> {
+    return this.api.post<TemplateImageSlot>(
+      `/remotion-templates/${templateId}/image-slots`,
+      payload,
+    );
+  }
+
+  updateImageSlot(
+    templateId: string,
+    slotId: string,
+    patch: TemplateImageSlotUpdate,
+  ): Observable<TemplateImageSlot> {
+    return this.api.patch<TemplateImageSlot>(
+      `/remotion-templates/${templateId}/image-slots/${slotId}`,
+      patch,
+    );
+  }
+
+  deleteImageSlot(templateId: string, slotId: string): Observable<void> {
+    return this.api.delete<void>(`/remotion-templates/${templateId}/image-slots/${slotId}`);
   }
 }
