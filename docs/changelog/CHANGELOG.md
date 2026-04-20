@@ -1,3 +1,9 @@
+## [3.197.1](https://github.com/Tallec7/neopro/compare/v3.197.0...v3.197.1) (2026-04-20)
+
+### Bug Fixes
+
+- **hotspot:** resolve route collision on /api/sites/:id/hotspot-config (ADR-076) ([#495](https://github.com/Tallec7/neopro/issues/495)) ([a5468e5](https://github.com/Tallec7/neopro/commit/a5468e59c4916bfe1b2aeddf020cbcaedd0645af))
+
 # [3.197.0](https://github.com/Tallec7/neopro/compare/v3.196.3...v3.197.0) (2026-04-20)
 
 ### Features
