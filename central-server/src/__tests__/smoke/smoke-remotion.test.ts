@@ -223,7 +223,7 @@ describe('Remotion — ADR docs exist', () => {
   });
 });
 
-describe('Template Studio v2 (ADR-074)', () => {
+describe('Template Studio v2 (ADR-075)', () => {
   const migration = readFile('scripts/migrations/add-template-studio-v2.sql');
   const types = readFile('types/template-studio.types.ts');
   const repo = readFile('repositories/template-studio.repository.ts');

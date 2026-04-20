@@ -154,7 +154,7 @@ POST   /api/remotion-templates/:id/versions/:versionId/restore → applique un a
 
 **Versions trigger (ADR-055)** : `trg_neopro_templates_snapshot` capture OLD automatiquement à chaque UPDATE de `props_schema`/`default_props` — la route restore est donc une simple UPDATE qui déclenche elle-même un snapshot (zéro perte possible).
 
-## Template Studio v2 (ADR-074 — super_admin only)
+## Template Studio v2 (ADR-075 — super_admin only)
 
 ```
 GET    /api/remotion-templates/:id/studio                  → vue V2 consolidée (variants + layers + text_fields + image_slots) — 404 si schema_version=1
@@ -223,7 +223,7 @@ Pi Analytics: 500 req/min (par IP)
 - Remettre `import ... from '@remotion/renderer'` dans `remotion-templates.controller.ts` (le renderer vit uniquement dans `remotion-render-worker.service.ts` depuis ADR-054 — sinon le controller redevient synchrone). Smoke test enforced.
 - Supprimer `failStaleRunningJobs(10)` du boot du worker (sans ça, un job claimed par un process mort reste `running` ad vitam → le user ne peut pas retry). Smoke test enforced.
 - Ajouter `PATCH/POST /:id/duplicate/versions/restore` sans `requireRole('admin'|'super_admin')` (l'édition du schéma template impacte tous les clubs — jamais accessible aux rôles club/viewer). Smoke test enforced.
-- Monter `templateStudioRoutes` APRÈS `remotionTemplatesRoutes` dans `server.ts` (ADR-074) — les sous-ressources `/:id/variants`, `/:id/layers`, `/:id/text-fields`, `/:id/image-slots` seraient capturées par `/:id` du legacy et retourneraient 404/403 mystérieux. Smoke test enforced.
+- Monter `templateStudioRoutes` APRÈS `remotionTemplatesRoutes` dans `server.ts` (ADR-075) — les sous-ressources `/:id/variants`, `/:id/layers`, `/:id/text-fields`, `/:id/image-slots` seraient capturées par `/:id` du legacy et retourneraient 404/403 mystérieux. Smoke test enforced.
 - Ajouter un endpoint Template Studio v2 sans `requireRole('super_admin')` (l'édition de la composition d'un template impacte toute la flotte — jamais accessible aux rôles admin/club/viewer). Smoke test enforced.
 - Ajouter une valeur au champ `animation` de `template_text_fields` sans updater les 3 endroits (CHECK constraint SQL + union `AnimationPreset` + `computeAnimation()` dans `animations.ts`) — sinon crash runtime à la lecture d'un row avec preset inconnu.
 - Supprimer le trigger `trg_neopro_templates_snapshot` ou remplacer l'audit trail par un INSERT manuel côté repository (un futur endpoint qui oublie le snapshot perd silencieusement l'historique — le trigger DB garantit la capture quelle que soit la route — ADR-055). Smoke test enforced.

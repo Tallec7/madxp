@@ -38,11 +38,28 @@ Auto-refresh toutes les 15 s quand l'onglet est actif.
 ## 3. Rotater la PSK (cas nominal — dashboard distant)
 
 1. Onglet **Network** → bouton **Rotate PSK**
-2. Laisser le champ vide pour une PSK auto-générée (20 chars alphanum + suffixe `Neo`), ou saisir une PSK custom (8-63 chars, pas de `\n|&;`)
+2. **Saisir une PSK custom memorable** (voir pattern recommandé ci-dessous). La PSK auto-générée (20 chars alphanum) est **déconseillée pour les clubs** — trop complexe à saisir sur un smartphone par le staff, source d'erreurs et d'appels support
 3. Cliquer **Confirmer**
 4. Le dashboard affiche la nouvelle PSK + bouton **Copier**
 5. **Noter la PSK immédiatement** — elle n'est plus affichée ensuite (consultable uniquement en SSH sur le Pi)
 6. Communiquer la nouvelle PSK au contact du club
+
+### Pattern PSK recommandé
+
+`<NomClubAbbrev><Année>!` — unique par club, lisible, 12-22 chars.
+
+Exemples :
+
+| Club                          | PSK                     |
+| ----------------------------- | ----------------------- |
+| NLF Handball                  | `NantesLoireFeminin26!` |
+| AS Saint Rogatien             | `SaintRogatien26!`      |
+| Corsaires de Nantes           | `CorsairesNantes26!`    |
+| Nantes Atlantique Rink Hockey | `NantesRinkHockey26!`   |
+
+Contraintes techniques (validées par l'API) : 8-63 chars, ASCII imprimable, pas de `\n|&;`.
+
+> **Exception** : pour une nouvelle installation où un sticker PSK est collé sur le boîtier, l'auto-gen 20-char reste acceptable (le staff n'a pas à mémoriser / resaisir la PSK en dehors du premier pairing).
 
 Ce que fait le backend (`hotspot-dashboard.service.js:rotatePsk`) :
 

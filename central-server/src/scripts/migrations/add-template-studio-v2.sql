@@ -1,4 +1,4 @@
--- Migration: Template Studio v2 — ADR-074
+-- Migration: Template Studio v2 — ADR-075
 -- Extension du modèle neopro_templates pour supporter le compositeur multi-couches
 -- data-driven : variantes bg + couches alpha + slots texte + slots image.
 --
@@ -14,7 +14,7 @@ ALTER TABLE neopro_templates
   ADD COLUMN IF NOT EXISTS fps              INT          NOT NULL DEFAULT 30;
 
 COMMENT ON COLUMN neopro_templates.schema_version IS
-  'ADR-074 : 1 = legacy (composition codée), 2 = data-driven (couches+slots)';
+  'ADR-075 : 1 = legacy (composition codée), 2 = data-driven (couches+slots)';
 
 -- 2) Variantes (vidéos bg opaques, même structure, couleurs différentes)
 CREATE TABLE IF NOT EXISTS template_variants (
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS template_variants (
   created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE template_variants IS 'ADR-074 : variantes couleur/ton d''un template (ex: rouge/bleu/vert)';
+COMMENT ON TABLE template_variants IS 'ADR-075 : variantes couleur/ton d''un template (ex: rouge/bleu/vert)';
 
 -- 3) Couches alpha (MOV empilés en Z)
 CREATE TABLE IF NOT EXISTS template_layers (
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS template_layers (
   CHECK (mask_right  BETWEEN 0 AND 1)
 );
 
-COMMENT ON TABLE template_layers IS 'ADR-074 : couches alpha empilées en Z (Gabin AE → MOV)';
+COMMENT ON TABLE template_layers IS 'ADR-075 : couches alpha empilées en Z (Gabin AE → MOV)';
 
 -- 4) Champs texte (slots éditables par l'user)
 CREATE TABLE IF NOT EXISTS template_text_fields (
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS template_text_fields (
   CHECK (max_width  BETWEEN 0 AND 1)
 );
 
-COMMENT ON TABLE template_text_fields IS 'ADR-074 : champs texte éditables par l''user (position + timing + animation)';
+COMMENT ON TABLE template_text_fields IS 'ADR-075 : champs texte éditables par l''user (position + timing + animation)';
 
 -- 5) Slots image (logos, photos joueur...)
 CREATE TABLE IF NOT EXISTS template_image_slots (
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS template_image_slots (
   CHECK (height BETWEEN 0 AND 1)
 );
 
-COMMENT ON TABLE template_image_slots IS 'ADR-074 : slots image éditables (position + dimensions + timing)';
+COMMENT ON TABLE template_image_slots IS 'ADR-075 : slots image éditables (position + dimensions + timing)';
 
 -- 6) Indexes
 CREATE INDEX IF NOT EXISTS idx_variants_template ON template_variants(template_id, sort_order);

@@ -1,6 +1,6 @@
 # PROP-014 — Template Studio (interne → public freemium)
 
-> **⚠️ Supersédé par [ADR-074](../adr/ADR-074-template-studio.md)** — la décision a été prise et enrichie (couches alpha + slots data-driven + wizard super_admin). Cette proposition est conservée pour historique mais l'ADR est la source de vérité.
+> **⚠️ Supersédé par [ADR-075](../adr/ADR-075-template-studio.md)** — la décision a été prise et enrichie (couches alpha + slots data-driven + wizard super_admin). Cette proposition est conservée pour historique mais l'ADR est la source de vérité.
 >
 > Statut : Supersédé · Auteur : Claude + GLT · Date : 2026-04-19
 > Epic SAFe : E-05 (Motion / Templates, PI-2)

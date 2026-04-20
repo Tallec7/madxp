@@ -110,9 +110,13 @@ class HotspotDashboardService {
   }
 
   /**
-   * Rotation de la PSK WiFi.
-   * Génère une nouvelle clé via openssl, patch hostapd.conf, restart hostapd,
-   * met à jour club-config.json (si présent).
+   * Rotation de la PSK WiFi (chemin local, hors-ligne).
+   *
+   * ADR-074 : la voie nominale de rotation est désormais côté cloud
+   * (`POST /api/sites/:id/hotspot-config/rotate` → dispatch `rotate_psk`
+   * au Pi → `sync-agent` re-pull cloud + écrit hostapd.conf). Cette méthode
+   * reste comme fallback offline — elle écrit hostapd.conf directement mais
+   * ne touche PLUS `club-config.json` (seul hostapd.conf fait autorité Pi).
    * @returns {Promise<{psk: string, generated: true}>}
    */
   async rotatePsk({ newPsk } = {}) {
@@ -143,20 +147,9 @@ class HotspotDashboardService {
       throw new CommandError(`Échec restart hostapd : ${restartResult.error}`);
     }
 
-    // Update club-config.json (best effort, non-bloquant)
-    try {
-      const clubConfigPath = path.join(NEOPRO_DIR, 'club-config.json');
-      if (fsCore.existsSync(clubConfigPath)) {
-        const data = await fs.readFile(clubConfigPath, 'utf8');
-        const config = JSON.parse(data);
-        config.wifiPassword = psk;
-        config.pskRotatedAt = new Date().toISOString();
-        await fs.writeFile(clubConfigPath, JSON.stringify(config, null, 2));
-      }
-    } catch (error) {
-      console.warn('[hotspot-dashboard] club-config.json update failed:', error.message);
-    }
-
+    // ADR-074 : plus aucune écriture dans club-config.json. hostapd.conf est
+    // la seule source Pi ; le sync-agent réconcilie avec le cloud au prochain
+    // auth / heartbeat.
     return { psk, generated: !newPsk, rotatedAt: new Date().toISOString() };
   }
 

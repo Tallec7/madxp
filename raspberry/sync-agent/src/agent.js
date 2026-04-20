@@ -32,6 +32,7 @@ const { networkDetector } = require('./services/network-detector');
 const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
 const hostapdTelemetry = require('./services/hostapd-telemetry');
+const { syncFromCloud: hotspotSyncFromCloud } = require('./services/hotspot-sync');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
 const commands = require('./commands');
@@ -452,6 +453,26 @@ class NeoproSyncAgent {
 
     // Traiter les commandes en attente dans la queue offline
     this.processOfflineQueue();
+
+    // ADR-074: pull canonical hotspot PSK from cloud on every (re)connect.
+    // Runs async — we don't block the auth flow on it.
+    this.syncHotspotFromCloud().catch((err) => {
+      logger.warn('hotspot-sync: initial sync failed', { error: err.message });
+    });
+  }
+
+  /**
+   * ADR-074 — fetch the canonical hotspot PSK from cloud and reconcile
+   * /etc/hostapd/hostapd.conf if needed. Safe to call repeatedly.
+   */
+  async syncHotspotFromCloud() {
+    if (!config.site.id || !config.site.apiKey || !config.central.url) return;
+    const result = await hotspotSyncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+    });
+    logger.info('hotspot-sync: result', result);
   }
 
   /**

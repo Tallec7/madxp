@@ -162,6 +162,21 @@ describe('Hourly metric alerting wiring', () => {
     });
   });
 
+  it('heartbeat handler throttles metrics persistence (not every 30s heartbeat)', () => {
+    const heartbeatPath = path.join(repoRoot, 'central-server', 'src', 'handlers', 'heartbeat.handler.ts');
+    const content = fs.readFileSync(heartbeatPath, 'utf8');
+
+    expect({
+      hasThrottleConstant: /METRICS_PERSIST_INTERVAL_MS\s*=/.test(content),
+      usesCtxMap: /ctx\.lastMetricsInsertAt\.(get|set)/.test(content),
+      throttleGuardsInsert: /if\s*\(\s*now\s*-\s*lastInsert\s*>=\s*METRICS_PERSIST_INTERVAL_MS[^]*?INSERT INTO metrics/m.test(content),
+    }).toEqual({
+      hasThrottleConstant: true,
+      usesCtxMap: true,
+      throttleGuardsInsert: true,
+    });
+  });
+
   it('socket service feeds disconnect events to alertingService', () => {
     const socketPath = path.join(repoRoot, 'central-server', 'src', 'services', 'socket.service.ts');
     const content = fs.readFileSync(socketPath, 'utf8');

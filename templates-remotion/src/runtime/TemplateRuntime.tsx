@@ -1,5 +1,5 @@
 /**
- * ADR-074 — Meta-composition Remotion data-driven.
+ * ADR-075 — Meta-composition Remotion data-driven.
  * 1 composition pour N templates : reçoit le template complet + les valeurs
  * user en props, rend bg variant + couches alpha Z-stackées + slots texte/image.
  */

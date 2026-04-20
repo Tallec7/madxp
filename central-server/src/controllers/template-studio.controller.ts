@@ -1,5 +1,5 @@
 /**
- * ADR-074 — Template Studio controllers (v2 compositeur).
+ * ADR-075 — Template Studio controllers (v2 compositeur).
  * CRUD granulaire sur variants / layers / text_fields / image_slots.
  * Gated super_admin via routes.
  *

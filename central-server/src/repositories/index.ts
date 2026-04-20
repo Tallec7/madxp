@@ -322,3 +322,8 @@ export {
   type CreateRemoteAuthEventInput,
   type MigrationStats,
 } from './remote-auth-events.repository';
+
+export {
+  hotspotConfigRepository,
+  type HotspotConfig,
+} from './hotspot-config.repository';

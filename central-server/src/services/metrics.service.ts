@@ -698,11 +698,11 @@ const secondaryVariantEnrichedCount = new Histogram({
   registers: [register],
 });
 
-// ============= Template Studio v2 (ADR-074) =============
+// ============= Template Studio v2 (ADR-075) =============
 
 const templateStudioOperationsTotal = new Counter({
   name: 'neopro_template_studio_operations_total',
-  help: 'Template Studio v2 CRUD operations (ADR-074)',
+  help: 'Template Studio v2 CRUD operations (ADR-075)',
   labelNames: ['resource', 'operation', 'status'],
   registers: [register],
 });
@@ -1164,7 +1164,7 @@ class MetricsService {
     sponsorHealthCheckDuration.observe(durationSeconds);
   }
 
-  // ============= Template Studio v2 (ADR-074) =============
+  // ============= Template Studio v2 (ADR-075) =============
 
   recordTemplateStudioOperation(
     resource: 'variant' | 'layer' | 'text_field' | 'image_slot' | 'studio_view',

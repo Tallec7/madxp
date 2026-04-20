@@ -799,7 +799,17 @@ export const schemas = {
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
 
-  // ── Template Studio v2 (ADR-074) ───────────────────────────────────────────
+  // ADR-074 — hotspot config
+  hotspotConfigBootstrap: Joi.object({
+    ssid: Joi.string().min(1).max(32).required(),
+    psk: Joi.string().min(8).max(63).required(),
+  }),
+  hotspotConfigRotate: Joi.object({
+    psk: Joi.string().min(8).max(63).optional(),
+    ssid: Joi.string().min(1).max(32).optional(),
+  }),
+
+  // ── Template Studio v2 (ADR-075) ───────────────────────────────────────────
   templateStudioVariantCreate: Joi.object({
     name: Joi.string().max(100).required(),
     backgroundVideoUrl: Joi.string().uri().max(2000).required(),
@@ -964,7 +974,7 @@ export const paramSchemas = {
     profileId: Joi.string().uuid().required(),
   }),
   jobId: Joi.object({ jobId: Joi.string().uuid().required() }),
-  // ADR-074 — Template Studio v2 compound params
+  // ADR-075 — Template Studio v2 compound params
   idAndVariantId: Joi.object({
     id: Joi.string().uuid().required(),
     variantId: Joi.string().uuid().required(),

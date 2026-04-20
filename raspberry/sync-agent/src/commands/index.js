@@ -44,6 +44,7 @@ const {
   configureWifiClient,
 } = require('./wifi-client');
 const { updateHostname } = require('./hostname');
+const { syncFromCloud: hotspotSyncFromCloud } = require('../services/hotspot-sync');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -108,6 +109,22 @@ const commands = {
 
   // === Hostname (module: hostname.js) ===
   update_hostname: updateHostname,
+
+  // === Hotspot PSK cloud-canonical (ADR-074) ===
+  /**
+   * Triggered by the cloud after an admin rotates the PSK.
+   * The Pi re-pulls the canonical config from cloud and rewrites hostapd.conf.
+   */
+  async rotate_psk() {
+    logger.info('rotate_psk command received — syncing hotspot from cloud');
+    const result = await hotspotSyncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+    });
+    logger.info('rotate_psk result', result);
+    return { success: true, ...result };
+  },
 
   // === Commandes simples (inline) ===
 

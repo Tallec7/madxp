@@ -1,4 +1,4 @@
-# ADR-074 : Template Studio — compositeur multi-couches data-driven
+# ADR-075 : Template Studio — compositeur multi-couches data-driven
 
 **Date** : 2026-04-20
 **Statut** : Proposé

@@ -43,7 +43,7 @@ export const Root: React.FC = () => {
           scoreLabel: '+1',
         }}
       />
-      {/* ADR-074 — Meta-composition data-driven pour les templates v2 (schema_version=2).
+      {/* ADR-075 — Meta-composition data-driven pour les templates v2 (schema_version=2).
           Durée / fps / dimensions sont surchargés à l'enqueue via calculateMetadata(),
           les defaultProps ici sont une stub de dev (Remotion exige des defaults valides). */}
       <Composition

@@ -90,7 +90,8 @@ Un ADR documente une décision technique importante avec :
 | [ADR-071](ADR-071-frontend-hosting-migration-cloudflare-pages.md)  | Migration hosting frontend (dashboard + SaaS) → Cloudflare Pages | Proposé                  | Avr 2026 |
 | [ADR-072](ADR-072-hotspot-generalist-defaults.md)                  | Hotspot — defaults generalist pour toute la flotte               | Proposé                  | Avr 2026 |
 | [ADR-073](ADR-073-hotspot-security-hardening.md)                   | Durcissement sécurité hotspot + dashboard local                  | Accepté                  | Avr 2026 |
-| [ADR-074](ADR-074-template-studio.md)                              | Template Studio — couches alpha + slots data-driven + wizard     | Accepté                  | Avr 2026 |
+| [ADR-074](ADR-074-hotspot-psk-single-source-of-truth.md)           | PSK hotspot — source de vérité unique côté cloud                 | Accepté                  | Avr 2026 |
+| [ADR-075](ADR-075-template-studio.md)                              | Template Studio — couches alpha + slots data-driven + wizard     | Accepté                  | Avr 2026 |
 
 ### Supersédés
 
@@ -130,7 +131,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-075**)
+3. Numéroter séquentiellement (prochain : **ADR-076**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge

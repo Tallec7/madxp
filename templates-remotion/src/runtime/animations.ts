@@ -1,5 +1,5 @@
 /**
- * ADR-074 — Animation presets data-driven.
+ * ADR-075 — Animation presets data-driven.
  * Chaque preset retourne { opacity, transform } à appliquer sur un slot
  * (texte ou image), en fonction de la frame courante et de la fenêtre
  * appearAt / appearDuration.

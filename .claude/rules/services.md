@@ -122,6 +122,7 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 - Importer `@remotion/renderer` depuis `remotion-templates.controller.ts` (le renderer vit UNIQUEMENT dans `remotion-render-worker.service.ts` — le controller doit rester HTTP-only et retourner 202 en enqueue — sans cette séparation on retombe dans les 502 Railway timeout ADR-054)
 - Réintroduire le pattern `if (target.siteType === 'saas') ... continue` dans `deployment.service.ts` (ADR-069 a supprimé cette branche ; la sélection Pi vs SaaS passe par `deliveryStrategyRegistry.resolve(site)` qui choisit `SaasDirectStrategy` ou `PiSocketStrategy`. Le smoke test `noLegacySaasShortCircuit` bloque toute réintroduction)
 - Ajouter un nouveau canal de livraison (Chromecast, Android TV, ...) en modifiant `deployment.service.ts` (ADR-069 : créer `central-server/src/services/delivery/{name}.strategy.ts` implémentant `DeliveryStrategy`, puis l'ajouter à `DEFAULT_STRATEGIES` dans `strategy-registry.ts`. Le service principal ne doit JAMAIS savoir qu'un nouveau canal existe)
+- Retirer le throttle `METRICS_PERSIST_INTERVAL_MS` / `lastMetricsInsertAt` dans `heartbeat.handler.ts` (le heartbeat arrive toutes les 30s pour la liveness, mais persister chaque échantillon bloate la table `metrics` 10× sans valeur analytique — 1 INSERT/5min/site suffit pour l'historique 24h. Smoke test `heartbeat handler throttles metrics persistence` enforced)
 
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 

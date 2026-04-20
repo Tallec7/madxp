@@ -1,3 +1,27 @@
+## [3.196.3](https://github.com/Tallec7/neopro/compare/v3.196.2...v3.196.3) (2026-04-20)
+
+### Bug Fixes
+
+- **hotspot:** correct column names in hotspot-bootstrap-status script ([#492](https://github.com/Tallec7/neopro/issues/492)) ([e62b017](https://github.com/Tallec7/neopro/commit/e62b0178db3dad3ebe1cc1c9e13fdc1c14f1c24e))
+
+## [3.196.2](https://github.com/Tallec7/neopro/compare/v3.196.1...v3.196.2) (2026-04-20)
+
+### Performance Improvements
+
+- **kiosk:** reduce X server wait from 60s to 3s in watchdog ([#491](https://github.com/Tallec7/neopro/issues/491)) ([a08229e](https://github.com/Tallec7/neopro/commit/a08229ee1ff576a833763de8d23b4964a37a9fbf))
+
+## [3.196.1](https://github.com/Tallec7/neopro/compare/v3.196.0...v3.196.1) (2026-04-20)
+
+### Performance Improvements
+
+- **metrics:** throttle Pi metrics DB persistence to 5min/site ([#488](https://github.com/Tallec7/neopro/issues/488)) ([d1acb70](https://github.com/Tallec7/neopro/commit/d1acb700b024fd3dc69076ac1f551e1a9c587cac))
+
+# [3.196.0](https://github.com/Tallec7/neopro/compare/v3.195.0...v3.196.0) (2026-04-20)
+
+### Features
+
+- **hotspot:** ADR-074 — cloud-canonical PSK (phases 1-5a) ([#489](https://github.com/Tallec7/neopro/issues/489)) ([0f55be8](https://github.com/Tallec7/neopro/commit/0f55be8fb442129f4d20cbe15c6460641d89618f))
+
 # [3.195.0](https://github.com/Tallec7/neopro/compare/v3.194.1...v3.195.0) (2026-04-19)
 
 ### Features

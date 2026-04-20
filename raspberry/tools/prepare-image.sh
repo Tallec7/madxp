@@ -83,13 +83,12 @@ cleanup_system() {
 generalize_config() {
     print_step "Généralisation de la configuration..."
 
-    # Créer un fichier de première configuration
+    # ADR-074 : first-boot-config.json ne contient plus de champs WiFi.
+    # hostapd.conf est la source de vérité (écrite plus bas avec PSK par défaut).
     cat > /home/pi/neopro/first-boot-config.json << 'EOF'
 {
   "configured": false,
   "clubName": "",
-  "wifiSSID": "",
-  "wifiPassword": "",
   "installDate": "",
   "version": "1.0.0"
 }
@@ -194,20 +193,17 @@ echo "Application de la configuration..."
 sudo sed -i "s/ssid=.*/ssid=NEOPRO-$CLUB_NAME/" /etc/hostapd/hostapd.conf
 sudo sed -i "s/wpa_passphrase=.*/wpa_passphrase=$WIFI_PASSWORD/" /etc/hostapd/hostapd.conf
 
-# Création du fichier de configuration
+# ADR-074 : club-config.json garde uniquement les métadonnées (pas de WiFi).
+# Le PSK vient d'être écrit dans /etc/hostapd/hostapd.conf juste au-dessus.
 cat > /home/pi/neopro/club-config.json << EOF
 {
   "clubName": "$CLUB_NAME",
-  "wifiSSID": "NEOPRO-$CLUB_NAME",
-  "wifiPassword": "$WIFI_PASSWORD",
   "installDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "version": "1.0.0",
   "configured": true
 }
 EOF
-
-# Sécuriser club-config.json (contient le mot de passe WiFi)
-chmod 600 /home/pi/neopro/club-config.json
+chmod 644 /home/pi/neopro/club-config.json
 chown pi:pi /home/pi/neopro/club-config.json
 
 # Suppression du fichier de première config
