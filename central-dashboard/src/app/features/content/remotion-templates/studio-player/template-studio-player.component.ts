@@ -125,6 +125,7 @@ export class TemplateStudioPlayerComponent implements AfterViewInit, OnChanges, 
         style: { width: '100%', aspectRatio: `${s.canvasWidth} / ${s.canvasHeight}` },
         controls: true,
         loop: true,
+        acknowledgeRemotionLicense: true,
       }),
     );
   }
