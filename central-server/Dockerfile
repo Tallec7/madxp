@@ -149,5 +149,9 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Start the application
-CMD ["node", "--max-old-space-size=512", "--expose-gc", "dist/server.js"]
+# Run pending DB migrations then start the application.
+# Migrations are idempotent (IF NOT EXISTS guards + schema_migrations tracking table),
+# so running on every boot is safe and ensures Railway deploys can never ship code
+# ahead of their schema (incident ADR-076 post-mortem — missing ADR-074 migration
+# caused 500s on /hotspot-config for days before detection).
+CMD ["sh", "-c", "node dist/scripts/migrate.js && node --max-old-space-size=512 --expose-gc dist/server.js"]
