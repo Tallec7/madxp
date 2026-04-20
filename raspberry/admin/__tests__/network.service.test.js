@@ -4,10 +4,41 @@
 
 const NetworkService = require('../services/network.service');
 
+// ---------------------------------------------------------------------------
+// Mocks for fixHotspot (shell + fs)
+// ---------------------------------------------------------------------------
+
+jest.mock('../helpers', () => {
+  const actual = jest.requireActual('../helpers');
+  return {
+    ...actual,
+    execCommand: jest.fn(),
+    NEOPRO_DIR: '/home/pi/neopro',
+  };
+});
+
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs');
+  return {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      access: jest.fn(),
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+      unlink: jest.fn(),
+    },
+  };
+});
+
+const { execCommand } = require('../helpers');
+const fs = require('fs').promises;
+
 describe('NetworkService', () => {
   let service;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     service = new NetworkService();
   });
 
@@ -125,6 +156,63 @@ describe('NetworkService', () => {
       const networks = service.parseWifiScanResults(output);
       expect(networks[0].ssid).toBe('Strong');
       expect(networks[1].ssid).toBe('Weak');
+    });
+  });
+
+  // ===========================================================================
+  // fixHotspot — regression tests (ADR-075 / hotspot 500 fix)
+  // ===========================================================================
+
+  describe('fixHotspot', () => {
+    const VALID_JSON = JSON.stringify({
+      success: true,
+      diagnostic: { currentChannel: 6, recommendedChannel: 6, hostapdActive: true, dnsmasqActive: true, powerOk: true },
+      fix: { channelChanged: false, needsReboot: false },
+      message: 'Diagnostic terminé.',
+    });
+
+    beforeEach(() => {
+      fs.access.mockResolvedValue(undefined);
+    });
+
+    it('returns parsed JSON when script exits 0 with valid output', async () => {
+      execCommand.mockResolvedValue({ success: true, output: VALID_JSON, error: '' });
+      const result = await service.fixHotspot();
+      expect(result.success).toBe(true);
+      expect(result.diagnostic.currentChannel).toBe(6);
+    });
+
+    it('returns parsed JSON even when script exits non-zero but stdout has JSON', async () => {
+      // Regression: script crashed after writing JSON — must not return 500
+      execCommand.mockResolvedValue({ success: false, error: 'exit 1', output: VALID_JSON });
+      const result = await service.fixHotspot();
+      expect(result.success).toBe(true);
+      expect(result.diagnostic).toBeDefined();
+    });
+
+    it('returns manual:true when output is non-JSON (script ran, bad output)', async () => {
+      execCommand.mockResolvedValue({ success: true, output: 'unexpected text output', error: '' });
+      const result = await service.fixHotspot();
+      expect(result.manual).toBe(true);
+      expect(result.success).toBe(true);
+    });
+
+    it('throws CommandError when script fails with no output', async () => {
+      execCommand.mockResolvedValue({ success: false, error: 'sudo: command not found', output: '' });
+      const { CommandError } = require('../services/errors');
+      await expect(service.fixHotspot()).rejects.toBeInstanceOf(CommandError);
+    });
+
+    it('throws NotFoundError when script file does not exist', async () => {
+      fs.access.mockRejectedValue(new Error('ENOENT'));
+      const { NotFoundError } = require('../services/errors');
+      await expect(service.fixHotspot()).rejects.toBeInstanceOf(NotFoundError);
+    });
+
+    it('passes --auto-fix flag when autoFix=true', async () => {
+      execCommand.mockResolvedValue({ success: true, output: VALID_JSON, error: '' });
+      await service.fixHotspot({ autoFix: true });
+      expect(execCommand).toHaveBeenCalledWith(expect.stringContaining('--auto-fix'));
     });
   });
 

@@ -11,7 +11,7 @@
 const fs = require('fs').promises;
 const os = require('os');
 
-const { execCommand, shellEscape } = require('../helpers');
+const { execCommand, shellEscape, NEOPRO_DIR } = require('../helpers');
 const { ValidationError, NotFoundError, CommandError } = require('./errors');
 
 class NetworkService {
@@ -437,11 +437,17 @@ class NetworkService {
     const cmd = `sudo bash ${scriptPath} ${args.join(' ')} 2>&1`;
     const result = await execCommand(cmd);
 
-    if (result.success && result.output) {
+    if (!result.success) {
+      console.error('[hotspot-fix] script exited non-zero:', result.error?.slice(0, 200));
+    }
+
+    const output = result.output?.trim();
+    if (output) {
       try {
-        return JSON.parse(result.output.trim());
+        return JSON.parse(output);
       } catch {
-        return { success: true, output: result.output, manual: true };
+        console.warn('[hotspot-fix] JSON parse failed — returning raw output (manual mode)');
+        return { success: true, output, manual: true };
       }
     }
 
