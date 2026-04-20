@@ -1,3 +1,9 @@
+# [3.200.0](https://github.com/Tallec7/neopro/compare/v3.199.0...v3.200.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 Sprint 4 — legacy shadow seed + super_admin guard tests ([#506](https://github.com/Tallec7/neopro/issues/506)) ([2968fe8](https://github.com/Tallec7/neopro/commit/2968fe8f157522acb324c087bf1f4cade0bc5b27))
+
 # [3.199.0](https://github.com/Tallec7/neopro/compare/v3.198.2...v3.199.0) (2026-04-20)
 
 ### Features
