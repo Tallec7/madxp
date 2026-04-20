@@ -1,3 +1,9 @@
+## [3.202.1](https://github.com/Tallec7/neopro/compare/v3.202.0...v3.202.1) (2026-04-20)
+
+### Bug Fixes
+
+- **templates:** guard OffthreadVideo src to prevent 'No src passed' in Studio preview ([#511](https://github.com/Tallec7/neopro/issues/511)) ([721ca25](https://github.com/Tallec7/neopro/commit/721ca25a7cff2e5595f50657be3a8e5b43584f1d))
+
 # [3.202.0](https://github.com/Tallec7/neopro/compare/v3.201.0...v3.202.0) (2026-04-20)
 
 ### Features
