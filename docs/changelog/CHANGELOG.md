@@ -1,3 +1,9 @@
+# [3.207.0](https://github.com/Tallec7/neopro/compare/v3.206.0...v3.207.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 Sprint 8 V2 — upload direct admin panels + 7 smoke guards ([#519](https://github.com/Tallec7/neopro/issues/519)) ([0766131](https://github.com/Tallec7/neopro/commit/0766131657a4d6be1476250145793ed0a8d7da11))
+
 # [3.206.0](https://github.com/Tallec7/neopro/compare/v3.205.0...v3.206.0) (2026-04-20)
 
 ### Features
