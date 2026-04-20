@@ -42,6 +42,7 @@ import { AdminLayersPanelComponent } from './admin-layers-panel.component';
   template: `
     <div class="asp" *ngIf="view" data-testid="admin-studio-panel">
       <app-admin-variants-panel
+        [templateId]="view.id"
         [variants]="view.variants"
         (create)="onCreateVariant($event)"
         (update)="onUpdateVariant($event)"
@@ -49,6 +50,7 @@ import { AdminLayersPanelComponent } from './admin-layers-panel.component';
       ></app-admin-variants-panel>
 
       <app-admin-layers-panel
+        [templateId]="view.id"
         [layers]="view.layers"
         (create)="onCreateLayer($event)"
         (update)="onUpdateLayer($event)"

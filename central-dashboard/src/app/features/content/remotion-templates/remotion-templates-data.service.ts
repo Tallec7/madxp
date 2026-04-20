@@ -77,6 +77,21 @@ export class RemotionTemplatesDataService {
   }
 
   /**
+   * ADR-075 V2 — Upload d'un asset (vidéo de fond variant, thumbnail, vidéo layer)
+   * sans mutation de `default_props`. Le fichier atterrit dans le dossier FTP
+   * `template-assets/studio/` (isolé du `remotion-assets/` legacy v1). L'URL
+   * retournée doit ensuite être branchée via PATCH sur la ressource cible.
+   */
+  uploadStudioAsset(templateId: string, file: File): Observable<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.api.upload<{ url: string }>(
+      `/remotion-templates/${templateId}/assets`,
+      formData,
+    );
+  }
+
+  /**
    * ADR-077 — Upload image utilisateur (JPEG/PNG/WebP ≤ 10Mo) accessible à tout
    * rôle authentifié (pas uniquement super_admin). L'URL retournée doit être
    * injectée dans le payload render v2 sous `imageUploads[slotKey]`.

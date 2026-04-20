@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { AdminVariantsPanelComponent } from './admin-variants-panel.component';
+import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
 import type { TemplateVariant } from '../../remotion-templates.types';
 
 function makeVariant(id: string, order: number): TemplateVariant {
@@ -20,10 +23,15 @@ describe('AdminVariantsPanelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminVariantsPanelComponent],
+      providers: [
+        { provide: RemotionTemplatesDataService, useValue: { uploadStudioAsset: () => of({ url: '' }) } },
+        { provide: NotificationService, useValue: { success: () => {}, error: () => {} } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AdminVariantsPanelComponent);
     cmp = fixture.componentInstance;
+    cmp.templateId = 't1';
   });
 
   it('shows empty message when no variants', () => {
