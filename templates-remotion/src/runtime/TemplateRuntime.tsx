@@ -62,7 +62,10 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
 
   const variant = props.variants.find((v) => v.id === props.variantId);
   const sortedLayers = [...props.layers].sort((a, b) => a.zIndex - b.zIndex);
-  const bgSrc = (variant?.backgroundVideoUrl ?? '').trim();
+  const isValidSrc = (url: string): boolean =>
+    /^(https?:|blob:|data:)/.test(url);
+  const bgSrcRaw = (variant?.backgroundVideoUrl ?? '').trim();
+  const bgSrc = isValidSrc(bgSrcRaw) ? bgSrcRaw : '';
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
@@ -74,7 +77,8 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
       ) : null}
 
       {sortedLayers.map((layer) => {
-        const layerSrc = (layer.videoUrl ?? '').trim();
+        const layerSrcRaw = (layer.videoUrl ?? '').trim();
+        const layerSrc = isValidSrc(layerSrcRaw) ? layerSrcRaw : '';
         if (!layerSrc) return null;
         const clipPath =
           `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ` +
