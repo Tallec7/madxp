@@ -1,3 +1,9 @@
+## [3.204.1](https://github.com/Tallec7/neopro/compare/v3.204.0...v3.204.1) (2026-04-20)
+
+### Bug Fixes
+
+- **templates:** ADR-075 V2 Sprint 7 — corrige build Railway ([#516](https://github.com/Tallec7/neopro/issues/516)) ([af46183](https://github.com/Tallec7/neopro/commit/af46183c9ce1300c0e7b59069ad62a632eff52f5))
+
 # [3.204.0](https://github.com/Tallec7/neopro/compare/v3.203.0...v3.204.0) (2026-04-20)
 
 ### Features
