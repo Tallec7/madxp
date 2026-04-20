@@ -75,3 +75,45 @@ test.describe('Template Studio V2 — super_admin parcours (ADR-075)', () => {
     await page.keyboard.press('Escape');
   });
 });
+
+test.describe('Template Studio V2 — Sprint 6 white-glove gallery filter (ADR-075)', () => {
+  test('scope filter appears only when at least one club-scoped template exists', async ({
+    page,
+  }) => {
+    await login(page, SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD);
+    await page.goto('/content/remotion-templates');
+
+    // Attendre le chargement de la galerie
+    await expect(page.locator('h1', { hasText: /Templates Vidéo/i })).toBeVisible({
+      timeout: 10000,
+    });
+    // Laisser le temps à la requête GET /templates de résoudre
+    await page.waitForTimeout(800);
+
+    const scopeFilter = page.locator('.template-scope-filter');
+    const clubBadge = page.locator('.badge-club').first();
+
+    const hasScopedTemplate = await clubBadge.isVisible({ timeout: 1000 }).catch(() => false);
+
+    if (hasScopedTemplate) {
+      // Un template white-glove existe → le filtre doit être visible avec 3 boutons
+      await expect(scopeFilter).toBeVisible();
+      const buttons = scopeFilter.locator('button');
+      await expect(buttons).toHaveCount(3);
+
+      // Test du switch "Mes templates perso" : au moins 1 carte rendue
+      await scopeFilter.locator('button', { hasText: /perso|mine/i }).click();
+      await expect(page.locator('app-template-grid .template-card')).toHaveCount(1, {
+        timeout: 3000,
+      });
+
+      // Retour sur "Tous" : au moins autant de cartes qu'en mode scopé
+      await scopeFilter.locator('button', { hasText: /tous|all/i }).click();
+      const totalCount = await page.locator('app-template-grid .template-card').count();
+      expect(totalCount).toBeGreaterThanOrEqual(1);
+    } else {
+      // Aucun template scopé seedé → le filtre DOIT être masqué (condition *ngIf)
+      await expect(scopeFilter).not.toBeVisible();
+    }
+  });
+});
