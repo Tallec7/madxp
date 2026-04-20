@@ -1,7 +1,7 @@
 # ADR-075 : Template Studio — compositeur multi-couches data-driven
 
 **Date** : 2026-04-20
-**Statut** : Proposé
+**Statut** : Accepté — MVP livré (Sprints 1→4, voir tableau de suivi ci-dessous)
 **Décideurs** : GLT (PO + Dev Lead), Gabin (Motion Designer), Claude Code (exécution)
 **Remplace** : PROP-014 (draft, superseded)
 **Lié** : ADR-054 (async Remotion render), ADR-055 (template versions), PROP-004 (video template engine)
@@ -631,6 +631,51 @@ Tous standalone, <400 lignes chacun (règle projet). Si un dépasse, splitter.
 
 ---
 
+## Statut de livraison (MVP)
+
+| Sprint | PR                                                 | Périmètre livré                                                                                                                                                   | Status   |
+| ------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1      | [#493](https://github.com/Tallec7/neopro/pull/493) | Migration `template_variants` / `_layers` / `_text_fields` / `_image_slots`, API super_admin CRUD, runtime data-driven, fallback v1                               | ✅ Mergé |
+| 2      | [#501](https://github.com/Tallec7/neopro/pull/501) | Studio user mode (Angular) : `StudioV2EditorComponent`, preview React-in-Angular via `@remotion/player`, upload user images (ADR-077)                             | ✅ Mergé |
+| 3      | [#504](https://github.com/Tallec7/neopro/pull/504) | Studio super_admin mode : `AdminStudioPanelComponent` (variants / layers / fields), `CreateTemplateWizardComponent`, CRUD admin wiré au dashboard, E2E Playwright | 🟠 Open  |
+| 4      | [#506](https://github.com/Tallec7/neopro/pull/506) | Migration shadow-seed ButSimple / ButImgJoueur (idempotente, `schema_version=1` préservé), tests permissions `super_admin` sur 8 routes × 5 rôles, smoke guards   | 🟠 Open  |
+
+### Flip vers v2 pour les templates legacy (opt-in manuel)
+
+La migration Sprint 4 **ne bascule pas** automatiquement `schema_version` à 2. Après validation QA visuelle (preview v2 == rendu v1 à l'œil), exécuter manuellement :
+
+```sql
+UPDATE neopro_templates SET schema_version = 2 WHERE composition_id = 'ButSimple';
+UPDATE neopro_templates SET schema_version = 2 WHERE composition_id = 'ButImgJoueur';
+```
+
+Rollback trivial : `UPDATE ... SET schema_version = 1 WHERE ...` — les données shadow restent en base et sont réutilisées si on reflip.
+
+---
+
+## Supervision & invariants post-MVP
+
+### Invariants enforced par smoke tests
+
+- `smoke-remotion` bloque le retrait de la migration `seed-but-simple-but-img-joueur-v2-shadow.sql` et du test `template-studio.permissions.test.ts` (les deux sont l'assurance anti-régression).
+- `smoke-remotion` garantit que la migration **n'inclut aucun `UPDATE schema_version = 2` automatique** (safety : le flip reste opt-in manuel).
+- `smoke-remotion` verrouille l'enregistrement de `StudioV2EditorComponent`, `TemplateStudioPlayerComponent`, `AdminStudioPanelComponent` dans le module dashboard (Sprints 2/3).
+
+### Invariant runtime (à implémenter si un incident survient)
+
+Si un template avec `schema_version = 2` n'a **aucun variant** en DB, le runtime Remotion retourne un écran vide → plantage silencieux côté UI. Le controller `renderTemplate` doit court-circuiter cette situation en retournant **400 `template_studio_v2_incomplete`** avant l'enqueue du job. Pour l'instant la seule piste d'entrée vers `schema_version = 2` est :
+
+- le wizard super_admin (Sprint 3) → crée le template + au moins 1 variant par défaut
+- le flip manuel SQL (Sprint 4) → les données shadow assurent qu'1 variant existe
+
+Donc l'invariant est tenu **by construction** pour les deux chemins. L'ajout d'un check runtime reste sur la roadmap V2 si on ouvre d'autres chemins d'édition.
+
+### Métriques Prometheus utiles (à ajouter post-flip)
+
+Quand un template legacy passe en v2, il devient intéressant de splitter les métriques du `remotion-render-worker` par `schema_version` (label `schema_version={1,2}`) pour détecter une régression de taux d'échec entre le chemin codé v1 et le chemin data-driven v2. Pas urgent : tant que `ButSimple`/`ButImgJoueur` restent en v1, le worker ne voit que v1 pour les templates legacy.
+
+---
+
 ## Roadmap post-MVP
 
 ### V2 (Option B — white-glove clubs) — T+1 à 2 mois
@@ -772,6 +817,7 @@ Tous standalone, <400 lignes chacun (règle projet). Si un dépasse, splitter.
 
 ## Changelog
 
-| Date       | Auteur       | Changement                        |
-| ---------- | ------------ | --------------------------------- |
-| 2026-04-20 | Claude + GLT | Version initiale — statut Proposé |
+| Date       | Auteur       | Changement                                                                                                                                                                                   |
+| ---------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-20 | Claude + GLT | Version initiale — statut Proposé                                                                                                                                                            |
+| 2026-04-20 | Claude + GLT | Sprints 1→4 livrés (MVP complet). Ajout tableau de suivi, section supervision & invariants, procédure de flip v2 manuel pour `ButSimple`/`ButImgJoueur`. Statut passé à Accepté / MVP livré. |
