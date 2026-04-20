@@ -1,3 +1,9 @@
+# [3.205.0](https://github.com/Tallec7/neopro/compare/v3.204.1...v3.205.0) (2026-04-20)
+
+### Features
+
+- **raspberry:** captive portal brandé + ADR-079 hotspot internet share ([#517](https://github.com/Tallec7/neopro/issues/517)) ([88836c6](https://github.com/Tallec7/neopro/commit/88836c66c982a7c00f7050f5e233764e77e910b3))
+
 ## [3.204.1](https://github.com/Tallec7/neopro/compare/v3.204.0...v3.204.1) (2026-04-20)
 
 ### Bug Fixes
