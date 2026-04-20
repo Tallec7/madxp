@@ -417,3 +417,95 @@ describe('Template Studio v2 — user image uploads (ADR-077)', () => {
     expect(readme).toMatch(/ADR-077/);
   });
 });
+
+describe('Template Studio v2 — dashboard wiring (ADR-075 / ADR-077)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const studioDir = path.join(
+    dashRoot,
+    'src/app/features/content/remotion-templates',
+  );
+
+  function readDash(rel: string): string {
+    return fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  }
+
+  it('data service exposes getStudioView + enqueueRenderV2 + uploadUserImage', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/getStudioView\s*\(/);
+    expect(svc).toMatch(/enqueueRenderV2\s*\(/);
+    expect(svc).toMatch(/uploadUserImage\s*\(/);
+    expect(svc).toMatch(/\/remotion-templates\/\$\{templateId\}\/studio/);
+    expect(svc).toMatch(/\/remotion-templates\/\$\{templateId\}\/user-uploads/);
+  });
+
+  it('types file declares studio v2 contracts + isV2Template helper', () => {
+    const types = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.types.ts',
+    );
+    expect(types).toMatch(/interface TemplateStudioView\b/);
+    expect(types).toMatch(/interface RenderTemplateRequestV2\b/);
+    expect(types).toMatch(/export function isV2Template\b/);
+  });
+
+  it('StudioV2EditorComponent declares @Input view + payloadChange + readyChange', () => {
+    const p = path.join(studioDir, 'studio-v2', 'studio-v2-editor.component.ts');
+    expect(fs.existsSync(p)).toBe(true);
+    const src = fs.readFileSync(p, 'utf8');
+    expect(src).toMatch(/@Input\(\s*\{\s*required:\s*true\s*\}\s*\)\s+view!:\s*TemplateStudioView/);
+    expect(src).toMatch(
+      /@Output\(\)\s+payloadChange\s*=\s*new\s+EventEmitter<RenderTemplateRequestV2>/,
+    );
+    expect(src).toMatch(/@Output\(\)\s+readyChange\s*=\s*new\s+EventEmitter<boolean>/);
+    expect(src).toMatch(/uploadUserImage\(/);
+  });
+
+  it('TemplateStudioPlayerComponent bridges React via createRoot + @remotion/player', () => {
+    const p = path.join(studioDir, 'studio-player', 'template-studio-player.component.ts');
+    expect(fs.existsSync(p)).toBe(true);
+    const src = fs.readFileSync(p, 'utf8');
+    expect(src).toMatch(/from ['"]react-dom\/client['"]/);
+    expect(src).toMatch(/from ['"]@remotion\/player['"]/);
+    expect(src).toMatch(/createRoot\(/);
+    expect(src).toMatch(/this\.root\.unmount\(\)/);
+    expect(fs.existsSync(path.join(studioDir, 'studio-player', 'template-runtime.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(studioDir, 'studio-player', 'animations.ts'))).toBe(true);
+  });
+
+  it('orchestrator imports StudioV2EditorComponent and branches on isV2Template', () => {
+    const ts = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.ts',
+    );
+    expect(ts).toMatch(/StudioV2EditorComponent/);
+    expect(ts).toMatch(/isV2Template\(/);
+    expect(ts).toMatch(/enqueueRenderV2\(/);
+    expect(ts).toMatch(/getStudioView\(/);
+    const html = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.html',
+    );
+    expect(html).toMatch(/<app-studio-v2-editor/);
+    expect(html).toMatch(/\[class\.render-panel-body--v2\]="isV2"/);
+  });
+
+  it('dashboard Karma specs for v2 editor + studio player are checked in', () => {
+    expect(
+      fs.existsSync(path.join(studioDir, 'studio-v2', 'studio-v2-editor.component.spec.ts')),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(studioDir, 'studio-player', 'template-studio-player.component.spec.ts'),
+      ),
+    ).toBe(true);
+  });
+
+  it('tsconfig enables jsx:react-jsx and package.json declares react + @remotion/player', () => {
+    const tsconfig = JSON.parse(readDash('tsconfig.json'));
+    expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
+    const pkg = JSON.parse(readDash('package.json'));
+    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
+    expect(deps['react']).toBeTruthy();
+    expect(deps['react-dom']).toBeTruthy();
+    expect(deps['@remotion/player']).toBeTruthy();
+  });
+});
