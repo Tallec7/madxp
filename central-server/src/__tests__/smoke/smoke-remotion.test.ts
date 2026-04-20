@@ -653,3 +653,67 @@ describe('Template Studio v2 — Sprint 3 admin dashboard (ADR-075)', () => {
     expect(fs.existsSync(path.join(studioAdminDir, 'create-template-wizard.component.spec.ts'))).toBe(true);
   });
 });
+
+describe('Template Studio v2 — schema_version UI toggle (ADR-075)', () => {
+  const readSrv = (rel: string): string => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string): string => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('route PATCH /:id/schema-version is super_admin-only with Joi validation', () => {
+    const routes = readSrv('routes/remotion-templates.routes.ts');
+    expect(routes).toMatch(/['"]\/:id\/schema-version['"]/);
+    // Route block must include super_admin guard + validate(templateSchemaVersionUpdate)
+    const block = routes.match(/router\.patch\(\s*['"]\/:id\/schema-version['"][\s\S]*?\)\s*;/);
+    expect(block).not.toBeNull();
+    expect(block?.[0]).toMatch(/requireRole\(\s*['"]super_admin['"]\s*\)/);
+    expect(block?.[0]).toMatch(/validate\(\s*schemas\.templateSchemaVersionUpdate\s*\)/);
+    expect(block?.[0]).toMatch(/sensitiveRateLimit/);
+  });
+
+  it('Joi schema rejects values outside {1, 2}', () => {
+    const v = readSrv('middleware/validation.ts');
+    expect(v).toMatch(/templateSchemaVersionUpdate\s*:\s*Joi\.object/);
+    // schema_version must be Joi.number().valid(1, 2).required()
+    expect(v).toMatch(/schema_version\s*:\s*Joi\.number\(\)\.valid\(\s*1\s*,\s*2\s*\)\.required\(\)/);
+  });
+
+  it('controller guards v2 flip with shadow-data count check (409)', () => {
+    const ctl = readSrv('controllers/remotion-templates.controller.ts');
+    expect(ctl).toMatch(/setTemplateSchemaVersion/);
+    expect(ctl).toMatch(/countStudioShadowData/);
+    expect(ctl).toMatch(/status\(409\)/);
+    expect(ctl).toMatch(/recordTemplateStudioOperation/);
+  });
+
+  it('repository exposes findSchemaVersion + setSchemaVersion + countStudioShadowData', () => {
+    const repo = readSrv('repositories/remotion-templates.repository.ts');
+    expect(repo).toMatch(/findSchemaVersion\(/);
+    expect(repo).toMatch(/setSchemaVersion\(/);
+    expect(repo).toMatch(/countStudioShadowData\(/);
+  });
+
+  it('dashboard data service exposes setSchemaVersion', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/setSchemaVersion\(/);
+    expect(svc).toMatch(/\/schema-version/);
+  });
+
+  it('dashboard toggle UI gated on isSuperAdmin with data-testid', () => {
+    const html = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.html',
+    );
+    expect(html).toContain('schema-version-toggle');
+    expect(html).toContain('toggleSchemaVersion()');
+    // Gated behind isSuperAdmin
+    const block = html.match(/<div[^>]*schema-version-toggle[\s\S]*?<\/div>/);
+    expect(block).not.toBeNull();
+    const componentTs = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.ts',
+    );
+    expect(componentTs).toMatch(/toggleSchemaVersion\(\)\s*:\s*void/);
+    // 409 handling hint (missing shadow data)
+    expect(componentTs).toMatch(/err\?\.status === 409|status === 409/);
+  });
+});

@@ -228,6 +228,54 @@
   }
 }
 
+// ADR-075 — schema_version toggle (super_admin)
+.schema-version-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f9fafb);
+
+  &__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary, #6b7280);
+  }
+
+  &__btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-primary, #111827);
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: var(--bg-hover, #f3f4f6);
+    }
+
+    &--active {
+      background: var(--neo-hand-dark, #7c3aed);
+      color: #fff;
+      cursor: default;
+    }
+
+    &:disabled:not(&--active) {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
 // ADR-075 Sprint 3 — studio admin toggle + panel
 .studio-mode-toggle {
   margin-left: auto;

@@ -40,6 +40,40 @@
     <div class="render-panel-header">
       <h2>{{ selectedTemplate.name }}</h2>
       <div class="render-panel-header-actions">
+        <div
+          *ngIf="isSuperAdmin"
+          class="schema-version-toggle"
+          role="group"
+          aria-label="Version du schéma template"
+          data-testid="schema-version-toggle"
+        >
+          <span class="schema-version-toggle__label">Schéma</span>
+          <button
+            type="button"
+            class="schema-version-toggle__btn"
+            [class.schema-version-toggle__btn--active]="
+              (selectedTemplate.schema_version ?? 1) === 1
+            "
+            [disabled]="schemaVersionFlipping || (selectedTemplate.schema_version ?? 1) === 1"
+            (click)="toggleSchemaVersion()"
+            title="Schéma legacy v1 (props JSON)"
+          >
+            v1
+          </button>
+          <button
+            type="button"
+            class="schema-version-toggle__btn"
+            [class.schema-version-toggle__btn--active]="
+              (selectedTemplate.schema_version ?? 1) === 2
+            "
+            [disabled]="schemaVersionFlipping || (selectedTemplate.schema_version ?? 1) === 2"
+            (click)="toggleSchemaVersion()"
+            title="Schéma v2 data-driven (variants + text_fields + image_slots)"
+          >
+            v2
+          </button>
+        </div>
+
         <ng-container *ngIf="isAdmin">
           <button
             type="button"
