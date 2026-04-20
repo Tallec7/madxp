@@ -906,3 +906,76 @@ describe('Template Studio v2 — scaffold placeholders (ADR-075)', () => {
     expect(ts).toMatch(/window\.confirm|confirm\(/);
   });
 });
+
+describe('Template Studio v2 — direct asset upload in admin panels (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+
+  it('uploadTemplateAssetController accepts requests without prop_key (studio v2 path)', () => {
+    const ctl = read('controllers/remotion-templates.controller.ts');
+    // Legacy v1 branch must keep requiring prop_key — gated by ternary, not an early return
+    expect(ctl).not.toMatch(/if\s*\(\s*!prop_key\s*\)\s*{\s*return\s+res\.status\(400\)/);
+    expect(ctl).toMatch(/prop_key\s*\?\s*['"]remotion-assets['"]\s*:\s*['"]template-assets\/studio['"]/);
+  });
+
+  it('uploadTemplateAssetController only mutates default_props when prop_key is present', () => {
+    const ctl = read('controllers/remotion-templates.controller.ts');
+    // updateDefaultProps must be guarded by an `if (prop_key)` block — studio v2 must not touch v1 default_props
+    const uploadMatch = ctl.match(/uploadTemplateAssetController[\s\S]*?^};/m);
+    expect(uploadMatch).not.toBeNull();
+    const body = uploadMatch?.[0] ?? '';
+    expect(body).toMatch(/if\s*\(\s*prop_key\s*\)\s*{[\s\S]*?updateDefaultProps/);
+  });
+
+  it('url-upload-input component exists and posts to studio asset endpoint', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/url-upload-input.component.ts',
+    );
+    expect(comp).toMatch(/selector:\s*['"]app-url-upload-input['"]/);
+    expect(comp).toMatch(/uploadStudioAsset/);
+    // Must surface the URL via (valueChange), never auto-patch the resource
+    expect(comp).toMatch(/@Output\(\)\s+valueChange/);
+  });
+
+  it('data service exposes uploadStudioAsset(id, file) without prop_key', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/uploadStudioAsset\s*\([\s\S]*?templateId\s*:\s*string[\s\S]*?file\s*:\s*File/);
+    // Must NOT append prop_key in formData (that would re-trigger v1 default_props mutation)
+    const m = svc.match(/uploadStudioAsset[\s\S]*?^\s{2}}/m);
+    expect(m).not.toBeNull();
+    expect(m?.[0]).not.toMatch(/prop_key/);
+  });
+
+  it('admin-variants-panel imports UrlUploadInputComponent and requires templateId', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-variants-panel.component.ts',
+    );
+    expect(comp).toMatch(/import\s*\{\s*UrlUploadInputComponent\s*\}\s*from\s*['"]\.\/url-upload-input\.component['"]/);
+    expect(comp).toMatch(/imports:\s*\[[^\]]*UrlUploadInputComponent/);
+    expect(comp).toMatch(/@Input\(\{\s*required:\s*true\s*\}\)\s+templateId/);
+    expect(comp).toMatch(/<app-url-upload-input/);
+  });
+
+  it('admin-layers-panel imports UrlUploadInputComponent and requires templateId', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-layers-panel.component.ts',
+    );
+    expect(comp).toMatch(/import\s*\{\s*UrlUploadInputComponent\s*\}\s*from\s*['"]\.\/url-upload-input\.component['"]/);
+    expect(comp).toMatch(/imports:\s*\[[^\]]*UrlUploadInputComponent/);
+    expect(comp).toMatch(/@Input\(\{\s*required:\s*true\s*\}\)\s+templateId/);
+    expect(comp).toMatch(/<app-url-upload-input/);
+  });
+
+  it('admin-studio-panel passes templateId to variants + layers panels', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts',
+    );
+    const variantsBlock = comp.match(/<app-admin-variants-panel[\s\S]*?><\/app-admin-variants-panel>/);
+    const layersBlock = comp.match(/<app-admin-layers-panel[\s\S]*?><\/app-admin-layers-panel>/);
+    expect(variantsBlock?.[0]).toMatch(/\[templateId\]="view\.id"/);
+    expect(layersBlock?.[0]).toMatch(/\[templateId\]="view\.id"/);
+  });
+});
