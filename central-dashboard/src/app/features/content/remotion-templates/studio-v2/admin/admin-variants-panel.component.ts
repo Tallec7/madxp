@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { TemplateVariant } from '../../remotion-templates.types';
 import type { TemplateVariantCreate } from '../../remotion-templates-data.service';
+import { UrlUploadInputComponent } from './url-upload-input.component';
 
 /**
  * ADR-075 Sprint 3 — Panel CRUD variants (super_admin).
@@ -17,7 +18,7 @@ import type { TemplateVariantCreate } from '../../remotion-templates-data.servic
 @Component({
   selector: 'app-admin-variants-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UrlUploadInputComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="avp" data-testid="admin-variants-panel">
@@ -30,8 +31,20 @@ import type { TemplateVariantCreate } from '../../remotion-templates-data.servic
 
       <form *ngIf="openAdd" class="avp__form" (ngSubmit)="submitNew()">
         <input placeholder="Nom" [(ngModel)]="draft.name" name="name" required />
-        <input placeholder="URL vidéo de fond" [(ngModel)]="draft.backgroundVideoUrl" name="bg" required />
-        <input placeholder="URL thumbnail (opt.)" [(ngModel)]="draft.thumbnailUrl" name="thumb" />
+        <app-url-upload-input
+          [templateId]="templateId"
+          [value]="draft.backgroundVideoUrl"
+          placeholder="URL vidéo de fond"
+          accept="video/*"
+          (valueChange)="draft.backgroundVideoUrl = $event"
+        ></app-url-upload-input>
+        <app-url-upload-input
+          [templateId]="templateId"
+          [value]="draft.thumbnailUrl"
+          placeholder="URL thumbnail (opt.)"
+          accept="image/*,video/*"
+          (valueChange)="draft.thumbnailUrl = $event || null"
+        ></app-url-upload-input>
         <button type="submit" class="avp__save" [disabled]="!draft.name || !draft.backgroundVideoUrl">Créer</button>
       </form>
 
@@ -39,7 +52,14 @@ import type { TemplateVariantCreate } from '../../remotion-templates-data.servic
         <li *ngFor="let v of variants; let i = index" class="avp__item">
           <span class="avp__order">#{{ i + 1 }}</span>
           <input class="avp__name" [(ngModel)]="v.name" (change)="emitUpdate(v, { name: v.name })" />
-          <input class="avp__url" [(ngModel)]="v.backgroundVideoUrl" (change)="emitUpdate(v, { backgroundVideoUrl: v.backgroundVideoUrl })" />
+          <app-url-upload-input
+            class="avp__url"
+            [templateId]="templateId"
+            [value]="v.backgroundVideoUrl"
+            placeholder="URL vidéo de fond"
+            accept="video/*"
+            (valueChange)="v.backgroundVideoUrl = $event; emitUpdate(v, { backgroundVideoUrl: $event })"
+          ></app-url-upload-input>
           <button type="button" class="avp__btn" [disabled]="i === 0" (click)="moveUp(v, i)" title="Monter">↑</button>
           <button type="button" class="avp__btn" [disabled]="i === variants.length - 1" (click)="moveDown(v, i)" title="Descendre">↓</button>
           <button type="button" class="avp__delete" (click)="delete.emit(v.id)">Suppr.</button>
@@ -70,6 +90,7 @@ import type { TemplateVariantCreate } from '../../remotion-templates-data.servic
   `],
 })
 export class AdminVariantsPanelComponent {
+  @Input({ required: true }) templateId = '';
   @Input({ required: true }) variants: TemplateVariant[] = [];
   @Output() create = new EventEmitter<TemplateVariantCreate>();
   @Output() update = new EventEmitter<{ id: string; patch: Partial<TemplateVariant> }>();

@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { TemplateLayer } from '../../remotion-templates.types';
 import type { TemplateLayerCreate } from '../../remotion-templates-data.service';
+import { UrlUploadInputComponent } from './url-upload-input.component';
 
 /**
  * ADR-075 Sprint 3 — Panel CRUD layers (z-index + mask) — super_admin.
@@ -16,7 +17,7 @@ import type { TemplateLayerCreate } from '../../remotion-templates-data.service'
 @Component({
   selector: 'app-admin-layers-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UrlUploadInputComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="alp" data-testid="admin-layers-panel">
@@ -29,7 +30,13 @@ import type { TemplateLayerCreate } from '../../remotion-templates-data.service'
 
       <form *ngIf="openAdd" class="alp__form" (ngSubmit)="submitNew()">
         <input placeholder="Nom" [(ngModel)]="draft.name" name="name" required />
-        <input placeholder="URL vidéo" [(ngModel)]="draft.videoUrl" name="url" required />
+        <app-url-upload-input
+          [templateId]="templateId"
+          [value]="draft.videoUrl"
+          placeholder="URL vidéo"
+          accept="video/*"
+          (valueChange)="draft.videoUrl = $event"
+        ></app-url-upload-input>
         <input type="number" placeholder="z-index" [(ngModel)]="draft.zIndex" name="z" />
         <button type="submit" class="alp__save" [disabled]="!draft.name || !draft.videoUrl">Créer</button>
       </form>
@@ -38,7 +45,14 @@ import type { TemplateLayerCreate } from '../../remotion-templates-data.service'
         <li *ngFor="let l of layers" class="alp__item">
           <span class="alp__z">z={{ l.zIndex }}</span>
           <input class="alp__name" [(ngModel)]="l.name" (change)="emitUpdate(l, { name: l.name })" />
-          <input class="alp__url" [(ngModel)]="l.videoUrl" (change)="emitUpdate(l, { videoUrl: l.videoUrl })" />
+          <app-url-upload-input
+            class="alp__url"
+            [templateId]="templateId"
+            [value]="l.videoUrl"
+            placeholder="URL vidéo"
+            accept="video/*"
+            (valueChange)="l.videoUrl = $event; emitUpdate(l, { videoUrl: $event })"
+          ></app-url-upload-input>
           <span class="alp__mask" title="mask top/bottom/left/right">
             {{ l.mask.top }}/{{ l.mask.bottom }}/{{ l.mask.left }}/{{ l.mask.right }}
           </span>
@@ -69,6 +83,7 @@ import type { TemplateLayerCreate } from '../../remotion-templates-data.service'
   `],
 })
 export class AdminLayersPanelComponent {
+  @Input({ required: true }) templateId = '';
   @Input({ required: true }) layers: TemplateLayer[] = [];
   @Output() create = new EventEmitter<TemplateLayerCreate>();
   @Output() update = new EventEmitter<{ id: string; patch: Partial<TemplateLayer> }>();

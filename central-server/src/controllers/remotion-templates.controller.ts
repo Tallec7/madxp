@@ -266,9 +266,6 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
     if (!file || !filePath) {
       return res.status(400).json({ error: 'Fichier requis' });
     }
-    if (!prop_key) {
-      return res.status(400).json({ error: 'prop_key requis (ex: videoSrcA)' });
-    }
 
     const template = await remotionTemplatesRepository.findById(id);
     if (!template) {
@@ -276,8 +273,11 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
       return res.status(404).json({ error: 'Template non trouvé' });
     }
 
-    // Upload vers FTP — dossier remotion-assets/
-    const storagePath = `remotion-assets/${Date.now()}-${file.originalname}`;
+    // ADR-075 V2 : les variants/layers passent sans prop_key — l'URL est
+    // ensuite branchée via PATCH sur la ressource (pas dans default_props).
+    // Dossier FTP : `template-assets/studio/` pour isoler du remotion-assets legacy.
+    const folder = prop_key ? 'remotion-assets' : 'template-assets/studio';
+    const storagePath = `${folder}/${Date.now()}-${file.originalname}`;
     const buffer = fs.readFileSync(filePath);
     const result = await uploadAsset(buffer, storagePath, file.mimetype);
 
@@ -289,12 +289,13 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
 
     const publicUrl = getAssetUrl(storagePath);
 
-    // Mettre à jour default_props du template avec la nouvelle URL
-    const updatedDefaultProps = { ...(template.default_props as Record<string, unknown>), [prop_key]: publicUrl };
-    await remotionTemplatesRepository.updateDefaultProps(id, updatedDefaultProps);
+    if (prop_key) {
+      const updatedDefaultProps = { ...(template.default_props as Record<string, unknown>), [prop_key]: publicUrl };
+      await remotionTemplatesRepository.updateDefaultProps(id, updatedDefaultProps);
+    }
 
-    logger.info('Template asset uploaded', { templateId: id, prop_key, url: publicUrl });
-    res.json({ url: publicUrl, prop_key });
+    logger.info('Template asset uploaded', { templateId: id, prop_key: prop_key ?? '(studio-v2)', url: publicUrl });
+    res.json({ url: publicUrl, prop_key: prop_key ?? null });
   } catch (error) {
     if (filePath) cleanupFile(filePath);
     logger.error('uploadTemplateAsset error', { error, id: req.params.id });
