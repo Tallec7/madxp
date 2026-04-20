@@ -90,6 +90,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-071](ADR-071-frontend-hosting-migration-cloudflare-pages.md)  | Migration hosting frontend (dashboard + SaaS) → Cloudflare Pages | Proposé                  | Avr 2026 |
 | [ADR-072](ADR-072-hotspot-generalist-defaults.md)                  | Hotspot — defaults generalist pour toute la flotte               | Proposé                  | Avr 2026 |
 | [ADR-073](ADR-073-hotspot-security-hardening.md)                   | Durcissement sécurité hotspot + dashboard local                  | Accepté                  | Avr 2026 |
+| [ADR-074](ADR-074-hotspot-psk-single-source-of-truth.md)           | PSK hotspot — source de vérité unique côté cloud                 | Accepté                  | Avr 2026 |
 
 ### Supersédés
 

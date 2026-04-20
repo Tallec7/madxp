@@ -46,6 +46,8 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'configure_wifi_client',
   // Hostname customization - v3.51
   'update_hostname',
+  // ADR-074 — cloud-canonical hotspot PSK
+  'rotate_psk',
 ];
 
 const buildAllowedCommands = () => {

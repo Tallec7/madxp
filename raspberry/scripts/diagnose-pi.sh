@@ -473,18 +473,13 @@ check_permissions() {
         TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
     fi
 
-    # Vérifier que club-config.json est protégé
+    # ADR-074 : club-config.json ne contient plus le PSK WiFi. 644 est OK.
+    # (Le PSK est désormais dans /etc/hostapd/hostapd.conf, déjà protégé par root.)
     if [ -f "${NEOPRO_DIR}/club-config.json" ]; then
         local CONFIG_PERMS
         CONFIG_PERMS=$(stat -c "%a" "${NEOPRO_DIR}/club-config.json" 2>/dev/null)
-        if [ "$CONFIG_PERMS" = "600" ]; then
-            print_success "club-config.json : chmod 600"
-            json_add "permissions" "club-config.json" "ok" "600"
-        else
-            print_warning "club-config.json : chmod ${CONFIG_PERMS} (devrait être 600)"
-            json_add "permissions" "club-config.json" "warn" "${CONFIG_PERMS}"
-            TOTAL_WARNINGS=$((TOTAL_WARNINGS + 1))
-        fi
+        print_success "club-config.json : chmod ${CONFIG_PERMS}"
+        json_add "permissions" "club-config.json" "ok" "${CONFIG_PERMS}"
     fi
 
     # Vérifier ownership de webapp

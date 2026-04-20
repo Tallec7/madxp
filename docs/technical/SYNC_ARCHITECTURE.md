@@ -1614,4 +1614,52 @@ Le handler `profile-switch` broadcastait la config brute du profil **sans** la f
 
 ---
 
+## 10. Hotspot PSK — source unique côté cloud (ADR-074)
+
+Depuis le 2026-04-19, la vérité du PSK hotspot est **la DB cloud**. Le Pi consomme, jamais ne dicte.
+
+### Flux
+
+```
+┌──────────────────┐    GET /api/sites/:id/hotspot-config    ┌─────────────┐
+│  central-server  │ ◄─────────────────────────────────────── │  sync-agent │
+│  sites.wifi_psk_ │    (Bearer: site.api_key)                │  (boot +    │
+│  encrypted (AES) │ ───────────────────────────────────────► │   reconnect)│
+└──────────────────┘    { ssid, psk, channel }                └─────────────┘
+         │                                                            │
+         │ rotate (dashboard)                                          ▼
+         ▼                                                    parseHostapdConf
+   sendOrQueue('rotate_psk')  ──► Socket.IO ──► cmd rotate_psk ──► syncFromCloud
+         │                                                            │
+         │                                                            ▼
+         │                                                 diff → sed hostapd.conf
+         │                                                 restart hostapd
+         │                                                 chmod 0600 .hotspot-cache
+```
+
+### Modules
+
+| Côté           | Fichier                                     | Rôle                                                        |
+| -------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| central-server | `services/hotspot-psk-crypto.service.ts`    | AES-256-GCM, clé `HOTSPOT_PSK_ENCRYPTION_KEY`               |
+| central-server | `controllers/hotspot-config.controller.ts`  | GET / bootstrap (one-shot) / rotate (dispatch `rotate_psk`) |
+| central-server | `repositories/hotspot-config.repository.ts` | Accès DB `sites.wifi_psk_encrypted` + `sites.wifi_ssid`     |
+| central-server | `scripts/hotspot-bootstrap-status.ts`       | `npm run hotspot:status` — audit flotte                     |
+| sync-agent     | `services/hotspot-sync.js`                  | Fetch, parse, diff, sed, restart, cache chiffré             |
+| sync-agent     | `commands/index.js` (handler `rotate_psk`)  | Commande cloud → resync immédiat                            |
+| admin          | `services/hostapd-reader.service.js`        | Read-only parse de hostapd.conf (plus de club-config.json)  |
+
+### Cache local
+
+`/home/pi/neopro/.hotspot-cache` — chiffré (même clé que DB), chmod `0600`, survit aux redémarrages offline. Si cloud injoignable au boot, `hostapd.conf` existant reste source valide — jamais d'écrasement sans donnée plus fraîche.
+
+### Invariants (voir `.claude/rules/hotspot-psk.md`)
+
+- `sync-agent` est le **seul** écrivain de `hostapd.conf` sur le Pi.
+- `club-config.json` ne contient plus de WiFi (phase 5b prévue 2026-06-15 pour suppression complète).
+- `rotate_psk` whitelisté dans `DEFAULT_ALLOWED_COMMANDS`.
+- Smoke test `smoke-hotspot-psk.test.ts` garantit la non-régression.
+
+---
+
 _Document généré pour le projet NEOPRO - Confidentiel_
