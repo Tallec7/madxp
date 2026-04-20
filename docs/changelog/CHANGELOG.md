@@ -1,3 +1,9 @@
+# [3.201.0](https://github.com/Tallec7/neopro/compare/v3.200.4...v3.201.0) (2026-04-20)
+
+### Features
+
+- **dashboard:** add view modes and thumbnail support to content library ([3d74174](https://github.com/Tallec7/neopro/commit/3d741741c85c6d7372a7b163be81c4c0c09a982e))
+
 ## [3.200.4](https://github.com/Tallec7/neopro/compare/v3.200.3...v3.200.4) (2026-04-20)
 
 ### Bug Fixes
