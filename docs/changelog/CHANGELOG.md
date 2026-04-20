@@ -1,3 +1,9 @@
+## [3.198.1](https://github.com/Tallec7/neopro/compare/v3.198.0...v3.198.1) (2026-04-20)
+
+### Bug Fixes
+
+- **saas:** decode JWT to extract real filename for analytics ([#502](https://github.com/Tallec7/neopro/issues/502)) ([38bc401](https://github.com/Tallec7/neopro/commit/38bc401ad15b328c48aba630293023ec5d04d5cd))
+
 # [3.198.0](https://github.com/Tallec7/neopro/compare/v3.197.5...v3.198.0) (2026-04-20)
 
 ### Features
