@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc && cp -r src/docs dist/ && cp -r src/templates dist/ && mkdir -p dist/scripts/migrations && cp src/scripts/migrations/*.sql dist/scripts/migrations/",
-    "start": "node --max-old-space-size=512 --expose-gc dist/server.js",
+    "start": "node dist/scripts/migrate.js && node --max-old-space-size=512 --expose-gc dist/server.js",
     "db:migrate": "ts-node src/scripts/migrate.ts",
     "db:migrate:prod": "node dist/scripts/migrate.js",
     "db:seed": "ts-node src/scripts/seed.ts",
