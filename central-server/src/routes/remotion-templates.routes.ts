@@ -96,6 +96,19 @@ router.patch(
   ctrl.publishTemplate,
 );
 
+// ADR-075 — toggle schema_version 1 ↔ 2 (super_admin uniquement)
+// Remplace le flip manuel SQL documenté dans ADR-075 par un toggle UI.
+// Guard repo-side : v2 exige shadow data présentes (variants/text_fields/image_slots).
+router.patch(
+  '/:id/schema-version',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(paramSchemas.id),
+  validate(schemas.templateSchemaVersionUpdate),
+  sensitiveRateLimit,
+  ctrl.setTemplateSchemaVersion,
+);
+
 // Upload asset vidéo (WebM) — admin uniquement
 router.post(
   '/:id/assets',

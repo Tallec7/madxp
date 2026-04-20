@@ -45,6 +45,16 @@ export class RemotionTemplatesDataService {
     return this.api.patch<RemotionTemplate>(`/remotion-templates/${id}/publish`, { published });
   }
 
+  /**
+   * ADR-075 — Toggle schema_version 1 ↔ 2 (super_admin UI).
+   * 409 si schema_version=2 demandé sans shadow data (variants/text_fields/image_slots).
+   */
+  setSchemaVersion(id: string, schemaVersion: 1 | 2): Observable<RemotionTemplate> {
+    return this.api.patch<RemotionTemplate>(`/remotion-templates/${id}/schema-version`, {
+      schema_version: schemaVersion,
+    });
+  }
+
   uploadAsset(templateId: string, file: File, propKey: string): Observable<AssetUploadResult> {
     const formData = new FormData();
     formData.append('file', file);

@@ -795,6 +795,11 @@ export const schemas = {
     name: Joi.string().max(255).optional(),
   }),
 
+  // ADR-075 — toggle schema_version 1 ↔ 2 (super_admin UI)
+  templateSchemaVersionUpdate: Joi.object({
+    schema_version: Joi.number().valid(1, 2).required(),
+  }),
+
   // ADR-077 — body pour POST /:id/user-uploads (image slot / prop user-fillable)
   templateUserUploadBody: Joi.object({
     slot_key: Joi.string().pattern(/^[a-zA-Z0-9_-]{1,64}$/).required(),

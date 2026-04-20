@@ -86,6 +86,7 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   versionsLoading = false;
   restoringVersionId: string | null = null;
   duplicating = false;
+  schemaVersionFlipping = false;
 
   ngOnDestroy(): void {
     this.stopPolling();
@@ -482,6 +483,45 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
       error: () => {
         this.restoringVersionId = null;
         this.notifications.error('Échec de la restauration');
+      },
+    });
+  }
+
+  /**
+   * ADR-075 — Bascule schema_version 1 ↔ 2 (super_admin uniquement).
+   * 409 si flip v1→v2 sans shadow data (variants/text_fields/image_slots).
+   */
+  toggleSchemaVersion(): void {
+    if (!this.isSuperAdmin || !this.selectedTemplate || this.schemaVersionFlipping) return;
+    const current = (this.selectedTemplate.schema_version ?? 1) as 1 | 2;
+    const target: 1 | 2 = current === 2 ? 1 : 2;
+    this.schemaVersionFlipping = true;
+    this.dataService.setSchemaVersion(this.selectedTemplate.id, target).subscribe({
+      next: (updated) => {
+        this.schemaVersionFlipping = false;
+        this.applyUpdatedTemplate(updated);
+        this.notifications.success(`Schéma basculé en v${target}`);
+        if (isV2Template(updated)) this.loadStudioView(updated.id);
+        else this.studioView = null;
+      },
+      error: (err: { status?: number; error?: { error?: string; missing?: Record<string, boolean> } }) => {
+        this.schemaVersionFlipping = false;
+        if (err?.status === 409) {
+          const missing = err.error?.missing;
+          const parts = missing
+            ? Object.entries(missing)
+                .filter(([, m]) => m)
+                .map(([k]) => k)
+                .join(', ')
+            : '';
+          this.notifications.error(
+            parts
+              ? `Impossible de passer en v2 : shadow data manquante (${parts})`
+              : 'Impossible de passer en v2 : shadow data manquante',
+          );
+        } else {
+          this.notifications.error('Échec du changement de schéma');
+        }
       },
     });
   }

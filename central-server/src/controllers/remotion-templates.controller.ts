@@ -10,6 +10,7 @@ import {
   remotionTemplateVersionsRepository,
   remotionRenderJobRepository,
 } from '../repositories';
+import { metricsService } from '../services/metrics.service';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -154,6 +155,67 @@ export const publishTemplate = async (req: AuthRequest, res: Response) => {
     res.json(template);
   } catch (error) {
     logger.error('publishTemplate error', { error, id: req.params.id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * PATCH /api/remotion-templates/:id/schema-version
+ * Bascule un template entre v1 (legacy props_schema) et v2 (data-driven
+ * variants/layers/text_fields/image_slots). super_admin uniquement.
+ *
+ * Flipper vers v2 exige que les shadow data v2 aient déjà été seedées — sinon
+ * 409 Conflict avec détail du manque, pour éviter de casser le rendu.
+ */
+export const setTemplateSchemaVersion = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { schema_version } = req.body as { schema_version: 1 | 2 };
+
+    const current = await remotionTemplatesRepository.findSchemaVersion(id);
+    if (current === null) {
+      metricsService.recordTemplateStudioOperation('studio_view', 'update', 'not_found');
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    if (current === schema_version) {
+      const tpl = await remotionTemplatesRepository.findById(id);
+      return res.json(tpl);
+    }
+
+    if (schema_version === 2) {
+      const counts = await remotionTemplatesRepository.countStudioShadowData(id);
+      if (counts.variants === 0 || counts.textFields === 0 || counts.imageSlots === 0) {
+        metricsService.recordTemplateStudioOperation('studio_view', 'update', 'conflict');
+        return res.status(409).json({
+          error: 'Impossible de flipper en v2 : shadow data v2 manquantes',
+          missing: {
+            variants: counts.variants === 0,
+            text_fields: counts.textFields === 0,
+            image_slots: counts.imageSlots === 0,
+          },
+          counts,
+        });
+      }
+    }
+
+    const updated = await remotionTemplatesRepository.setSchemaVersion(id, schema_version);
+    if (!updated) {
+      metricsService.recordTemplateStudioOperation('studio_view', 'update', 'not_found');
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    metricsService.recordTemplateStudioOperation('studio_view', 'update', 'success');
+    logger.info('Template schema_version flipped', {
+      templateId: id,
+      from: current,
+      to: schema_version,
+      userId: req.user?.id,
+    });
+    res.json(updated);
+  } catch (error) {
+    logger.error('setTemplateSchemaVersion error', { error, id: req.params.id });
+    metricsService.recordTemplateStudioOperation('studio_view', 'update', 'error');
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };

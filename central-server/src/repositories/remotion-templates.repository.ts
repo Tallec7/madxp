@@ -105,6 +105,40 @@ class RemotionTemplatesRepository {
     return result.rows[0] || null;
   }
 
+  async findSchemaVersion(id: string): Promise<number | null> {
+    const result = await query<{ schema_version: number }>(
+      'SELECT schema_version FROM neopro_templates WHERE id = $1',
+      [id]
+    );
+    const row = result.rows[0];
+    return row ? Number(row.schema_version) : null;
+  }
+
+  async setSchemaVersion(id: string, schemaVersion: 1 | 2): Promise<NeoProTemplate | null> {
+    const result = await query<NeoProTemplate>(
+      `UPDATE neopro_templates SET schema_version = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [schemaVersion, id]
+    );
+    return result.rows[0] || null;
+  }
+
+  async countStudioShadowData(id: string): Promise<{ variants: number; textFields: number; imageSlots: number }> {
+    const result = await query<{ variants: string; text_fields: string; image_slots: string }>(
+      `SELECT
+         (SELECT COUNT(*) FROM template_variants WHERE template_id = $1)     AS variants,
+         (SELECT COUNT(*) FROM template_text_fields WHERE template_id = $1)  AS text_fields,
+         (SELECT COUNT(*) FROM template_image_slots WHERE template_id = $1)  AS image_slots`,
+      [id]
+    );
+    const row = result.rows[0];
+    return {
+      variants: Number(row?.variants ?? 0),
+      textFields: Number(row?.text_fields ?? 0),
+      imageSlots: Number(row?.image_slots ?? 0),
+    };
+  }
+
   /**
    * Update template's editable fields. Any UPDATE that touches props_schema or
    * default_props triggers an automatic snapshot into neopro_template_versions
