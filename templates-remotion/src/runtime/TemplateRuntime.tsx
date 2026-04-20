@@ -62,25 +62,27 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
 
   const variant = props.variants.find((v) => v.id === props.variantId);
   const sortedLayers = [...props.layers].sort((a, b) => a.zIndex - b.zIndex);
+  const bgSrc = (variant?.backgroundVideoUrl ?? '').trim();
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      {variant && variant.backgroundVideoUrl ? (
+      {bgSrc ? (
         <OffthreadVideo
-          src={variant.backgroundVideoUrl}
+          src={bgSrc}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       ) : null}
 
       {sortedLayers.map((layer) => {
-        if (!layer.videoUrl) return null;
+        const layerSrc = (layer.videoUrl ?? '').trim();
+        if (!layerSrc) return null;
         const clipPath =
           `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ` +
           `${layer.mask.bottom * 100}% ${layer.mask.left * 100}%)`;
         return (
           <AbsoluteFill key={layer.id} style={{ clipPath }}>
             <OffthreadVideo
-              src={layer.videoUrl}
+              src={layerSrc}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </AbsoluteFill>
