@@ -56,21 +56,21 @@ import type { RemotionTemplate } from './remotion-templates.types';
   styles: [`
     :host { display: block; }
     .template-card {
-      border: 2px solid #e5e7eb;
+      border: 2px solid var(--border-color);
       border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
       transition: border-color .15s, box-shadow .15s;
-      background: #fff;
+      background: var(--card-bg);
       outline: none;
     }
     .template-card:hover, .template-card:focus-visible {
-      border-color: #8b5cf6;
-      box-shadow: 0 2px 8px rgba(139, 92, 246, .15);
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 15%, transparent);
     }
     .template-card.selected {
-      border-color: #8b5cf6;
-      box-shadow: 0 0 0 3px rgba(139, 92, 246, .2);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 20%, transparent);
     }
     .tpl-thumb {
       height: 140px;

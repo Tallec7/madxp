@@ -13,12 +13,13 @@
     font-size: 24px;
     font-weight: 700;
     margin: 0 0 6px;
+    color: var(--text-primary);
   }
 }
 
 .badge-new {
-  background: #8b5cf6;
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--card-bg);
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 12px;
@@ -27,14 +28,14 @@
 }
 
 .subtitle {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0;
 }
 
 .render-panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 24px;
   margin-top: 8px;
@@ -50,6 +51,7 @@
     font-size: 18px;
     font-weight: 600;
     margin: 0;
+    color: var(--text-primary);
   }
 }
 
@@ -64,20 +66,20 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .btn-ghost {
   font-size: 13px;
   padding: 6px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: #fff;
-  color: #111827;
+  background: var(--card-bg);
+  color: var(--text-primary);
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background: #f9fafb;
+    background: var(--bg-color);
   }
   &:disabled {
     opacity: 0.6;
@@ -108,14 +110,15 @@
 
 .btn {
   &.btn-primary {
-    background: #8b5cf6;
-    color: #fff;
+    background: var(--primary-color);
+    color: var(--card-bg);
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    transition: filter 0.15s;
 
     &:hover:not(:disabled) {
-      background: #7c3aed;
+      filter: brightness(0.9);
     }
   }
 
@@ -127,13 +130,14 @@
 
 .render-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-secondary);
+  opacity: 0.8;
   margin: 0;
 }
 
 .progress-bar {
   height: 6px;
-  background: #e5e7eb;
+  background: var(--border-color);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 6px;
@@ -141,7 +145,7 @@
 
 .progress-fill {
   height: 100%;
-  background: #8b5cf6;
+  background: var(--primary-color);
   transition: width 0.3s;
 }
 
@@ -150,25 +154,26 @@
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: #d1fae5;
+  background: color-mix(in srgb, var(--success-color) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success-color) 35%, transparent);
   border-radius: 8px;
 }
 
 .result-ok {
   font-size: 13px;
-  color: #065f46;
+  color: var(--neo-hand-dark);
   font-weight: 500;
 }
 
 .btn-download {
   font-size: 12px;
-  color: #065f46;
+  color: var(--neo-hand-dark);
   text-decoration: underline;
 }
 
 .result-size {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-left: auto;
 }
 
