@@ -17,6 +17,7 @@
     "target": "ES2022",
     "module": "preserve",
     "lib": ["ES2022", "dom"],
+    "jsx": "react-jsx",
     "paths": {
       "@app/*": ["src/app/*"],
       "@env/*": ["src/environments/*"]
