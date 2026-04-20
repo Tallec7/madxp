@@ -9,10 +9,11 @@ import logger from '../config/logger';
 /**
  * ADR-074 — Hotspot config controller.
  *
- * Three endpoints:
- *   GET  /api/sites/:id/hotspot-config            → Pi fetch (site API key)
- *   POST /api/sites/:id/hotspot-config/bootstrap  → Pi one-shot upload of existing local PSK
- *   POST /api/sites/:id/hotspot-config/rotate     → admin dashboard rotates PSK
+ * Four endpoints:
+ *   GET  /api/sites/:id/hotspot-config             → Pi fetch (site API key)
+ *   GET  /api/sites/:id/hotspot-config/admin-view  → admin dashboard read (JWT, ADR-076)
+ *   POST /api/sites/:id/hotspot-config/bootstrap   → Pi one-shot upload of existing local PSK
+ *   POST /api/sites/:id/hotspot-config/rotate      → admin dashboard rotates PSK
  */
 
 export const getHotspotConfig = async (req: SiteAuthRequest, res: Response): Promise<void> => {
@@ -34,6 +35,26 @@ export const getHotspotConfig = async (req: SiteAuthRequest, res: Response): Pro
     });
   } catch (error) {
     logger.error('getHotspotConfig error', { error, siteId: req.params.id });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getHotspotConfigAdminView = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const config = await hotspotConfigRepository.findBySiteId(id);
+    if (!config) {
+      res.json({ configured: false });
+      return;
+    }
+    res.json({
+      configured: true,
+      ssid: config.ssid,
+      psk: config.psk,
+      rotatedAt: config.rotatedAt,
+    });
+  } catch (error) {
+    logger.error('getHotspotConfigAdminView error', { error, siteId: req.params.id });
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -41,13 +41,10 @@ export interface OverlayConfig {
 }
 
 export interface HotspotConfigResponse {
-  success: boolean;
   configured: boolean;
   ssid?: string;
-  password?: string;
-  channel?: number;
-  isActive?: boolean;
-  message?: string;
+  psk?: string;
+  rotatedAt?: string;
 }
 
 export interface CommandResponse {
