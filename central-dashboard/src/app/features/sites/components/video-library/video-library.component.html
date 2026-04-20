@@ -165,8 +165,11 @@
     [siteType]="siteType"
     [configTargets]="configTargets"
     [configVideoLabels]="configVideoLabels"
+    [configVideoTargets]="configVideoTargets"
     [canUseSecondaryDisplay]="canUseSecondaryDisplay"
     [totalDisplays]="totalDisplays"
+    [siteDisplays]="siteDisplays"
+    [availableVideos]="availableVideos"
     [isClubLocked]="detailVideo ? isClubLocked(detailVideo) : false"
     [isDeploying]="detailVideo ? isDeploying(detailVideo) : false"
     [addToDropdownOpen]="!!detailVideo && addToDropdownVideo === detailVideo"
@@ -174,9 +177,10 @@
     (closePanel)="closeDetail()"
     (toggleAddTo)="toggleAddToDropdown($event.video, $event.event)"
     (addToTargetSelect)="onAddToTargetSelect($event.video, $event.target, $event.event)"
-    (variant)="onVariant($event.video, $event.event)"
     (deploy)="onDeploy($event.video, $event.event)"
     (deleteVideo)="onDelete($event.video, $event.event)"
+    (variantChanged)="onVariantChanged($event)"
+    (removeFromTarget)="removeFromTarget.emit($event)"
   ></app-video-detail-panel>
 
   <!-- Video Preview Popup (extracted to sub-component) -->

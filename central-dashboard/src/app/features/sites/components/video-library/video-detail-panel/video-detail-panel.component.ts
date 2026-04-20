@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { VideoItem, AddToTarget } from '../video-library.types';
+import { DisplayConfig, CloudVideo } from '../../../../../core/models';
+import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
 import {
   formatBytes,
   formatDate,
@@ -20,7 +22,7 @@ import {
 @Component({
   selector: 'app-video-detail-panel',
   standalone: true,
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, VideoVariantPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-detail-panel.component.html',
   styleUrls: ['./video-detail-panel.component.scss'],
@@ -30,8 +32,11 @@ export class VideoDetailPanelComponent {
   @Input() siteType: string = '';
   @Input() configTargets: AddToTarget[] = [];
   @Input() configVideoLabels: Map<string, string[]> = new Map();
+  @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map();
   @Input() canUseSecondaryDisplay = false;
   @Input() totalDisplays = 1;
+  @Input() siteDisplays: DisplayConfig[] = [];
+  @Input() availableVideos: CloudVideo[] = [];
   /** Parent-resolved boolean (depends on isClubUser + upload ownership) */
   @Input() isClubLocked = false;
   /** Parent-resolved boolean (deploy state is keyed by video.id) */
@@ -47,9 +52,10 @@ export class VideoDetailPanelComponent {
     target: AddToTarget;
     event: Event;
   }>();
-  @Output() variant = new EventEmitter<{ video: VideoItem; event: Event }>();
   @Output() deploy = new EventEmitter<{ video: VideoItem; event: Event }>();
   @Output() deleteVideo = new EventEmitter<{ video: VideoItem; event: Event }>();
+  @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
+  @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>();
 
   // Expose pure formatters as instance fields so templates can call them directly.
   readonly formatBytes = formatBytes;
@@ -71,15 +77,15 @@ export class VideoDetailPanelComponent {
     this.addToTargetSelect.emit({ video, target, event });
   }
 
-  onVariant(video: VideoItem, event: Event): void {
-    this.variant.emit({ video, event });
-  }
-
   onDeploy(video: VideoItem, event: Event): void {
     this.deploy.emit({ video, event });
   }
 
   onDelete(video: VideoItem, event: Event): void {
     this.deleteVideo.emit({ video, event });
+  }
+
+  onRemoveFromTarget(video: VideoItem, target: AddToTarget): void {
+    this.removeFromTarget.emit({ video, target });
   }
 }

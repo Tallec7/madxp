@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, Chang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor } from '../../../../core/models';
+import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 import { VideoReconciliationService } from './video-reconciliation.service';
 import { VideoRelevanceFilterService } from './video-relevance-filter.service';
@@ -77,6 +77,8 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
   @Input() siteSponsors: SiteSponsor[] = []; // ADR-050: sponsors for status calc
+  @Input() siteDisplays: DisplayConfig[] = [];
+  @Input() availableVideos: CloudVideo[] = [];
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() videoPreview = new EventEmitter<VideoItem>();
@@ -86,6 +88,8 @@ export class VideoLibraryComponent implements OnChanges {
   @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2: add video to any config target
 
   @Input() configTargets: AddToTarget[] = []; // Available targets from config (built by site-content-tab)
+  @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map(); // Sprint 3: targets each video belongs to
+  @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
 
   constructor(
     private gate: FeatureGateService,
@@ -110,6 +114,13 @@ export class VideoLibraryComponent implements OnChanges {
     if (!this.canUseSecondaryDisplay) return;
     this.videoVariant.emit(video);
   }
+
+  onVariantChanged(event: { videoId: string; count: number; types: string[] }): void {
+    this.variantChanged.emit(event);
+    this.secondaryVariantChanged.emit();
+  }
+  @Output() secondaryVariantChanged = new EventEmitter<void>();
+  @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() bulkDeploy = new EventEmitter<VideoItem[]>();
   @Output() bulkDelete = new EventEmitter<VideoItem[]>();
 
@@ -339,13 +350,33 @@ export class VideoLibraryComponent implements OnChanges {
       this.addToDropdownVideo = null;
       return;
     }
-    // Position the fixed dropdown relative to the trigger button
     const trigger = event.target as HTMLElement;
     const rect = trigger.getBoundingClientRect();
-    this.addToDropdownStyle = {
-      top: `${rect.bottom + 2}px`,
-      left: `${rect.right}px`,
-    };
+    const dropdownMinWidth = 200;
+    const dropdownEstimatedHeight = 240;
+    const spaceOnLeft = rect.right;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const style: Record<string, string> = {};
+
+    // Horizontal: right-aligned when there's room, left-aligned otherwise
+    if (spaceOnLeft >= dropdownMinWidth) {
+      style['left'] = `${rect.right}px`;
+      style['transform'] = 'translateX(-100%)';
+    } else {
+      style['left'] = `${rect.left}px`;
+      style['transform'] = 'none';
+    }
+
+    // Vertical: open downward unless there's not enough space below
+    if (spaceBelow >= dropdownEstimatedHeight) {
+      style['top'] = `${rect.bottom + 2}px`;
+      style['bottom'] = 'auto';
+    } else {
+      style['top'] = 'auto';
+      style['bottom'] = `${window.innerHeight - rect.top + 2}px`;
+    }
+
+    this.addToDropdownStyle = style;
     this.addToDropdownVideo = video;
   }
 

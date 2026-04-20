@@ -1,0 +1,90 @@
+<div class="vcm">
+  <div class="vcm__header">
+    <h4 class="vcm__title">Catégories vidéo</h4>
+    <button class="vcm__add-btn" (click)="openCreateForm()" [disabled]="showForm">
+      + Nouvelle catégorie
+    </button>
+  </div>
+
+  @if (showForm) {
+    <div class="vcm__form">
+      <div class="vcm__form-row">
+        <input
+          class="vcm__input"
+          type="text"
+          placeholder="Nom de la catégorie"
+          [(ngModel)]="form.name"
+          (keyup.enter)="save()"
+          autofocus
+        />
+        <select class="vcm__select" [(ngModel)]="form.type" (ngModelChange)="onTypeChange()">
+          @for (opt of typeOptions; track opt) {
+            <option [value]="opt">{{ typeLabels[opt] }}</option>
+          }
+        </select>
+        <input
+          class="vcm__input vcm__input--icon"
+          type="text"
+          placeholder="Icône (emoji)"
+          [(ngModel)]="form.icon"
+          maxlength="4"
+        />
+      </div>
+      <div class="vcm__form-actions">
+        <button
+          class="vcm__btn vcm__btn--primary"
+          (click)="save()"
+          [disabled]="saving || !form.name.trim()"
+        >
+          {{
+            saving
+              ? ('common.saving' | translate)
+              : editingId
+                ? ('common.update' | translate)
+                : ('common.create' | translate)
+          }}
+        </button>
+        <button class="vcm__btn vcm__btn--ghost" (click)="cancelForm()">
+          {{ 'common.cancel' | translate }}
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading) {
+    <div class="vcm__empty">Chargement…</div>
+  } @else if (categories.length === 0 && !showForm) {
+    <div class="vcm__empty">Aucune catégorie. Créez-en une pour organiser vos vidéos.</div>
+  } @else {
+    <ul class="vcm__list">
+      @for (cat of categories; track cat.id; let i = $index) {
+        <li class="vcm__item" [class.vcm__item--editing]="editingId === cat.id">
+          <span class="vcm__icon">{{ cat.icon ?? typeIcons[cat.type] }}</span>
+          <span class="vcm__name">{{ cat.name }}</span>
+          <span class="vcm__badge vcm__badge--{{ cat.type }}">{{ typeLabels[cat.type] }}</span>
+          <div class="vcm__actions">
+            <button class="vcm__icon-btn" title="Monter" (click)="moveUp(i)" [disabled]="i === 0">
+              ↑
+            </button>
+            <button
+              class="vcm__icon-btn"
+              title="Descendre"
+              (click)="moveDown(i)"
+              [disabled]="i === categories.length - 1"
+            >
+              ↓
+            </button>
+            <button class="vcm__icon-btn" title="Modifier" (click)="openEditForm(cat)">✏️</button>
+            <button
+              class="vcm__icon-btn vcm__icon-btn--danger"
+              title="Supprimer"
+              (click)="deleteCategory(cat)"
+            >
+              🗑️
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -327,3 +327,11 @@ export {
   hotspotConfigRepository,
   type HotspotConfig,
 } from './hotspot-config.repository';
+
+export {
+  videoCategoryRepository,
+  type VideoCategoryRow,
+  type VideoCategoryType,
+  type CreateVideoCategoryInput,
+  type UpdateVideoCategoryInput,
+} from './video-category.repository';

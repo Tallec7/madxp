@@ -45,12 +45,18 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [featureOverrides]="featureOverrides"
         [siteSponsors]="siteSponsors"
         [configTargets]="configTargets"
+        [configVideoTargets]="configVideoTargets"
+        [siteDisplays]="siteDisplays"
+        [availableVideos]="cloudVideos"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
         (videoDelete)="onVideoDelete($event)"
         (videoVariant)="onVideoVariant($event)"
+        (secondaryVariantChanged)="closeVariantModal()"
+        (variantChanged)="onVariantChanged($event)"
         (addToTarget)="addToTarget.emit($event)"
+        (removeFromTarget)="removeFromTarget.emit($event)"
       ></app-video-library>
     </div>
 
@@ -216,6 +222,7 @@ export class VideoManagerComponent {
   @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() siteSponsors: SiteSponsor[] = []; // ADR-050
   @Input() configTargets: AddToTarget[] = []; // ADR-050 Phase 2: available config targets
+  @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map(); // Sprint 3: targets each video belongs to
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() isSuperAdmin = false;
   @Input() isClubUser = false;
@@ -227,6 +234,7 @@ export class VideoManagerComponent {
   @Output() secondaryVariantChanged = new EventEmitter<void>();
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2
+  @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
 
   selectedVideoPath = '';
   showDeleteModal = false;
