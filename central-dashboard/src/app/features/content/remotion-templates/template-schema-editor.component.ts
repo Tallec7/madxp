@@ -130,7 +130,7 @@ import type { RemotionTemplate, TemplatePropDef } from './remotion-templates.typ
     }
     .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-size: 14px; }
     .btn-secondary { background: #fff; border-color: #d1d5db; }
-    .btn-primary { background: #8b5cf6; color: #fff; }
+    .btn-primary { background: var(--primary-color); color: #fff; }
     .btn-primary:disabled, .btn-secondary:disabled { opacity: .6; cursor: not-allowed; }
   `],
 })

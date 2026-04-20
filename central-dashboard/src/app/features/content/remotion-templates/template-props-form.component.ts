@@ -148,7 +148,7 @@ import type { RemotionTemplate, TemplatePropDef } from './remotion-templates.typ
       font-size: 14px; box-sizing: border-box;
     }
     .number-field { display: flex; align-items: center; gap: 10px; }
-    .range-input { flex: 1; cursor: pointer; accent-color: #8b5cf6; }
+    .range-input { flex: 1; cursor: pointer; accent-color: var(--primary-color); }
     .number-input { width: 80px; flex: none; }
     .asset-field { display: flex; flex-direction: column; gap: 6px; }
     .asset-current {
@@ -163,11 +163,14 @@ import type { RemotionTemplate, TemplatePropDef } from './remotion-templates.typ
     }
     .asset-upload-btn {
       display: inline-block; padding: 8px 14px;
-      border: 1px dashed #a78bfa; border-radius: 8px;
-      cursor: pointer; font-size: 12px; color: #7c3aed; background: #f5f3ff;
+      border: 1px dashed color-mix(in srgb, var(--primary-color) 55%, transparent);
+      border-radius: 8px;
+      cursor: pointer; font-size: 12px;
+      color: var(--primary-color);
+      background: color-mix(in srgb, var(--primary-color) 6%, transparent);
     }
-    .asset-upload-btn:hover { background: #ede9fe; }
-    .asset-uploading { font-size: 12px; color: #8b5cf6; }
+    .asset-upload-btn:hover { background: color-mix(in srgb, var(--primary-color) 12%, transparent); }
+    .asset-uploading { font-size: 12px; color: var(--primary-color); }
     .image-preview { position: relative; display: inline-block; }
     .image-preview img { height: 80px; border-radius: 8px; border: 1px solid #e5e7eb; }
     .btn-remove {

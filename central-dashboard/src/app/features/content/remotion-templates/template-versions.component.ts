@@ -90,7 +90,10 @@ import type { TemplateVersion } from './remotion-templates.types';
       background: #f9fafb; padding: 1px 6px; border-radius: 10px;
       align-self: flex-start;
     }
-    .version-reason.reason-initial { background: #ede9fe; color: #6d28d9; }
+    .version-reason.reason-initial {
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      color: var(--primary-color);
+    }
     .btn-restore {
       font-size: 12px; padding: 4px 10px;
       border: 1px solid #d1d5db; border-radius: 6px;
