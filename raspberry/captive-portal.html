@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>NEOPRO — Réseau local</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        background: linear-gradient(160deg, #0f2744 0%, #1a3f6f 50%, #0d1f38 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 20px;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 380px;
+        text-align: center;
+      }
+
+      .logo {
+        height: 32px;
+        width: auto;
+        opacity: 0.95;
+        margin-bottom: 36px;
+      }
+
+      .icon-wrap {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+      }
+
+      .icon-wrap svg {
+        width: 40px;
+        height: 40px;
+      }
+
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        margin-bottom: 8px;
+        color: #fff;
+      }
+
+      .ssid {
+        font-size: 15px;
+        font-weight: 600;
+        color: #5bb8ff;
+        margin-bottom: 20px;
+      }
+
+      .divider {
+        width: 40px;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 2px;
+        margin: 0 auto 20px;
+      }
+
+      .description {
+        font-size: 14px;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 28px;
+      }
+
+      .notice {
+        background: rgba(255, 165, 0, 0.15);
+        border: 1px solid rgba(255, 165, 0, 0.3);
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 28px;
+        text-align: left;
+      }
+
+      .notice-title {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #ffa940;
+        margin-bottom: 6px;
+      }
+
+      .notice p {
+        font-size: 13px;
+        line-height: 1.55;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .notice strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .btn-close {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        border-radius: 12px;
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.01em;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s;
+      }
+
+      .btn-close:active {
+        background: #1d4ed8;
+      }
+
+      .footer {
+        margin-top: 24px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.25);
+        letter-spacing: 0.05em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img class="logo" src="/neopro-logo-white.png" alt="Neopro" />
+
+      <div class="icon-wrap">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 28.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z" fill="#5bb8ff" />
+          <path
+            d="M6.5 19.5C10.2 15.8 14.8 13.5 20 13.5s9.8 2.3 13.5 6"
+            stroke="#5bb8ff"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <path
+            d="M11 24.5C13.5 22 16.6 20.5 20 20.5s6.5 1.5 9 4"
+            stroke="rgba(255,255,255,0.6)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <path
+            d="M2 14.5C6.7 9.8 13 7 20 7s13.3 2.8 18 7.5"
+            stroke="rgba(255,255,255,0.3)"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle cx="30" cy="10" r="7" fill="#22c55e" />
+          <path
+            d="M27 10l2 2 4-4"
+            stroke="#fff"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+
+      <h1>Connecté au réseau du club</h1>
+      <div class="ssid">Réseau local — sans accès internet</div>
+
+      <div class="divider"></div>
+
+      <p class="description">
+        Ce réseau Wi-Fi est réservé à l'affichage digital du club.<br />
+        Aucune connexion internet n'est nécessaire.
+      </p>
+
+      <div class="notice">
+        <div class="notice-title">Si votre iPhone demande…</div>
+        <p>
+          « Ce réseau Wi-Fi n'est pas connecté à Internet »<br />
+          → Appuyez sur <strong>Utiliser sans Internet</strong>. C'est normal et attendu.
+        </p>
+      </div>
+
+      <button class="btn-close" onclick="window.location = 'about:blank'">
+        Fermer et continuer
+      </button>
+
+      <div class="footer">neopro.local &nbsp;·&nbsp; 192.168.4.1</div>
+    </div>
+  </body>
+</html>
