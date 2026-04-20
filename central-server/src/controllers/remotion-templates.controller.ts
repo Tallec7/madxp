@@ -212,6 +212,70 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
 };
 
 /**
+ * POST /api/remotion-templates/:id/user-uploads (ADR-077)
+ * Upload une image utilisateur (JPEG/PNG/WebP ≤ 10Mo) vers FTP, namespaced
+ * par `template-assets/user-uploads/{siteId}/{userId}/`. Accessible à tout
+ * utilisateur authentifié (contrairement à `/:id/assets` super_admin-only).
+ * Ne modifie PAS default_props du template : l'URL est retournée au client
+ * qui la passe dans le payload render sous `imageUploads[slotKey]`.
+ */
+export const uploadUserImageAsset = async (req: AuthRequest, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  const filePath = file?.path;
+
+  try {
+    const { id } = req.params;
+    const { slot_key } = req.body as { slot_key?: string };
+
+    if (!file || !filePath) {
+      return res.status(400).json({ error: 'Fichier image requis' });
+    }
+    if (!slot_key) {
+      return res.status(400).json({ error: 'slot_key requis' });
+    }
+
+    const template = await remotionTemplatesRepository.findById(id);
+    if (!template) {
+      cleanupFile(filePath);
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    const userId = req.user?.id ?? 'anonymous';
+    const siteId = req.user?.site_id ?? 'shared';
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `template-assets/user-uploads/${siteId}/${userId}/${Date.now()}-${safeName}`;
+
+    const buffer = fs.readFileSync(filePath);
+    const result = await uploadAsset(buffer, storagePath, file.mimetype);
+    cleanupFile(filePath);
+
+    if (!result) {
+      return res.status(500).json({ error: 'Échec upload FTP' });
+    }
+
+    const publicUrl = getAssetUrl(storagePath);
+    logger.info('template_user_image_uploaded', {
+      templateId: id,
+      slotKey: slot_key,
+      userId,
+      siteId,
+      role: req.user?.role,
+      mime: file.mimetype,
+      size: file.size,
+    });
+
+    res.json({ url: publicUrl, slot_key });
+  } catch (error) {
+    if (filePath) cleanupFile(filePath);
+    logger.error('uploadUserImageAsset error', {
+      error: error instanceof Error ? error.message : error,
+      templateId: req.params.id,
+    });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
  * POST /api/remotion-templates/:id/render
  * Enqueue an async render job (ADR-054). Returns 202 { job_id } immediately.
  * The in-process worker picks it up, and the frontend polls GET /render-jobs/:jobId.

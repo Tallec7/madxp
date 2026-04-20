@@ -55,6 +55,9 @@ export const streamVideo = async (req: Request, res: Response): Promise<void> =>
       if (v) res.setHeader(h, v);
     }
     res.setHeader('Cache-Control', 'private, max-age=300');
+    // Token JWT déjà valide → autoriser le <video> SaaS cross-origin
+    // (helmet par défaut: same-origin → ERR_BLOCKED_BY_RESPONSE.NotSameOrigin)
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     if (!upstream.body) {
       res.end();

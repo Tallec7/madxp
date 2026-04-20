@@ -27,6 +27,107 @@ export interface RemotionTemplate {
   thumbnail_url: string | null;
   published: boolean;
   created_at: string;
+  /** ADR-075 — null/1 = legacy, 2 = data-driven studio. */
+  schema_version?: number;
+}
+
+// ── ADR-075 Template Studio v2 — types data-driven ─────────────────────────
+
+export type AnimationPreset =
+  | 'none'
+  | 'fade'
+  | 'slide-up'
+  | 'slide-down'
+  | 'scale-in'
+  | 'blur-in';
+
+export type TextAlign = 'left' | 'center' | 'right';
+
+export interface TemplateVariant {
+  id: string;
+  templateId: string;
+  name: string;
+  backgroundVideoUrl: string;
+  thumbnailUrl: string | null;
+  sortOrder: number;
+}
+
+export interface TemplateLayer {
+  id: string;
+  templateId: string;
+  name: string;
+  videoUrl: string;
+  zIndex: number;
+  mask: { top: number; bottom: number; left: number; right: number };
+}
+
+export interface TemplateTextField {
+  id: string;
+  templateId: string;
+  slotKey: string;
+  label: string;
+  position: { x: number; y: number };
+  maxWidth: number;
+  fontFamily: string;
+  fontSize: number;
+  color: string;
+  align: TextAlign;
+  appearAt: number;
+  appearDuration: number;
+  animation: AnimationPreset;
+  defaultValue: string;
+  maxChars: number | null;
+  multiline: boolean;
+  required: boolean;
+  sortOrder: number;
+}
+
+export interface TemplateImageSlot {
+  id: string;
+  templateId: string;
+  slotKey: string;
+  label: string;
+  position: { x: number; y: number; width: number; height: number };
+  appearAt: number;
+  appearDuration: number;
+  animation: AnimationPreset;
+  aspectRatio: string | null;
+  required: boolean;
+  sortOrder: number;
+}
+
+/** Vue consolidée retournée par `GET /api/remotion-templates/:id/studio`. */
+export interface TemplateStudioView {
+  id: string;
+  name: string;
+  description: string | null;
+  schemaVersion: 2;
+  compositionId: string;
+  durationSeconds: number;
+  fps: number;
+  thumbnailUrl: string | null;
+  published: boolean;
+  variants: TemplateVariant[];
+  layers: TemplateLayer[];
+  textFields: TemplateTextField[];
+  imageSlots: TemplateImageSlot[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Payload v2 envoyé dans `POST /render` via la clé `props`.
+ * Le worker le discrimine du payload v1 (clé/valeur plate) par la présence
+ * de `variantId` + `textValues` + `imageUploads`.
+ */
+export interface RenderTemplateRequestV2 {
+  variantId: string;
+  textValues: Record<string, string>;
+  imageUploads: Record<string, string>;
+}
+
+export function isV2Template(t: Pick<RemotionTemplate, 'schema_version'>): boolean {
+  return t.schema_version === 2;
 }
 
 export interface RenderResult {

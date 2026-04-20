@@ -148,6 +148,16 @@ export const uploadRateLimit = createUserRateLimit(
   'upload'
 );
 
+// ADR-077 — Upload image user Template Studio (20 uploads / heure / user)
+export const templateUserUploadRateLimit = createUserRateLimit(
+  60 * 60 * 1000, // 1 heure
+  20,
+  {
+    message: { error: 'Limite d\'uploads image atteinte. Réessayez dans 1 heure.' },
+  },
+  'template-user-upload'
+);
+
 // Upload de packages OTA - quota distinct des vidéos (20 uploads / heure)
 export const otaUploadRateLimit = createUserRateLimit(
   60 * 60 * 1000, // 1 heure

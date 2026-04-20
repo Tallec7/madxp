@@ -137,6 +137,27 @@ export const uploadTemplateAsset = multer({
   limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
 });
 
+// ADR-077 — Upload image user pour les image_slots (v2) / image props (v1).
+// Ouvert aux utilisateurs authentifiés (non super_admin). Images uniquement.
+const userImageFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) => {
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Type non autorisé: ${file.mimetype}. Formats acceptés: JPEG, PNG, WebP`));
+  }
+};
+
+export const uploadUserTemplateImage = multer({
+  storage: diskStorage,
+  fileFilter: userImageFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max (ADR-077)
+});
+
 // Configuration multer pour les paquets de mise à jour — DISK STORAGE (jusqu'à 1GB)
 export const uploadUpdatePackage = multer({
   storage: diskStorage,

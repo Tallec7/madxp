@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
-import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import {
+  adminRateLimit,
+  sensitiveRateLimit,
+  templateUserUploadRateLimit,
+} from '../middleware/user-rate-limit';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
-import { uploadTemplateAsset } from '../middleware/upload';
+import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
 import * as ctrl from '../controllers/remotion-templates.controller';
 
 const router = Router();
@@ -101,6 +105,21 @@ router.post(
   sensitiveRateLimit,
   uploadTemplateAsset.single('file'),
   ctrl.uploadTemplateAssetController,
+);
+
+// ADR-077 — Upload image utilisateur (JPEG/PNG/WebP ≤ 10Mo) pour image_slots v2
+// ou image props v1. Ouvert à tout utilisateur authentifié (admin/super_admin,
+// operator, club). L'URL retournée est consommée côté dashboard dans le payload
+// render (`imageUploads[slotKey]`), pas persistée dans default_props.
+router.post(
+  '/:id/user-uploads',
+  authenticate,
+  requireRole('admin', 'super_admin', 'operator', 'club'),
+  validateParams(paramSchemas.id),
+  templateUserUploadRateLimit,
+  uploadUserTemplateImage.single('file'),
+  validate(schemas.templateUserUploadBody),
+  ctrl.uploadUserImageAsset,
 );
 
 // Render — admin/operator libre, club doit avoir la feature video_templates
