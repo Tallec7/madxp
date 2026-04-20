@@ -1,3 +1,9 @@
+## [3.197.3](https://github.com/Tallec7/neopro/compare/v3.197.2...v3.197.3) (2026-04-20)
+
+### Bug Fixes
+
+- **deploy:** chain migrations in npm start for Railway override ([#497](https://github.com/Tallec7/neopro/issues/497)) ([fcc28aa](https://github.com/Tallec7/neopro/commit/fcc28aa3c3b7a9c3f2f39f5ea2aabc7019f8a87f))
+
 ## [3.197.2](https://github.com/Tallec7/neopro/compare/v3.197.1...v3.197.2) (2026-04-20)
 
 ### Bug Fixes
