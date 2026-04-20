@@ -1,3 +1,9 @@
+## [3.200.1](https://github.com/Tallec7/neopro/compare/v3.200.0...v3.200.1) (2026-04-20)
+
+### Bug Fixes
+
+- **ci:** install central-dashboard deps in release workflow ([#507](https://github.com/Tallec7/neopro/issues/507)) ([95f3517](https://github.com/Tallec7/neopro/commit/95f35174be3972b517e62bb08da4f8a4992d6962))
+
 # [3.200.0](https://github.com/Tallec7/neopro/compare/v3.199.0...v3.200.0) (2026-04-20)
 
 ### Features
