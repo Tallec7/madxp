@@ -168,11 +168,11 @@ describe('Hourly metric alerting wiring', () => {
 
     expect({
       hasThrottleConstant: /METRICS_PERSIST_INTERVAL_MS\s*=/.test(content),
-      hasThrottleMap: /lastMetricsInsertAt\s*=\s*new Map/.test(content),
+      usesCtxMap: /ctx\.lastMetricsInsertAt\.(get|set)/.test(content),
       throttleGuardsInsert: /if\s*\(\s*now\s*-\s*lastInsert\s*>=\s*METRICS_PERSIST_INTERVAL_MS[^]*?INSERT INTO metrics/m.test(content),
     }).toEqual({
       hasThrottleConstant: true,
-      hasThrottleMap: true,
+      usesCtxMap: true,
       throttleGuardsInsert: true,
     });
   });
