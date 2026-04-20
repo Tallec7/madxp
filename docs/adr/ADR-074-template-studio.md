@@ -1,0 +1,777 @@
+# ADR-074 : Template Studio — compositeur multi-couches data-driven
+
+**Date** : 2026-04-20
+**Statut** : Proposé
+**Décideurs** : GLT (PO + Dev Lead), Gabin (Motion Designer), Claude Code (exécution)
+**Remplace** : PROP-014 (draft, superseded)
+**Lié** : ADR-054 (async Remotion render), ADR-055 (template versions), PROP-004 (video template engine)
+**Epic SAFe** : E-05 Motion / Templates (PI-2)
+
+---
+
+## TL;DR
+
+Template Studio = studio web permettant de **composer des visuels vidéo** à partir de :
+
+- **Couches vidéo alpha** produites par Gabin en After Effects
+- **Textes et images** remplis par l'user dans un formulaire
+- **Variantes couleur** swappables (bg rouge/bleu/vert…)
+
+Le moteur de rendu est une **meta-composition Remotion data-driven** : aucune composition codée par template, tout lu depuis la DB. Un nouveau template = une insertion DB (via wizard super_admin), zéro code à écrire.
+
+MVP livré en ~3 semaines. Architecture posée pour 3 modes d'usage :
+
+- **A (MVP)** : catalogue Neopro, super_admin crée via wizard, users remplissent et rendent
+- **B (V2)** : white-glove club templates, équipe Neopro configure pour un club spécifique
+- **C (V3)** : self-service club (club compose ses propres templates)
+
+---
+
+## Contexte
+
+### État actuel
+
+- 2 templates en prod (`ButSimple`, `ButImgJoueur`) codés en dur dans `central-server/src/templates/`
+- Schema JSON par template, édition admin partielle (ADR-055)
+- Render async via ADR-054 (`render_jobs`, polling, MP4 stocké sur FTP)
+- UI `/content/templates-remotion` avec grille + preview iframe + form props + CTA render
+- Tokens design alignés sur `--primary-color` dashboard (restyle fait 2026-04-19)
+
+### Besoin produit
+
+1. **Gabin livre ~1 template/semaine** en After Effects, sous forme de MOV alpha + vidéos background colorées + brief écrit. Il n'est pas dev.
+2. **GLT (super_admin)** doit pouvoir créer/modifier un template **sans dev**, itérer le timing/position des textes en temps réel.
+3. **Les users (club, operator)** doivent remplir un formulaire simple (nom joueur, photo, variante couleur) et obtenir un MP4.
+4. **Demain** : clubs produisent leurs propres vidéos en interne et veulent les personnaliser via le studio (BYO template).
+5. **Après-demain** : ouverture publique sur `studio.neopro.fr` pour freemium lead-gen.
+
+### Contraintes
+
+- ✅ Pas de mini-Figma / éditeur keyframes dans le studio (trop gros)
+- ✅ Remotion natif pour animations (pas Lottie, pas d'éditeur externe)
+- ✅ Cohérence design tokens dashboard (pas de noir/or)
+- ✅ Retro-compat avec les 2 templates existants
+- ✅ File size <400 lignes/fichier (règle projet)
+- ✅ Repository pattern (pas de `query()` direct)
+
+---
+
+## Décision
+
+**Modèle de données "couches + slots" + runtime Remotion meta-composition data-driven + studio 2-modes (user / super_admin)**.
+
+### Modèle conceptuel
+
+```
+Template
+├─ Variantes (N vidéos bg opaques, même structure, couleurs différentes)
+├─ Couches alpha (1..10 MOV empilés en Z, durée fixe)
+├─ Champs texte (M slots éditables, position + timing + animation preset)
+└─ Image slots (P slots éditables, position + timing + animation preset)
+
+User input (au moment du render)
+├─ templateId
+├─ variantId (choisi)
+├─ textValues[fieldId] (remplis)
+└─ imageUploads[slotId] (uploadés)
+
+Render → meta-composition Remotion qui stack tout → MP4
+```
+
+### Rejet des alternatives
+
+#### 1. Scènes temporelles séquentielles (intro → but → score)
+
+**Ce que c'était** : timeline horizontale de briques (type CapCut/Premiere), user ajoute/retire/réordonne des scènes qui jouent les unes après les autres.
+**Rejeté parce que** : ne matche pas le workflow de Gabin. Il produit une seule animation de 5s avec 3 couches alpha empilées en Z, pas 3 scènes de 1.5s chacune. Le modèle "scènes" serait plus simple mais incompatible avec son use case réel.
+**Verdict** : ❌ Rejeté — PROP-014 draft superseded.
+
+#### 2. JSON frozen généré par Claude Code uniquement
+
+**Ce que c'était** : toute la config template vit dans un fichier JSON versionné en Git, Claude Code le produit depuis les MOV de Gabin, pas d'édition via studio.
+**Rejeté parce que** : GLT serait bloqué sur Claude Code pour chaque itération de timing/position. Workflow trop lent pour des ajustements quotidiens en phase de création de template.
+**Verdict** : ❌ Rejeté — on expose les champs édition à super_admin dès le MVP.
+
+#### 3. Builder WYSIWYG drag-to-place dès le MVP
+
+**Ce que c'était** : canvas interactif, super_admin clique pour placer un champ texte, drag handles pour le positionner/redimensionner, timeline pour régler timing.
+**Rejeté parce que** : +1-2 semaines de dev pour le visuel, alors qu'un wizard form avec inputs x/y en % suffit pour super_admin. Le WYSIWYG est pertinent quand on ouvrira aux clubs (V3), pas avant.
+**Verdict** : ⏸️ Reporté V3 — l'architecture le permet sans refonte.
+
+#### 4. Lottie pour les animations
+
+**Ce que c'était** : animations texte/image en fichiers Lottie JSON, Remotion les embed via `@remotion/lottie`.
+**Rejeté parce que** : overkill pour fade / slide / scale simples. Remotion natif (`interpolate`, `spring`) fait ça en 5 lignes, 0 dépendance, 0 fichier externe. Lottie utile seulement pour animations complexes externes (cas Gabin = AE → MOV alpha, pas Lottie).
+**Verdict** : ❌ Rejeté — Remotion natif. Lottie possible plus tard si cas concret remonte.
+
+### Alternative retenue ✅
+
+**Couches alpha + slots data-driven + wizard super_admin form-based.**
+
+**Avantages** :
+
+1. Matche exactement le workflow Gabin (AE → MOV alpha)
+2. Super_admin autonome via wizard, plus de dépendance Claude Code sur iterations
+3. Architecture prépare V2 (white-glove) et V3 (self-service club) sans refonte
+4. Retro-compat ButSimple/ButImgJoueur triviale (wrap en 1-couche, 0 variante)
+5. Runtime Remotion générique = 1 composition pour N templates
+6. Pas d'explosion de scope (pas de WYSIWYG, pas de keyframes, pas de Lottie)
+
+**Inconvénients** :
+
+1. Pas de visual builder pour super_admin (positions en % via formulaire) — acceptable vu volume faible (~1 template/semaine)
+2. Durée fixe par couche (pas de stretch) — cohérent avec workflow AE, Gabin livre à durée précise
+3. Masks rectangulaires uniquement (top/bottom/left/right %), pas de SVG paths — suffit pour les cas actuels
+
+---
+
+## Modèle de données
+
+### Migration DB
+
+Fichier : `central-server/migrations/0044_template_studio_v2.sql`
+
+```sql
+-- Extension de la table existante
+ALTER TABLE remotion_templates
+  ADD COLUMN schema_version INT NOT NULL DEFAULT 2,
+  ADD COLUMN duration_seconds NUMERIC(6,2) NOT NULL DEFAULT 5.0,
+  ADD COLUMN min_scenes INT NOT NULL DEFAULT 1,  -- usage futur scènes
+  ADD COLUMN fps INT NOT NULL DEFAULT 30;
+
+-- Nouvelles tables (Z-stack, slots)
+
+CREATE TABLE template_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES remotion_templates(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                    -- "Rouge", "Bleu"
+  background_video_url TEXT NOT NULL,    -- FTP URL, opaque MP4
+  thumbnail_url TEXT,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE template_layers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES remotion_templates(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                    -- "A — Logo", "B — Transition"
+  video_url TEXT NOT NULL,               -- FTP URL, alpha MOV
+  z_index INT NOT NULL,
+  mask_top NUMERIC(4,3) DEFAULT 0,       -- 0..1 (% du haut à masquer)
+  mask_bottom NUMERIC(4,3) DEFAULT 0,
+  mask_left NUMERIC(4,3) DEFAULT 0,
+  mask_right NUMERIC(4,3) DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE template_text_fields (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES remotion_templates(id) ON DELETE CASCADE,
+  slot_key TEXT NOT NULL,                -- 'prenom', 'nom', 'clubHaut'
+  label TEXT NOT NULL,                   -- "Prénom"
+  position_x NUMERIC(5,4) NOT NULL,      -- 0..1
+  position_y NUMERIC(5,4) NOT NULL,
+  max_width NUMERIC(5,4) NOT NULL DEFAULT 0.8,
+  font_family TEXT NOT NULL DEFAULT 'Anton',
+  font_size INT NOT NULL,                -- px @ 1080p
+  color TEXT NOT NULL DEFAULT '#FFFFFF',
+  align TEXT NOT NULL DEFAULT 'center',  -- 'left' | 'center' | 'right'
+  appear_at NUMERIC(5,2) NOT NULL,       -- secondes
+  appear_duration NUMERIC(4,2) NOT NULL DEFAULT 0.4,
+  animation TEXT NOT NULL DEFAULT 'fade', -- 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in'
+  default_value TEXT NOT NULL DEFAULT '',
+  max_chars INT,
+  multiline BOOLEAN NOT NULL DEFAULT FALSE,
+  required BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INT NOT NULL DEFAULT 0,
+  UNIQUE (template_id, slot_key)
+);
+
+CREATE TABLE template_image_slots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES remotion_templates(id) ON DELETE CASCADE,
+  slot_key TEXT NOT NULL,                -- 'photoJoueur', 'logoSponsor'
+  label TEXT NOT NULL,
+  position_x NUMERIC(5,4) NOT NULL,
+  position_y NUMERIC(5,4) NOT NULL,
+  width NUMERIC(5,4) NOT NULL,
+  height NUMERIC(5,4) NOT NULL,
+  appear_at NUMERIC(5,2) NOT NULL,
+  appear_duration NUMERIC(4,2) NOT NULL DEFAULT 0.4,
+  animation TEXT NOT NULL DEFAULT 'fade',
+  aspect_ratio TEXT,                     -- '1:1', '3:4', NULL=free
+  required BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INT NOT NULL DEFAULT 0,
+  UNIQUE (template_id, slot_key)
+);
+
+CREATE INDEX idx_variants_template ON template_variants(template_id);
+CREATE INDEX idx_layers_template ON template_layers(template_id, z_index);
+CREATE INDEX idx_text_template ON template_text_fields(template_id);
+CREATE INDEX idx_image_template ON template_image_slots(template_id);
+```
+
+### TypeScript interfaces
+
+Fichier : `central-server/src/types/template-studio.types.ts`
+
+```typescript
+export interface TemplateV2 {
+  id: string;
+  name: string;
+  description: string | null;
+  schemaVersion: 2;
+  durationSeconds: number;
+  fps: number;
+  variants: TemplateVariant[];
+  layers: TemplateLayer[];
+  textFields: TemplateTextField[];
+  imageSlots: TemplateImageSlot[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateVariant {
+  id: string;
+  name: string;
+  backgroundVideoUrl: string;
+  thumbnailUrl: string | null;
+  sortOrder: number;
+}
+
+export interface TemplateLayer {
+  id: string;
+  name: string;
+  videoUrl: string;
+  zIndex: number;
+  mask: { top: number; bottom: number; left: number; right: number };
+}
+
+export interface TemplateTextField {
+  id: string;
+  slotKey: string;
+  label: string;
+  position: { x: number; y: number };
+  maxWidth: number;
+  fontFamily: string;
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  appearAt: number;
+  appearDuration: number;
+  animation: AnimationPreset;
+  defaultValue: string;
+  maxChars: number | null;
+  multiline: boolean;
+  required: boolean;
+  sortOrder: number;
+}
+
+export interface TemplateImageSlot {
+  id: string;
+  slotKey: string;
+  label: string;
+  position: { x: number; y: number; width: number; height: number };
+  appearAt: number;
+  appearDuration: number;
+  animation: AnimationPreset;
+  aspectRatio: string | null;
+  required: boolean;
+  sortOrder: number;
+}
+
+export type AnimationPreset = 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+
+// Render payload (user → server)
+export interface RenderTemplateRequest {
+  templateId: string;
+  variantId: string;
+  textValues: Record<string, string>; // keyed by slotKey
+  imageUploads: Record<string, string>; // keyed by slotKey, value = uploaded asset URL
+}
+```
+
+---
+
+## Contrat API
+
+### Endpoints
+
+| Method   | Path                                           | Rôle              | Description                                           |
+| -------- | ---------------------------------------------- | ----------------- | ----------------------------------------------------- |
+| `GET`    | `/api/remotion-templates`                      | all authenticated | Liste templates (sans détails)                        |
+| `GET`    | `/api/remotion-templates/:id`                  | all authenticated | Template complet (variants + layers + fields + slots) |
+| `POST`   | `/api/remotion-templates`                      | super_admin       | Créer template (wizard)                               |
+| `PATCH`  | `/api/remotion-templates/:id`                  | super_admin       | Update name/duration/fps                              |
+| `DELETE` | `/api/remotion-templates/:id`                  | super_admin       | Supprimer template                                    |
+| `POST`   | `/api/remotion-templates/:id/variants`         | super_admin       | Ajouter variant                                       |
+| `PATCH`  | `/api/remotion-templates/:id/variants/:vId`    | super_admin       | Update variant                                        |
+| `DELETE` | `/api/remotion-templates/:id/variants/:vId`    | super_admin       | Supprimer variant                                     |
+| `POST`   | `/api/remotion-templates/:id/layers`           | super_admin       | Ajouter couche                                        |
+| `PATCH`  | `/api/remotion-templates/:id/layers/:lId`      | super_admin       | Update couche (z-index, mask)                         |
+| `DELETE` | `/api/remotion-templates/:id/layers/:lId`      | super_admin       | Supprimer couche                                      |
+| `POST`   | `/api/remotion-templates/:id/text-fields`      | super_admin       | Ajouter champ texte                                   |
+| `PATCH`  | `/api/remotion-templates/:id/text-fields/:fId` | super_admin       | Update champ texte                                    |
+| `DELETE` | `/api/remotion-templates/:id/text-fields/:fId` | super_admin       | Supprimer champ texte                                 |
+| `POST`   | `/api/remotion-templates/:id/image-slots`      | super_admin       | Ajouter image slot                                    |
+| `PATCH`  | `/api/remotion-templates/:id/image-slots/:sId` | super_admin       | Update slot                                           |
+| `DELETE` | `/api/remotion-templates/:id/image-slots/:sId` | super_admin       | Supprimer slot                                        |
+| `POST`   | `/api/remotion-templates/upload-asset`         | super_admin       | Upload MOV/MP4 vers FTP, retourne URL                 |
+| `POST`   | `/api/remotion-templates/:id/render`           | authenticated     | Lance render async (existant ADR-054)                 |
+| `GET`    | `/api/render-jobs/:jobId`                      | authenticated     | Polling render (existant ADR-054)                     |
+
+Validation Joi par endpoint. Repository pattern (pas de `query()` direct dans les controllers).
+
+---
+
+## Runtime Remotion
+
+### Meta-composition data-driven
+
+Fichier : `central-server/src/templates/_runtime/TemplateRuntime.tsx`
+
+```tsx
+import { AbsoluteFill, OffthreadVideo, Sequence, useVideoConfig } from 'remotion';
+import { AnimatedText } from './AnimatedText';
+import { AnimatedImage } from './AnimatedImage';
+import type { TemplateV2, RenderTemplateRequest } from '../types';
+
+type Props = TemplateV2 & RenderTemplateRequest;
+
+export const TemplateRuntime: React.FC<Props> = (props) => {
+  const { fps } = useVideoConfig();
+  const variant = props.variants.find((v) => v.id === props.variantId)!;
+  const sorted = [...props.layers].sort((a, b) => a.zIndex - b.zIndex);
+
+  return (
+    <AbsoluteFill>
+      {/* Couche 0 : background opaque (variant choisi) */}
+      <OffthreadVideo src={variant.backgroundVideoUrl} />
+
+      {/* Couches alpha empilées */}
+      {sorted.map((layer) => (
+        <AbsoluteFill
+          key={layer.id}
+          style={{
+            clipPath: `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ${layer.mask.bottom * 100}% ${layer.mask.left * 100}%)`,
+          }}
+        >
+          <OffthreadVideo src={layer.videoUrl} />
+        </AbsoluteFill>
+      ))}
+
+      {/* Textes avec animation + timing */}
+      {props.textFields.map((field) => (
+        <Sequence
+          key={field.id}
+          from={Math.round(field.appearAt * fps)}
+          durationInFrames={Math.round((props.durationSeconds - field.appearAt) * fps)}
+        >
+          <AnimatedText
+            field={field}
+            value={props.textValues[field.slotKey] ?? field.defaultValue}
+          />
+        </Sequence>
+      ))}
+
+      {/* Images slots */}
+      {props.imageSlots.map((slot) => (
+        <Sequence
+          key={slot.id}
+          from={Math.round(slot.appearAt * fps)}
+          durationInFrames={Math.round((props.durationSeconds - slot.appearAt) * fps)}
+        >
+          <AnimatedImage slot={slot} src={props.imageUploads[slot.slotKey]} />
+        </Sequence>
+      ))}
+    </AbsoluteFill>
+  );
+};
+```
+
+### Presets d'animation
+
+Fichier : `central-server/src/templates/_runtime/animations.ts`
+
+```typescript
+import { interpolate, spring, Easing } from 'remotion';
+
+export function animate(
+  preset: AnimationPreset,
+  frame: number,
+  fps: number,
+  durationFrames: number,
+) {
+  switch (preset) {
+    case 'none':
+      return { opacity: 1, transform: 'none' };
+    case 'fade':
+      return {
+        opacity: interpolate(frame, [0, durationFrames], [0, 1], { extrapolateRight: 'clamp' }),
+      };
+    case 'slide-up':
+      return {
+        opacity: interpolate(frame, [0, durationFrames], [0, 1], { extrapolateRight: 'clamp' }),
+        transform: `translateY(${interpolate(frame, [0, durationFrames], [30, 0], { easing: Easing.out(Easing.cubic), extrapolateRight: 'clamp' })}px)`,
+      };
+    case 'slide-down':
+      return {
+        /* similar, reversed */
+      };
+    case 'scale-in': {
+      const s = spring({ frame, fps, config: { damping: 12 }, durationInFrames: durationFrames });
+      return { opacity: Math.min(s, 1), transform: `scale(${s})` };
+    }
+    case 'blur-in':
+      return {
+        opacity: interpolate(frame, [0, durationFrames], [0, 1], { extrapolateRight: 'clamp' }),
+        filter: `blur(${interpolate(frame, [0, durationFrames], [20, 0], { extrapolateRight: 'clamp' })}px)`,
+      };
+  }
+}
+```
+
+### Composition unique
+
+Une seule composition Remotion enregistrée : `template-runtime`. Les props varient selon le template chargé. Évite l'explosion des compositions par template.
+
+---
+
+## UI Dashboard (Angular)
+
+### Mode user (rôles : admin, operator, club)
+
+Route : `/content/templates-remotion` (existante, restylée).
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ Templates Remotion                                                │
+│ (grille de cards par template)                                    │
+└──────────────────────────────────────────────────────────────────┘
+
+Click template →
+┌──────────────────────────────────────────────────────────────────┐
+│ ← Retour    Template: But Simple                                  │
+│                                                                    │
+│ ┌─ Preview (iframe Remotion) ─┐  ┌─ Form ────────────────────┐   │
+│ │                              │  │ Variante                   │   │
+│ │    [canvas 16:9 animé]       │  │ [●Rouge] [○Bleu] [○Vert]  │   │
+│ │                              │  │                            │   │
+│ │                              │  │ Prénom    [Kylian______]  │   │
+│ │                              │  │ Nom       [Mbappé______]  │   │
+│ └──────────────────────────────┘  │ Club haut [PARIS SG____]  │   │
+│                                    │ Club bas  [PSG_________]  │   │
+│                                    │                            │   │
+│                                    │ Photo joueur              │   │
+│                                    │ [⬆ Téléverser]           │   │
+│                                    │                            │   │
+│                                    │ [✦ GÉNÉRER LA VIDÉO]      │   │
+│                                    └────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Mode super_admin (rôle : super_admin uniquement)
+
+Même route + toggle "⚙ Mode édition" visible seulement pour super_admin.
+
+Expose **3 panneaux supplémentaires** à droite :
+
+1. **Variantes** — list edit (add/remove/rename, upload bg MP4)
+2. **Couches alpha** — list edit (z-index, mask top/bottom/left/right, upload MOV)
+3. **Champs texte & images** — list edit avec éditeur par champ :
+   - Position X / Y (% sliders)
+   - Taille (largeur %)
+   - Font / size / color
+   - Timing : appear_at, appear_duration (sliders)
+   - Animation (dropdown 6 presets)
+   - Default value, required
+
+- Bouton "**+ Nouveau template**" → wizard 4 étapes (Infos → Variantes → Couches → Slots).
+
+### Composants Angular à créer
+
+| Composant                       | Fichier                               | Rôle                                      |
+| ------------------------------- | ------------------------------------- | ----------------------------------------- |
+| `StudioPageComponent`           | `studio-page.component.ts`            | Container route                           |
+| `TemplateGalleryComponent`      | `template-gallery.component.ts`       | Grille de templates (mode user entry)     |
+| `TemplateEditorComponent`       | `template-editor.component.ts`        | Preview + form                            |
+| `VariantPickerComponent`        | `variant-picker.component.ts`         | Pastilles couleur                         |
+| `TextFieldInputComponent`       | `text-field-input.component.ts`       | Input texte user mode                     |
+| `ImageSlotUploadComponent`      | `image-slot-upload.component.ts`      | Upload image user mode                    |
+| `AdminVariantsPanelComponent`   | `admin-variants-panel.component.ts`   | super_admin only                          |
+| `AdminLayersPanelComponent`     | `admin-layers-panel.component.ts`     | super_admin only                          |
+| `AdminFieldEditorComponent`     | `admin-field-editor.component.ts`     | super_admin only, réutilisable text/image |
+| `CreateTemplateWizardComponent` | `create-template-wizard.component.ts` | super_admin only, 4 étapes                |
+| `TemplateStudioDataService`     | `template-studio-data.service.ts`     | HTTP client                               |
+
+Tous standalone, <400 lignes chacun (règle projet). Si un dépasse, splitter.
+
+---
+
+## User stories & critères d'acceptation
+
+### US-1 — Super_admin crée un template depuis zéro
+
+**Scénario** : Gabin livre BUT_simple (3 MOV alpha + 3 MP4 bg) + brief texte.
+
+1. Je me connecte en super_admin, j'ouvre le studio
+2. Je clique "+ Nouveau template"
+3. **Étape 1** (Infos) : je saisis nom "But Simple v2", durée 5s, fps 30
+4. **Étape 2** (Variantes) : j'upload bg-red.mp4, bg-blue.mp4, bg-green.mp4
+5. **Étape 3** (Couches) : j'upload BUT_simple_A/B/C.mov avec z-index 1/2/3
+6. **Étape 4** (Slots) : j'ajoute 4 champs texte (prénom, nom, clubHaut, clubBas) avec positions, timing, animations. J'ajoute 0 image slot.
+7. Je valide → template apparaît dans la galerie
+
+**Critères d'acceptation** :
+
+- ✅ Wizard valide les uploads (MOV pour couches, MP4 pour bg)
+- ✅ Taille max fichier = 50 Mo
+- ✅ Erreurs affichées clairement (format, taille, champ manquant)
+- ✅ Annulation à n'importe quelle étape = rien en DB
+- ✅ Validation finale = INSERT atomique (template + variants + layers + fields en 1 transaction)
+
+### US-2 — Super_admin ajuste le timing d'un champ
+
+**Scénario** : après test visuel, le prénom apparaît 0.2s trop tôt.
+
+1. J'ouvre le template en mode édition
+2. Je clique sur le champ "Prénom" dans le panneau super_admin
+3. Je déplace le slider "Apparaît à" de 1.6s → 1.8s
+4. La preview iframe rend à nouveau automatiquement (debounce 400ms)
+5. Je vérifie visuellement, OK
+
+**Critères d'acceptation** :
+
+- ✅ Changement persiste (PATCH DB)
+- ✅ Preview live resync sur edit
+- ✅ Undo via Ctrl+Z local (session, pas DB) — V2
+
+### US-3 — User remplit et génère une vidéo
+
+**Scénario** : Club FC veut générer "But Mbappé vs OM".
+
+1. Club ouvre `/content/templates-remotion`
+2. Click card "But Simple"
+3. Choisit variante rouge
+4. Remplit prénom "Kylian", nom "Mbappé", clubHaut "PARIS SG", clubBas "PSG"
+5. Upload photo joueur
+6. Click "Générer la vidéo"
+7. Polling job async (ADR-054) → toast "MP4 prêt" + lien dans bibliothèque
+
+**Critères d'acceptation** :
+
+- ✅ Champs required obligatoires (form disable submit si vide)
+- ✅ Max chars respecté (ex. prénom 12 chars)
+- ✅ Upload image : progress bar + preview
+- ✅ MP4 apparaît dans `/content/videos` du club automatiquement
+- ✅ Render time affiché ("~30s") + pas de blocage UI
+
+### US-4 — Retro-compat ButSimple / ButImgJoueur
+
+**Scénario** : les 2 templates existants continuent de marcher pendant la migration.
+
+1. Migration DB wrap le schema existant dans le format v2 (1 variante = bg unique actuel, 1 couche = composition actuelle, N textFields mappés depuis le schema JSON existant)
+2. Les clubs qui rendent ButSimple obtiennent exactement le même rendu visuel qu'avant
+3. Plus tard, Gabin livre une vraie version v2 multi-couches de ButSimple et on désactive la v1
+
+**Critères d'acceptation** :
+
+- ✅ Zéro régression visuelle sur render ButSimple/ButImgJoueur
+- ✅ Smoke test `smoke-remotion` passe toujours
+- ✅ Si migration échoue, rollback propre (DOWN SQL testé)
+
+---
+
+## Plan d'implémentation (MVP — 3 semaines)
+
+### Sprint 1 — Backend + Runtime (semaine 1)
+
+| Tâche                                                 | Estimation | Fichier(s)                                                     |
+| ----------------------------------------------------- | ---------- | -------------------------------------------------------------- |
+| Migration DB `0044_template_studio_v2.sql` + rollback | 1j         | `central-server/migrations/`                                   |
+| Repositories (variants, layers, fields, slots)        | 1j         | `central-server/src/repositories/template-*.ts`                |
+| Controllers + routes CRUD granulaires                 | 1.5j       | `central-server/src/controllers/template-studio.controller.ts` |
+| Validation Joi par endpoint                           | 0.5j       | `central-server/src/schemas/template-studio.schemas.ts`        |
+| Runtime `TemplateRuntime.tsx` + animations presets    | 1.5j       | `central-server/src/templates/_runtime/`                       |
+| Refacto endpoint render pour v2 (+ fallback v1)       | 0.5j       | `central-server/src/controllers/remotion.controller.ts`        |
+| Tests Jest runtime + controllers                      | 0.5j       | `central-server/src/__tests__/`                                |
+
+### Sprint 2 — Studio user mode (semaine 2)
+
+| Tâche                                                                             | Estimation | Fichier(s)         |
+| --------------------------------------------------------------------------------- | ---------- | ------------------ |
+| `TemplateStudioDataService`                                                       | 0.5j       | dashboard services |
+| `StudioPageComponent` + routing                                                   | 0.5j       | dashboard          |
+| `TemplateGalleryComponent` (grille restylée)                                      | 0.5j       | dashboard          |
+| `TemplateEditorComponent` + preview iframe                                        | 1.5j       | dashboard          |
+| `VariantPickerComponent` + `TextFieldInputComponent` + `ImageSlotUploadComponent` | 1j         | dashboard          |
+| Render CTA + polling toast                                                        | 0.5j       | dashboard          |
+| Responsive <900px                                                                 | 0.5j       | dashboard          |
+
+### Sprint 3 — Studio super_admin mode + wizard (semaine 3)
+
+| Tâche                                                       | Estimation | Fichier(s)                 |
+| ----------------------------------------------------------- | ---------- | -------------------------- |
+| Toggle mode + feature gate super_admin                      | 0.5j       | dashboard                  |
+| `AdminFieldEditorComponent` (text + image)                  | 1.5j       | dashboard                  |
+| `AdminLayersPanelComponent` + `AdminVariantsPanelComponent` | 1j         | dashboard                  |
+| `CreateTemplateWizardComponent` (4 étapes)                  | 1.5j       | dashboard                  |
+| Upload asset endpoint + UI                                  | 0.5j       | central-server + dashboard |
+
+### Sprint 4 — Migration + QA (semaine 3, parallèle)
+
+| Tâche                                         | Estimation |
+| --------------------------------------------- | ---------- |
+| Migration retro-compat ButSimple/ButImgJoueur | 1j         |
+| Smoke tests `smoke-remotion` étendus          | 0.5j       |
+| E2E Playwright (render E2E)                   | 0.5j       |
+| Smoke test SUPER_ADMIN permissions            | 0.5j       |
+
+**Total MVP : 15-17 jours = 3 semaines.**
+
+---
+
+## Roadmap post-MVP
+
+### V2 (Option B — white-glove clubs) — T+1 à 2 mois
+
+**Trigger** : 3-5 clubs pilotes demandent un template personnalisé.
+**Scope** :
+
+- Processus commercial : club envoie vidéo + brief, équipe Neopro utilise wizard super_admin (déjà en place MVP) pour créer un template dédié au club
+- Ajout `site_id` nullable sur `remotion_templates` → template scopé à 1 club
+- UI filtre "Mes templates perso" dans la galerie
+- Feature gate Premium (ADR-039)
+
+**Estimation** : 5-7j dev (scoping + UI filter + gate), 0 refonte architecture.
+
+### V3 (Option C — self-service club) — T+3 à 6 mois
+
+**Trigger** : signal produit fort (≥20 clubs demandent self-service).
+**Scope** :
+
+- Mode "club_admin" qui expose un sous-ensemble des contrôles super_admin
+- **Visual helper drag-to-position** sur le canvas (nouveauté vs form input %)
+- Upload direct d'une vidéo background par le club (pas de couches alpha — club n'a pas AE)
+- Template "BYO" simplifié : 1 variante = leur vidéo, 0 couches alpha, N text/image slots
+- Rate limit par site (max 3 templates perso actifs, max 10 renders/jour)
+- Feature gate Premium+
+
+**Estimation** : 10-15j dev.
+
+### V4 (freemium public) — T+6 à 12 mois
+
+**Trigger** : stratégie PLG validée.
+**Scope** :
+
+- Sous-domaine `studio.neopro.fr`
+- Lead capture email pour download MP4
+- Watermark overlay forcé sur render anonyme
+- Rate limit par IP
+- SEO landing pages `/templates/:templateId`
+- CRM sync
+
+**Estimation** : 2-3 semaines dev.
+
+### V5 (nice-to-have) — quand besoin émerge
+
+- Transitions entre couches (fade 0.3s)
+- Undo/redo stack super_admin
+- Preview temps réel pendant le wizard de création
+- Visual drag handles sur canvas super_admin
+- Masks SVG path (au lieu de rect)
+- Lottie embed (si cas concret)
+- Animations texte/image custom (vraies keyframes) — à éviter, reste sur presets
+
+---
+
+## Conséquences
+
+### Positives
+
+1. **Gabin autonome sur le motion** (AE → MOV alpha, format bien défini)
+2. **GLT autonome sur la création template** (wizard super_admin, pas de dev requis)
+3. **Claude Code hors boucle post-MVP** (plus de génération JSON manuelle)
+4. **Architecture réutilisable V2/V3/V4** sans refonte
+5. **1 composition Remotion unique** = simplification maintenance
+6. **Retro-compat** = pas de casse, migration progressive
+
+### Négatives
+
+1. **Pas de visual builder MVP** — super_admin édite en % via forms, acceptable mais moins sexy
+2. **Durée fixe par couche** — pas de stretch possible, aligne sur workflow Gabin mais contrainte
+3. **6 presets d'animation uniquement** — si un cas demande autre chose → Gabin l'inclut dans le MOV alpha (scope)
+4. **Poids data URL** — images uploadées en base64 pour preview live peut ramer → envoyer URL FTP après upload
+
+### Risques & mitigations
+
+| Risque                                             | Probabilité | Impact | Mitigation                                                                          |
+| -------------------------------------------------- | ----------- | ------ | ----------------------------------------------------------------------------------- |
+| Remotion OffthreadVideo perf avec 5+ couches alpha | Moyen       | Moyen  | Benchmark dès Sprint 1, fallback `<Video>` si besoin                                |
+| Masques `clipPath` mal supportés vieux Chromium    | Faible      | Faible | Min version Chromium Pi ciblée, test rendu                                          |
+| Wizard super_admin confus sur positions %          | Moyen       | Faible | Placeholder ghost sur canvas preview dès MVP                                        |
+| Upload 50 Mo MOV échoue sur Railway                | Faible      | Haut   | FTP direct, pas passage Railway (déjà en place)                                     |
+| Migration retro-compat casse rendu existant        | Moyen       | Haut   | Tests visuels avant/après sur ButSimple/ButImgJoueur, feature flag `USE_V2_RUNTIME` |
+| Scope creep wizard → mini-Figma                    | Haut        | Haut   | ADR lock le périmètre : form inputs uniquement, pas de canvas interactif MVP        |
+
+---
+
+## Success metrics
+
+### MVP (fin sprint 3)
+
+- ✅ 2 templates migrés (ButSimple, ButImgJoueur) rendent identique à avant
+- ✅ GLT crée 1 nouveau template via wizard en <30 min (partant des MOV Gabin)
+- ✅ Render E2E passe (template → form → MP4 dans bibliothèque) en <60s
+- ✅ Smoke tests `smoke-remotion` verts
+- ✅ 0 régression visuelle détectée par smoke test visuel
+
+### V2 (3 mois)
+
+- ≥3 templates Neopro actifs en catalogue
+- ≥3 templates club perso (white-glove)
+- ≥50 renders/mois (total toutes sites)
+
+### V3 (6 mois)
+
+- ≥20 clubs ont créé ≥1 template perso self-service
+- Taux de complétion wizard club ≥60%
+
+### V4 (12 mois)
+
+- ≥1000 renders publics/mois sur studio.neopro.fr
+- Taux conversion lead → inscription Neopro ≥2%
+
+---
+
+## Règles & gotchas spécifiques
+
+1. **Repository pattern** — aucun `query()` direct dans les controllers (ESLint enforced)
+2. **Joi validation** — tous les endpoints PATCH/POST
+3. **Logger Winston** — pas de `console.log`
+4. **TypeScript strict** — pas de `any`
+5. **File size <400 lignes** — splitter proactivement (règle `feedback_file_size_limit`)
+6. **Feature gate** — `FeatureGateService.canAccess('template_studio_admin', site)` pour V2/V3
+7. **Smoke test coverage** — ajouter aux 13 suites : `smoke-template-studio` (wiring variants/layers/fields)
+8. **SAFe update** — à chaque feat(templates), mettre à jour `docs/safe/FEATURES.md` (F-05.x) et `IMPLEMENTED-BACKLOG.md` (IMP-VID-NN)
+9. **Migration rollback testée** — le script DOWN doit restaurer l'état pré-migration sans perte de données
+
+---
+
+## Références
+
+- **Bundle design** (archive) : `/tmp/design-studio/template-design-neopro/`
+- **ADR-054** : Remotion async render jobs — `docs/adr/ADR-054-async-remotion-render-jobs.md`
+- **ADR-055** : Remotion template versions — `docs/adr/ADR-055-remotion-template-versions.md`
+- **PROP-004** : Video template engine — `docs/proposals/PROP-004-video-template-engine.md`
+- **PROP-014** : Template Studio (superseded par cet ADR) — `docs/proposals/PROP-014-template-studio.md`
+- **SAFe Epic E-05** : `docs/safe/FEATURES.md#e-05`
+- **Règles projet** : `.claude/rules/context.md`, `.claude/rules/dashboard.md`, `.claude/rules/code-patterns.md`
+
+---
+
+## Changelog
+
+| Date       | Auteur       | Changement                        |
+| ---------- | ------------ | --------------------------------- |
+| 2026-04-20 | Claude + GLT | Version initiale — statut Proposé |

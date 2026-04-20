@@ -798,6 +798,119 @@ export const schemas = {
   templateRestoreVersion: Joi.object({
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
+
+  // ── Template Studio v2 (ADR-074) ───────────────────────────────────────────
+  templateStudioVariantCreate: Joi.object({
+    name: Joi.string().max(100).required(),
+    backgroundVideoUrl: Joi.string().uri().max(2000).required(),
+    thumbnailUrl: Joi.string().uri().max(2000).allow(null, '').optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }),
+  templateStudioVariantUpdate: Joi.object({
+    name: Joi.string().max(100).optional(),
+    backgroundVideoUrl: Joi.string().uri().max(2000).optional(),
+    thumbnailUrl: Joi.string().uri().max(2000).allow(null, '').optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }).min(1),
+
+  templateStudioLayerCreate: Joi.object({
+    name: Joi.string().max(100).required(),
+    videoUrl: Joi.string().uri().max(2000).required(),
+    zIndex: Joi.number().integer().required(),
+    mask: Joi.object({
+      top: Joi.number().min(0).max(1).optional(),
+      bottom: Joi.number().min(0).max(1).optional(),
+      left: Joi.number().min(0).max(1).optional(),
+      right: Joi.number().min(0).max(1).optional(),
+    }).optional(),
+  }),
+  templateStudioLayerUpdate: Joi.object({
+    name: Joi.string().max(100).optional(),
+    videoUrl: Joi.string().uri().max(2000).optional(),
+    zIndex: Joi.number().integer().optional(),
+    mask: Joi.object({
+      top: Joi.number().min(0).max(1).optional(),
+      bottom: Joi.number().min(0).max(1).optional(),
+      left: Joi.number().min(0).max(1).optional(),
+      right: Joi.number().min(0).max(1).optional(),
+    }).optional(),
+  }).min(1),
+
+  templateStudioTextFieldCreate: Joi.object({
+    slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).required(),
+    label: Joi.string().max(200).required(),
+    positionX: Joi.number().min(0).max(1).required(),
+    positionY: Joi.number().min(0).max(1).required(),
+    maxWidth: Joi.number().min(0).max(1).optional(),
+    fontFamily: Joi.string().max(80).optional(),
+    fontSize: Joi.number().integer().min(8).max(800).required(),
+    color: Joi.string().max(16).optional(),
+    align: Joi.string().valid('left', 'center', 'right').optional(),
+    appearAt: Joi.number().min(0).max(300).required(),
+    appearDuration: Joi.number().min(0).max(10).optional(),
+    animation: Joi.string()
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .optional(),
+    defaultValue: Joi.string().allow('').max(500).optional(),
+    maxChars: Joi.number().integer().min(1).max(500).allow(null).optional(),
+    multiline: Joi.boolean().optional(),
+    required: Joi.boolean().optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }),
+  templateStudioTextFieldUpdate: Joi.object({
+    slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
+    label: Joi.string().max(200).optional(),
+    positionX: Joi.number().min(0).max(1).optional(),
+    positionY: Joi.number().min(0).max(1).optional(),
+    maxWidth: Joi.number().min(0).max(1).optional(),
+    fontFamily: Joi.string().max(80).optional(),
+    fontSize: Joi.number().integer().min(8).max(800).optional(),
+    color: Joi.string().max(16).optional(),
+    align: Joi.string().valid('left', 'center', 'right').optional(),
+    appearAt: Joi.number().min(0).max(300).optional(),
+    appearDuration: Joi.number().min(0).max(10).optional(),
+    animation: Joi.string()
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .optional(),
+    defaultValue: Joi.string().allow('').max(500).optional(),
+    maxChars: Joi.number().integer().min(1).max(500).allow(null).optional(),
+    multiline: Joi.boolean().optional(),
+    required: Joi.boolean().optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }).min(1),
+
+  templateStudioImageSlotCreate: Joi.object({
+    slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).required(),
+    label: Joi.string().max(200).required(),
+    positionX: Joi.number().min(0).max(1).required(),
+    positionY: Joi.number().min(0).max(1).required(),
+    width: Joi.number().min(0).max(1).required(),
+    height: Joi.number().min(0).max(1).required(),
+    appearAt: Joi.number().min(0).max(300).required(),
+    appearDuration: Joi.number().min(0).max(10).optional(),
+    animation: Joi.string()
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .optional(),
+    aspectRatio: Joi.string().max(16).allow(null, '').optional(),
+    required: Joi.boolean().optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }),
+  templateStudioImageSlotUpdate: Joi.object({
+    slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
+    label: Joi.string().max(200).optional(),
+    positionX: Joi.number().min(0).max(1).optional(),
+    positionY: Joi.number().min(0).max(1).optional(),
+    width: Joi.number().min(0).max(1).optional(),
+    height: Joi.number().min(0).max(1).optional(),
+    appearAt: Joi.number().min(0).max(300).optional(),
+    appearDuration: Joi.number().min(0).max(10).optional(),
+    animation: Joi.string()
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .optional(),
+    aspectRatio: Joi.string().max(16).allow(null, '').optional(),
+    required: Joi.boolean().optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  }).min(1),
 };
 
 // ============================================================================
@@ -851,6 +964,23 @@ export const paramSchemas = {
     profileId: Joi.string().uuid().required(),
   }),
   jobId: Joi.object({ jobId: Joi.string().uuid().required() }),
+  // ADR-074 — Template Studio v2 compound params
+  idAndVariantId: Joi.object({
+    id: Joi.string().uuid().required(),
+    variantId: Joi.string().uuid().required(),
+  }),
+  idAndLayerId: Joi.object({
+    id: Joi.string().uuid().required(),
+    layerId: Joi.string().uuid().required(),
+  }),
+  idAndFieldId: Joi.object({
+    id: Joi.string().uuid().required(),
+    fieldId: Joi.string().uuid().required(),
+  }),
+  idAndSlotId: Joi.object({
+    id: Joi.string().uuid().required(),
+    slotId: Joi.string().uuid().required(),
+  }),
   // ADR-058
   siteIdProfileIdTokenId: Joi.object({
     siteId: Joi.string().uuid().required(),
