@@ -383,7 +383,10 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { props = {}, title } = req.body;
 
-    const template = await remotionTemplatesRepository.findPublishedById(id);
+    const isPrivilegedUser = req.user?.role === 'admin' || req.user?.role === 'super_admin';
+    const template = isPrivilegedUser
+      ? await remotionTemplatesRepository.findById(id)
+      : await remotionTemplatesRepository.findPublishedById(id);
     if (!template) {
       return res.status(404).json({ error: 'Template non trouvé ou non publié' });
     }
@@ -392,9 +395,7 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
     //   1) Refuser si l'utilisateur n'appartient pas au site scope (sauf admin/super_admin)
     //   2) Vérifier le feature gate `template_studio_club_scoped` (Premium ou override)
     if (template.site_id) {
-      const role = req.user?.role;
-      const isPrivileged = role === 'admin' || role === 'super_admin';
-      if (!isPrivileged && req.user?.site_id !== template.site_id) {
+      if (!isPrivilegedUser && req.user?.site_id !== template.site_id) {
         return res.status(403).json({ error: 'Template réservé à un autre club' });
       }
       const scopedSite = await siteRepository.findById(template.site_id);
