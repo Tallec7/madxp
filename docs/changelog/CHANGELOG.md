@@ -1,3 +1,9 @@
+# [3.199.0](https://github.com/Tallec7/neopro/compare/v3.198.2...v3.199.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 Sprint 3 — studio admin + wizard ([#504](https://github.com/Tallec7/neopro/issues/504)) ([3808d66](https://github.com/Tallec7/neopro/commit/3808d66f04c1135e92e7eb68b1da1d285c65b054))
+
 ## [3.198.2](https://github.com/Tallec7/neopro/compare/v3.198.1...v3.198.2) (2026-04-20)
 
 ### Bug Fixes
