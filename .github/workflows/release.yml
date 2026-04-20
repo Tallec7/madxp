@@ -184,7 +184,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci
 
       # The dashboard's runtime deps (react, react-dom, @remotion/player)
