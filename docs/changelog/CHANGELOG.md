@@ -1,3 +1,16 @@
+# [3.203.0](https://github.com/Tallec7/neopro/compare/v3.202.2...v3.203.0) (2026-04-20)
+
+### Bug Fixes
+
+- **admin:** NEOPRO_DIR manquant → ReferenceError → 500 sur POST /api/hotspot/fix ([aa542eb](https://github.com/Tallec7/neopro/commit/aa542eb2047a88d6defea0d2fdc7c6c49d043e44))
+- **templates:** harden Studio preview against empty/whitespace video URLs + widen CSP ([cff3624](https://github.com/Tallec7/neopro/commit/cff3624c68ee499a1038d59815ad156a5cef425f))
+- **templates:** validate video URL scheme before passing to OffthreadVideo ([42cc7b4](https://github.com/Tallec7/neopro/commit/42cc7b44cdb3258c17e7f211d0d1babb5d380b8d))
+
+### Features
+
+- **templates:** ADR-075 V2 Bootstrap + preview hardening guards ([60214b3](https://github.com/Tallec7/neopro/commit/60214b307f15814ed98f060f287bbe81d0ea593d))
+- **templates:** one-click scaffold pour débloquer flip v1→v2 (ADR-075) ([aa7afa9](https://github.com/Tallec7/neopro/commit/aa7afa99d39b3ef399314169d35db9b659247de8))
+
 ## [3.202.2](https://github.com/Tallec7/neopro/compare/v3.202.1...v3.202.2) (2026-04-20)
 
 ### Bug Fixes
