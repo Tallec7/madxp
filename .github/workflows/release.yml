@@ -184,8 +184,16 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci
+
+      # The dashboard's runtime deps (react, react-dom, @remotion/player)
+      # live in central-dashboard/package.json (ADR-075 Sprint 2). `ng build
+      # central-dashboard` resolves modules from the project's node_modules,
+      # so both installs are required — matches ci.yml central-dashboard job.
+      - name: Install central-dashboard dependencies
+        run: npm ci
+        working-directory: central-dashboard
 
       - name: Build dashboard
         run: npm run build:central
