@@ -6,7 +6,9 @@ import type {
   RemotionTemplate,
   RenderJobEnqueued,
   RenderJobSnapshot,
+  RenderTemplateRequestV2,
   TemplatePropDef,
+  TemplateStudioView,
   TemplateVersion,
 } from './remotion-templates.types';
 
@@ -79,5 +81,30 @@ export class RemotionTemplatesDataService {
       `/remotion-templates/${templateId}/versions/${versionId}/restore`,
       {},
     );
+  }
+
+  // ── ADR-075 Template Studio v2 ─────────────────────────────────────────────
+
+  /**
+   * Charge la vue consolidée V2 (variants + layers + text_fields + image_slots).
+   * Retourne 404 si `schema_version = 1` — fallback legacy.
+   */
+  getStudioView(templateId: string): Observable<TemplateStudioView> {
+    return this.api.get<TemplateStudioView>(`/remotion-templates/${templateId}/studio`);
+  }
+
+  /**
+   * Render v2 : enqueue un job avec payload `{ variantId, textValues, imageUploads }`
+   * transporté sous la clé `props` (le worker discrimine par la forme).
+   */
+  enqueueRenderV2(
+    templateId: string,
+    payload: RenderTemplateRequestV2,
+    title: string,
+  ): Observable<RenderJobEnqueued> {
+    return this.api.post<RenderJobEnqueued>(`/remotion-templates/${templateId}/render`, {
+      props: payload,
+      title,
+    });
   }
 }
