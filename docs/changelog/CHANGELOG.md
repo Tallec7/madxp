@@ -1,3 +1,15 @@
+# [3.198.0](https://github.com/Tallec7/neopro/compare/v3.197.5...v3.198.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 Sprint 2 — studio v2 + ADR-077 user uploads ([#501](https://github.com/Tallec7/neopro/issues/501)) ([852ff8d](https://github.com/Tallec7/neopro/commit/852ff8df87cd9b3af837f9ba729819eed89c8bff))
+
+## [3.197.5](https://github.com/Tallec7/neopro/compare/v3.197.4...v3.197.5) (2026-04-20)
+
+### Bug Fixes
+
+- **saas:** unblock cross-origin video stream via CORP header ([#500](https://github.com/Tallec7/neopro/issues/500)) ([4a6f44c](https://github.com/Tallec7/neopro/commit/4a6f44c7a38813527a8bf4ccaef024053510759f))
+
 ## [3.197.4](https://github.com/Tallec7/neopro/compare/v3.197.3...v3.197.4) (2026-04-20)
 
 ### Bug Fixes
