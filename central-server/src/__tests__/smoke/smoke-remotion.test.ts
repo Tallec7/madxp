@@ -756,6 +756,76 @@ describe('Template Studio V2 — site-scoped templates (ADR-075)', () => {
   });
 });
 
+describe('Template Studio V2 — Sprint 6 Premium gate + UI filter (ADR-075)', () => {
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('renderTemplate enforces Premium tier + site scope when template has site_id', () => {
+    const ctl = read('controllers/remotion-templates.controller.ts');
+    // Must reference the feature flag used for override bypass
+    expect(ctl).toMatch(/template_studio_club_scoped/);
+    // Must look up the scoped site and enforce Premium tier
+    expect(ctl).toMatch(/TIER_LEVEL\.premium/);
+    expect(ctl).toMatch(/resolveTierLevel/);
+    expect(ctl).toMatch(/hasFeatureOverride/);
+    // Must reject club users whose site_id does not match
+    expect(ctl).toMatch(/Template r[ée]serv[ée] [àa] un autre club/i);
+    // Must return 403 when tier is insufficient
+    expect(ctl).toMatch(/r[ée]serv[ée]s? au tier Premium/i);
+  });
+
+  it('dashboard FeatureGateService registers template_studio_club_scoped as premium', () => {
+    const svc = readDash('src/app/core/services/feature-gate.service.ts');
+    expect(svc).toMatch(/template_studio_club_scoped/);
+    // The key must map to the premium tier in FEATURE_TIERS
+    expect(svc).toMatch(/template_studio_club_scoped\s*:\s*['"]premium['"]/);
+  });
+
+  it('dashboard remotion-templates component exposes scope filter + hasClubScopedTemplates', () => {
+    const cmp = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.ts',
+    );
+    expect(cmp).toMatch(/templateScopeFilter\s*:\s*['"]all['"]\s*\|\s*['"]mine['"]\s*\|\s*['"]global['"]/);
+    expect(cmp).toMatch(/get\s+hasClubScopedTemplates/);
+    expect(cmp).toMatch(/get\s+filteredTemplates/);
+    expect(cmp).toMatch(/setTemplateScopeFilter/);
+  });
+
+  it('dashboard template gallery HTML renders segmented scope filter conditionally', () => {
+    const html = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.component.html',
+    );
+    expect(html).toMatch(/template-scope-filter/);
+    expect(html).toMatch(/hasClubScopedTemplates/);
+    expect(html).toMatch(/filteredTemplates/);
+  });
+
+  it('dashboard template-card shows Club badge when template has site_id', () => {
+    const card = readDash(
+      'src/app/features/content/remotion-templates/template-card.component.ts',
+    );
+    expect(card).toMatch(/badge-club/);
+    expect(card).toMatch(/template\.site_id/);
+  });
+
+  it('club-scoping migration exists and adds nullable site_id + partial index', () => {
+    const mig = read('scripts/migrations/add-template-studio-v2-club-scoping.sql');
+    expect(mig).toMatch(/ADD COLUMN\s+IF NOT EXISTS\s+site_id\s+UUID\s+REFERENCES\s+sites/);
+    expect(mig).toMatch(/ON DELETE CASCADE/);
+    // Partial index on scoped rows only (WHERE site_id IS NOT NULL)
+    expect(mig).toMatch(/CREATE INDEX\s+IF NOT EXISTS[\s\S]*WHERE\s+site_id\s+IS\s+NOT\s+NULL/i);
+  });
+
+  it('seed script exists for white-glove template demo', () => {
+    const seed = read('scripts/seed-white-glove-template.ts');
+    expect(seed).toMatch(/INSERT INTO\s+neopro_templates/);
+    expect(seed).toMatch(/site_id/);
+    // Must be idempotent (skip if already seeded)
+    expect(seed).toMatch(/SELECT id FROM neopro_templates WHERE/);
+  });
+});
+
 describe('Template Studio v2 — preview hardening (ADR-075)', () => {
   const dashRoot = path.join(repoRoot, 'central-dashboard');
   const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
