@@ -798,6 +798,16 @@ export const schemas = {
   templateRestoreVersion: Joi.object({
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
+
+  // ADR-074 — hotspot config
+  hotspotConfigBootstrap: Joi.object({
+    ssid: Joi.string().min(1).max(32).required(),
+    psk: Joi.string().min(8).max(63).required(),
+  }),
+  hotspotConfigRotate: Joi.object({
+    psk: Joi.string().min(8).max(63).optional(),
+    ssid: Joi.string().min(1).max(32).optional(),
+  }),
 };
 
 // ============================================================================

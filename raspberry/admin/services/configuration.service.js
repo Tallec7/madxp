@@ -23,6 +23,7 @@ const {
   ValidationError,
   DuplicateError,
 } = require('./errors');
+const HostapdReaderService = require('./hostapd-reader.service');
 
 class ConfigurationService {
   /**
@@ -30,9 +31,10 @@ class ConfigurationService {
    * @param {Object} deps.cache - CacheManager instance
    * @param {Object} deps.NAMESPACES - Cache namespace constants
    */
-  constructor({ cache, NAMESPACES }) {
+  constructor({ cache, NAMESPACES, hostapdReader }) {
     this.cache = cache;
     this.NAMESPACES = NAMESPACES;
+    this.hostapdReader = hostapdReader || new HostapdReaderService();
   }
 
   // ===========================================================================
@@ -106,13 +108,30 @@ class ConfigurationService {
   // ===========================================================================
 
   /**
-   * Lire club-config.json.
+   * Lire la configuration club.
+   *
+   * ADR-074 : les champs WiFi (`wifiSsid`, `wifiPassword`) proviennent désormais
+   * de `/etc/hostapd/hostapd.conf` (source unique Pi, réconciliée avec le cloud
+   * par le sync-agent). Les autres champs (clubName, apiKey, etc.) restent lus
+   * depuis `club-config.json` pour préserver la compatibilité, mais ne sont
+   * plus écrits par l'admin-server.
    * @returns {Promise<Object>}
    */
   async getClubConfig() {
-    const configPath = path.join(NEOPRO_DIR, 'club-config.json');
-    const data = await fs.readFile(configPath, 'utf8');
-    return JSON.parse(data);
+    let base = {};
+    try {
+      const configPath = path.join(NEOPRO_DIR, 'club-config.json');
+      const data = await fs.readFile(configPath, 'utf8');
+      base = JSON.parse(data);
+    } catch (err) {
+      if (!err || err.code !== 'ENOENT') throw err;
+    }
+    const hostapd = await this.hostapdReader.read();
+    return {
+      ...base,
+      wifiSsid: hostapd.ssid ?? base.wifiSsid ?? null,
+      wifiPassword: hostapd.psk ?? base.wifiPassword ?? null,
+    };
   }
 
   // ===========================================================================

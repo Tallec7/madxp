@@ -27,6 +27,7 @@ import { cleanupStaleTempFiles } from './middleware/upload';
 import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
 import sitesRoutes from './routes/sites.routes';
+import hotspotConfigRoutes from './routes/hotspot-config.routes';
 import groupsRoutes from './routes/groups.routes';
 import contentRoutes from './routes/content.routes';
 import updatesRoutes from './routes/updates.routes';
@@ -435,6 +436,7 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Monitoring endpoints (connection-status, dashboard, metrics, local-content) use monitoringRateLimit (300/min)
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
+app.use('/api/sites', hotspotConfigRoutes); // ADR-074 — hotspot PSK cloud source of truth (Pi + admin endpoints, auth + rate limits per-route)
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);

@@ -25,7 +25,8 @@ NC='\033[0m' # No Color
 CLUB_NAME="${1:-DEMO}"
 # ADR-073 S1 — plus de PSK hardcodé "NeoProWiFi2025" (connu du public via repo).
 # Si omis, on génère un mot de passe aléatoire fort via openssl (16 bytes = 22 chars base64).
-# Le PSK généré est loggé dans /var/log/neopro-install-*.log ET stocké dans club-config.json (chmod 600).
+# Le PSK généré est loggé dans /var/log/neopro-install-*.log et écrit dans /etc/hostapd/hostapd.conf
+# (ADR-074 : hostapd.conf est la source unique Pi ; club-config.json ne contient plus le PSK).
 if [ -n "${2:-}" ]; then
     WIFI_PASSWORD="$2"
     WIFI_PASSWORD_GENERATED="false"
@@ -1132,19 +1133,19 @@ configure_ssh() {
 finalize() {
     print_step "Finalisation de l'installation..."
 
-    # Création du fichier de configuration club
+    # ADR-074 : club-config.json ne contient plus les champs WiFi. La source
+    # de vérité pour le PSK hotspot est /etc/hostapd/hostapd.conf (réconciliée
+    # avec le cloud par le sync-agent). Le fichier garde juste les métadonnées
+    # d'installation (et sert de marqueur "first-boot done" pour prepare-image.sh).
     cat > ${INSTALL_DIR}/club-config.json << EOF
 {
   "clubName": "${CLUB_NAME}",
-  "wifiSSID": "NEOPRO-${CLUB_NAME}",
-  "wifiPassword": "${WIFI_PASSWORD}",
   "installDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "version": "1.0.0"
 }
 EOF
-    # Restreindre l'accès au fichier contenant le mot de passe WiFi
     chown pi:pi ${INSTALL_DIR}/club-config.json
-    chmod 600 ${INSTALL_DIR}/club-config.json
+    chmod 644 ${INSTALL_DIR}/club-config.json
 
     # Permissions finales : tout appartient à pi pour que sync-agent puisse écrire
     # www-data (nginx) peut lire via le groupe pi
@@ -1238,7 +1239,7 @@ print_summary() {
     echo "  • WiFi SSID: NEOPRO-${CLUB_NAME}"
     if [ "${WIFI_PASSWORD_GENERATED:-false}" = "true" ]; then
         echo -e "  • WiFi Password: ${YELLOW}${WIFI_PASSWORD}${NC} ${GREEN}(généré aléatoirement — ADR-073 S1)${NC}"
-        echo -e "    ${YELLOW}⚠ Notez ce mot de passe — il est aussi sauvegardé dans ${INSTALL_DIR}/club-config.json (chmod 600)${NC}"
+        echo -e "    ${YELLOW}⚠ Notez ce mot de passe — il est stocké dans /etc/hostapd/hostapd.conf (ADR-074)${NC}"
     else
         echo "  • WiFi Password: ${WIFI_PASSWORD}"
     fi
