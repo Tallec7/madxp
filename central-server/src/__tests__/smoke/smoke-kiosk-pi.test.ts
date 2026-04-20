@@ -3205,6 +3205,36 @@ describe('Manual video transition flash prevention guards', () => {
     expect({ skipsPreCapturedInManualMode: doubleBufferContent.includes('hasValidLastFrame && !isManualMode') })
       .toEqual({ skipsPreCapturedInManualMode: true });
   });
+
+  it('manual-video.service must detect manual→manual via getActiveManualPlayer, not targetPlayer', () => {
+    // Regression guard: testing targetPlayer (the INACTIVE manual player, always opacity=0)
+    // always evaluates to `wasManualVisible = false`, which triggers captureAndShowFreezeFrame()
+    // and shows the periodically-captured LOOP frame for ~500ms → visible loop flash between
+    // two manual videos. Must test getActiveManualPlayer() (the one actually showing).
+    const playMethodStart = manualVideoContent.indexOf('play(video: PiConfigVideoEntry)');
+    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 3500);
+    expect({
+      detectsOnActivePlayer: /getActiveManualPlayer\(\)[\s\S]*?opacity\s*===\s*'1'/.test(playMethodBlock),
+      noFalsePositiveOnTargetPlayer: !/wasManualVisible\s*=\s*targetPlayer\.style\.opacity/.test(playMethodBlock),
+    }).toEqual({
+      detectsOnActivePlayer: true,
+      noFalsePositiveOnTargetPlayer: true,
+    });
+  });
+
+  it('manual-video.service must skip freeze-frame during manual→manual transitions', () => {
+    // In manual→manual, the previous manual player stays visible behind the new one
+    // (z-index double-buffer). Showing a freeze-frame (z=20) would cover it with the
+    // stale pre-captured loop frame, causing the visible loop flash. Freeze-frame /
+    // black overlay must be gated behind "!isManualToManual" (or equivalent).
+    const playMethodStart = manualVideoContent.indexOf('play(video: PiConfigVideoEntry)');
+    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 3500);
+    expect({
+      hasGuardedFreeze: /if\s*\(\s*!\s*isManualToManual\s*\)[\s\S]{0,400}captureAndShowFreezeFrame/.test(playMethodBlock),
+    }).toEqual({
+      hasGuardedFreeze: true,
+    });
+  });
 });
 
 describe('Raspberry Pi OS autostart popups must be removed (kiosk focus)', () => {

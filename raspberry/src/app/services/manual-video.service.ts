@@ -115,19 +115,20 @@ export class ManualVideoService {
       });
     }
 
-    // ETAPE 1: Capturer et afficher le freeze-frame IMMEDIATEMENT
-    // Si une vidéo manuelle est déjà visible, capturer depuis le player manuel
-    // (sinon on capture le player de boucle qui est derrière/pausé → flash boucle)
-    const wasManualVisible = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
-    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(wasManualVisible);
+    // ETAPE 1: Détecter si une vidéo manuelle est déjà visible (transition manuel→manuel).
+    // On teste le player ACTIF (celui qui joue actuellement), pas targetPlayer (inactif, toujours opacity=0).
+    const activeManualPlayer = this.doubleBufferService.getActiveManualPlayer();
+    const isManualToManual = activeManualPlayer.style.opacity === '1' && !activeManualPlayer.paused;
 
-    // ETAPE 2: Afficher le black overlay UNIQUEMENT si le freeze-frame a échoué.
-    // En software decode (Pi 5 fallback), le chargement vidéo est plus lent et le
-    // black overlay (z-5) devenait visible entre le hideFreezeFrame et l'apparition
-    // du player manuel, causant un flash noir. Le freeze-frame (z-20) suffit à
-    // masquer la boucle pendant le chargement.
-    if (!freezeOk) {
-      this.doubleBufferService.showBlackOverlay();
+    // ETAPE 2: En manuel→manuel, l'ancien player reste visible derrière — pas de freeze-frame
+    // (sinon on capture la boucle via le frame périodique → flash boucle pendant ~500ms).
+    // En boucle→manuel, capturer le freeze-frame depuis le player manuel actif (qui est vide/pausé,
+    // donc isManualMode=true force une capture live depuis le player de boucle via fallback).
+    if (!isManualToManual) {
+      const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(false);
+      if (!freezeOk) {
+        this.doubleBufferService.showBlackOverlay();
+      }
     }
 
     // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
