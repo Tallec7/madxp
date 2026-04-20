@@ -1,3 +1,9 @@
+# [3.204.0](https://github.com/Tallec7/neopro/compare/v3.203.0...v3.204.0) (2026-04-20)
+
+### Features
+
+- **templates:** ADR-075 V2 Sprint 7 — hardening (seed + tests + E2E) ([#515](https://github.com/Tallec7/neopro/issues/515)) ([6ef4d89](https://github.com/Tallec7/neopro/commit/6ef4d89288d780a892c11699a458848240ca35e7))
+
 # [3.203.0](https://github.com/Tallec7/neopro/compare/v3.202.2...v3.203.0) (2026-04-20)
 
 ### Bug Fixes
