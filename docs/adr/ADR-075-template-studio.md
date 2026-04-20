@@ -1,7 +1,7 @@
 # ADR-075 : Template Studio — compositeur multi-couches data-driven
 
 **Date** : 2026-04-20
-**Statut** : Accepté — MVP livré (Sprints 1→4) + V2 Bootstrap (Sprint 5, site-scoped templates)
+**Statut** : Accepté — MVP livré (Sprints 1→4) + V2 white-glove complet (Sprints 5–6, site-scoped templates + Premium gate)
 **Décideurs** : GLT (PO + Dev Lead), Gabin (Motion Designer), Claude Code (exécution)
 **Remplace** : PROP-014 (draft, superseded)
 **Lié** : ADR-054 (async Remotion render), ADR-055 (template versions), PROP-004 (video template engine)
@@ -640,7 +640,7 @@ Tous standalone, <400 lignes chacun (règle projet). Si un dépasse, splitter.
 | 3      | [#504](https://github.com/Tallec7/neopro/pull/504) | Studio super_admin mode : `AdminStudioPanelComponent` (variants / layers / fields), `CreateTemplateWizardComponent`, CRUD admin wiré au dashboard, E2E Playwright                                                          | ✅ Mergé |
 | 4      | [#506](https://github.com/Tallec7/neopro/pull/506) | Migration shadow-seed ButSimple / ButImgJoueur (idempotente, `schema_version=1` préservé), tests permissions `super_admin` sur 8 routes × 5 rôles, smoke guards                                                            | ✅ Mergé |
 | 5 (V2) | (cette PR)                                         | Site-scoped templates : `site_id` sur `neopro_templates`, `findVisibleForSite`, `templateCreateSchema` Joi, scope POST/PATCH super_admin only — white-glove clubs                                                          | ✅ Mergé |
-| 6 (V2) | (cette PR)                                         | Gallery filter "Mes templates perso" + badge Club (dashboard), feature gate `template_studio_club_scoped` (Premium) côté front/back, render-time guard site_id + tier, migration `add-template-studio-v2-club-scoping.sql` | 🟠 WIP   |
+| 6 (V2) | [#514](https://github.com/Tallec7/neopro/pull/514) | Gallery filter "Mes templates perso" + badge Club (dashboard), feature gate `template_studio_club_scoped` (Premium) côté front/back, render-time guard site_id + tier, migration `add-template-studio-v2-club-scoping.sql` | ✅ Mergé |
 
 ### Flip vers v2 pour les templates legacy (opt-in manuel)
 
