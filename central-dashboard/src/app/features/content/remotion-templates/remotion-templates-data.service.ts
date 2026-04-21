@@ -24,10 +24,53 @@ export type TemplateLayerCreate = Omit<TemplateLayer, 'id' | 'templateId'>;
 export type TemplateLayerUpdate = Partial<TemplateLayerCreate>;
 
 export type TemplateTextFieldCreate = Omit<TemplateTextField, 'id' | 'templateId'>;
-export type TemplateTextFieldUpdate = Partial<TemplateTextFieldCreate>;
+
+/**
+ * Flat payload matching server Joi schema `templateStudioTextFieldUpdate`
+ * (positionX/positionY, not nested `position`). Do not replace with
+ * `Partial<TemplateTextFieldCreate>` — the domain type has nested `position`
+ * but the API expects flat fields.
+ */
+export interface TemplateTextFieldUpdate {
+  slotKey?: string;
+  label?: string;
+  positionX?: number;
+  positionY?: number;
+  maxWidth?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  color?: string;
+  align?: 'left' | 'center' | 'right';
+  appearAt?: number;
+  appearDuration?: number;
+  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  defaultValue?: string;
+  maxChars?: number | null;
+  multiline?: boolean;
+  required?: boolean;
+  sortOrder?: number;
+}
 
 export type TemplateImageSlotCreate = Omit<TemplateImageSlot, 'id' | 'templateId'>;
-export type TemplateImageSlotUpdate = Partial<TemplateImageSlotCreate>;
+
+/**
+ * Flat payload matching server Joi schema `templateStudioImageSlotUpdate`
+ * (positionX/positionY/width/height, not nested `position`).
+ */
+export interface TemplateImageSlotUpdate {
+  slotKey?: string;
+  label?: string;
+  positionX?: number;
+  positionY?: number;
+  width?: number;
+  height?: number;
+  appearAt?: number;
+  appearDuration?: number;
+  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  aspectRatio?: string | null;
+  required?: boolean;
+  sortOrder?: number;
+}
 
 /**
  * Wrap des appels API `/api/remotion-templates/*`.

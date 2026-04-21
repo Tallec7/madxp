@@ -12,6 +12,10 @@ import type {
   TemplateImageSlot,
   TemplateTextField,
 } from '../../remotion-templates.types';
+import type {
+  TemplateImageSlotUpdate,
+  TemplateTextFieldUpdate,
+} from '../../remotion-templates-data.service';
 
 export type EditableField =
   | { kind: 'text'; value: TemplateTextField }
@@ -167,7 +171,7 @@ const FONT_FAMILIES = [
 export class AdminFieldEditorComponent {
   @Input({ required: true }) field!: EditableField;
   @Output() patch = new EventEmitter<
-    Partial<TemplateTextField> | Partial<TemplateImageSlot>
+    TemplateTextFieldUpdate | TemplateImageSlotUpdate
   >();
   @Output() delete = new EventEmitter<void>();
 
@@ -175,8 +179,45 @@ export class AdminFieldEditorComponent {
   readonly fontFamilies = FONT_FAMILIES;
 
   emitPatch(): void {
-    // Emit the current snapshot; the parent diffs against its own state
-    // and issues the PATCH. Shallow clone to detach from our mutable ref.
-    this.patch.emit({ ...this.field.value });
+    if (this.field.kind === 'text') {
+      const v = this.field.value;
+      const patch: TemplateTextFieldUpdate = {
+        slotKey: v.slotKey,
+        label: v.label,
+        positionX: v.position.x,
+        positionY: v.position.y,
+        maxWidth: v.maxWidth,
+        fontFamily: v.fontFamily,
+        fontSize: v.fontSize,
+        color: v.color,
+        align: v.align,
+        appearAt: v.appearAt,
+        appearDuration: v.appearDuration,
+        animation: v.animation,
+        defaultValue: v.defaultValue,
+        maxChars: v.maxChars,
+        multiline: v.multiline,
+        required: v.required,
+        sortOrder: v.sortOrder,
+      };
+      this.patch.emit(patch);
+    } else {
+      const v = this.field.value;
+      const patch: TemplateImageSlotUpdate = {
+        slotKey: v.slotKey,
+        label: v.label,
+        positionX: v.position.x,
+        positionY: v.position.y,
+        width: v.position.width,
+        height: v.position.height,
+        appearAt: v.appearAt,
+        appearDuration: v.appearDuration,
+        animation: v.animation,
+        aspectRatio: v.aspectRatio,
+        required: v.required,
+        sortOrder: v.sortOrder,
+      };
+      this.patch.emit(patch);
+    }
   }
 }
