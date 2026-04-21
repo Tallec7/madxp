@@ -27,6 +27,8 @@ interface TemplateBaseRow extends QueryResultRow {
   schema_version: number;
   duration_seconds: string;
   fps: number;
+  canvas_width: number;
+  canvas_height: number;
   thumbnail_url: string | null;
   published: boolean;
   created_at: Date;
@@ -175,7 +177,8 @@ class TemplateStudioRepository {
   async findV2ById(id: string): Promise<TemplateV2 | null> {
     const base = await query<TemplateBaseRow>(
       `SELECT id, name, description, composition_id, schema_version,
-              duration_seconds, fps, thumbnail_url, published, created_at, updated_at
+              duration_seconds, fps, canvas_width, canvas_height,
+              thumbnail_url, published, created_at, updated_at
        FROM neopro_templates
        WHERE id = $1`,
       [id]
@@ -198,6 +201,8 @@ class TemplateStudioRepository {
       compositionId: row.composition_id,
       durationSeconds: num(row.duration_seconds),
       fps: row.fps,
+      canvasWidth: row.canvas_width,
+      canvasHeight: row.canvas_height,
       thumbnailUrl: row.thumbnail_url,
       published: row.published,
       variants,

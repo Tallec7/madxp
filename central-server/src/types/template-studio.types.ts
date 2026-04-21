@@ -86,6 +86,8 @@ export interface TemplateV2 {
   compositionId: string;
   durationSeconds: number;
   fps: number;
+  canvasWidth: number;
+  canvasHeight: number;
   thumbnailUrl: string | null;
   published: boolean;
   variants: TemplateVariant[];

@@ -791,6 +791,9 @@ export const schemas = {
     description: Joi.string().allow(null, '').max(2000).optional(),
     // ADR-075 V2 — scope un template legacy à un club (super_admin only)
     site_id: Joi.string().uuid().allow(null).optional(),
+    // ADR-075 — dimensions canvas Remotion (16:9, 9:16, 1:1…)
+    canvas_width: Joi.number().integer().min(240).max(7680).optional(),
+    canvas_height: Joi.number().integer().min(240).max(7680).optional(),
   }).min(1),
 
   // ADR-075 V2 — create template avec scope club optionnel (super_admin)
