@@ -217,6 +217,10 @@ export interface PhaseChangeEvent {
 export interface CommandEvent {
   type: string;
   data?: unknown;
+  /** ADR-081 Phase 0 — corrélation télécommande → cloud audit. */
+  commandId?: string;
+  /** ADR-081 — cible explicite (indices d'écran) pour dual-display. */
+  target?: number[];
 }
 
 export interface OptionsUpdateEvent {
