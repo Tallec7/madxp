@@ -1,3 +1,9 @@
+## [3.214.2](https://github.com/Tallec7/neopro/compare/v3.214.1...v3.214.2) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** studio v2 variant card sizing + missing-bg warning + hardening guards ([#536](https://github.com/Tallec7/neopro/issues/536)) ([3d3891e](https://github.com/Tallec7/neopro/commit/3d3891e3d3e782e909d9373e9ea4452e6b088446))
+
 ## [3.214.1](https://github.com/Tallec7/neopro/compare/v3.214.0...v3.214.1) (2026-04-21)
 
 ### Bug Fixes
