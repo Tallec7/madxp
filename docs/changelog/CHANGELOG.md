@@ -1,3 +1,9 @@
+# [3.215.0](https://github.com/Tallec7/neopro/compare/v3.214.4...v3.215.0) (2026-04-21)
+
+### Features
+
+- **content:** video club grants — super_admin multi-club video access (ADR-082) ([#539](https://github.com/Tallec7/neopro/issues/539)) ([50fae25](https://github.com/Tallec7/neopro/commit/50fae25d3a34f775cc37c6c886b5835b4eb33d20)), closes [#538](https://github.com/Tallec7/neopro/issues/538) [#538](https://github.com/Tallec7/neopro/issues/538)
+
 ## [Unreleased]
 
 ### Features
