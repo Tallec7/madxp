@@ -1,3 +1,9 @@
+## [3.214.1](https://github.com/Tallec7/neopro/compare/v3.214.0...v3.214.1) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** studio v2 drag fluidity + card/canvas sync + 400 on PATCH ([#535](https://github.com/Tallec7/neopro/issues/535)) ([63fe155](https://github.com/Tallec7/neopro/commit/63fe155630818aa8b4b5922bcb18a225263ba71e))
+
 # [3.214.0](https://github.com/Tallec7/neopro/compare/v3.213.3...v3.214.0) (2026-04-21)
 
 ### Features
