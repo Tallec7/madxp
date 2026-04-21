@@ -478,11 +478,12 @@ describe('SaaS mode guards (ADR-037)', () => {
     expect(resolveFunction).not.toBeNull();
     expect({
       acceptsStoragePathMap: /storagePathMap/.test(resolveFunction![0]),
-      usesMapGet: /storagePathMap\.get/.test(resolveFunction![0]),
+      // ADR-083: .get lookup moved into resolveStoragePath helper (filename-resolver.ts)
+      delegatesResolution: /resolveStoragePath/.test(resolveFunction![0]),
       stripsPathPrefix: /\.split\(['"]\/['"]\)\.pop\(\)/.test(resolveFunction![0]),
     }).toEqual({
       acceptsStoragePathMap: true,
-      usesMapGet: true,
+      delegatesResolution: true,
       stripsPathPrefix: true,
     });
   });
@@ -512,14 +513,16 @@ describe('SaaS mode guards (ADR-037)', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      importsNormalizeFilename: content.includes('normalizeFilename'),
+      importsResolver: /from ['"]\.\.\/utils\/filename-resolver['"]/.test(content),
       importsMetricsService: /from ['"]\.\.\/services\/metrics\.service['"]/.test(content),
-      hasBuildFuzzyIndex: content.includes('buildFuzzyIndex'),
+      usesBuildFuzzyIndex: /buildFuzzyIndex|buildFuzzyFilenameIndex/.test(content),
+      callsResolveStoragePath: content.includes('resolveStoragePath'),
       recordsResolutionResult: content.includes('recordVideoPathResolution'),
     }).toEqual({
-      importsNormalizeFilename: true,
+      importsResolver: true,
       importsMetricsService: true,
-      hasBuildFuzzyIndex: true,
+      usesBuildFuzzyIndex: true,
+      callsResolveStoragePath: true,
       recordsResolutionResult: true,
     });
   });

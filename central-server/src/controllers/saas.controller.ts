@@ -15,7 +15,7 @@ import { signVideoStreamToken } from '../services/video-token.service';
 import { metricsService } from '../services/metrics.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
-import { normalizeFilename } from '../utils/filename-normalize';
+import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
 import logger from '../config/logger';
 
@@ -80,42 +80,18 @@ function resolveVideoUrl(
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const filename = path.split('/').pop() || path;
 
-  const exact = storagePathMap.get(filename);
-  if (exact) {
-    metricsService.recordVideoPathResolution('exact');
-    return buildPublicVideoUrl(exact, siteId);
-  }
-
-  const fuzzyKey = normalizeFilename(filename);
-  const fuzzyHit = fuzzyIndex.get(fuzzyKey);
-  if (fuzzyHit) {
-    metricsService.recordVideoPathResolution('fuzzy');
+  const { storagePath, result } = resolveStoragePath(filename, storagePathMap, fuzzyIndex);
+  metricsService.recordVideoPathResolution(result);
+  if (result === 'fuzzy') {
     logger.warn('SaaS config path drift healed via fuzzy match', {
       siteId,
       configFilename: filename,
-      resolvedStoragePath: fuzzyHit,
+      resolvedStoragePath: storagePath,
     });
-    return buildPublicVideoUrl(fuzzyHit, siteId);
+  } else if (result === 'miss') {
+    logger.warn('SaaS config path drift — no match found', { siteId, configFilename: filename });
   }
-
-  metricsService.recordVideoPathResolution('miss');
-  logger.warn('SaaS config path drift — no match found', { siteId, configFilename: filename });
-  return buildPublicVideoUrl(filename, siteId);
-}
-
-/**
- * Construit un index fuzzy `normalizedFilename → storagePath` à partir de la
- * storagePathMap exacte (ADR-083). Les collisions sont résolues en gardant la
- * première occurrence (ordre DB) — les doublons normalisés sont rares et les
- * doublons vrais (same UUID) ont le même storage_path.
- */
-function buildFuzzyIndex(storagePathMap: Map<string, string>): Map<string, string> {
-  const fuzzy = new Map<string, string>();
-  for (const [filename, storagePath] of storagePathMap.entries()) {
-    const key = normalizeFilename(filename);
-    if (!fuzzy.has(key)) fuzzy.set(key, storagePath);
-  }
-  return fuzzy;
+  return buildPublicVideoUrl(storagePath, siteId);
 }
 
 /**
@@ -301,7 +277,7 @@ export async function getSaasConfig(req: Request, res: Response) {
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
     // Then resolve video URLs (filename → storage_path) with fuzzy fallback (ADR-083)
-    const fuzzyIndex = buildFuzzyIndex(storagePathMap);
+    const fuzzyIndex = buildFuzzyFilenameIndex(storagePathMap);
     const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
@@ -445,7 +421,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
     // Then resolve video URLs (filename → storage_path) with fuzzy fallback (ADR-083)
-    const fuzzyIndex = buildFuzzyIndex(storagePathMap);
+    const fuzzyIndex = buildFuzzyFilenameIndex(storagePathMap);
     const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
