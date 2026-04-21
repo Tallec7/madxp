@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
+import * as videoClubGrantsController from '../controllers/video-club-grants.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { uploadVideo, uploadImage, uploadTemplate } from '../middleware/upload';
 import { paginationMiddleware, createPaginationMiddleware } from '../middleware/pagination';
 import { adminRateLimit, sensitiveRateLimit, uploadRateLimit } from '../middleware/user-rate-limit';
+import { validate, validateParams, schemas, paramSchemas } from '../middleware/validation';
 
 const router = Router();
 
@@ -57,5 +59,11 @@ router.get('/deployments/:id', authenticate, adminRateLimit, contentController.g
 router.post('/deployments', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, contentController.createDeployment);
 router.put('/deployments/:id', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, contentController.updateDeployment);
 router.delete('/deployments/:id', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteDeployment);
+
+// Video club grants (ADR-082) — super_admin only for mutations, authenticated for reads
+router.get('/videos/grants-for-site/:siteId', authenticate, adminRateLimit, validateParams(paramSchemas.siteId), videoClubGrantsController.getGrantedVideoIdsForSite);
+router.get('/videos/:id/club-grants', authenticate, requireRole('super_admin'), adminRateLimit, validateParams(paramSchemas.id), videoClubGrantsController.listGrants);
+router.post('/videos/:id/club-grants', authenticate, requireRole('super_admin'), sensitiveRateLimit, validateParams(paramSchemas.id), validate(schemas.addVideoClubGrant), videoClubGrantsController.addGrant);
+router.delete('/videos/:id/club-grants/:siteId', authenticate, requireRole('super_admin'), sensitiveRateLimit, validateParams(paramSchemas.idAndSiteId), videoClubGrantsController.removeGrant);
 
 export default router;

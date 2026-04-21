@@ -2347,3 +2347,173 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 });
+
+// ============================================================
+// ADR-082 — Video Club Grants (super_admin multi-club access)
+// ============================================================
+describe('ADR-082 Video Club Grants — routes, guards and Prometheus instrumentation', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  let routesContent: string;
+  let controllerContent: string;
+  let metricsContent: string;
+  let repoContent: string;
+
+  beforeAll(() => {
+    routesContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts'),
+      'utf8',
+    );
+    controllerContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-club-grants.controller.ts'),
+      'utf8',
+    );
+    metricsContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts'),
+      'utf8',
+    );
+    repoContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'repositories', 'video-club-grant.repository.ts'),
+      'utf8',
+    );
+  });
+
+  it('controller exports all 4 handlers', () => {
+    expect({
+      hasListGrants: /export const listGrants/.test(controllerContent),
+      hasAddGrant: /export const addGrant/.test(controllerContent),
+      hasRemoveGrant: /export const removeGrant/.test(controllerContent),
+      hasGetGrantedVideoIdsForSite: /export const getGrantedVideoIdsForSite/.test(controllerContent),
+    }).toEqual({
+      hasListGrants: true,
+      hasAddGrant: true,
+      hasRemoveGrant: true,
+      hasGetGrantedVideoIdsForSite: true,
+    });
+  });
+
+  it('GET /grants-for-site/:siteId is authenticated with validateParams', () => {
+    expect({
+      routeExists: /grants-for-site\/:siteId/.test(routesContent),
+      hasValidateParams: (() => {
+        const routeIdx = routesContent.indexOf('grants-for-site/:siteId');
+        const lineStart = routesContent.lastIndexOf('\n', routeIdx);
+        const lineEnd = routesContent.indexOf('\n', routeIdx);
+        const line = routesContent.slice(lineStart, lineEnd);
+        return line.includes('validateParams');
+      })(),
+    }).toEqual({
+      routeExists: true,
+      hasValidateParams: true,
+    });
+  });
+
+  it('GET/POST/DELETE club-grants mutations require super_admin', () => {
+    const listGrantsIdx = routesContent.indexOf('/club-grants');
+    expect(listGrantsIdx).toBeGreaterThan(-1);
+
+    // All 3 mutation routes (list, add, remove) should have requireRole('super_admin')
+    const grantsSection = routesContent.slice(listGrantsIdx - 200, routesContent.indexOf('club-grants/:siteId') + 300);
+    expect(grantsSection.includes("requireRole('super_admin')")).toBe(true);
+  });
+
+  it('DELETE /club-grants/:siteId has validateParams for composite param', () => {
+    const deleteIdx = routesContent.indexOf('club-grants/:siteId');
+    expect(deleteIdx).toBeGreaterThan(-1);
+    const line = routesContent.slice(routesContent.lastIndexOf('\n', deleteIdx), routesContent.indexOf('\n', deleteIdx));
+    expect(line.includes('validateParams')).toBe(true);
+  });
+
+  it('addGrant controller blocks NEOPRO category videos', () => {
+    expect({
+      checksNeopro: /NEOPRO/.test(controllerContent),
+      returns403: /403/.test(controllerContent),
+    }).toEqual({
+      checksNeopro: true,
+      returns403: true,
+    });
+  });
+
+  it('Prometheus counter neopro_video_club_grants_total is registered in metrics.service', () => {
+    expect({
+      counterDefined: /neopro_video_club_grants_total/.test(metricsContent),
+      recorderExposed: /recordVideoClubGrant/.test(metricsContent),
+      hasOperationLabel: /operation/.test(metricsContent) && /labelNames/.test(metricsContent),
+    }).toEqual({
+      counterDefined: true,
+      recorderExposed: true,
+      hasOperationLabel: true,
+    });
+  });
+
+  it('addGrant and removeGrant controller record Prometheus metrics', () => {
+    expect({
+      addsSuccess: /recordVideoClubGrant\(['"]add['"],\s*['"]success['"]\)/.test(controllerContent),
+      addsError: /recordVideoClubGrant\(['"]add['"],\s*['"]error['"]\)/.test(controllerContent),
+      removesSuccess: /recordVideoClubGrant\(['"]remove['"],\s*['"]success['"]\)/.test(controllerContent),
+      removesError: /recordVideoClubGrant\(['"]remove['"],\s*['"]error['"]\)/.test(controllerContent),
+    }).toEqual({
+      addsSuccess: true,
+      addsError: true,
+      removesSuccess: true,
+      removesError: true,
+    });
+  });
+
+  it('repository exposes all required methods', () => {
+    expect({
+      hasFindGrantedSiteIds: /findGrantedSiteIdsForVideo/.test(repoContent),
+      hasFindGrantedVideoIds: /findGrantedVideoIdsForSite/.test(repoContent),
+      hasAddGrant: /addGrant\(/.test(repoContent),
+      hasRemoveGrant: /removeGrant\(/.test(repoContent),
+      hasHasGrant: /hasGrant\(/.test(repoContent),
+    }).toEqual({
+      hasFindGrantedSiteIds: true,
+      hasFindGrantedVideoIds: true,
+      hasAddGrant: true,
+      hasRemoveGrant: true,
+      hasHasGrant: true,
+    });
+  });
+
+  it('controller uses logger (not console.log)', () => {
+    expect({
+      noConsoleLog: !controllerContent.includes('console.log'),
+      usesLogger: /logger\.(info|error|warn)/.test(controllerContent),
+    }).toEqual({
+      noConsoleLog: true,
+      usesLogger: true,
+    });
+  });
+
+  it('videoClubGrantRepository is exported from repositories/index.ts', () => {
+    const indexContent = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'repositories', 'index.ts'),
+      'utf8',
+    );
+    expect(indexContent.includes('videoClubGrantRepository')).toBe(true);
+  });
+
+  it('isLockedForConfig relaxes grant guard in video-library.component', () => {
+    const filePath = path.join(
+      repoRoot,
+      'central-dashboard',
+      'src',
+      'app',
+      'features',
+      'sites',
+      'components',
+      'video-library',
+      'video-library.component.ts',
+    );
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasIsLockedForConfig: /isLockedForConfig/.test(content),
+      hasClubGrantedVideoIds: /clubGrantedVideoIds/.test(content),
+      loadsGrantsOnSiteChange: /loadClubGrants/.test(content),
+    }).toEqual({
+      hasIsLockedForConfig: true,
+      hasClubGrantedVideoIds: true,
+      loadsGrantsOnSiteChange: true,
+    });
+  });
+});

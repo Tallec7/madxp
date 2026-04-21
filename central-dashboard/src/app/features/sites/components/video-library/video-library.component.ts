@@ -1,11 +1,19 @@
-import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy, HostListener } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
+import { ApiService } from '../../../../core/services/api.service';
 import { VideoReconciliationService } from './video-reconciliation.service';
 import { VideoRelevanceFilterService } from './video-relevance-filter.service';
+
+interface VideoClubGrantRow {
+  video_id: string;
+  site_id: string;
+  site_name: string;
+  club_name: string | null;
+}
 // Types are extracted for reuse across the library's sub-components and data service.
 // Re-exported below so external importers (video-manager, site-content-tab, tests) keep working.
 import type {
@@ -73,6 +81,8 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() videoVariantInfo: Map<string, { count: number; types: string[] }> = new Map(); // Phase 5H: variant counts per video
   @Input() totalDisplays: number = 1; // Phase 5H: total configured displays for X/N badge
   @Input() isClubUser = false;
+  @Input() isSuperAdmin = false;
+  @Input() currentSiteName = '';
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
 
@@ -91,10 +101,17 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map(); // Sprint 3: targets each video belongs to
   @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
 
+  // ADR-082: Club grants state
+  clubGrantedVideoIds: Set<string> = new Set();
+  videoGrants: VideoClubGrantRow[] = [];
+  grantsLoading = false;
+
   constructor(
     private gate: FeatureGateService,
     private reconciliation: VideoReconciliationService,
     private relevanceFilter: VideoRelevanceFilterService,
+    private api: ApiService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   @HostListener('document:click')
@@ -194,6 +211,37 @@ export class VideoLibraryComponent implements OnChanges {
     if (changes['storage'] && this.storage) {
       this.storagePercent = (this.storage.used / this.storage.total) * 100;
     }
+    if ((changes['siteId'] || changes['isClubUser']) && this.isClubUser && this.siteId) {
+      this.loadClubGrants(this.siteId);
+    }
+  }
+
+  private loadClubGrants(siteId: string): void {
+    this.api.get<{ videoIds: string[] }>(`/content/videos/grants-for-site/${siteId}`)
+      .subscribe({ next: (res) => { this.clubGrantedVideoIds = new Set(res.videoIds); this.cdr.markForCheck(); } });
+  }
+
+  loadVideoGrants(videoId: string): void {
+    if (!videoId) return;
+    this.grantsLoading = true;
+    this.videoGrants = [];
+    this.api.get<{ grants: VideoClubGrantRow[] }>(`/content/videos/${videoId}/club-grants`)
+      .subscribe({
+        next: (res) => { this.videoGrants = res.grants; this.grantsLoading = false; this.cdr.markForCheck(); },
+        error: () => { this.grantsLoading = false; this.cdr.markForCheck(); },
+      });
+  }
+
+  onAddGrant(siteId: string): void {
+    if (!this.detailVideo?.id) return;
+    this.api.post<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants`, { site_id: siteId })
+      .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
+  }
+
+  onRemoveGrant(siteId: string): void {
+    if (!this.detailVideo?.id) return;
+    this.api.delete<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants/${siteId}`)
+      .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
   }
 
   private processVideos(): void {
@@ -394,6 +442,9 @@ export class VideoLibraryComponent implements OnChanges {
     this.selectedPath = video.path;
     this.detailVideo = video;
     this.videoSelect.emit(video);
+    if (this.isSuperAdmin && video.id) {
+      this.loadVideoGrants(video.id);
+    }
   }
 
   closeDetail(): void {
@@ -549,10 +600,22 @@ export class VideoLibraryComponent implements OnChanges {
 
   /**
    * Club users cannot modify videos that are not explicitly their own uploads.
-   * A video is "club-locked" if category is NEOPRO or it wasn't uploaded for their site.
+   * A video is "club-locked" for delete/edit if category is NEOPRO or it wasn't uploaded for their site.
    */
   isClubLocked(video: VideoItem): boolean {
     if (!this.isClubUser) return false;
     return video.owner === 'neopro' || video.category?.toUpperCase() === 'NEOPRO' || !this.isUploadedForThisSite(video);
+  }
+
+  /** ADR-082: True if super_admin granted this club access to place the video in config. */
+  isClubGranted(video: VideoItem): boolean {
+    return !!(video.id && this.clubGrantedVideoIds.has(video.id));
+  }
+
+  /** True when the "Add to config" dropdown should be locked (stricter than delete lock). */
+  isLockedForConfig(video: VideoItem): boolean {
+    if (!this.isClubUser) return false;
+    if (this.isClubGranted(video)) return false;
+    return this.isClubLocked(video);
   }
 }

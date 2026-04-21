@@ -98,6 +98,7 @@
       [canUseSecondaryDisplay]="canUseSecondaryDisplay"
       [isClubUser]="isClubUser"
       [siteId]="siteId"
+      [clubGrantedVideoIds]="clubGrantedVideoIds"
       [deployStates]="deployStates"
       [allVideosCount]="allVideos.length"
       [filteredVideosCount]="filteredVideos.length"
@@ -171,9 +172,15 @@
     [siteDisplays]="siteDisplays"
     [availableVideos]="availableVideos"
     [isClubLocked]="detailVideo ? isClubLocked(detailVideo) : false"
+    [isLockedForConfig]="detailVideo ? isLockedForConfig(detailVideo) : false"
     [isDeploying]="detailVideo ? isDeploying(detailVideo) : false"
     [addToDropdownOpen]="!!detailVideo && addToDropdownVideo === detailVideo"
     [addToDropdownStyle]="addToDropdownStyle"
+    [isSuperAdmin]="isSuperAdmin"
+    [videoGrants]="videoGrants"
+    [grantsLoading]="grantsLoading"
+    [currentSiteId]="siteId"
+    [currentSiteName]="currentSiteName"
     (closePanel)="closeDetail()"
     (toggleAddTo)="toggleAddToDropdown($event.video, $event.event)"
     (addToTargetSelect)="onAddToTargetSelect($event.video, $event.target, $event.event)"
@@ -181,6 +188,8 @@
     (deleteVideo)="onDelete($event.video, $event.event)"
     (variantChanged)="onVariantChanged($event)"
     (removeFromTarget)="removeFromTarget.emit($event)"
+    (addGrant)="onAddGrant($event)"
+    (removeGrant)="onRemoveGrant($event)"
   ></app-video-detail-panel>
 
   <!-- Video Preview Popup (extracted to sub-component) -->

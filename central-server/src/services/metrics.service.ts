@@ -707,6 +707,15 @@ const templateStudioOperationsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Video Club Grants (ADR-082) =============
+
+const videoClubGrantsTotal = new Counter({
+  name: 'neopro_video_club_grants_total',
+  help: 'Video club grant operations (ADR-082)',
+  labelNames: ['operation', 'status'],
+  registers: [register],
+});
+
 // ============= Hotspot PSK (ADR-074) =============
 
 const hotspotBootstrapAttemptsTotal = new Counter({
@@ -1196,6 +1205,15 @@ class MetricsService {
     status: 'success' | 'not_found' | 'conflict' | 'error'
   ): void {
     templateStudioOperationsTotal.inc({ resource, operation, status });
+  }
+
+  // ============= Video Club Grants (ADR-082) =============
+
+  recordVideoClubGrant(
+    operation: 'add' | 'remove',
+    status: 'success' | 'error'
+  ): void {
+    videoClubGrantsTotal.inc({ operation, status });
   }
 
   // ============= Hotspot PSK (ADR-074) =============

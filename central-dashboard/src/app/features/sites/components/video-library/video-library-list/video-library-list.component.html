@@ -47,7 +47,7 @@
         >
           👁️
         </button>
-        <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isClubLocked(video)">
+        <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig(video)">
           <button
             class="action-btn add-to-trigger"
             (click)="onAddToToggle(video, $event)"
@@ -310,7 +310,10 @@
             >
               👁️
             </button>
-            <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isClubLocked(video)">
+            <div
+              class="add-to-wrapper"
+              *ngIf="configTargets.length > 0 && !isLockedForConfig(video)"
+            >
               <button
                 class="action-btn add-to-trigger"
                 (click)="onAddToToggle(video, $event)"

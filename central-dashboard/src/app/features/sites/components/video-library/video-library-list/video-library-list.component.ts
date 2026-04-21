@@ -52,6 +52,7 @@ export class VideoLibraryListComponent {
   @Input() canUseSecondaryDisplay: boolean = false;
   @Input() isClubUser: boolean = false;
   @Input() siteId: string | null = null;
+  @Input() clubGrantedVideoIds: Set<string> = new Set();
   @Input() deployStates: Map<string, VideoDeployState> = new Map();
   @Input() allVideosCount: number = 0;
   @Input() filteredVideosCount: number = 0;
@@ -145,6 +146,12 @@ export class VideoLibraryListComponent {
   isClubLocked(video: VideoItem): boolean {
     if (!this.isClubUser) return false;
     return video.owner === 'neopro' || video.category?.toUpperCase() === 'NEOPRO' || !this.isUploadedForThisSite(video);
+  }
+
+  isLockedForConfig(video: VideoItem): boolean {
+    if (!this.isClubUser) return false;
+    if (video.id && this.clubGrantedVideoIds.has(video.id)) return false;
+    return this.isClubLocked(video);
   }
 
   getDeployState(video: VideoItem): VideoDeployState | null {
