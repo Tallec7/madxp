@@ -764,6 +764,7 @@ Visual drag-to-position super_admin sur canvas. Composant `AdminCanvasOverlayCom
 
 - PR #533 : 400 Bad Request sur drag (PATCH `/image-slots/:id`) et CREATE (POST) — payloads nested `{position:{x,y}}` vs Joi flat `positionX/positionY` ; flash sur ngModel keystroke (reload-on-patch).
 - PR #535 : drag non fluide (OnPush sans `markForCheck` mid-pointermove) ; carte → canvas désynchronisé (ngModel mute référence partagée, overlay OnPush ne re-render pas) ; 400 récurrent sur PATCH `/text-fields/:id` (null DB envoyé à Joi qui n'`.allow(null)` que sur `maxChars`/`aspectRatio`).
+- PR #536 : variant thumbnails étalés pleine largeur (column `1fr`) et deformés sur templates 16/9 ou 1/1 (ratio hardcodé 9/16) ; preview noir silencieux pour templates v1→v2 dont le scaffold crée un `background_video_url` vide (runtime `isValidSrc` skippe → black frame). Fix : `--thumb-ratio` CSS var pilotée par `canvasWidth/canvasHeight`, colonnes fixes 96px, bannière empty-state explicite quand `isBackgroundMissing`. Filtre console AbortError (Chrome power-save sur `<video>` sans piste audio). 3 smoke guards additionnels dans `smoke-remotion.test.ts`.
 
 **Estimation globale V3** : 10-13j dev, tout livré.
 
