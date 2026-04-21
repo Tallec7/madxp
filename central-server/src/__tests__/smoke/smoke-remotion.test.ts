@@ -1214,6 +1214,35 @@ describe('Template Studio v2 — drag-to-position admin overlay (ADR-075 V3 Phas
     // No nested position passthrough in emitted patch payload.
     expect(editor).not.toMatch(/this\.patch\.emit\([\s\S]*position:\s*\{/);
   });
+
+  // Regression guard: onAddTextField / onAddImageSlot must POST flat payloads,
+  // same class of bug as the drag PATCH (Joi Create schema also uses flat fields).
+  it('admin-studio-panel CREATE payloads are FLAT (positionX / positionY)', () => {
+    const panel = readDash(panelPath);
+    // TextField create
+    expect(panel).toMatch(/TemplateTextFieldCreate\s*=\s*\{[\s\S]*positionX:\s*0\.5,[\s\S]*positionY:\s*0\.5,/);
+    // ImageSlot create
+    expect(panel).toMatch(/TemplateImageSlotCreate\s*=\s*\{[\s\S]*positionX:\s*0\.5,[\s\S]*positionY:\s*0\.5,[\s\S]*width:\s*0\.3,[\s\S]*height:\s*0\.3,/);
+    // Neither may send a nested `position: { x, y` at creation time.
+    expect(panel).not.toMatch(/position:\s*\{\s*x:/);
+  });
+
+  // Regression guard: PATCH handlers must NOT trigger a full view reload on
+  // success. Reload unmounts/remounts the card → flash at every keystroke
+  // (reported by user on field editor inputs).
+  it('admin-studio-panel PATCH handlers do not reload the view on success', () => {
+    const panel = readDash(panelPath);
+    const patchBlocks = panel.match(
+      /onPatch(?:TextField|ImageSlot)\([^)]*\)\s*:\s*void\s*\{[\s\S]*?\n  \}/g,
+    );
+    expect(patchBlocks).toBeTruthy();
+    expect(patchBlocks!.length).toBe(2);
+    for (const block of patchBlocks!) {
+      expect(block).not.toMatch(/next:\s*\(\)\s*=>\s*this\.changed\.emit/);
+      // Still have an error handler to notify the user.
+      expect(block).toMatch(/error:\s*\(\)\s*=>/);
+    }
+  });
 });
 
 describe('Club self-service templates (ADR-075 V3 Phase B)', () => {
