@@ -1,3 +1,9 @@
+# [3.212.0](https://github.com/Tallec7/neopro/compare/v3.211.0...v3.212.0) (2026-04-21)
+
+### Features
+
+- **templates:** FTP background video upload for clubs (ADR-075 V3 Phase C) ([#530](https://github.com/Tallec7/neopro/issues/530)) ([38b881c](https://github.com/Tallec7/neopro/commit/38b881c9c0345b9685fc0d4861a357abb3854e2e))
+
 # [3.211.0](https://github.com/Tallec7/neopro/compare/v3.210.0...v3.211.0) (2026-04-21)
 
 ### Features
