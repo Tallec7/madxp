@@ -12,12 +12,14 @@
  */
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
   Input,
   Output,
   ViewChild,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type {
@@ -154,6 +156,7 @@ export class AdminCanvasOverlayComponent {
   selectedVariantId: string | null = null;
   private drag: DragState | null = null;
   private emitTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private cdr = inject(ChangeDetectorRef);
 
   get activeVariant(): TemplateVariant | null {
     if (!this.view?.variants.length) return null;
@@ -261,6 +264,7 @@ export class AdminCanvasOverlayComponent {
         this.patchImageSlot.emit({ id, patch: { positionX: x, positionY: y } }),
       );
     }
+    this.cdr.markForCheck();
   }
 
   private applyResize(id: string, width: number, height: number): void {
@@ -270,6 +274,12 @@ export class AdminCanvasOverlayComponent {
     this.scheduleEmit(`i-${id}`, () =>
       this.patchImageSlot.emit({ id, patch: { width, height } }),
     );
+    this.cdr.markForCheck();
+  }
+
+  /** Called by parent after a field editor card emits a patch, so the overlay re-renders. */
+  refresh(): void {
+    this.cdr.markForCheck();
   }
 
   private scheduleEmit(key: string, fn: () => void): void {

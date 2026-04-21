@@ -1227,6 +1227,46 @@ describe('Template Studio v2 — drag-to-position admin overlay (ADR-075 V3 Phas
     expect(panel).not.toMatch(/position:\s*\{\s*x:/);
   });
 
+  // Regression guard: drag fluidity. OnPush + raw mutation of `tf.position`
+  // inside pointermove doesn't trigger change detection, so the handle only
+  // repositions on pointerup. Fix: markForCheck() after each mutation.
+  it('admin-canvas-overlay calls markForCheck during drag/resize', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/ChangeDetectorRef/);
+    expect(comp).toMatch(/this\.cdr\.markForCheck\(\)/);
+    // Must expose a `refresh()` hook for the parent panel to re-render the
+    // overlay after a field-editor card edits a nested property in-place.
+    expect(comp).toMatch(/refresh\(\)\s*:\s*void/);
+  });
+
+  // Regression guard: card edits (typographie, couleur, fontSize, …) mutate
+  // the shared `view.textFields[i]` reference via ngModel; the OnPush overlay
+  // child does not re-render unless the parent explicitly pushes it.
+  it('admin-studio-panel refreshes canvas overlay after card patches', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/#canvasOverlay/);
+    expect(panel).toMatch(/@ViewChild\('canvasOverlay'\)\s+canvasOverlay\?:\s*AdminCanvasOverlayComponent/);
+    // Both PATCH handlers must call refresh() so the visual canvas follows
+    // the card input immediately.
+    expect(panel).toMatch(/onPatchTextField[\s\S]*this\.canvasOverlay\?\.refresh\(\)/);
+    expect(panel).toMatch(/onPatchImageSlot[\s\S]*this\.canvasOverlay\?\.refresh\(\)/);
+  });
+
+  // Regression guard: `emitPatch` used to blindly include DB-null values
+  // (color=null, fontFamily=null, …) that Joi rejects. Result: every ngModel
+  // keystroke returned 400. Fix: strip null/undefined before emitting,
+  // except the whitelisted fields Joi explicitly `.allow(null)`.
+  it('admin-field-editor strips null/undefined before emitting PATCH', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts',
+    );
+    expect(editor).toMatch(/function\s+stripNullish/);
+    expect(editor).toMatch(/stripNullish\(\{[\s\S]*slotKey:\s*v\.slotKey/);
+    // maxChars / aspectRatio must be whitelisted to preserve explicit null.
+    expect(editor).toMatch(/\['maxChars'\]/);
+    expect(editor).toMatch(/\['aspectRatio'\]/);
+  });
+
   // Regression guard: PATCH handlers must NOT trigger a full view reload on
   // success. Reload unmounts/remounts the card → flash at every keystroke
   // (reported by user on field editor inputs).

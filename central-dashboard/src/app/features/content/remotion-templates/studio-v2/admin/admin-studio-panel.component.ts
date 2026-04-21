@@ -4,6 +4,7 @@ import {
   EventEmitter,
   Input,
   Output,
+  ViewChild,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -49,6 +50,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
   template: `
     <div class="asp" *ngIf="view" data-testid="admin-studio-panel">
       <app-admin-canvas-overlay
+        #canvasOverlay
         [view]="view"
         (patchTextField)="onPatchTextField($event.id, $event.patch)"
         (patchImageSlot)="onPatchImageSlot($event.id, $event.patch)"
@@ -167,6 +169,8 @@ export class AdminStudioPanelComponent {
   @Input() clubMode = false;
   @Output() changed = new EventEmitter<void>();
 
+  @ViewChild('canvasOverlay') canvasOverlay?: AdminCanvasOverlayComponent;
+
   private api = inject(RemotionTemplatesDataService);
   private clubApi = inject(ClubTemplatesDataService);
   private notifications = inject(NotificationService);
@@ -284,6 +288,9 @@ export class AdminStudioPanelComponent {
     // Ne PAS emit `changed` ici : le two-way binding ngModel a déjà mis à jour
     // le modèle local. Reload = unmount/remount des cartes → flash à chaque
     // keystroke. On reload uniquement après CREATE/DELETE (afterMutation).
+    // Canvas refresh : la carte a muté `tf` in-place, l'overlay (OnPush) ne
+    // re-render pas tout seul — on le pousse ici.
+    this.canvasOverlay?.refresh();
     svc.updateTextField(this.view.id, id, patch).subscribe({
       error: () => this.notifications.error('Échec mise à jour champ texte'),
     });
@@ -325,6 +332,7 @@ export class AdminStudioPanelComponent {
   onPatchImageSlot(id: string, patch: TemplateImageSlotUpdate): void {
     const svc = this.clubMode ? this.clubApi : this.api;
     // Pas d'emit `changed` : voir onPatchTextField pour la raison (anti-flash).
+    this.canvasOverlay?.refresh();
     svc.updateImageSlot(this.view.id, id, patch).subscribe({
       error: () => this.notifications.error('Échec mise à jour slot image'),
     });
