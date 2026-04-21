@@ -1,3 +1,9 @@
+## [3.213.3](https://github.com/Tallec7/neopro/compare/v3.213.2...v3.213.3) (2026-04-21)
+
+### Bug Fixes
+
+- **templates+sites:** studio v2 400 drag/create + onglet accès club multi-comptes ([#533](https://github.com/Tallec7/neopro/issues/533)) ([149f156](https://github.com/Tallec7/neopro/commit/149f15613f252ebcaca87f79d6994eabb400ef86))
+
 ## [3.213.2](https://github.com/Tallec7/neopro/compare/v3.213.1...v3.213.2) (2026-04-21)
 
 ### Bug Fixes
