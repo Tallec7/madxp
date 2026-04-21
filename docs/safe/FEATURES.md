@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 20 Avril 2026 <!-- ADR-075 Template Studio v2 MVP complet (Sprints 1→4) + Sprints 5–8 white-glove complet (site_id + Premium gate + seed + E2E + upload direct admin panels) -->
+> **Dernière mise à jour** : 21 Avril 2026 <!-- ADR-075 Template Studio V3 complet (Phase 1 drag + Phases A/B/C/D self-service club PR #525/528/529/530/531) + hardening UX PR #533/535/536 (drag fluidity, card↔canvas sync, 400 PATCH, variant sizing, missing-bg warning) -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -361,17 +361,19 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Preview temps réel dans le dashboard avant déploiement
 - [ ] Les templates s'appliquent aux écrans d'accueil, transitions et habillages
 
-| US        | Description                                                                                                            | SP  | Sprint          | Priorité |
-| --------- | ---------------------------------------------------------------------------------------------------------------------- | --- | --------------- | -------- |
-| US-05.1.1 | Moteur de templates avec injection couleurs/logo + 5 templates de base                                                 | 8   | PI-2 S1         | Must     |
-| US-05.1.2 | Preview temps réel dans le dashboard (iframe rendu)                                                                    | 3   | PI-2 S1         | Must     |
-| US-05.1.3 | Template Studio v2 — backbone data-driven (ADR-075 Sprint 1 : migration + API super_admin + runtime)                   | 5   | ✅ PI-1 S3 Done | Must     |
-| US-05.1.4 | Template Studio v2 — studio user Angular + preview React-in-Angular (ADR-075 Sprint 2 + ADR-077 uploads)               | 5   | ✅ PI-1 S3 Done | Must     |
-| US-05.1.5 | Template Studio v2 — studio super_admin (admin panels + wizard création) (ADR-075 Sprint 3)                            | 5   | 🟠 PI-1 S3 Open | Must     |
-| US-05.1.6 | Template Studio v2 — migration legacy ButSimple/ButImgJoueur + permission guards (ADR-075 Sprint 4)                    | 3   | 🟠 PI-1 S3 Open | Must     |
-| US-05.1.7 | Template Studio v2 — white-glove club scoping (site_id + filtre galerie + feature gate Premium) (ADR-075 Sprint 6)     | 3   | ✅ PI-1 S3 Done | Should   |
-| US-05.1.8 | Template Studio v2 — hardening white-glove (seed idempotent + E2E filtre + smoke tests) (ADR-075 Sprint 7)             | 2   | ✅ PI-1 S3 Done | Should   |
-| US-05.1.9 | Template Studio v2 — upload direct 📁 dans admin panels (UrlUploadInput + dossier FTP studio isolé) (ADR-075 Sprint 8) | 2   | ✅ PI-1 S3 Done | Should   |
+| US         | Description                                                                                                                                   | SP  | Sprint          | Priorité |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------------- | -------- |
+| US-05.1.1  | Moteur de templates avec injection couleurs/logo + 5 templates de base                                                                        | 8   | PI-2 S1         | Must     |
+| US-05.1.2  | Preview temps réel dans le dashboard (iframe rendu)                                                                                           | 3   | PI-2 S1         | Must     |
+| US-05.1.3  | Template Studio v2 — backbone data-driven (ADR-075 Sprint 1 : migration + API super_admin + runtime)                                          | 5   | ✅ PI-1 S3 Done | Must     |
+| US-05.1.4  | Template Studio v2 — studio user Angular + preview React-in-Angular (ADR-075 Sprint 2 + ADR-077 uploads)                                      | 5   | ✅ PI-1 S3 Done | Must     |
+| US-05.1.5  | Template Studio v2 — studio super_admin (admin panels + wizard création) (ADR-075 Sprint 3)                                                   | 5   | 🟠 PI-1 S3 Open | Must     |
+| US-05.1.6  | Template Studio v2 — migration legacy ButSimple/ButImgJoueur + permission guards (ADR-075 Sprint 4)                                           | 3   | 🟠 PI-1 S3 Open | Must     |
+| US-05.1.7  | Template Studio v2 — white-glove club scoping (site_id + filtre galerie + feature gate Premium) (ADR-075 Sprint 6)                            | 3   | ✅ PI-1 S3 Done | Should   |
+| US-05.1.8  | Template Studio v2 — hardening white-glove (seed idempotent + E2E filtre + smoke tests) (ADR-075 Sprint 7)                                    | 2   | ✅ PI-1 S3 Done | Should   |
+| US-05.1.9  | Template Studio v2 — upload direct 📁 dans admin panels (UrlUploadInput + dossier FTP studio isolé) (ADR-075 Sprint 8)                        | 2   | ✅ PI-1 S3 Done | Should   |
+| US-05.1.10 | Template Studio v3 — self-service club (drag admin + portail club + upload background + quotas) (ADR-075 V3 Phases 1/A/B/C/D)                 | 8   | ✅ PI-1 S3 Done | Should   |
+| US-05.1.11 | Template Studio v2/v3 — hardening UX (drag fluidity + card↔canvas sync + 400 PATCH + variant sizing + missing-bg warning) (PR #533/#535/#536) | 3   | ✅ PI-1 S3 Done | Should   |
 
 ---
 
