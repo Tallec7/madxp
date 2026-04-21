@@ -3,14 +3,16 @@
 # Setup Captive Portal iptables rules for Android HTTPS connectivity checks
 # =============================================================================
 #
-# Problème : Android fait ses checks de connectivité en HTTPS (port 443).
-# Le Pi ne répond pas en HTTPS, donc Android conclut "pas d'internet" et
-# bascule automatiquement sur les données mobiles → le hotspot est ignoré.
+# ADR-079 Phase 1 — DNAT HTTP uniquement (port 80).
 #
-# Solution : Intercepter le trafic HTTP/HTTPS des clients hotspot (wlan0)
-# et le rediriger vers nginx (port 80) sur le Pi. Android reçoit une
-# réponse HTTP sur son check HTTPS → détecte un captive portal → affiche
-# "Se connecter au réseau" automatiquement (comme dans un hôtel/aéroport).
+# Historique : on redirigeait aussi le 443 vers nginx:80, mais ça casse le
+# handshake TLS sur captive.apple.com → iOS affiche une page blanche dans
+# la sheet "Captive Wi-Fi". Retiré pour laisser le TLS échouer proprement
+# (RST), ce qui fait reculer iOS sur la détection HTTP /hotspot-detect.html.
+#
+# Solution : intercepter uniquement le HTTP (port 80) des clients hotspot
+# (wlan0) et le rediriger vers nginx (port 80) sur le Pi. iOS/Android
+# utilisent des probes HTTP pour la détection de captive portal.
 #
 # Usage : sudo ./setup-captive-portal-iptables.sh
 #         Appelé automatiquement par install.sh
@@ -64,13 +66,11 @@ iptables_cleanup() {
 
 iptables_install() {
     iptables -t nat -A PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}"
-    iptables -t nat -A PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}"
     iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$AP_INTERFACE" -j MASQUERADE
 }
 
 iptables_verify() {
-    iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null &&
-    iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null
+    iptables -t nat -C PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null
 }
 
 # =============================================================================
@@ -85,7 +85,6 @@ nftables_install() {
     nft add table ip "$NFT_TABLE"
     nft add chain ip "$NFT_TABLE" prerouting '{ type nat hook prerouting priority -100 ; }'
     nft add rule ip "$NFT_TABLE" prerouting iifname "$AP_INTERFACE" tcp dport 80 dnat to "${HOTSPOT_IP}:${NGINX_PORT}"
-    nft add rule ip "$NFT_TABLE" prerouting iifname "$AP_INTERFACE" tcp dport 443 dnat to "${HOTSPOT_IP}:${NGINX_PORT}"
     nft add chain ip "$NFT_TABLE" postrouting '{ type nat hook postrouting priority 100 ; }'
     nft add rule ip "$NFT_TABLE" postrouting ip saddr 192.168.4.0/24 oifname "$AP_INTERFACE" masquerade
 }
@@ -102,7 +101,7 @@ if [[ "$FIREWALL_BACKEND" == "iptables" ]]; then
     iptables_cleanup
     iptables_install
     if iptables_verify; then
-        log_ok "Captive portal iptables actif (HTTP+HTTPS → nginx sur ${AP_INTERFACE})"
+        log_ok "Captive portal iptables actif (HTTP → nginx sur ${AP_INTERFACE}, ADR-079)"
     else
         log_err "Erreur lors de l'installation des règles iptables"
         exit 1
@@ -111,7 +110,7 @@ else
     nftables_cleanup
     nftables_install
     if nftables_verify; then
-        log_ok "Captive portal nftables actif (HTTP+HTTPS → nginx sur ${AP_INTERFACE})"
+        log_ok "Captive portal nftables actif (HTTP → nginx sur ${AP_INTERFACE}, ADR-079)"
     else
         log_err "Erreur lors de l'installation des règles nftables"
         exit 1
