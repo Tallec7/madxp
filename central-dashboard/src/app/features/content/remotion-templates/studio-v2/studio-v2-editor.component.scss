@@ -24,6 +24,29 @@
     position: sticky;
     top: 16px;
   }
+
+  &__bg-missing {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    color: #78350f;
+    font-size: 12px;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &__bg-missing-title {
+    font-weight: 600;
+    margin-bottom: 2px !important;
+  }
+
+  &__bg-missing-hint {
+    color: #92400e;
+  }
 }
 
 .block {
@@ -49,16 +72,18 @@
 }
 
 .variants {
+  // Largeur fixe : une seule variante ne doit pas s'étaler sur toute la section
+  // (le 1fr auparavant gonflait la carte quand `view.variants.length === 1`).
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, 96px);
+  gap: 8px;
 }
 
 .variant {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 4px;
   background: #f9fafb;
   border: 2px solid transparent;
   border-radius: 8px;
@@ -76,7 +101,9 @@
   }
 
   &__thumb {
-    aspect-ratio: 9 / 16;
+    // Ratio piloté par le template via `--thumb-ratio` (cf. component .ts).
+    // Fallback 9/16 pour rétro-compat si la variable n'est pas posée.
+    aspect-ratio: var(--thumb-ratio, 9 / 16);
     background: #111;
     border-radius: 4px;
     overflow: hidden;
@@ -84,7 +111,7 @@
     align-items: center;
     justify-content: center;
     color: #6b7280;
-    font-size: 20px;
+    font-size: 18px;
 
     img {
       width: 100%;

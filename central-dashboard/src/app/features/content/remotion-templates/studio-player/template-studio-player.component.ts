@@ -21,6 +21,15 @@ import {
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
+
+// Filtre le spam d'AbortError émis par Chrome quand il met en pause power-save
+// les <video> sans piste audio (video-only background media). Lecture non affectée.
+const _origConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const msg = args[0];
+  if (typeof msg === 'string' && msg.includes('Could not play video')) return;
+  _origConsoleError(...args);
+};
 import { CommonModule } from '@angular/common';
 import { createElement } from 'react';
 import { createRoot, Root } from 'react-dom/client';
@@ -125,6 +134,7 @@ export class TemplateStudioPlayerComponent implements AfterViewInit, OnChanges, 
         style: { width: '100%', aspectRatio: `${s.canvasWidth} / ${s.canvasHeight}` },
         controls: true,
         loop: true,
+        initiallyMuted: true,
         acknowledgeRemotionLicense: true,
       }),
     );
