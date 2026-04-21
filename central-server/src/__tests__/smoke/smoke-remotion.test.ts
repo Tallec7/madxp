@@ -1230,8 +1230,8 @@ describe('Club self-service templates (ADR-075 V3 Phase B)', () => {
     expect(ctl).toMatch(/site_id\s*!==\s*clubSiteId/);
     // Child resources (text fields / image slots) verify template ownership
     expect(ctl).toMatch(/assertChildBelongs/);
-    expect(ctl).toMatch(/template_text_fields/);
-    expect(ctl).toMatch(/template_image_slots/);
+    expect(ctl).toMatch(/'text_field'/);
+    expect(ctl).toMatch(/'image_slot'/);
   });
 
   it('dashboard ClubTemplatesDataService hits /club/remotion-templates/*', () => {

@@ -438,6 +438,14 @@ class TemplateStudioRepository {
     return mapTextField(rows[0]);
   }
 
+  async findTextFieldById(fieldId: string): Promise<TemplateTextField | null> {
+    const { rows } = await query<TemplateTextFieldRow>(
+      `SELECT * FROM template_text_fields WHERE id = $1`,
+      [fieldId]
+    );
+    return rows[0] ? mapTextField(rows[0]) : null;
+  }
+
   async updateTextField(
     fieldId: string,
     input: UpdateTextFieldInput
@@ -532,6 +540,14 @@ class TemplateStudioRepository {
       ]
     );
     return mapImageSlot(rows[0]);
+  }
+
+  async findImageSlotById(slotId: string): Promise<TemplateImageSlot | null> {
+    const { rows } = await query<TemplateImageSlotRow>(
+      `SELECT * FROM template_image_slots WHERE id = $1`,
+      [slotId]
+    );
+    return rows[0] ? mapImageSlot(rows[0]) : null;
   }
 
   async updateImageSlot(

@@ -13,7 +13,6 @@ import * as fs from 'fs';
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
-import { query } from '../config/database';
 import {
   remotionTemplatesRepository,
   templateStudioRepository,
@@ -52,15 +51,14 @@ const loadOwnedTemplate = async (
 
 /** Vérifie qu'une sous-ressource (text_field, image_slot) appartient au template. */
 const assertChildBelongs = async (
-  table: 'template_text_fields' | 'template_image_slots',
+  kind: 'text_field' | 'image_slot',
   childId: string,
   templateId: string,
 ): Promise<boolean> => {
-  const { rows } = await query<{ template_id: string }>(
-    `SELECT template_id FROM ${table} WHERE id = $1`,
-    [childId],
-  );
-  return rows[0]?.template_id === templateId;
+  const row = kind === 'text_field'
+    ? await templateStudioRepository.findTextFieldById(childId)
+    : await templateStudioRepository.findImageSlotById(childId);
+  return row?.templateId === templateId;
 };
 
 // ── GET /api/club/remotion-templates/quota
@@ -142,7 +140,7 @@ export const updateMyTextField = async (req: AuthRequest, res: Response): Promis
     if (!owned.ok) {
       return owned.reason === 'not_found' ? notFound(res, 'Template non trouvé') : forbidden(res);
     }
-    if (!(await assertChildBelongs('template_text_fields', fieldId, id))) {
+    if (!(await assertChildBelongs('text_field', fieldId, id))) {
       return notFound(res, 'Champ non trouvé');
     }
     const updated = await templateStudioRepository.updateTextField(fieldId, req.body);
@@ -217,7 +215,7 @@ export const updateMyImageSlot = async (req: AuthRequest, res: Response): Promis
     if (!owned.ok) {
       return owned.reason === 'not_found' ? notFound(res, 'Template non trouvé') : forbidden(res);
     }
-    if (!(await assertChildBelongs('template_image_slots', slotId, id))) {
+    if (!(await assertChildBelongs('image_slot', slotId, id))) {
       return notFound(res, 'Slot non trouvé');
     }
     const updated = await templateStudioRepository.updateImageSlot(slotId, req.body);
