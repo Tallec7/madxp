@@ -1,3 +1,9 @@
+# [3.213.0](https://github.com/Tallec7/neopro/compare/v3.212.0...v3.213.0) (2026-04-21)
+
+### Features
+
+- **templates:** club template quotas — 3 templates + 10 renders/24h (ADR-075 V3 Phase D) ([#531](https://github.com/Tallec7/neopro/issues/531)) ([f64fc28](https://github.com/Tallec7/neopro/commit/f64fc28dbe5a2a371764a197e8beed2ee865a0fa))
+
 # [3.212.0](https://github.com/Tallec7/neopro/compare/v3.211.0...v3.212.0) (2026-04-21)
 
 ### Features
