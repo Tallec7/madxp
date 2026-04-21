@@ -883,13 +883,17 @@ fi
 
 log_step "11/10 — Captive portal iptables (Android)"
 
-# Android fait ses checks de connectivité en HTTPS (port 443).
-# Sans redirection iptables, le Pi ne répond pas → Android bascule sur la 4G.
-# Avec la redirection, Android détecte un captive portal et reste sur le WiFi.
+# ADR-079 Phase 1 — DNAT HTTP uniquement (port 80).
+# Rediriger le 443 casse le handshake TLS sur captive.apple.com → page blanche iOS.
+# On nettoie tout 443 résiduel des Pi déjà déployés et on n'installe que le 80.
 IPTABLES_SCRIPT="$NEOPRO_ROOT/scripts/setup-captive-portal-iptables.sh"
+
+# Cleanup legacy 443 rule (pré-ADR-079) sur les Pi déjà en prod
+while iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; do :; done
+
 if [ -x "$IPTABLES_SCRIPT" ]; then
     if AP_INTERFACE=wlan0 "$IPTABLES_SCRIPT"; then
-        log_ok "Captive portal iptables configuré via script"
+        log_ok "Captive portal iptables configuré via script (HTTP uniquement, ADR-079)"
         CHANGES=$((CHANGES + 1))
     else
         log_err "Échec du script setup-captive-portal-iptables.sh"
@@ -900,16 +904,14 @@ else
 
     # Nettoyage (idempotent)
     while iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; do :; done
-    while iptables -t nat -D PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; do :; done
     while iptables -t nat -D POSTROUTING -s 192.168.4.0/24 -o wlan0 -j MASQUERADE 2>/dev/null; do :; done
 
-    # Installation
+    # Installation (HTTP uniquement — ADR-079)
     iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
-    iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null || true
     iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o wlan0 -j MASQUERADE 2>/dev/null || true
 
-    if iptables -t nat -C PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
-        log_ok "Captive portal iptables configuré (inline)"
+    if iptables -t nat -C PREROUTING -i wlan0 -p tcp --dport 80 -j DNAT --to-destination 192.168.4.1:80 2>/dev/null; then
+        log_ok "Captive portal iptables configuré (inline, HTTP uniquement)"
         CHANGES=$((CHANGES + 1))
     else
         log_err "Échec de la configuration iptables captive portal"
