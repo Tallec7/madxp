@@ -58,6 +58,29 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
 
   playerState: RuntimePlayerState | null = null;
 
+  /**
+   * Aspect ratio des thumbnails variante, calqué sur le canvas du template.
+   * Évite un ratio 9/16 hardcodé qui déformait les templates 16/9 ou 1/1.
+   */
+  get variantThumbRatio(): string {
+    if (!this.view) return '9 / 16';
+    return `${this.view.canvasWidth} / ${this.view.canvasHeight}`;
+  }
+
+  /** Variante actuellement sélectionnée — lu par l'empty-state du preview. */
+  get activeVariant(): TemplateVariant | null {
+    return this.view?.variants.find((v) => v.id === this.selectedVariantId) ?? null;
+  }
+
+  /** True si la variante active n'a pas de fond vidéo (template legacy v1→v2
+   *  dont le scaffold n'a créé qu'un placeholder vide). */
+  get isBackgroundMissing(): boolean {
+    const v = this.activeVariant;
+    if (!v) return false;
+    const url = v.backgroundVideoUrl;
+    return !url || !url.trim();
+  }
+
   private emitTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {

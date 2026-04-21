@@ -3,7 +3,7 @@
     <section class="block" *ngIf="view.variants.length > 0">
       <h3 class="block__title">Variante</h3>
       <p class="block__hint">Choisis le fond vidéo</p>
-      <div class="variants">
+      <div class="variants" [style.--thumb-ratio]="variantThumbRatio">
         <button
           type="button"
           *ngFor="let v of view.variants; trackBy: trackVariant"
@@ -97,5 +97,12 @@
 
   <div class="studio-v2__preview">
     <app-template-studio-player [state]="playerState"></app-template-studio-player>
+    <div *ngIf="isBackgroundMissing" class="studio-v2__bg-missing">
+      <p class="studio-v2__bg-missing-title">⚠️ Fond vidéo manquant</p>
+      <p class="studio-v2__bg-missing-hint">
+        Cette variante n'a pas encore de fond vidéo. Uploade-le via l'édition admin pour voir la
+        preview.
+      </p>
+    </div>
   </div>
 </div>
