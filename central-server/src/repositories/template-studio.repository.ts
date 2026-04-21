@@ -80,6 +80,9 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   multiline: r.multiline,
   required: r.required,
   sortOrder: r.sort_order,
+  alwaysVisible: r.always_visible,
+  scaleFrom: num(r.scale_from),
+  scaleTo: num(r.scale_to),
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -147,6 +150,9 @@ export interface CreateTextFieldInput {
   multiline?: boolean;
   required?: boolean;
   sortOrder?: number;
+  alwaysVisible?: boolean;
+  scaleFrom?: number;
+  scaleTo?: number;
 }
 
 export type UpdateTextFieldInput = Partial<CreateTextFieldInput>;
@@ -411,8 +417,9 @@ class TemplateStudioRepository {
       `INSERT INTO template_text_fields
          (template_id, slot_key, label, position_x, position_y, max_width,
           font_family, font_size, color, align, appear_at, appear_duration,
-          animation, default_value, max_chars, multiline, required, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          animation, default_value, max_chars, multiline, required, sort_order,
+          always_visible, scale_from, scale_to)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING *`,
       [
         templateId,
@@ -433,6 +440,9 @@ class TemplateStudioRepository {
         input.multiline ?? false,
         input.required ?? true,
         input.sortOrder ?? 0,
+        input.alwaysVisible ?? false,
+        input.scaleFrom ?? 0.7,
+        input.scaleTo ?? 1.0,
       ]
     );
     return mapTextField(rows[0]);
@@ -468,6 +478,9 @@ class TemplateStudioRepository {
       multiline: 'multiline',
       required: 'required',
       sortOrder: 'sort_order',
+      alwaysVisible: 'always_visible',
+      scaleFrom: 'scale_from',
+      scaleTo: 'scale_to',
     };
     const fields: string[] = [];
     const values: unknown[] = [];

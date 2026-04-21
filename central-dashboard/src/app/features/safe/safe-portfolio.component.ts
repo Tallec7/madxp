@@ -61,6 +61,9 @@ interface KanbanColumn {
           <a routerLink="/safe/product" class="btn btn-secondary">
             Produit
           </a>
+          <a routerLink="/safe/adr" class="btn btn-secondary">
+            ADR
+          </a>
         </div>
       </div>
 

@@ -28,6 +28,12 @@ export interface RuntimeTextField {
   appearDuration: number;
   animation: AnimationPreset;
   defaultValue: string;
+  /** Si true, le texte est visible sur toute la durée (ignore appearAt/appearDuration) */
+  alwaysVisible?: boolean;
+  /** Valeur de départ pour scale-in (défaut 0.7) */
+  scaleFrom?: number;
+  /** Valeur d'arrivée pour scale-in (défaut 1.0) */
+  scaleTo?: number;
 }
 
 export interface RuntimeImageSlot {
@@ -96,12 +102,28 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
       {props.textFields.map((tf) => {
         const value = props.textValues[tf.slotKey] ?? tf.defaultValue;
         if (!value) return null;
-        const style = computeAnimation(tf.animation, {
-          frame,
-          fps,
-          appearAtFrame: Math.round(tf.appearAt * fps),
-          durationFrames: Math.max(1, Math.round(tf.appearDuration * fps)),
-        });
+
+        let opacity: number;
+        let transform: string;
+        let filter: string | undefined;
+
+        if (tf.alwaysVisible) {
+          opacity = 1;
+          transform = 'translate(0, 0)';
+        } else {
+          const style = computeAnimation(tf.animation, {
+            frame,
+            fps,
+            appearAtFrame: Math.round(tf.appearAt * fps),
+            durationFrames: Math.max(1, Math.round(tf.appearDuration * fps)),
+            scaleFrom: tf.scaleFrom,
+            scaleTo: tf.scaleTo,
+          });
+          opacity = style.opacity;
+          transform = style.transform;
+          filter = style.filter;
+        }
+
         return (
           <div
             key={tf.id}
@@ -110,9 +132,9 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
               left: `${tf.position.x * 100}%`,
               top: `${tf.position.y * 100}%`,
               width: `${tf.maxWidth * 100}%`,
-              transform: `translate(-50%, -50%) ${style.transform}`,
-              opacity: style.opacity,
-              filter: style.filter,
+              transform: `translate(-50%, -50%) ${transform}`,
+              opacity,
+              filter,
               color: tf.color,
               fontFamily: tf.fontFamily,
               fontSize: tf.fontSize,

@@ -863,6 +863,14 @@
       "title": "Propuestas & Spikes",
       "titleLabel": "Título"
     },
+    "adr": {
+      "searchPlaceholder": "Buscar un ADR...",
+      "all": "Todos",
+      "loadError": "Error al cargar los ADRs",
+      "empty": "Ningún ADR coincide con la búsqueda.",
+      "loading": "Cargando…",
+      "selectHint": "← Selecciona un ADR para leer su contenido"
+    },
     "roamStatus": {
       "Accepted": "Aceptado",
       "Mitigated": "Mitigado",

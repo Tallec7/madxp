@@ -364,6 +364,48 @@ export const updateProposalContent = async (req: AuthRequest, res: Response) => 
 };
 
 /**
+ * GET /api/safe/adr
+ * Retourne la liste des ADR (sans contenu) depuis docs/adr/
+ */
+export const getAdrs = async (_req: AuthRequest, res: Response) => {
+  try {
+    const adrs = safeParserService.getAdrs();
+
+    return res.json({
+      success: true,
+      data: adrs,
+    });
+  } catch (error) {
+    logger.error('Error getting ADRs:', error);
+    return res.status(500).json({ error: 'Failed to get ADRs' });
+  }
+};
+
+/**
+ * GET /api/safe/adr/:id
+ * Retourne un ADR avec son contenu markdown (id = "ADR-083" ou "083")
+ */
+export const getAdr = async (req: AuthRequest, res: Response) => {
+  try {
+    const rawId = req.params.id;
+    const id = /^\d+$/.test(rawId) ? `ADR-${rawId.padStart(3, '0')}` : rawId;
+    const adr = safeParserService.getAdr(id);
+
+    if (!adr) {
+      return res.status(404).json({ error: `ADR ${id} not found` });
+    }
+
+    return res.json({
+      success: true,
+      data: adr,
+    });
+  } catch (error) {
+    logger.error('Error getting ADR:', error);
+    return res.status(500).json({ error: 'Failed to get ADR' });
+  }
+};
+
+/**
  * PUT /api/safe/sprints/:sprintId/stories/:storyId/fields
  * Met à jour les story points et/ou priorité d'une story dans USER-STORIES.md
  */

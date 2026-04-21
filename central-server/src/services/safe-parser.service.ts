@@ -19,6 +19,8 @@ import type {
   SafeProposal,
   SafeProposalSummary,
   SafeSprintTracker,
+  SafeAdrSummary,
+  SafeAdrWithContent,
   SprintStoryStatus,
   EpicStatus,
   ProposalType,
@@ -46,12 +48,14 @@ const PROJECT_ROOT = process.env.NODE_ENV === 'production'
   : path.resolve(__dirname, '../../..');  // central-server/src/services → project root
 const SAFE_DIR = path.join(PROJECT_ROOT, 'docs/safe');
 const PROPOSALS_DIR = path.join(PROJECT_ROOT, 'docs/proposals');
+const ADR_DIR = path.join(PROJECT_ROOT, 'docs/adr');
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 class SafeParserService {
   private portfolioCache: CacheEntry<SafePortfolio> | null = null;
   private proposalsCache: CacheEntry<SafeProposalSummary[]> | null = null;
   private sprintsCache: CacheEntry<SafeSprintTracker> | null = null;
+  private adrsCache: CacheEntry<SafeAdrSummary[]> | null = null;
 
   // --- Public API ---
 
@@ -446,6 +450,58 @@ ${data.content}
     this.portfolioCache = null;
     this.proposalsCache = null;
     this.sprintsCache = null;
+    this.adrsCache = null;
+  }
+
+  // --- ADR ---
+
+  getAdrs(): SafeAdrSummary[] {
+    if (this.adrsCache && Date.now() - this.adrsCache.timestamp < CACHE_TTL_MS) {
+      return this.adrsCache.data;
+    }
+    const adrs = this.parseAdrs();
+    this.adrsCache = { data: adrs, timestamp: Date.now() };
+    return adrs;
+  }
+
+  getAdr(id: string): SafeAdrWithContent | null {
+    const summaries = this.getAdrs();
+    const summary = summaries.find(a => a.id.toUpperCase() === id.toUpperCase());
+    if (!summary) return null;
+    const content = this.readFileSafe(path.join(ADR_DIR, summary.filename));
+    return { ...summary, content };
+  }
+
+  private parseAdrs(): SafeAdrSummary[] {
+    if (!fs.existsSync(ADR_DIR)) return [];
+    return fs.readdirSync(ADR_DIR)
+      .filter(f => /^ADR-\d+.*\.md$/i.test(f))
+      .sort()
+      .map(filename => this.parseAdrFile(filename))
+      .filter((a): a is SafeAdrSummary => a !== null);
+  }
+
+  private parseAdrFile(filename: string): SafeAdrSummary | null {
+    const match = filename.match(/^(ADR-(\d+))/i);
+    if (!match) return null;
+    const id = match[1].toUpperCase();
+    const number = parseInt(match[2], 10);
+    const content = this.readFileSafe(path.join(ADR_DIR, filename));
+    if (!content) return null;
+    const titleLine = content.split('\n').find(l => l.startsWith('# '));
+    const title = titleLine ? titleLine.replace(/^#\s*ADR-\d+[:\s]+/i, '').trim() : filename;
+    const dateMatch = content.match(/\*\*Date\*\*\s*:\s*(\S+)/);
+    const statusMatch = content.match(/\*\*Statut\*\*\s*:\s*([^\n*]+)/);
+    const formatMatch = content.match(/\*\*Format\*\*\s*:\s*([^\n*]+)/);
+    return {
+      id,
+      number,
+      title,
+      date: dateMatch ? dateMatch[1].trim() : '',
+      status: statusMatch ? statusMatch[1].trim() : '',
+      format: formatMatch ? formatMatch[1].trim() : '',
+      filename,
+    };
   }
 
   // --- Portfolio builder ---

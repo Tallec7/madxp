@@ -375,6 +375,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | US-05.1.10 | Template Studio v3 — self-service club (drag admin + portail club + upload background + quotas) (ADR-075 V3 Phases 1/A/B/C/D)                                   | 8   | ✅ PI-1 S3 Done | Should   |
 | US-05.1.11 | Template Studio v2/v3 — hardening UX (drag fluidity + card↔canvas sync + 400 PATCH + variant sizing + missing-bg warning) (PR #533/#535/#536)                   | 3   | ✅ PI-1 S3 Done | Should   |
 | US-05.1.12 | Template Studio v2 — backfill URLs legacy multi-fragments (ButSimple 3 frags + ButImgJoueur 5 frags, migration SQL idempotente + 3 smoke guards) (PR #537/#538) | 2   | ✅ PI-1 S3 Done | Must     |
+| US-05.1.13 | Template Studio v2 — polices custom OTF (Bulevar + General Sans), `always_visible` sans timecode, `scale_from`/`scale_to` configurables pour scale-in (ADR-084) | 3   | ✅ PI-1 S3 Done | Should   |
 
 ---
 

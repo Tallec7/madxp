@@ -478,11 +478,12 @@ describe('SaaS mode guards (ADR-037)', () => {
     expect(resolveFunction).not.toBeNull();
     expect({
       acceptsStoragePathMap: /storagePathMap/.test(resolveFunction![0]),
-      usesMapGet: /storagePathMap\.get/.test(resolveFunction![0]),
+      // ADR-083: .get lookup moved into resolveStoragePath helper (filename-resolver.ts)
+      delegatesResolution: /resolveStoragePath/.test(resolveFunction![0]),
       stripsPathPrefix: /\.split\(['"]\/['"]\)\.pop\(\)/.test(resolveFunction![0]),
     }).toEqual({
       acceptsStoragePathMap: true,
-      usesMapGet: true,
+      delegatesResolution: true,
       stripsPathPrefix: true,
     });
   });
@@ -501,6 +502,42 @@ describe('SaaS mode guards (ADR-037)', () => {
     }).toEqual({
       thumbsBeforeResolveInGetConfig: true,
       thumbsBeforeResolveInProfileConfig: true,
+    });
+  });
+
+  // --- ADR-083: resolveVideoUrl must have fuzzy fallback for config path drift ---
+  // Config filenames may drift from DB filenames (spaces vs underscores, accents,
+  // casing) after profile cloning or legacy uploads. Without fuzzy fallback, the
+  // SaaS TV gets broken FTP URLs → 404.
+  it('resolveVideoUrl must use fuzzy normalization fallback (ADR-083)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsResolver: /from ['"]\.\.\/utils\/filename-resolver['"]/.test(content),
+      importsMetricsService: /from ['"]\.\.\/services\/metrics\.service['"]/.test(content),
+      usesBuildFuzzyIndex: /buildFuzzyIndex|buildFuzzyFilenameIndex/.test(content),
+      callsResolveStoragePath: content.includes('resolveStoragePath'),
+      recordsResolutionResult: content.includes('recordVideoPathResolution'),
+    }).toEqual({
+      importsResolver: true,
+      importsMetricsService: true,
+      usesBuildFuzzyIndex: true,
+      callsResolveStoragePath: true,
+      recordsResolutionResult: true,
+    });
+  });
+
+  it('metrics.service must expose recordVideoPathResolution (ADR-083)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasCounter: content.includes('neopro_video_path_resolution_total'),
+      hasMethod: content.includes('recordVideoPathResolution'),
+      hasExactLabel: /result.*exact.*fuzzy.*miss/s.test(content),
+    }).toEqual({
+      hasCounter: true,
+      hasMethod: true,
+      hasExactLabel: true,
     });
   });
 

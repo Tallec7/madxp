@@ -157,6 +157,22 @@ export interface SafeSprintTracker {
   averageVelocity: number;
 }
 
+// --- ADR types ---
+
+export interface SafeAdrSummary {
+  id: string;       // "ADR-083"
+  number: number;   // 83
+  title: string;
+  date: string;
+  status: string;   // "Accepté" | "Proposé" | "Déprécié" | "Supersédé" | "Suspendu"
+  format: string;   // "Léger" | "Complet" | ""
+  filename: string;
+}
+
+export interface SafeAdrWithContent extends SafeAdrSummary {
+  content: string;
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -235,6 +251,18 @@ export class SafeService {
   updateStoryFields(sprintId: string, storyId: string, data: { storyPoints?: number; priority?: string }): Observable<void> {
     return this.api.put<ApiResponse<void>>(`/safe/sprints/${sprintId}/stories/${storyId}/fields`, data).pipe(
       map(() => void 0)
+    );
+  }
+
+  getAdrs(): Observable<SafeAdrSummary[]> {
+    return this.api.get<ApiResponse<SafeAdrSummary[]>>('/safe/adr').pipe(
+      map(res => res.data)
+    );
+  }
+
+  getAdr(id: string): Observable<SafeAdrWithContent> {
+    return this.api.get<ApiResponse<SafeAdrWithContent>>(`/safe/adr/${id}`).pipe(
+      map(res => res.data)
     );
   }
 }

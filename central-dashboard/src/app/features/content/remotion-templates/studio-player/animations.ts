@@ -25,6 +25,10 @@ interface Params {
   fps: number;
   appearAtFrame: number;
   durationFrames: number;
+  /** scale-in uniquement : valeur de départ (défaut 0.7) */
+  scaleFrom?: number;
+  /** scale-in uniquement : valeur d'arrivée (défaut 1.0) */
+  scaleTo?: number;
 }
 
 const clamped = (n: number): number => Math.max(0, Math.min(1, n));
@@ -69,6 +73,8 @@ export function computeAnimation(preset: AnimationPreset, params: Params): Anima
       };
     }
     case 'scale-in': {
+      const from = params.scaleFrom ?? 0.7;
+      const to = params.scaleTo ?? 1.0;
       const s = spring({
         frame: params.frame - params.appearAtFrame,
         fps: params.fps,
@@ -76,7 +82,7 @@ export function computeAnimation(preset: AnimationPreset, params: Params): Anima
       });
       return {
         opacity: interpolate(progress(params), [0, 1], [0, 1]),
-        transform: `scale(${interpolate(s, [0, 1], [0.7, 1])})`,
+        transform: `scale(${interpolate(s, [0, 1], [from, to])})`,
       };
     }
     case 'blur-in': {

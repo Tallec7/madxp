@@ -8,6 +8,8 @@
 
 ### Features
 
+- **templates:** Template Studio v2 — polices custom (Bulevar + General Sans OTF), option `always_visible` sur les champs texte (visible sans timecode), paramètres `scale_from`/`scale_to` configurables pour l'animation `scale-in` (ADR-084). Migration SQL `add-template-text-field-visibility-scale.sql`, loader `fonts.ts` Remotion, `@font-face` dashboard, section Scale-in dans l'éditeur de champ, smoke guards.
+
 - **content:** video club grants — super_admin peut autoriser plusieurs clubs à placer une vidéo admin dans leurs boucles/catégories sans re-upload (ADR-082). Table pivot `video_club_grants`, 4 nouveaux endpoints API, section "Clubs autorisés" dans le VideoDetailPanel, `isLockedForConfig()` découplé du `isClubLocked()` delete-strict, compteur Prometheus `neopro_video_club_grants_total`.
 
 ---

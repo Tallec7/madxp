@@ -164,6 +164,22 @@ export interface SafeSprintTracker {
   averageVelocity: number;
 }
 
+// --- ADR (Architecture Decision Record) ---
+
+export interface SafeAdrSummary {
+  id: string;       // "ADR-083"
+  number: number;   // 83
+  title: string;
+  date: string;     // "2026-04-21"
+  status: string;   // "Accepté" | "Proposé" | "Déprécié" | "Supersédé" | "Suspendu"
+  format: string;   // "Léger" | "Complet" | ""
+  filename: string; // "ADR-083-config-path-drift-resilience.md"
+}
+
+export interface SafeAdrWithContent extends SafeAdrSummary {
+  content: string;  // Raw markdown
+}
+
 // --- Portfolio (agrégé) ---
 
 export interface SafePortfolio {
