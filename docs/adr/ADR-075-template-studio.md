@@ -683,6 +683,12 @@ Rollback trivial : `UPDATE ... SET schema_version = 1 WHERE ...` — les donnée
   - `AdminFieldEditorComponent` doit utiliser un `<select>` sur `FONT_FAMILIES` (curated Google Fonts) avec `[style.fontFamily]="ff"` pour preview — **jamais** un `<input type="text">` libre (régression UX + polices non chargées)
   - `central-dashboard/src/index.html` doit precharger les 29 familles Google Fonts (Anton, Bebas Neue, Inter, Montserrat, Playfair Display, JetBrains Mono, Pacifico… — sinon les previews retombent sur la police système sans warning)
   - `AdminStudioPanelComponent` doit exposer les boutons `admin-add-text-field` / `admin-add-image-slot` avec un générateur `nextSlotKey` pour éviter les 409 sur slotKey dupliqué
+- `smoke-remotion` (V3 Phase 1) verrouille l'overlay drag-to-position super_admin :
+  - `AdminCanvasOverlayComponent` doit exister avec `data-testid="admin-canvas-overlay"` + `data-testid="admin-canvas"` et pilote l'aspect-ratio via `view.canvasWidth/canvasHeight` (cohérence avec le format picker)
+  - Les handles drag/resize utilisent `pointerdown/pointermove/pointerup` (pas mousedown-only — touch/pen doivent fonctionner)
+  - Les PATCH serveurs sont debouncés via `scheduleEmit` + `setTimeout(…, 300)` pour ne pas flooder l'API pendant le drag
+  - Les positions sont clampées `clamp(v, 0, 1)` (fractions du canvas, jamais hors bornes)
+  - L'overlay émet `patchTextField` / `patchImageSlot` et `AdminStudioPanelComponent` les route vers les handlers existants — pas de double code path vs le form editor
 
 ### Invariant runtime (à implémenter si un incident survient)
 
@@ -746,7 +752,7 @@ Quand un template legacy passe en v2, il devient intéressant de splitter les m�
 - Transitions entre couches (fade 0.3s)
 - Undo/redo stack super_admin
 - Preview temps réel pendant le wizard de création
-- Visual drag handles sur canvas super_admin
+- ~~Visual drag handles sur canvas super_admin~~ ✅ Livré en V3 Phase 1 (2026-04) — `AdminCanvasOverlayComponent`
 - Masks SVG path (au lieu de rect)
 - Lottie embed (si cas concret)
 - Animations texte/image custom (vraies keyframes) — à éviter, reste sur presets
