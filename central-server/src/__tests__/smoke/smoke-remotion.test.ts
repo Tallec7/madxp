@@ -562,6 +562,66 @@ describe('Template Studio v2 — Sprint 4 migration + permissions (ADR-075)', ()
   });
 });
 
+describe('Template Studio v2 — Legacy v2 URL backfill migration (ADR-075 PR #538)', () => {
+  const migrationPath = path.join(
+    centralSrc,
+    'scripts',
+    'migrations',
+    'backfill-legacy-templates-v2-urls.sql',
+  );
+
+  it('backfill migration exists and seeds both legacy templates', () => {
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const sql = fs.readFileSync(migrationPath, 'utf8');
+    // Cible les 2 composition_id legacy
+    expect(sql).toMatch(/composition_id\s*=\s*'ButSimple'/);
+    expect(sql).toMatch(/composition_id\s*=\s*'ButImgJoueur'/);
+    // Seed le background (variant) + les layers (runtime v2 exige URLs http/blob/data)
+    expect(sql).toMatch(/UPDATE\s+template_variants/);
+    expect(sql).toMatch(/SET\s+background_video_url/);
+    expect(sql).toMatch(/INSERT\s+INTO\s+template_layers/);
+    // Base URL publique FTP Hostinger (si elle bouge, casser ce test force le resync)
+    expect(sql).toContain('https://kalonpartners.bzh/neopro-video/template-assets/studio/legacy');
+    // Idempotence : UPDATE guardé, INSERT guardé
+    expect(sql).toMatch(/background_video_url\s+IS\s+NULL\s+OR\s+background_video_url\s*=\s*''/i);
+    expect(sql).toMatch(/IF\s+NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+template_layers/i);
+  });
+
+  it('backfill migration references all 8 fragments (3 for ButSimple, 5 for ButImgJoueur)', () => {
+    const sql = fs.readFileSync(migrationPath, 'utf8');
+    for (const frag of ['BUT_simple_A', 'BUT_simple_B', 'BUT_simple_C']) {
+      expect(sql).toContain(`${frag}.webm`);
+    }
+    for (const frag of [
+      'BUT_img_joueur_A',
+      'BUT_img_joueur_B',
+      'BUT_img_joueur_C',
+      'BUT_img_joueur_D',
+      'BUT_img_joueur_E',
+    ]) {
+      expect(sql).toContain(`${frag}.webm`);
+    }
+  });
+
+  it('TemplateRuntime v2 keeps isValidSrc guard (prevents preview regression)', () => {
+    // Si ce guard disparaît, les URLs vides ne sont plus skip → OffthreadVideo
+    // plante sur src="" et on retombe sur un preview cassé/console-spam.
+    const runtimePath = path.join(
+      repoRoot,
+      'templates-remotion',
+      'src',
+      'runtime',
+      'TemplateRuntime.tsx',
+    );
+    const src = fs.readFileSync(runtimePath, 'utf8');
+    expect(src).toMatch(/isValidSrc/);
+    expect(src).toMatch(/\/\^\(https\?:\|blob:\|data:\)\//);
+    // Le guard doit être appliqué au background ET aux layers
+    expect(src).toMatch(/bgSrc\s*=\s*isValidSrc/);
+    expect(src).toMatch(/layerSrc\s*=\s*isValidSrc/);
+  });
+});
+
 describe('Template Studio v2 — Sprint 3 admin dashboard (ADR-075)', () => {
   const dashRoot = path.join(repoRoot, 'central-dashboard');
   const studioAdminDir = path.join(
