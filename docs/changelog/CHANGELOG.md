@@ -1,3 +1,9 @@
+## [3.208.1](https://github.com/Tallec7/neopro/compare/v3.208.0...v3.208.1) (2026-04-21)
+
+### Bug Fixes
+
+- **raspberry:** retire DNAT 443 → fix page blanche captive iOS (ADR-079 Phase 1) ([#524](https://github.com/Tallec7/neopro/issues/524)) ([00e98b8](https://github.com/Tallec7/neopro/commit/00e98b8b035d89fd0cf8374ee20ebf84a04fd682))
+
 # [3.208.0](https://github.com/Tallec7/neopro/compare/v3.207.3...v3.208.0) (2026-04-21)
 
 ### Features
