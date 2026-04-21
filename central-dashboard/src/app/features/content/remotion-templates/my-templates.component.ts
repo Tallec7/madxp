@@ -62,9 +62,21 @@ import type {
       </section>
 
       <section class="mt__studio" *ngIf="selected() && view()">
-        <button type="button" class="mt__back" (click)="closeStudio()">
-          ← Retour
-        </button>
+        <div class="mt__studio-head">
+          <button type="button" class="mt__back" (click)="closeStudio()">
+            ← Retour
+          </button>
+          <label class="mt__bg-upload" [class.mt__bg-upload--busy]="uploading()">
+            <input
+              type="file"
+              accept="video/mp4,video/webm"
+              (change)="onBackgroundSelected($event)"
+              [disabled]="uploading()"
+              data-testid="my-templates-bg-upload"
+            />
+            <span>{{ uploading() ? 'Upload…' : 'Changer la vidéo de fond' }}</span>
+          </label>
+        </div>
         <app-admin-studio-panel
           [view]="view()!"
           [clubMode]="true"
@@ -92,6 +104,14 @@ import type {
     .mt__back { align-self: flex-start; padding: 4px 10px; font-size: 12px;
       border: 1px solid #d1d5db; background: #f9fafb; border-radius: 4px; cursor: pointer; }
     .mt__back:hover { background: #f3f4f6; }
+    .mt__studio-head { display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; margin-bottom: 12px; }
+    .mt__bg-upload { display: inline-flex; align-items: center; padding: 6px 12px;
+      font-size: 12px; border: 1px solid #6d28d9; background: #fff; color: #6d28d9;
+      border-radius: 4px; cursor: pointer; }
+    .mt__bg-upload:hover { background: #f5f3ff; }
+    .mt__bg-upload input { display: none; }
+    .mt__bg-upload--busy { opacity: 0.6; cursor: wait; }
   `],
 })
 export class MyTemplatesComponent implements OnInit {
@@ -102,6 +122,7 @@ export class MyTemplatesComponent implements OnInit {
   loading = signal<boolean>(true);
   selected = signal<string | null>(null);
   view = signal<TemplateStudioView | null>(null);
+  uploading = signal<boolean>(false);
 
   ngOnInit(): void {
     this.loadList();
@@ -139,5 +160,26 @@ export class MyTemplatesComponent implements OnInit {
     this.selected.set(null);
     this.view.set(null);
     this.loadList();
+  }
+
+  onBackgroundSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const templateId = this.selected();
+    if (!file || !templateId) return;
+    this.uploading.set(true);
+    this.clubApi.uploadVariantBackground(templateId, file).subscribe({
+      next: () => {
+        this.notifications.success('Vidéo de fond mise à jour');
+        this.uploading.set(false);
+        input.value = '';
+        this.reloadView();
+      },
+      error: () => {
+        this.notifications.error('Échec upload vidéo');
+        this.uploading.set(false);
+        input.value = '';
+      },
+    });
   }
 }

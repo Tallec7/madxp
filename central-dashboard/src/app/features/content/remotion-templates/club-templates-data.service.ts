@@ -6,6 +6,7 @@ import type {
   TemplateImageSlot,
   TemplateStudioView,
   TemplateTextField,
+  TemplateVariant,
 } from './remotion-templates.types';
 import type {
   TemplateImageSlotUpdate,
@@ -59,6 +60,19 @@ export class ClubTemplatesDataService {
     return this.api.patch<TemplateImageSlot>(
       `/club/remotion-templates/${templateId}/image-slots/${slotId}`,
       patch,
+    );
+  }
+
+  /** ADR-075 V3 Phase C — upload d'une vidéo de fond pour la variante principale. */
+  uploadVariantBackground(
+    templateId: string,
+    file: File,
+  ): Observable<{ url: string; variant: TemplateVariant }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.api.upload<{ url: string; variant: TemplateVariant }>(
+      `/club/remotion-templates/${templateId}/background`,
+      form,
     );
   }
 }

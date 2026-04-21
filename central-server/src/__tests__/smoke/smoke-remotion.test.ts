@@ -1275,3 +1275,52 @@ describe('Club self-service templates (ADR-075 V3 Phase B)', () => {
     expect(cmp).toMatch(/app-admin-studio-panel/);
   });
 });
+
+describe('Club template background upload (ADR-075 V3 Phase C)', () => {
+  const repoRoot3 = path.resolve(__dirname, '..', '..', '..', '..');
+  const dashRoot3 = path.join(repoRoot3, 'central-dashboard');
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot3, rel), 'utf8');
+
+  it('POST /:id/background route uses multer uploadTemplateAsset.single("file")', () => {
+    const routes = read('routes/club-templates.routes.ts');
+    expect(routes).toMatch(/uploadTemplateAsset/);
+    expect(routes).toMatch(/\/:id\/background/);
+    expect(routes).toMatch(/uploadTemplateAsset\.single\(\s*['"]file['"]\s*\)/);
+    expect(routes).toMatch(/uploadMyVariantBackground/);
+  });
+
+  it('controller enforces ownership + targets first variant + uploads to FTP', () => {
+    const ctl = read('controllers/club-templates.controller.ts');
+    expect(ctl).toMatch(/uploadMyVariantBackground/);
+    expect(ctl).toMatch(/loadOwnedTemplate/);
+    expect(ctl).toMatch(/listVariants/);
+    expect(ctl).toMatch(/uploadAsset/);
+    expect(ctl).toMatch(/getAssetUrl/);
+    // Updates the variant's backgroundVideoUrl
+    expect(ctl).toMatch(/updateVariant[\s\S]*backgroundVideoUrl/);
+    // Cleans up tmp file on every code path (success, failure, forbidden)
+    expect(ctl).toMatch(/cleanupTmp/);
+  });
+
+  it('dashboard data service exposes uploadVariantBackground via FormData', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/club-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/uploadVariantBackground/);
+    expect(svc).toMatch(/\/club\/remotion-templates\/\$\{templateId\}\/background/);
+    expect(svc).toMatch(/FormData/);
+    expect(svc).toMatch(/api\.upload</);
+  });
+
+  it('MyTemplatesComponent exposes the bg-upload input with testid', () => {
+    const cmp = readDash(
+      'src/app/features/content/remotion-templates/my-templates.component.ts',
+    );
+    expect(cmp).toMatch(/data-testid="my-templates-bg-upload"/);
+    expect(cmp).toMatch(/onBackgroundSelected/);
+    expect(cmp).toMatch(/uploading\s*=\s*signal/);
+    expect(cmp).toMatch(/uploadVariantBackground/);
+    expect(cmp).toMatch(/accept="video\/mp4,video\/webm"/);
+  });
+});
