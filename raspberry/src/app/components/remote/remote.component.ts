@@ -528,19 +528,35 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // ACTIONS VIDÉO
   // ============================================================================
 
+  /**
+   * ADR-081 Phase 0 — UUID v4 généré par le remote à chaque emit.
+   * Utilise crypto.randomUUID() si dispo (HTTPS/modern browsers), fallback Math.random sinon.
+   */
+  private newCommandId(): string {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+      const r = (Math.random() * 16) | 0;
+      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
   public launchSponsors(): void {
     this.notifyUserActivity();
     const target = this.getCommandTarget();
-    this.localBroadcast.emitCommand({ type: 'sponsors', ...(target ? { target } : {}) });
-    this.socketService.emit('command', { type: 'sponsors', ...(target ? { target } : {}) });
+    const commandId = this.newCommandId();
+    this.localBroadcast.emitCommand({ type: 'sponsors', commandId, ...(target ? { target } : {}) });
+    this.socketService.emit('command', { type: 'sponsors', commandId, ...(target ? { target } : {}) });
   }
 
   public launchVideo(video: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     this.analyticsService.trackManualTrigger(video);
     const target = this.getCommandTarget();
-    this.localBroadcast.emitCommand({ type: 'video', data: video, ...(target ? { target } : {}) });
-    this.socketService.emit('command', { type: 'video', data: video, ...(target ? { target } : {}) });
+    const commandId = this.newCommandId();
+    this.localBroadcast.emitCommand({ type: 'video', data: video, commandId, ...(target ? { target } : {}) });
+    this.socketService.emit('command', { type: 'video', data: video, commandId, ...(target ? { target } : {}) });
     this.addToRecentVideos(video);
     this.playingVideoPath = video.path;
     this.displayToast(`${video.name} lancée sur l'écran`, 'success');

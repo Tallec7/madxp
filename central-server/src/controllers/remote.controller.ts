@@ -17,6 +17,7 @@ import { Request, Response } from 'express';
 import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { siteRepository } from '../repositories';
+import { remoteCommandAuditRepository } from '../repositories/remote-command-audit.repository';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import socketService from '../services/socket.service';
@@ -420,7 +421,7 @@ export async function verifyPin(req: Request, res: Response) {
 export async function sendRemoteCommand(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
-    const { type, data } = req.body;
+    const { type, data, commandId } = req.body;
 
     const validCommands = [
       'score-update',
@@ -648,6 +649,25 @@ export async function sendRemoteCommand(req: Request, res: Response) {
 
     io.to(siteId).emit(eventName, payload);
     metricsService.recordCommand(type, 'sent');
+
+    // ADR-081 Phase 0 — Audit fire-and-forget
+    if (commandId) {
+      remoteCommandAuditRepository
+        .insert({
+          commandId,
+          siteId,
+          commandType: type,
+          roomSize: room.size,
+          metadata: { source: 'pi', eventName },
+        })
+        .catch((err: Error) => {
+          logger.warn('Remote command audit insert failed', {
+            commandId,
+            siteId,
+            error: err.message,
+          });
+        });
+    }
     if (type.startsWith('command/')) {
       metricsService.recordMatchCommand(type.replace('command/', ''));
     }

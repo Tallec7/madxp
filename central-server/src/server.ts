@@ -608,6 +608,29 @@ const startServer = async () => {
       24 * 60 * 60 * 1000
     );
     profileTokensInterval.unref();
+
+    // ADR-081 Phase 0 — cleanup quotidien remote_command_audit (TTL 7j)
+    const { remoteCommandAuditRepository } = await import(
+      './repositories/remote-command-audit.repository'
+    );
+    const runRemoteCommandAuditCleanup = async () => {
+      try {
+        const deleted = await remoteCommandAuditRepository.cleanupExpired();
+        if (deleted > 0) {
+          logger.info('remote_command_audit purged', { deleted, retentionDays: 7 });
+        }
+      } catch (err) {
+        logger.warn('remote_command_audit cleanup failed (pre-migration?)', {
+          error: (err as Error).message,
+        });
+      }
+    };
+    setTimeout(runRemoteCommandAuditCleanup, 60 * 1000).unref();
+    const remoteCommandAuditInterval = setInterval(
+      runRemoteCommandAuditCleanup,
+      24 * 60 * 60 * 1000
+    );
+    remoteCommandAuditInterval.unref();
   } catch (error) {
     logger.error('Failed to initialize dependencies:', error);
     // Ne pas quitter - le serveur reste en mode dégradé et le health check rapportera l'état

@@ -426,11 +426,26 @@ export class RemoteService {
     profileId?: string | null
   ): Observable<CommandResult> {
     const options = this.getHeaders(siteId, profileId);
+    // ADR-081 Phase 0 — commandId UUID pour tracer la commande dans remote_command_audit
+    const commandId = this.newCommandId();
     return this.http.post<CommandResult>(
       `${this.apiUrl}/remote/${siteId}/command`,
-      { type, data },
+      { type, data, commandId },
       options
     );
+  }
+
+  /**
+   * ADR-081 Phase 0 — UUID v4 généré par le remote (cloud dashboard).
+   */
+  private newCommandId(): string {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+      const r = (Math.random() * 16) | 0;
+      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
   // === Commandes typées pour une meilleure DX ===
@@ -506,7 +521,7 @@ export class RemoteService {
     const options = this.getHeaders(siteId);
     return this.http.post<ScreenshotResult>(
       `${this.apiUrl}/remote/${siteId}/command`,
-      { type: 'screenshot', data: { quality: 0.5 } },
+      { type: 'screenshot', data: { quality: 0.5 }, commandId: this.newCommandId() },
       options
     );
   }

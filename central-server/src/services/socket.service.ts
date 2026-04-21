@@ -21,6 +21,7 @@ import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../
 import logger from '../config/logger';
 import { alertService } from './alert.service';
 import metricsService from './metrics.service';
+import { remoteCommandAuditRepository } from '../repositories/remote-command-audit.repository';
 import { handleMatchConfig } from '../handlers/match-config.handler';
 import { handleScoreUpdate, handleScoreReset } from '../handlers/score-update.handler';
 
@@ -834,8 +835,10 @@ class SocketService {
     const state = this.saasStates.get(siteId)!;
 
     // command → action relay (same as Pi server)
+    // ADR-081 Phase 0: log + audit (fire-and-forget, non-bloquant)
     socket.on('command', (data: Record<string, unknown>) => {
       socket.to(siteId).emit('action', data);
+      this.auditRemoteCommand(siteId, data, 'saas');
     });
 
     // ADR-059 SaaS — relay state-sync (émis après chaque commande granulaire)
@@ -977,6 +980,50 @@ class SocketService {
         }
       }
     });
+  }
+
+  /**
+   * ADR-081 Phase 0 — Audit d'une commande télécommande relayée.
+   * Fire-and-forget : log + INSERT. Jamais bloquant pour le relay.
+   * `source`: 'saas' (SaaS TV) ou 'pi' (Pi cloud relay).
+   */
+  private auditRemoteCommand(
+    siteId: string,
+    data: Record<string, unknown>,
+    source: 'saas' | 'pi'
+  ): void {
+    const room = this.io?.sockets.adapter.rooms.get(siteId);
+    const roomSize = room ? room.size : 0;
+    // Exclure le socket emitter du count : on veut le nombre de receivers
+    const receivers = Math.max(0, roomSize - 1);
+    const commandId = (data?.commandId as string) || undefined;
+    const commandType = (data?.type as string) || 'unknown';
+
+    logger.info('Remote command relayed', {
+      commandId,
+      siteId,
+      commandType,
+      source,
+      receivers,
+    });
+
+    if (!commandId) return; // Phase 0 : pas d'audit sans commandId (remote pas encore mis à jour)
+
+    remoteCommandAuditRepository
+      .insert({
+        commandId,
+        siteId,
+        commandType,
+        roomSize: receivers,
+        metadata: { source },
+      })
+      .catch((err: Error) => {
+        logger.warn('Remote command audit insert failed', {
+          commandId,
+          siteId,
+          error: err.message,
+        });
+      });
   }
 
   // SaaS state storage (per site)
