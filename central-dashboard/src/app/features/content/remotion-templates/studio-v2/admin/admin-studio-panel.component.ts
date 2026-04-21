@@ -11,8 +11,10 @@ import { NotificationService } from '../../../../../core/services/notification.s
 import {
   RemotionTemplatesDataService,
   type TemplateImageSlotCreate,
+  type TemplateImageSlotUpdate,
   type TemplateLayerCreate,
   type TemplateTextFieldCreate,
+  type TemplateTextFieldUpdate,
   type TemplateVariantCreate,
 } from '../../remotion-templates-data.service';
 import { ClubTemplatesDataService } from '../../club-templates-data.service';
@@ -276,7 +278,7 @@ export class AdminStudioPanelComponent {
     });
   }
 
-  onPatchTextField(id: string, patch: Partial<TemplateTextField>): void {
+  onPatchTextField(id: string, patch: TemplateTextFieldUpdate): void {
     const svc = this.clubMode ? this.clubApi : this.api;
     svc.updateTextField(this.view.id, id, patch).subscribe({
       next: () => this.changed.emit(),
@@ -314,7 +316,7 @@ export class AdminStudioPanelComponent {
     });
   }
 
-  onPatchImageSlot(id: string, patch: Partial<TemplateImageSlot>): void {
+  onPatchImageSlot(id: string, patch: TemplateImageSlotUpdate): void {
     const svc = this.clubMode ? this.clubApi : this.api;
     svc.updateImageSlot(this.view.id, id, patch).subscribe({
       next: () => this.changed.emit(),

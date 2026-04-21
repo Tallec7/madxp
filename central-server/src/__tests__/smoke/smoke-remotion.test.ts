@@ -1188,6 +1188,32 @@ describe('Template Studio v2 — drag-to-position admin overlay (ADR-075 V3 Phas
     expect(panel).toMatch(/AdminCanvasOverlayComponent/);
     expect(panel).toMatch(/<app-admin-canvas-overlay[\s\S]*\[view\]="view"[\s\S]*patchTextField[\s\S]*patchImageSlot/);
   });
+
+  // Regression guard: the server Joi schemas (templateStudioTextFieldUpdate /
+  // templateStudioImageSlotUpdate) accept FLAT fields (positionX / positionY /
+  // width / height). Emitting a nested `position: { x, y }` payload gets the
+  // unknown key stripped, the body becomes empty, `.min(1)` fails and the
+  // drag/resize patches return 400. Incident: ADR-075 V3 Phase 1 rollout.
+  it('admin-canvas-overlay emits FLAT positionX/positionY patches (not nested)', () => {
+    const comp = readDash(overlayPath);
+    // Drag emissions must send flat fields matching the server Joi schema.
+    expect(comp).toMatch(/patchTextField\.emit\(\s*\{\s*id,\s*patch:\s*\{\s*positionX:/);
+    expect(comp).toMatch(/patchImageSlot\.emit\(\s*\{\s*id,\s*patch:\s*\{\s*positionX:/);
+    // And resize emits flat width/height, not a nested position object.
+    expect(comp).toMatch(/patchImageSlot\.emit\(\s*\{\s*id,\s*patch:\s*\{\s*width,\s*height\s*\}/);
+    // Explicit guard: never emit `patch: { position:` from the overlay.
+    expect(comp).not.toMatch(/patch:\s*\{\s*position\s*:/);
+  });
+
+  it('admin-field-editor emits FLAT positionX/positionY patches', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts',
+    );
+    expect(editor).toMatch(/positionX:\s*v\.position\.x/);
+    expect(editor).toMatch(/positionY:\s*v\.position\.y/);
+    // No nested position passthrough in emitted patch payload.
+    expect(editor).not.toMatch(/this\.patch\.emit\([\s\S]*position:\s*\{/);
+  });
 });
 
 describe('Club self-service templates (ADR-075 V3 Phase B)', () => {

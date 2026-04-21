@@ -21,11 +21,13 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type {
-  TemplateImageSlot,
   TemplateStudioView,
-  TemplateTextField,
   TemplateVariant,
 } from '../../remotion-templates.types';
+import type {
+  TemplateImageSlotUpdate,
+  TemplateTextFieldUpdate,
+} from '../../remotion-templates-data.service';
 
 type DragMode = 'move' | 'resize';
 
@@ -144,8 +146,8 @@ interface DragState {
 })
 export class AdminCanvasOverlayComponent {
   @Input({ required: true }) view!: TemplateStudioView;
-  @Output() patchTextField = new EventEmitter<{ id: string; patch: Partial<TemplateTextField> }>();
-  @Output() patchImageSlot = new EventEmitter<{ id: string; patch: Partial<TemplateImageSlot> }>();
+  @Output() patchTextField = new EventEmitter<{ id: string; patch: TemplateTextFieldUpdate }>();
+  @Output() patchImageSlot = new EventEmitter<{ id: string; patch: TemplateImageSlotUpdate }>();
 
   @ViewChild('canvas', { static: false }) canvasRef?: ElementRef<HTMLDivElement>;
 
@@ -249,15 +251,14 @@ export class AdminCanvasOverlayComponent {
       if (!tf) return;
       tf.position = { x, y };
       this.scheduleEmit(`t-${id}`, () =>
-        this.patchTextField.emit({ id, patch: { position: { x, y } } }),
+        this.patchTextField.emit({ id, patch: { positionX: x, positionY: y } }),
       );
     } else {
       const s = this.view.imageSlots.find((i) => i.id === id);
       if (!s) return;
       s.position = { ...s.position, x, y };
-      const position = { ...s.position };
       this.scheduleEmit(`i-${id}`, () =>
-        this.patchImageSlot.emit({ id, patch: { position } }),
+        this.patchImageSlot.emit({ id, patch: { positionX: x, positionY: y } }),
       );
     }
   }
@@ -266,9 +267,8 @@ export class AdminCanvasOverlayComponent {
     const s = this.view.imageSlots.find((i) => i.id === id);
     if (!s) return;
     s.position = { ...s.position, width, height };
-    const position = { ...s.position };
     this.scheduleEmit(`i-${id}`, () =>
-      this.patchImageSlot.emit({ id, patch: { position } }),
+      this.patchImageSlot.emit({ id, patch: { width, height } }),
     );
   }
 
