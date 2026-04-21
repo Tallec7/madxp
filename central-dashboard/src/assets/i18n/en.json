@@ -1004,6 +1004,14 @@
       "implementing": "Implementing",
       "done": "Done"
     },
+    "adr": {
+      "searchPlaceholder": "Search an ADR...",
+      "all": "All",
+      "loadError": "Failed to load ADRs",
+      "empty": "No ADR matches the search.",
+      "loading": "Loading…",
+      "selectHint": "← Select an ADR to read its content"
+    },
     "roamStatus": {
       "Resolved": "Resolved",
       "Owned": "Owned",

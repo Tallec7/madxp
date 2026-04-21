@@ -288,6 +288,12 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['admin', 'super_admin'] },
         loadComponent: () => import('./features/safe/safe-product.component').then(m => m.SafeProductComponent)
+      },
+      {
+        path: 'safe/adr',
+        canActivate: [roleGuard],
+        data: { roles: ['admin', 'super_admin'] },
+        loadComponent: () => import('./features/safe/safe-adr.component').then(m => m.SafeAdrComponent)
       }
     ]
   },

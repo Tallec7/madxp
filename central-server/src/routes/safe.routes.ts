@@ -48,4 +48,10 @@ router.put('/risks/:id/roam-status', authenticate, requireRole('admin'), validat
 // Mise à jour du contenu d'une proposal (titre + markdown)
 router.put('/proposals/:id/content', authenticate, requireRole('admin'), validateParams(paramSchemas.idString), validate(schemas.updateProposalContent), safeController.updateProposalContent);
 
+// Liste des ADR (sans contenu)
+router.get('/adr', authenticate, requireRole('admin'), safeController.getAdrs);
+
+// Détail d'un ADR (avec contenu markdown) — id = "ADR-083" ou "083"
+router.get('/adr/:id', authenticate, requireRole('admin'), validateParams(paramSchemas.idString), safeController.getAdr);
+
 export default router;

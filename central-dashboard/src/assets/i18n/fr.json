@@ -1004,6 +1004,14 @@
       "implementing": "En cours",
       "done": "Terminé"
     },
+    "adr": {
+      "searchPlaceholder": "Rechercher un ADR...",
+      "all": "Tous",
+      "loadError": "Impossible de charger les ADRs",
+      "empty": "Aucun ADR ne correspond à la recherche.",
+      "loading": "Chargement…",
+      "selectHint": "← Sélectionne un ADR pour lire son contenu"
+    },
     "roamStatus": {
       "Resolved": "Résolu",
       "Owned": "Pris en charge",
