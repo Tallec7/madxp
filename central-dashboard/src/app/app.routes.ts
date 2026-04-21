@@ -149,6 +149,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
+        // ADR-075 V3 Phase B — Self-service club templates
+        path: 'content/my-templates',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () => import('./features/content/remotion-templates/my-templates.component').then(m => m.MyTemplatesComponent)
+      },
+      {
         path: 'updates',
         canActivate: [roleGuard],
         data: { roles: ['super_admin', 'admin', 'operator'] },

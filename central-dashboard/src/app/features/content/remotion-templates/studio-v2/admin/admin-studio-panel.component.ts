@@ -15,6 +15,7 @@ import {
   type TemplateTextFieldCreate,
   type TemplateVariantCreate,
 } from '../../remotion-templates-data.service';
+import { ClubTemplatesDataService } from '../../club-templates-data.service';
 import type {
   TemplateImageSlot,
   TemplateLayer,
@@ -72,6 +73,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
       </section>
 
       <app-admin-variants-panel
+        *ngIf="!clubMode"
         [templateId]="view.id"
         [variants]="view.variants"
         (create)="onCreateVariant($event)"
@@ -80,6 +82,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
       ></app-admin-variants-panel>
 
       <app-admin-layers-panel
+        *ngIf="!clubMode"
         [templateId]="view.id"
         [layers]="view.layers"
         (create)="onCreateLayer($event)"
@@ -91,6 +94,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
         <header class="asp__fields-head">
           <h4>Champs texte ({{ view.textFields.length }})</h4>
           <button
+            *ngIf="!clubMode"
             type="button"
             class="asp__add"
             data-testid="admin-add-text-field"
@@ -114,6 +118,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
         <header class="asp__fields-head">
           <h4>Slots image ({{ view.imageSlots.length }})</h4>
           <button
+            *ngIf="!clubMode"
             type="button"
             class="asp__add"
             data-testid="admin-add-image-slot"
@@ -156,9 +161,12 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
 })
 export class AdminStudioPanelComponent {
   @Input({ required: true }) view!: TemplateStudioView;
+  /** ADR-075 V3 Phase B — masque layers/variants + route les patches vers /api/club/*. */
+  @Input() clubMode = false;
   @Output() changed = new EventEmitter<void>();
 
   private api = inject(RemotionTemplatesDataService);
+  private clubApi = inject(ClubTemplatesDataService);
   private notifications = inject(NotificationService);
 
   readonly formatPresets: ReadonlyArray<{ id: string; label: string; width: number; height: number }> = [
@@ -174,7 +182,8 @@ export class AdminStudioPanelComponent {
 
   onSelectFormat(preset: { width: number; height: number }): void {
     if (this.isActiveFormat(preset)) return;
-    this.api
+    const svc = this.clubMode ? this.clubApi : this.api;
+    svc
       .updateTemplate(this.view.id, {
         canvas_width: preset.width,
         canvas_height: preset.height,
@@ -268,7 +277,8 @@ export class AdminStudioPanelComponent {
   }
 
   onPatchTextField(id: string, patch: Partial<TemplateTextField>): void {
-    this.api.updateTextField(this.view.id, id, patch).subscribe({
+    const svc = this.clubMode ? this.clubApi : this.api;
+    svc.updateTextField(this.view.id, id, patch).subscribe({
       next: () => this.changed.emit(),
       error: () => this.notifications.error('Échec mise à jour champ texte'),
     });
@@ -305,7 +315,8 @@ export class AdminStudioPanelComponent {
   }
 
   onPatchImageSlot(id: string, patch: Partial<TemplateImageSlot>): void {
-    this.api.updateImageSlot(this.view.id, id, patch).subscribe({
+    const svc = this.clubMode ? this.clubApi : this.api;
+    svc.updateImageSlot(this.view.id, id, patch).subscribe({
       next: () => this.changed.emit(),
       error: () => this.notifications.error('Échec mise à jour slot image'),
     });

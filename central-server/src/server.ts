@@ -65,6 +65,7 @@ import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import templateStudioRoutes from './routes/template-studio.routes';
+import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
@@ -493,6 +494,8 @@ app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture —
 // Monté AVANT remotion-templates pour que les sous-ressources matchent ce router.
 app.use('/api/remotion-templates', templateStudioRoutes);
 app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes); // Templates vidéo Remotion (ADR-052)
+// ADR-075 V3 Phase B — Club self-service templates
+app.use('/api/club/remotion-templates', clubTemplatesRoutes);
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

@@ -1189,3 +1189,89 @@ describe('Template Studio v2 — drag-to-position admin overlay (ADR-075 V3 Phas
     expect(panel).toMatch(/<app-admin-canvas-overlay[\s\S]*\[view\]="view"[\s\S]*patchTextField[\s\S]*patchImageSlot/);
   });
 });
+
+describe('Club self-service templates (ADR-075 V3 Phase B)', () => {
+  const repoRoot2 = path.resolve(__dirname, '..', '..', '..', '..');
+  const dashRoot2 = path.join(repoRoot2, 'central-dashboard');
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot2, rel), 'utf8');
+
+  it('middleware requireClubByoAccess enforces template_studio_byo + premium', () => {
+    const mw = read('middleware/require-club-byo-access.ts');
+    expect(mw).toMatch(/template_studio_byo/);
+    expect(mw).toMatch(/hasFeatureOverride/);
+    expect(mw).toMatch(/TIER_LEVEL\.premium/);
+    // super_admin bypass + site_id assignment check
+    expect(mw).toMatch(/super_admin/);
+    expect(mw).toMatch(/req\.clubSiteId\s*=/);
+  });
+
+  it('club-templates routes wire authenticate + requireRole + requireClubByoAccess', () => {
+    const routes = read('routes/club-templates.routes.ts');
+    expect(routes).toMatch(/requireClubByoAccess/);
+    expect(routes).toMatch(/requireRole\(\s*['"]club['"]/);
+    // MUST NOT be gated super_admin only (Phase B contract)
+    expect(routes).not.toMatch(/requireRole\(\s*['"]super_admin['"]\s*\)/);
+    // validateParams on every :id route
+    expect(routes).toMatch(/validateParams\(paramSchemas\.id\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndFieldId\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.idAndSlotId\)/);
+  });
+
+  it('server.ts mounts club-templates under /api/club/remotion-templates', () => {
+    const server = read('server.ts');
+    expect(server).toMatch(/clubTemplatesRoutes/);
+    expect(server).toMatch(/\/api\/club\/remotion-templates/);
+  });
+
+  it('controller enforces template.site_id === req.clubSiteId on every write', () => {
+    const ctl = read('controllers/club-templates.controller.ts');
+    expect(ctl).toMatch(/loadOwnedTemplate/);
+    expect(ctl).toMatch(/site_id\s*!==\s*clubSiteId/);
+    // Child resources (text fields / image slots) verify template ownership
+    expect(ctl).toMatch(/assertChildBelongs/);
+    expect(ctl).toMatch(/template_text_fields/);
+    expect(ctl).toMatch(/template_image_slots/);
+  });
+
+  it('dashboard ClubTemplatesDataService hits /club/remotion-templates/*', () => {
+    const svc = readDash('src/app/features/content/remotion-templates/club-templates-data.service.ts');
+    expect(svc).toMatch(/\/club\/remotion-templates/);
+    expect(svc).toMatch(/getStudioView/);
+    expect(svc).toMatch(/updateTextField/);
+    expect(svc).toMatch(/updateImageSlot/);
+    expect(svc).toMatch(/updateTemplate/);
+  });
+
+  it('admin-studio-panel exposes clubMode input that hides variants + layers + add-buttons', () => {
+    const panel = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts',
+    );
+    expect(panel).toMatch(/@Input\(\)\s+clubMode\s*=\s*false/);
+    // Variants/layers hidden under *ngIf="!clubMode"
+    expect(panel).toMatch(/<app-admin-variants-panel[\s\S]*\*ngIf="!clubMode"/);
+    expect(panel).toMatch(/<app-admin-layers-panel[\s\S]*\*ngIf="!clubMode"/);
+    // Add-field / add-slot buttons gated too
+    expect(panel).toMatch(/admin-add-text-field[\s\S]*!clubMode|!clubMode[\s\S]*admin-add-text-field/);
+    // Patch methods route through ClubTemplatesDataService when clubMode
+    expect(panel).toMatch(/ClubTemplatesDataService/);
+    expect(panel).toMatch(/this\.clubMode\s*\?\s*this\.clubApi\s*:\s*this\.api/);
+  });
+
+  it('dashboard /content/my-templates route is registered with club role', () => {
+    const routes = readDash('src/app/app.routes.ts');
+    expect(routes).toMatch(/content\/my-templates/);
+    expect(routes).toMatch(/my-templates\.component[\s\S]*MyTemplatesComponent/);
+    // Route data includes 'club' role
+    expect(routes).toMatch(/my-templates[\s\S]*roles:\s*\[[^\]]*'club'/);
+  });
+
+  it('MyTemplatesComponent passes clubMode=true to admin-studio-panel', () => {
+    const cmp = readDash(
+      'src/app/features/content/remotion-templates/my-templates.component.ts',
+    );
+    expect(cmp).toMatch(/\[clubMode\]="true"/);
+    expect(cmp).toMatch(/ClubTemplatesDataService/);
+    expect(cmp).toMatch(/app-admin-studio-panel/);
+  });
+});
