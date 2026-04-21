@@ -782,6 +782,12 @@ describe('Template Studio V2 — Sprint 6 Premium gate + UI filter (ADR-075)', (
     expect(svc).toMatch(/template_studio_club_scoped\s*:\s*['"]premium['"]/);
   });
 
+  it('dashboard FeatureGateService registers template_studio_byo as premium (ADR-075 V3 Phase A)', () => {
+    const svc = readDash('src/app/core/services/feature-gate.service.ts');
+    expect(svc).toMatch(/template_studio_byo/);
+    expect(svc).toMatch(/template_studio_byo\s*:\s*['"]premium['"]/);
+  });
+
   it('dashboard remotion-templates component exposes scope filter + hasClubScopedTemplates', () => {
     const cmp = readDash(
       'src/app/features/content/remotion-templates/remotion-templates.component.ts',
