@@ -1324,3 +1324,65 @@ describe('Club template background upload (ADR-075 V3 Phase C)', () => {
     expect(cmp).toMatch(/accept="video\/mp4,video\/webm"/);
   });
 });
+
+describe('Club template quotas (ADR-075 V3 Phase D)', () => {
+  const repoRoot4 = path.resolve(__dirname, '..', '..', '..', '..');
+  const dashRoot4 = path.join(repoRoot4, 'central-dashboard');
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot4, rel), 'utf8');
+
+  it('service exposes CLUB_TEMPLATE_LIMIT=3 and CLUB_RENDER_DAILY_LIMIT=10', () => {
+    const svc = read('services/club-template-quota.service.ts');
+    expect(svc).toMatch(/CLUB_TEMPLATE_LIMIT\s*=\s*3\b/);
+    expect(svc).toMatch(/CLUB_RENDER_DAILY_LIMIT\s*=\s*10\b/);
+    expect(svc).toMatch(/getQuotaFor/);
+    expect(svc).toMatch(/assertRenderAllowed/);
+  });
+
+  it('render job repo counts renders in last 24h per site', () => {
+    const repo = read('repositories/remotion-render-job.repository.ts');
+    expect(repo).toMatch(/countRendersLast24h/);
+    expect(repo).toMatch(/requested_for_site_id\s*=\s*\$1/);
+    expect(repo).toMatch(/INTERVAL '24 hours'/);
+  });
+
+  it('templates repo counts owned templates per site', () => {
+    const repo = read('repositories/remotion-templates.repository.ts');
+    expect(repo).toMatch(/countOwnedBySite/);
+    expect(repo).toMatch(/WHERE site_id = \$1/);
+  });
+
+  it('renderTemplate returns 429 when club exceeds daily render quota', () => {
+    const ctl = read('controllers/remotion-templates.controller.ts');
+    expect(ctl).toMatch(/clubTemplateQuotaService/);
+    expect(ctl).toMatch(/assertRenderAllowed/);
+    // 429 path with quota payload
+    expect(ctl).toMatch(/429[\s\S]*quota:/);
+  });
+
+  it('GET /api/club/remotion-templates/quota route + controller exist', () => {
+    const routes = read('routes/club-templates.routes.ts');
+    expect(routes).toMatch(/\/quota/);
+    expect(routes).toMatch(/getMyQuota/);
+    const ctl = read('controllers/club-templates.controller.ts');
+    expect(ctl).toMatch(/export const getMyQuota/);
+    expect(ctl).toMatch(/clubTemplateQuotaService\.getQuotaFor/);
+  });
+
+  it('dashboard data service + UI render quota badges', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/club-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/getQuota\(\)/);
+    expect(svc).toMatch(/\/club\/remotion-templates\/quota/);
+    expect(svc).toMatch(/ClubTemplateQuota/);
+
+    const cmp = readDash(
+      'src/app/features/content/remotion-templates/my-templates.component.ts',
+    );
+    expect(cmp).toMatch(/data-testid="my-templates-quota-templates"/);
+    expect(cmp).toMatch(/data-testid="my-templates-quota-renders"/);
+    expect(cmp).toMatch(/quota\s*=\s*signal/);
+    expect(cmp).toMatch(/loadQuota/);
+  });
+});

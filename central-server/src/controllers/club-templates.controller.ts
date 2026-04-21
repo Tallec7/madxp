@@ -19,6 +19,7 @@ import {
   templateStudioRepository,
 } from '../repositories';
 import { uploadAsset, getAssetUrl } from '../services/storage.service';
+import { clubTemplateQuotaService } from '../services/club-template-quota.service';
 
 const notFound = (res: Response, msg = 'Ressource non trouvée'): void => {
   res.status(404).json({ error: msg });
@@ -60,6 +61,18 @@ const assertChildBelongs = async (
     [childId],
   );
   return rows[0]?.template_id === templateId;
+};
+
+// ── GET /api/club/remotion-templates/quota
+// ADR-075 V3 Phase D — expose quotas (templates + renders) pour le site club.
+export const getMyQuota = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const siteId = req.clubSiteId as string;
+    const quota = await clubTemplateQuotaService.getQuotaFor(siteId);
+    res.json(quota);
+  } catch (error) {
+    serverError('getMyQuota', req, error, res);
+  }
 };
 
 // ── GET /api/club/remotion-templates
