@@ -862,6 +862,58 @@ describe('Template Studio v2 — preview hardening (ADR-075)', () => {
     expect(csp).toMatch(/media-src[^;]*kalonpartners\.bzh/);
     expect(csp).toMatch(/media-src[^;]*blob:/);
   });
+
+  // Regression guard: studio-v2 variant thumbnails must follow the template
+  // canvas aspect ratio, not a hardcoded 9/16 (deformed 16/9 or 1/1 templates).
+  // Driven by the `--thumb-ratio` CSS variable set from canvasWidth/Height.
+  it('studio-v2-editor binds --thumb-ratio from canvasWidth/canvasHeight', () => {
+    const ts = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts',
+    );
+    expect(ts).toMatch(/variantThumbRatio/);
+    expect(ts).toMatch(/canvasWidth.*canvasHeight|canvasWidth\}\s*\/\s*\$\{this\.view\.canvasHeight/);
+
+    const html = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.html',
+    );
+    expect(html).toMatch(/\[style\.--thumb-ratio\]="variantThumbRatio"/);
+
+    const scss = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.scss',
+    );
+    expect(scss).toMatch(/aspect-ratio:\s*var\(--thumb-ratio/);
+    // Fixed column width prevents single-variant row from stretching.
+    expect(scss).toMatch(/grid-template-columns:\s*repeat\(auto-fill,\s*96px\)/);
+  });
+
+  // Regression guard: legacy v1→v2 scaffold creates variants with empty
+  // background_video_url. The runtime `isValidSrc` guard skips empty URLs →
+  // black preview with no explanation. An explicit warning banner must be
+  // shown when the active variant has no background.
+  it('studio-v2-editor surfaces missing background warning for empty variants', () => {
+    const ts = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts',
+    );
+    expect(ts).toMatch(/isBackgroundMissing/);
+    expect(ts).toMatch(/backgroundVideoUrl/);
+
+    const html = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.html',
+    );
+    expect(html).toMatch(/\*ngIf="isBackgroundMissing"/);
+    expect(html).toMatch(/studio-v2__bg-missing/);
+  });
+
+  // Regression guard: Chrome power-saves video-only <video> tags and spams
+  // "Could not play video: AbortError" in the console. The Angular host of
+  // the Player filters these specific messages without silencing real errors.
+  it('template-studio-player filters benign AbortError console noise', () => {
+    const host = readDash(
+      'src/app/features/content/remotion-templates/studio-player/template-studio-player.component.ts',
+    );
+    expect(host).toMatch(/Could not play video/);
+    expect(host).toMatch(/_origConsoleError/);
+  });
 });
 
 describe('Template Studio v2 — scaffold placeholders (ADR-075)', () => {
