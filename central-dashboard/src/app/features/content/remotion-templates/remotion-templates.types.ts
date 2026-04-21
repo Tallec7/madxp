@@ -82,6 +82,9 @@ export interface TemplateTextField {
   multiline: boolean;
   required: boolean;
   sortOrder: number;
+  alwaysVisible: boolean;
+  scaleFrom: number;
+  scaleTo: number;
 }
 
 export interface TemplateImageSlot {

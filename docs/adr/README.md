@@ -162,4 +162,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 21 avril 2026 (ADR-083 Accepté — résolveur fuzzy drift ; ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_
+_Dernière mise à jour : 21 avril 2026 (ADR-084 Accepté — polices custom + alwaysVisible + scale-in config ; ADR-083 Accepté — résolveur fuzzy drift ; ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_

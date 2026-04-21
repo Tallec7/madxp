@@ -898,6 +898,9 @@ export const schemas = {
     multiline: Joi.boolean().optional(),
     required: Joi.boolean().optional(),
     sortOrder: Joi.number().integer().min(0).optional(),
+    alwaysVisible: Joi.boolean().optional(),
+    scaleFrom: Joi.number().min(0).max(5).optional(),
+    scaleTo: Joi.number().min(0).max(5).optional(),
   }),
   templateStudioTextFieldUpdate: Joi.object({
     slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
@@ -919,6 +922,9 @@ export const schemas = {
     multiline: Joi.boolean().optional(),
     required: Joi.boolean().optional(),
     sortOrder: Joi.number().integer().min(0).optional(),
+    alwaysVisible: Joi.boolean().optional(),
+    scaleFrom: Joi.number().min(0).max(5).optional(),
+    scaleTo: Joi.number().min(0).max(5).optional(),
   }).min(1),
 
   templateStudioImageSlotCreate: Joi.object({

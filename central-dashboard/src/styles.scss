@@ -1,3 +1,26 @@
+/* Custom fonts — OTF locales (Bulevar, General Sans) */
+@font-face {
+  font-family: 'Bulevar';
+  src: url('./assets/fonts/Bulevar-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('./assets/fonts/GeneralSans-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('./assets/fonts/GeneralSans-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Reset and base styles */
 * {
   margin: 0;
@@ -7,35 +30,36 @@
 
 :root {
   /* NEOPRO Sports Colors */
-  --neo-basket-light: #FF6AA7;
-  --neo-basket-dark: #CC384E;
-  --neo-futsal-light: #FE5949;
-  --neo-futsal-dark: #951D13;
-  --neo-volley-light: #FAE571;
-  --neo-volley-dark: #FDBE00;
-  --neo-hand-light: #51B28B;
-  --neo-hand-dark: #20473C;
-  --neo-hockey-light: #A3EFFD;
-  --neo-hockey-dark: #2022E9;
-  --neo-purple-light: #7863F6;
-  --neo-purple-dark: #3A0686;
+  --neo-basket-light: #ff6aa7;
+  --neo-basket-dark: #cc384e;
+  --neo-futsal-light: #fe5949;
+  --neo-futsal-dark: #951d13;
+  --neo-volley-light: #fae571;
+  --neo-volley-dark: #fdbe00;
+  --neo-hand-light: #51b28b;
+  --neo-hand-dark: #20473c;
+  --neo-hockey-light: #a3effd;
+  --neo-hockey-dark: #2022e9;
+  --neo-purple-light: #7863f6;
+  --neo-purple-dark: #3a0686;
 
   /* NEOPRO Neutrals */
   --neo-black: #000000;
-  --neo-beige: #FEECD8;
-  --neo-grey: #EBEFEE;
-  --neo-white: #FFFFFF;
+  --neo-beige: #feecd8;
+  --neo-grey: #ebefee;
+  --neo-white: #ffffff;
 
   /* Typography - System fonts for better readability */
-  --neo-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --neo-font-body:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   /* Semantic Colors (mapped to NEOPRO palette) */
-  --primary-color: #2022E9;      /* Hockey Dark */
-  --primary-light: #A3EFFD;      /* Hockey Light */
+  --primary-color: #2022e9; /* Hockey Dark */
+  --primary-light: #a3effd; /* Hockey Light */
   --secondary-color: #64748b;
-  --success-color: #51B28B;      /* Hand Light */
-  --warning-color: #FDBE00;      /* Volley Dark */
-  --danger-color: #FE5949;       /* Futsal Light */
+  --success-color: #51b28b; /* Hand Light */
+  --warning-color: #fdbe00; /* Volley Dark */
+  --danger-color: #fe5949; /* Futsal Light */
   --bg-color: var(--neo-grey);
   --card-bg: var(--neo-white);
   --text-primary: var(--neo-black);
@@ -145,8 +169,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================================================================
@@ -255,17 +283,17 @@ select:focus-visible {
 
 /* Color blind friendly status indicators */
 .status-online::before {
-  content: "●";
+  content: '●';
   margin-right: 0.25rem;
 }
 
 .status-offline::before {
-  content: "○";
+  content: '○';
   margin-right: 0.25rem;
 }
 
 .status-error::before {
-  content: "✕";
+  content: '✕';
   margin-right: 0.25rem;
 }
 

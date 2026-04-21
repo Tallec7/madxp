@@ -184,6 +184,10 @@ CREATE TABLE template_text_fields (
   multiline BOOLEAN NOT NULL DEFAULT FALSE,
   required BOOLEAN NOT NULL DEFAULT TRUE,
   sort_order INT NOT NULL DEFAULT 0,
+  -- ADR-084 —
+  always_visible BOOLEAN NOT NULL DEFAULT FALSE,  -- si TRUE : visible tout le temps, ignore appear_at/duration
+  scale_from NUMERIC(4,2) NOT NULL DEFAULT 0.70,  -- valeur départ scale-in
+  scale_to   NUMERIC(4,2) NOT NULL DEFAULT 1.00,  -- valeur arrivée scale-in
   UNIQUE (template_id, slot_key)
 );
 

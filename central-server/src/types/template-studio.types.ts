@@ -57,6 +57,9 @@ export interface TemplateTextField {
   multiline: boolean;
   required: boolean;
   sortOrder: number;
+  alwaysVisible: boolean;
+  scaleFrom: number;
+  scaleTo: number;
 }
 
 export interface TemplateImageSlot {
@@ -149,6 +152,9 @@ export interface TemplateTextFieldRow extends QueryResultRow {
   multiline: boolean;
   required: boolean;
   sort_order: number;
+  always_visible: boolean;
+  scale_from: string;
+  scale_to: string;
 }
 
 export interface TemplateImageSlotRow extends QueryResultRow {

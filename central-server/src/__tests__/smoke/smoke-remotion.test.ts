@@ -1593,3 +1593,181 @@ describe('Club template quotas (ADR-075 V3 Phase D)', () => {
     expect(cmp).toMatch(/loadQuota/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-084 — Custom fonts + alwaysVisible + scale-in configurable
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Template Studio v2 — ADR-084 custom fonts + visibility + scale-in', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const remotionRoot = path.join(repoRoot, 'templates-remotion');
+
+  const read = (rel: string) => fs.readFileSync(path.join(centralSrc, rel), 'utf8');
+  const readDash = (rel: string) => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  const readRemotionFile = (rel: string) => fs.readFileSync(path.join(remotionRoot, rel), 'utf8');
+
+  // ── Fonts ──────────────────────────────────────────────────────────────────
+
+  it('custom OTF fonts exist in templates-remotion/public/', () => {
+    const pub = path.join(remotionRoot, 'public');
+    expect(fs.existsSync(path.join(pub, 'Bulevar-Regular.otf'))).toBe(true);
+    expect(fs.existsSync(path.join(pub, 'GeneralSans-Semibold.otf'))).toBe(true);
+    expect(fs.existsSync(path.join(pub, 'GeneralSans-Bold.otf'))).toBe(true);
+  });
+
+  it('custom OTF fonts exist in central-dashboard/src/assets/fonts/', () => {
+    const assetsDir = path.join(dashRoot, 'src', 'assets', 'fonts');
+    expect(fs.existsSync(path.join(assetsDir, 'Bulevar-Regular.otf'))).toBe(true);
+    expect(fs.existsSync(path.join(assetsDir, 'GeneralSans-Semibold.otf'))).toBe(true);
+    expect(fs.existsSync(path.join(assetsDir, 'GeneralSans-Bold.otf'))).toBe(true);
+  });
+
+  it('fonts.ts registers Bulevar + General Sans via staticFile()', () => {
+    const fonts = readRemotionFile('src/fonts.ts');
+    expect(fonts).toMatch(/registerCustomFonts/);
+    expect(fonts).toMatch(/staticFile\(/);
+    expect(fonts).toMatch(/Bulevar-Regular\.otf/);
+    expect(fonts).toMatch(/GeneralSans-Semibold\.otf/);
+    expect(fonts).toMatch(/GeneralSans-Bold\.otf/);
+    expect(fonts).toMatch(/@font-face/);
+  });
+
+  it('index.ts calls registerCustomFonts() before registerRoot()', () => {
+    const idx = readRemotionFile('src/index.ts');
+    expect(idx).toMatch(/registerCustomFonts\s*\(\s*\)/);
+    const customPos = idx.indexOf('registerCustomFonts');
+    const rootPos = idx.indexOf('registerRoot');
+    expect(customPos).toBeGreaterThan(-1);
+    expect(rootPos).toBeGreaterThan(-1);
+    expect(customPos).toBeLessThan(rootPos);
+  });
+
+  it('styles.scss declares @font-face for Bulevar and General Sans', () => {
+    const styles = readDash('src/styles.scss');
+    expect(styles).toMatch(/@font-face/);
+    expect(styles).toMatch(/Bulevar/);
+    expect(styles).toMatch(/General Sans/);
+    expect(styles).toMatch(/assets\/fonts\/Bulevar-Regular\.otf/);
+    expect(styles).toMatch(/assets\/fonts\/GeneralSans-Semibold\.otf/);
+    expect(styles).toMatch(/assets\/fonts\/GeneralSans-Bold\.otf/);
+  });
+
+  it('admin-field-editor lists Bulevar and General Sans in FONT_FAMILIES', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts',
+    );
+    expect(editor).toContain("'Bulevar'");
+    expect(editor).toContain("'General Sans'");
+  });
+
+  // ── alwaysVisible ──────────────────────────────────────────────────────────
+
+  it('migration adds always_visible + scale_from + scale_to columns', () => {
+    const sql = fs.readFileSync(
+      path.join(centralSrc, 'scripts', 'migrations', 'add-template-text-field-visibility-scale.sql'),
+      'utf8',
+    );
+    expect(sql).toMatch(/always_visible\s+BOOLEAN\s+NOT NULL\s+DEFAULT FALSE/i);
+    expect(sql).toMatch(/scale_from/i);
+    expect(sql).toMatch(/scale_to/i);
+  });
+
+  it('server types declare alwaysVisible + scaleFrom + scaleTo on TemplateTextField and Row', () => {
+    const types = read('types/template-studio.types.ts');
+    expect(types).toMatch(/alwaysVisible\s*:\s*boolean/);
+    expect(types).toMatch(/scaleFrom\s*:\s*number/);
+    expect(types).toMatch(/scaleTo\s*:\s*number/);
+    expect(types).toMatch(/always_visible\s*:\s*boolean/);
+    expect(types).toMatch(/scale_from\s*:\s*string/);
+    expect(types).toMatch(/scale_to\s*:\s*string/);
+  });
+
+  it('repository colMap includes alwaysVisible + scaleFrom + scaleTo', () => {
+    const repo = read('repositories/template-studio.repository.ts');
+    expect(repo).toMatch(/alwaysVisible\s*:\s*['"]always_visible['"]/);
+    expect(repo).toMatch(/scaleFrom\s*:\s*['"]scale_from['"]/);
+    expect(repo).toMatch(/scaleTo\s*:\s*['"]scale_to['"]/);
+    expect(repo).toMatch(/always_visible.*scale_from.*scale_to/s);
+  });
+
+  it('Joi schemas (create + update) accept alwaysVisible + scaleFrom + scaleTo', () => {
+    const validation = read('middleware/validation.ts');
+    const createIdx = validation.indexOf('templateStudioTextFieldCreate');
+    const updateIdx = validation.indexOf('templateStudioTextFieldUpdate');
+    const createBlock = validation.slice(createIdx, updateIdx);
+    const updateBlock = validation.slice(updateIdx, updateIdx + 800);
+    expect(createBlock).toMatch(/alwaysVisible/);
+    expect(createBlock).toMatch(/scaleFrom/);
+    expect(createBlock).toMatch(/scaleTo/);
+    expect(updateBlock).toMatch(/alwaysVisible/);
+    expect(updateBlock).toMatch(/scaleFrom/);
+    expect(updateBlock).toMatch(/scaleTo/);
+  });
+
+  it('TemplateRuntime short-circuits computeAnimation when alwaysVisible is true', () => {
+    const runtime = readRemotionFile('src/runtime/TemplateRuntime.tsx');
+    expect(runtime).toMatch(/alwaysVisible/);
+    expect(runtime).toMatch(/if\s*\(tf\.alwaysVisible\)/);
+    expect(runtime).toMatch(/opacity\s*=\s*1/);
+  });
+
+  it('animations.ts (Remotion) accepts scaleFrom + scaleTo with defaults 0.7 / 1.0', () => {
+    const anim = readRemotionFile('src/runtime/animations.ts');
+    expect(anim).toMatch(/scaleFrom\s*\?/);
+    expect(anim).toMatch(/scaleTo\s*\?/);
+    expect(anim).toMatch(/params\.scaleFrom\s*\?\?\s*0\.7/);
+    expect(anim).toMatch(/params\.scaleTo\s*\?\?\s*1\.0/);
+  });
+
+  it('dashboard animations.ts mirrors scaleFrom/scaleTo params', () => {
+    const dashAnim = readDash(
+      'src/app/features/content/remotion-templates/studio-player/animations.ts',
+    );
+    expect(dashAnim).toMatch(/scaleFrom\s*\?/);
+    expect(dashAnim).toMatch(/scaleTo\s*\?/);
+    expect(dashAnim).toMatch(/params\.scaleFrom\s*\?\?\s*0\.7/);
+    expect(dashAnim).toMatch(/params\.scaleTo\s*\?\?\s*1\.0/);
+  });
+
+  it('dashboard types declare alwaysVisible + scaleFrom + scaleTo on TemplateTextField', () => {
+    const types = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.types.ts',
+    );
+    expect(types).toMatch(/alwaysVisible\s*:\s*boolean/);
+    expect(types).toMatch(/scaleFrom\s*:\s*number/);
+    expect(types).toMatch(/scaleTo\s*:\s*number/);
+  });
+
+  it('data service payloads include optional alwaysVisible + scaleFrom + scaleTo', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    expect(svc).toMatch(/alwaysVisible\s*\?\s*:\s*boolean/);
+    expect(svc).toMatch(/scaleFrom\s*\?\s*:\s*number/);
+    expect(svc).toMatch(/scaleTo\s*\?\s*:\s*number/);
+  });
+
+  it('admin field editor: alwaysVisible checkbox + scale-in section + emitPatch', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts',
+    );
+    expect(editor).toMatch(/alwaysVisible/);
+    expect(editor).toMatch(/animation.*===.*scale-in/);
+    expect(editor).toMatch(/scaleFrom/);
+    expect(editor).toMatch(/scaleTo/);
+    const patchIdx = editor.indexOf('emitPatch');
+    const patchBlock = editor.slice(patchIdx, patchIdx + 1400);
+    expect(patchBlock).toMatch(/alwaysVisible/);
+    expect(patchBlock).toMatch(/scaleFrom/);
+    expect(patchBlock).toMatch(/scaleTo/);
+  });
+
+  it('ADR-084 doc is checked in and listed in ADR README', () => {
+    const adrDir = path.join(repoRoot, 'docs', 'adr');
+    expect(
+      fs.existsSync(path.join(adrDir, 'ADR-084-template-studio-fonts-visibility-scale.md')),
+    ).toBe(true);
+    const readme = fs.readFileSync(path.join(adrDir, 'README.md'), 'utf8');
+    expect(readme).toMatch(/ADR-084/);
+  });
+});

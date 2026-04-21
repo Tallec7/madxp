@@ -31,13 +31,19 @@ const ANIMATIONS: AnimationPreset[] = [
 ];
 
 /**
- * ADR-075 — Polices curated chargées côté dashboard via Google Fonts
- * (cf. `central-dashboard/src/index.html`). Toute police hors liste retombera
- * sur la police système côté preview. Pour ajouter : (1) ajouter ici,
- * (2) ajouter au `<link>` Google Fonts dans `index.html`, (3) s'assurer que
- * le worker Remotion side rendering la charge aussi.
+ * ADR-075 — Polices curated chargées côté dashboard.
+ * - Google Fonts : chargées via `<link>` dans `index.html`
+ * - Custom (Bulevar, General Sans) : chargées via @font-face dans `styles.scss`
+ * Pour ajouter une Google Font : (1) ajouter ici, (2) ajouter au `<link>` dans
+ * `index.html`, (3) s'assurer que le worker Remotion la charge aussi.
+ * Pour ajouter une custom : (1) ajouter ici, (2) copier le fichier OTF dans
+ * `templates-remotion/public/` + `central-dashboard/src/assets/fonts/`,
+ * (3) ajouter l'@font-face dans `fonts.ts` (Remotion) et `styles.scss` (dashboard).
  */
 const FONT_FAMILIES = [
+  // Custom — OTF locales (non-Google)
+  'Bulevar',
+  'General Sans',
   // Display / impact (titres)
   'Anton',
   'Bebas Neue',
@@ -108,7 +114,15 @@ const FONT_FAMILIES = [
         </label>
       </section>
 
-      <section class="afe__section">
+      <section class="afe__section" *ngIf="f.kind === 'text'">
+        <h5>Visibilité</h5>
+        <label class="afe__checkbox">
+          <input type="checkbox" [(ngModel)]="$any(f.value).alwaysVisible" (change)="emitPatch()" />
+          Toujours visible (sans timecode)
+        </label>
+      </section>
+
+      <section class="afe__section" *ngIf="f.kind !== 'text' || !$any(f.value).alwaysVisible">
         <h5>Timing (secondes)</h5>
         <label>appearAt
           <input type="number" step="0.1" [(ngModel)]="f.value.appearAt" (change)="emitPatch()" />
@@ -123,6 +137,18 @@ const FONT_FAMILIES = [
         <select [(ngModel)]="f.value.animation" (change)="emitPatch()">
           <option *ngFor="let a of animations" [value]="a">{{ a }}</option>
         </select>
+      </section>
+
+      <section class="afe__section" *ngIf="f.kind === 'text' && $any(f.value).animation === 'scale-in'">
+        <h5>Scale-in</h5>
+        <label>Départ
+          <input type="number" step="0.05" min="0" max="5"
+                 [(ngModel)]="$any(f.value).scaleFrom" (change)="emitPatch()" />
+        </label>
+        <label>Arrivée
+          <input type="number" step="0.05" min="0" max="5"
+                 [(ngModel)]="$any(f.value).scaleTo" (change)="emitPatch()" />
+        </label>
       </section>
 
       <section class="afe__section" *ngIf="f.kind === 'text'">
@@ -163,6 +189,8 @@ const FONT_FAMILIES = [
     .afe__section h5 { flex-basis: 100%; margin: 0; font-size: 12px; color: #6b7280; text-transform: uppercase; }
     .afe__section label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
     .afe__section input, .afe__section select { padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; }
+    .afe__checkbox { flex-direction: row !important; align-items: center; gap: 6px !important; cursor: pointer; }
+    .afe__checkbox input[type="checkbox"] { width: 14px; height: 14px; padding: 0; cursor: pointer; }
     .afe__footer { display: flex; justify-content: flex-end; }
     .afe__delete { padding: 4px 10px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; font-size: 12px; }
     .afe__delete:hover { background: #fee2e2; }
@@ -200,6 +228,9 @@ export class AdminFieldEditorComponent {
         multiline: v.multiline,
         required: v.required,
         sortOrder: v.sortOrder,
+        alwaysVisible: v.alwaysVisible,
+        scaleFrom: v.scaleFrom,
+        scaleTo: v.scaleTo,
       }, ['maxChars']);
       this.patch.emit(patch);
     } else {

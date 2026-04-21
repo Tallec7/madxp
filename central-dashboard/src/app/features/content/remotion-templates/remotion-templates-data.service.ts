@@ -46,6 +46,9 @@ export interface TemplateTextFieldCreate {
   multiline?: boolean;
   required?: boolean;
   sortOrder?: number;
+  alwaysVisible?: boolean;
+  scaleFrom?: number;
+  scaleTo?: number;
 }
 
 /**
@@ -69,6 +72,9 @@ export interface TemplateTextFieldUpdate {
   multiline?: boolean;
   required?: boolean;
   sortOrder?: number;
+  alwaysVisible?: boolean;
+  scaleFrom?: number;
+  scaleTo?: number;
 }
 
 /**
