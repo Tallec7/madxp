@@ -1,3 +1,15 @@
+## [3.213.2](https://github.com/Tallec7/neopro/compare/v3.213.1...v3.213.2) (2026-04-21)
+
+### Bug Fixes
+
+- **sites:** refonte onglet Accès club (multi-comptes, édition, reset mdp) ([#532](https://github.com/Tallec7/neopro/issues/532)) ([6362601](https://github.com/Tallec7/neopro/commit/63626012e13dbad861c9b063ac935428d953dff8))
+
+## [3.213.1](https://github.com/Tallec7/neopro/compare/v3.213.0...v3.213.1) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** remove direct database import from club-templates controller ([339088d](https://github.com/Tallec7/neopro/commit/339088d029b9bcffd0bf5647a735f9a5f0177de7))
+
 # [3.213.0](https://github.com/Tallec7/neopro/compare/v3.212.0...v3.213.0) (2026-04-21)
 
 ### Features
