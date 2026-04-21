@@ -1,3 +1,9 @@
+# [3.208.0](https://github.com/Tallec7/neopro/compare/v3.207.3...v3.208.0) (2026-04-21)
+
+### Features
+
+- **templates:** canvas format picker + add-field buttons + curated fonts (ADR-075 Sprint 9) ([#523](https://github.com/Tallec7/neopro/issues/523)) ([3f272fc](https://github.com/Tallec7/neopro/commit/3f272fcb62a25177152545a113179a1ab2c9b674))
+
 ## [3.207.3](https://github.com/Tallec7/neopro/compare/v3.207.2...v3.207.3) (2026-04-21)
 
 ### Bug Fixes
