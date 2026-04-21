@@ -224,9 +224,16 @@ export const schemas = {
     type: Joi.string().valid(
       'score-update', 'score-reset', 'phase-change', 'play-video',
       'play-sponsors', 'timer-update', 'breaking-news', 'match-config',
-      'recording-toggle', 'screenshot'
+      'recording-toggle', 'screenshot',
+      // ADR-059 granular match commands
+      'command/increment_home', 'command/decrement_home',
+      'command/increment_away', 'command/decrement_away',
+      'command/score_reset', 'command/set_phase',
+      'command/timer_start', 'command/timer_pause', 'command/timer_reset'
     ).required(),
     data: Joi.object().optional().default({}),
+    // ADR-081 Phase 0 — commandId optionnel (UUID généré par le remote)
+    commandId: Joi.string().uuid().optional(),
   }),
 
   // Remote PIN verification (public endpoint)

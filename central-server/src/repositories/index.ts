@@ -329,6 +329,13 @@ export {
 } from './hotspot-config.repository';
 
 export {
+  remoteCommandAuditRepository,
+  type CreateRemoteCommandAuditInput,
+  type RemoteCommandAuditRow,
+  type RemoteCommandAuditStatus,
+} from './remote-command-audit.repository';
+
+export {
   videoCategoryRepository,
   type VideoCategoryRow,
   type VideoCategoryType,
