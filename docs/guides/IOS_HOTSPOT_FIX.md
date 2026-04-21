@@ -8,6 +8,31 @@ Quand un iPhone/iPad se connecte au hotspot `NEOPRO-{CLUB}`, plusieurs symptôme
 2. **Le captive portal sheet iOS s'ouvre** et bloque l'accès dans Safari
 3. **`neopro.local` ne résout pas** (mais `192.168.4.1` fonctionne)
 4. **La connexion WiFi semble fonctionner** mais aucune page ne charge
+5. **La Captive Wi-Fi sheet affiche une page blanche** sur `captive.apple.com` (fixé ADR-079 Phase 1 — voir ci-dessous)
+
+## Page blanche dans la Captive Wi-Fi sheet — ADR-079 Phase 1 (avril 2026)
+
+**Symptôme** : La sheet « Captive Wi-Fi » ouvre `captive.apple.com` mais reste blanche, sans contenu.
+
+**Cause** : La règle `iptables DNAT wlan0 tcp/443 → 192.168.4.1:80` (ancien pattern pour capturer les probes HTTPS Android) redirigeait le probe HTTPS iOS vers nginx en HTTP clair → handshake TLS invalide → page blanche.
+
+**Fix** : Retrait de la règle DNAT 443. Seul le probe HTTP `/hotspot-detect.html` (port 80) est intercepté. iOS reçoit la page brandée Neopro (`raspberry/captive-portal.html`) et affiche `Utiliser sans Internet`.
+
+**Vérification sur le Pi** :
+
+```bash
+# Sur Debian 12 (iptables)
+sudo iptables -t nat -L PREROUTING -n -v | grep -E 'dpt:(80|443)'
+# Doit afficher UNIQUEMENT la règle 80, pas de 443
+
+# Sur Debian 13 Trixie (nftables)
+sudo nft list ruleset | grep -E 'dport (80|443)'
+# Doit afficher UNIQUEMENT dport 80
+```
+
+Si la règle 443 réapparaît après un reboot/OTA, le smoke test `smoke-network-wifi.test.ts` (describe "ADR-079 Phase 1") l'aurait bloquée avant merge — ouvrir une issue pour investigation.
+
+**Rollback manuel** (si on doit réintroduire temporairement) : NE PAS. Préférer Phase 2 (partage Internet via wlan1) si le comportement iOS est non-satisfaisant.
 
 ## Diagnostic rapide
 
@@ -195,22 +220,23 @@ sudo systemctl restart nginx avahi-daemon  # les deux coupables habituels
 
 iOS vérifie la connectivité Internet via plusieurs URLs à chaque connexion WiFi :
 
-| URL | Réponse attendue | Effet si absent |
-|-----|-------------------|-----------------|
-| `http://captive.apple.com/hotspot-detect.html` | HTTP 200 + body "Success" | Captive portal sheet s'ouvre |
-| `http://www.apple.com/library/test/success.html` | HTTP 200 + body "Success" | Fallback check |
+| URL                                              | Réponse attendue          | Effet si absent              |
+| ------------------------------------------------ | ------------------------- | ---------------------------- |
+| `http://captive.apple.com/hotspot-detect.html`   | HTTP 200 + body "Success" | Captive portal sheet s'ouvre |
+| `http://www.apple.com/library/test/success.html` | HTTP 200 + body "Success" | Fallback check               |
 
 La config complète (dnsmasq + nginx) est dans :
+
 - `raspberry/config/systemd/dnsmasq.conf` — Redirections DNS
 - `raspberry/config/nginx-captive-portal.conf` — Endpoints HTTP
 
 ## Différences Mac vs iPhone
 
-| Comportement | Mac | iPhone |
-|-------------|-----|--------|
-| Résolution mDNS (.local) | Cache Bonjour robuste, résout même si Avahi est lent | Dépend du DNS dnsmasq + mDNS, échoue plus facilement |
-| Captive portal | Ouvre un mini-navigateur séparé, n'affecte pas Safari | Sheet intégré qui **restreint l'accès réseau dans Safari** |
-| Fallback DNS | Utilise mDNS Bonjour en natif | Priorité au DNS classique, mDNS en fallback |
+| Comportement             | Mac                                                   | iPhone                                                     |
+| ------------------------ | ----------------------------------------------------- | ---------------------------------------------------------- |
+| Résolution mDNS (.local) | Cache Bonjour robuste, résout même si Avahi est lent  | Dépend du DNS dnsmasq + mDNS, échoue plus facilement       |
+| Captive portal           | Ouvre un mini-navigateur séparé, n'affecte pas Safari | Sheet intégré qui **restreint l'accès réseau dans Safari** |
+| Fallback DNS             | Utilise mDNS Bonjour en natif                         | Priorité au DNS classique, mDNS en fallback                |
 
 C'est pourquoi `neopro.local` peut fonctionner sur Mac mais pas sur iPhone connecté au même hotspot.
 
@@ -236,13 +262,13 @@ sudo journalctl -u avahi-daemon -n 10 | grep -c wlan0 && echo "OK" || echo "NON 
 
 ## Résumé
 
-| Problème | Cause probable | Solution rapide |
-|----------|---------------|-----------------|
-| `neopro.local` ne résout pas | avahi-daemon crashé ou pas sur wlan0 | `sudo systemctl restart avahi-daemon` |
-| Rien ne charge | nginx tombé | `sudo systemctl restart nginx` |
-| Captive portal sheet bloque | Endpoint `/hotspot-detect.html` absent | Ajouter dans nginx (voir ci-dessus) |
-| DNS `captive.apple.com` pas redirigé | Manque dans dnsmasq.conf | Ajouter `address=/captive.apple.com/192.168.4.1` |
-| Fonctionnait avant, plus maintenant | Service crashé silencieusement | `systemctl is-active hostapd dnsmasq nginx avahi-daemon` |
+| Problème                             | Cause probable                         | Solution rapide                                          |
+| ------------------------------------ | -------------------------------------- | -------------------------------------------------------- |
+| `neopro.local` ne résout pas         | avahi-daemon crashé ou pas sur wlan0   | `sudo systemctl restart avahi-daemon`                    |
+| Rien ne charge                       | nginx tombé                            | `sudo systemctl restart nginx`                           |
+| Captive portal sheet bloque          | Endpoint `/hotspot-detect.html` absent | Ajouter dans nginx (voir ci-dessus)                      |
+| DNS `captive.apple.com` pas redirigé | Manque dans dnsmasq.conf               | Ajouter `address=/captive.apple.com/192.168.4.1`         |
+| Fonctionnait avant, plus maintenant  | Service crashé silencieusement         | `systemctl is-active hostapd dnsmasq nginx avahi-daemon` |
 
 ## Références
 

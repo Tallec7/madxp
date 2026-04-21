@@ -166,6 +166,11 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Utiliser `rsync -a` sans `--delete` pour sync-agent dans build-raspberry.sh (fichiers supprimés survivent sur les Pi après OTA)
 - Supprimer `version.ts` ou l'injection de `APP_VERSION` dans `build-raspberry.sh` / `release.yml`
 
+### Captive Portal (ADR-079 Phase 1)
+
+- Réintroduire la règle `iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 192.168.4.1:80` (ou son équivalent nftables) dans `raspberry/scripts/setup-captive-portal-iptables.sh` ou `fix-fleet-pi.sh` — casse le handshake TLS sur `captive.apple.com` → iOS affiche une page blanche dans la Captive Wi-Fi sheet. Seul le DNAT port 80 est autorisé (smoke test enforced)
+- Supprimer `captive-portal.html` de la copie webapp dans `build-raspberry.sh` ou retirer le bloc `try_files /captive-portal.html` des configs nginx (`install.sh`, `nginx-captive-portal.conf`) → iOS retomberait sur `Success` brut, UX cassée
+
 ### Hardware
 
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (ventilateur non contrôlé, surchauffe silencieuse)

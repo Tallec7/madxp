@@ -1,10 +1,17 @@
 # ADR-079 : Hotspot Internet Share — Option B raffinée puis Option C
 
 **Date** : 2026-04-20
-**Statut** : Proposé
+**Statut** : Phase 1 ✅ Accepté & implémenté (2026-04-21) · Phase 2 ⏳ Proposé
 **Décideurs** : @Tallec7 + Claude
 **Remplace** : —
 **Remplacé par** : —
+
+## Historique
+
+| Date       | Événement                                                                                                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-20 | Rédaction ADR                                                                                                                                                                 |
+| 2026-04-21 | **Phase 1 mergée** : PR [#517](https://github.com/Tallec7/neopro/pull/517) (captive portal brandé) + PR [#524](https://github.com/Tallec7/neopro/pull/524) (retrait DNAT 443) |
 
 ---
 
