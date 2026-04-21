@@ -1133,3 +1133,53 @@ describe('Template Studio v2 — add-field buttons + curated fonts (ADR-075)', (
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-075 V3 Phase 1 — Visual drag-to-position super_admin overlay
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Template Studio v2 — drag-to-position admin overlay (ADR-075 V3 Phase 1)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string): string =>
+    fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  const overlayPath =
+    'src/app/features/content/remotion-templates/studio-v2/admin/admin-canvas-overlay.component.ts';
+  const panelPath =
+    'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts';
+
+  it('admin-canvas-overlay component exists with canvas + drag handles', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/selector:\s*['"]app-admin-canvas-overlay['"]/);
+    expect(comp).toMatch(/data-testid="admin-canvas-overlay"/);
+    expect(comp).toMatch(/data-testid="admin-canvas"/);
+    // Uses view.canvasWidth/Height to drive aspect-ratio (format picker wiring).
+    expect(comp).toMatch(/view\.canvasWidth[\s\S]*view\.canvasHeight/);
+  });
+
+  it('admin-canvas-overlay wires pointer events and emits debounced patches', () => {
+    const comp = readDash(overlayPath);
+    // Pointer-based drag (no mousedown-only) so touch + pen work too.
+    expect(comp).toMatch(/\(pointerdown\)="startDrag/);
+    expect(comp).toMatch(/pointermove[\s\S]*pointerup/);
+    // Debounced via scheduleEmit with setTimeout — not raw patch flood.
+    expect(comp).toMatch(/scheduleEmit\(/);
+    expect(comp).toMatch(/setTimeout\([\s\S]*300\)/);
+    // Position values are clamped to [0,1] — positions are fractions of canvas.
+    expect(comp).toMatch(/clamp\([^,]+,\s*0,\s*1\)/);
+  });
+
+  it('admin-canvas-overlay emits patchTextField / patchImageSlot events', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/@Output\(\)\s+patchTextField\s*=\s*new EventEmitter</);
+    expect(comp).toMatch(/@Output\(\)\s+patchImageSlot\s*=\s*new EventEmitter</);
+    // Resize corner exists for image slots (width/height tuning).
+    expect(comp).toMatch(/data-testid]="'resize-image-/);
+    expect(comp).toMatch(/applyResize\(/);
+  });
+
+  it('admin-studio-panel renders the overlay and wires it to patch handlers', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/import\s*\{\s*AdminCanvasOverlayComponent\s*\}\s*from\s*'\.\/admin-canvas-overlay\.component'/);
+    expect(panel).toMatch(/AdminCanvasOverlayComponent/);
+    expect(panel).toMatch(/<app-admin-canvas-overlay[\s\S]*\[view\]="view"[\s\S]*patchTextField[\s\S]*patchImageSlot/);
+  });
+});

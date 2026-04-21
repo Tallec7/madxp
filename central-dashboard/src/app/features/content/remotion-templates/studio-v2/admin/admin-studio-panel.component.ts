@@ -25,6 +25,7 @@ import type {
 import { AdminFieldEditorComponent, type EditableField } from './admin-field-editor.component';
 import { AdminVariantsPanelComponent } from './admin-variants-panel.component';
 import { AdminLayersPanelComponent } from './admin-layers-panel.component';
+import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
 
 /**
  * ADR-075 Sprint 3 — Orchestrateur du mode édition admin.
@@ -39,10 +40,17 @@ import { AdminLayersPanelComponent } from './admin-layers-panel.component';
     AdminFieldEditorComponent,
     AdminVariantsPanelComponent,
     AdminLayersPanelComponent,
+    AdminCanvasOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="asp" *ngIf="view" data-testid="admin-studio-panel">
+      <app-admin-canvas-overlay
+        [view]="view"
+        (patchTextField)="onPatchTextField($event.id, $event.patch)"
+        (patchImageSlot)="onPatchImageSlot($event.id, $event.patch)"
+      ></app-admin-canvas-overlay>
+
       <section class="asp__format" data-testid="admin-format-picker">
         <h4>Format du visuel</h4>
         <div class="asp__format-options">
