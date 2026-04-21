@@ -1,3 +1,9 @@
+# [3.211.0](https://github.com/Tallec7/neopro/compare/v3.210.0...v3.211.0) (2026-04-21)
+
+### Features
+
+- **templates:** club self-service templates route + restricted studio mode (ADR-075 V3 Phase B) ([#529](https://github.com/Tallec7/neopro/issues/529)) ([b16a5d9](https://github.com/Tallec7/neopro/commit/b16a5d90cdbae58c456dee5a302e8d7fd4ab89eb))
+
 # [3.210.0](https://github.com/Tallec7/neopro/compare/v3.209.0...v3.210.0) (2026-04-21)
 
 ### Features
