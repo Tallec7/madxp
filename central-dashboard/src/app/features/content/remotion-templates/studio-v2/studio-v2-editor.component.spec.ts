@@ -20,6 +20,8 @@ function makeView(overrides: Partial<TemplateStudioView> = {}): TemplateStudioVi
     compositionId: 'TemplateRuntime',
     durationSeconds: 6,
     fps: 30,
+    canvasWidth: 1080,
+    canvasHeight: 1920,
     thumbnailUrl: null,
     published: true,
     variants: [

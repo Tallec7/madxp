@@ -979,3 +979,157 @@ describe('Template Studio v2 — direct asset upload in admin panels (ADR-075)',
     expect(layersBlock?.[0]).toMatch(/\[templateId\]="view\.id"/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-075 — Canvas format picker (16:9 / 9:16 / 1:1 / 4:5)
+// Protège contre les régressions qui reverseraient le format visuel côté DB,
+// repository, validation, contrôleur, types ou UI admin.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Template Studio v2 — canvas format picker (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string): string =>
+    fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('migration adds canvas_width + canvas_height to neopro_templates', () => {
+    const sql = fs.readFileSync(
+      path.join(centralSrc, 'scripts', 'migrations', 'add-template-canvas-dimensions.sql'),
+      'utf8',
+    );
+    expect(sql).toMatch(/ALTER\s+TABLE\s+neopro_templates/i);
+    expect(sql).toMatch(/canvas_width\s+INT\s+NOT\s+NULL\s+DEFAULT\s+1920/i);
+    expect(sql).toMatch(/canvas_height\s+INT\s+NOT\s+NULL\s+DEFAULT\s+1080/i);
+  });
+
+  it('template-studio repository selects + maps canvas_width / canvas_height', () => {
+    const repo = readFile('repositories/template-studio.repository.ts');
+    expect(repo).toMatch(/canvas_width:\s*number/);
+    expect(repo).toMatch(/canvas_height:\s*number/);
+    // SELECT must include both columns, else findV2ById returns undefined for canvas dims
+    expect(repo).toMatch(/SELECT[\s\S]*canvas_width,\s*canvas_height[\s\S]*FROM neopro_templates/);
+    expect(repo).toMatch(/canvasWidth:\s*row\.canvas_width/);
+    expect(repo).toMatch(/canvasHeight:\s*row\.canvas_height/);
+  });
+
+  it('TemplateV2 type exposes canvasWidth / canvasHeight', () => {
+    const types = readFile('types/template-studio.types.ts');
+    expect(types).toMatch(/canvasWidth:\s*number/);
+    expect(types).toMatch(/canvasHeight:\s*number/);
+  });
+
+  it('remotion-templates repository UpdateTemplateInput + update() accept canvas dims', () => {
+    const repo = readFile('repositories/remotion-templates.repository.ts');
+    expect(repo).toMatch(/canvas_width\?:\s*number/);
+    expect(repo).toMatch(/canvas_height\?:\s*number/);
+    expect(repo).toMatch(/canvas_width\s*=\s*\$/);
+    expect(repo).toMatch(/canvas_height\s*=\s*\$/);
+  });
+
+  it('Joi templateUpdateSchema validates canvas_width + canvas_height bounds', () => {
+    const validation = readFile('middleware/validation.ts');
+    const block = validation.match(/templateUpdateSchema:\s*Joi\.object\(\{[\s\S]*?\}\)\.min\(1\)/);
+    expect(block?.[0]).toBeTruthy();
+    expect(block?.[0]).toMatch(/canvas_width:\s*Joi\.number\(\)\.integer\(\)\.min\(240\)\.max\(7680\)/);
+    expect(block?.[0]).toMatch(/canvas_height:\s*Joi\.number\(\)\.integer\(\)\.min\(240\)\.max\(7680\)/);
+  });
+
+  it('updateTemplate controller forwards canvas_width + canvas_height to repo', () => {
+    const ctrl = readFile('controllers/remotion-templates.controller.ts');
+    const updateBlock = ctrl.match(/export\s+const\s+updateTemplate\s*=[\s\S]*?\n\};/);
+    expect(updateBlock?.[0]).toBeTruthy();
+    expect(updateBlock?.[0]).toMatch(/canvas_width\s*,\s*canvas_height/);
+    expect(updateBlock?.[0]).toMatch(/remotionTemplatesRepository\.update\([\s\S]*canvas_width[\s\S]*canvas_height/);
+  });
+
+  it('dashboard TemplateStudioView type exposes canvasWidth / canvasHeight', () => {
+    const types = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates.types.ts',
+    );
+    const block = types.match(/interface\s+TemplateStudioView\s*\{[\s\S]*?\}/);
+    expect(block?.[0]).toMatch(/canvasWidth:\s*number/);
+    expect(block?.[0]).toMatch(/canvasHeight:\s*number/);
+  });
+
+  it('dashboard data service updateTemplate() patch accepts canvas_width/height', () => {
+    const svc = readDash(
+      'src/app/features/content/remotion-templates/remotion-templates-data.service.ts',
+    );
+    const block = svc.match(/updateTemplate\([\s\S]*?\)\s*:\s*Observable/);
+    expect(block?.[0]).toMatch(/canvas_width:\s*number/);
+    expect(block?.[0]).toMatch(/canvas_height:\s*number/);
+  });
+
+  it('studio-v2-editor reads canvas dims from view (not hardcoded)', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts',
+    );
+    expect(editor).toMatch(/canvasWidth:\s*this\.view\.canvasWidth/);
+    expect(editor).toMatch(/canvasHeight:\s*this\.view\.canvasHeight/);
+    // Guard against regression to hardcoded 1920/1080 landscape
+    expect(editor).not.toMatch(/canvasWidth:\s*1920,\s*\n\s*canvasHeight:\s*1080/);
+  });
+
+  it('admin-studio-panel exposes format picker with 4 presets + onSelectFormat PATCH', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts',
+    );
+    expect(comp).toMatch(/data-testid="admin-format-picker"/);
+    expect(comp).toMatch(/formatPresets/);
+    // 4 presets: 16:9 TV, 9:16 Vertical, 1:1 Carré, 4:5 Portrait
+    expect(comp).toMatch(/id:\s*['"]16-9['"][\s\S]*width:\s*1920[\s\S]*height:\s*1080/);
+    expect(comp).toMatch(/id:\s*['"]9-16['"][\s\S]*width:\s*1080[\s\S]*height:\s*1920/);
+    expect(comp).toMatch(/id:\s*['"]1-1['"][\s\S]*width:\s*1080[\s\S]*height:\s*1080/);
+    expect(comp).toMatch(/id:\s*['"]4-5['"][\s\S]*width:\s*1080[\s\S]*height:\s*1350/);
+    expect(comp).toMatch(/onSelectFormat[\s\S]*updateTemplate[\s\S]*canvas_width[\s\S]*canvas_height/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADR-075 — Add text/image buttons + curated Google Fonts dropdown
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Template Studio v2 — add-field buttons + curated fonts (ADR-075)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string): string =>
+    fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+
+  it('admin-studio-panel exposes "+ Ajouter un champ texte" and "+ Ajouter un slot image"', () => {
+    const comp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts',
+    );
+    expect(comp).toMatch(/data-testid="admin-add-text-field"/);
+    expect(comp).toMatch(/data-testid="admin-add-image-slot"/);
+    expect(comp).toMatch(/onAddTextField\(\)[\s\S]*createTextField/);
+    expect(comp).toMatch(/onAddImageSlot\(\)[\s\S]*createImageSlot/);
+    // Unique slotKey generator must remain — duplicates would hit 409 on POST
+    expect(comp).toMatch(/private\s+nextSlotKey\(/);
+  });
+
+  it('admin-field-editor uses curated font dropdown (not free-text) with preview', () => {
+    const editor = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts',
+    );
+    expect(editor).toMatch(/FONT_FAMILIES\s*=\s*\[/);
+    // Core families across display / sans / serif / mono / script buckets
+    for (const fam of ['Anton', 'Inter', 'Montserrat', 'Playfair Display', 'JetBrains Mono', 'Pacifico']) {
+      expect(editor).toContain(`'${fam}'`);
+    }
+    // Dropdown must be <select>, not free <input type="text">, and preview via [style.fontFamily]
+    expect(editor).toMatch(/<select[^>]*ngModel[^>]*fontFamily[\s\S]*\*ngFor="let ff of fontFamilies"/);
+    expect(editor).toMatch(/\[style\.fontFamily\]="ff"/);
+  });
+
+  it('dashboard index.html preloads curated Google Fonts families', () => {
+    const html = readDash('src/index.html');
+    expect(html).toMatch(/fonts\.googleapis\.com\/css2\?family=/);
+    for (const fam of [
+      'Anton',
+      'Bebas\\+Neue',
+      'Inter',
+      'Montserrat',
+      'Playfair\\+Display',
+      'JetBrains\\+Mono',
+      'Pacifico',
+    ]) {
+      expect(html).toMatch(new RegExp(`family=[^"']*${fam}`));
+    }
+  });
+});

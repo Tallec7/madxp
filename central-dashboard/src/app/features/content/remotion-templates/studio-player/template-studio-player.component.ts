@@ -64,7 +64,7 @@ export interface RuntimePlayerState {
   styles: [`
     :host { display: block; width: 100%; }
     .studio-player { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; }
-    .studio-player--empty { aspect-ratio: 9 / 16; }
+    .studio-player--empty { aspect-ratio: 16 / 9; }
     .studio-player__host { width: 100%; }
     .studio-player__empty {
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;

@@ -187,8 +187,9 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
       variantId: this.selectedVariantId,
       textValues: { ...this.textValues },
       imageUploads: { ...this.imageUploads },
-      canvasWidth: 1080,
-      canvasHeight: 1920,
+      // ADR-075 — Canvas dimensions piloté par le template (format picker admin).
+      canvasWidth: this.view.canvasWidth,
+      canvasHeight: this.view.canvasHeight,
       durationSeconds: this.view.durationSeconds,
       fps: this.view.fps,
     };

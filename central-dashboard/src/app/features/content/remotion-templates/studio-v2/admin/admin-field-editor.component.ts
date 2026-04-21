@@ -27,6 +27,50 @@ const ANIMATIONS: AnimationPreset[] = [
 ];
 
 /**
+ * ADR-075 — Polices curated chargées côté dashboard via Google Fonts
+ * (cf. `central-dashboard/src/index.html`). Toute police hors liste retombera
+ * sur la police système côté preview. Pour ajouter : (1) ajouter ici,
+ * (2) ajouter au `<link>` Google Fonts dans `index.html`, (3) s'assurer que
+ * le worker Remotion side rendering la charge aussi.
+ */
+const FONT_FAMILIES = [
+  // Display / impact (titres)
+  'Anton',
+  'Bebas Neue',
+  'Oswald',
+  'Teko',
+  'Archivo Black',
+  'Russo One',
+  'Staatliches',
+  'Bungee',
+  'Abril Fatface',
+  // Sans-serif modernes
+  'Inter',
+  'Roboto',
+  'Montserrat',
+  'Poppins',
+  'Open Sans',
+  'Raleway',
+  'Work Sans',
+  'Barlow',
+  'DM Sans',
+  'Nunito',
+  'Figtree',
+  // Serif élégants
+  'Playfair Display',
+  'Lora',
+  'Merriweather',
+  'Cormorant Garamond',
+  // Monospace / tech
+  'JetBrains Mono',
+  'Space Mono',
+  // Scripts / fun
+  'Pacifico',
+  'Caveat',
+  'Permanent Marker',
+] as const;
+
+/**
  * ADR-075 Sprint 3 — Éditeur de champ unique (text ou image).
  * Émet des patches partiels consommés par le parent pour PATCH serveur.
  */
@@ -80,7 +124,11 @@ const ANIMATIONS: AnimationPreset[] = [
       <section class="afe__section" *ngIf="f.kind === 'text'">
         <h5>Typographie</h5>
         <label>fontFamily
-          <input type="text" [(ngModel)]="$any(f.value).fontFamily" (change)="emitPatch()" />
+          <select [(ngModel)]="$any(f.value).fontFamily" (change)="emitPatch()">
+            <option *ngFor="let ff of fontFamilies" [value]="ff" [style.fontFamily]="ff">
+              {{ ff }}
+            </option>
+          </select>
         </label>
         <label>fontSize
           <input type="number" [(ngModel)]="$any(f.value).fontSize" (change)="emitPatch()" />
@@ -124,6 +172,7 @@ export class AdminFieldEditorComponent {
   @Output() delete = new EventEmitter<void>();
 
   readonly animations = ANIMATIONS;
+  readonly fontFamilies = FONT_FAMILIES;
 
   emitPatch(): void {
     // Emit the current snapshot; the parent diffs against its own state

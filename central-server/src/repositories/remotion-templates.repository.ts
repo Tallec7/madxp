@@ -32,6 +32,8 @@ export interface UpdateTemplateInput {
   props_schema?: Record<string, unknown>[];
   default_props?: Record<string, unknown>;
   site_id?: string | null;
+  canvas_width?: number;
+  canvas_height?: number;
 }
 
 export interface NeoProTemplateVersion extends QueryResultRow {
@@ -189,6 +191,14 @@ class RemotionTemplatesRepository {
     if (input.site_id !== undefined) {
       fields.push(`site_id = $${idx++}`);
       values.push(input.site_id);
+    }
+    if (input.canvas_width !== undefined) {
+      fields.push(`canvas_width = $${idx++}`);
+      values.push(input.canvas_width);
+    }
+    if (input.canvas_height !== undefined) {
+      fields.push(`canvas_height = $${idx++}`);
+      values.push(input.canvas_height);
     }
 
     if (fields.length === 0) return this.findById(id);

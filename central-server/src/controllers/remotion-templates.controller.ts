@@ -456,12 +456,14 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
 export const updateTemplate = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, props_schema, default_props, site_id } = req.body as {
+    const { name, description, props_schema, default_props, site_id, canvas_width, canvas_height } = req.body as {
       name?: string;
       description?: string | null;
       props_schema?: Record<string, unknown>[];
       default_props?: Record<string, unknown>;
       site_id?: string | null;
+      canvas_width?: number;
+      canvas_height?: number;
     };
 
     const existing = await remotionTemplatesRepository.findById(id);
@@ -476,6 +478,8 @@ export const updateTemplate = async (req: AuthRequest, res: Response) => {
       props_schema,
       default_props,
       site_id: siteIdPatch,
+      canvas_width,
+      canvas_height,
     });
 
     logger.info('Template updated', {
@@ -486,6 +490,8 @@ export const updateTemplate = async (req: AuthRequest, res: Response) => {
         props_schema: props_schema !== undefined,
         default_props: default_props !== undefined,
         site_id: siteIdPatch !== undefined,
+        canvas_width: canvas_width !== undefined,
+        canvas_height: canvas_height !== undefined,
       },
       userId: req.user?.id,
     });

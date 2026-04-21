@@ -138,6 +138,8 @@ export class RemotionTemplatesDataService {
       description: string | null;
       props_schema: TemplatePropDef[];
       default_props: Record<string, unknown>;
+      canvas_width: number;
+      canvas_height: number;
     }>,
   ): Observable<RemotionTemplate> {
     return this.api.patch<RemotionTemplate>(`/remotion-templates/${id}`, patch);
