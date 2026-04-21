@@ -1,3 +1,9 @@
+# [3.216.0](https://github.com/Tallec7/neopro/compare/v3.215.0...v3.216.0) (2026-04-21)
+
+### Features
+
+- **templates+safe:** ADR-083 filename-resolver + ADR-084 polices OTF + alwaysVisible + scale-in ([#540](https://github.com/Tallec7/neopro/issues/540)) ([0b049fa](https://github.com/Tallec7/neopro/commit/0b049faaa9500e96ad08523815f928eb0a97ab02))
+
 # [3.215.0](https://github.com/Tallec7/neopro/compare/v3.214.4...v3.215.0) (2026-04-21)
 
 ### Features
