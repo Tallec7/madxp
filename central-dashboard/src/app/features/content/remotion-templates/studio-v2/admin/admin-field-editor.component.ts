@@ -181,7 +181,7 @@ export class AdminFieldEditorComponent {
   emitPatch(): void {
     if (this.field.kind === 'text') {
       const v = this.field.value;
-      const patch: TemplateTextFieldUpdate = {
+      const patch: TemplateTextFieldUpdate = stripNullish({
         slotKey: v.slotKey,
         label: v.label,
         positionX: v.position.x,
@@ -195,15 +195,16 @@ export class AdminFieldEditorComponent {
         appearDuration: v.appearDuration,
         animation: v.animation,
         defaultValue: v.defaultValue,
-        maxChars: v.maxChars,
+        // maxChars: serveur accepte null explicitement (Joi `.allow(null)`)
+        maxChars: v.maxChars ?? null,
         multiline: v.multiline,
         required: v.required,
         sortOrder: v.sortOrder,
-      };
+      }, ['maxChars']);
       this.patch.emit(patch);
     } else {
       const v = this.field.value;
-      const patch: TemplateImageSlotUpdate = {
+      const patch: TemplateImageSlotUpdate = stripNullish({
         slotKey: v.slotKey,
         label: v.label,
         positionX: v.position.x,
@@ -213,11 +214,33 @@ export class AdminFieldEditorComponent {
         appearAt: v.appearAt,
         appearDuration: v.appearDuration,
         animation: v.animation,
-        aspectRatio: v.aspectRatio,
+        // aspectRatio: serveur accepte null/'' explicitement
+        aspectRatio: v.aspectRatio ?? null,
         required: v.required,
         sortOrder: v.sortOrder,
-      };
+      }, ['aspectRatio']);
       this.patch.emit(patch);
     }
   }
+}
+
+/**
+ * Les schémas Joi PATCH n'autorisent pas `null` sur la plupart des champs
+ * (seulement `maxChars` / `aspectRatio`). Les colonnes DB étant nullable, un
+ * template existant peut avoir `color: null`, `fontFamily: null`, etc. Sans
+ * ce filtre, chaque frappe renvoyait un 400 car le payload contenait des
+ * `null` interdits. On préserve les clés whitelist (qui autorisent null).
+ */
+function stripNullish<T extends Record<string, unknown>>(
+  obj: T,
+  keepNullKeys: ReadonlyArray<keyof T> = [],
+): T {
+  const out: Record<string, unknown> = {};
+  const keepSet = new Set<string>(keepNullKeys as ReadonlyArray<string>);
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    if (v === null && !keepSet.has(k)) continue;
+    out[k] = v;
+  }
+  return out as T;
 }
