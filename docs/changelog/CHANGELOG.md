@@ -1,3 +1,9 @@
+## [3.207.3](https://github.com/Tallec7/neopro/compare/v3.207.2...v3.207.3) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** allow admin/super_admin to render unpublished templates ([#522](https://github.com/Tallec7/neopro/issues/522)) ([73bf3da](https://github.com/Tallec7/neopro/commit/73bf3daae7bf6a04558d49f664e4a3ee46a9c989))
+
 ## [3.207.2](https://github.com/Tallec7/neopro/compare/v3.207.1...v3.207.2) (2026-04-20)
 
 ### Bug Fixes
