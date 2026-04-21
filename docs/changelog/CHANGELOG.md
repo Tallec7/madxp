@@ -1,3 +1,9 @@
+# [3.209.0](https://github.com/Tallec7/neopro/compare/v3.208.1...v3.209.0) (2026-04-21)
+
+### Features
+
+- **templates:** drag-to-position visual overlay for super_admin (ADR-075 V3 P1) ([#525](https://github.com/Tallec7/neopro/issues/525)) ([47e69d7](https://github.com/Tallec7/neopro/commit/47e69d79853d715f193cc4267ef97b10b21162e0))
+
 ## [3.208.1](https://github.com/Tallec7/neopro/compare/v3.208.0...v3.208.1) (2026-04-21)
 
 ### Bug Fixes
