@@ -14,6 +14,7 @@ import { Router } from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
 import { requireClubByoAccess } from '../middleware/require-club-byo-access';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { uploadTemplateAsset } from '../middleware/upload';
 import {
   validate,
   validateParams,
@@ -70,6 +71,16 @@ router.patch(
   validate(schemas.templateStudioImageSlotUpdate),
   sensitiveRateLimit,
   ctrl.updateMyImageSlot,
+);
+
+// ── Upload vidéo de fond (ADR-075 V3 Phase C)
+router.post(
+  '/:id/background',
+  ...clubAccess,
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  uploadTemplateAsset.single('file'),
+  ctrl.uploadMyVariantBackground,
 );
 
 export default router;

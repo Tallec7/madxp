@@ -9,6 +9,7 @@
  * listés en lecture seule, pas éditables.
  */
 
+import * as fs from 'fs';
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
@@ -17,6 +18,7 @@ import {
   remotionTemplatesRepository,
   templateStudioRepository,
 } from '../repositories';
+import { uploadAsset, getAssetUrl } from '../services/storage.service';
 
 const notFound = (res: Response, msg = 'Ressource non trouvée'): void => {
   res.status(404).json({ error: msg });
@@ -135,6 +137,61 @@ export const updateMyTextField = async (req: AuthRequest, res: Response): Promis
     res.json(updated);
   } catch (error) {
     serverError('updateMyTextField', req, error, res);
+  }
+};
+
+const cleanupTmp = (filePath: string): void => {
+  try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+};
+
+// ── POST /api/club/remotion-templates/:id/background
+// Upload d'une vidéo de fond (WebM/MP4) pour la première variante du template.
+// Le club a un modèle single-variant : on update la variant de sort_order le plus bas.
+export const uploadMyVariantBackground = async (req: AuthRequest, res: Response): Promise<void> => {
+  const file = req.file as Express.Multer.File | undefined;
+  const filePath = file?.path;
+  try {
+    const { id } = req.params;
+    const siteId = req.clubSiteId as string;
+    if (!file || !filePath) {
+      res.status(400).json({ error: 'Fichier requis' });
+      return;
+    }
+    const owned = await loadOwnedTemplate(id, siteId);
+    if (!owned.ok) {
+      cleanupTmp(filePath);
+      return owned.reason === 'not_found' ? notFound(res, 'Template non trouvé') : forbidden(res);
+    }
+    const variants = await templateStudioRepository.listVariants(id);
+    const variant = variants[0];
+    if (!variant) {
+      cleanupTmp(filePath);
+      return notFound(res, 'Aucune variante à éditer — contactez le support');
+    }
+
+    const storagePath = `template-assets/club/${siteId}/${Date.now()}-${file.originalname}`;
+    const buffer = fs.readFileSync(filePath);
+    const uploaded = await uploadAsset(buffer, storagePath, file.mimetype);
+    cleanupTmp(filePath);
+    if (!uploaded) {
+      res.status(500).json({ error: 'Échec upload FTP' });
+      return;
+    }
+    const url = getAssetUrl(storagePath);
+    const updated = await templateStudioRepository.updateVariant(variant.id, {
+      backgroundVideoUrl: url,
+    });
+    logger.info('Club template variant background uploaded', {
+      templateId: id,
+      variantId: variant.id,
+      siteId,
+      userId: req.user?.id,
+      url,
+    });
+    res.json({ url, variant: updated });
+  } catch (error) {
+    if (filePath) cleanupTmp(filePath);
+    serverError('uploadMyVariantBackground', req, error, res);
   }
 };
 
