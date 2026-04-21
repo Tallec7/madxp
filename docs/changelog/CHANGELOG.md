@@ -6,6 +6,18 @@
 
 ---
 
+## [3.214.4](https://github.com/Tallec7/neopro/compare/v3.214.3...v3.214.4) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** SQL migration backfill legacy v2 URLs (ADR-075) ([#538](https://github.com/Tallec7/neopro/issues/538)) ([191d4d1](https://github.com/Tallec7/neopro/commit/191d4d1387a9e22641f30ed77555249177f63e7d))
+
+## [3.214.3](https://github.com/Tallec7/neopro/compare/v3.214.2...v3.214.3) (2026-04-21)
+
+### Bug Fixes
+
+- **templates:** backfill legacy ButSimple/ButImgJoueur v2 assets (ADR-075) ([#537](https://github.com/Tallec7/neopro/issues/537)) ([cf0932a](https://github.com/Tallec7/neopro/commit/cf0932a299b82814c1ec26dd2e15f6166e90fe80))
+
 ## [3.214.2](https://github.com/Tallec7/neopro/compare/v3.214.1...v3.214.2) (2026-04-21)
 
 ### Bug Fixes
