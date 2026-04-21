@@ -1,3 +1,9 @@
+# [3.214.0](https://github.com/Tallec7/neopro/compare/v3.213.3...v3.214.0) (2026-04-21)
+
+### Features
+
+- **remote:** ADR-081 Phase 0 — observability télécommande (audit + logs) ([#534](https://github.com/Tallec7/neopro/issues/534)) ([c0c28d4](https://github.com/Tallec7/neopro/commit/c0c28d42b37c1333bc3454c984bddd84dc832ea2))
+
 ## [3.213.3](https://github.com/Tallec7/neopro/compare/v3.213.2...v3.213.3) (2026-04-21)
 
 ### Bug Fixes
