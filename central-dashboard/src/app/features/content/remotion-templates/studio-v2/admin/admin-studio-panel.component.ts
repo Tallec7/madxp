@@ -257,7 +257,8 @@ export class AdminStudioPanelComponent {
     const payload: TemplateTextFieldCreate = {
       slotKey,
       label: `Texte ${this.view.textFields.length + 1}`,
-      position: { x: 0.5, y: 0.5 },
+      positionX: 0.5,
+      positionY: 0.5,
       maxWidth: 0.8,
       fontFamily: 'Anton',
       fontSize: 48,
@@ -280,8 +281,10 @@ export class AdminStudioPanelComponent {
 
   onPatchTextField(id: string, patch: TemplateTextFieldUpdate): void {
     const svc = this.clubMode ? this.clubApi : this.api;
+    // Ne PAS emit `changed` ici : le two-way binding ngModel a déjà mis à jour
+    // le modèle local. Reload = unmount/remount des cartes → flash à chaque
+    // keystroke. On reload uniquement après CREATE/DELETE (afterMutation).
     svc.updateTextField(this.view.id, id, patch).subscribe({
-      next: () => this.changed.emit(),
       error: () => this.notifications.error('Échec mise à jour champ texte'),
     });
   }
@@ -302,7 +305,10 @@ export class AdminStudioPanelComponent {
     const payload: TemplateImageSlotCreate = {
       slotKey,
       label: `Image ${this.view.imageSlots.length + 1}`,
-      position: { x: 0.5, y: 0.5, width: 0.3, height: 0.3 },
+      positionX: 0.5,
+      positionY: 0.5,
+      width: 0.3,
+      height: 0.3,
       appearAt: 0.5,
       appearDuration: 0.4,
       animation: 'fade',
@@ -318,8 +324,8 @@ export class AdminStudioPanelComponent {
 
   onPatchImageSlot(id: string, patch: TemplateImageSlotUpdate): void {
     const svc = this.clubMode ? this.clubApi : this.api;
+    // Pas d'emit `changed` : voir onPatchTextField pour la raison (anti-flash).
     svc.updateImageSlot(this.view.id, id, patch).subscribe({
-      next: () => this.changed.emit(),
       error: () => this.notifications.error('Échec mise à jour slot image'),
     });
   }

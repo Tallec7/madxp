@@ -23,13 +23,33 @@ export type TemplateVariantUpdate = Partial<TemplateVariantCreate>;
 export type TemplateLayerCreate = Omit<TemplateLayer, 'id' | 'templateId'>;
 export type TemplateLayerUpdate = Partial<TemplateLayerCreate>;
 
-export type TemplateTextFieldCreate = Omit<TemplateTextField, 'id' | 'templateId'>;
+/**
+ * Flat payload matching server Joi schema `templateStudioTextFieldCreate`
+ * (positionX/positionY, not nested `position`). Do not use `Omit<TemplateTextField, ...>`
+ * — the domain type has nested `position` but the API expects flat fields.
+ */
+export interface TemplateTextFieldCreate {
+  slotKey: string;
+  label: string;
+  positionX: number;
+  positionY: number;
+  maxWidth?: number;
+  fontFamily?: string;
+  fontSize: number;
+  color?: string;
+  align?: 'left' | 'center' | 'right';
+  appearAt: number;
+  appearDuration?: number;
+  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  defaultValue?: string;
+  maxChars?: number | null;
+  multiline?: boolean;
+  required?: boolean;
+  sortOrder?: number;
+}
 
 /**
- * Flat payload matching server Joi schema `templateStudioTextFieldUpdate`
- * (positionX/positionY, not nested `position`). Do not replace with
- * `Partial<TemplateTextFieldCreate>` — the domain type has nested `position`
- * but the API expects flat fields.
+ * Flat payload matching server Joi schema `templateStudioTextFieldUpdate`.
  */
 export interface TemplateTextFieldUpdate {
   slotKey?: string;
@@ -51,11 +71,26 @@ export interface TemplateTextFieldUpdate {
   sortOrder?: number;
 }
 
-export type TemplateImageSlotCreate = Omit<TemplateImageSlot, 'id' | 'templateId'>;
+/**
+ * Flat payload matching server Joi schema `templateStudioImageSlotCreate`.
+ */
+export interface TemplateImageSlotCreate {
+  slotKey: string;
+  label: string;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  appearAt: number;
+  appearDuration?: number;
+  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  aspectRatio?: string | null;
+  required?: boolean;
+  sortOrder?: number;
+}
 
 /**
- * Flat payload matching server Joi schema `templateStudioImageSlotUpdate`
- * (positionX/positionY/width/height, not nested `position`).
+ * Flat payload matching server Joi schema `templateStudioImageSlotUpdate`.
  */
 export interface TemplateImageSlotUpdate {
   slotKey?: string;
