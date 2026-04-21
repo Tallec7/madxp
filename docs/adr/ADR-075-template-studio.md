@@ -1,7 +1,7 @@
 # ADR-075 : Template Studio — compositeur multi-couches data-driven
 
 **Date** : 2026-04-20
-**Statut** : Accepté — MVP livré (Sprints 1→4) + V2 white-glove complet (Sprints 5–9, site-scoped templates + Premium gate + upload direct 📁 + canvas format picker + curated fonts)
+**Statut** : Accepté — MVP livré (Sprints 1→4) + V2 white-glove complet (Sprints 5–9) + V3 Phase 1 (drag-to-position super_admin, 2026-04-21). V3 Phases A/B/C/D **en cours** (self-service club, décision GLT 2026-04-21, estimation 8-10j)
 **Décideurs** : GLT (PO + Dev Lead), Gabin (Motion Designer), Claude Code (exécution)
 **Remplace** : PROP-014 (draft, superseded)
 **Lié** : ADR-054 (async Remotion render), ADR-055 (template versions), PROP-004 (video template engine)
@@ -719,19 +719,50 @@ Quand un template legacy passe en v2, il devient intéressant de splitter les m�
 
 **Estimation** : 5-7j dev (scoping + UI filter + gate), 0 refonte architecture.
 
-### V3 (Option C — self-service club) — T+3 à 6 mois
+### V3 (Option C — self-service club) — en cours (2026-04)
 
-**Trigger** : signal produit fort (≥20 clubs demandent self-service).
-**Scope** :
+**Trigger** : décision produit GLT 2026-04-21 (accélère le roadmap, pas de signal ≥20 clubs mais Phase 1 drag-to-position a dé-risqué la partie UX).
+**Scope découpé en 4 sous-phases livrées en PR séparées** (reviewabilité + rollback indépendant) :
 
-- Mode "club_admin" qui expose un sous-ensemble des contrôles super_admin
-- **Visual helper drag-to-position** sur le canvas (nouveauté vs form input %)
-- Upload direct d'une vidéo background par le club (pas de couches alpha — club n'a pas AE)
-- Template "BYO" simplifié : 1 variante = leur vidéo, 0 couches alpha, N text/image slots
-- Rate limit par site (max 3 templates perso actifs, max 10 renders/jour)
-- Feature gate Premium+
+#### V3 Phase 1 — ✅ Livré (2026-04)
 
-**Estimation** : 10-15j dev.
+Visual drag-to-position super_admin sur canvas. Composant `AdminCanvasOverlayComponent` (PointerEvent, debounce 300ms, clamp 0-1, resize corner sur images). Ouvre la voie à la réutilisation en mode club_admin (Phase 2).
+
+#### V3 Phase A — Infra backend `site_id` + feature gate (2-3j)
+
+- `neopro_templates.site_id` : colonne déjà nullable (V2 white-glove), ajouter **index** + guard `WHERE site_id IS NULL OR site_id = $userSite` sur `findVisibleForSite()` (déjà en place) — vérifier qu'il est branché sur TOUTES les routes studio v2 CRUD (variants, layers, text-fields, image-slots, renders)
+- **Feature gate** : utiliser l'existant `FeatureGateService.canAccess('template_studio_byo', site)` avec tier `premium` (PAS de nouveau tier `premium_plus` — grosse évol droits/abonnements planifiée séparément, ne pas créer de dette sur le schema actuel)
+- Ajouter `template_studio_byo` au map `FEATURE_TIERS` dans `feature-gate.service.ts` + server-side `requireSiteTier('premium')`
+- Active le white-glove V2 au passage (UI filtre "Mes templates perso" côté dashboard super_admin)
+
+#### V3 Phase B — Mode club_admin dashboard (3-4j)
+
+- Nouvelle route `/content/my-templates` (rôle `club` + feature gate `template_studio_byo`)
+- Réutilise `AdminStudioPanelComponent` + `AdminCanvasOverlayComponent` en mode **restreint** :
+  - ❌ pas de création de layers (couches alpha = réservé super_admin)
+  - ❌ pas de modification des variants existants (1 seule variante = leur vidéo)
+  - ✅ drag-to-position + format picker + text/image fields + curated Google Fonts
+- Wizard BYO simplifié : step 1 upload vidéo, step 2 ajout slots texte/image, step 3 publish
+- Filtre `site_id = currentSite.id` côté data service (pas de fuite cross-club)
+
+#### V3 Phase C — Upload direct vidéo background club (2-3j)
+
+- Endpoint `POST /api/sites/:id/templates/:tid/background` — FTP `template-assets/club/<siteId>/`
+- Transcodage léger (ffmpeg) si codec non supporté par Remotion (h264/mp4 target)
+- Quota storage par site (réutiliser l'infra existante si possible, sinon déféré à l'évol droits/abonnements)
+- Validation : max 60s, max 100MB, pas de couches alpha
+
+#### V3 Phase D — Rate limits + quotas (2-3j)
+
+- `max 3 templates actifs` par site : check côté `createTemplate` controller
+- `max 10 renders/jour` : table `site_render_counts` (day-partitioned) ou Redis counter si déjà en place
+- Badges quota dans UI club : `X/3 templates`, `Y/10 renders restants aujourd'hui`
+- Endpoint `GET /api/sites/:id/template-studio/quota` → `{ templatesActive, templatesMax, rendersToday, rendersMax }`
+- Alertes : si 90% d'un quota atteint, notification dashboard club
+
+**Estimation globale V3** : 10-13j dev (Phase 1 déjà livré → reste ~8-10j sur A/B/C/D).
+
+**⚠️ Note droits/abonnements** : Une grosse évolution du système de droits/abonnements est planifiée séparément par GLT. Pour V3 A/B/C/D, **utiliser l'existant simple** (`premium` tier, `FeatureGateService.canAccess`, `requireSiteTier`). Ne pas introduire `premium_plus` ni table de quotas sophistiquée : l'évol future réconciliera tout ça. Les rate limits Phase D peuvent donc rester en valeurs dures (`3` / `10/jour`) hardcodées dans `feature-gate.service.ts` plutôt que configurables par tier.
 
 ### V4 (freemium public) — T+6 à 12 mois
 
