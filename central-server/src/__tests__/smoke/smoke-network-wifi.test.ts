@@ -1239,3 +1239,92 @@ describe('ADR-073 hotspot security hardening guards', () => {
     expect(build.includes('modules/network/hotspot-dashboard.js')).toBe(true);
   });
 });
+
+describe('ADR-079 Phase 1 — captive portal HTTPS (443) regression guards', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  // Rediriger le 443 des clients hotspot vers nginx:80 casse le handshake TLS sur
+  // captive.apple.com → iOS affiche une page blanche dans la Captive Wi-Fi sheet.
+  // Ne garder que la DNAT 80 (ADR-079 Phase 1, PR #524).
+
+  it('setup-captive-portal-iptables.sh must NOT install iptables DNAT on port 443', () => {
+    const script = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
+      'utf8'
+    );
+    // Match any iptables -A/-I rule adding a DNAT on dport 443
+    const forbidden = /iptables\s+-t\s+nat\s+-[AI]\s+PREROUTING[^\n]*--dport\s+443[^\n]*DNAT/;
+    expect({ installsDnat443: forbidden.test(script) })
+      .toEqual({ installsDnat443: false });
+  });
+
+  it('setup-captive-portal-iptables.sh must NOT install nftables DNAT on port 443', () => {
+    const script = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
+      'utf8'
+    );
+    // Match `nft add rule ... tcp dport 443 dnat to ...`
+    const forbidden = /nft\s+add\s+rule[^\n]*tcp\s+dport\s+443[^\n]*dnat/;
+    expect({ installsNftDnat443: forbidden.test(script) })
+      .toEqual({ installsNftDnat443: false });
+  });
+
+  it('setup-captive-portal-iptables.sh must still install DNAT on port 80 (kept)', () => {
+    const script = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
+      'utf8'
+    );
+    const hasIptables80 = /iptables\s+-t\s+nat\s+-[AI]\s+PREROUTING[^\n]*--dport\s+80[^\n]*DNAT/.test(script);
+    const hasNft80 = /nft\s+add\s+rule[^\n]*tcp\s+dport\s+80[^\n]*dnat/.test(script);
+    expect({ hasIptables80, hasNft80 })
+      .toEqual({ hasIptables80: true, hasNft80: true });
+  });
+
+  it('fix-fleet-pi.sh must NOT install DNAT 443 (legacy rule) — may only cleanup it', () => {
+    const script = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/fix-fleet-pi.sh'),
+      'utf8'
+    );
+    // An install line uses -A / -I ; a cleanup line uses -D. Only -A/-I on dport 443 is forbidden.
+    const installLines = script
+      .split('\n')
+      .filter((l) => /iptables\s+-t\s+nat\s+-[AI]\s+PREROUTING/.test(l))
+      .filter((l) => /--dport\s+443/.test(l));
+    expect({ installs443: installLines.length }).toEqual({ installs443: 0 });
+  });
+
+  it('nginx must serve branded captive-portal.html for /hotspot-detect.html (install.sh + nginx-captive-portal.conf)', () => {
+    const installSh = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/install.sh'),
+      'utf8'
+    );
+    const nginxConf = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/nginx-captive-portal.conf'),
+      'utf8'
+    );
+    expect({
+      installShTryFiles: /hotspot-detect\.html[\s\S]{0,200}try_files\s+\/captive-portal\.html/.test(installSh),
+      nginxConfTryFiles: /hotspot-detect\.html[\s\S]{0,200}try_files\s+\/captive-portal\.html/.test(nginxConf),
+    }).toEqual({ installShTryFiles: true, nginxConfTryFiles: true });
+  });
+
+  it('build-raspberry.sh must copy captive-portal.html into webapp deploy dir', () => {
+    const build = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/scripts/build-raspberry.sh'),
+      'utf8'
+    );
+    expect({ copiesPortal: /captive-portal\.html[\s\S]*webapp\/captive-portal\.html/.test(build) })
+      .toEqual({ copiesPortal: true });
+  });
+
+  it('raspberry/captive-portal.html must exist and load the Neopro logo', () => {
+    const portal = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/captive-portal.html'),
+      'utf8'
+    );
+    expect({
+      hasLogo: /neopro-logo-white\.png/.test(portal),
+      hasTitle: /<title>[^<]*NEOPRO/i.test(portal),
+    }).toEqual({ hasLogo: true, hasTitle: true });
+  });
+});
