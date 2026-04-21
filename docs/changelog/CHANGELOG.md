@@ -1,3 +1,9 @@
+# [3.210.0](https://github.com/Tallec7/neopro/compare/v3.209.0...v3.210.0) (2026-04-21)
+
+### Features
+
+- **templates:** register template_studio_byo feature gate (ADR-075 V3 Phase A) ([#528](https://github.com/Tallec7/neopro/issues/528)) ([3cab038](https://github.com/Tallec7/neopro/commit/3cab038b1da0796c8e4241ad55d210f4fc270c21))
+
 # [3.209.0](https://github.com/Tallec7/neopro/compare/v3.208.1...v3.209.0) (2026-04-21)
 
 ### Features
