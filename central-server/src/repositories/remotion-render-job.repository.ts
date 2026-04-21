@@ -152,6 +152,22 @@ class RemotionRenderJobRepository {
   }
 
   /**
+   * ADR-075 V3 Phase D — Count renders enqueued in the last 24h for a site.
+   * Used for club render quota enforcement. Counts all statuses (even failed)
+   * to prevent retry abuse, but excludes cancelled.
+   */
+  async countRendersLast24h(siteId: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+       FROM remotion_render_jobs
+       WHERE requested_for_site_id = $1
+         AND created_at >= NOW() - INTERVAL '24 hours'`,
+      [siteId]
+    );
+    return parseInt(result.rows[0]?.count ?? '0', 10);
+  }
+
+  /**
    * Recovery helper — on server restart, any 'running' job claimed by this process
    * is stale (the render was interrupted). Mark them failed so the user can retry.
    */

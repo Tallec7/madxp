@@ -84,6 +84,19 @@ class RemotionTemplatesRepository {
     return result.rows[0] || null;
   }
 
+  /**
+   * ADR-075 V3 Phase D — Count templates scoped to a specific site (site_id = siteId).
+   * Used for club template quota display (informational, not hard-gated since
+   * super_admin scaffolds templates).
+   */
+  async countOwnedBySite(siteId: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM neopro_templates WHERE site_id = $1`,
+      [siteId]
+    );
+    return parseInt(result.rows[0]?.count ?? '0', 10);
+  }
+
   async findPublishedById(id: string): Promise<NeoProTemplate | null> {
     const result = await query<NeoProTemplate>(
       'SELECT * FROM neopro_templates WHERE id = $1 AND published = true',

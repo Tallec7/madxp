@@ -34,6 +34,9 @@ const clubAccess = [
 // ── List own templates
 router.get('/', ...clubAccess, adminRateLimit, ctrl.listMyTemplates);
 
+// ── Quota snapshot (ADR-075 V3 Phase D)
+router.get('/quota', ...clubAccess, adminRateLimit, ctrl.getMyQuota);
+
 // ── Studio view (V2)
 router.get(
   '/:id/studio',

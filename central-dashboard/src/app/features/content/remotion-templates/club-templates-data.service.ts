@@ -13,6 +13,12 @@ import type {
   TemplateTextFieldUpdate,
 } from './remotion-templates-data.service';
 
+/** ADR-075 V3 Phase D — Quota snapshot returned by GET /club/remotion-templates/quota. */
+export interface ClubTemplateQuota {
+  templates: { used: number; limit: number; remaining: number };
+  renders: { used: number; limit: number; remaining: number; windowHours: 24 };
+}
+
 /**
  * ADR-075 V3 Phase B — Wrap des appels `/api/club/remotion-templates/*`.
  *
@@ -26,6 +32,11 @@ export class ClubTemplatesDataService {
 
   list(): Observable<RemotionTemplate[]> {
     return this.api.get<RemotionTemplate[]>('/club/remotion-templates');
+  }
+
+  /** ADR-075 V3 Phase D — snapshot quotas templates + renders. */
+  getQuota(): Observable<ClubTemplateQuota> {
+    return this.api.get<ClubTemplateQuota>('/club/remotion-templates/quota');
   }
 
   getStudioView(templateId: string): Observable<TemplateStudioView> {

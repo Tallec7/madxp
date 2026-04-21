@@ -6,7 +6,10 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ClubTemplatesDataService } from './club-templates-data.service';
+import {
+  ClubTemplatesDataService,
+  type ClubTemplateQuota,
+} from './club-templates-data.service';
 import { AdminStudioPanelComponent } from './studio-v2/admin/admin-studio-panel.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import type {
@@ -34,6 +37,22 @@ import type {
           Personnalisez vos templates vidéo (Premium). Drag &amp; drop pour repositionner,
           éditez les textes, changez le format.
         </p>
+        <div class="mt__quota" *ngIf="quota() as q" data-testid="my-templates-quota">
+          <span
+            class="mt__badge"
+            [class.mt__badge--warn]="q.templates.remaining === 0"
+            data-testid="my-templates-quota-templates"
+          >
+            {{ q.templates.used }}/{{ q.templates.limit }} templates
+          </span>
+          <span
+            class="mt__badge"
+            [class.mt__badge--warn]="q.renders.remaining === 0"
+            data-testid="my-templates-quota-renders"
+          >
+            {{ q.renders.used }}/{{ q.renders.limit }} rendus / 24h
+          </span>
+        </div>
       </header>
 
       <section class="mt__list" *ngIf="!selected()">
@@ -112,6 +131,11 @@ import type {
     .mt__bg-upload:hover { background: #f5f3ff; }
     .mt__bg-upload input { display: none; }
     .mt__bg-upload--busy { opacity: 0.6; cursor: wait; }
+    .mt__quota { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .mt__badge { display: inline-flex; align-items: center; padding: 4px 10px;
+      font-size: 12px; font-weight: 500; color: #374151; background: #f3f4f6;
+      border: 1px solid #e5e7eb; border-radius: 999px; }
+    .mt__badge--warn { color: #b45309; background: #fef3c7; border-color: #fcd34d; }
   `],
 })
 export class MyTemplatesComponent implements OnInit {
@@ -123,9 +147,18 @@ export class MyTemplatesComponent implements OnInit {
   selected = signal<string | null>(null);
   view = signal<TemplateStudioView | null>(null);
   uploading = signal<boolean>(false);
+  quota = signal<ClubTemplateQuota | null>(null);
 
   ngOnInit(): void {
     this.loadList();
+    this.loadQuota();
+  }
+
+  loadQuota(): void {
+    this.clubApi.getQuota().subscribe({
+      next: (q) => this.quota.set(q),
+      error: () => { /* quota is informational — silent fail */ },
+    });
   }
 
   loadList(): void {
@@ -160,6 +193,7 @@ export class MyTemplatesComponent implements OnInit {
     this.selected.set(null);
     this.view.set(null);
     this.loadList();
+    this.loadQuota();
   }
 
   onBackgroundSelected(event: Event): void {

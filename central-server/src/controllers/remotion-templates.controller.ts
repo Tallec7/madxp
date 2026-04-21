@@ -13,6 +13,7 @@ import {
 } from '../repositories';
 import { metricsService } from '../services/metrics.service';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
+import { clubTemplateQuotaService } from '../services/club-template-quota.service';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -412,6 +413,17 @@ export const renderTemplate = async (req: AuthRequest, res: Response) => {
         return res.status(403).json({
           error: 'Les templates perso club sont réservés au tier Premium',
           required_tier: 'premium',
+        });
+      }
+    }
+
+    // ADR-075 V3 Phase D — quota garde-fou : 10 renders / 24h pour un club.
+    if (req.user?.role === 'club' && req.user.site_id) {
+      const allowed = await clubTemplateQuotaService.assertRenderAllowed(req.user.site_id);
+      if (!allowed.ok) {
+        return res.status(429).json({
+          error: 'Quota de rendus quotidien atteint — réessayez demain ou contactez le support',
+          quota: allowed.quota,
         });
       }
     }
