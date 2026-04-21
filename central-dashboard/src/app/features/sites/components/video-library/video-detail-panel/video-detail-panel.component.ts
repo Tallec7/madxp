@@ -37,15 +37,25 @@ export class VideoDetailPanelComponent {
   @Input() totalDisplays = 1;
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() availableVideos: CloudVideo[] = [];
-  /** Parent-resolved boolean (depends on isClubUser + upload ownership) */
+  /** For delete button — true when club user doesn't own this video */
   @Input() isClubLocked = false;
+  /** For "Add to config" — same as isClubLocked but relaxed by grants (ADR-082) */
+  @Input() isLockedForConfig = false;
   /** Parent-resolved boolean (deploy state is keyed by video.id) */
   @Input() isDeploying = false;
+  // ADR-082 — Club grants (super_admin only)
+  @Input() isSuperAdmin = false;
+  @Input() videoGrants: { video_id: string; site_id: string; site_name: string; club_name: string | null }[] = [];
+  @Input() grantsLoading = false;
+  @Input() currentSiteId: string | null = null;
+  @Input() currentSiteName = '';
   /** Parent-managed dropdown visibility — true when the "Add to" dropdown is open for this video */
   @Input() addToDropdownOpen = false;
   @Input() addToDropdownStyle: Record<string, string> = {};
 
   @Output() closePanel = new EventEmitter<void>();
+  @Output() addGrant = new EventEmitter<string>();
+  @Output() removeGrant = new EventEmitter<string>();
   @Output() toggleAddTo = new EventEmitter<{ video: VideoItem; event: Event }>();
   @Output() addToTargetSelect = new EventEmitter<{
     video: VideoItem;
@@ -87,5 +97,17 @@ export class VideoDetailPanelComponent {
 
   onRemoveFromTarget(video: VideoItem, target: AddToTarget): void {
     this.removeFromTarget.emit({ video, target });
+  }
+
+  isCurrentSiteGranted(): boolean {
+    return this.videoGrants.some(g => g.site_id === this.currentSiteId);
+  }
+
+  onAddGrant(): void {
+    if (this.currentSiteId) this.addGrant.emit(this.currentSiteId);
+  }
+
+  onRemoveGrant(siteId: string): void {
+    this.removeGrant.emit(siteId);
   }
 }

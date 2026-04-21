@@ -37,6 +37,8 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [siteId]="siteId"
         [siteType]="siteType"
         [isClubUser]="isClubUser"
+        [isSuperAdmin]="isSuperAdmin"
+        [currentSiteName]="siteName"
         [configVideoRoles]="configVideoRoles"
         [configVideoLabels]="configVideoLabels"
         [pendingDeploymentVideoIds]="pendingDeploymentVideoIds"

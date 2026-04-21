@@ -98,6 +98,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-079](ADR-079-hotspot-internet-share.md)                       | Hotspot Internet Share — Option B raffinée puis Option C         | Phase 1 Accepté · Phase 2 Proposé | Avr 2026 |
 | [ADR-080](ADR-080-manual-video-prefetch.md)                        | Prefetch contextuel des vidéos manuelles (Pi + SaaS)             | Suspendu — prérequis ADR-081      | Avr 2026 |
 | [ADR-081](ADR-081-manual-video-reliability.md)                     | Fiabilité remote → vidéo manuelle (ACK, retry, observabilité)    | Proposé                           | Avr 2026 |
+| [ADR-082](ADR-082-video-club-grants.md)                            | Video Club Grants — accès multi-clubs aux vidéos admin           | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -160,4 +161,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 21 avril 2026 (ADR-081 Phase 0 en cours — observabilité commandes remote ; ADR-080 Suspendu)_
+_Dernière mise à jour : 21 avril 2026 (ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_

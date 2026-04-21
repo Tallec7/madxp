@@ -1,3 +1,11 @@
+## [Unreleased]
+
+### Features
+
+- **content:** video club grants — super_admin peut autoriser plusieurs clubs à placer une vidéo admin dans leurs boucles/catégories sans re-upload (ADR-082). Table pivot `video_club_grants`, 4 nouveaux endpoints API, section "Clubs autorisés" dans le VideoDetailPanel, `isLockedForConfig()` découplé du `isClubLocked()` delete-strict, compteur Prometheus `neopro_video_club_grants_total`.
+
+---
+
 ## [3.214.2](https://github.com/Tallec7/neopro/compare/v3.214.1...v3.214.2) (2026-04-21)
 
 ### Bug Fixes

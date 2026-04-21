@@ -129,9 +129,39 @@
       ></app-video-variant-panel>
     </div>
 
+    <!-- Clubs autorisés (ADR-082) — super_admin uniquement -->
+    <div class="detail-section" *ngIf="isSuperAdmin && video.source === 'cloud' && video.id">
+      <div class="detail-label">Clubs autorisés</div>
+      <div *ngIf="grantsLoading" class="grants-loading">Chargement…</div>
+      <div *ngIf="!grantsLoading">
+        <div class="grant-row" *ngFor="let g of videoGrants">
+          <span class="grant-site-name">{{ g.club_name || g.site_name }}</span>
+          <button
+            class="grant-remove-btn"
+            (click)="onRemoveGrant(g.site_id)"
+            title="Révoquer l'accès"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="grants-empty" *ngIf="videoGrants.length === 0">Aucun club autorisé</div>
+        <button
+          class="btn btn-sm btn-secondary grants-add-btn"
+          *ngIf="currentSiteId && !isCurrentSiteGranted()"
+          (click)="onAddGrant()"
+        >
+          + Autoriser ce club{{ currentSiteName ? ' (' + currentSiteName + ')' : '' }}
+        </button>
+        <div class="grants-already" *ngIf="currentSiteId && isCurrentSiteGranted()">
+          ✅ Ce club est autorisé
+          <button class="grant-remove-btn" (click)="onRemoveGrant(currentSiteId!)">Révoquer</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Actions -->
     <div class="detail-section detail-actions-section">
-      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isClubLocked">
+      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig">
         <button
           class="btn btn-primary btn-sm detail-action-btn"
           (click)="onToggleAddTo(video, $event)"

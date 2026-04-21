@@ -73,6 +73,20 @@ Les utilisateurs `club` ont accès aux endpoints contenu avec des restrictions :
 - **Delete/Update** : uniquement les vidéos avec `uploaded_for_site_id` = `user.site_id` ET `category ≠ NEOPRO`
 - **Deploy** : uniquement vers leur propre site
 
+## Video Club Grants (ADR-082 — super_admin)
+
+```
+GET    /api/content/videos/grants-for-site/:siteId  → IDs des vidéos grantées pour un site (authenticated, adminRateLimit)
+GET    /api/content/videos/:id/club-grants          → clubs autorisés pour une vidéo (super_admin)
+POST   /api/content/videos/:id/club-grants          → octroyer accès à un club { site_id } (super_admin)
+DELETE /api/content/videos/:id/club-grants/:siteId  → révoquer accès (super_admin)
+```
+
+- Grants = droit d'ajouter la vidéo admin aux boucles/catégories club — **pas** de droit de suppression (delete reste gardé par `uploaded_for_site_id`).
+- `POST` refuse les vidéos `category = 'NEOPRO'` avec 403.
+- Supervision : `neopro_video_club_grants_total{operation=add|remove, status=success|error}`.
+- Table pivot : `video_club_grants (video_id, site_id, PRIMARY KEY)` — migration `add-video-club-grants.sql`.
+
 ## Video Streaming Proxy (ADR-068)
 
 ```
@@ -237,5 +251,7 @@ Pi Analytics: 500 req/min (par IP)
 - Ajouter `PATCH/POST /:id/duplicate/versions/restore` sans `requireRole('admin'|'super_admin')` (l'édition du schéma template impacte tous les clubs — jamais accessible aux rôles club/viewer). Smoke test enforced.
 - Monter `templateStudioRoutes` APRÈS `remotionTemplatesRoutes` dans `server.ts` (ADR-075) — les sous-ressources `/:id/variants`, `/:id/layers`, `/:id/text-fields`, `/:id/image-slots` seraient capturées par `/:id` du legacy et retourneraient 404/403 mystérieux. Smoke test enforced.
 - Ajouter un endpoint Template Studio v2 sans `requireRole('super_admin')` (l'édition de la composition d'un template impacte toute la flotte — jamais accessible aux rôles admin/club/viewer). Smoke test enforced.
+- Confondre `isLockedForConfig()` et `isClubLocked()` dans la video-library — `isClubLocked` garde la **suppression** (strict, basé sur `uploaded_for_site_id`) ; `isLockedForConfig` garde l'**ajout en config** (relaxé par grants ADR-082) — ne jamais utiliser `isClubLocked` pour les boutons "Ajouter à" (smoke test enforced)
+- Octroyer un grant sur une vidéo `category = 'NEOPRO'` (les vidéos Neopro corporate ne doivent jamais être configurables par des clubs — guard 403 dans `addGrant` controller, smoke test enforced)
 - Ajouter une valeur au champ `animation` de `template_text_fields` sans updater les 3 endroits (CHECK constraint SQL + union `AnimationPreset` + `computeAnimation()` dans `animations.ts`) — sinon crash runtime à la lecture d'un row avec preset inconnu.
 - Supprimer le trigger `trg_neopro_templates_snapshot` ou remplacer l'audit trail par un INSERT manuel côté repository (un futur endpoint qui oublie le snapshot perd silencieusement l'historique — le trigger DB garantit la capture quelle que soit la route — ADR-055). Smoke test enforced.

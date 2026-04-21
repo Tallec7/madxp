@@ -953,6 +953,10 @@ export const schemas = {
     required: Joi.boolean().optional(),
     sortOrder: Joi.number().integer().min(0).optional(),
   }).min(1),
+  // ADR-082 — Video club grants
+  addVideoClubGrant: Joi.object({
+    site_id: Joi.string().uuid().required(),
+  }),
 };
 
 // ============================================================================

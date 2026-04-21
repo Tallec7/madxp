@@ -342,3 +342,8 @@ export {
   type CreateVideoCategoryInput,
   type UpdateVideoCategoryInput,
 } from './video-category.repository';
+
+export {
+  videoClubGrantRepository,
+  type VideoClubGrantRow,
+} from './video-club-grant.repository';
