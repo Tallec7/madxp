@@ -504,6 +504,40 @@ describe('SaaS mode guards (ADR-037)', () => {
     });
   });
 
+  // --- ADR-083: resolveVideoUrl must have fuzzy fallback for config path drift ---
+  // Config filenames may drift from DB filenames (spaces vs underscores, accents,
+  // casing) after profile cloning or legacy uploads. Without fuzzy fallback, the
+  // SaaS TV gets broken FTP URLs → 404.
+  it('resolveVideoUrl must use fuzzy normalization fallback (ADR-083)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsNormalizeFilename: content.includes('normalizeFilename'),
+      importsMetricsService: /from ['"]\.\.\/services\/metrics\.service['"]/.test(content),
+      hasBuildFuzzyIndex: content.includes('buildFuzzyIndex'),
+      recordsResolutionResult: content.includes('recordVideoPathResolution'),
+    }).toEqual({
+      importsNormalizeFilename: true,
+      importsMetricsService: true,
+      hasBuildFuzzyIndex: true,
+      recordsResolutionResult: true,
+    });
+  });
+
+  it('metrics.service must expose recordVideoPathResolution (ADR-083)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasCounter: content.includes('neopro_video_path_resolution_total'),
+      hasMethod: content.includes('recordVideoPathResolution'),
+      hasExactLabel: /result.*exact.*fuzzy.*miss/s.test(content),
+    }).toEqual({
+      hasCounter: true,
+      hasMethod: true,
+      hasExactLabel: true,
+    });
+  });
+
   // --- config-profiles.controller must emit saas-config-updated ---
   it('config-profiles.controller must emit saas-config-updated after updateProfileConfiguration', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'config-profiles.controller.ts');

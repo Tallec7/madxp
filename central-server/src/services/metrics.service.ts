@@ -480,6 +480,15 @@ const videoStreamRequestsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Video Path Resolution (ADR-083) =============
+
+const videoPathResolutionTotal = new Counter({
+  name: 'neopro_video_path_resolution_total',
+  help: 'Config video path resolution outcomes (ADR-083 drift resilience)',
+  labelNames: ['result'], // exact | fuzzy | miss
+  registers: [register],
+});
+
 // ============= Métriques License Push =============
 
 const licenseStatusPushesTotal = new Counter({
@@ -1110,6 +1119,10 @@ class MetricsService {
     status: 'success' | 'missing_token' | 'expired' | 'invalid' | 'upstream_error' | 'proxy_error'
   ): void {
     videoStreamRequestsTotal.inc({ status });
+  }
+
+  recordVideoPathResolution(result: 'exact' | 'fuzzy' | 'miss'): void {
+    videoPathResolutionTotal.inc({ result });
   }
 
   // ============= Méthodes License Push =============

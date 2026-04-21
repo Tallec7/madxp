@@ -12,8 +12,10 @@ import { Request, Response } from 'express';
 import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
 import { signVideoStreamToken } from '../services/video-token.service';
+import { metricsService } from '../services/metrics.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { normalizeFilename } from '../utils/filename-normalize';
 import { SiteConfiguration } from '../types';
 import logger from '../config/logger';
 
@@ -63,25 +65,67 @@ function buildPublicVideoUrl(storagePath: string, siteId: string): string {
 
 /**
  * Résout un chemin vidéo en URL publique (FTP direct ou proxy signé selon ADR-068).
- * Utilise le storagePathMap (filename → storage_path) pour résoudre le vrai chemin FTP.
- * Fallback sur le filename direct si pas trouvé dans la map (anciens uploads à plat).
+ * ADR-083 : lookup exact puis fallback fuzzy (normalisation Unicode + casse +
+ * espaces/points/tirets → _) pour auto-healing des configs legacy où filename
+ * config ≠ filename DB (ex: spaces cloned from Pi, renames, accents).
+ * Dernier recours = filename brut (anciens uploads à plat).
  */
-function resolveVideoUrl(path: string | undefined, storagePathMap: Map<string, string>, siteId: string): string {
+function resolveVideoUrl(
+  path: string | undefined,
+  storagePathMap: Map<string, string>,
+  fuzzyIndex: Map<string, string>,
+  siteId: string
+): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const filename = path.split('/').pop() || path;
-  const storagePath = storagePathMap.get(filename);
-  return buildPublicVideoUrl(storagePath || filename, siteId);
+
+  const exact = storagePathMap.get(filename);
+  if (exact) {
+    metricsService.recordVideoPathResolution('exact');
+    return buildPublicVideoUrl(exact, siteId);
+  }
+
+  const fuzzyKey = normalizeFilename(filename);
+  const fuzzyHit = fuzzyIndex.get(fuzzyKey);
+  if (fuzzyHit) {
+    metricsService.recordVideoPathResolution('fuzzy');
+    logger.warn('SaaS config path drift healed via fuzzy match', {
+      siteId,
+      configFilename: filename,
+      resolvedStoragePath: fuzzyHit,
+    });
+    return buildPublicVideoUrl(fuzzyHit, siteId);
+  }
+
+  metricsService.recordVideoPathResolution('miss');
+  logger.warn('SaaS config path drift — no match found', { siteId, configFilename: filename });
+  return buildPublicVideoUrl(filename, siteId);
+}
+
+/**
+ * Construit un index fuzzy `normalizedFilename → storagePath` à partir de la
+ * storagePathMap exacte (ADR-083). Les collisions sont résolues en gardant la
+ * première occurrence (ordre DB) — les doublons normalisés sont rares et les
+ * doublons vrais (same UUID) ont le même storage_path.
+ */
+function buildFuzzyIndex(storagePathMap: Map<string, string>): Map<string, string> {
+  const fuzzy = new Map<string, string>();
+  for (const [filename, storagePath] of storagePathMap.entries()) {
+    const key = normalizeFilename(filename);
+    if (!fuzzy.has(key)) fuzzy.set(key, storagePath);
+  }
+  return fuzzy;
 }
 
 /**
  * Résout toutes les URLs vidéo dans un tableau de vidéos.
  */
-function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>, siteId: string): VideoLike[] {
+function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, string>, fuzzyIndex: Map<string, string>, siteId: string): VideoLike[] {
   return videos.map(v => {
     const resolved: VideoLike = {
       ...v,
-      path: resolveVideoUrl(v.path, storagePathMap, siteId),
+      path: resolveVideoUrl(v.path, storagePathMap, fuzzyIndex, siteId),
     };
     // Resolve variant paths: storage_path is already set by enrichConfigWithDisplayVariants,
     // so pass it directly to buildPublicVideoUrl instead of looking up in storagePathMap
@@ -98,21 +142,21 @@ function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, strin
 /**
  * Résout les URLs vidéo dans les catégories (récursif pour les sous-catégories).
  */
-function resolveCategories(categories: CategoryLike[], storagePathMap: Map<string, string>, siteId: string): CategoryLike[] {
+function resolveCategories(categories: CategoryLike[], storagePathMap: Map<string, string>, fuzzyIndex: Map<string, string>, siteId: string): CategoryLike[] {
   return categories.map(cat => ({
     ...cat,
-    videos: cat.videos ? resolveVideoUrls(cat.videos, storagePathMap, siteId) : [],
-    subCategories: cat.subCategories ? resolveCategories(cat.subCategories, storagePathMap, siteId) : [],
+    videos: cat.videos ? resolveVideoUrls(cat.videos, storagePathMap, fuzzyIndex, siteId) : [],
+    subCategories: cat.subCategories ? resolveCategories(cat.subCategories, storagePathMap, fuzzyIndex, siteId) : [],
   }));
 }
 
 /**
  * Résout les URLs vidéo dans les timeCategories.
  */
-function resolveTimeCategories(timeCategories: TimeCategoryLike[], storagePathMap: Map<string, string>, siteId: string): TimeCategoryLike[] {
+function resolveTimeCategories(timeCategories: TimeCategoryLike[], storagePathMap: Map<string, string>, fuzzyIndex: Map<string, string>, siteId: string): TimeCategoryLike[] {
   return timeCategories.map(tc => ({
     ...tc,
-    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos, storagePathMap, siteId) : [],
+    loopVideos: tc.loopVideos ? resolveVideoUrls(tc.loopVideos, storagePathMap, fuzzyIndex, siteId) : [],
   }));
 }
 
@@ -256,10 +300,11 @@ export async function getSaasConfig(req: Request, res: Response) {
     const categoriesWithThumbs = applyCategoryThumbnails(categories, thumbnailMap);
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
-    // Then resolve video URLs (filename → storage_path)
-    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, siteId);
-    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, siteId);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, siteId);
+    // Then resolve video URLs (filename → storage_path) with fuzzy fallback (ADR-083)
+    const fuzzyIndex = buildFuzzyIndex(storagePathMap);
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, fuzzyIndex, siteId);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
@@ -399,10 +444,11 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const categoriesWithThumbs = applyCategoryThumbnails(categories, thumbnailMap);
     const timeCategoriesWithThumbs = applyTimeCategoryThumbnails(timeCategories, thumbnailMap);
 
-    // Then resolve video URLs (filename → storage_path)
-    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, siteId);
-    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, siteId);
-    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, siteId);
+    // Then resolve video URLs (filename → storage_path) with fuzzy fallback (ADR-083)
+    const fuzzyIndex = buildFuzzyIndex(storagePathMap);
+    const resolvedSponsors = resolveVideoUrls(sponsorsWithThumbs, storagePathMap, fuzzyIndex, siteId);
+    const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
+    const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },

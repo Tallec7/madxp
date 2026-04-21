@@ -99,6 +99,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-080](ADR-080-manual-video-prefetch.md)                        | Prefetch contextuel des vidéos manuelles (Pi + SaaS)             | Suspendu — prérequis ADR-081      | Avr 2026 |
 | [ADR-081](ADR-081-manual-video-reliability.md)                     | Fiabilité remote → vidéo manuelle (ACK, retry, observabilité)    | Proposé                           | Avr 2026 |
 | [ADR-082](ADR-082-video-club-grants.md)                            | Video Club Grants — accès multi-clubs aux vidéos admin           | Accepté                           | Avr 2026 |
+| [ADR-083](ADR-083-config-path-drift-resilience.md)                 | Resolveur fuzzy filename pour configs SaaS avec paths legacy     | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -138,7 +139,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-080**)
+3. Numéroter séquentiellement (prochain : **ADR-084**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -161,4 +162,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 21 avril 2026 (ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_
+_Dernière mise à jour : 21 avril 2026 (ADR-083 Accepté — résolveur fuzzy drift ; ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_

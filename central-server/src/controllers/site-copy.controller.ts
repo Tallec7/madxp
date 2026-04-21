@@ -157,6 +157,13 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
         sponsorIdMap,
       );
 
+      // Normaliser les video.path vers des filenames nus : sans ça, un profil
+      // copié depuis un Pi peut contenir des URLs http(s) ou chemins Pi absolus
+      // que `saas.controller.resolveVideoUrl` renvoie tels quels (URLs Pi côté
+      // navigateur SaaS). La résolution filename → storage_path FTP se fait au
+      // read via `videoRepository.findStoragePathsByFilenames`.
+      const normalizedConfig = normalizeVideoPaths(remappedConfig);
+
       const copied = await configProfileRepository.create({
         siteId: targetSiteId,
         name,
@@ -165,7 +172,7 @@ export const copyConfig = async (req: AuthRequest, res: Response) => {
         sport: profile.sport || undefined,
         sortOrder: maxSortOrder + 1 + i,
         isDefault: false, // Ne jamais écraser le profil par défaut de la cible
-        configuration: remappedConfig as Record<string, unknown>,
+        configuration: normalizedConfig as Record<string, unknown>,
         createdBy: req.user?.id,
       });
       copiedProfiles.push(copied);
@@ -369,6 +376,58 @@ function remapSponsorIds(
         for (const sub of cat.subCategories) {
           if (Array.isArray(sub.videos)) {
             sub.videos.forEach(remap);
+          }
+        }
+      }
+    }
+  }
+
+  return cloned;
+}
+
+/**
+ * Normalise les `video.path` d'une config copiée en filename nu.
+ * Un profil source Pi peut contenir des paths avec préfixe (http(s) URL,
+ * chemin Pi absolu type `/media/pi/...`) — côté cible SaaS, le resolver
+ * renvoie ces paths tels quels si c'est une URL, ou échoue le lookup FTP
+ * si le préfixe pollue le filename. On garde uniquement le dernier segment.
+ * Idempotent sur les paths déjà normalisés (filename sans `/`).
+ */
+function normalizeVideoPaths(config: SiteConfiguration): SiteConfiguration {
+  const cloned: SiteConfiguration = JSON.parse(JSON.stringify(config));
+
+  const normalize = (video: { path?: string; variants?: { secondary?: { path?: string } } }): void => {
+    if (video.path && video.path.includes('/')) {
+      const filename = video.path.split('/').pop();
+      if (filename) video.path = filename;
+    }
+    if (video.variants?.secondary?.path && video.variants.secondary.path.includes('/')) {
+      const filename = video.variants.secondary.path.split('/').pop();
+      if (filename) video.variants.secondary.path = filename;
+    }
+  };
+
+  if (Array.isArray(cloned.sponsors)) {
+    cloned.sponsors.forEach(normalize);
+  }
+
+  if (Array.isArray(cloned.timeCategories)) {
+    for (const tc of cloned.timeCategories) {
+      if (Array.isArray(tc.loopVideos)) {
+        tc.loopVideos.forEach(normalize);
+      }
+    }
+  }
+
+  if (Array.isArray(cloned.categories)) {
+    for (const cat of cloned.categories) {
+      if (Array.isArray(cat.videos)) {
+        cat.videos.forEach(normalize);
+      }
+      if (Array.isArray(cat.subCategories)) {
+        for (const sub of cat.subCategories) {
+          if (Array.isArray(sub.videos)) {
+            sub.videos.forEach(normalize);
           }
         }
       }
