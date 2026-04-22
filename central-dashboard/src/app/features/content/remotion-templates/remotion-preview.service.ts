@@ -39,13 +39,17 @@ export class RemotionPreviewService {
   proxyFtpUrls(props: Record<string, unknown>): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(props)) {
-      if (typeof v === 'string' && v.includes('kalonpartners.bzh')) {
-        result[k] = `${this.serverBase}/api/remotion-templates/asset-proxy?url=${encodeURIComponent(v)}`;
-      } else {
-        result[k] = v;
-      }
+      result[k] = typeof v === 'string' ? this.proxyUrl(v) : v;
     }
     return result;
+  }
+
+  /** Proxifie une URL FTP externe via same-origin pour éviter CORB dans le player React. */
+  proxyUrl(url: string): string;
+  proxyUrl(url: string | null | undefined): string | null | undefined;
+  proxyUrl(url: string | null | undefined): string | null | undefined {
+    if (!url || !url.includes('kalonpartners.bzh')) return url;
+    return `${this.serverBase}/api/remotion-templates/asset-proxy?url=${encodeURIComponent(url)}`;
   }
 
   /**

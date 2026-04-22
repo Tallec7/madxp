@@ -25,6 +25,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { RemotionTemplatesDataService } from '../remotion-templates-data.service';
+import { RemotionPreviewService } from '../remotion-preview.service';
 import type {
   RenderTemplateRequestV2,
   TemplateImageSlot,
@@ -50,6 +51,7 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
 
   private dataService = inject(RemotionTemplatesDataService);
   private notifications = inject(NotificationService);
+  private previewService = inject(RemotionPreviewService);
 
   selectedVariantId = '';
   textValues: Record<string, string> = {};
@@ -177,11 +179,11 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
     this.playerState = {
       variants: this.view.variants.map((v) => ({
         id: v.id,
-        backgroundVideoUrl: v.backgroundVideoUrl,
+        backgroundVideoUrl: this.previewService.proxyUrl(v.backgroundVideoUrl),
       })),
       layers: this.view.layers.map((l) => ({
         id: l.id,
-        videoUrl: l.videoUrl,
+        videoUrl: this.previewService.proxyUrl(l.videoUrl),
         zIndex: l.zIndex,
         mask: l.mask,
       })),
