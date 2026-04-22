@@ -1,3 +1,9 @@
+## [3.223.2](https://github.com/Tallec7/neopro/compare/v3.223.1...v3.223.2) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** repoint seed Joueur détaillé sur assets Railway (ADR-086) ([502f81b](https://github.com/Tallec7/neopro/commit/502f81b1f9775759c8ff6ee54905a62357ce74a4))
+
 ## [3.223.1](https://github.com/Tallec7/neopro/compare/v3.223.0...v3.223.1) (2026-04-22)
 
 ### Bug Fixes
