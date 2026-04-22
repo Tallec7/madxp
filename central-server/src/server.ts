@@ -64,6 +64,7 @@ import saasRoutes from './routes/saas.routes';
 import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
+import { proxyTemplateAsset } from './controllers/remotion-templates.controller';
 import templateStudioRoutes from './routes/template-studio.routes';
 import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
@@ -498,6 +499,18 @@ app.use('/api/sites', videoCategoriesRoutes); // Catégories vidéo par site —
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 // Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.
 // Monté AVANT remotion-templates pour que les sous-ressources matchent ce router.
+// Asset proxy FTP — monté AVANT le wrapper sensitiveRateLimit (30/min) qui
+// étouffe les range requests de <video> Remotion et cascade en NotSameOrigin.
+// Route publique, stateless, CDN 24h. CORP + CORS headers forcés.
+app.get(
+  '/api/remotion-templates/asset-proxy',
+  (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  proxyTemplateAsset,
+);
 app.use('/api/remotion-templates', templateStudioRoutes);
 // Templates vidéo Remotion (ADR-052) — rate limits per-route dans remotion-templates.routes.ts.
 // Pas de `sensitiveRateLimit` au mount : (1) double-comptage avec les limiteurs per-route
