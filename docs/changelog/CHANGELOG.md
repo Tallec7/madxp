@@ -1,3 +1,9 @@
+## [3.223.7](https://github.com/Tallec7/neopro/compare/v3.223.6...v3.223.7) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** mount asset-proxy AVANT sensitiveRateLimit wrapper ([8bf86b0](https://github.com/Tallec7/neopro/commit/8bf86b0aa61cb6ac99dd067d103b652a22de0717))
+
 ## [3.223.6](https://github.com/Tallec7/neopro/compare/v3.223.5...v3.223.6) (2026-04-22)
 
 ### Bug Fixes
