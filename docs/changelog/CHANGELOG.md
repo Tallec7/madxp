@@ -1,3 +1,9 @@
+## [3.217.3](https://github.com/Tallec7/neopro/compare/v3.217.2...v3.217.3) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** absorb per-video play() rejections pour éviter 3x MediaPlaybackError ([0e16049](https://github.com/Tallec7/neopro/commit/0e16049db3c951d2204dd424cf153dcc9ce698fd))
+
 ## [3.217.2](https://github.com/Tallec7/neopro/compare/v3.217.1...v3.217.2) (2026-04-22)
 
 ### Bug Fixes
