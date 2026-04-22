@@ -238,9 +238,11 @@ export class BrowserRendererService {
         requestAnimationFrame(drawFrame);
       };
 
-      // Attach .catch on each play() so Zone.js doesn't report them as unhandled
-      // before Promise.all propagates to the outer .catch(reject).
-      Promise.all([videoA, videoB, videoC].map(v => v.play().catch((e: unknown) => { throw e; }))).then(() => {
+      // Absorb per-video play() rejections so Zone.js considers each handled,
+      // then propagate the first error once via reject() if any failed.
+      const playErrors: unknown[] = [];
+      Promise.all([videoA, videoB, videoC].map(v => v.play().catch((e: unknown) => playErrors.push(e)))).then(() => {
+        if (playErrors.length > 0) { reject(playErrors[0]); return; }
         requestAnimationFrame(drawFrame);
       }).catch(reject);
     });
