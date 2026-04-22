@@ -1,17 +1,32 @@
-# PROP-011: Multi-Zone LED — Contenus Différenciés par Côté de Terrain depuis un Seul Pi
+# PROP-011 v2: Multi-Zone LED — Contenus Différenciés par Côté de Terrain depuis un Seul Pi
 
-**Date** : 2026-03-01
-**Statut** : Proposé
+**Date v1** : 2026-03-01
+**Date v2** : 2026-04-22
+**Statut** : Proposé — spike Phase 0 pré-requis avant engagement commercial
 **Décideurs** : Équipe Neopro
-**Lié à** : [PROP-002](./PROP-002-tv-led-dual-output.md) (TV + LED Dual Output), [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) (Dual HDMI), [PROP-010](./PROP-010-auto-generation-video-variants.md) (Auto-génération variantes)
+**Lié à** : [PROP-002](./PROP-002-tv-led-dual-output.md), [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md), [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md), [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md), [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md)
+
+---
+
+## Changelog v2 (2026-04-22)
+
+Audit 52 jours après la v1. Mises à jour :
+
+- ❌ **Section "Extension du modèle de variantes vidéo" supprimée** — la migration `n-display-model.sql` a déjà été appliquée : `video_variants.display_type` accepte `^[a-z0-9-]+$` (1-20 chars) et `sites.displays JSONB` existe avec repository prêt (`siteRepository.getDisplays/updateDisplays`). Socket event `displays-changed` déjà émis.
+- ✅ **Contrainte GPU ajoutée** : le double-buffer ADR-042 (4 `<video>` par zone) × 4 zones = 16 flux simultanés. Non validé par SPIKE-001. Décision CTO requise : dégrader en mono-player pour les zones (option A, recommandée) ou limiter N≤2 (option B).
+- ✅ **7 nouvelles contraintes** listées (EDID custom, hauteur uniforme bandeaux, alerte mismatch, PV installation, mire de test, dégradation double-buffer, budget réel LED).
+- ✅ **Budget clarifié** : Neopro **n'achète pas** le contrôleur LED côté client. L'intégrateur LED du club livre le contrôleur avec les dalles. Seul le spike R&D nécessite un contrôleur (0-250€ via emprunt ou occasion).
+- ⚠️ **Découplage de PROP-010** : l'auto-génération de variantes reste proposal. PROP-011 v1 s'appuyait dessus comme pré-requis implicite. En v2, on accepte l'upload manuel en premier palier et on pointe **ADR-086 Template Studio v2** comme voie d'auto-génération privilégiée.
+- ✅ **SPIKE-003 ouvert** pour valider Pi 5 + 7680×384 + N flux vidéo avant engagement Phase 1.
+- ✅ **Effort révisé** : 9-13 jours (au lieu de 11-16j), la Phase 2 étant partiellement retirée (BD déjà prête).
 
 ---
 
 ## Contexte
 
-Certains clubs sportifs disposent de **panneaux LED sur plusieurs côtés du terrain** (bandeaux bord de terrain Nord, Sud, Est, Ouest). Chaque côté peut être un **annonceur différent** ou un **contenu différent** (ex: score côté tribunes, pub côté caméra TV, infos match côtés latéraux).
+Certains clubs sportifs disposent de **panneaux LED sur plusieurs côtés du terrain** (bandeaux Nord, Sud, Est, Ouest). Chaque côté peut être un annonceur différent ou un contenu différent (score côté tribunes, pub côté caméra TV, infos latérales).
 
-Aujourd'hui, PROP-002 / ADR-029 gèrent **2 contenus simultanés** via les 2 HDMI du Pi (TV + secondaire). Mais un terrain à 4 côtés avec 4 contenus différents dépasse cette limite.
+Aujourd'hui, PROP-002 / ADR-029 gèrent **2 contenus simultanés** via les 2 HDMI du Pi (TV + secondaire). Un terrain à 4 côtés avec 4 contenus différents dépasse cette limite.
 
 ### Marché des panneaux LED bord de terrain en France
 
@@ -21,45 +36,36 @@ Aujourd'hui, PROP-002 / ADR-029 gèrent **2 contenus simultanés** via les 2 HDM
 | **Stramatel**       | Tableaux d'affichage + LED | HDMI via contrôleur | Propriétaire ou Novastar |
 | **Bodet Sport**     | Tableaux d'affichage + LED | HDMI via contrôleur | Propriétaire ou Novastar |
 | **Daktronics**      | LED pro (stades)           | HDMI via contrôleur | Propriétaire             |
-| **Barco**           | Murs LED haut de gamme     | HDMI/SDI            | Propriétaire             |
 
-**Point clé** : Quel que soit le fabricant des dalles LED (JSG, Stramatel, Bodet...), le signal d'entrée passe toujours par un **contrôleur LED** (sending card) qui accepte du **HDMI standard**. Neopro n'a pas besoin de "parler" le langage de chaque fabricant — il envoie du HDMI, le contrôleur distribue.
+Neopro est agnostique du fabricant des dalles. Le signal d'entrée passe toujours par un **contrôleur LED** (sending card) qui accepte du HDMI standard. Neopro envoie du HDMI, le contrôleur distribue.
 
-### Comment fonctionne un panneau LED
+### Modèle économique — Qui achète quoi
 
-```
-Source HDMI (Pi, PC, etc.)
-        │
-        ↓
-┌──────────────────┐
-│  Contrôleur LED  │  ← "sending card" : traduit HDMI → données dalles
-│  (Novastar,      │     Configuré UNE FOIS avec logiciel Windows
-│   Colorlight,    │     (NovaLCT, LEDVision, etc.)
-│   Linsn)         │     Ensuite accepte n'importe quelle source HDMI
-└──────────────────┘
-        │ Ethernet (1 câble par zone de dalles)
-        ↓
-┌──┐┌──┐┌──┐┌──┐
-│  ││  ││  ││  │  ← dalles LED (modules physiques assemblés)
-└──┘└──┘└──┘└──┘    marque : JSG, Stramatel, Bodet, etc.
-```
+| Hardware                        | Acheteur         | Moment                                  |
+| ------------------------------- | ---------------- | --------------------------------------- |
+| Dalles LED (JSG/Stramatel/etc.) | Club             | Installation pré-existante le + souvent |
+| Contrôleur LED (Novastar, etc.) | Intégrateur LED  | Livré **avec** les dalles               |
+| Raspberry Pi 5 + câbles         | **Neopro**       | Produit vendu                           |
+| Installation HDMI Pi↔contrôleur | Intégrateur/tech | Setup terrain                           |
 
-Le logiciel propriétaire de JSG/Stramatel/Bodet est leur **CMS de diffusion** (concurrent de Neopro). Il n'est **pas obligatoire** — c'est juste une source HDMI parmi d'autres. On le remplace par le Pi.
+**Neopro n'achète pas de contrôleur LED côté client.** Pour le spike R&D interne, un seul contrôleur suffit (emprunt partenaire intégrateur, occasion 150-250€, ou neuf 300-500€).
 
 ### Contraintes
 
 - **1 seul Pi** pour piloter TV + tous les côtés LED
 - **Contenus différents** par côté (pub ciblée côté caméra, score côté tribunes, etc.)
 - **2 HDMI max** sur le Pi → HDMI 0 pour TV, HDMI 1 pour le contrôleur LED
-- **Synchronisation** : tous les côtés changent en même temps (même boucle, même tempo)
-- **GPU Pi 5** : doit composer le framebuffer multi-zone en temps réel
+- **Synchronisation** : tous les côtés changent en même temps (même framebuffer garantit la sync gratuitement)
+- **GPU Pi 5** : doit composer le framebuffer multi-zone en temps réel — ⚠️ **non validé sur N flux simultanés**
+- **Hauteur uniforme** : tous les bandeaux d'un même terrain doivent avoir la même hauteur en pixels (contrainte géométrie framebuffer)
 
-### État actuel (PROP-002 / ADR-029)
+### État actuel post-migration n-display (2026-04-22)
 
-- **2 display types** : `tv` et `secondary`
-- **1 variante vidéo secondaire** par sponsor (même contenu sur tout le secondaire)
-- Pas de concept de "zone" dans le modèle de données
-- Le composant Angular `/secondary` rend un seul flux plein écran
+- `video_variants.display_type` ouvert à `^[a-z0-9-]+$` (1-20 chars) → accepte `tv`, `secondary`, `zone-1`, `zone-N`
+- `sites.displays JSONB` existe avec `siteRepository.getDisplays/updateDisplays` (site.repository.ts:702-720)
+- Socket event `displays-changed` émis au site room (socket.service.ts:395-812)
+- Composant Angular `/secondary` rend un seul flux plein écran
+- Variantes secondary servies via `/videos-secondary/` (ADR-033) et survivent aux merge/replace config (ADR-032)
 
 ## Décision
 
@@ -90,375 +96,218 @@ Ce que le contrôleur LED distribue physiquement :
               Côté Sud - Zone 3 (Pub B)
 ```
 
+⚠️ Le schéma physique est une représentation logique : les 4 côtés ne sont **pas alignés** dans le framebuffer (ils sont perpendiculaires dans le réel). Le framebuffer reste une image 2D plate ; c'est le contrôleur LED qui fait la gymnastique physique port → câble → côté.
+
 ### Faisabilité Pi 5 — Bande passante HDMI
 
-| Résolution                 | Pixels | Pixel clock estimé | Limite Pi 5 | Verdict      |
-| -------------------------- | ------ | ------------------ | ----------- | ------------ |
-| 7680×384 @60Hz             | ~3M    | ~185 MHz           | 600 MHz     | Largement OK |
-| 5760×384 @60Hz (3 zones)   | ~2.2M  | ~140 MHz           | 600 MHz     | OK           |
-| 3840×384 @60Hz (2 zones)   | ~1.5M  | ~95 MHz            | 600 MHz     | OK           |
-| 3840×2160 @60Hz (4K tuilé) | ~8.3M  | ~594 MHz           | 600 MHz     | Limite       |
-
-Le Pi 5 supporte des résolutions personnalisées jusqu'à **7680 pixels de large** via son contrôleur HDMI (RP1, pixel clock max 600 MHz). Une image 7680×384 ne consomme que ~30% de la bande passante d'un 4K.
+| Résolution                 | Pixels | Pixel clock estimé | Limite Pi 5 | Verdict                            |
+| -------------------------- | ------ | ------------------ | ----------- | ---------------------------------- |
+| 7680×384 @60Hz             | ~3M    | ~185 MHz           | 600 MHz     | OK théorique — **à valider spike** |
+| 5760×384 @60Hz (3 zones)   | ~2.2M  | ~140 MHz           | 600 MHz     | OK                                 |
+| 3840×384 @60Hz (2 zones)   | ~1.5M  | ~95 MHz            | 600 MHz     | OK                                 |
+| 3840×2160 @60Hz (fallback) | ~8.3M  | ~594 MHz           | 600 MHz     | Limite — dual HDMI à risque        |
 
 ### Contrôleurs LED compatibles multi-zone
 
-| Contrôleur           | HDMI | Largeur max input | Ports sortie | Zone mapping      | Prix estimé |
-| -------------------- | ---- | ----------------- | ------------ | ----------------- | ----------- |
-| **Novastar MCTRL4K** | 2.0  | **7680px**        | 16 Ethernet  | Oui (NovaLCT)     | 300-500€    |
-| **Novastar VX1000**  | 1.4  | 3840px            | 10 Ethernet  | Oui               | 400-600€    |
-| **Colorlight Z6**    | 2.0  | **8192px**        | Multi        | Oui (crop/splice) | 300-500€    |
-| **Colorlight Z5**    | 2.0  | **16384px**       | Multi        | Oui               | 500-800€    |
-| **Linsn TS901**      | 1.x  | 2048px            | Limité       | Cascade requise   | 100-200€    |
+| Contrôleur           | HDMI | Largeur max | Ports  | Zone mapping      | Prix estimé |
+| -------------------- | ---- | ----------- | ------ | ----------------- | ----------- |
+| **Novastar MCTRL4K** | 2.0  | **7680px**  | 16     | Oui (NovaLCT)     | 300-500€    |
+| **Colorlight Z6**    | 2.0  | 8192px      | Multi  | Oui (crop/splice) | 300-500€    |
+| **Linsn TS901**      | 1.x  | 2048px      | Limité | Cascade requise   | 100-200€    |
 
-**Recommandation** : **Novastar MCTRL4K** — supporte 7680px en entrée, 16 ports de sortie, custom EDID, documentation accessible.
+**Recommandation spike** : Novastar MCTRL4K (7680px, documentation accessible, custom EDID).
 
-### Comment le contrôleur découpe les zones
+### Configuration contrôleur — contrat statique à 3 acteurs
 
-La configuration se fait **une seule fois** avec NovaLCT (Windows) :
+Le contrôleur LED est configuré **une fois à l'installation** via NovaLCT, jamais piloté dynamiquement par Neopro. La config doit matcher pixel à pixel `sites.displays` côté cloud. Voir [RUNBOOK_LED_INSTALLATION.md](../guides/RUNBOOK_LED_INSTALLATION.md) pour le PV d'installation signé intégrateur ↔ Neopro.
 
-1. Brancher un PC au contrôleur en USB
-2. Définir les zones de crop dans l'image d'entrée :
-   - Port 1 → crop (0, 0) → (1920, 384) → câble Ethernet → dalles Côté Nord
-   - Port 2 → crop (1920, 0) → (3840, 384) → câble Ethernet → dalles Côté Est
-   - Port 3 → crop (3840, 0) → (5760, 384) → câble Ethernet → dalles Côté Sud
-   - Port 4 → crop (5760, 0) → (7680, 384) → câble Ethernet → dalles Côté Ouest
-3. Sauvegarder la config dans le contrôleur. Débrancher le PC.
+### Implémentation Neopro (delta réel à 2026-04-22)
 
-Après cette config initiale, **n'importe quelle source HDMI** envoyant du 7680×384 s'affiche correctement sur les 4 côtés. Le contrôleur ne fait aucune intelligence — il découpe et distribue.
+| Brique                                        | État         | Travail restant                                                   |
+| --------------------------------------------- | ------------ | ----------------------------------------------------------------- |
+| BD `video_variants.display_type` ouvert       | ✅           | Rien                                                              |
+| BD `sites.displays JSONB` + repository        | ✅           | Rien                                                              |
+| Détection HDMI + xrandr dynamique             | ✅           | Tester résolutions custom ultra-larges (SPIKE-003)                |
+| Composant Angular `<app-zone>`                | ❌           | Phase 1 — 3-4j                                                    |
+| Sync inter-zones (même Pi)                    | ⚠️ à adapter | ADR-031 = inter-Pi. Inter-zone = sync "gratuite" même framebuffer |
+| Dashboard : UI multi-zone                     | ❌           | Phase 2 — 2-3j                                                    |
+| Upload variantes `zone-N`                     | ⚠️ API OK    | Étendre onglet zones dans content-editor                          |
+| `deploySecondaryVariant()` sync-agent         | ✅ secondary | Étendre pour `zone-N`                                             |
+| `restoreSecondaryVariants()` ADR-032          | ✅ secondary | **Doit** inclure `zone-N` (sinon régression)                      |
+| Watchdog `setup_secondary_xrandr` ultra-large | ✅ base      | Calculer total_width depuis `sites.displays`                      |
 
-### Implémentation Neopro
+### Décision GPU requise avant Phase 1
 
-#### 1. Composant Angular multi-zone
+Le double-buffer ADR-042 (`DoubleBufferVideoService`) instancie 4 `<video>` par zone pour le cross-fade. 4 zones × 4 players = **16 éléments `<video>` simultanés** sur le Chromium secondaire. Non validé par SPIKE-001.
 
-Le composant `/secondary` évolue pour supporter un mode multi-zone :
+**Option A — Dégrader en mono-player pour les zones (RECOMMANDÉ)**
 
-```
-/secondary                          → mode actuel (1 zone plein écran)
-/secondary?zones=4&layout=horizontal → mode multi-zone (N zones côte à côte)
-```
+- Les zones bandeau affichent des pubs statiques ou animations courtes (pas de vidéo 4K complexe)
+- Transitions plus brutes (pas de cross-fade parfait) mais acceptable sur bandeau
+- Pas de charge GPU excessive
 
-```html
-<!-- Mode multi-zone : N zones côte à côte -->
-<div class="zone-container" [style.width.px]="totalWidth" [style.height.px]="zoneHeight">
-  <app-zone
-    *ngFor="let zone of zones; let i = index"
-    [zoneIndex]="i"
-    [width]="zoneWidth"
-    [height]="zoneHeight"
-    [playlist]="zone.playlist"
-  >
-  </app-zone>
-</div>
-```
+**Option B — Conserver double-buffer mais limiter N≤2 zones**
 
-Chaque `<app-zone>` est un mini-player vidéo autonome avec sa propre playlist, synchronisé au master via Socket.IO (même tempo, même index de boucle).
+- 2 zones × 4 players = 8 `<video>` (comparable à dual-TV actuel)
+- Impose un 2ᵉ contrôleur LED en cascade au-delà de 2 zones
+- Qualité visuelle préservée
 
-#### 2. Extension du modèle de variantes vidéo
+→ Décision à prendre après SPIKE-003.
 
-```sql
--- Aujourd'hui (PROP-002)
-CHECK (display_type IN ('tv', 'secondary'))
+### Fallback intelligent (inchangé v1)
 
--- Extension multi-zone
-ALTER TABLE video_variants
-  DROP CONSTRAINT video_variants_display_type_check;
+Cascade de résolution de variante par zone :
 
-ALTER TABLE video_variants
-  ADD CONSTRAINT video_variants_display_type_check
-  CHECK (display_type ~ '^(tv|secondary|zone-[0-9]+)$');
+1. Variante `zone-N` présente → l'utiliser
+2. Sinon variante `secondary` → l'utiliser
+3. Sinon variante `tv` → object-fit: cover
 
--- Exemple de variantes pour un sponsor
--- video_id=X, display_type='tv'       → sponsor-acme-16x9.mp4
--- video_id=X, display_type='secondary' → sponsor-acme-bandeau.mp4      (même contenu partout)
--- video_id=X, display_type='zone-1'    → sponsor-acme-nord.mp4         (contenu spécifique côté Nord)
--- video_id=X, display_type='zone-2'    → sponsor-acme-est-score.mp4    (contenu spécifique côté Est)
-```
+Un sponsor qui livre 1 variante bandeau est auto-dupliqué sur les 4 zones. Un sponsor qui livre 4 variantes a du contenu différencié.
 
-**Fallback intelligent** : si pas de variante `zone-N`, utiliser `secondary`. Si pas de `secondary`, utiliser `tv`. Ceci garantit la rétrocompatibilité totale.
+## 7 contraintes ajoutées en v2
 
-#### 3. Configuration site dans le dashboard
+1. **EDID custom obligatoire** côté contrôleur LED pour les résolutions ultra-larges. Sans reprogrammation NovaLCT, le Pi fallback en 1920×1080 et la négociation échoue. Manip 5 min en atelier avec PC Windows.
+2. **GPU V3D Pi 5 non validé** pour N flux vidéo simultanés. SPIKE-001 a testé 2 Chromium × 1 flux, pas 1 Chromium × 16 flux. SPIKE-003 à livrer avant Phase 1.
+3. **Hauteur uniforme des bandeaux** : tous les côtés d'un même terrain doivent partager la même hauteur pixel. Un Nord 1920×384 + Est 1920×160 casse la géométrie framebuffer. Alternative : 2 contrôleurs LED ou padding noir.
+4. **Alerte `edid_mismatch`** côté sync-agent : lire l'EDID réel du contrôleur, comparer à `sites.displays`, lever une alerte si divergence. Évite la dérive silencieuse (cas A du doc audit).
+5. **PV d'installation signé** intégrateur LED ↔ admin Neopro qui fige les coordonnées de crop et le nombre de panneaux physiques. Source de vérité commerciale contre les zones fantômes.
+6. **Mire de test au boot** : 3-5 secondes d'affichage numéros de zone + couleurs distinctes avant de basculer sur le contenu réel. Permet à l'installateur de valider visuellement.
+7. **Verrou `super_admin`** sur `sites.displays` : modification impossible depuis le dashboard standard avec warning explicite sur la nécessité d'une intervention terrain parallèle.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Écran secondaire                                        │
-│                                                          │
-│  ☑ Activé                                               │
-│                                                          │
-│  Mode :  ○ Standard (1 contenu)                         │
-│          ● Multi-zone (contenu par côté)                │
-│                                                          │
-│  Nombre de zones : [4]                                   │
-│                                                          │
-│  Résolution par zone : [1920] × [384]                   │
-│  Résolution totale calculée : 7680 × 384                │
-│                                                          │
-│  ┌──────────┬──────────┬──────────┬──────────┐          │
-│  │ Zone 1   │ Zone 2   │ Zone 3   │ Zone 4   │          │
-│  │ Nord     │ Est      │ Sud      │ Ouest    │          │
-│  │ [Rename] │ [Rename] │ [Rename] │ [Rename] │          │
-│  └──────────┴──────────┴──────────┴──────────┘          │
-│                                                          │
-│  Contrôleur LED : [Novastar MCTRL4K ▼]  (informatif)   │
-└─────────────────────────────────────────────────────────┘
-```
+## Alternatives considérées (inchangées)
 
-#### 4. Configuration Pi (watchdog)
+1. **Multi-Pi (1 Pi par côté)** : coût × 4, sync inter-Pi non garantie. Fallback recevable.
+2. **4K tuilé 2×2 (3840×2160)** : pixel clock 594 MHz, proche limite Pi 5. Sous-optimal pour bandeaux 5:1. Fallback si ultra-wide échoue au SPIKE-003.
+3. **Image ultra-large composée (choisie)** : 1 Pi + 1 contrôleur, sync gratuite (même framebuffer), rétrocompatible via cascade de variantes.
 
-```bash
-# Résolution custom ultra-large sur HDMI 1
-# Option A : cmdline.txt (boot)
-video=HDMI-A-2:7680x384M@60D
+## Plan d'implémentation v2
 
-# Option B : xrandr (runtime)
-cvt 7680 384 60
-xrandr --newmode "7680x384_60" 185.00 7680 7840 7920 8000 384 387 391 394 -hsync +vsync
-xrandr --addmode HDMI-A-2 "7680x384_60"
-xrandr --output HDMI-A-2 --mode "7680x384_60" --right-of HDMI-A-1
+### Phase 0 — SPIKE-003 (2-3 jours) — PRÉ-REQUIS
 
-# Lancer Chromium secondaire en ultra-large
-chromium-browser --app="http://neopro.local/secondary?zones=4&layout=horizontal" \
-  --window-position=${SECONDARY_X_OFFSET},0 \
-  --window-size=7680,384 \
-  --user-data-dir=/tmp/kiosk-secondary
-```
+Référence : [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md).
 
-#### 5. Upload des variantes par zone
+Objectifs :
 
-Dans l'onglet contenu du dashboard, chaque vidéo sponsor affiche :
+- Valider Pi 5 + 7680×384 @60Hz stable via `xrandr --newmode`
+- Mesurer charge GPU avec 4 `<video>` h264 simultanés dans un Chromium `--app` secondaire
+- Tester custom EDID Novastar (NovaLCT) et workaround `cmdline.txt` avec flag `D`
+- Valider stabilité 2h minimum sans tearing ni memory leak
 
-```
-┌─────────────────────────────────────────────┐
-│  Sponsor : Acme Corp                        │
-│                                             │
-│  TV (16:9)      : acme-16x9.mp4     [✓]    │
-│  Secondaire     : acme-bandeau.mp4  [✓]    │
-│  Zone 1 (Nord)  : acme-nord.mp4    [✓]     │  ← optionnel
-│  Zone 2 (Est)   : acme-est.mp4     [✓]     │  ← optionnel
-│  Zone 3 (Sud)   : (utilise Secondaire)      │  ← fallback
-│  Zone 4 (Ouest) : (utilise Secondaire)      │  ← fallback
-│                                             │
-│  [+ Ajouter variante zone]                  │
-└─────────────────────────────────────────────┘
-```
+**GO Phase 1** si :
 
-Les zones sans variante spécifique héritent de la variante `secondary`, puis `tv`.
+- [ ] Mode custom négocié sans fallback 1080p
+- [ ] 4 flux vidéo jouent sans drop frame > 5%
+- [ ] RAM stable, CPU < 70%, 0 GPU error
 
-## Alternatives Considérées
+**NO-GO** → fallback option A (mono-player) ou B (N≤2 zones) ou 4K tuilé.
 
-### 1. Multi-Pi (un Pi par côté) — Statu quo
+### Phase 1 — Composant Angular multi-zone (3-4 jours)
 
-**Principe** : Chaque côté du terrain a son propre Pi + contrôleur.
+1. Créer `ZoneComponent` (mono-player ou double-buffer selon décision SPIKE-003)
+2. Route `/secondary` lit `sites.displays` au boot et rend N `<app-zone>` côte à côte
+3. Chaque zone résout sa variante via cascade `zone-N` → `secondary` → `tv`
+4. Sync implicite via même `requestAnimationFrame` (même framebuffer)
+5. Tests unitaires + E2E dual-display multi-zone
 
-**Avantages** :
+### Phase 2 — Dashboard + extensions sync-agent (2-3 jours)
 
-- Zéro développement. Fonctionne aujourd'hui.
-- Chaque Pi est indépendant, pas de framebuffer composite.
-- Pas de résolution custom HDMI.
+Note : la partie BD (CHECK constraint + JSONB) est **déjà faite**. Phase réduite par rapport à v1.
 
-**Inconvénients** :
+1. Dashboard : configurateur graphique qui écrit dans `sites.displays` (verrou `super_admin`)
+2. Content-editor : onglet "Zones" pour uploader variantes `zone-N` par sponsor
+3. Sync-agent : `deploySecondaryVariant()` étendu pour déployer N variantes `zone-N`
+4. Sync-agent : `restoreSecondaryVariants()` whitelist étendue à `zone-[0-9]+`
+5. Mire de test au boot (composant Angular dédié, 5s affichage avant contenu)
 
-- 4 Pi + 4 contrôleurs = coût matériel × 4.
-- 4 boîtiers à administrer (OTA, monitoring, réseau).
-- Synchronisation inter-Pi non garantie (décalage possible entre les côtés).
-- Alimentation + câblage × 4.
+### Phase 3 — Watchdog + alerting (1-2 jours)
 
-**Verdict** : Viable comme fallback, mais coûteux et moins élégant.
+1. `setup_secondary_xrandr()` calcule `total_width` depuis `sites.displays`
+2. Application via `xrandr --newmode` + `--addmode` au démarrage
+3. Recovery après hot-plug perdant la résolution custom
+4. Sync-agent : lecture EDID réel + alerte `edid_mismatch` si divergence avec `sites.displays`
+5. Smoke tests watchdog pour les nouvelles contraintes
 
-### 2. 4K tuilé (grille 2×2 en 3840×2160)
+### Phase 4 — Validation terrain (2-3 jours)
 
-**Principe** : Le Pi envoie du 4K standard. Le contrôleur LED crop 4 quadrants.
+1. Premier déploiement pilote chez un prospect avec panneaux LED multi-côtés
+2. PV d'installation signé intégrateur ↔ Neopro
+3. Validation mire de test
+4. Monitoring post-déploiement 72h (RAM, GPU errors, crashs Chromium)
 
-```
-3840 × 2160 (4K standard)
-┌──────────┬──────────┐
-│  Zone 1  │  Zone 2  │
-│ 1920×1080│ 1920×1080│
-├──────────┼──────────┤
-│  Zone 3  │  Zone 4  │
-│ 1920×1080│ 1920×1080│
-└──────────┴──────────┘
-```
+## Budget v2
 
-**Avantages** :
+### Hardware — rôles clarifiés
 
-- Résolution 4K = standard, 100% fiable sur Pi 5.
-- Pas de custom EDID, pas de modeline xrandr.
+| Rôle               | Hardware                     | Acheteur                 | Coût                           |
+| ------------------ | ---------------------------- | ------------------------ | ------------------------------ |
+| Déploiement client | Pi 5 + câbles HDMI           | Neopro (produit)         | Déjà dans le BOM               |
+| Déploiement client | Contrôleur LED + dalles      | **Client / intégrateur** | Hors budget Neopro             |
+| Spike R&D interne  | Contrôleur Novastar MCTRL4K  | Neopro (one-off)         | 0-500€ (emprunt/occasion/neuf) |
+| Spike R&D interne  | Panneau LED ou moniteur test | Emprunt partenaire       | 0€                             |
 
-**Inconvénients** :
+### Développement
 
-- Les zones sont 1920×1080 (16:9) alors que les bandeaux LED sont souvent 1920×384 (5:1). Le contrôleur downscale → perte de qualité.
-- Pixel clock à 594 MHz = proche de la limite Pi 5 (600 MHz). Dual HDMI (TV + 4K) pourrait être instable.
-- Gaspillage de pixels (on rend 8.3M pixels pour n'en utiliser que ~3M).
-
-**Verdict** : Fallback si la résolution ultra-large pose problème, mais sous-optimal pour les bandeaux.
-
-### 3. Image ultra-large composée (choisie) ✅
-
-**Avantages** :
-
-- 1 seul Pi, 1 seul contrôleur LED.
-- Résolution adaptée au format réel des dalles (pas de downscale).
-- Bande passante HDMI confortable (~30% du budget).
-- Synchronisation parfaite entre zones (même framebuffer).
-- Compatible avec le système de variantes existant.
-
-**Inconvénients** :
-
-- Résolution custom HDMI à valider avec le matériel réel.
-- Composant Angular multi-zone à développer.
-- Le contrôleur LED doit supporter la largeur (7680px).
-
-**Verdict** : Accepté — approche la plus propre et la plus économique.
+| Phase                            | Effort    | Cumulé         | Delta v1            |
+| -------------------------------- | --------- | -------------- | ------------------- |
+| Phase 0 — SPIKE-003              | 2-3 jours | 2-3j           | =                   |
+| Phase 1 — Composant multi-zone   | 3-4 jours | 5-7j           | =                   |
+| Phase 2 — Dashboard + sync-agent | 2-3 jours | 7-10j          | -1j (BD déjà prête) |
+| Phase 3 — Watchdog + alerting    | 1-2 jours | 8-12j          | =                   |
+| Phase 4 — Validation terrain     | 2-3 jours | 10-15j         | =                   |
+| **Total v2**                     |           | **9-13 jours** | -2j                 |
 
 ## Conséquences
 
 ### Positives
 
-1. **1 Pi = 1 terrain complet** : TV + 4 côtés LED, contenus différenciés
-2. **Coût réduit** : 1 seul Pi + 1 seul contrôleur LED vs 4 Pi + 4 contrôleurs
-3. **Sync parfaite** : tous les côtés changent au même instant (même framebuffer)
-4. **Rétrocompatible** : les sites sans multi-zone continuent de fonctionner (fallback sur `secondary`)
-5. **Avantage commercial** : les logiciels CMS de JSG/Stramatel/Bodet ne proposent pas cette flexibilité par zone
-6. **Extensible** : de 2 à N zones, paramétrable par site
+1. 1 Pi = 1 terrain complet (TV + 4 côtés)
+2. Coût matériel : 1 contrôleur LED client au lieu de 4
+3. Sync parfaite (même framebuffer)
+4. Rétrocompatible (cascade de variantes)
+5. Extensible de 2 à N zones
+6. Auto-génération future via ADR-086 Template Studio v2 (alternative propre à PROP-010 FFmpeg)
 
 ### Négatives
 
-1. **Résolution HDMI custom** : nécessite validation terrain avec le contrôleur réel
-2. **Config contrôleur LED** : requiert un passage technicien avec PC Windows (une seule fois)
-3. **Upload variantes** : l'annonceur doit fournir des vidéos par zone (ou accepter le même contenu partout)
-4. **Limite de zones** : borné par la largeur HDMI max (7680px) et le nombre de ports du contrôleur
+1. Résolution HDMI custom nécessite validation SPIKE-003
+2. Config contrôleur LED = passage technicien one-shot
+3. Upload variantes par zone = effort éditorial annonceur (mitigé par cascade)
+4. Contrat statique BD ↔ contrôleur : toute désync = affichage cassé silencieusement (mitigé par PV d'install + alerte `edid_mismatch`)
 
-### Risques
+### Risques (révisés)
 
-| Risque                                              | Probabilité | Mitigation                                                          |
-| --------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
-| Pi 5 ne gère pas 7680px de large                    | Faible      | Pixel clock OK en théorie. Fallback : 4K tuilé ou multi-Pi          |
-| Contrôleur LED ne reconnaît pas la résolution       | Moyenne     | Custom EDID via NovaLCT. Fallback : résolution standard + downscale |
-| Hot-plug HDMI perd la résolution custom             | Moyenne     | Script watchdog de rétablissement automatique de la résolution      |
-| Performance GPU insuffisante pour N zones           | Faible      | 3M pixels << 8.3M (4K). Le Pi 5 gère largement                      |
-| Clubs veulent > 4 zones                             | Faible      | Architecture extensible à N zones tant que largeur ≤ 7680px         |
-| Annonceurs ne fournissent pas de variantes par zone | Élevée      | Fallback : même vidéo sur toutes les zones (variante `secondary`)   |
+| Risque                                              | Probabilité | Mitigation                                      |
+| --------------------------------------------------- | ----------- | ----------------------------------------------- |
+| Pi 5 ne gère pas 7680px                             | Faible      | SPIKE-003. Fallback 4K tuilé                    |
+| **GPU saturé par N flux vidéo simultanés**          | **Moyenne** | **SPIKE-003 + option A mono-player**            |
+| Contrôleur refuse la résolution custom              | Moyenne     | EDID custom NovaLCT. Fallback `cmdline.txt D`   |
+| Hot-plug perd la résolution custom                  | Moyenne     | Script watchdog de recovery                     |
+| Dérive silencieuse BD ↔ contrôleur (zones fantômes) | Élevée      | PV install + alerte `edid_mismatch` + mire test |
+| Clubs veulent > 4 zones                             | Faible      | Extensible tant que largeur ≤ 7680px            |
+| Annonceurs ne fournissent pas N variantes           | Élevée      | Cascade `zone-N` → `secondary` → `tv`           |
+| Hauteurs bandeaux non uniformes                     | Moyenne     | Spec contractuelle client ou 2 contrôleurs      |
 
-## Plan d'implémentation
+## Recommandations stratégiques
 
-### Phase 0 — Spike hardware (2-3 jours)
-
-**Objectif** : valider Pi 5 + résolution ultra-large + contrôleur LED réel.
-
-1. Commander un **Novastar MCTRL4K** (ou emprunter au prospect JSG/Stramatel)
-2. Configurer le Pi 5 en 7680×384 sur HDMI 1 (`video=` ou `xrandr`)
-3. Configurer le contrôleur avec NovaLCT : 4 zones de crop
-4. Afficher une mire de test (4 couleurs, une par zone) sur les dalles
-5. Mesurer la latence et la stabilité sur 5h
-
-**Critères de validation** :
-
-- [ ] Pi 5 sort du 7680×384 @60Hz stable sur HDMI 1
-- [ ] Contrôleur LED crop correctement les 4 zones
-- [ ] Chromium rend une page de 7680×384 sans artefacts
-- [ ] Dual HDMI (TV 1080p + LED 7680×384) stable simultanément pendant 5h
-- [ ] Hot-plug HDMI : résolution rétablie automatiquement
-
-**Alternative 4K tuilé** : si 7680px échoue, tester en 3840×2160 avec crop en grille 2×2.
-
-### Phase 1 — Composant Angular multi-zone (3-4 jours)
-
-1. Créer le composant `ZoneComponent` (mini-player vidéo autonome)
-2. Adapter le composant `/secondary` pour supporter `?zones=N&layout=horizontal`
-3. Chaque zone résout sa variante (`zone-N` → `secondary` → `tv`)
-4. Synchronisation master : toutes les zones changent de vidéo au même index de boucle
-5. Tests unitaires + tests E2E dual-display multi-zone
-
-**Critères de validation** :
-
-- [ ] 4 zones affichent 4 vidéos différentes simultanément
-- [ ] Changement de vidéo synchronisé entre zones (même tempo)
-- [ ] Fallback : zone sans variante spécifique affiche la variante `secondary`
-
-### Phase 2 — Extension variantes + Dashboard (3-4 jours)
-
-1. Étendre le CHECK constraint de `video_variants` pour accepter `zone-N`
-2. Dashboard : mode multi-zone dans les settings du site (nb zones, résolution par zone, noms)
-3. Dashboard : upload de variantes par zone dans l'onglet contenu
-4. API : `enrichConfigWithDisplayVariants()` étendu pour injecter les variantes par zone (N-display ready)
-5. Sync-agent : `deploySecondaryVariant()` étendu pour déployer les variantes zone-N
-
-**Critères de validation** :
-
-- [ ] Upload d'une variante `zone-1` dans le dashboard
-- [ ] La variante arrive sur le Pi dans `videos-secondary/` avec le bon tag zone
-- [ ] La zone 1 du composant Angular affiche cette variante spécifique
-
-### Phase 3 — Watchdog résolution custom (1-2 jours)
-
-1. Étendre `setup_secondary_xrandr()` pour supporter les résolutions ultra-larges
-2. Calculer la résolution totale depuis la config site (nb zones × largeur zone)
-3. Appliquer via `xrandr --newmode` + `--addmode` au démarrage
-4. Script de recovery si hot-plug perd la résolution custom
-5. Smoke tests pour les contraintes watchdog
-
-**Critères de validation** :
-
-- [ ] Watchdog applique automatiquement 7680×384 si site configuré en 4 zones
-- [ ] Recovery après débranchement/rebranchement HDMI
-- [ ] Fallback sur résolution standard si le mode custom échoue
-
-### Phase 4 — Validation terrain (2-3 jours)
-
-1. Déployer chez un club avec panneaux LED multi-côtés
-2. Tester avec du contenu réel (sponsors, score, breaking news)
-3. Valider les transitions de phase (mi-temps, fin de match) sur toutes les zones
-4. Documenter les contrôleurs LED validés et les résolutions testées
-
-## Budget estimé
-
-### Par club (matériel)
-
-| Configuration                    | Hardware                           | Coût                      |
-| -------------------------------- | ---------------------------------- | ------------------------- |
-| Multi-zone (1 Pi + 1 contrôleur) | Pi 5 (existant) + Novastar MCTRL4K | **300-500€** (contrôleur) |
-| Multi-Pi (4 Pi + 4 contrôleurs)  | 4× Pi 5 + 4× contrôleur basique    | **1200-2000€**            |
-| **Économie multi-zone**          |                                    | **~60-75%**               |
-
-### Développement
-
-| Phase                           | Effort    | Cumulé           |
-| ------------------------------- | --------- | ---------------- |
-| Phase 0 — Spike hardware        | 2-3 jours | 2-3j             |
-| Phase 1 — Composant multi-zone  | 3-4 jours | 5-7j             |
-| Phase 2 — Variantes + Dashboard | 3-4 jours | 8-11j            |
-| Phase 3 — Watchdog résolution   | 1-2 jours | 9-13j            |
-| Phase 4 — Validation terrain    | 2-3 jours | 11-16j           |
-| **Total**                       |           | **~11-16 jours** |
-
-## Compatibilité constructeurs d'écrans LED
-
-Neopro est **agnostique du fabricant de dalles LED**. La compatibilité dépend uniquement du contrôleur LED (sending card) acceptant du HDMI standard, ce qui est le cas de la quasi-totalité du marché :
-
-| Fabricant dalles               | Compatible Neopro | Raison                                                     |
-| ------------------------------ | ----------------- | ---------------------------------------------------------- |
-| **JSG Technologie**            | Oui               | Dalles pilotées par contrôleur HDMI (Novastar, Colorlight) |
-| **Stramatel** (panneaux LED)   | Oui               | Idem — signal HDMI via contrôleur                          |
-| **Bodet Sport** (panneaux LED) | Oui               | Idem — signal HDMI via contrôleur                          |
-| **Daktronics**                 | Oui               | Idem (contrôleur propriétaire mais entrée HDMI)            |
-| **Barco**                      | Oui               | Idem (HDMI/SDI)                                            |
-| **Absen, Unilumin, Leyard**    | Oui               | Idem                                                       |
-| Tout panneau LED à entrée HDMI | Oui               | Le Pi envoie du HDMI standard                              |
-
-**Le logiciel CMS propriétaire** de ces fabricants (JSG Studio, Bodet Display, Stramatel Manager, etc.) est remplacé par Neopro. Il n'est **pas nécessaire** et **pas requis**. C'est un choix commercial du club, pas une contrainte technique.
+1. **Vendre le panneau LED unique dès maintenant** — zéro dev, tout est en place (ADR-029, ADR-031, ADR-032, ADR-033). Premier déploiement avec technicien présent (cf. runbook). Pas besoin de PROP-011.
+2. **Ne pas vendre de multi-zone avant SPIKE-003** — risque planning/qualité 30-40% sinon. Après spike GO, risque <15%.
+3. **Pricing multi-zone en 2 tiers** : LED Basic (modèle A, 1 variante bandeau partout), LED Pro (modèle B, variantes par zone). Justifie surcoût abonnement.
+4. **Éviter les presets contrôleur** (API propriétaire par fabricant) pour le MVP. Garder la config statique install.
 
 ## Références
 
-- [PROP-002](./PROP-002-tv-led-dual-output.md) — TV + LED Dual Output (base du système secondaire)
-- [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) — Décision architecturale Dual HDMI
-- [ADR-031](../adr/ADR-031-master-slave-video-loop-sync.md) — Synchronisation master-slave boucles vidéo
-- [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md) — Validation hardware dual HDMI
-- [PROP-010](./PROP-010-auto-generation-video-variants.md) — Auto-génération variantes vidéo
+- [PROP-002](./PROP-002-tv-led-dual-output.md) — TV + LED Dual Output
+- [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) — Dual HDMI
+- [ADR-031](../adr/ADR-031-master-slave-video-loop-sync.md) — Sync master-slave
+- [ADR-032](../adr/ADR-032-secondary-variants-restore.md) — Restore variantes secondary
+- [ADR-033](../adr/ADR-033-secondary-variants-nginx-race-condition.md) — Nginx variantes + race condition
+- [ADR-042](../adr/ADR-042-double-buffer-video-service.md) — Double-buffer vidéo
+- [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) — Template Studio v2
+- [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md) — Validation dual HDMI
+- [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md) — Validation multi-zone ultra-wide
+- [RUNBOOK_LED_INSTALLATION](../guides/RUNBOOK_LED_INSTALLATION.md) — Procédure installation LED
 - Novastar MCTRL4K : [Spécifications](https://oss.novastar.tech/uploads/2024/11/MCTRL4K-LED-Display-Controller-Specifications-V1.2.1.pdf)
-- Colorlight Z6 : [Fiche produit](https://www.colorlitled.com/colorlight-z6/)
-- Raspberry Pi 5 display pipeline : [Documentation](https://www.raspberrypi.com/documentation/computers/config_txt.html)
 
 ---
 
-_Créé le 1 mars 2026_
+_v1 créée le 1 mars 2026 — v2 révisée le 22 avril 2026_
