@@ -8,8 +8,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type {
+  Anchor,
   AnimationPreset,
+  FitMode,
+  Overflow,
   TemplateImageSlot,
+  TemplateLayer,
   TemplateTextField,
 } from '../../remotion-templates.types';
 import type {
@@ -28,6 +32,22 @@ const ANIMATIONS: AnimationPreset[] = [
   'slide-down',
   'scale-in',
   'blur-in',
+  'zoom',
+  'logo-pop',
+];
+
+const ANCHORS: Anchor[] = [
+  'top-left', 'top-center', 'top-right',
+  'center-left', 'center', 'center-right',
+  'bottom-left', 'bottom-center', 'bottom-right',
+];
+
+const FIT_MODES: FitMode[] = [
+  'contain', 'cover', 'fill-width-anchor-top', 'fill-height-anchor-left',
+];
+
+const OVERFLOWS: Overflow[] = [
+  'hidden', 'visible', 'top', 'bottom', 'left', 'right',
 ];
 
 /**
@@ -139,15 +159,78 @@ const FONT_FAMILIES = [
         </select>
       </section>
 
-      <section class="afe__section" *ngIf="f.kind === 'text' && $any(f.value).animation === 'scale-in'">
-        <h5>Scale-in</h5>
-        <label>Départ
+      <section class="afe__section"
+               *ngIf="$any(f.value).animation === 'scale-in' ||
+                      $any(f.value).animation === 'zoom' ||
+                      $any(f.value).animation === 'logo-pop'">
+        <h5>Scale</h5>
+        <label>Départ (absent)
           <input type="number" step="0.05" min="0" max="5"
                  [(ngModel)]="$any(f.value).scaleFrom" (change)="emitPatch()" />
         </label>
-        <label>Arrivée
+        <label>Arrivée (présent)
           <input type="number" step="0.05" min="0" max="5"
                  [(ngModel)]="$any(f.value).scaleTo" (change)="emitPatch()" />
+        </label>
+      </section>
+
+      <!-- ADR-086 — Layer parent + direction animation -->
+      <section class="afe__section" *ngIf="layers?.length">
+        <h5>Layer parent (ADR-086)</h5>
+        <label>Layer
+          <select [(ngModel)]="$any(f.value).layerId" (change)="emitPatch()">
+            <option [ngValue]="null">— Aucun (timing autonome) —</option>
+            <option *ngFor="let l of layers" [ngValue]="l.id">
+              z{{ l.zIndex }} · {{ l.name }}
+            </option>
+          </select>
+        </label>
+        <label>Direction
+          <select [(ngModel)]="$any(f.value).animationDirection" (change)="emitPatch()">
+            <option value="in">in — arrivée</option>
+            <option value="out">out — sortie</option>
+          </select>
+        </label>
+        <label *ngIf="f.kind === 'text'" class="afe__checkbox">
+          <input type="checkbox" [(ngModel)]="$any(f.value).respectAlpha"
+                 [disabled]="!$any(f.value).layerId" (change)="emitPatch()" />
+          Respecter l'alpha du layer (rendu sous)
+        </label>
+      </section>
+
+      <!-- ADR-086 — Safe-zone image -->
+      <section class="afe__section" *ngIf="f.kind === 'image'">
+        <h5>Safe-zone & fit (ADR-086)</h5>
+        <label>Anchor
+          <select [(ngModel)]="$any(f.value).anchor" (change)="emitPatch()">
+            <option *ngFor="let a of anchors" [value]="a">{{ a }}</option>
+          </select>
+        </label>
+        <label>Fit mode
+          <select [(ngModel)]="$any(f.value).fitMode" (change)="emitPatch()">
+            <option *ngFor="let m of fitModes" [value]="m">{{ m }}</option>
+          </select>
+        </label>
+        <label>Overflow
+          <select [(ngModel)]="$any(f.value).overflow" (change)="emitPatch()">
+            <option *ngFor="let o of overflows" [value]="o">{{ o }}</option>
+          </select>
+        </label>
+        <label>safe top %
+          <input type="number" step="0.5" min="0" max="100"
+                 [(ngModel)]="$any(f.value).safeTopPct" (change)="emitPatch()" />
+        </label>
+        <label>safe left %
+          <input type="number" step="0.5" min="0" max="100"
+                 [(ngModel)]="$any(f.value).safeLeftPct" (change)="emitPatch()" />
+        </label>
+        <label>safe width %
+          <input type="number" step="0.5" min="0" max="100"
+                 [(ngModel)]="$any(f.value).safeWidthPct" (change)="emitPatch()" />
+        </label>
+        <label>safe height %
+          <input type="number" step="0.5" min="0" max="100"
+                 [(ngModel)]="$any(f.value).safeHeightPct" (change)="emitPatch()" />
         </label>
       </section>
 
@@ -198,6 +281,7 @@ const FONT_FAMILIES = [
 })
 export class AdminFieldEditorComponent {
   @Input({ required: true }) field!: EditableField;
+  @Input() layers: TemplateLayer[] | null = null;
   @Output() patch = new EventEmitter<
     TemplateTextFieldUpdate | TemplateImageSlotUpdate
   >();
@@ -205,6 +289,9 @@ export class AdminFieldEditorComponent {
 
   readonly animations = ANIMATIONS;
   readonly fontFamilies = FONT_FAMILIES;
+  readonly anchors = ANCHORS;
+  readonly fitModes = FIT_MODES;
+  readonly overflows = OVERFLOWS;
 
   emitPatch(): void {
     if (this.field.kind === 'text') {
@@ -231,6 +318,10 @@ export class AdminFieldEditorComponent {
         alwaysVisible: v.alwaysVisible,
         scaleFrom: v.scaleFrom,
         scaleTo: v.scaleTo,
+        // ADR-086 — layerId est NOT NULL côté serveur, on n'envoie pas de null
+        layerId: v.layerId ?? undefined,
+        respectAlpha: v.respectAlpha,
+        animationDirection: v.animationDirection,
       }, ['maxChars']);
       this.patch.emit(patch);
     } else {
@@ -249,7 +340,19 @@ export class AdminFieldEditorComponent {
         aspectRatio: v.aspectRatio ?? null,
         required: v.required,
         sortOrder: v.sortOrder,
-      }, ['aspectRatio']);
+        // ADR-086 — null autorisé (Joi .allow(null))
+        layerId: v.layerId,
+        anchor: v.anchor,
+        fitMode: v.fitMode,
+        safeTopPct: v.safeTopPct,
+        safeLeftPct: v.safeLeftPct,
+        safeWidthPct: v.safeWidthPct,
+        safeHeightPct: v.safeHeightPct,
+        overflow: v.overflow,
+        animationDirection: v.animationDirection,
+        scaleFrom: v.scaleFrom,
+        scaleTo: v.scaleTo,
+      }, [...(['aspectRatio'] as const), ...IMAGE_ADR086_NULLABLE_KEYS]);
       this.patch.emit(patch);
     }
   }
@@ -262,6 +365,13 @@ export class AdminFieldEditorComponent {
  * ce filtre, chaque frappe renvoyait un 400 car le payload contenait des
  * `null` interdits. On préserve les clés whitelist (qui autorisent null).
  */
+/** ADR-086 — keys where Joi explicitly `.allow(null)` on image slots. */
+const IMAGE_ADR086_NULLABLE_KEYS = [
+  'layerId',
+  'safeTopPct', 'safeLeftPct', 'safeWidthPct', 'safeHeightPct',
+  'scaleFrom', 'scaleTo',
+] as const;
+
 function stripNullish<T extends Record<string, unknown>>(
   obj: T,
   keepNullKeys: ReadonlyArray<keyof T> = [],

@@ -25,6 +25,9 @@ function makeTextField(): TemplateTextField {
     alwaysVisible: false,
     scaleFrom: 0.7,
     scaleTo: 1.0,
+    layerId: null,
+    respectAlpha: false,
+    animationDirection: 'in',
   };
 }
 
@@ -41,6 +44,17 @@ function makeImageSlot(): TemplateImageSlot {
     aspectRatio: '1:1',
     required: false,
     sortOrder: 0,
+    layerId: null,
+    anchor: 'center',
+    fitMode: 'contain',
+    safeTopPct: null,
+    safeLeftPct: null,
+    safeWidthPct: null,
+    safeHeightPct: null,
+    overflow: 'hidden',
+    animationDirection: 'in',
+    scaleFrom: null,
+    scaleTo: null,
   };
 }
 

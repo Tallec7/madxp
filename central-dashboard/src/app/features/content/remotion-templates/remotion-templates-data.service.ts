@@ -2,7 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import type {
+  Anchor,
+  AnimationDirection,
+  AnimationPreset,
   AssetUploadResult,
+  FitMode,
+  Overflow,
   RemotionTemplate,
   RenderJobEnqueued,
   RenderJobSnapshot,
@@ -40,7 +45,7 @@ export interface TemplateTextFieldCreate {
   align?: 'left' | 'center' | 'right';
   appearAt: number;
   appearDuration?: number;
-  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  animation?: AnimationPreset;
   defaultValue?: string;
   maxChars?: number | null;
   multiline?: boolean;
@@ -49,6 +54,10 @@ export interface TemplateTextFieldCreate {
   alwaysVisible?: boolean;
   scaleFrom?: number;
   scaleTo?: number;
+  /** ADR-086 */
+  layerId?: string | null;
+  respectAlpha?: boolean;
+  animationDirection?: AnimationDirection;
 }
 
 /**
@@ -66,7 +75,7 @@ export interface TemplateTextFieldUpdate {
   align?: 'left' | 'center' | 'right';
   appearAt?: number;
   appearDuration?: number;
-  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  animation?: AnimationPreset;
   defaultValue?: string;
   maxChars?: number | null;
   multiline?: boolean;
@@ -75,6 +84,10 @@ export interface TemplateTextFieldUpdate {
   alwaysVisible?: boolean;
   scaleFrom?: number;
   scaleTo?: number;
+  /** ADR-086 */
+  layerId?: string;
+  respectAlpha?: boolean;
+  animationDirection?: AnimationDirection;
 }
 
 /**
@@ -89,10 +102,22 @@ export interface TemplateImageSlotCreate {
   height: number;
   appearAt: number;
   appearDuration?: number;
-  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  animation?: AnimationPreset;
   aspectRatio?: string | null;
   required?: boolean;
   sortOrder?: number;
+  /** ADR-086 */
+  layerId?: string | null;
+  anchor?: Anchor;
+  fitMode?: FitMode;
+  safeTopPct?: number | null;
+  safeLeftPct?: number | null;
+  safeWidthPct?: number | null;
+  safeHeightPct?: number | null;
+  overflow?: Overflow;
+  animationDirection?: AnimationDirection;
+  scaleFrom?: number | null;
+  scaleTo?: number | null;
 }
 
 /**
@@ -107,10 +132,22 @@ export interface TemplateImageSlotUpdate {
   height?: number;
   appearAt?: number;
   appearDuration?: number;
-  animation?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'scale-in' | 'blur-in';
+  animation?: AnimationPreset;
   aspectRatio?: string | null;
   required?: boolean;
   sortOrder?: number;
+  /** ADR-086 */
+  layerId?: string | null;
+  anchor?: Anchor;
+  fitMode?: FitMode;
+  safeTopPct?: number | null;
+  safeLeftPct?: number | null;
+  safeWidthPct?: number | null;
+  safeHeightPct?: number | null;
+  overflow?: Overflow;
+  animationDirection?: AnimationDirection;
+  scaleFrom?: number | null;
+  scaleTo?: number | null;
 }
 
 /**

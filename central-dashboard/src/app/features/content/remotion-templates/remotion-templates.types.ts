@@ -41,7 +41,30 @@ export type AnimationPreset =
   | 'slide-up'
   | 'slide-down'
   | 'scale-in'
-  | 'blur-in';
+  | 'blur-in'
+  | 'zoom'
+  | 'logo-pop';
+
+export type AnimationDirection = 'in' | 'out';
+
+export type Anchor =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'center-left'
+  | 'center'
+  | 'center-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+
+export type FitMode =
+  | 'contain'
+  | 'cover'
+  | 'fill-width-anchor-top'
+  | 'fill-height-anchor-left';
+
+export type Overflow = 'hidden' | 'visible' | 'top' | 'bottom' | 'left' | 'right';
 
 export type TextAlign = 'left' | 'center' | 'right';
 
@@ -85,6 +108,10 @@ export interface TemplateTextField {
   alwaysVisible: boolean;
   scaleFrom: number;
   scaleTo: number;
+  /** ADR-086 */
+  layerId: string | null;
+  respectAlpha: boolean;
+  animationDirection: AnimationDirection;
 }
 
 export interface TemplateImageSlot {
@@ -99,6 +126,18 @@ export interface TemplateImageSlot {
   aspectRatio: string | null;
   required: boolean;
   sortOrder: number;
+  /** ADR-086 */
+  layerId: string | null;
+  anchor: Anchor;
+  fitMode: FitMode;
+  safeTopPct: number | null;
+  safeLeftPct: number | null;
+  safeWidthPct: number | null;
+  safeHeightPct: number | null;
+  overflow: Overflow;
+  animationDirection: AnimationDirection;
+  scaleFrom: number | null;
+  scaleTo: number | null;
 }
 
 /** Vue consolidée retournée par `GET /api/remotion-templates/:id/studio`. */

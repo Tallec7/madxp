@@ -111,6 +111,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
           <app-admin-field-editor
             *ngFor="let f of view.textFields"
             [field]="asTextField(f)"
+            [layers]="view.layers"
             (patch)="onPatchTextField(f.id, $any($event))"
             (delete)="onDeleteTextField(f.id)"
           ></app-admin-field-editor>
@@ -135,6 +136,7 @@ import { AdminCanvasOverlayComponent } from './admin-canvas-overlay.component';
           <app-admin-field-editor
             *ngFor="let s of view.imageSlots"
             [field]="asImageSlot(s)"
+            [layers]="view.layers"
             (patch)="onPatchImageSlot(s.id, $any($event))"
             (delete)="onDeleteImageSlot(s.id)"
           ></app-admin-field-editor>
