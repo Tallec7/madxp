@@ -47,6 +47,8 @@
 43. [Admin UI — CSP bloque Socket.IO cross-origin (v3.176.8+)](#admin-ui--csp-bloque-socketio-cross-origin-v317680)
 44. [Workflow db-backup GitHub Actions échoue (post migration Railway)](#workflow-db-backup-github-actions-échoue-post-migration-railway)
 45. [SPA 404 sur routes profondes (`/saas/remote`, `/sites/<uuid>`) (v3.193.7+)](#spa-404-sur-routes-profondes-saasremote-sitesuuid--v31937)
+46. [MediaPlaybackError Zone.js dans la console (v3.216+)](#mediaplaybackerror-zonejs-dans-la-console-v3216)
+47. [Preview Remotion v2 noir — 1 486 requêtes CORB bloquées (v3.216+)](#preview-remotion-v2-noir--1-486-requêtes-corb-bloquées-v3216)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6677,3 +6679,94 @@ Si la probe `frontend-health` fail ou qu'un user rapporte un 404 SPA :
 - Réduire le verify à un simple check de la racine (laisser les deep-routes)
 - Désactiver le cron de `frontend-health.yml`
 - Passer `dangerous-clean-slate: false` sans repenser la stratégie de deploy (ce serait pire : builds obsolètes coexisteraient)
+
+---
+
+## MediaPlaybackError Zone.js dans la console — v3.216+
+
+### Symptômes
+
+La console navigateur affiche en boucle :
+
+```
+Uncaught MediaPlaybackError: The browser threw an error while playing the video
+  at polyfills-XXXXXXXX.js:1
+```
+
+L'erreur apparaît sur le Dashboard (templates Remotion, renderer canvas) et sur le Pi Angular. Elle n'affecte pas le rendu mais pollue les logs.
+
+### Cause racine
+
+Zone.js enveloppe **tous** les event listeners DOM globalement, y compris les `error` events sur `<video>`. Il re-throw une `MediaPlaybackError` même quand le `.catch()` du `play()` a déjà absorbé l'erreur. Ce throw se produit hors de la zone Angular → `GlobalErrorHandler` ne le voit pas.
+
+Trois sources distinctes :
+
+| Source                                      | Mécanisme                                                                                                                                            | Fix appliqué                                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `BrowserRendererService.renderStandalone()` | `Promise.all([a.play(), b.play(), c.play()])` — Zone.js reportait les rejections individuelles avant que `Promise.all` propage vers `.catch(reject)` | Absorber chaque `play()` dans `playErrors[]`, propager la première une seule fois                             |
+| Dashboard Angular zone                      | `GlobalErrorHandler.handleError()` attrapait `MediaPlaybackError` et l'envoyait à `ErrorBoundaryService`                                             | Early return avant le handler principal                                                                       |
+| React Remotion Player (hors zone Angular)   | `createRoot()` de React tourne hors zone → Angular ne voit pas ses erreurs                                                                           | `window.addEventListener('error', ..., true)` dans `main.ts` + `MediaErrorHandler` dans `app.config.ts` du Pi |
+
+### Fix permanent (v3.216)
+
+Fichiers modifiés :
+
+- [`central-dashboard/src/main.ts`](../../central-dashboard/src/main.ts) — suppression globale via `window.addEventListener('error', event => event.preventDefault(), true)` ciblant `MediaPlaybackError`
+- [`central-dashboard/src/app/core/handlers/global-error.handler.ts`](../../central-dashboard/src/app/core/handlers/global-error.handler.ts) — early return avant `errorBoundary.triggerError()`
+- [`central-dashboard/src/app/features/content/browser-renderer.service.ts`](../../central-dashboard/src/app/features/content/browser-renderer.service.ts) — pattern `playErrors[]` pour absorber les rejections individuelles
+- [`raspberry/src/app/services/media-error-handler.ts`](../../raspberry/src/app/services/media-error-handler.ts) — nouveau `ErrorHandler` Angular Pi
+- [`raspberry/src/app/app.config.ts`](../../raspberry/src/app/app.config.ts) — enregistrement de `MediaErrorHandler`
+
+### Régression prévenue par
+
+`smoke-remotion.test.ts` — bloc `Video playback — CORB proxy + Zone.js error suppression guards` (8 tests).
+
+### NE JAMAIS FAIRE
+
+- Retirer le `window.addEventListener` de `main.ts` (c'est la seule couche qui attrape les erreurs React hors zone Angular)
+- Remettre `.catch((e) => { throw e; })` dans le `Promise.all` de `renderStandalone()` (crée 3 rejections Zone.js au lieu d'une)
+- Utiliser `video.src = ''` pour libérer un élément vidéo (navigue vers la page courante → nouvelle `error` event) — toujours `removeAttribute('src')` + `load()`
+
+---
+
+## Preview Remotion v2 noir — 1 486 requêtes CORB bloquées — v3.216+
+
+### Symptômes
+
+- Le preview du template Remotion **v2** (éditeur Studio) est entièrement **noir**
+- La console DevTools affiche `1 486` warnings `CORB` (Cross-Origin Read Blocking)
+- Les requêtes bloquées pointent vers `https://kalonpartners.bzh/...` (FTP Hostinger)
+- Le preview **v1** (iframe) fonctionne normalement
+
+### Cause racine
+
+Le player Remotion v2 utilise React `createRoot()` et passe les URLs FTP directement aux éléments `<video>` avec `crossOrigin = 'anonymous'`. Le serveur FTP Hostinger ne retourne **pas** de header `Access-Control-Allow-Origin` → le navigateur applique CORB et bloque toutes les ressources vidéo → canvas noir.
+
+Le preview v1 passait par une iframe servie same-origin via `/api/remotion-templates/asset-proxy`, ce qui évitait le problème.
+
+### Différence v1 / v2
+
+|            | v1 (iframe)                         | v2 (React createRoot)                              |
+| ---------- | ----------------------------------- | -------------------------------------------------- |
+| Rendu      | `<iframe src="/remotion-preview/">` | `@remotion/player` React inline                    |
+| URLs vidéo | Proxifiées via iframe same-origin   | Passées directement → CORB                         |
+| Fix        | Existant (architecture iframe)      | `proxyUrl()` injecté dans `recomputePlayerState()` |
+
+### Fix permanent (v3.216)
+
+`RemotionPreviewService.proxyUrl()` proxifie toutes les URLs `kalonpartners.bzh` via `/api/remotion-templates/asset-proxy?url=...` (same-origin, supporte `Range` headers pour la seekability WebM).
+
+Fichiers modifiés :
+
+- [`central-dashboard/src/app/features/content/remotion-templates/remotion-preview.service.ts`](../../central-dashboard/src/app/features/content/remotion-templates/remotion-preview.service.ts) — ajout de `proxyUrl()` avec overloads TypeScript
+- [`central-dashboard/src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts`](../../central-dashboard/src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts) — injection de `RemotionPreviewService` + appel `proxyUrl()` sur `backgroundVideoUrl` et `videoUrl` dans `recomputePlayerState()`
+
+### Régression prévenue par
+
+`smoke-remotion.test.ts` — tests `RemotionPreviewService expose proxyUrl()` et `StudioV2EditorComponent proxifie les URLs vidéo`.
+
+### NE JAMAIS FAIRE
+
+- Passer des URLs FTP `kalonpartners.bzh` directement à `<video src>` dans un contexte React avec `crossOrigin = 'anonymous'`
+- Retirer `proxyUrl()` de `RemotionPreviewService` (casse le preview v2 silencieusement — canvas noir sans erreur JS explicite)
+- Ajouter un nouveau composant de preview vidéo qui bypass `RemotionPreviewService` (toujours utiliser `proxyUrl()` pour les assets FTP)
