@@ -12,8 +12,21 @@ import * as ctrl from '../controllers/remotion-templates.controller';
 const router = Router();
 
 // Proxy same-origin pour les assets FTP (CORS bypass pour @remotion/player)
-// Route sans auth — assets déjà publics sur kalonpartners.bzh
-router.get('/asset-proxy', adminRateLimit, ctrl.proxyTemplateAsset);
+// Route sans auth — assets déjà publics sur kalonpartners.bzh.
+// CORP/CORS DOIT être posé AVANT le rate limiter : sinon les réponses 429
+// d'express-rate-limit n'incluent pas CORP → le browser bloque avec
+// ERR_BLOCKED_BY_RESPONSE.NotSameOrigin au lieu d'un "429 rate limited"
+// propre, et le <video> Remotion rentre en boucle d'erreur.
+router.get(
+  '/asset-proxy',
+  (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  adminRateLimit,
+  ctrl.proxyTemplateAsset,
+);
 
 // Lecture — admin voit tout, club voit uniquement les publiés (feature-gated)
 router.get(
