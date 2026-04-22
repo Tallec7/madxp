@@ -329,10 +329,34 @@ describe('Template Studio v2 (ADR-075)', () => {
     expect(legacyIdx).toBeGreaterThan(-1);
     // Mount order: studio must be registered before legacy for sub-resources.
     const studioMount = server.indexOf("app.use('/api/remotion-templates', templateStudioRoutes");
-    const legacyMount = server.indexOf("app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes");
+    const legacyMount = server.indexOf("app.use('/api/remotion-templates', remotionTemplatesRoutes");
     expect(studioMount).toBeGreaterThan(-1);
     expect(legacyMount).toBeGreaterThan(-1);
     expect(studioMount).toBeLessThan(legacyMount);
+  });
+
+  // Anti-pattern enforced : pas de `sensitiveRateLimit` (ni autre rate limiter) au mount
+  // `/api/remotion-templates`. Chaque route déclare son propre limiteur. La wrapper-level
+  // limit (1) double-compte les requêtes authentifiées, (2) renvoie un 429 sans les headers
+  // CORP/CORS posés par le handler `/asset-proxy` → browser bloque avec
+  // ERR_BLOCKED_BY_RESPONSE.NotSameOrigin et le <video> Remotion rentre en boucle.
+  it('server.ts does NOT wrap /api/remotion-templates mount with a rate limiter', () => {
+    const mountLine = server.match(/app\.use\(\s*['"]\/api\/remotion-templates['"]\s*,[^)]*remotionTemplatesRoutes\s*\)/);
+    expect(mountLine).not.toBeNull();
+    expect(mountLine?.[0]).not.toMatch(/RateLimit/);
+  });
+
+  it('asset-proxy route declares NO rate limiter but sets CORP/CORS before the handler', () => {
+    const routes = readFile('routes/remotion-templates.routes.ts');
+    const startIdx = routes.indexOf("'/asset-proxy'");
+    expect(startIdx).toBeGreaterThan(-1);
+    // Bloc = depuis `'/asset-proxy'` jusqu'au prochain `router.` (ou fin de fichier).
+    const nextRouterIdx = routes.indexOf('router.', startIdx + 1);
+    const block = routes.slice(startIdx, nextRouterIdx > -1 ? nextRouterIdx : undefined);
+    expect(block).not.toMatch(/RateLimit/);
+    expect(block).toMatch(/Access-Control-Allow-Origin/);
+    expect(block).toMatch(/Cross-Origin-Resource-Policy/);
+    expect(block).toMatch(/proxyTemplateAsset/);
   });
 
   it('TemplateRuntime + animations exist with 6 presets', () => {
