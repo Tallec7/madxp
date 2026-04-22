@@ -1,3 +1,9 @@
+## [3.217.1](https://github.com/Tallec7/neopro/compare/v3.217.0...v3.217.1) (2026-04-22)
+
+### Bug Fixes
+
+- **video:** suppress MediaPlaybackError Zone.js noise + fix video.src='' ([#542](https://github.com/Tallec7/neopro/issues/542)) ([b67fa52](https://github.com/Tallec7/neopro/commit/b67fa528a7b1b707cf6af69fee5962ee5c509591))
+
 # [3.217.0](https://github.com/Tallec7/neopro/compare/v3.216.0...v3.217.0) (2026-04-22)
 
 ### Features
