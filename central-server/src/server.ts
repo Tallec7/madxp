@@ -499,7 +499,12 @@ app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture —
 // Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.
 // Monté AVANT remotion-templates pour que les sous-ressources matchent ce router.
 app.use('/api/remotion-templates', templateStudioRoutes);
-app.use('/api/remotion-templates', sensitiveRateLimit, remotionTemplatesRoutes); // Templates vidéo Remotion (ADR-052)
+// Templates vidéo Remotion (ADR-052) — rate limits per-route dans remotion-templates.routes.ts.
+// Pas de `sensitiveRateLimit` au mount : (1) double-comptage avec les limiteurs per-route
+// (anti-pattern documenté) et (2) CORP/CORS ne survivent pas à un 429 renvoyé avant le handler,
+// ce qui fait planter le <video> Remotion avec ERR_BLOCKED_BY_RESPONSE.NotSameOrigin sur
+// `/asset-proxy` (endpoint stateless sans rate limit volontaire — cf. routes).
+app.use('/api/remotion-templates', remotionTemplatesRoutes);
 // ADR-075 V3 Phase B — Club self-service templates
 app.use('/api/club/remotion-templates', clubTemplatesRoutes);
 
