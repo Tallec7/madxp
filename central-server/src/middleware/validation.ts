@@ -891,7 +891,7 @@ export const schemas = {
     appearAt: Joi.number().min(0).max(300).required(),
     appearDuration: Joi.number().min(0).max(10).optional(),
     animation: Joi.string()
-      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in', 'zoom', 'logo-pop')
       .optional(),
     defaultValue: Joi.string().allow('').max(500).optional(),
     maxChars: Joi.number().integer().min(1).max(500).allow(null).optional(),
@@ -901,6 +901,9 @@ export const schemas = {
     alwaysVisible: Joi.boolean().optional(),
     scaleFrom: Joi.number().min(0).max(5).optional(),
     scaleTo: Joi.number().min(0).max(5).optional(),
+    layerId: Joi.string().uuid().allow(null).optional(),
+    respectAlpha: Joi.boolean().optional(),
+    animationDirection: Joi.string().valid('in', 'out').optional(),
   }),
   templateStudioTextFieldUpdate: Joi.object({
     slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
@@ -915,7 +918,7 @@ export const schemas = {
     appearAt: Joi.number().min(0).max(300).optional(),
     appearDuration: Joi.number().min(0).max(10).optional(),
     animation: Joi.string()
-      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in', 'zoom', 'logo-pop')
       .optional(),
     defaultValue: Joi.string().allow('').max(500).optional(),
     maxChars: Joi.number().integer().min(1).max(500).allow(null).optional(),
@@ -925,6 +928,9 @@ export const schemas = {
     alwaysVisible: Joi.boolean().optional(),
     scaleFrom: Joi.number().min(0).max(5).optional(),
     scaleTo: Joi.number().min(0).max(5).optional(),
+    layerId: Joi.string().uuid().optional(),
+    respectAlpha: Joi.boolean().optional(),
+    animationDirection: Joi.string().valid('in', 'out').optional(),
   }).min(1),
 
   templateStudioImageSlotCreate: Joi.object({
@@ -937,11 +943,32 @@ export const schemas = {
     appearAt: Joi.number().min(0).max(300).required(),
     appearDuration: Joi.number().min(0).max(10).optional(),
     animation: Joi.string()
-      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in', 'zoom', 'logo-pop')
       .optional(),
     aspectRatio: Joi.string().max(16).allow(null, '').optional(),
     required: Joi.boolean().optional(),
     sortOrder: Joi.number().integer().min(0).optional(),
+    layerId: Joi.string().uuid().allow(null).optional(),
+    anchor: Joi.string()
+      .valid(
+        'top-left', 'top-center', 'top-right',
+        'center-left', 'center', 'center-right',
+        'bottom-left', 'bottom-center', 'bottom-right'
+      )
+      .optional(),
+    fitMode: Joi.string()
+      .valid('contain', 'cover', 'fill-width-anchor-top', 'fill-height-anchor-left')
+      .optional(),
+    safeTopPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeLeftPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeWidthPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeHeightPct: Joi.number().min(0).max(100).allow(null).optional(),
+    overflow: Joi.string()
+      .valid('hidden', 'visible', 'top', 'bottom', 'left', 'right')
+      .optional(),
+    animationDirection: Joi.string().valid('in', 'out').optional(),
+    scaleFrom: Joi.number().min(0).max(5).allow(null).optional(),
+    scaleTo: Joi.number().min(0).max(5).allow(null).optional(),
   }),
   templateStudioImageSlotUpdate: Joi.object({
     slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
@@ -953,11 +980,32 @@ export const schemas = {
     appearAt: Joi.number().min(0).max(300).optional(),
     appearDuration: Joi.number().min(0).max(10).optional(),
     animation: Joi.string()
-      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in')
+      .valid('none', 'fade', 'slide-up', 'slide-down', 'scale-in', 'blur-in', 'zoom', 'logo-pop')
       .optional(),
     aspectRatio: Joi.string().max(16).allow(null, '').optional(),
     required: Joi.boolean().optional(),
     sortOrder: Joi.number().integer().min(0).optional(),
+    layerId: Joi.string().uuid().allow(null).optional(),
+    anchor: Joi.string()
+      .valid(
+        'top-left', 'top-center', 'top-right',
+        'center-left', 'center', 'center-right',
+        'bottom-left', 'bottom-center', 'bottom-right'
+      )
+      .optional(),
+    fitMode: Joi.string()
+      .valid('contain', 'cover', 'fill-width-anchor-top', 'fill-height-anchor-left')
+      .optional(),
+    safeTopPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeLeftPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeWidthPct: Joi.number().min(0).max(100).allow(null).optional(),
+    safeHeightPct: Joi.number().min(0).max(100).allow(null).optional(),
+    overflow: Joi.string()
+      .valid('hidden', 'visible', 'top', 'bottom', 'left', 'right')
+      .optional(),
+    animationDirection: Joi.string().valid('in', 'out').optional(),
+    scaleFrom: Joi.number().min(0).max(5).allow(null).optional(),
+    scaleTo: Joi.number().min(0).max(5).allow(null).optional(),
   }).min(1),
   // ADR-082 — Video club grants
   addVideoClubGrant: Joi.object({

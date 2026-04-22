@@ -11,7 +11,30 @@ export type AnimationPreset =
   | 'slide-up'
   | 'slide-down'
   | 'scale-in'
-  | 'blur-in';
+  | 'blur-in'
+  | 'zoom'
+  | 'logo-pop';
+
+export type AnimationDirection = 'in' | 'out';
+
+export type Anchor =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'center-left'
+  | 'center'
+  | 'center-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+
+export type FitMode =
+  | 'contain'
+  | 'cover'
+  | 'fill-width-anchor-top'
+  | 'fill-height-anchor-left';
+
+export type Overflow = 'hidden' | 'visible' | 'top' | 'bottom' | 'left' | 'right';
 
 export type TextAlign = 'left' | 'center' | 'right';
 
@@ -60,6 +83,12 @@ export interface TemplateTextField {
   alwaysVisible: boolean;
   scaleFrom: number;
   scaleTo: number;
+  /** ADR-086 — layer parent (FK) */
+  layerId: string | null;
+  /** ADR-086 — rendu sous le layer parent (masqué par zones opaques) */
+  respectAlpha: boolean;
+  /** ADR-086 — direction d'animation */
+  animationDirection: AnimationDirection;
 }
 
 export interface TemplateImageSlot {
@@ -74,6 +103,23 @@ export interface TemplateImageSlot {
   aspectRatio: string | null;
   required: boolean;
   sortOrder: number;
+  /** ADR-086 — layer parent (FK, optionnel) */
+  layerId: string | null;
+  /** ADR-086 — point d'ancrage dans le rectangle safe */
+  anchor: Anchor;
+  /** ADR-086 — comment l'image remplit le rectangle safe */
+  fitMode: FitMode;
+  /** ADR-086 — rectangle safe (% du canvas, null = legacy) */
+  safeTopPct: number | null;
+  safeLeftPct: number | null;
+  safeWidthPct: number | null;
+  safeHeightPct: number | null;
+  /** ADR-086 — direction autorisée de débordement */
+  overflow: Overflow;
+  /** ADR-086 — direction d'animation */
+  animationDirection: AnimationDirection;
+  scaleFrom: number | null;
+  scaleTo: number | null;
 }
 
 /**
@@ -155,6 +201,9 @@ export interface TemplateTextFieldRow extends QueryResultRow {
   always_visible: boolean;
   scale_from: string;
   scale_to: string;
+  layer_id: string | null;
+  respect_alpha: boolean;
+  animation_direction: AnimationDirection;
 }
 
 export interface TemplateImageSlotRow extends QueryResultRow {
@@ -172,4 +221,15 @@ export interface TemplateImageSlotRow extends QueryResultRow {
   aspect_ratio: string | null;
   required: boolean;
   sort_order: number;
+  layer_id: string | null;
+  anchor: Anchor;
+  fit_mode: FitMode;
+  safe_top_pct: string | null;
+  safe_left_pct: string | null;
+  safe_width_pct: string | null;
+  safe_height_pct: string | null;
+  overflow: Overflow;
+  animation_direction: AnimationDirection;
+  scale_from: string | null;
+  scale_to: string | null;
 }

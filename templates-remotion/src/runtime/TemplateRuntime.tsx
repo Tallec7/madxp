@@ -1,18 +1,38 @@
 /**
- * ADR-075 — Meta-composition Remotion data-driven.
+ * ADR-075 / ADR-086 — Meta-composition Remotion data-driven.
  * 1 composition pour N templates : reçoit le template complet + les valeurs
  * user en props, rend bg variant + couches alpha Z-stackées + slots texte/image.
+ *
+ * ADR-086 apports :
+ *   - Les text fields / image slots peuvent être enfants d'un layer (`layerId`).
+ *     La durée d'animation est héritée du layer parent (`durationMs`).
+ *   - Flag `respectAlpha` sur text fields → rendu SOUS le layer parent dans
+ *     l'ordre z-stack (le layer masque les zones opaques de son WebM).
+ *   - Image slots paramétrables (anchor, fit_mode, safe-zone, overflow).
+ *   - Animations réversibles (`animationDirection: 'in' | 'out'`).
  */
 
 import React from 'react';
 import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig } from 'remotion';
-import { computeAnimation, AnimationPreset } from './animations';
+import {
+  computeAnimation,
+  AnimationPreset,
+  AnimationDirection,
+} from './animations';
+import {
+  computeImageStyle,
+  Anchor,
+  FitMode,
+  Overflow,
+} from './fit-modes';
 
 export interface RuntimeLayer {
   id: string;
   videoUrl: string;
   zIndex: number;
   mask: { top: number; bottom: number; left: number; right: number };
+  /** ADR-086 — durée du layer (ms). Héritée par les text/image enfants. */
+  durationMs?: number;
 }
 
 export interface RuntimeTextField {
@@ -28,12 +48,15 @@ export interface RuntimeTextField {
   appearDuration: number;
   animation: AnimationPreset;
   defaultValue: string;
-  /** Si true, le texte est visible sur toute la durée (ignore appearAt/appearDuration) */
   alwaysVisible?: boolean;
-  /** Valeur de départ pour scale-in (défaut 0.7) */
   scaleFrom?: number;
-  /** Valeur d'arrivée pour scale-in (défaut 1.0) */
   scaleTo?: number;
+  /** ADR-086 — layer parent (durée héritée) */
+  layerId?: string | null;
+  /** ADR-086 — rendre SOUS le layer parent (masqué par zones opaques) */
+  respectAlpha?: boolean;
+  /** ADR-086 — 'in' (défaut) = arrivée, 'out' = sortie */
+  animationDirection?: AnimationDirection;
 }
 
 export interface RuntimeImageSlot {
@@ -43,6 +66,21 @@ export interface RuntimeImageSlot {
   appearAt: number;
   appearDuration: number;
   animation: AnimationPreset;
+  scaleFrom?: number;
+  scaleTo?: number;
+  /** ADR-086 — layer parent (durée héritée) */
+  layerId?: string | null;
+  /** ADR-086 — paramètres safe-zone */
+  anchor?: Anchor;
+  fitMode?: FitMode;
+  safeZone?: {
+    topPct: number | null;
+    leftPct: number | null;
+    widthPct: number | null;
+    heightPct: number | null;
+  };
+  overflow?: Overflow;
+  animationDirection?: AnimationDirection;
 }
 
 export interface RuntimeVariant {
@@ -62,16 +100,63 @@ export interface TemplateRuntimeProps {
   canvasHeight: number;
 }
 
+const isValidSrc = (url: string): boolean => /^(https?:|blob:|data:)/.test(url);
+
 export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   const variant = props.variants.find((v) => v.id === props.variantId);
-  const sortedLayers = [...props.layers].sort((a, b) => a.zIndex - b.zIndex);
-  const isValidSrc = (url: string): boolean =>
-    /^(https?:|blob:|data:)/.test(url);
   const bgSrcRaw = (variant?.backgroundVideoUrl ?? '').trim();
   const bgSrc = isValidSrc(bgSrcRaw) ? bgSrcRaw : '';
+
+  const layerById = new Map<string, RuntimeLayer>();
+  for (const l of props.layers) layerById.set(l.id, l);
+
+  const appearDurationSeconds = (
+    slotAppearDuration: number,
+    layerId: string | null | undefined
+  ): number => {
+    if (!layerId) return slotAppearDuration;
+    const parent = layerById.get(layerId);
+    if (!parent?.durationMs || parent.durationMs <= 0) return slotAppearDuration;
+    return parent.durationMs / 1000;
+  };
+
+  // ADR-086 — construire un flux z-stacké unique : layers + text/image.
+  // Text/image avec respectAlpha=true sont rendus z=layer.z-0.5 (sous le layer).
+  // Sinon, z=layer.z+0.5 (au-dessus du layer parent).
+  // Ceux sans layerId gardent le comportement historique : tout en haut.
+  type Stacked =
+    | { kind: 'layer'; z: number; layer: RuntimeLayer }
+    | { kind: 'text'; z: number; field: RuntimeTextField }
+    | { kind: 'image'; z: number; slot: RuntimeImageSlot };
+
+  const stack: Stacked[] = [];
+  const TOP = Number.MAX_SAFE_INTEGER;
+
+  for (const layer of props.layers) {
+    stack.push({ kind: 'layer', z: layer.zIndex, layer });
+  }
+  for (const field of props.textFields) {
+    const parent = field.layerId ? layerById.get(field.layerId) : undefined;
+    if (parent && field.respectAlpha) {
+      stack.push({ kind: 'text', z: parent.zIndex - 0.5, field });
+    } else if (parent) {
+      stack.push({ kind: 'text', z: parent.zIndex + 0.5, field });
+    } else {
+      stack.push({ kind: 'text', z: TOP, field });
+    }
+  }
+  for (const slot of props.imageSlots) {
+    const parent = slot.layerId ? layerById.get(slot.layerId) : undefined;
+    if (parent) {
+      stack.push({ kind: 'image', z: parent.zIndex + 0.5, slot });
+    } else {
+      stack.push({ kind: 'image', z: TOP, slot });
+    }
+  }
+  stack.sort((a, b) => a.z - b.z);
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
@@ -82,102 +167,120 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
         />
       ) : null}
 
-      {sortedLayers.map((layer) => {
-        const layerSrcRaw = (layer.videoUrl ?? '').trim();
-        const layerSrc = isValidSrc(layerSrcRaw) ? layerSrcRaw : '';
-        if (!layerSrc) return null;
-        const clipPath =
-          `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ` +
-          `${layer.mask.bottom * 100}% ${layer.mask.left * 100}%)`;
-        return (
-          <AbsoluteFill key={layer.id} style={{ clipPath }}>
-            <OffthreadVideo
-              src={layerSrc}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          </AbsoluteFill>
-        );
-      })}
-
-      {props.textFields.map((tf) => {
-        const value = props.textValues[tf.slotKey] ?? tf.defaultValue;
-        if (!value) return null;
-
-        let opacity: number;
-        let transform: string;
-        let filter: string | undefined;
-
-        if (tf.alwaysVisible) {
-          opacity = 1;
-          transform = 'translate(0, 0)';
-        } else {
-          const style = computeAnimation(tf.animation, {
-            frame,
-            fps,
-            appearAtFrame: Math.round(tf.appearAt * fps),
-            durationFrames: Math.max(1, Math.round(tf.appearDuration * fps)),
-            scaleFrom: tf.scaleFrom,
-            scaleTo: tf.scaleTo,
-          });
-          opacity = style.opacity;
-          transform = style.transform;
-          filter = style.filter;
+      {stack.map((item) => {
+        if (item.kind === 'layer') {
+          const layer = item.layer;
+          const layerSrcRaw = (layer.videoUrl ?? '').trim();
+          const layerSrc = isValidSrc(layerSrcRaw) ? layerSrcRaw : '';
+          if (!layerSrc) return null;
+          const clipPath =
+            `inset(${layer.mask.top * 100}% ${layer.mask.right * 100}% ` +
+            `${layer.mask.bottom * 100}% ${layer.mask.left * 100}%)`;
+          return (
+            <AbsoluteFill key={`layer-${layer.id}`} style={{ clipPath }}>
+              <OffthreadVideo
+                src={layerSrc}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </AbsoluteFill>
+          );
         }
 
-        return (
-          <div
-            key={tf.id}
-            style={{
-              position: 'absolute',
-              left: `${tf.position.x * 100}%`,
-              top: `${tf.position.y * 100}%`,
-              width: `${tf.maxWidth * 100}%`,
-              transform: `translate(-50%, -50%) ${transform}`,
-              opacity,
-              filter,
-              color: tf.color,
-              fontFamily: tf.fontFamily,
-              fontSize: tf.fontSize,
-              textAlign: tf.align,
-              lineHeight: 1.1,
-              whiteSpace: 'pre-wrap',
-              pointerEvents: 'none',
-            }}
-          >
-            {value}
-          </div>
-        );
-      })}
+        if (item.kind === 'text') {
+          const tf = item.field;
+          const value = props.textValues[tf.slotKey] ?? tf.defaultValue;
+          if (!value) return null;
 
-      {props.imageSlots.map((slot) => {
+          const durationSec = appearDurationSeconds(tf.appearDuration, tf.layerId);
+          let opacity: number;
+          let transform: string;
+          let filter: string | undefined;
+
+          if (tf.alwaysVisible) {
+            opacity = 1;
+            transform = 'translate(0, 0)';
+          } else {
+            const style = computeAnimation(tf.animation, {
+              frame,
+              fps,
+              appearAtFrame: Math.round(tf.appearAt * fps),
+              durationFrames: Math.max(1, Math.round(durationSec * fps)),
+              direction: tf.animationDirection ?? 'in',
+              scaleFrom: tf.scaleFrom,
+              scaleTo: tf.scaleTo,
+            });
+            opacity = style.opacity;
+            transform = style.transform;
+            filter = style.filter;
+          }
+
+          return (
+            <div
+              key={`text-${tf.id}`}
+              style={{
+                position: 'absolute',
+                left: `${tf.position.x * 100}%`,
+                top: `${tf.position.y * 100}%`,
+                width: `${tf.maxWidth * 100}%`,
+                transform: `translate(-50%, -50%) ${transform}`,
+                opacity,
+                filter,
+                color: tf.color,
+                fontFamily: tf.fontFamily,
+                fontSize: tf.fontSize,
+                textAlign: tf.align,
+                lineHeight: 1.1,
+                whiteSpace: 'pre-wrap',
+                pointerEvents: 'none',
+              }}
+            >
+              {value}
+            </div>
+          );
+        }
+
+        // image
+        const slot = item.slot;
         const src = props.imageUploads[slot.slotKey];
         if (!src) return null;
-        const style = computeAnimation(slot.animation, {
+
+        const durationSec = appearDurationSeconds(slot.appearDuration, slot.layerId);
+        const anim = computeAnimation(slot.animation, {
           frame,
           fps,
           appearAtFrame: Math.round(slot.appearAt * fps),
-          durationFrames: Math.max(1, Math.round(slot.appearDuration * fps)),
+          durationFrames: Math.max(1, Math.round(durationSec * fps)),
+          direction: slot.animationDirection ?? 'in',
+          scaleFrom: slot.scaleFrom,
+          scaleTo: slot.scaleTo,
         });
+
+        const { wrapper, img } = computeImageStyle({
+          slotPosition: slot.position,
+          anchor: slot.anchor ?? 'center',
+          fitMode: slot.fitMode ?? 'contain',
+          safeZone: slot.safeZone ?? {
+            topPct: null,
+            leftPct: null,
+            widthPct: null,
+            heightPct: null,
+          },
+          overflow: slot.overflow ?? 'hidden',
+        });
+
+        const baseTransform = (wrapper.transform as string | undefined) ?? '';
         return (
           <div
-            key={slot.id}
+            key={`image-${slot.id}`}
             style={{
-              position: 'absolute',
-              left: `${slot.position.x * 100}%`,
-              top: `${slot.position.y * 100}%`,
-              width: `${slot.position.width * 100}%`,
-              height: `${slot.position.height * 100}%`,
-              transform: `translate(-50%, -50%) ${style.transform}`,
-              opacity: style.opacity,
-              filter: style.filter,
+              ...wrapper,
+              transform: `${baseTransform} ${anim.transform}`.trim(),
+              opacity: anim.opacity,
+              filter: anim.filter,
               pointerEvents: 'none',
             }}
           >
-            <img
-              src={src}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
+            <img src={src} alt="" style={img} />
           </div>
         );
       })}

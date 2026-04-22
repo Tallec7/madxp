@@ -16,6 +16,10 @@ import type {
   TemplateTextFieldRow,
   TemplateImageSlotRow,
   AnimationPreset,
+  AnimationDirection,
+  Anchor,
+  FitMode,
+  Overflow,
   TextAlign,
 } from '../types/template-studio.types';
 
@@ -37,6 +41,9 @@ interface TemplateBaseRow extends QueryResultRow {
 
 const num = (v: string | number): number =>
   typeof v === 'number' ? v : parseFloat(v);
+
+const numOrNull = (v: string | number | null): number | null =>
+  v === null || v === undefined ? null : num(v);
 
 const mapVariant = (r: TemplateVariantRow): TemplateVariant => ({
   id: r.id,
@@ -83,6 +90,9 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   alwaysVisible: r.always_visible,
   scaleFrom: num(r.scale_from),
   scaleTo: num(r.scale_to),
+  layerId: r.layer_id,
+  respectAlpha: r.respect_alpha,
+  animationDirection: r.animation_direction,
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -102,6 +112,17 @@ const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
   aspectRatio: r.aspect_ratio,
   required: r.required,
   sortOrder: r.sort_order,
+  layerId: r.layer_id,
+  anchor: r.anchor,
+  fitMode: r.fit_mode,
+  safeTopPct: numOrNull(r.safe_top_pct),
+  safeLeftPct: numOrNull(r.safe_left_pct),
+  safeWidthPct: numOrNull(r.safe_width_pct),
+  safeHeightPct: numOrNull(r.safe_height_pct),
+  overflow: r.overflow,
+  animationDirection: r.animation_direction,
+  scaleFrom: numOrNull(r.scale_from),
+  scaleTo: numOrNull(r.scale_to),
 });
 
 export interface CreateVariantInput {
@@ -153,6 +174,9 @@ export interface CreateTextFieldInput {
   alwaysVisible?: boolean;
   scaleFrom?: number;
   scaleTo?: number;
+  layerId?: string | null;
+  respectAlpha?: boolean;
+  animationDirection?: AnimationDirection;
 }
 
 export type UpdateTextFieldInput = Partial<CreateTextFieldInput>;
@@ -170,6 +194,17 @@ export interface CreateImageSlotInput {
   aspectRatio?: string | null;
   required?: boolean;
   sortOrder?: number;
+  layerId?: string | null;
+  anchor?: Anchor;
+  fitMode?: FitMode;
+  safeTopPct?: number | null;
+  safeLeftPct?: number | null;
+  safeWidthPct?: number | null;
+  safeHeightPct?: number | null;
+  overflow?: Overflow;
+  animationDirection?: AnimationDirection;
+  scaleFrom?: number | null;
+  scaleTo?: number | null;
 }
 
 export type UpdateImageSlotInput = Partial<CreateImageSlotInput>;
@@ -413,13 +448,30 @@ class TemplateStudioRepository {
     templateId: string,
     input: CreateTextFieldInput
   ): Promise<TemplateTextField> {
+    // ADR-086 — layer_id est NOT NULL. Si absent, on rattache au premier layer
+    // (z_index ASC) du template. Si aucun layer n'existe, on en crée un vide.
+    let layerId = input.layerId ?? null;
+    if (!layerId) {
+      const existing = await this.listLayers(templateId);
+      if (existing.length > 0) {
+        layerId = existing[0].id;
+      } else {
+        const fallback = await this.createLayer(templateId, {
+          name: 'Layer par défaut',
+          videoUrl: '',
+          zIndex: 1,
+        });
+        layerId = fallback.id;
+      }
+    }
     const { rows } = await query<TemplateTextFieldRow>(
       `INSERT INTO template_text_fields
          (template_id, slot_key, label, position_x, position_y, max_width,
           font_family, font_size, color, align, appear_at, appear_duration,
           animation, default_value, max_chars, multiline, required, sort_order,
-          always_visible, scale_from, scale_to)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+          always_visible, scale_from, scale_to,
+          layer_id, respect_alpha, animation_direction)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING *`,
       [
         templateId,
@@ -443,6 +495,9 @@ class TemplateStudioRepository {
         input.alwaysVisible ?? false,
         input.scaleFrom ?? 0.7,
         input.scaleTo ?? 1.0,
+        layerId,
+        input.respectAlpha ?? false,
+        input.animationDirection ?? 'in',
       ]
     );
     return mapTextField(rows[0]);
@@ -481,6 +536,9 @@ class TemplateStudioRepository {
       alwaysVisible: 'always_visible',
       scaleFrom: 'scale_from',
       scaleTo: 'scale_to',
+      layerId: 'layer_id',
+      respectAlpha: 'respect_alpha',
+      animationDirection: 'animation_direction',
     };
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -533,8 +591,12 @@ class TemplateStudioRepository {
     const { rows } = await query<TemplateImageSlotRow>(
       `INSERT INTO template_image_slots
          (template_id, slot_key, label, position_x, position_y, width, height,
-          appear_at, appear_duration, animation, aspect_ratio, required, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          appear_at, appear_duration, animation, aspect_ratio, required, sort_order,
+          layer_id, anchor, fit_mode,
+          safe_top_pct, safe_left_pct, safe_width_pct, safe_height_pct,
+          overflow, animation_direction, scale_from, scale_to)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
+               $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING *`,
       [
         templateId,
@@ -550,6 +612,17 @@ class TemplateStudioRepository {
         input.aspectRatio ?? null,
         input.required ?? false,
         input.sortOrder ?? 0,
+        input.layerId ?? null,
+        input.anchor ?? 'center',
+        input.fitMode ?? 'contain',
+        input.safeTopPct ?? null,
+        input.safeLeftPct ?? null,
+        input.safeWidthPct ?? null,
+        input.safeHeightPct ?? null,
+        input.overflow ?? 'hidden',
+        input.animationDirection ?? 'in',
+        input.scaleFrom ?? null,
+        input.scaleTo ?? null,
       ]
     );
     return mapImageSlot(rows[0]);
@@ -580,6 +653,17 @@ class TemplateStudioRepository {
       aspectRatio: 'aspect_ratio',
       required: 'required',
       sortOrder: 'sort_order',
+      layerId: 'layer_id',
+      anchor: 'anchor',
+      fitMode: 'fit_mode',
+      safeTopPct: 'safe_top_pct',
+      safeLeftPct: 'safe_left_pct',
+      safeWidthPct: 'safe_width_pct',
+      safeHeightPct: 'safe_height_pct',
+      overflow: 'overflow',
+      animationDirection: 'animation_direction',
+      scaleFrom: 'scale_from',
+      scaleTo: 'scale_to',
     };
     const fields: string[] = [];
     const values: unknown[] = [];
