@@ -1,3 +1,9 @@
+## [3.217.4](https://github.com/Tallec7/neopro/compare/v3.217.3...v3.217.4) (2026-04-22)
+
+### Bug Fixes
+
+- **dashboard:** supprimer MediaPlaybackError Zone.js via window.onerror ([e7c9b91](https://github.com/Tallec7/neopro/commit/e7c9b9127cafe30dac10cb334d61c88c68caa5ed))
+
 ## [3.217.3](https://github.com/Tallec7/neopro/compare/v3.217.2...v3.217.3) (2026-04-22)
 
 ### Bug Fixes
