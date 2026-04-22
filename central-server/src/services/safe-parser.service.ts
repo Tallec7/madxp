@@ -10,6 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import logger from '../config/logger';
 import { safeRepository } from '../repositories/safe.repository';
+import { gitHubService } from './github.service';
 import type {
   SafePortfolio,
   SafeEpic,
@@ -236,6 +237,12 @@ class SafeParserService {
     // Persist to DB (hybrid layer — survives container restarts)
     await safeRepository.upsertProposalStatus(id, newStatus);
 
+    const repoPath = `docs/proposals/${proposal.filePath}`;
+    this.persistToGitHub(
+      () => gitHubService.writeFile(repoPath, content, `chore(safe): update proposal ${id} status → ${newStatus}`),
+      { id, repoPath, newStatus }
+    );
+
     this.invalidateCache();
     logger.info('SAFe: Updated proposal status', { id, newStatus });
     return true;
@@ -274,6 +281,12 @@ ${data.content}
     fs.writeFileSync(path.join(PROPOSALS_DIR, filename), mdContent, 'utf-8');
     this.invalidateCache();
 
+    const repoPath = `docs/proposals/${filename}`;
+    this.persistToGitHub(
+      () => gitHubService.writeFile(repoPath, mdContent, `feat(safe): create proposal ${id} — ${data.title}`),
+      { id, repoPath }
+    );
+
     logger.info('SAFe: Created proposal', { id, title: data.title, type: data.type });
 
     return {
@@ -297,6 +310,12 @@ ${data.content}
 
     fs.unlinkSync(fullPath);
     this.invalidateCache();
+
+    const repoPath = `docs/proposals/${proposal.filePath}`;
+    this.persistToGitHub(
+      () => gitHubService.deleteFile(repoPath, `chore(safe): delete proposal ${id}`),
+      { id, repoPath }
+    );
 
     logger.info('SAFe: Deleted proposal', { id, filePath: proposal.filePath });
     return true;
@@ -404,6 +423,8 @@ ${data.content}
 
     fs.writeFileSync(fullPath, fileContent, 'utf-8');
 
+    let finalFilename = proposal.filePath;
+
     // Rename file if title changed (slug in filename)
     if (data.title) {
       const newSlug = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/g, '');
@@ -411,7 +432,23 @@ ${data.content}
       if (newFilename !== proposal.filePath) {
         const newPath = path.resolve(PROPOSALS_DIR, newFilename);
         fs.renameSync(fullPath, newPath);
+        finalFilename = newFilename;
       }
+    }
+
+    const oldRepoPath = `docs/proposals/${proposal.filePath}`;
+    const newRepoPath = `docs/proposals/${finalFilename}`;
+
+    if (finalFilename !== proposal.filePath) {
+      this.persistToGitHub(
+        () => gitHubService.renameFile(oldRepoPath, newRepoPath, fileContent, `feat(safe): update & rename proposal ${id}`),
+        { id, oldRepoPath, newRepoPath }
+      );
+    } else {
+      this.persistToGitHub(
+        () => gitHubService.writeFile(newRepoPath, fileContent, `feat(safe): update proposal ${id} content`),
+        { id, repoPath: newRepoPath }
+      );
     }
 
     this.invalidateCache();
@@ -444,6 +481,14 @@ ${data.content}
     this.invalidateCache();
     logger.info('SAFe: Updated story fields', { storyId, ...data });
     return true;
+  }
+
+  // --- GitHub persistence (fire-and-forget — never blocks the response) ---
+
+  private persistToGitHub(op: () => Promise<void>, context: Record<string, unknown>): void {
+    op().catch((err: unknown) => {
+      logger.warn('SAFe: GitHub persist failed — change is ephemeral until next deploy', { ...context, err });
+    });
   }
 
   invalidateCache(): void {
