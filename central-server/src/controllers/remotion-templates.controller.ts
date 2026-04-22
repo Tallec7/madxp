@@ -164,11 +164,33 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
   const upstreamReq = transport.request(
     { hostname: parsed.hostname, path: parsed.pathname + parsed.search, method: 'GET', headers: upstreamHeaders },
     (upstreamRes) => {
-      // Relayer les headers nécessaires pour le seek et le streaming vidéo
-      const relay = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+      // Relayer les headers nécessaires pour le seek et le streaming vidéo.
+      // Content-type : Hostinger sert les .webm en `text/plain` (mime table
+      // manquante) → combiné à `x-content-type-options: nosniff`, le browser
+      // rejette le <video> et retry en boucle. On force le type selon
+      // l'extension de l'URL.
+      const relay = ['content-length', 'content-range', 'accept-ranges'];
       for (const h of relay) {
         if (upstreamRes.headers[h]) res.setHeader(h, upstreamRes.headers[h] as string);
       }
+      const pathLower = parsed.pathname.toLowerCase();
+      const mimeByExt: Record<string, string> = {
+        '.webm': 'video/webm',
+        '.mp4': 'video/mp4',
+        '.mov': 'video/quicktime',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.otf': 'font/otf',
+        '.woff2': 'font/woff2',
+      };
+      const matched = Object.keys(mimeByExt).find((ext) => pathLower.endsWith(ext));
+      const forcedType = matched ? mimeByExt[matched] : undefined;
+      res.setHeader(
+        'content-type',
+        forcedType ?? (upstreamRes.headers['content-type'] as string) ?? 'application/octet-stream',
+      );
       setCorsProxyHeaders(res);
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.status(upstreamRes.statusCode ?? 200);
