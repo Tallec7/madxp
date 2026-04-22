@@ -1,3 +1,13 @@
+# [3.221.0](https://github.com/Tallec7/neopro/compare/v3.220.0...v3.221.0) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** corrige table vocabulaire DESIGNER_WORKFLOW après prettier ([c924ebb](https://github.com/Tallec7/neopro/commit/c924ebbdee254fecb4494c15c8676e4dc507a9e0))
+
+### Features
+
+- **templates:** ADR-086 Wave 1 — migration DB + workflow designer + rules ([ee280a9](https://github.com/Tallec7/neopro/commit/ee280a91a90111c3c6ec6f2dbb8358b333ddd3e0))
+
 # [3.220.0](https://github.com/Tallec7/neopro/compare/v3.219.0...v3.220.0) (2026-04-22)
 
 ### Features
