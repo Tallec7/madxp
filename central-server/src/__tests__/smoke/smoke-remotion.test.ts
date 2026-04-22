@@ -1771,3 +1771,98 @@ describe('Template Studio v2 — ADR-084 custom fonts + visibility + scale-in', 
     expect(readme).toMatch(/ADR-084/);
   });
 });
+
+describe('Video playback — CORB proxy + Zone.js error suppression guards', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const raspRoot = path.join(repoRoot, 'raspberry');
+
+  function readDash(rel: string): string {
+    return fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  }
+
+  function readRasp(rel: string): string {
+    return fs.readFileSync(path.join(raspRoot, rel), 'utf8');
+  }
+
+  // ── CORB proxy (ADR-075 / fix #546) ────────────────────────────────────────
+  // Le player Remotion v2 passait les URLs FTP kalonpartners.bzh directement au
+  // <video> sans proxy → CORB bloquait 1 486 requêtes → preview noir.
+  // V1 fonctionnait car même-origine via l'iframe asset-proxy.
+
+  it('RemotionPreviewService expose proxyUrl() pour proxifier les URLs FTP', () => {
+    const svc = readDash('src/app/features/content/remotion-templates/remotion-preview.service.ts');
+    expect(svc).toMatch(/proxyUrl\s*\(/);
+    expect(svc).toMatch(/asset-proxy/);
+    expect(svc).toMatch(/kalonpartners\.bzh/);
+    expect(svc).toMatch(/encodeURIComponent/);
+  });
+
+  it('StudioV2EditorComponent proxifie backgroundVideoUrl et videoUrl via proxyUrl()', () => {
+    const cmp = readDash(
+      'src/app/features/content/remotion-templates/studio-v2/studio-v2-editor.component.ts',
+    );
+    // Doit injecter RemotionPreviewService
+    expect(cmp).toMatch(/RemotionPreviewService/);
+    expect(cmp).toMatch(/previewService\s*=\s*inject\s*\(\s*RemotionPreviewService/);
+    // Doit proxifier les deux types d'URL
+    expect(cmp).toMatch(/previewService\.proxyUrl\s*\(\s*v\.backgroundVideoUrl/);
+    expect(cmp).toMatch(/previewService\.proxyUrl\s*\(\s*l\.videoUrl/);
+    // Ne doit PAS passer des URLs brutes non-proxifiées
+    expect(cmp).not.toMatch(/backgroundVideoUrl:\s*v\.backgroundVideoUrl[^,\n)]/);
+    expect(cmp).not.toMatch(/videoUrl:\s*l\.videoUrl[^,\n)]/);
+  });
+
+  it('BrowserRendererService absorbe les rejets play() individuels (pas de rethrow Zone.js)', () => {
+    const svc = readDash('src/app/features/content/browser-renderer.service.ts');
+    // Doit capturer les erreurs par vidéo sans les relancer directement
+    expect(svc).toMatch(/playErrors/);
+    expect(svc).toMatch(/\.play\(\)\.catch/);
+    // Ne doit PAS relancer immédiatement (pattern qui causait 3x MediaPlaybackError)
+    expect(svc).not.toMatch(/\.play\(\)\.catch\s*\(\s*\(\s*e[^)]*\)\s*=>\s*\{\s*throw\s+e\s*;\s*\}\s*\)/);
+  });
+
+  // ── MediaPlaybackError Zone.js suppression ──────────────────────────────────
+  // Zone.js wrape les event listeners vidéo globalement et re-throw MediaPlaybackError
+  // hors Angular zone (player React Remotion) → "Uncaught" en console.
+
+  it('main.ts supprime MediaPlaybackError via window.addEventListener error capture', () => {
+    const main = readDash('src/main.ts');
+    expect(main).toMatch(/window\.addEventListener\s*\(\s*['"]error['"]/);
+    expect(main).toMatch(/MediaPlaybackError/);
+    expect(main).toMatch(/preventDefault/);
+  });
+
+  it('GlobalErrorHandler supprime MediaPlaybackError avant errorBoundary', () => {
+    const handler = readDash('src/app/core/handlers/global-error.handler.ts');
+    expect(handler).toMatch(/MediaPlaybackError/);
+    // Doit return early (pas de fall-through vers errorBoundary)
+    const mpIdx = handler.indexOf('MediaPlaybackError');
+    const block = handler.slice(mpIdx - 50, mpIdx + 200);
+    expect(block).toMatch(/return/);
+  });
+
+  // ── video.src = '' (Pi + admin panel) ──────────────────────────────────────
+  // Assigner src='' navigue vers la page courante → requête réseau parasite + error event.
+  // Toujours utiliser removeAttribute('src') + load().
+
+  it("manual-video.service.ts n'utilise pas video.src = '' (utilise removeAttribute)", () => {
+    const svc = readRasp('src/app/services/manual-video.service.ts');
+    // Doit NE PAS contenir targetPlayer.src = '' ou player.src = ''
+    expect(svc).not.toMatch(/targetPlayer\.src\s*=\s*['"]{2}/);
+    expect(svc).not.toMatch(/player\.src\s*=\s*['"]{2}/);
+    // Doit utiliser removeAttribute
+    expect(svc).toMatch(/removeAttribute\s*\(\s*['"]src['"]\s*\)/);
+  });
+
+  it("admin notifications.js n'utilise pas video.src = '' (utilise removeAttribute)", () => {
+    const notif = readRasp('admin/public/modules/core/notifications.js');
+    expect(notif).not.toMatch(/video\.src\s*=\s*['"]{2}/);
+    expect(notif).toMatch(/removeAttribute\s*\(\s*['"]src['"]\s*\)/);
+  });
+
+  it('MediaErrorHandler est enregistré dans app.config.ts du Pi', () => {
+    const config = readRasp('src/app/app.config.ts');
+    expect(config).toMatch(/MediaErrorHandler/);
+    expect(config).toMatch(/provide\s*:\s*ErrorHandler/);
+  });
+});
