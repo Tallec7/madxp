@@ -58,19 +58,18 @@ ALTER TABLE template_image_slots
     CHECK (animation_direction IN ('in', 'out'));
 
 -- =============================================================================
--- 3. Fonts — URL dynamique pour chargement DB-driven
--- =============================================================================
--- template_fonts existe déjà (ADR-084). On ajoute woff2_url pour permettre
--- le chargement dynamique côté runtime et dashboard, fallback sur chargement
--- statique si NULL.
-ALTER TABLE template_fonts
-  ADD COLUMN IF NOT EXISTS woff2_url VARCHAR(512);
-
--- =============================================================================
--- Note : pas de table `animation_presets` — les presets sont des string literals
--- (enum côté types + whitelist Joi). Les nouvelles valeurs 'zoom' et 'logo-pop'
--- sont ajoutées en Wave 2 (middleware/validation.ts) + types côté serveur et
--- dashboard, sans changement de schéma DB ici.
+-- Notes de scope :
+--
+-- - Pas de table `animation_presets` — les presets sont des string literals
+--   (enum côté types + whitelist Joi). Les nouvelles valeurs 'zoom' et 'logo-pop'
+--   sont ajoutées en Wave 2 (middleware/validation.ts) + types côté serveur et
+--   dashboard, sans changement de schéma DB ici.
+--
+-- - Fonts DB-driven différées : ADR-084 charge les fonts custom (Bulevar,
+--   General Sans) statiquement via fonts.ts + public/ + styles.scss. Tant
+--   que le nombre de fonts reste limité, le chargement statique suffit.
+--   Une migration séparée créera `template_fonts` (name, woff2_url, status)
+--   quand le designer voudra livrer des fonts via SPEC.md.
 -- =============================================================================
 
 COMMIT;

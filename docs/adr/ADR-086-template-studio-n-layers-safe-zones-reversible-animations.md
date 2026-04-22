@@ -96,13 +96,11 @@ Route backend nouvelle : `POST /api/remotion-templates/upload` (multipart, guard
 
 Ce script est un **fallback** : dès que l'UI admin expose tous les paramètres, le designer peut composer directement dans le Studio. Le SPEC.md reste utile pour versionner le contrat de template.
 
-### 6. Font dynamique
+### 6. Font dynamique — **différée**
 
-`template_fonts` existe déjà (ADR-084 a chargé Bulevar et General Sans statiquement). On ajoute :
+ADR-084 charge Bulevar et General Sans statiquement (fonts.ts + public/ + styles.scss) — il n'existe **pas** de table `template_fonts`. Tant que le nombre de fonts reste limité, ce chargement statique suffit.
 
-- `template_fonts.woff2_url VARCHAR(512)` — URL FTP du woff2 (optionnel, fallback sur chargement statique).
-- Endpoint `GET /api/remotion-templates/fonts` (déjà présent ? à vérifier dans le plan).
-- UI : dropdown font dans `admin-field-editor` peuplée depuis cette table (au lieu de la const `FONT_FAMILIES` hardcodée).
+Une migration séparée créera `template_fonts` (name, woff2_url, status) quand un designer voudra livrer une font via SPEC.md sans passer par un commit. Dans l'intervalle, le script `template:import` refuse les fonts non présentes dans `fonts.ts` (whitelist statique).
 
 ---
 
