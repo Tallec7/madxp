@@ -1,3 +1,9 @@
+## [3.217.2](https://github.com/Tallec7/neopro/compare/v3.217.1...v3.217.2) (2026-04-22)
+
+### Bug Fixes
+
+- **ci:** repair 5 ADR-084 CI failures — import order, slice sizes, spec fixtures, ADR README ([c89fa38](https://github.com/Tallec7/neopro/commit/c89fa3836cc779f95f7ce3f044b76c3a335c16dc))
+
 ## [3.217.1](https://github.com/Tallec7/neopro/compare/v3.217.0...v3.217.1) (2026-04-22)
 
 ### Bug Fixes
