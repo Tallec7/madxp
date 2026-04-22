@@ -101,6 +101,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-082](ADR-082-video-club-grants.md)                            | Video Club Grants — accès multi-clubs aux vidéos admin           | Accepté                           | Avr 2026 |
 | [ADR-083](ADR-083-config-path-drift-resilience.md)                 | Resolveur fuzzy filename pour configs SaaS avec paths legacy     | Accepté                           | Avr 2026 |
 | [ADR-084](ADR-084-template-studio-fonts-visibility-scale.md)       | Template Studio — polices custom + alwaysVisible + scale-in      | Accepté                           | Avr 2026 |
+| [ADR-085](ADR-085-simplification-2026.md)                          | Simplification 2026 — dégraissage outillage non-core             | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -140,7 +141,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-085**)
+3. Numéroter séquentiellement (prochain : **ADR-086**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -163,4 +164,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 21 avril 2026 (ADR-084 Accepté — polices custom + alwaysVisible + scale-in config ; ADR-083 Accepté — résolveur fuzzy drift ; ADR-082 Accepté — video club grants ; ADR-081 Phase 0 en cours ; ADR-080 Suspendu)_
+_Dernière mise à jour : 22 avril 2026 (ADR-085 Accepté — Simplification 2026 : suppression Excel SAFe auto-gen, sync Notion, dual-storage Supabase ; ADR-084 Accepté — polices custom + alwaysVisible + scale-in config ; ADR-083 Accepté — résolveur fuzzy drift)_

@@ -235,20 +235,10 @@ Le Sprint Tracker capture automatiquement :
 
 ## Tooling & Automatisation
 
-### Pipeline SAFe → Excel
-
-Les fichiers `.md` dans `docs/safe/` sont la **source de vérité**. Un pipeline automatique maintient la cohérence :
-
-```
-docs/safe/*.md  →  pre-commit hook  →  export-to-excel.py  →  NEOPRO_SAFe_Portfolio.xlsx
-                                                                (13 onglets, formules WSJF)
-```
+> **ADR-085** : l'auto-génération Excel et l'import Notion (CSV) ont été supprimés. La source de vérité est désormais **uniquement les `.md`** + le **dashboard Angular SAFe** consommé via l'API.
 
 | Outil           | Fichier                                              | Rôle                                                                                                                                                       |
 | --------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Export Excel    | `docs/safe/scripts/export-to-excel.py`               | Génère le `.xlsx` avec 13 onglets (Dashboard, Epics, Features, Sprint Tracker, ROAM, Flow Metrics, User Stories, \_ChartData, etc.)                        |
-| Recalc helper   | `docs/safe/scripts/recalc.py`                        | Force le recalcul des formules Excel                                                                                                                       |
-| Pre-commit hook | `.husky/pre-commit`                                  | Détecte les changements `docs/safe/*.md` et régénère l'Excel automatiquement                                                                               |
 | Règle Claude    | `.claude/rules/safe-update.md`                       | Checklist pour que Claude mette à jour les `.md` SAFe à chaque `feat`/`fix` commit                                                                         |
 | Dashboard SAFe  | `central-dashboard/src/app/features/safe/`           | Dashboard Angular interactif : Portfolio Overview (KPIs, Gantt, Kanban Epics, ROAM), Proposals Kanban (drag & drop, CRUD), Proposal Detail, Sprint Tracker |
 | API SAFe        | `central-server/src/routes/safe.routes.ts`           | 9 endpoints REST (`/api/safe/*`) — parse les `.md` en JSON, write-back atomique pour mutations, DB hybrid layer pour sprints                               |
@@ -262,7 +252,6 @@ Quand Claude effectue un commit `feat(scope)` ou `fix(scope)` qui implémente un
 2. **IMPLEMENTED-BACKLOG.md** — Nouvelle ligne `IMP-XXX-NN` si feature complète
 3. **Compteurs** — PORTFOLIO.md et README.md si nécessaire
 4. **Dates** — `Dernière mise à jour` sur tous les `.md` modifiés
-5. **Excel** — Régénéré automatiquement par le hook pre-commit
 
 > Le mapping `scope → Epic → Feature` est documenté dans `.claude/rules/safe-update.md`.
 

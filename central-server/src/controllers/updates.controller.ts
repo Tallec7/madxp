@@ -380,11 +380,9 @@ export const checkUpdatePackageUrl = async (req: AuthRequest, res: Response) => 
       });
     }
 
-    // Déterminer le type de stockage
+    // Déterminer le type de stockage (ADR-085 : plus de Supabase Storage)
     let storageType = 'unknown';
-    if (packageUrl.includes('supabase')) {
-      storageType = 'supabase';
-    } else if (packageUrl.includes(process.env.FTP_UPDATE_PUBLIC_URL || 'neopro-update')) {
+    if (packageUrl.includes(process.env.FTP_UPDATE_PUBLIC_URL || 'neopro-update')) {
       storageType = 'ftp';
     } else if (packageUrl.startsWith('http')) {
       storageType = 'external';

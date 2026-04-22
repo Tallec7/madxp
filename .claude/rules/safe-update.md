@@ -119,13 +119,9 @@ Format date français : `19 Février 2026`, `5 Mars 2026`, etc.
 
 Mois en français : Janvier, Février, Mars, Avril, Mai, Juin, Juillet, Août, Septembre, Octobre, Novembre, Décembre.
 
-### 6. Régénération Excel
+### 6. Excel — supprimé (ADR-085)
 
-**Ne rien faire** — le hook pre-commit dans `.husky/pre-commit` détecte automatiquement les changements `docs/safe/*.md` et régénère `NEOPRO_SAFe_Portfolio.xlsx`.
-
-### 7. Mettre à jour `export-to-excel.py` si les données changent
-
-Si de nouvelles données sont ajoutées (nouvelle Feature terminée, nouveau risque, etc.), mettre aussi à jour les données en dur dans `docs/safe/scripts/export-to-excel.py` pour que le prochain Excel généré soit cohérent.
+L'auto-génération Excel a été supprimée. La source de vérité SAFe est désormais **uniquement les `.md`**. Les fichiers `.xlsx` restants dans `docs/safe/` (`*vTravail.xlsx`, `*_backup.xlsx`) sont des fichiers de travail manuels — ne pas les régénérer.
 
 ## Exemple concret
 
@@ -137,9 +133,7 @@ Actions :
 1. **FEATURES.md** : F-01.1 passe de `⏳ Backlog` à `✅ Done`, sprint = S2
 2. **IMPLEMENTED-BACKLOG.md** : Ajouter `IMP-MON-15` dans "Monétisation & Sponsors"
 3. **Dates** : Mettre à jour FEATURES.md et IMPLEMENTED-BACKLOG.md
-4. **export-to-excel.py** : Mettre à jour le statut de F-01.1 dans `build_features_us()`
-5. **Commit** : Inclure les `.md` modifiés dans le même commit
-6. **Excel** : Le hook pre-commit régénère automatiquement
+4. **Commit** : Inclure les `.md` modifiés dans le même commit
 
 ## Règles importantes
 

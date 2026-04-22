@@ -3,7 +3,7 @@
 > _Anciennement ADR-008. Renuméroté pour éliminer la collision avec ADR-008 (Double-Buffer Vidéo Pi)._
 
 **Date** : Décembre 2024 (documenté rétroactivement)
-**Statut** : Accepté
+**Statut** : ⚠️ Supersédé par [ADR-085](ADR-085-simplification-2026.md) — fallback Supabase Storage supprimé (avril 2026). FTP Hostinger reste le seul backend ; migration future vers Cloudflare R2 actée par ADR-085.
 **Décideurs** : Équipe technique Neopro
 
 ---
