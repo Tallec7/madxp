@@ -1,3 +1,14 @@
+# [3.219.0](https://github.com/Tallec7/neopro/compare/v3.218.0...v3.219.0) (2026-04-22)
+
+### Bug Fixes
+
+- **dashboard:** stopper les 429 burst /api/groups et /api/logs/frontend ([a14a7d1](https://github.com/Tallec7/neopro/commit/a14a7d13bb24e234bce9f9ee8e42c6dc4efae3ba)), closes [#48](https://github.com/Tallec7/neopro/issues/48)
+- **templates:** CORP headers + correction migration pour preview Remotion v2 (ERR_BLOCKED_BY_RESPONSE) ([50d32bd](https://github.com/Tallec7/neopro/commit/50d32bde42c52a6dae400e3f68b2fc5d1710e157))
+
+### Features
+
+- **safe:** ADR viewer v2 — TOC, cross-refs, prev/next, URL sync, fullscreen ([e99aa37](https://github.com/Tallec7/neopro/commit/e99aa375509d644056e8372269ce07dc57910ce3)), closes [#NNN](https://github.com/Tallec7/neopro/issues/NNN)
+
 # [3.218.0](https://github.com/Tallec7/neopro/compare/v3.217.5...v3.218.0) (2026-04-22)
 
 ### Features
