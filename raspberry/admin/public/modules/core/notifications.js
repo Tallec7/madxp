@@ -177,7 +177,8 @@ function closeVideoPreview() {
 
     if (video) {
         video.pause();
-        video.src = '';
+        video.removeAttribute('src');
+        video.load();
     }
 
     if (modal) {

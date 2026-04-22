@@ -241,7 +241,8 @@ export class ManualVideoService {
 
       targetPlayer.style.opacity = '0';
       targetPlayer.pause();
-      targetPlayer.src = '';
+      targetPlayer.removeAttribute('src');
+      targetPlayer.load();
 
       this._isManualMode = false;
 
@@ -354,7 +355,8 @@ export class ManualVideoService {
 
       targetPlayer.style.opacity = '0';
       targetPlayer.pause();
-      targetPlayer.src = '';
+      targetPlayer.removeAttribute('src');
+      targetPlayer.load();
 
       this._isManualMode = false;
       this._preloadedManualVideo = null;
