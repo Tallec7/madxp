@@ -1,3 +1,9 @@
+# [3.217.0](https://github.com/Tallec7/neopro/compare/v3.216.0...v3.217.0) (2026-04-22)
+
+### Features
+
+- **safe:** ADR viewer + filename-resolver drift resilience (ADR-083/084) ([#541](https://github.com/Tallec7/neopro/issues/541)) ([b0a5434](https://github.com/Tallec7/neopro/commit/b0a54341c8b5e448b1b14b2bd893aeb43e1103ed))
+
 # [3.216.0](https://github.com/Tallec7/neopro/compare/v3.215.0...v3.216.0) (2026-04-21)
 
 ### Features
