@@ -21,6 +21,7 @@
 ### Bug Fixes
 
 - **templates:** absorb per-video play() rejections pour éviter 3x MediaPlaybackError ([0e16049](https://github.com/Tallec7/neopro/commit/0e16049db3c951d2204dd424cf153dcc9ce698fd))
+- **dashboard:** 429 burst — GroupsService `pendingLoad`+`shareReplay` déduplique les appels `ngOnInit` simultanés ; LoggerService backoff exponentiel 60s→300s coupe le feedback loop `POST /api/logs/frontend`
 
 ## [3.217.2](https://github.com/Tallec7/neopro/compare/v3.217.1...v3.217.2) (2026-04-22)
 

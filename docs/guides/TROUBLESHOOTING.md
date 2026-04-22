@@ -49,6 +49,7 @@
 45. [SPA 404 sur routes profondes (`/saas/remote`, `/sites/<uuid>`) (v3.193.7+)](#spa-404-sur-routes-profondes-saasremote-sitesuuid--v31937)
 46. [MediaPlaybackError Zone.js dans la console (v3.216+)](#mediaplaybackerror-zonejs-dans-la-console-v3216)
 47. [Preview Remotion v2 noir — 1 486 requêtes CORB bloquées (v3.216+)](#preview-remotion-v2-noir--1-486-requêtes-corb-bloquées-v3216)
+48. [429 burst sur /api/groups et /api/logs/frontend au chargement du dashboard (v3.217.3+)](#429-burst-sur-apigroups-et-apilogsfrontend-au-chargement-du-dashboard-v32173)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -6770,3 +6771,98 @@ Fichiers modifiés :
 - Passer des URLs FTP `kalonpartners.bzh` directement à `<video src>` dans un contexte React avec `crossOrigin = 'anonymous'`
 - Retirer `proxyUrl()` de `RemotionPreviewService` (casse le preview v2 silencieusement — canvas noir sans erreur JS explicite)
 - Ajouter un nouveau composant de preview vidéo qui bypass `RemotionPreviewService` (toujours utiliser `proxyUrl()` pour les assets FTP)
+
+---
+
+## 429 burst sur /api/groups et /api/logs/frontend au chargement du dashboard (v3.217.3+)
+
+### Symptôme
+
+La console du navigateur affiche des erreurs 429 en rafale au chargement d'une page du dashboard :
+
+```
+GET  https://.../api/groups           429 (Too Many Requests)
+POST https://.../api/logs/frontend    429 (Too Many Requests)
+[ERROR] HTTP request failed {url: '/api/groups', status: 429}
+[ERROR] Unhandled error {message: 'Trop de requêtes', status: 429}
+```
+
+Les erreurs `/api/groups` apparaissent **3× simultanément** depuis `loadGroups` en `ngOnInit`. Les erreurs `/api/logs/frontend` apparaissent en boucle toutes les 2 secondes.
+
+### Cause (deux origines indépendantes)
+
+**1. GroupsService — burst concurrent au démarrage**
+
+Plusieurs composants Angular (`groups-list`, `content-management`, `updates-management`, etc.) appelaient chacun `loadGroups()` dans leur `ngOnInit`. Comme Angular hydrate ces composants quasi-simultanément lors du routage, 3 à 5 requêtes `GET /api/groups` partaient en parallèle. Le `apiRateLimit` est à **100 req/min** — un utilisateur naviguant rapidement entre pages pouvait l'atteindre.
+
+**2. LoggerService — feedback loop 429**
+
+Le service envoyait **1 POST individuel par entrée de log**, jusqu'à 20 par batch, toutes les 2 secondes. Débit théorique : **10 req/s = 600 req/min** contre un `loggingRateLimit` de **200/min**. Quand un 429 était reçu, l'erreur était elle-même loggée → ajoutée au batch suivant → nouveau 429 (boucle infinie de dégradation progressive).
+
+### Correction (v3.217.3)
+
+**GroupsService** (`central-dashboard/src/app/core/services/groups.service.ts`) :
+
+```typescript
+private pendingLoad: Observable<{ total: number; groups: Group[] }> | null = null;
+
+loadGroups(filters?): Observable<...> {
+  if (!filters && this.pendingLoad) return this.pendingLoad;  // ← retourne le même in-flight
+  const obs = this.api.get(...).pipe(
+    tap(...),
+    finalize(() => { if (!filters) this.pendingLoad = null; }),
+    shareReplay(1)  // ← tous les abonnés partagent 1 seule requête HTTP
+  );
+  if (!filters) this.pendingLoad = obs;
+  return obs;
+}
+```
+
+**LoggerService** (`central-dashboard/src/app/core/services/logger.service.ts`) :
+
+```typescript
+private rateLimitBackoffUntil = 0;
+private rateLimitBackoffMs = 60_000;
+
+sendBatchToBackend(entries) {
+  if (Date.now() < this.rateLimitBackoffUntil) return;  // ← drop batch pendant backoff
+  for (const entry of entries) {
+    this.http.post(...).pipe(
+      tap(() => { this.rateLimitBackoffMs = 60_000; }),  // ← reset sur succès
+      catchError(error => {
+        if (error?.status === 429) {
+          this.rateLimitBackoffUntil = Date.now() + this.rateLimitBackoffMs;
+          this.rateLimitBackoffMs = Math.min(this.rateLimitBackoffMs * 2, 300_000); // ← exp. backoff
+        }
+        return of(null);
+      })
+    ).subscribe();
+  }
+}
+```
+
+### Vérification
+
+```bash
+# Vérifier que les smoke tests passent
+cd central-server && npx jest --testPathPattern='smoke/smoke-dashboard-guards' --no-coverage --forceExit
+# Doit afficher : "429 burst guard — logger backoff + groups deduplication (7 tests)"
+```
+
+### Monitoring
+
+7 smoke tests dans `smoke-dashboard-guards.test.ts` (describe `429 burst guard`) protègent contre la régression :
+
+- `LoggerService must have a rateLimitBackoffUntil field`
+- `LoggerService sendBatchToBackend must bail early when inside 429 backoff window`
+- `LoggerService must set rateLimitBackoffUntil when a 429 is received`
+- `LoggerService must implement exponential backoff capped at 300 000 ms`
+- `GroupsService must have a pendingLoad field`
+- `GroupsService loadGroups must use shareReplay`
+- `GroupsService loadGroups must return pendingLoad for concurrent no-filter calls`
+
+### NE JAMAIS FAIRE
+
+- Retirer `rateLimitBackoffUntil` de `LoggerService` (le feedback loop 429 reviendra immédiatement)
+- Retirer `pendingLoad` / `shareReplay` de `GroupsService.loadGroups()` (3+ requêtes simultanées à chaque navigation vers une page contenant des groupes)
+- Augmenter `MAX_BATCH_SIZE` au-delà de 20 sans ajuster `loggingRateLimit` côté serveur (chaque batch = 1 POST par entrée → débit proportionnel)

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, shareReplay, finalize } from 'rxjs';
 import { ApiService } from './api.service';
 import { Group, Site } from '../models';
 
@@ -12,10 +12,23 @@ export class GroupsService {
   private groupsSubject = new BehaviorSubject<Group[]>([]);
   public groups$ = this.groupsSubject.asObservable();
 
+  // Deduplicates concurrent loadGroups() calls — multiple ngOnInit firing simultaneously
+  // share the same in-flight HTTP request instead of each making their own.
+  private pendingLoad: Observable<{ total: number; groups: Group[] }> | null = null;
+
   loadGroups(filters?: Record<string, string | number | boolean>): Observable<{ total: number; groups: Group[] }> {
-    return this.api.get<{ total: number; groups: Group[] }>('/groups', filters).pipe(
-      tap(response => this.groupsSubject.next(response.groups))
+    if (!filters && this.pendingLoad) {
+      return this.pendingLoad;
+    }
+    const obs = this.api.get<{ total: number; groups: Group[] }>('/groups', filters).pipe(
+      tap(response => this.groupsSubject.next(response.groups)),
+      finalize(() => { if (!filters) this.pendingLoad = null; }),
+      shareReplay(1)
     );
+    if (!filters) {
+      this.pendingLoad = obs;
+    }
+    return obs;
   }
 
   getGroup(id: string): Observable<Group> {
