@@ -1,3 +1,9 @@
+## [3.221.1](https://github.com/Tallec7/neopro/compare/v3.221.0...v3.221.1) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** retire ALTER template_fonts de la migration ADR-086 ([a0cd4b5](https://github.com/Tallec7/neopro/commit/a0cd4b56bbc957dbe4665624a550dc84c6ef3ac7))
+
 # [3.221.0](https://github.com/Tallec7/neopro/compare/v3.220.0...v3.221.0) (2026-04-22)
 
 ### Bug Fixes
