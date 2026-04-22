@@ -1,3 +1,9 @@
+## [3.223.5](https://github.com/Tallec7/neopro/compare/v3.223.4...v3.223.5) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** retirer rate limiter de asset-proxy (CORP ne survit pas au 429) ([4daf2f2](https://github.com/Tallec7/neopro/commit/4daf2f2792828f8fb47488c4890fbde832ad990f))
+
 ## [3.223.4](https://github.com/Tallec7/neopro/compare/v3.223.3...v3.223.4) (2026-04-22)
 
 ### Bug Fixes
