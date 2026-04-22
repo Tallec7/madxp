@@ -1,9 +1,85 @@
 import { marked } from 'marked';
-import DOMPurify from 'dompurify';
+
+export interface TocEntry {
+  level: number;
+  text: string;
+  id: string;
+}
+
+export interface AdrRef {
+  type: 'pr' | 'adr' | 'prop' | 'feature';
+  label: string;
+  external: boolean;
+  href?: string;
+  routerPath?: string;
+  queryParams?: Record<string, string>;
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[*_`[\]()]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function addHeadingIds(html: string): string {
+  return html.replace(/<(h[1-3])>([\s\S]*?)<\/h[1-3]>/g, (_, tag, inner) => {
+    const id = slugify(inner);
+    return `<${tag} id="${id}">${inner}</${tag}>`;
+  });
+}
 
 export function renderMarkdown(md: string): string {
   if (!md) return '';
-  return DOMPurify.sanitize(marked.parse(md) as string);
+  return addHeadingIds(marked.parse(md) as string);
+}
+
+export function extractToc(md: string): TocEntry[] {
+  return [...md.matchAll(/^(#{1,3})\s+(.+)$/gm)].map(m => {
+    const raw = m[2]
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .trim();
+    return { level: m[1].length, text: raw, id: slugify(raw) };
+  });
+}
+
+export function parseAdrRefs(content: string, currentId: string): AdrRef[] {
+  const refs: AdrRef[] = [];
+  const seen = new Set<string>();
+
+  const add = (ref: AdrRef) => {
+    if (!seen.has(ref.label)) { seen.add(ref.label); refs.push(ref); }
+  };
+
+  for (const m of content.matchAll(/PR #(\d+)/g)) {
+    add({ type: 'pr', label: `PR #${m[1]}`, external: true, href: `https://github.com/Tallec7/neopro/pull/${m[1]}` });
+  }
+
+  for (const m of content.matchAll(/\bADR-(\d+)\b/g)) {
+    const num = parseInt(m[1], 10);
+    const id = `ADR-${String(num).padStart(3, '0')}`;
+    if (id !== currentId) {
+      add({ type: 'adr', label: id, external: false, routerPath: '/safe/adr', queryParams: { id } });
+    }
+  }
+
+  for (const m of content.matchAll(/\bPROP-(\d+)\b/g)) {
+    const label = `PROP-${String(parseInt(m[1], 10)).padStart(3, '0')}`;
+    add({ type: 'prop', label, external: false, routerPath: `/safe/proposals/${label}` });
+  }
+
+  for (const m of content.matchAll(/\bF-(\d+)\.(\d+)\b/g)) {
+    const label = `F-${m[1]}.${m[2]}`;
+    add({ type: 'feature', label, external: false, routerPath: '/safe' });
+  }
+
+  return refs;
 }
 
 export const MARKDOWN_STYLES = `

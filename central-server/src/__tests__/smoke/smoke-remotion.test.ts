@@ -1865,4 +1865,49 @@ describe('Video playback — CORB proxy + Zone.js error suppression guards', () 
     expect(config).toMatch(/MediaErrorHandler/);
     expect(config).toMatch(/provide\s*:\s*ErrorHandler/);
   });
+
+  // ── CORP sur le proxy asset + routes /remotion-preview/public ──────────────
+  // Sans Cross-Origin-Resource-Policy: cross-origin, Chrome bloque même les
+  // réponses 4xx/5xx avec ERR_BLOCKED_BY_RESPONSE.NotSameOrigin.
+
+  it('proxyTemplateAsset pose CORS + CORP sur toutes les réponses (y compris erreurs)', () => {
+    const ctrl = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/remotion-templates.controller.ts'),
+      'utf8',
+    );
+    // Helper setCorsProxyHeaders doit exister
+    expect(ctrl).toMatch(/setCorsProxyHeaders/);
+    // Doit être appelé sur les chemins d'erreur (400/403/502)
+    expect(ctrl).toMatch(/setCorsProxyHeaders\s*\(\s*res\s*\)/);
+    // Doit poser Cross-Origin-Resource-Policy
+    expect(ctrl).toMatch(/Cross-Origin-Resource-Policy/);
+    expect(ctrl).toMatch(/cross-origin/);
+  });
+
+  it('/remotion-preview/public pose CORS + CORP dans server.ts', () => {
+    const srv = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/server.ts'),
+      'utf8',
+    );
+    // Le middleware CORS doit être posé avant le express.static de public/
+    const corsIdx = srv.indexOf("'Access-Control-Allow-Origin'");
+    const publicStaticIdx = srv.indexOf("remotion-preview/public");
+    expect(corsIdx).toBeGreaterThan(0);
+    expect(publicStaticIdx).toBeGreaterThan(0);
+    // CORP sur les assets publics
+    expect(srv).toMatch(/Cross-Origin-Resource-Policy/);
+  });
+
+  it('migration fix-legacy-template-asset-urls-railway.sql redirige de FTP vers Railway', () => {
+    const mig = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/migrations/fix-legacy-template-asset-urls-railway.sql'),
+      'utf8',
+    );
+    expect(mig).toMatch(/kalonpartners\.bzh.*template-assets.*studio.*legacy/);
+    expect(mig).toMatch(/railway\.app.*remotion-preview\/public/);
+    expect(mig).toMatch(/template_variants/);
+    expect(mig).toMatch(/template_layers/);
+    expect(mig).toMatch(/ButSimple/);
+    expect(mig).toMatch(/ButImgJoueur/);
+  });
 });

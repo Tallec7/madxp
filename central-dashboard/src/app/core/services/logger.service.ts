@@ -1,7 +1,7 @@
 import { Injectable, inject, isDevMode, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@env/environment';
-import { catchError, of, Subject, bufferTime, filter, takeUntil } from 'rxjs';
+import { catchError, of, Subject, bufferTime, filter, takeUntil, tap } from 'rxjs';
 
 /**
  * Log levels
@@ -73,6 +73,10 @@ export class LoggerService implements OnDestroy {
   private readonly MAX_BATCH_SIZE = 20; // Max logs per batch
   private readonly logQueue$ = new Subject<LogEntry>();
   private readonly destroy$ = new Subject<void>();
+
+  // 429 backoff: when set, batches are dropped until this timestamp
+  private rateLimitBackoffUntil = 0;
+  private rateLimitBackoffMs = 60_000;
 
   constructor() {
     try {
@@ -284,24 +288,25 @@ export class LoggerService implements OnDestroy {
    * Silently handles rate limit (429) errors without console spam
    */
   private sendBatchToBackend(entries: LogEntry[]): void {
-    // Skip if HttpClient is not available (e.g., in tests)
-    if (!this.http || entries.length === 0) {
-      return;
-    }
+    if (!this.http || entries.length === 0) return;
 
-    // Send each log entry individually (backend expects single entries)
-    // We batch on the client side to reduce request frequency
+    // Drop batch entirely while in 429 backoff to prevent feedback loop
+    if (Date.now() < this.rateLimitBackoffUntil) return;
+
     for (const entry of entries) {
       this.http
-        .post(`${environment.apiUrl}/logs/frontend`, entry, {
-          withCredentials: true,
-        })
+        .post(`${environment.apiUrl}/logs/frontend`, entry, { withCredentials: true })
         .pipe(
+          tap(() => {
+            // Reset backoff on success
+            this.rateLimitBackoffMs = 60_000;
+          }),
           catchError((error) => {
-            // Silently ignore rate limit errors (429) - expected behavior
-            // Also ignore other errors to prevent console spam in production
-            // Only log in dev mode for debugging purposes
-            if (isDevMode() && error?.status !== 429) {
+            if (error?.status === 429) {
+              // Exponential backoff: 60s → 120s → 240s → 300s max
+              this.rateLimitBackoffUntil = Date.now() + this.rateLimitBackoffMs;
+              this.rateLimitBackoffMs = Math.min(this.rateLimitBackoffMs * 2, 300_000);
+            } else if (isDevMode()) {
               console.warn('[LoggerService] Failed to send log to backend:', error);
             }
             return of(null);

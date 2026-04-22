@@ -434,7 +434,13 @@ const remotionAssetCache = (res: Response, filePath: string) => {
 };
 
 app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false, setHeaders: remotionAssetCache }));
-app.use('/remotion-preview/public', express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
+// CORS + CORP requis pour que le dashboard Angular (kalonpartners.bzh) puisse charger
+// les assets WebM directement via <video> dans @remotion/player (cross-origin Railway).
+app.use('/remotion-preview/public', (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
 app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist'), { setHeaders: remotionAssetCache }));
 // SPA fallback : toute route /remotion-preview/* non trouvée → index.html
 app.get('/remotion-preview/*', (_req, res) => {

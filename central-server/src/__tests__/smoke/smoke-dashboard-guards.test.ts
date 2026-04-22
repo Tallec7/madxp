@@ -1823,3 +1823,50 @@ describe('Egress guard: dashboard cache + metrics LIMIT', () => {
     });
   });
 });
+
+// 429 burst guard (incident 2026-04-22).
+// LoggerService envoyait 1 POST par entrée × 20 entrées/batch × toutes les 2s → jusqu'à
+// 600 req/min contre une limite loggingRateLimit de 200/min. Sans backoff, les 429 généraient
+// des logs d'erreur qui alimentaient le batch suivant (feedback loop).
+// GroupsService appelé simultanément par 3+ composants en ngOnInit → burst GET /api/groups
+// franchissant apiRateLimit (100/min).
+describe('429 burst guard — logger backoff + groups deduplication', () => {
+  const dashRoot = path.resolve(__dirname, '..', '..', '..', '..', 'central-dashboard', 'src', 'app', 'core', 'services');
+
+  it('LoggerService must have a rateLimitBackoffUntil field to stop sending on 429', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'logger.service.ts'), 'utf-8');
+    expect(content).toMatch(/rateLimitBackoffUntil/);
+  });
+
+  it('LoggerService sendBatchToBackend must bail early when inside 429 backoff window', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'logger.service.ts'), 'utf-8');
+    expect(content).toMatch(/Date\.now\(\)\s*<\s*this\.rateLimitBackoffUntil/);
+  });
+
+  it('LoggerService must set rateLimitBackoffUntil when a 429 is received', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'logger.service.ts'), 'utf-8');
+    expect(content).toMatch(/error\?\.status\s*===\s*429/);
+    expect(content).toMatch(/rateLimitBackoffUntil\s*=\s*Date\.now\(\)/);
+  });
+
+  it('LoggerService must implement exponential backoff capped at 300 000 ms', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'logger.service.ts'), 'utf-8');
+    expect(content).toMatch(/rateLimitBackoffMs/);
+    expect(content).toMatch(/300[_]?000/);
+  });
+
+  it('GroupsService must have a pendingLoad field to deduplicate concurrent loadGroups calls', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'groups.service.ts'), 'utf-8');
+    expect(content).toMatch(/pendingLoad/);
+  });
+
+  it('GroupsService loadGroups must use shareReplay to share the in-flight HTTP request', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'groups.service.ts'), 'utf-8');
+    expect(content).toMatch(/shareReplay/);
+  });
+
+  it('GroupsService loadGroups must return pendingLoad for concurrent no-filter calls', () => {
+    const content = fs.readFileSync(path.join(dashRoot, 'groups.service.ts'), 'utf-8');
+    expect(content).toMatch(/if\s*\(!filters\s*&&\s*this\.pendingLoad\)/);
+  });
+});

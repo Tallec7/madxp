@@ -121,9 +121,19 @@ export const createTemplate = async (req: AuthRequest, res: Response) => {
  */
 const ALLOWED_PROXY_HOST = 'kalonpartners.bzh';
 
+// CORS + CORP sur toutes les réponses du proxy (succès ET erreurs).
+// Sans ça, le dashboard Angular (kalonpartners.bzh) reçoit ERR_BLOCKED_BY_RESPONSE.NotSameOrigin
+// même sur les 4xx/5xx, empêchant le browser de distinguer "proxy ok mais FTP 404"
+// d'une erreur CORP.
+const setCorsProxyHeaders = (res: Response): void => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+};
+
 export const proxyTemplateAsset = (req: Request, res: Response): void => {
   const rawUrl = req.query['url'] as string | undefined;
   if (!rawUrl) {
+    setCorsProxyHeaders(res);
     res.status(400).json({ error: 'url requis' });
     return;
   }
@@ -132,12 +142,14 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
   try {
     parsed = new URL(decodeURIComponent(rawUrl));
   } catch {
+    setCorsProxyHeaders(res);
     res.status(400).json({ error: 'url invalide' });
     return;
   }
 
   // Restriction de sécurité : uniquement kalonpartners.bzh
   if (parsed.hostname !== ALLOWED_PROXY_HOST) {
+    setCorsProxyHeaders(res);
     res.status(403).json({ error: 'Domaine non autorisé' });
     return;
   }
@@ -157,7 +169,7 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
       for (const h of relay) {
         if (upstreamRes.headers[h]) res.setHeader(h, upstreamRes.headers[h] as string);
       }
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      setCorsProxyHeaders(res);
       res.setHeader('Cache-Control', 'public, max-age=86400');
       res.status(upstreamRes.statusCode ?? 200);
       upstreamRes.pipe(res);
@@ -166,7 +178,10 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
 
   upstreamReq.on('error', (err) => {
     logger.error('proxyTemplateAsset error', { url: rawUrl, error: err.message });
-    if (!res.headersSent) res.status(502).json({ error: 'Erreur proxy' });
+    if (!res.headersSent) {
+      setCorsProxyHeaders(res);
+      res.status(502).json({ error: 'Erreur proxy' });
+    }
   });
 
   upstreamReq.end();
