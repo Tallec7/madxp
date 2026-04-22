@@ -8,13 +8,13 @@
 ## Vocabulaire partagé
 
 | Terme           | Définition                                                                                                      |
-| --------------- | --------------------------------------------------------------------------------------------------------------- | ----- |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
 | **Template**    | Un type de clip (ex: "BUT simple", "Joueur détaillé"). Identifié par un slug (`but-simple`, `joueur-detaille`). |
 | **Variant**     | Déclinaison visuelle (couleurs, assets différents) d'un même template. Même structure.                          |
 | **Layer**       | Couche vidéo WebM VP9 avec alpha. Ordonnée par `z_index`. Possède une durée propre.                             |
 | **Slot**        | Emplacement paramétré sur un layer → texte, image, logo, numéro. Hérite de la durée du layer parent.            |
 | **Safe-zone**   | Rectangle figé où un asset user (photo joueur, logo club) doit se caler : ancre + dimensions.                   |
-| **Preset anim** | Animation nommée, réversible (`zoom`, `slide-up`, `fade`, `logo-pop`). Flag `direction: in                      | out`. |
+| **Preset anim** | Animation nommée, réversible (`zoom`, `slide-up`, `fade`, `logo-pop`). Flag `direction` = `in` ou `out`.        |
 
 ---
 
