@@ -100,6 +100,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-081](ADR-081-manual-video-reliability.md)                     | Fiabilité remote → vidéo manuelle (ACK, retry, observabilité)    | Proposé                           | Avr 2026 |
 | [ADR-082](ADR-082-video-club-grants.md)                            | Video Club Grants — accès multi-clubs aux vidéos admin           | Accepté                           | Avr 2026 |
 | [ADR-083](ADR-083-config-path-drift-resilience.md)                 | Resolveur fuzzy filename pour configs SaaS avec paths legacy     | Accepté                           | Avr 2026 |
+| [ADR-084](ADR-084-template-studio-fonts-visibility-scale.md)       | Template Studio — polices custom + alwaysVisible + scale-in      | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -139,7 +140,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-084**)
+3. Numéroter séquentiellement (prochain : **ADR-085**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge

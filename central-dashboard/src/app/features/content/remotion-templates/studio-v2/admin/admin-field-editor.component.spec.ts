@@ -22,6 +22,9 @@ function makeTextField(): TemplateTextField {
     multiline: false,
     required: true,
     sortOrder: 0,
+    alwaysVisible: false,
+    scaleFrom: 0.7,
+    scaleTo: 1.0,
   };
 }
 

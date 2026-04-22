@@ -63,6 +63,9 @@ function makeView(overrides: Partial<TemplateStudioView> = {}): TemplateStudioVi
         multiline: false,
         required: true,
         sortOrder: 0,
+        alwaysVisible: false,
+        scaleFrom: 0.7,
+        scaleTo: 1.0,
       },
     ],
     imageSlots: [
