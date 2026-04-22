@@ -1,3 +1,9 @@
+## [3.223.4](https://github.com/Tallec7/neopro/compare/v3.223.3...v3.223.4) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** force content-type selon extension dans asset-proxy ([aa3cbd5](https://github.com/Tallec7/neopro/commit/aa3cbd54d56a1d19931d7de1b71841c7b3d8776f))
+
 ## [3.223.3](https://github.com/Tallec7/neopro/compare/v3.223.2...v3.223.3) (2026-04-22)
 
 ### Bug Fixes
