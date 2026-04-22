@@ -29,6 +29,12 @@ export class GlobalErrorHandler implements ErrorHandler {
   private errorBoundary = inject(ErrorBoundaryService);
 
   handleError(error: Error | HttpErrorResponse | unknown): void {
+    // Zone.js wraps video element error events as MediaPlaybackError even when
+    // our own handlers (attachErrorHandlers / play().catch) already caught them.
+    if (error instanceof Error && error.name === 'MediaPlaybackError') {
+      return;
+    }
+
     // Handle stale chunk errors after redeployment — auto-reload once
     if (error instanceof Error && this.isChunkLoadError(error)) {
       const reloadKey = 'neopro_chunk_reload';

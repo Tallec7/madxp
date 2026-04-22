@@ -238,7 +238,9 @@ export class BrowserRendererService {
         requestAnimationFrame(drawFrame);
       };
 
-      Promise.all([videoA.play(), videoB.play(), videoC.play()]).then(() => {
+      // Attach .catch on each play() so Zone.js doesn't report them as unhandled
+      // before Promise.all propagates to the outer .catch(reject).
+      Promise.all([videoA, videoB, videoC].map(v => v.play().catch((e: unknown) => { throw e; }))).then(() => {
         requestAnimationFrame(drawFrame);
       }).catch(reject);
     });
