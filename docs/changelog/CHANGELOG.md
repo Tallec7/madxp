@@ -1,3 +1,9 @@
+# [3.218.0](https://github.com/Tallec7/neopro/compare/v3.217.5...v3.218.0) (2026-04-22)
+
+### Features
+
+- **safe:** persist proposals to git via GitHub API + render MD as HTML ([d838f69](https://github.com/Tallec7/neopro/commit/d838f697822938e471b2cf5aa4fa5e94f001fa7e))
+
 ## [3.217.5](https://github.com/Tallec7/neopro/compare/v3.217.4...v3.217.5) (2026-04-22)
 
 ### Bug Fixes
