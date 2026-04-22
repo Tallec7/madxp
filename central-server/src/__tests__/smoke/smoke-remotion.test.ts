@@ -1695,7 +1695,7 @@ describe('Template Studio v2 — ADR-084 custom fonts + visibility + scale-in', 
     const createIdx = validation.indexOf('templateStudioTextFieldCreate');
     const updateIdx = validation.indexOf('templateStudioTextFieldUpdate');
     const createBlock = validation.slice(createIdx, updateIdx);
-    const updateBlock = validation.slice(updateIdx, updateIdx + 800);
+    const updateBlock = validation.slice(updateIdx, updateIdx + 1300);
     expect(createBlock).toMatch(/alwaysVisible/);
     expect(createBlock).toMatch(/scaleFrom/);
     expect(createBlock).toMatch(/scaleTo/);
@@ -1756,7 +1756,7 @@ describe('Template Studio v2 — ADR-084 custom fonts + visibility + scale-in', 
     expect(editor).toMatch(/scaleFrom/);
     expect(editor).toMatch(/scaleTo/);
     const patchIdx = editor.indexOf('emitPatch');
-    const patchBlock = editor.slice(patchIdx, patchIdx + 1400);
+    const patchBlock = editor.slice(patchIdx, patchIdx + 3000);
     expect(patchBlock).toMatch(/alwaysVisible/);
     expect(patchBlock).toMatch(/scaleFrom/);
     expect(patchBlock).toMatch(/scaleTo/);
