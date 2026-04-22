@@ -1,3 +1,9 @@
+## [3.223.1](https://github.com/Tallec7/neopro/compare/v3.223.0...v3.223.1) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** durationMs default sur draft layer (ADR-086) ([194e8cf](https://github.com/Tallec7/neopro/commit/194e8cfe75ea1f6160a82d71512e25671f733888))
+
 # [3.223.0](https://github.com/Tallec7/neopro/compare/v3.222.0...v3.223.0) (2026-04-22)
 
 ### Features
