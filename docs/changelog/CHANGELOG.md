@@ -1,3 +1,11 @@
+# [3.223.0](https://github.com/Tallec7/neopro/compare/v3.222.0...v3.223.0) (2026-04-22)
+
+### Features
+
+- **templates:** Wave 3 — safe-zone visual widget (ADR-086) ([4a0ab36](https://github.com/Tallec7/neopro/commit/4a0ab36279cc3dca23749d96c8f43f5cc7055782))
+- **templates:** Wave 3 — UI admin field editor pour ADR-086 ([aa04fdd](https://github.com/Tallec7/neopro/commit/aa04fdd9876edac41d31e5022fd40ff15d4d5d7a))
+- **templates:** Wave 4 — seed "Joueur détaillé" + layer duration_ms (ADR-086) ([dc1367d](https://github.com/Tallec7/neopro/commit/dc1367db68237ea29c3fc45daa7a14ccd1cc81f9))
+
 # [3.222.0](https://github.com/Tallec7/neopro/compare/v3.221.1...v3.222.0) (2026-04-22)
 
 ### Features
