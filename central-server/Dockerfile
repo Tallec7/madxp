@@ -63,6 +63,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY central-server/ .
 COPY docs/safe/ ./docs-safe/
 COPY docs/proposals/ ./docs-proposals/
+COPY docs/adr/ ./docs-adr/
 
 # Build TypeScript
 RUN npm run build
@@ -129,6 +130,7 @@ COPY --from=builder /app/src/templates ./dist/templates
 # Copy SAFe docs (source of truth for SAFe dashboard parser)
 COPY --from=builder /app/docs-safe/ ./docs/safe/
 COPY --from=builder /app/docs-proposals/ ./docs/proposals/
+COPY --from=builder /app/docs-adr/ ./docs/adr/
 
 # Copy Remotion templates + pre-installed node_modules (ADR-052)
 COPY templates-remotion/ ./templates-remotion/
