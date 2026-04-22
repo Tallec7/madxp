@@ -1,3 +1,9 @@
+# [3.222.0](https://github.com/Tallec7/neopro/compare/v3.221.1...v3.222.0) (2026-04-22)
+
+### Features
+
+- **templates:** Wave 2 — moteur + API pour ADR-086 ([6aecfb3](https://github.com/Tallec7/neopro/commit/6aecfb3c42150bd53e8427835def9a65af94ba7e))
+
 ## [3.221.1](https://github.com/Tallec7/neopro/compare/v3.221.0...v3.221.1) (2026-04-22)
 
 ### Bug Fixes
