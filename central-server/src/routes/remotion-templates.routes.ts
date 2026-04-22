@@ -12,11 +12,10 @@ import * as ctrl from '../controllers/remotion-templates.controller';
 const router = Router();
 
 // Proxy same-origin pour les assets FTP (CORS bypass pour @remotion/player)
-// Route sans auth — assets déjà publics sur kalonpartners.bzh.
-// CORP/CORS DOIT être posé AVANT le rate limiter : sinon les réponses 429
-// d'express-rate-limit n'incluent pas CORP → le browser bloque avec
-// ERR_BLOCKED_BY_RESPONSE.NotSameOrigin au lieu d'un "429 rate limited"
-// propre, et le <video> Remotion rentre en boucle d'erreur.
+// Route sans auth — assets déjà publics sur kalonpartners.bzh, déjà cachés 24h
+// par le CDN Railway. Pas de rate limiter : les 429 ne propagent pas CORP, le
+// <video> Remotion déclenche des range requests + retries et rentre en boucle
+// ERR_BLOCKED_BY_RESPONSE.NotSameOrigin. Le proxy est stateless et gratuit.
 router.get(
   '/asset-proxy',
   (_req, res, next) => {
@@ -24,7 +23,6 @@ router.get(
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   },
-  adminRateLimit,
   ctrl.proxyTemplateAsset,
 );
 
