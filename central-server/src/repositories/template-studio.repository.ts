@@ -66,6 +66,7 @@ const mapLayer = (r: TemplateLayerRow): TemplateLayer => ({
     left: num(r.mask_left),
     right: num(r.mask_right),
   },
+  durationMs: r.duration_ms,
 });
 
 const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
@@ -144,6 +145,7 @@ export interface CreateLayerInput {
   videoUrl: string;
   zIndex: number;
   mask?: { top?: number; bottom?: number; left?: number; right?: number };
+  durationMs?: number;
 }
 
 export interface UpdateLayerInput {
@@ -151,6 +153,7 @@ export interface UpdateLayerInput {
   videoUrl?: string;
   zIndex?: number;
   mask?: { top?: number; bottom?: number; left?: number; right?: number };
+  durationMs?: number;
 }
 
 export interface CreateTextFieldInput {
@@ -354,8 +357,8 @@ class TemplateStudioRepository {
     const { rows } = await query<TemplateLayerRow>(
       `INSERT INTO template_layers
          (template_id, name, video_url, z_index,
-          mask_top, mask_bottom, mask_left, mask_right)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          mask_top, mask_bottom, mask_left, mask_right, duration_ms)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         templateId,
@@ -366,6 +369,7 @@ class TemplateStudioRepository {
         m.bottom ?? 0,
         m.left ?? 0,
         m.right ?? 0,
+        input.durationMs ?? 5000,
       ]
     );
     return mapLayer(rows[0]);
@@ -407,6 +411,10 @@ class TemplateStudioRepository {
         fields.push(`mask_right = $${idx++}`);
         values.push(input.mask.right);
       }
+    }
+    if (input.durationMs !== undefined) {
+      fields.push(`duration_ms = $${idx++}`);
+      values.push(input.durationMs);
     }
     if (fields.length === 0) {
       const { rows } = await query<TemplateLayerRow>(

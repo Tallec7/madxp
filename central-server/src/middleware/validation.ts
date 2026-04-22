@@ -865,6 +865,7 @@ export const schemas = {
       left: Joi.number().min(0).max(1).optional(),
       right: Joi.number().min(0).max(1).optional(),
     }).optional(),
+    durationMs: Joi.number().integer().min(0).max(600000).optional(),
   }),
   templateStudioLayerUpdate: Joi.object({
     name: Joi.string().max(100).optional(),
@@ -876,6 +877,7 @@ export const schemas = {
       left: Joi.number().min(0).max(1).optional(),
       right: Joi.number().min(0).max(1).optional(),
     }).optional(),
+    durationMs: Joi.number().integer().min(0).max(600000).optional(),
   }).min(1),
 
   templateStudioTextFieldCreate: Joi.object({

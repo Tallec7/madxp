@@ -84,6 +84,8 @@ export interface TemplateLayer {
   videoUrl: string;
   zIndex: number;
   mask: { top: number; bottom: number; left: number; right: number };
+  /** ADR-086 — durée du layer en ms (héritée par les slots enfants). */
+  durationMs: number;
 }
 
 export interface TemplateTextField {

@@ -59,6 +59,8 @@ export interface TemplateLayer {
     left: number;
     right: number;
   };
+  /** ADR-086 — durée du layer en ms (source de vérité pour slots enfants). */
+  durationMs: number;
 }
 
 export interface TemplateTextField {
@@ -175,6 +177,7 @@ export interface TemplateLayerRow extends QueryResultRow {
   mask_bottom: string;
   mask_left: string;
   mask_right: string;
+  duration_ms: number;
   created_at: Date;
 }
 
