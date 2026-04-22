@@ -25,6 +25,7 @@ import {
 } from '../../core/services/safe.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { renderMarkdown } from './markdown.utils';
 
 @Component({
   selector: 'app-safe-proposal-detail',
@@ -362,7 +363,7 @@ export class SafeProposalDetailComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.proposal = data;
           this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
-            this.renderMarkdown(data.content)
+            renderMarkdown(data.content)
           );
           this.cdr.markForCheck();
         },
@@ -501,7 +502,7 @@ export class SafeProposalDetailComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.proposal = data;
           this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(
-            this.renderMarkdown(data.content)
+            renderMarkdown(data.content)
           );
           this.cdr.markForCheck();
         },
@@ -511,164 +512,4 @@ export class SafeProposalDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * Markdown → HTML renderer.
-   * Handles headers, bold, italic, code blocks, tables, lists (ordered + unordered),
-   * links, images, blockquotes, hr.
-   */
-  private renderMarkdown(md: string): string {
-    if (!md) return '';
-
-    let html = md;
-
-    // Code blocks (``` ... ```)
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
-      return `<pre><code>${this.escapeHtml(code.trim())}</code></pre>`;
-    });
-
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-    // Headers
-    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-
-    // Horizontal rules
-    html = html.replace(/^---$/gm, '<hr>');
-
-    // Bold and italic
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-    // Images (before links to avoid conflict)
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy">');
-
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-    // Blockquotes
-    html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-
-    // Tables
-    html = this.renderTables(html);
-
-    // Lists (ordered + unordered, with nesting support)
-    html = this.renderLists(html);
-
-    // Paragraphs
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = `<p>${html}</p>`;
-    html = html.replace(/<p><(h[1-3]|pre|table|ul|ol|blockquote|hr|img)/g, '<$1');
-    html = html.replace(/<\/(h[1-3]|pre|table|ul|ol|blockquote)><\/p>/g, '</$1>');
-    html = html.replace(/<hr><\/p>/g, '<hr>');
-    html = html.replace(/<p><\/p>/g, '');
-
-    return html;
-  }
-
-  private renderLists(html: string): string {
-    const lines = html.split('\n');
-    const result: string[] = [];
-    const stack: Array<{ tag: 'ul' | 'ol'; indent: number }> = [];
-
-    for (const rawLine of lines) {
-      const ulMatch = rawLine.match(/^(\s*)-\s+(.+)$/);
-      const olMatch = rawLine.match(/^(\s*)\d+\.\s+(.+)$/);
-      const match = ulMatch || olMatch;
-
-      if (match) {
-        const indent = match[1].length;
-        const content = match[2];
-        const tag: 'ul' | 'ol' = ulMatch ? 'ul' : 'ol';
-
-        // Close deeper or same-level lists that switched type
-        while (stack.length > 0) {
-          const top = stack[stack.length - 1];
-          if (top.indent > indent || (top.indent === indent && top.tag !== tag)) {
-            result.push(`</li></${top.tag}>`);
-            stack.pop();
-          } else {
-            break;
-          }
-        }
-
-        if (stack.length === 0 || indent > stack[stack.length - 1].indent) {
-          // Open a new nested list
-          result.push(`<${tag}>`);
-          stack.push({ tag, indent });
-        } else {
-          // Same level — close previous <li>
-          result.push('</li>');
-        }
-
-        result.push(`<li>${content}`);
-      } else {
-        // Non-list line — close all open lists
-        while (stack.length > 0) {
-          const top = stack.pop()!;
-          result.push(`</li></${top.tag}>`);
-        }
-        result.push(rawLine);
-      }
-    }
-
-    // Close remaining open lists
-    while (stack.length > 0) {
-      const top = stack.pop()!;
-      result.push(`</li></${top.tag}>`);
-    }
-
-    return result.join('\n');
-  }
-
-  private renderTables(html: string): string {
-    const lines = html.split('\n');
-    const result: string[] = [];
-    let inTable = false;
-    let headerDone = false;
-
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (line.startsWith('|') && line.endsWith('|')) {
-        // Check if separator line
-        if (/^\|[\s:-]+\|$/.test(line.replace(/\|/g, '|').replace(/[^|:-\s]/g, ''))) {
-          continue; // Skip separator
-        }
-
-        if (!inTable) {
-          result.push('<table>');
-          inTable = true;
-          headerDone = false;
-        }
-
-        const cells = line.split('|').filter(c => c.trim() !== '');
-        const tag = !headerDone ? 'th' : 'td';
-        const row = cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('');
-        if (!headerDone) {
-          result.push(`<thead><tr>${row}</tr></thead><tbody>`);
-          headerDone = true;
-        } else {
-          result.push(`<tr>${row}</tr>`);
-        }
-      } else {
-        if (inTable) {
-          result.push('</tbody></table>');
-          inTable = false;
-        }
-        result.push(rawLine);
-      }
-    }
-    if (inTable) result.push('</tbody></table>');
-
-    return result.join('\n');
-  }
-
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
 }

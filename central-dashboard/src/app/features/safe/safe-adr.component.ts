@@ -16,9 +16,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { SafeService, SafeAdrSummary, SafeAdrWithContent } from '../../core/services/safe.service';
+import { renderMarkdown, MARKDOWN_STYLES } from './markdown.utils';
 
 type AdrStatus = 'Accepté' | 'Proposé' | 'Déprécié' | 'Supersédé' | 'Suspendu' | 'Partiel' | '';
 
@@ -124,7 +126,7 @@ const STATUS_ORDER: Record<string, number> = {
           <h2 class="detail-title">{{ selectedAdr.title }}</h2>
 
           <div *ngIf="loadingContent" class="content-loading">{{ 'safe.adr.loading' | translate }}</div>
-          <pre *ngIf="!loadingContent && contentAdr" class="adr-content">{{ contentAdr.content }}</pre>
+          <div *ngIf="!loadingContent && contentAdr" class="markdown-content" [innerHTML]="renderedContent"></div>
         </div>
 
         <!-- Placeholder when nothing selected -->
@@ -185,7 +187,7 @@ const STATUS_ORDER: Record<string, number> = {
     .btn-close { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--color-text-secondary, #999); padding: 4px 8px; border-radius: 4px; }
     .btn-close:hover { background: var(--color-surface-2, #f5f5f5); }
     .content-loading { padding: 24px; text-align: center; color: var(--color-text-secondary, #999); }
-    .adr-content { font-size: 0.82rem; line-height: 1.65; white-space: pre-wrap; word-break: break-word; margin: 0; font-family: 'SF Mono', 'Fira Code', monospace; background: var(--color-surface-2, #f8f9fa); padding: 16px; border-radius: 6px; overflow-x: auto; }
+    ${MARKDOWN_STYLES}
 
     /* Status badges */
     .status-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
@@ -213,12 +215,14 @@ const STATUS_ORDER: Record<string, number> = {
 export class SafeAdrComponent implements OnInit, OnDestroy {
   private readonly safe = inject(SafeService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly destroy$ = new Subject<void>();
 
   adrs: SafeAdrSummary[] = [];
   filtered: SafeAdrSummary[] = [];
   selectedAdr: SafeAdrSummary | null = null;
   contentAdr: SafeAdrWithContent | null = null;
+  renderedContent: SafeHtml = '';
   loading = true;
   loadingContent = false;
   error = '';
@@ -275,6 +279,7 @@ export class SafeAdrComponent implements OnInit, OnDestroy {
     this.safe.getAdr(adr.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: full => {
         this.contentAdr = full;
+        this.renderedContent = this.sanitizer.bypassSecurityTrustHtml(renderMarkdown(full.content));
         this.loadingContent = false;
         this.cdr.markForCheck();
       },
@@ -288,6 +293,7 @@ export class SafeAdrComponent implements OnInit, OnDestroy {
   closeDetail(): void {
     this.selectedAdr = null;
     this.contentAdr = null;
+    this.renderedContent = '';
     this.cdr.markForCheck();
   }
 
