@@ -4,9 +4,11 @@
 -- Valide le moteur v2 étendu (ADR-086) : textes enfants de layer, safe-zone
 -- photo, animation zoom-out, logo-pop, respect_alpha.
 --
--- Assets WebM attendus à :
---   https://kalonpartners.bzh/neopro-video/template-assets/studio/joueur-detaille/
---     {A,B,C,D,E}.webm
+-- Assets WebM : réutilise les fragments `BUT_img_joueur_{A..E}.webm` servis par
+-- Railway lui-même (`/remotion-preview/public/` bundle statique du serveur —
+-- mêmes assets que les templates legacy, pas besoin d'upload FTP). Valide le
+-- moteur v2 data-driven immédiatement. Les refs designer définitives seront
+-- uploadées plus tard via la future UI d'upload admin et le seed patché.
 --
 -- Idempotent : NOT EXISTS guards sur le template, variant et layers.
 -- -----------------------------------------------------------------------------
@@ -20,7 +22,8 @@ DECLARE
   layer_c_id UUID;
   layer_d_id UUID;
   layer_e_id UUID;
-  base_url  TEXT := 'https://kalonpartners.bzh/neopro-video/template-assets/studio/joueur-detaille';
+  base_url  TEXT := 'https://neopro-central-production.up.railway.app/remotion-preview/public';
+  asset_prefix TEXT := '/BUT_img_joueur_';
 BEGIN
   -- ── 1. Template row (schema_version=2 direct) ───────────────────────────
   SELECT id INTO tpl_id FROM neopro_templates WHERE composition_id = 'JoueurDetaille' LIMIT 1;
@@ -53,23 +56,23 @@ BEGIN
   -- ── 3. Layers A..E (chacun 5s, hérité par slots enfants) ─────────────────
   IF NOT EXISTS (SELECT 1 FROM template_layers WHERE template_id = tpl_id) THEN
     INSERT INTO template_layers (template_id, name, video_url, z_index, duration_ms)
-    VALUES (tpl_id, 'A — fond logo',      base_url || '/A.webm', 0, 5000)
+    VALUES (tpl_id, 'A — fond logo',      base_url || asset_prefix || 'A.webm', 0, 5000)
     RETURNING id INTO layer_a_id;
 
     INSERT INTO template_layers (template_id, name, video_url, z_index, duration_ms)
-    VALUES (tpl_id, 'B — transition 1',   base_url || '/B.webm', 1, 5000)
+    VALUES (tpl_id, 'B — transition 1',   base_url || asset_prefix || 'B.webm', 1, 5000)
     RETURNING id INTO layer_b_id;
 
     INSERT INTO template_layers (template_id, name, video_url, z_index, duration_ms)
-    VALUES (tpl_id, 'C — titre + pattern', base_url || '/C.webm', 2, 5000)
+    VALUES (tpl_id, 'C — titre + pattern', base_url || asset_prefix || 'C.webm', 2, 5000)
     RETURNING id INTO layer_c_id;
 
     INSERT INTO template_layers (template_id, name, video_url, z_index, duration_ms)
-    VALUES (tpl_id, 'D — transition 2',   base_url || '/D.webm', 3, 5000)
+    VALUES (tpl_id, 'D — transition 2',   base_url || asset_prefix || 'D.webm', 3, 5000)
     RETURNING id INTO layer_d_id;
 
     INSERT INTO template_layers (template_id, name, video_url, z_index, duration_ms)
-    VALUES (tpl_id, 'E — joueur + nom + coins', base_url || '/E.webm', 4, 5000)
+    VALUES (tpl_id, 'E — joueur + nom + coins', base_url || asset_prefix || 'E.webm', 4, 5000)
     RETURNING id INTO layer_e_id;
   ELSE
     -- Idempotent re-run : récupère les IDs existants
