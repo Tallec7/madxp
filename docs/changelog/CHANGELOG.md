@@ -1,3 +1,9 @@
+# [3.220.0](https://github.com/Tallec7/neopro/compare/v3.219.0...v3.220.0) (2026-04-22)
+
+### Features
+
+- **db:** cibles explicites db:migrate:prod Railway + db:migrate:backup Supabase ([d6e9693](https://github.com/Tallec7/neopro/commit/d6e969384a67f550c9eb8acd42d90a1575eafa62))
+
 # [3.219.0](https://github.com/Tallec7/neopro/compare/v3.218.0...v3.219.0) (2026-04-22)
 
 ### Bug Fixes
