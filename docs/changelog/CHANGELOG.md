@@ -1,3 +1,9 @@
+## [3.217.5](https://github.com/Tallec7/neopro/compare/v3.217.4...v3.217.5) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** proxifier URLs FTP en v2 pour résoudre CORB + preview noir ([5e04624](https://github.com/Tallec7/neopro/commit/5e0462424cb6d90214323efd500a6fff5889bef0))
+
 ## [3.217.4](https://github.com/Tallec7/neopro/compare/v3.217.3...v3.217.4) (2026-04-22)
 
 ### Bug Fixes
