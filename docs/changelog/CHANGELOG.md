@@ -1,3 +1,9 @@
+## [3.223.3](https://github.com/Tallec7/neopro/compare/v3.223.2...v3.223.3) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** CORP posé AVANT rate limiter sur asset-proxy ([5e87a1c](https://github.com/Tallec7/neopro/commit/5e87a1c79259fe92c0a806a69d5ba0d6af764d41))
+
 ## [3.223.2](https://github.com/Tallec7/neopro/compare/v3.223.1...v3.223.2) (2026-04-22)
 
 ### Bug Fixes
