@@ -1,3 +1,9 @@
+## [3.223.6](https://github.com/Tallec7/neopro/compare/v3.223.5...v3.223.6) (2026-04-22)
+
+### Bug Fixes
+
+- **templates:** retirer sensitiveRateLimit du mount /api/remotion-templates ([99d5d0e](https://github.com/Tallec7/neopro/commit/99d5d0edfc03b4c59af6f8d8bcd5822f75aad23a))
+
 ## [3.223.5](https://github.com/Tallec7/neopro/compare/v3.223.4...v3.223.5) (2026-04-22)
 
 ### Bug Fixes
