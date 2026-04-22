@@ -23,6 +23,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type {
+  TemplateImageSlot,
   TemplateStudioView,
   TemplateVariant,
 } from '../../remotion-templates.types';
@@ -32,9 +33,10 @@ import type {
 } from '../../remotion-templates-data.service';
 
 type DragMode = 'move' | 'resize';
+type DragKind = 'text' | 'image' | 'safe-zone';
 
 interface DragState {
-  kind: 'text' | 'image';
+  kind: DragKind;
   id: string;
   mode: DragMode;
   startClientX: number;
@@ -117,11 +119,35 @@ interface DragState {
             (pointerdown)="startDrag($event, 'image', slot.id, 'resize')"
           ></span>
         </div>
+
+        <!-- ADR-086 — Safe-zone red rectangle (admin edits, user subit) -->
+        <div
+          *ngFor="let slot of view.imageSlots"
+        >
+          <div
+            *ngIf="hasSafeZone(slot)"
+            class="aco__safe-zone"
+            [attr.data-testid]="'safe-zone-' + slot.slotKey"
+            [style.left.%]="slot.safeLeftPct"
+            [style.top.%]="slot.safeTopPct"
+            [style.width.%]="slot.safeWidthPct"
+            [style.height.%]="slot.safeHeightPct"
+            (pointerdown)="startSafeZoneDrag($event, slot.id, 'move')"
+          >
+            <span class="aco__tag aco__tag--safe">🛡 {{ slot.slotKey }} safe</span>
+            <span
+              class="aco__resize aco__resize--safe"
+              [attr.data-testid]="'resize-safe-' + slot.slotKey"
+              (pointerdown)="startSafeZoneDrag($event, slot.id, 'resize')"
+            ></span>
+          </div>
+        </div>
       </div>
 
       <p class="aco__hint">
         Glisse les blocs pour repositionner, ou la poignée ⤡ pour redimensionner les images.
         Positions stockées en fraction (0–1) — le canvas se met à jour à l'échelle.
+        Rectangles rouges = safe-zones ADR-086 (drag/resize admin uniquement).
       </p>
     </div>
   `,
@@ -143,6 +169,10 @@ interface DragState {
     .aco__handle--image .aco__tag { background: #2563eb; }
     .aco__preview { display: inline-block; pointer-events: none; }
     .aco__resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; background: #2563eb; border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; }
+    .aco__safe-zone { position: absolute; transform: translate(-50%, -50%); border: 2px solid rgba(220, 38, 38, 0.9); background: rgba(220, 38, 38, 0.08); cursor: grab; box-sizing: border-box; pointer-events: auto; }
+    .aco__safe-zone:active { cursor: grabbing; }
+    .aco__tag--safe { background: #dc2626 !important; }
+    .aco__resize--safe { background: #dc2626; }
     .aco__hint { margin: 0; font-size: 11px; color: #6b7280; }
   `],
 })
@@ -178,6 +208,40 @@ export class AdminCanvasOverlayComponent {
     const refW = this.view?.canvasWidth ?? 1920;
     if (!refW) return fontSize;
     return Math.max(8, fontSize * (canvasW / refW));
+  }
+
+  hasSafeZone(slot: TemplateImageSlot): boolean {
+    return (
+      slot.safeTopPct !== null &&
+      slot.safeLeftPct !== null &&
+      slot.safeWidthPct !== null &&
+      slot.safeHeightPct !== null
+    );
+  }
+
+  startSafeZoneDrag(evt: PointerEvent, id: string, mode: DragMode): void {
+    evt.preventDefault();
+    evt.stopPropagation();
+    const canvas = this.canvasRef?.nativeElement;
+    if (!canvas) return;
+    const slot = this.view.imageSlots.find((s) => s.id === id);
+    if (!slot || !this.hasSafeZone(slot)) return;
+
+    this.drag = {
+      kind: 'safe-zone',
+      id,
+      mode,
+      startClientX: evt.clientX,
+      startClientY: evt.clientY,
+      startX: slot.safeLeftPct ?? 0,
+      startY: slot.safeTopPct ?? 0,
+      startW: slot.safeWidthPct ?? 0,
+      startH: slot.safeHeightPct ?? 0,
+    };
+    (evt.target as HTMLElement).setPointerCapture?.(evt.pointerId);
+    canvas.addEventListener('pointermove', this.onPointerMove);
+    canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', this.onPointerUp);
   }
 
   startDrag(evt: PointerEvent, kind: 'text' | 'image', id: string, mode: DragMode): void {
@@ -227,6 +291,19 @@ export class AdminCanvasOverlayComponent {
     const dx = (evt.clientX - this.drag.startClientX) / rect.width;
     const dy = (evt.clientY - this.drag.startClientY) / rect.height;
 
+    if (this.drag.kind === 'safe-zone') {
+      if (this.drag.mode === 'move') {
+        const leftPct = clamp(this.drag.startX + dx * 100, 0, 100);
+        const topPct = clamp(this.drag.startY + dy * 100, 0, 100);
+        this.applySafeZoneMove(this.drag.id, leftPct, topPct);
+      } else {
+        const widthPct = clamp(this.drag.startW + dx * 200, 1, 100);
+        const heightPct = clamp(this.drag.startH + dy * 200, 1, 100);
+        this.applySafeZoneResize(this.drag.id, widthPct, heightPct);
+      }
+      return;
+    }
+
     if (this.drag.mode === 'move') {
       const x = clamp(this.drag.startX + dx, 0, 1);
       const y = clamp(this.drag.startY + dy, 0, 1);
@@ -237,6 +314,34 @@ export class AdminCanvasOverlayComponent {
       this.applyResize(this.drag.id, w, h);
     }
   };
+
+  private applySafeZoneMove(id: string, leftPct: number, topPct: number): void {
+    const slot = this.view.imageSlots.find((s) => s.id === id);
+    if (!slot) return;
+    slot.safeLeftPct = leftPct;
+    slot.safeTopPct = topPct;
+    this.scheduleEmit(`sz-${id}`, () =>
+      this.patchImageSlot.emit({
+        id,
+        patch: { safeLeftPct: leftPct, safeTopPct: topPct },
+      }),
+    );
+    this.cdr.markForCheck();
+  }
+
+  private applySafeZoneResize(id: string, widthPct: number, heightPct: number): void {
+    const slot = this.view.imageSlots.find((s) => s.id === id);
+    if (!slot) return;
+    slot.safeWidthPct = widthPct;
+    slot.safeHeightPct = heightPct;
+    this.scheduleEmit(`sz-${id}`, () =>
+      this.patchImageSlot.emit({
+        id,
+        patch: { safeWidthPct: widthPct, safeHeightPct: heightPct },
+      }),
+    );
+    this.cdr.markForCheck();
+  }
 
   private readonly onPointerUp = (): void => {
     const canvas = this.canvasRef?.nativeElement;
