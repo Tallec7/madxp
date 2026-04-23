@@ -1,3 +1,13 @@
+# [3.229.0](https://github.com/Tallec7/neopro/compare/v3.228.1...v3.229.0) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** correct overlay link in scoreboard simulator (F-15.2 Phase 2) ([#563](https://github.com/Tallec7/neopro/issues/563)) ([a0bfd7c](https://github.com/Tallec7/neopro/commit/a0bfd7cbe97026e05e61ec384545b82bc1585c44))
+
+### Features
+
+- **score:** relay cloud scoreboard-state to Pi TV overlay (F-15.2 Phase 3) ([#565](https://github.com/Tallec7/neopro/issues/565)) ([79104c9](https://github.com/Tallec7/neopro/commit/79104c9e8710afb84285f3002c393e9465940585))
+
 ## [3.228.1](https://github.com/Tallec7/neopro/compare/v3.228.0...v3.228.1) (2026-04-23)
 
 ### Bug Fixes
