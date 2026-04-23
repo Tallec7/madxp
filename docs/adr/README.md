@@ -103,6 +103,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-084](ADR-084-template-studio-fonts-visibility-scale.md)                    | Template Studio — polices custom + alwaysVisible + scale-in                      | Accepté                           | Avr 2026 |
 | [ADR-085](ADR-085-simplification-2026.md)                                       | Simplification 2026 — dégraissage outillage non-core                             | Accepté                           | Avr 2026 |
 | [ADR-086](ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) | Template Studio v2 — textes enfants de layer, safe-zones, animations réversibles | Accepté                           | Avr 2026 |
+| [ADR-087](ADR-087-no-global-api-rate-limiter-corp-on-429.md)                    | Pas de rate limiter sur `/api` nu + CORP/CORS sur 429 (incident asset-proxy)     | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -142,7 +143,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-086**)
+3. Numéroter séquentiellement (prochain : **ADR-088**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -165,4 +166,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 22 avril 2026 (ADR-085 Accepté — Simplification 2026 : suppression Excel SAFe auto-gen, sync Notion, dual-storage Supabase ; ADR-084 Accepté — polices custom + alwaysVisible + scale-in config ; ADR-083 Accepté — résolveur fuzzy drift)_
+_Dernière mise à jour : 23 avril 2026 (ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones ; ADR-085 Accepté — Simplification 2026)_

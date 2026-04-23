@@ -235,6 +235,17 @@ Pi Analytics: 500 req/min (par IP)
 
 **Anti-pattern** : ne PAS appliquer `apiRateLimit` globalement ET par route (double comptage).
 
+**Anti-pattern strict (ADR-087)** : ne JAMAIS monter un rate limiter sur le **préfixe `/api` nu**. `app.use('/api', xxxRateLimit, …)` attache le limiteur à TOUTES les requêtes `/api/*`, y compris celles qui ne matchent pas le router concerné (Express consomme le quota avant de tester le path). Les rate limits se posent uniquement :
+
+- Au niveau route dans `routes/*.routes.ts` (ex : `router.get('/x', adminRateLimit, …)`)
+- Au niveau du router lui-même si pertinent (`const router = express.Router(); router.use(rateLimit); app.use('/api/xxx', router)`)
+
+Smoke test `smoke-remotion.test.ts` enforce : bloque tout nouveau `app.use('/api', <xxxRateLimit>, …)`. Incident root cause : `apiRateLimit` global causait 429 sur `/api/remotion-templates/asset-proxy` → cascade `NotSameOrigin` sur le player Remotion.
+
+**Invariant CORP/CORS 429** : `createLimitHandler` dans `middleware/user-rate-limit.ts` DOIT poser `Access-Control-Allow-Origin` + `Cross-Origin-Resource-Policy: cross-origin` sur toute réponse 429. Sans ça, un proxy cross-origin qui se fait limiter cascade en `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`. Smoke test enforced.
+
+**Supervision asset-proxy (ADR-087)** : la route `/api/remotion-templates/asset-proxy` émet `neopro_template_asset_proxy_upstream_total{status_class}`. Un spike de `4xx`/`5xx` indique un seed template cassé (URL FTP inexistante) ou une panne upstream — à surveiller via Grafana.
+
 ## NE JAMAIS FAIRE (smoke test enforced)
 
 - Ajouter une route avec paramètre (`:id`, `:siteId`) sans `validateParams(paramSchemas.X)` dans le fichier routes (la validation se fait au niveau routes, pas controllers)
