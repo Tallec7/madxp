@@ -57,3 +57,6 @@ raspberry/admin/public/styles.css.bak
 
 # Claude Code runtime locks (transient)
 .claude/scheduled_tasks.lock
+
+# Claude Code worktrees (agent isolation sandbox)
+.claude/worktrees/
