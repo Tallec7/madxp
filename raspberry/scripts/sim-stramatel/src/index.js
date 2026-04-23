@@ -4,6 +4,8 @@
 const net = require('net');
 const { createEmitter, DEFAULT_RATE_HZ } = require('./emitter');
 const { buildScenario } = require('./scenarios/basket-demo');
+const { startRepl } = require('./repl');
+const { createWebUi } = require('./web-ui');
 
 function parseArgs(argv) {
   const opts = {
@@ -14,16 +16,27 @@ function parseArgs(argv) {
     timeScale: 1,
     verbose: false,
     transport: 'tcp-server',
+    repl: false,
+    web: false,
+    webHost: '127.0.0.1',
+    webPort: 5100,
+    noTcp: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--host') opts.host = argv[++i];
     else if (a === '--port') opts.port = parseInt(argv[++i], 10);
     else if (a === '--scenario') opts.scenario = argv[++i];
+    else if (a === '--no-scenario') opts.scenario = 'none';
     else if (a === '--rate-hz') opts.rateHz = parseFloat(argv[++i]);
     else if (a === '--time-scale') opts.timeScale = parseFloat(argv[++i]);
     else if (a === '--verbose' || a === '-v') opts.verbose = true;
     else if (a === '--transport') opts.transport = argv[++i];
+    else if (a === '--repl') opts.repl = true;
+    else if (a === '--web') opts.web = true;
+    else if (a === '--web-host') opts.webHost = argv[++i];
+    else if (a === '--web-port') opts.webPort = parseInt(argv[++i], 10);
+    else if (a === '--no-tcp') opts.noTcp = true;
     else if (a === '--help' || a === '-h') {
       printHelp();
       process.exit(0);
@@ -42,15 +55,22 @@ Options:
   --host <ip>            Adresse d'écoute TCP (default: 127.0.0.1)
   --port <port>          Port TCP d'écoute (default: 5000)
   --scenario <name>      Scénario à jouer (default: basket-demo)
+  --no-scenario          Démarre sans scénario (état vierge, pour --repl)
   --rate-hz <n>          Fréquence d'émission des trames 0x33 (default: 10)
   --time-scale <x>       Accélération du temps simulé (default: 1)
   --transport <kind>     tcp-server (default) — émule un Serial-to-Ethernet bridge
   --verbose, -v          Hex dump d'une trame par seconde
+  --repl                 Mode interactif clavier (voir README § REPL)
+  --web                  Démarre l'UI web (http://127.0.0.1:5100)
+  --web-host <ip>        Host d'écoute UI (default: 127.0.0.1)
+  --web-port <port>      Port d'écoute UI (default: 5100)
+  --no-tcp               Désactive le serveur TCP (UI-only, libère le port 5000)
   --help, -h             Cette aide
 `);
 }
 
 function loadScenario(name) {
+  if (name === 'none') return [];
   if (name === 'basket-demo') return buildScenario();
   throw new Error(`Unknown scenario: ${name}`);
 }
@@ -92,16 +112,22 @@ function main() {
     process.exit(2);
   }
   const scenario = loadScenario(opts.scenario);
-  const transport = createTcpServerTransport(opts);
+  const transport = opts.noTcp
+    ? { write: () => {}, stop: () => {} }
+    : createTcpServerTransport(opts);
 
   const verboseEveryN = Math.max(1, Math.round(opts.rateHz)); // ≈ 1 dump / seconde
 
+  let webUi = null;
   const emitter = createEmitter({
     scenario,
     verbose: opts.verbose,
     rateHz: opts.rateHz,
     verboseEveryN,
     onFrame: (buf) => transport.write(buf),
+    onFrameTyped: (buf) => {
+      if (webUi) webUi.recordFrame(buf);
+    },
   });
 
   emitter.start({ timeScale: opts.timeScale });
@@ -110,10 +136,19 @@ function main() {
     console.log('\n[sim] shutting down');
     emitter.stop();
     transport.stop();
+    if (process.stdin.isTTY && process.stdin.setRawMode) process.stdin.setRawMode(false);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
+  if (opts.web) {
+    webUi = createWebUi({ emitter, host: opts.webHost, port: opts.webPort });
+  }
+
+  if (opts.repl) {
+    startRepl({ emitter, onQuit: shutdown });
+  }
 }
 
 main();

@@ -12,7 +12,7 @@ const {
 } = require('./messages-basket');
 const { createInitialState, applyEvent, tickChrono } = require('./match-state');
 
-function createEmitter({ scenario, onFrame, verbose = false, roundIntervalMs = 200 } = {}) {
+function createEmitter({ scenario, onFrame, onFrameTyped, verbose = false, roundIntervalMs = 200 } = {}) {
   let state = createInitialState();
   let scenarioEvents = scenario ? [...scenario] : [];
   let simElapsedMs = 0;
@@ -49,6 +49,7 @@ function createEmitter({ scenario, onFrame, verbose = false, roundIntervalMs = 2
     for (const { id, buf } of messages) {
       const framed = frame(buf);
       onFrame(framed, id);
+      if (onFrameTyped) onFrameTyped(id, framed);
       if (verbose) {
         dumpFrame(id, framed);
       }
@@ -78,9 +79,21 @@ function createEmitter({ scenario, onFrame, verbose = false, roundIntervalMs = 2
     timerHandle = null;
   }
 
+  function injectEvent(event) {
+    if (event.type === 'chrono-set') {
+      state = { ...state, chronoMs: event.remainingMs };
+    } else {
+      state = applyEvent(state, event);
+    }
+    if (verbose) {
+      console.log(`[event manual] ${JSON.stringify(event)}`);
+    }
+  }
+
   return {
     start,
     stop,
+    injectEvent,
     getState: () => state,
   };
 }

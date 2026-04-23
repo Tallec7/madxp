@@ -4,6 +4,8 @@
 const net = require('net');
 const { createEmitter } = require('./emitter');
 const { buildScenario } = require('./scenarios/basket-demo');
+const { startRepl } = require('./repl');
+const { createWebUi } = require('./web-ui');
 
 function parseArgs(argv) {
   const opts = {
@@ -13,15 +15,26 @@ function parseArgs(argv) {
     rate: 200,
     timeScale: 1,
     verbose: false,
+    repl: false,
+    web: false,
+    webHost: '127.0.0.1',
+    webPort: 4100,
+    noTcp: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--host') opts.host = argv[++i];
     else if (a === '--port') opts.port = parseInt(argv[++i], 10);
     else if (a === '--scenario') opts.scenario = argv[++i];
+    else if (a === '--no-scenario') opts.scenario = 'none';
     else if (a === '--rate') opts.rate = parseInt(argv[++i], 10);
     else if (a === '--time-scale') opts.timeScale = parseFloat(argv[++i]);
     else if (a === '--verbose' || a === '-v') opts.verbose = true;
+    else if (a === '--repl') opts.repl = true;
+    else if (a === '--web') opts.web = true;
+    else if (a === '--web-host') opts.webHost = argv[++i];
+    else if (a === '--web-port') opts.webPort = parseInt(argv[++i], 10);
+    else if (a === '--no-tcp') opts.noTcp = true;
     else if (a === '--help' || a === '-h') {
       printHelp();
       process.exit(0);
@@ -40,14 +53,21 @@ Options:
   --host <ip>            IP du serveur cible (default: 127.0.0.1)
   --port <port>          Port TCP cible (default: 4001)
   --scenario <name>      Scénario à jouer (default: basket-demo)
+  --no-scenario          Démarre sans scénario (état vierge, pour --repl)
   --rate <ms>            Intervalle entre rondes d'émission (default: 200)
   --time-scale <x>       Accélération du temps simulé (default: 1)
   --verbose, -v          Active le hex dump des trames émises
+  --repl                 Mode interactif clavier (voir README § REPL)
+  --web                  Démarre l'UI web (http://127.0.0.1:4100)
+  --web-host <ip>        Host d'écoute UI (default: 127.0.0.1)
+  --web-port <port>      Port d'écoute UI (default: 4100)
+  --no-tcp               Désactive le client TCP sortant (UI-only, pas d'ECONNREFUSED)
   --help, -h             Affiche cette aide
 `);
 }
 
 function loadScenario(name) {
+  if (name === 'none') return [];
   if (name === 'basket-demo') return buildScenario();
   throw new Error(`Unknown scenario: ${name}`);
 }
@@ -85,6 +105,7 @@ function main() {
   const scenario = loadScenario(opts.scenario);
   let currentSocket = null;
 
+  let webUi = null;
   const emitter = createEmitter({
     scenario,
     verbose: opts.verbose,
@@ -94,11 +115,16 @@ function main() {
         currentSocket.write(buf);
       }
     },
+    onFrameTyped: (id, buf) => {
+      if (webUi) webUi.recordFrame(id, buf);
+    },
   });
 
-  const controller = connectWithRetry(opts, (sock) => {
-    currentSocket = sock;
-  });
+  const controller = opts.noTcp
+    ? { stop: () => {} }
+    : connectWithRetry(opts, (sock) => {
+        currentSocket = sock;
+      });
 
   emitter.start({ timeScale: opts.timeScale });
 
@@ -106,10 +132,19 @@ function main() {
     console.log('\n[sim] shutting down');
     emitter.stop();
     controller.stop();
+    if (process.stdin.isTTY && process.stdin.setRawMode) process.stdin.setRawMode(false);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
+  if (opts.web) {
+    webUi = createWebUi({ emitter, host: opts.webHost, port: opts.webPort });
+  }
+
+  if (opts.repl) {
+    startRepl({ emitter, onQuit: shutdown });
+  }
 }
 
 main();

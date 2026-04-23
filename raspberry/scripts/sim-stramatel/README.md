@@ -33,10 +33,52 @@ nc 127.0.0.1 5000 | xxd    # voir les 54 octets défiler à 10 Hz
 | `--host <ip>`        | `127.0.0.1`   | Adresse d'écoute TCP                                        |
 | `--port <p>`         | `5000`        | Port TCP d'écoute                                           |
 | `--scenario <name>`  | `basket-demo` | Scénario (seul `basket-demo` dispo en V1)                   |
+| `--no-scenario`      | off           | Démarre sans scénario (état vierge, pour `--repl`)          |
 | `--rate-hz <n>`      | `10`          | Fréquence d'émission des trames 0x33                        |
 | `--time-scale <x>`   | `1`           | Accélère le temps simulé (10 = 1 min réelle = 10 min match) |
 | `--transport <kind>` | `tcp-server`  | Mode de transport (tcp-server uniquement pour l'instant)    |
 | `--verbose`, `-v`    | off           | Hex dump d'une trame par seconde (≈ 1/`rate-hz` trames)     |
+| `--repl`             | off           | Mode interactif clavier (voir § REPL)                       |
+| `--web`              | off           | UI web sur `:5100` (voir § UI Web)                          |
+| `--web-port <p>`     | `5100`        | Port de l'UI web                                            |
+
+## UI Web — mode graphique
+
+```bash
+node src/index.js --no-scenario --web
+# → http://127.0.0.1:5100
+```
+
+L'UI affiche la **trame 0x33 complète octet-par-octet** (54 bytes), avec chaque byte colorisé selon son rôle (start, type, chrono, score, période, fautes, shot clock) et un tooltip au survol qui décode la sémantique + ASCII. Les octets changent en live pendant que tu cliques sur les boutons — idéal pour comprendre le layout basket.
+
+Cumulable avec `--repl` et TCP server sur `--port 5000`. UI local-only par défaut (`127.0.0.1`).
+
+## REPL — mode interactif clavier
+
+Pour injecter des events en direct (tester edge cases : faute juste avant fin période, timeout pendant shot clock, etc.) :
+
+```bash
+node src/index.js --no-scenario --repl
+```
+
+Keybinds identiques au simulateur Bodet :
+
+| Touche         | Action                                  |
+| -------------- | --------------------------------------- |
+| `1 2 3`        | Panier **home** +1 / +2 / +3            |
+| `7 8 9`        | Panier **guest** +1 / +2 / +3           |
+| `f` / `F`      | Faute **home** / **guest** (joueur n°4) |
+| `t` / `T`      | Timeout **home** / **guest** (60s)      |
+| `e`            | Fin du timeout en cours                 |
+| `space`        | Chrono play/pause                       |
+| `p`            | Fin de période                          |
+| `o` / `i`      | Reset shot clock 24s / 14s              |
+| `r`            | Tip-off                                 |
+| `s`            | Status                                  |
+| `?` / `h`      | Aide                                    |
+| `x` / `Ctrl-C` | Quitte                                  |
+
+Astuce A/B : lancer les deux sims en REPL simultanément (ports différents) pour comparer le même event encodé dans les deux protocoles côte à côte.
 
 ## Scénarios
 
@@ -99,5 +141,7 @@ Tests : longueur 54 B, bytes 0-1, encodage chrono normal + dernière minute, sco
 - `src/match-state.js` — modèle pur du match basket (score, chrono, fautes, timeouts, shot clock)
 - `src/emitter.js` — boucle tick 10 Hz + consommation scénario
 - `src/scenarios/basket-demo.js` — scénario scripté (miroir de sim-bodet)
+- `src/repl.js` — mode REPL clavier (keybinds basket)
+- `src/web-ui.js` + `public/index.html` — UI web (HTTP vanilla + HTML/JS, zéro dép)
 - `src/index.js` — entry CLI + TCP server
 - `test/frame-0x33.test.js` — tests `node:test` natif
