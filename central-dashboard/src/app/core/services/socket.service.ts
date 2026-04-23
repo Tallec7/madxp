@@ -165,6 +165,23 @@ export class SocketService {
     this.socket.on('state-sync', (data: unknown) => {
       this.eventsSubject.next({ type: 'state-sync', data });
     });
+
+    // ADR-088 F-15.2 — scoreboard live multi-vendor (sim/connector → cloud → dashboard)
+    this.socket.on('scoreboard-state', (data: unknown) => {
+      this.eventsSubject.next({ type: 'scoreboard-state', data });
+    });
+  }
+
+  subscribeSite(siteId: string): void {
+    if (this.socket && this.connected) {
+      this.socket.emit('dashboard-subscribe-site', { siteId });
+    }
+  }
+
+  unsubscribeSite(siteId: string): void {
+    if (this.socket && this.connected) {
+      this.socket.emit('dashboard-unsubscribe-site', { siteId });
+    }
   }
 
   disconnect(): void {
