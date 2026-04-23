@@ -7,6 +7,25 @@ import { LocalOptionsService, LocalOptions } from '../../services/local-options.
 import { Configuration, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 
 /**
+ * ADR-088 F-15.2 — MatchState v1 emitted by cloud server on `scoreboard-state`.
+ * Shared contract between sim-bodet, sim-stramatel, dashboard simulator and overlay.
+ */
+export interface ScoreboardMatchStateV1 {
+  vendor: 'bodet' | 'stramatel' | 'manual';
+  sport: 'basketball';
+  period: number;
+  chronoMs: number;
+  clockRunning: boolean;
+  homeScore: number;
+  guestScore: number;
+  homeTeamFouls: number;
+  guestTeamFouls: number;
+  shotClockMs: number;
+  timeoutActive: 'home' | 'guest' | null;
+  timeoutRemainingMs: number;
+}
+
+/**
  * Score data received from remote or cloud
  */
 export interface ScoreData {
@@ -83,6 +102,14 @@ export class ScoreOverlayComponent implements OnInit, OnDestroy {
     this.socketService.on('score-update', (scoreData: ScoreData | null) => {
       if (!scoreData) return;
       this.handleScoreUpdate(scoreData);
+    });
+
+    // ADR-088 F-15.2 — live scoreboard state (MatchState v1) from cloud via sync-agent.
+    // Mapped into legacy ScoreData for the existing overlay; basket-specific fields
+    // (fouls, shot clock, timeouts) ignored in Phase 1-overlay — see ADR-088 Phase 3 backlog.
+    this.socketService.on<ScoreboardMatchStateV1>('scoreboard-state', (state) => {
+      if (!state) return;
+      this.handleScoreUpdate(this.mapScoreboardStateToScoreData(state));
     });
 
     this.socketService.on('score-reset', () => {
@@ -197,6 +224,25 @@ export class ScoreOverlayComponent implements OnInit, OnDestroy {
   public resetScore(): void {
     this.currentScore = null;
     this.showScoreOverlay = false;
+  }
+
+  /**
+   * ADR-088 — Map MatchState v1 (basket) → legacy ScoreData for the existing overlay.
+   * Team names fall back to localOptions inside handleScoreUpdate().
+   */
+  private mapScoreboardStateToScoreData(state: ScoreboardMatchStateV1): ScoreData {
+    const totalSec = Math.max(0, Math.floor(state.chronoMs / 1000));
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    const matchTime = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return {
+      homeTeam: this.localOptions.match.homeTeam.name || 'HOME',
+      awayTeam: this.localOptions.match.awayTeam.name || 'GUEST',
+      homeScore: state.homeScore,
+      awayScore: state.guestScore,
+      period: `Q${state.period}`,
+      matchTime,
+    };
   }
 
   // === Template helpers ===

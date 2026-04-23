@@ -277,6 +277,16 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
     });
 
     /**
+     * ADR-088 F-15.2 — live scoreboard state (MatchState v1) relay from sync-agent → TV overlay.
+     * Fire-and-forget, no persistence (cloud repo holds state with TTL 60s).
+     * @event scoreboard-state
+     * @param {object} data — MatchState v1 (vendor, sport, period, chronoMs, homeScore, guestScore, ...)
+     */
+    socket.on('scoreboard-state', (data) => {
+      socket.broadcast.emit('scoreboard-state', data);
+    });
+
+    /**
      * Config updated notification (from sync-agent) — re-reads configuration.json
      * from disk and broadcasts a reload-config action to all clients.
      * @event config_updated
