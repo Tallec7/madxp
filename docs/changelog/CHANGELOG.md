@@ -1,3 +1,9 @@
+# [3.233.0](https://github.com/Tallec7/neopro/compare/v3.232.5...v3.233.0) (2026-04-23)
+
+### Features
+
+- **dashboard:** configuration Angular 'staging' pour Cloudflare Pages ([51da58b](https://github.com/Tallec7/neopro/commit/51da58b88aed6081197069afbe26993eaf9be559))
+
 ## [3.232.5](https://github.com/Tallec7/neopro/compare/v3.232.4...v3.232.5) (2026-04-23)
 
 ### Bug Fixes
