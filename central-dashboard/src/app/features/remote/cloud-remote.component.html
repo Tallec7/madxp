@@ -437,6 +437,56 @@
                   </svg>
                   <span>Spectateurs : {{ matchInfo.audienceEstimate }}</span>
                 </button>
+                <!-- ADR-088 — Afficher une page web -->
+                <button
+                  class="header-menu-item"
+                  (click)="openWebContentModal('web-page'); closeHeaderMenu()"
+                >
+                  <svg
+                    class="menu-item-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path
+                      d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"
+                    />
+                  </svg>
+                  <span>Afficher une page web</span>
+                </button>
+                <!-- ADR-088 — Diffuser un livestream -->
+                <button
+                  class="header-menu-item"
+                  (click)="openWebContentModal('livestream'); closeHeaderMenu()"
+                >
+                  <svg
+                    class="menu-item-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </svg>
+                  <span>Diffuser un flux live</span>
+                </button>
+                <!-- ADR-088 — Arrêter la diffusion manuelle -->
+                <button class="header-menu-item" (click)="stopManualContent(); closeHeaderMenu()">
+                  <svg
+                    class="menu-item-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="5" y="5" width="14" height="14" rx="2" />
+                  </svg>
+                  <span>Arrêter la diffusion manuelle</span>
+                </button>
                 <!-- Refresh -->
                 <button
                   class="header-menu-item"
@@ -481,13 +531,23 @@
                     (click)="toggleRemoteVersion(); closeHeaderMenu()"
                     aria-label="Basculer version télécommande"
                   >
-                    <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg
+                      class="menu-item-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
                       <path d="M17 1l4 4-4 4" />
                       <path d="M3 11V9a4 4 0 014-4h14" />
                       <path d="M7 23l-4-4 4-4" />
                       <path d="M21 13v2a4 4 0 01-4 4H3" />
                     </svg>
-                    <span>{{ currentRemoteVersion === 'v2' ? 'Ancienne télécommande' : 'Nouvelle télécommande' }}</span>
+                    <span>{{
+                      currentRemoteVersion === 'v2'
+                        ? 'Ancienne télécommande'
+                        : 'Nouvelle télécommande'
+                    }}</span>
                   </button>
                 }
                 <!-- ADR-062 famille UX — Préférences per-device -->
@@ -1740,6 +1800,66 @@
           <div class="modal-footer">
             <button class="btn btn-secondary" (click)="closeMatchModal()">Annuler</button>
             <button class="btn btn-primary" (click)="saveMatchInfo()">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ADR-088 — Modal Page web / Livestream -->
+    @if (showWebContentModal) {
+      <div class="modal-overlay" (click)="closeWebContentModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>
+              {{
+                webContentMode === 'web-page' ? 'Afficher une page web' : 'Diffuser un flux live'
+              }}
+            </h2>
+            <button class="modal-close" (click)="closeWebContentModal()">x</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="webContentUrl">URL</label>
+              <input
+                type="url"
+                id="webContentUrl"
+                [(ngModel)]="webContentInput.url"
+                [placeholder]="
+                  webContentMode === 'web-page'
+                    ? 'https://exemple.com'
+                    : 'https://stream.exemple.com/live.m3u8'
+                "
+                class="form-input"
+              />
+              <span class="form-hint">
+                {{
+                  webContentMode === 'web-page'
+                    ? 'URL http/https affichée en plein écran sur la TV.'
+                    : 'URL HLS (m3u8) ou MP4 du flux live.'
+                }}
+              </span>
+            </div>
+
+            @if (webContentMode === 'web-page') {
+              <div class="form-group">
+                <label for="webContentDuration">Durée (minutes, 0 = illimité)</label>
+                <input
+                  type="number"
+                  id="webContentDuration"
+                  [(ngModel)]="webContentInput.durationMinutes"
+                  min="0"
+                  step="1"
+                  class="form-input"
+                />
+                <span class="form-hint">À la fin du délai, la boucle reprend automatiquement.</span>
+              </div>
+            }
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn-secondary" (click)="closeWebContentModal()">Annuler</button>
+            <button class="btn btn-primary" (click)="launchWebContent()">Lancer sur la TV</button>
           </div>
         </div>
       </div>

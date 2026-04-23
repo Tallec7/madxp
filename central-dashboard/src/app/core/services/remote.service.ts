@@ -170,7 +170,10 @@ export type RemoteCommandType =
   | 'breaking-news'
   | 'match-config'
   | 'recording-toggle'
-  | 'screenshot';
+  | 'screenshot'
+  | 'play-web-page'
+  | 'play-livestream'
+  | 'stop-manual';
 
 // ADR-059 — commandes granulaires Pi autoritaire
 export type MatchCommandType =
@@ -483,6 +486,27 @@ export class RemoteService {
    */
   playSponsors(siteId: string): Observable<CommandResult> {
     return this.sendCommand(siteId, 'play-sponsors');
+  }
+
+  /**
+   * Affiche une page web sur la TV (ADR-088)
+   */
+  playWebPage(siteId: string, url: string, durationMs?: number | null): Observable<CommandResult> {
+    return this.sendCommand(siteId, 'play-web-page', { url, durationMs: durationMs ?? null });
+  }
+
+  /**
+   * Diffuse un livestream sur la TV (ADR-088)
+   */
+  playLivestream(siteId: string, url: string, mimeType?: string | null): Observable<CommandResult> {
+    return this.sendCommand(siteId, 'play-livestream', { url, mimeType: mimeType ?? null });
+  }
+
+  /**
+   * Stoppe toute diffusion manuelle (vidéo, page web, livestream) et revient à la boucle
+   */
+  stopManual(siteId: string): Observable<CommandResult> {
+    return this.sendCommand(siteId, 'stop-manual');
   }
 
   /**

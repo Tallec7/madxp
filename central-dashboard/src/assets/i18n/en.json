@@ -273,6 +273,8 @@
   "content": {
     "title": "Content Management",
     "uploadVideo": "Upload video",
+    "addWebPage": "🌐 Add a web page",
+    "addLivestream": "📡 Add a livestream",
     "videoList": "Video list",
     "videoName": "Video name",
     "duration": "Duration",

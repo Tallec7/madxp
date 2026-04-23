@@ -22,6 +22,23 @@ export interface VideoRow {
   upload_status: string;
   created_at: Date;
   updated_at: Date;
+  content_type?: 'video' | 'web_page' | 'livestream';
+  external_url?: string | null;
+}
+
+// ADR-088 Phase 1 — Web / livestream content (no FTP file)
+export type WebContentType = 'web_page' | 'livestream';
+
+export interface CreateWebContentInput {
+  content_type: WebContentType;
+  name: string;
+  external_url: string;
+  category: string | null;
+  subcategory: string | null;
+  duration: number | null; // seconds, required for livestream in loop mode
+  thumbnail_url: string | null;
+  uploaded_by: string | null;
+  uploaded_for_site_id: string | null;
 }
 
 export interface VideoFilters {
@@ -122,6 +139,51 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
    * Liste paginee de videos avec filtres optionnels.
    * Retourne data + total en parallele.
    */
+  /**
+   * ADR-088 — Retrouve les web_page / livestream accessibles pour un site.
+   * Include : rows globales (uploaded_for_site_id NULL) + rows taguees pour ce site.
+   */
+  async findWebContentForSite(siteId: string): Promise<Array<{
+    id: string;
+    name: string;
+    external_url: string;
+    content_type: 'web_page' | 'livestream';
+    category: string | null;
+    subcategory: string | null;
+    duration: number | null;
+    thumbnail_url: string | null;
+  }>> {
+    const result = await query<{
+      id: string;
+      original_name: string;
+      filename: string;
+      external_url: string;
+      content_type: 'web_page' | 'livestream';
+      category: string | null;
+      subcategory: string | null;
+      duration: number | null;
+      thumbnail_url: string | null;
+    }>(
+      `SELECT id, original_name, filename, external_url, content_type,
+              category, subcategory, duration, thumbnail_url
+       FROM videos
+       WHERE content_type IN ('web_page', 'livestream')
+         AND (uploaded_for_site_id IS NULL OR uploaded_for_site_id = $1)
+       ORDER BY created_at DESC`,
+      [siteId]
+    );
+    return result.rows.map(r => ({
+      id: r.id,
+      name: r.original_name || r.filename,
+      external_url: r.external_url,
+      content_type: r.content_type,
+      category: r.category,
+      subcategory: r.subcategory,
+      duration: r.duration,
+      thumbnail_url: r.thumbnail_url,
+    }));
+  }
+
   async findAllPaginated(
     filters: VideoFilters,
     limit: number,
@@ -152,7 +214,8 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     const dataQuery = `
       SELECT id, filename, original_name, category, subcategory,
              file_size, duration, storage_path as url,
-             thumbnail_url, metadata, created_at, updated_at
+             thumbnail_url, metadata, created_at, updated_at,
+             content_type, external_url
       FROM videos
       ${whereClause}
       ORDER BY created_at DESC
@@ -178,7 +241,8 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
       `SELECT id, filename, original_name, category, subcategory,
               file_size, duration, storage_path as url,
               thumbnail_url, metadata, checksum, uploaded_for_site_id,
-              created_at, updated_at
+              created_at, updated_at,
+              content_type, external_url
        FROM videos
        WHERE id = $1`,
       [id]
@@ -200,6 +264,44 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
         input.metadata, input.uploaded_by, input.uploaded_for_site_id,
         input.upload_status, input.upload_verified_at, input.upload_verified_size,
         ...(input.duration !== undefined ? [input.duration] : []),
+      ]
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * ADR-088 Phase 1 — Cree une entree web_page ou livestream (pas de fichier FTP).
+   * filename / storage_path / checksum sont synthetiques (placeholder) pour rester compatibles
+   * avec les NOT NULL existants sur ces colonnes.
+   */
+  async createWebContent(input: CreateWebContentInput): Promise<VideoRow> {
+    const synthFilename = `${input.content_type}-${Date.now()}`;
+    const result = await query<VideoRow>(
+      `INSERT INTO videos (
+         filename, original_name, category, subcategory,
+         file_size, mime_type, storage_path, checksum,
+         duration, thumbnail_url, metadata,
+         uploaded_by, uploaded_for_site_id, upload_status,
+         content_type, external_url
+       )
+       VALUES ($1, $2, $3, $4, 0, $5, $6, '', $7, $8, '{}'::jsonb, $9, $10, 'ready', $11, $12)
+       RETURNING id, filename, original_name, category, subcategory, file_size, duration,
+                 storage_path as url, thumbnail_url, metadata, checksum,
+                 uploaded_for_site_id, upload_status, created_at, updated_at,
+                 content_type, external_url`,
+      [
+        synthFilename,
+        input.name,
+        input.category,
+        input.subcategory,
+        input.content_type === 'livestream' ? 'application/vnd.apple.mpegurl' : 'text/html',
+        synthFilename,
+        input.duration,
+        input.thumbnail_url,
+        input.uploaded_by,
+        input.uploaded_for_site_id,
+        input.content_type,
+        input.external_url,
       ]
     );
     return result.rows[0];

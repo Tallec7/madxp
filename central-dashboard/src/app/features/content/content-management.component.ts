@@ -41,6 +41,22 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   showUploadModal = false;
   showHistoryModal = false;
   showImageModal = false;
+  showWebContentModal = false;
+  isCreatingWebContent = false;
+  webContentForm: {
+    contentType: 'web_page' | 'livestream';
+    name: string;
+    url: string;
+    durationSeconds: number | null;
+    category: string;
+  } = { contentType: 'web_page', name: '', url: '', durationSeconds: null, category: '' };
+
+  get webContentModalTitleKey(): string {
+    return this.webContentForm.contentType === 'livestream'
+      ? 'content.addLivestream'
+      : 'content.addWebPage';
+  }
+
   isLoadingHistory = false;
   isDragOver = false;
   isImageDragOver = false;
@@ -115,6 +131,19 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     if (video.duration) parts.push(this.formatDuration(video.duration));
     parts.push(this.formatDate(video.created_at));
     return parts;
+  }
+
+  // ADR-088 — Visual cues per content type
+  contentTypeIcon(contentType?: 'video' | 'web_page' | 'livestream'): string {
+    if (contentType === 'web_page') return '🌐';
+    if (contentType === 'livestream') return '📡';
+    return '🎬';
+  }
+
+  contentTypeBadge(contentType?: 'video' | 'web_page' | 'livestream'): string | null {
+    if (contentType === 'web_page') return 'Web';
+    if (contentType === 'livestream') return 'Live';
+    return null;
   }
 
   // ── Data loading ──
@@ -217,6 +246,55 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   uploadVideos(): void {
     this.uploadService.uploadVideos(() => { this.loadVideos(); this.loadAllVideos(); });
+  }
+
+  // ── ADR-088 — Web content (page web / livestream) ──
+
+  openWebContentModal(contentType: 'web_page' | 'livestream'): void {
+    this.webContentForm = { contentType, name: '', url: '', durationSeconds: null, category: '' };
+    this.showWebContentModal = true;
+  }
+
+  closeWebContentModal(): void {
+    if (this.isCreatingWebContent) return;
+    this.showWebContentModal = false;
+  }
+
+  submitWebContent(): void {
+    const name = this.webContentForm.name.trim();
+    const url = this.webContentForm.url.trim();
+    if (!name || !/^https?:\/\//i.test(url)) {
+      this.notificationService.error('Nom et URL (http/https) requis');
+      return;
+    }
+    if (this.webContentForm.contentType === 'livestream'
+        && (!this.webContentForm.durationSeconds || this.webContentForm.durationSeconds <= 0)) {
+      this.notificationService.error('Durée requise pour un livestream');
+      return;
+    }
+    this.isCreatingWebContent = true;
+    this.dataService.createWebContent({
+      contentType: this.webContentForm.contentType,
+      name,
+      url,
+      category: this.webContentForm.category.trim() || null,
+      durationSeconds: this.webContentForm.durationSeconds ?? null,
+    }).subscribe({
+      next: () => {
+        this.isCreatingWebContent = false;
+        this.showWebContentModal = false;
+        this.notificationService.success('Contenu créé');
+        this.loadVideos();
+        this.loadAllVideos();
+      },
+      error: (error: unknown) => {
+        this.isCreatingWebContent = false;
+        const message = this.dataService.getErrorMessage(error);
+        this.notificationService.error(`Erreur: ${message}`, {
+          correlationId: this.dataService.getCorrelationId(error),
+        });
+      },
+    });
   }
 
   // ── Video CRUD actions ──
