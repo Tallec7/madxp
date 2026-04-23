@@ -552,9 +552,35 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public launchVideo(video: PiConfigVideoEntry): void {
     this.notifyUserActivity();
-    this.analyticsService.trackManualTrigger(video);
     const target = this.getCommandTarget();
     const commandId = this.newCommandId();
+
+    // ADR-089 — Dispatch web_page / livestream as dedicated command types
+    if (video.contentType === 'web_page' && video.externalUrl) {
+      const data = {
+        url: video.externalUrl,
+        durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
+      };
+      this.localBroadcast.emitCommand({ type: 'web-page', data, commandId, ...(target ? { target } : {}) });
+      this.socketService.emit('command', { type: 'web-page', data, commandId, ...(target ? { target } : {}) });
+      this.addToRecentVideos(video);
+      this.playingVideoPath = video.path;
+      this.displayToast(`${video.name} (page web) lancée`, 'success');
+      setTimeout(() => { this.playingVideoPath = null; }, 3000);
+      return;
+    }
+    if (video.contentType === 'livestream' && video.externalUrl) {
+      const data = { url: video.externalUrl, mimeType: null };
+      this.localBroadcast.emitCommand({ type: 'livestream', data, commandId, ...(target ? { target } : {}) });
+      this.socketService.emit('command', { type: 'livestream', data, commandId, ...(target ? { target } : {}) });
+      this.addToRecentVideos(video);
+      this.playingVideoPath = video.path;
+      this.displayToast(`${video.name} (livestream) lancé`, 'success');
+      setTimeout(() => { this.playingVideoPath = null; }, 3000);
+      return;
+    }
+
+    this.analyticsService.trackManualTrigger(video);
     this.localBroadcast.emitCommand({ type: 'video', data: video, commandId, ...(target ? { target } : {}) });
     this.socketService.emit('command', { type: 'video', data: video, commandId, ...(target ? { target } : {}) });
     this.addToRecentVideos(video);

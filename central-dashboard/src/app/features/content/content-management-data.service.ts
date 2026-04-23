@@ -27,6 +27,9 @@ export interface ContentVideoRow {
   created_at: Date;
   url?: string;
   thumbnail_url?: string | null;
+  // ADR-089 — Web content as first-class video
+  content_type?: 'video' | 'web_page' | 'livestream';
+  external_url?: string | null;
 }
 
 export interface PaginationInfo {
@@ -132,6 +135,20 @@ export class ContentManagementDataService {
 
   uploadVideoBulk(formData: FormData): Observable<BulkUploadResponse> {
     return this.api.upload<BulkUploadResponse>('/videos/bulk', formData);
+  }
+
+  // ADR-089 — Web page / livestream as first-class content
+  createWebContent(payload: {
+    contentType: 'web_page' | 'livestream';
+    name: string;
+    url: string;
+    category?: string | null;
+    subcategory?: string | null;
+    durationSeconds?: number | null;
+    thumbnailUrl?: string | null;
+    uploadedForSiteId?: string | null;
+  }): Observable<ContentVideoRow> {
+    return this.api.post<ContentVideoRow>('/videos/web-content', payload);
   }
 
   // ── Deployment operations ──

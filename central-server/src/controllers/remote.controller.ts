@@ -16,7 +16,7 @@
 import { Request, Response } from 'express';
 import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
-import { siteRepository } from '../repositories';
+import { siteRepository, videoRepository } from '../repositories';
 import { remoteCommandAuditRepository } from '../repositories/remote-command-audit.repository';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
@@ -28,6 +28,7 @@ import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
+import { injectWebContentCategory } from '../utils/inject-web-content-category';
 
 // Lazy import to avoid circular dependency
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -269,9 +270,14 @@ export async function getRemoteState(req: Request, res: Response) {
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
     if (!pinRequired || pinVerified) {
+      // ADR-088 — Auto-inject pseudo-category "Web / Live" (shared helper)
+      const baseCategories = await injectWebContentCategory(
+        ((localConfig.categories as unknown[]) || []) as Parameters<typeof injectWebContentCategory>[0],
+        siteId,
+      );
       response.config = {
         sponsors: (localConfig.sponsors as unknown[]) || [],
-        categories: (localConfig.categories as unknown[]) || [],
+        categories: baseCategories,
         timeCategories: (localConfig.timeCategories as unknown[]) || [],
         liveScoreEnabled: (localConfig.liveScoreEnabled as boolean) ?? false,
         scoreOverlay: localConfig.scoreOverlay || null,
@@ -429,6 +435,9 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'phase-change',
       'play-video',
       'play-sponsors',
+      'play-web-page',
+      'play-livestream',
+      'stop-manual',
       'timer-update',
       'breaking-news',
       'match-config',
@@ -524,6 +533,46 @@ export async function sendRemoteCommand(req: Request, res: Response) {
           type: 'sponsors',
           timestamp,
         };
+        break;
+
+      // ADR-089 — contenus web_page / livestream (commandes manuelles)
+      case 'play-web-page': {
+        const url = typeof data?.url === 'string' ? data.url : '';
+        if (!/^https?:\/\//i.test(url)) {
+          return res.status(400).json({ error: 'URL invalide (http/https requis)' });
+        }
+        eventName = 'cloud-remote-action';
+        payload = {
+          type: 'web-page',
+          data: {
+            url,
+            durationMs: typeof data?.durationMs === 'number' ? data.durationMs : null,
+          },
+          timestamp,
+        };
+        break;
+      }
+
+      case 'play-livestream': {
+        const url = typeof data?.url === 'string' ? data.url : '';
+        if (!/^https?:\/\//i.test(url)) {
+          return res.status(400).json({ error: 'URL invalide (http/https requis)' });
+        }
+        eventName = 'cloud-remote-action';
+        payload = {
+          type: 'livestream',
+          data: {
+            url,
+            mimeType: typeof data?.mimeType === 'string' ? data.mimeType : null,
+          },
+          timestamp,
+        };
+        break;
+      }
+
+      case 'stop-manual':
+        eventName = 'cloud-remote-action';
+        payload = { type: 'stop-manual', timestamp };
         break;
 
       case 'timer-update':
@@ -738,14 +787,18 @@ export async function getRemoteVideos(req: Request, res: Response) {
     }>) || [];
     const categories = (localConfig.categories as unknown[]) || [];
 
-    const videosByCategory: Record<string, Array<{
+    type RemoteEntry = {
       filename: string;
       path: string;
       category: string;
       subcategory: string | null;
       size: number;
       duration: number | null;
-    }>> = {};
+      content_type?: 'video' | 'web_page' | 'livestream';
+      external_url?: string | null;
+      thumbnail_url?: string | null;
+    };
+    const videosByCategory: Record<string, RemoteEntry[]> = {};
 
     for (const video of localVideos) {
       const cat = video.category || 'AUTRES';
@@ -759,13 +812,34 @@ export async function getRemoteVideos(req: Request, res: Response) {
         subcategory: video.subcategory,
         size: video.size,
         duration: video.duration,
+        content_type: 'video',
+      });
+    }
+
+    // ADR-088 — Merge web_page / livestream rows (not file-backed, lived in DB)
+    const webContent = await videoRepository.findWebContentForSite(siteId);
+    for (const row of webContent) {
+      const cat = row.category || 'WEB';
+      if (!videosByCategory[cat]) {
+        videosByCategory[cat] = [];
+      }
+      videosByCategory[cat].push({
+        filename: row.name,
+        path: row.external_url,
+        category: cat,
+        subcategory: row.subcategory,
+        size: 0,
+        duration: row.duration,
+        content_type: row.content_type,
+        external_url: row.external_url,
+        thumbnail_url: row.thumbnail_url,
       });
     }
 
     res.json({
       categories,
       videosByCategory,
-      totalVideos: localVideos.length,
+      totalVideos: localVideos.length + webContent.length,
     });
   } catch (error) {
     logger.error('Error getting remote videos:', { error, siteId: req.params.siteId });

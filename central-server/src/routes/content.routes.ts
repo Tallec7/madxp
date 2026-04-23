@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as contentController from '../controllers/content.controller';
+import * as webContentController from '../controllers/web-content.controller';
 import * as videoClubGrantsController from '../controllers/video-club-grants.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { uploadVideo, uploadImage, uploadTemplate } from '../middleware/upload';
@@ -13,6 +14,8 @@ const router = Router();
 router.get('/videos', authenticate, adminRateLimit, createPaginationMiddleware(20, 500), contentController.getVideos);
 router.get('/videos/names', authenticate, adminRateLimit, contentController.getVideoNames);  // Liste légère id+titre pour dropdowns
 router.get('/videos/for-site/:siteId', authenticate, adminRateLimit, paginationMiddleware, contentController.getVideosForSite);  // Vidéos priorisées pour un site
+// ADR-088 — Web page / livestream content (must be BEFORE /videos/:id to avoid 'web-content' matching as id)
+router.post('/videos/web-content', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, validate(schemas.createWebContent), webContentController.createWebContent);
 router.get('/videos/:id', authenticate, adminRateLimit, contentController.getVideo);
 router.get('/videos/:id/deployments', authenticate, adminRateLimit, contentController.getVideoDeployments);
 router.post('/videos', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideo);

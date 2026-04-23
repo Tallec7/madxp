@@ -51,5 +51,5 @@
 
 ## Contributeurs
 
-Initié par : Claude (assistant IA) + Guillaume Le Tallec
+Initié par : Claude (assistant IA) + Gwenvael Le Tallec
 Date de démarrage : 2026-04-23

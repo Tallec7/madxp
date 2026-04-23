@@ -347,3 +347,8 @@ export {
   videoClubGrantRepository,
   type VideoClubGrantRow,
 } from './video-club-grant.repository';
+
+export {
+  scoreboardStateRepository,
+  type ScoreboardMatchState,
+} from './scoreboard-state.repository';

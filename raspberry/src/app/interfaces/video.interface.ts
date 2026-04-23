@@ -47,4 +47,10 @@ export interface PiConfigVideoEntry {
             height?: number | null;
         };
     };
+    /** ADR-089 — Type de contenu (vidéo par défaut, web_page ou livestream) */
+    contentType?: 'video' | 'web_page' | 'livestream';
+    /** ADR-089 — URL externe pour web_page / livestream */
+    externalUrl?: string;
+    /** ADR-089 — Durée en secondes pour les web_page (durée auto-close) */
+    durationSeconds?: number | null;
 }

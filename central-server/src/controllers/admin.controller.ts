@@ -55,6 +55,8 @@ export const streamJobs = (req: AuthRequest, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  // Required for Railway/nginx: prevents proxy buffering that causes ERR_HTTP2_PROTOCOL_ERROR
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
   const send = (event: string, data: unknown) => {

@@ -107,6 +107,13 @@ export const routes: Routes = [
         data: { roles: ['super_admin', 'admin', 'operator'] },
         loadComponent: () => import('./features/analytics/club-analytics.component').then(m => m.ClubAnalyticsComponent)
       },
+      // F-15.2 ADR-088 — Scoreboard live multi-vendor (sim/connector → cloud → dashboard)
+      {
+        path: 'scoreboard-live/:siteId',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator', 'club'] },
+        loadComponent: () => import('./features/scoreboard-live/scoreboard-live.component').then(m => m.ScoreboardLiveComponent)
+      },
       {
         path: 'sites',
         loadComponent: () => import('./features/sites/sites-list.component').then(m => m.SitesListComponent)

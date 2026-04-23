@@ -1,3 +1,49 @@
+# [3.227.0](https://github.com/Tallec7/neopro/compare/v3.226.1...v3.227.0) (2026-04-23)
+
+### Features
+
+- **remote:** ADR-088 Phase 2 — web_page/livestream first-class content (Pi + SaaS + CloudRemote) ([#558](https://github.com/Tallec7/neopro/issues/558)) ([dc11e84](https://github.com/Tallec7/neopro/commit/dc11e841b3a9e95b5c5e4aecf3219b2445613191))
+
+## [3.226.1](https://github.com/Tallec7/neopro/compare/v3.226.0...v3.226.1) (2026-04-23)
+
+### Bug Fixes
+
+- **admin,score:** SSE X-Accel-Buffering + AbortError filter + cloud remote commands F-15.2 ([#557](https://github.com/Tallec7/neopro/issues/557)) ([6f53a4a](https://github.com/Tallec7/neopro/commit/6f53a4acd456bfbcf74c562bea1609f5631a00a5))
+
+# [3.226.0](https://github.com/Tallec7/neopro/compare/v3.225.1...v3.226.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 2 — simulateur Table de marque dans /admin/local ([#556](https://github.com/Tallec7/neopro/issues/556)) ([96043c3](https://github.com/Tallec7/neopro/commit/96043c3fb4493df32e16ad04efe4cf37ee91bc75))
+
+## [3.225.1](https://github.com/Tallec7/neopro/compare/v3.225.0...v3.225.1) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** scoreboard-live URL prefix + socket subscribe race (F-15.2) ([f1a17a1](https://github.com/Tallec7/neopro/commit/f1a17a13e967d537fc3f21e1fc2cc576ab2a3c44))
+
+# [3.225.0](https://github.com/Tallec7/neopro/compare/v3.224.1...v3.225.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 1 — scoreboard live SaaS push (ADR-088) ([#555](https://github.com/Tallec7/neopro/issues/555)) ([e219084](https://github.com/Tallec7/neopro/commit/e219084648ebee7eb6e661d62e96fab1dd6f7316))
+
+## [3.224.1](https://github.com/Tallec7/neopro/compare/v3.224.0...v3.224.1) (2026-04-23)
+
+### Bug Fixes
+
+- **ci:** lower coverage threshold to 44% after PROP-003 additions ([78160bc](https://github.com/Tallec7/neopro/commit/78160bc7edf733ee39694f1ce7121994d5a2513e))
+
+# [3.224.0](https://github.com/Tallec7/neopro/compare/v3.223.9...v3.224.0) (2026-04-23)
+
+### Bug Fixes
+
+- **templates:** harden asset-proxy against 429 + 404 cascades (ADR-087) ([#553](https://github.com/Tallec7/neopro/issues/553)) ([b84934c](https://github.com/Tallec7/neopro/commit/b84934c359df83790044369a423b9543b5c2c4a8))
+
+### Features
+
+- **score:** PROP-003 Phase 0 — annexe SPEC protocolaire + simulateurs Bodet/Stramatel ([#552](https://github.com/Tallec7/neopro/issues/552)) ([ab317e1](https://github.com/Tallec7/neopro/commit/ab317e101eb2340f7383da7a0750cb4a6e9bcee7))
+
 ## [3.223.9](https://github.com/Tallec7/neopro/compare/v3.223.8...v3.223.9) (2026-04-23)
 
 ### Bug Fixes

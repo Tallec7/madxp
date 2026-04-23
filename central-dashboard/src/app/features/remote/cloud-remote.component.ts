@@ -474,6 +474,32 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public launchVideo(video: RemoteVideoEntry): void {
+    // ADR-089 — Dispatch by contentType: web_page/livestream utilisent leur propre commande remote
+    if (video.contentType === 'web_page' && video.externalUrl) {
+      const durationMs = video.durationSeconds ? video.durationSeconds * 1000 : null;
+      this.remoteService.playWebPage(this.siteId, video.externalUrl, durationMs).subscribe({
+        next: () => {
+          this.config.addToRecentVideos(video);
+          this.playingVideoPath = video.path;
+          this.displayToast(`${video.name} affichée sur l'écran`, 'success');
+          setTimeout(() => { this.playingVideoPath = null; }, 3000);
+        },
+        error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
+      });
+      return;
+    }
+    if (video.contentType === 'livestream' && video.externalUrl) {
+      this.remoteService.playLivestream(this.siteId, video.externalUrl).subscribe({
+        next: () => {
+          this.config.addToRecentVideos(video);
+          this.playingVideoPath = video.path;
+          this.displayToast(`${video.name} diffusée sur l'écran`, 'success');
+          setTimeout(() => { this.playingVideoPath = null; }, 3000);
+        },
+        error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
+      });
+      return;
+    }
     this.remoteService.playVideo(this.siteId, { name: video.name, path: video.path, categoryId: video.categoryId }).subscribe({
       next: () => {
         this.config.addToRecentVideos(video);
@@ -481,6 +507,56 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
         this.displayToast(`${video.name} lancée sur l'écran`, 'success');
         setTimeout(() => { this.playingVideoPath = null; }, 3000);
       },
+      error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
+    });
+  }
+
+  // ==== WEB CONTENT (ADR-089) ====
+
+  public showWebContentModal = false;
+  public webContentMode: 'web-page' | 'livestream' = 'web-page';
+  public webContentInput = {
+    url: '',
+    durationMinutes: 0 as number, // 0 = illimité (retour manuel)
+  };
+
+  public openWebContentModal(mode: 'web-page' | 'livestream'): void {
+    this.webContentMode = mode;
+    this.webContentInput = { url: '', durationMinutes: 0 };
+    this.showWebContentModal = true;
+  }
+
+  public closeWebContentModal(): void {
+    this.showWebContentModal = false;
+  }
+
+  public launchWebContent(): void {
+    const url = (this.webContentInput.url || '').trim();
+    if (!/^https?:\/\//i.test(url)) {
+      this.displayToast('URL invalide (http/https requis)', 'info');
+      return;
+    }
+    const durationMs = this.webContentInput.durationMinutes > 0
+      ? this.webContentInput.durationMinutes * 60_000
+      : null;
+
+    const obs = this.webContentMode === 'web-page'
+      ? this.remoteService.playWebPage(this.siteId, url, durationMs)
+      : this.remoteService.playLivestream(this.siteId, url);
+
+    obs.subscribe({
+      next: () => {
+        this.showWebContentModal = false;
+        const label = this.webContentMode === 'web-page' ? 'Page web' : 'Livestream';
+        this.displayToast(`${label} lancé sur l'écran`, 'success');
+      },
+      error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
+    });
+  }
+
+  public stopManualContent(): void {
+    this.remoteService.stopManual(this.siteId).subscribe({
+      next: () => this.displayToast('Retour à la boucle', 'success'),
       error: (err) => this.displayToast('Erreur: ' + (err.error?.error || 'Échec de la commande'), 'info'),
     });
   }

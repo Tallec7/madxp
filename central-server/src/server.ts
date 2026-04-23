@@ -28,6 +28,7 @@ import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
 import sitesRoutes from './routes/sites.routes';
 import hotspotConfigRoutes from './routes/hotspot-config.routes';
+import webContentPiRoutes from './routes/web-content-pi.routes';
 import groupsRoutes from './routes/groups.routes';
 import contentRoutes from './routes/content.routes';
 import updatesRoutes from './routes/updates.routes';
@@ -61,6 +62,7 @@ import sponsorAlertsRoutes from './routes/sponsor-alerts.routes';
 import safeRoutes from './routes/safe.routes';
 import campaignRoutes from './routes/campaign.routes';
 import saasRoutes from './routes/saas.routes';
+import scoreboardRoutes from './routes/scoreboard.routes';
 import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
@@ -477,6 +479,7 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', hotspotConfigRoutes); // ADR-074 — hotspot PSK cloud source of truth (Pi + admin endpoints, auth + rate limits per-route)
+app.use('/api/sites', webContentPiRoutes); // ADR-088 — Pi fetch web_page/livestream entries (authenticateSiteApiKey)
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles
 app.use('/api/groups', apiRateLimit, groupsRoutes);
@@ -511,6 +514,7 @@ app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive 
 app.use('/api/safe', apiRateLimit, safeRoutes); // SAFe dashboard (portfolio, proposals, epics)
 app.use('/api/campaigns', campaignRoutes); // Campaign management (ADR-035 Phase 3) — rate limits per-route
 app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits per-route
+app.use('/api/scoreboard', scoreboardRoutes); // Scoreboard live push (ADR-088 / F-15.2) — rate limits per-route
 app.use('/api/sites', videoCategoriesRoutes); // Catégories vidéo par site — rate limits per-route
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 // Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.

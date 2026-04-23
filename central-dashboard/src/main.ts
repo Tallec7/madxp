@@ -16,5 +16,17 @@ window.addEventListener('error', (event) => {
   }
 }, true);
 
+// Suppress Remotion "Could not play video: AbortError" spam from Chrome power-saving
+// video-only <video> elements (no audio track + muted). The same filter lives in
+// template-studio-player.component.ts but that module is lazy-loaded, so errors that
+// fire before the user navigates to the template studio page leak through.
+// The play() rejection is already handled by Remotion internally — this is cosmetic only.
+const _origConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  const msg = args[0];
+  if (typeof msg === 'string' && msg.includes('Could not play video')) return;
+  _origConsoleError(...args);
+};
+
 bootstrapApplication(AppComponent, appConfig)
   .catch((err) => console.error(err));
