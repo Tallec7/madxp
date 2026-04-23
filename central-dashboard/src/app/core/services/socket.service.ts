@@ -72,6 +72,7 @@ export class SocketService {
       this.reconnectAttempt = 0;
       this.eventsSubject.next({ type: 'connected', data: null });
       this.emitConnectionStatus();
+      this.replaySiteSubscriptions();
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -110,6 +111,7 @@ export class SocketService {
       this.reconnectAttempt = 0;
       this.eventsSubject.next({ type: 'reconnected', data: { attempts: attempt } });
       this.emitConnectionStatus();
+      this.replaySiteSubscriptions();
     });
 
     this.socket.io.on('reconnect_error', (error) => {
@@ -172,15 +174,26 @@ export class SocketService {
     });
   }
 
+  private readonly subscribedSites = new Set<string>();
+
   subscribeSite(siteId: string): void {
+    this.subscribedSites.add(siteId);
     if (this.socket && this.connected) {
       this.socket.emit('dashboard-subscribe-site', { siteId });
     }
   }
 
   unsubscribeSite(siteId: string): void {
+    this.subscribedSites.delete(siteId);
     if (this.socket && this.connected) {
       this.socket.emit('dashboard-unsubscribe-site', { siteId });
+    }
+  }
+
+  private replaySiteSubscriptions(): void {
+    if (!this.socket || !this.connected) return;
+    for (const siteId of this.subscribedSites) {
+      this.socket.emit('dashboard-subscribe-site', { siteId });
     }
   }
 

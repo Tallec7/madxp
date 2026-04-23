@@ -253,17 +253,22 @@ export class ScoreboardLiveComponent implements OnInit, OnDestroy {
     this.socket.subscribeSite(this.siteId);
 
     this.api
-      .get<{ state: ScoreboardMatchState | null }>(`scoreboard/${this.siteId}/state`)
+      .get<ScoreboardMatchState | null>(`/scoreboard/${this.siteId}/state`)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
-          this.state = res?.state ?? null;
+          this.state = res ?? null;
           this.lastUpdateAt = this.state?.updatedAt ?? null;
           this.loading = false;
         },
         error: (err) => {
           this.loading = false;
-          this.error = err?.error?.error ?? 'Impossible de charger l\'état';
+          if (err?.status === 404) {
+            this.error = null;
+          } else {
+            const msg = err?.error?.error ?? err?.error?.message ?? err?.message;
+            this.error = typeof msg === 'string' ? msg : 'Impossible de charger l\'état';
+          }
         },
       });
 
