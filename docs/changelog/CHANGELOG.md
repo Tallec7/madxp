@@ -1,3 +1,9 @@
+## [3.228.1](https://github.com/Tallec7/neopro/compare/v3.228.0...v3.228.1) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** correct overlay link in scoreboard simulator (F-15.2 Phase 2) ([#562](https://github.com/Tallec7/neopro/issues/562)) ([eb10297](https://github.com/Tallec7/neopro/commit/eb10297fd7a5ed4f28cc8564a154fbcd3e255fe1))
+
 # [3.228.0](https://github.com/Tallec7/neopro/compare/v3.227.0...v3.228.0) (2026-04-23)
 
 ### Bug Fixes
