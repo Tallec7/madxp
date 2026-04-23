@@ -1,3 +1,9 @@
+# [3.230.0](https://github.com/Tallec7/neopro/compare/v3.229.0...v3.230.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 3 — relay scoreboard state to Pi TV overlay ([#566](https://github.com/Tallec7/neopro/issues/566)) ([ffd73bc](https://github.com/Tallec7/neopro/commit/ffd73bc7677436f65177360ad6bad7ea8458c865))
+
 # [3.229.0](https://github.com/Tallec7/neopro/compare/v3.228.1...v3.229.0) (2026-04-23)
 
 ### Bug Fixes
