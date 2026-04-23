@@ -1518,10 +1518,12 @@ describe('CI workflow reliability guards', () => {
   );
 
   it('ci.yml must have concurrency with cancel-in-progress to prevent stale runs', () => {
-    // Without this, pushing multiple commits triggers parallel CI runs on
-    // intermediate commits that may fail because tests reference code not
-    // yet present at that point in the history.
-    expect(ciWorkflow).toContain('cancel-in-progress: true');
+    // cancel-in-progress may be a literal true or a dynamic expression that
+    // evaluates to true on non-main branches (preserving main CI runs).
+    const hasCancelInProgress =
+      ciWorkflow.includes('cancel-in-progress: true') ||
+      ciWorkflow.includes("cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}");
+    expect(hasCancelInProgress).toBe(true);
   });
 
   it('ci.yml must define concurrency group per workflow and ref', () => {
