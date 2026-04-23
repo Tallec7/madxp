@@ -171,6 +171,8 @@ class NeoproSyncAgent {
     // =========================================================================
     this.socket.on('score-update', (data) => this.relayToLocalServer('score-update', data));
     this.socket.on('score-reset', (data) => this.relayToLocalServer('score-reset', data));
+    // ADR-088 F-15.2 — live scoreboard state (MatchState v1) from cloud → TV overlay
+    this.socket.on('scoreboard-state', (data) => this.relayToLocalServer('scoreboard-state', data));
     this.socket.on('phase-change', (data) => this.relayToLocalServer('phase-change', data));
     this.socket.on('timer-update', (data) => this.relayToLocalServer('timer-update', data));
     this.socket.on('breaking-news', (data) => this.relayToLocalServer('breaking-news', data));
