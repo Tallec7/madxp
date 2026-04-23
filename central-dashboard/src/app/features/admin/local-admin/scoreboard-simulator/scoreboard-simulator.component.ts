@@ -22,6 +22,7 @@ const PERIOD_MS = 10 * 60 * 1000;
 const SHOT_CLOCK_FULL_MS = 24_000;
 const SHOT_CLOCK_RESET_MS = 14_000;
 const PUSH_DEBOUNCE_MS = 300;
+const PUSH_THROTTLE_MS = 500;
 const TICK_MS = 100;
 
 @Component({
@@ -399,6 +400,7 @@ export class ScoreboardSimulatorComponent implements OnInit, OnDestroy {
 
   private tickInterval: ReturnType<typeof setInterval> | null = null;
   private pushTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastPushAt = 0;
   private subs: Subscription[] = [];
 
   constructor() {
@@ -577,13 +579,23 @@ export class ScoreboardSimulatorComponent implements OnInit, OnDestroy {
   }
 
   private schedulePush(): void {
+    // Throttle + debounce : pendant que le chrono tourne, chronoMs change
+    // toutes les 100ms et reset le debounce → sans throttle, push jamais.
+    // On force un push toutes les PUSH_THROTTLE_MS max.
+    const now = Date.now();
+    const elapsed = now - this.lastPushAt;
     if (this.pushTimer) clearTimeout(this.pushTimer);
-    this.pushTimer = setTimeout(() => this.doPush(), PUSH_DEBOUNCE_MS);
+    if (elapsed >= PUSH_THROTTLE_MS) {
+      this.doPush();
+    } else {
+      this.pushTimer = setTimeout(() => this.doPush(), Math.min(PUSH_DEBOUNCE_MS, PUSH_THROTTLE_MS - elapsed));
+    }
   }
 
   private doPush(): void {
     const state = this.buildState();
     if (!state) return;
+    this.lastPushAt = Date.now();
     this.pushing.set(true);
     this.pushError.set(null);
     this.simApi.push(state).subscribe({
