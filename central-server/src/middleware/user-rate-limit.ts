@@ -256,6 +256,25 @@ export const piAnalyticsRateLimit = rateLimit({
   message: { error: 'Trop de requêtes analytics. Réduisez la fréquence d\'envoi.' },
 });
 
+// Scoreboard state-manual push (ADR-088/090) - 600 req/min par user+siteId.
+// Le simulateur dashboard push toutes les 500ms chrono running (2 req/s)
+// et la Remote relaie les +/- ponctuels. sensitiveRateLimit (30/min) était
+// calibré pour des actions one-shot → 429 en continu.
+export const scoreboardPushRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600,
+  keyGenerator: (req: Request): string => {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id || req.ip || 'unknown';
+    const siteId = req.params?.siteId || 'no-site';
+    return `${userId}:${siteId}`;
+  },
+  handler: createLimitHandler('scoreboard_push'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de pushes scoreboard. Réduisez la fréquence.' },
+});
+
 /**
  * Rate limiter dynamique basé sur le rôle utilisateur
  * Les admins ont des limites plus élevées
@@ -295,5 +314,6 @@ export default {
   monitoringRateLimit,
   loggingRateLimit,
   piAnalyticsRateLimit,
+  scoreboardPushRateLimit,
   roleBasedRateLimit,
 };

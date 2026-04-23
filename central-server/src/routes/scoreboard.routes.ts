@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { authenticate, authenticateSiteApiKey, requireRole } from '../middleware/auth';
 import { validate, validateParams, paramSchemas } from '../middleware/validation';
-import { remoteRateLimit, apiRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+import { remoteRateLimit, apiRateLimit, scoreboardPushRateLimit } from '../middleware/user-rate-limit';
 import { scoreboardStateSchema } from '../validators/scoreboard.validator';
 import {
   postScoreboardState,
@@ -31,7 +31,7 @@ router.post(
 // Auth JWT + requireRole gère le scope club → son propre site uniquement.
 router.post(
   '/:siteId/state-manual',
-  sensitiveRateLimit,
+  scoreboardPushRateLimit,
   authenticate,
   requireRole('admin', 'operator', 'club'),
   validateParams(paramSchemas.siteId),
