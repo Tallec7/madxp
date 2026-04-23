@@ -27,7 +27,7 @@
    HOTSPOT_PSK_ENCRYPTION_KEY=<générer via `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`>
 
    # CORS
-   ALLOWED_ORIGINS=https://neopro-staging.kalonpartners.bzh,https://neopro-dashboard.pages.dev
+   ALLOWED_ORIGINS=https://neopro-staging.kalonpartners.bzh,https://neopro.pages.dev
 
    # FTP (réutiliser prod read-only pour J1 — on splittera un bucket staging à J3)
    FTP_HOST=<valeur prod>
