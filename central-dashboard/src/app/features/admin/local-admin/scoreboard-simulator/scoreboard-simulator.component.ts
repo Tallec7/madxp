@@ -176,7 +176,7 @@ const TICK_MS = 100;
           <button class="btn" (click)="forcePush()">Push maintenant</button>
           <a
             class="btn ghost"
-            [routerLink]="['/sites', siteId(), 'scoreboard-live']"
+            [routerLink]="['/scoreboard-live', siteId()]"
             target="_blank"
             rel="noopener"
             *ngIf="siteId()"
