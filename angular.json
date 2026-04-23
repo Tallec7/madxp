@@ -247,6 +247,16 @@
                 "glob": "health.json",
                 "input": "central-dashboard/src/",
                 "output": "/"
+              },
+              {
+                "glob": "_redirects",
+                "input": "central-dashboard/cloudflare/",
+                "output": "/"
+              },
+              {
+                "glob": "_headers",
+                "input": "central-dashboard/cloudflare/",
+                "output": "/"
               }
             ],
             "styles": ["central-dashboard/src/styles.scss"],
