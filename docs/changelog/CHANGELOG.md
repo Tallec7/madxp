@@ -1,3 +1,9 @@
+## [3.226.1](https://github.com/Tallec7/neopro/compare/v3.226.0...v3.226.1) (2026-04-23)
+
+### Bug Fixes
+
+- **admin,score:** SSE X-Accel-Buffering + AbortError filter + cloud remote commands F-15.2 ([#557](https://github.com/Tallec7/neopro/issues/557)) ([6f53a4a](https://github.com/Tallec7/neopro/commit/6f53a4acd456bfbcf74c562bea1609f5631a00a5))
+
 # [3.226.0](https://github.com/Tallec7/neopro/compare/v3.225.1...v3.226.0) (2026-04-23)
 
 ### Features
