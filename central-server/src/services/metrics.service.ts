@@ -480,6 +480,15 @@ const videoStreamRequestsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Template Asset Proxy (ADR-087) =============
+
+const templateAssetProxyUpstreamTotal = new Counter({
+  name: 'neopro_template_asset_proxy_upstream_total',
+  help: 'Upstream FTP status class for /api/remotion-templates/asset-proxy (catches 404 HTML cascades + 5xx)',
+  labelNames: ['status_class'], // 2xx | 3xx | 4xx | 5xx | error
+  registers: [register],
+});
+
 // ============= Métriques Video Path Resolution (ADR-083) =============
 
 const videoPathResolutionTotal = new Counter({
@@ -1119,6 +1128,12 @@ class MetricsService {
     status: 'success' | 'missing_token' | 'expired' | 'invalid' | 'upstream_error' | 'proxy_error'
   ): void {
     videoStreamRequestsTotal.inc({ status });
+  }
+
+  recordTemplateAssetProxyUpstream(
+    statusClass: '2xx' | '3xx' | '4xx' | '5xx' | 'error'
+  ): void {
+    templateAssetProxyUpstreamTotal.inc({ status_class: statusClass });
   }
 
   recordVideoPathResolution(result: 'exact' | 'fuzzy' | 'miss'): void {

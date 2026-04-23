@@ -193,13 +193,24 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
       );
       setCorsProxyHeaders(res);
       res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.status(upstreamRes.statusCode ?? 200);
+      const upstreamStatus = upstreamRes.statusCode ?? 200;
+      const statusClass = (
+        upstreamStatus >= 500 ? '5xx' :
+        upstreamStatus >= 400 ? '4xx' :
+        upstreamStatus >= 300 ? '3xx' : '2xx'
+      ) as '2xx' | '3xx' | '4xx' | '5xx';
+      metricsService.recordTemplateAssetProxyUpstream(statusClass);
+      if (statusClass === '4xx' || statusClass === '5xx') {
+        logger.warn('proxyTemplateAsset upstream non-2xx', { url: rawUrl, status: upstreamStatus });
+      }
+      res.status(upstreamStatus);
       upstreamRes.pipe(res);
     }
   );
 
   upstreamReq.on('error', (err) => {
     logger.error('proxyTemplateAsset error', { url: rawUrl, error: err.message });
+    metricsService.recordTemplateAssetProxyUpstream('error');
     if (!res.headersSent) {
       setCorsProxyHeaders(res);
       res.status(502).json({ error: 'Erreur proxy' });

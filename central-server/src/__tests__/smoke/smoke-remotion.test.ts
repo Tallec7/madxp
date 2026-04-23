@@ -1945,6 +1945,24 @@ describe('Video playback — CORB proxy + Zone.js error suppression guards', () 
     expect(ctrl).toMatch(/cross-origin/);
   });
 
+  it('proxyTemplateAsset émet la metric Prometheus recordTemplateAssetProxyUpstream (ADR-087)', () => {
+    const ctrl = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/remotion-templates.controller.ts'),
+      'utf8',
+    );
+    // La metric est appelée sur la réponse upstream (200/4xx/5xx) + sur erreur réseau
+    expect(ctrl).toMatch(/recordTemplateAssetProxyUpstream\s*\(\s*statusClass\s*\)/);
+    expect(ctrl).toMatch(/recordTemplateAssetProxyUpstream\s*\(\s*['"]error['"]\s*\)/);
+
+    const metrics = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/metrics.service.ts'),
+      'utf8',
+    );
+    // Counter registered + method exposed
+    expect(metrics).toMatch(/neopro_template_asset_proxy_upstream_total/);
+    expect(metrics).toMatch(/recordTemplateAssetProxyUpstream/);
+  });
+
   it('/remotion-preview/public pose CORS + CORP dans server.ts', () => {
     const srv = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/server.ts'),
@@ -1970,5 +1988,18 @@ describe('Video playback — CORB proxy + Zone.js error suppression guards', () 
     expect(mig).toMatch(/template_layers/);
     expect(mig).toMatch(/ButSimple/);
     expect(mig).toMatch(/ButImgJoueur/);
+  });
+
+  it('migration fix-joueur-detaille-asset-urls-railway.sql repoint les layers vers Railway', () => {
+    const mig = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/scripts/migrations/fix-joueur-detaille-asset-urls-railway.sql'),
+      'utf8',
+    );
+    expect(mig).toMatch(/kalonpartners\.bzh.*template-assets.*studio.*joueur-detaille/);
+    expect(mig).toMatch(/railway\.app.*remotion-preview\/public\/BUT_img_joueur_/);
+    expect(mig).toMatch(/JoueurDetaille/);
+    expect(mig).toMatch(/template_layers/);
+    expect(mig).toMatch(/template_variants/);
+    expect(mig).toMatch(/LIKE old_prefix/);
   });
 });

@@ -1,0 +1,15 @@
+{
+  "name": "sim-bodet-scorepad",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Simulator of a Bodet Scorepad console (basketball FIBA). TCP client that emits framed messages per PDF 608264 J. See SPEC-PROP-003 section 2.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:demo": "node src/index.js --host 127.0.0.1 --port 4001 --scenario basket-demo --time-scale 10 --verbose",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
