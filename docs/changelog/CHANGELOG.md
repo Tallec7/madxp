@@ -1,3 +1,9 @@
+# [3.231.0](https://github.com/Tallec7/neopro/compare/v3.230.0...v3.231.0) (2026-04-23)
+
+### Features
+
+- **score:** unified scoreboard-state sync Remote ↔ Simulator ↔ Display (ADR-090) ([#568](https://github.com/Tallec7/neopro/issues/568)) ([7ed0d13](https://github.com/Tallec7/neopro/commit/7ed0d13bf1331d386a9470845861efbd06e52d4e))
+
 # [3.230.0](https://github.com/Tallec7/neopro/compare/v3.229.0...v3.230.0) (2026-04-23)
 
 ### Features
