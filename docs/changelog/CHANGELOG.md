@@ -1,3 +1,9 @@
+# [3.225.0](https://github.com/Tallec7/neopro/compare/v3.224.1...v3.225.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 1 — scoreboard live SaaS push (ADR-088) ([#555](https://github.com/Tallec7/neopro/issues/555)) ([e219084](https://github.com/Tallec7/neopro/commit/e219084648ebee7eb6e661d62e96fab1dd6f7316))
+
 ## [3.224.1](https://github.com/Tallec7/neopro/compare/v3.224.0...v3.224.1) (2026-04-23)
 
 ### Bug Fixes
