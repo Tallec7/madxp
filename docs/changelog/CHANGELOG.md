@@ -1,3 +1,9 @@
+## [3.223.9](https://github.com/Tallec7/neopro/compare/v3.223.8...v3.223.9) (2026-04-23)
+
+### Bug Fixes
+
+- **server:** retirer apiRateLimit du mount global /api (root cause 429 asset-proxy) ([8a90715](https://github.com/Tallec7/neopro/commit/8a9071594cb6269fc57ceba6f4c5cabb2e9916d0))
+
 ## [3.223.8](https://github.com/Tallec7/neopro/compare/v3.223.7...v3.223.8) (2026-04-23)
 
 ### Bug Fixes
