@@ -1047,6 +1047,15 @@ class SocketService {
     logger.info('Emitted saas-config-updated', { siteId, ...(meta || {}) });
   }
 
+  /**
+   * ADR-088 — Broadcast a live scoreboard state to all subscribers of siteId.
+   * Consumed by the dashboard live overlay. Silent no-op if io not initialized.
+   */
+  emitScoreboardState(siteId: string, state: object): void {
+    if (!this.io) return;
+    this.io.to(siteId).emit('scoreboard-state', state);
+  }
+
   getConnectionHealth(siteId: string): {
     inMap: boolean;
     socketConnected: boolean;

@@ -104,6 +104,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-085](ADR-085-simplification-2026.md)                                       | Simplification 2026 — dégraissage outillage non-core                             | Accepté                           | Avr 2026 |
 | [ADR-086](ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) | Template Studio v2 — textes enfants de layer, safe-zones, animations réversibles | Accepté                           | Avr 2026 |
 | [ADR-087](ADR-087-no-global-api-rate-limiter-corp-on-429.md)                    | Pas de rate limiter sur `/api` nu + CORP/CORS sur 429 (incident asset-proxy)     | Accepté                           | Avr 2026 |
+| [ADR-088](ADR-088-scoreboard-saas-push.md)                                      | Scoreboard live multi-vendor — validation SaaS-first (F-15.2)                    | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -166,4 +167,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 23 avril 2026 (ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones ; ADR-085 Accepté — Simplification 2026)_
+_Dernière mise à jour : 23 avril 2026 (ADR-088 Accepté — scoreboard live multi-vendor SaaS-first pour F-15.2 ; ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones ; ADR-085 Accepté — Simplification 2026)_

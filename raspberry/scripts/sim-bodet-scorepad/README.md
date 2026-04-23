@@ -22,14 +22,66 @@ Pour tester sans serveur, lance un `nc -l 4001` ou `ncat -l -k 4001` dans un aut
 
 ## Flags CLI
 
-| Flag                | Default       | Rôle                                                           |
-| ------------------- | ------------- | -------------------------------------------------------------- |
-| `--host <ip>`       | `127.0.0.1`   | Adresse du serveur TCP cible                                   |
-| `--port <p>`        | `4001`        | Port TCP cible                                                 |
-| `--scenario <name>` | `basket-demo` | Scénario à jouer (seul `basket-demo` dispo en V1)              |
-| `--rate <ms>`       | `200`         | Intervalle entre rondes d'émission (messages 18/30/31/50/60)   |
-| `--time-scale <x>`  | `1`           | Accélère le temps simulé (10 = 1 minute réelle = 10 min match) |
-| `--verbose`, `-v`   | off           | Hex dump byte-par-byte des trames émises                       |
+| Flag                   | Default       | Rôle                                                           |
+| ---------------------- | ------------- | -------------------------------------------------------------- |
+| `--host <ip>`          | `127.0.0.1`   | Adresse du serveur TCP cible                                   |
+| `--port <p>`           | `4001`        | Port TCP cible                                                 |
+| `--scenario <name>`    | `basket-demo` | Scénario à jouer (seul `basket-demo` dispo en V1)              |
+| `--no-scenario`        | off           | Démarre sans scénario (état vierge, pour `--repl`)             |
+| `--rate <ms>`          | `200`         | Intervalle entre rondes d'émission (messages 18/30/31/50/60)   |
+| `--time-scale <x>`     | `1`           | Accélère le temps simulé (10 = 1 minute réelle = 10 min match) |
+| `--verbose`, `-v`      | off           | Hex dump byte-par-byte des trames émises                       |
+| `--repl`               | off           | Mode interactif clavier (voir § REPL)                          |
+| `--web`                | off           | UI web sur `:4100` (voir § UI Web)                             |
+| `--web-port <p>`       | `4100`        | Port de l'UI web                                               |
+| `--push-url <url>`     | —             | Base URL `/api/scoreboard` du central (ADR-088 SaaS push)      |
+| `--site-id <uuid>`     | —             | Site SaaS cible                                                |
+| `--site-api-key <k>`   | —             | API key du site (Bearer)                                       |
+| `--push-interval <ms>` | `500`         | Intervalle de push cloud                                       |
+
+## UI Web — mode graphique
+
+Pour comprendre visuellement le protocole et tester les scénarios :
+
+```bash
+node src/index.js --no-scenario --web
+# → http://127.0.0.1:4100
+```
+
+L'UI affiche en live :
+
+- Score / chrono / fautes / timeouts / shot clock / bonus
+- Boutons pour toutes les actions (panier +1/+2/+3, faute par joueur, timeout, period, chrono play/pause, shot reset, tip-off, reset match)
+- **Hex dump des dernières trames de chaque type** (msg 18, 30, 31, 50, 60 + 36/19 conditionnels) avec framing colorisé (SOH/STX/ETX verts, LRC jaune)
+
+Cumulable avec `--repl` (clavier) et l'écriture TCP vers `--host/--port`. Le web UI écoute par défaut sur `127.0.0.1` uniquement (local-only).
+
+## REPL — mode interactif clavier
+
+Pour tester manuellement des edge cases (faute à 4.9s de fin, timeout pendant shot clock <5s, etc.), utiliser `--repl` :
+
+```bash
+node src/index.js --no-scenario --repl --verbose
+```
+
+Touches disponibles :
+
+| Touche         | Action                                  |
+| -------------- | --------------------------------------- |
+| `1 2 3`        | Panier **home** +1 / +2 / +3            |
+| `7 8 9`        | Panier **guest** +1 / +2 / +3           |
+| `f` / `F`      | Faute **home** / **guest** (joueur n°4) |
+| `t` / `T`      | Timeout **home** / **guest** (60s)      |
+| `e`            | Fin du timeout en cours                 |
+| `space`        | Chrono play/pause                       |
+| `p`            | Fin de période (reset chrono + fautes)  |
+| `o` / `i`      | Reset shot clock 24s / 14s              |
+| `r`            | Tip-off (démarre le match)              |
+| `s`            | Affiche le status courant               |
+| `?` ou `h`     | Affiche l'aide                          |
+| `x` / `Ctrl-C` | Quitte                                  |
+
+Chaque action affiche une ligne de status `[P1] ▶ 09:58 | H 2-0 G | fautes H0/G0 | shot 22s | TO H3/G3`.
 
 ## Scénarios
 
@@ -90,5 +142,7 @@ Tests : LRC de référence, règle `+0x20 si < 0x20`, layouts msg 18/30/31/36/50
 - `src/match-state.js` — modèle pur du match basket
 - `src/emitter.js` — moteur qui combine state + scénario + rondes périodiques
 - `src/scenarios/basket-demo.js` — scénario scripté
+- `src/repl.js` — mode REPL clavier (keybinds basket)
+- `src/web-ui.js` + `public/index.html` — UI web (HTTP vanilla + HTML/JS, zéro dép)
 - `src/index.js` — entry CLI + connexion TCP client + reconnexion
 - `test/` — tests `node:test` natif

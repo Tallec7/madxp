@@ -76,6 +76,11 @@ function applyEvent(state, event) {
       next.clockRunning = true;
       next.shotClockRunning = true;
       break;
+    case 'shot-reset':
+      next.shotClockMs = (event.seconds || 24) * 1000;
+      break;
+    case 'reset-match':
+      return createInitialState();
     default:
       break;
   }

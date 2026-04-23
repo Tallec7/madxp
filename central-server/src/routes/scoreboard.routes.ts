@@ -1,0 +1,38 @@
+/**
+ * ADR-088 — Scoreboard live routes (F-15.2 SaaS-first).
+ *
+ * Mount : app.use('/api/scoreboard', scoreboardRoutes)
+ */
+
+import { Router } from 'express';
+import { authenticate, authenticateSiteApiKey } from '../middleware/auth';
+import { validate, validateParams, paramSchemas } from '../middleware/validation';
+import { remoteRateLimit, apiRateLimit } from '../middleware/user-rate-limit';
+import { scoreboardStateSchema } from '../validators/scoreboard.validator';
+import {
+  postScoreboardState,
+  getScoreboardState,
+} from '../controllers/scoreboard.controller';
+
+const router = Router();
+
+// Pi / sim pushes the decoded match state every ~200ms.
+router.post(
+  '/:siteId/state',
+  remoteRateLimit,
+  authenticateSiteApiKey,
+  validateParams(paramSchemas.siteId),
+  validate(scoreboardStateSchema),
+  postScoreboardState
+);
+
+// Dashboard hydration (JWT) — returns last cached state on overlay load.
+router.get(
+  '/:siteId/state',
+  apiRateLimit,
+  authenticate,
+  validateParams(paramSchemas.siteId),
+  getScoreboardState
+);
+
+export default router;

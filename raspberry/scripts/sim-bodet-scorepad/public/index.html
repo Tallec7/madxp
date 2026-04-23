@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>sim-bodet-scorepad</title>
+    <style>
+      :root {
+        --bg: #0e1116;
+        --panel: #161b22;
+        --ink: #d0d7de;
+        --accent: #f85149;
+        --ok: #3fb950;
+        --dim: #6e7681;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      header {
+        padding: 12px 20px;
+        background: var(--panel);
+        border-bottom: 1px solid #30363d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      header h1 .tag {
+        color: var(--accent);
+        font-weight: 400;
+        font-size: 13px;
+        margin-left: 8px;
+      }
+      .status-bar {
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+        color: var(--ok);
+      }
+      main {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--dim);
+        letter-spacing: 0.05em;
+      }
+      .score {
+        display: grid;
+        grid-template-columns: 1fr 80px 1fr;
+        gap: 12px;
+        align-items: center;
+        text-align: center;
+      }
+      .score .num {
+        font-size: 56px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-family: ui-monospace, monospace;
+      }
+      .score .label {
+        color: var(--dim);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .score .vs {
+        color: var(--dim);
+        font-size: 20px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 16px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+      }
+      .kv dt {
+        color: var(--dim);
+      }
+      .kv dd {
+        margin: 0;
+      }
+      .btn-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .btn-grid.six {
+        grid-template-columns: repeat(6, 1fr);
+      }
+      .btn-grid.four {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      button {
+        background: #21262d;
+        color: var(--ink);
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 10px 8px;
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.1s;
+      }
+      button:hover {
+        background: #30363d;
+        border-color: #484f58;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button.home {
+        border-color: #316dca;
+      }
+      button.home:hover {
+        background: #1f3a63;
+      }
+      button.guest {
+        border-color: #bc8cff;
+      }
+      button.guest:hover {
+        background: #4a3173;
+      }
+      button.danger {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      button.danger:hover {
+        background: #3a1d1d;
+      }
+      button.primary {
+        background: var(--ok);
+        border-color: var(--ok);
+        color: #0e1116;
+        font-weight: 600;
+      }
+      button.primary:hover {
+        background: #2ea043;
+        border-color: #2ea043;
+      }
+      .section {
+        margin-bottom: 14px;
+      }
+      .section-label {
+        font-size: 11px;
+        color: var(--dim);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+      .frames {
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+      }
+      .frame {
+        border-top: 1px solid #21262d;
+        padding: 8px 0;
+      }
+      .frame:first-child {
+        border-top: none;
+        padding-top: 0;
+      }
+      .frame-head {
+        display: flex;
+        justify-content: space-between;
+        color: var(--dim);
+        margin-bottom: 4px;
+      }
+      .frame-head .msg-id {
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .frame-hex {
+        word-break: break-all;
+        line-height: 1.5;
+        color: var(--ink);
+      }
+      .frame-hex .hl-soh {
+        color: #3fb950;
+      }
+      .frame-hex .hl-etx {
+        color: #3fb950;
+      }
+      .frame-hex .hl-lrc {
+        color: #d29922;
+      }
+      .explain {
+        margin-top: 4px;
+        color: var(--dim);
+        font-size: 10px;
+      }
+      .full {
+        grid-column: 1 / -1;
+      }
+      .muted {
+        color: var(--dim);
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #21262d;
+        font-size: 11px;
+        margin-left: 6px;
+      }
+      .pill.on {
+        background: var(--ok);
+        color: #0e1116;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>
+        sim-bodet-scorepad <span class="tag">Scorepad · basket FIBA · Pi-side server @ :4001</span>
+      </h1>
+      <div class="status-bar" id="status-bar">—</div>
+    </header>
+    <main>
+      <section class="panel">
+        <h2>État du match</h2>
+        <div class="score">
+          <div>
+            <div class="label">HOME</div>
+            <div class="num" id="home-score">0</div>
+            <div class="muted" id="home-fouls">0 fautes</div>
+          </div>
+          <div class="vs">vs</div>
+          <div>
+            <div class="label">GUEST</div>
+            <div class="num" id="guest-score">0</div>
+            <div class="muted" id="guest-fouls">0 fautes</div>
+          </div>
+        </div>
+        <dl class="kv" style="margin-top: 16px">
+          <dt>Période</dt>
+          <dd id="period">1</dd>
+          <dt>Chrono</dt>
+          <dd id="chrono">10:00 <span class="pill" id="clock-pill">STOP</span></dd>
+          <dt>Shot clock</dt>
+          <dd id="shot">24s</dd>
+          <dt>Timeouts restants</dt>
+          <dd>H <span id="home-to">3</span> / G <span id="guest-to">3</span></dd>
+          <dt>Timeout en cours</dt>
+          <dd id="timeout-state">—</dd>
+          <dt>Bonus</dt>
+          <dd id="bonus">—</dd>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <h2>Contrôles</h2>
+
+        <div class="section">
+          <div class="section-label">Panier HOME</div>
+          <div class="btn-grid">
+            <button class="home" onclick="score('home', 1)">+1</button>
+            <button class="home" onclick="score('home', 2)">+2</button>
+            <button class="home" onclick="score('home', 3)">+3</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Panier GUEST</div>
+          <div class="btn-grid">
+            <button class="guest" onclick="score('guest', 1)">+1</button>
+            <button class="guest" onclick="score('guest', 2)">+2</button>
+            <button class="guest" onclick="score('guest', 3)">+3</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">
+            Faute (joueur
+            <select
+              id="player-line"
+              style="
+                background: #21262d;
+                color: var(--ink);
+                border: 1px solid #30363d;
+                border-radius: 4px;
+                padding: 2px 4px;
+              "
+            >
+              <option>1</option>
+              <option>2</option>
+              <option>3</option>
+              <option selected>4</option>
+              <option>5</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+              <option>11</option>
+              <option>12</option></select
+            >)
+          </div>
+          <div class="btn-grid" style="grid-template-columns: 1fr 1fr">
+            <button class="home" onclick="foul('home')">Faute HOME</button>
+            <button class="guest" onclick="foul('guest')">Faute GUEST</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Timeout (60s)</div>
+          <div class="btn-grid">
+            <button class="home" onclick="inject({ type: 'timeout-start', team: 'home' })">
+              TO HOME
+            </button>
+            <button class="guest" onclick="inject({ type: 'timeout-start', team: 'guest' })">
+              TO GUEST
+            </button>
+            <button onclick="inject({ type: 'timeout-end' })">Fin TO</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Chrono</div>
+          <div class="btn-grid four">
+            <button class="primary" id="clock-toggle" onclick="toggleClock()">▶ Play</button>
+            <button onclick="inject({ type: 'period-end' })">Période+1</button>
+            <button onclick="shotReset(24)">Shot 24s</button>
+            <button onclick="shotReset(14)">Shot 14s</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Divers</div>
+          <div class="btn-grid">
+            <button onclick="inject({ type: 'tipoff' })">Tip-off</button>
+            <button onclick="setChrono(65000)">Chrono 1:05</button>
+            <button class="danger" onclick="fullReset()">Reset match</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel full">
+        <h2>Dernières trames émises (live)</h2>
+        <p class="muted" style="margin-top: -8px; font-size: 12px">
+          Framing :
+          <code>SOH(01) · Address(7F) · STX(02) · CTRL(47) · payload · ETX(03) · LRC</code> — LRC en
+          jaune, délimiteurs en vert.
+        </p>
+        <div class="frames" id="frames">En attente de trames…</div>
+      </section>
+    </main>
+
+    <script>
+      const MSG_DESC = {
+        18: 'Chrono + période + timeouts restants',
+        19: 'Countdown timeout actif (toutes les 200ms pendant TO)',
+        30: 'Scores Home/Guest',
+        31: 'Faute (dernier joueur fauté + fautes équipe)',
+        36: 'Chrono dixièmes (dernière minute, horloge qui tourne)',
+        50: 'Shot clock',
+        60: 'Indicateur bonus (5+ fautes équipe)',
+      };
+
+      async function post(event) {
+        await fetch('/api/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+        });
+      }
+      function inject(event) {
+        post(event);
+      }
+      function score(team, points) {
+        post({ type: 'score', team, points });
+      }
+      function foul(team) {
+        const line = parseInt(document.getElementById('player-line').value, 10) || 4;
+        post({ type: 'foul', team, playerLine: line });
+      }
+      function toggleClock() {
+        const running = currentState && currentState.clockRunning;
+        post({ type: running ? 'clock-stop' : 'clock-start' });
+      }
+      function shotReset(s) {
+        post({ type: 'shot-reset', seconds: s });
+      }
+      function setChrono(ms) {
+        post({ type: 'chrono-set', remainingMs: ms });
+      }
+      async function fullReset() {
+        if (!confirm('Reset complet du match ?')) return;
+        await post({ type: 'reset-match' });
+      }
+
+      let currentState = null;
+
+      function formatChrono(ms) {
+        const s = Math.max(0, Math.floor(ms / 1000));
+        return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+      }
+
+      function colorizeHex(hex) {
+        const parts = hex.trim().split(' ');
+        if (parts.length < 6) return hex;
+        const head = `<span class="hl-soh">${parts.slice(0, 4).join(' ')}</span>`;
+        const body = parts.slice(4, -2).join(' ');
+        const tail = `<span class="hl-etx">${parts[parts.length - 2]}</span> <span class="hl-lrc">${parts[parts.length - 1]}</span>`;
+        return `${head} ${body} ${tail}`;
+      }
+
+      async function refresh() {
+        try {
+          const [stateRes, framesRes] = await Promise.all([
+            fetch('/api/state').then((r) => r.json()),
+            fetch('/api/frames').then((r) => r.json()),
+          ]);
+          currentState = stateRes;
+
+          document.getElementById('home-score').textContent = stateRes.homeScore;
+          document.getElementById('guest-score').textContent = stateRes.guestScore;
+          document.getElementById('home-fouls').textContent = stateRes.homeTeamFouls + ' fautes';
+          document.getElementById('guest-fouls').textContent = stateRes.guestTeamFouls + ' fautes';
+          document.getElementById('period').textContent = stateRes.period;
+          document.getElementById('chrono').firstChild.textContent =
+            formatChrono(stateRes.chronoMs) + ' ';
+          const pill = document.getElementById('clock-pill');
+          pill.textContent = stateRes.clockRunning ? 'RUN' : 'STOP';
+          pill.classList.toggle('on', stateRes.clockRunning);
+          document.getElementById('clock-toggle').textContent = stateRes.clockRunning
+            ? '⏸ Pause'
+            : '▶ Play';
+          document.getElementById('shot').textContent =
+            Math.max(0, Math.ceil(stateRes.shotClockMs / 1000)) + 's';
+          document.getElementById('home-to').textContent = stateRes.homeTimeoutsLeft;
+          document.getElementById('guest-to').textContent = stateRes.guestTimeoutsLeft;
+          document.getElementById('timeout-state').textContent = stateRes.timeoutActive
+            ? `${stateRes.timeoutActive.toUpperCase()} · ${Math.ceil(stateRes.timeoutRemainingMs / 1000)}s`
+            : '—';
+          const bonus = [stateRes.homeBonus && 'HOME', stateRes.guestBonus && 'GUEST']
+            .filter(Boolean)
+            .join(', ');
+          document.getElementById('bonus').textContent = bonus || '—';
+
+          document.getElementById('status-bar').textContent =
+            `● connecté — P${stateRes.period} ${formatChrono(stateRes.chronoMs)} H${stateRes.homeScore}-${stateRes.guestScore}G`;
+
+          const frameIds = Object.keys(framesRes).sort();
+          if (frameIds.length === 0) {
+            document.getElementById('frames').innerHTML =
+              '<span class="muted">En attente de trames…</span>';
+          } else {
+            document.getElementById('frames').innerHTML = frameIds
+              .map((id) => {
+                const f = framesRes[id];
+                const age = Math.max(0, Date.now() - f.at);
+                return `<div class="frame">
+          <div class="frame-head">
+            <span><span class="msg-id">msg ${id}</span> <span class="muted">· ${MSG_DESC[id] || ''}</span></span>
+            <span class="muted">${f.bytes}B · ${age}ms ago</span>
+          </div>
+          <div class="frame-hex">${colorizeHex(f.hex)}</div>
+        </div>`;
+              })
+              .join('');
+          }
+        } catch (err) {
+          document.getElementById('status-bar').textContent = '✕ déconnecté';
+        }
+      }
+
+      setInterval(refresh, 200);
+      refresh();
+    </script>
+  </body>
+</html>
