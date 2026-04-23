@@ -1,3 +1,9 @@
+## [3.233.1](https://github.com/Tallec7/neopro/compare/v3.233.0...v3.233.1) (2026-04-23)
+
+### Bug Fixes
+
+- **dashboard:** autoriser api-staging dans la CSP connect-src ([eb6c1ba](https://github.com/Tallec7/neopro/commit/eb6c1bac66619a2b1727b5f0e41b8a5a001cfbe1))
+
 # [3.233.0](https://github.com/Tallec7/neopro/compare/v3.232.5...v3.233.0) (2026-04-23)
 
 ### Features
