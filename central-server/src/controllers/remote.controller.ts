@@ -429,6 +429,9 @@ export async function sendRemoteCommand(req: Request, res: Response) {
       'phase-change',
       'play-video',
       'play-sponsors',
+      'play-web-page',
+      'play-livestream',
+      'stop-manual',
       'timer-update',
       'breaking-news',
       'match-config',
@@ -524,6 +527,36 @@ export async function sendRemoteCommand(req: Request, res: Response) {
           type: 'sponsors',
           timestamp,
         };
+        break;
+
+      // ADR-088 — Web page / livestream + stop manual
+      case 'play-web-page':
+        if (!data || typeof data.url !== 'string' || !/^https?:\/\//i.test(data.url)) {
+          return res.status(400).json({ error: 'URL invalide (http/https requis)' });
+        }
+        eventName = 'cloud-remote-action';
+        payload = {
+          type: 'web-page',
+          data: { url: data.url, durationMs: data.durationMs ?? null },
+          timestamp,
+        };
+        break;
+
+      case 'play-livestream':
+        if (!data || typeof data.url !== 'string' || !/^https?:\/\//i.test(data.url)) {
+          return res.status(400).json({ error: 'URL invalide (http/https requis)' });
+        }
+        eventName = 'cloud-remote-action';
+        payload = {
+          type: 'livestream',
+          data: { url: data.url, mimeType: data.mimeType ?? null },
+          timestamp,
+        };
+        break;
+
+      case 'stop-manual':
+        eventName = 'cloud-remote-action';
+        payload = { type: 'stop-manual', timestamp };
         break;
 
       case 'timer-update':
