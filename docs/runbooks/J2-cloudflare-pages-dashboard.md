@@ -1,6 +1,6 @@
 # Runbook J2 — Migrer le dashboard vers Cloudflare Pages
 
-> **Objectif** : `staging.neopro.fr` (auto-deploy sur push `main`) + PR previews automatiques. Hostinger reste prod en parallèle (bascule plus tard).
+> **Objectif** : `neopro-staging.kalonpartners.bzh` (auto-deploy sur push `main`) + PR previews automatiques. Hostinger reste prod en parallèle (bascule plus tard).
 > **Pré-requis** : J1 terminé (API staging up), compte Cloudflare admin, accès repo GitHub.
 > **Niveau de risque** : 🟢 faible — Hostinger prod inchangé tant qu'on ne bascule pas le DNS prod.
 
@@ -22,7 +22,7 @@
    - **Root directory** : `/` (laisser vide)
    - **Environment variables** :
      - `NODE_VERSION` = `22`
-     - `API_BASE_URL` = `https://api-staging.neopro.fr` _(point vers staging par défaut, prod overrider plus tard)_
+     - `API_BASE_URL` = `https://api-neopro-staging.kalonpartners.bzh` _(point vers staging par défaut, prod overrider plus tard)_
 4. **Save and Deploy**.
 
 ## Étape 2 — Premier build Cloudflare (~10 min)
@@ -65,12 +65,12 @@ ls -la dist/neopro-central-dashboard/browser/_redirects dist/neopro-central-dash
 
 Cloudflare auto-détecte ces fichiers à la racine du build output.
 
-## Étape 4 — Domaine custom `staging.neopro.fr` (~10 min)
+## Étape 4 — Domaine custom `neopro-staging.kalonpartners.bzh` (~10 min)
 
 1. Dans le projet Cloudflare Pages → **Custom domains** → **Set up a custom domain**.
-2. Saisir `staging.neopro.fr`.
-3. Cloudflare ajoute automatiquement un CNAME (zone `neopro.fr` doit être gérée par Cloudflare, sinon créer le record manuellement vers `neopro-dashboard.pages.dev`).
-4. Attendre TLS auto (~2 min) : `curl -I https://staging.neopro.fr/` → 200.
+2. Saisir `neopro-staging.kalonpartners.bzh`.
+3. Cloudflare ajoute automatiquement un CNAME (zone `kalonpartners.bzh` doit être gérée par Cloudflare, sinon créer le record manuellement vers `neopro-dashboard.pages.dev`).
+4. Attendre TLS auto (~2 min) : `curl -I https://neopro-staging.kalonpartners.bzh/` → 200.
 
 ## Étape 5 — Activer les Preview Deployments PR (~5 min)
 
@@ -85,26 +85,26 @@ Le dashboard a besoin de pointer vers la bonne API selon l'environnement. Deux o
 **Option A — runtime config** (recommandé) : ajouter un fichier `src/assets/config.json` lu au boot :
 
 ```json
-{ "apiBaseUrl": "https://api-staging.neopro.fr" }
+{ "apiBaseUrl": "https://api-neopro-staging.kalonpartners.bzh" }
 ```
 
 Cloudflare le sert tel quel. Pour prod, ce sera un autre fichier injecté au build via env var.
 
 **Option B — env var build-time** : utiliser `fileReplacements` Angular (pattern existant `environment.ts` / `environment.prod.ts`). Créer `environment.staging.ts` et déclencher la bonne config selon `process.env.NODE_ENV`.
 
-→ **À décider J2 selon l'usage actuel.** Pour démarrer rapidement, hardcoder `api-staging.neopro.fr` dans `environment.ts` côté staging et garder `environment.prod.ts` intact pour Hostinger.
+→ **À décider J2 selon l'usage actuel.** Pour démarrer rapidement, hardcoder `api-neopro-staging.kalonpartners.bzh` dans `environment.ts` côté staging et garder `environment.prod.ts` intact pour Hostinger.
 
 ## Étape 7 — Vérifications finales (~10 min)
 
 ```bash
 # Le dashboard staging répond et est servi par Cloudflare
-curl -I https://staging.neopro.fr/                       # 200, header server: cloudflare
-curl -I https://staging.neopro.fr/sites/ci-probe         # 200 (SPA fallback _redirects)
-curl -sI https://staging.neopro.fr/ | grep -i x-frame    # SAMEORIGIN
+curl -I https://neopro-staging.kalonpartners.bzh/                       # 200, header server: cloudflare
+curl -I https://neopro-staging.kalonpartners.bzh/sites/ci-probe         # 200 (SPA fallback _redirects)
+curl -sI https://neopro-staging.kalonpartners.bzh/ | grep -i x-frame    # SAMEORIGIN
 
 # Le dashboard tape bien l'API staging
-# Ouvrir https://staging.neopro.fr dans un navigateur
-# DevTools Network : les XHR vont vers api-staging.neopro.fr (pas api.neopro.fr)
+# Ouvrir https://neopro-staging.kalonpartners.bzh dans un navigateur
+# DevTools Network : les XHR vont vers api-neopro-staging.kalonpartners.bzh (pas api.neopro.fr)
 ```
 
 ---
@@ -114,18 +114,18 @@ curl -sI https://staging.neopro.fr/ | grep -i x-frame    # SAMEORIGIN
 - [ ] Projet Cloudflare Pages `neopro-dashboard` créé et lié au repo
 - [ ] Build vert sur push `main` (auto)
 - [ ] `_redirects` et `_headers` présents dans le build output
-- [ ] `staging.neopro.fr` actif (TLS Cloudflare, server: cloudflare)
+- [ ] `neopro-staging.kalonpartners.bzh` actif (TLS Cloudflare, server: cloudflare)
 - [ ] SPA fallback OK : `/sites/ci-probe` retourne 200
 - [ ] Preview Deployments activés (URL unique par PR)
-- [ ] Le dashboard staging tape `api-staging.neopro.fr` (pas la prod)
+- [ ] Le dashboard staging tape `api-neopro-staging.kalonpartners.bzh` (pas la prod)
 
-**Livrable** : `staging.neopro.fr` opérationnel, branché sur l'API staging J1. Prêt pour J3 (anonymized DB dump → tu auras enfin du contenu réel pour démo).
+**Livrable** : `neopro-staging.kalonpartners.bzh` opérationnel, branché sur l'API staging J1. Prêt pour J3 (anonymized DB dump → tu auras enfin du contenu réel pour démo).
 
 ## Rollback
 
 Tout est isolé. Pour annuler :
 
-- Supprimer le projet Cloudflare Pages → DNS `staging.neopro.fr` casse, prod intacte.
+- Supprimer le projet Cloudflare Pages → DNS `neopro-staging.kalonpartners.bzh` casse, prod intacte.
 - Ne **pas** toucher au job `deploy-dashboard` de `release.yml` tant que J4 n'a pas scindé le pipeline (sinon Hostinger prod arrête de recevoir les deploys).
 
 ## Note sur la prod

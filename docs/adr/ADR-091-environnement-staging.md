@@ -26,14 +26,14 @@ Créer un **3ᵉ environnement `staging`** qui est une **réplique structurelle 
 
 ### Composition
 
-| Couche       | Staging                                               | Source                                   |
-| ------------ | ----------------------------------------------------- | ---------------------------------------- |
-| API          | Railway service `central-server-staging` (Dockerfile) | Clone du service prod, mêmes builds      |
-| DB           | Postgres Railway `neopro-staging`                     | Dump prod anonymisé, rafraîchi hebdo     |
-| Dashboard    | `staging.neopro.fr` via Cloudflare Pages              | Branche `main` auto-deploy               |
-| Stockage FTP | Hostinger bucket `neopro-video-staging`               | Dossier séparé, pas de copie vidéos prod |
-| Pi canary    | 1 boîtier physique dédié (non-client)                 | api_key pointant vers staging            |
-| Domaine      | `api-staging.neopro.fr`, `staging.neopro.fr`          | Cloudflare DNS                           |
+| Couche       | Staging                                                                    | Source                                   |
+| ------------ | -------------------------------------------------------------------------- | ---------------------------------------- |
+| API          | Railway service `central-server-staging` (Dockerfile)                      | Clone du service prod, mêmes builds      |
+| DB           | Postgres Railway `neopro-staging`                                          | Dump prod anonymisé, rafraîchi hebdo     |
+| Dashboard    | `neopro-staging.kalonpartners.bzh` via Cloudflare Pages                    | Branche `main` auto-deploy               |
+| Stockage FTP | Hostinger bucket `neopro-video-staging`                                    | Dossier séparé, pas de copie vidéos prod |
+| Pi canary    | 1 boîtier physique dédié (non-client)                                      | api_key pointant vers staging            |
+| Domaine      | `api-neopro-staging.kalonpartners.bzh`, `neopro-staging.kalonpartners.bzh` | Cloudflare DNS                           |
 
 ### Flux de code
 

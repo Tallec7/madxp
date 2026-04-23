@@ -1,6 +1,6 @@
 # Runbook J1 — Créer l'environnement Staging
 
-> **Objectif** : disposer d'un `api-staging.neopro.fr` + `staging.neopro.fr` fonctionnels, isolés de prod, en ~2h.
+> **Objectif** : disposer d'un `api-neopro-staging.kalonpartners.bzh` + `neopro-staging.kalonpartners.bzh` fonctionnels, isolés de prod, en ~2h.
 > **Pré-requis** : compte Railway admin, compte Cloudflare admin, accès au repo GitHub.
 > **Niveau de risque** : 🟢 faible — aucune modification sur la prod existante.
 
@@ -15,14 +15,35 @@
    - **Root Directory** : `/` (laisser vide).
    - **Config-as-code** : `railway.staging.json` (ce fichier est créé dans ce commit, cf. racine du repo).
    - **Watch Paths** : identique à `railway.json` (central-server/**, templates-remotion/**, etc.).
-4. Dans l'onglet **Variables**, dupliquer TOUTES les variables du service prod SAUF :
-   - `DATABASE_URL` → sera fournie par la DB staging (étape 2).
-   - `FTP_PUBLIC_URL` → remplacer par `https://kalonpartners.bzh/neopro-video-staging` (bucket à créer Hostinger si pas encore fait — sinon garder prod en read-only pour l'instant).
-   - `NODE_ENV` → passer à `staging`.
-   - `ALLOWED_ORIGINS` → ajouter `https://staging.neopro.fr`.
-   - `JWT_SECRET` → **régénérer** (ne JAMAIS réutiliser celui de prod).
-   - `GITHUB_TOKEN` → nouveau token read-only si besoin, sinon retirer.
-5. **Ne pas déployer encore** — attendre la DB.
+4. Dans l'onglet **Variables**, configurer **au minimum** ces variables (sinon le boot crashe en boucle sur `Migration runner failed`) :
+
+   ```
+   # Obligatoires pour booter
+   DATABASE_URL=${{ Postgres.neopro-staging-db.DATABASE_URL }}   # ← référence, pas string
+   DATABASE_SSL=false                                             # DB Railway interne, pas de SSL
+   NODE_ENV=production                                            # ← pas "staging" : impacte Winston + SSL
+   PORT=3001
+   JWT_SECRET=<générer via `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`>
+   HOTSPOT_PSK_ENCRYPTION_KEY=<générer via `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`>
+
+   # CORS
+   ALLOWED_ORIGINS=https://neopro-staging.kalonpartners.bzh,https://neopro-dashboard.pages.dev
+
+   # FTP (réutiliser prod read-only pour J1 — on splittera un bucket staging à J3)
+   FTP_HOST=<valeur prod>
+   FTP_PORT=21
+   FTP_USER=<valeur prod>
+   FTP_PASSWORD=<valeur prod>
+   FTP_PUBLIC_URL=<valeur prod>
+   FTP_UPDATE_HOST=<valeur prod>
+   FTP_UPDATE_USER=<valeur prod>
+   FTP_UPDATE_PASSWORD=<valeur prod>
+   FTP_UPDATE_PUBLIC_URL=<valeur prod>
+   ```
+
+   **Ne JAMAIS réutiliser le `JWT_SECRET` ou `HOTSPOT_PSK_ENCRYPTION_KEY` de prod** — staging doit avoir ses propres secrets, sinon un token staging serait valide en prod.
+
+5. **Ne pas déployer encore** — attendre la DB (étape 2).
 
 ## Étape 2 — Créer la DB Postgres staging (~10 min)
 
@@ -39,25 +60,30 @@
 ## Étape 3 — Premier déploiement staging (~15 min)
 
 1. Sur le service `central-server-staging`, onglet **Deployments** → **Deploy**.
-2. Observer les logs. La DB est vide → les migrations Knex doivent tourner au boot (cf. `central-server/src/index.ts`, check `runMigrations()`).
-3. Si le boot échoue à cause d'une migration manquante : lancer manuellement via Railway CLI
+2. Observer les **Deploy Logs** (pas Build Logs). La DB est vide → les migrations tournent au boot via `npm run db:migrate` (prestart).
+3. **Symptôme typique d'env var manquant** : `Migration runner failed:` qui se répète toutes les secondes + healthcheck KO après 1m40s. Causes les plus fréquentes :
+   - `DATABASE_URL` pas bindé en référence `${{ Postgres... }}` → app ne peut pas se connecter.
+   - `JWT_SECRET` absent → `auth.ts` throw dès l'import.
+   - `HOTSPOT_PSK_ENCRYPTION_KEY` absent → `server.ts:129` throw.
+   - `DATABASE_SSL=true` sur une DB Railway interne → handshake TLS échoue.
+4. Si besoin, lancer les migrations manuellement via Railway CLI :
    ```bash
    railway run --service central-server-staging -- npm run db:migrate
    ```
-4. Une fois `/live` répond 200 → staging est debout (mais DB vide).
+5. Une fois `/live` répond 200 → staging est debout (mais DB vide).
 
 ## Étape 4 — Domaine Cloudflare pour l'API (~10 min)
 
 1. Sur Railway, onglet **Settings** du service staging → **Networking** → **Custom Domain**.
-2. Ajouter `api-staging.neopro.fr`.
+2. Ajouter `api-neopro-staging.kalonpartners.bzh`.
 3. Copier le CNAME proposé par Railway (ex. `xxx.up.railway.app`).
-4. Aller sur [Cloudflare dashboard](https://dash.cloudflare.com) → zone `neopro.fr` → **DNS**.
+4. Aller sur [Cloudflare dashboard](https://dash.cloudflare.com) → zone `kalonpartners.bzh` → **DNS**.
 5. Créer record :
    - Type : `CNAME`
    - Name : `api-staging`
    - Target : `xxx.up.railway.app` (valeur Railway)
    - Proxy : **DNS only** (cloud gris, Railway gère TLS)
-6. Attendre propagation (~2 min) : `curl -I https://api-staging.neopro.fr/live` doit retourner 200.
+6. Attendre propagation (~2 min) : `curl -I https://api-neopro-staging.kalonpartners.bzh/live` doit retourner 200.
 
 ## Étape 5 — Seed d'un user admin staging (~5 min)
 
@@ -70,7 +96,7 @@ railway run -- node -e "
   const bcrypt = require('bcrypt');
   bcrypt.hash('StagingAdmin2026!', 10).then(async hash => {
     await userRepository.create({
-      email: 'admin@staging.neopro.fr',
+      email: 'admin@kalonpartners.bzh',
       password_hash: hash,
       role: 'super_admin',
       mfa_enabled: false
@@ -86,23 +112,23 @@ railway run -- node -e "
 
 ```bash
 # API répond et est bien en mode staging
-curl -s https://api-staging.neopro.fr/live
-curl -s https://api-staging.neopro.fr/api/version  # doit inclure "env":"staging"
+curl -s https://api-neopro-staging.kalonpartners.bzh/live
+curl -s https://api-neopro-staging.kalonpartners.bzh/api/version  # doit inclure "env":"staging"
 
 # Login admin fonctionne
-curl -X POST https://api-staging.neopro.fr/api/auth/login \
+curl -X POST https://api-neopro-staging.kalonpartners.bzh/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@staging.neopro.fr","password":"..."}'
+  -d '{"email":"admin@kalonpartners.bzh","password":"..."}'
 
 # DB isolée de prod — pas de sites prod visibles
-curl -s https://api-staging.neopro.fr/api/sites \
+curl -s https://api-neopro-staging.kalonpartners.bzh/api/sites \
   -H "Authorization: Bearer <token>" | jq '. | length'
 # → doit être 0 (on restaurera un dump anonymisé J3)
 ```
 
 ## Étape 7 — Déclencher le rebuild Grafana/Prometheus (optionnel, ~5 min)
 
-Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitoring/prometheus.yml` pointant vers `api-staging.neopro.fr/metrics`. Sinon ignore cette étape pour J1, fais-le J4.
+Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitoring/prometheus.yml` pointant vers `api-neopro-staging.kalonpartners.bzh/metrics`. Sinon ignore cette étape pour J1, fais-le J4.
 
 ---
 
@@ -110,8 +136,8 @@ Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitor
 
 - [ ] Service Railway `central-server-staging` déployé, `/live` = 200
 - [ ] DB Postgres `neopro-staging-db` provisionnée et migrée
-- [ ] Domaine `api-staging.neopro.fr` actif (TLS OK)
-- [ ] User `admin@staging.neopro.fr` créé, password dans le password manager
+- [ ] Domaine `api-neopro-staging.kalonpartners.bzh` actif (TLS OK)
+- [ ] User `admin@kalonpartners.bzh` créé, password dans le password manager
 - [ ] Variables staging **séparées** de prod (JWT_SECRET différent, FTP bucket différent)
 - [ ] `GET /api/sites` retourne 0 (DB isolée, pas de fuite prod)
 
