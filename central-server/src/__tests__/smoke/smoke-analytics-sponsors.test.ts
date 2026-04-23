@@ -1205,7 +1205,7 @@ describe('sponsor_impressions_bridge VIEW completeness guard', () => {
   });
 
   it('sponsor_impressions_bridge must include interruption_reason column', () => {
-    const viewBlock = content.match(/CREATE OR REPLACE VIEW sponsor_impressions_bridge[\s\S]*?;/);
+    const viewBlock = content.match(/CREATE (?:OR REPLACE )?VIEW (?:public\.)?sponsor_impressions_bridge[\s\S]*?;/);
     expect({
       hasInterruptionReason: viewBlock ? /interruption_reason/.test(viewBlock[0]) : false,
       reason: 'advertiser analytics need interruption context for completion analysis',

@@ -824,8 +824,8 @@ describe('ADR-035 Phase 3: Campaign operational wiring', () => {
     const schemaContent = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/scripts/full-schema.sql'), 'utf-8'
     );
-    expect(schemaContent).toContain('CREATE TABLE IF NOT EXISTS campaign_videos');
-    expect(schemaContent).toContain('CREATE TABLE IF NOT EXISTS campaign_sites');
+    expect(schemaContent).toMatch(/CREATE TABLE (IF NOT EXISTS |public\.)campaign_videos/);
+    expect(schemaContent).toMatch(/CREATE TABLE (IF NOT EXISTS |public\.)campaign_sites/);
     expect(schemaContent).toContain('target_criteria');
     expect(schemaContent).toContain('campaign_stats_live');
   });

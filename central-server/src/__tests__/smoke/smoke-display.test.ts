@@ -1595,7 +1595,7 @@ describe('Deployment secondary variant persistence guard', () => {
 
   it('full-schema.sql must include has_secondary_variant column', () => {
     expect({
-      hasColumn: /has_secondary_variant\s+BOOLEAN/.test(schemaContent),
+      hasColumn: /has_secondary_variant\s+BOOLEAN/i.test(schemaContent),
     }).toEqual({
       hasColumn: true,
     });
