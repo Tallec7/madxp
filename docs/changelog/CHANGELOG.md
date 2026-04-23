@@ -1,3 +1,9 @@
+## [3.232.3](https://github.com/Tallec7/neopro/compare/v3.232.2...v3.232.3) (2026-04-23)
+
+### Bug Fixes
+
+- **staging:** regen full-schema.sql depuis prod + bootstrap workflow ([522ee70](https://github.com/Tallec7/neopro/commit/522ee7020f81e6f861eb0ebf5ec60d56ea3fd6ed))
+
 ## [3.232.2](https://github.com/Tallec7/neopro/compare/v3.232.1...v3.232.2) (2026-04-23)
 
 ### Bug Fixes
