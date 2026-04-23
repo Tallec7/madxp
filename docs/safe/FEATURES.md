@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 21 Avril 2026 <!-- ADR-075 Template Studio V3 complet (Phase 1 drag + Phases A/B/C/D self-service club PR #525/528/529/530/531) + hardening UX PR #533/535/536 + backfill URLs legacy v2 PR #537/#538 (migration SQL idempotente ButSimple/ButImgJoueur) -->
+> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 0 dev tooling livré : SPEC-PROP-003 + simulateurs sim-bodet-scorepad / sim-stramatel + smoke-prop003-scoreboard verrouillant 3 corrections protocolaires -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -459,6 +459,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 > _En tant que club, le score, le chrono, la période, les fautes et les temps morts se mettent à jour automatiquement sur l'écran TV et LED en temps réel depuis la table de marque officielle (Stramatel, Bodet, …), sans double saisie humaine._
 
 **Contexte** : deal-breaker pour plusieurs prospects. Les clubs équipés Stramatel (série 452) et Bodet (Scorepad TCP, BT6000 série) sont la majorité du marché amateur français. Le parser doit être multi-constructeurs (pattern plugin `ScoreboardConnector`) avec un fallback OCR universel pour les tableaux sans sortie données. Architecture détaillée dans [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+
+> **Phase 0 — dev tooling livré (avr. 2026)** : annexe protocolaire [SPEC-PROP-003](../proposals/SPEC-PROP-003-protocoles-scoreboards.md) + simulateurs [`sim-bodet-scorepad`](../../raspberry/scripts/sim-bodet-scorepad/) et [`sim-stramatel`](../../raspberry/scripts/sim-stramatel/) permettent de démarrer US-15.2.1/2/3 sans console physique. 3 corrections protocolaires verrouillées par smoke test `smoke-prop003-scoreboard` (Bodet série 9600 bps, Scorepad = client TCP, Stramatel `0x33` seul porteur de l'état match).
 
 **Critères d'acceptation**
 

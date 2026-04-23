@@ -206,6 +206,37 @@ ssh pi@neopro.local '/home/pi/neopro/scripts/diagnose-pi.sh --json'
 
 > ℹ️ `setup-wifi-client.sh` crée désormais automatiquement le lien `/etc/wpa_supplicant/wpa_supplicant-wlan1.conf`, active `wpa_supplicant@wlan1.service` et relance `dhcpcd`. Une fois lancé, le WiFi client reste actif après chaque redémarrage.
 
+### Outils de développement — POC & simulateurs tables de marque (F-15.2)
+
+Ces outils sont **standalone** (pas de dépendance runtime), utilisables depuis n'importe quelle machine de dev pour préparer le connecteur `ScoreboardConnector` sans console physique.
+
+| Outil                                          | Rôle                                                                                                              | Transport                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`poc-stramatel/`](./poc-stramatel/)           | **Récepteur** : lit les trames `0xF8` depuis une vraie console Stramatel (série ou Serial-to-Ethernet)            | série `/dev/ttyX` OU TCP (pont Moxa NPort)                |
+| [`sim-bodet-scorepad/`](./sim-bodet-scorepad/) | **Émetteur** : simule une console Bodet Scorepad basket FIBA (framing SOH/STX/ETX/LRC, msgs 18/30/31/50/36/19/60) | TCP client sortant (simule le Scorepad qui dial au Pi)    |
+| [`sim-stramatel/`](./sim-stramatel/)           | **Émetteur** : simule une console Stramatel basket (flux `0xF8 0x33` 54 octets à 10 Hz)                           | TCP serveur (imite un pont Serial-to-Ethernet Moxa NPort) |
+
+Référence protocole : [`docs/proposals/SPEC-PROP-003-protocoles-scoreboards.md`](../../docs/proposals/SPEC-PROP-003-protocoles-scoreboards.md).
+
+Lancement rapide :
+
+```bash
+# Simulateur Bodet (scénario basket démo, x10 vitesse)
+cd raspberry/scripts/sim-bodet-scorepad
+node src/index.js --host 127.0.0.1 --port 4001 --scenario basket-demo --time-scale 10 --verbose
+
+# Simulateur Stramatel (même scénario, port 5000)
+cd raspberry/scripts/sim-stramatel
+npm run start:demo
+```
+
+Tests unitaires Node natif :
+
+```bash
+cd raspberry/scripts/sim-bodet-scorepad && node --test    # 13/13
+cd raspberry/scripts/sim-stramatel     && node --test    # 11/11
+```
+
 ---
 
 ## 🔧 Détails des scripts

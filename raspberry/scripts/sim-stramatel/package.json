@@ -1,0 +1,15 @@
+{
+  "name": "sim-stramatel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Simulator of a Stramatel console (basketball FIBA). TCP server emulating a Serial-to-Ethernet bridge that streams raw 0xF8/0x33 frames at ~10 Hz. See SPEC-PROP-003 section 1.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:demo": "node src/index.js --host 127.0.0.1 --port 5000 --scenario basket-demo --time-scale 10 --verbose",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
