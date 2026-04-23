@@ -1,3 +1,9 @@
+## [3.225.1](https://github.com/Tallec7/neopro/compare/v3.225.0...v3.225.1) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** scoreboard-live URL prefix + socket subscribe race (F-15.2) ([f1a17a1](https://github.com/Tallec7/neopro/commit/f1a17a13e967d537fc3f21e1fc2cc576ab2a3c44))
+
 # [3.225.0](https://github.com/Tallec7/neopro/compare/v3.224.1...v3.225.0) (2026-04-23)
 
 ### Features
