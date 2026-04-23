@@ -1,3 +1,9 @@
+## [3.224.1](https://github.com/Tallec7/neopro/compare/v3.224.0...v3.224.1) (2026-04-23)
+
+### Bug Fixes
+
+- **ci:** lower coverage threshold to 44% after PROP-003 additions ([78160bc](https://github.com/Tallec7/neopro/commit/78160bc7edf733ee39694f1ce7121994d5a2513e))
+
 # [3.224.0](https://github.com/Tallec7/neopro/compare/v3.223.9...v3.224.0) (2026-04-23)
 
 ### Bug Fixes
