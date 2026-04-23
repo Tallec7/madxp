@@ -119,6 +119,12 @@ export class RemoteScoreService {
       homeScore: state.homeScore,
       awayScore: state.guestScore,
     };
+    const unchanged =
+      next.homeScore === this.currentScore.homeScore &&
+      next.awayScore === this.currentScore.awayScore &&
+      next.homeTeam === this.currentScore.homeTeam &&
+      next.awayTeam === this.currentScore.awayTeam;
+    if (unchanged) return;
     this.currentScore = next;
     this.localBroadcast.emitScoreUpdate(next);
   }

@@ -359,14 +359,15 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   /** Applique un scoreboard-state reçu du cloud (simulateur, table de marque). */
   private applyIncomingScoreboardState(state: ScoreboardStateV1): void {
-    // Guard anti-loop : si le push vient de nous-mêmes (vendor=remote) avec mêmes
-    // valeurs que l'état local, no-op.
+    // Guard anti-flash : si l'état cloud matche déjà l'état local (à la seconde
+    // près pour le chrono), no-op — évite les re-render Remote+Display sur les
+    // pushes répétés du simulateur (throttle 500ms) qui ne changent rien.
     const alreadySynced =
       state.homeScore === this.scoreService.currentScore.homeScore &&
       state.guestScore === this.scoreService.currentScore.awayScore &&
       Math.abs(Math.floor(state.chronoMs / 1000) - this.timerService.currentTime) < 2 &&
       state.clockRunning === this.timerService.isRunning;
-    if (alreadySynced && state.vendor === 'remote') return;
+    if (alreadySynced) return;
 
     this.scoreService.applyCloudState(state);
     this.timerService.applyCloudState(state, this.localOptions.timer);
