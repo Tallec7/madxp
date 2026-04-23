@@ -10,8 +10,8 @@
 
 export interface ScoreboardMatchState {
   siteId: string;
-  vendor: 'bodet' | 'stramatel' | 'manual';
-  sport: 'basketball';
+  vendor: 'bodet' | 'stramatel' | 'manual' | 'remote';
+  sport: 'basketball' | 'football';
   period: number;
   chronoMs: number;
   clockRunning: boolean;
@@ -22,6 +22,8 @@ export interface ScoreboardMatchState {
   shotClockMs: number;
   timeoutActive: 'home' | 'guest' | null;
   timeoutRemainingMs: number;
+  homeTeamName?: string;
+  guestTeamName?: string;
   updatedAt: number;
 }
 

@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 1 SaaS push + dashboard live (ADR-088) : endpoint /api/scoreboard, broadcast scoreboard-state, overlay /scoreboard-live/:siteId, sim cloud-push Bodet/Stramatel -->
+> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 4 Unified Remote ↔ Simulator ↔ Display (ADR-090) : scoreboard-state source unique, Remote SaaS applyCloudState + scoreboard-state-push, validator football+remote -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -463,6 +463,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 > **Phase 0 — dev tooling livré (avr. 2026)** : annexe protocolaire [SPEC-PROP-003](../proposals/SPEC-PROP-003-protocoles-scoreboards.md) + simulateurs [`sim-bodet-scorepad`](../../raspberry/scripts/sim-bodet-scorepad/) et [`sim-stramatel`](../../raspberry/scripts/sim-stramatel/) permettent de démarrer US-15.2.1/2/3 sans console physique. 3 corrections protocolaires verrouillées par smoke test `smoke-prop003-scoreboard` (Bodet série 9600 bps, Scorepad = client TCP, Stramatel `0x33` seul porteur de l'état match).
 
 > **Phase 1 — SaaS push + dashboard live (avr. 2026)** : [ADR-088](../adr/ADR-088-scoreboard-saas-push.md) contourne le Pi. Modèle `MatchState v1` (basket FIBA), endpoint `POST /api/scoreboard/:siteId/state` (auth site-key), broadcast Socket.IO `scoreboard-state`, overlay dashboard `/scoreboard-live/:siteId`. Les simulateurs Bodet/Stramatel poussent via `cloud-push.js` (flags `--push-url --site-id --site-api-key`). Le connecteur Pi byte-level (US-15.2.2/3) réutilisera le même contrat.
+
+> **Phase 4 — Unification Remote ↔ Simulator ↔ Display (avr. 2026)** : [ADR-090](../adr/ADR-090-unified-scoreboard-state-remote-sync.md). `scoreboard-state` devient la source de vérité unique pour score+chrono. La Remote SaaS lit le state entrant (simulateur dashboard, connecteurs vendor) via `applyCloudState()` et pousse ses +/- via socket `scoreboard-state-push` (vendor=`remote`). Validator étendu à `sport=football|basketball`. Le Pi local garde le legacy `score-update` en parallèle (compat football native). Fallback Remote préservé pour les clubs sans table de marque.
 
 **Critères d'acceptation**
 
