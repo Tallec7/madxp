@@ -1,3 +1,9 @@
+## [3.233.2](https://github.com/Tallec7/neopro/compare/v3.233.1...v3.233.2) (2026-04-23)
+
+### Bug Fixes
+
+- **smoke:** tolérer format pg_dump dans full-schema.sql assertions ([b2f7fc4](https://github.com/Tallec7/neopro/commit/b2f7fc4b32d39e193ac7d1f2e37265a6419d1b8c))
+
 ## [3.233.1](https://github.com/Tallec7/neopro/compare/v3.233.0...v3.233.1) (2026-04-23)
 
 ### Bug Fixes
