@@ -346,17 +346,25 @@ describe('Template Studio v2 (ADR-075)', () => {
     expect(mountLine?.[0]).not.toMatch(/RateLimit/);
   });
 
-  it('asset-proxy route declares NO rate limiter but sets CORP/CORS before the handler', () => {
-    const routes = readFile('routes/remotion-templates.routes.ts');
-    const startIdx = routes.indexOf("'/asset-proxy'");
+  it('asset-proxy is mounted on app in server.ts BEFORE the remotion-templates wrapper, with CORP/CORS and no rate limiter', () => {
+    // Depuis le fix `mount asset-proxy AVANT sensitiveRateLimit wrapper`, la route
+    // `/api/remotion-templates/asset-proxy` est déclarée directement sur `app` dans
+    // server.ts (et non plus dans routes/remotion-templates.routes.ts) pour échapper
+    // à tout wrapper de rate-limit qui étoufferait les range requests <video> Remotion.
+    const startIdx = server.indexOf("'/api/remotion-templates/asset-proxy'");
     expect(startIdx).toBeGreaterThan(-1);
-    // Bloc = depuis `'/asset-proxy'` jusqu'au prochain `router.` (ou fin de fichier).
-    const nextRouterIdx = routes.indexOf('router.', startIdx + 1);
-    const block = routes.slice(startIdx, nextRouterIdx > -1 ? nextRouterIdx : undefined);
+    // Bloc = depuis le mount `/asset-proxy` jusqu'au prochain `app.` (mount suivant).
+    const nextAppIdx = server.indexOf('app.', startIdx + 1);
+    const block = server.slice(startIdx, nextAppIdx > -1 ? nextAppIdx : undefined);
     expect(block).not.toMatch(/RateLimit/);
     expect(block).toMatch(/Access-Control-Allow-Origin/);
     expect(block).toMatch(/Cross-Origin-Resource-Policy/);
     expect(block).toMatch(/proxyTemplateAsset/);
+    // Ordre : asset-proxy DOIT être mounté avant le mount `remotionTemplatesRoutes`
+    // (sinon le wrapper sensitiveRateLimit du mount legacy intercepterait les requêtes).
+    const legacyMount = server.indexOf("app.use('/api/remotion-templates', remotionTemplatesRoutes");
+    expect(legacyMount).toBeGreaterThan(-1);
+    expect(startIdx).toBeLessThan(legacyMount);
   });
 
   it('TemplateRuntime + animations exist with 6 presets', () => {
