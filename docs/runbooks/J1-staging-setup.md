@@ -72,18 +72,21 @@
    ```
 5. Une fois `/live` répond 200 → staging est debout (mais DB vide).
 
-## Étape 4 — Domaine Cloudflare pour l'API (~10 min)
+## Étape 4 — Domaine Hostinger pour l'API (~10 min)
 
-1. Sur Railway, onglet **Settings** du service staging → **Networking** → **Custom Domain**.
-2. Ajouter `api-neopro-staging.kalonpartners.bzh`.
-3. Copier le CNAME proposé par Railway (ex. `xxx.up.railway.app`).
-4. Aller sur [Cloudflare dashboard](https://dash.cloudflare.com) → zone `kalonpartners.bzh` → **DNS**.
-5. Créer record :
+> La zone `kalonpartners.bzh` est sur **Hostinger** (nameservers `ns1/ns2.dns-parking.com`), pas Cloudflare. Le DNS se gère donc dans hPanel.
+
+1. Sur Railway, onglet **Settings** du service staging → **Networking** → **+ Custom Domain**.
+2. Saisir `api-neopro-staging.kalonpartners.bzh`.
+3. Copier le CNAME cible proposé par Railway (format `xxx.up.railway.app`).
+4. Aller sur [hpanel.hostinger.com](https://hpanel.hostinger.com) → **Domains** → `kalonpartners.bzh` → **DNS / Nameservers** → **Manage DNS records**.
+5. **Add record** :
    - Type : `CNAME`
-   - Name : `api-staging`
-   - Target : `xxx.up.railway.app` (valeur Railway)
-   - Proxy : **DNS only** (cloud gris, Railway gère TLS)
-6. Attendre propagation (~2 min) : `curl -I https://api-neopro-staging.kalonpartners.bzh/live` doit retourner 200.
+   - Name : `api-neopro-staging`
+   - Target / Points to : `xxx.up.railway.app` (valeur Railway)
+   - TTL : 3600
+6. Retour Railway — après ~1 min le domaine passe en vert (TLS Railway Let's Encrypt auto-provisionné).
+7. Test : `curl -I https://api-neopro-staging.kalonpartners.bzh/live` doit retourner 200.
 
 ## Étape 5 — Seed d'un user admin staging (~5 min)
 
