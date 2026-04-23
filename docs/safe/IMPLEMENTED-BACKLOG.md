@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 21 Avril 2026 (ADR-082 Video Club Grants : super_admin multi-club access table pivot + dashboard UI + Prometheus — IMP-VID-26)
+> **Dernière mise à jour** : 23 Avril 2026 (ADR-088 Scoreboard live multi-vendor SaaS push + overlay dashboard — IMP-OVR-11 ; ADR-082 Video Club Grants — IMP-VID-26)
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -75,18 +75,19 @@
 
 ## 3. Score en Direct & Overlays
 
-| ID         | Feature                                                           | Statut     | Fichiers clés                                 | Version/Date |
-| ---------- | ----------------------------------------------------------------- | ---------- | --------------------------------------------- | ------------ |
-| IMP-OVR-01 | Overlay V2 Multi-Sport (6 sports, 9 positions)                    | Production | `local-options.service.ts`, `tv.component.ts` | Déc 2025     |
-| IMP-OVR-02 | Overlay local (chronomètre, bandeau info, popup but, 3 templates) | Production | `local-broadcast.service.ts`                  | Déc 2025     |
-| IMP-OVR-03 | Overlay score simplifié : 2 thèmes CSS broadcast                  | Production | `overlay.component.ts`                        | v3.50.0      |
-| IMP-OVR-04 | Score en direct avec overlay + popup                              | Production | -                                             | Déc 2025     |
-| IMP-OVR-05 | Personnalisation overlay score depuis dashboard central           | Production | -                                             | Déc 2025     |
-| IMP-OVR-06 | Upload logos équipes et affichage dans overlay                    | Production | -                                             | Déc 2025     |
-| IMP-OVR-07 | Presets overlay (templates de configuration réutilisables)        | Production | -                                             | Déc 2025     |
-| IMP-OVR-08 | Bandeau d'informations défilant (scroll/truncate/multiline)       | Production | -                                             | Déc 2025     |
-| IMP-OVR-09 | Animation but (popup/plein écran/slide)                           | Production | -                                             | Déc 2025     |
-| IMP-OVR-10 | Chronomètre intégré avec score                                    | Production | -                                             | Déc 2025     |
+| ID         | Feature                                                                  | Statut     | Fichiers clés                                                                                                                                                                            | Version/Date |
+| ---------- | ------------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| IMP-OVR-01 | Overlay V2 Multi-Sport (6 sports, 9 positions)                           | Production | `local-options.service.ts`, `tv.component.ts`                                                                                                                                            | Déc 2025     |
+| IMP-OVR-02 | Overlay local (chronomètre, bandeau info, popup but, 3 templates)        | Production | `local-broadcast.service.ts`                                                                                                                                                             | Déc 2025     |
+| IMP-OVR-03 | Overlay score simplifié : 2 thèmes CSS broadcast                         | Production | `overlay.component.ts`                                                                                                                                                                   | v3.50.0      |
+| IMP-OVR-04 | Score en direct avec overlay + popup                                     | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-05 | Personnalisation overlay score depuis dashboard central                  | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-06 | Upload logos équipes et affichage dans overlay                           | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-07 | Presets overlay (templates de configuration réutilisables)               | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-08 | Bandeau d'informations défilant (scroll/truncate/multiline)              | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-09 | Animation but (popup/plein écran/slide)                                  | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-10 | Chronomètre intégré avec score                                           | Production | -                                                                                                                                                                                        | Déc 2025     |
+| IMP-OVR-11 | F-15.2 Phase 1 — Scoreboard live SaaS push + overlay dashboard (ADR-088) | Production | `scoreboard.routes.ts`, `scoreboard.controller.ts`, `scoreboard-state.repository.ts`, `scoreboard.validator.ts`, `scoreboard-live.component.ts`, sim `cloud-push.js` (Bodet + Stramatel) | Avril 2026   |
 
 ---
 
