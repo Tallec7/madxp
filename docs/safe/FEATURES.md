@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 0 dev tooling livré : SPEC-PROP-003 + simulateurs sim-bodet-scorepad / sim-stramatel + smoke-prop003-scoreboard verrouillant 3 corrections protocolaires -->
+> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 1 SaaS push + dashboard live (ADR-088) : endpoint /api/scoreboard, broadcast scoreboard-state, overlay /scoreboard-live/:siteId, sim cloud-push Bodet/Stramatel -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
@@ -461,6 +461,8 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 **Contexte** : deal-breaker pour plusieurs prospects. Les clubs équipés Stramatel (série 452) et Bodet (Scorepad TCP, BT6000 série) sont la majorité du marché amateur français. Le parser doit être multi-constructeurs (pattern plugin `ScoreboardConnector`) avec un fallback OCR universel pour les tableaux sans sortie données. Architecture détaillée dans [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 > **Phase 0 — dev tooling livré (avr. 2026)** : annexe protocolaire [SPEC-PROP-003](../proposals/SPEC-PROP-003-protocoles-scoreboards.md) + simulateurs [`sim-bodet-scorepad`](../../raspberry/scripts/sim-bodet-scorepad/) et [`sim-stramatel`](../../raspberry/scripts/sim-stramatel/) permettent de démarrer US-15.2.1/2/3 sans console physique. 3 corrections protocolaires verrouillées par smoke test `smoke-prop003-scoreboard` (Bodet série 9600 bps, Scorepad = client TCP, Stramatel `0x33` seul porteur de l'état match).
+
+> **Phase 1 — SaaS push + dashboard live (avr. 2026)** : [ADR-088](../adr/ADR-088-scoreboard-saas-push.md) contourne le Pi. Modèle `MatchState v1` (basket FIBA), endpoint `POST /api/scoreboard/:siteId/state` (auth site-key), broadcast Socket.IO `scoreboard-state`, overlay dashboard `/scoreboard-live/:siteId`. Les simulateurs Bodet/Stramatel poussent via `cloud-push.js` (flags `--push-url --site-id --site-api-key`). Le connecteur Pi byte-level (US-15.2.2/3) réutilisera le même contrat.
 
 **Critères d'acceptation**
 

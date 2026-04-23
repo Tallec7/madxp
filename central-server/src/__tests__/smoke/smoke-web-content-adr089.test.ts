@@ -1,5 +1,5 @@
 /**
- * Smoke tests — ADR-088 web_page / livestream as first-class content.
+ * Smoke tests — ADR-089 web_page / livestream as first-class content.
  * File-level reads only (no app bootstrap).
  */
 
@@ -10,7 +10,7 @@ const repoRoot = path.resolve(__dirname, '../../../../');
 const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 const exists = (rel: string) => fs.existsSync(path.join(repoRoot, rel));
 
-describe('Smoke — ADR-088 web_page / livestream', () => {
+describe('Smoke — ADR-089 web_page / livestream', () => {
   // ------------ central-server ------------
 
   it('central-server — shared injection helper exists and exports injectWebContentCategory', () => {

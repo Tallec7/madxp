@@ -283,7 +283,7 @@ export async function getSaasConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
-    // ADR-088 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
+    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
     const categoriesWithWeb = await injectWebContentCategory(
       resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
       siteId,
@@ -433,7 +433,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
-    // ADR-088 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
+    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
     const categoriesWithWeb = await injectWebContentCategory(
       resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
       siteId,

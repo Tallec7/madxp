@@ -489,14 +489,14 @@ export class RemoteService {
   }
 
   /**
-   * Affiche une page web sur la TV (ADR-088)
+   * Affiche une page web sur la TV (ADR-089)
    */
   playWebPage(siteId: string, url: string, durationMs?: number | null): Observable<CommandResult> {
     return this.sendCommand(siteId, 'play-web-page', { url, durationMs: durationMs ?? null });
   }
 
   /**
-   * Diffuse un livestream sur la TV (ADR-088)
+   * Diffuse un livestream sur la TV (ADR-089)
    */
   playLivestream(siteId: string, url: string, mimeType?: string | null): Observable<CommandResult> {
     return this.sendCommand(siteId, 'play-livestream', { url, mimeType: mimeType ?? null });

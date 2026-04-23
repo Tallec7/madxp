@@ -26,7 +26,7 @@ export interface VideoRow {
   external_url?: string | null;
 }
 
-// ADR-088 Phase 1 — Web / livestream content (no FTP file)
+// ADR-089 Phase 1 — Web / livestream content (no FTP file)
 export type WebContentType = 'web_page' | 'livestream';
 
 export interface CreateWebContentInput {
@@ -140,7 +140,7 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
    * Retourne data + total en parallele.
    */
   /**
-   * ADR-088 — Retrouve les web_page / livestream accessibles pour un site.
+   * ADR-089 — Retrouve les web_page / livestream accessibles pour un site.
    * Include : rows globales (uploaded_for_site_id NULL) + rows taguees pour ce site.
    */
   async findWebContentForSite(siteId: string): Promise<Array<{
@@ -270,7 +270,7 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
-   * ADR-088 Phase 1 — Cree une entree web_page ou livestream (pas de fichier FTP).
+   * ADR-089 Phase 1 — Cree une entree web_page ou livestream (pas de fichier FTP).
    * filename / storage_path / checksum sont synthetiques (placeholder) pour rester compatibles
    * avec les NOT NULL existants sur ces colonnes.
    */

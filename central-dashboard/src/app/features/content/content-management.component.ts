@@ -133,7 +133,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return parts;
   }
 
-  // ADR-088 — Visual cues per content type
+  // ADR-089 — Visual cues per content type
   contentTypeIcon(contentType?: 'video' | 'web_page' | 'livestream'): string {
     if (contentType === 'web_page') return '🌐';
     if (contentType === 'livestream') return '📡';
@@ -248,7 +248,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     this.uploadService.uploadVideos(() => { this.loadVideos(); this.loadAllVideos(); });
   }
 
-  // ── ADR-088 — Web content (page web / livestream) ──
+  // ── ADR-089 — Web content (page web / livestream) ──
 
   openWebContentModal(contentType: 'web_page' | 'livestream'): void {
     this.webContentForm = { contentType, name: '', url: '', durationSeconds: null, category: '' };

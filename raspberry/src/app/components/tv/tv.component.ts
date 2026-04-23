@@ -120,7 +120,7 @@ export class TvComponent implements OnInit, OnDestroy {
   @ViewChild('manualPlayerA', { static: true }) manualPlayerARef: ElementRef<HTMLVideoElement>;
   @ViewChild('manualPlayerB', { static: true }) manualPlayerBRef: ElementRef<HTMLVideoElement>;
 
-  // ADR-088 — web page iframe + livestream player (z-index 10)
+  // ADR-089 — web page iframe + livestream player (z-index 10)
   @ViewChild('webFrame', { static: true }) webFrameRef: ElementRef<HTMLIFrameElement>;
   @ViewChild('livestreamPlayer', { static: true }) livestreamPlayerRef: ElementRef<HTMLVideoElement>;
 
@@ -453,7 +453,7 @@ export class TvComponent implements OnInit, OnDestroy {
       emitPlayerState: (partial) => this.emitPlayerState(partial),
     });
 
-    // 4b. ADR-088 — Register web page / livestream DOM elements
+    // 4b. ADR-089 — Register web page / livestream DOM elements
     this.webContentService.registerElements(
       this.webFrameRef.nativeElement,
       this.livestreamPlayerRef.nativeElement,

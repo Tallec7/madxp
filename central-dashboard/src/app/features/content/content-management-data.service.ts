@@ -27,7 +27,7 @@ export interface ContentVideoRow {
   created_at: Date;
   url?: string;
   thumbnail_url?: string | null;
-  // ADR-088 — Web content as first-class video
+  // ADR-089 — Web content as first-class video
   content_type?: 'video' | 'web_page' | 'livestream';
   external_url?: string | null;
 }
@@ -137,7 +137,7 @@ export class ContentManagementDataService {
     return this.api.upload<BulkUploadResponse>('/videos/bulk', formData);
   }
 
-  // ADR-088 — Web page / livestream as first-class content
+  // ADR-089 — Web page / livestream as first-class content
   createWebContent(payload: {
     contentType: 'web_page' | 'livestream';
     name: string;

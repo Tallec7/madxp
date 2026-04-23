@@ -4,7 +4,7 @@ import { VideoPlaybackService } from './video-playback.service';
 import { WebPagePayload, LivestreamPayload } from '../interfaces/command.interface';
 
 /**
- * ADR-088 — Contenus manuels web_page / livestream.
+ * ADR-089 — Contenus manuels web_page / livestream.
  * Même layer z-index que la vidéo manuelle (10), même mécanisme de return-to-loop.
  */
 @Injectable({ providedIn: 'root' })

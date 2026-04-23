@@ -11,7 +11,7 @@ interface CategoryLike {
 const WEB_CATEGORY_ID = 'web-content';
 
 /**
- * ADR-088 — Injecte une pseudo-catégorie "Web / Live" dans la config.
+ * ADR-089 — Injecte une pseudo-catégorie "Web / Live" dans la config.
  * Partagée entre `remote.controller`, `saas.controller` et sync-agent (via Pi config push)
  * pour exposer les web_page/livestream côté Remote sans modifier les profils config.
  */

@@ -461,7 +461,7 @@ class NeoproSyncAgent {
       logger.warn('hotspot-sync: initial sync failed', { error: err.message });
     });
 
-    // ADR-088: pull web_page / livestream entries and merge into configuration.json
+    // ADR-089: pull web_page / livestream entries and merge into configuration.json
     // under pseudo-category `web-content`. Runs async — non blocking.
     this.syncWebContentFromCloud().catch((err) => {
       logger.warn('web-content-sync: initial sync failed', { error: err.message });
@@ -492,7 +492,7 @@ class NeoproSyncAgent {
   }
 
   /**
-   * ADR-088 — fetch cloud web_page / livestream entries and merge into the
+   * ADR-089 — fetch cloud web_page / livestream entries and merge into the
    * local configuration.json pseudo-category `web-content`. Safe to call repeatedly.
    */
   async syncWebContentFromCloud() {

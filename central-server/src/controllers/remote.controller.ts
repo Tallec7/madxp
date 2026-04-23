@@ -535,7 +535,7 @@ export async function sendRemoteCommand(req: Request, res: Response) {
         };
         break;
 
-      // ADR-088 — contenus web_page / livestream (commandes manuelles, MVP)
+      // ADR-089 — contenus web_page / livestream (commandes manuelles)
       case 'play-web-page': {
         const url = typeof data?.url === 'string' ? data.url : '';
         if (!/^https?:\/\//i.test(url)) {

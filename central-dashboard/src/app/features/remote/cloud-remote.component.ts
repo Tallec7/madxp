@@ -474,7 +474,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
   }
 
   public launchVideo(video: RemoteVideoEntry): void {
-    // ADR-088 — Dispatch by contentType: web_page/livestream utilisent leur propre commande remote
+    // ADR-089 — Dispatch by contentType: web_page/livestream utilisent leur propre commande remote
     if (video.contentType === 'web_page' && video.externalUrl) {
       const durationMs = video.durationSeconds ? video.durationSeconds * 1000 : null;
       this.remoteService.playWebPage(this.siteId, video.externalUrl, durationMs).subscribe({
@@ -511,7 +511,7 @@ export class CloudRemoteComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ==== WEB CONTENT (ADR-088) ====
+  // ==== WEB CONTENT (ADR-089) ====
 
   public showWebContentModal = false;
   public webContentMode: 'web-page' | 'livestream' = 'web-page';

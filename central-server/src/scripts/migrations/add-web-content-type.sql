@@ -1,4 +1,4 @@
--- ADR-088 Phase 1 — Extend videos table to support web_page / livestream content
+-- ADR-089 Phase 1 — Extend videos table to support web_page / livestream content
 -- Backward-compatible: existing rows default to 'video', storage_path unchanged.
 
 ALTER TABLE videos

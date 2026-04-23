@@ -7,7 +7,7 @@ import type { WebContentType } from '../repositories/video.repository';
 import { metricsService } from '../services/metrics.service';
 
 /**
- * ADR-088 Phase 1 — POST /api/videos/web-content
+ * ADR-089 Phase 1 — POST /api/videos/web-content
  * Cree une entree videos de type web_page ou livestream (pas de fichier FTP).
  * Reutilisable via les memes flows que les videos (bibliotheque, catégories, remote).
  */
@@ -68,7 +68,7 @@ export const createWebContent = async (req: AuthRequest, res: Response) => {
 };
 
 /**
- * ADR-088 Phase 2 — GET /api/sites/:id/web-content (Pi sync-agent, authenticateSiteApiKey)
+ * ADR-089 Phase 2 — GET /api/sites/:id/web-content (Pi sync-agent, authenticateSiteApiKey)
  * Retourne la liste des web_page / livestream accessibles pour le site (globales + taguees).
  * Le sync-agent merge le resultat dans configuration.json sous une pseudo-categorie `web-content`.
  */

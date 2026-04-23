@@ -1,3 +1,27 @@
+## [3.226.1](https://github.com/Tallec7/neopro/compare/v3.226.0...v3.226.1) (2026-04-23)
+
+### Bug Fixes
+
+- **admin,score:** SSE X-Accel-Buffering + AbortError filter + cloud remote commands F-15.2 ([#557](https://github.com/Tallec7/neopro/issues/557)) ([6f53a4a](https://github.com/Tallec7/neopro/commit/6f53a4acd456bfbcf74c562bea1609f5631a00a5))
+
+# [3.226.0](https://github.com/Tallec7/neopro/compare/v3.225.1...v3.226.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 2 — simulateur Table de marque dans /admin/local ([#556](https://github.com/Tallec7/neopro/issues/556)) ([96043c3](https://github.com/Tallec7/neopro/commit/96043c3fb4493df32e16ad04efe4cf37ee91bc75))
+
+## [3.225.1](https://github.com/Tallec7/neopro/compare/v3.225.0...v3.225.1) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** scoreboard-live URL prefix + socket subscribe race (F-15.2) ([f1a17a1](https://github.com/Tallec7/neopro/commit/f1a17a13e967d537fc3f21e1fc2cc576ab2a3c44))
+
+# [3.225.0](https://github.com/Tallec7/neopro/compare/v3.224.1...v3.225.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 1 — scoreboard live SaaS push (ADR-088) ([#555](https://github.com/Tallec7/neopro/issues/555)) ([e219084](https://github.com/Tallec7/neopro/commit/e219084648ebee7eb6e661d62e96fab1dd6f7316))
+
 ## [3.224.1](https://github.com/Tallec7/neopro/compare/v3.224.0...v3.224.1) (2026-04-23)
 
 ### Bug Fixes

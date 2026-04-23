@@ -1,5 +1,5 @@
 /**
- * web-content-sync.js — ADR-088 Phase 2
+ * web-content-sync.js — ADR-089 Phase 2
  *
  * Sync-agent consumer for web_page / livestream entries managed cloud-side.
  *
@@ -14,7 +14,7 @@
  * (`web_page` | `livestream`) and `externalUrl` so the Remote/TV dispatch
  * knows how to play it without any code change on the Pi.
  *
- * Writers of configuration.json after ADR-088:
+ * Writers of configuration.json after ADR-089:
  *   - update-config.js (cloud config push, merge/replace strategies)
  *   - sync-profiles (profile switch)
  *   - this module (web_page / livestream pseudo-category only)

@@ -1014,7 +1014,7 @@ export const schemas = {
   addVideoClubGrant: Joi.object({
     site_id: Joi.string().uuid().required(),
   }),
-  // ADR-088 — Web page / livestream content
+  // ADR-089 — Web page / livestream content
   createWebContent: Joi.object({
     contentType: Joi.string().valid('web_page', 'livestream').required(),
     name: Joi.string().min(1).max(255).required(),

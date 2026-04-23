@@ -555,7 +555,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     const target = this.getCommandTarget();
     const commandId = this.newCommandId();
 
-    // ADR-088 — Dispatch web_page / livestream as dedicated command types
+    // ADR-089 — Dispatch web_page / livestream as dedicated command types
     if (video.contentType === 'web_page' && video.externalUrl) {
       const data = {
         url: video.externalUrl,

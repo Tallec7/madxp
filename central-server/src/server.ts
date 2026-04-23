@@ -62,6 +62,7 @@ import sponsorAlertsRoutes from './routes/sponsor-alerts.routes';
 import safeRoutes from './routes/safe.routes';
 import campaignRoutes from './routes/campaign.routes';
 import saasRoutes from './routes/saas.routes';
+import scoreboardRoutes from './routes/scoreboard.routes';
 import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
@@ -513,6 +514,7 @@ app.use('/api/sponsor-alerts', apiRateLimit, sponsorAlertsRoutes); // Proactive 
 app.use('/api/safe', apiRateLimit, safeRoutes); // SAFe dashboard (portfolio, proposals, epics)
 app.use('/api/campaigns', campaignRoutes); // Campaign management (ADR-035 Phase 3) — rate limits per-route
 app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits per-route
+app.use('/api/scoreboard', scoreboardRoutes); // Scoreboard live push (ADR-088 / F-15.2) — rate limits per-route
 app.use('/api/sites', videoCategoriesRoutes); // Catégories vidéo par site — rate limits per-route
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 // Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.

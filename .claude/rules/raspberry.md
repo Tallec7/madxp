@@ -65,7 +65,7 @@ paths:
 | service-metrics   | metrics/service-metrics.js    | Systemd, kiosk, health, orphans (ADR-044)                                                             |
 | ota-download      | commands/ota-download.js      | Download + checksum + stall detection (ADR-044)                                                       |
 | ota-install       | commands/ota-install.js       | Extract + install + systemd + sudoers (ADR-044)                                                       |
-| web-content-sync  | services/web-content-sync.js  | Fetch cloud web_page/livestream + merge `configuration.json` pseudo-catégorie `web-content` (ADR-088) |
+| web-content-sync  | services/web-content-sync.js  | Fetch cloud web_page/livestream + merge `configuration.json` pseudo-catégorie `web-content` (ADR-089) |
 
 ## Config Merge Intelligent
 
@@ -157,7 +157,7 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Créer `club-config.json` sans `chmod 600` (contient le mot de passe WiFi en clair)
 - Lancer `nginx -t` sans `sudo` dans les scripts de diagnostic
 
-### Sync-Agent — ADR-088 Web Content
+### Sync-Agent — ADR-089 Web Content
 
 - Supprimer `services/web-content-sync.js` ou son appel dans `agent.js` (`syncWebContentFromCloud()` au reconnect + setInterval 30min) — sans ce module, les web_page/livestream créés dans le cloud n'apparaissent jamais dans la Remote Pi.
 - Écrire la pseudo-catégorie `web-content` ailleurs que dans `web-content-sync.js` — source de vérité cloud, le sync-agent est le seul writer Pi-side.

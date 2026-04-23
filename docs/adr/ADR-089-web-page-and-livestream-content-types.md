@@ -1,4 +1,4 @@
-# ADR-088: Contenus `web_page` et `livestream` — commandes manuelles (MVP)
+# ADR-089: Contenus `web_page` et `livestream` — commandes manuelles (MVP)
 
 **Date** : 2026-04-23
 **Statut** : Accepté (Phase 2 livrée)
@@ -84,7 +84,7 @@ Le périmètre a été étendu au-delà du MVP initial : les `web_page` / `lives
 - Le sync-agent log `web-content-sync: result { action, count }` à chaque cycle (reconnect + 30min). Les actions possibles sont `noop` / `updated` / `cleared` / `skipped` (+ detail).
 - Smoke test `__tests__/smoke/smoke-web-content-adr088.test.ts` (14 tests) verrouille la chaîne complète contre régression : helper d'injection, routes, guards, monitoring, sync-agent, Remote/TV components.
 
-### Invariants ADR-088
+### Invariants ADR-089
 
 - La pseudo-catégorie `web-content` dans `configuration.json` est **écrite uniquement** par le sync-agent `web-content-sync.js`. Les autres writers (`update-config.js`, `sync-profiles`) la laissent telle quelle ou la remplacent — la source de vérité reste la DB cloud.
 - L'endpoint Pi renvoie toujours `{ siteId, entries }`, même vide (pas de 404 si 0 entries).

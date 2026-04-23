@@ -87,7 +87,7 @@ DELETE /api/content/videos/:id/club-grants/:siteId  → révoquer accès (super_
 - Supervision : `neopro_video_club_grants_total{operation=add|remove, status=success|error}`.
 - Table pivot : `video_club_grants (video_id, site_id, PRIMARY KEY)` — migration `add-video-club-grants.sql`.
 
-## Web Content — web_page / livestream (ADR-088)
+## Web Content — web_page / livestream (ADR-089)
 
 ```
 POST   /api/videos/web-content                    → crée une entree web_page/livestream (admin/operator/club + validate)
