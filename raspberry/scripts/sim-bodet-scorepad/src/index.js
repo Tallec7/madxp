@@ -6,6 +6,7 @@ const { createEmitter } = require('./emitter');
 const { buildScenario } = require('./scenarios/basket-demo');
 const { startRepl } = require('./repl');
 const { createWebUi } = require('./web-ui');
+const { createCloudPusher } = require('./cloud-push');
 
 function parseArgs(argv) {
   const opts = {
@@ -20,6 +21,10 @@ function parseArgs(argv) {
     webHost: '127.0.0.1',
     webPort: 4100,
     noTcp: false,
+    pushUrl: null,
+    siteId: null,
+    siteApiKey: null,
+    pushInterval: 500,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -35,6 +40,10 @@ function parseArgs(argv) {
     else if (a === '--web-host') opts.webHost = argv[++i];
     else if (a === '--web-port') opts.webPort = parseInt(argv[++i], 10);
     else if (a === '--no-tcp') opts.noTcp = true;
+    else if (a === '--push-url') opts.pushUrl = argv[++i];
+    else if (a === '--site-id') opts.siteId = argv[++i];
+    else if (a === '--site-api-key') opts.siteApiKey = argv[++i];
+    else if (a === '--push-interval') opts.pushInterval = parseInt(argv[++i], 10);
     else if (a === '--help' || a === '-h') {
       printHelp();
       process.exit(0);
@@ -62,6 +71,10 @@ Options:
   --web-host <ip>        Host d'écoute UI (default: 127.0.0.1)
   --web-port <port>      Port d'écoute UI (default: 4100)
   --no-tcp               Désactive le client TCP sortant (UI-only, pas d'ECONNREFUSED)
+  --push-url <url>       Base URL /api/scoreboard du central server (ADR-088)
+  --site-id <uuid>       Site SaaS cible
+  --site-api-key <key>   API key du site (Authorization: Bearer)
+  --push-interval <ms>   Intervalle de push cloud (default: 500)
   --help, -h             Affiche cette aide
 `);
 }
@@ -128,19 +141,33 @@ function main() {
 
   emitter.start({ timeScale: opts.timeScale });
 
+  if (opts.web) {
+    webUi = createWebUi({ emitter, host: opts.webHost, port: opts.webPort });
+  }
+
+  let cloudPusher = null;
+  if (opts.pushUrl) {
+    cloudPusher = createCloudPusher({
+      baseUrl: opts.pushUrl,
+      siteId: opts.siteId,
+      siteApiKey: opts.siteApiKey,
+      getState: () => emitter.getState(),
+      intervalMs: opts.pushInterval,
+      verbose: opts.verbose,
+    });
+    cloudPusher.start();
+  }
+
   const shutdown = () => {
     console.log('\n[sim] shutting down');
     emitter.stop();
     controller.stop();
+    if (cloudPusher) cloudPusher.stop();
     if (process.stdin.isTTY && process.stdin.setRawMode) process.stdin.setRawMode(false);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
-
-  if (opts.web) {
-    webUi = createWebUi({ emitter, host: opts.webHost, port: opts.webPort });
-  }
 
   if (opts.repl) {
     startRepl({ emitter, onQuit: shutdown });

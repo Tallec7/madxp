@@ -28,19 +28,23 @@ nc 127.0.0.1 5000 | xxd    # voir les 54 octets défiler à 10 Hz
 
 ## Flags CLI
 
-| Flag                 | Default       | Rôle                                                        |
-| -------------------- | ------------- | ----------------------------------------------------------- |
-| `--host <ip>`        | `127.0.0.1`   | Adresse d'écoute TCP                                        |
-| `--port <p>`         | `5000`        | Port TCP d'écoute                                           |
-| `--scenario <name>`  | `basket-demo` | Scénario (seul `basket-demo` dispo en V1)                   |
-| `--no-scenario`      | off           | Démarre sans scénario (état vierge, pour `--repl`)          |
-| `--rate-hz <n>`      | `10`          | Fréquence d'émission des trames 0x33                        |
-| `--time-scale <x>`   | `1`           | Accélère le temps simulé (10 = 1 min réelle = 10 min match) |
-| `--transport <kind>` | `tcp-server`  | Mode de transport (tcp-server uniquement pour l'instant)    |
-| `--verbose`, `-v`    | off           | Hex dump d'une trame par seconde (≈ 1/`rate-hz` trames)     |
-| `--repl`             | off           | Mode interactif clavier (voir § REPL)                       |
-| `--web`              | off           | UI web sur `:5100` (voir § UI Web)                          |
-| `--web-port <p>`     | `5100`        | Port de l'UI web                                            |
+| Flag                   | Default       | Rôle                                                        |
+| ---------------------- | ------------- | ----------------------------------------------------------- |
+| `--host <ip>`          | `127.0.0.1`   | Adresse d'écoute TCP                                        |
+| `--port <p>`           | `5000`        | Port TCP d'écoute                                           |
+| `--scenario <name>`    | `basket-demo` | Scénario (seul `basket-demo` dispo en V1)                   |
+| `--no-scenario`        | off           | Démarre sans scénario (état vierge, pour `--repl`)          |
+| `--rate-hz <n>`        | `10`          | Fréquence d'émission des trames 0x33                        |
+| `--time-scale <x>`     | `1`           | Accélère le temps simulé (10 = 1 min réelle = 10 min match) |
+| `--transport <kind>`   | `tcp-server`  | Mode de transport (tcp-server uniquement pour l'instant)    |
+| `--verbose`, `-v`      | off           | Hex dump d'une trame par seconde (≈ 1/`rate-hz` trames)     |
+| `--repl`               | off           | Mode interactif clavier (voir § REPL)                       |
+| `--web`                | off           | UI web sur `:5100` (voir § UI Web)                          |
+| `--web-port <p>`       | `5100`        | Port de l'UI web                                            |
+| `--push-url <url>`     | —             | Base URL `/api/scoreboard` du central (ADR-088 SaaS push)   |
+| `--site-id <uuid>`     | —             | Site SaaS cible                                             |
+| `--site-api-key <k>`   | —             | API key du site (Bearer)                                    |
+| `--push-interval <ms>` | `500`         | Intervalle de push cloud                                    |
 
 ## UI Web — mode graphique
 

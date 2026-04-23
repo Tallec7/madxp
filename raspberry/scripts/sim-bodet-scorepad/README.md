@@ -22,18 +22,22 @@ Pour tester sans serveur, lance un `nc -l 4001` ou `ncat -l -k 4001` dans un aut
 
 ## Flags CLI
 
-| Flag                | Default       | Rôle                                                           |
-| ------------------- | ------------- | -------------------------------------------------------------- |
-| `--host <ip>`       | `127.0.0.1`   | Adresse du serveur TCP cible                                   |
-| `--port <p>`        | `4001`        | Port TCP cible                                                 |
-| `--scenario <name>` | `basket-demo` | Scénario à jouer (seul `basket-demo` dispo en V1)              |
-| `--no-scenario`     | off           | Démarre sans scénario (état vierge, pour `--repl`)             |
-| `--rate <ms>`       | `200`         | Intervalle entre rondes d'émission (messages 18/30/31/50/60)   |
-| `--time-scale <x>`  | `1`           | Accélère le temps simulé (10 = 1 minute réelle = 10 min match) |
-| `--verbose`, `-v`   | off           | Hex dump byte-par-byte des trames émises                       |
-| `--repl`            | off           | Mode interactif clavier (voir § REPL)                          |
-| `--web`             | off           | UI web sur `:4100` (voir § UI Web)                             |
-| `--web-port <p>`    | `4100`        | Port de l'UI web                                               |
+| Flag                   | Default       | Rôle                                                           |
+| ---------------------- | ------------- | -------------------------------------------------------------- |
+| `--host <ip>`          | `127.0.0.1`   | Adresse du serveur TCP cible                                   |
+| `--port <p>`           | `4001`        | Port TCP cible                                                 |
+| `--scenario <name>`    | `basket-demo` | Scénario à jouer (seul `basket-demo` dispo en V1)              |
+| `--no-scenario`        | off           | Démarre sans scénario (état vierge, pour `--repl`)             |
+| `--rate <ms>`          | `200`         | Intervalle entre rondes d'émission (messages 18/30/31/50/60)   |
+| `--time-scale <x>`     | `1`           | Accélère le temps simulé (10 = 1 minute réelle = 10 min match) |
+| `--verbose`, `-v`      | off           | Hex dump byte-par-byte des trames émises                       |
+| `--repl`               | off           | Mode interactif clavier (voir § REPL)                          |
+| `--web`                | off           | UI web sur `:4100` (voir § UI Web)                             |
+| `--web-port <p>`       | `4100`        | Port de l'UI web                                               |
+| `--push-url <url>`     | —             | Base URL `/api/scoreboard` du central (ADR-088 SaaS push)      |
+| `--site-id <uuid>`     | —             | Site SaaS cible                                                |
+| `--site-api-key <k>`   | —             | API key du site (Bearer)                                       |
+| `--push-interval <ms>` | `500`         | Intervalle de push cloud                                       |
 
 ## UI Web — mode graphique
 

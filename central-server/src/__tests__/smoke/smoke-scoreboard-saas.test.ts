@@ -82,6 +82,21 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
     expect(barrel).toMatch(/ScoreboardMatchState/);
   });
 
+  it('sim-bodet + sim-stramatel expose cloud-push.js with matching vendor tags', () => {
+    const bodet = readRepo('raspberry/scripts/sim-bodet-scorepad/src/cloud-push.js');
+    const stra = readRepo('raspberry/scripts/sim-stramatel/src/cloud-push.js');
+    expect(bodet).toMatch(/vendor:\s*'bodet'/);
+    expect(stra).toMatch(/vendor:\s*'stramatel'/);
+    // Authorization: Bearer (site api key)
+    expect(bodet).toMatch(/Bearer \$\{siteApiKey\}/);
+    expect(stra).toMatch(/Bearer \$\{siteApiKey\}/);
+  });
+
+  it('sim cloud-push modules have matching test coverage', () => {
+    expect(existsRepo('raspberry/scripts/sim-bodet-scorepad/test/cloud-push.test.js')).toBe(true);
+    expect(existsRepo('raspberry/scripts/sim-stramatel/test/cloud-push.test.js')).toBe(true);
+  });
+
   it('route mount is NOT rate-limited globally (ADR-087 anti-pattern)', () => {
     const server = readRepo('central-server/src/server.ts');
     // Mount line for scoreboardRoutes must not include a rate limiter arg
