@@ -7,7 +7,7 @@ Procédures pas-à-pas pour les opérations infra/ops non-automatisées. Un runb
 | #   | Runbook                                                        | Objectif                                                                                              | Statut        |
 | --- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- |
 | J1  | [Staging setup](J1-staging-setup.md)                           | Créer Railway `central-server-staging` + DB + domaine `api-staging.kalonpartners.bzh` (Hostinger DNS) | 🟡 à exécuter |
-| J2  | [Cloudflare Pages dashboard](J2-cloudflare-pages-dashboard.md) | Dashboard `neopro.pages.dev` sur Cloudflare Pages + PR previews (Option A, sans custom domain)        | 🟡 à exécuter |
+| J2  | [Cloudflare Pages dashboard](J2-cloudflare-pages-dashboard.md) | Dashboard `neopro-exg.pages.dev` sur Cloudflare Pages + PR previews (Option A, sans custom domain)    | 🟡 à exécuter |
 | J3  | Restore staging DB depuis prod (à créer)                       | Script anonymisation + restore hebdo                                                                  | 🔴 pending    |
 | J4  | Scinder release.yml (à créer)                                  | staging-deploy.yml (main) + prod-deploy.yml (tag) + protect main                                      | 🔴 pending    |
 | J5  | Onboarding Gabin (à créer)                                     | Accès, docs, TEAM.md                                                                                  | 🔴 pending    |
