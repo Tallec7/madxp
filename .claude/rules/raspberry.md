@@ -46,25 +46,26 @@ paths:
 
 ## Modules Sync-Agent
 
-| Module            | Fichier                       | Rôle                                                    |
-| ----------------- | ----------------------------- | ------------------------------------------------------- |
-| update-config     | update-config.js              | Config avec merge intelligent                           |
-| diagnostics       | diagnostics.js                | Diagnostics système                                     |
-| hotspot           | hotspot.js                    | Gestion hotspot WiFi                                    |
-| network-diag      | network-diagnostics.js        | Diagnostics réseau                                      |
-| debug-bundle      | debug-bundle.js               | Export debug pour support (16 sections, testé)          |
-| analytics-buf     | analytics-buffer.js           | Buffer analytics                                        |
-| heartbeat         | services/heartbeat.js         | Heartbeat périodique + health check connexion (ADR-044) |
-| analytics-sync    | services/analytics-sync.js    | Envoi périodique analytics HTTP (ADR-044)               |
-| command-dispatch  | services/command-dispatch.js  | Dispatch commandes + queue offline (ADR-044)            |
-| hotspot-watchdog  | services/hotspot-watchdog.js  | Health check + recovery hotspot (ADR-044)               |
-| internet-watchdog | services/internet-watchdog.js | Connectivité internet + recovery (ADR-044)              |
-| config-rollback   | services/config-rollback.js   | Rollback point management réseau (ADR-044)              |
-| hw-metrics        | metrics/hardware-metrics.js   | CPU, RAM, temp, disk, GPU, fan, WiFi (ADR-044)          |
-| display-metrics   | metrics/display-metrics.js    | EDID, display info, CEC (ADR-044)                       |
-| service-metrics   | metrics/service-metrics.js    | Systemd, kiosk, health, orphans (ADR-044)               |
-| ota-download      | commands/ota-download.js      | Download + checksum + stall detection (ADR-044)         |
-| ota-install       | commands/ota-install.js       | Extract + install + systemd + sudoers (ADR-044)         |
+| Module            | Fichier                       | Rôle                                                                                                  |
+| ----------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| update-config     | update-config.js              | Config avec merge intelligent                                                                         |
+| diagnostics       | diagnostics.js                | Diagnostics système                                                                                   |
+| hotspot           | hotspot.js                    | Gestion hotspot WiFi                                                                                  |
+| network-diag      | network-diagnostics.js        | Diagnostics réseau                                                                                    |
+| debug-bundle      | debug-bundle.js               | Export debug pour support (16 sections, testé)                                                        |
+| analytics-buf     | analytics-buffer.js           | Buffer analytics                                                                                      |
+| heartbeat         | services/heartbeat.js         | Heartbeat périodique + health check connexion (ADR-044)                                               |
+| analytics-sync    | services/analytics-sync.js    | Envoi périodique analytics HTTP (ADR-044)                                                             |
+| command-dispatch  | services/command-dispatch.js  | Dispatch commandes + queue offline (ADR-044)                                                          |
+| hotspot-watchdog  | services/hotspot-watchdog.js  | Health check + recovery hotspot (ADR-044)                                                             |
+| internet-watchdog | services/internet-watchdog.js | Connectivité internet + recovery (ADR-044)                                                            |
+| config-rollback   | services/config-rollback.js   | Rollback point management réseau (ADR-044)                                                            |
+| hw-metrics        | metrics/hardware-metrics.js   | CPU, RAM, temp, disk, GPU, fan, WiFi (ADR-044)                                                        |
+| display-metrics   | metrics/display-metrics.js    | EDID, display info, CEC (ADR-044)                                                                     |
+| service-metrics   | metrics/service-metrics.js    | Systemd, kiosk, health, orphans (ADR-044)                                                             |
+| ota-download      | commands/ota-download.js      | Download + checksum + stall detection (ADR-044)                                                       |
+| ota-install       | commands/ota-install.js       | Extract + install + systemd + sudoers (ADR-044)                                                       |
+| web-content-sync  | services/web-content-sync.js  | Fetch cloud web_page/livestream + merge `configuration.json` pseudo-catégorie `web-content` (ADR-089) |
 
 ## Config Merge Intelligent
 
@@ -155,6 +156,13 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Utiliser `grep -c "pattern" || echo "0"` (sort `0` ET echo `0` → variable = `"0\n0"` — utiliser `$(grep -c ... || true)`)
 - Créer `club-config.json` sans `chmod 600` (contient le mot de passe WiFi en clair)
 - Lancer `nginx -t` sans `sudo` dans les scripts de diagnostic
+
+### Sync-Agent — ADR-089 Web Content
+
+- Supprimer `services/web-content-sync.js` ou son appel dans `agent.js` (`syncWebContentFromCloud()` au reconnect + setInterval 30min) — sans ce module, les web_page/livestream créés dans le cloud n'apparaissent jamais dans la Remote Pi.
+- Écrire la pseudo-catégorie `web-content` ailleurs que dans `web-content-sync.js` — source de vérité cloud, le sync-agent est le seul writer Pi-side.
+- Recréer `webContentInterval` sans `clearInterval(this.webContentInterval)` avant — fuite N timers par reconnexion (même pattern anti-leak que `stopWatchers()`).
+- Faire confiance aux entries locales : à chaque reconnect + toutes les 30min, la pseudo-catégorie est entièrement remplacée par la réponse cloud (merge par `mergeWebContent`).
 
 ### Sync-Agent
 

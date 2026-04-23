@@ -734,6 +734,16 @@ const videoClubGrantsTotal = new Counter({
   registers: [register],
 });
 
+// ============= Web Content (ADR-088) =============
+
+const webContentFetchTotal = new Counter({
+  name: 'neopro_web_content_fetch_total',
+  help: 'Pi fetch of web_page/livestream entries via GET /api/sites/:id/web-content (ADR-088)',
+  // success | forbidden | error
+  labelNames: ['status'],
+  registers: [register],
+});
+
 // ============= Hotspot PSK (ADR-074) =============
 
 const hotspotBootstrapAttemptsTotal = new Counter({
@@ -1242,6 +1252,12 @@ class MetricsService {
     status: 'success' | 'error'
   ): void {
     videoClubGrantsTotal.inc({ operation, status });
+  }
+
+  // ============= Web Content (ADR-088) =============
+
+  recordWebContentFetch(status: 'success' | 'forbidden' | 'error'): void {
+    webContentFetchTotal.inc({ status });
   }
 
   // ============= Hotspot PSK (ADR-074) =============

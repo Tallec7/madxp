@@ -85,6 +85,24 @@
   [hidden]="isLicenseBlocked"
 ></video>
 
+<!-- ADR-088 — Web page iframe (z-index 10, même layer que manual video) -->
+<iframe
+  #webFrame
+  class="web-content-frame"
+  sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+  referrerpolicy="no-referrer"
+  [hidden]="isLicenseBlocked"
+></iframe>
+
+<!-- ADR-088 — Livestream player (z-index 10) -->
+<video
+  #livestreamPlayer
+  class="web-content-livestream"
+  playsinline
+  muted
+  [hidden]="isLicenseBlocked"
+></video>
+
 <!-- Score Overlay Component (score, timer, goal animation, breaking news, secondary overlays) -->
 <app-score-overlay
   [configuration]="configuration"

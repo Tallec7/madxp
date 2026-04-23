@@ -27,6 +27,10 @@ export interface RemoteVideoEntry {
   type?: string;
   categoryId?: string;
   hasSecondaryVariant?: boolean;
+  // ADR-089 — Web content (page web / livestream) as first-class video
+  contentType?: 'video' | 'web_page' | 'livestream';
+  externalUrl?: string | null;
+  durationSeconds?: number | null;
 }
 
 export interface TimeCategory {

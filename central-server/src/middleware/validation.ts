@@ -223,7 +223,8 @@ export const schemas = {
   remoteCommand: Joi.object({
     type: Joi.string().valid(
       'score-update', 'score-reset', 'phase-change', 'play-video',
-      'play-sponsors', 'timer-update', 'breaking-news', 'match-config',
+      'play-sponsors', 'play-web-page', 'play-livestream', 'stop-manual',
+      'timer-update', 'breaking-news', 'match-config',
       'recording-toggle', 'screenshot',
       // ADR-059 granular match commands
       'command/increment_home', 'command/decrement_home',
@@ -1012,6 +1013,17 @@ export const schemas = {
   // ADR-082 — Video club grants
   addVideoClubGrant: Joi.object({
     site_id: Joi.string().uuid().required(),
+  }),
+  // ADR-089 — Web page / livestream content
+  createWebContent: Joi.object({
+    contentType: Joi.string().valid('web_page', 'livestream').required(),
+    name: Joi.string().min(1).max(255).required(),
+    url: Joi.string().uri({ scheme: ['http', 'https'] }).max(2048).required(),
+    category: Joi.string().allow(null, '').optional(),
+    subcategory: Joi.string().allow(null, '').optional(),
+    durationSeconds: Joi.number().integer().min(1).max(86400).allow(null).optional(),
+    thumbnailUrl: Joi.string().uri().allow(null, '').optional(),
+    uploadedForSiteId: Joi.string().uuid().allow(null).optional(),
   }),
 };
 

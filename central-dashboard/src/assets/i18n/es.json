@@ -271,6 +271,8 @@
     "statusInProgress": "En progreso",
     "statusPending": "Pendiente",
     "title": "Gestión de contenido",
+    "addWebPage": "🌐 Añadir una página web",
+    "addLivestream": "📡 Añadir un livestream",
     "uploadVideo": "Subir vídeo",
     "videoList": "Lista de vídeos",
     "videoName": "Nombre del vídeo"

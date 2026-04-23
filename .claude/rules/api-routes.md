@@ -87,6 +87,19 @@ DELETE /api/content/videos/:id/club-grants/:siteId  → révoquer accès (super_
 - Supervision : `neopro_video_club_grants_total{operation=add|remove, status=success|error}`.
 - Table pivot : `video_club_grants (video_id, site_id, PRIMARY KEY)` — migration `add-video-club-grants.sql`.
 
+## Web Content — web_page / livestream (ADR-089)
+
+```
+POST   /api/videos/web-content                    → crée une entree web_page/livestream (admin/operator/club + validate)
+GET    /api/sites/:id/web-content                 → Pi sync-agent fetch (authenticateSiteApiKey, validateParams)
+```
+
+- Pi endpoint renvoie `{ siteId, entries: [{ id, name, contentType, externalUrl, durationSeconds, thumbnailUrl, ... }] }`.
+- Guard strict : `req.siteId !== req.params.id` → 403 (un Pi ne lit que ses propres entries).
+- Consommé par `raspberry/sync-agent/src/services/web-content-sync.js` qui merge dans `configuration.json` sous pseudo-catégorie `web-content` (id `web-content`, name `Web / Live`).
+- CloudRemote (`remote.controller.ts`) et Remote SaaS (`saas.controller.ts`) injectent la même pseudo-catégorie à la volée via `utils/inject-web-content-category.ts` — pas de merge DB persistant.
+- Supervision Prometheus : `neopro_web_content_fetch_total{status=success|forbidden|error}`.
+
 ## Video Streaming Proxy (ADR-068)
 
 ```

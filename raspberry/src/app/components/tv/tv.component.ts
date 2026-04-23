@@ -17,6 +17,7 @@ import { ScreenshotService } from '../../services/screenshot.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { SaasConfigService } from '../../services/saas-config.service';
 import { ManualVideoService } from '../../services/manual-video.service';
+import { WebContentService } from '../../services/web-content.service';
 import { TvSyncService } from '../../services/tv-sync.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
@@ -25,7 +26,7 @@ import { ScoreOverlayComponent } from '../score-overlay/score-overlay.component'
 import { HotspotQrComponent } from '../hotspot-qr/hotspot-qr.component';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { Configuration } from '../../interfaces/configuration.interface';
-import { Command } from '../../interfaces/command.interface';
+import { Command, WebPagePayload, LivestreamPayload } from '../../interfaces/command.interface';
 import { Sponsor } from '../../interfaces/sponsor.interface';
 import { Category } from '../../interfaces/category.interface';
 import { environment } from '../../../environments/environment';
@@ -57,6 +58,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly recordingState = inject(RecordingStateService);
   private readonly saasConfigService = inject(SaasConfigService);
   private readonly manualVideoService = inject(ManualVideoService);
+  private readonly webContentService = inject(WebContentService);
   private readonly tvSyncService = inject(TvSyncService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
@@ -117,6 +119,10 @@ export class TvComponent implements OnInit, OnDestroy {
   // Double-buffer pour les vidéos MANUELLES (z-index 10-11, au-dessus de la boucle)
   @ViewChild('manualPlayerA', { static: true }) manualPlayerARef: ElementRef<HTMLVideoElement>;
   @ViewChild('manualPlayerB', { static: true }) manualPlayerBRef: ElementRef<HTMLVideoElement>;
+
+  // ADR-089 — web page iframe + livestream player (z-index 10)
+  @ViewChild('webFrame', { static: true }) webFrameRef: ElementRef<HTMLIFrameElement>;
+  @ViewChild('livestreamPlayer', { static: true }) livestreamPlayerRef: ElementRef<HTMLVideoElement>;
 
   // Score overlay component (score, timer, goal animation, breaking news)
   @ViewChild(ScoreOverlayComponent) scoreOverlay: ScoreOverlayComponent;
@@ -447,6 +453,12 @@ export class TvComponent implements OnInit, OnDestroy {
       emitPlayerState: (partial) => this.emitPlayerState(partial),
     });
 
+    // 4b. ADR-089 — Register web page / livestream DOM elements
+    this.webContentService.registerElements(
+      this.webFrameRef.nativeElement,
+      this.livestreamPlayerRef.nativeElement,
+    );
+
     // Attach error handlers to all players
     this.errorRecoveryService.attachErrorHandlers({ loopA: playerA, loopB: playerB, manualA: manualPlayerA, manualB: manualPlayerB });
 
@@ -621,6 +633,21 @@ export class TvComponent implements OnInit, OnDestroy {
       if (this.isDuplicateCommand('reload-config')) return;
       console.log('tv: reloading config for club', command.data);
       this.reloadConfiguration(command.data as Configuration);
+    } else if (command.type === 'web-page' && command.data) {
+      const payload = command.data as WebPagePayload;
+      if (this.isDuplicateCommand(`web-page:${payload.url}`)) return;
+      this.lastTriggerType = 'manual';
+      this.tvSyncService.markActionReceived();
+      this.webContentService.showWebPage(payload);
+    } else if (command.type === 'livestream' && command.data) {
+      const payload = command.data as LivestreamPayload;
+      if (this.isDuplicateCommand(`livestream:${payload.url}`)) return;
+      this.lastTriggerType = 'manual';
+      this.tvSyncService.markActionReceived();
+      this.webContentService.showLivestream(payload);
+    } else if (command.type === 'stop-manual') {
+      if (this.isDuplicateCommand('stop-manual')) return;
+      this.webContentService.returnToLoop();
     }
   }
 

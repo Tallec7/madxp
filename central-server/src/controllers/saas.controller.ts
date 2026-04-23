@@ -17,6 +17,7 @@ import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-met
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
+import { injectWebContentCategory } from '../utils/inject-web-content-category';
 import logger from '../config/logger';
 
 interface VideoLike {
@@ -282,12 +283,18 @@ export async function getSaasConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
+    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
+    const categoriesWithWeb = await injectWebContentCategory(
+      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+      siteId,
+    );
+
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${site.club_name || site.site_name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
-      categories: resolvedCategories,
+      categories: categoriesWithWeb,
       timeCategories: resolvedTimeCategories,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
@@ -426,12 +433,18 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
+    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
+    const categoriesWithWeb = await injectWebContentCategory(
+      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+      siteId,
+    );
+
     const resolvedConfig = {
       remote: configuration.remote || { title: `Télécommande ${profile.display_name || profile.name}` },
       auth: configuration.auth || { password: '', sessionDuration: 28800000 },
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
-      categories: resolvedCategories,
+      categories: categoriesWithWeb,
       timeCategories: resolvedTimeCategories,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,

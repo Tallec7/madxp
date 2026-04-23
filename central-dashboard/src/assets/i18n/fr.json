@@ -273,6 +273,8 @@
   "content": {
     "title": "Gestion du contenu",
     "uploadVideo": "Téléverser une vidéo",
+    "addWebPage": "🌐 Ajouter une page web",
+    "addLivestream": "📡 Ajouter un livestream",
     "videoList": "Liste des vidéos",
     "videoName": "Nom de la vidéo",
     "duration": "Durée",

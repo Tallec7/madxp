@@ -105,6 +105,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-086](ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) | Template Studio v2 — textes enfants de layer, safe-zones, animations réversibles | Accepté                           | Avr 2026 |
 | [ADR-087](ADR-087-no-global-api-rate-limiter-corp-on-429.md)                    | Pas de rate limiter sur `/api` nu + CORP/CORS sur 429 (incident asset-proxy)     | Accepté                           | Avr 2026 |
 | [ADR-088](ADR-088-scoreboard-saas-push.md)                                      | Scoreboard live multi-vendor — validation SaaS-first (F-15.2)                    | Accepté                           | Avr 2026 |
+| [ADR-089](ADR-089-web-page-and-livestream-content-types.md)                     | Contenus `web_page` et `livestream` — first-class content (Phase 2 Pi + SaaS)    | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -144,7 +145,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-088**)
+3. Numéroter séquentiellement (prochain : **ADR-090**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -167,4 +168,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 23 avril 2026 (ADR-088 Accepté — scoreboard live multi-vendor SaaS-first pour F-15.2 ; ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones ; ADR-085 Accepté — Simplification 2026)_
+_Dernière mise à jour : 23 avril 2026 (ADR-089 Accepté — Contenus `web_page`/`livestream` first-class, Phase 2 Pi sync-agent + SaaS injection + CloudRemote ; ADR-088 Accepté — scoreboard live multi-vendor SaaS-first pour F-15.2 ; ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones)_

@@ -33,6 +33,7 @@ const { safeNetworkOperations } = require('./services/safe-network-operations');
 const networkWatchdog = require('./services/network-watchdog');
 const hostapdTelemetry = require('./services/hostapd-telemetry');
 const { syncFromCloud: hotspotSyncFromCloud } = require('./services/hotspot-sync');
+const { syncFromCloud: webContentSyncFromCloud } = require('./services/web-content-sync');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
 const commands = require('./commands');
@@ -459,6 +460,21 @@ class NeoproSyncAgent {
     this.syncHotspotFromCloud().catch((err) => {
       logger.warn('hotspot-sync: initial sync failed', { error: err.message });
     });
+
+    // ADR-089: pull web_page / livestream entries and merge into configuration.json
+    // under pseudo-category `web-content`. Runs async — non blocking.
+    this.syncWebContentFromCloud().catch((err) => {
+      logger.warn('web-content-sync: initial sync failed', { error: err.message });
+    });
+
+    // Periodic refresh (30 min) so new web_page / livestream entries show up
+    // without waiting for a reconnect. Resets on each reconnect to avoid leaks.
+    if (this.webContentInterval) clearInterval(this.webContentInterval);
+    this.webContentInterval = setInterval(() => {
+      this.syncWebContentFromCloud().catch((err) => {
+        logger.warn('web-content-sync: periodic sync failed', { error: err.message });
+      });
+    }, 30 * 60 * 1000);
   }
 
   /**
@@ -473,6 +489,21 @@ class NeoproSyncAgent {
       apiKey: config.site.apiKey,
     });
     logger.info('hotspot-sync: result', result);
+  }
+
+  /**
+   * ADR-089 — fetch cloud web_page / livestream entries and merge into the
+   * local configuration.json pseudo-category `web-content`. Safe to call repeatedly.
+   */
+  async syncWebContentFromCloud() {
+    if (!config.site.id || !config.site.apiKey || !config.central.url) return;
+    const result = await webContentSyncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+      configPath: config.paths && config.paths.config,
+    });
+    logger.info('web-content-sync: result', result);
   }
 
   /**
