@@ -1,3 +1,9 @@
+# [3.226.0](https://github.com/Tallec7/neopro/compare/v3.225.1...v3.226.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 2 — simulateur Table de marque dans /admin/local ([#556](https://github.com/Tallec7/neopro/issues/556)) ([96043c3](https://github.com/Tallec7/neopro/commit/96043c3fb4493df32e16ad04efe4cf37ee91bc75))
+
 ## [3.225.1](https://github.com/Tallec7/neopro/compare/v3.225.0...v3.225.1) (2026-04-23)
 
 ### Bug Fixes
