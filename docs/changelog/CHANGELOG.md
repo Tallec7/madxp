@@ -1,3 +1,9 @@
+## [3.232.1](https://github.com/Tallec7/neopro/compare/v3.232.0...v3.232.1) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** skip redundant scoreboard-state apply to avoid mini-flash (ADR-090) ([#570](https://github.com/Tallec7/neopro/issues/570)) ([37d7b8e](https://github.com/Tallec7/neopro/commit/37d7b8e2a9f2e0453413bd204a4c60aee2af3c45))
+
 # [3.232.0](https://github.com/Tallec7/neopro/compare/v3.231.0...v3.232.0) (2026-04-23)
 
 ### Features
