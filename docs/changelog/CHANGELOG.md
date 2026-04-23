@@ -1,3 +1,9 @@
+## [3.232.4](https://github.com/Tallec7/neopro/compare/v3.232.3...v3.232.4) (2026-04-23)
+
+### Bug Fixes
+
+- **ci:** retirer gitlink orphelin .claude/worktrees du repo ([1c1146d](https://github.com/Tallec7/neopro/commit/1c1146d19e5ea48e129fe3cb78c54cb8103ba321))
+
 ## [3.232.3](https://github.com/Tallec7/neopro/compare/v3.232.2...v3.232.3) (2026-04-23)
 
 ### Bug Fixes
