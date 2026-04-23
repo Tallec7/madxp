@@ -1,3 +1,9 @@
+## [3.223.8](https://github.com/Tallec7/neopro/compare/v3.223.7...v3.223.8) (2026-04-23)
+
+### Bug Fixes
+
+- **smoke:** asset-proxy test reads server.ts (mount déplacé hors routes) ([95bc6a5](https://github.com/Tallec7/neopro/commit/95bc6a55e927a8829d9aeca845fc25488815cb9d))
+
 ## [3.223.7](https://github.com/Tallec7/neopro/compare/v3.223.6...v3.223.7) (2026-04-22)
 
 ### Bug Fixes
