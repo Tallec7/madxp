@@ -891,6 +891,25 @@ class SocketService {
       socket.to(siteId).emit('match-info-updated', data);
     });
 
+    // ADR-090 — scoreboard-state push depuis la Remote SaaS (pas de JWT : relay socket).
+    // Le Remote SaaS est déjà authentifié par son siteId room (saas-register).
+    // Le payload est validé par `validateScoreboardStatePush` avant persistence + broadcast.
+    socket.on('scoreboard-state-push', (data: Record<string, unknown>) => {
+      try {
+        const { validateScoreboardStatePush } = require('../validators/scoreboard.validator');
+        const validated = validateScoreboardStatePush(data);
+        if (!validated) return;
+        const {
+          scoreboardStateRepository,
+        } = require('../repositories/scoreboard-state.repository');
+        const fullState = { siteId, ...validated, updatedAt: Date.now() };
+        scoreboardStateRepository.upsert(fullState);
+        if (this.io) this.io.to(siteId).emit('scoreboard-state', fullState);
+      } catch (err) {
+        logger.warn('scoreboard-state-push invalid payload', { siteId, err: (err as Error).message });
+      }
+    });
+
     // --- Master-Slave TV sync (same as Pi local server) ---
 
     // TV registration with role assignment

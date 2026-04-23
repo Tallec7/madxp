@@ -26,6 +26,9 @@ export class RemoteTimerService implements OnDestroy {
   /** Callback fired when timer reaches end of period */
   onPeriodEnd: (() => void) | null = null;
 
+  /** ADR-090 — hook appelé après chaque changement local pour push cloud. */
+  onLocalChange: (() => void) | null = null;
+
   ngOnDestroy(): void {
     this.clearInterval();
   }
@@ -39,6 +42,7 @@ export class RemoteTimerService implements OnDestroy {
     this.isRunning = true;
 
     this.emit({ action: 'start', currentTime: this.currentTime, isRunning: true, ...config });
+    this.onLocalChange?.();
 
     this.interval = setInterval(() => {
       if (config.countDown) {
@@ -70,6 +74,7 @@ export class RemoteTimerService implements OnDestroy {
     this.isRunning = false;
     this.clearInterval();
     this.emit({ action: 'pause', currentTime: this.currentTime, isRunning: false });
+    this.onLocalChange?.();
   }
 
   toggle(config: TimerConfig): void {
@@ -90,6 +95,41 @@ export class RemoteTimerService implements OnDestroy {
       periodDuration: config.periodDuration,
       countDown: config.countDown,
     });
+    this.onLocalChange?.();
+  }
+
+  /**
+   * ADR-090 — applique un état cloud entrant (scoreboard-state) sans rebroadcast.
+   * `chronoMs` en ms → `currentTime` en secondes. `clockRunning` ajuste l'interval.
+   */
+  applyCloudState(state: { chronoMs: number; clockRunning: boolean }, config: TimerConfig): void {
+    const nextSec = Math.max(0, Math.floor(state.chronoMs / 1000));
+    const changed = nextSec !== this.currentTime || state.clockRunning !== this.isRunning;
+    this.currentTime = nextSec;
+    if (state.clockRunning && !this.isRunning) {
+      this.isRunning = true;
+      this.scheduleTick(config);
+    } else if (!state.clockRunning && this.isRunning) {
+      this.isRunning = false;
+      this.clearInterval();
+    }
+    if (changed) {
+      this.sync(config);
+    }
+  }
+
+  private scheduleTick(config: TimerConfig): void {
+    this.interval = setInterval(() => {
+      if (config.countDown) {
+        if (this.currentTime > 0) this.currentTime--;
+        else { this.pause(); this.onPeriodEnd?.(); }
+      } else {
+        const maxTime = config.periodDuration * 60;
+        if (this.currentTime < maxTime) this.currentTime++;
+        else { this.pause(); this.onPeriodEnd?.(); }
+      }
+      if (this.currentTime % 5 === 0) this.sync(config);
+    }, 1000);
   }
 
   formatTime(seconds: number): string {

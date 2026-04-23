@@ -72,8 +72,8 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
     ]) {
       expect(v).toMatch(new RegExp(`${field}:\\s*Joi`));
     }
-    // vendor restricted to the 3 supported sources
-    expect(v).toMatch(/'bodet'[^)]*'stramatel'[^)]*'manual'/);
+    // vendor restricted to the supported sources (bodet/stramatel/manual + remote pour ADR-090)
+    expect(v).toMatch(/'bodet'[^)]*'stramatel'[^)]*'manual'[^)]*'remote'/);
   });
 
   it('repository exported from barrel', () => {
@@ -119,6 +119,41 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
       expect(fn).toMatch(/req\.user\.site_id\s*!==\s*siteId/);
       expect(fn).toMatch(/scoreboardStateRepository\.upsert/);
       expect(fn).toMatch(/socketService\.emitScoreboardState/);
+    });
+  });
+
+  describe('ADR-090 — Unified scoreboard-state Remote ↔ Simulator ↔ Display', () => {
+    it('validator supports sport=football and vendor=remote', () => {
+      const v = readRepo('central-server/src/validators/scoreboard.validator.ts');
+      expect(v).toMatch(/'basketball'\s*,\s*'football'/);
+      expect(v).toMatch(/'remote'/);
+      // validateScoreboardStatePush helper exported pour le socket listener
+      expect(v).toMatch(/export function validateScoreboardStatePush/);
+    });
+
+    it('socket.service wires scoreboard-state-push listener with validator + repo + broadcast', () => {
+      const svc = readRepo('central-server/src/services/socket.service.ts');
+      expect(svc).toMatch(/socket\.on\('scoreboard-state-push'/);
+      expect(svc).toMatch(/validateScoreboardStatePush/);
+      expect(svc).toMatch(/scoreboardStateRepository/);
+    });
+
+    it('RemoteScoreService + RemoteTimerService expose applyCloudState + onLocalChange hook', () => {
+      const score = readRepo('raspberry/src/app/components/remote/remote-score.service.ts');
+      const timer = readRepo('raspberry/src/app/components/remote/remote-timer.service.ts');
+      expect(score).toMatch(/applyCloudState/);
+      expect(score).toMatch(/onLocalChange/);
+      expect(timer).toMatch(/applyCloudState/);
+      expect(timer).toMatch(/onLocalChange/);
+    });
+
+    it('RemoteComponent subscribes to scoreboard-state and exposes pushScoreboardState', () => {
+      const remote = readRepo('raspberry/src/app/components/remote/remote.component.ts');
+      expect(remote).toMatch(/socketService\.on\('scoreboard-state'/);
+      expect(remote).toMatch(/pushScoreboardState/);
+      expect(remote).toMatch(/scoreboard-state-push/);
+      // push restreint au mode SaaS (Pi local garde legacy score-update)
+      expect(remote).toMatch(/saasConfigService\.isSaasMode\(\)/);
     });
   });
 

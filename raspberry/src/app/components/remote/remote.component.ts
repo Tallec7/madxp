@@ -33,6 +33,24 @@ import { RemotePreferencesService } from './remote-preferences.service';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
+// ADR-090 — MatchState v1 payload (scoreboard-state unifié)
+export interface ScoreboardStateV1 {
+  vendor: 'bodet' | 'stramatel' | 'manual' | 'remote';
+  sport: 'basketball' | 'football';
+  period: number;
+  chronoMs: number;
+  clockRunning: boolean;
+  homeScore: number;
+  guestScore: number;
+  homeTeamFouls: number;
+  guestTeamFouls: number;
+  shotClockMs: number;
+  timeoutActive: 'home' | 'guest' | null;
+  timeoutRemainingMs: number;
+  homeTeamName?: string;
+  guestTeamName?: string;
+}
+
 @Component({
   selector: 'app-remote',
   standalone: true,
@@ -241,6 +259,10 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.timerService.initialize(this.localOptions.timer);
     this.timerService.onPeriodEnd = () => this.displayToast('Mi-temps terminée !', 'info');
 
+    // ADR-090 — push unifié scoreboard-state après chaque changement local.
+    this.scoreService.onLocalChange = () => this.pushScoreboardState();
+    this.timerService.onLocalChange = () => this.pushScoreboardState();
+
     if (this.isDemoMode) {
       this.selectorTitle = 'Mode Démo';
       this.selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
@@ -303,6 +325,14 @@ export class RemoteComponent implements OnInit, OnDestroy {
       });
     });
 
+    // ADR-090 — scoreboard-state entrant (simulateur dashboard ou autre table)
+    this.socketService.on('scoreboard-state', (state: ScoreboardStateV1 | null) => {
+      if (!state) return;
+      this.ngZone.run(() => {
+        this.applyIncomingScoreboardState(state);
+      });
+    });
+
     this.socketService.on('phase-change', (data: { phase: 'neutral' | 'before' | 'during' | 'after' }) => {
       this.ngZone.run(() => { this.activePhase = data.phase; });
     });
@@ -321,6 +351,56 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  // ============================================================================
+  // ADR-090 — Unified scoreboard-state bridge
+  // ============================================================================
+
+  /** Applique un scoreboard-state reçu du cloud (simulateur, table de marque). */
+  private applyIncomingScoreboardState(state: ScoreboardStateV1): void {
+    // Guard anti-loop : si le push vient de nous-mêmes (vendor=remote) avec mêmes
+    // valeurs que l'état local, no-op.
+    const alreadySynced =
+      state.homeScore === this.scoreService.currentScore.homeScore &&
+      state.guestScore === this.scoreService.currentScore.awayScore &&
+      Math.abs(Math.floor(state.chronoMs / 1000) - this.timerService.currentTime) < 2 &&
+      state.clockRunning === this.timerService.isRunning;
+    if (alreadySynced && state.vendor === 'remote') return;
+
+    this.scoreService.applyCloudState(state);
+    this.timerService.applyCloudState(state, this.localOptions.timer);
+
+    // Synchroniser la période si dérivable (basket uniquement pour l'instant)
+    if (state.sport === 'basketball' && state.period > 0 && state.period <= this.getAvailablePeriods().length) {
+      this.localOptionsService.setPeriod(state.period - 1);
+      this.localOptions = this.localOptionsService.getOptions();
+    }
+  }
+
+  /** Construit et pousse le scoreboard-state unifié vers le cloud. */
+  private pushScoreboardState(): void {
+    // Seul le mode SaaS pousse pour l'instant (le Pi local a déjà les broadcasts legacy).
+    if (!this.saasConfigService.isSaasMode()) return;
+    const sport = this.localOptions.sport === 'basketball' ? 'basketball' : 'football';
+    const periodIdx = this.getAvailablePeriods().indexOf(this.localOptions.match.period);
+    const payload: ScoreboardStateV1 = {
+      vendor: 'remote',
+      sport,
+      period: Math.max(1, periodIdx + 1),
+      chronoMs: this.timerService.currentTime * 1000,
+      clockRunning: this.timerService.isRunning,
+      homeScore: this.scoreService.currentScore.homeScore,
+      guestScore: this.scoreService.currentScore.awayScore,
+      homeTeamFouls: 0,
+      guestTeamFouls: 0,
+      shotClockMs: 0,
+      timeoutActive: null,
+      timeoutRemainingMs: 0,
+      homeTeamName: this.scoreService.currentScore.homeTeam,
+      guestTeamName: this.scoreService.currentScore.awayTeam,
+    };
+    this.socketService.emit('scoreboard-state-push', payload);
   }
 
   // ============================================================================
