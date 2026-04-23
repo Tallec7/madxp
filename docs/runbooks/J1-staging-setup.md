@@ -57,20 +57,44 @@
    (syntaxe Railway pour binding inter-services).
 5. Copier aussi `DATABASE_PUBLIC_URL` dans une variable locale `STAGING_DATABASE_URL` (tu en auras besoin pour les dumps).
 
-## Étape 3 — Premier déploiement staging (~15 min)
+## Étape 3 — Bootstrap DB staging via `full-schema.sql` (~10 min)
 
-1. Sur le service `central-server-staging`, onglet **Deployments** → **Deploy**.
-2. Observer les **Deploy Logs** (pas Build Logs). La DB est vide → les migrations tournent au boot via `npm run db:migrate` (prestart).
-3. **Symptôme typique d'env var manquant** : `Migration runner failed:` qui se répète toutes les secondes + healthcheck KO après 1m40s. Causes les plus fréquentes :
+> **Pourquoi pas laisser le migration runner remplir la DB ?** Le runner applique les migrations en ordre alphabétique, et certaines migrations (ex. `add-aggregation-schedules-and-live-views.sql`) référencent des tables créées par des migrations plus tardives (`rename-sponsor-to-advertiser.sql`). Sur une DB vierge, le runner crashe. **Solution** : bootstraper depuis `central-server/src/scripts/full-schema.sql` (dump pg_dump prod, régénéré à chaque migration prod) puis marquer toutes les migrations comme appliquées.
+
+1. Récupérer `DATABASE_PUBLIC_URL` de la DB staging :
+   ```bash
+   railway variables --service neopro-staging-db --kv | grep DATABASE_PUBLIC_URL
+   ```
+2. Bootstraper le schéma :
+   ```bash
+   psql "$STAGING_DATABASE_PUBLIC_URL" -v ON_ERROR_STOP=0 \
+     -f central-server/src/scripts/full-schema.sql
+   # Les avertissements `\restrict` / `\unrestrict` sur PG < 17 sont bénins
+   ```
+3. Marquer toutes les migrations comme appliquées (le schéma est déjà complet) :
+   ```bash
+   cd central-server && \
+   DATABASE_URL="$STAGING_DATABASE_PUBLIC_URL" DATABASE_SSL=false \
+     npm run db:migrate -- --mark-all-applied
+   ```
+4. Déployer le service Railway (**Deployments** → **Deploy**).
+5. **Symptôme typique d'env var manquant** : `Migration runner failed:` qui se répète + healthcheck KO après 1m40s. Causes fréquentes :
    - `DATABASE_URL` pas bindé en référence `${{ Postgres... }}` → app ne peut pas se connecter.
    - `JWT_SECRET` absent → `auth.ts` throw dès l'import.
    - `HOTSPOT_PSK_ENCRYPTION_KEY` absent → `server.ts:129` throw.
    - `DATABASE_SSL=true` sur une DB Railway interne → handshake TLS échoue.
-4. Si besoin, lancer les migrations manuellement via Railway CLI :
-   ```bash
-   railway run --service central-server-staging -- npm run db:migrate
-   ```
-5. Une fois `/live` répond 200 → staging est debout (mais DB vide).
+6. Une fois `/live` répond 200 → staging est debout avec schéma complet.
+
+### Régénérer `full-schema.sql` depuis la prod (quand les migrations prod évoluent)
+
+```bash
+/opt/homebrew/opt/postgresql@18/bin/pg_dump \
+  --schema-only --no-owner --no-acl \
+  "$PROD_DATABASE_PUBLIC_URL" \
+  | sed -E '/^\\(restrict|unrestrict) /d' \
+  > central-server/src/scripts/full-schema.sql
+# Puis perl -i -pe 's/\r\n/\n/g' pour normaliser LF
+```
 
 ## Étape 4 — Domaine Hostinger pour l'API (~10 min)
 
