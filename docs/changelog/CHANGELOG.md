@@ -1,3 +1,13 @@
+# [3.224.0](https://github.com/Tallec7/neopro/compare/v3.223.9...v3.224.0) (2026-04-23)
+
+### Bug Fixes
+
+- **templates:** harden asset-proxy against 429 + 404 cascades (ADR-087) ([#553](https://github.com/Tallec7/neopro/issues/553)) ([b84934c](https://github.com/Tallec7/neopro/commit/b84934c359df83790044369a423b9543b5c2c4a8))
+
+### Features
+
+- **score:** PROP-003 Phase 0 — annexe SPEC protocolaire + simulateurs Bodet/Stramatel ([#552](https://github.com/Tallec7/neopro/issues/552)) ([ab317e1](https://github.com/Tallec7/neopro/commit/ab317e101eb2340f7383da7a0750cb4a6e9bcee7))
+
 ## [3.223.9](https://github.com/Tallec7/neopro/compare/v3.223.8...v3.223.9) (2026-04-23)
 
 ### Bug Fixes
