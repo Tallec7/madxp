@@ -1,7 +1,7 @@
 # ADR-071: Migration du hosting frontend (dashboard + SaaS) vers Cloudflare Pages
 
-**Date** : 2026-04-19
-**Statut** : Proposé
+**Date** : 2026-04-19 (mis à jour 2026-04-23)
+**Statut** : Accepté pour staging (J2 ADR-091) — Proposé pour bascule prod (post-validation)
 **Format** : Léger
 
 ---

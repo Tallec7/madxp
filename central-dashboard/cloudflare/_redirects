@@ -1,0 +1,8 @@
+# Cloudflare Pages SPA fallback (ADR-071, ADR-091)
+# Remplace .htaccess Apache (Hostinger).
+
+# SaaS app dans /saas/ — fallback vers son propre index.html (déployé séparément)
+/saas/*  /saas/index.html  200
+
+# Toutes les autres routes Angular → index.html (SPA fallback)
+/*  /index.html  200

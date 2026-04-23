@@ -41,6 +41,16 @@
                 "glob": ".htaccess",
                 "input": "./",
                 "output": "/"
+              },
+              {
+                "glob": "_redirects",
+                "input": "cloudflare/",
+                "output": "/"
+              },
+              {
+                "glob": "_headers",
+                "input": "cloudflare/",
+                "output": "/"
               }
             ],
             "styles": ["src/styles.css"],

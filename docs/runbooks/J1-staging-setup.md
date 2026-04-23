@@ -62,6 +62,7 @@
 ## Étape 5 — Seed d'un user admin staging (~5 min)
 
 Via Railway CLI en local :
+
 ```bash
 railway link --service central-server-staging
 railway run -- node -e "
@@ -78,6 +79,7 @@ railway run -- node -e "
   });
 "
 ```
+
 **Noter le mot de passe dans le password manager perso**, pas dans un fichier.
 
 ## Étape 6 — Vérifications finales (~10 min)
