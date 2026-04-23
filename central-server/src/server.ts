@@ -448,6 +448,22 @@ app.get('/remotion-preview/*', (_req, res) => {
   res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
 });
 
+// Asset proxy FTP Remotion — monté AVANT tout middleware préfixé `/api`
+// (incluant `setRLSContext` + les `app.use('/api', apiRateLimit, …)` plus bas).
+// Sinon `apiRateLimit` (100 req/min) étouffe les range requests de <video>
+// Remotion et le 429 cascade en `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`
+// (le handler 429 générique ne pose pas CORP/CORS).
+// Route publique, stateless, CDN 24h. CORP + CORS headers forcés par le handler.
+app.get(
+  '/api/remotion-templates/asset-proxy',
+  (_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  proxyTemplateAsset,
+);
+
 // Apply Row-Level Security context to all API routes
 // This middleware sets PostgreSQL session variables for multi-tenant isolation
 // It must run after authentication (which is handled in individual routes)
@@ -469,7 +485,7 @@ app.use('/api', contentRoutes); // Vidéos & déploiements - rate limits per-rou
 app.use('/api', updatesRoutes); // Mises à jour - rate limits per-route dans updates.routes.ts
 app.use('/api/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/analytics', advertiserAnalyticsRoutes); // Analytics annonceurs - rate limits per-route (piAnalyticsRateLimit for /impressions, apiRateLimit for the rest)
-app.use('/api', apiRateLimit, advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat)
+app.use('/api', advertiserSitesRoutes); // Gestion associations annonceurs <-> sites (+ backward compat) — rate limits per-route
 app.use('/api/sites', adminRateLimit, siteSponsorRoutes); // Sponsors par site - adminRateLimit (400/min) car le dashboard charge liste + stats + benchmark + rapports en parallèle
 app.use('/api/sites', clubPermissionsRoutes); // Club permissions per site - rate limits per-route
 app.use('/api/sponsor-portal', apiRateLimit, sponsorPortalRoutes); // Portail sponsor (public, token-based)
@@ -499,18 +515,7 @@ app.use('/api/sites', videoCategoriesRoutes); // Catégories vidéo par site —
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
 // Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.
 // Monté AVANT remotion-templates pour que les sous-ressources matchent ce router.
-// Asset proxy FTP — monté AVANT le wrapper sensitiveRateLimit (30/min) qui
-// étouffe les range requests de <video> Remotion et cascade en NotSameOrigin.
-// Route publique, stateless, CDN 24h. CORP + CORS headers forcés.
-app.get(
-  '/api/remotion-templates/asset-proxy',
-  (_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    next();
-  },
-  proxyTemplateAsset,
-);
+// (Asset proxy FTP `/asset-proxy` est monté plus haut, AVANT tout `app.use('/api', …)`.)
 app.use('/api/remotion-templates', templateStudioRoutes);
 // Templates vidéo Remotion (ADR-052) — rate limits per-route dans remotion-templates.routes.ts.
 // Pas de `sensitiveRateLimit` au mount : (1) double-comptage avec les limiteurs per-route

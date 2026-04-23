@@ -367,6 +367,35 @@ describe('Template Studio v2 (ADR-075)', () => {
     expect(startIdx).toBeLessThan(legacyMount);
   });
 
+  it('asset-proxy est monté AVANT tout app.use("/api", …) pour échapper aux rate limiters globaux', () => {
+    // Invariant anti-régression : la route `/api/remotion-templates/asset-proxy`
+    // doit être déclarée AVANT tout middleware préfixé `/api` (setRLSContext,
+    // apiRateLimit sur /api via advertiserSitesRoutes, etc.). Sinon Express
+    // exécute la chaîne `/api` avant la route spécifique et consomme le quota
+    // `apiRateLimit` (100/min) → 429 + cascade NotSameOrigin sur les range
+    // requests <video> Remotion.
+    const proxyIdx = server.indexOf("'/api/remotion-templates/asset-proxy'");
+    // Cherche UNIQUEMENT les `app.use('/api', …)` réels (pas dans les commentaires) :
+    // regex multi-ligne ancrée en début de ligne (éventuellement indentée).
+    const apiUseMatch = server.match(/^[ \t]*app\.use\(\s*['"]\/api['"]\s*,/m);
+    expect(proxyIdx).toBeGreaterThan(-1);
+    expect(apiUseMatch).not.toBeNull();
+    const apiUseIdx = apiUseMatch?.index ?? -1;
+    expect(apiUseIdx).toBeGreaterThan(-1);
+    expect(proxyIdx).toBeLessThan(apiUseIdx);
+  });
+
+  it('server.ts ne monte AUCUN rate limiter sur le préfixe /api nu (anti-pattern global)', () => {
+    // Cause racine de l'incident asset-proxy : `app.use('/api', apiRateLimit, …)`
+    // attache le limiter à TOUTES les requêtes /api/*, même celles qui ne
+    // matchent pas le router concerné (Express consomme le quota avant de
+    // tester le path). Les rate limits doivent toujours être posés au niveau
+    // routeur ou per-route — jamais sur le préfixe `/api` nu.
+    const offenders = [...server.matchAll(/^[ \t]*app\.use\(\s*['"]\/api['"]\s*,\s*(\w+)\s*,/gm)];
+    const bad = offenders.filter((m) => /RateLimit$/i.test(m[1]));
+    expect(bad.map((m) => m[0])).toEqual([]);
+  });
+
   it('TemplateRuntime + animations exist with 6 presets', () => {
     expect(runtime).toMatch(/TemplateRuntime/);
     expect(runtime).toMatch(/OffthreadVideo/);

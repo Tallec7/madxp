@@ -42,7 +42,12 @@ const userKeyGenerator = (req: Request): string => {
 };
 
 /**
- * Handler pour les dépassements de limite
+ * Handler pour les dépassements de limite.
+ *
+ * Pose systématiquement `Access-Control-Allow-Origin` + `Cross-Origin-Resource-Policy`
+ * sur le 429 : sans ça, un proxy cross-origin (ex: asset-proxy Remotion) qui se fait
+ * limiter renvoie un 429 "nu" que le browser traite en `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`,
+ * masquant la vraie cause au dashboard et faisant boucler le <video> player.
  */
 const createLimitHandler = (limiterName: string) => (req: Request, res: Response): void => {
   const authReq = req as AuthRequest;
@@ -57,6 +62,13 @@ const createLimitHandler = (limiterName: string) => (req: Request, res: Response
   });
 
   getMetricsService()?.recordRateLimitHit(limiterName, keyType);
+
+  if (!res.getHeader('Access-Control-Allow-Origin')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  if (!res.getHeader('Cross-Origin-Resource-Policy')) {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
 
   res.status(429).json({
     error: 'Trop de requêtes',

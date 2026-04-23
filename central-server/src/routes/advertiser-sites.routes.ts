@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth';
+import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import {
   getAdvertiserSites,
@@ -33,6 +34,7 @@ router.get(
   '/advertisers/:id/sites',
   authenticate,
   requireRole('admin', 'operator'),
+  adminRateLimit,
   validateParams(paramSchemas.id),
   getAdvertiserSites
 );
@@ -52,6 +54,7 @@ router.post(
   '/advertisers/:id/sites',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   validateParams(paramSchemas.id),
   validate(schemas.addSitesToAdvertiser),
   addSitesToAdvertiser
@@ -72,6 +75,7 @@ router.put(
   '/advertisers/:advertiserId/sites/:siteId',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   validateParams(paramSchemas.advertiserIdAndSiteId),
   validate(schemas.updateAdvertiserSite),
   updateAdvertiserSite
@@ -90,6 +94,7 @@ router.delete(
   '/advertisers/:advertiserId/sites/:siteId',
   authenticate,
   requireRole('admin', 'operator'),
+  sensitiveRateLimit,
   validateParams(paramSchemas.advertiserIdAndSiteId),
   removeSiteFromAdvertiser
 );
@@ -111,6 +116,7 @@ router.get(
   '/sites/:id/advertisers',
   authenticate,
   requireRole('admin', 'operator'),
+  adminRateLimit,
   validateParams(paramSchemas.id),
   getSiteAdvertisers
 );
@@ -126,9 +132,9 @@ import {
   removeSiteFromSponsor,
 } from '../controllers/advertiser-sites.controller';
 
-router.get('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), validateParams(paramSchemas.id), getSponsorSites);
-router.post('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), validateParams(paramSchemas.id), validate(schemas.addSitesToAdvertiser), addSitesToSponsor);
-router.put('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), validateParams(paramSchemas.sponsorIdAndSiteId), validate(schemas.updateAdvertiserSite), updateSponsorSite);
-router.delete('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), validateParams(paramSchemas.sponsorIdAndSiteId), removeSiteFromSponsor);
+router.get('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.id), getSponsorSites);
+router.post('/sponsors/:id/sites', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, validateParams(paramSchemas.id), validate(schemas.addSitesToAdvertiser), addSitesToSponsor);
+router.put('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, validateParams(paramSchemas.sponsorIdAndSiteId), validate(schemas.updateAdvertiserSite), updateSponsorSite);
+router.delete('/sponsors/:sponsorId/sites/:siteId', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, validateParams(paramSchemas.sponsorIdAndSiteId), removeSiteFromSponsor);
 
 export default router;
