@@ -49,3 +49,27 @@ Le connecteur Pi (PROP-003 v2) n'est plus bloquant pour F-15.2 : quand il arrive
 - `central-dashboard/src/app/features/scoreboard-live/scoreboard-live.component.ts`
 - `central-dashboard/src/app/core/services/socket.service.ts` — listener + subscribe helpers
 - `central-dashboard/src/app/app.routes.ts` — route `/scoreboard-live/:siteId`
+
+## Phase 2 — Simulateur Table de marque dans le dashboard (2026-04-23)
+
+Étendu F-15.2 avec un simulateur **interne au dashboard** (pas d'agent externe requis) pour valider le contrat sim → cloud → dashboard depuis n'importe quel navigateur authentifié.
+
+### Ajouts
+
+1. **Endpoint manuel** `POST /api/scoreboard/:siteId/state-manual` — mêmes payload et broadcast que Phase 1, mais authentifié via **JWT** au lieu d'`authenticateSiteApiKey`. Rôles autorisés : `admin`, `operator`, `club` (super_admin bypass implicite). Les clubs sont scopés à leur propre site via `requireRole` + guard explicite côté controller (`req.user.site_id !== siteId` → 403).
+2. **Composant `ScoreboardSimulatorComponent`** (standalone, signals-based) intégré comme onglet dans `/admin/local` (LocalAdminComponent). UI temps réel : sélecteur site, vendor radio (bodet/stramatel/manual), chrono + shot-clock auto-tick 100ms, boutons scores/fautes/timeout, RESET MATCH, push auto debounced 300ms.
+3. **Service `ScoreboardSimulatorService`** — wrapper ApiService pour `GET /api/sites` et `POST /scoreboard/:siteId/state-manual`.
+
+### Pourquoi deux endpoints distincts ?
+
+- Phase 1 (`/state`) reste réservée aux **agents externes** (sims Bodet/Stramatel, futurs connecteurs Pi) qui connaissent une `api_key` site.
+- Phase 2 (`/state-manual`) est réservée aux **humains authentifiés** dans le dashboard — pas besoin de distribuer des api_key aux opérateurs.
+- Mixer les deux auth schemes dans un seul handler complique la matrice sécurité et rend les smoke tests ambigus.
+
+### Fichiers impactés (Phase 2)
+
+- `central-server/src/controllers/scoreboard.controller.ts` — `postScoreboardStateManual`
+- `central-server/src/routes/scoreboard.routes.ts` — route `/state-manual` JWT + requireRole + Joi
+- `central-server/src/__tests__/smoke/smoke-scoreboard-saas.test.ts` — 2 tests de wiring Phase 2
+- `central-dashboard/src/app/features/admin/local-admin/scoreboard-simulator/` — composant + service
+- `central-dashboard/src/app/features/admin/local-admin/local-admin.component.ts` — intégration onglet

@@ -4,11 +4,14 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AdminOpsService } from '../../../core/services/admin-ops.service';
 import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/admin';
+import { ScoreboardSimulatorComponent } from './scoreboard-simulator/scoreboard-simulator.component';
+
+type LocalAdminTab = 'ops' | 'scoreboard';
 
 @Component({
   selector: 'app-local-admin',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ScoreboardSimulatorComponent],
   template: `
     <div class="page-container">
       <header class="page-header">
@@ -26,6 +29,32 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
         </div>
       </header>
 
+      <nav class="tabs" role="tablist">
+        <button
+          type="button"
+          class="tab"
+          role="tab"
+          [class.active]="activeTab() === 'ops'"
+          (click)="activeTab.set('ops')"
+        >
+          Ops locales
+        </button>
+        <button
+          type="button"
+          class="tab"
+          role="tab"
+          [class.active]="activeTab() === 'scoreboard'"
+          (click)="activeTab.set('scoreboard')"
+        >
+          Simu Table de marque
+        </button>
+      </nav>
+
+      <section *ngIf="activeTab() === 'scoreboard'" class="card">
+        <app-scoreboard-simulator></app-scoreboard-simulator>
+      </section>
+
+      <ng-container *ngIf="activeTab() === 'ops'">
       <section class="grid">
         <article class="card">
           <div class="card-header">
@@ -176,6 +205,7 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
           <div class="empty">Aucun client enregistré.</div>
         </ng-template>
       </section>
+      </ng-container>
     </div>
   `,
   styles: [
@@ -222,6 +252,26 @@ import { AdminActionType, AdminJob, LocalClient } from '../../../core/models/adm
       .hint {
         color: #94a3b8;
         font-size: 0.85rem;
+      }
+      .tabs {
+        display: flex;
+        gap: 0.4rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .tab {
+        background: transparent;
+        border: none;
+        padding: 0.7rem 1.1rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+      .tab.active {
+        color: #0f172a;
+        border-bottom-color: #2022e9;
       }
       .grid {
         display: grid;
@@ -395,6 +445,7 @@ export class LocalAdminComponent implements OnInit, OnDestroy {
   private readonly adminOps = inject(AdminOpsService);
   private subscriptions: Subscription[] = [];
   readonly loading = signal(false);
+  readonly activeTab = signal<LocalAdminTab>('ops');
 
   readonly actionOptions: AdminActionType[] = [
     'build:central',

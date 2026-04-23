@@ -97,6 +97,31 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
     expect(existsRepo('raspberry/scripts/sim-stramatel/test/cloud-push.test.js')).toBe(true);
   });
 
+  describe('F-15.2 Phase 2 — manual push (simulateur Table de marque)', () => {
+    it('POST /:siteId/state-manual route wired with JWT + requireRole + Joi', () => {
+      const routes = readRepo('central-server/src/routes/scoreboard.routes.ts');
+      const idx = routes.indexOf("'/:siteId/state-manual'");
+      expect(idx).toBeGreaterThan(-1);
+      const block = routes.slice(idx, idx + 600);
+      expect(block).toMatch(/authenticate\b/);
+      expect(block).toMatch(/requireRole\(\s*'admin'\s*,\s*'operator'\s*,\s*'club'\s*\)/);
+      expect(block).toMatch(/validateParams\(paramSchemas\.siteId\)/);
+      expect(block).toMatch(/validate\(scoreboardStateSchema\)/);
+      expect(block).toMatch(/postScoreboardStateManual/);
+    });
+
+    it('controller enforces club cross-site guard and reuses repo + broadcast', () => {
+      const ctrl = readRepo('central-server/src/controllers/scoreboard.controller.ts');
+      const idx = ctrl.indexOf('postScoreboardStateManual');
+      expect(idx).toBeGreaterThan(-1);
+      const fn = ctrl.slice(idx, ctrl.indexOf('export const getScoreboardState'));
+      expect(fn).toMatch(/req\.user\?\.role\s*===\s*'club'/);
+      expect(fn).toMatch(/req\.user\.site_id\s*!==\s*siteId/);
+      expect(fn).toMatch(/scoreboardStateRepository\.upsert/);
+      expect(fn).toMatch(/socketService\.emitScoreboardState/);
+    });
+  });
+
   it('route mount is NOT rate-limited globally (ADR-087 anti-pattern)', () => {
     const server = readRepo('central-server/src/server.ts');
     // Mount line for scoreboardRoutes must not include a rate limiter arg
