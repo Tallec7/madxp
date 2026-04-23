@@ -1,3 +1,10 @@
+## [3.232.5](https://github.com/Tallec7/neopro/compare/v3.232.4...v3.232.5) (2026-04-23)
+
+### Bug Fixes
+
+- **cloudflare:** copier \_redirects/\_headers depuis le bon angular.json ([67cdd7f](https://github.com/Tallec7/neopro/commit/67cdd7f5b750118af137a383130379135cffe2e4))
+- **runbook:** J2 — corriger output path Cloudflare Pages ([cbc9026](https://github.com/Tallec7/neopro/commit/cbc9026d9500d2bbef62f674fe634e3983497a51))
+
 ## [3.232.4](https://github.com/Tallec7/neopro/compare/v3.232.3...v3.232.4) (2026-04-23)
 
 ### Bug Fixes
