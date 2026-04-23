@@ -20,7 +20,7 @@
      ```bash
      npm ci && cd central-dashboard && npm install --no-audit --no-fund && cd .. && npm run build:central
      ```
-   - **Build output directory** : `dist/neopro-central-dashboard/browser`
+   - **Build output directory** : `dist/central-dashboard/browser`
    - **Root directory** : `/` (laisser vide)
    - **Environment variables** :
      - `NODE_VERSION` = `22`
@@ -62,7 +62,7 @@ Test après build local :
 
 ```bash
 npm run build:central
-ls -la dist/neopro-central-dashboard/browser/_redirects dist/neopro-central-dashboard/browser/_headers
+ls -la dist/central-dashboard/browser/_redirects dist/central-dashboard/browser/_headers
 ```
 
 Cloudflare auto-détecte ces fichiers à la racine du build output.
