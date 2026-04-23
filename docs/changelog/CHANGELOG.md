@@ -1,3 +1,13 @@
+# [3.228.0](https://github.com/Tallec7/neopro/compare/v3.227.0...v3.228.0) (2026-04-23)
+
+### Bug Fixes
+
+- **remote:** explicit string | null type for livestream mimeType (TS strict) ([#561](https://github.com/Tallec7/neopro/issues/561)) ([ec45792](https://github.com/Tallec7/neopro/commit/ec45792a1276a82b48b7c3f647ad403dfff2d1d7))
+
+### Features
+
+- **remote:** ADR-088 Phase 2 — web_page/livestream first-class content (Pi + SaaS + CloudRemote) ([#560](https://github.com/Tallec7/neopro/issues/560)) ([128b2d8](https://github.com/Tallec7/neopro/commit/128b2d894951eee944bf8b1a27e5922c132b80e6))
+
 # [3.227.0](https://github.com/Tallec7/neopro/compare/v3.226.1...v3.227.0) (2026-04-23)
 
 ### Features
