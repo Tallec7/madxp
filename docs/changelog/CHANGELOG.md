@@ -1,3 +1,9 @@
+# [3.232.0](https://github.com/Tallec7/neopro/compare/v3.231.0...v3.232.0) (2026-04-23)
+
+### Features
+
+- **score:** F-15.2 Phase 4 — unified scoreboard-state sync (ADR-090) ([#569](https://github.com/Tallec7/neopro/issues/569)) ([fd0f98a](https://github.com/Tallec7/neopro/commit/fd0f98a2679c405a0e1832a5a039858928f3db3a))
+
 # [3.231.0](https://github.com/Tallec7/neopro/compare/v3.230.0...v3.231.0) (2026-04-23)
 
 ### Features
