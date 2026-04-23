@@ -1,6 +1,6 @@
 # Runbook J1 — Créer l'environnement Staging
 
-> **Objectif** : disposer d'un `api-neopro-staging.kalonpartners.bzh` + `neopro-staging.kalonpartners.bzh` fonctionnels, isolés de prod, en ~2h.
+> **Objectif** : disposer d'un `api-staging.kalonpartners.bzh` + `neopro-staging.kalonpartners.bzh` fonctionnels, isolés de prod, en ~2h.
 > **Pré-requis** : compte Railway admin, compte Cloudflare admin, accès au repo GitHub.
 > **Niveau de risque** : 🟢 faible — aucune modification sur la prod existante.
 
@@ -77,16 +77,16 @@
 > La zone `kalonpartners.bzh` est sur **Hostinger** (nameservers `ns1/ns2.dns-parking.com`), pas Cloudflare. Le DNS se gère donc dans hPanel.
 
 1. Sur Railway, onglet **Settings** du service staging → **Networking** → **+ Custom Domain**.
-2. Saisir `api-neopro-staging.kalonpartners.bzh`.
+2. Saisir `api-staging.kalonpartners.bzh`.
 3. Copier le CNAME cible proposé par Railway (format `xxx.up.railway.app`).
 4. Aller sur [hpanel.hostinger.com](https://hpanel.hostinger.com) → **Domains** → `kalonpartners.bzh` → **DNS / Nameservers** → **Manage DNS records**.
 5. **Add record** :
    - Type : `CNAME`
-   - Name : `api-neopro-staging`
+   - Name : `api-staging`
    - Target / Points to : `xxx.up.railway.app` (valeur Railway)
    - TTL : 3600
 6. Retour Railway — après ~1 min le domaine passe en vert (TLS Railway Let's Encrypt auto-provisionné).
-7. Test : `curl -I https://api-neopro-staging.kalonpartners.bzh/live` doit retourner 200.
+7. Test : `curl -I https://api-staging.kalonpartners.bzh/live` doit retourner 200.
 
 ## Étape 5 — Seed d'un user admin staging (~5 min)
 
@@ -115,23 +115,23 @@ railway run -- node -e "
 
 ```bash
 # API répond et est bien en mode staging
-curl -s https://api-neopro-staging.kalonpartners.bzh/live
-curl -s https://api-neopro-staging.kalonpartners.bzh/api/version  # doit inclure "env":"staging"
+curl -s https://api-staging.kalonpartners.bzh/live
+curl -s https://api-staging.kalonpartners.bzh/api/version  # doit inclure "env":"staging"
 
 # Login admin fonctionne
-curl -X POST https://api-neopro-staging.kalonpartners.bzh/api/auth/login \
+curl -X POST https://api-staging.kalonpartners.bzh/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@kalonpartners.bzh","password":"..."}'
 
 # DB isolée de prod — pas de sites prod visibles
-curl -s https://api-neopro-staging.kalonpartners.bzh/api/sites \
+curl -s https://api-staging.kalonpartners.bzh/api/sites \
   -H "Authorization: Bearer <token>" | jq '. | length'
 # → doit être 0 (on restaurera un dump anonymisé J3)
 ```
 
 ## Étape 7 — Déclencher le rebuild Grafana/Prometheus (optionnel, ~5 min)
 
-Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitoring/prometheus.yml` pointant vers `api-neopro-staging.kalonpartners.bzh/metrics`. Sinon ignore cette étape pour J1, fais-le J4.
+Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitoring/prometheus.yml` pointant vers `api-staging.kalonpartners.bzh/metrics`. Sinon ignore cette étape pour J1, fais-le J4.
 
 ---
 
@@ -139,7 +139,7 @@ Si tu veux que staging soit scrapé par Prometheus, ajouter un job dans `monitor
 
 - [ ] Service Railway `central-server-staging` déployé, `/live` = 200
 - [ ] DB Postgres `neopro-staging-db` provisionnée et migrée
-- [ ] Domaine `api-neopro-staging.kalonpartners.bzh` actif (TLS OK)
+- [ ] Domaine `api-staging.kalonpartners.bzh` actif (TLS OK)
 - [ ] User `admin@kalonpartners.bzh` créé, password dans le password manager
 - [ ] Variables staging **séparées** de prod (JWT_SECRET différent, FTP bucket différent)
 - [ ] `GET /api/sites` retourne 0 (DB isolée, pas de fuite prod)

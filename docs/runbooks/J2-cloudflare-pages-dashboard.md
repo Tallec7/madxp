@@ -24,7 +24,7 @@
    - **Root directory** : `/` (laisser vide)
    - **Environment variables** :
      - `NODE_VERSION` = `22`
-     - `API_BASE_URL` = `https://api-neopro-staging.kalonpartners.bzh` _(point vers l'API staging J1, prod overrider plus tard)_
+     - `API_BASE_URL` = `https://api-staging.kalonpartners.bzh` _(point vers l'API staging J1, prod overrider plus tard)_
 4. **Save and Deploy**.
 
 ## Étape 2 — Premier build Cloudflare (~10 min)
@@ -84,14 +84,14 @@ Le dashboard a besoin de pointer vers la bonne API selon l'environnement. Deux o
 **Option A — runtime config** (recommandé) : ajouter un fichier `src/assets/config.json` lu au boot :
 
 ```json
-{ "apiBaseUrl": "https://api-neopro-staging.kalonpartners.bzh" }
+{ "apiBaseUrl": "https://api-staging.kalonpartners.bzh" }
 ```
 
 Cloudflare le sert tel quel. Pour prod, ce sera un autre fichier injecté au build via env var.
 
 **Option B — env var build-time** : utiliser `fileReplacements` Angular (pattern existant `environment.ts` / `environment.prod.ts`). Créer `environment.staging.ts` et déclencher la bonne config selon `process.env.NODE_ENV`.
 
-→ **À décider J2 selon l'usage actuel.** Pour démarrer rapidement, hardcoder `api-neopro-staging.kalonpartners.bzh` dans `environment.ts` côté staging et garder `environment.prod.ts` intact pour Hostinger.
+→ **À décider J2 selon l'usage actuel.** Pour démarrer rapidement, hardcoder `api-staging.kalonpartners.bzh` dans `environment.ts` côté staging et garder `environment.prod.ts` intact pour Hostinger.
 
 ## Étape 7 — Vérifications finales (~10 min)
 
@@ -103,7 +103,7 @@ curl -sI https://neopro-dashboard.pages.dev/ | grep -i x-frame    # SAMEORIGIN
 
 # Le dashboard tape bien l'API staging
 # Ouvrir https://neopro-dashboard.pages.dev dans un navigateur
-# DevTools Network : les XHR vont vers api-neopro-staging.kalonpartners.bzh (pas api.neopro.fr)
+# DevTools Network : les XHR vont vers api-staging.kalonpartners.bzh (pas api.neopro.fr)
 ```
 
 ---
@@ -116,7 +116,7 @@ curl -sI https://neopro-dashboard.pages.dev/ | grep -i x-frame    # SAMEORIGIN
 - [ ] `neopro-dashboard.pages.dev` actif (TLS Cloudflare, server: cloudflare)
 - [ ] SPA fallback OK : `/sites/ci-probe` retourne 200
 - [ ] Preview Deployments activés (URL unique par PR)
-- [ ] Le dashboard staging tape `api-neopro-staging.kalonpartners.bzh` (pas la prod)
+- [ ] Le dashboard staging tape `api-staging.kalonpartners.bzh` (pas la prod)
 
 **Livrable** : `neopro-dashboard.pages.dev` opérationnel, branché sur l'API staging J1. Prêt pour J3 (anonymized DB dump → tu auras enfin du contenu réel pour démo).
 
