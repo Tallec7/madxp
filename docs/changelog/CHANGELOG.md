@@ -1,3 +1,9 @@
+## [3.232.2](https://github.com/Tallec7/neopro/compare/v3.232.1...v3.232.2) (2026-04-23)
+
+### Bug Fixes
+
+- **score:** dedicated rate limit for /state-manual streaming pushes ([#571](https://github.com/Tallec7/neopro/issues/571)) ([dfea68a](https://github.com/Tallec7/neopro/commit/dfea68a0b6039dada42a066184559d5586ad8563))
+
 ## [3.232.1](https://github.com/Tallec7/neopro/compare/v3.232.0...v3.232.1) (2026-04-23)
 
 ### Bug Fixes
