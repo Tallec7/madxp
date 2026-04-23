@@ -1,3 +1,9 @@
+# [3.227.0](https://github.com/Tallec7/neopro/compare/v3.226.1...v3.227.0) (2026-04-23)
+
+### Features
+
+- **remote:** ADR-088 Phase 2 — web_page/livestream first-class content (Pi + SaaS + CloudRemote) ([#558](https://github.com/Tallec7/neopro/issues/558)) ([dc11e84](https://github.com/Tallec7/neopro/commit/dc11e841b3a9e95b5c5e4aecf3219b2445613191))
+
 ## [3.226.1](https://github.com/Tallec7/neopro/compare/v3.226.0...v3.226.1) (2026-04-23)
 
 ### Bug Fixes
