@@ -2,41 +2,62 @@
   <!-- HEADER -->
   <header class="r2-header">
     <button class="r2-club-pill" (click)="openSheet('profile')">
-      {{ currentProfile }}
+      <span class="r2-club-badge">{{ clubInitials }}</span>
+      <span>{{ currentProfile }}</span>
     </button>
     <div class="r2-header-actions">
-      <button class="r2-icon-btn" [class.rec-active]="recording" (click)="toggleRecording()">
-        {{ recording ? 'REC' : '⏺' }}
-      </button>
-      <button class="r2-icon-btn" (click)="openSheet('gear')">⚙</button>
+      <button class="r2-icon-btn" (click)="openSheet('gear')" aria-label="Menu">⚙</button>
     </div>
   </header>
 
   <!-- HERO "À l'antenne" -->
   <section class="r2-hero">
-    <div class="r2-hero-label">À l'antenne</div>
-
-    <div class="r2-loop-tabs">
-      <button [class.active]="loopId === 'before'" (click)="setLoop('before')">Avant-match</button>
-      <button [class.active]="loopId === 'during'" (click)="setLoop('during')">Match</button>
-      <button [class.active]="loopId === 'after'" (click)="setLoop('after')">Après-match</button>
+    <div class="r2-hero-eyebrow">
+      <span class="r2-hero-dot"></span>
+      <span>À l'antenne</span>
     </div>
 
-    <div class="r2-hero-info" *ngIf="loopVideo()">
-      <span class="r2-video-name">{{ loopVideo()?.name }}</span>
+    <div class="r2-hero-main">
+      <div class="r2-tv-thumb">
+        <button
+          class="r2-rec-badge"
+          [class.active]="recording"
+          (click)="toggleRecording()"
+          aria-label="Enregistrer"
+        >
+          <span class="r2-rec-dot"></span>
+        </button>
+      </div>
+      <div class="r2-hero-info" *ngIf="loopVideo()">
+        <span class="r2-video-name">{{ loopVideo()?.name }}</span>
+      </div>
     </div>
 
-    <div class="r2-display-target" *ngIf="displays.length > 0">
-      <button [class.active]="targetDisplay === 'all'" (click)="setTargetDisplay('all')">
-        Tous
-      </button>
-      <button
-        *ngFor="let d of displays"
-        [class.active]="targetDisplay === d.id"
-        (click)="setTargetDisplay(d.id)"
-      >
-        {{ d.label }}
-      </button>
+    <div class="r2-loop-tabs-wrap">
+      <div class="r2-hero-section-label">Boucle</div>
+      <div class="r2-loop-tabs">
+        <button [class.active]="loopId === 'before'" (click)="setLoop('before')">
+          Avant-match
+        </button>
+        <button [class.active]="loopId === 'during'" (click)="setLoop('during')">Match</button>
+        <button [class.active]="loopId === 'after'" (click)="setLoop('after')">Après-match</button>
+      </div>
+    </div>
+
+    <div class="r2-display-wrap" *ngIf="displays.length > 0">
+      <div class="r2-hero-section-label">Écran</div>
+      <div class="r2-display-target">
+        <button [class.active]="targetDisplay === 'all'" (click)="setTargetDisplay('all')">
+          Tous
+        </button>
+        <button
+          *ngFor="let d of displays"
+          [class.active]="targetDisplay === d.id"
+          (click)="setTargetDisplay(d.id)"
+        >
+          {{ d.label }}
+        </button>
+      </div>
     </div>
   </section>
 
@@ -44,6 +65,7 @@
   <section class="r2-widgets">
     <!-- Score -->
     <div class="r2-widget r2-widget-score">
+      <div class="r2-widget-label">Score</div>
       <div class="r2-score-row">
         <div class="r2-team">
           <span class="r2-team-name">{{ scoreService.currentScore.homeTeam }}</span>
@@ -68,6 +90,7 @@
 
     <!-- Chrono -->
     <div class="r2-widget r2-widget-chrono">
+      <div class="r2-widget-label">Chrono</div>
       <span class="r2-chrono-display">{{ chronoDisplay }}</span>
       <div class="r2-chrono-btns">
         <button (click)="toggleTimer()">{{ timerService.isRunning ? '⏸' : '▶' }}</button>

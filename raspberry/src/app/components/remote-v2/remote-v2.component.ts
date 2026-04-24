@@ -100,6 +100,15 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Profil actif (nom). */
   currentProfile = '';
 
+  /** Initiales (2 lettres max) du club/profil actif pour le badge header. */
+  get clubInitials(): string {
+    const source = this.currentProfile || '';
+    const parts = source.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '–';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
   /** Toast (notification fugitive). */
   toast: string | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
