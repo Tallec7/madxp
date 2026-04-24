@@ -71,11 +71,13 @@ describe('AdminFieldEditorComponent', () => {
     cmp = fixture.componentInstance;
   });
 
-  it('renders a text field header with label + slot key', () => {
+  it('renders a text field header with label + slot key', async () => {
     cmp.field = { kind: 'text', value: makeTextField() } as EditableField;
     fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
-    // Label is rendered as an editable input — check its value, not textContent
+    // Label is rendered as an editable input bound via ngModel — check presence + value
     const labelInput = host.querySelector<HTMLInputElement>(
       '[data-testid="admin-field-label-score"]',
     );
