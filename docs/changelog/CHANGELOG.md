@@ -1,3 +1,9 @@
+## [3.237.2](https://github.com/Tallec7/neopro/compare/v3.237.1...v3.237.2) (2026-04-24)
+
+### Bug Fixes
+
+- **ci:** add retry to frontend-health probe to absorb FTP deploy window ([#585](https://github.com/Tallec7/neopro/issues/585)) ([39bdfba](https://github.com/Tallec7/neopro/commit/39bdfba854c85f945417f7af0358ac04664cc081))
+
 ## [3.237.1](https://github.com/Tallec7/neopro/compare/v3.237.0...v3.237.1) (2026-04-24)
 
 ### Bug Fixes
