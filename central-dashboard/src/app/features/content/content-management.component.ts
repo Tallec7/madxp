@@ -252,7 +252,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   }
 
   get webContentSiteOptions(): WebContentSiteOption[] {
-    return this.sites.map(s => ({ id: s.id, name: s.name }));
+    return this.sites.map((s) => ({ id: s.id, name: s.site_name }));
   }
 
   // ── Video CRUD actions ──
