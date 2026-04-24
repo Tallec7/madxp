@@ -1148,6 +1148,12 @@ export const querySchemas = {
     type: Joi.string().max(100).optional(),
   }),
 
+  matchHistory: Joi.object({
+    limit: Joi.number().integer().min(1).max(100).optional(),
+    from: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    to: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  }),
+
   multiSiteComparison: Joi.object({
     site_ids: Joi.string().optional(),
     days: Joi.string().optional().default('30'),

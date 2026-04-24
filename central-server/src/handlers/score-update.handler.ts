@@ -11,6 +11,7 @@
 
 import { Socket } from 'socket.io';
 import logger from '../config/logger';
+import pool from '../config/database';
 import { auditService } from '../services/audit.service';
 
 // Throttle score audit to avoid flooding audit_logs (one entry per minute max per site)
@@ -123,6 +124,21 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
         // Ignore audit errors
       });
     }
+
+    // ADR-092 — Freeze latest scores on the open club_session (if any).
+    // Auto-close CRON reads these columns as the final scores.
+    pool
+      .query(
+        `UPDATE club_sessions
+         SET home_score = $2, away_score = $3
+         WHERE site_id = $1 AND ended_at IS NULL
+         AND started_at = (
+           SELECT MAX(started_at) FROM club_sessions
+           WHERE site_id = $1 AND ended_at IS NULL
+         )`,
+        [siteId, homeScore, awayScore]
+      )
+      .catch((err) => logger.warn('score-update: club_sessions update failed', { err, siteId }));
 
     // Note: Le stockage du score dans sponsor_impressions se fait
     // automatiquement côté Raspberry Pi dans le service sponsor-analytics

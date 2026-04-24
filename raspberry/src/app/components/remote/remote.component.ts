@@ -97,6 +97,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public isDemoMode = false;
   public isMultiProfile = false;
   public currentProfileName: string | null = null;
+  public currentProfileId: string | null = null;
   public isReloading = false;
 
   // Club-selector (mode demo ou multi-profil)
@@ -413,6 +414,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       this.demoConfigService.loadClubConfiguration(club.id).subscribe({
         next: (config) => {
           this.currentProfileName = club.name;
+          this.currentProfileId = club.id;
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
           this.socketService.emit('command', { type: 'reload-config', data: config });
@@ -424,6 +426,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       this.saasConfigService.loadProfileConfiguration(siteId, club.id).subscribe({
         next: (config) => {
           this.currentProfileName = club.name;
+          this.currentProfileId = club.id;
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
         },
@@ -433,6 +436,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
         next: (config) => {
           this.currentProfileName = club.name;
+          this.currentProfileId = club.id;
           this.initializeWithConfiguration(config);
           this.currentView = 'home';
           this.socketService.emit('profile-switch', { profileId: club.id });
@@ -814,11 +818,16 @@ export class RemoteComponent implements OnInit, OnDestroy {
     if (this.matchInfo.audienceEstimate > 0) {
       this.analyticsService.setAudienceEstimate(this.matchInfo.audienceEstimate);
     }
+    const match = this.localOptionsService.getOptions().match;
     this.socketService.emit('match-config', {
       sessionId: this.currentSessionId,
       matchDate: this.matchInfo.date,
       matchName: this.matchInfo.matchName,
-      audienceEstimate: this.matchInfo.audienceEstimate
+      audienceEstimate: this.matchInfo.audienceEstimate,
+      homeTeam: match?.homeTeam?.name || undefined,
+      awayTeam: match?.awayTeam?.name || undefined,
+      profileId: this.currentProfileId || undefined,
+      eventType: 'match'
     });
     this.scoreService.updateTeamNamesFromMatch(this.matchInfo.matchName);
     this.showMatchModal = false;

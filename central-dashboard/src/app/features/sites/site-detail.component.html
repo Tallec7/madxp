@@ -671,14 +671,40 @@
               <div class="match-item" *ngFor="let match of matchHistory.matches">
                 <div class="match-date">{{ formatMatchDate(match.matchDate) }}</div>
                 <div class="match-details">
-                  <div class="match-name">{{ match.matchName }}</div>
+                  <div class="match-name">
+                    <ng-container *ngIf="match.homeTeam || match.awayTeam; else legacyName">
+                      {{ match.homeTeam || '?' }}
+                      <span
+                        class="match-score"
+                        *ngIf="match.homeScore !== null && match.awayScore !== null"
+                      >
+                        {{ match.homeScore }} - {{ match.awayScore }}
+                      </span>
+                      <span *ngIf="match.homeScore === null || match.awayScore === null"> vs </span>
+                      {{ match.awayTeam || '?' }}
+                    </ng-container>
+                    <ng-template #legacyName>{{ match.matchName }}</ng-template>
+                  </div>
                   <div class="match-meta">
+                    <span
+                      class="match-badge"
+                      *ngIf="match.eventType && match.eventType !== 'match'"
+                    >
+                      {{ match.eventType }}
+                    </span>
                     <span class="match-badge" *ngIf="match.audienceEstimate">
                       👥 {{ match.audienceEstimate }} spectateurs
                     </span>
                     <span class="match-badge"> 📺 {{ match.videosPlayed }} vidéos </span>
                     <span class="match-badge" *ngIf="match.durationMinutes">
                       ⏱️ {{ match.durationMinutes }} min
+                    </span>
+                    <span
+                      class="match-badge"
+                      *ngIf="match.endedBy === 'timeout'"
+                      title="Cloturée automatiquement"
+                    >
+                      ⏲️ auto
                     </span>
                   </div>
                 </div>

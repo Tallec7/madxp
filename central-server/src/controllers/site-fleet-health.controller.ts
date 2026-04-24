@@ -263,6 +263,10 @@ export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const fromStr = req.query.from as string | undefined;
+    const toStr = req.query.to as string | undefined;
+    const from = fromStr ? new Date(fromStr) : undefined;
+    const to = toStr ? new Date(toStr) : undefined;
 
     // Verify site exists
     const siteInfo = await siteRepository.findBasicInfo(id);
@@ -273,7 +277,7 @@ export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
     // Get match history and aggregate stats in parallel
     const [matchRows, matchStats] = await Promise.all([
       siteRepository.getMatchHistory(id, limit),
-      siteRepository.getMatchStats(id),
+      siteRepository.getMatchStats(id, from, to),
     ]);
 
     const stats = matchStats;
@@ -282,6 +286,13 @@ export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
       id: m.id,
       matchDate: m.match_date || m.started_at,
       matchName: m.match_name || 'Match non nommé',
+      homeTeam: m.home_team,
+      awayTeam: m.away_team,
+      homeScore: m.home_score,
+      awayScore: m.away_score,
+      profileId: m.profile_id,
+      eventType: m.event_type || 'match',
+      endedBy: m.ended_by,
       audienceEstimate: m.audience_estimate,
       startedAt: m.started_at,
       endedAt: m.ended_at,

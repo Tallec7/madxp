@@ -148,6 +148,13 @@ export interface MatchRow extends QueryResultRow {
   match_date: Date | null;
   match_name: string | null;
   audience_estimate: number | null;
+  home_team: string | null;
+  away_team: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  profile_id: string | null;
+  event_type: string | null;
+  ended_by: string | null;
 }
 
 export interface MatchStatsRow extends QueryResultRow {
@@ -664,10 +671,13 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       `SELECT
         id, started_at, ended_at, duration_seconds,
         videos_played, manual_triggers, auto_plays,
-        match_date, match_name, audience_estimate
+        match_date, match_name, audience_estimate,
+        home_team, away_team, home_score, away_score,
+        profile_id, event_type, ended_by
       FROM club_sessions
       WHERE site_id = $1
-        AND (match_name IS NOT NULL OR audience_estimate IS NOT NULL)
+        AND (match_name IS NOT NULL OR audience_estimate IS NOT NULL
+             OR home_team IS NOT NULL OR away_team IS NOT NULL)
       ORDER BY COALESCE(match_date, started_at::date) DESC, started_at DESC
       LIMIT $2`,
       [siteId, limit]
@@ -676,9 +686,27 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   }
 
   /**
-   * Recupere les stats agreges des matchs pour un site.
+   * Recupere les stats agreges des matchs pour un site, filtrable par periode.
+   * ADR-092: rapports sponsors utilisent avg_audience sur la periode.
    */
-  async getMatchStats(siteId: string): Promise<MatchStatsRow> {
+  async getMatchStats(
+    siteId: string,
+    from?: Date,
+    to?: Date
+  ): Promise<MatchStatsRow> {
+    const conditions: string[] = [
+      'site_id = $1',
+      '(match_name IS NOT NULL OR audience_estimate IS NOT NULL OR home_team IS NOT NULL OR away_team IS NOT NULL)',
+    ];
+    const params: unknown[] = [siteId];
+    if (from) {
+      params.push(from.toISOString());
+      conditions.push(`COALESCE(match_date, started_at::date) >= $${params.length}`);
+    }
+    if (to) {
+      params.push(to.toISOString());
+      conditions.push(`COALESCE(match_date, started_at::date) <= $${params.length}`);
+    }
     const result = await query<MatchStatsRow>(
       `SELECT
         COUNT(*) as total_matches,
@@ -687,9 +715,8 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
         COALESCE(SUM(videos_played), 0) as total_videos,
         COALESCE(SUM(duration_seconds), 0) as total_duration
       FROM club_sessions
-      WHERE site_id = $1
-        AND (match_name IS NOT NULL OR audience_estimate IS NOT NULL)`,
-      [siteId]
+      WHERE ${conditions.join(' AND ')}`,
+      params
     );
     return result.rows[0];
   }

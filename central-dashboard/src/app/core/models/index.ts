@@ -482,6 +482,13 @@ export interface Match {
   id: string;
   matchDate: Date;
   matchName: string;
+  homeTeam: string | null;
+  awayTeam: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  profileId: string | null;
+  eventType: string;
+  endedBy: string | null;
   audienceEstimate: number | null;
   startedAt: Date;
   endedAt: Date | null;
