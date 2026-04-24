@@ -365,3 +365,63 @@ jobs:
           fi
 
           echo "✅ SaaS deployment verified — SPA fallback works on deep routes"
+
+  deploy-railway:
+    name: Deploy Central Server to Railway
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    # J4 — même gate que dashboard/saas : approbation manuelle via GitHub Environment.
+    # Auto-deploy Railway est désactivé (watchPatterns = __manual_deploy_only__/**).
+    # Ce job bump __manual_deploy_only__/trigger.md → Railway rebuild via watch.
+    environment: divine-freedom / production
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          ref: main
+
+      - name: Bump Railway deploy trigger
+        run: |
+          mkdir -p __manual_deploy_only__
+          TRIGGER_FILE="__manual_deploy_only__/trigger.md"
+          VERSION="${{ needs.release.outputs.new_release_version }}"
+          TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          SHA="${GITHUB_SHA:0:8}"
+
+          # Append one line to the history table to force a real file change
+          # (empty commits don't match railway.json watchPatterns).
+          if [ ! -f "$TRIGGER_FILE" ]; then
+            cat > "$TRIGGER_FILE" <<EOF
+          # Manual Deploy Trigger
+
+          Ce dossier matche \`watchPatterns\` de \`railway.json\` — commit ici = rebuild prod Railway.
+
+          ## Historique
+
+          | Date | Commit SHA | Version |
+          |------|------------|---------|
+          EOF
+          fi
+          echo "| $TS | $SHA | $VERSION |" >> "$TRIGGER_FILE"
+
+      - name: Commit + push trigger
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add __manual_deploy_only__/trigger.md
+          git commit -m "chore(deploy): trigger Railway rebuild for v${{ needs.release.outputs.new_release_version }} [skip ci]"
+          git push origin main
+
+      - name: Verify Railway deploy picks up
+        run: |
+          echo "⏳ Waiting 90s for Railway to detect the watchPattern match..."
+          sleep 90
+          echo "Railway deploy should be BUILDING now."
+          echo "Check: https://railway.app/project/$(echo '${{ secrets.RAILWAY_PROJECT_ID }}' | head -c 8)…"
+          echo ""
+          echo "Post-deploy health check will run in a separate job (frontend-health.yml)."
