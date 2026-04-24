@@ -40,6 +40,9 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Retirer `selectedSlot` / `selectSlot()` / `onCanvasBackgroundClick()`** (casse le click-to-select, régression step 3).
 - **Retirer la prop `startFontSize` de `DragState` ou le fallback `d.startFontSize ?? tf.fontSize`** (la resize text devient non-annulable — régression step 2 + step 7).
 - **Retirer le toggle mode édition/preview (`asp__mode` / `setMode` / `recomputePlayerState`)** ou omettre `proxyUrl()` dans `recomputePlayerState` (CORB ; cf. ADR-087).
+- **Retourner à un `<strong>` non éditable pour le libellé dans `admin-field-editor.component.ts`** (input `.afe__label` avec `data-testid="admin-field-label-<slotKey>"` — sans quoi l'admin ne peut pas renommer un slot depuis le panel).
+- **Supprimer le guard `*ngIf="hasMask(l)"` ou la méthode `hasMask()`** dans `admin-layers-panel.component.ts` (sans lui, le panel réaffiche `0/0/0/0` cryptique pour les layers sans recadrage — feedback UX post-PR #586).
+- **Retirer les sections FR "Police / Taille (px) / Couleur / Alignement / Calque parent / Zone sûre & cadrage"** du field editor (ADR-095 polish : les libellés techniques `fontFamily`/`fontSize`/`Safe-zone & fit` ont été francisés pour les utilisateurs non-tech).
 
 ### CLI `template:import` (ADR-095 — smoke test enforced)
 
