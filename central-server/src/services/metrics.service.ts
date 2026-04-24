@@ -245,6 +245,15 @@ const stateSyncRelaysTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Match Sessions Auto-Close (ADR-093) =============
+
+const matchSessionsAutoclosedTotal = new Counter({
+  name: 'neopro_match_sessions_autoclosed_total',
+  help: 'Total club_sessions auto-closed by CRON (ADR-093)',
+  labelNames: ['reason'], // idle | absolute
+  registers: [register],
+});
+
 // ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
 
 const remoteClientVersionTotal = new Counter({
@@ -956,6 +965,11 @@ class MetricsService {
   /** ADR-059: state-sync reçu du Pi et relayé vers la room dashboard */
   recordStateSyncRelay(): void {
     stateSyncRelaysTotal.inc();
+  }
+
+  /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */
+  recordMatchSessionAutoclosed(reason: 'idle' | 'absolute', count = 1): void {
+    if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
   }
 
   /** ADR-061: accès télécommande tracé avec client_version pour pilotage sunset */

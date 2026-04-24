@@ -318,7 +318,7 @@ class AuditService {
   async logMatchStarted(
     siteId: string,
     sessionId: string,
-    matchConfig: { matchName?: string; matchDate?: string; audienceEstimate?: number }
+    matchConfig: Record<string, unknown>
   ): Promise<void> {
     await this.log({
       action: 'MATCH_STARTED',

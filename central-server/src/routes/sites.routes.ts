@@ -40,7 +40,7 @@ router.get('/:id/dashboard', authenticate, monitoringRateLimit, validateParams(p
 router.get('/:id/timeline', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
 
 // Match history for clubs (Phase 1.2 - audience, videos played per match)
-router.get('/:id/match-history', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMatchHistory);
+router.get('/:id/match-history', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), validateQuery(querySchemas.matchHistory), sitesController.getSiteMatchHistory);
 
 router.get(
   '/:id/logs',

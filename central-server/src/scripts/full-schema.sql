@@ -1673,7 +1673,14 @@ CREATE TABLE public.club_sessions (
     created_at timestamp without time zone DEFAULT now(),
     match_date date,
     match_name character varying(255),
-    audience_estimate integer
+    audience_estimate integer,
+    home_team character varying(100),
+    away_team character varying(100),
+    home_score integer,
+    away_score integer,
+    profile_id uuid,
+    event_type character varying(50) DEFAULT 'match'::character varying,
+    ended_by character varying(50)
 );
 
 
@@ -2124,7 +2131,7 @@ CREATE TABLE public.recurring_schedules (
     CONSTRAINT check_frequency CHECK (((frequency IS NULL) OR ((frequency)::text = ANY (ARRAY[('daily'::character varying)::text, ('weekly'::character varying)::text, ('monthly'::character varying)::text])))),
     CONSTRAINT check_hour CHECK (((hour >= 0) AND (hour <= 23))),
     CONSTRAINT check_minute CHECK (((minute >= 0) AND (minute <= 59))),
-    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY (ARRAY[('report'::character varying)::text, ('cleanup'::character varying)::text, ('aggregation'::character varying)::text, ('backup'::character varying)::text, ('objective_check'::character varying)::text])))
+    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY (ARRAY[('report'::character varying)::text, ('cleanup'::character varying)::text, ('aggregation'::character varying)::text, ('backup'::character varying)::text, ('objective_check'::character varying)::text, ('pdf_report'::character varying)::text, ('match_session_autoclose'::character varying)::text])))
 );
 
 ALTER TABLE ONLY public.recurring_schedules FORCE ROW LEVEL SECURITY;
