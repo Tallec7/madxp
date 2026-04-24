@@ -1,3 +1,9 @@
+# [3.235.0](https://github.com/Tallec7/neopro/compare/v3.234.0...v3.235.0) (2026-04-24)
+
+### Features
+
+- **match:** persister sessions match + auto-close CRON (ADR-092) ([#576](https://github.com/Tallec7/neopro/issues/576)) ([a3f2107](https://github.com/Tallec7/neopro/commit/a3f21070c4b35a20dedc348827e586a66b4bebec)), closes [#579](https://github.com/Tallec7/neopro/issues/579) [#579](https://github.com/Tallec7/neopro/issues/579)
+
 # [3.234.0](https://github.com/Tallec7/neopro/compare/v3.233.2...v3.234.0) (2026-04-24)
 
 ### Bug Fixes
