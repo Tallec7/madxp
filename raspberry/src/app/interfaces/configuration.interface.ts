@@ -188,6 +188,12 @@ export interface Configuration {
      * Résolution de l'écran secondaire (ex: '1920x384' pour LED, '1920x1080' pour TV).
      */
     secondaryDisplayResolution?: string;
+    /**
+     * Feature flags synchronisés depuis la DB cloud (`sites.feature_overrides`)
+     * par `sync-agent/src/services/feature-flags-sync.js` (ADR-092).
+     * Lus par RemoteHostComponent pour router V1/V2.
+     */
+    featureOverrides?: Record<string, boolean>;
 }
 
 /**

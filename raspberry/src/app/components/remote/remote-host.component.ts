@@ -14,6 +14,7 @@ import { ActivatedRoute } from '@angular/router';
 import { RemoteComponent } from './remote.component';
 import { RemoteV2Component } from '../remote-v2/remote-v2.component';
 import { SaasConfigService } from '../../services/saas-config.service';
+import { Configuration } from '../../interfaces/configuration.interface';
 
 const OVERRIDE_STORAGE_KEY = 'neopro_remote_v2_override';
 
@@ -58,6 +59,14 @@ export class RemoteHostComponent implements OnInit {
     const stored = localStorage.getItem(OVERRIDE_STORAGE_KEY);
     if (stored === '1') return true;
     if (stored === '0') return false;
+
+    // ADR-092: sur Pi, featureOverrides est écrit dans configuration.json par
+    // feature-flags-sync.js. Sur SaaS, il est servi via /api/saas/:siteId/config.
+    const configuration = this.route.snapshot.data['configuration'] as Configuration | undefined;
+    const piOverrides = configuration?.featureOverrides;
+    if (piOverrides && typeof piOverrides['remote_v2'] === 'boolean') {
+      return piOverrides['remote_v2'];
+    }
 
     return this.saasConfig.isFeatureEnabled('remote_v2');
   }

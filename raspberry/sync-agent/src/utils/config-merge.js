@@ -24,6 +24,7 @@ const LOCAL_ONLY_SETTINGS = [
   'hotspot',         // Configuration WiFi hotspot (SSID, etc.) - si jamais stocké ici
   'localNetwork',    // Configuration réseau locale
   'localSponsors',   // Sponsors créés localement par le bénévole (P3)
+  'featureOverrides', // Feature flags écrits par feature-flags-sync.js (ADR-092)
 ];
 
 /**

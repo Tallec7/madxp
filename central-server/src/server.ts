@@ -28,6 +28,7 @@ import authRoutes from './routes/auth.routes';
 import mfaRoutes from './routes/mfa.routes';
 import sitesRoutes from './routes/sites.routes';
 import hotspotConfigRoutes from './routes/hotspot-config.routes';
+import featureFlagsPiRoutes from './routes/feature-flags-pi.routes';
 import webContentPiRoutes from './routes/web-content-pi.routes';
 import groupsRoutes from './routes/groups.routes';
 import contentRoutes from './routes/content.routes';
@@ -495,6 +496,7 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', hotspotConfigRoutes); // ADR-074 — hotspot PSK cloud source of truth (Pi + admin endpoints, auth + rate limits per-route)
+app.use('/api/sites', featureFlagsPiRoutes); // ADR-092 — feature flags fetched by Pi sync-agent (authenticateSiteApiKey, :id/feature-flags)
 app.use('/api/sites', webContentPiRoutes); // ADR-088 — Pi fetch web_page/livestream entries (authenticateSiteApiKey)
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft
 app.use('/api/sites', configProfilesRoutes);  // Config profiles - sous /api/sites/:siteId/profiles

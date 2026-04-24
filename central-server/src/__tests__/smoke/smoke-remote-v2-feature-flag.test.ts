@@ -93,6 +93,62 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/Télécommande V2/.test(tab)).toBe(true);
   });
 
+  // ------------ Pi sync-agent path (ADR-092 Phase Pi) ------------
+
+  it('central-server exposes Pi-facing GET /api/sites/:id/feature-flags', () => {
+    const route = 'central-server/src/routes/feature-flags-pi.routes.ts';
+    const controller = 'central-server/src/controllers/feature-flags.controller.ts';
+    expect(exists(route)).toBe(true);
+    expect(exists(controller)).toBe(true);
+
+    const routeContent = read(route);
+    // Pi auth (api_key Bearer), not JWT admin.
+    expect(/authenticateSiteApiKey/.test(routeContent)).toBe(true);
+    expect(/:id\/feature-flags/.test(routeContent)).toBe(true);
+
+    const ctrl = read(controller);
+    // Guard site mismatch — a Pi can only read its own flags.
+    expect(/req\.siteId\s*!==\s*id/.test(ctrl)).toBe(true);
+    expect(/feature_overrides/.test(ctrl)).toBe(true);
+
+    // Route mounted in server.ts.
+    const server = read('central-server/src/server.ts');
+    expect(/featureFlagsPiRoutes/.test(server)).toBe(true);
+  });
+
+  it('sync-agent fetches feature flags on reconnect and writes configuration.json', () => {
+    const svc = 'raspberry/sync-agent/src/services/feature-flags-sync.js';
+    expect(exists(svc)).toBe(true);
+    const content = read(svc);
+    expect(/\/api\/sites\/\$\{siteId\}\/feature-flags/.test(content)).toBe(true);
+    expect(/featureOverrides/.test(content)).toBe(true);
+    expect(/atomicWriteJson/.test(content)).toBe(true);
+
+    const agent = read('raspberry/sync-agent/src/agent.js');
+    expect(/syncFeatureFlagsFromCloud/.test(agent)).toBe(true);
+    expect(/featureFlagsInterval/.test(agent)).toBe(true);
+  });
+
+  it('featureOverrides is declared in LOCAL_ONLY_SETTINGS (never wiped by cloud push)', () => {
+    const merge = read('raspberry/sync-agent/src/utils/config-merge.js');
+    expect(/'featureOverrides'/.test(merge)).toBe(true);
+  });
+
+  it('RemoteHostComponent reads featureOverrides from route configuration (Pi mode)', () => {
+    const host = read(
+      'raspberry/src/app/components/remote/remote-host.component.ts',
+    );
+    // Reads configuration from route data (resolver).
+    expect(/route\.snapshot\.data\[['"]configuration['"]\]/.test(host)).toBe(true);
+    // Reads featureOverrides out of configuration before falling back to SaasConfigService.
+    expect(/featureOverrides/.test(host)).toBe(true);
+  });
+
+  it('Configuration interface declares featureOverrides for Pi resolver', () => {
+    const iface = read('raspberry/src/app/interfaces/configuration.interface.ts');
+    expect(/featureOverrides\??:\s*Record<string,\s*boolean>/.test(iface)).toBe(true);
+  });
+
   // ------------ ADR present ------------
 
   it('ADR-092 is committed alongside the implementation', () => {
