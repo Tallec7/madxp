@@ -2,10 +2,9 @@
  * RemoteHostComponent — Dispatcher V1 / V2 de la télécommande.
  *
  * Règle de décision (ordre de priorité) :
- * 1. Query param `?v2=1` ou `?v2=0` — override local persisté en localStorage.
- * 2. localStorage (persistance de l'override entre sessions).
- * 3. Feature flag `remote_v2` côté site (via SaasConfigService) — source cloud.
- * 4. Fallback V1 (legacy) sinon.
+ * 1. Query param `?v2=1` ou `?v2=0` — override local pour test (précède toujours).
+ * 2. Feature flag `remote_v2` côté site (via SaasConfigService) — source cloud.
+ * 3. Fallback V1 (legacy) sinon.
  *
  * Rollback : query param `?v2=0` OU décocher la feature dans le dashboard.
  */
@@ -41,6 +40,10 @@ export class RemoteHostComponent implements OnInit {
     this.useV2 = this.resolveVariant();
   }
 
+  /**
+   * Décide V1 vs V2. Priorité : query param > localStorage > feature flag site.
+   * L'override localStorage persiste entre sessions pour faciliter les tests.
+   */
   private resolveVariant(): boolean {
     const qp = this.route.snapshot.queryParamMap.get('v2');
     if (qp === '1' || qp === 'true') {
