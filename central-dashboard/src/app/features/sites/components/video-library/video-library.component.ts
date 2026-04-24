@@ -34,6 +34,7 @@ import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-
 import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
 import { VideoLibraryListComponent } from './video-library-list/video-library-list.component';
 import { VideoBulkActionsBarComponent } from './video-bulk-actions-bar/video-bulk-actions-bar.component';
+import { WebContentCreateModalComponent, WebContentType } from '../../../../shared/components/web-content-create-modal/web-content-create-modal.component';
 
 export type {
   VideoContentStatus,
@@ -61,6 +62,7 @@ export type {
     VideoLibraryFiltersComponent,
     VideoLibraryListComponent,
     VideoBulkActionsBarComponent,
+    WebContentCreateModalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
@@ -140,6 +142,24 @@ export class VideoLibraryComponent implements OnChanges {
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() bulkDeploy = new EventEmitter<VideoItem[]>();
   @Output() bulkDelete = new EventEmitter<VideoItem[]>();
+  /** Emitted after a web_page or livestream is successfully created — parent should reload its video list. */
+  @Output() webContentCreated = new EventEmitter<void>();
+
+  /** Active web-content modal type. Null means closed. */
+  webContentModalType: WebContentType | null = null;
+
+  openWebContentModal(type: WebContentType): void {
+    this.webContentModalType = type;
+  }
+
+  closeWebContentModal(): void {
+    this.webContentModalType = null;
+  }
+
+  onWebContentCreated(): void {
+    this.webContentModalType = null;
+    this.webContentCreated.emit();
+  }
 
   filteredVideos: VideoItem[] = [];
   allVideos: VideoItem[] = [];

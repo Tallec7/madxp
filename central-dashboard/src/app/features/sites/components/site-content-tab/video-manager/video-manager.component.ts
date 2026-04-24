@@ -59,6 +59,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         (variantChanged)="onVariantChanged($event)"
         (addToTarget)="addToTarget.emit($event)"
         (removeFromTarget)="removeFromTarget.emit($event)"
+        (webContentCreated)="webContentCreated.emit()"
       ></app-video-library>
     </div>
 
@@ -233,6 +234,7 @@ export class VideoManagerComponent {
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
   @Output() videoDeploy = new EventEmitter<VideoItem>();
   @Output() videoDeleted = new EventEmitter<void>();
+  @Output() webContentCreated = new EventEmitter<void>();
   @Output() secondaryVariantChanged = new EventEmitter<void>();
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2

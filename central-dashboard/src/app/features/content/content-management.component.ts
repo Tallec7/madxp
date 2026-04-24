@@ -8,6 +8,7 @@ import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
 import { VideoCardComponent } from '../../shared/components/video-card/video-card.component';
+import { WebContentCreateModalComponent, WebContentSiteOption, WebContentType } from '../../shared/components/web-content-create-modal/web-content-create-modal.component';
 import {
   ContentManagementDataService,
   ContentVideoRow,
@@ -22,7 +23,7 @@ import { ContentDeploymentService } from './content-deployment.service';
 @Component({
   selector: 'app-content-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent, VideoCardComponent],
+  imports: [CommonModule, FormsModule, TranslateModule, VideoVariantPanelComponent, VideoCardComponent, WebContentCreateModalComponent],
   templateUrl: './content-management.component.html',
   styleUrls: ['./content-management.component.scss']
 })
@@ -41,21 +42,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   showUploadModal = false;
   showHistoryModal = false;
   showImageModal = false;
-  showWebContentModal = false;
-  isCreatingWebContent = false;
-  webContentForm: {
-    contentType: 'web_page' | 'livestream';
-    name: string;
-    url: string;
-    durationSeconds: number | null;
-    category: string;
-  } = { contentType: 'web_page', name: '', url: '', durationSeconds: null, category: '' };
-
-  get webContentModalTitleKey(): string {
-    return this.webContentForm.contentType === 'livestream'
-      ? 'content.addLivestream'
-      : 'content.addWebPage';
-  }
+  webContentModalType: WebContentType | null = null;
 
   isLoadingHistory = false;
   isDragOver = false;
@@ -251,50 +238,21 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   // ── ADR-089 — Web content (page web / livestream) ──
 
   openWebContentModal(contentType: 'web_page' | 'livestream'): void {
-    this.webContentForm = { contentType, name: '', url: '', durationSeconds: null, category: '' };
-    this.showWebContentModal = true;
+    this.webContentModalType = contentType;
   }
 
   closeWebContentModal(): void {
-    if (this.isCreatingWebContent) return;
-    this.showWebContentModal = false;
+    this.webContentModalType = null;
   }
 
-  submitWebContent(): void {
-    const name = this.webContentForm.name.trim();
-    const url = this.webContentForm.url.trim();
-    if (!name || !/^https?:\/\//i.test(url)) {
-      this.notificationService.error('Nom et URL (http/https) requis');
-      return;
-    }
-    if (this.webContentForm.contentType === 'livestream'
-        && (!this.webContentForm.durationSeconds || this.webContentForm.durationSeconds <= 0)) {
-      this.notificationService.error('Durée requise pour un livestream');
-      return;
-    }
-    this.isCreatingWebContent = true;
-    this.dataService.createWebContent({
-      contentType: this.webContentForm.contentType,
-      name,
-      url,
-      category: this.webContentForm.category.trim() || null,
-      durationSeconds: this.webContentForm.durationSeconds ?? null,
-    }).subscribe({
-      next: () => {
-        this.isCreatingWebContent = false;
-        this.showWebContentModal = false;
-        this.notificationService.success('Contenu créé');
-        this.loadVideos();
-        this.loadAllVideos();
-      },
-      error: (error: unknown) => {
-        this.isCreatingWebContent = false;
-        const message = this.dataService.getErrorMessage(error);
-        this.notificationService.error(`Erreur: ${message}`, {
-          correlationId: this.dataService.getCorrelationId(error),
-        });
-      },
-    });
+  onWebContentCreated(): void {
+    this.webContentModalType = null;
+    this.loadVideos();
+    this.loadAllVideos();
+  }
+
+  get webContentSiteOptions(): WebContentSiteOption[] {
+    return this.sites.map(s => ({ id: s.id, name: s.name }));
   }
 
   // ── Video CRUD actions ──

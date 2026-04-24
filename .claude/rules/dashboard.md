@@ -56,6 +56,9 @@ paths:
 - NE PAS utiliser de `<select>` natif pour les sélecteurs vidéo dans les config-editors ou loop-manager (utiliser `<app-video-search-select>` avec `[compact]="true"` — les selects natifs ne supportent pas l'autocomplete et sont inutilisables avec 50+ vidéos — smoke test enforced)
 - NE PAS retirer `:host { display: block }` de `video-search-select.component.ts` (sans display:block, le host inline ne participe pas au flex layout → zone cliquable trop petite — smoke test enforced)
 - NE PAS retirer le positionnement `position: fixed` du `.vss__dropdown` dans `video-search-select` (le dropdown doit échapper aux containers `overflow:hidden` des catégories/sous-catégories — smoke test enforced)
+- NE PAS dégater les boutons création 🌐 Page web / 📡 Livestream dans `video-library.component.html` (action block `*ngIf="siteId"` obligatoire — sans le guard, la vue admin globale `/content` exposerait des boutons avec `lockedSiteId = null` → tout contenu créé tomberait silencieusement en global, peu importe le site sélectionné — ADR-089 Phase 2.1, smoke test enforced)
+- NE PAS dupliquer le formulaire de création web_page/livestream — toujours passer par `<app-web-content-create-modal>` (`shared/components/web-content-create-modal/`) qui POST sur `/videos/web-content` avec `uploadedForSiteId = lockedSiteId ?? selectedSiteId ?? null`. La logique inline `webContentForm` + `submitWebContent` dans `content-management.component.ts` est interdite (ADR-089 Phase 2.1, smoke test enforced)
+- NE PAS oublier `(webContentCreated)="loadContent()"` sur `<app-video-manager>` dans `site-content-tab.component.html` (sans cet event, la nouvelle entrée web_page/livestream reste invisible jusqu'à reload manuel — ADR-089 Phase 2.1, smoke test enforced)
 
 ## OTA Dashboard
 
