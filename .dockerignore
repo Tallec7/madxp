@@ -1,0 +1,72 @@
+# Railway uses central-server/Dockerfile with repo root as build context.
+# This file minimizes the context uploaded to the builder.
+
+# Angular builds not needed by central-server Dockerfile
+central-dashboard/
+raspberry/
+e2e/
+scripts/test-dashboard/
+.angular/
+
+# Build artifacts
+dist/
+build/
+coverage/
+.nx/
+tools/
+
+# Node modules (installed inside Docker)
+node_modules/
+**/node_modules/
+
+# Templates Remotion heavy assets (will be copied explicitly by Dockerfile)
+# NOTE: templates-remotion/public/ IS needed (WebM assets) — don't exclude.
+# Only exclude build artifacts inside:
+templates-remotion/out/
+templates-remotion/preview/dist/
+
+# Planning / docs not copied by Dockerfile
+# (Dockerfile copies only docs/safe/, docs/proposals/, docs/adr/)
+.planning/
+.cursor/
+.claude/
+docs/guides/
+docs/runbooks/
+docs/clients/
+docs/changelog/
+docs/technical/
+docs/safe-archive/
+docs/archive/
+docs/templates/
+docs/images/
+__manual_deploy_only__/
+
+# VCS + CI
+.git/
+.github/
+.husky/
+
+# Env / logs
+.env*
+!.env.example
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Test / coverage
+**/coverage/
+**/__tests__/
+**/__mocks__/
+
+# Misc heavy files
+*.tgz
+*.tar.gz
+*.xlsx
+tmp/
+.tmp/

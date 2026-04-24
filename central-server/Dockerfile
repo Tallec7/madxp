@@ -1,5 +1,9 @@
+# syntax=docker/dockerfile:1.6
+# BuildKit cache mounts (--mount=type=cache) reduce npm install time by 30-60s
+# on subsequent builds when node_modules don't change structurally.
+
 # ============================================
-# Stage 1: Dependencies
+# Stage 1: Dependencies (all deps for build + runtime pruning base)
 # ============================================
 FROM node:20-slim AS deps
 
@@ -18,8 +22,9 @@ COPY central-server/package*.json ./
 # Skip Puppeteer Chromium download (we install system Chromium in the runtime stage)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-# Install all dependencies (including dev for build)
-RUN npm ci
+# Install all dependencies (including dev for build) with npm cache mount
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci
 
 # ============================================
 # Stage 1b: Remotion dependencies (production — no dev tools)
@@ -33,7 +38,8 @@ COPY templates-remotion/package*.json ./
 # Skip Chromium download (we use system Chromium in the runtime stage)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-RUN npm ci --omit=dev && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --omit=dev
 
 # ============================================
 # Stage 1c: Preview app builder (Vite + @remotion/player)
@@ -45,7 +51,8 @@ WORKDIR /app/templates-remotion
 # Install all deps (including vite, @vitejs/plugin-react)
 COPY templates-remotion/package*.json ./
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci
 
 # Copy sources and build
 COPY templates-remotion/ .
@@ -69,26 +76,14 @@ COPY docs/adr/ ./docs-adr/
 RUN npm run build
 
 # ============================================
-# Stage 3: Production Dependencies
+# Stage 3: Production Dependencies (prune from deps stage to avoid duplicate npm ci)
 # ============================================
-FROM node:20-slim AS prod-deps
+FROM deps AS prod-deps
 
-WORKDIR /app
-
-# Install dependencies for native modules (canvas needs native compilation)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
-    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev libpixman-1-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY central-server/package*.json ./
-
-# Skip Puppeteer Chromium download (we install system Chromium in the runtime stage)
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# Remove dev dependencies in place (saves a full `npm ci --omit=dev` run, ~45s).
+# `npm prune` uses the same registry cache and lockfile resolution already done
+# in the deps stage, so no network calls are made.
+RUN npm prune --omit=dev && npm cache clean --force
 
 # ============================================
 # Stage 4: Production Runtime
