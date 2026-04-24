@@ -1,3 +1,9 @@
+# [3.236.0](https://github.com/Tallec7/neopro/compare/v3.235.0...v3.236.0) (2026-04-24)
+
+### Features
+
+- **remote:** ADR-092 Phase Pi — feature flags Pi + fix CI semantic-release ([#581](https://github.com/Tallec7/neopro/issues/581)) ([d118b38](https://github.com/Tallec7/neopro/commit/d118b38b91eebfa784409af682947b1ab8b7232f))
+
 # [3.235.0](https://github.com/Tallec7/neopro/compare/v3.234.0...v3.235.0) (2026-04-24)
 
 ### Features
