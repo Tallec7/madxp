@@ -1,3 +1,19 @@
+# [3.234.0](https://github.com/Tallec7/neopro/compare/v3.233.2...v3.234.0) (2026-04-24)
+
+### Bug Fixes
+
+- **ci:** afficher l'output semantic-release en cas d'échec ([a38e78d](https://github.com/Tallec7/neopro/commit/a38e78dbdca39bba44a64f547145bd252f79f66e))
+- **ci:** aligner environment name sur 'divine-freedom / production' ([ff12f0d](https://github.com/Tallec7/neopro/commit/ff12f0d835d452271cdf83664e9f231768543a5a))
+- **content:** use Site.site_name in webContentSiteOptions mapping ([78f3dd4](https://github.com/Tallec7/neopro/commit/78f3dd4362dc71b8b037ddcdd21bdf99210ee338))
+- **cors:** support wildcard subdomain origins for Cloudflare Pages previews ([4d24839](https://github.com/Tallec7/neopro/commit/4d24839fce2b7fabac7663a4eb874a2db4f34628))
+- **saas:** use environment.saasBaseUrl instead of hardcoded prod URL ([b86ceee](https://github.com/Tallec7/neopro/commit/b86ceee265dd4129bfbba306cbbd61b2504dd85b))
+
+### Features
+
+- **content:** UI création web_page/livestream per-site + admin site selector (ADR-089 Phase 2.1) ([897bb80](https://github.com/Tallec7/neopro/commit/897bb8013a19c90334be286f911e1e1a13410305))
+- **remote:** télécommande V2 avec feature flag per-site + rollback < 10s (ADR-092) ([70a783c](https://github.com/Tallec7/neopro/commit/70a783cdf880f6bd1f2a17826a1ebdd290c41d05))
+- **remote:** télécommande V2 avec feature flag per-site + rollback instantané ([#579](https://github.com/Tallec7/neopro/issues/579)) ([73b7c20](https://github.com/Tallec7/neopro/commit/73b7c20aa27d83a425f48256ec5f80536fe75501))
+
 ## [3.233.2](https://github.com/Tallec7/neopro/compare/v3.233.1...v3.233.2) (2026-04-23)
 
 ### Bug Fixes
