@@ -4,13 +4,13 @@ Procédures pas-à-pas pour les opérations infra/ops non-automatisées. Un runb
 
 ## Plan NOW (staging setup — avril 2026)
 
-| #   | Runbook                                                        | Objectif                                                                                              | Statut        |
-| --- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- |
-| J1  | [Staging setup](J1-staging-setup.md)                           | Créer Railway `central-server-staging` + DB + domaine `api-staging.kalonpartners.bzh` (Hostinger DNS) | 🟡 à exécuter |
-| J2  | [Cloudflare Pages dashboard](J2-cloudflare-pages-dashboard.md) | Dashboard `neopro-exg.pages.dev` sur Cloudflare Pages + PR previews (Option A, sans custom domain)    | 🟡 à exécuter |
-| J3  | Restore staging DB depuis prod (à créer)                       | Script anonymisation + restore hebdo                                                                  | 🔴 pending    |
-| J4  | Scinder release.yml (à créer)                                  | staging-deploy.yml (main) + prod-deploy.yml (tag) + protect main                                      | 🔴 pending    |
-| J5  | Onboarding Gabin (à créer)                                     | Accès, docs, TEAM.md                                                                                  | 🔴 pending    |
+| #   | Runbook                                                                   | Objectif                                                                                              | Statut        |
+| --- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------- |
+| J1  | [Staging setup](J1-staging-setup.md)                                      | Créer Railway `central-server-staging` + DB + domaine `api-staging.kalonpartners.bzh` (Hostinger DNS) | 🟡 à exécuter |
+| J2  | [Cloudflare Pages dashboard](J2-cloudflare-pages-dashboard.md)            | Dashboard `neopro-exg.pages.dev` sur Cloudflare Pages + PR previews (Option A, sans custom domain)    | 🟡 à exécuter |
+| J3  | [Anonymized prod dump](J3-anonymized-prod-dump.md)                        | Script anonymisation + restore hebdo                                                                  | ✅ exécuté    |
+| J4  | [Split CI/CD + branch protection](J4-cicd-split-and-branch-protection.md) | staging auto + prod gated review + protect main                                                       | ✅ exécuté    |
+| J5  | [Onboarding Gabin](J5-onboarding-gabin.md)                                | Accès, docs, TEAM.md                                                                                  | 🟡 à exécuter |
 
 ## Ops récurrentes (à écrire post-J5)
 
