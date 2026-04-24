@@ -34,6 +34,7 @@ const networkWatchdog = require('./services/network-watchdog');
 const hostapdTelemetry = require('./services/hostapd-telemetry');
 const { syncFromCloud: hotspotSyncFromCloud } = require('./services/hotspot-sync');
 const { syncFromCloud: webContentSyncFromCloud } = require('./services/web-content-sync');
+const { syncFromCloud: featureFlagsSyncFromCloud } = require('./services/feature-flags-sync');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
 const commands = require('./commands');
@@ -477,6 +478,19 @@ class NeoproSyncAgent {
         logger.warn('web-content-sync: periodic sync failed', { error: err.message });
       });
     }, 30 * 60 * 1000);
+
+    // ADR-092: pull feature_overrides from cloud and merge into configuration.json
+    // root-level `featureOverrides`. Runs async — non blocking.
+    this.syncFeatureFlagsFromCloud().catch((err) => {
+      logger.warn('feature-flags-sync: initial sync failed', { error: err.message });
+    });
+
+    if (this.featureFlagsInterval) clearInterval(this.featureFlagsInterval);
+    this.featureFlagsInterval = setInterval(() => {
+      this.syncFeatureFlagsFromCloud().catch((err) => {
+        logger.warn('feature-flags-sync: periodic sync failed', { error: err.message });
+      });
+    }, 30 * 60 * 1000);
   }
 
   /**
@@ -506,6 +520,21 @@ class NeoproSyncAgent {
       configPath: config.paths && config.paths.config,
     });
     logger.info('web-content-sync: result', result);
+  }
+
+  /**
+   * ADR-092 — fetch cloud `feature_overrides` and write to configuration.json
+   * root-level `featureOverrides`. Read by the Angular Pi app on boot.
+   */
+  async syncFeatureFlagsFromCloud() {
+    if (!config.site.id || !config.site.apiKey || !config.central.url) return;
+    const result = await featureFlagsSyncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+      configPath: config.paths && config.paths.config,
+    });
+    logger.info('feature-flags-sync: result', result);
   }
 
   /**
