@@ -157,6 +157,44 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "saas-staging": {
+              "baseHref": "/saas/",
+              "fileReplacements": [
+                {
+                  "replace": "raspberry/src/environments/environment.ts",
+                  "with": "raspberry/src/environments/environment.saas.staging.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "raspberry/public"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "raspberry/src/assets/i18n",
+                  "output": "assets/i18n"
+                },
+                {
+                  "glob": "socket.io.min.js",
+                  "input": "raspberry/src/assets",
+                  "output": "assets"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "3MB",
+                  "maximumError": "5MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "50kB",
+                  "maximumError": "64kB"
+                }
+              ],
+              "outputHashing": "all"
             }
           },
           "defaultConfiguration": "production"
