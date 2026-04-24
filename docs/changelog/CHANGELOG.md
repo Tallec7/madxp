@@ -1,3 +1,9 @@
+# [3.238.0](https://github.com/Tallec7/neopro/compare/v3.237.2...v3.238.0) (2026-04-24)
+
+### Features
+
+- **templates:** Template Studio v2 admin UX (ADR-095) ([#586](https://github.com/Tallec7/neopro/issues/586)) ([d91e0cd](https://github.com/Tallec7/neopro/commit/d91e0cd6fa1d6992ffd57ac9aee4d08834e4f180))
+
 ## [3.237.2](https://github.com/Tallec7/neopro/compare/v3.237.1...v3.237.2) (2026-04-24)
 
 ### Bug Fixes
