@@ -75,7 +75,12 @@ describe('AdminFieldEditorComponent', () => {
     cmp.field = { kind: 'text', value: makeTextField() } as EditableField;
     fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
-    expect(host.textContent).toContain('Score');
+    // Label is rendered as an editable input — check its value, not textContent
+    const labelInput = host.querySelector<HTMLInputElement>(
+      '[data-testid="admin-field-label-score"]',
+    );
+    expect(labelInput).toBeTruthy();
+    expect(labelInput!.value).toBe('Score');
     expect(host.textContent).toContain('score');
     expect(host.textContent).toContain('Texte');
   });
