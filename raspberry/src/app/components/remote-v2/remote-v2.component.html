@@ -15,6 +15,7 @@
     <div class="r2-hero-eyebrow">
       <span class="r2-hero-dot"></span>
       <span>À l'antenne</span>
+      <span class="r2-tag r2-tag--live" *ngIf="recording || loopId === 'during'">LIVE</span>
     </div>
 
     <div class="r2-hero-main">
@@ -64,9 +65,9 @@
   <!-- WIDGETS compacts -->
   <section class="r2-widgets">
     <!-- Score -->
-    <div class="r2-widget r2-widget-score">
+    <div class="r2-widget r2-widget-score" (click)="openSheet('widget-score')">
       <div class="r2-widget-label">Score</div>
-      <div class="r2-score-row">
+      <div class="r2-score-row" (click)="$event.stopPropagation()">
         <div class="r2-team">
           <span class="r2-team-name">{{ scoreService.currentScore.homeTeam }}</span>
           <div class="r2-score-btns">
@@ -85,17 +86,33 @@
           </div>
         </div>
       </div>
-      <button class="r2-reset-btn" (click)="resetScore()">Réinitialiser</button>
+      <button class="r2-reset-btn" (click)="$event.stopPropagation(); resetScore()">
+        Réinitialiser
+      </button>
     </div>
 
     <!-- Chrono -->
-    <div class="r2-widget r2-widget-chrono">
+    <div class="r2-widget r2-widget-chrono" (click)="openSheet('widget-chrono')">
       <div class="r2-widget-label">Chrono</div>
       <span class="r2-chrono-display">{{ chronoDisplay }}</span>
-      <div class="r2-chrono-btns">
+      <div class="r2-chrono-btns" (click)="$event.stopPropagation()">
         <button (click)="toggleTimer()">{{ timerService.isRunning ? '⏸' : '▶' }}</button>
         <button (click)="resetTimer()">↺</button>
       </div>
+    </div>
+
+    <!-- Breaking -->
+    <div class="r2-widget r2-widget-breaking" [class.live]="breakingLive">
+      <span class="r2-breaking-bar" *ngIf="breakingLive"></span>
+      <div class="r2-widget-label r2-widget-label--breaking">
+        Info<ng-container *ngIf="breakingLive"> · LIVE</ng-container>
+      </div>
+      <button class="r2-breaking-text" (click)="openSheet('widget-breaking')">
+        {{ breakingText || 'Tapez pour saisir un message' }}
+      </button>
+      <button class="r2-breaking-btn" [class.live]="breakingLive" (click)="toggleBreaking()">
+        {{ breakingLive ? 'Retirer' : 'Diffuser' }}
+      </button>
     </div>
   </section>
 
@@ -131,7 +148,8 @@
               [class.playing]="playingVideoId === v.id"
               (click)="playVideo(v)"
             >
-              {{ v.name }}
+              <span class="r2-video-thumb" [style.background]="videoThumbGradient(v.id)">▶</span>
+              <span class="r2-video-name">{{ v.name }}</span>
             </button>
           </div>
         </div>
@@ -144,7 +162,8 @@
             [class.playing]="playingVideoId === v.id"
             (click)="playVideo(v)"
           >
-            {{ v.name }}
+            <span class="r2-video-thumb" [style.background]="videoThumbGradient(v.id)">▶</span>
+            <span class="r2-video-name">{{ v.name }}</span>
           </button>
         </div>
       </div>
@@ -164,10 +183,38 @@
       <button (click)="closeSheet()">✕</button>
     </div>
     <div class="r2-sheet-body">
-      <button class="r2-menu-item" (click)="openMatchInfo()">Infos match</button>
-      <button class="r2-menu-item" (click)="openSheet('profile')">Profil</button>
-      <button class="r2-menu-item" (click)="openSheet('prefs')">Préférences</button>
-      <button class="r2-menu-item" (click)="openSheet('options')">Options match</button>
+      <button class="r2-gear-item" (click)="openMatchInfo()">
+        <span class="r2-gear-icon">⏱</span>
+        <span class="r2-gear-main">
+          <span class="r2-gear-label">Infos du match</span>
+          <span class="r2-gear-sub">Équipes, date, spectateurs</span>
+        </span>
+        <span class="r2-gear-chev">›</span>
+      </button>
+      <button class="r2-gear-item" (click)="openSheet('profile')">
+        <span class="r2-gear-icon">👤</span>
+        <span class="r2-gear-main">
+          <span class="r2-gear-label">Profil actif</span>
+        </span>
+        <span class="r2-gear-value">{{ currentProfile }}</span>
+      </button>
+      <button class="r2-gear-item" (click)="openSheet('prefs')">
+        <span class="r2-gear-icon">📱</span>
+        <span class="r2-gear-main">
+          <span class="r2-gear-label">Préférences appareil</span>
+          <span class="r2-gear-sub">Haptique, contraste…</span>
+        </span>
+        <span class="r2-gear-chev">›</span>
+      </button>
+      <div class="r2-gear-sep"></div>
+      <button class="r2-gear-item" (click)="openSheet('options')">
+        <span class="r2-gear-icon">⚙</span>
+        <span class="r2-gear-main">
+          <span class="r2-gear-label">Options match</span>
+          <span class="r2-gear-sub">Score, chrono, template…</span>
+        </span>
+        <span class="r2-gear-chev">›</span>
+      </button>
       <hr />
       <button class="r2-menu-item r2-menu-item--secondary" (click)="backToV1()">Retour V1</button>
     </div>
@@ -229,22 +276,28 @@
       <button (click)="closeSheet()">✕</button>
     </div>
     <div class="r2-sheet-body">
-      <label class="r2-pref-row">
+      <div class="r2-pref-row">
         <span>Contraste élevé</span>
-        <input
-          type="checkbox"
-          [checked]="prefsService.prefs.highContrast"
-          (change)="updatePref('highContrast', $any($event.target).checked)"
-        />
-      </label>
-      <label class="r2-pref-row">
+        <button
+          class="r2-switch"
+          [class.on]="prefsService.prefs.highContrast"
+          (click)="updatePref('highContrast', !prefsService.prefs.highContrast)"
+          aria-label="Contraste élevé"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
+      <div class="r2-pref-row">
         <span>Vibrations</span>
-        <input
-          type="checkbox"
-          [checked]="prefsService.prefs.haptics"
-          (change)="updatePref('haptics', $any($event.target).checked)"
-        />
-      </label>
+        <button
+          class="r2-switch"
+          [class.on]="prefsService.prefs.haptics"
+          (click)="updatePref('haptics', !prefsService.prefs.haptics)"
+          aria-label="Vibrations"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -256,22 +309,28 @@
       <button (click)="closeSheet()">✕</button>
     </div>
     <div class="r2-sheet-body">
-      <label class="r2-pref-row">
+      <div class="r2-pref-row">
         <span>Overlay score</span>
-        <input
-          type="checkbox"
-          [checked]="localOptions.overlay?.scoreEnabled"
-          (change)="updateOverlayScore($any($event.target).checked)"
-        />
-      </label>
-      <label class="r2-pref-row">
+        <button
+          class="r2-switch"
+          [class.on]="localOptions.overlay?.scoreEnabled"
+          (click)="updateOverlayScore(!localOptions.overlay?.scoreEnabled)"
+          aria-label="Overlay score"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
+      <div class="r2-pref-row">
         <span>Breaking news</span>
-        <input
-          type="checkbox"
-          [checked]="localOptions.breakingNews?.enabled"
-          (change)="updateBreakingEnabled($any($event.target).checked)"
-        />
-      </label>
+        <button
+          class="r2-switch"
+          [class.on]="localOptions.breakingNews?.enabled"
+          (click)="updateBreakingEnabled(!localOptions.breakingNews?.enabled)"
+          aria-label="Breaking news"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
       <label class="r2-pref-row">
         <span>Position breaking news</span>
         <select
@@ -292,14 +351,17 @@
           (change)="updateTimerDuration(+$any($event.target).value)"
         />
       </label>
-      <label class="r2-pref-row">
+      <div class="r2-pref-row">
         <span>Décompte</span>
-        <input
-          type="checkbox"
-          [checked]="localOptions.timer?.countDown"
-          (change)="updateTimerCountDown($any($event.target).checked)"
-        />
-      </label>
+        <button
+          class="r2-switch"
+          [class.on]="localOptions.timer?.countDown"
+          (click)="updateTimerCountDown(!localOptions.timer?.countDown)"
+          aria-label="Décompte"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
       <label class="r2-pref-row">
         <span>Template</span>
         <select
@@ -312,6 +374,88 @@
       </label>
       <hr />
       <button class="r2-reset-btn" (click)="resetOptions()">Réinitialiser les options</button>
+    </div>
+  </div>
+
+  <!-- Widget Score sheet -->
+  <div
+    class="r2-sheet-backdrop"
+    *ngIf="activeSheet === 'widget-score'"
+    (click)="closeSheet()"
+  ></div>
+  <div class="r2-sheet" *ngIf="activeSheet === 'widget-score'">
+    <div class="r2-sheet-header">
+      <span>Score en direct</span>
+      <button (click)="closeSheet()">✕</button>
+    </div>
+    <div class="r2-sheet-body">
+      <div class="r2-module-score">
+        <div class="r2-module-side">
+          <div class="r2-module-team-badge">{{ scoreService.currentScore.homeTeam }}</div>
+          <div class="r2-module-score-val">{{ scoreService.currentScore.homeScore }}</div>
+          <div class="r2-module-score-btns">
+            <button (click)="decHome()">−</button>
+            <button class="primary" (click)="incHome()">+</button>
+          </div>
+        </div>
+        <div class="r2-module-side">
+          <div class="r2-module-team-badge">{{ scoreService.currentScore.awayTeam }}</div>
+          <div class="r2-module-score-val">{{ scoreService.currentScore.awayScore }}</div>
+          <div class="r2-module-score-btns">
+            <button (click)="decAway()">−</button>
+            <button class="primary" (click)="incAway()">+</button>
+          </div>
+        </div>
+      </div>
+      <button class="r2-reset-btn" (click)="resetScore()">Réinitialiser</button>
+    </div>
+  </div>
+
+  <!-- Widget Chrono sheet -->
+  <div
+    class="r2-sheet-backdrop"
+    *ngIf="activeSheet === 'widget-chrono'"
+    (click)="closeSheet()"
+  ></div>
+  <div class="r2-sheet" *ngIf="activeSheet === 'widget-chrono'">
+    <div class="r2-sheet-header">
+      <span>Chronomètre</span>
+      <button (click)="closeSheet()">✕</button>
+    </div>
+    <div class="r2-sheet-body">
+      <div class="r2-module-chrono">{{ chronoDisplay }}</div>
+      <div class="r2-module-chrono-btns">
+        <button class="dark" (click)="toggleTimer()">
+          {{ timerService.isRunning ? '⏸ Pause' : '▶ Reprendre' }}
+        </button>
+        <button (click)="resetTimer()">RAZ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Widget Breaking sheet -->
+  <div
+    class="r2-sheet-backdrop"
+    *ngIf="activeSheet === 'widget-breaking'"
+    (click)="closeSheet()"
+  ></div>
+  <div class="r2-sheet" *ngIf="activeSheet === 'widget-breaking'">
+    <div class="r2-sheet-header">
+      <span>Bandeau breaking news</span>
+      <button (click)="closeSheet()">✕</button>
+    </div>
+    <div class="r2-sheet-body">
+      <div class="r2-module-breaking-label">Texte du bandeau</div>
+      <textarea
+        class="r2-module-breaking-input"
+        rows="3"
+        [value]="breakingText"
+        (input)="updateBreakingText($any($event.target).value)"
+        placeholder="Saisissez votre message…"
+      ></textarea>
+      <button class="r2-module-breaking-btn" [class.live]="breakingLive" (click)="toggleBreaking()">
+        {{ breakingLive ? "Retirer de l'écran" : 'Diffuser en overlay' }}
+      </button>
     </div>
   </div>
 </div>
