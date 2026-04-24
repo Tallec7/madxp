@@ -1,3 +1,9 @@
+## [3.237.1](https://github.com/Tallec7/neopro/compare/v3.237.0...v3.237.1) (2026-04-24)
+
+### Bug Fixes
+
+- **staging:** build SaaS app into /saas/ subpath on Cloudflare Pages ([#583](https://github.com/Tallec7/neopro/issues/583)) ([044b644](https://github.com/Tallec7/neopro/commit/044b6442c49530c7f587374b4510af1cc6097d01))
+
 # [3.237.0](https://github.com/Tallec7/neopro/compare/v3.236.0...v3.237.0) (2026-04-24)
 
 ### Features
