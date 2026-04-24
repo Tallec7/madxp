@@ -1,3 +1,9 @@
+# [3.240.0](https://github.com/Tallec7/neopro/compare/v3.239.0...v3.240.0) (2026-04-24)
+
+### Features
+
+- **remote:** compléter alignement V7 (widget breaking, module sheets, switches, thumbs) ([#588](https://github.com/Tallec7/neopro/issues/588)) ([e049fc9](https://github.com/Tallec7/neopro/commit/e049fc955522472bebb32f076ea230dd9630648f))
+
 # [3.239.0](https://github.com/Tallec7/neopro/compare/v3.238.0...v3.239.0) (2026-04-24)
 
 ### Features
