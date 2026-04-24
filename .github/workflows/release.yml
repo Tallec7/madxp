@@ -46,9 +46,17 @@ jobs:
       - name: Run semantic-release
         id: semantic
         run: |
-          # Capture semantic-release output to detect if a release was published
+          # Capture output separately so set -e doesn't hide the error message
+          set +e
           SR_OUTPUT=$(npx semantic-release 2>&1)
+          SR_EXIT=$?
+          set -e
           echo "$SR_OUTPUT"
+
+          if [ $SR_EXIT -ne 0 ]; then
+            echo "::error::semantic-release exited with code $SR_EXIT"
+            exit $SR_EXIT
+          fi
 
           # Parse the published version from semantic-release output
           PUBLISHED_VERSION=$(echo "$SR_OUTPUT" | grep -oP 'Published release \K[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
