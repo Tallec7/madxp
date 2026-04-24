@@ -140,6 +140,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     { key: 'analytics_advanced', label: 'Analytics avancées', tier: 'Premium' },
     { key: 'remote_diagnostic', label: 'Diagnostic distant', tier: 'Premium' },
     { key: 'white_label', label: 'Marque blanche', tier: 'Premium' },
+    { key: 'remote_v2', label: 'Télécommande V2 (beta)', tier: 'Beta' },
   ];
 
   constructor(

@@ -60,6 +60,12 @@
       "port": 3000
     },
     {
+      "name": "remote-v7-preview",
+      "runtimeExecutable": "/opt/homebrew/bin/python3",
+      "runtimeArgs": ["-m", "http.server", "4299", "--directory", ".claude/preview/v7"],
+      "port": 4299
+    },
+    {
       "name": "remotion-studio",
       "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v18.20.7/bin/npx",
       "runtimeArgs": ["remotion", "studio", "--port", "3002"],

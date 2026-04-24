@@ -302,12 +302,21 @@ export async function getSaasConfig(req: Request, res: Response) {
       settings: configuration.settings || {},
     };
 
+    // Feature overrides (ADR-039 Phase 3) — exposés au navigateur SaaS pour le gating
+    // côté client (ex: `remote_v2` toggle par site pour la télécommande V2).
+    const featureOverrides: Record<string, boolean> = site.feature_overrides
+      ? typeof site.feature_overrides === 'string'
+        ? JSON.parse(site.feature_overrides)
+        : (site.feature_overrides as Record<string, boolean>)
+      : {};
+
     // Métadonnées du site
     const response = {
       siteId,
       siteName: site.site_name,
       clubName: site.club_name,
       sport: site.sport || null,
+      featureOverrides,
       configuration: resolvedConfig,
     };
 
@@ -452,6 +461,12 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       settings: configuration.settings || {},
     };
 
+    const featureOverrides: Record<string, boolean> = site.feature_overrides
+      ? typeof site.feature_overrides === 'string'
+        ? JSON.parse(site.feature_overrides)
+        : (site.feature_overrides as Record<string, boolean>)
+      : {};
+
     return res.json({
       siteId,
       siteName: site.site_name,
@@ -459,6 +474,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       profileId: profile.id,
       profileName: profile.display_name || profile.name,
       sport: profile.sport || site.sport || null,
+      featureOverrides,
       configuration: resolvedConfig,
     });
   } catch (error) {

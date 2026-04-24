@@ -30,6 +30,7 @@ interface SaasConfigResponse {
   siteName: string;
   clubName: string;
   sport: string | null;
+  featureOverrides?: Record<string, boolean>;
   configuration: Configuration;
   profileId?: string;
   profileName?: string;
@@ -48,6 +49,7 @@ export class SaasConfigService {
   private selectedConfiguration: Configuration | null = null;
   private siteName: string | null = null;
   private clubName: string | null = null;
+  private featureOverrides: Record<string, boolean> = {};
 
   public isSaasMode(): boolean {
     return !!(environment as { saasMode?: boolean }).saasMode;
@@ -92,6 +94,7 @@ export class SaasConfigService {
       tap(response => {
         this.siteName = response.siteName;
         this.clubName = response.clubName;
+        this.featureOverrides = response.featureOverrides || {};
       }),
       map(response => response.configuration),
       tap(config => {
@@ -113,6 +116,7 @@ export class SaasConfigService {
       tap(response => {
         this.siteName = response.siteName;
         this.clubName = response.clubName;
+        this.featureOverrides = response.featureOverrides || {};
       }),
       map(response => response.configuration),
       tap(config => {
@@ -202,5 +206,18 @@ export class SaasConfigService {
 
   public getClubName(): string {
     return this.clubName || '';
+  }
+
+  /**
+   * Feature flag lookup (ADR-039). Ex: isFeatureEnabled('remote_v2').
+   * Les overrides proviennent de `sites.feature_overrides` (JSONB) côté cloud
+   * et sont rechargés à chaque appel `loadConfiguration` / `loadProfileConfiguration`.
+   */
+  public isFeatureEnabled(key: string): boolean {
+    return this.featureOverrides[key] === true;
+  }
+
+  public getFeatureOverrides(): Record<string, boolean> {
+    return { ...this.featureOverrides };
   }
 }
