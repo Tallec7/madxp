@@ -127,21 +127,75 @@ describe('Smoke — ADR-089 web_page / livestream', () => {
     expect(/this\.lockedSiteId\s*\?\?\s*this\.selectedSiteId/.test(src)).toBe(true);
   });
 
-  it('dashboard — video-library exposes web_page + livestream creation buttons gated by siteId', () => {
+  it('dashboard — video-library exposes unified "+ Ajouter du contenu" button gated by siteId (ADR-094)', () => {
     const html = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.html');
-    expect(/openWebContentModal\(\s*'web_page'\s*\)/.test(html)).toBe(true);
-    expect(/openWebContentModal\(\s*'livestream'\s*\)/.test(html)).toBe(true);
-    // The action block must be gated by *ngIf="siteId" — no buttons in the admin global library
+    // ADR-094: the 2 legacy buttons are replaced by a single unified entry point.
+    expect(/openAddContentModal\s*\(\s*\)/.test(html)).toBe(true);
+    expect(/\+\s*Ajouter du contenu/.test(html)).toBe(true);
+    // The action block must still be gated by *ngIf="siteId" — no buttons in the admin global library.
     expect(/class="library-actions"\s+\*ngIf="siteId"/.test(html)).toBe(true);
-    // Modal must forward the current siteId as lockedSiteId (not null = global leak)
-    expect(/<app-web-content-create-modal[\s\S]*?\[lockedSiteId\]="siteId"/.test(html)).toBe(true);
+    // The modal host must also be gated on siteId (defense-in-depth vs global leak).
+    expect(/<app-add-content-modal[\s\S]*?\*ngIf="addContentModalOpen\s*&&\s*siteId"/.test(html)).toBe(true);
+    // The modal must forward the current siteId (per-site scope — ADR-089 invariant).
+    expect(/<app-add-content-modal[\s\S]*?\[siteId\]="siteId"/.test(html)).toBe(true);
   });
 
-  it('dashboard — video-library component wires modal state + emits webContentCreated', () => {
+  it('dashboard — video-library component wires unified add-content modal state + emits webContentCreated (ADR-094)', () => {
     const ts = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts');
-    expect(/webContentModalType:\s*WebContentType\s*\|\s*null/.test(ts)).toBe(true);
+    expect(/addContentModalOpen\s*=\s*false/.test(ts)).toBe(true);
+    expect(/openAddContentModal\s*\(\s*\)/.test(ts)).toBe(true);
+    expect(/closeAddContentModal\s*\(\s*\)/.test(ts)).toBe(true);
     expect(/@Output\(\)\s+webContentCreated\s*=\s*new\s+EventEmitter/.test(ts)).toBe(true);
-    expect(/WebContentCreateModalComponent/.test(ts)).toBe(true);
+    expect(/AddContentModalComponent/.test(ts)).toBe(true);
+  });
+
+  it('dashboard — AddContentModalComponent exists and forwards lockedSiteId to embedded web-content modal (ADR-094)', () => {
+    const file = 'central-dashboard/src/app/shared/components/add-content-modal/add-content-modal.component.ts';
+    expect(exists(file)).toBe(true);
+    const src = read(file);
+    // 3 tabs: upload / web_page / livestream
+    expect(/activeTab\s*===\s*'upload'/.test(src)).toBe(true);
+    expect(/activeTab\s*===\s*'web_page'/.test(src)).toBe(true);
+    expect(/activeTab\s*===\s*'livestream'/.test(src)).toBe(true);
+    // Each web-content tab must forward lockedSiteId (ADR-089 invariant).
+    const webTabMatches = src.match(/<app-web-content-create-modal[\s\S]*?>/g) || [];
+    expect(webTabMatches.length).toBe(2);
+    webTabMatches.forEach(tag => {
+      expect(/\[lockedSiteId\]="siteId"/.test(tag)).toBe(true);
+      expect(/\[embedded\]="true"/.test(tag)).toBe(true);
+    });
+  });
+
+  it('dashboard — web-content-create-modal supports embedded mode (ADR-094)', () => {
+    const src = read('central-dashboard/src/app/shared/components/web-content-create-modal/web-content-create-modal.component.ts');
+    expect(/@Input\(\)\s+embedded\s*=\s*false/.test(src)).toBe(true);
+    // In embedded mode, backdrop/header must be omitted (parent owns the chrome).
+    expect(/\*ngIf="!embedded;\s*else\s+embeddedBody"/.test(src)).toBe(true);
+  });
+
+  it('dashboard — video-manager no longer renders a standalone upload zone (ADR-094)', () => {
+    const src = read('central-dashboard/src/app/features/sites/components/site-content-tab/video-manager/video-manager.component.ts');
+    // The upload zone is now hosted inside the add-content modal, triggered from the library.
+    expect(/<app-video-upload-zone/.test(src)).toBe(false);
+    expect(/VideoUploadZoneComponent/.test(src)).toBe(false);
+    // Upload events must still propagate from library → manager → parent.
+    expect(/\(uploadComplete\)="onVideoUploaded\(\$event\)"/.test(src)).toBe(true);
+    expect(/\(allUploadsComplete\)="onAllVideosUploaded\(\$event\)"/.test(src)).toBe(true);
+  });
+
+  it('dashboard — video-library exposes global drag-drop overlay gated by siteId (ADR-094)', () => {
+    const html = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.html');
+    expect(/class="global-drop-overlay"/.test(html)).toBe(true);
+    // Must be gated by siteId to avoid triggering on admin global views.
+    expect(/\*ngIf="siteId\s*&&\s*isFileDraggedOverPage"/.test(html)).toBe(true);
+
+    const ts = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts');
+    // Counter prevents enter/leave flicker when dragging over nested elements.
+    expect(/dragCounter/.test(ts)).toBe(true);
+    expect(/@HostListener\(['"]document:dragenter['"]/.test(ts)).toBe(true);
+    expect(/@HostListener\(['"]document:drop['"]/.test(ts)).toBe(true);
+    // Must filter non-file drags (text selections, links) to avoid spurious overlays.
+    expect(/types\?\.\s*includes\(['"]Files['"]\)/.test(ts)).toBe(true);
   });
 
   it('dashboard — per-site event propagates video-library → video-manager → site-content-tab', () => {

@@ -31,15 +31,27 @@ interface CreateWebContentRequest {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="modal-backdrop" (click)="onBackdropClick()">
-      <div class="modal-content" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h2>{{ title }}</h2>
-          <button class="btn-close" (click)="close()" [disabled]="isSubmitting" aria-label="Fermer">
-            ×
-          </button>
+    <ng-container *ngIf="!embedded; else embeddedBody">
+      <div class="modal-backdrop" (click)="onBackdropClick()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>{{ title }}</h2>
+            <button class="btn-close" (click)="close()" [disabled]="isSubmitting" aria-label="Fermer">
+              ×
+            </button>
+          </div>
+          <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
+          <ng-container *ngTemplateOutlet="footerTpl"></ng-container>
         </div>
+      </div>
+    </ng-container>
 
+    <ng-template #embeddedBody>
+      <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
+      <ng-container *ngTemplateOutlet="footerTpl"></ng-container>
+    </ng-template>
+
+    <ng-template #bodyTpl>
         <div class="modal-body">
           <p class="scope-hint" *ngIf="lockedSiteName">
             Sera créé pour <strong>{{ lockedSiteName }}</strong> uniquement.
@@ -117,9 +129,11 @@ interface CreateWebContentRequest {
             />
           </div>
         </div>
+    </ng-template>
 
+    <ng-template #footerTpl>
         <div class="modal-footer">
-          <button class="btn btn-secondary" (click)="close()" [disabled]="isSubmitting">
+          <button class="btn btn-secondary" *ngIf="!embedded" (click)="close()" [disabled]="isSubmitting">
             Annuler
           </button>
           <button
@@ -130,8 +144,7 @@ interface CreateWebContentRequest {
             {{ isSubmitting ? 'Création...' : '✅ Créer' }}
           </button>
         </div>
-      </div>
-    </div>
+    </ng-template>
   `,
   styles: [`
     .modal-backdrop {
@@ -201,6 +214,12 @@ export class WebContentCreateModalComponent {
    * pick a site (or leave empty for global). Ignored if `lockedSiteId` is set.
    */
   @Input() availableSites: WebContentSiteOption[] | null = null;
+
+  /**
+   * When true, skip the outer backdrop/header — render form + footer inline.
+   * The parent is responsible for providing the wrapper (e.g. tabbed modal).
+   */
+  @Input() embedded = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() created = new EventEmitter<WebContentCreatedPayload>();

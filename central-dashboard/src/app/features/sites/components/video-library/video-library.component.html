@@ -5,11 +5,8 @@
       Bibliothèque Vidéo
     </h4>
     <div class="library-actions" *ngIf="siteId">
-      <button type="button" class="library-action-btn" (click)="openWebContentModal('web_page')">
-        🌐 Page web
-      </button>
-      <button type="button" class="library-action-btn" (click)="openWebContentModal('livestream')">
-        📡 Livestream
+      <button type="button" class="library-add-btn" (click)="openAddContentModal()">
+        + Ajouter du contenu
       </button>
     </div>
     <div class="library-stats">
@@ -207,13 +204,32 @@
     (closeModal)="closePreview()"
   ></app-video-preview-modal>
 
-  <!-- ADR-089 — Web content creation modal (per-site, scope locked) -->
-  <app-web-content-create-modal
-    *ngIf="webContentModalType && siteId"
-    [contentType]="webContentModalType"
-    [lockedSiteId]="siteId"
-    [lockedSiteName]="currentSiteName"
-    (closed)="closeWebContentModal()"
-    (created)="onWebContentCreated()"
-  ></app-web-content-create-modal>
+  <!-- Unified add-content modal (Upload · Page web · Livestream) -->
+  <app-add-content-modal
+    *ngIf="addContentModalOpen && siteId"
+    [siteId]="siteId"
+    [siteName]="currentSiteName"
+    [pendingFiles]="pendingDropFiles"
+    (closed)="closeAddContentModal()"
+    (uploadComplete)="uploadComplete.emit($event)"
+    (allUploadsComplete)="allUploadsComplete.emit($event)"
+    (webContentCreated)="onWebContentCreated()"
+  ></app-add-content-modal>
+
+  <!-- Global drop overlay — appears when a file is dragged over the page -->
+  <div
+    class="global-drop-overlay"
+    *ngIf="siteId && isFileDraggedOverPage"
+    (dragover)="onGlobalDragOver($event)"
+    (dragleave)="onGlobalDragLeave($event)"
+    (drop)="onGlobalDrop($event)"
+  >
+    <div class="global-drop-card">
+      <span class="global-drop-icon">📁</span>
+      <span class="global-drop-title">Déposez pour uploader</span>
+      <span class="global-drop-hint" *ngIf="currentSiteName">
+        Ajouté à <strong>{{ currentSiteName }}</strong>
+      </span>
+    </div>
+  </div>
 </div>

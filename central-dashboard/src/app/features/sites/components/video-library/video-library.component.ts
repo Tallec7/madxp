@@ -34,7 +34,8 @@ import { VideoPreviewModalComponent } from './video-preview-modal/video-preview-
 import { VideoLibraryFiltersComponent } from './video-library-filters/video-library-filters.component';
 import { VideoLibraryListComponent } from './video-library-list/video-library-list.component';
 import { VideoBulkActionsBarComponent } from './video-bulk-actions-bar/video-bulk-actions-bar.component';
-import { WebContentCreateModalComponent, WebContentType } from '../../../../shared/components/web-content-create-modal/web-content-create-modal.component';
+import { AddContentModalComponent } from '../../../../shared/components/add-content-modal/add-content-modal.component';
+import { UploadedVideo } from '../../../../shared/components/video-upload-zone/video-upload-zone.component';
 
 export type {
   VideoContentStatus,
@@ -62,7 +63,7 @@ export type {
     VideoLibraryFiltersComponent,
     VideoLibraryListComponent,
     VideoBulkActionsBarComponent,
-    WebContentCreateModalComponent,
+    AddContentModalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './video-library.component.html',
@@ -144,20 +145,92 @@ export class VideoLibraryComponent implements OnChanges {
   @Output() bulkDelete = new EventEmitter<VideoItem[]>();
   /** Emitted after a web_page or livestream is successfully created — parent should reload its video list. */
   @Output() webContentCreated = new EventEmitter<void>();
+  /** Forwarded from the upload zone inside the add-content modal. */
+  @Output() uploadComplete = new EventEmitter<UploadedVideo>();
+  @Output() allUploadsComplete = new EventEmitter<UploadedVideo[]>();
 
-  /** Active web-content modal type. Null means closed. */
-  webContentModalType: WebContentType | null = null;
+  /** Unified add-content modal (Upload · Page web · Livestream). */
+  addContentModalOpen = false;
+  pendingDropFiles: File[] | null = null;
+  isFileDraggedOverPage = false;
+  private dragCounter = 0;
 
-  openWebContentModal(type: WebContentType): void {
-    this.webContentModalType = type;
+  openAddContentModal(): void {
+    if (!this.siteId) return;
+    this.pendingDropFiles = null;
+    this.addContentModalOpen = true;
   }
 
-  closeWebContentModal(): void {
-    this.webContentModalType = null;
+  closeAddContentModal(): void {
+    this.addContentModalOpen = false;
+    this.pendingDropFiles = null;
+  }
+
+  @HostListener('document:dragenter', ['$event'])
+  onDocumentDragEnter(event: DragEvent): void {
+    if (!this.siteId || !this.hasFiles(event)) return;
+    this.dragCounter++;
+    if (!this.isFileDraggedOverPage) {
+      this.isFileDraggedOverPage = true;
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('document:dragover', ['$event'])
+  onDocumentDragOver(event: DragEvent): void {
+    if (!this.siteId || !this.hasFiles(event)) return;
+    // Required to allow a drop anywhere on the page.
+    event.preventDefault();
+  }
+
+  @HostListener('document:dragleave', ['$event'])
+  onDocumentDragLeave(event: DragEvent): void {
+    if (!this.siteId || !this.hasFiles(event)) return;
+    this.dragCounter = Math.max(0, this.dragCounter - 1);
+    if (this.dragCounter === 0 && this.isFileDraggedOverPage) {
+      this.isFileDraggedOverPage = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('document:drop')
+  onDocumentDrop(): void {
+    this.dragCounter = 0;
+    if (this.isFileDraggedOverPage) {
+      this.isFileDraggedOverPage = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onGlobalDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }
+
+  onGlobalDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onGlobalDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isFileDraggedOverPage = false;
+    this.dragCounter = 0;
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0 || !this.siteId) return;
+    this.pendingDropFiles = Array.from(files);
+    this.addContentModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  private hasFiles(event: DragEvent): boolean {
+    return !!event.dataTransfer?.types?.includes('Files');
   }
 
   onWebContentCreated(): void {
-    this.webContentModalType = null;
+    this.addContentModalOpen = false;
     this.webContentCreated.emit();
   }
 

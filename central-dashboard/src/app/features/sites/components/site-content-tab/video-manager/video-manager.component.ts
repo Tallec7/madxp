@@ -7,28 +7,20 @@ import { NotificationService } from '../../../../../core/services/notification.s
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState, AddToTarget } from '../../video-library/video-library.component';
-import { VideoUploadZoneComponent, UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
+import { UploadedVideo } from '../../../../../shared/components/video-upload-zone/video-upload-zone.component';
 import { VideoVariantPanelComponent } from '../../../../content/video-variant-panel.component';
 
 @Component({
   selector: 'app-video-manager',
   standalone: true,
-  imports: [CommonModule, VideoLibraryComponent, VideoUploadZoneComponent, VideoVariantPanelComponent],
+  imports: [CommonModule, VideoLibraryComponent, VideoVariantPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Upload Zone -->
-    <div class="section">
-      <app-video-upload-zone
-        [siteId]="siteId"
-        [siteName]="siteName"
-        (uploadComplete)="onVideoUploaded($event)"
-        (allUploadsComplete)="onAllVideosUploaded($event)"
-      ></app-video-upload-zone>
-    </div>
-
-    <!-- Video Library -->
+    <!-- Video Library (upload entry point is inside the library header) -->
     <div class="section" id="section-library">
       <app-video-library
+        (uploadComplete)="onVideoUploaded($event)"
+        (allUploadsComplete)="onAllVideosUploaded($event)"
         [videos]="localVideos"
         [cloudVideos]="cloudVideos"
         [storage]="localStorage"
