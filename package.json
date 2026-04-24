@@ -15,6 +15,8 @@
     "build:central": "ng build central-dashboard",
     "build:central:staging": "ng build central-dashboard --configuration=staging",
     "build:saas": "ng build raspberry --configuration=saas",
+    "build:saas:staging": "ng build raspberry --configuration=saas-staging",
+    "build:cloudflare": "npm run build:central:staging && npm run build:saas:staging && mkdir -p dist/central-dashboard/browser/saas && cp -r dist/raspberry/browser/. dist/central-dashboard/browser/saas/",
     "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh",
     "watch": "ng build raspberry --watch --configuration development",
     "watch:central": "ng build central-dashboard --watch --configuration development",
