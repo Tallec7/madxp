@@ -2003,3 +2003,141 @@ describe('Video playback — CORB proxy + Zone.js error suppression guards', () 
     expect(mig).toMatch(/LIKE old_prefix/);
   });
 });
+
+describe('Template Studio v2 — ADR-095 admin UX (drag/snap/undo/preview + CLI SPEC)', () => {
+  const dashRoot = path.join(repoRoot, 'central-dashboard');
+  const readDash = (rel: string): string => fs.readFileSync(path.join(dashRoot, rel), 'utf8');
+  const overlayPath =
+    'src/app/features/content/remotion-templates/studio-v2/admin/admin-canvas-overlay.component.ts';
+  const panelPath =
+    'src/app/features/content/remotion-templates/studio-v2/admin/admin-studio-panel.component.ts';
+  const layersPath =
+    'src/app/features/content/remotion-templates/studio-v2/admin/admin-layers-panel.component.ts';
+
+  // ── Step 3 : click-to-select ─────────────────────────────────────────────
+  it('overlay exposes selectedSlot / selectSlot / onCanvasBackgroundClick (click-to-select)', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/selectedSlot/);
+    expect(comp).toMatch(/selectSlot\s*\(/);
+    expect(comp).toMatch(/onCanvasBackgroundClick/);
+  });
+
+  // ── Step 4 : snap to center + guides ─────────────────────────────────────
+  it('overlay implements applySnap() with SNAP_THRESHOLD and snapGuides state', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/SNAP_THRESHOLD\s*=\s*0\.015/);
+    expect(comp).toMatch(/applySnap\s*\(/);
+    expect(comp).toMatch(/snapGuides/);
+  });
+
+  // ── Step 2 + Step 7 : text resize + undo-friendly DragState ──────────────
+  it('DragState carries startFontSize to power text resize + undo', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/startFontSize\??:\s*number/);
+    expect(comp).toMatch(/applyTextResize\s*\(/);
+  });
+
+  // ── Step 7 : historyRecord Output + emit on pointerUp ────────────────────
+  it('overlay emits historyRecord Output in finished drags (before/after patch)', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/@Output\(\)\s+historyRecord\s*=\s*new\s+EventEmitter/);
+    expect(comp).toMatch(/emitHistoryForDrag\s*\(/);
+    // Guard : must compare start vs current state before emitting.
+    expect(comp).toMatch(/d\.startX[\s\S]{0,200}d\.startY/);
+  });
+
+  // ── Step 7 : undo/redo plumbing in the studio panel ──────────────────────
+  it('studio panel wires undo/redo stacks + Ctrl+Z HostListener + toolbar buttons', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/undoStack:\s*HistoryEntry\[\]/);
+    expect(panel).toMatch(/redoStack:\s*HistoryEntry\[\]/);
+    expect(panel).toMatch(/@HostListener\(['"]document:keydown['"]/);
+    expect(panel).toMatch(/data-testid="admin-undo"/);
+    expect(panel).toMatch(/data-testid="admin-redo"/);
+    expect(panel).toMatch(/applyHistoryPatch\s*\(/);
+    // Must NOT emit changed (anti-flash) — history apply is local + targeted API.
+    const applyFn = panel.split('applyHistoryPatch')[2] || '';
+    expect(applyFn.split('private applyTextPatchLocally')[0]).not.toMatch(/this\.changed\.emit/);
+  });
+
+  it('studio panel Ctrl+Z handler supports both Ctrl+Shift+Z and Ctrl+Y for redo', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/evt\.shiftKey/);
+    expect(panel).toMatch(/key\s*===\s*['"]y['"]/);
+  });
+
+  it('studio panel caps undo stack at 50 entries and clears redo on new record', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/undoStack\.length\s*>\s*50/);
+    expect(panel).toMatch(/this\.redoStack\s*=\s*\[\]/);
+  });
+
+  // ── Step 6 : inline Remotion preview toggle ──────────────────────────────
+  it('studio panel exposes Édition/Preview toggle and proxyUrl() in recomputePlayerState', () => {
+    const panel = readDash(panelPath);
+    expect(panel).toMatch(/data-testid="admin-mode-edit"/);
+    expect(panel).toMatch(/data-testid="admin-mode-preview"/);
+    expect(panel).toMatch(/recomputePlayerState/);
+    expect(panel).toMatch(/previewService\.proxyUrl/);
+    // Preview must recompute after each drag patch to stay in sync.
+    expect(panel).toMatch(/if\s*\(this\.mode\s*===\s*['"]preview['"]\)\s*this\.recomputePlayerState\(\)/);
+  });
+
+  // ── Step 1 : layer picker ────────────────────────────────────────────────
+  it('overlay renders layer picker with Tous + per-layer + orphan buttons', () => {
+    const comp = readDash(overlayPath);
+    expect(comp).toMatch(/data-testid="layer-picker"/);
+    expect(comp).toMatch(/data-testid="layer-btn-all"/);
+    expect(comp).toMatch(/data-testid="layer-btn-orphan"/);
+    expect(comp).toMatch(/selectedLayerId/);
+  });
+
+  // ── Step 7 : z-order swap on layers panel ────────────────────────────────
+  it('layers panel sorts by zIndex desc + exposes moveUp/moveDown/swapZ', () => {
+    const panel = readDash(layersPath);
+    expect(panel).toMatch(/sorted\(\)\s*:\s*TemplateLayer\[\]/);
+    expect(panel).toMatch(/sort\(\(a,\s*b\)\s*=>\s*b\.zIndex\s*-\s*a\.zIndex\)/);
+    expect(panel).toMatch(/moveUp\s*\(/);
+    expect(panel).toMatch(/moveDown\s*\(/);
+    expect(panel).toMatch(/swapZ\s*\(/);
+    // UI must expose the buttons with testids for future E2E hooks.
+    expect(panel).toMatch(/\[attr\.data-testid\]="'layer-up-'\s*\+\s*l\.id"/);
+    expect(panel).toMatch(/\[attr\.data-testid\]="'layer-down-'\s*\+\s*l\.id"/);
+    // Up/down must be disabled at the extremes.
+    expect(panel).toMatch(/\[disabled\]="i\s*===\s*0"/);
+    expect(panel).toMatch(/\[disabled\]="last"/);
+  });
+
+  // ── Step 5 : CLI template:import ─────────────────────────────────────────
+  it('central-server package.json declares the template:import script', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, 'central-server/package.json'), 'utf8'),
+    );
+    expect(pkg.scripts['template:import']).toBe(
+      'ts-node src/scripts/import-template-spec.ts',
+    );
+    // yaml lib must be a real dep (parseYaml in the CLI).
+    expect(pkg.dependencies.yaml).toBeDefined();
+  });
+
+  it('import-template-spec.ts uses templateStudioRepository (no direct controller imports)', () => {
+    const scriptPath = path.join(
+      repoRoot,
+      'central-server/src/scripts/import-template-spec.ts',
+    );
+    expect(fs.existsSync(scriptPath)).toBe(true);
+    const src = fs.readFileSync(scriptPath, 'utf8');
+    // Repository pattern : no fetch, no direct HTTP call.
+    expect(src).not.toMatch(/\bfetch\s*\(/);
+    // Must go through the repository for writes.
+    expect(src).toMatch(/templateStudioRepository/);
+    // v1 guard-rails must be present.
+    expect(src).toMatch(/ensureSlugAvailable/);
+    expect(src).toMatch(/ensureFontsExist/);
+    // YAML frontmatter parsing entry point.
+    expect(src).toMatch(/extractFrontmatter/);
+    expect(src).toMatch(/parseYaml/);
+    // v1 MUST refuse duplicate slugs (no silent upsert).
+    expect(src).toMatch(/ne supporte pas l'upsert/);
+  });
+});

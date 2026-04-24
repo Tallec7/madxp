@@ -111,6 +111,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-092](ADR-092-remote-v2-feature-flag-rollout.md)                            | Télécommande V2 — rollout par feature flag per-site avec rollback instantané     | Accepté                           | Avr 2026 |
 | [ADR-093](ADR-093-match-sessions-persistence-and-history.md)                    | Persistance des sessions de match — extension `club_sessions` + auto-close CRON  | Accepté                           | Avr 2026 |
 | [ADR-094](ADR-094-unified-add-content-modal-and-global-drop.md)                 | Entrée unifiée "Ajouter du contenu" (modal à onglets) + drag-drop global         | Accepté                           | Avr 2026 |
+| [ADR-095](ADR-095-template-studio-admin-ux-v2.md)                               | Template Studio v2 — UX édition visuelle (drag/snap/undo + CLI SPEC)             | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
@@ -150,7 +151,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-095**)
+3. Numéroter séquentiellement (prochain : **ADR-096**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
@@ -173,4 +174,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 24 avril 2026 (ADR-094 Accepté — Entrée unifiée "+ Ajouter du contenu" dashboard (modal à onglets Fichier/Page web/Livestream) + drag-drop global plein écran, remplace dropzone géante + 2 boutons, ~400 px gagnés above-the-fold ; ADR-093 Accepté — Persistance sessions match via extension `club_sessions` + auto-close CRON, exposition avg_audience périodisée pour rapports sponsors ; ADR-092 Accepté — Télécommande V2 rollout par feature flag per-site avec rollback instantané < 10s ; ADR-091 Accepté — Environnement Staging 3-tier dev/staging/prod, plan NOW J1-J5 ; ADR-090 Accepté — Unified scoreboard-state sync Remote ↔ Simulator ↔ Display pour F-15.2 Phase 4 ; ADR-089 Accepté — Contenus `web_page`/`livestream` first-class, Phase 2 Pi sync-agent + SaaS injection + CloudRemote ; ADR-088 Accepté — scoreboard live multi-vendor SaaS-first pour F-15.2 ; ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones)_
+_Dernière mise à jour : 24 avril 2026 (ADR-095 Accepté — Template Studio v2 UX édition visuelle : layer picker, resize text, click-select, snap-to-center + guides, mode preview Remotion inline, undo/redo drag (Ctrl+Z/Y, 50 entrées), z-order swap ↑/↓ layers, CLI `template:import` v1 (YAML → DB via repository) ; ADR-094 Accepté — Entrée unifiée "+ Ajouter du contenu" dashboard (modal à onglets Fichier/Page web/Livestream) + drag-drop global plein écran, remplace dropzone géante + 2 boutons, ~400 px gagnés above-the-fold ; ADR-093 Accepté — Persistance sessions match via extension `club_sessions` + auto-close CRON, exposition avg_audience périodisée pour rapports sponsors ; ADR-092 Accepté — Télécommande V2 rollout par feature flag per-site avec rollback instantané < 10s ; ADR-091 Accepté — Environnement Staging 3-tier dev/staging/prod, plan NOW J1-J5 ; ADR-090 Accepté — Unified scoreboard-state sync Remote ↔ Simulator ↔ Display pour F-15.2 Phase 4 ; ADR-089 Accepté — Contenus `web_page`/`livestream` first-class, Phase 2 Pi sync-agent + SaaS injection + CloudRemote ; ADR-088 Accepté — scoreboard live multi-vendor SaaS-first pour F-15.2 ; ADR-087 Accepté — pas de rate limiter sur `/api` nu + CORP/CORS sur 429, metric asset-proxy upstream ; ADR-086 Accepté — Template Studio v2 n-layers + safe-zones)_

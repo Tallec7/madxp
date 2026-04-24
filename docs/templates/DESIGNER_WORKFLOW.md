@@ -86,18 +86,20 @@ template-joueur-detaille/
 ### Étape par étape
 
 1. **Designer** : duplique `docs/templates/SPEC-TEMPLATE.md`, le remplit, livre le dossier `template-<slug>/` sur Drive.
-2. **Admin** exécute :
+2. **Admin** upload les assets (layers, variants, fonts) sur FTP Hostinger (ou via le dashboard pour les fonts) et récupère les URLs absolues.
+3. **Admin** remplit les `file:` du SPEC avec ces URLs absolues, puis exécute :
    ```bash
    cd central-server
    npm run template:import -- /path/to/template-<slug>/SPEC.md
    ```
-   Ce script :
+   Ce script (v1 MVP — ADR-095) :
    - parse le frontmatter YAML de SPEC.md ;
-   - upload les assets (layers, variants, fonts) vers FTP Hostinger ;
-   - génère un SQL seed idempotent (ON CONFLICT DO UPDATE sur slug) ;
-   - insère en DB.
-3. **Validation** : render de test déclenché automatiquement → screenshot comparé aux refs du dossier `refs/`. GO/NOGO designer.
-4. **Publication** : le template apparaît dans la bibliothèque user. Les users finaux remplissent les champs (prénom, photo, titre), déclenchent le render.
+   - vérifie que les fonts référencées existent dans `template_fonts` (sinon refus) ;
+   - vérifie que le slug n'est pas déjà pris (sinon refus — pas d'upsert en v1) ;
+   - crée `neopro_templates` + variant default + layers + text_fields + image_slots via `templateStudioRepository`.
+   - **Ne fait pas** : upload FTP auto des assets `file:` relatifs (deferred v2), upsert idempotent, render de test.
+4. **Validation manuelle** : ouvrir le template dans `/admin/templates/:id`, basculer en mode **Preview Remotion** (toggle toolbar), comparer visuellement aux refs du dossier `refs/`.
+5. **Publication** : le template apparaît dans la bibliothèque user. Les users finaux remplissent les champs (prénom, photo, titre), déclenchent le render.
 
 ---
 
@@ -108,6 +110,18 @@ Dès que l'UI admin expose tous les paramètres (layers, slots, safe-zones, anim
 - **Versionner** le contrat de template dans git.
 - **Livrer hors-dashboard** (le designer bosse sans accès admin).
 - **Rejouer** le seed sur un autre environnement.
+
+### UX édition visuelle (ADR-095)
+
+Depuis le panel admin studio (`/admin/templates/:id`) :
+
+- **Layer picker** pour filtrer les slots visibles par layer parent.
+- **Drag direct** sur le canvas pour déplacer/redimensionner les textes et images. Les positions sont en `%` du canvas, préservées sur changement de format.
+- **Snap** au centre canvas + centre safe-zone (seuil `0.015`) pendant le drag, avec guides visuels.
+- **Click-to-select** : clic sur un slot → focus (outline doré). Clic fond = désélection.
+- **Mode Preview Remotion** : toggle Édition/Preview dans la toolbar, alimente `<app-template-studio-player>` en direct.
+- **Undo/Redo** des drags : **Ctrl+Z / Ctrl+Maj+Z** (ou Ctrl+Y), boutons toolbar. Stack limité à 50 entrées, réinitialisé au chargement.
+- **Z-order** layers : flèches ↑/↓ dans le panel Layers qui swappent les `zIndex` des voisins.
 
 ---
 
@@ -125,5 +139,6 @@ Dès que l'UI admin expose tous les paramètres (layers, slots, safe-zones, anim
 - [ADR-077](../adr/ADR-077-template-studio-preview-and-uploads.md) — Preview & uploads
 - [ADR-084](../adr/ADR-084-template-studio-fonts-visibility-scale.md) — Fonts custom + scale
 - [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) — N-layers + safe-zones + animations réversibles
+- [ADR-095](../adr/ADR-095-template-studio-admin-ux-v2.md) — UX édition visuelle (drag/snap/undo + CLI SPEC v1)
 - Gabarit : [`SPEC-TEMPLATE.md`](./SPEC-TEMPLATE.md)
 - Règles NE JAMAIS FAIRE : [`.claude/rules/templates.md`](../../.claude/rules/templates.md)

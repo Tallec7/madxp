@@ -1,6 +1,6 @@
 # Templates Remotion V2 — Invariants
 
-Source de vérité : ADR-075, ADR-077, ADR-084, ADR-086.
+Source de vérité : ADR-075, ADR-077, ADR-084, ADR-086, ADR-095.
 Le Template Studio v2 est **data-driven** : tout template se décrit par des rows DB + assets, jamais par du code.
 
 ## NE JAMAIS FAIRE (smoke test enforced)
@@ -30,6 +30,25 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Exposer une route d'upload WebM sans guard `super_admin` + Joi.** La route `POST /api/remotion-templates/upload` est réservée (templates = asset partagé de la flotte).
 - **Importer depuis les controllers `../config/database` directement.** Repository pattern obligatoire (`templateStudioRepository`).
 
+### Admin UX (ADR-095 — smoke test enforced)
+
+- **Retirer `historyRecord` de `admin-canvas-overlay.component.ts`** (Output émis en fin de drag, alimente les stacks undo/redo du panel parent — sans lui les raccourcis Ctrl+Z sont muets).
+- **Retirer `@HostListener('document:keydown')` ou les stacks `undoStack`/`redoStack` de `admin-studio-panel.component.ts`** (casse le contrat undo/redo ADR-095).
+- **Faire un `reload` / emit `changed` depuis `applyHistoryPatch`** : l'undo réapplique le patch local + API ciblée, un reload complet ramènerait le flash (cf. commentaire anti-flash de `onPatchTextField`).
+- **Retirer le tri descendant par zIndex dans `admin-layers-panel.sorted()`** (casse l'ordre visuel du panel et la sémantique des boutons ↑/↓).
+- **Retirer `applySnap()` ou la constante `SNAP_THRESHOLD = 0.015`** de `admin-canvas-overlay.component.ts` (rend l'aimantation inerte — régression ADR-095 step 4).
+- **Retirer `selectedSlot` / `selectSlot()` / `onCanvasBackgroundClick()`** (casse le click-to-select, régression step 3).
+- **Retirer la prop `startFontSize` de `DragState` ou le fallback `d.startFontSize ?? tf.fontSize`** (la resize text devient non-annulable — régression step 2 + step 7).
+- **Retirer le toggle mode édition/preview (`asp__mode` / `setMode` / `recomputePlayerState`)** ou omettre `proxyUrl()` dans `recomputePlayerState` (CORB ; cf. ADR-087).
+
+### CLI `template:import` (ADR-095 — smoke test enforced)
+
+- **Supprimer ou renommer le script `central-server/src/scripts/import-template-spec.ts`** ni la ligne `"template:import"` de `central-server/package.json` (contrat CLI documenté dans `DESIGNER_WORKFLOW.md`).
+- **Importer `../config/database` ou utiliser `fetch()` dans le script CLI** : passer exclusivement par `templateStudioRepository` (pattern repository). Seules les sondes `ensureSlugAvailable` / `ensureFontsExist` peuvent utiliser `query()` en lecture pure.
+- **Retirer `ensureSlugAvailable()` ou `ensureFontsExist()`** : sans ces garde-fous le CLI crée des doublons silencieux ou laisse passer des références de fonts inconnues.
+- **Ajouter un upsert implicite (`ON CONFLICT DO UPDATE`)** tant que v2 n'est pas écrit : v1 refuse volontairement un slug existant pour éviter les écrasements accidentels.
+- **Lire les WebM en local dans le script** : les `file:` des layers doivent rester des URLs absolues en v1 (upload FTP = v2).
+
 ### Backward-compat
 
 - **Modifier la migration `add-template-studio-v2.sql` déjà en production.** Toute évolution passe par une nouvelle migration `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` (voir `add-template-studio-v2-layer-parent-safe-zone.sql` pour le pattern ADR-086).
@@ -45,5 +64,6 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 ## Référence
 
 - [ADR-086](../../docs/adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md)
+- [ADR-095](../../docs/adr/ADR-095-template-studio-admin-ux-v2.md)
 - [Workflow designer](../../docs/templates/DESIGNER_WORKFLOW.md)
 - [Gabarit SPEC](../../docs/templates/SPEC-TEMPLATE.md)

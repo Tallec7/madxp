@@ -42,9 +42,25 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
       </form>
 
       <ul class="alp__list">
-        <li *ngFor="let l of layers" class="alp__item">
+        <li *ngFor="let l of sorted(); let i = index; let last = last" class="alp__item">
           <span class="alp__z">z={{ l.zIndex }}</span>
-          <input class="alp__name" [(ngModel)]="l.name" (change)="emitUpdate(l, { name: l.name })" />
+          <button
+            type="button"
+            class="alp__reorder"
+            [disabled]="i === 0"
+            (click)="moveUp(i)"
+            title="Monter (z+1)"
+            [attr.data-testid]="'layer-up-' + l.id"
+          >↑</button>
+          <button
+            type="button"
+            class="alp__reorder"
+            [disabled]="last"
+            (click)="moveDown(i)"
+            title="Descendre (z-1)"
+            [attr.data-testid]="'layer-down-' + l.id"
+          >↓</button>
+          <input class="alp__name" [(ngModel)]="l.name" [name]="'n-' + l.id" (change)="emitUpdate(l, { name: l.name })" />
           <app-url-upload-input
             class="alp__url"
             [templateId]="templateId"
@@ -78,6 +94,9 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .alp__name { flex: 0 0 120px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__url { flex: 1; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__mask { font-size: 10px; color: #6b7280; font-family: monospace; }
+    .alp__reorder { width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 3px; background: #fff; cursor: pointer; font-size: 12px; color: #374151; }
+    .alp__reorder:hover:not(:disabled) { background: #f3f4f6; }
+    .alp__reorder:disabled { opacity: 0.35; cursor: not-allowed; }
     .alp__delete { padding: 2px 6px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 3px; cursor: pointer; font-size: 11px; }
     .alp__empty { font-size: 12px; color: #6b7280; font-style: italic; }
   `],
@@ -101,6 +120,36 @@ export class AdminLayersPanelComponent {
 
   emitUpdate(l: TemplateLayer, patch: Partial<TemplateLayer>): void {
     this.update.emit({ id: l.id, patch });
+  }
+
+  /** Tri décroissant par zIndex : le layer au-dessus (z plus haut) est affiché en premier. */
+  sorted(): TemplateLayer[] {
+    return [...this.layers].sort((a, b) => b.zIndex - a.zIndex);
+  }
+
+  /** Monter = augmenter le zIndex (swap avec le voisin du dessus dans la liste triée). */
+  moveUp(index: number): void {
+    const list = this.sorted();
+    if (index <= 0) return;
+    this.swapZ(list[index], list[index - 1]);
+  }
+
+  moveDown(index: number): void {
+    const list = this.sorted();
+    if (index >= list.length - 1) return;
+    this.swapZ(list[index], list[index + 1]);
+  }
+
+  private swapZ(a: TemplateLayer, b: TemplateLayer): void {
+    const az = a.zIndex;
+    const bz = b.zIndex;
+    if (az === bz) {
+      // Cas dégénéré : forcer un écart pour que le swap soit observable.
+      this.update.emit({ id: a.id, patch: { zIndex: bz + 1 } });
+      return;
+    }
+    this.update.emit({ id: a.id, patch: { zIndex: bz } });
+    this.update.emit({ id: b.id, patch: { zIndex: az } });
   }
 
   private resetDraft(): TemplateLayerCreate {
