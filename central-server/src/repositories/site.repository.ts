@@ -687,7 +687,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
 
   /**
    * Recupere les stats agreges des matchs pour un site, filtrable par periode.
-   * ADR-092: rapports sponsors utilisent avg_audience sur la periode.
+   * ADR-093: rapports sponsors utilisent avg_audience sur la periode.
    */
   async getMatchStats(
     siteId: string,

@@ -1,4 +1,4 @@
-# ADR-092: Persistance structurée des sessions de match et historique dashboard
+# ADR-093: Persistance structurée des sessions de match et historique dashboard
 
 **Date** : 2026-04-24
 **Statut** : Proposé
@@ -79,4 +79,4 @@ CREATE INDEX IF NOT EXISTS idx_club_sessions_match_date
 - `central-server/src/services/cron-scheduler.service.ts` — job auto-close `closeStaleMatchSessions()` (horaire, timeout 4h sans video_play + 24h absolu)
 - `raspberry/src/app/services/local-options.service.ts` — émission socket enrichie + debounce 2s
 - `central-dashboard/src/app/features/sites/site-detail/match-history/` — **nouveau** (composant + service)
-- `docs/adr/README.md` — ajouter entrée ADR-092
+- `docs/adr/README.md` — ajouter entrée ADR-093

@@ -245,11 +245,11 @@ const stateSyncRelaysTotal = new Counter({
   registers: [register],
 });
 
-// ============= Métriques Match Sessions Auto-Close (ADR-092) =============
+// ============= Métriques Match Sessions Auto-Close (ADR-093) =============
 
 const matchSessionsAutoclosedTotal = new Counter({
   name: 'neopro_match_sessions_autoclosed_total',
-  help: 'Total club_sessions auto-closed by CRON (ADR-092)',
+  help: 'Total club_sessions auto-closed by CRON (ADR-093)',
   labelNames: ['reason'], // idle | absolute
   registers: [register],
 });
@@ -967,7 +967,7 @@ class MetricsService {
     stateSyncRelaysTotal.inc();
   }
 
-  /** ADR-092: session match auto-fermée par le CRON (reason: idle|absolute) */
+  /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */
   recordMatchSessionAutoclosed(reason: 'idle' | 'absolute', count = 1): void {
     if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
   }

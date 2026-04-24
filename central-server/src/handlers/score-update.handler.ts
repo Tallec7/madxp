@@ -125,7 +125,7 @@ export function handleScoreUpdate(socket: Socket, payload: ScoreUpdatePayload) {
       });
     }
 
-    // ADR-092 — Freeze latest scores on the open club_session (if any).
+    // ADR-093 — Freeze latest scores on the open club_session (if any).
     // Auto-close CRON reads these columns as the final scores.
     pool
       .query(

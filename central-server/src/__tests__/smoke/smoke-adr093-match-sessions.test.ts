@@ -1,5 +1,5 @@
 /**
- * Smoke tests — ADR-092 match sessions persistence + auto-close CRON.
+ * Smoke tests — ADR-093 match sessions persistence + auto-close CRON.
  * File-level reads only (no app bootstrap).
  */
 
@@ -10,7 +10,7 @@ const repoRoot = path.resolve(__dirname, '../../../../');
 const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 const exists = (rel: string) => fs.existsSync(path.join(repoRoot, rel));
 
-describe('Smoke — ADR-092 match sessions', () => {
+describe('Smoke — ADR-093 match sessions', () => {
   it('migration file exists and extends club_sessions with match fields', () => {
     const file = 'central-server/src/scripts/migrations/extend-club-sessions-match-fields.sql';
     expect(exists(file)).toBe(true);
@@ -43,7 +43,7 @@ describe('Smoke — ADR-092 match sessions', () => {
     expect(line!).toMatch(/match_session_autoclose/);
   });
 
-  it('full-schema.sql club_sessions has ADR-092 columns', () => {
+  it('full-schema.sql club_sessions has ADR-093 columns', () => {
     const sql = read('central-server/src/scripts/full-schema.sql');
     const table = sql.match(/CREATE TABLE public\.club_sessions[\s\S]*?\);/);
     expect(table).not.toBeNull();

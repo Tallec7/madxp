@@ -1,6 +1,6 @@
-# Match Sessions — Invariants (ADR-092)
+# Match Sessions — Invariants (ADR-093)
 
-Source de vérité : ADR-092. Les sessions match sont persistées dans `club_sessions`
+Source de vérité : ADR-093. Les sessions match sont persistées dans `club_sessions`
 (pas de table parallèle) pour préserver le pipeline analytics (`video_plays.session_id`).
 
 ## NE JAMAIS FAIRE (smoke test enforced)
@@ -8,7 +8,7 @@ Source de vérité : ADR-092. Les sessions match sont persistées dans `club_ses
 ### Persistance
 
 - Retirer `home_team`, `away_team`, `home_score`, `away_score`, `profile_id`,
-  `event_type` ou `ended_by` de `club_sessions` (colonnes ADR-092, utilisées par
+  `event_type` ou `ended_by` de `club_sessions` (colonnes ADR-093, utilisées par
   l'historique match + sponsor reports période-filtrés).
 - Laisser `score-update.handler.ts` sans UPDATE sur `club_sessions` (sans ça, les
   scores finaux ne sont jamais gelés → historique match vide côté dashboard).
@@ -16,7 +16,7 @@ Source de vérité : ADR-092. Les sessions match sont persistées dans `club_ses
   `match-config.handler.ts` (le Pi émet `match-config` au démarrage du match ;
   sans persistance, les équipes apparaissent uniquement dans `match_name` legacy).
 - Oublier `COALESCE` sur `match_name` legacy vs `home_team || ' vs ' || away_team`
-  côté dashboard (les sessions pré-ADR-092 n'ont que `match_name`).
+  côté dashboard (les sessions pré-ADR-093 n'ont que `match_name`).
 
 ### CRON auto-close
 
@@ -48,13 +48,13 @@ Source de vérité : ADR-092. Les sessions match sont persistées dans `club_ses
 
 ### Full-schema
 
-- Modifier les colonnes ADR-092 dans `full-schema.sql` sans créer une nouvelle
+- Modifier les colonnes ADR-093 dans `full-schema.sql` sans créer une nouvelle
   migration (la migration `extend-club-sessions-match-fields.sql` est la source
   de vérité prod — `full-schema.sql` est le snapshot staging bootstrap).
 
 ## Référence
 
-- [ADR-092](../../docs/adr/ADR-092-match-sessions-persistence-and-history.md)
+- [ADR-093](../../docs/adr/ADR-093-match-sessions-persistence-and-history.md)
 - Migration : `central-server/src/scripts/migrations/extend-club-sessions-match-fields.sql`
 - CRON : `central-server/src/services/cron-scheduler.service.ts` → `executeMatchAutoCloseTask`
 - Supervision : `neopro_match_sessions_autoclosed_total{reason}`

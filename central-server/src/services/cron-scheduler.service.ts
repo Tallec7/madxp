@@ -645,7 +645,7 @@ class CronSchedulerService {
   }
 
   /**
-   * ADR-092 — Clôture automatique des sessions match ouvertes.
+   * ADR-093 — Clôture automatique des sessions match ouvertes.
    *
    * Règles :
    * - idle : aucune `video_plays` depuis `idleHours` (défaut 4h) ET started_at plus vieux que idleHours

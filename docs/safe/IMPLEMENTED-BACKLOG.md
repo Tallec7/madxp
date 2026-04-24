@@ -1,6 +1,6 @@
 # Implemented Backlog — Features Livrées
 
-> **Dernière mise à jour** : 24 Avril 2026 (ADR-092 : persistance sessions match + CRON auto-close + sponsor reports période-filtrés — IMP-ANA-22 ; ADR-089 Phase 2 : contenus `web_page`/`livestream` first-class Pi + SaaS, sync-agent + injection CloudRemote/SaaS + Prometheus — IMP-VID-28 ; F-15.2 Phase 2 simulateur Table de marque — IMP-OVR-12 ; ADR-088 Scoreboard live multi-vendor SaaS push — IMP-OVR-11)
+> **Dernière mise à jour** : 24 Avril 2026 (ADR-093 : persistance sessions match + CRON auto-close + sponsor reports période-filtrés — IMP-ANA-22 ; ADR-089 Phase 2 : contenus `web_page`/`livestream` first-class Pi + SaaS, sync-agent + injection CloudRemote/SaaS + Prometheus — IMP-VID-28 ; F-15.2 Phase 2 simulateur Table de marque — IMP-OVR-12 ; ADR-088 Scoreboard live multi-vendor SaaS push — IMP-OVR-11)
 > Ce document recense **toutes** les features implémentées dans le codebase NEOPRO, organisées par domaine fonctionnel. Il complète le backlog SAFe (futur) avec une vue exhaustive du produit livré.
 > **Source** : Croisement systématique de 34 changelogs, 200+ commits git (v3.47→v3.64), audit codebase, et sprint audit sponsors/analytics (26 features P0+P1+P2+P3).
 
@@ -162,7 +162,7 @@
 | IMP-ANA-19 | Refonte fleet overview business-first (KPIs, Chart.js engagement, sponsors)                                               | Production | `analytics.component.ts`                                                                                                                         | Fév 2026     |
 | IMP-ANA-20 | Refonte club analytics : page unique, sponsors benchmark, tendances                                                       | Production | `club-analytics.component.ts`                                                                                                                    | Fév 2026     |
 | IMP-ANA-21 | Fix pipeline consolidation cleanup — stale sponsor buffer + orphan sender causant HTTP 400 sur 50+ Pi                     | Production | `agent.js`, `analytics-buffer.js`, `build-raspberry.sh`                                                                                          | Mars 2026    |
-| IMP-ANA-22 | ADR-092 — Persistance sessions match (home/away/scores/profil) + CRON auto-close 4h/24h + sponsor reports période-filtrés | Production | `extend-club-sessions-match-fields.sql`, `cron-scheduler.service.ts`, `match-config.handler.ts`, `score-update.handler.ts`, `site.repository.ts` | Avril 2026   |
+| IMP-ANA-22 | ADR-093 — Persistance sessions match (home/away/scores/profil) + CRON auto-close 4h/24h + sponsor reports période-filtrés | Production | `extend-club-sessions-match-fields.sql`, `cron-scheduler.service.ts`, `match-config.handler.ts`, `score-update.handler.ts`, `site.repository.ts` | Avril 2026   |
 
 ---
 

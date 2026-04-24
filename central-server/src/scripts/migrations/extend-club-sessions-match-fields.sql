@@ -1,4 +1,4 @@
--- Migration: Extend club_sessions with structured match fields (ADR-092)
+-- Migration: Extend club_sessions with structured match fields (ADR-093)
 -- Date: 2026-04-24
 -- Description:
 --   Adds split home/away team names, final scores, profile_id, event_type
@@ -43,9 +43,9 @@ CREATE INDEX IF NOT EXISTS idx_club_sessions_open
   WHERE ended_at IS NULL;
 
 COMMENT ON COLUMN club_sessions.home_team IS
-  'Home team name (split from legacy match_name). ADR-092.';
+  'Home team name (split from legacy match_name). ADR-093.';
 COMMENT ON COLUMN club_sessions.away_team IS
-  'Away team name (split from legacy match_name). ADR-092.';
+  'Away team name (split from legacy match_name). ADR-093.';
 COMMENT ON COLUMN club_sessions.home_score IS
   'Final home score at session close (frozen by auto-close CRON or match-end event).';
 COMMENT ON COLUMN club_sessions.away_score IS
@@ -57,7 +57,7 @@ COMMENT ON COLUMN club_sessions.event_type IS
 COMMENT ON COLUMN club_sessions.ended_by IS
   'How the session was closed: remote, timeout, manual. NULL while open.';
 
--- Extend check_task_type to allow 'pdf_report' (legacy) and 'match_session_autoclose' (ADR-092).
+-- Extend check_task_type to allow 'pdf_report' (legacy) and 'match_session_autoclose' (ADR-093).
 DO $$
 BEGIN
   ALTER TABLE recurring_schedules DROP CONSTRAINT IF EXISTS check_task_type;
@@ -79,7 +79,7 @@ INSERT INTO recurring_schedules (
 )
 SELECT
   'Match session auto-close',
-  'Clôture automatique des sessions match inactives (4h sans video_plays) ou ouvertes depuis >24h. ADR-092.',
+  'Clôture automatique des sessions match inactives (4h sans video_plays) ou ouvertes depuis >24h. ADR-093.',
   'match_session_autoclose',
   '15 * * * *',
   0, 15,
@@ -91,5 +91,5 @@ WHERE NOT EXISTS (
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Migration complete: club_sessions extended with match fields + auto-close schedule (ADR-092)';
+  RAISE NOTICE 'Migration complete: club_sessions extended with match fields + auto-close schedule (ADR-093)';
 END $$;

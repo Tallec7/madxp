@@ -3,7 +3,7 @@
  *
  * Gère les événements de configuration de match envoyés par la télécommande:
  * - Date du match
- * - Nom du match (legacy, concaténé) + home_team / away_team (ADR-092)
+ * - Nom du match (legacy, concaténé) + home_team / away_team (ADR-093)
  * - Estimation d'audience
  * - Scores finaux (home_score / away_score) — mis à jour incrémentalement
  * - profile_id (ADR-058)
@@ -12,7 +12,7 @@
  * Stocke les infos dans club_sessions pour corrélation avec analytics et
  * rapports historique / sponsors (avg_audience période).
  *
- * Date: 2025-12-16 (étendu 2026-04-24 ADR-092)
+ * Date: 2025-12-16 (étendu 2026-04-24 ADR-093)
  */
 
 import { Socket } from 'socket.io';
@@ -25,7 +25,7 @@ export interface MatchConfigPayload {
   matchDate?: string;
   matchName?: string;
   audienceEstimate?: number;
-  // ADR-092 — structured match fields
+  // ADR-093 — structured match fields
   homeTeam?: string;
   awayTeam?: string;
   homeScore?: number;
