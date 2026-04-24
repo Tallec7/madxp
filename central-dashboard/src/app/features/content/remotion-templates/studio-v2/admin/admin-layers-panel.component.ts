@@ -69,8 +69,12 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
             accept="video/*"
             (valueChange)="l.videoUrl = $event; emitUpdate(l, { videoUrl: $event })"
           ></app-url-upload-input>
-          <span class="alp__mask" title="mask top/bottom/left/right">
-            {{ l.mask.top }}/{{ l.mask.bottom }}/{{ l.mask.left }}/{{ l.mask.right }}
+          <span
+            class="alp__mask"
+            *ngIf="hasMask(l)"
+            title="Recadrage en % : haut / bas / gauche / droite"
+          >
+            Recadrage {{ l.mask.top }}/{{ l.mask.bottom }}/{{ l.mask.left }}/{{ l.mask.right }} %
           </span>
           <button type="button" class="alp__delete" (click)="delete.emit(l.id)">Suppr.</button>
         </li>
@@ -94,9 +98,9 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .alp__name { flex: 0 0 120px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__url { flex: 1; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__mask { font-size: 10px; color: #6b7280; font-family: monospace; }
-    .alp__reorder { width: 22px; height: 22px; padding: 0; border: 1px solid #d1d5db; border-radius: 3px; background: #fff; cursor: pointer; font-size: 12px; color: #374151; }
-    .alp__reorder:hover:not(:disabled) { background: #f3f4f6; }
-    .alp__reorder:disabled { opacity: 0.35; cursor: not-allowed; }
+    .alp__reorder { width: 28px; height: 28px; padding: 0; border: 1px solid #c4b5fd; border-radius: 4px; background: #f5f3ff; cursor: pointer; font-size: 15px; font-weight: 700; color: #6d28d9; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .alp__reorder:hover:not(:disabled) { background: #ede9fe; border-color: #7c3aed; }
+    .alp__reorder:disabled { opacity: 0.3; cursor: not-allowed; background: #f3f4f6; border-color: #e5e7eb; color: #9ca3af; }
     .alp__delete { padding: 2px 6px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 3px; cursor: pointer; font-size: 11px; }
     .alp__empty { font-size: 12px; color: #6b7280; font-style: italic; }
   `],
@@ -138,6 +142,11 @@ export class AdminLayersPanelComponent {
     const list = this.sorted();
     if (index >= list.length - 1) return;
     this.swapZ(list[index], list[index + 1]);
+  }
+
+  hasMask(l: TemplateLayer): boolean {
+    const m = l.mask;
+    return !!m && (m.top > 0 || m.bottom > 0 || m.left > 0 || m.right > 0);
   }
 
   private swapZ(a: TemplateLayer, b: TemplateLayer): void {

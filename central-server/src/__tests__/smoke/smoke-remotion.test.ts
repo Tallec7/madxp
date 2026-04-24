@@ -1816,7 +1816,7 @@ describe('Template Studio v2 — ADR-084 custom fonts + visibility + scale-in', 
     expect(editor).toMatch(/animation.*===.*scale-in/);
     expect(editor).toMatch(/scaleFrom/);
     expect(editor).toMatch(/scaleTo/);
-    const patchIdx = editor.indexOf('emitPatch');
+    const patchIdx = editor.indexOf('emitPatch(): void');
     const patchBlock = editor.slice(patchIdx, patchIdx + 3000);
     expect(patchBlock).toMatch(/alwaysVisible/);
     expect(patchBlock).toMatch(/scaleFrom/);
@@ -2106,6 +2106,37 @@ describe('Template Studio v2 — ADR-095 admin UX (drag/snap/undo/preview + CLI 
     // Up/down must be disabled at the extremes.
     expect(panel).toMatch(/\[disabled\]="i\s*===\s*0"/);
     expect(panel).toMatch(/\[disabled\]="last"/);
+  });
+
+  // ── UX polish (post-PR #586 feedback) : editable label + mask hide + French labels ──
+  it('field editor exposes editable label input (not a read-only strong)', () => {
+    const fieldEditorPath =
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts';
+    const src = readDash(fieldEditorPath);
+    expect(src).toMatch(/\[\(ngModel\)\]="f\.value\.label"/);
+    expect(src).toMatch(/\[attr\.data-testid\]="'admin-field-label-'\s*\+\s*f\.value\.slotKey"/);
+    expect(src).toMatch(/class="afe__label"/);
+  });
+
+  it('field editor uses French section labels with units (non-tech friendly)', () => {
+    const fieldEditorPath =
+      'src/app/features/content/remotion-templates/studio-v2/admin/admin-field-editor.component.ts';
+    const src = readDash(fieldEditorPath);
+    expect(src).toMatch(/<label>Police\s/);
+    expect(src).toMatch(/<label>Taille \(px\)\s/);
+    expect(src).toMatch(/<label>Couleur\s/);
+    expect(src).toMatch(/<label>Alignement\s/);
+    expect(src).toMatch(/<h5>Calque parent<\/h5>/);
+    expect(src).toMatch(/<h5>Zone sûre & cadrage<\/h5>/);
+    expect(src).toMatch(/Astuce\s*:\s*glissez le slot/);
+  });
+
+  it('layers panel hides mask chip when all zero (0/0/0/0 is noise for non-tech users)', () => {
+    const panel = readDash(layersPath);
+    expect(panel).toMatch(/\*ngIf="hasMask\(l\)"/);
+    expect(panel).toMatch(/hasMask\s*\(\s*l:\s*TemplateLayer\s*\)/);
+    // New human-readable label instead of the raw "0/0/0/0".
+    expect(panel).toMatch(/Recadrage\s*{{\s*l\.mask\.top\s*}}/);
   });
 
   // ── Step 5 : CLI template:import ─────────────────────────────────────────

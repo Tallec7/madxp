@@ -113,47 +113,64 @@ const FONT_FAMILIES = [
     <div class="afe" *ngIf="field as f" [attr.data-testid]="'admin-field-editor'">
       <header class="afe__header">
         <span class="afe__kind">{{ f.kind === 'text' ? 'Texte' : 'Image' }}</span>
-        <strong>{{ f.value.label }}</strong>
-        <code class="afe__key">{{ f.value.slotKey }}</code>
+        <input
+          class="afe__label"
+          type="text"
+          [(ngModel)]="f.value.label"
+          (change)="emitPatch()"
+          placeholder="Libellé"
+          [attr.data-testid]="'admin-field-label-' + f.value.slotKey"
+        />
+        <code class="afe__key" title="Identifiant technique (slotKey)">{{ f.value.slotKey }}</code>
       </header>
 
       <section class="afe__section">
         <h5>Position</h5>
-        <label>x <input type="number" [(ngModel)]="f.value.position.x" (change)="emitPatch()" /></label>
-        <label>y <input type="number" [(ngModel)]="f.value.position.y" (change)="emitPatch()" /></label>
+        <label>X (% horizontal)
+          <input type="number" step="0.01" min="0" max="1"
+                 [(ngModel)]="f.value.position.x" (change)="emitPatch()" />
+        </label>
+        <label>Y (% vertical)
+          <input type="number" step="0.01" min="0" max="1"
+                 [(ngModel)]="f.value.position.y" (change)="emitPatch()" />
+        </label>
         <ng-container *ngIf="f.kind === 'image'">
-          <label>width
-            <input type="number" [(ngModel)]="$any(f.value).position.width" (change)="emitPatch()" />
+          <label>Largeur (% canvas)
+            <input type="number" step="0.01" min="0" max="1"
+                   [(ngModel)]="$any(f.value).position.width" (change)="emitPatch()" />
           </label>
-          <label>height
-            <input type="number" [(ngModel)]="$any(f.value).position.height" (change)="emitPatch()" />
+          <label>Hauteur (% canvas)
+            <input type="number" step="0.01" min="0" max="1"
+                   [(ngModel)]="$any(f.value).position.height" (change)="emitPatch()" />
           </label>
         </ng-container>
-        <label *ngIf="f.kind === 'text'">maxWidth
-          <input type="number" [(ngModel)]="$any(f.value).maxWidth" (change)="emitPatch()" />
+        <label *ngIf="f.kind === 'text'">Largeur max (% canvas)
+          <input type="number" step="0.01" min="0" max="1"
+                 [(ngModel)]="$any(f.value).maxWidth" (change)="emitPatch()" />
         </label>
+        <p class="afe__hint">Astuce : glissez le slot sur le canvas pour positionner visuellement.</p>
       </section>
 
       <section class="afe__section" *ngIf="f.kind === 'text'">
         <h5>Visibilité</h5>
         <label class="afe__checkbox">
           <input type="checkbox" [(ngModel)]="$any(f.value).alwaysVisible" (change)="emitPatch()" />
-          Toujours visible (sans timecode)
+          Toujours visible (ignore le timing)
         </label>
       </section>
 
       <section class="afe__section" *ngIf="f.kind !== 'text' || !$any(f.value).alwaysVisible">
-        <h5>Timing (secondes)</h5>
-        <label>appearAt
+        <h5>Timing</h5>
+        <label>Apparition (s)
           <input type="number" step="0.1" [(ngModel)]="f.value.appearAt" (change)="emitPatch()" />
         </label>
-        <label>appearDuration
+        <label>Durée d'animation (s)
           <input type="number" step="0.1" [(ngModel)]="f.value.appearDuration" (change)="emitPatch()" />
         </label>
       </section>
 
       <section class="afe__section">
-        <h5>Animation</h5>
+        <h5>Animation d'apparition</h5>
         <select [(ngModel)]="f.value.animation" (change)="emitPatch()">
           <option *ngFor="let a of animations" [value]="a">{{ a }}</option>
         </select>
@@ -163,12 +180,12 @@ const FONT_FAMILIES = [
                *ngIf="$any(f.value).animation === 'scale-in' ||
                       $any(f.value).animation === 'zoom' ||
                       $any(f.value).animation === 'logo-pop'">
-        <h5>Scale</h5>
-        <label>Départ (absent)
+        <h5>Échelle</h5>
+        <label>Départ (ex. 0.7 = absent)
           <input type="number" step="0.05" min="0" max="5"
                  [(ngModel)]="$any(f.value).scaleFrom" (change)="emitPatch()" />
         </label>
-        <label>Arrivée (présent)
+        <label>Arrivée (ex. 1 = taille finale)
           <input type="number" step="0.05" min="0" max="5"
                  [(ngModel)]="$any(f.value).scaleTo" (change)="emitPatch()" />
         </label>
@@ -176,8 +193,8 @@ const FONT_FAMILIES = [
 
       <!-- ADR-086 — Layer parent + direction animation -->
       <section class="afe__section" *ngIf="layers?.length">
-        <h5>Layer parent (ADR-086)</h5>
-        <label>Layer
+        <h5>Calque parent</h5>
+        <label>Calque
           <select [(ngModel)]="$any(f.value).layerId" (change)="emitPatch()">
             <option [ngValue]="null">— Aucun (timing autonome) —</option>
             <option *ngFor="let l of layers" [ngValue]="l.id">
@@ -187,48 +204,48 @@ const FONT_FAMILIES = [
         </label>
         <label>Direction
           <select [(ngModel)]="$any(f.value).animationDirection" (change)="emitPatch()">
-            <option value="in">in — arrivée</option>
-            <option value="out">out — sortie</option>
+            <option value="in">Arrivée (in)</option>
+            <option value="out">Sortie (out)</option>
           </select>
         </label>
         <label *ngIf="f.kind === 'text'" class="afe__checkbox">
           <input type="checkbox" [(ngModel)]="$any(f.value).respectAlpha"
                  [disabled]="!$any(f.value).layerId" (change)="emitPatch()" />
-          Respecter l'alpha du layer (rendu sous)
+          Respecter l'alpha du calque (rendu sous)
         </label>
       </section>
 
       <!-- ADR-086 — Safe-zone image -->
       <section class="afe__section" *ngIf="f.kind === 'image'">
-        <h5>Safe-zone & fit (ADR-086)</h5>
-        <label>Anchor
+        <h5>Zone sûre & cadrage</h5>
+        <label>Ancre
           <select [(ngModel)]="$any(f.value).anchor" (change)="emitPatch()">
             <option *ngFor="let a of anchors" [value]="a">{{ a }}</option>
           </select>
         </label>
-        <label>Fit mode
+        <label>Mode de cadrage
           <select [(ngModel)]="$any(f.value).fitMode" (change)="emitPatch()">
             <option *ngFor="let m of fitModes" [value]="m">{{ m }}</option>
           </select>
         </label>
-        <label>Overflow
+        <label>Débordement
           <select [(ngModel)]="$any(f.value).overflow" (change)="emitPatch()">
             <option *ngFor="let o of overflows" [value]="o">{{ o }}</option>
           </select>
         </label>
-        <label>safe top %
+        <label>Zone sûre — haut (%)
           <input type="number" step="0.5" min="0" max="100"
                  [(ngModel)]="$any(f.value).safeTopPct" (change)="emitPatch()" />
         </label>
-        <label>safe left %
+        <label>Zone sûre — gauche (%)
           <input type="number" step="0.5" min="0" max="100"
                  [(ngModel)]="$any(f.value).safeLeftPct" (change)="emitPatch()" />
         </label>
-        <label>safe width %
+        <label>Zone sûre — largeur (%)
           <input type="number" step="0.5" min="0" max="100"
                  [(ngModel)]="$any(f.value).safeWidthPct" (change)="emitPatch()" />
         </label>
-        <label>safe height %
+        <label>Zone sûre — hauteur (%)
           <input type="number" step="0.5" min="0" max="100"
                  [(ngModel)]="$any(f.value).safeHeightPct" (change)="emitPatch()" />
         </label>
@@ -236,24 +253,25 @@ const FONT_FAMILIES = [
 
       <section class="afe__section" *ngIf="f.kind === 'text'">
         <h5>Typographie</h5>
-        <label>fontFamily
+        <label>Police
           <select [(ngModel)]="$any(f.value).fontFamily" (change)="emitPatch()">
             <option *ngFor="let ff of fontFamilies" [value]="ff" [style.fontFamily]="ff">
               {{ ff }}
             </option>
           </select>
         </label>
-        <label>fontSize
-          <input type="number" [(ngModel)]="$any(f.value).fontSize" (change)="emitPatch()" />
+        <label>Taille (px)
+          <input type="number" min="8" max="400"
+                 [(ngModel)]="$any(f.value).fontSize" (change)="emitPatch()" />
         </label>
-        <label>color
+        <label>Couleur
           <input type="color" [(ngModel)]="$any(f.value).color" (change)="emitPatch()" />
         </label>
-        <label>align
+        <label>Alignement
           <select [(ngModel)]="$any(f.value).align" (change)="emitPatch()">
-            <option value="left">left</option>
-            <option value="center">center</option>
-            <option value="right">right</option>
+            <option value="left">Gauche</option>
+            <option value="center">Centre</option>
+            <option value="right">Droite</option>
           </select>
         </label>
       </section>
@@ -266,8 +284,12 @@ const FONT_FAMILIES = [
   styles: [`
     .afe { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; }
     .afe__header { display: flex; align-items: center; gap: 8px; }
-    .afe__kind { padding: 2px 8px; font-size: 11px; border-radius: 3px; background: #ede9fe; color: #6d28d9; }
-    .afe__key { font-size: 11px; color: #6b7280; margin-left: auto; }
+    .afe__kind { padding: 2px 8px; font-size: 11px; border-radius: 3px; background: #ede9fe; color: #6d28d9; flex-shrink: 0; }
+    .afe__label { flex: 1 1 auto; min-width: 0; padding: 4px 8px; font-size: 13px; font-weight: 600; color: #111827; border: 1px solid transparent; border-radius: 4px; background: transparent; }
+    .afe__label:hover { border-color: #d1d5db; background: #f9fafb; }
+    .afe__label:focus { outline: none; border-color: #6d28d9; background: #fff; box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.15); }
+    .afe__key { font-size: 10px; color: #9ca3af; font-family: monospace; flex-shrink: 0; cursor: help; }
+    .afe__hint { flex-basis: 100%; margin: 4px 0 0; font-size: 11px; color: #6b7280; font-style: italic; }
     .afe__section { display: flex; flex-wrap: wrap; gap: 8px; }
     .afe__section h5 { flex-basis: 100%; margin: 0; font-size: 12px; color: #6b7280; text-transform: uppercase; }
     .afe__section label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
