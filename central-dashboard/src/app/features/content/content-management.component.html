@@ -71,18 +71,10 @@
         </button>
       </div>
       <div class="header-actions">
-        <button
-          class="btn btn-secondary"
-          (click)="openWebContentModal('web_page')"
-          title="Ajouter une page web diffusable comme une vidéo"
-        >
+        <button class="btn btn-secondary" (click)="openWebContentModal('web_page')">
           🌐 Page web
         </button>
-        <button
-          class="btn btn-secondary"
-          (click)="openWebContentModal('livestream')"
-          title="Ajouter un flux live diffusable comme une vidéo"
-        >
+        <button class="btn btn-secondary" (click)="openWebContentModal('livestream')">
           📡 Livestream
         </button>
         <button class="btn btn-secondary" (click)="showImageModal = true">
@@ -715,95 +707,12 @@
     </div>
   </div>
 
-  <!-- ADR-088 — Web content modal (page web / livestream) -->
-  <div class="modal" *ngIf="showWebContentModal" (click)="closeWebContentModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>{{ webContentModalTitleKey | translate }}</h2>
-        <button
-          class="btn-close"
-          (click)="closeWebContentModal()"
-          [disabled]="isCreatingWebContent"
-        >
-          ×
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Nom *</label>
-          <input
-            type="text"
-            class="form-control"
-            [(ngModel)]="webContentForm.name"
-            maxlength="255"
-            placeholder="Ex: Classement ligue / Live France-Brésil"
-          />
-        </div>
-        <div class="form-group">
-          <label
-            >URL * ({{
-              webContentForm.contentType === 'livestream' ? 'HLS / M3U8 / MP4' : 'https://...'
-            }})</label
-          >
-          <input
-            type="url"
-            class="form-control"
-            [(ngModel)]="webContentForm.url"
-            placeholder="https://..."
-          />
-        </div>
-        <div class="form-group" *ngIf="webContentForm.contentType === 'livestream'">
-          <label>Durée par passage (secondes) *</label>
-          <input
-            type="number"
-            class="form-control"
-            [(ngModel)]="webContentForm.durationSeconds"
-            min="5"
-            max="3600"
-            step="5"
-          />
-          <small class="text-muted"
-            >Durée pendant laquelle le livestream sera affiché dans la boucle</small
-          >
-        </div>
-        <div class="form-group" *ngIf="webContentForm.contentType === 'web_page'">
-          <label>Durée par passage (secondes, optionnel)</label>
-          <input
-            type="number"
-            class="form-control"
-            [(ngModel)]="webContentForm.durationSeconds"
-            min="5"
-            max="3600"
-            step="5"
-            placeholder="Ex: 30"
-          />
-        </div>
-        <div class="form-group">
-          <label>Catégorie (optionnel)</label>
-          <input
-            type="text"
-            class="form-control"
-            [(ngModel)]="webContentForm.category"
-            maxlength="100"
-          />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button
-          class="btn btn-secondary"
-          (click)="closeWebContentModal()"
-          [disabled]="isCreatingWebContent"
-        >
-          Annuler
-        </button>
-        <button
-          class="btn btn-primary"
-          (click)="submitWebContent()"
-          [disabled]="isCreatingWebContent || !webContentForm.name || !webContentForm.url"
-        >
-          {{ isCreatingWebContent ? 'Création...' : '✅ Créer' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- ADR-089 — Web content creation modal (admin global, with optional site selector) -->
+  <app-web-content-create-modal
+    *ngIf="webContentModalType"
+    [contentType]="webContentModalType"
+    [availableSites]="webContentSiteOptions"
+    (closed)="closeWebContentModal()"
+    (created)="onWebContentCreated()"
+  ></app-web-content-create-modal>
 </div>

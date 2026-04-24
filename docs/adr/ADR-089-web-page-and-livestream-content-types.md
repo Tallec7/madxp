@@ -90,3 +90,24 @@ Le périmètre a été étendu au-delà du MVP initial : les `web_page` / `lives
 - L'endpoint Pi renvoie toujours `{ siteId, entries }`, même vide (pas de 404 si 0 entries).
 - `listWebContentForPi` **DOIT** vérifier `req.siteId === req.params.id` (guard contre Pi A lisant les data de Pi B).
 - Les clients `uploaded_for_site_id = NULL` sont des web-content **globaux** (visibles par toutes les flottes) ; les tagués par `site_id` sont privés.
+
+---
+
+## Addendum — Phase 2.1 UI création (2026-04-24)
+
+Le manque d'UI exposait l'asymétrie : seul `/content` (vue admin globale) avait un bouton de création, et son submit ne propageait jamais `uploadedForSiteId` → tous les contenus créés par l'admin tombaient en `NULL` (global). Aucun moyen côté dashboard de scoper un web_page / livestream à un site précis.
+
+### Changements
+
+- **Nouveau composant partagé** : `central-dashboard/src/app/shared/components/web-content-create-modal/` — formulaire unique (nom, URL, durée, catégorie) consommé par les deux surfaces. Inputs : `contentType` (required), `lockedSiteId` (per-site), `availableSites` (admin avec sélecteur).
+- **Surface per-site** : boutons 🌐 Page web / 📡 Livestream ajoutés dans `video-library.component.html` (gated `*ngIf="siteId"` → invisibles dans l'admin global). Modal ouverte avec `lockedSiteId = siteId` → `uploadedForSiteId = site.id`.
+- **Surface admin global** (`/content`) : le sélecteur "Site cible (optionnel)" laisse l'admin choisir un site précis ou laisser vide pour la flotte entière. La modal calcule `uploadedForSiteId = lockedSiteId ?? selectedSiteId ?? null` (per-site authoritative).
+- **Propagation événement** : `webContentCreated` remonte la chaîne `video-library` → `video-manager` → `site-content-tab.loadContent()` pour rafraîchir la bibliothèque sans reload manuel.
+
+### Invariants additionnels (smoke test enforced — `smoke-web-content-adr089.test.ts`)
+
+- Les boutons création web_page / livestream dans `video-library` sont **gated par `*ngIf="siteId"`** — la vue admin globale (sans `siteId`) ne doit JAMAIS les exposer (sinon `lockedSiteId` serait null → fuite de scope).
+- La modal partagée **DOIT** poster sur `/videos/web-content` (jamais reproduire le formulaire ailleurs — unicité de la validation).
+- `uploadedForSiteId` doit suivre `lockedSiteId ?? selectedSiteId ?? null` — `lockedSiteId` est prioritaire et non-réécrit (le user ne peut pas changer le scope d'un per-site vers global).
+- L'event `webContentCreated` **DOIT** déclencher `loadContent()` au niveau `site-content-tab` (sinon le nouveau row reste invisible jusqu'à reload manuel).
+- Le formulaire inline legacy (`webContentForm`, `submitWebContent`) dans `content-management.component.ts` est **interdit** — la modal partagée est la seule source.

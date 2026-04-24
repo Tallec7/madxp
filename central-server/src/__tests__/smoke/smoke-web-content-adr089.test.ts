@@ -110,4 +110,59 @@ describe('Smoke — ADR-089 web_page / livestream', () => {
     expect(/['"]web-page['"]/.test(tv)).toBe(true);
     expect(/['"]livestream['"]/.test(tv)).toBe(true);
   });
+
+  // ------------ dashboard UI — création web-content (per-site + admin) ------------
+
+  it('dashboard — shared WebContentCreateModal component exists and POSTs to /videos/web-content', () => {
+    const modal = 'central-dashboard/src/app/shared/components/web-content-create-modal/web-content-create-modal.component.ts';
+    expect(exists(modal)).toBe(true);
+    const src = read(modal);
+    // Required inputs wire the two usage modes
+    expect(/@Input\(\{\s*required:\s*true\s*\}\)\s+contentType/.test(src)).toBe(true);
+    expect(/@Input\(\)\s+lockedSiteId/.test(src)).toBe(true);
+    expect(/@Input\(\)\s+availableSites/.test(src)).toBe(true);
+    // Submit must POST to the ADR-089 endpoint
+    expect(/post<[^>]*>\(\s*['"]\/videos\/web-content['"]/.test(src)).toBe(true);
+    // uploadedForSiteId must prefer lockedSiteId over selectedSiteId (per-site is authoritative)
+    expect(/this\.lockedSiteId\s*\?\?\s*this\.selectedSiteId/.test(src)).toBe(true);
+  });
+
+  it('dashboard — video-library exposes web_page + livestream creation buttons gated by siteId', () => {
+    const html = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.html');
+    expect(/openWebContentModal\(\s*'web_page'\s*\)/.test(html)).toBe(true);
+    expect(/openWebContentModal\(\s*'livestream'\s*\)/.test(html)).toBe(true);
+    // The action block must be gated by *ngIf="siteId" — no buttons in the admin global library
+    expect(/class="library-actions"\s+\*ngIf="siteId"/.test(html)).toBe(true);
+    // Modal must forward the current siteId as lockedSiteId (not null = global leak)
+    expect(/<app-web-content-create-modal[\s\S]*?\[lockedSiteId\]="siteId"/.test(html)).toBe(true);
+  });
+
+  it('dashboard — video-library component wires modal state + emits webContentCreated', () => {
+    const ts = read('central-dashboard/src/app/features/sites/components/video-library/video-library.component.ts');
+    expect(/webContentModalType:\s*WebContentType\s*\|\s*null/.test(ts)).toBe(true);
+    expect(/@Output\(\)\s+webContentCreated\s*=\s*new\s+EventEmitter/.test(ts)).toBe(true);
+    expect(/WebContentCreateModalComponent/.test(ts)).toBe(true);
+  });
+
+  it('dashboard — per-site event propagates video-library → video-manager → site-content-tab', () => {
+    const manager = read('central-dashboard/src/app/features/sites/components/site-content-tab/video-manager/video-manager.component.ts');
+    expect(/@Output\(\)\s+webContentCreated\s*=\s*new\s+EventEmitter/.test(manager)).toBe(true);
+    expect(/\(webContentCreated\)="webContentCreated\.emit\(\)"/.test(manager)).toBe(true);
+
+    const tab = read('central-dashboard/src/app/features/sites/components/site-content-tab/site-content-tab.component.html');
+    // The tab must reload content after web-content creation (otherwise the new row is invisible until refresh)
+    expect(/<app-video-manager[\s\S]*?\(webContentCreated\)="loadContent\(\)"/.test(tab)).toBe(true);
+  });
+
+  it('dashboard — content-management uses shared modal with availableSites (admin site selector)', () => {
+    const html = read('central-dashboard/src/app/features/content/content-management.component.html');
+    expect(/<app-web-content-create-modal/.test(html)).toBe(true);
+    expect(/\[availableSites\]="webContentSiteOptions"/.test(html)).toBe(true);
+
+    const ts = read('central-dashboard/src/app/features/content/content-management.component.ts');
+    expect(/WebContentCreateModalComponent/.test(ts)).toBe(true);
+    expect(/get\s+webContentSiteOptions\s*\(\s*\)\s*:\s*WebContentSiteOption\[\]/.test(ts)).toBe(true);
+    // Must not reintroduce the legacy inline form (webContentForm) — the modal owns the form state
+    expect(/webContentForm\s*:/.test(ts)).toBe(false);
+  });
 });
