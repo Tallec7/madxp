@@ -113,6 +113,18 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   toast: string | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /** Breaking news — texte courant (bufferisé localement, broadcast on demand). */
+  breakingText = '';
+
+  private static readonly THUMB_GRADIENTS = [
+    'linear-gradient(135deg, #20473c, #51b28b)',
+    'linear-gradient(135deg, #cc384e, #e77085)',
+    'linear-gradient(135deg, #1f4e8c, #5a8ed6)',
+    'linear-gradient(135deg, #7d3aa3, #b06ed0)',
+    'linear-gradient(135deg, #c97a1e, #e3a95a)',
+    'linear-gradient(135deg, #2e2e2e, #696969)',
+  ];
+
   // ---- Cycle de vie -----------------------------------------------------
 
   ngOnInit(): void {
@@ -123,6 +135,9 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     const m = this.localOptions.match;
     this.scoreService.currentScore.homeTeam = m.homeTeam.name || 'DOMICILE';
     this.scoreService.currentScore.awayTeam = m.awayTeam.name || 'EXTÉRIEUR';
+
+    // Breaking news: hydrate depuis le premier quickMessage s'il existe
+    this.breakingText = this.localOptions.breakingNews?.quickMessages?.[0] || '';
 
     // Timer: initialisation
     this.timerService.initialize(this.localOptions.timer);
@@ -381,6 +396,34 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   updateBreakingPosition(position: 'top' | 'bottom'): void {
     this.localOptionsService.updateBreakingNewsOptions({ position });
+  }
+
+  get breakingLive(): boolean {
+    return !!this.localOptions.breakingNews?.enabled;
+  }
+
+  toggleBreaking(): void {
+    const next = !this.breakingLive;
+    this.localOptionsService.updateBreakingNewsOptions({ enabled: next });
+    if (next && this.breakingText.trim()) {
+      const existing = this.localOptions.breakingNews?.quickMessages || [];
+      const head = this.breakingText.trim();
+      const dedup = [head, ...existing.filter(m => m !== head)].slice(0, 10);
+      this.localOptionsService.updateBreakingNewsOptions({ quickMessages: dedup });
+    }
+    this.showToast(next ? 'Breaking news diffusé' : 'Breaking news retiré');
+  }
+
+  updateBreakingText(text: string): void {
+    this.breakingText = text;
+  }
+
+  videoThumbGradient(id: string | undefined | null): string {
+    const s = id || 'x';
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    const idx = Math.abs(h) % RemoteV2Component.THUMB_GRADIENTS.length;
+    return RemoteV2Component.THUMB_GRADIENTS[idx];
   }
 
   updateTemplate(t: 'broadcast' | 'minimal'): void {
