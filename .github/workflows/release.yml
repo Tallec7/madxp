@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     # J4 — gate prod deploy via GitHub Environment "production" (required reviewers).
     # Staging dashboard est auto-déployé par Cloudflare Pages, pas concerné par ce job.
-    environment: production
+    environment: divine-freedom / production
 
     steps:
       - name: Checkout
@@ -270,7 +270,7 @@ jobs:
     if: needs.release.outputs.new_release_published == 'true'
     runs-on: ubuntu-latest
     # J4 — même gate que deploy-dashboard ; production = approbation manuelle.
-    environment: production
+    environment: divine-freedom / production
 
     steps:
       - name: Checkout
