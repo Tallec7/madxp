@@ -53,7 +53,9 @@ export type FeatureKey =
   // Templates vidéo
   | 'video_templates'         // Pro+ : accès aux templates vidéo Remotion (ADR-052)
   | 'template_studio_club_scoped'  // Premium : templates perso club white-glove (ADR-075 V2)
-  | 'template_studio_byo';    // Premium : self-service club templates (ADR-075 V3)
+  | 'template_studio_byo'     // Premium : self-service club templates (ADR-075 V3)
+  // Remote Télécommande
+  | 'remote_v2';              // Beta : nouvelle version V2 de la télécommande (rollback instantané via override)
 
 const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   multi_profiles: 'pro',
@@ -69,6 +71,7 @@ const FEATURE_TIERS: Record<FeatureKey, SiteTier> = {
   video_templates: 'pro',
   template_studio_club_scoped: 'premium',
   template_studio_byo: 'premium',
+  remote_v2: 'club', // beta cross-tier, activation par override super_admin uniquement
 };
 
 /**

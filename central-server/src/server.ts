@@ -88,6 +88,17 @@ const allowedOrigins =
     .map((origin) => normalizeOrigin(origin.trim()))
     .filter(Boolean) || [];
 
+// Compile wildcard origins (ex: https://*.neopro-exg.pages.dev) to regex
+// Limité à un wildcard de sous-domaine — pas de wildcard sur le scheme/TLD
+const allowedOriginPatterns: RegExp[] = allowedOrigins
+  .filter((origin) => origin.includes('*'))
+  .map((origin) => {
+    const escaped = origin
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '[a-z0-9-]+');
+    return new RegExp(`^${escaped}$`);
+  });
+
 // SECURITY: Fail-closed in production - reject all cross-origin requests if ALLOWED_ORIGINS not configured
 const isProduction = process.env.NODE_ENV === 'production';
 const corsFailClosed = isProduction && allowedOrigins.length === 0;
@@ -194,8 +205,13 @@ const resolveOrigin = (origin?: string | undefined): string | null => {
     return normalizedOrigin;
   }
 
-  // Check if origin matches any allowed origin
+  // Check if origin matches any allowed origin (exact match)
   if (allowedOrigins.includes(normalizedOrigin)) {
+    return normalizedOrigin;
+  }
+
+  // Check wildcard patterns (ex: https://*.neopro-exg.pages.dev → previews Cloudflare Pages)
+  if (allowedOriginPatterns.some((pattern) => pattern.test(normalizedOrigin))) {
     return normalizedOrigin;
   }
 

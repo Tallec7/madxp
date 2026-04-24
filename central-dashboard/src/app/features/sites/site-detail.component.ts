@@ -14,6 +14,7 @@ import { Site, Metrics, FanStatus, SiteConnectionStatus, ConnectionHealth, Match
 import { formatVersion } from './utils/version';
 import { Subscription, interval } from 'rxjs';
 import * as QRCode from 'qrcode';
+import { environment } from '../../../environments/environment';
 import { ConnectionIndicatorComponent } from '../../shared/components/connection-indicator.component';
 import { SiteContentTabComponent } from './components/site-content-tab/site-content-tab.component';
 import { SiteSettingsTabComponent } from './components/site-settings-tab/site-settings-tab.component';
@@ -307,7 +308,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   getSaasUrl(): string {
-    return `https://neopro-admin.kalonpartners.bzh/saas/?site=${this.site?.id || ''}`;
+    return `${environment.saasBaseUrl}/?site=${this.site?.id || ''}`;
   }
 
   copySaasUrl(): void {
