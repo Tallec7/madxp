@@ -6,7 +6,7 @@
  * Les vidéos uploadées sont automatiquement associées au site.
  */
 
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
@@ -313,13 +313,21 @@ interface UploadState {
     }
   `]
 })
-export class VideoUploadZoneComponent {
+export class VideoUploadZoneComponent implements OnChanges {
   private readonly http = inject(HttpClient);
 
   @Input() siteId: string | null = null;
   @Input() siteName: string = '';
+  /** Files injected from an external drop (e.g. global drag overlay). Triggers upload on change. */
+  @Input() pendingFiles: File[] | null = null;
   @Output() uploadComplete = new EventEmitter<UploadedVideo>();
   @Output() allUploadsComplete = new EventEmitter<UploadedVideo[]>();
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['pendingFiles'] && this.pendingFiles && this.pendingFiles.length > 0) {
+      this.uploadFiles(this.pendingFiles);
+    }
+  }
 
   isDragOver = false;
   isUploading = false;
