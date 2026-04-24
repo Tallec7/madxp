@@ -1,3 +1,9 @@
+## [3.240.1](https://github.com/Tallec7/neopro/compare/v3.240.0...v3.240.1) (2026-04-24)
+
+### Performance Improvements
+
+- **docker:** reduce Railway build time from ~5-10min to ~2-3min ([#589](https://github.com/Tallec7/neopro/issues/589)) ([0369f6a](https://github.com/Tallec7/neopro/commit/0369f6ab50c03c56b42cfd4b61950f38963c49e2))
+
 # [3.240.0](https://github.com/Tallec7/neopro/compare/v3.239.0...v3.240.0) (2026-04-24)
 
 ### Features
