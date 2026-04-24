@@ -1,6 +1,6 @@
 import { ResolveFn, Routes } from '@angular/router';
 import { TvComponent } from './components/tv/tv.component';
-import { RemoteComponent } from './components/remote/remote.component';
+import { RemoteHostComponent } from './components/remote/remote-host.component';
 import { LoginComponent } from './components/login/login.component';
 import { HomeComponent } from './components/home/home.component';
 import { Configuration } from './interfaces/configuration.interface';
@@ -134,6 +134,6 @@ export const routes: Routes = [
     { path: 'display/:n', component: TvComponent, resolve: { configuration: getConfiguration } },
     { path: 'tv', redirectTo: 'display/0', pathMatch: 'full' },
     { path: 'secondary', redirectTo: 'display/1', pathMatch: 'full' },
-    { path: 'remote', component: RemoteComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
+    { path: 'remote', component: RemoteHostComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
     { path: '**', redirectTo: 'display/0' }
 ];

@@ -1,0 +1,313 @@
+<div class="v2-root">
+  <!-- Header -->
+  <header class="v2-header">
+    <img src="/assets/logos/neopro-n-stacked-black.png" class="v2-logo" alt="NeoPro" />
+    <div class="v2-sep"></div>
+    <button
+      class="v2-club-pill"
+      (click)="openSheet('profile')"
+      *ngIf="profiles.length > 1; else staticClub"
+    >
+      <span class="v2-club-badge">{{ (clubName || 'CL').substring(0, 2).toUpperCase() }}</span>
+      <span class="v2-club-name">{{ clubName }}</span>
+      <span class="v2-chev">▾</span>
+    </button>
+    <ng-template #staticClub>
+      <span class="v2-club-pill v2-club-pill--static">
+        <span class="v2-club-badge">{{ (clubName || 'CL').substring(0, 2).toUpperCase() }}</span>
+        <span class="v2-club-name">{{ clubName }}</span>
+      </span>
+    </ng-template>
+    <span class="v2-spacer"></span>
+    <button class="v2-icon-btn" (click)="openSheet('gear')" aria-label="Réglages">⚙︎</button>
+  </header>
+
+  <!-- Hero On-Air -->
+  <section class="v2-hero">
+    <div class="v2-eyebrow">
+      <span class="v2-dot"></span>
+      À l'antenne
+    </div>
+
+    <div class="v2-hero-main">
+      <div class="v2-tv-preview"></div>
+      <button
+        class="v2-rec-badge"
+        [class.v2-rec-badge--active]="recording"
+        (click)="toggleRecording()"
+        aria-label="Enregistrement"
+      >
+        <span class="v2-rec-dot"></span>
+      </button>
+      <div class="v2-hero-title">
+        {{ configuration?.remote?.title || siteName || 'Télécommande' }}
+      </div>
+    </div>
+
+    <div class="v2-loop-section">
+      <div class="v2-label">Boucle active</div>
+      <div class="v2-seg">
+        <button
+          class="v2-seg-btn"
+          [class.v2-seg-btn--active]="loopId === 'before'"
+          (click)="setLoop('before')"
+        >
+          Avant
+        </button>
+        <button
+          class="v2-seg-btn"
+          [class.v2-seg-btn--active]="loopId === 'during'"
+          (click)="setLoop('during')"
+        >
+          Match
+        </button>
+        <button
+          class="v2-seg-btn"
+          [class.v2-seg-btn--active]="loopId === 'after'"
+          (click)="setLoop('after')"
+        >
+          Après
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Widgets -->
+  <section class="v2-widgets">
+    <!-- Score widget -->
+    <div class="v2-widget v2-widget--score">
+      <span class="v2-widget-label">Score</span>
+      <button class="v2-score-display" (click)="openSheet('options')">
+        <span class="v2-team-chip v2-team-chip--home">{{
+          (scoreService.currentScore.homeTeam || 'DOM').substring(0, 4)
+        }}</span>
+        <span class="v2-score-num">
+          {{ scoreService.currentScore.homeScore }}
+          <span class="v2-score-dash">–</span>
+          {{ scoreService.currentScore.awayScore }}
+        </span>
+        <span class="v2-team-chip v2-team-chip--away">{{
+          (scoreService.currentScore.awayTeam || 'EXT').substring(0, 4)
+        }}</span>
+      </button>
+      <div class="v2-score-btns">
+        <button class="v2-score-btn v2-score-btn--dec" (click)="decHome()">−</button>
+        <button class="v2-score-btn v2-score-btn--home" (click)="incHome()">+ DOM</button>
+        <button class="v2-score-btn v2-score-btn--away" (click)="incAway()">+ EXT</button>
+        <button class="v2-score-btn v2-score-btn--dec" (click)="decAway()">−</button>
+      </div>
+    </div>
+
+    <!-- Chrono widget -->
+    <div class="v2-widget v2-widget--chrono" *ngIf="localOptions?.timer?.enabled">
+      <span class="v2-widget-label">Chrono</span>
+      <div class="v2-chrono-time">{{ formatTimer() }}</div>
+      <button class="v2-chrono-btn" (click)="toggleTimer()">
+        {{ timerService.isRunning ? '⏸ Pause' : '▶ Go' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- Phase tabs -->
+  <section class="v2-phase-tabs">
+    <button
+      class="v2-tab"
+      [class.v2-tab--active]="phaseId === 'neutral'"
+      (click)="setPhase('neutral')"
+    >
+      Neutre
+    </button>
+    <button
+      class="v2-tab"
+      [class.v2-tab--active]="phaseId === 'before'"
+      (click)="setPhase('before')"
+    >
+      Avant
+    </button>
+    <button
+      class="v2-tab"
+      [class.v2-tab--active]="phaseId === 'during'"
+      (click)="setPhase('during')"
+    >
+      Match
+    </button>
+    <button class="v2-tab" [class.v2-tab--active]="phaseId === 'after'" (click)="setPhase('after')">
+      Après
+    </button>
+    <button
+      class="v2-align-chip"
+      *ngIf="loopId !== 'neutral' && phaseId !== loopId"
+      (click)="alignPhaseToLoop()"
+    >
+      ⇄ Aligner sur boucle
+    </button>
+  </section>
+
+  <!-- Categories -->
+  <section class="v2-categories">
+    <div class="v2-cat" *ngFor="let cat of currentCategories">
+      <button class="v2-cat-head" (click)="toggleCategory(cat.id)">
+        <span class="v2-cat-icon">{{ cat.icon || '📁' }}</span>
+        <span class="v2-cat-name">{{ cat.name }}</span>
+        <span class="v2-cat-count">{{ cat.videos?.length || 0 }}</span>
+        <span class="v2-cat-chev">{{ expandedCategoryId === cat.id ? '▴' : '▾' }}</span>
+      </button>
+
+      <div class="v2-cat-body" *ngIf="expandedCategoryId === cat.id">
+        <!-- Sous-catégories -->
+        <div class="v2-sub" *ngFor="let sub of cat.subCategories || []">
+          <button class="v2-sub-head" (click)="toggleSub(sub.id)">
+            <span class="v2-sub-name">{{ sub.name }}</span>
+            <span class="v2-sub-count">{{ sub.videos?.length || 0 }}</span>
+            <span class="v2-sub-chev">{{ expandedSubId === sub.id ? '▴' : '▾' }}</span>
+          </button>
+          <div class="v2-videos" *ngIf="expandedSubId === sub.id">
+            <button
+              class="v2-video"
+              *ngFor="let v of sub.videos || []"
+              (click)="playVideo(v.path, v.name)"
+            >
+              <span class="v2-video-name">{{ v.name || v.path }}</span>
+            </button>
+          </div>
+        </div>
+        <!-- Vidéos directes -->
+        <div class="v2-videos">
+          <button
+            class="v2-video"
+            *ngFor="let v of cat.videos || []"
+            (click)="playVideo(v.path, v.name)"
+          >
+            <span class="v2-video-name">{{ v.name || v.path }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="v2-empty" *ngIf="currentCategories.length === 0">Aucune catégorie disponible.</div>
+  </section>
+
+  <!-- Gear sheet -->
+  <div class="v2-sheet-backdrop" *ngIf="activeSheet !== 'none'" (click)="closeSheet()"></div>
+
+  <aside class="v2-sheet" *ngIf="activeSheet === 'gear'">
+    <div class="v2-sheet-head">
+      <h3>Menu</h3>
+      <button class="v2-icon-btn" (click)="closeSheet()">✕</button>
+    </div>
+    <button class="v2-menu-item" (click)="openSheet('match-info')">🏆 Infos du match</button>
+    <button class="v2-menu-item" *ngIf="profiles.length > 1" (click)="openSheet('profile')">
+      👥 Profil actif
+    </button>
+    <button class="v2-menu-item" (click)="openSheet('preferences')">⚙ Préférences appareil</button>
+    <div class="v2-menu-sep"></div>
+    <button class="v2-menu-item" (click)="openSheet('options')">🎚 Options match</button>
+    <div class="v2-menu-sep"></div>
+    <button class="v2-menu-item v2-menu-item--warn" (click)="backToV1()">↩ Revenir à la V1</button>
+  </aside>
+
+  <aside class="v2-sheet" *ngIf="activeSheet === 'match-info'">
+    <div class="v2-sheet-head">
+      <h3>Infos du match</h3>
+      <button class="v2-icon-btn" (click)="closeSheet()">✕</button>
+    </div>
+    <label class="v2-field">
+      <span>Équipe domicile</span>
+      <input type="text" [(ngModel)]="matchDraft.teamHome" placeholder="Ex: NLF Handball" />
+    </label>
+    <label class="v2-field">
+      <span>Équipe extérieur</span>
+      <input type="text" [(ngModel)]="matchDraft.teamAway" placeholder="Ex: ASM Paris" />
+    </label>
+    <label class="v2-field">
+      <span>Date</span>
+      <input type="date" [(ngModel)]="matchDraft.date" />
+    </label>
+    <label class="v2-field">
+      <span>Spectateurs estimés</span>
+      <input type="number" min="0" [(ngModel)]="matchDraft.spectators" />
+    </label>
+    <button class="v2-btn v2-btn--primary" (click)="saveMatchInfo()">Enregistrer</button>
+  </aside>
+
+  <aside class="v2-sheet" *ngIf="activeSheet === 'profile'">
+    <div class="v2-sheet-head">
+      <h3>Changer de profil</h3>
+      <button class="v2-icon-btn" (click)="closeSheet()">✕</button>
+    </div>
+    <button
+      class="v2-menu-item"
+      *ngFor="let p of profiles"
+      [class.v2-menu-item--active]="p.id === currentProfileId"
+      (click)="selectProfile(p.id)"
+    >
+      {{ p.displayName || p.name }}
+    </button>
+    <div class="v2-empty" *ngIf="profiles.length === 0">Aucun autre profil.</div>
+  </aside>
+
+  <aside class="v2-sheet" *ngIf="activeSheet === 'preferences'">
+    <div class="v2-sheet-head">
+      <h3>Préférences appareil</h3>
+      <button class="v2-icon-btn" (click)="closeSheet()">✕</button>
+    </div>
+    <p class="v2-hint">
+      Les préférences d'interface sont gérées par le menu Préférences V1 pour l'instant. Le port V2
+      arrivera dans une itération suivante.
+    </p>
+  </aside>
+
+  <aside class="v2-sheet" *ngIf="activeSheet === 'options'">
+    <div class="v2-sheet-head">
+      <h3>Options match</h3>
+      <button class="v2-icon-btn" (click)="closeSheet()">✕</button>
+    </div>
+
+    <div class="v2-section">
+      <div class="v2-section-title">Overlay</div>
+      <label class="v2-toggle">
+        <input
+          type="checkbox"
+          [checked]="localOptions?.overlay?.scoreEnabled"
+          (change)="toggleScoreOverlay()"
+        />
+        <span>Afficher le score à l'écran</span>
+      </label>
+    </div>
+
+    <div class="v2-section">
+      <div class="v2-section-title">Chrono</div>
+      <label class="v2-toggle">
+        <input
+          type="checkbox"
+          [checked]="localOptions?.timer?.enabled"
+          (change)="toggleTimerEnabled()"
+        />
+        <span>Activer le chrono</span>
+      </label>
+      <label class="v2-toggle">
+        <input
+          type="checkbox"
+          [checked]="localOptions?.timer?.countDown"
+          (change)="toggleCountDown()"
+        />
+        <span>Compte à rebours</span>
+      </label>
+    </div>
+
+    <div class="v2-section">
+      <div class="v2-section-title">Annonces</div>
+      <label class="v2-toggle">
+        <input
+          type="checkbox"
+          [checked]="localOptions?.breakingNews?.enabled"
+          (change)="toggleBreakingEnabled()"
+        />
+        <span>Activer les breaking news</span>
+      </label>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div class="v2-toast" *ngIf="toastMessage">{{ toastMessage }}</div>
+</div>
