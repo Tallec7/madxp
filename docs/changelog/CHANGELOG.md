@@ -1,3 +1,9 @@
+# [3.239.0](https://github.com/Tallec7/neopro/compare/v3.238.0...v3.239.0) (2026-04-24)
+
+### Features
+
+- **templates,remote:** Template Studio admin UX ADR-095 + Remote V2 design V7 ([#587](https://github.com/Tallec7/neopro/issues/587)) ([d1fb32c](https://github.com/Tallec7/neopro/commit/d1fb32c00b30937e8ad320d8ac1970e22dcddc71)), closes [#586](https://github.com/Tallec7/neopro/issues/586) [#51b28b](https://github.com/Tallec7/neopro/issues/51b28b)
+
 # [3.238.0](https://github.com/Tallec7/neopro/compare/v3.237.2...v3.238.0) (2026-04-24)
 
 ### Features
