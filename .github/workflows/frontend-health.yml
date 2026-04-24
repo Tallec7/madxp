@@ -41,16 +41,25 @@ jobs:
             ['/saas/tv?site=ci-probe']='200'
           )
 
+          # Retry up to 3 times with 20s backoff to absorb the FTP deploy
+          # window, during which .htaccess is briefly missing on Hostinger.
           failures=0
           report=''
           for route in "${!ROUTES[@]}"; do
             expected="${ROUTES[$route]}"
-            actual=$(curl -sI -o /dev/null -w '%{http_code}' \
-              --max-time 10 \
-              "${BASE}${route}" 2>/dev/null || echo '000')
+            actual='000'
+            for attempt in 1 2 3; do
+              actual=$(curl -sI -o /dev/null -w '%{http_code}' \
+                --max-time 10 \
+                "${BASE}${route}" 2>/dev/null || echo '000')
+              if [ "$actual" = "$expected" ]; then
+                break
+              fi
+              [ "$attempt" -lt 3 ] && sleep 20
+            done
             if [ "$actual" != "$expected" ]; then
               failures=$((failures + 1))
-              report+=$'\n'"  ❌ ${route} → got ${actual}, expected ${expected}"
+              report+=$'\n'"  ❌ ${route} → got ${actual}, expected ${expected} (after 3 attempts)"
             else
               report+=$'\n'"  ✅ ${route} → ${actual}"
             fi
