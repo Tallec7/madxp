@@ -1,3 +1,9 @@
+# [3.237.0](https://github.com/Tallec7/neopro/compare/v3.236.0...v3.237.0) (2026-04-24)
+
+### Features
+
+- **content:** bouton "+ Ajouter du contenu" unifié + drag global (ADR-094) ([#582](https://github.com/Tallec7/neopro/issues/582)) ([3f0a26e](https://github.com/Tallec7/neopro/commit/3f0a26e780453144e48c41d31c402e9d66e82df5))
+
 # [3.236.0](https://github.com/Tallec7/neopro/compare/v3.235.0...v3.236.0) (2026-04-24)
 
 ### Features
