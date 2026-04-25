@@ -422,13 +422,15 @@ export class TvComponent implements OnInit, OnDestroy {
         },
         onFullReset: () => this.performFullReset(),
         onManualErrorRecovery: () => {
+          // La vidéo manuelle a planté (404, format invalide, timeout réseau).
+          // Le loop player est en pause sous le manual player KO ; sans relance
+          // explicite l'écran reste figé sur la freeze frame.
           this.doubleBufferService.hideFreezeFrame();
           this.doubleBufferService.hideBlackOverlay();
           this.isManualMode = false;
           this.lastTriggerType = 'auto';
-          if (!this.playbackService.isLoopMode) {
-            this.playbackService.startSeamlessLoop();
-          }
+          console.log('[TV] Manual video error - resuming loop');
+          this.playbackService.startSeamlessLoop();
         },
         getActivePlayer: () => this.doubleBufferService.getActivePlayer(),
         getIsManualMode: () => this.isManualMode,

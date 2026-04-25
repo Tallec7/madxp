@@ -14,6 +14,12 @@ import { metricsService } from '../services/metrics.service';
 import logger from '../config/logger';
 
 export const streamVideo = async (req: Request, res: Response): Promise<void> => {
+  // Token JWT déjà valide → autoriser le <video> SaaS cross-origin sur TOUTES
+  // les réponses (succès ET erreurs). Sans CORP sur les erreurs, helmet retombe
+  // sur same-origin → ERR_BLOCKED_BY_RESPONSE.NotSameOrigin côté client, qui
+  // masque le vrai status (404/401/502) en MEDIA_ELEMENT_ERROR opaque.
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   if (!token) {
     metricsService.recordVideoStreamRequest('missing_token');
@@ -55,9 +61,6 @@ export const streamVideo = async (req: Request, res: Response): Promise<void> =>
       if (v) res.setHeader(h, v);
     }
     res.setHeader('Cache-Control', 'private, max-age=300');
-    // Token JWT déjà valide → autoriser le <video> SaaS cross-origin
-    // (helmet par défaut: same-origin → ERR_BLOCKED_BY_RESPONSE.NotSameOrigin)
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     if (!upstream.body) {
       res.end();
