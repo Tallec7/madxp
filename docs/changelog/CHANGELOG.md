@@ -1,3 +1,13 @@
+# [3.241.0](https://github.com/Tallec7/neopro/compare/v3.240.8...v3.241.0) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** db-backup sanity check — use du -b instead of cls --format ([#602](https://github.com/Tallec7/neopro/issues/602)) ([f5f1d2a](https://github.com/Tallec7/neopro/commit/f5f1d2a73b445e0a8d000fc97edc91e10b4efa2b)), closes [#14](https://github.com/Tallec7/neopro/issues/14)
+
+### Features
+
+- **infra:** env maturity — ops runbooks + E2E nightly staging ([#603](https://github.com/Tallec7/neopro/issues/603)) ([a0ca0f6](https://github.com/Tallec7/neopro/commit/a0ca0f677471f6bada9398ab972c6ef27ad6bf8a))
+
 ## [3.240.8](https://github.com/Tallec7/neopro/compare/v3.240.7...v3.240.8) (2026-04-25)
 
 ### Bug Fixes
