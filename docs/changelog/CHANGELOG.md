@@ -1,3 +1,9 @@
+# [3.243.0](https://github.com/Tallec7/neopro/compare/v3.242.3...v3.243.0) (2026-04-25)
+
+### Features
+
+- **observability:** expose erreurs vidéo player en Prometheus + alerte 24h (PR3) ([#617](https://github.com/Tallec7/neopro/issues/617)) ([057f9f2](https://github.com/Tallec7/neopro/commit/057f9f24b89c4b68066743bd4d7ca1f8c41ec9a0))
+
 ## [3.242.3](https://github.com/Tallec7/neopro/compare/v3.242.2...v3.242.3) (2026-04-25)
 
 ### Bug Fixes
