@@ -2,6 +2,7 @@ import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 
 import { Site, UserRole, DisplayConfig } from '../types';
+import { findRowsReferencingInJsonb } from '../utils/jsonb-references';
 import { BaseRepository } from './base.repository';
 
 // --------------------------------------------------------------------------
@@ -627,26 +628,15 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
    * sur le JSONB stringifié.
    */
   async findSitesReferencingVideoInLocalMirror(criteria: { videoId?: string; filename?: string }): Promise<Array<{ id: string; site_name: string; site_type: string; local_config_mirror: Record<string, unknown> | null }>> {
-    const filters: string[] = [];
-    const params: string[] = [];
-    if (criteria.videoId) {
-      params.push(`%${criteria.videoId}%`);
-      filters.push(`local_config_mirror::text ILIKE $${params.length}`);
-    }
-    if (criteria.filename) {
-      params.push(`%${criteria.filename}%`);
-      filters.push(`local_config_mirror::text ILIKE $${params.length}`);
-    }
-    if (filters.length === 0) return [];
-
-    const result = await query<{ id: string; site_name: string; site_type: string; local_config_mirror: Record<string, unknown> | null }>(
-      `SELECT id, site_name, site_type, local_config_mirror
-       FROM sites
-       WHERE local_config_mirror IS NOT NULL
-         AND (${filters.join(' OR ')})`,
-      params,
+    return findRowsReferencingInJsonb<{ id: string; site_name: string; site_type: string; local_config_mirror: Record<string, unknown> | null }>(
+      {
+        table: 'sites',
+        jsonbColumn: 'local_config_mirror',
+        selectColumns: 'id, site_name, site_type, local_config_mirror',
+        extraWhere: 'local_config_mirror IS NOT NULL',
+      },
+      criteria,
     );
-    return result.rows;
   }
 
   /**
