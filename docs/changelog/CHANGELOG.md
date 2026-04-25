@@ -1,3 +1,9 @@
+## [3.240.5](https://github.com/Tallec7/neopro/compare/v3.240.4...v3.240.5) (2026-04-25)
+
+### Bug Fixes
+
+- **infra:** saasStates memory leak + logtail flush + memory monitoring (issue [#594](https://github.com/Tallec7/neopro/issues/594)) ([#598](https://github.com/Tallec7/neopro/issues/598)) ([7ef6ba3](https://github.com/Tallec7/neopro/commit/7ef6ba3817fcd92cf0396f908b4638b3b367b1f2)), closes [593/#595](https://github.com/Tallec7/neopro/issues/595) [#592](https://github.com/Tallec7/neopro/issues/592) [#593](https://github.com/Tallec7/neopro/issues/593) [#595](https://github.com/Tallec7/neopro/issues/595) [#592](https://github.com/Tallec7/neopro/issues/592)
+
 ## [3.240.4](https://github.com/Tallec7/neopro/compare/v3.240.3...v3.240.4) (2026-04-25)
 
 ### Bug Fixes
