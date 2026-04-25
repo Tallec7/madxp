@@ -1,3 +1,9 @@
+# [3.244.0](https://github.com/Tallec7/neopro/compare/v3.243.0...v3.244.0) (2026-04-25)
+
+### Features
+
+- **content:** cleanup cascade + CRON audit FTP des vidéos orphelines (PR2 + PR2.2) ([#616](https://github.com/Tallec7/neopro/issues/616)) ([eedaf99](https://github.com/Tallec7/neopro/commit/eedaf9976e30f327a36dd7f2b7a66de1514d3bd9)), closes [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613)
+
 # [3.243.0](https://github.com/Tallec7/neopro/compare/v3.242.3...v3.243.0) (2026-04-25)
 
 ### Features
