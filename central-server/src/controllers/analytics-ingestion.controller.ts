@@ -198,6 +198,15 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
     // Batch insert via repository (handles batching internally)
     await analyticsRepository.recordVideoPlays(validPlays);
 
+    // PR3 — exposer les erreurs de lecture player dans Prometheus. Compte les
+    // plays avec interruption_reason='video_error' du batch et incrémente le
+    // counter `neopro_video_playback_errors_total{site_id}` (alimente l'alerte
+    // `video_errors_24h` + le widget Grafana).
+    const videoErrorCount = validPlays.filter(p => p.interruptionReason === 'video_error').length;
+    if (videoErrorCount > 0) {
+      metricsService.recordVideoPlaybackErrors(site_id, videoErrorCount);
+    }
+
     logger.info('Video plays recorded', { siteId: site_id, count: validPlays.length, totalPlays: validPlays.length });
 
     res.json({ success: true, recorded: validPlays.length });

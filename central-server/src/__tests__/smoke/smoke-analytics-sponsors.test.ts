@@ -1402,6 +1402,61 @@ describe('Weighted sponsor rotation guards', () => {
   });
 });
 
+// =============================================================================
+// PR3 — Observabilité erreurs vidéo player (Pi/SaaS)
+// =============================================================================
+// Le client TV émet des `video_plays` avec `interruption_reason='video_error'`
+// quand un MEDIA_ELEMENT_ERROR survient (404 stream FTP, format invalide,
+// timeout). PR3 connecte ces events au counter Prometheus + à l'alerte
+// `video_errors_24h` configurée dans alerting.types.
+describe('PR3 — Video playback errors observability', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('metrics.service expose neopro_video_playback_errors_total + recordVideoPlaybackErrors', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      counterDeclared: /name:\s*['"]neopro_video_playback_errors_total['"]/.test(content),
+      labelsBySite: /labelNames:\s*\[\s*['"]site_id['"]\s*\]/.test(content),
+      recorderExposed: /recordVideoPlaybackErrors\(siteId:\s*string,\s*count:\s*number\)/.test(content),
+    }).toEqual({
+      counterDeclared: true,
+      labelsBySite: true,
+      recorderExposed: true,
+    });
+  });
+
+  it('analytics-ingestion.controller incrémente le counter quand interruption_reason=video_error', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'analytics-ingestion.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      filtersErrors: /filter\(p\s*=>\s*p\.interruptionReason\s*===\s*['"]video_error['"]\)/.test(content),
+      callsRecorder: /metricsService\.recordVideoPlaybackErrors\(site_id,\s*videoErrorCount\)/.test(content),
+    }).toEqual({
+      filtersErrors: true,
+      callsRecorder: true,
+    });
+  });
+
+  it('alerting-checks calcule video_errors_24h et appelle evaluateMetric', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting-checks.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      queriesVideoPlays: /interruption_reason\s*=\s*['"]video_error['"][\s\S]{0,200}NOW\(\)\s*-\s*INTERVAL\s*['"]24 hours['"]/.test(content),
+      evaluatesMetric: /evaluateMetric\([^,]+,\s*['"]video_errors_24h['"]/.test(content),
+    }).toEqual({
+      queriesVideoPlays: true,
+      evaluatesMetric: true,
+    });
+  });
+
+  it('alerting.types expose la threshold video_errors_24h (warning ≥5, critical ≥15)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'alerting.types.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(/metric:\s*['"]video_errors_24h['"]/.test(content)).toBe(true);
+  });
+});
+
 describe('Third-party SDK safety: @bworlds/launchkit access gate prevention', () => {
   const mainTsPath = path.join(__dirname, '../../../../central-dashboard/src/main.ts');
 

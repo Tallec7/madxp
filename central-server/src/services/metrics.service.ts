@@ -686,6 +686,19 @@ const videoPlaysFkFallbackTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Erreurs Vidéo Player (PR3) =============
+// Le client TV (Pi/SaaS) émet déjà des video_plays avec interruption_reason
+// = 'video_error' quand un MEDIA_ELEMENT_ERROR survient (404 stream FTP,
+// format invalide, timeout réseau...). Compteur dédié pour le monitoring +
+// alerting (`video_errors_24h`).
+
+const videoPlaybackErrorsTotal = new Counter({
+  name: 'neopro_video_playback_errors_total',
+  help: 'Video playback errors reported by Pi/SaaS clients (video_plays.interruption_reason=video_error)',
+  labelNames: ['site_id'],
+  registers: [register],
+});
+
 // ============= Métriques Sponsor Health (F-AUD-07) =============
 
 const sponsorHealthCheckTotal = new Counter({
@@ -876,6 +889,11 @@ class MetricsService {
 
   recordVideoPlaysFkFallback(column: 'sponsor_id' | 'video_id' | 'session_id' | 'campaign_id', count: number): void {
     videoPlaysFkFallbackTotal.inc({ column }, count);
+  }
+
+  /** PR3: erreurs de lecture vidéo côté player (par site, batch). */
+  recordVideoPlaybackErrors(siteId: string, count: number): void {
+    if (count > 0) videoPlaybackErrorsTotal.inc({ site_id: siteId }, count);
   }
 
   recordVideoUpload(status: string, sizeBytes?: number): void {
