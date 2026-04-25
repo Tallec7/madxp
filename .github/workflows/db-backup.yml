@@ -56,14 +56,16 @@ jobs:
           FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: |
-          # L'utilisateur FTP Hostinger n'est PAS chrooté : son `/` = home account,
-          # qui contient `public_html/` parmi d'autres dirs. Le chemin `/public_html/...`
-          # est donc requis (testé empiriquement : `/neopro-video/...` sans préfixe fait
-          # échouer le put silencieusement → run #12 #594 issue).
-          # Si le file manager hPanel affiche le dossier vide alors que les runs sont
-          # success, vérifier que le compte hPanel est le même que celui du secret
-          # HOSTINGER_FTP_USERNAME (un compte Hostinger peut avoir plusieurs hostings).
-          REMOTE_DIR="/public_html/neopro-video/db-backups"
+          # L'utilisateur FTP Hostinger EST chrooté sur `public_html/` — confirmé
+          # définitivement par l'erreur 550 sur `rm public_html/` du release deploy
+          # (cf. fail run release #1935, fix PR #604). Le `/` du FTP correspond donc
+          # déjà au document root web (= `public_html/` côté serveur).
+          # Vu côté hPanel file manager : `public_html/neopro-video/db-backups/`.
+          # Vu côté FTP user (chrooté) : `/neopro-video/db-backups`.
+          # NE PAS préfixer par `/public_html/...` — sinon les dumps atterrissent dans
+          # `public_html/public_html/...` (orphelins, invisibles depuis hPanel,
+          # bloquent le release deploy mirror — incident PR #604).
+          REMOTE_DIR="/neopro-video/db-backups"
           LFTP_SETTINGS="set ssl:verify-certificate no; set ftp:ssl-allow no;"
 
           # Upload avec vérification d'erreur explicite
