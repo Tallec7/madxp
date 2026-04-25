@@ -211,32 +211,37 @@ jobs:
       - name: Build dashboard
         run: npm run build:central
 
-      - name: Deploy to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          local-dir: dist/central-dashboard/browser/
-          server-dir: /
-          dangerous-clean-slate: true
-          exclude: |
-            saas/**
-          timeout: 60000
+      # lftp mirror replaces SamKirkland/FTP-Deploy-Action.
+      # Why: that action repeatedly skipped dotfiles (.htaccess) after
+      # `dangerous-clean-slate`, breaking SPA fallback on deep routes
+      # (incidents tracked in commits d56de74d, 4ce6fd4b, e765b2f8).
+      # lftp `mirror --reverse --delete` is atomic per-file, ships with
+      # native retries, and uploads dotfiles like any other file.
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends lftp
 
-      - name: Retry deploy on failure
-        if: failure()
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          local-dir: dist/central-dashboard/browser/
-          server-dir: /
-          dangerous-clean-slate: true
-          exclude: |
-            saas/**
-          timeout: 120000
+      - name: Deploy to Hostinger via lftp mirror
+        env:
+          FTP_SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -s dist/central-dashboard/browser/index.html
+          test -s dist/central-dashboard/browser/.htaccess
+          lftp -c "
+            set ftp:ssl-allow yes;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            set net:timeout 30;
+            set mirror:parallel-transfer-count 4;
+            open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
+            mirror --reverse --delete --verbose \
+                   --exclude-glob saas/ --exclude-glob saas \
+                   dist/central-dashboard/browser/ /;
+          "
+          echo "✅ Dashboard mirrored (dotfiles included, /saas/ preserved)"
 
       - name: Verify dashboard deployment
         run: |
@@ -311,33 +316,32 @@ jobs:
           fi
           echo "✅ .htaccess staged in SaaS build ($(wc -c < dist/raspberry/browser/.htaccess) bytes)"
 
-      - name: Create /saas/ directory on Hostinger
-        run: |
-          curl -s ftp://${{ secrets.HOSTINGER_FTP_SERVER }}/saas/ \
-            --user "${{ secrets.HOSTINGER_FTP_USERNAME }}:${{ secrets.HOSTINGER_FTP_PASSWORD }}" \
-            --ftp-create-dirs -Q "MKD /saas" 2>/dev/null || true
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends lftp
 
-      - name: Deploy SaaS to Hostinger /saas/
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          local-dir: dist/raspberry/browser/
-          server-dir: /saas/
-          dangerous-clean-slate: true
-          log-level: verbose
-          timeout: 60000
-
-      - name: Force upload .htaccess (dotfile safety net)
+      - name: Deploy SaaS to Hostinger via lftp mirror
+        env:
+          FTP_SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          FTP_PASS: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: |
-          # FTP-Deploy-Action has known issues with dotfiles after clean-slate.
-          # Explicitly re-upload .htaccess via curl to guarantee SPA fallback.
-          curl --silent --show-error --fail \
-            --user "${{ secrets.HOSTINGER_FTP_USERNAME }}:${{ secrets.HOSTINGER_FTP_PASSWORD }}" \
-            -T dist/raspberry/browser/.htaccess \
-            "ftp://${{ secrets.HOSTINGER_FTP_SERVER }}/saas/.htaccess"
-          echo "✅ .htaccess force-uploaded to /saas/"
+          set -euo pipefail
+          test -s dist/raspberry/browser/index.html
+          test -s dist/raspberry/browser/.htaccess
+          # `mirror --reverse` auto-creates the remote target dir, so the
+          # explicit MKD /saas step is no longer needed.
+          lftp -c "
+            set ftp:ssl-allow yes;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            set net:timeout 30;
+            set mirror:parallel-transfer-count 4;
+            open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
+            mirror --reverse --delete --verbose \
+                   dist/raspberry/browser/ /saas/;
+          "
+          echo "✅ SaaS mirrored to /saas/ (dotfiles included)"
 
       - name: Verify SaaS deployment
         run: |
