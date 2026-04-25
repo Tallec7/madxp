@@ -113,6 +113,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-094](ADR-094-unified-add-content-modal-and-global-drop.md)                 | Entrée unifiée "Ajouter du contenu" (modal à onglets) + drag-drop global              | Accepté                           | Avr 2026 |
 | [ADR-095](ADR-095-template-studio-admin-ux-v2.md)                               | Template Studio v2 — UX édition visuelle (drag/snap/undo + CLI SPEC)                  | Accepté                           | Avr 2026 |
 | [ADR-096](ADR-096-extract-saas-relay-handler.md)                                | Extraction du SaaS relay vers `handlers/saas-relay.handler.ts` (split socket.service) | Accepté                           | Avr 2026 |
+| [ADR-097](ADR-097-extract-cron-tasks-modules.md)                                | Extraction des CRON tasks vers `cron-tasks/` (split cron-scheduler.service)           | Accepté                           | Avr 2026 |
 
 ### Supersédés
 
