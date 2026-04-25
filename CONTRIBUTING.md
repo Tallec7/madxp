@@ -46,7 +46,7 @@ Format imposé par `commitlint` + `husky` :
 
 **Types** : `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `ci`, `style`.
 
-**Scopes Neopro fréquents** : `sponsors`, `match`, `remote`, `profiles`, `onboarding`, `wifi`, `alerts`, `audit`, `fleet`, `motion`, `templates`, `score`, `live`, `email`, `infra`, `safe`, `ci`. Liste complète dans [`.claude/rules/safe-update.md`](.claude/rules/safe-update.md) (mapping Epics SAFe).
+**Scopes Neopro fréquents** : `sponsors`, `match`, `remote`, `profiles`, `onboarding`, `wifi`, `alerts`, `audit`, `fleet`, `motion`, `templates`, `score`, `live`, `email`, `infra`, `safe`, `ci`.
 
 **Exemples** :
 
@@ -54,7 +54,7 @@ Format imposé par `commitlint` + `husky` :
 - ✅ `fix(match): freeze score on session end (ADR-093)`
 - ❌ `update stuff` (pas de type, pas de scope, sujet vague)
 
-> Voir [`docs/safe/README.md`](docs/safe/README.md) pour la mise à jour automatique des fichiers SAFe à chaque feat/fix.
+> Pour la mise à jour des fichiers SAFe (FEATURES.md, IMPLEMENTED-BACKLOG.md), voir [`docs/safe/README.md`](docs/safe/README.md). À faire **manuellement** à la livraison d'une feature notable (l'auto-update via règle Claude a été archivée le 2026-04-25, voir `.claude/rules/_archive/README.md`).
 
 ---
 
@@ -176,14 +176,14 @@ Voir [`CLAUDE.md`](CLAUDE.md) §"NE JAMAIS FAIRE" pour la liste complète. Rappe
 
 À chaque évolution structurante :
 
-| Fichier                                            | Quand                                                                                           |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `docs/changelog/CHANGELOG.md`                      | Auto via semantic-release                                                                       |
-| `docs/safe/FEATURES.md` + `IMPLEMENTED-BACKLOG.md` | Si feature SAFe complétée — voir [`.claude/rules/safe-update.md`](.claude/rules/safe-update.md) |
-| `docs/adr/ADR-XXX-*.md`                            | Si décision architecturale                                                                      |
-| `docs/technical/ENVIRONMENTS.md`                   | Si changement d'infra ou de plateforme                                                          |
-| `docs/technical/REFERENCE.md`                      | Si nouvelle entité/endpoint structurant                                                         |
-| `docs/clients/NLF.md` ou autres                    | Si impact client critique                                                                       |
+| Fichier                                            | Quand                                                                                                                                           |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/changelog/CHANGELOG.md`                      | Auto via semantic-release                                                                                                                       |
+| `docs/safe/FEATURES.md` + `IMPLEMENTED-BACKLOG.md` | Si feature SAFe complétée — mise à jour manuelle (la règle d'auto-update a été archivée le 2026-04-25, voir `.claude/rules/_archive/README.md`) |
+| `docs/adr/ADR-XXX-*.md`                            | Si décision architecturale                                                                                                                      |
+| `docs/technical/ENVIRONMENTS.md`                   | Si changement d'infra ou de plateforme                                                                                                          |
+| `docs/technical/REFERENCE.md`                      | Si nouvelle entité/endpoint structurant                                                                                                         |
+| `docs/clients/NLF.md` ou autres                    | Si impact client critique                                                                                                                       |
 
 ---
 
