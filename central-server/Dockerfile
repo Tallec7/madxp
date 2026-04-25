@@ -1,6 +1,8 @@
-# syntax=docker/dockerfile:1.6
-# BuildKit cache mounts (--mount=type=cache) reduce npm install time by 30-60s
-# on subsequent builds when node_modules don't change structurally.
+# Note : BuildKit (cache mounts + `# syntax=docker/dockerfile:1.6`) retiré
+# v3.240.2 — Railway ne l'active pas par défaut, ce qui faisait échouer le
+# build au step "Build image" en 15s (parse error sur --mount=type=cache).
+# Le gain structurel principal reste : `FROM deps AS prod-deps` + `npm prune`
+# évite un second `npm ci --omit=dev` (~45s économisé).
 
 # ============================================
 # Stage 1: Dependencies (all deps for build + runtime pruning base)
@@ -22,9 +24,8 @@ COPY central-server/package*.json ./
 # Skip Puppeteer Chromium download (we install system Chromium in the runtime stage)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-# Install all dependencies (including dev for build) with npm cache mount
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci
+# Install all dependencies (including dev for build)
+RUN npm ci
 
 # ============================================
 # Stage 1b: Remotion dependencies (production — no dev tools)
@@ -38,8 +39,7 @@ COPY templates-remotion/package*.json ./
 # Skip Chromium download (we use system Chromium in the runtime stage)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
 # ============================================
 # Stage 1c: Preview app builder (Vite + @remotion/player)
@@ -51,8 +51,7 @@ WORKDIR /app/templates-remotion
 # Install all deps (including vite, @vitejs/plugin-react)
 COPY templates-remotion/package*.json ./
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci
+RUN npm ci
 
 # Copy sources and build
 COPY templates-remotion/ .
