@@ -56,7 +56,12 @@ jobs:
           FTP_USER: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
         run: |
-          REMOTE_DIR="/public_html/neopro-video/db-backups"
+          # L'utilisateur FTP Hostinger est chrooté sur `public_html/` (cf. "Chemin de
+          # téléchargement = public_html" dans hPanel). Le `/` du FTP correspond donc
+          # déjà à `public_html/` côté serveur — on n'écrit PAS `/public_html/...` ici,
+          # sinon les dumps atterrissent dans `public_html/public_html/...` (invisible
+          # depuis le file manager hPanel).
+          REMOTE_DIR="/neopro-video/db-backups"
           LFTP_SETTINGS="set ssl:verify-certificate no; set ftp:ssl-allow no;"
 
           # Upload avec vérification d'erreur explicite
@@ -70,12 +75,20 @@ jobs:
           EOF
 
           # Vérification : le fichier doit être présent côté FTP
-          REMOTE_SIZE=$(lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; cls -l $DUMP_FILE; bye" 2>/dev/null | awk '{print $5}' | head -1)
+          # Utilise `cls --format="%s\n"` (size en bytes uniquement) — ne pas parser `cls -l`
+          # car le format Hostinger inclut des UIDs numériques qui décalent les colonnes.
+          REMOTE_SIZE=$(lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; cls --format='%s\n' $DUMP_FILE; bye" 2>/dev/null | tr -dc '0-9')
           if [ -z "$REMOTE_SIZE" ] || [ "$REMOTE_SIZE" -lt 1000000 ]; then
             echo "::error::Upload FTP échoué ou fichier absent/trop petit côté Hostinger (taille: ${REMOTE_SIZE:-0})"
             exit 1
           fi
           echo "Upload FTP OK: $DUMP_FILE ($REMOTE_SIZE bytes) → $REMOTE_DIR"
+
+          # Diagnostic : log le chemin absolu réel côté FTP (utile en cas de chroot Hostinger)
+          # pour distinguer "/public_html/.../db-backups" doc-affiché vs chemin résolu côté serveur.
+          echo "=== FTP path resolution diagnostic ==="
+          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; pwd; cls -l; bye" 2>&1 | sed 's/^/  /'
+          echo "=== End diagnostic ==="
 
           # Purge FTP : on liste puis delete les dumps vieux de >30j
           lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; cls -l; bye" > /tmp/ftp-ls.txt
