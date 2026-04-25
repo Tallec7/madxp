@@ -32,6 +32,15 @@ $danger-bg: #ffecec;
   }
 }
 
+@keyframes v7-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 :host {
   display: block;
   min-height: 100vh;
@@ -64,6 +73,20 @@ $danger-bg: #ffecec;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.r2-header-logo {
+  height: 26px;
+  width: auto;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.r2-header-sep {
+  width: 1px;
+  height: 20px;
+  background: $border;
+  flex-shrink: 0;
 }
 
 .r2-club-pill {
@@ -167,6 +190,14 @@ $danger-bg: #ffecec;
     background: $accent-light;
     animation: np-pulse 1.4s ease-in-out infinite;
   }
+
+  &.is-manual {
+    color: $yellow;
+
+    .r2-hero-dot {
+      background: $yellow;
+    }
+  }
 }
 
 .r2-hero-main {
@@ -181,20 +212,31 @@ $danger-bg: #ffecec;
   flex-shrink: 0;
   width: 60px;
   height: 38px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, $accent-deep, darken($accent-deep, 8%));
+  border-radius: 8px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(129, 227, 188, 0.25), transparent 60%),
+    linear-gradient(135deg, $accent-deep, #0c2a23);
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 
-  &::before {
-    content: 'TV';
-    opacity: 0.6;
+  .r2-tv-scanline {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(129, 227, 188, 0.55), transparent);
+    transform: translateY(-50%);
+  }
+
+  &.is-manual {
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(255, 236, 133, 0.22), transparent 60%),
+      linear-gradient(135deg, #3a2f0a, #1a1503);
+
+    .r2-tv-scanline {
+      background: linear-gradient(90deg, transparent, rgba(255, 236, 133, 0.55), transparent);
+    }
   }
 }
 
@@ -247,6 +289,70 @@ $danger-bg: #ffecec;
     overflow: hidden;
     text-overflow: ellipsis;
     display: block;
+  }
+
+  .r2-video-subline {
+    display: block;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+}
+
+.r2-hero-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+
+  .r2-hero-progress-duration {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+
+  .r2-hero-progress-bar {
+    display: block;
+    width: 40px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .r2-hero-progress-fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: $yellow;
+    animation-name: v7-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+}
+
+.r2-loop-btn-circle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: $accent-light;
+  color: $dark;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms;
+
+  &:hover {
+    transform: scale(1.05);
   }
 }
 
@@ -383,9 +489,72 @@ $danger-bg: #ffecec;
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  justify-content: flex-start;
+}
+
+.r2-team-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.r2-score-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r2-score-quick {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+
+  .r2-score-quick-btn {
+    padding: 5px 8px;
+    border-radius: 6px;
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.1);
+    }
+  }
+}
+
+.r2-chrono-toggle {
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: none;
+  background: $warn;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: darken($warn, 5%);
+  }
 }
 
 .r2-team {
@@ -498,53 +667,78 @@ $danger-bg: #ffecec;
   }
 }
 
-// ---- Phase tabs -----------------------------------------------------------
-.r2-phase-tabs {
+// ---- Phase tabs (carte "Parcourir · temps affiché") -----------------------
+.r2-browse-card {
   margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: $surface;
+  border: 1px solid $border;
+}
+
+.r2-browse-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $text-muted;
+  margin-bottom: 6px;
+
+  > span:first-of-type {
+    flex: 1;
+  }
+}
+
+.r2-align-btn {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: $accent-bg;
+  color: $accent-deep;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  &:hover {
+    background: darken($accent-bg, 3%);
+  }
+}
+
+.r2-phase-tabs {
   display: flex;
   gap: 4px;
-  padding: 4px;
-  background: $surface;
-  border: 1px solid $border-subtle;
-  border-radius: 12px;
-  flex-wrap: wrap;
+  padding: 3px;
+  background: $bg;
+  border-radius: 10px;
 
   > button {
     flex: 1;
-    min-width: 70px;
-    padding: 8px 6px;
-    border-radius: 8px;
+    padding: 7px 4px;
+    border-radius: 7px;
     border: none;
     background: transparent;
     color: $text-muted;
     font-family: inherit;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.02em;
     cursor: pointer;
     transition: all 150ms;
 
     &.active {
-      background: $dark;
-      color: #fff;
+      background: $surface;
+      color: $text;
       font-weight: 800;
-    }
-  }
-
-  .r2-align-btn {
-    flex: 0 0 auto;
-    min-width: 0;
-    padding: 6px 10px;
-    background: $accent-bg;
-    color: $accent-deep;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    border-radius: 8px;
-    text-transform: uppercase;
-
-    &:hover {
-      background: darken($accent-bg, 3%);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
   }
 }
@@ -573,22 +767,49 @@ $danger-bg: #ffecec;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   text-align: left;
-  text-transform: uppercase;
 
   &:hover {
     background: $bg;
   }
 
   .r2-cat-chev {
-    font-size: 10px;
     color: $text-muted;
-    opacity: 0.7;
+    flex-shrink: 0;
+    transition: transform 180ms;
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+
+  .r2-cat-name {
+    text-transform: uppercase;
+  }
+
+  .r2-cat-folders {
+    font-size: 10px;
+    font-weight: 700;
+    color: $text-muted;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: $bg;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    flex-shrink: 0;
+  }
+
+  .r2-cat-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: $text-muted;
+    font-weight: 700;
+    flex-shrink: 0;
   }
 }
 
@@ -610,17 +831,36 @@ $danger-bg: #ffecec;
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: $text-muted;
+  color: $text;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   text-align: left;
-  text-transform: uppercase;
+
+  .r2-cat-chev {
+    color: $text-muted;
+    flex-shrink: 0;
+    transition: transform 180ms;
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+
+  .r2-subcat-name {
+    flex: 1;
+  }
+
+  .r2-subcat-count {
+    font-size: 10px;
+    color: $text-muted;
+    font-weight: 700;
+  }
 }
 
 .r2-videos {
@@ -987,6 +1227,15 @@ $danger-bg: #ffecec;
     background: $danger-bg;
     color: $danger;
   }
+
+  &--rec {
+    background: $danger;
+    color: #fff;
+    padding: 2px 8px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    animation: np-pulse 1.4s ease-in-out infinite;
+  }
 }
 
 // ---- Breaking widget ------------------------------------------------------
@@ -1324,4 +1573,780 @@ $danger-bg: #ffecec;
   &.live {
     background: $danger;
   }
+}
+
+// ---- Video row (V7) -------------------------------------------------------
+.r2-video-row {
+  width: 100%;
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 120ms;
+
+  &:hover {
+    background: $bg;
+  }
+
+  &.playing {
+    background: $accent-bg;
+    border-color: rgba($accent, 0.3);
+  }
+
+  .r2-video-thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: block;
+  }
+
+  .r2-video-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .r2-video-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .r2-video-extra {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .r2-video-duration {
+    font-size: 11px;
+    color: $text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .r2-video-dot {
+    font-size: 11px;
+    color: $text-muted;
+  }
+
+  .r2-video-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+
+    &.is-secondary {
+      background: #e0f4ea;
+      color: $accent-deep;
+    }
+
+    &.is-sponsor {
+      background: $warn-bg;
+      color: $warn;
+    }
+
+    &.is-link {
+      background: #e8f9fc;
+      color: #064b59;
+    }
+  }
+
+  .r2-video-play {
+    width: 28px;
+    height: 28px;
+    border-radius: 99px;
+    background: $bg;
+    color: $dark;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.active {
+      background: $accent;
+      color: #fff;
+    }
+  }
+}
+
+// ---- Sheet handle pill ----------------------------------------------------
+.r2-sheet-handle {
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 99px;
+  background: $border;
+  margin: 8px auto 4px;
+  flex-shrink: 0;
+}
+
+.r2-sheet-hint {
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.4;
+  margin: 0 0 4px;
+}
+
+// ---- Widget activation toggles --------------------------------------------
+.r2-widget-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid $border;
+  background: $surface;
+
+  .r2-widget-toggle-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: $border-subtle;
+    color: $text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .r2-widget-toggle-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .r2-widget-toggle-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+  }
+
+  .r2-widget-toggle-sub {
+    font-size: 11px;
+    color: $text-muted;
+  }
+
+  &--score {
+    .r2-widget-toggle-icon {
+      background: $accent-bg;
+      color: $accent;
+    }
+  }
+
+  &--chrono {
+    .r2-widget-toggle-icon {
+      background: $warn-bg;
+      color: $warn;
+    }
+  }
+
+  &--breaking {
+    .r2-widget-toggle-icon {
+      background: $danger-bg;
+      color: $danger;
+    }
+  }
+}
+
+// ---- Recording warning banner --------------------------------------------
+.r2-rec-warning {
+  margin: 10px 16px 4px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: $danger-bg;
+  border: 1px solid $danger;
+  border-radius: 10px;
+  color: $danger;
+
+  .r2-rec-warning-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: $danger;
+    animation: np-pulse 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .r2-rec-warning-text {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: $text;
+
+    strong {
+      color: $danger;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .r2-rec-warning-extend {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background: $danger;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .r2-rec-warning-stop {
+    width: 26px;
+    height: 26px;
+    border-radius: 99px;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($danger, 0.15);
+    }
+  }
+}
+
+// ---- Video thumbnail with image overlay ----------------------------------
+.r2-video-thumb {
+  position: relative;
+  overflow: hidden;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 2;
+  }
+
+  .r2-video-thumb-initials {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  &.thumbnail-error img {
+    display: none;
+  }
+}
+
+// ---- Search sheet --------------------------------------------------------
+.r2-sheet--full {
+  max-height: 92vh;
+}
+
+.r2-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: $bg;
+  border: 1px solid $border;
+
+  &:focus-within {
+    border-color: $accent;
+    background: $surface;
+  }
+
+  > svg {
+    color: $text-muted;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: $text;
+
+    &::placeholder {
+      color: $text-muted;
+      font-weight: 500;
+    }
+  }
+}
+
+.r2-search-clear {
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  border: none;
+  background: $border;
+  color: $text-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.r2-search-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: $text-muted;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.r2-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.r2-search-count {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $text-muted;
+  padding: 4px 4px 6px;
+}
+
+// ---- Quick messages (breaking sheet) -------------------------------------
+.r2-quick-msgs {
+  margin-bottom: 4px;
+}
+
+.r2-quick-msgs-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: $text-muted;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.r2-quick-msgs-hint {
+  padding: 10px;
+  background: $bg;
+  border-radius: 10px;
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.r2-quick-msgs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.r2-quick-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 99px;
+  background: $accent-bg;
+  color: $accent-deep;
+  border: 1px solid rgba($accent, 0.3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 100%;
+
+  > span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  &:hover {
+    background: darken($accent-bg, 3%);
+  }
+
+  .r2-quick-msg-remove {
+    width: 16px;
+    height: 16px;
+    border-radius: 99px;
+    background: rgba($accent-deep, 0.15);
+    color: $accent-deep;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    flex-shrink: 0;
+
+    &:hover {
+      background: $accent-deep;
+      color: #fff;
+    }
+  }
+}
+
+.r2-breaking-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+
+  .r2-breaking-save {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid $border;
+    background: $surface;
+    color: $text;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: $bg;
+    }
+  }
+
+  .r2-module-breaking-btn {
+    flex: 1;
+    margin-top: 0;
+  }
+}
+
+// ---- Team badges with logo support ----------------------------------------
+.r2-team-badge {
+  position: relative;
+  overflow: hidden;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 1px;
+  }
+
+  &.has-logo {
+    border: 1px solid $border;
+  }
+}
+
+// ---- Match info — sport / period / logos / audience -----------------------
+.r2-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $text-muted;
+  margin: 4px 0 2px;
+}
+
+.r2-team-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 2px;
+}
+
+.r2-team-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.r2-team-logo-upload {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: $bg;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+  }
+
+  .r2-team-logo-placeholder {
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .r2-team-logo-edit {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 99px;
+    background: $dark;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  &.has-logo {
+    background: $surface;
+  }
+}
+
+.r2-team-color-picker {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  &::-webkit-color-swatch {
+    border-radius: 6px;
+    border: 1px solid $border;
+  }
+}
+
+.r2-team-name-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid $border;
+  background: $bg;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: $text;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+    background: $surface;
+  }
+}
+
+.r2-team-logo-clear {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: $danger;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    background: $danger-bg;
+  }
+}
+
+.r2-audience-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid $border;
+    background: $bg;
+    color: $text;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+      background: $border-subtle;
+    }
+  }
+
+  input {
+    width: 70px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid $border;
+    background: $bg;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+    text-align: center;
+  }
+}
+
+.r2-menu-item--danger {
+  color: $danger;
+  border-color: rgba($danger, 0.3);
+
+  &:hover {
+    background: $danger-bg;
+    border-color: $danger;
+  }
+}
+
+// ---- Overlay score position picker ----------------------------------------
+.r2-overlay-pos {
+  margin: 4px 0 8px;
+}
+
+.r2-overlay-pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px;
+  background: $bg;
+  border-radius: 10px;
+  aspect-ratio: 16 / 5;
+}
+
+.r2-overlay-pos-cell {
+  position: relative;
+  border: 1.5px dashed $border;
+  background: $surface;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+
+  .r2-overlay-pos-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: $border;
+    align-self: stretch;
+    margin: auto;
+  }
+
+  // Position du dot dans la cell
+  &[data-pos$='-left'] .r2-overlay-pos-dot {
+    margin-left: 4px;
+    margin-right: auto;
+  }
+  &[data-pos$='-right'] .r2-overlay-pos-dot {
+    margin-right: 4px;
+    margin-left: auto;
+  }
+  &[data-pos^='top-'] .r2-overlay-pos-dot {
+    margin-top: 4px;
+    margin-bottom: auto;
+  }
+  &[data-pos^='bottom-'] .r2-overlay-pos-dot {
+    margin-bottom: 4px;
+    margin-top: auto;
+  }
+
+  &:hover {
+    border-color: $accent;
+  }
+
+  &.active {
+    border-style: solid;
+    border-color: $accent;
+    background: $accent-bg;
+    box-shadow: 0 0 0 2px rgba($accent, 0.15);
+
+    .r2-overlay-pos-dot {
+      background: $accent;
+      animation: np-pulse 1.4s ease-in-out infinite;
+    }
+  }
+}
+
+.r2-overlay-pos-hint {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: $accent-deep;
+  letter-spacing: 0.04em;
+}
+
+// ---- Search recent videos -------------------------------------------------
+.r2-search-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// ---- Module team color (in widget-score sheet) ----------------------------
+.r2-module-team-color {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  flex-shrink: 0;
 }

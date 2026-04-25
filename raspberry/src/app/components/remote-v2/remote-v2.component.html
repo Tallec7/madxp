@@ -1,259 +1,319 @@
 <div class="remote-v2">
-  <!-- HEADER -->
-  <header class="r2-header">
-    <button class="r2-club-pill" (click)="openSheet('profile')">
-      <span class="r2-club-badge">{{ clubInitials }}</span>
-      <span>{{ currentProfile }}</span>
-    </button>
-    <div class="r2-header-actions">
-      <button class="r2-icon-btn" (click)="openSheet('gear')" aria-label="Menu">⚙</button>
-    </div>
-  </header>
+  <app-r2-header
+    [initials]="clubInitials"
+    [clubName]="currentProfile"
+    (profileClick)="openSheet('profile')"
+    (searchClick)="openSheet('search')"
+    (gearClick)="openSheet('gear')"
+  ></app-r2-header>
 
-  <!-- HERO "À l'antenne" -->
-  <section class="r2-hero">
-    <div class="r2-hero-eyebrow">
-      <span class="r2-hero-dot"></span>
-      <span>À l'antenne</span>
-      <span class="r2-tag r2-tag--live" *ngIf="recording || loopId === 'during'">LIVE</span>
-    </div>
+  <app-r2-hero
+    [loopId]="loopId"
+    [loopVideoName]="loopVideo()?.name"
+    [playingVideo]="playingVideo"
+    [subline]="heroSubline()"
+    [recording]="recording"
+    [displays]="displays"
+    [targetDisplay]="targetDisplay"
+    (setLoop)="setLoop($event)"
+    (setTargetDisplay)="setTargetDisplay($event)"
+    (toggleRecording)="toggleRecording()"
+    (alignPhase)="alignPhaseToLoop()"
+  ></app-r2-hero>
 
-    <div class="r2-hero-main">
-      <div class="r2-tv-thumb">
-        <button
-          class="r2-rec-badge"
-          [class.active]="recording"
-          (click)="toggleRecording()"
-          aria-label="Enregistrer"
-        >
-          <span class="r2-rec-dot"></span>
-        </button>
-      </div>
-      <div class="r2-hero-info" *ngIf="loopVideo()">
-        <span class="r2-video-name">{{ loopVideo()?.name }}</span>
-      </div>
-    </div>
+  <app-r2-recording-warning
+    [state]="recordingWarning"
+    (extend)="extendRecording()"
+    (dismiss)="dismissRecordingWarning()"
+  ></app-r2-recording-warning>
 
-    <div class="r2-loop-tabs-wrap">
-      <div class="r2-hero-section-label">Boucle</div>
-      <div class="r2-loop-tabs">
-        <button [class.active]="loopId === 'before'" (click)="setLoop('before')">
-          Avant-match
-        </button>
-        <button [class.active]="loopId === 'during'" (click)="setLoop('during')">Match</button>
-        <button [class.active]="loopId === 'after'" (click)="setLoop('after')">Après-match</button>
-      </div>
-    </div>
+  <app-r2-widgets
+    [enabled]="widgetsEnabled"
+    [score]="scoreService.currentScore"
+    [homeColor]="homeColor()"
+    [awayColor]="awayColor()"
+    [homeLogo]="homeLogo()"
+    [awayLogo]="awayLogo()"
+    [chronoDisplay]="chronoDisplay"
+    [timerRunning]="timerService.isRunning"
+    [breakingText]="breakingText"
+    [breakingLive]="breakingLive"
+    (openSheet)="openSheet($event)"
+    (incHome)="incHome()"
+    (incAway)="incAway()"
+    (toggleTimer)="toggleTimer()"
+    (toggleBreaking)="toggleBreaking()"
+  ></app-r2-widgets>
 
-    <div class="r2-display-wrap" *ngIf="displays.length > 0">
-      <div class="r2-hero-section-label">Écran</div>
-      <div class="r2-display-target">
-        <button [class.active]="targetDisplay === 'all'" (click)="setTargetDisplay('all')">
-          Tous
-        </button>
-        <button
-          *ngFor="let d of displays"
-          [class.active]="targetDisplay === d.id"
-          (click)="setTargetDisplay(d.id)"
-        >
-          {{ d.label }}
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- WIDGETS compacts -->
-  <section class="r2-widgets">
-    <!-- Score -->
-    <div class="r2-widget r2-widget-score" (click)="openSheet('widget-score')">
-      <div class="r2-widget-label">Score</div>
-      <div class="r2-score-row" (click)="$event.stopPropagation()">
-        <div class="r2-team">
-          <span class="r2-team-name">{{ scoreService.currentScore.homeTeam }}</span>
-          <div class="r2-score-btns">
-            <button (click)="decHome()">−</button>
-            <span class="r2-score-val">{{ scoreService.currentScore.homeScore }}</span>
-            <button (click)="incHome()">+</button>
-          </div>
-        </div>
-        <span class="r2-score-sep">–</span>
-        <div class="r2-team">
-          <span class="r2-team-name">{{ scoreService.currentScore.awayTeam }}</span>
-          <div class="r2-score-btns">
-            <button (click)="decAway()">−</button>
-            <span class="r2-score-val">{{ scoreService.currentScore.awayScore }}</span>
-            <button (click)="incAway()">+</button>
-          </div>
-        </div>
-      </div>
-      <button class="r2-reset-btn" (click)="$event.stopPropagation(); resetScore()">
-        Réinitialiser
-      </button>
-    </div>
-
-    <!-- Chrono -->
-    <div class="r2-widget r2-widget-chrono" (click)="openSheet('widget-chrono')">
-      <div class="r2-widget-label">Chrono</div>
-      <span class="r2-chrono-display">{{ chronoDisplay }}</span>
-      <div class="r2-chrono-btns" (click)="$event.stopPropagation()">
-        <button (click)="toggleTimer()">{{ timerService.isRunning ? '⏸' : '▶' }}</button>
-        <button (click)="resetTimer()">↺</button>
-      </div>
-    </div>
-
-    <!-- Breaking -->
-    <div class="r2-widget r2-widget-breaking" [class.live]="breakingLive">
-      <span class="r2-breaking-bar" *ngIf="breakingLive"></span>
-      <div class="r2-widget-label r2-widget-label--breaking">
-        Info<ng-container *ngIf="breakingLive"> · LIVE</ng-container>
-      </div>
-      <button class="r2-breaking-text" (click)="openSheet('widget-breaking')">
-        {{ breakingText || 'Tapez pour saisir un message' }}
-      </button>
-      <button class="r2-breaking-btn" [class.live]="breakingLive" (click)="toggleBreaking()">
-        {{ breakingLive ? 'Retirer' : 'Diffuser' }}
-      </button>
-    </div>
-  </section>
-
-  <!-- PHASE TABS -->
-  <nav class="r2-phase-tabs">
-    <button [class.active]="phaseId === 'before'" (click)="setPhase('before')">Avant-match</button>
-    <button [class.active]="phaseId === 'during'" (click)="setPhase('during')">Match</button>
-    <button [class.active]="phaseId === 'after'" (click)="setPhase('after')">Après-match</button>
-    <button class="r2-align-btn" *ngIf="phaseDivergesFromLoop" (click)="alignPhaseToLoop()">
-      Aligner sur boucle
-    </button>
-  </nav>
-
-  <!-- CATÉGORIES accordéon -->
-  <section class="r2-categories">
-    <div class="r2-category" *ngFor="let cat of phaseCategories()">
-      <button class="r2-cat-header" (click)="toggleCategory(cat.id)">
-        <span>{{ cat.name }}</span>
-        <span>{{ expandedCategories[cat.id] ? '▲' : '▼' }}</span>
-      </button>
-
-      <div class="r2-cat-content" *ngIf="expandedCategories[cat.id]">
-        <!-- Sous-catégories -->
-        <div class="r2-subcat" *ngFor="let sub of cat.subCategories">
-          <button class="r2-subcat-header" (click)="toggleSub(sub.id)">
-            <span>{{ sub.name }}</span>
-            <span>{{ expandedSubs[sub.id] ? '▲' : '▼' }}</span>
-          </button>
-          <div class="r2-videos" *ngIf="expandedSubs[sub.id]">
-            <button
-              class="r2-video-btn"
-              *ngFor="let v of sub.videos"
-              [class.playing]="playingVideoId === v.id"
-              (click)="playVideo(v)"
-            >
-              <span class="r2-video-thumb" [style.background]="videoThumbGradient(v.id)">▶</span>
-              <span class="r2-video-name">{{ v.name }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Vidéos directes -->
-        <div class="r2-videos" *ngIf="cat.videos?.length">
-          <button
-            class="r2-video-btn"
-            *ngFor="let v of cat.videos"
-            [class.playing]="playingVideoId === v.id"
-            (click)="playVideo(v)"
-          >
-            <span class="r2-video-thumb" [style.background]="videoThumbGradient(v.id)">▶</span>
-            <span class="r2-video-name">{{ v.name }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
+  <app-r2-browse
+    [categories]="phaseCategories()"
+    [phaseId]="phaseId"
+    [phaseDivergesFromLoop]="phaseDivergesFromLoop"
+    [showPhaseTabs]="hasTimeCategorization"
+    [expandedCategories]="expandedCategories"
+    [expandedSubs]="expandedSubs"
+    [playingVideoId]="playingVideoId"
+    [useLocalThumbnails]="useLocalThumbnails"
+    (setPhase)="setPhase($event)"
+    (alignPhase)="alignPhaseToLoop()"
+    (toggleCategory)="toggleCategory($event)"
+    (toggleSub)="toggleSub($event)"
+    (playVideo)="playVideo($event)"
+  ></app-r2-browse>
 
   <!-- TOAST -->
-  <div class="r2-toast" *ngIf="toast">{{ toast }}</div>
+  <div class="r2-toast" *ngIf="toast" role="status" aria-live="polite">{{ toast }}</div>
 
   <!-- SHEETS (modals) -->
 
-  <!-- Gear menu -->
-  <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'gear'" (click)="closeSheet()"></div>
-  <div class="r2-sheet" *ngIf="activeSheet === 'gear'">
+  <app-r2-gear-sheet
+    [open]="activeSheet === 'gear'"
+    [currentProfile]="currentProfile"
+    [isDemoMode]="isDemoMode"
+    (closed)="closeSheet()"
+    (action)="onGearAction($event)"
+    (reload)="reloadConfiguration()"
+    (backToV1)="backToV1()"
+  ></app-r2-gear-sheet>
+
+  <!-- Search sheet -->
+  <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'search'" (click)="closeSheet()"></div>
+  <div class="r2-sheet r2-sheet--full" *ngIf="activeSheet === 'search'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
-      <span>Menu</span>
-      <button (click)="closeSheet()">✕</button>
+      <span>Rechercher une vidéo</span>
+      <button (click)="closeSheet()" aria-label="Fermer">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
     </div>
     <div class="r2-sheet-body">
-      <button class="r2-gear-item" (click)="openMatchInfo()">
-        <span class="r2-gear-icon">⏱</span>
-        <span class="r2-gear-main">
-          <span class="r2-gear-label">Infos du match</span>
-          <span class="r2-gear-sub">Équipes, date, spectateurs</span>
-        </span>
-        <span class="r2-gear-chev">›</span>
-      </button>
-      <button class="r2-gear-item" (click)="openSheet('profile')">
-        <span class="r2-gear-icon">👤</span>
-        <span class="r2-gear-main">
-          <span class="r2-gear-label">Profil actif</span>
-        </span>
-        <span class="r2-gear-value">{{ currentProfile }}</span>
-      </button>
-      <button class="r2-gear-item" (click)="openSheet('prefs')">
-        <span class="r2-gear-icon">📱</span>
-        <span class="r2-gear-main">
-          <span class="r2-gear-label">Préférences appareil</span>
-          <span class="r2-gear-sub">Haptique, contraste…</span>
-        </span>
-        <span class="r2-gear-chev">›</span>
-      </button>
-      <div class="r2-gear-sep"></div>
-      <button class="r2-gear-item" (click)="openSheet('options')">
-        <span class="r2-gear-icon">⚙</span>
-        <span class="r2-gear-main">
-          <span class="r2-gear-label">Options match</span>
-          <span class="r2-gear-sub">Score, chrono, template…</span>
-        </span>
-        <span class="r2-gear-chev">›</span>
-      </button>
-      <hr />
-      <button class="r2-menu-item r2-menu-item--secondary" (click)="backToV1()">Retour V1</button>
+      <div class="r2-search-input-wrap">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          placeholder="Nom de la vidéo…"
+          autocomplete="off"
+          autofocus
+        />
+        <button
+          *ngIf="searchQuery"
+          class="r2-search-clear"
+          (click)="clearSearch()"
+          aria-label="Effacer"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <ng-container *ngIf="!searchQuery">
+        <div *ngIf="recentVideos().length > 0" class="r2-search-recent">
+          <div class="r2-search-count">Récentes</div>
+          <app-r2-video-row
+            *ngFor="let v of recentVideos()"
+            [video]="v"
+            [active]="playingVideoId === v.id"
+            [useLocalThumbnails]="useLocalThumbnails"
+            (playClick)="playVideo($event)"
+          ></app-r2-video-row>
+        </div>
+        <div class="r2-search-empty" *ngIf="recentVideos().length === 0">
+          Tape un mot-clé pour parcourir toute la bibliothèque ({{ getAllVideos().length }} vidéos).
+        </div>
+      </ng-container>
+
+      <div class="r2-search-results" *ngIf="searchQuery">
+        <div class="r2-search-count">{{ searchResults().length }} résultat(s)</div>
+        <app-r2-video-row
+          *ngFor="let v of searchResults()"
+          [video]="v"
+          [active]="playingVideoId === v.id"
+          [useLocalThumbnails]="useLocalThumbnails"
+          (playClick)="playVideo($event)"
+        ></app-r2-video-row>
+        <div class="r2-search-empty" *ngIf="searchResults().length === 0">
+          Aucune vidéo trouvée.
+        </div>
+      </div>
     </div>
   </div>
+
+  <app-r2-widgets-toggle-sheet
+    [open]="activeSheet === 'widgets'"
+    [enabled]="widgetsEnabled"
+    (closed)="closeSheet()"
+    (toggled)="toggleWidget($event)"
+  ></app-r2-widgets-toggle-sheet>
 
   <!-- Match info -->
   <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'matchInfo'" (click)="closeSheet()"></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'matchInfo'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Infos match</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
-      <label
-        >Équipe domicile
-        <input type="text" [(ngModel)]="matchDraft.teamHome" placeholder="Nom équipe" />
-      </label>
-      <label
-        >Équipe extérieur
-        <input type="text" [(ngModel)]="matchDraft.teamAway" placeholder="Nom équipe" />
-      </label>
+      <!-- Sport + période -->
+      <div class="r2-pref-row">
+        <span>Sport</span>
+        <select [value]="localOptions.sport" (change)="setSport($any($event.target).value)">
+          <option *ngFor="let s of sportTypes" [value]="s">{{ sportLabel(s) }}</option>
+        </select>
+      </div>
+      <div class="r2-pref-row">
+        <span>Période</span>
+        <select
+          [value]="localOptions.match.period"
+          (change)="setPeriod(getAvailablePeriods().indexOf($any($event.target).value))"
+        >
+          <option *ngFor="let p of getAvailablePeriods()" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <button class="r2-menu-item" (click)="nextPeriod()">→ Période suivante</button>
+
+      <hr />
+
+      <!-- Équipes + logos -->
+      <div class="r2-team-row">
+        <div class="r2-team-row-side">
+          <label class="r2-team-logo-upload" [class.has-logo]="homeLogo()">
+            <img *ngIf="homeLogo() as l" [src]="l" alt="Logo domicile" />
+            <span
+              *ngIf="!homeLogo()"
+              class="r2-team-logo-placeholder"
+              [style.background]="homeColor()"
+            >
+              {{ teamShort(scoreService.currentScore.homeTeam) }}
+            </span>
+            <input type="file" accept="image/*" (change)="onLogoUpload($event, 'home')" hidden />
+            <span class="r2-team-logo-edit">📷</span>
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="matchDraft.teamHome"
+            placeholder="Domicile"
+            class="r2-team-name-input"
+          />
+          <input
+            type="color"
+            class="r2-team-color-picker"
+            [value]="homeColor()"
+            (input)="setTeamColor('home', $any($event.target).value)"
+            aria-label="Couleur domicile"
+          />
+          <button
+            *ngIf="homeLogo()"
+            class="r2-team-logo-clear"
+            (click)="clearTeamLogo('home')"
+            type="button"
+          >
+            Retirer logo
+          </button>
+        </div>
+        <div class="r2-team-row-side">
+          <label class="r2-team-logo-upload" [class.has-logo]="awayLogo()">
+            <img *ngIf="awayLogo() as l" [src]="l" alt="Logo extérieur" />
+            <span
+              *ngIf="!awayLogo()"
+              class="r2-team-logo-placeholder"
+              [style.background]="awayColor()"
+            >
+              {{ teamShort(scoreService.currentScore.awayTeam) }}
+            </span>
+            <input type="file" accept="image/*" (change)="onLogoUpload($event, 'away')" hidden />
+            <span class="r2-team-logo-edit">📷</span>
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="matchDraft.teamAway"
+            placeholder="Extérieur"
+            class="r2-team-name-input"
+          />
+          <input
+            type="color"
+            class="r2-team-color-picker"
+            [value]="awayColor()"
+            (input)="setTeamColor('away', $any($event.target).value)"
+            aria-label="Couleur extérieur"
+          />
+          <button
+            *ngIf="awayLogo()"
+            class="r2-team-logo-clear"
+            (click)="clearTeamLogo('away')"
+            type="button"
+          >
+            Retirer logo
+          </button>
+        </div>
+      </div>
+
       <label
         >Date
         <input type="date" [(ngModel)]="matchDraft.date" />
       </label>
-      <label
-        >Spectateurs
-        <input type="number" [(ngModel)]="matchDraft.spectators" min="0" />
-      </label>
+
+      <!-- Audience avec +/- -->
+      <div class="r2-pref-row">
+        <span>Spectateurs</span>
+        <div class="r2-audience-stepper">
+          <button type="button" (click)="decrementAudience()" aria-label="−10">−10</button>
+          <input type="number" [(ngModel)]="matchDraft.spectators" min="0" />
+          <button type="button" (click)="incrementAudience()" aria-label="+10">+10</button>
+        </div>
+      </div>
+
       <button class="r2-save-btn" (click)="saveMatchInfo()">Enregistrer</button>
+
+      <hr />
+
+      <button class="r2-menu-item r2-menu-item--danger" (click)="startNewMatch()">
+        🔁 Démarrer un nouveau match
+      </button>
     </div>
   </div>
 
   <!-- Profil -->
   <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'profile'" (click)="closeSheet()"></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'profile'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Profil</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
       <div *ngIf="profiles.length === 0" class="r2-empty">Aucun profil disponible</div>
@@ -271,9 +331,10 @@
   <!-- Préférences -->
   <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'prefs'" (click)="closeSheet()"></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'prefs'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Préférences</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
       <div class="r2-pref-row">
@@ -304,9 +365,10 @@
   <!-- Options match -->
   <div class="r2-sheet-backdrop" *ngIf="activeSheet === 'options'" (click)="closeSheet()"></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'options'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Options match</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
       <div class="r2-pref-row">
@@ -319,6 +381,29 @@
         >
           <span class="r2-switch-thumb"></span>
         </button>
+      </div>
+
+      <div class="r2-overlay-pos" *ngIf="localOptions.overlay?.scoreEnabled">
+        <div class="r2-section-label">Position sur la TV</div>
+        <div class="r2-overlay-pos-grid">
+          <button
+            *ngFor="let p of overlayPositions"
+            class="r2-overlay-pos-cell"
+            [class.active]="localOptions.overlay?.position === p"
+            [attr.data-pos]="p"
+            (click)="setOverlayPosition(p)"
+            [attr.aria-label]="overlayPositionLabel(p)"
+          >
+            <span class="r2-overlay-pos-dot"></span>
+          </button>
+        </div>
+        <div class="r2-overlay-pos-hint">
+          {{
+            localOptions.overlay?.position
+              ? overlayPositionLabel(localOptions.overlay!.position!)
+              : 'Position par défaut (cloud)'
+          }}
+        </div>
       </div>
       <div class="r2-pref-row">
         <span>Breaking news</span>
@@ -372,6 +457,55 @@
           <option value="minimal">Minimal</option>
         </select>
       </label>
+
+      <hr />
+
+      <!-- Animation de but -->
+      <div class="r2-section-label">Animation de but</div>
+      <div class="r2-pref-row">
+        <span>Activée</span>
+        <button
+          class="r2-switch"
+          [class.on]="localOptions.goalAnimation?.enabled"
+          (click)="updateGoalAnimation('enabled', !localOptions.goalAnimation?.enabled)"
+          aria-label="Animation but"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
+      <label class="r2-pref-row">
+        <span>Style</span>
+        <select
+          [value]="localOptions.goalAnimation?.style"
+          (change)="updateGoalAnimation('style', $any($event.target).value)"
+        >
+          <option value="popup">Popup</option>
+          <option value="fullscreen">Plein écran</option>
+          <option value="slide">Slide</option>
+        </select>
+      </label>
+      <label class="r2-pref-row">
+        <span>Durée (s)</span>
+        <input
+          type="number"
+          min="1"
+          max="10"
+          [value]="localOptions.goalAnimation?.duration"
+          (change)="updateGoalAnimation('duration', +$any($event.target).value)"
+        />
+      </label>
+      <div class="r2-pref-row">
+        <span>Son</span>
+        <button
+          class="r2-switch"
+          [class.on]="localOptions.goalAnimation?.soundEnabled"
+          (click)="updateGoalAnimation('soundEnabled', !localOptions.goalAnimation?.soundEnabled)"
+          aria-label="Son but"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
+
       <hr />
       <button class="r2-reset-btn" (click)="resetOptions()">Réinitialiser les options</button>
     </div>
@@ -384,13 +518,17 @@
     (click)="closeSheet()"
   ></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'widget-score'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Score en direct</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
       <div class="r2-module-score">
         <div class="r2-module-side">
+          <div class="r2-module-team-color" [style.background]="homeColor()">
+            {{ teamShort(scoreService.currentScore.homeTeam) }}
+          </div>
           <div class="r2-module-team-badge">{{ scoreService.currentScore.homeTeam }}</div>
           <div class="r2-module-score-val">{{ scoreService.currentScore.homeScore }}</div>
           <div class="r2-module-score-btns">
@@ -399,6 +537,9 @@
           </div>
         </div>
         <div class="r2-module-side">
+          <div class="r2-module-team-color" [style.background]="awayColor()">
+            {{ teamShort(scoreService.currentScore.awayTeam) }}
+          </div>
           <div class="r2-module-team-badge">{{ scoreService.currentScore.awayTeam }}</div>
           <div class="r2-module-score-val">{{ scoreService.currentScore.awayScore }}</div>
           <div class="r2-module-score-btns">
@@ -418,9 +559,10 @@
     (click)="closeSheet()"
   ></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'widget-chrono'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Chronomètre</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
       <div class="r2-module-chrono">{{ chronoDisplay }}</div>
@@ -440,11 +582,34 @@
     (click)="closeSheet()"
   ></div>
   <div class="r2-sheet" *ngIf="activeSheet === 'widget-breaking'">
+    <span class="r2-sheet-handle"></span>
     <div class="r2-sheet-header">
       <span>Bandeau breaking news</span>
-      <button (click)="closeSheet()">✕</button>
+      <button (click)="closeSheet()" aria-label="Fermer">✕</button>
     </div>
     <div class="r2-sheet-body">
+      <div class="r2-quick-msgs" *ngIf="quickMessages.length > 0">
+        <div class="r2-quick-msgs-label">Messages rapides</div>
+        <div class="r2-quick-msgs-list">
+          <button
+            class="r2-quick-msg"
+            *ngFor="let m of quickMessages; let i = index"
+            (click)="selectQuickMessage(m)"
+          >
+            <span>{{ m }}</span>
+            <span
+              class="r2-quick-msg-remove"
+              (click)="$event.stopPropagation(); removeQuickMessage(i)"
+              aria-label="Retirer"
+              >×</span
+            >
+          </button>
+        </div>
+      </div>
+      <div class="r2-quick-msgs-hint" *ngIf="quickMessages.length === 0">
+        💡 Astuce : enregistre tes messages récurrents pour les rediffuser en 1 tap.
+      </div>
+
       <div class="r2-module-breaking-label">Texte du bandeau</div>
       <textarea
         class="r2-module-breaking-input"
@@ -453,9 +618,22 @@
         (input)="updateBreakingText($any($event.target).value)"
         placeholder="Saisissez votre message…"
       ></textarea>
-      <button class="r2-module-breaking-btn" [class.live]="breakingLive" (click)="toggleBreaking()">
-        {{ breakingLive ? "Retirer de l'écran" : 'Diffuser en overlay' }}
-      </button>
+      <div class="r2-breaking-actions">
+        <button
+          class="r2-breaking-save"
+          (click)="addQuickMessageFromText()"
+          [disabled]="!breakingText.trim()"
+        >
+          + Enregistrer
+        </button>
+        <button
+          class="r2-module-breaking-btn"
+          [class.live]="breakingLive"
+          (click)="toggleBreaking()"
+        >
+          {{ breakingLive ? "Retirer de l'écran" : 'Diffuser en overlay' }}
+        </button>
+      </div>
     </div>
   </div>
 </div>

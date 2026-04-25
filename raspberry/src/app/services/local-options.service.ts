@@ -9,6 +9,8 @@ export interface TeamConfig {
   name: string;
   shortName?: string; // Nom court pour l'affichage compact
   logo?: string; // URL ou data:image base64
+  /** Couleur identitaire (hex). Optionnel — fallback hash sur le nom si absent. ADR-light V2-color. */
+  color?: string;
 }
 
 /**
