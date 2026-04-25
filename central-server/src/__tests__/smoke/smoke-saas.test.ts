@@ -2348,6 +2348,53 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // Cascade delete guard. Avant cette PR, DELETE /api/videos/:id supprimait
+  // DB + FTP sans notifier les sites qui référençaient la vidéo dans leur
+  // config déployée → orphelines invisibles côté flotte (incident PR #613 :
+  // vidéo morte sur SaaS, écran figé). La nouvelle version refuse la
+  // suppression (409) si la vidéo est référencée, sauf si ?cascade=true,
+  // auquel cas elle re-notifie les sites impactés (saas-config-updated pour
+  // SaaS, update_config pour Pi) et logue l'audit VIDEO_DELETED_CASCADE.
+  it('content.controller deleteVideo guards usage with 409 + cascade=true bypass', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasFindUsage: /findVideoUsage\s*\(/.test(content),
+      hasGetUsageEndpoint: /export const getVideoUsage\s*=/.test(content),
+      checksCascadeQuery: /req\.query\.cascade\s*===\s*['"]true['"]/.test(content),
+      returns409WithCode: /res\.status\(409\)[\s\S]{0,400}?VIDEO_IN_USE/.test(content),
+      emitsSaasConfigUpdated: /socketService\.emitSaasConfigUpdated\(/.test(content),
+      queuesUpdateConfig: /commandQueueService\.sendOrQueue\([^,]+,\s*['"]update_config['"]/.test(content),
+      auditsCascade: /action:\s*['"]VIDEO_DELETED_CASCADE['"]/.test(content),
+    }).toEqual({
+      hasFindUsage: true,
+      hasGetUsageEndpoint: true,
+      checksCascadeQuery: true,
+      returns409WithCode: true,
+      emitsSaasConfigUpdated: true,
+      queuesUpdateConfig: true,
+      auditsCascade: true,
+    });
+  });
+
+  it('content.routes mounts GET /videos/:id/usage with validateParams', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasUsageRoute: /router\.get\(['"]\/videos\/:id\/usage['"]/.test(content),
+      hasValidateParams: /\/videos\/:id\/usage[\s\S]{0,200}validateParams\(paramSchemas\.id\)/.test(content),
+    }).toEqual({
+      hasUsageRoute: true,
+      hasValidateParams: true,
+    });
+  });
+
+  it('audit.service AuditAction enum includes VIDEO_DELETED_CASCADE', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'audit.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(/\|\s*['"]VIDEO_DELETED_CASCADE['"]/.test(content)).toBe(true);
+  });
+
   // Regression guard — when a manual video errors (404 / format / network),
   // the recovery callback in tv.component.ts MUST unconditionally restart the
   // seamless loop. The previous version had `if (!isLoopMode) startSeamlessLoop()`
