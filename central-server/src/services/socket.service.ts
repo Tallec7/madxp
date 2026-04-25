@@ -21,7 +21,6 @@ import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../
 import logger from '../config/logger';
 import { alertService } from './alert.service';
 import metricsService from './metrics.service';
-import { remoteCommandAuditRepository } from '../repositories/remote-command-audit.repository';
 import { handleMatchConfig } from '../handlers/match-config.handler';
 import { handleScoreUpdate, handleScoreReset } from '../handlers/score-update.handler';
 
@@ -44,6 +43,11 @@ import { sendLicenseStatus } from '../handlers/license.handler';
 import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRollback } from '../handlers/network-resilience.handler';
 import { handleHostapdEvent } from '../handlers/hostapd-events.handler';
 import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
+import {
+  registerSaasRelay as saasRelayRegister,
+  getSaasConnectedDisplays as saasGetConnectedDisplays,
+  sweepOrphanSaasStates as saasSweepOrphanStates,
+} from '../handlers/saas-relay.handler';
 import { sendSyncProfilesToSite } from './profile-sync.service';
 import {
   checkConnectionHealth,
@@ -213,11 +217,11 @@ class SocketService {
       syncDbWithWebSocketState(this.ctx);
     }, 60000);
 
-    // GC sweep saasStates : si un disconnect ne firérait pas (zombie socket),
-    // l'entrée resterait orpheline. Toutes les 5 min, on purge les states dont
-    // la room Socket.IO est vide ET la map tvInstances est vide.
+    // GC sweep saasStates (ADR-096 — délégué au handler) : si un disconnect ne
+    // firérait pas (zombie socket), l'entrée resterait orpheline. Toutes les
+    // 5 min, on purge les states dont la room est vide ET tvInstances vide.
     this.saasStatesGcInterval = setInterval(() => {
-      this.sweepOrphanSaasStates();
+      saasSweepOrphanStates(this.io);
     }, 5 * 60 * 1000);
 
     logger.info('Socket.IO service initialized');
@@ -800,303 +804,26 @@ class SocketService {
     return count;
   }
 
-  /** Phase 5 — PROP-002: get connected SaaS displays for a site */
+  /**
+   * Phase 5 — PROP-002 / ADR-096 — get connected SaaS displays for a site.
+   * Délégué au handler `handlers/saas-relay.handler.ts`. Conserve la surface
+   * publique pour les consommateurs externes (handlers Pi, dashboard).
+   */
   getSaasConnectedDisplays(siteId: string): Array<{ index: number; type: string }> {
-    if (!this.io) return [];
-    const room = this.io.sockets.adapter.rooms.get(siteId);
-    if (!room) return [];
-    const seen = new Set<number>();
-    const displays: Array<{ index: number; type: string }> = [];
-    for (const socketId of room) {
-      const sock = this.io.sockets.sockets.get(socketId);
-      if (sock && (sock as any).clientType === 'saas-tv') {
-        const index = (sock as any).displayIndex ?? 0;
-        if (!seen.has(index)) {
-          seen.add(index);
-          displays.push({ index, type: `display-${index}` });
-        }
-      }
-    }
-    return displays.sort((a, b) => a.index - b.index);
+    return saasGetConnectedDisplays(this.io, siteId);
   }
 
   /**
-   * Phase 5 — PROP-002: SaaS event relay.
-   * Replicates the Pi local Socket.IO server relay for SaaS clients.
-   * Relays commands and state events between SaaS Remote and SaaS TV displays
-   * within the same site room on the central server.
+   * Phase 5 — PROP-002 / ADR-096 — SaaS event relay.
+   * Délégué au handler `handlers/saas-relay.handler.ts`. Le wrapper privé
+   * préserve la surface API du SocketService pour les tests existants.
+   * Voir saas-relay.handler.ts pour la liste complète des événements relayés
+   * (command, score-update, phase-change, timer-update, tv-register,
+   * tv-loop-update, scoreboard-state-push — ADR-081/059/090).
    */
-  private saasRelayRegistered = new Set<string>();
-
   private registerSaasRelay(socket: Socket, siteId: string): void {
-    // Avoid duplicate registration on reconnect
-    if (this.saasRelayRegistered.has(socket.id)) return;
-    this.saasRelayRegistered.add(socket.id);
-
-    // State storage per site (lightweight, in-memory)
-    if (!this.saasStates.has(siteId)) {
-      this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false }, tvInstances: new Map(), loopState: null });
-      metricsService.recordSaasStatesCount(this.saasStates.size);
-    }
-    const state = this.saasStates.get(siteId)!;
-
-    // command → action relay (same as Pi server)
-    // ADR-081 Phase 0: log + audit (fire-and-forget, non-bloquant)
-    socket.on('command', (data: Record<string, unknown>) => {
-      socket.to(siteId).emit('action', data);
-      this.auditRemoteCommand(siteId, data, 'saas');
-    });
-
-    // ADR-059 SaaS — relay state-sync (émis après chaque commande granulaire)
-    socket.on('state-sync', (data: Record<string, unknown>) => {
-      socket.to(siteId).emit('state-sync', data);
-    });
-
-    // Score relay + state persistence
-    socket.on('score-update', (data: Record<string, unknown>) => {
-      state.score = data;
-      socket.to(siteId).emit('score-update', data);
-    });
-
-    socket.on('score-reset', () => {
-      state.score = null;
-      socket.to(siteId).emit('score-reset');
-    });
-
-    // Phase relay
-    socket.on('phase-change', (data: Record<string, unknown>) => {
-      state.phase = (data as { phase: string }).phase || 'neutral';
-      socket.to(siteId).emit('phase-change', data);
-    });
-
-    // Timer relay
-    socket.on('timer-update', (data: Record<string, unknown>) => {
-      Object.assign(state.timer, data);
-      socket.to(siteId).emit('timer-update', data);
-    });
-
-    // Breaking news relay
-    socket.on('breaking-news', (data: Record<string, unknown>) => {
-      socket.to(siteId).emit('breaking-news', data);
-    });
-
-    // Options relay
-    socket.on('options-update', (data: Record<string, unknown>) => {
-      state.options = data;
-      socket.to(siteId).emit('options-update', data);
-    });
-
-    // Recording state relay
-    socket.on('recording-state', (data: Record<string, unknown>) => {
-      state.recording = data as { isRecording: boolean; isManualOverride: boolean };
-      socket.to(siteId).emit('recording-state', data);
-    });
-
-    // Match info relay
-    socket.on('match-info-updated', (data: Record<string, unknown>) => {
-      socket.to(siteId).emit('match-info-updated', data);
-    });
-
-    // ADR-090 — scoreboard-state push depuis la Remote SaaS (pas de JWT : relay socket).
-    // Le Remote SaaS est déjà authentifié par son siteId room (saas-register).
-    // Le payload est validé par `validateScoreboardStatePush` avant persistence + broadcast.
-    socket.on('scoreboard-state-push', (data: Record<string, unknown>) => {
-      try {
-        const { validateScoreboardStatePush } = require('../validators/scoreboard.validator');
-        const validated = validateScoreboardStatePush(data);
-        if (!validated) return;
-        const {
-          scoreboardStateRepository,
-        } = require('../repositories/scoreboard-state.repository');
-        const fullState = { siteId, ...validated, updatedAt: Date.now() };
-        scoreboardStateRepository.upsert(fullState);
-        if (this.io) this.io.to(siteId).emit('scoreboard-state', fullState);
-      } catch (err) {
-        logger.warn('scoreboard-state-push invalid payload', { siteId, err: (err as Error).message });
-      }
-    });
-
-    // --- Master-Slave TV sync (same as Pi local server) ---
-
-    // TV registration with role assignment
-    socket.on('tv-register', (data: Record<string, unknown>) => {
-      const displayType = (data?.displayType as string) || 'tv';
-      const displayIndex = (data?.displayIndex as number) ?? 0;
-      const instances = state.tvInstances;
-
-      // Find current master
-      const masterEntry = [...instances.entries()].find(([, info]) => info.role === 'master');
-
-      let role: 'master' | 'slave';
-      let demotedId: string | null = null;
-
-      if (!masterEntry) {
-        role = 'master';
-      } else if (displayType === 'tv' && masterEntry[1].displayType !== 'tv') {
-        // Pi kiosk priority
-        masterEntry[1].role = 'slave';
-        demotedId = masterEntry[0];
-        role = 'master';
-      } else {
-        role = 'slave';
-      }
-
-      instances.set(socket.id, { role, displayType, displayIndex, connectedAt: Date.now() });
-      socket.emit('tv-role-assigned', { role });
-      logger.info('SaaS TV registered', { siteId, socketId: socket.id, role, displayType, displayIndex });
-
-      if (demotedId && this.io) {
-        this.io.to(demotedId).emit('tv-role-assigned', { role: 'slave' });
-        this.io.to(demotedId).emit('tv-loop-state', state.loopState);
-      }
-
-      if (role === 'slave' && state.loopState) {
-        socket.emit('tv-loop-state', state.loopState);
-      }
-
-      // Notify displays changed
-      const displays = this.getSaasConnectedDisplays(siteId);
-      socket.to(siteId).emit('displays-changed', { displays });
-      socket.emit('displays-changed', { displays });
-    });
-
-    // TV loop update (master → slaves)
-    socket.on('tv-loop-update', (data: Record<string, unknown>) => {
-      const instance = state.tvInstances.get(socket.id);
-      if (!instance || instance.role !== 'master') return;
-      state.loopState = data;
-      socket.to(siteId).emit('tv-loop-state', data);
-    });
-
-    // Request state (SaaS equivalent of Pi's request-state)
-    socket.on('request-state', () => {
-      if (state.score) socket.emit('score-update', state.score);
-      socket.emit('phase-change', { phase: state.phase });
-      socket.emit('recording-state', state.recording);
-      if (state.options) socket.emit('options-update', state.options);
-      if (state.timer.isRunning || state.timer.currentTime > 0) {
-        socket.emit('timer-update', { action: 'sync', ...state.timer });
-      }
-      const displays = this.getSaasConnectedDisplays(siteId);
-      socket.emit('displays-changed', { displays });
-    });
-
-    // Cleanup on disconnect — unregister TV + promote slave if master disconnects
-    socket.on('disconnect', () => {
-      this.saasRelayRegistered.delete(socket.id);
-      const instance = state.tvInstances.get(socket.id);
-      if (instance) {
-        const wasMaster = instance.role === 'master';
-        state.tvInstances.delete(socket.id);
-
-        if (wasMaster) {
-          // Promote oldest slave
-          let oldest: { id: string; connectedAt: number } | null = null;
-          for (const [id, info] of state.tvInstances) {
-            if (!oldest || info.connectedAt < oldest.connectedAt) {
-              oldest = { id, connectedAt: info.connectedAt };
-            }
-          }
-          if (oldest && this.io) {
-            state.tvInstances.get(oldest.id)!.role = 'master';
-            this.io.to(oldest.id).emit('tv-role-assigned', { role: 'master' });
-            logger.info('SaaS TV promoted to master', { siteId, promoted: oldest.id });
-          }
-        }
-      }
-
-      // Release saasStates entry when no clients remain for this site (issue #594 fix)
-      if (this.saasStates && state.tvInstances.size === 0) {
-        const room = this.io?.sockets.adapter.rooms.get(siteId);
-        if (!room || room.size === 0) {
-          this.saasStates.delete(siteId);
-          metricsService.recordSaasStatesCount(this.saasStates.size);
-          logger.info('SaaS state released — no remaining clients', { siteId });
-        }
-      }
-    });
+    saasRelayRegister(this.io, socket, siteId);
   }
-
-  /**
-   * ADR-081 Phase 0 — Audit d'une commande télécommande relayée.
-   * Fire-and-forget : log + INSERT. Jamais bloquant pour le relay.
-   * `source`: 'saas' (SaaS TV) ou 'pi' (Pi cloud relay).
-   */
-  private auditRemoteCommand(
-    siteId: string,
-    data: Record<string, unknown>,
-    source: 'saas' | 'pi'
-  ): void {
-    const room = this.io?.sockets.adapter.rooms.get(siteId);
-    const roomSize = room ? room.size : 0;
-    // Exclure le socket emitter du count : on veut le nombre de receivers
-    const receivers = Math.max(0, roomSize - 1);
-    const commandId = (data?.commandId as string) || undefined;
-    const commandType = (data?.type as string) || 'unknown';
-
-    logger.info('Remote command relayed', {
-      commandId,
-      siteId,
-      commandType,
-      source,
-      receivers,
-    });
-
-    if (!commandId) return; // Phase 0 : pas d'audit sans commandId (remote pas encore mis à jour)
-
-    remoteCommandAuditRepository
-      .insert({
-        commandId,
-        siteId,
-        commandType,
-        roomSize: receivers,
-        metadata: { source },
-      })
-      .catch((err: Error) => {
-        logger.warn('Remote command audit insert failed', {
-          commandId,
-          siteId,
-          error: err.message,
-        });
-      });
-  }
-
-  // Sweep périodique : purge les saasStates dont aucun client n'est plus
-  // connecté (zombie sockets qui ne firérent jamais 'disconnect').
-  // Complément du cleanup synchrone fait dans le handler disconnect (issue #594).
-  private sweepOrphanSaasStates(): void {
-    if (!this.saasStates.size || !this.io) return;
-    let purged = 0;
-    for (const [siteId, state] of this.saasStates) {
-      const room = this.io.sockets.adapter.rooms.get(siteId);
-      const roomEmpty = !room || room.size === 0;
-      if (roomEmpty && state.tvInstances.size === 0) {
-        this.saasStates.delete(siteId);
-        purged++;
-      }
-    }
-    if (purged > 0) {
-      metricsService.recordSaasStatesCount(this.saasStates.size);
-      logger.info('SaaS states GC sweep purged orphan entries', {
-        purged,
-        remaining: this.saasStates.size,
-      });
-    }
-  }
-
-  // SaaS state storage (per site) — initialisé eagerly pour préserver le type
-  // narrowing dans les closures (issue #594 : la lazy init `Map | undefined`
-  // bloquait TS2532 dans les handlers `disconnect` qui accèdent à
-  // `this.saasStates.delete()` après cleanup).
-  private saasStates: Map<string, {
-    score: Record<string, unknown> | null;
-    phase: string;
-    options: Record<string, unknown> | null;
-    timer: { currentTime: number; isRunning: boolean; [key: string]: unknown };
-    recording: { isRecording: boolean; isManualOverride: boolean };
-    tvInstances: Map<string, { role: 'master' | 'slave'; displayType: string; displayIndex: number; connectedAt: number }>;
-    loopState: Record<string, unknown> | null;
-  }> = new Map();
 
   /**
    * Notify connected SaaS browsers that their config has been updated.

@@ -131,11 +131,16 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
       expect(v).toMatch(/export function validateScoreboardStatePush/);
     });
 
-    it('socket.service wires scoreboard-state-push listener with validator + repo + broadcast', () => {
+    it('saas-relay handler wires scoreboard-state-push listener with validator + repo + broadcast (ADR-096)', () => {
+      // ADR-096 : la logique relay SaaS (incluant scoreboard-state-push) a été
+      // extraite dans handlers/saas-relay.handler.ts. socket.service.ts importe
+      // ce handler et délègue via registerSaasRelay().
+      const handler = readRepo('central-server/src/handlers/saas-relay.handler.ts');
+      expect(handler).toMatch(/socket\.on\('scoreboard-state-push'/);
+      expect(handler).toMatch(/validateScoreboardStatePush/);
+      expect(handler).toMatch(/scoreboardStateRepository/);
       const svc = readRepo('central-server/src/services/socket.service.ts');
-      expect(svc).toMatch(/socket\.on\('scoreboard-state-push'/);
-      expect(svc).toMatch(/validateScoreboardStatePush/);
-      expect(svc).toMatch(/scoreboardStateRepository/);
+      expect(svc).toMatch(/saas-relay\.handler/);
     });
 
     it('RemoteScoreService + RemoteTimerService expose applyCloudState + onLocalChange hook', () => {

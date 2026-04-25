@@ -53,6 +53,11 @@ jest.mock('./deployment.service', () => ({
 
 // Import after mocks
 import socketService from './socket.service';
+import {
+  __resetSaasRelayState,
+  __getSaasStatesMap,
+  __getSaasRelayRegistered,
+} from '../handlers/saas-relay.handler';
 import { SocketData, HeartbeatMessage, CommandResult } from '../types';
 
 type SocketEventHandler = (...args: unknown[]) => void;
@@ -1052,10 +1057,9 @@ describe('SocketService', () => {
     beforeEach(() => {
       socket1 = createMockSocket({ id: 'sock-1' as any });
       socket2 = createMockSocket({ id: 'sock-2' as any });
-      // Reset saas state (reset io to null first to avoid cleanup errors)
+      // Reset saas state (ADR-096 — handler module owns the state)
       (socketService as any).io = null;
-      (socketService as any).saasRelayRegistered = new Set();
-      (socketService as any).saasStates = new Map();
+      __resetSaasRelayState();
     });
 
     const createMockIo = () => ({
@@ -1075,7 +1079,7 @@ describe('SocketService', () => {
       expect(socket1.on).toHaveBeenCalledWith('tv-loop-update', expect.any(Function));
       expect(socket1.on).toHaveBeenCalledWith('request-state', expect.any(Function));
       expect(socket1.on).toHaveBeenCalledWith('disconnect', expect.any(Function));
-      expect((socketService as any).saasStates.has(siteId)).toBe(true);
+      expect(__getSaasStatesMap().has(siteId)).toBe(true);
     });
 
     it('should skip duplicate registration for same socket', () => {
@@ -1099,7 +1103,7 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       (socket1 as any).triggerEvent('score-update', { home: 1, away: 0 });
-      const state = (socketService as any).saasStates.get(siteId);
+      const state = __getSaasStatesMap().get(siteId)!;
       expect(state.score).toEqual({ home: 1, away: 0 });
       expect(emitToRoom).toHaveBeenCalledWith('score-update', { home: 1, away: 0 });
     });
@@ -1109,9 +1113,9 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       // Set score first
-      (socketService as any).saasStates.get(siteId).score = { home: 1 };
+      __getSaasStatesMap().get(siteId)!.score = { home: 1 };
       (socket1 as any).triggerEvent('score-reset');
-      expect((socketService as any).saasStates.get(siteId).score).toBeNull();
+      expect(__getSaasStatesMap().get(siteId)!.score).toBeNull();
       expect(emitToRoom).toHaveBeenCalledWith('score-reset');
     });
 
@@ -1120,7 +1124,7 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       (socket1 as any).triggerEvent('phase-change', { phase: 'match' });
-      expect((socketService as any).saasStates.get(siteId).phase).toBe('match');
+      expect(__getSaasStatesMap().get(siteId)!.phase).toBe('match');
     });
 
     it('should relay timer-update and persist timer state', () => {
@@ -1128,7 +1132,7 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       (socket1 as any).triggerEvent('timer-update', { currentTime: 45, isRunning: true });
-      const state = (socketService as any).saasStates.get(siteId);
+      const state = __getSaasStatesMap().get(siteId)!;
       expect(state.timer.currentTime).toBe(45);
       expect(state.timer.isRunning).toBe(true);
     });
@@ -1146,7 +1150,7 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       (socket1 as any).triggerEvent('options-update', { overlay: true });
-      expect((socketService as any).saasStates.get(siteId).options).toEqual({ overlay: true });
+      expect(__getSaasStatesMap().get(siteId)!.options).toEqual({ overlay: true });
     });
 
     it('should relay recording-state and persist', () => {
@@ -1154,7 +1158,7 @@ describe('SocketService', () => {
       socket1.to = jest.fn().mockReturnValue({ emit: emitToRoom }) as any;
       callRegister(socket1);
       (socket1 as any).triggerEvent('recording-state', { isRecording: true, isManualOverride: false });
-      expect((socketService as any).saasStates.get(siteId).recording.isRecording).toBe(true);
+      expect(__getSaasStatesMap().get(siteId)!.recording.isRecording).toBe(true);
     });
 
     it('should relay match-info-updated to room', () => {
@@ -1187,7 +1191,7 @@ describe('SocketService', () => {
 
         (socket1 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 0 });
         // Set loopState
-        const state = (socketService as any).saasStates.get(siteId);
+        const state = __getSaasStatesMap().get(siteId)!;
         state.loopState = { videoIndex: 2 };
 
         (socket2 as any).triggerEvent('tv-register', { displayType: 'browser', displayIndex: 1 });
@@ -1255,7 +1259,7 @@ describe('SocketService', () => {
         (socketService as any).io = createMockIo();
 
         callRegister(socket1);
-        const state = (socketService as any).saasStates.get(siteId);
+        const state = __getSaasStatesMap().get(siteId)!;
         state.score = { home: 2, away: 1 };
         state.options = { overlay: true };
         state.timer = { currentTime: 30, isRunning: true };
@@ -1296,9 +1300,9 @@ describe('SocketService', () => {
       it('should clean up saasRelayRegistered on disconnect', () => {
         socket1.to = jest.fn().mockReturnValue({ emit: jest.fn() }) as any;
         callRegister(socket1);
-        expect((socketService as any).saasRelayRegistered.has('sock-1')).toBe(true);
+        expect(__getSaasRelayRegistered().has('sock-1')).toBe(true);
         (socket1 as any).triggerEvent('disconnect');
-        expect((socketService as any).saasRelayRegistered.has('sock-1')).toBe(false);
+        expect(__getSaasRelayRegistered().has('sock-1')).toBe(false);
       });
     });
   });
