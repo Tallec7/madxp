@@ -1,3 +1,10 @@
+## [3.242.2](https://github.com/Tallec7/neopro/compare/v3.242.1...v3.242.2) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** durcir lftp mirror Hostinger (max-retries, parallélisme) ([#610](https://github.com/Tallec7/neopro/issues/610)) ([8bd5e3a](https://github.com/Tallec7/neopro/commit/8bd5e3a9a76132e06d0d6ee229a9621599d22308))
+- **e2e:** drop legacy h1/h2 'connexion' assertion in login form test ([81bc193](https://github.com/Tallec7/neopro/commit/81bc193539f7417d6f8e11bffed8c82e00cc19da))
+
 ## [3.242.1](https://github.com/Tallec7/neopro/compare/v3.242.0...v3.242.1) (2026-04-25)
 
 ### Bug Fixes
