@@ -1,3 +1,10 @@
+## [3.242.1](https://github.com/Tallec7/neopro/compare/v3.242.0...v3.242.1) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** db-backup re-apply du -b sanity check (lost in PR [#606](https://github.com/Tallec7/neopro/issues/606) squash) ([#611](https://github.com/Tallec7/neopro/issues/611)) ([ec1ab0a](https://github.com/Tallec7/neopro/commit/ec1ab0a156880ac4d271ab3c22392020fac19353)), closes [#602](https://github.com/Tallec7/neopro/issues/602) [#602](https://github.com/Tallec7/neopro/issues/602)
+- **infra:** use valid TLD for E2E staging bot email ([acadbf9](https://github.com/Tallec7/neopro/commit/acadbf95dcf750d9d47ded5ebb10c1f065ae9913))
+
 # [3.242.0](https://github.com/Tallec7/neopro/compare/v3.241.2...v3.242.0) (2026-04-25)
 
 ### Features
