@@ -1,3 +1,9 @@
+## [3.240.3](https://github.com/Tallec7/neopro/compare/v3.240.2...v3.240.3) (2026-04-25)
+
+### Bug Fixes
+
+- **docker:** remove BuildKit syntax + cache mounts breaking Railway build ([#595](https://github.com/Tallec7/neopro/issues/595)) ([50e92d8](https://github.com/Tallec7/neopro/commit/50e92d85292b36538c116244a1cb316f125fab4f)), closes [#590](https://github.com/Tallec7/neopro/issues/590) [#590](https://github.com/Tallec7/neopro/issues/590)
+
 ## [3.240.2](https://github.com/Tallec7/neopro/compare/v3.240.1...v3.240.2) (2026-04-25)
 
 ### Bug Fixes
