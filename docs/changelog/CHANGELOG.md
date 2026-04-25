@@ -1,3 +1,15 @@
+# [3.246.0](https://github.com/Tallec7/neopro/compare/v3.245.0...v3.246.0) (2026-04-25)
+
+### Features
+
+- **tests:** smoke guard requiring 1 test min per new service ([#622](https://github.com/Tallec7/neopro/issues/622)) ([37dc627](https://github.com/Tallec7/neopro/commit/37dc6278f4a251ea80edadd5fbacca4af3a43458))
+
+# [3.245.0](https://github.com/Tallec7/neopro/compare/v3.244.0...v3.245.0) (2026-04-25)
+
+### Features
+
+- **content:** cascade JSONB config_profiles + local_config_mirror (PR2.1, dépend de [#616](https://github.com/Tallec7/neopro/issues/616)) ([#618](https://github.com/Tallec7/neopro/issues/618)) ([6a2f8d5](https://github.com/Tallec7/neopro/commit/6a2f8d5b50a6f64e84ce5126abf2399c8b8d9212)), closes [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613) [#613](https://github.com/Tallec7/neopro/issues/613)
+
 # [3.244.0](https://github.com/Tallec7/neopro/compare/v3.243.0...v3.244.0) (2026-04-25)
 
 ### Features

@@ -1,5 +1,6 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
+import { findRowsReferencingInJsonb } from '../utils/jsonb-references';
 import { BaseRepository } from './base.repository';
 
 // --------------------------------------------------------------------------
@@ -239,27 +240,16 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
    * éviter de charger toute la table en mémoire. Rapide même sur 100+ profils.
    */
   async findProfilesReferencingVideo(criteria: { videoId?: string; filename?: string }): Promise<ConfigProfileRow[]> {
-    const filters: string[] = [];
-    const params: string[] = [];
-    if (criteria.videoId) {
-      params.push(`%${criteria.videoId}%`);
-      filters.push(`configuration::text ILIKE $${params.length}`);
-    }
-    if (criteria.filename) {
-      params.push(`%${criteria.filename}%`);
-      filters.push(`configuration::text ILIKE $${params.length}`);
-    }
-    if (filters.length === 0) return [];
-
-    const result = await query<ConfigProfileRow>(
-      `SELECT id, site_id, name, display_name, city, sport, sort_order,
+    return findRowsReferencingInJsonb<ConfigProfileRow>(
+      {
+        table: 'config_profiles',
+        jsonbColumn: 'configuration',
+        selectColumns: `id, site_id, name, display_name, city, sport, sort_order,
               is_default, configuration, created_by, updated_by, created_at, updated_at,
-              remote_pin_required
-       FROM config_profiles
-       WHERE ${filters.join(' OR ')}`,
-      params,
+              remote_pin_required`,
+      },
+      criteria,
     );
-    return result.rows;
   }
 
   /**
