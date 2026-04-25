@@ -2348,6 +2348,60 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // Regression guard — when a manual video errors (404 / format / network),
+  // the recovery callback in tv.component.ts MUST unconditionally restart the
+  // seamless loop. The previous version had `if (!isLoopMode) startSeamlessLoop()`
+  // which was a no-op in the common case (isLoopMode is true: loop service was
+  // never stopped, only overlaid by the manual player), leaving the screen
+  // frozen on the freeze frame indefinitely. The watchdog cannot rescue this
+  // path because it skips manual mode (and isManualMode is now flipped to false).
+  it('tv.component manual error recovery unconditionally restarts the seamless loop', () => {
+    const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'tv', 'tv.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const recoveryBlockMatch = content.match(/onManualErrorRecovery\s*:\s*\(\)\s*=>\s*\{([\s\S]*?)\n\s{8}\},/);
+    const recoveryBody = recoveryBlockMatch ? recoveryBlockMatch[1] : '';
+    expect({
+      callbackFound: !!recoveryBlockMatch,
+      callsStartSeamlessLoop: /this\.playbackService\.startSeamlessLoop\(\)/.test(recoveryBody),
+      noConditionalLoopGate: !/if\s*\(\s*!\s*this\.playbackService\.isLoopMode\s*\)/.test(recoveryBody),
+      flipsManualMode: /this\.isManualMode\s*=\s*false/.test(recoveryBody),
+    }).toEqual({
+      callbackFound: true,
+      callsStartSeamlessLoop: true,
+      noConditionalLoopGate: true,
+      flipsManualMode: true,
+    });
+  });
+
+  // Regression guard — when a manual video 404s on FTP, the proxy returns
+  // status 404 but Chrome was blocking the response body with
+  // ERR_BLOCKED_BY_RESPONSE.NotSameOrigin because CORP was only set on the
+  // success branch (helmet defaults to same-origin). The SaaS <video> element
+  // then surfaced an opaque MEDIA_ELEMENT_ERROR instead of a clean 404,
+  // making client-side recovery and analytics unreliable. The header must be
+  // set unconditionally in front of every res.status().json() error branch.
+  it('video-stream.controller sets Cross-Origin-Resource-Policy on ALL responses (success + 4xx/5xx)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const corpIdx = content.indexOf("setHeader('Cross-Origin-Resource-Policy'");
+    const missingTokenIdx = content.search(/res\.status\(400\)/);
+    const invalidTokenIdx = content.search(/res\.status\(401\)/);
+    const upstreamErrorIdx = content.indexOf("res.status(upstream.status === 404 ? 404 : 502)");
+    expect({
+      corpHeaderPresent: corpIdx > -1,
+      corpBeforeMissingToken: corpIdx > -1 && missingTokenIdx > -1 && corpIdx < missingTokenIdx,
+      corpBeforeInvalidToken: corpIdx > -1 && invalidTokenIdx > -1 && corpIdx < invalidTokenIdx,
+      corpBeforeUpstreamError: corpIdx > -1 && upstreamErrorIdx > -1 && corpIdx < upstreamErrorIdx,
+      corpValueIsCrossOrigin: /Cross-Origin-Resource-Policy['"]\s*,\s*['"]cross-origin['"]/.test(content),
+    }).toEqual({
+      corpHeaderPresent: true,
+      corpBeforeMissingToken: true,
+      corpBeforeInvalidToken: true,
+      corpBeforeUpstreamError: true,
+      corpValueIsCrossOrigin: true,
+    });
+  });
+
   it('video-stream.controller instruments Prometheus counter neopro_video_stream_requests_total', () => {
     const controllerPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
     const controller = fs.readFileSync(controllerPath, 'utf8');
