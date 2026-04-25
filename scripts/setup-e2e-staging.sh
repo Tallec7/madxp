@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-EMAIL="e2e-bot@staging.local"
+EMAIL="e2e-bot@staging.kalonpartners.bzh"
 DB_URL="${STAGING_DATABASE_PUBLIC_URL:-}"
 
 if [ -z "$DB_URL" ]; then
