@@ -2395,6 +2395,108 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     expect(/\|\s*['"]VIDEO_DELETED_CASCADE['"]/.test(content)).toBe(true);
   });
 
+  // PR2.2 — Video FTP orphan audit. La cascade DELETE de PR2 ne couvre que les
+  // suppressions API. Les fichiers FTP supprimés directement (FileZilla, SSH)
+  // ou les uploads jamais réussis côté FTP (row DB créée mais .mp4 absent) ne
+  // sont détectés QUE par ce CRON nocturne. L'audit prod confirmé sur incident
+  // PR #613 : la vidéo acff5e34 EXISTE en DB mais le fichier FTP avait disparu,
+  // sans aucun audit_log de suppression API.
+  it('PR2.2 — video-ftp-audit.service expose auditAllVideos avec HEAD upstream', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'video-ftp-audit.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasService: /class VideoFtpAuditService/.test(content),
+      exportsSingleton: /export const videoFtpAuditService\s*=\s*new VideoFtpAuditService\(\)/.test(content),
+      headRequest: /method:\s*['"]HEAD['"]/.test(content),
+      handles404: /response\.status\s*===\s*404/.test(content),
+      timeoutGuard: /AbortController/.test(content) && /HEAD_TIMEOUT_MS/.test(content),
+      autoResolve: /clearWarning\(/.test(content),
+      recordsMetric: /metricsService\.recordVideoFtpAudit\(/.test(content),
+    }).toEqual({
+      hasService: true,
+      exportsSingleton: true,
+      headRequest: true,
+      handles404: true,
+      timeoutGuard: true,
+      autoResolve: true,
+      recordsMetric: true,
+    });
+  });
+
+  it('PR2.2 — cron-tasks/video-ftp-audit.task.ts exporte executeVideoFtpAuditTask', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'cron-tasks', 'video-ftp-audit.task.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasExecuteFn: /export async function executeVideoFtpAuditTask/.test(content),
+      callsService: /videoFtpAuditService\.auditAllVideos\(/.test(content),
+      returnsExecutionResult: /Promise<ExecutionResult>/.test(content),
+    }).toEqual({
+      hasExecuteFn: true,
+      callsService: true,
+      returnsExecutionResult: true,
+    });
+  });
+
+  it('PR2.2 — cron-scheduler dispatch table inclut video_ftp_audit (ADR-097)', () => {
+    const typesFile = fs.readFileSync(path.join(repoRoot, 'central-server', 'src', 'cron-tasks', 'types.ts'), 'utf8');
+    const schedFile = fs.readFileSync(path.join(repoRoot, 'central-server', 'src', 'services', 'cron-scheduler.service.ts'), 'utf8');
+    expect({
+      typeUnion: /CronTaskType[\s\S]+'video_ftp_audit'/.test(typesFile),
+      importsTask: /import \{ executeVideoFtpAuditTask \} from ['"]\.\.\/cron-tasks\/video-ftp-audit\.task['"]/.test(schedFile),
+      dispatchEntry: /video_ftp_audit:\s*executeVideoFtpAuditTask/.test(schedFile),
+    }).toEqual({
+      typeUnion: true,
+      importsTask: true,
+      dispatchEntry: true,
+    });
+  });
+
+  it('PR2.2 — migration add-video-ftp-audit-warnings.sql crée table + check_task_type étendu + seed CRON', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'scripts', 'migrations', 'add-video-ftp-audit-warnings.sql');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      createsTable: /CREATE TABLE IF NOT EXISTS video_ftp_audit_warnings/.test(content),
+      cascadeFK: /REFERENCES videos\(id\) ON DELETE CASCADE/.test(content),
+      uniqueVideoId: /UNIQUE \(video_id\)/.test(content),
+      extendsCheck: /'video_ftp_audit'/.test(content) && /check_task_type/.test(content),
+      seedsSchedule: /INSERT INTO recurring_schedules[\s\S]+'video_ftp_audit'/.test(content),
+    }).toEqual({
+      createsTable: true,
+      cascadeFK: true,
+      uniqueVideoId: true,
+      extendsCheck: true,
+      seedsSchedule: true,
+    });
+  });
+
+  it('PR2.2 — admin route /video-ftp-orphans est gardée par super_admin', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'admin.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      listRoute: /router\.get\(['"]\/video-ftp-orphans['"][\s\S]{0,200}requireRole\(['"]super_admin['"]\)/.test(content),
+      runRoute: /router\.post\(['"]\/video-ftp-orphans\/run['"][\s\S]{0,200}requireRole\(['"]super_admin['"]\)/.test(content),
+    }).toEqual({
+      listRoute: true,
+      runRoute: true,
+    });
+  });
+
+  it('PR2.2 — metrics.service expose recordVideoFtpAudit et les counters Prometheus', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      counterWarnings: /name:\s*['"]neopro_video_ftp_audit_warnings_total['"]/.test(content),
+      counterScanned: /name:\s*['"]neopro_video_ftp_audit_scanned_total['"]/.test(content),
+      gaugeCurrent: /name:\s*['"]neopro_video_ftp_orphans_current['"]/.test(content),
+      recorderExposed: /recordVideoFtpAudit\(payload:/.test(content),
+    }).toEqual({
+      counterWarnings: true,
+      counterScanned: true,
+      gaugeCurrent: true,
+      recorderExposed: true,
+    });
+  });
+
   // Regression guard — when a manual video errors (404 / format / network),
   // the recovery callback in tv.component.ts MUST unconditionally restart the
   // seamless loop. The previous version had `if (!isLoopMode) startSeamlessLoop()`

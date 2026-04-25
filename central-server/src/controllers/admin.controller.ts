@@ -5,7 +5,8 @@ import { AdminActionRequest, LocalClientInput } from '../types/admin';
 import logger from '../config/logger';
 import { PassThrough } from 'stream';
 import socketService from '../services/socket.service';
-import { siteRepository } from '../repositories';
+import { siteRepository, videoFtpAuditRepository } from '../repositories';
+import { videoFtpAuditService } from '../services/video-ftp-audit.service';
 
 
 export const listJobs = (_req: AuthRequest, res: Response) => {
@@ -125,6 +126,49 @@ export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error getting socket debug info:', error);
     return res.status(500).json({ error: 'Failed to get socket debug info' });
+  }
+};
+
+// =============================================================================
+// PR2.2 — Video FTP orphan audit (admin diagnostic + manual trigger)
+// =============================================================================
+
+/**
+ * GET /api/admin/video-ftp-orphans
+ * Liste les vidéos dont le storage_path FTP est mort selon le dernier passage
+ * du CRON `video_ftp_audit`. Réponse enrichie avec filename + reference_count
+ * (nombre de sites qui référencent encore la vidéo).
+ */
+export const listVideoFtpOrphans = async (_req: AuthRequest, res: Response) => {
+  try {
+    const [warnings, counts] = await Promise.all([
+      videoFtpAuditRepository.findAllActive(200),
+      videoFtpAuditRepository.countActive(),
+    ]);
+    return res.json({
+      summary: counts,
+      warnings,
+    });
+  } catch (error) {
+    logger.error('Error listing video FTP orphans:', error);
+    return res.status(500).json({ error: 'Failed to list video FTP orphans' });
+  }
+};
+
+/**
+ * POST /api/admin/video-ftp-orphans/run
+ * Déclenche manuellement un passage du CRON `video_ftp_audit`. Utile pour
+ * tester ou re-vérifier rapidement après un cleanup FTP. Bloquant (timeout
+ * client = HEAD * 8s par batch concurrent), à n'utiliser que sur démo/staging
+ * pour des petits jeux de données.
+ */
+export const runVideoFtpAudit = async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await videoFtpAuditService.auditAllVideos();
+    return res.json({ ok: true, result });
+  } catch (error) {
+    logger.error('Error running video FTP audit on demand:', error);
+    return res.status(500).json({ error: 'Failed to run video FTP audit' });
   }
 };
 

@@ -260,6 +260,37 @@ const matchSessionsAutoclosedTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Video FTP Audit (PR2.2) =============
+// Détecte les videos.storage_path qui pointent vers un fichier FTP absent
+// (suppression hors API, upload jamais réussi). CRON quotidien 03:00.
+
+const videoFtpAuditWarningsTotal = new Counter({
+  name: 'neopro_video_ftp_audit_warnings_total',
+  help: 'Total warnings recorded by the FTP orphan audit (per status)',
+  labelNames: ['status'], // missing | unreachable | resolved
+  registers: [register],
+});
+
+const videoFtpAuditScannedTotal = new Counter({
+  name: 'neopro_video_ftp_audit_scanned_total',
+  help: 'Total videos scanned by the FTP orphan audit',
+  registers: [register],
+});
+
+const videoFtpAuditDuration = new Histogram({
+  name: 'neopro_video_ftp_audit_duration_seconds',
+  help: 'Duration of the FTP orphan audit run (full scan)',
+  buckets: [10, 30, 60, 180, 600, 1800],
+  registers: [register],
+});
+
+const videoFtpAuditCurrentOrphansGauge = new Gauge({
+  name: 'neopro_video_ftp_orphans_current',
+  help: 'Current count of videos flagged as missing on FTP (active warnings)',
+  labelNames: ['status'],
+  registers: [register],
+});
+
 // ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
 
 const remoteClientVersionTotal = new Counter({
@@ -980,6 +1011,23 @@ class MetricsService {
   /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */
   recordMatchSessionAutoclosed(reason: 'idle' | 'absolute', count = 1): void {
     if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
+  }
+
+  /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */
+  recordVideoFtpAudit(payload: {
+    scanned: number;
+    missing: number;
+    unreachable: number;
+    resolved: number;
+    durationMs: number;
+  }): void {
+    videoFtpAuditScannedTotal.inc(payload.scanned);
+    if (payload.missing > 0) videoFtpAuditWarningsTotal.inc({ status: 'missing' }, payload.missing);
+    if (payload.unreachable > 0) videoFtpAuditWarningsTotal.inc({ status: 'unreachable' }, payload.unreachable);
+    if (payload.resolved > 0) videoFtpAuditWarningsTotal.inc({ status: 'resolved' }, payload.resolved);
+    videoFtpAuditDuration.observe(payload.durationMs / 1000);
+    videoFtpAuditCurrentOrphansGauge.set({ status: 'missing' }, payload.missing);
+    videoFtpAuditCurrentOrphansGauge.set({ status: 'unreachable' }, payload.unreachable);
   }
 
   /** ADR-061: accès télécommande tracé avec client_version pour pilotage sunset */
