@@ -1,3 +1,9 @@
+# [3.242.0](https://github.com/Tallec7/neopro/compare/v3.241.2...v3.242.0) (2026-04-25)
+
+### Features
+
+- **remote:** Remote V2 — parité V1 complète + V7 visual fidelity (IMP-PI-42) ([#605](https://github.com/Tallec7/neopro/issues/605)) ([3240edd](https://github.com/Tallec7/neopro/commit/3240edd5076ccb2dc7ae2e60599b4ea7c8e6737c))
+
 ## [3.241.2](https://github.com/Tallec7/neopro/compare/v3.241.1...v3.241.2) (2026-04-25)
 
 ### Bug Fixes
