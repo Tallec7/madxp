@@ -1,9 +1,10 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
 import { SitesService } from '../../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
+import { ConfirmDialogService } from '../../../../../core/services/confirm-dialog.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState, AddToTarget } from '../../video-library/video-library.component';
@@ -283,6 +284,43 @@ export class VideoManagerComponent {
     this.showDeleteModal = true;
   }
 
+  private readonly confirmDialog = inject(ConfirmDialogService);
+
+  /**
+   * Wrap un appel deleteCloudVideo : si le backend renvoie 409 (vidéo
+   * référencée par d'autres sites), demande à l'utilisateur de confirmer
+   * la suppression cascade et retry avec ?cascade=true. Évite les
+   * orphelines silencieuses (incident PR #613 — vidéo morte sur SaaS).
+   */
+  private deleteCloudWithCascadeFallback(videoId: string): Observable<{ message: string }> {
+    return new Observable(subscriber => {
+      this.sitesService.deleteCloudVideo(videoId).subscribe({
+        next: result => { subscriber.next(result); subscriber.complete(); },
+        error: async (error: unknown) => {
+          const status = (error as { status?: number })?.status;
+          const body = (error as { error?: { code?: string; usage?: { sites?: Array<{ name: string; site_type: string }>; totalSites?: number } } })?.error;
+          if (status === 409 && body?.code === 'VIDEO_IN_USE' && body.usage) {
+            const sitesList = body.usage.sites?.map(s => `• ${s.name} (${s.site_type})`).join('\n') ?? '';
+            const ok = await this.confirmDialog.confirm(
+              `Cette vidéo est encore utilisée par ${body.usage.totalSites} site(s) :\n${sitesList}\n\nLa supprimer du cloud rechargera leur configuration sans cette vidéo. Continuer ?`,
+              { title: 'Suppression cascade', confirmLabel: 'Supprimer (cascade)' },
+            );
+            if (!ok) {
+              subscriber.error(error);
+              return;
+            }
+            this.sitesService.deleteCloudVideo(videoId, { cascade: true }).subscribe({
+              next: result => { subscriber.next(result); subscriber.complete(); },
+              error: err => subscriber.error(err),
+            });
+          } else {
+            subscriber.error(error);
+          }
+        },
+      });
+    });
+  }
+
   executeDelete(choice: 'pi' | 'cloud' | 'both' | 'unlink'): void {
     const video = this.deleteTarget;
     if (!video) return;
@@ -295,7 +333,7 @@ export class VideoManagerComponent {
       category: piCat || undefined,
       subcategory: piSubcat || undefined
     });
-    const deleteCloud$ = this.sitesService.deleteCloudVideo(video.id!);
+    const deleteCloud$ = this.deleteCloudWithCascadeFallback(video.id!);
     const unlink$ = this.sitesService.unlinkVideoFromSite(video.id!, this.siteId);
 
     const onSuccess = (msg: string) => {

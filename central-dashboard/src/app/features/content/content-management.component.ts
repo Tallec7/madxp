@@ -16,6 +16,7 @@ import {
   Deployment,
   VideoDeploymentHistory,
   VideoName,
+  VideoUsage,
 } from './content-management-data.service';
 import { VideoUploadService } from './video-upload.service';
 import { ContentDeploymentService } from './content-deployment.service';
@@ -258,12 +259,28 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   // ── Video CRUD actions ──
 
   async deleteVideo(video: ContentVideoRow): Promise<void> {
-    const ok = await this.confirmDialog.confirm(
-      `Supprimer la vidéo "${video.title}" ?`,
-      { title: 'Suppression', confirmLabel: 'Supprimer' },
-    );
+    // Pré-fetch de l'usage : si la vidéo est sur ≥1 site, la modal de confirmation
+    // liste les sites impactés et la suppression part en cascade. Sinon, simple
+    // confirmation comme avant. Évite les orphelines silencieuses (incident vidéo
+    // morte sur SaaS qui figeait l'écran — cf. PR #613).
+    let usage: VideoUsage | null = null;
+    try {
+      usage = await this.dataService.getVideoUsage(video.id).toPromise() ?? null;
+    } catch {
+      usage = null;
+    }
+
+    const cascade = (usage?.totalSites ?? 0) > 0;
+    const message = cascade && usage
+      ? `Supprimer la vidéo "${video.title}" ?\n\nElle est utilisée par ${usage.totalSites} site(s) :\n${usage.sites.map(s => `• ${s.name} (${s.site_type})`).join('\n')}\n\nLes TVs concernées rechargeront leur configuration sans cette vidéo.`
+      : `Supprimer la vidéo "${video.title}" ?`;
+
+    const ok = await this.confirmDialog.confirm(message, {
+      title: cascade ? 'Suppression cascade' : 'Suppression',
+      confirmLabel: cascade ? 'Supprimer (cascade)' : 'Supprimer',
+    });
     if (ok) {
-      this.dataService.deleteVideo(video.id).subscribe({
+      this.dataService.deleteVideo(video.id, { cascade }).subscribe({
         next: () => {
           this.videos = this.videos.filter(v => v.id !== video.id);
           this.allVideos = this.allVideos.filter(v => v.id !== video.id);
