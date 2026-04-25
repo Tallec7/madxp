@@ -1,0 +1,143 @@
+name: E2E Nightly (staging)
+
+# Lance les tests Playwright contre staging :
+# - Nightly à 04:00 UTC (après le dump prod 03:00 UTC + restore staging)
+# - Manuel via workflow_dispatch
+# - Sur PR si le label "e2e" est présent (gate explicite, évite de payer 5-10 min/PR)
+#
+# Cible : neopro-exg.pages.dev (dashboard staging) + api-staging.kalonpartners.bzh
+# Compense l'absence d'un 2ᵉ paire d'yeux humains avant tag prod.
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 04:00 UTC quotidien
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Override BASE_URL (défaut staging)'
+        required: false
+        default: 'https://neopro-exg.pages.dev'
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    # Sur PR : seulement si label "e2e" appliqué
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://neopro-exg.pages.dev' }}
+      API_BASE_URL: 'https://api-staging.kalonpartners.bzh'
+      TEST_EMAIL: ${{ secrets.STAGING_E2E_EMAIL }}
+      TEST_PASSWORD: ${{ secrets.STAGING_E2E_PASSWORD }}
+      CI: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Pre-flight — staging is up
+        run: |
+          set -e
+          echo "Checking API staging..."
+          curl -fsS --max-time 10 "$API_BASE_URL/live" || (echo "::error::API staging /live failed"; exit 1)
+          curl -fsS --max-time 10 "$API_BASE_URL/ready" || (echo "::error::API staging /ready failed"; exit 1)
+
+          echo "Checking dashboard staging..."
+          DASH_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL")
+          if [ "$DASH_STATUS" != "200" ] && [ "$DASH_STATUS" != "304" ]; then
+            echo "::error::Dashboard staging returned HTTP $DASH_STATUS"
+            exit 1
+          fi
+          echo "Staging healthy ✅"
+
+      - name: Install e2e deps
+        working-directory: e2e
+        run: npm ci || npm install
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run Playwright (smoke subset)
+        working-directory: e2e
+        run: |
+          # Sur PR/nightly : run le smoke (auth + sites). Tests longs (video-deployment,
+          # hardware-matrix) restent disponibles pour run manuel.
+          npx playwright test \
+            --project=chromium \
+            --project=firefox \
+            tests/auth.spec.ts \
+            tests/sites.spec.ts \
+            tests/cloud-remote.spec.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: e2e/playwright-report/
+          retention-days: 14
+
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-${{ github.run_id }}
+          path: e2e/test-results/
+          retention-days: 7
+
+  alert-on-nightly-failure:
+    needs: e2e
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open issue if nightly E2E failed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 E2E nightly staging — failed run ${context.runId}`;
+            const body = [
+              `Le run E2E nightly contre staging a échoué.`,
+              ``,
+              `- Workflow : ${context.workflow}`,
+              `- Run : https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `- Date : ${new Date().toISOString()}`,
+              ``,
+              `À investiguer rapidement : si staging est cassé, on n'a plus de filet avant prod.`,
+              ``,
+              `Voir [OPS-01 — Rollback prod](docs/runbooks/OPS-01-rollback-prod.md) si la régression touche déjà la prod.`,
+              ``,
+              `_Issue créée automatiquement par e2e-staging.yml_`,
+            ].join('\n');
+
+            // Dédupliquer : ne pas spammer si une issue ouverte existe déjà
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'e2e-broken',
+              state: 'open',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              console.log(`Existing open issue #${existing.data[0].number} — skip`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['e2e-broken', 'bug'],
+            });
