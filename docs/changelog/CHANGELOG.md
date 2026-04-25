@@ -1,3 +1,9 @@
+# [3.247.0](https://github.com/Tallec7/neopro/compare/v3.246.0...v3.247.0) (2026-04-25)
+
+### Features
+
+- **remote:** expose lockRotation + fontSize prefs in remote V2 ([#624](https://github.com/Tallec7/neopro/issues/624)) ([993c35f](https://github.com/Tallec7/neopro/commit/993c35f51e2f80c02848f67ebc84285db54e6744))
+
 # [3.246.0](https://github.com/Tallec7/neopro/compare/v3.245.0...v3.246.0) (2026-04-25)
 
 ### Features
