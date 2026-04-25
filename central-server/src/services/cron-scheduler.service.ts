@@ -13,6 +13,7 @@ import { query } from '../config/database';
 import emailService from './email.service';
 import { generateMonthlyReports } from './monthly-reports.service';
 import { metricsService } from './metrics.service';
+import { alertNotifier } from './alerting-notifier.service';
 import logger from '../config/logger';
 
 interface RecurringSchedule {
@@ -511,10 +512,47 @@ class CronSchedulerService {
       const atRiskObjectives = objectivesResult.rows.filter(o => o.progress_percent < 50);
       const achievedObjectives = objectivesResult.rows.filter(o => o.progress_percent >= 100);
 
-      // Envoyer des alertes si configuré
+      // Notifier Slack si configuré (groupé par site pour éviter le spam :
+      // un site avec N objectifs à risque ne déclenche qu'UNE seule alerte).
       if (config.send_alerts && atRiskObjectives.length > 0) {
-        // TODO: Envoyer des notifications pour les objectifs à risque
         logger.info(`${atRiskObjectives.length} objectives at risk`);
+
+        const bySite = new Map<string, { siteName: string; objectives: typeof atRiskObjectives }>();
+        for (const obj of atRiskObjectives) {
+          const entry = bySite.get(obj.site_id);
+          if (entry) {
+            entry.objectives.push(obj);
+          } else {
+            bySite.set(obj.site_id, { siteName: obj.site_name, objectives: [obj] });
+          }
+        }
+
+        const now = new Date();
+        for (const [siteId, { siteName, objectives }] of bySite) {
+          const lines = objectives
+            .map((o) => `• *${o.name}* — ${o.progress_percent}% (${o.current_value}/${o.target_value} ${o.metric_type})`)
+            .join('\n');
+          const message = `${objectives.length} objectif(s) à risque (< 50% de progression) :\n${lines}`;
+
+          // Fire-and-forget : la méthode catch ses propres erreurs, mais on guard
+          // au cas où la signature changerait. Une erreur Slack ne doit pas faire
+          // échouer le CRON ni masquer les autres notifications.
+          try {
+            await alertNotifier.sendSlackNotification({
+              siteName,
+              siteId,
+              alertType: 'Objectifs club à risque',
+              severity: 'warning',
+              message,
+              timestamp: now,
+            });
+          } catch (err) {
+            logger.error('Failed to notify at-risk objectives for site', {
+              siteId,
+              error: err instanceof Error ? err.message : err,
+            });
+          }
+        }
       }
 
       return {
