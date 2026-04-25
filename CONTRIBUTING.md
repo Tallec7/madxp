@@ -192,6 +192,7 @@ Voir [`CLAUDE.md`](CLAUDE.md) §"NE JAMAIS FAIRE" pour la liste complète. Rappe
 - **CI rouge** : voir logs dans l'onglet Actions, fix en local, push à nouveau
 - **Release stuck** : voir [Troubleshooting § Release bloquée](docs/guides/TROUBLESHOOTING.md)
 - **Incident prod (NLF ou tout autre client)** : suivre [`docs/guides/RUNBOOK_INCIDENT.md`](docs/guides/RUNBOOK_INCIDENT.md). Spécificités NLF dans la §10 du même runbook.
+- **Incident prod NLF** : suivre [`docs/guides/RUNBOOK_NLF.md`](docs/guides/RUNBOOK_NLF.md)
 - **Doute sur scope/architecture** : ouvrir une issue ou un ADR draft avant la PR
 
 ---
