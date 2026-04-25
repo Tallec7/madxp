@@ -288,9 +288,10 @@ describe('Live stats VIEWs guards (prevent table regression)', () => {
     });
   }
 
-  it('cron-scheduler.service.ts executeAggregationTask must call both club AND advertiser aggregation', () => {
+  it('aggregation.task.ts executeAggregationTask must call both club AND advertiser aggregation (ADR-097)', () => {
+    // ADR-097 : la logique du task `aggregation` est isolée dans cron-tasks/aggregation.task.ts.
     const content = fs.readFileSync(
-      path.join(repoRoot, 'central-server/src/services/cron-scheduler.service.ts'),
+      path.join(repoRoot, 'central-server/src/cron-tasks/aggregation.task.ts'),
       'utf8'
     );
     expect({
@@ -946,10 +947,11 @@ describe('Sponsor stats migration to site_sponsor_daily_stats guard', () => {
     expect(schema).toContain('calculate_site_sponsor_daily_stats');
   });
 
-  it('cron-scheduler must call calculate_site_sponsor_daily_stats', () => {
-    const cronPath = path.join(repoRoot, 'central-server/src/services/cron-scheduler.service.ts');
-    const cron = fs.readFileSync(cronPath, 'utf8');
-    expect(cron).toContain('calculate_site_sponsor_daily_stats');
+  it('aggregation.task.ts must call calculate_site_sponsor_daily_stats (ADR-097)', () => {
+    // ADR-097 : extraction de la logique du task aggregation depuis cron-scheduler.service.ts
+    const taskPath = path.join(repoRoot, 'central-server/src/cron-tasks/aggregation.task.ts');
+    const task = fs.readFileSync(taskPath, 'utf8');
+    expect(task).toContain('calculate_site_sponsor_daily_stats');
   });
 
   it('alerting must monitor site_sponsor_daily_stats staleness', () => {
