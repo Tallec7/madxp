@@ -18,6 +18,7 @@ router.get('/videos/for-site/:siteId', authenticate, adminRateLimit, paginationM
 router.post('/videos/web-content', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, validate(schemas.createWebContent), webContentController.createWebContent);
 router.get('/videos/:id', authenticate, adminRateLimit, contentController.getVideo);
 router.get('/videos/:id/deployments', authenticate, adminRateLimit, contentController.getVideoDeployments);
+router.get('/videos/:id/usage', authenticate, adminRateLimit, validateParams(paramSchemas.id), contentController.getVideoUsage);
 router.post('/videos', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideo);
 router.post('/videos/bulk', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.array('videos', 20), contentController.createVideos);
 router.put('/videos/:id', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, contentController.updateVideo);

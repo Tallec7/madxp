@@ -9,6 +9,9 @@ import { UploadStatus } from '../services/upload-verification.service';
 import { cleanupTempFile } from '../middleware/upload';
 import metricsService from '../services/metrics.service';
 import { calculateChecksum, calculateChecksumFromFile, fixMulterEncoding, generateUniqueFilename } from './content.helpers';
+import socketService from '../services/socket.service';
+import { commandQueueService } from '../services/command-queue.service';
+import { auditService } from '../services/audit.service';
 
 // Upload/download/delete functions are provided by storage.service.ts
 // - uploadVideo(buffer, filename, contentType)
@@ -484,6 +487,41 @@ export const updateVideo = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Liste les sites qui référencent une vidéo via la table pivot site_videos.
+ * Utilisé par le dashboard avant un DELETE pour prévenir l'utilisateur de
+ * l'impact cascade. Scope : `site_videos` uniquement (PR2 / Min).
+ */
+async function findVideoUsage(videoId: string): Promise<Array<{ id: string; name: string; site_type: string }>> {
+  const siteIds = await siteVideoRepository.findSitesByVideo(videoId);
+  if (siteIds.length === 0) return [];
+
+  const sites = await Promise.all(siteIds.map(id => siteRepository.findById(id)));
+  return sites
+    .filter((s): s is NonNullable<typeof s> => s != null)
+    .map(s => ({ id: s.id, name: s.site_name, site_type: s.site_type }));
+}
+
+/**
+ * GET /api/videos/:id/usage
+ * Retourne la liste des sites qui référencent la vidéo.
+ * Le dashboard l'appelle avant DELETE pour afficher la modal de confirmation.
+ */
+export const getVideoUsage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+    const sites = await findVideoUsage(id);
+    res.json({ videoId: id, sites, totalSites: sites.length });
+  } catch (error) {
+    logger.error('Error fetching video usage:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'usage' });
+  }
+};
+
 export const deleteVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -499,6 +537,20 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Cascade guard : si la vidéo est référencée par ≥1 site, refuser sans
+    // ?cascade=true pour permettre au dashboard de confirmer avec l'utilisateur.
+    // Sans ça, la suppression DB+FTP laisse les sites avec des références
+    // orphelines (incident PR #613 — vidéo morte sur SaaS, écran figé).
+    const usage = await findVideoUsage(id);
+    const cascade = req.query.cascade === 'true' || req.query.cascade === '1';
+    if (usage.length > 0 && !cascade) {
+      return res.status(409).json({
+        error: 'Cette vidéo est utilisée par un ou plusieurs sites. Confirmez la suppression cascade pour continuer.',
+        code: 'VIDEO_IN_USE',
+        usage: { sites: usage, totalSites: usage.length },
+      });
+    }
+
     // Récupérer le chemin de stockage avant suppression
     const storagePath = await videoRepository.findStoragePath(id);
 
@@ -510,7 +562,8 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Supprimer de la base de données
+    // Supprimer de la base de données (cascade SQL nettoie site_videos /
+    // campaign_videos / advertiser_videos via ON DELETE CASCADE)
     await videoRepository.deleteAndReturn(id);
 
     // Supprimer du stockage FTP
@@ -518,8 +571,49 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
       await deleteStorageVideo(storagePath);
     }
 
-    logger.info('Video deleted:', { id, storagePath });
-    res.json({ message: 'Vidéo supprimée avec succès' });
+    // Notifier les sites impactés pour qu'ils rechargent leur config :
+    //   - SaaS : socket event `saas-config-updated` → le SaaS GET /api/saas/:id/config
+    //   - Pi   : commande `update_config` (queue si offline) — le sync-agent
+    //            re-pull la config et la re-pousse au serveur Pi local.
+    // Sans cette étape, les configs déployées garderaient des références mortes.
+    if (usage.length > 0) {
+      for (const site of usage) {
+        try {
+          if (site.site_type === 'saas') {
+            socketService.emitSaasConfigUpdated(site.id, { updatedBy: req.user?.email });
+          } else if (site.site_type === 'pi') {
+            await commandQueueService.sendOrQueue(site.id, 'update_config', {
+              reason: 'video_deleted_cascade',
+              videoId: id,
+            });
+          }
+        } catch (notifyErr) {
+          // Best-effort : un échec de notification ne doit pas faire planter
+          // la suppression (la cascade DB+FTP a déjà eu lieu).
+          logger.warn('Failed to notify site after cascade delete', {
+            siteId: site.id, videoId: id, err: (notifyErr as Error).message,
+          });
+        }
+      }
+
+      auditService.log({
+        action: 'VIDEO_DELETED_CASCADE',
+        targetType: 'video',
+        targetId: id,
+        details: {
+          storagePath,
+          affectedSites: usage.map(s => ({ id: s.id, name: s.name, site_type: s.site_type })),
+          totalAffected: usage.length,
+        },
+      }, req).catch(err => logger.error('audit log VIDEO_DELETED_CASCADE failed', { err }));
+    }
+
+    logger.info('Video deleted:', { id, storagePath, cascadeAffected: usage.length });
+    res.json({
+      message: 'Vidéo supprimée avec succès',
+      cascadeAffected: usage.length,
+      affectedSites: usage.map(s => s.id),
+    });
   } catch (error) {
     logger.error('Error deleting video:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression de la vidéo' });

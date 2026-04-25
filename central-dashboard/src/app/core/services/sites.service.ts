@@ -215,8 +215,9 @@ export class SitesService {
   }
 
   // Cloud video management
-  deleteCloudVideo(videoId: string): Observable<{ message: string }> {
-    return this.api.delete<{ message: string }>(`/videos/${videoId}`);
+  deleteCloudVideo(videoId: string, opts?: { cascade?: boolean }): Observable<{ message: string }> {
+    const qs = opts?.cascade ? '?cascade=true' : '';
+    return this.api.delete<{ message: string }>(`/videos/${videoId}${qs}`);
   }
 
   unlinkVideoFromSite(videoId: string, siteId: string): Observable<{ message: string }> {

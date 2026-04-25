@@ -24,7 +24,29 @@ jest.mock('../repositories', () => ({
   },
   siteRepository: {
     exists: jest.fn(),
+    findById: jest.fn(),
   },
+  // PR2 — cleanup cascade : la nouvelle deleteVideo lit findSitesByVideo
+  // pour calculer l'usage avant DELETE. Default mock = pas d'usage (legacy
+  // path : la suppression passe direct, sans cascade ni 409).
+  siteVideoRepository: {
+    findSitesByVideo: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+// PR2 — services additionnels appelés par la cascade (mockés au niveau module
+// pour ne pas charger socket.io / queue DB en unit test).
+jest.mock('../services/socket.service', () => ({
+  __esModule: true,
+  default: { emitSaasConfigUpdated: jest.fn() },
+}));
+
+jest.mock('../services/command-queue.service', () => ({
+  commandQueueService: { sendOrQueue: jest.fn().mockResolvedValue({ sent: false, queued: true }) },
+}));
+
+jest.mock('../services/audit.service', () => ({
+  auditService: { log: jest.fn().mockResolvedValue(undefined) },
 }));
 
 // Mock storage service
@@ -348,7 +370,13 @@ describe('Content Controller', () => {
         await deleteVideoController(req, res);
 
         expect(deleteStorageVideo).toHaveBeenCalledWith('videos/test.mp4');
-        expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
+        // PR2 — réponse enrichie avec cascadeAffected/affectedSites (0 ici car
+        // pas d'usage par défaut dans les mocks → branche "no cascade").
+        expect(res.json).toHaveBeenCalledWith({
+          message: 'Vidéo supprimée avec succès',
+          cascadeAffected: 0,
+          affectedSites: [],
+        });
       });
 
       it('should return 404 if video not found', async () => {
@@ -376,7 +404,11 @@ describe('Content Controller', () => {
         await deleteVideoController(req, res);
 
         expect(deleteStorageVideo).not.toHaveBeenCalled();
-        expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo supprimée avec succès' });
+        expect(res.json).toHaveBeenCalledWith({
+          message: 'Vidéo supprimée avec succès',
+          cascadeAffected: 0,
+          affectedSites: [],
+        });
       });
     });
 

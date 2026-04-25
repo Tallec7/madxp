@@ -16,4 +16,9 @@ router.post('/clients/:id/sync', authenticate, requireRole('admin'), validatePar
 // Debug endpoint pour l'état des connexions Socket.IO
 router.get('/socket-debug', authenticate, requireRole('admin'), adminController.getSocketDebugInfo);
 
+// PR2.2 — Audit FTP des vidéos orphelines (super_admin uniquement : opération
+// diagnostique sur tout le catalogue vidéo de la flotte).
+router.get('/video-ftp-orphans', authenticate, requireRole('super_admin'), adminController.listVideoFtpOrphans);
+router.post('/video-ftp-orphans/run', authenticate, requireRole('super_admin'), adminController.runVideoFtpAudit);
+
 export default router;

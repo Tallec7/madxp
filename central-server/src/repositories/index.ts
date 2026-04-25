@@ -352,3 +352,8 @@ export {
   scoreboardStateRepository,
   type ScoreboardMatchState,
 } from './scoreboard-state.repository';
+
+export {
+  videoFtpAuditRepository,
+  type VideoFtpAuditWarning,
+} from './video-ftp-audit.repository';
