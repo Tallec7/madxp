@@ -134,6 +134,7 @@ class SocketService {
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
+  private saasStatesGcInterval: NodeJS.Timeout | null = null;
   private redisClient: RedisClientType | null = null;
   private redisSub: RedisClientType | null = null;
 
@@ -211,6 +212,13 @@ class SocketService {
     this.dbSyncInterval = setInterval(() => {
       syncDbWithWebSocketState(this.ctx);
     }, 60000);
+
+    // GC sweep saasStates : si un disconnect ne firérait pas (zombie socket),
+    // l'entrée resterait orpheline. Toutes les 5 min, on purge les states dont
+    // la room Socket.IO est vide ET la map tvInstances est vide.
+    this.saasStatesGcInterval = setInterval(() => {
+      this.sweepOrphanSaasStates();
+    }, 5 * 60 * 1000);
 
     logger.info('Socket.IO service initialized');
   }
@@ -1053,6 +1061,29 @@ class SocketService {
       });
   }
 
+  // Sweep périodique : purge les saasStates dont aucun client n'est plus
+  // connecté (zombie sockets qui ne firérent jamais 'disconnect').
+  // Complément du cleanup synchrone fait dans le handler disconnect (issue #594).
+  private sweepOrphanSaasStates(): void {
+    if (!this.saasStates.size || !this.io) return;
+    let purged = 0;
+    for (const [siteId, state] of this.saasStates) {
+      const room = this.io.sockets.adapter.rooms.get(siteId);
+      const roomEmpty = !room || room.size === 0;
+      if (roomEmpty && state.tvInstances.size === 0) {
+        this.saasStates.delete(siteId);
+        purged++;
+      }
+    }
+    if (purged > 0) {
+      metricsService.recordSaasStatesCount(this.saasStates.size);
+      logger.info('SaaS states GC sweep purged orphan entries', {
+        purged,
+        remaining: this.saasStates.size,
+      });
+    }
+  }
+
   // SaaS state storage (per site) — initialisé eagerly pour préserver le type
   // narrowing dans les closures (issue #594 : la lazy init `Map | undefined`
   // bloquait TS2532 dans les handlers `disconnect` qui accèdent à
@@ -1171,6 +1202,10 @@ class SocketService {
     if (this.dbSyncInterval) {
       clearInterval(this.dbSyncInterval);
       this.dbSyncInterval = null;
+    }
+    if (this.saasStatesGcInterval) {
+      clearInterval(this.saasStatesGcInterval);
+      this.saasStatesGcInterval = null;
     }
 
     // Notify all connected Pi devices that the server is shutting down,
