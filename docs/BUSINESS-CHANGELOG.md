@@ -14,8 +14,7 @@
 
 ### 🎯 Pour le club (NLF, prospects)
 
-- Aucun changement visible utilisateur
-  (sessions techniques d'audit + refactor d'infra + cleanup process)
+- **Télécommande V2 : verrou rotation + taille du texte de retour** ([#624](https://github.com/Tallec7/neopro/pull/624)) — la sheet "Préférences" V2 ré-expose 2 contrôles d'accessibilité disponibles en V1 (lock rotation, taille texte normale/grande). Les clubs qui activent V2 retrouvent ces options sans devoir basculer en V1.
 
 ### 🛡️ Pour la robustesse / production
 
