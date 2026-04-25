@@ -94,7 +94,7 @@ Labels secondaires utiles : `breaking-change`, `migration`, `docs-only`, `urgent
 
 **Flow** :
 
-1. PR ouverte avec label `needs-gabin` → notif auto Discord `#valid-gabin` (Sprint 2)
+1. PR ouverte avec label `needs-gabin` → mention Slack `#neopro-alerts` ou message direct Gabin (canal Slack équipe)
 2. Gabin teste sur staging via l'URL de la PR (Cloudflare Pages staging + Pi staging Sprint 1)
 3. Gabin appose label `gabin-validated` ou demande des changements en commentaire
 4. **SLA** : 48h pour valider. Au-delà sans réponse, un autre approbateur produit peut débloquer.

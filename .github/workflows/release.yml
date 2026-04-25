@@ -417,11 +417,89 @@ jobs:
           git commit -m "chore(deploy): trigger Railway rebuild for v${{ needs.release.outputs.new_release_version }} [skip ci]"
           git push origin main
 
-      - name: Verify Railway deploy picks up
+      - name: Verify Railway deploy actually restarted (catch silent build failures)
+        # Sprint 2 supervision (post-incident v3.240.x BuildKit bug PR #595) :
+        # si le build Railway échoue (parse error Dockerfile, OOM, etc.), Railway
+        # garde l'ancienne version qui répond toujours 200 sur /live. La détection
+        # par HTTP seul est aveugle. On utilise donc l'uptime exposé par /health
+        # comme signal de redémarrage : après ~6 min, si l'API n'a PAS redémarré
+        # (uptime > 600s), le build a silencieusement échoué.
         run: |
           echo "⏳ Waiting 90s for Railway to detect the watchPattern match..."
           sleep 90
-          echo "Railway deploy should be BUILDING now."
-          echo "Check: https://railway.app/project/$(echo '${{ secrets.RAILWAY_PROJECT_ID }}' | head -c 8)…"
+          echo "⏳ Waiting 5 more minutes for Docker build + start..."
+          sleep 300
+
+          API="https://neopro-central-production.up.railway.app"
+          MAX_RETRIES=10
+          RETRY_DELAY=30
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HEALTH=$(curl -sf --max-time 10 "$API/health" || echo "")
+            if [ -n "$HEALTH" ]; then
+              UPTIME=$(echo "$HEALTH" | jq -r '.uptime // 99999')
+              UPTIME_INT=${UPTIME%.*}
+              echo "Probe $i/$MAX_RETRIES — API uptime: ${UPTIME_INT}s"
+
+              # Si uptime < 600s (10 min), API a redémarré → build OK.
+              if [ "$UPTIME_INT" -lt 600 ]; then
+                echo "✅ Railway deploy succeeded — API uptime ${UPTIME_INT}s < 600s"
+                exit 0
+              fi
+            else
+              echo "Probe $i/$MAX_RETRIES — /health unreachable"
+            fi
+            sleep $RETRY_DELAY
+          done
+
+          # Échec : l'API n'a jamais redémarré dans la fenêtre attendue.
+          echo "::error::Railway deploy verification FAILED — API did not restart within $((90 + 300 + MAX_RETRIES * RETRY_DELAY))s"
+          echo "::error::Likely cause : Docker build failed silently. Check Railway dashboard."
           echo ""
-          echo "Post-deploy health check will run in a separate job (frontend-health.yml)."
+          echo "Action immédiate :"
+          echo "  1. Railway dashboard → service neopro-central → onglet Deployments"
+          echo "  2. Identifier le build FAILED le plus récent → View logs"
+          echo "  3. Si parse error Dockerfile, voir docs/guides/RUNBOOK_INCIDENT.md §7"
+
+          # Crée une issue auto pour alerter l'équipe (idempotent — pas de doublon).
+          EXISTING=$(gh issue list --label "release-stuck" --state open --limit 1 --json number -q '.[0].number' || true)
+          if [ -z "$EXISTING" ]; then
+            gh issue create \
+              --title "🚨 Railway build failed silently — v${{ needs.release.outputs.new_release_version }}" \
+              --label "release-stuck,infra,urgent-nlf" \
+              --body "$(cat <<'BODY'
+          ## Symptôme
+
+          Le job \`deploy-railway\` du workflow \`release.yml\` a tagué une nouvelle version
+          mais l'API Railway prod n'a PAS redémarré dans les 8-9 minutes suivantes
+          (uptime > 600s détecté).
+
+          ## Cause probable
+
+          Le build Docker a échoué silencieusement. Railway garde l'ancienne version
+          qui répond toujours 200, donc invisible côté \`/live\` HTTP.
+
+          ## Action immédiate
+
+          1. Railway dashboard → service \`neopro-central\` → onglet Deployments
+          2. Le dernier build doit être en état \`FAILED\` — ouvrir les logs
+          3. Si parse error Dockerfile (ex: BuildKit) → voir PR #595 pour pattern fix
+          4. Si OOM → voir \`railway-restart.yml\` workaround memory leak issue #594
+
+          ## Contexte release
+
+          - Version : v${VERSION}
+          - SHA : ${SHA}
+          - Workflow : ${WORKFLOW_URL}
+
+          _Issue créée automatiquement par \`release.yml\` (Sprint 2 supervision)._
+          BODY
+          )" || echo "::warning::Could not create issue (gh permissions?)"
+          fi
+
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION: ${{ needs.release.outputs.new_release_version }}
+          SHA: ${{ github.sha }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

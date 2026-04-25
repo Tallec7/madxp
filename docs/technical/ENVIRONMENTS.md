@@ -2,7 +2,7 @@
 
 > Source de vérité : qui déploie quoi, où, comment. À tenir à jour à chaque modif d'infra ou de workflow CI/CD.
 
-**Dernière mise à jour** : 25 Avril 2026 (Sprint 0 cleanup — suppression Render + mirror Supabase + smoke tests CI)
+**Dernière mise à jour** : 25 Avril 2026 (Sprint 0+1+2 + hotfix Dockerfile #595 — programme delivery system audit CTO)
 
 ---
 
@@ -61,7 +61,7 @@
 
 Jobs en parallèle :
 
-1. **central-server** — lint, typecheck, tests Jest (2728), **smoke tests (1235)**, build, upload coverage
+1. **central-server** — lint, typecheck, tests Jest (2728), **smoke tests (1655)**, build, upload coverage
 2. **central-dashboard** — lint, tests Karma (520), build prod, upload coverage
 3. **sync-agent** — tests Jest (raspberry/sync-agent)
 4. **webapp** — lint raspberry, build raspberry config
@@ -123,7 +123,7 @@ Rapport hebdo PR + commits → mail.
 ## 6. Flow de validation Gabin avant prod (Sprint 1)
 
 1. PR ouverte → CI passe → label `needs-gabin` ou `tech-only`
-2. Si `needs-gabin` → notif Discord `#valid-gabin` → Gabin teste sur staging (URL dans description PR)
+2. Si `needs-gabin` → mention Slack équipe / message direct Gabin → Gabin teste sur staging (URL dans description PR)
 3. Gabin appose label `gabin-validated` ou commente
 4. Merge main → release auto sur staging (Cloudflare Pages + Railway staging)
 5. **Tag prod manuel** via GitHub Environment `production` — required reviewer

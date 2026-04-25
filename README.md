@@ -183,7 +183,8 @@ neopro/
 ├── k8s/                          # Configuration Kubernetes
 ├── docs/                         # Documentation (180+ fichiers)
 │
-├── render.yaml                   # Déploiement Render.com/Railway
+├── railway.json                  # Déploiement Railway (API prod)
+├── railway.staging.json          # Déploiement Railway (API staging)
 ├── docker-compose.yml            # Stack développement local
 ├── angular.json                  # Configuration Angular CLI
 └── .env.example                  # Template variables d'environnement

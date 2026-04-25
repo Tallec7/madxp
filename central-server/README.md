@@ -48,16 +48,18 @@ npm run dev
    psql $DATABASE_URL -f src/scripts/init-db.sql
    ```
 
-### Déploiement Render.com
+### Déploiement Railway (production)
 
-Le déploiement est configuré via `render.yaml` à la racine du projet.
+Le déploiement est configuré via `railway.json` à la racine du projet (`Dockerfile builder`, ADR-070).
 
-1. Connecter votre repository Git à Render
-2. Render détectera automatiquement le fichier `render.yaml`
-3. Configurer les variables d'environnement dans Environment
-4. Déployer
+1. Service Railway `neopro-central` connecté au repo GitHub `Tallec7/neopro`
+2. Build sur tag (gate via GitHub Environment `production`)
+3. Variables d'environnement configurées dans Railway dashboard (cf. `docs/technical/ENVIRONMENTS.md` §5)
+4. Build trigger : commit dans `__manual_deploy_only__/trigger.md` via job `deploy-railway` du workflow `release.yml`
 
 **URL déployée :** `https://neopro-central-production.up.railway.app`
+
+> **Note** : Render.com retiré (Sprint 0 cleanup, Avril 2026). Ce serveur Démo Socket.IO `neopro.onrender.com` n'est plus utilisé. Voir `docs/technical/ENVIRONMENTS.md` pour le détail des plateformes actives.
 
 ---
 

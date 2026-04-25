@@ -241,9 +241,15 @@ SCSS natif avec variables CSS :
 
 ## 🚀 Déploiement
 
-Le déploiement est configuré via `render.yaml` à la racine du projet.
+**Prod** : Hostinger via FTP (workflow `release.yml` → job `deploy-dashboard`).
+URL : `https://neopro-admin.kalonpartners.bzh`
 
-**Hébergement :** Render.com (Static Site - Gratuit)
+**Staging** : Cloudflare Pages, build auto sur push `main`.
+
+**SaaS app** : Hostinger sous-dossier `/saas/` (workflow `release.yml` → job `deploy-saas`).
+URL : `https://neopro-admin.kalonpartners.bzh/saas/`
+
+> **Note** : Render.com retiré (Sprint 0 cleanup, Avril 2026). Voir `docs/technical/ENVIRONMENTS.md` pour le mapping complet env × plateformes.
 
 ---
 
