@@ -78,12 +78,17 @@ jobs:
           bye
           EOF
 
-          # Vérification : le fichier doit être présent côté FTP
-          # Utilise `cls --format="%s\n"` (size en bytes uniquement) — ne pas parser `cls -l`
-          # car le format Hostinger inclut des UIDs numériques qui décalent les colonnes.
-          REMOTE_SIZE=$(lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; cls --format='%s\n' $DUMP_FILE; bye" 2>/dev/null | tr -dc '0-9')
+          # Vérification : le fichier doit être présent côté FTP avec la bonne taille.
+          # Approche robuste : `du -b` retourne `SIZE PATH` (bytes), pas de parsing
+          # de `cls -l` (dont le format varie selon les UIDs numériques Hostinger).
+          # `cls --format='%s'` n'est PAS supporté par lftp Ubuntu runner (testé
+          # run #14, REMOTE_SIZE=0 retourné silencieusement — saga PRs #597/#599/#602/#606).
+          REMOTE_SIZE=$(lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; du -b $DUMP_FILE; bye" 2>/dev/null | awk '{print $1}' | head -1)
           if [ -z "$REMOTE_SIZE" ] || [ "$REMOTE_SIZE" -lt 1000000 ]; then
             echo "::error::Upload FTP échoué ou fichier absent/trop petit côté Hostinger (taille: ${REMOTE_SIZE:-0})"
+            echo "::error::DUMP_FILE=$DUMP_FILE — REMOTE_DIR=$REMOTE_DIR — DUMP_SIZE local=$DUMP_SIZE"
+            echo "::error::Diagnostic FTP raw du -b output:"
+            lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; du -b $DUMP_FILE; cls -l; bye" 2>&1 | sed 's/^/  /'
             exit 1
           fi
           echo "Upload FTP OK: $DUMP_FILE ($REMOTE_SIZE bytes) → $REMOTE_DIR"
