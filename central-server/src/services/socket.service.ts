@@ -826,9 +826,6 @@ class SocketService {
     this.saasRelayRegistered.add(socket.id);
 
     // State storage per site (lightweight, in-memory)
-    if (!this.saasStates) {
-      this.saasStates = new Map();
-    }
     if (!this.saasStates.has(siteId)) {
       this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false }, tvInstances: new Map(), loopState: null });
       metricsService.recordSaasStatesCount(this.saasStates.size);
@@ -1056,7 +1053,10 @@ class SocketService {
       });
   }
 
-  // SaaS state storage (per site)
+  // SaaS state storage (per site) — initialisé eagerly pour préserver le type
+  // narrowing dans les closures (issue #594 : la lazy init `Map | undefined`
+  // bloquait TS2532 dans les handlers `disconnect` qui accèdent à
+  // `this.saasStates.delete()` après cleanup).
   private saasStates: Map<string, {
     score: Record<string, unknown> | null;
     phase: string;
@@ -1065,7 +1065,7 @@ class SocketService {
     recording: { isRecording: boolean; isManualOverride: boolean };
     tvInstances: Map<string, { role: 'master' | 'slave'; displayType: string; displayIndex: number; connectedAt: number }>;
     loopState: Record<string, unknown> | null;
-  }> | undefined;
+  }> = new Map();
 
   /**
    * Notify connected SaaS browsers that their config has been updated.
