@@ -232,10 +232,13 @@ jobs:
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
-            set net:max-retries 3;
-            set net:reconnect-interval-base 5;
-            set net:timeout 30;
-            set mirror:parallel-transfer-count 4;
+            set ftp:passive-mode on;
+            set ftp:use-mlsd on;
+            set net:max-retries 10;
+            set net:reconnect-interval-base 10;
+            set net:reconnect-interval-multiplier 1.5;
+            set net:timeout 60;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
             mirror --reverse --delete --verbose \
                    --exclude-glob saas/ --exclude-glob saas \
@@ -335,10 +338,13 @@ jobs:
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
-            set net:max-retries 3;
-            set net:reconnect-interval-base 5;
-            set net:timeout 30;
-            set mirror:parallel-transfer-count 4;
+            set ftp:passive-mode on;
+            set ftp:use-mlsd on;
+            set net:max-retries 10;
+            set net:reconnect-interval-base 10;
+            set net:reconnect-interval-multiplier 1.5;
+            set net:timeout 60;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
             mirror --reverse --delete --verbose \
                    dist/raspberry/browser/ /saas/;
