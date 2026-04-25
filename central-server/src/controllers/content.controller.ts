@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, deploymentRepository, siteRepository, siteVideoRepository } from '../repositories';
+import { videoRepository, deploymentRepository, siteRepository, siteVideoRepository, configProfileRepository } from '../repositories';
+import { removeVideoFromConfig } from '../utils/config-video-cleanup';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl } from '../services/storage.service';
 import thumbnailService from '../services/thumbnail.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
@@ -562,6 +563,12 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // PR2.1 — capturer le filename AVANT la suppression DB pour pouvoir
+    // matcher les références JSONB qui utilisent le filename plutôt que le
+    // video_id (entries legacy pré-enrichConfigWithAnalyticsMetadata).
+    const videoRow = await videoRepository.findVideoById(id);
+    const videoFilename = videoRow?.filename;
+
     // Supprimer de la base de données (cascade SQL nettoie site_videos /
     // campaign_videos / advertiser_videos via ON DELETE CASCADE)
     await videoRepository.deleteAndReturn(id);
@@ -569,6 +576,56 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
     // Supprimer du stockage FTP
     if (storagePath) {
       await deleteStorageVideo(storagePath);
+    }
+
+    // PR2.1 — Cleanup cascade JSONB : retirer la vidéo des
+    // `config_profiles.configuration` et `sites.local_config_mirror` qui la
+    // référencent. Sans ça, le Pi/SaaS télécharge la config, voit la vidéo,
+    // tente de la jouer → 404 → écran figé (incident PR #613 confirmé sur
+    // 2 profils NLF + le Pi NLF prod, malgré la cascade SQL site_videos).
+    let profilesCleaned = 0;
+    let mirrorsCleaned = 0;
+    let totalEntriesRemoved = 0;
+    try {
+      const referencingProfiles = await configProfileRepository.findProfilesReferencingVideo({
+        videoId: id,
+        filename: videoFilename,
+      });
+      for (const profile of referencingProfiles) {
+        const removed = removeVideoFromConfig(profile.configuration as Record<string, unknown>, {
+          videoId: id,
+          filename: videoFilename,
+        });
+        if (removed > 0) {
+          await configProfileRepository.replaceConfiguration(profile.id, profile.configuration, req.user?.id);
+          profilesCleaned++;
+          totalEntriesRemoved += removed;
+        }
+      }
+
+      const referencingMirrors = await siteRepository.findSitesReferencingVideoInLocalMirror({
+        videoId: id,
+        filename: videoFilename,
+      });
+      for (const site of referencingMirrors) {
+        if (!site.local_config_mirror) continue;
+        const removed = removeVideoFromConfig(site.local_config_mirror as Record<string, unknown>, {
+          videoId: id,
+          filename: videoFilename,
+        });
+        if (removed > 0) {
+          await siteRepository.updateLocalConfigMirror(site.id, site.local_config_mirror);
+          mirrorsCleaned++;
+          totalEntriesRemoved += removed;
+        }
+      }
+    } catch (cleanupErr) {
+      // Best-effort : un échec du cleanup JSONB ne doit pas faire planter
+      // la suppression (la cascade SQL + FTP a déjà eu lieu). Mais on log
+      // bruyamment pour qu'un admin investigate.
+      logger.error('JSONB cascade cleanup failed', {
+        videoId: id, err: (cleanupErr as Error).message,
+      });
     }
 
     // Notifier les sites impactés pour qu'ils rechargent leur config :
@@ -602,17 +659,23 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
         targetId: id,
         details: {
           storagePath,
+          videoFilename,
           affectedSites: usage.map(s => ({ id: s.id, name: s.name, site_type: s.site_type })),
           totalAffected: usage.length,
+          jsonbCleanup: { profilesCleaned, mirrorsCleaned, totalEntriesRemoved },
         },
       }, req).catch(err => logger.error('audit log VIDEO_DELETED_CASCADE failed', { err }));
     }
 
-    logger.info('Video deleted:', { id, storagePath, cascadeAffected: usage.length });
+    logger.info('Video deleted:', {
+      id, storagePath, cascadeAffected: usage.length,
+      jsonbProfilesCleaned: profilesCleaned, jsonbMirrorsCleaned: mirrorsCleaned, jsonbEntriesRemoved: totalEntriesRemoved,
+    });
     res.json({
       message: 'Vidéo supprimée avec succès',
       cascadeAffected: usage.length,
       affectedSites: usage.map(s => s.id),
+      jsonbCleanup: { profilesCleaned, mirrorsCleaned, totalEntriesRemoved },
     });
   } catch (error) {
     logger.error('Error deleting video:', error);

@@ -2395,6 +2395,86 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     expect(/\|\s*['"]VIDEO_DELETED_CASCADE['"]/.test(content)).toBe(true);
   });
 
+  // PR2.1 — Cascade JSONB. La cascade SQL `ON DELETE CASCADE` (PR2) nettoie
+  // bien `site_videos` mais PAS les `config_profiles.configuration` JSONB ni
+  // `sites.local_config_mirror`. L'audit prod (incident PR #613) a confirmé
+  // que la vidéo morte JOUEUR_85 était encore dans 2 profils JSONB + le
+  // local_config_mirror du Pi NLF — provoquant la même cascade silencieuse.
+  // PR2.1 ajoute ce nettoyage dans la cascade DELETE.
+  it('PR2.1 — config-video-cleanup util retire les références par video_id et filename', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'utils', 'config-video-cleanup.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasExportedFn: /export function removeVideoFromConfig/.test(content),
+      coversSponsors: /config\.sponsors[\s\S]{0,200}filter\(/.test(content),
+      coversCategories: /category\.videos[\s\S]{0,200}filter\(/.test(content),
+      coversSubCategories: /subCat\.videos[\s\S]{0,200}filter\(/.test(content),
+      coversTimeCategories: /timeCategory\.loopVideos[\s\S]{0,200}filter\(/.test(content),
+      matchesByVideoId: /entry\.video_id\s*===\s*criteria\.videoId/.test(content),
+      matchesByFilename: /extractFilenameFromPath\(entry\.path\)/.test(content),
+    }).toEqual({
+      hasExportedFn: true,
+      coversSponsors: true,
+      coversCategories: true,
+      coversSubCategories: true,
+      coversTimeCategories: true,
+      matchesByVideoId: true,
+      matchesByFilename: true,
+    });
+  });
+
+  it('PR2.1 — config-profile.repository expose findProfilesReferencingVideo + replaceConfiguration', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'config-profile.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      findFn: /async findProfilesReferencingVideo\(/.test(content),
+      filterByVideoId: /configuration::text ILIKE \$/.test(content),
+      replaceFn: /async replaceConfiguration\(profileId:/.test(content),
+      writesJsonb: /configuration = \$1::jsonb/.test(content),
+    }).toEqual({
+      findFn: true,
+      filterByVideoId: true,
+      replaceFn: true,
+      writesJsonb: true,
+    });
+  });
+
+  it('PR2.1 — site.repository expose findSitesReferencingVideoInLocalMirror', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'site.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      findFn: /async findSitesReferencingVideoInLocalMirror\(/.test(content),
+      filterMirror: /local_config_mirror::text ILIKE \$/.test(content),
+      guardsNull: /local_config_mirror IS NOT NULL/.test(content),
+    }).toEqual({
+      findFn: true,
+      filterMirror: true,
+      guardsNull: true,
+    });
+  });
+
+  it('PR2.1 — content.controller.deleteVideo cascade nettoie JSONB profils + mirrors et logue le compteur', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsCleanup: /import \{ removeVideoFromConfig \} from ['"]\.\.\/utils\/config-video-cleanup['"]/.test(content),
+      importsConfigProfile: /configProfileRepository/.test(content),
+      callsRemoveOnProfile: /removeVideoFromConfig\(profile\.configuration/.test(content),
+      callsRemoveOnMirror: /removeVideoFromConfig\(site\.local_config_mirror/.test(content),
+      writesProfile: /configProfileRepository\.replaceConfiguration\(/.test(content),
+      writesMirror: /siteRepository\.updateLocalConfigMirror\(/.test(content),
+      auditIncludesCleanup: /jsonbCleanup:\s*\{\s*profilesCleaned/.test(content),
+    }).toEqual({
+      importsCleanup: true,
+      importsConfigProfile: true,
+      callsRemoveOnProfile: true,
+      callsRemoveOnMirror: true,
+      writesProfile: true,
+      writesMirror: true,
+      auditIncludesCleanup: true,
+    });
+  });
+
   // PR2.2 — Video FTP orphan audit. La cascade DELETE de PR2 ne couvre que les
   // suppressions API. Les fichiers FTP supprimés directement (FileZilla, SSH)
   // ou les uploads jamais réussis côté FTP (row DB créée mais .mp4 absent) ne

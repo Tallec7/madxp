@@ -233,6 +233,53 @@ class ConfigProfileRepositoryImpl extends BaseRepository<ConfigProfileRow> {
   }
 
   /**
+   * PR2.1 — cleanup cascade JSONB.
+   * Liste les profils dont la `configuration` JSONB référence un videoId ou
+   * un filename donné. Filtrage côté DB (ILIKE sur configuration::text) pour
+   * éviter de charger toute la table en mémoire. Rapide même sur 100+ profils.
+   */
+  async findProfilesReferencingVideo(criteria: { videoId?: string; filename?: string }): Promise<ConfigProfileRow[]> {
+    const filters: string[] = [];
+    const params: string[] = [];
+    if (criteria.videoId) {
+      params.push(`%${criteria.videoId}%`);
+      filters.push(`configuration::text ILIKE $${params.length}`);
+    }
+    if (criteria.filename) {
+      params.push(`%${criteria.filename}%`);
+      filters.push(`configuration::text ILIKE $${params.length}`);
+    }
+    if (filters.length === 0) return [];
+
+    const result = await query<ConfigProfileRow>(
+      `SELECT id, site_id, name, display_name, city, sport, sort_order,
+              is_default, configuration, created_by, updated_by, created_at, updated_at,
+              remote_pin_required
+       FROM config_profiles
+       WHERE ${filters.join(' OR ')}`,
+      params,
+    );
+    return result.rows;
+  }
+
+  /**
+   * PR2.1 — REPLACE complet de la `configuration` JSONB d'un profil. Utilisé
+   * par la cascade DELETE après que `removeVideoFromConfig()` a muté la
+   * configuration en place. Pas de merge, on écrit le JSONB exact (sans la
+   * vidéo morte).
+   */
+  async replaceConfiguration(profileId: string, configuration: Record<string, unknown>, updatedBy?: string): Promise<void> {
+    await query(
+      `UPDATE config_profiles
+       SET configuration = $1::jsonb,
+           updated_by = COALESCE($2, updated_by),
+           updated_at = NOW()
+       WHERE id = $3`,
+      [JSON.stringify(configuration), updatedBy ?? null, profileId],
+    );
+  }
+
+  /**
    * Definit un profil comme profil par defaut (et unset l'ancien).
    * Utilise une transaction pour garantir la coherence.
    */
