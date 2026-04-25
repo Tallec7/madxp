@@ -1,3 +1,9 @@
+## [3.240.7](https://github.com/Tallec7/neopro/compare/v3.240.6...v3.240.7) (2026-04-25)
+
+### Bug Fixes
+
+- **infra:** backup task fails loudly + saasStates GC sweep (audit P0) ([#600](https://github.com/Tallec7/neopro/issues/600)) ([b3f648b](https://github.com/Tallec7/neopro/commit/b3f648b0954d1f066d6b8e73a6ac56274993ff9d)), closes [#598](https://github.com/Tallec7/neopro/issues/598) [#594](https://github.com/Tallec7/neopro/issues/594)
+
 ## [3.240.6](https://github.com/Tallec7/neopro/compare/v3.240.5...v3.240.6) (2026-04-25)
 
 ### Bug Fixes
