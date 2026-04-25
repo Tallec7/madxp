@@ -66,6 +66,12 @@
       "port": 4299
     },
     {
+      "name": "raspberry-static",
+      "runtimeExecutable": "/opt/homebrew/bin/python3",
+      "runtimeArgs": [".claude/preview/spa-server.py", "4298", "dist/raspberry/browser"],
+      "port": 4298
+    },
+    {
       "name": "remotion-studio",
       "runtimeExecutable": "/Users/gletallec/.nvm/versions/node/v18.20.7/bin/npx",
       "runtimeArgs": ["remotion", "studio", "--port", "3002"],
