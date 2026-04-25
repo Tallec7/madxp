@@ -998,7 +998,7 @@ class SocketService {
       }
 
       // Release saasStates entry when no clients remain for this site (issue #594 fix)
-      if (state.tvInstances.size === 0) {
+      if (this.saasStates && state.tvInstances.size === 0) {
         const room = this.io?.sockets.adapter.rooms.get(siteId);
         if (!room || room.size === 0) {
           this.saasStates.delete(siteId);
