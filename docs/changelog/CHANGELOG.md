@@ -1,3 +1,9 @@
+## [3.240.4](https://github.com/Tallec7/neopro/compare/v3.240.3...v3.240.4) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** db-backup chemin FTP chroot Hostinger + sanity check robuste ([#597](https://github.com/Tallec7/neopro/issues/597)) ([c54eca1](https://github.com/Tallec7/neopro/commit/c54eca1a29d213b9835dc82dffe42c6de10a54c2)), closes [593/#595](https://github.com/Tallec7/neopro/issues/595) [#592](https://github.com/Tallec7/neopro/issues/592) [#593](https://github.com/Tallec7/neopro/issues/593) [#595](https://github.com/Tallec7/neopro/issues/595) [#592](https://github.com/Tallec7/neopro/issues/592) [#594](https://github.com/Tallec7/neopro/issues/594)
+
 ## [3.240.3](https://github.com/Tallec7/neopro/compare/v3.240.2...v3.240.3) (2026-04-25)
 
 ### Bug Fixes
