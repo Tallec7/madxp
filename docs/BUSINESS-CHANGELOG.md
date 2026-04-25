@@ -13,15 +13,17 @@
 > Audit Lead Dev complet par Claude. Note projet : 78/100 → potentiel 85+ après merge des PRs ouvertes.
 
 ### 🎯 Pour le club (NLF, prospects)
-- Aucun changement visible utilisateur
-  (sessions techniques d'audit + refactor d'infra + cleanup process)
+
+- **Télécommande V2 : verrou rotation + taille du texte de retour** ([#624](https://github.com/Tallec7/neopro/pull/624)) — la sheet "Préférences" V2 ré-expose 2 contrôles d'accessibilité disponibles en V1 (lock rotation, taille texte normale/grande). Les clubs qui activent V2 retrouvent ces options sans devoir basculer en V1.
 
 ### 🛡️ Pour la robustesse / production
+
 - **Memory leak SaaS corrigé** ([#600](https://github.com/Tallec7/neopro/pull/600)) — évite les redémarrages Railway intempestifs après plusieurs jours d'uptime sur sites SaaS multi-clients.
 - **Backup task : alerte explicite** ([#600](https://github.com/Tallec7/neopro/pull/600)) — si quelqu'un croit avoir un backup CRON qui tourne, on le sait maintenant (avant : faux positif "success" silencieux dangereux).
 - **Notifications Slack quand un objectif club est à risque** ([#612](https://github.com/Tallec7/neopro/pull/612)) — alerte groupée par site (1 message Slack par site, liste des objectifs <50% de progression). Activable via `SLACK_WEBHOOK_URL`.
 
 ### 🧹 Pour l'équipe (toi + futurs devs)
+
 - **2 fichiers monstres splittés** : `socket.service.ts` (1263→991 lignes, [#607](https://github.com/Tallec7/neopro/pull/607) — extraction du SaaS relay) et `cron-scheduler.service.ts` (1036→486 lignes, [#612](https://github.com/Tallec7/neopro/pull/612) — extraction des 7 task executors). Reviews de PR plus rapides, scope cognitif clarifié.
 - **Règle SAFe morte archivée** ([#609](https://github.com/Tallec7/neopro/pull/609)) — `.claude/rules/safe-update.md` n'avait jamais été appliquée (735 commits sans MAJ auto). Moins de bruit dans chaque session Claude.
 - **2 nouveaux ADR documentés** : ADR-096 (split socket.service via handler dédié), ADR-097 (split cron-scheduler via cron-tasks/ modules).
