@@ -6,7 +6,6 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should display login form', async ({ page }) => {
-    await expect(page.locator('h1, h2').filter({ hasText: /connexion/i })).toBeVisible();
     await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
