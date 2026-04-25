@@ -1,0 +1,160 @@
+name: Migration Check
+
+# Sprint 2 — CI gate sur les migrations DB.
+# Joue full-schema.sql + les migrations modifiées dans la PR sur un PG éphémère
+# pour valider qu'elles sont rejouables et idempotentes.
+#
+# Trigger : PR qui touche central-server/src/scripts/{full-schema,migrations}
+# Bénéfice : évite la classe de bugs où une migration non testée casse staging
+# ou pire la prod (ex: NOT NULL sans backfill, FK manquante, syntax error).
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'central-server/src/scripts/full-schema.sql'
+      - 'central-server/src/scripts/migrations/*.sql'
+      - '.github/workflows/migration-check.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply-migrations:
+    name: Apply schema + migrations on ephemeral PG
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: neopro
+          POSTGRES_PASSWORD: neopro_test
+          POSTGRES_DB: neopro_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neopro"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need history to diff against base
+
+      - name: Install psql client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PG ready
+        env:
+          PGPASSWORD: neopro_test
+        run: |
+          for i in {1..20}; do
+            if psql -h localhost -U neopro -d neopro_test -c 'SELECT 1' >/dev/null 2>&1; then
+              echo "PG ready"
+              break
+            fi
+            echo "Waiting for PG... ($i/20)"
+            sleep 2
+          done
+
+      - name: Apply full-schema.sql (bootstrap baseline)
+        env:
+          PGPASSWORD: neopro_test
+        run: |
+          # Le schéma de base — doit toujours s'appliquer cleanly.
+          psql -h localhost -U neopro -d neopro_test \
+            -v ON_ERROR_STOP=1 \
+            -f central-server/src/scripts/full-schema.sql
+
+          # Sanity check : les tables critiques sont là
+          TABLES=$(psql -h localhost -U neopro -d neopro_test -At \
+            -c "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('sites','users','videos','config_profiles');")
+          if [ "$TABLES" -lt 4 ]; then
+            echo "::error::full-schema.sql incomplet — seulement $TABLES/4 tables critiques"
+            exit 1
+          fi
+          echo "full-schema.sql OK — $TABLES/4 tables critiques présentes"
+
+      - name: Detect migrations modified in this PR
+        id: changed
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Liste des migrations SQL modifiées ou ajoutées par la PR
+          CHANGED=$(git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '^central-server/src/scripts/migrations/.*\.sql$' \
+            | sort) || true
+
+          echo "Changed migrations:"
+          echo "$CHANGED"
+
+          # Sauvegarde dans un fichier pour le step suivant (multi-line output)
+          echo "$CHANGED" > /tmp/changed-migrations.txt
+          if [ -z "$CHANGED" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply changed migrations (idempotency check)
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          PGPASSWORD: neopro_test
+        run: |
+          set -e
+          while IFS= read -r MIGRATION; do
+            [ -z "$MIGRATION" ] && continue
+            echo ""
+            echo "=== Applying $MIGRATION ==="
+            psql -h localhost -U neopro -d neopro_test \
+              -v ON_ERROR_STOP=1 \
+              -f "$MIGRATION"
+
+            echo ""
+            echo "=== Re-applying $MIGRATION (idempotency check) ==="
+            # Une migration bien écrite doit être idempotente :
+            # IF NOT EXISTS / IF EXISTS / ON CONFLICT DO NOTHING.
+            # Si la 2e application échoue, c'est probablement un oubli.
+            if ! psql -h localhost -U neopro -d neopro_test \
+                -v ON_ERROR_STOP=1 \
+                -f "$MIGRATION" 2>&1 | tee /tmp/replay.log; then
+              echo "::warning file=$MIGRATION::Migration n'est pas idempotente — voir /tmp/replay.log"
+              echo "::warning::Astuce : utiliser CREATE TABLE IF NOT EXISTS, ALTER ... ADD COLUMN IF NOT EXISTS, INSERT ... ON CONFLICT DO NOTHING"
+              # On warn mais on bloque pas (certaines migrations one-shot historiques ne sont pas idempotentes)
+            fi
+          done < /tmp/changed-migrations.txt
+
+      - name: Sanity — tables critiques toujours présentes après migrations
+        if: steps.changed.outputs.has_changes == 'true'
+        env:
+          PGPASSWORD: neopro_test
+        run: |
+          TABLES=$(psql -h localhost -U neopro -d neopro_test -At \
+            -c "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('sites','users','videos','config_profiles');")
+          if [ "$TABLES" -lt 4 ]; then
+            echo "::error::Une migration a cassé les tables critiques — $TABLES/4 présentes après replay"
+            exit 1
+          fi
+          echo "OK — $TABLES/4 tables critiques toujours présentes"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Migration check summary" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.changed.outputs.has_changes }}" = "true" ]; then
+            echo "Migrations testées dans cette PR :" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat /tmp/changed-migrations.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Aucune migration modifiée — gate skippé." >> $GITHUB_STEP_SUMMARY
+          fi

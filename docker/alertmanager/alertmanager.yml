@@ -1,14 +1,22 @@
 # Alertmanager configuration for NeoPro
 #
 # Setup:
-#   1. Set SLACK_WEBHOOK_URL in .env (or replace placeholder below)
-#   2. For email (ADR-058 Phase 2C security alerts) : set SMTP_* + ALERT_EMAIL_TO
+#   1. Slack (canal principal #neopro-alerts) : SLACK_WEBHOOK_URL dans .env
+#   2. Email backup (Sprint 2 — fallback si Slack indispo) :
+#      SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD,
+#      ALERT_EMAIL_FROM, ALERT_EMAIL_TO (super_admin, security alerts),
+#      ALERT_EMAIL_OPS (équipe technique on-call, critical alerts)
 #   3. docker compose up alertmanager prometheus grafana
 #
 # Routes:
-#   critical              → slack #neopro-alerts (immediate)
+#   critical              → slack #neopro-alerts + email-ops (double notif Sprint 2)
 #   warning               → slack #neopro-alerts (grouped, 5min wait)
-#   category=security     → slack + email to super_admin (ADR-058 Phase 2C)
+#   category=security     → slack + email super_admin (ADR-058 Phase 2C)
+#
+# Note Sprint 2 : Slack reste le canal principal. L'ajout de l'email-ops sur les
+# alertes critiques est une ceinture+bretelles — si Slack down ou webhook expiré,
+# l'on-call reçoit quand même par mail. ALERT_EMAIL_OPS optionnel : si non défini,
+# alertmanager log un warning mais continue (le envoi Slack reste actif).
 
 global:
   resolve_timeout: 5m
@@ -35,10 +43,12 @@ route:
       repeat_interval: 1h
       continue: false
 
-    # Critical alerts: notify immediately, repeat every 1h
+    # Critical alerts: notify immediately, repeat every 1h.
+    # Sprint 2 — receiver `critical-email-and-slack` : Slack reste primaire,
+    # email-ops en backup pour garantir la réception même si webhook Slack KO.
     - match:
         severity: critical
-      receiver: slack-critical
+      receiver: critical-email-and-slack
       group_wait: 10s
       repeat_interval: 1h
 
@@ -62,6 +72,49 @@ receivers:
             url: 'https://railway.app'
 
   - name: slack-critical
+    slack_configs:
+      - channel: '#neopro-alerts'
+        send_resolved: true
+        title: ':rotating_light: [CRITICAL] {{ .CommonLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          ---
+          {{ end }}
+        actions:
+          - type: button
+            text: 'Grafana'
+            url: 'https://grafana.neopro.tv'
+          - type: button
+            text: 'Railway Logs'
+            url: 'https://railway.app'
+
+  # Sprint 2 — receiver double Slack + Email pour les alertes critiques.
+  # Slack notifie instantanément si configuré (ignoré silencieusement sinon).
+  # Email-ops garantit la réception même sans Slack/Discord adopté par l'équipe.
+  # Configurer ALERT_EMAIL_OPS dans .env (ex: oncall@neopro.fr ou ml équipe tech).
+  - name: critical-email-and-slack
+    email_configs:
+      - to: "${ALERT_EMAIL_OPS}"
+        send_resolved: true
+        headers:
+          Subject: '[NEOPRO CRITICAL] {{ .CommonLabels.alertname }}'
+        html: |
+          <h2>🚨 {{ .CommonLabels.alertname }}</h2>
+          <p><b>Severity:</b> {{ .CommonLabels.severity }}</p>
+          {{ range .Alerts }}
+          <hr/>
+          <p><b>{{ .Annotations.summary }}</b></p>
+          <p>{{ .Annotations.description }}</p>
+          <p><small>Starts at: {{ .StartsAt }}</small></p>
+          {{ end }}
+          <hr/>
+          <p>
+            <a href="https://grafana.neopro.tv">Grafana</a> ·
+            <a href="https://railway.app">Railway Logs</a>
+          </p>
+          <p><small>Runbook NLF : <code>docs/guides/RUNBOOK_NLF.md</code></small></p>
     slack_configs:
       - channel: '#neopro-alerts'
         send_resolved: true
