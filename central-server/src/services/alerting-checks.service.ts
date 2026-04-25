@@ -66,6 +66,23 @@ export class AlertingChecks {
       for (const row of kioskCrashes.rows) {
         await this.alertCreator.evaluateMetric(row.site_id, 'kiosk_crashes_1h', Number(row.crash_count));
       }
+
+      // 4. Video playback errors 24h (PR3) — alimente l'alerte
+      // `video_errors_24h` déclarée dans alerting.types (warning ≥5, critical ≥15).
+      // La fenêtre 24h est calculée dans la requête ; le tick 5min reste léger
+      // grâce à l'index sur `video_plays(site_id, played_at)`.
+      const videoErrors = await query<{ site_id: string; error_count: number }>(
+        `SELECT site_id, COUNT(*)::int AS error_count
+         FROM video_plays
+         WHERE interruption_reason = 'video_error'
+           AND played_at > NOW() - INTERVAL '24 hours'
+           AND site_id IS NOT NULL
+         GROUP BY site_id`
+      );
+
+      for (const row of videoErrors.rows) {
+        await this.alertCreator.evaluateMetric(row.site_id, 'video_errors_24h', Number(row.error_count));
+      }
     } catch (error) {
       if (error instanceof Error && error.message.includes('alerts')) {
         return;
