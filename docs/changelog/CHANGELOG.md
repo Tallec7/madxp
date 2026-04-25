@@ -1,3 +1,9 @@
+## [3.240.6](https://github.com/Tallec7/neopro/compare/v3.240.5...v3.240.6) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** db-backup revert chroot path — hypothèse fausse, restore /public_html/ ([#599](https://github.com/Tallec7/neopro/issues/599)) ([70d8988](https://github.com/Tallec7/neopro/commit/70d898896a3d913bb961eea65410741c367c7c4a)), closes [#597](https://github.com/Tallec7/neopro/issues/597) [#12](https://github.com/Tallec7/neopro/issues/12) [#594](https://github.com/Tallec7/neopro/issues/594) [#597](https://github.com/Tallec7/neopro/issues/597) [#597](https://github.com/Tallec7/neopro/issues/597)
+
 ## [3.240.5](https://github.com/Tallec7/neopro/compare/v3.240.4...v3.240.5) (2026-04-25)
 
 ### Bug Fixes
