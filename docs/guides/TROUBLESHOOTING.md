@@ -6408,6 +6408,7 @@ print(f\"Status: {d['checks']['memory']['status']}  Uptime: {d['uptime']//60:.0f
 2. **Vérifier le plan Railway** — le Hobby plan ($5/mo) a ~512MB RAM, le heap V8 est limité à 256MB (`--max-old-space-size=256` dans Dockerfile). Les librairies natives (canvas, ffmpeg) consomment ~90MB de RSS hors-heap
 3. **Si ça persiste après restart** → vérifier les métriques Railway (Memory Usage dans Metrics) pour détecter un memory leak progressif
 4. **Le monitoring existant** (`memory-manager.service.ts`) gère les seuils automatiquement et log les warnings dans Railway logs
+5. **Si la croissance est progressive sur 7+ jours** → voir la section "Railway weekly restart workaround" ci-dessous
 
 ### Vérification post-fix
 
@@ -6424,6 +6425,38 @@ curl -s https://neopro-central-production.up.railway.app/health | python3 -m jso
 ```
 
 ---
+
+### Railway weekly restart workaround (issue #594 — investigué 2026-04-25)
+
+**Symptôme :** Le workflow `.github/workflows/railway-restart.yml` redéployait le service `neopro-central` tous les dimanches à 04h00 UTC sans cause documentée.
+
+**Investigation :** 5 hypothèses analysées (Winston/Logtail, FTP, PG pool, Socket.IO rooms, CRON scheduler).
+
+**Seul leak confirmé :** `saasStates` Map dans `socket.service.ts` — les entrées par `siteId` étaient créées à la première connexion SaaS mais jamais supprimées. Impact faible (quelques Ko par site SaaS), mais réel.
+
+**Fixes livrés (v3.241.0) :**
+
+- `socket.service.ts` : `saasStates.delete(siteId)` dans le disconnect handler quand la room Socket.IO est vide
+- `server.ts` SIGTERM : `logtail.flush()` avant `process.exit()` pour ne pas perdre les logs buffered au redéploiement
+- `metrics.service.ts` : gauge `neopro_saas_states_active` exposée sur `/metrics`
+- `rules.yml` : alertes `MemoryLeakSuspect` (RSS croissance > 500B/s sur 1h) + `HighActiveHandles` (> 200)
+
+**Monitoring :**
+
+```bash
+# Vérifier la valeur actuelle du gauge saasStates
+curl -s https://neopro-central-production.up.railway.app/metrics | grep neopro_saas_states_active
+
+# Vérifier la tendance RSS (Grafana)
+# Panel : process_resident_memory_bytes — chercher une pente linéaire sur 7 jours
+
+# Vérifier les handles Node.js
+curl -s https://neopro-central-production.up.railway.app/metrics | grep nodejs_active_handles
+```
+
+**Critère de fermeture :** 14 jours consécutifs sans restart hebdomadaire actif ni dégradation OOM → supprimer `.github/workflows/railway-restart.yml` et fermer issue #594.
+
+**Cause probable résiduelle :** La fragmentation naturelle du heap Node.js sur des process long-lived (> 7 jours) peut légèrement augmenter le RSS sans être un vrai leak. Surveiller `deriv(process_resident_memory_bytes[1h])` : si > 500 B/s de manière continue, c'est un leak ; si < 200 B/s, c'est de la fragmentation normale.
 
 ---
 

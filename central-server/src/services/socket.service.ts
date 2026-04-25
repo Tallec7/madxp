@@ -831,6 +831,7 @@ class SocketService {
     }
     if (!this.saasStates.has(siteId)) {
       this.saasStates.set(siteId, { score: null, phase: 'neutral', options: null, timer: { currentTime: 0, isRunning: false }, recording: { isRecording: false, isManualOverride: false }, tvInstances: new Map(), loopState: null });
+      metricsService.recordSaasStatesCount(this.saasStates.size);
     }
     const state = this.saasStates.get(siteId)!;
 
@@ -996,6 +997,16 @@ class SocketService {
             this.io.to(oldest.id).emit('tv-role-assigned', { role: 'master' });
             logger.info('SaaS TV promoted to master', { siteId, promoted: oldest.id });
           }
+        }
+      }
+
+      // Release saasStates entry when no clients remain for this site (issue #594 fix)
+      if (state.tvInstances.size === 0) {
+        const room = this.io?.sockets.adapter.rooms.get(siteId);
+        if (!room || room.size === 0) {
+          this.saasStates.delete(siteId);
+          metricsService.recordSaasStatesCount(this.saasStates.size);
+          logger.info('SaaS state released — no remaining clients', { siteId });
         }
       }
     });

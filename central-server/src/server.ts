@@ -711,6 +711,14 @@ process.on('SIGTERM', async () => {
     });
   }
 
+  // Flush Logtail before shutdown to avoid losing buffered log lines on Railway redeploy
+  try {
+    const { logtail } = await import('./config/logger');
+    if (logtail) await logtail.flush();
+  } catch (_err) {
+    // non-blocking — shutdown must proceed regardless
+  }
+
   // Cleanup sockets BEFORE closing HTTP server — Socket.IO needs the HTTP
   // server alive to send the shutdown notification to connected Pi devices.
   await socketService.cleanup();

@@ -192,6 +192,12 @@ const websocketDisconnectsTotal = new Counter({
   registers: [register],
 });
 
+const saasStatesActiveGauge = new Gauge({
+  name: 'neopro_saas_states_active',
+  help: 'Number of active in-memory SaaS state entries (one per connected SaaS site)',
+  registers: [register],
+});
+
 // ============= Métriques Authentication =============
 
 const authAttemptsTotal = new Counter({
@@ -935,6 +941,10 @@ class MetricsService {
 
   recordSocketDisconnect(reason: string, clientType: 'agent' | 'dashboard' | 'unknown'): void {
     websocketDisconnectsTotal.inc({ reason, client_type: clientType });
+  }
+
+  recordSaasStatesCount(count: number): void {
+    saasStatesActiveGauge.set(count);
   }
 
   recordAuthAttempt(status: 'success' | 'failure', mfaUsed: boolean): void {
