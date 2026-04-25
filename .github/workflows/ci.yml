@@ -169,6 +169,18 @@ jobs:
         run: npx ng build raspberry --configuration=raspberry
 
   # ============================================
+  # Docs - Vérifier les liens runbook (rapide, ~1s)
+  # ============================================
+  runbook-links:
+    name: Runbook links smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Check runbook links
+        run: bash scripts/check-runbook-links.sh
+
+  # ============================================
   # Coverage Report - Upload to Codecov
   # ============================================
   coverage:
