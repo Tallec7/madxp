@@ -50,13 +50,15 @@ Implémenté dans [`.github/workflows/db-backup.yml`](../../.github/workflows/db
 
 ### 3. Garde-fous anti-régression (bugs vus en production)
 
-Le workflow contient 3 garde-fous validés par des runs échoués avant stabilisation :
+Le workflow contient 5 garde-fous validés par des runs échoués avant stabilisation :
 
-| Garde-fou                               | Bug intercepté                                                     | Code                                          |
-| --------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- |
-| **Dump size ≥ 1 MB**                    | pg_dump produit un fichier vide → FTP écraserait un bon backup     | `if [ "$SIZE" -lt 1000000 ]; then exit 1`     |
-| **Count tables critiques ≥ 4**          | Restore silencieusement partiel côté Supabase (search_path, perms) | `SELECT count(*) FROM pg_tables WHERE ... <4` |
-| **Checksum Railway vs Supabase strict** | Dérive données / mirror corrompu                                   | `diff railway.txt supabase.txt → exit 1`      |
+| Garde-fou                                                                  | Bug intercepté                                                                                        | Code                                                           |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Dump size ≥ 1 MB**                                                       | pg_dump produit un fichier vide → FTP écraserait un bon backup                                        | `if [ "$SIZE" -lt 1000000 ]; then exit 1`                      |
+| **Sanity check post-upload robuste**                                       | `awk '{print $5}'` sur `cls -l` Hostinger lisait le mois (`Apr`) au lieu de la taille — faux positif  | `cls --format='%s\n'` + `tr -dc '0-9'` (bytes only)            |
+| **Path resolution sans chroot doublé**                                     | FTP user chrooté à `public_html/` → `/public_html/...` créait `public_html/public_html/...` invisible | `pwd` post-`cd $REMOTE_DIR` doit ne pas contenir `public_html` |
+| **Count tables critiques ≥ 4** _(legacy Supabase mirror, retiré Sprint 0)_ | Restore silencieusement partiel côté Supabase (search_path, perms)                                    | `SELECT count(*) FROM pg_tables WHERE ... <4`                  |
+| **Checksum Railway vs Supabase strict** _(legacy, retiré Sprint 0)_        | Dérive données / mirror corrompu                                                                      | `diff railway.txt supabase.txt → exit 1`                       |
 
 Toutes les sorties `|| true` qui pourraient masquer un échec sont proscrites dans les étapes critiques.
 

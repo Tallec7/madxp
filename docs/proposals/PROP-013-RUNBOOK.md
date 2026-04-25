@@ -242,14 +242,16 @@ Implémenté dans [`.github/workflows/db-backup.yml`](../../.github/workflows/db
 
 Tous les bugs rencontrés pendant la mise au point sont désormais interceptés :
 
-| Bug rencontré                              | Garde-fou actuel                                         |
-| ------------------------------------------ | -------------------------------------------------------- |
-| pg_dump PG16 vs server PG18                | `echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH`      |
-| Hostinger FTP cert mismatch                | `set ssl:verify-certificate no`                          |
-| `cls --date-format` invalide               | Retrait complet, purge via `grep` sur `cls -l`           |
-| Supabase `schema_migrations` duplicate key | `DROP SCHEMA supabase_migrations CASCADE` ajouté au wipe |
-| Restore silencieusement partiel            | `SELECT count(*) FROM pg_tables ... < 4 → exit 1`        |
-| Checksum Supabase avec search_path bancal  | SQL schema-qualifié (`public.sites`) + `SET search_path` |
+| Bug rencontré                                                             | Garde-fou actuel                                                                                       |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| pg_dump PG16 vs server PG18                                               | `echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH`                                                    |
+| Hostinger FTP cert mismatch                                               | `set ssl:verify-certificate no`                                                                        |
+| `cls --date-format` invalide                                              | Retrait complet, purge via `grep` sur `cls -l`                                                         |
+| Supabase `schema_migrations` duplicate key                                | `DROP SCHEMA supabase_migrations CASCADE` ajouté au wipe                                               |
+| Restore silencieusement partiel                                           | `SELECT count(*) FROM pg_tables ... < 4 → exit 1`                                                      |
+| Checksum Supabase avec search_path bancal                                 | SQL schema-qualifié (`public.sites`) + `SET search_path`                                               |
+| **Path doublé `public_html/public_html/`** (chroot Hostinger non détecté) | `REMOTE_DIR="/neopro-video/db-backups"` + assertion `pwd` ne contient pas `public_html` (exit 1 sinon) |
+| **Sanity check faux positif (`awk` lit "Apr" au lieu de la taille)**      | `cls --format='%s\n'` + `tr -dc '0-9'` (taille en bytes uniquement, pas de parsing par colonne)        |
 
 ### Supervision
 

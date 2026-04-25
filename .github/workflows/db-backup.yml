@@ -84,10 +84,20 @@ jobs:
           fi
           echo "Upload FTP OK: $DUMP_FILE ($REMOTE_SIZE bytes) → $REMOTE_DIR"
 
-          # Diagnostic : log le chemin absolu réel côté FTP (utile en cas de chroot Hostinger)
-          # pour distinguer "/public_html/.../db-backups" doc-affiché vs chemin résolu côté serveur.
+          # Diagnostic + garde-fou : log le chemin absolu réel côté FTP, et fail explicitement
+          # si le chemin contient `public_html` (= chroot doublé : on a écrit dans
+          # `public_html/public_html/...` invisible depuis hPanel — régression du bug ADR-070).
           echo "=== FTP path resolution diagnostic ==="
-          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; pwd; cls -l; bye" 2>&1 | sed 's/^/  /'
+          PWD_OUTPUT=$(lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; pwd; bye" 2>&1)
+          echo "$PWD_OUTPUT" | sed 's/^/  /'
+          # Le `pwd` lftp affiche l'URL complète : ftp://user@host/chemin → on extrait le path
+          RESOLVED_PATH=$(echo "$PWD_OUTPUT" | grep -oE 'ftp://[^/]+(/.*)?$' | sed -E 's|ftp://[^/]+||' | tail -1)
+          if echo "$RESOLVED_PATH" | grep -qi 'public_html'; then
+            echo "::error::Chemin FTP résolu contient 'public_html' (\"$RESOLVED_PATH\") — chroot doublé détecté."
+            echo "::error::REMOTE_DIR doit être relatif au chroot (ex: /neopro-video/db-backups), pas /public_html/..."
+            exit 1
+          fi
+          lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" -e "$LFTP_SETTINGS cd $REMOTE_DIR; cls -l; bye" 2>&1 | sed 's/^/  /'
           echo "=== End diagnostic ==="
 
           # Purge FTP : on liste puis delete les dumps vieux de >30j

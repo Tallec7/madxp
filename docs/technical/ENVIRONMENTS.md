@@ -81,8 +81,16 @@ Tous les 3 jobs gates par GitHub Environment `production` (required reviewer).
 
 ### 4.3 — `db-backup.yml` (cron 03:00 UTC quotidien)
 
-`pg_dump` Railway prod → upload Hostinger FTP `/public_html/neopro-video/db-backups/` → purge >30j.
+`pg_dump` Railway prod → upload Hostinger FTP `neopro-video/db-backups/` → purge >30j.
 **Mirror Supabase + checksums supprimés Sprint 0.**
+
+> ⚠️ **Chroot Hostinger** : l'utilisateur FTP `u406531085` est chrooté sur `public_html/`
+> (cf. hPanel → Informations FTP → "Chemin de téléchargement = public_html"). Le `/`
+> du FTP ≡ `public_html/` côté serveur. Côté workflow, `REMOTE_DIR` doit donc être
+> `/neopro-video/db-backups` **sans** préfixe `/public_html/` — sinon les dumps
+> atterrissent dans `public_html/public_html/...` (techniquement créé, mais invisible
+> depuis hPanel et non conforme au chemin documenté). Vu côté hPanel (file manager) :
+> `public_html/neopro-video/db-backups/`.
 
 ### 4.4 — `frontend-health.yml` (cron \*/10 min + post-release)
 
@@ -147,15 +155,15 @@ Détails : voir `CONTRIBUTING.md` (Sprint 1).
 
 ## 8. Référence rapide
 
-| Question                                     | Réponse                                                                          |
-| -------------------------------------------- | -------------------------------------------------------------------------------- |
-| Comment déployer en prod ?                   | Push `main` → semantic-release → tag → approuver GitHub Environment `production` |
-| Comment rollback prod ?                      | Railway dashboard → Deployments → Redeploy version précédente                    |
-| Où est le backup DB le plus récent ?         | Hostinger FTP `/public_html/neopro-video/db-backups/neopro_YYYYMMDD_HHMMSS.dump` |
-| Comment tester en local avec data réaliste ? | `npm run dev:seed`                                                               |
-| Comment lancer les tests régression ?        | `npm run test:smoke:smart` (rapide) ou `npm run test:smoke` (complet)            |
-| Qui peut tagger en prod ?                    | GitHub Environment `production` reviewers (super_admin de l'équipe)              |
-| URL admin prod ?                             | `neopro-admin.kalonpartners.bzh` (PAS `admin-neopro`)                            |
+| Question                                     | Réponse                                                                                                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Comment déployer en prod ?                   | Push `main` → semantic-release → tag → approuver GitHub Environment `production`                                                                        |
+| Comment rollback prod ?                      | Railway dashboard → Deployments → Redeploy version précédente                                                                                           |
+| Où est le backup DB le plus récent ?         | Hostinger hPanel → file manager → `public_html/neopro-video/db-backups/neopro_YYYYMMDD_HHMMSS.dump` (côté FTP : `/neopro-video/db-backups/` car chroot) |
+| Comment tester en local avec data réaliste ? | `npm run dev:seed`                                                                                                                                      |
+| Comment lancer les tests régression ?        | `npm run test:smoke:smart` (rapide) ou `npm run test:smoke` (complet)                                                                                   |
+| Qui peut tagger en prod ?                    | GitHub Environment `production` reviewers (super_admin de l'équipe)                                                                                     |
+| URL admin prod ?                             | `neopro-admin.kalonpartners.bzh` (PAS `admin-neopro`)                                                                                                   |
 
 ---
 
