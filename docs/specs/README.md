@@ -58,8 +58,12 @@ docs/specs/
 | SPEC | ADR liés | Statut | Dernière revue |
 |---|---|---|---|
 | [features/match-sessions](features/match-sessions.spec.md) | ADR-093, ADR-097 | Live | 2026-04-25 |
+| [features/saas-mode](features/saas-mode.spec.md) | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live | 2026-04-25 |
+| [features/templates-studio](features/templates-studio.spec.md) | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095 | Live | 2026-04-25 |
+| [services/cron-scheduler](services/cron-scheduler.spec.md) | ADR-097 | Live | 2026-04-25 |
+| [services/socket-service](services/socket-service.spec.md) | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096 | Live | 2026-04-25 |
 
-> *(les autres seront ajoutées progressivement, 1 PR par SPEC pour rester atomique)*
+**Total : 5 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/sponsors-rotation`, `features/hotspot-psk`, `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
 
 ## Cycle de vie d'une SPEC
 
