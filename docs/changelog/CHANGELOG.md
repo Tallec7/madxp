@@ -1,3 +1,9 @@
+## [3.241.1](https://github.com/Tallec7/neopro/compare/v3.241.0...v3.241.1) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** release mirror — exclude orphan public_html/ + neopro-video/ dirs ([#604](https://github.com/Tallec7/neopro/issues/604)) ([79bfbc1](https://github.com/Tallec7/neopro/commit/79bfbc122ca266c60472ee1009142a50519ee0ca)), closes [#597](https://github.com/Tallec7/neopro/issues/597) [#599](https://github.com/Tallec7/neopro/issues/599)
+
 # [3.241.0](https://github.com/Tallec7/neopro/compare/v3.240.8...v3.241.0) (2026-04-25)
 
 ### Bug Fixes
