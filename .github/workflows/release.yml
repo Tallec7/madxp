@@ -238,6 +238,16 @@ jobs:
             saas/**
           timeout: 120000
 
+      - name: Force upload .htaccess (dotfile safety net)
+        run: |
+          # FTP-Deploy-Action skips dotfiles after clean-slate (known issue).
+          # Mirror the SaaS deploy guard below to guarantee SPA fallback.
+          curl --silent --show-error --fail \
+            --user "${{ secrets.HOSTINGER_FTP_USERNAME }}:${{ secrets.HOSTINGER_FTP_PASSWORD }}" \
+            -T dist/central-dashboard/browser/.htaccess \
+            "ftp://${{ secrets.HOSTINGER_FTP_SERVER }}/.htaccess"
+          echo "✅ .htaccess force-uploaded to dashboard root"
+
       - name: Verify dashboard deployment
         run: |
           echo "Waiting 10s for CDN propagation..."
