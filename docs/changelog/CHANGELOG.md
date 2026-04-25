@@ -1,3 +1,9 @@
+# [3.246.0](https://github.com/Tallec7/neopro/compare/v3.245.0...v3.246.0) (2026-04-25)
+
+### Features
+
+- **tests:** smoke guard requiring 1 test min per new service ([#622](https://github.com/Tallec7/neopro/issues/622)) ([37dc627](https://github.com/Tallec7/neopro/commit/37dc6278f4a251ea80edadd5fbacca4af3a43458))
+
 # [3.245.0](https://github.com/Tallec7/neopro/compare/v3.244.0...v3.245.0) (2026-04-25)
 
 ### Features
