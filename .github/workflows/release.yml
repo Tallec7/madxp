@@ -234,13 +234,15 @@ jobs:
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
+            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set mirror:parallel-transfer-count 2;
+            set net:connection-limit 5;
+            set mirror:parallel-transfer-count 5;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose \
+            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
                    --exclude-glob saas/ --exclude-glob saas \
                    --exclude-glob public_html/ --exclude-glob public_html \
                    --exclude-glob neopro-video/ --exclude-glob neopro-video \
@@ -340,13 +342,15 @@ jobs:
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
+            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set mirror:parallel-transfer-count 2;
+            set net:connection-limit 5;
+            set mirror:parallel-transfer-count 5;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose \
+            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
                    dist/raspberry/browser/ /saas/;
           "
           echo "✅ SaaS mirrored to /saas/ (dotfiles included)"
