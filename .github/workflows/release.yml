@@ -239,6 +239,8 @@ jobs:
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
             mirror --reverse --delete --verbose \
                    --exclude-glob saas/ --exclude-glob saas \
+                   --exclude-glob public_html/ --exclude-glob public_html \
+                   --exclude-glob neopro-video/ --exclude-glob neopro-video \
                    dist/central-dashboard/browser/ /;
           "
           echo "✅ Dashboard mirrored (dotfiles included, /saas/ preserved)"
