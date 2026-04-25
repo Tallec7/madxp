@@ -1,10 +1,13 @@
 name: Railway Weekly Restart
 
+# Cron schedule disabled 2026-04-25 — investigation issue #594 (memory leak ?)
+# Le redeploy hebdomadaire masquait la cause racine sans la documenter.
+# Laissé 14 jours de run sans restart pour observer le profil mémoire via Grafana.
+# Si stable → supprimer ce fichier et fermer issue #594.
 on:
-  schedule:
-    # Tous les dimanches à 4h du matin (heure UTC)
-    - cron: '0 4 * * 0'
-  workflow_dispatch: # Permet de lancer manuellement
+  # schedule:
+  #   - cron: '0 4 * * 0'  # Tous les dimanches à 4h UTC — DISABLED
+  workflow_dispatch: # Conservé pour déclenchement manuel d'urgence
 
 jobs:
   restart:
