@@ -52,13 +52,17 @@ describe('Smoke — ADR-093 match sessions', () => {
     }
   });
 
-  it('cron-scheduler.service wires executeMatchAutoCloseTask in both switches', () => {
+  it('cron-scheduler dispatches match_session_autoclose to extracted handler (ADR-097)', () => {
+    // ADR-097 : extraction des executors dans cron-tasks/. Le service garde un
+    // dispatch via TASK_EXECUTORS qui mappe `match_session_autoclose` vers
+    // executeMatchAutoCloseTask, et la logique métier vit dans le task file.
     const svc = read('central-server/src/services/cron-scheduler.service.ts');
     expect(/executeMatchAutoCloseTask/.test(svc)).toBe(true);
-    const caseCount = (svc.match(/case 'match_session_autoclose'/g) || []).length;
-    expect(caseCount).toBeGreaterThanOrEqual(2); // executeSchedule + runNow
-    expect(/ended_by = 'timeout'/.test(svc)).toBe(true);
-    expect(/recordMatchSessionAutoclosed/.test(svc)).toBe(true);
+    expect(/match_session_autoclose:\s*executeMatchAutoCloseTask/.test(svc)).toBe(true);
+
+    const task = read('central-server/src/cron-tasks/match-autoclose.task.ts');
+    expect(/ended_by = 'timeout'/.test(task)).toBe(true);
+    expect(/recordMatchSessionAutoclosed/.test(task)).toBe(true);
   });
 
   it('metrics.service exposes neopro_match_sessions_autoclosed_total with reason label', () => {
