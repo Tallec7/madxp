@@ -14,3 +14,4 @@ Ce dossier matche `watchPatterns` de `railway.json` — commit ici = rebuild pro
 | 2026-04-24T18:13:27Z | 0369f6ab   | 3.240.1                                                      |
 | 2026-04-25           | e95b224    | force release 3.240.2 — htaccess neopro-health               |
 | 2026-04-25T09:34:14Z | 37497df6 | 3.240.2 |
+| 2026-04-25T11:40:25Z | 50e92d85 | 3.240.3 |
