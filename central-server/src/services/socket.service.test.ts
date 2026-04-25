@@ -1055,7 +1055,7 @@ describe('SocketService', () => {
       // Reset saas state (reset io to null first to avoid cleanup errors)
       (socketService as any).io = null;
       (socketService as any).saasRelayRegistered = new Set();
-      (socketService as any).saasStates = undefined;
+      (socketService as any).saasStates = new Map();
     });
 
     const createMockIo = () => ({

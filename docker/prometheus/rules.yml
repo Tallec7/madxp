@@ -49,6 +49,29 @@ groups:
           summary: "High CPU usage"
           description: "CPU usage sustained above 80% for 5 minutes."
 
+      # Memory growing linearly — potential leak (issue #594)
+      # deriv() gives bytes/second trend over 1h. > 500 bytes/sec = ~42MB/day growth.
+      - alert: MemoryLeakSuspect
+        expr: deriv(process_resident_memory_bytes[1h]) > 500
+        for: 2h
+        labels:
+          severity: warning
+          category: stability
+        annotations:
+          summary: "RSS memory growing steadily — possible memory leak"
+          description: "process_resident_memory_bytes increasing at {{ $value | humanize }}B/s over 1h. At this rate the process gains >40MB/day. Check neopro_saas_states_active and nodejs_active_handles in Grafana."
+
+      # Active handles growing — resource leak
+      - alert: HighActiveHandles
+        expr: nodejs_active_handles > 200
+        for: 10m
+        labels:
+          severity: warning
+          category: stability
+        annotations:
+          summary: "Node.js active handles above threshold"
+          description: "{{ $value }} active handles (threshold: 200). Possible unclosed sockets, timers, or streams. Check with --inspect and .getActiveHandles()."
+
   # =============================================
   # WebSocket & Pi Connectivity
   # =============================================

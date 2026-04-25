@@ -429,3 +429,57 @@ describe('Deployment repository query safety', () => {
       .toEqual({ hasParameterizedLimit: true });
   });
 });
+
+describe('SaaS state memory leak regression guards (issue #594)', () => {
+  // Guards added 2026-04-25 — saasStates Map was never cleaned up on disconnect,
+  // causing unbounded growth for long-lived processes. Fixed in this session.
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const socketContent = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/services/socket.service.ts'),
+    'utf8'
+  );
+  const serverContent = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/server.ts'),
+    'utf8'
+  );
+
+  it('saasStates must be deleted when last SaaS client disconnects', () => {
+    // Without this, each unique siteId adds a permanent entry that is never freed.
+    expect({
+      hasDeleteCall: socketContent.includes('saasStates.delete(siteId)'),
+    }).toEqual({ hasDeleteCall: true });
+  });
+
+  it('saasStates deletion must be guarded by disconnect + empty-room check', () => {
+    // The delete must be conditional on tvInstances being empty AND the Socket.IO room
+    // being empty, to avoid premature cleanup when other clients are still connected.
+    expect({
+      guardedByTvInstances: socketContent.includes('tvInstances.size === 0'),
+      guardedByRoomSize: socketContent.includes('room.size === 0'),
+      hasDeleteCall: socketContent.includes('saasStates.delete(siteId)'),
+    }).toEqual({ guardedByTvInstances: true, guardedByRoomSize: true, hasDeleteCall: true });
+  });
+
+  it('saasStates size must be reported to Prometheus on set and delete', () => {
+    // Allows Grafana to detect a growing saasStates Map before it causes OOM.
+    // We verify recordSaasStatesCount is called at least twice: once on set, once on delete.
+    const occurrences = (socketContent.match(/metricsService\.recordSaasStatesCount/g) || []).length;
+    const setIdx = socketContent.indexOf('saasStates.set(siteId');
+    const deleteIdx = socketContent.indexOf('saasStates.delete(siteId)');
+    const metricAfterSet = socketContent.indexOf('recordSaasStatesCount', setIdx) < deleteIdx;
+    const metricAfterDelete = socketContent.indexOf('recordSaasStatesCount', deleteIdx) > deleteIdx;
+    expect({
+      calledAtLeastTwice: occurrences >= 2,
+      metricAfterSet,
+      metricAfterDelete,
+    }).toEqual({ calledAtLeastTwice: true, metricAfterSet: true, metricAfterDelete: true });
+  });
+
+  it('SIGTERM handler must flush Logtail before exit', () => {
+    // Without logtail.flush(), buffered log lines are silently dropped on Railway redeploy.
+    expect({
+      hasLogtailFlush: serverContent.includes('logtail.flush()'),
+      hasLogtailImport: serverContent.includes("import('./config/logger')"),
+    }).toEqual({ hasLogtailFlush: true, hasLogtailImport: true });
+  });
+});
