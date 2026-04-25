@@ -1,3 +1,9 @@
+## [3.241.2](https://github.com/Tallec7/neopro/compare/v3.241.1...v3.241.2) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** db-backup chemin FTP chroot-aware (definitive) ([#606](https://github.com/Tallec7/neopro/issues/606)) ([522072a](https://github.com/Tallec7/neopro/commit/522072ae09561541565f2b01b7a318b6c28ffe3f)), closes [#597](https://github.com/Tallec7/neopro/issues/597) [#599](https://github.com/Tallec7/neopro/issues/599) [#14](https://github.com/Tallec7/neopro/issues/14) [#604](https://github.com/Tallec7/neopro/issues/604) [#602](https://github.com/Tallec7/neopro/issues/602)
+
 ## [3.241.1](https://github.com/Tallec7/neopro/compare/v3.241.0...v3.241.1) (2026-04-25)
 
 ### Bug Fixes
