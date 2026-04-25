@@ -1449,15 +1449,27 @@ describe('PROP-002 Phase 5: N-display model guards', () => {
     expect(content).toMatch(/displays\s+JSONB/);
   });
 
-  it('central socket.service must track SaaS displayIndex', () => {
-    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
-    expect(content).toMatch(/getSaasConnectedDisplays/);
-    expect(content).toMatch(/displayIndex/);
+  it('central socket.service must track SaaS displayIndex (ADR-096 — délégué au handler)', () => {
+    // ADR-096 : la logique SaaS a été extraite dans handlers/saas-relay.handler.ts.
+    // socket.service.ts conserve un wrapper public `getSaasConnectedDisplays` pour
+    // préserver la surface API consommée par d'autres handlers Pi + tests.
+    const serviceContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
+    expect(serviceContent).toMatch(/getSaasConnectedDisplays/);
+    const handlerContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/handlers/saas-relay.handler.ts'), 'utf8');
+    expect(handlerContent).toMatch(/displayIndex/);
   });
 
-  it('central socket.service must have SaaS event relay (registerSaasRelay)', () => {
-    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
-    expect(content).toMatch(/registerSaasRelay/);
+  it('central socket.service must have SaaS event relay (ADR-096 — délégué au handler)', () => {
+    // ADR-096 : la logique relay vit désormais dans handlers/saas-relay.handler.ts.
+    // socket.service.ts conserve un wrapper privé `registerSaasRelay` qui délègue.
+    // Smoke test #X enforce que :
+    //   1. socket.service.ts garde l'entry point `registerSaasRelay`
+    //   2. Le handler isolé contient TOUS les listeners socket.on attendus
+    const serviceContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/socket.service.ts'), 'utf8');
+    expect(serviceContent).toMatch(/registerSaasRelay/);
+    expect(serviceContent).toMatch(/saasRelayRegister|saas-relay\.handler/);
+
+    const content = fs.readFileSync(path.join(repoRoot, 'central-server/src/handlers/saas-relay.handler.ts'), 'utf8');
     // Relay must handle all Pi-equivalent events
     expect(content).toMatch(/socket\.on\('command'/);
     expect(content).toMatch(/socket\.to\(siteId\)\.emit\('action'/);
