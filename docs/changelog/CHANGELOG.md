@@ -1,3 +1,9 @@
+## [3.240.8](https://github.com/Tallec7/neopro/compare/v3.240.7...v3.240.8) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** switch Hostinger deploys to lftp mirror (kill FTP dotfile bug) ([#601](https://github.com/Tallec7/neopro/issues/601)) ([ac534d2](https://github.com/Tallec7/neopro/commit/ac534d2b4c250aec677739b08c92e562e03e270f)), closes [#297](https://github.com/Tallec7/neopro/issues/297)
+
 ## [3.240.7](https://github.com/Tallec7/neopro/compare/v3.240.6...v3.240.7) (2026-04-25)
 
 ### Bug Fixes
