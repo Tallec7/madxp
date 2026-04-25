@@ -1,3 +1,9 @@
+## [3.242.3](https://github.com/Tallec7/neopro/compare/v3.242.2...v3.242.3) (2026-04-25)
+
+### Bug Fixes
+
+- **saas:** vidéo manuelle KO retombe sur la loop + CORP sur erreurs proxy ([#613](https://github.com/Tallec7/neopro/issues/613)) ([926df7d](https://github.com/Tallec7/neopro/commit/926df7dccbdf4f5627bbcdecd5787549a1c57b21))
+
 ## [3.242.2](https://github.com/Tallec7/neopro/compare/v3.242.1...v3.242.2) (2026-04-25)
 
 ### Bug Fixes
