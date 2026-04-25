@@ -90,68 +90,12 @@ jobs:
             fi
           done
 
-      - name: Mirror to Supabase (hot standby)
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: |
-          # Wipe complet : public (tables applicatives) + supabase_migrations (sinon duplicate key)
-          psql "$SUPABASE_URL" <<'SQL'
-          DROP SCHEMA IF EXISTS public CASCADE;
-          DROP SCHEMA IF EXISTS supabase_migrations CASCADE;
-          CREATE SCHEMA public;
-          GRANT ALL ON SCHEMA public TO postgres, public;
-          CREATE SCHEMA IF NOT EXISTS extensions;
-          CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
-          CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
-          GRANT USAGE ON SCHEMA extensions TO public;
-          SQL
-
-          # Restore — on log tout pour pouvoir diagnostiquer, on garde seulement les erreurs résiduelles
-          pg_restore \
-            --no-owner --no-acl \
-            --no-comments --no-publications --no-subscriptions --no-security-labels \
-            -d "$SUPABASE_URL" \
-            "$DUMP_FILE" > restore.log 2>&1 || true
-
-          ERRORS=$(grep -c "^pg_restore: error" restore.log || true)
-          echo "Restore errors total: $ERRORS"
-          echo "=== Dernières erreurs (max 30) ==="
-          grep "^pg_restore: error" restore.log | tail -30 || true
-
-          # Garde-fou : si aucune table applicative n'existe côté Supabase, on fail tout de suite
-          TABLES=$(psql "$SUPABASE_URL" -At -c "SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename IN ('sites','users','videos','config_profiles');")
-          if [ "$TABLES" -lt 4 ]; then
-            echo "::error::Restore incomplet — seulement $TABLES/4 tables critiques présentes côté Supabase"
-            exit 1
-          fi
-          echo "Tables critiques présentes: $TABLES/4"
-
-      - name: Verify checksums Railway vs Supabase
-        env:
-          RAILWAY_PROD_URL: ${{ secrets.RAILWAY_PROD_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        run: |
-          cat > /tmp/checksums.sql <<'SQL'
-          SET search_path = public, extensions;
-          SELECT 'sites' AS t, count(*) AS n, md5(string_agg(id::text, ',' ORDER BY id)) AS hash FROM public.sites
-          UNION ALL SELECT 'users', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.users
-          UNION ALL SELECT 'videos', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.videos
-          UNION ALL SELECT 'config_profiles', count(*), md5(string_agg(id::text, ',' ORDER BY id)) FROM public.config_profiles
-          ORDER BY t;
-          SQL
-
-          psql "$RAILWAY_PROD_URL" -At -f /tmp/checksums.sql > /tmp/railway.txt
-          psql "$SUPABASE_URL" -At -f /tmp/checksums.sql > /tmp/supabase.txt
-
-          echo "=== Railway ==="; cat /tmp/railway.txt
-          echo "=== Supabase ==="; cat /tmp/supabase.txt
-
-          if ! diff -q /tmp/railway.txt /tmp/supabase.txt > /dev/null; then
-            echo "::error::Checksums mismatch entre Railway et Supabase"
-            diff /tmp/railway.txt /tmp/supabase.txt
-            exit 1
-          fi
-          echo "✅ Checksums match"
+      # Mirror Supabase + checksums Railway/Supabase retirés (Sprint 0 cleanup delivery system).
+      # Justification : Supabase n'était pas un endpoint applicatif, juste un mirror passif jamais
+      # utilisé en cas d'incident. Le dump Hostinger FTP (vérifié par sanity check + double upload)
+      # est suffisant pour 50 sites — restauration manuelle Railway depuis FTP < 30 min.
+      # Si besoin futur : restaurer manuellement le mirror sur secrets SUPABASE_URL existants,
+      # ou prévoir un test de restauration mensuel depuis FTP comme garde-fou alternatif.
 
       - name: Summary
         if: always()
@@ -159,4 +103,3 @@ jobs:
           echo "## Backup $TIMESTAMP" >> $GITHUB_STEP_SUMMARY
           echo "- Dump: $DUMP_FILE ($DUMP_SIZE bytes)" >> $GITHUB_STEP_SUMMARY
           echo "- Hostinger FTP: /public_html/neopro-video/db-backups/$DUMP_FILE" >> $GITHUB_STEP_SUMMARY
-          echo "- Supabase mirror: refreshed" >> $GITHUB_STEP_SUMMARY
