@@ -1,3 +1,10 @@
+## [3.240.2](https://github.com/Tallec7/neopro/compare/v3.240.1...v3.240.2) (2026-04-25)
+
+### Bug Fixes
+
+- **ci:** force release — htaccess neopro-health (empty commit ne déclenche pas paths-ignore) ([37497df](https://github.com/Tallec7/neopro/commit/37497df64eea69e16841ee91698552cf6dbd3d5a))
+- **ci:** force release pour déployer htaccess neopro-health ([e95b224](https://github.com/Tallec7/neopro/commit/e95b2240bda8fca33b741522c23487f0c6e1da45))
+
 ## [3.240.1](https://github.com/Tallec7/neopro/compare/v3.240.0...v3.240.1) (2026-04-24)
 
 ### Performance Improvements
