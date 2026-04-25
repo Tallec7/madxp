@@ -621,6 +621,35 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   }
 
   /**
+   * PR2.1 — cleanup cascade JSONB.
+   * Liste les sites dont le `local_config_mirror` (cache Pi de la config
+   * déployée) référence un videoId ou filename. Filtrage côté DB via ILIKE
+   * sur le JSONB stringifié.
+   */
+  async findSitesReferencingVideoInLocalMirror(criteria: { videoId?: string; filename?: string }): Promise<Array<{ id: string; site_name: string; site_type: string; local_config_mirror: Record<string, unknown> | null }>> {
+    const filters: string[] = [];
+    const params: string[] = [];
+    if (criteria.videoId) {
+      params.push(`%${criteria.videoId}%`);
+      filters.push(`local_config_mirror::text ILIKE $${params.length}`);
+    }
+    if (criteria.filename) {
+      params.push(`%${criteria.filename}%`);
+      filters.push(`local_config_mirror::text ILIKE $${params.length}`);
+    }
+    if (filters.length === 0) return [];
+
+    const result = await query<{ id: string; site_name: string; site_type: string; local_config_mirror: Record<string, unknown> | null }>(
+      `SELECT id, site_name, site_type, local_config_mirror
+       FROM sites
+       WHERE local_config_mirror IS NOT NULL
+         AND (${filters.join(' OR ')})`,
+      params,
+    );
+    return result.rows;
+  }
+
+  /**
    * Recupere un site avec les champs de connexion (pour dashboard et connection status).
    */
   async findConnectionInfo(id: string): Promise<{

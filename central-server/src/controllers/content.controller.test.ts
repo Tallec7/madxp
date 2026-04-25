@@ -25,12 +25,21 @@ jest.mock('../repositories', () => ({
   siteRepository: {
     exists: jest.fn(),
     findById: jest.fn(),
+    // PR2.1 — cascade JSONB : default = aucun mirror Pi référence la vidéo.
+    findSitesReferencingVideoInLocalMirror: jest.fn().mockResolvedValue([]),
+    updateLocalConfigMirror: jest.fn().mockResolvedValue(undefined),
   },
   // PR2 — cleanup cascade : la nouvelle deleteVideo lit findSitesByVideo
   // pour calculer l'usage avant DELETE. Default mock = pas d'usage (legacy
   // path : la suppression passe direct, sans cascade ni 409).
   siteVideoRepository: {
     findSitesByVideo: jest.fn().mockResolvedValue([]),
+  },
+  // PR2.1 — cascade JSONB : default = aucun profil ne référence la vidéo →
+  // pas de cleanup, le test legacy reste vert.
+  configProfileRepository: {
+    findProfilesReferencingVideo: jest.fn().mockResolvedValue([]),
+    replaceConfiguration: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -376,6 +385,7 @@ describe('Content Controller', () => {
           message: 'Vidéo supprimée avec succès',
           cascadeAffected: 0,
           affectedSites: [],
+          jsonbCleanup: { profilesCleaned: 0, mirrorsCleaned: 0, totalEntriesRemoved: 0 },
         });
       });
 
@@ -408,6 +418,7 @@ describe('Content Controller', () => {
           message: 'Vidéo supprimée avec succès',
           cascadeAffected: 0,
           affectedSites: [],
+          jsonbCleanup: { profilesCleaned: 0, mirrorsCleaned: 0, totalEntriesRemoved: 0 },
         });
       });
     });
