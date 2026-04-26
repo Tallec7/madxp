@@ -153,6 +153,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
     weekScreenTime: number;
     weekCompletionRate: number;
     weekSponsorsDisplayed: number;
+    videoErrors24h?: number;
   } | null = null;
 
   private readonly route = inject(ActivatedRoute);

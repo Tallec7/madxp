@@ -17,18 +17,60 @@
 
   <!-- ADR-058 — Écran PIN remote SaaS -->
   @if (pinRequired) {
-    <div class="pin-entry-overlay" style="position:fixed;inset:0;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;z-index:999;">
-      <div style="max-width:320px;width:90%;text-align:center;padding:24px;">
-        <h2 style="margin:0 0 8px;">🔒 Code PIN requis</h2>
-        <p style="opacity:0.7;margin:0 0 20px;">Saisissez le code PIN de la télécommande.</p>
-        <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-               [(ngModel)]="pinInput"
-               (keyup.enter)="submitPin()"
-               style="width:100%;padding:14px;font-size:1.4rem;text-align:center;letter-spacing:0.4em;border-radius:8px;border:1px solid #444;background:#1a1a2e;color:#fff;"
-               placeholder="••••" />
-        @if (pinError) { <p style="color:#f66;margin-top:12px;">{{ pinError }}</p> }
-        <button (click)="submitPin()" [disabled]="!pinInput || pinInput.length < 4 || pinSubmitting"
-                style="margin-top:16px;width:100%;padding:14px;border-radius:8px;border:0;background:#2c5eff;color:#fff;font-weight:600;cursor:pointer;">
+    <div
+      class="pin-entry-overlay"
+      style="
+        position: fixed;
+        inset: 0;
+        background: #111;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+      "
+    >
+      <div style="max-width: 320px; width: 90%; text-align: center; padding: 24px">
+        <h2 style="margin: 0 0 8px">🔒 Code PIN requis</h2>
+        <p style="opacity: 0.7; margin: 0 0 20px">Saisissez le code PIN de la télécommande.</p>
+        <input
+          type="password"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          maxlength="6"
+          [(ngModel)]="pinInput"
+          (keyup.enter)="submitPin()"
+          style="
+            width: 100%;
+            padding: 14px;
+            font-size: 1.4rem;
+            text-align: center;
+            letter-spacing: 0.4em;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #1a1a2e;
+            color: #fff;
+          "
+          placeholder="••••"
+        />
+        @if (pinError) {
+          <p style="color: #f66; margin-top: 12px">{{ pinError }}</p>
+        }
+        <button
+          (click)="submitPin()"
+          [disabled]="!pinInput || pinInput.length < 4 || pinSubmitting"
+          style="
+            margin-top: 16px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: 0;
+            background: #2c5eff;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+          "
+        >
           Valider
         </button>
       </div>
@@ -41,6 +83,7 @@
       class="toast"
       [class.toast-success]="toastType === 'success'"
       [class.toast-info]="toastType === 'info'"
+      [class.toast-error]="toastType === 'error'"
       [class.has-banner]="hasLicenseWarning"
       role="alert"
       aria-live="polite"
@@ -443,7 +486,13 @@
                     (click)="openPreferences(); closeHeaderMenu()"
                     aria-label="Préférences"
                   >
-                    <svg class="menu-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg
+                      class="menu-item-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
                       <path d="M4 6h16M4 12h10M4 18h16" />
                     </svg>
                     <span>Préférences</span>
@@ -544,6 +593,7 @@
                   <button
                     class="video-card ripple"
                     [class.playing]="playingVideoPath === video.path"
+                    [class.errored]="!!video.path && erroredVideoPaths.has(video.path)"
                     (click)="launchVideo(video)"
                     [attr.aria-label]="'Lancer la vidéo ' + video.name"
                   >
@@ -649,6 +699,7 @@
                     <button
                       class="recent-video-card ripple"
                       [class.playing]="playingVideoPath === video.path"
+                      [class.errored]="!!video.path && erroredVideoPaths.has(video.path)"
                       (click)="launchVideo(video)"
                       [attr.aria-label]="'Relancer ' + video.name"
                     >
@@ -849,6 +900,7 @@
                   <button
                     class="video-card ripple"
                     [class.playing]="playingVideoPath === video.path"
+                    [class.errored]="!!video.path && erroredVideoPaths.has(video.path)"
                     (click)="launchVideo(video)"
                     [attr.aria-label]="'Lancer la vidéo ' + video.name"
                   >
@@ -1111,6 +1163,7 @@
                   <button
                     class="video-card ripple"
                     [class.playing]="playingVideoPath === video.path"
+                    [class.errored]="!!video.path && erroredVideoPaths.has(video.path)"
                     (click)="launchVideo(video)"
                     [attr.aria-label]="'Lancer la vidéo ' + video.name"
                   >
@@ -1859,7 +1912,19 @@
 
 <!-- ADR-062 famille UX — Overlay Préférences (Pi) -->
 @if (showPreferencesMenu) {
-  <div class="prefs-overlay" (click)="closePreferences()" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;">
+  <div
+    class="prefs-overlay"
+    (click)="closePreferences()"
+    style="
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    "
+  >
     <div (click)="$event.stopPropagation()">
       <app-preferences-menu (dismissed)="closePreferences()"></app-preferences-menu>
     </div>
