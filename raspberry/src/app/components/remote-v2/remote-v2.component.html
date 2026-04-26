@@ -358,6 +358,28 @@
           <span class="r2-switch-thumb"></span>
         </button>
       </div>
+      <div class="r2-pref-row">
+        <span>Verrouiller la rotation</span>
+        <button
+          class="r2-switch"
+          [class.on]="prefsService.prefs.lockRotation"
+          (click)="updatePref('lockRotation', !prefsService.prefs.lockRotation)"
+          aria-label="Verrouiller la rotation"
+        >
+          <span class="r2-switch-thumb"></span>
+        </button>
+      </div>
+      <div class="r2-pref-row">
+        <span>Taille du texte</span>
+        <select
+          [value]="prefsService.prefs.fontSize"
+          (change)="updatePref('fontSize', $any($event.target).value)"
+          aria-label="Taille du texte"
+        >
+          <option value="normal">Normale</option>
+          <option value="large">Grande</option>
+        </select>
+      </div>
     </div>
   </div>
 

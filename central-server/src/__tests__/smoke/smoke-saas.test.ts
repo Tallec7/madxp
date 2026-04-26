@@ -2428,12 +2428,15 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       findFn: /async findProfilesReferencingVideo\(/.test(content),
-      filterByVideoId: /configuration::text ILIKE \$/.test(content),
+      // Filtrage JSONB délégué à `findRowsReferencingInJsonb` (cf. utils/jsonb-references.ts).
+      // Le smoke `jsonb-references util` ci-dessous garantit que la signature SQL est intacte.
+      delegatesToUtil: /findRowsReferencingInJsonb<ConfigProfileRow>/.test(content)
+        && /jsonbColumn:\s*'configuration'/.test(content),
       replaceFn: /async replaceConfiguration\(profileId:/.test(content),
       writesJsonb: /configuration = \$1::jsonb/.test(content),
     }).toEqual({
       findFn: true,
-      filterByVideoId: true,
+      delegatesToUtil: true,
       replaceFn: true,
       writesJsonb: true,
     });
@@ -2444,12 +2447,36 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       findFn: /async findSitesReferencingVideoInLocalMirror\(/.test(content),
-      filterMirror: /local_config_mirror::text ILIKE \$/.test(content),
+      // Filtrage JSONB délégué à `findRowsReferencingInJsonb` (cf. utils/jsonb-references.ts).
+      delegatesToUtil: /findRowsReferencingInJsonb</.test(content)
+        && /jsonbColumn:\s*'local_config_mirror'/.test(content),
       guardsNull: /local_config_mirror IS NOT NULL/.test(content),
     }).toEqual({
       findFn: true,
-      filterMirror: true,
+      delegatesToUtil: true,
       guardsNull: true,
+    });
+  });
+
+  it('jsonb-references util — pattern factorisé (PR refactor)', () => {
+    // Source de vérité du pattern `JSONB::text ILIKE` réutilisé par les sondes
+    // de cascade DELETE (config-profile, site). Si quelqu'un supprime cet util,
+    // les 2 sondes ci-dessus retombent en SQL inline → grep le détectera, mais
+    // cette assertion donne un message d'erreur ciblé.
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'utils', 'jsonb-references.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      exportsFn: /export async function findRowsReferencingInJsonb</.test(content),
+      castIlike: /\$\{config\.jsonbColumn\}::text ILIKE \$/.test(content),
+      injectionGuardTable: /assertSafeIdent\(config\.table/.test(content),
+      injectionGuardColumn: /assertSafeIdent\(config\.jsonbColumn/.test(content),
+      earlyReturnNoCriteria: /if \(filters\.length === 0\) return \[\];/.test(content),
+    }).toEqual({
+      exportsFn: true,
+      castIlike: true,
+      injectionGuardTable: true,
+      injectionGuardColumn: true,
+      earlyReturnNoCriteria: true,
     });
   });
 
