@@ -5,7 +5,7 @@ import { AdminActionRequest, LocalClientInput } from '../types/admin';
 import logger from '../config/logger';
 import { PassThrough } from 'stream';
 import socketService from '../services/socket.service';
-import { siteRepository, videoFtpAuditRepository } from '../repositories';
+import { siteRepository, videoFtpAuditRepository, analyticsRepository } from '../repositories';
 import { videoFtpAuditService } from '../services/video-ftp-audit.service';
 
 
@@ -172,3 +172,40 @@ export const runVideoFtpAudit = async (_req: AuthRequest, res: Response) => {
   }
 };
 
+
+/**
+ * GET /api/admin/video-health
+ * Vue agrégée "Santé vidéos flotte" pour le dashboard super_admin :
+ * - orphelines FTP (totaux missing / unreachable + dernière exécution CRON)
+ * - erreurs de lecture vidéo des dernières 24h, sommées et top par site
+ *
+ * Fait deux requêtes en parallèle. Pas de cache : la page est super_admin only
+ * et les données changent au rythme du CRON nocturne (3h) + des analytics Pi.
+ */
+export const getFleetVideoHealth = async (_req: AuthRequest, res: Response) => {
+  try {
+    const last24hStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [ftpCounts, ftpWarnings, fleetErrors] = await Promise.all([
+      videoFtpAuditRepository.countActive(),
+      videoFtpAuditRepository.findAllActive(50),
+      analyticsRepository.getFleetVideoPlaybackErrors(last24hStart, 25),
+    ]);
+
+    const totalErrors24h = fleetErrors.reduce((sum, row) => sum + row.error_count, 0);
+    const lastFtpAuditAt = ftpWarnings[0]?.last_checked_at || null;
+
+    return res.json({
+      summary: {
+        ftpOrphans: ftpCounts,
+        videoErrors24h: totalErrors24h,
+        sitesWithErrors: fleetErrors.length,
+        lastFtpAuditAt,
+      },
+      topErrorSites: fleetErrors,
+      ftpOrphans: ftpWarnings,
+    });
+  } catch (error) {
+    logger.error('Error fetching fleet video health:', error);
+    return res.status(500).json({ error: 'Failed to fetch fleet video health' });
+  }
+};

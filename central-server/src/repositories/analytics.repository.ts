@@ -923,6 +923,57 @@ class AnalyticsRepositoryImpl {
   }
 
   /**
+   * Count video playback errors for a site since a given date.
+   * Source : `video_plays` rows with `interruption_reason = 'video_error'`
+   * (alimenté par les Pi/SaaS quand la TV émet `lastError: 'play_error'`).
+   * Aligné sur le counter Prometheus `neopro_video_playback_errors_total`.
+   */
+  async countVideoPlaybackErrors(siteId: string, since: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2 AND interruption_reason = 'video_error'`,
+      [siteId, since]
+    );
+    return parseInt(result.rows[0]?.count || '0');
+  }
+
+  /**
+   * Top sites with video playback errors since a given date.
+   * Source identique à `countVideoPlaybackErrors` (interruption_reason='video_error')
+   * mais agrégé GROUP BY site_id pour l'écran "Santé vidéos flotte" admin.
+   */
+  async getFleetVideoPlaybackErrors(
+    since: string,
+    limit = 50,
+  ): Promise<Array<{ site_id: string; site_name: string | null; club_name: string | null; error_count: number }>> {
+    const result = await query<{
+      site_id: string;
+      site_name: string | null;
+      club_name: string | null;
+      error_count: string;
+    }>(
+      `SELECT vp.site_id,
+              s.site_name,
+              s.club_name,
+              COUNT(*)::int AS error_count
+         FROM video_plays vp
+         LEFT JOIN sites s ON s.id = vp.site_id
+        WHERE vp.played_at >= $1
+          AND vp.interruption_reason = 'video_error'
+        GROUP BY vp.site_id, s.site_name, s.club_name
+        ORDER BY error_count DESC
+        LIMIT $2`,
+      [since, limit],
+    );
+    return result.rows.map(r => ({
+      site_id: r.site_id,
+      site_name: r.site_name,
+      club_name: r.club_name,
+      error_count: parseInt(String(r.error_count), 10) || 0,
+    }));
+  }
+
+  /**
    * Count distinct sponsors displayed for a site since a given date.
    */
   async countSponsorsDisplayed(siteId: string, since: string): Promise<number> {

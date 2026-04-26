@@ -21,6 +21,23 @@
   >
   </app-club-saas-actions>
 
+  <!-- Video playback health banner (Pi + SaaS) — chantier vidéos manquantes.
+       Visible uniquement quand des erreurs ont été reportées dans les
+       dernières 24h ; pointe vers /club/diagnostic pour le détail. -->
+  <a
+    class="video-errors-banner"
+    *ngIf="(siteDashboard?.saasMetrics?.videoErrors24h || 0) > 0"
+    routerLink="/club/diagnostic"
+    data-testid="club-video-errors-banner"
+  >
+    <span class="vbe-icon">⚠️</span>
+    <span class="vbe-text">
+      <strong>{{ siteDashboard?.saasMetrics?.videoErrors24h }}</strong>
+      erreur(s) de lecture vidéo dans les 24 dernières heures.
+    </span>
+    <span class="vbe-cta">Voir le diagnostic →</span>
+  </a>
+
   <!-- Pi site dashboard -->
   <div class="status-cards" *ngIf="siteDashboard && !isSaas">
     <!-- Connection Status -->

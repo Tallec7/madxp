@@ -5,6 +5,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { AnalyticsService, ClubHealthData } from '../../core/services/analytics.service';
 import { FeatureGateService } from '../../core/services/feature-gate.service';
+import { ClubDashboardDataService } from './club-dashboard-data.service';
 
 interface SiteInfo {
   id: string;
@@ -63,6 +64,17 @@ interface SiteInfo {
             <div class="card-label">Disponibilité 24h</div>
             <div class="card-value">{{ health?.availability_24h ?? '—' }}<span class="unit" *ngIf="health">%</span></div>
             <div class="card-sub" *ngIf="health">Alertes 24h : {{ health.alerts_24h }}</div>
+          </div>
+
+          <div class="card" data-testid="club-diagnostic-video-errors">
+            <div class="card-label">Erreurs vidéo (24h)</div>
+            <div class="card-value" [class.warn]="(videoErrors24h || 0) > 0 && (videoErrors24h || 0) < 5" [class.ko]="(videoErrors24h || 0) >= 5">
+              {{ videoErrors24h ?? 0 }}
+            </div>
+            <div class="card-sub">
+              Lectures vidéo qui ont planté côté TV (404, format, réseau).
+              <span *ngIf="(videoErrors24h || 0) > 0">Vérifie la bibliothèque pour repérer les fichiers manquants.</span>
+            </div>
           </div>
 
           <div class="card" *ngIf="health?.current_metrics as m">
@@ -141,9 +153,11 @@ export class ClubDiagnosticComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly analyticsService = inject(AnalyticsService);
   private readonly gate = inject(FeatureGateService);
+  private readonly dashboardData = inject(ClubDashboardDataService);
 
   site: SiteInfo | null = null;
   health: ClubHealthData | null = null;
+  videoErrors24h: number | null = null;
   loading = true;
   private sub?: Subscription;
 
@@ -169,11 +183,13 @@ export class ClubDiagnosticComponent implements OnInit, OnDestroy {
       startWith(0),
       switchMap(() => forkJoin({
         site: this.api.get<SiteInfo>(`/sites/${id}`).pipe(catchError(() => of(null))),
-        health: this.analyticsService.getClubHealth(id).pipe(catchError(() => of(null)))
+        health: this.analyticsService.getClubHealth(id).pipe(catchError(() => of(null))),
+        dashboard: this.dashboardData.fetchDashboard().pipe(catchError(() => of(null))),
       }))
-    ).subscribe(({ site, health }) => {
+    ).subscribe(({ site, health, dashboard }) => {
       if (site) this.site = site;
       if (health) this.health = health;
+      if (dashboard) this.videoErrors24h = dashboard.saasMetrics?.videoErrors24h ?? 0;
       this.loading = false;
     });
   }

@@ -351,6 +351,50 @@ describe('RemoteV2Component', () => {
     });
   });
 
+  // ---- Feedback erreur vidéo (player-state.lastError === 'play_error') ----
+  describe('handlePlayerState — feedback erreur vidéo manuelle', () => {
+    function getPlayerStateHandler(): (data: { lastError?: string | null }) => void {
+      const call = mockSocket.on.calls.allArgs().find(args => args[0] === 'player-state');
+      expect(call).toBeTruthy();
+      return call![1] as (data: { lastError?: string | null }) => void;
+    }
+
+    it('enregistre un listener Socket.IO sur player-state au boot', () => {
+      const events = mockSocket.on.calls.allArgs().map(a => a[0]);
+      expect(events).toContain('player-state');
+    });
+
+    it('marque la vidéo en erreur, reset playingVideoId et émet un toast rouge', () => {
+      const v = { id: 'joueur-85', name: 'Joueur 85', type: 'video', path: 'videos/x/85.mp4' };
+      component.playVideo(v);
+      expect(component.playingVideoId).toBe('joueur-85');
+
+      getPlayerStateHandler()({ lastError: 'play_error' });
+
+      expect(component.erroredVideoIds.has('joueur-85')).toBe(true);
+      expect(component.playingVideoId).toBeNull();
+      expect(component.playingVideo).toBeNull();
+      expect(component.toast).toContain('Joueur 85');
+      expect(component.toast).toContain('indisponible');
+      expect(component.toastKind).toBe('error');
+    });
+
+    it('ignore les player-state sans erreur', () => {
+      const v = { id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' };
+      component.playVideo(v);
+      getPlayerStateHandler()({ lastError: null });
+      expect(component.playingVideoId).toBe('v1');
+      expect(component.erroredVideoIds.has('v1')).toBe(false);
+    });
+
+    it('retire le marqueur d\'erreur quand l\'utilisateur retente la lecture', () => {
+      const v = { id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' };
+      component.erroredVideoIds.add('v1');
+      component.playVideo(v);
+      expect(component.erroredVideoIds.has('v1')).toBe(false);
+    });
+  });
+
   // ---- Phase divergence ----
   describe('phaseDivergesFromLoop', () => {
     it('false quand phase === loop', () => {

@@ -26,12 +26,15 @@ const THUMB_GRADIENTS = [
     <button
       class="r2-video-row"
       [class.playing]="active"
+      [class.errored]="errored"
+      [attr.data-testid]="errored ? 'video-row-errored' : null"
       (click)="playClick.emit(video)"
     >
       <span class="r2-video-thumb" [style.background]="gradient(video.id || video.path)">
         <img *ngIf="thumbnailUrl(video) as url" [src]="url" [alt]="video.name"
           (error)="onThumbError($event)" loading="lazy"/>
         <span class="r2-video-thumb-initials">{{ initials(video) }}</span>
+        <span class="r2-video-error-badge" *ngIf="errored" aria-label="Lecture en erreur" title="Dernière lecture en erreur">!</span>
       </span>
       <span class="r2-video-meta">
         <span class="r2-video-name">{{ video.name }}</span>
@@ -64,6 +67,7 @@ const THUMB_GRADIENTS = [
 export class R2VideoRowComponent {
   @Input({ required: true }) video!: PiConfigVideoEntry;
   @Input() active = false;
+  @Input() errored = false;
   @Input() useLocalThumbnails = true;
   @Input() cacheBuster = Date.now();
   @Output() playClick = new EventEmitter<PiConfigVideoEntry>();

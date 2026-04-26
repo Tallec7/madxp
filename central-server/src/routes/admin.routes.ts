@@ -21,4 +21,8 @@ router.get('/socket-debug', authenticate, requireRole('admin'), adminController.
 router.get('/video-ftp-orphans', authenticate, requireRole('super_admin'), adminController.listVideoFtpOrphans);
 router.post('/video-ftp-orphans/run', authenticate, requireRole('super_admin'), adminController.runVideoFtpAudit);
 
+// Vue agrégée "Santé vidéos flotte" : combine FTP orphans + erreurs de
+// lecture 24h. Source de la page super_admin /admin/video-health.
+router.get('/video-health', authenticate, requireRole('super_admin'), adminController.getFleetVideoHealth);
+
 export default router;

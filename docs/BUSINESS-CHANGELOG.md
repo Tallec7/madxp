@@ -17,6 +17,7 @@
 - Aucun changement visible utilisateur
   (sessions techniques d'audit + refactor d'infra + cleanup process)
 - **Télécommande V2 : verrou rotation + taille du texte de retour** ([#624](https://github.com/Tallec7/neopro/pull/624)) — la sheet "Préférences" V2 ré-expose 2 contrôles d'accessibilité disponibles en V1 (lock rotation, taille texte normale/grande). Les clubs qui activent V2 retrouvent ces options sans devoir basculer en V1.
+- **Vidéos manquantes : feedback visible sur les 3 surfaces** ([#630](https://github.com/Tallec7/neopro/pull/630)) — 3e étage du chantier "vidéos manquantes" (après #613/#616/#617/#618). NLF / staff club voient désormais : (1) un toast rouge `⚠️ Vidéo X indisponible — boucle reprise` sur la télécommande quand une vidéo plante, plus un badge `!` persistant sur le bouton ; (2) une bannière rouge sur `/club` quand des erreurs ont été détectées dans les 24h, qui pointe vers `/club/diagnostic` ; (3) une nouvelle tile `Erreurs vidéo (24h)` côté diagnostic. Plus d'écran figé en match sans explication.
 
 ### 🛡️ Pour la robustesse / production
 
@@ -24,6 +25,7 @@
 - **Backup task : alerte explicite** ([#600](https://github.com/Tallec7/neopro/pull/600)) — si quelqu'un croit avoir un backup CRON qui tourne, on le sait maintenant (avant : faux positif "success" silencieux dangereux).
 - **Notifications Slack quand un objectif club est à risque** ([#612](https://github.com/Tallec7/neopro/pull/612)) — alerte groupée par site (1 message Slack par site, liste des objectifs <50% de progression). Activable via `SLACK_WEBHOOK_URL`.
 - **Backup DB quotidien rendu idempotent** ([#626](https://github.com/Tallec7/neopro/pull/626)) — le job GitHub Actions plantait dès le 2e run (Hostinger FTP renvoyait "550 File exists" sur le `mkdir`). Désormais robuste : les sauvegardes Railway → Hostinger + Supabase tournent sans intervention.
+- **Page super_admin "Santé vidéos flotte"** ([#630](https://github.com/Tallec7/neopro/pull/630)) — `/admin/video-health` agrège les orphelines FTP (du CRON nocturne) + les erreurs de lecture 24h flotte (du compteur Prometheus) en une seule vue. KPIs + top sites en erreur (drill-down vers le contenu) + bouton `Lancer audit FTP maintenant`. Avant : ces données existaient mais aucun écran ne les affichait.
 
 ### 🧹 Pour l'équipe (toi + futurs devs)
 

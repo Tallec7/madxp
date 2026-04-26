@@ -160,6 +160,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
                 <span class="icon" aria-hidden="true">🛠️</span>
                 <span>{{ 'nav.localConsole' | translate }}</span>
               </a>
+              <a routerLink="/admin/video-health" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isSuperAdmin()" aria-describedby="admin-section" aria-label="Santé vidéos flotte">
+                <span class="icon" aria-hidden="true">🎬</span>
+                <span>Santé vidéos flotte</span>
+              </a>
               <a routerLink="/safe" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-describedby="admin-section" [attr.aria-label]="'nav.safe' | translate">
                 <span class="icon" aria-hidden="true">📊</span>
                 <span>{{ 'nav.safe' | translate }}</span>
@@ -752,6 +756,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   isAdmin(): boolean {
     return this.authService.hasRole('admin', 'super_admin');
+  }
+
+  isSuperAdmin(): boolean {
+    return this.authService.hasRole('super_admin');
   }
 
   isClub(): boolean {

@@ -912,6 +912,13 @@ $danger-bg: #ffecec;
   box-shadow: 0 8px 20px -4px rgba(16, 24, 40, 0.4);
   z-index: 100;
   animation: np-toast-in 180ms ease-out;
+
+  // Variant erreur (vidéo manuelle indisponible — feedback chantier vidéos manquantes).
+  &.is-error {
+    background: #cc384e;
+    color: #fff;
+    box-shadow: 0 8px 22px -4px rgba(204, 56, 78, 0.5);
+  }
 }
 
 @keyframes np-toast-in {
@@ -1599,12 +1606,38 @@ $danger-bg: #ffecec;
     border-color: rgba($accent, 0.3);
   }
 
+  // Indicateur visuel : la dernière tentative de lecture a échoué côté TV
+  // (player-state.lastError === 'play_error'). Reset quand l'utilisateur
+  // retente la lecture.
+  &.errored {
+    background: rgba(204, 56, 78, 0.06);
+    border-color: rgba(204, 56, 78, 0.35);
+  }
+
   .r2-video-thumb {
     width: 42px;
     height: 42px;
     border-radius: 8px;
     flex-shrink: 0;
     display: block;
+    position: relative;
+  }
+
+  .r2-video-error-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 99px;
+    background: #cc384e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+    box-shadow: 0 2px 4px -1px rgba(204, 56, 78, 0.6);
+    pointer-events: none;
   }
 
   .r2-video-meta {

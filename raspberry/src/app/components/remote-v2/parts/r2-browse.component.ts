@@ -72,6 +72,7 @@ export type Phase = 'before' | 'during' | 'after';
                 *ngFor="let v of sub.videos"
                 [video]="v"
                 [active]="playingVideoId === v.id"
+                [errored]="!!v.id && erroredVideoIds.has(v.id)"
                 [useLocalThumbnails]="useLocalThumbnails"
                 [cacheBuster]="cacheBuster"
                 (playClick)="playVideo.emit($event)"
@@ -84,6 +85,7 @@ export type Phase = 'before' | 'during' | 'after';
               *ngFor="let v of cat.videos"
               [video]="v"
               [active]="playingVideoId === v.id"
+              [errored]="!!v.id && erroredVideoIds.has(v.id)"
               [useLocalThumbnails]="useLocalThumbnails"
               [cacheBuster]="cacheBuster"
               (playClick)="playVideo.emit($event)"
@@ -102,6 +104,7 @@ export class R2BrowseComponent {
   @Input() expandedCategories: Record<string, boolean> = {};
   @Input() expandedSubs: Record<string, boolean> = {};
   @Input() playingVideoId: string | null = null;
+  @Input() erroredVideoIds: ReadonlySet<string> = new Set<string>();
   @Input() useLocalThumbnails = true;
   @Input() cacheBuster = Date.now();
 

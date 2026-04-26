@@ -1103,6 +1103,119 @@ describe('SaaS site-detail dashboard guards', () => {
     });
   });
 
+  // --- Video playback errors surface (chantier vidéos manquantes) ---
+  // Le counter Prometheus `neopro_video_playback_errors_total{site_id}` ne
+  // sert à rien si l'utilisateur club ne le voit pas. Pinné ici pour empêcher
+  // une régression silencieuse côté repo / controller / dashboard.
+  it('analytics.repository.ts must have countVideoPlaybackErrors filtering on interruption_reason=video_error', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'analytics.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasMethod: content.includes('countVideoPlaybackErrors'),
+      filtersInterruptionReason: /interruption_reason\s*=\s*'video_error'/.test(content),
+    }).toEqual({
+      hasMethod: true,
+      filtersInterruptionReason: true,
+    });
+  });
+
+  it('site-fleet-dashboard.controller.ts must surface videoErrors24h via countVideoPlaybackErrors', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'site-fleet-dashboard.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasField: content.includes('videoErrors24h'),
+      callsRepo: content.includes('countVideoPlaybackErrors'),
+    }).toEqual({
+      hasField: true,
+      callsRepo: true,
+    });
+  });
+
+  it('club-dashboard must render the videoErrors24h banner', () => {
+    const htmlPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-dashboard.component.html');
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    expect({
+      hasBanner: html.includes('video-errors-banner'),
+      bindsField: html.includes('videoErrors24h'),
+      linksToDiagnostic: /routerLink=["']\/club\/diagnostic["']/.test(html),
+    }).toEqual({
+      hasBanner: true,
+      bindsField: true,
+      linksToDiagnostic: true,
+    });
+  });
+
+  it('admin.controller.ts must expose getFleetVideoHealth using both repos', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'admin.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasHandler: content.includes('getFleetVideoHealth'),
+      callsFleetErrors: content.includes('getFleetVideoPlaybackErrors'),
+      callsFtpAudit: content.includes('videoFtpAuditRepository.countActive'),
+    }).toEqual({
+      hasHandler: true,
+      callsFleetErrors: true,
+      callsFtpAudit: true,
+    });
+  });
+
+  it('admin.routes.ts must mount /video-health behind super_admin guard', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'admin.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasRoute: /router\.get\(\s*['"]\/video-health['"]/.test(content),
+      requiresSuperAdmin: /\/video-health[^\n]+requireRole\(['"]super_admin['"]\)/.test(content),
+      bindsHandler: content.includes('getFleetVideoHealth'),
+    }).toEqual({
+      hasRoute: true,
+      requiresSuperAdmin: true,
+      bindsHandler: true,
+    });
+  });
+
+  it('analytics.repository.ts must aggregate fleet video errors GROUP BY site_id', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'analytics.repository.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      hasMethod: content.includes('getFleetVideoPlaybackErrors'),
+      groupsBySite: /GROUP BY[^\n]+vp\.site_id/.test(content),
+      filtersInterruptionReason: /interruption_reason\s*=\s*'video_error'/.test(content),
+    }).toEqual({
+      hasMethod: true,
+      groupsBySite: true,
+      filtersInterruptionReason: true,
+    });
+  });
+
+  it('app.routes.ts must register /admin/video-health behind super_admin role', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'app.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const block = content.split("path: 'admin/video-health'")[1] || '';
+    expect({
+      hasRoute: content.includes("path: 'admin/video-health'"),
+      isSuperAdminOnly: /roles:\s*\[['"]super_admin['"]\]/.test(block.split('}')[0] || ''),
+      lazyLoads: content.includes("./features/admin/video-health/video-health.component"),
+    }).toEqual({
+      hasRoute: true,
+      isSuperAdminOnly: true,
+      lazyLoads: true,
+    });
+  });
+
+  it('club-diagnostic must render the videoErrors24h tile', () => {
+    const tsPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-diagnostic.component.ts');
+    const content = fs.readFileSync(tsPath, 'utf8');
+    expect({
+      bindsField: content.includes('videoErrors24h'),
+      hasTestId: content.includes('club-diagnostic-video-errors'),
+      callsDashboard: content.includes('fetchDashboard'),
+    }).toEqual({
+      bindsField: true,
+      hasTestId: true,
+      callsDashboard: true,
+    });
+  });
+
   // --- analytics.repository.ts must have SaaS metric methods ---
   it('analytics.repository.ts must have countSessions, countSponsorsDisplayed, getCompletionRate', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'repositories', 'analytics.repository.ts');
