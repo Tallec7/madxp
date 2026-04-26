@@ -137,11 +137,17 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // Toast
   public showToast = false;
   public toastMessage = '';
-  public toastType: 'success' | 'info' = 'success';
+  public toastType: 'success' | 'info' | 'error' = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Vidéo en cours
   public playingVideoPath: string | null = null;
+  /**
+   * Chemins des vidéos dont la dernière tentative a planté côté TV
+   * (player-state.lastError === 'play_error'). Affiché via un badge ⚠️ sur
+   * la ligne. Vidé pour un path donné quand l'utilisateur retente la lecture.
+   */
+  public erroredVideoPaths = new Set<string>();
 
   // Vidéos récentes
   public recentVideos: PiConfigVideoEntry[] = [];
@@ -345,6 +351,14 @@ export class RemoteComponent implements OnInit, OnDestroy {
           this.displayTarget = 'all';
         }
       });
+    });
+
+    // Feedback erreur vidéo : la TV émet `player-state` avec
+    // `lastError: 'play_error'` quand une vidéo manuelle plante (404, format
+    // invalide, timeout réseau). Sans ce listener, le bouton Remote reste
+    // figé en "playing" alors que la TV recovery vers la boucle.
+    this.socketService.on('player-state', (data: { lastError?: string | null }) => {
+      this.ngZone.run(() => this.handlePlayerState(data));
     });
 
     this.socketService.emit('request-state', {});
@@ -637,6 +651,8 @@ export class RemoteComponent implements OnInit, OnDestroy {
 
   public launchVideo(video: PiConfigVideoEntry): void {
     this.notifyUserActivity();
+    // Retry : on retire le marqueur d'erreur précédent pour ce path.
+    if (video.path) this.erroredVideoPaths.delete(video.path);
     const target = this.getCommandTarget();
     const commandId = this.newCommandId();
 
@@ -678,12 +694,45 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // TOAST
   // ============================================================================
 
-  private displayToast(message: string, type: 'success' | 'info' = 'success'): void {
+  private displayToast(message: string, type: 'success' | 'info' | 'error' = 'success'): void {
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
     this.toastMessage = message;
     this.toastType = type;
     this.showToast = true;
-    this.toastTimeout = setTimeout(() => { this.showToast = false; }, 3000);
+    // Les erreurs restent un peu plus longtemps pour laisser le staff lire.
+    const duration = type === 'error' ? 4500 : 3000;
+    this.toastTimeout = setTimeout(() => { this.showToast = false; }, duration);
+  }
+
+  /**
+   * Reçoit l'état du player TV. Si la TV signale un `play_error` alors qu'on
+   * a une vidéo forcée en cours, on marque le path en erreur et on ramène l'UI
+   * à l'état "boucle" (sinon le bouton reste figé surligné).
+   */
+  private handlePlayerState(data: { lastError?: string | null }): void {
+    if (data?.lastError !== 'play_error') return;
+    const failedPath = this.playingVideoPath;
+    if (failedPath) this.erroredVideoPaths.add(failedPath);
+    const failedName = this.findVideoNameByPath(failedPath);
+    this.playingVideoPath = null;
+    this.displayToast(`⚠️ ${failedName} indisponible — boucle reprise`, 'error');
+  }
+
+  /** Retrouve le nom d'une vidéo via son path dans la config courante. */
+  private findVideoNameByPath(path: string | null): string {
+    if (!path || !this.configuration) return 'Vidéo';
+    const search = (cats: Category[] | undefined): string | null => {
+      if (!cats) return null;
+      for (const cat of cats) {
+        for (const v of cat.videos || []) {
+          if (v.path === path) return v.name || 'Vidéo';
+        }
+        const sub = search(cat.subCategories);
+        if (sub) return sub;
+      }
+      return null;
+    };
+    return search(this.configuration.categories) || 'Vidéo';
   }
 
   // ============================================================================

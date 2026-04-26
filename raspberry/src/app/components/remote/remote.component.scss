@@ -183,6 +183,12 @@ $dark-border: #4b5563;
     @include gradient($blue, #2563eb);
     color: white;
   }
+  // Variant erreur (vidéo manuelle indisponible — chantier vidéos manquantes).
+  &.toast-error {
+    background: #cc384e;
+    color: white;
+    box-shadow: 0 10px 40px rgba(204, 56, 78, 0.5);
+  }
   // Décale le toast quand la bannière de licence est visible
   &.has-banner {
     top: 4rem;
@@ -1044,6 +1050,30 @@ input:focus-visible {
     }
     .video-icon {
       filter: brightness(10);
+    }
+  }
+  // État erreur de lecture (player-state.lastError === 'play_error') —
+  // chantier vidéos manquantes. Reset au prochain clic via launchVideo().
+  &.errored {
+    border-color: rgba(204, 56, 78, 0.6);
+    background: rgba(204, 56, 78, 0.08);
+    position: relative;
+    &::after {
+      content: '!';
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 99px;
+      background: #cc384e;
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 18px;
+      text-align: center;
+      box-shadow: 0 2px 4px -1px rgba(204, 56, 78, 0.6);
+      pointer-events: none;
     }
   }
 }
