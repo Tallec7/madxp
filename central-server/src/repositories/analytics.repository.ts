@@ -923,6 +923,21 @@ class AnalyticsRepositoryImpl {
   }
 
   /**
+   * Count video playback errors for a site since a given date.
+   * Source : `video_plays` rows with `interruption_reason = 'video_error'`
+   * (alimenté par les Pi/SaaS quand la TV émet `lastError: 'play_error'`).
+   * Aligné sur le counter Prometheus `neopro_video_playback_errors_total`.
+   */
+  async countVideoPlaybackErrors(siteId: string, since: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM video_plays
+       WHERE site_id = $1 AND played_at >= $2 AND interruption_reason = 'video_error'`,
+      [siteId, since]
+    );
+    return parseInt(result.rows[0]?.count || '0');
+  }
+
+  /**
    * Count distinct sponsors displayed for a site since a given date.
    */
   async countSponsorsDisplayed(siteId: string, since: string): Promise<number> {

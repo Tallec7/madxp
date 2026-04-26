@@ -52,6 +52,8 @@ export interface SaasMetrics {
     createdAt: string;
   } | null;
   activeAlertsCount?: number;
+  /** Erreurs de lecture vidéo dans les 24 dernières heures (chantier vidéos manquantes). */
+  videoErrors24h?: number;
 }
 
 export interface SiteDashboard {

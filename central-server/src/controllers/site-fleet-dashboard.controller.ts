@@ -144,6 +144,9 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       // Pi-only (option B) — dernière OTA + alertes actives (0/null pour SaaS)
       lastOtaDeployment: LastOtaDeployment | null;
       activeAlertsCount: number;
+      // Erreurs de lecture vidéo dans les 24 dernières heures (chantier vidéos
+      // manquantes — surface UX du counter Prometheus côté club portal).
+      videoErrors24h: number;
     } | null = null;
 
     // Engagement metrics sont calculees pour TOUS les sites (SaaS + Pi).
@@ -161,6 +164,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       weekStart.setHours(0, 0, 0, 0);
       const previousWeekStart = new Date(weekStart);
       previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+      const last24hStart = new Date(nowDate.getTime() - 24 * 60 * 60 * 1000);
 
       const [
         todayUsage,
@@ -177,6 +181,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         siteSponsorsList,
         lastOtaRow,
         activeAlertsCount,
+        videoErrors24h,
       ] = await Promise.all([
         analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), nowDate.toISOString()),
         analyticsRepository.getDashboardUsage(id, yesterdayStart.toISOString(), todayStart.toISOString()),
@@ -200,6 +205,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         siteSponsorRepository.listBySite(id).catch(() => []),
         softwareUpdateRepository.findLastForSite(id).catch(() => null),
         alertRepository.countActiveForSite(id).catch(() => 0),
+        analyticsRepository.countVideoPlaybackErrors(id, last24hStart.toISOString()).catch(() => 0),
       ]);
 
       // #4 — active profile : extraire le nombre de vidéos de boucle + sponsors depuis la config JSONB
@@ -270,6 +276,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
             }
           : null,
         activeAlertsCount,
+        videoErrors24h,
       };
     }
 
