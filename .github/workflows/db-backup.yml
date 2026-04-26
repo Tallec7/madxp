@@ -72,7 +72,10 @@ jobs:
           lftp -u "$FTP_USER","$FTP_PASSWORD" "$FTP_HOST" <<EOF
           $LFTP_SETTINGS
           set cmd:fail-exit yes
-          mkdir -p $REMOTE_DIR
+          # mkdir -f : idempotent, n'échoue pas si le dossier existe déjà
+          # (Hostinger FTP renvoie 550 "File exists" sur mkdir -p classique,
+          # ce qui combiné à fail-exit:yes interrompait le job — run #16).
+          mkdir -f -p $REMOTE_DIR
           cd $REMOTE_DIR
           put $DUMP_FILE
           bye
