@@ -1,3 +1,9 @@
+# [3.250.0](https://github.com/Tallec7/neopro/compare/v3.249.0...v3.250.0) (2026-04-26)
+
+### Features
+
+- **remote:** mirror Remote V2 video error feedback to Remote V1 + admin site-detail banner ([#632](https://github.com/Tallec7/neopro/issues/632)) ([47d791f](https://github.com/Tallec7/neopro/commit/47d791fe6f4d73e0a40b6550b5d6ff3d52c70123)), closes [#630](https://github.com/Tallec7/neopro/issues/630) [#630](https://github.com/Tallec7/neopro/issues/630)
+
 # [3.249.0](https://github.com/Tallec7/neopro/compare/v3.248.0...v3.249.0) (2026-04-26)
 
 ### Features
