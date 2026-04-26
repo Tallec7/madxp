@@ -181,6 +181,7 @@ export const runVideoFtpAudit = async (_req: AuthRequest, res: Response) => {
  *
  * Fait deux requêtes en parallèle. Pas de cache : la page est super_admin only
  * et les données changent au rythme du CRON nocturne (3h) + des analytics Pi.
+ * Source de vérité côté UI : VideoHealthComponent (`/admin/video-health`).
  */
 export const getFleetVideoHealth = async (_req: AuthRequest, res: Response) => {
   try {
