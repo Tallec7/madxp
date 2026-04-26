@@ -7,16 +7,18 @@ name: Frontend Health Check
 # .htaccess on Hostinger after an FTP clean-slate, producing 404 on
 # /saas/remote?site=… or /sites/<uuid> while the home page still works.
 #
-# Runs every 10 minutes. On failure, the workflow fails (which triggers
+# Runs every hour. On failure, the workflow fails (which triggers
 # GitHub's default email notification to repo watchers) and can be hooked
 # into Alertmanager / Discord later via repository_dispatch.
+# The workflow_run trigger after Release is the primary detection mechanism;
+# the hourly cron is a fallback for non-deploy incidents (Hostinger outage, etc.).
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
   # Fire right after every release deploy so a broken deploy is caught
-  # within seconds instead of waiting for the next 10-min tick.
+  # within seconds instead of waiting for the next hourly tick.
   workflow_run:
     workflows: ['Release']
     types: [completed]
