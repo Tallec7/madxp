@@ -1,0 +1,634 @@
+{
+  "annotations": { "list": [] },
+  "description": "Métriques émises par le code mais absentes des autres dashboards. Vise à révéler les angles morts pour décider lesquelles promouvoir vers les dashboards principaux ou retirer du code.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["neopro"],
+      "targetBlank": false,
+      "title": "Neopro Dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "ADR-074 — Hotspot PSK (rotation flotte)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "id": 101,
+      "title": "PSK bootstrap attempts (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_hotspot_bootstrap_attempts_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "id": 102,
+      "title": "PSK rotation attempts (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_hotspot_rotation_attempts_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "id": 103,
+      "title": "PSK decrypt errors (CRITIQUE)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        { "expr": "sum(increase(neopro_hotspot_psk_decrypt_errors_total[1h]))", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 200,
+      "title": "ADR-093 — Match Sessions",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "id": 201,
+      "title": "Match sessions auto-closed (par raison, 24h)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (reason) (increase(neopro_match_sessions_autoclosed_total[1h]))",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "id": 202,
+      "title": "Match commands (par type)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (command_type) (rate(neopro_match_commands_total[5m]))",
+          "legendFormat": "{{command_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 300,
+      "title": "Vidéos — Cascade DELETE & FTP audit (PR #613-#618)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 19 },
+      "id": 301,
+      "title": "FTP orphans current",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 50 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [{ "expr": "neopro_video_ftp_orphans_current", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 19 },
+      "id": 302,
+      "title": "FTP audit warnings (1h)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        { "expr": "sum(increase(neopro_video_ftp_audit_warnings_total[1h]))", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 19 },
+      "id": 303,
+      "title": "FTP audit scanned (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_video_ftp_audit_scanned_total[5m]))",
+          "legendFormat": "scanned/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "id": 304,
+      "title": "FTP audit duration p95",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(neopro_video_ftp_audit_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "id": 305,
+      "title": "ADR-082 Video club grants (par action)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (action) (rate(neopro_video_club_grants_total[5m]))",
+          "legendFormat": "{{action}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "id": 400,
+      "title": "TV / Playback (Pi)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 34 },
+      "id": 401,
+      "title": "Video playback errors (par type)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (error_type) (rate(neopro_video_playback_errors_total[5m]))",
+          "legendFormat": "{{error_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 34 },
+      "id": 402,
+      "title": "Video stream requests (par status)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_video_stream_requests_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 34 },
+      "id": 403,
+      "title": "GPU decode fallback (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_gpu_decode_fallback_total[5m]))",
+          "legendFormat": "fallback/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 41 },
+      "id": 404,
+      "title": "Video preload reveal vs cleanup",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_video_preload_reveal_total[5m]))",
+          "legendFormat": "reveal",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(neopro_video_preload_cleanup_total[5m]))",
+          "legendFormat": "cleanup",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 41 },
+      "id": 405,
+      "title": "Video stale loop state (CRITIQUE)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_video_stale_loop_state_total[5m]))",
+          "legendFormat": "stale/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 41 },
+      "id": 406,
+      "title": "Video path resolution (par strategy)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (strategy) (rate(neopro_video_path_resolution_total[5m]))",
+          "legendFormat": "{{strategy}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "id": 500,
+      "title": "Template Studio v2",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 49 },
+      "id": 501,
+      "title": "Template Studio operations",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (operation) (rate(neopro_template_studio_operations_total[5m]))",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 49 },
+      "id": 502,
+      "title": "Template asset proxy upstream",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_template_asset_proxy_upstream_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 49 },
+      "id": 503,
+      "title": "Templates snapshot (count)",
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [{ "expr": "neopro_templates_snapshot", "refId": "A" }]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "id": 600,
+      "title": "Auth / MFA",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 57 },
+      "id": 601,
+      "title": "MFA setup (par étape)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (step) (rate(neopro_mfa_setup_total[5m]))",
+          "legendFormat": "{{step}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 57 },
+      "id": 602,
+      "title": "Legacy PIN migrations",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_legacy_pin_migrations_total[5m]))",
+          "legendFormat": "migrations/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 57 },
+      "id": 603,
+      "title": "Profile device tokens active",
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [{ "expr": "sum(neopro_profile_device_tokens_active)", "refId": "A" }]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 64 },
+      "id": 700,
+      "title": "Infra / Résilience",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 65 },
+      "id": 701,
+      "title": "DB circuit breaker state",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "0": { "color": "green", "text": "CLOSED" },
+                "1": { "color": "yellow", "text": "HALF" },
+                "2": { "color": "red", "text": "OPEN" }
+              },
+              "type": "value"
+            }
+          ],
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 2 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value"
+      },
+      "targets": [{ "expr": "neopro_db_circuit_breaker_state", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 65 },
+      "id": 702,
+      "title": "Canary rollbacks (1h)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [{ "expr": "sum(increase(neopro_canary_rollbacks_total[1h]))", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 65 },
+      "id": 703,
+      "title": "Orphan services detected",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_orphan_service_detected_total[15m]))",
+          "legendFormat": "detected/s",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 65 },
+      "id": 704,
+      "title": "Rate limit near exhaustion",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(neopro_rate_limit_near_exhaustion_total[5m]))",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 72 },
+      "id": 705,
+      "title": "State sync relays (par type)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (relay_type) (rate(neopro_state_sync_relays_total[5m]))",
+          "legendFormat": "{{relay_type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 72 },
+      "id": 706,
+      "title": "License status pushes",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_license_status_pushes_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 72 },
+      "id": 707,
+      "title": "FTP retries",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (operation) (rate(neopro_ftp_retries_total[5m]))",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 79 },
+      "id": 800,
+      "title": "Web / WiFi / Variants",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 80 },
+      "id": 801,
+      "title": "Web content fetch",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(neopro_web_content_fetch_total[5m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 80 },
+      "id": 802,
+      "title": "WiFi config (par action)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (action) (rate(neopro_wifi_config_total[5m]))",
+          "legendFormat": "{{action}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 80 },
+      "id": 803,
+      "title": "Secondary variant enrichment",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_secondary_variant_enrichment_total[5m]))",
+          "legendFormat": "enrichment/s",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(neopro_secondary_variant_enriched_count)",
+          "legendFormat": "enriched count",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 87 },
+      "id": 804,
+      "title": "Memory GC runs (rate 5m)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_memory_gc_runs_total[5m]))",
+          "legendFormat": "gc runs/s",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["neopro", "blind-spots", "audit"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "NeoPro Blind Spots",
+  "uid": "neopro-blind-spots",
+  "version": 1,
+  "weekStart": ""
+}
