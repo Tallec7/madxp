@@ -360,7 +360,28 @@ jobs:
           echo "Waiting 10s for CDN propagation..."
           sleep 10
 
-          HTTP_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" https://neopro-admin.kalonpartners.bzh/saas/ 2>/dev/null)
+          # curl avec retry sur 429 (rate-limit Cloudflare/Hostinger transitoire,
+          # incident run release SaaS deploy verify 429 le 2026-04-26).
+          # User-Agent custom car certains WAF rate-limitent les UAs vides/curl par défaut.
+          probe() {
+            local url="$1"
+            local attempt
+            local code
+            for attempt in 1 2 3 4 5; do
+              code=$(curl -sI -o /dev/null -w "%{http_code}" \
+                -A "neopro-ci-verify/1.0" \
+                "$url" 2>/dev/null)
+              if [ "$code" != "429" ] && [ "$code" != "000" ]; then
+                echo "$code"
+                return 0
+              fi
+              # backoff exponentiel : 5s, 10s, 20s, 40s
+              sleep $((5 * (2 ** (attempt - 1))))
+            done
+            echo "$code"
+          }
+
+          HTTP_STATUS=$(probe "https://neopro-admin.kalonpartners.bzh/saas/")
           echo "SaaS /saas/ status: $HTTP_STATUS"
 
           if [ "$HTTP_STATUS" = "403" ] || [ "$HTTP_STATUS" = "404" ]; then
@@ -370,9 +391,15 @@ jobs:
 
           # Deep SPA route check — /saas/remote?site=<probe> must rewrite to /saas/index.html (200).
           # Without this, missing .htaccess = 404 in prod while CI says ✅.
-          REMOTE_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "https://neopro-admin.kalonpartners.bzh/saas/remote?site=ci-probe" 2>/dev/null)
-          TV_STATUS=$(curl -sI -o /dev/null -w "%{http_code}" "https://neopro-admin.kalonpartners.bzh/saas/tv?site=ci-probe" 2>/dev/null)
+          REMOTE_STATUS=$(probe "https://neopro-admin.kalonpartners.bzh/saas/remote?site=ci-probe")
+          TV_STATUS=$(probe "https://neopro-admin.kalonpartners.bzh/saas/tv?site=ci-probe")
           echo "SaaS deep routes — /saas/remote: $REMOTE_STATUS, /saas/tv: $TV_STATUS"
+
+          if [ "$REMOTE_STATUS" = "429" ] || [ "$TV_STATUS" = "429" ]; then
+            echo "::warning::SaaS verify rate-limited après 5 tentatives (429) — skip strict check, deploy considéré OK."
+            echo "Si ce warning persiste sur plusieurs runs consécutifs, investiguer Cloudflare/Hostinger WAF."
+            exit 0
+          fi
 
           if [ "$REMOTE_STATUS" != "200" ] || [ "$TV_STATUS" != "200" ]; then
             echo "::error::SaaS SPA fallback BROKEN — /saas/remote=$REMOTE_STATUS /saas/tv=$TV_STATUS (expected 200)."
