@@ -1,3 +1,9 @@
+# [3.249.0](https://github.com/Tallec7/neopro/compare/v3.248.0...v3.249.0) (2026-04-26)
+
+### Features
+
+- **monitoring:** blind-spots dashboard + observability smoke guard ([#631](https://github.com/Tallec7/neopro/issues/631)) ([9d839a4](https://github.com/Tallec7/neopro/commit/9d839a48bc7056c2fdc23904eaebbad2510ca9c3))
+
 # [3.248.0](https://github.com/Tallec7/neopro/compare/v3.247.2...v3.248.0) (2026-04-26)
 
 ### Features
