@@ -24,6 +24,8 @@
 
 ### 🧹 Pour l'équipe (toi + futurs devs)
 
+- **Monitoring dashboard : 144 checks/jour → 24** — le workflow "Frontend Health Check" tournait toutes les 10 minutes inutilement entre deux déploiements. Réduit à toutes les heures ; le déclencheur post-Release (lui vraiment utile) reste intact.
+
 - **2 fichiers monstres splittés** : `socket.service.ts` (1263→991 lignes, [#607](https://github.com/Tallec7/neopro/pull/607) — extraction du SaaS relay) et `cron-scheduler.service.ts` (1036→486 lignes, [#612](https://github.com/Tallec7/neopro/pull/612) — extraction des 7 task executors). Reviews de PR plus rapides, scope cognitif clarifié.
 - **Règle SAFe morte archivée** ([#609](https://github.com/Tallec7/neopro/pull/609)) — `.claude/rules/safe-update.md` n'avait jamais été appliquée (735 commits sans MAJ auto). Moins de bruit dans chaque session Claude.
 - **2 nouveaux ADR documentés** : ADR-096 (split socket.service via handler dédié), ADR-097 (split cron-scheduler via cron-tasks/ modules).
