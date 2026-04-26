@@ -53,6 +53,7 @@
     [expandedCategories]="expandedCategories"
     [expandedSubs]="expandedSubs"
     [playingVideoId]="playingVideoId"
+    [erroredVideoIds]="erroredVideoIds"
     [useLocalThumbnails]="useLocalThumbnails"
     (setPhase)="setPhase($event)"
     (alignPhase)="alignPhaseToLoop()"
@@ -62,7 +63,16 @@
   ></app-r2-browse>
 
   <!-- TOAST -->
-  <div class="r2-toast" *ngIf="toast" role="status" aria-live="polite">{{ toast }}</div>
+  <div
+    class="r2-toast"
+    [class.is-error]="toastKind === 'error'"
+    *ngIf="toast"
+    role="status"
+    aria-live="polite"
+    data-testid="remote-v2-toast"
+  >
+    {{ toast }}
+  </div>
 
   <!-- SHEETS (modals) -->
 
@@ -146,6 +156,7 @@
             *ngFor="let v of recentVideos()"
             [video]="v"
             [active]="playingVideoId === v.id"
+            [errored]="!!v.id && erroredVideoIds.has(v.id)"
             [useLocalThumbnails]="useLocalThumbnails"
             (playClick)="playVideo($event)"
           ></app-r2-video-row>
@@ -161,6 +172,7 @@
           *ngFor="let v of searchResults()"
           [video]="v"
           [active]="playingVideoId === v.id"
+          [errored]="!!v.id && erroredVideoIds.has(v.id)"
           [useLocalThumbnails]="useLocalThumbnails"
           (playClick)="playVideo($event)"
         ></app-r2-video-row>

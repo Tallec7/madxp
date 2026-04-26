@@ -184,7 +184,16 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   /** Toast (notification fugitive). */
   toast: string | null = null;
+  /** Type du toast pour le style ('error' = rouge, sinon neutre). */
+  toastKind: 'info' | 'error' = 'info';
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Vidéos dont la dernière tentative de lecture a échoué côté TV
+   * (player-state.lastError === 'play_error'). Affiché via un badge ⚠️ sur
+   * la ligne. Vidé pour un id donné quand l'utilisateur retente la lecture.
+   */
+  erroredVideoIds = new Set<string>();
 
   /** Breaking news — texte courant (bufferisé localement, broadcast on demand). */
   breakingText = '';
@@ -258,6 +267,15 @@ export class RemoteV2Component implements OnInit, OnDestroy {
         this.loopId = data.phase;
       }
     });
+
+    // Feedback erreur vidéo : la TV émet `player-state` avec
+    // `lastError: 'play_error'` quand une vidéo manuelle plante (404, format
+    // invalide, timeout réseau). Sans ce listener, le bouton Remote reste
+    // figé en "playing" alors que la TV recovery vers la boucle.
+    this.socketService.on<{ lastError?: string | null; isManualMode?: boolean }>(
+      'player-state',
+      data => this.handlePlayerState(data),
+    );
 
     // Expansion par défaut : catégorie alignée sur la phase
     this.setDefaultExpanded();
@@ -364,10 +382,32 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
   }
 
-  showToast(msg: string): void {
+  showToast(msg: string, kind: 'info' | 'error' = 'info'): void {
     this.toast = msg;
+    this.toastKind = kind;
     if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => (this.toast = null), 1800);
+    // Les erreurs restent un peu plus longtemps pour laisser le staff lire.
+    const duration = kind === 'error' ? 3500 : 1800;
+    this.toastTimer = setTimeout(() => (this.toast = null), duration);
+  }
+
+  /**
+   * Reçoit l'état du player TV. Si la TV signale un `play_error` alors qu'on
+   * a une vidéo forcée en cours, on marque l'id en erreur et on ramène l'UI
+   * à l'état "boucle" (sinon le bouton reste figé surligné).
+   */
+  private handlePlayerState(data: { lastError?: string | null }): void {
+    if (data?.lastError !== 'play_error') return;
+    const failedId = this.playingVideoId;
+    if (failedId) this.erroredVideoIds.add(failedId);
+    const failedName = this.playingVideo?.name || 'Vidéo';
+    if (this.playingTimer) {
+      clearTimeout(this.playingTimer);
+      this.playingTimer = null;
+    }
+    this.playingVideoId = null;
+    this.playingVideo = null;
+    this.showToast(`⚠️ ${failedName} indisponible — boucle reprise`, 'error');
   }
 
   openSheet(sheet: Exclude<SheetType, null>): void {
@@ -472,6 +512,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   playVideo(v: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     this.addToRecentVideos(v);
+    // Retry : on retire le marqueur d'erreur précédent pour cet id.
+    if (v.id) this.erroredVideoIds.delete(v.id);
     this.playingVideoId = v.id ?? null;
     this.playingVideo = v;
     this.socketService.emit('command', {
