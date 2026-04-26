@@ -174,6 +174,12 @@ export const routes: Routes = [
         data: { roles: ['super_admin', 'admin'] },
         loadComponent: () => import('./features/admin/local-admin/local-admin.component').then(m => m.LocalAdminComponent)
       },
+      {
+        path: 'admin/video-health',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () => import('./features/admin/video-health/video-health.component').then(m => m.VideoHealthComponent)
+      },
       // Annonceurs (nouveau terme pour Sponsors)
       {
         path: 'advertisers',
