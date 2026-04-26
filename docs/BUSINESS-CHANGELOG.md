@@ -23,6 +23,7 @@
 - **Memory leak SaaS corrigé** ([#600](https://github.com/Tallec7/neopro/pull/600)) — évite les redémarrages Railway intempestifs après plusieurs jours d'uptime sur sites SaaS multi-clients.
 - **Backup task : alerte explicite** ([#600](https://github.com/Tallec7/neopro/pull/600)) — si quelqu'un croit avoir un backup CRON qui tourne, on le sait maintenant (avant : faux positif "success" silencieux dangereux).
 - **Notifications Slack quand un objectif club est à risque** ([#612](https://github.com/Tallec7/neopro/pull/612)) — alerte groupée par site (1 message Slack par site, liste des objectifs <50% de progression). Activable via `SLACK_WEBHOOK_URL`.
+- **Backup DB quotidien rendu idempotent** ([#626](https://github.com/Tallec7/neopro/pull/626)) — le job GitHub Actions plantait dès le 2e run (Hostinger FTP renvoyait "550 File exists" sur le `mkdir`). Désormais robuste : les sauvegardes Railway → Hostinger + Supabase tournent sans intervention.
 
 ### 🧹 Pour l'équipe (toi + futurs devs)
 
