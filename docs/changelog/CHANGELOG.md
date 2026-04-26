@@ -1,3 +1,15 @@
+## [3.247.2](https://github.com/Tallec7/neopro/compare/v3.247.1...v3.247.2) (2026-04-26)
+
+### Bug Fixes
+
+- **ci:** retry SaaS verify probes on 429, treat rate-limit as transient ([#629](https://github.com/Tallec7/neopro/issues/629)) ([97a6d7a](https://github.com/Tallec7/neopro/commit/97a6d7a3a41ce23cc76971de1d6f6d4a4f0d814e))
+
+## [3.247.1](https://github.com/Tallec7/neopro/compare/v3.247.0...v3.247.1) (2026-04-26)
+
+### Bug Fixes
+
+- **ci:** make FTP mkdir idempotent in db-backup workflow ([#626](https://github.com/Tallec7/neopro/issues/626)) ([1cfd5a1](https://github.com/Tallec7/neopro/commit/1cfd5a1008616ef779161d68bf1b08f33457e3bf)), closes [#16](https://github.com/Tallec7/neopro/issues/16)
+
 # [3.247.0](https://github.com/Tallec7/neopro/compare/v3.246.0...v3.247.0) (2026-04-25)
 
 ### Features
