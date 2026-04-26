@@ -1,3 +1,9 @@
+# [3.248.0](https://github.com/Tallec7/neopro/compare/v3.247.2...v3.248.0) (2026-04-26)
+
+### Features
+
+- **video-health:** surface vidéos manquantes sur les 3 surfaces UX (Remote/Club/Admin) ([#630](https://github.com/Tallec7/neopro/issues/630)) ([6b8e8fb](https://github.com/Tallec7/neopro/commit/6b8e8fbc514f57b392c512a03bd37582744b901a)), closes [617/#618](https://github.com/Tallec7/neopro/issues/618) [#617](https://github.com/Tallec7/neopro/issues/617) [617/#618](https://github.com/Tallec7/neopro/issues/618) [616/#617](https://github.com/Tallec7/neopro/issues/617) [617/#618](https://github.com/Tallec7/neopro/issues/618)
+
 ## [3.247.2](https://github.com/Tallec7/neopro/compare/v3.247.1...v3.247.2) (2026-04-26)
 
 ### Bug Fixes
