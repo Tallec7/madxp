@@ -1,3 +1,9 @@
+# [3.252.0](https://github.com/Tallec7/neopro/compare/v3.251.0...v3.252.0) (2026-04-27)
+
+### Features
+
+- **site-detail:** tab Contenu badge counts FTP orphans referenced by site (not just playback errors) ([#639](https://github.com/Tallec7/neopro/issues/639)) ([12f992e](https://github.com/Tallec7/neopro/commit/12f992efca530c4a65b2e9f067ede49b8e9a59c9))
+
 # [3.251.0](https://github.com/Tallec7/neopro/compare/v3.250.0...v3.251.0) (2026-04-27)
 
 ### Features
