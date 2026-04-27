@@ -1148,44 +1148,22 @@
   }
 }
 
-// Video playback errors banner — chantier vidéos manquantes (admin site detail).
-.video-errors-banner {
-  display: flex;
+// Tab badge — chantier vidéos manquantes : pastille rouge sur le tab Contenu
+// quand des erreurs de lecture vidéo ont été reportées dans les 24h.
+// Pattern reconnu (notif tab) — invisible à 0, immédiatement lisible à >0.
+.tab-btn .tab-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1.125rem;
-  margin-bottom: 1rem;
-  border-radius: 10px;
-  border: 1px solid #fca5a5;
-  background: #fef2f2;
-  color: #991b1b;
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: background 120ms ease;
-
-  &:hover {
-    background: #fee2e2;
-  }
-
-  .vbe-icon {
-    font-size: 1.25rem;
-    flex-shrink: 0;
-  }
-
-  .vbe-text {
-    flex: 1;
-    line-height: 1.4;
-
-    strong {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-  }
-
-  .vbe-cta {
-    font-weight: 600;
-    flex-shrink: 0;
-    color: #b91c1c;
-    white-space: nowrap;
-  }
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: #cc384e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-left: 0.4rem;
 }
