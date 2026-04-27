@@ -61,11 +61,12 @@ docs/specs/
 | [features/saas-mode](features/saas-mode.spec.md)                 | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live   | 2026-04-25     |
 | [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
 | [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
+| [features/hotspot-psk](features/hotspot-psk.spec.md)             | ADR-073, ADR-074, ADR-076                                     | Live   | 2026-04-27     |
 | [features/templates-studio](features/templates-studio.spec.md)   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095          | Live   | 2026-04-25     |
 | [services/cron-scheduler](services/cron-scheduler.spec.md)       | ADR-097                                                       | Live   | 2026-04-25     |
 | [services/socket-service](services/socket-service.spec.md)       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096 | Live   | 2026-04-25     |
 
-**Total : 7 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/hotspot-psk`, `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
+**Total : 8 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
 
 ## Cycle de vie d'une SPEC
 
