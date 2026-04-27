@@ -11,6 +11,7 @@
 
 - **[SESSION-3-SWOT-RECOMMANDATIONS.md](SESSION-3-SWOT-RECOMMANDATIONS.md)** — SWOT consolidé, pricing benchmark 13 acteurs, 5 reco roadmap (P0/P1/P2), 3 reco commerciales, plan d'action 90 jours
 - **[BENCHMARK-COMPETITORS.md](BENCHMARK-COMPETITORS.md)** — vue d'ensemble marché, matrice features × concurrents, cartographie positionnement
+- **[VOCABULARY-MAP.md](VOCABULARY-MAP.md)** — cartographie lexicale complète : phrase d'identité officielle, 14 clusters sémantiques, vocabulaire à éviter, guide d'utilisation SEO/pitch/home page
 
 ### 🎯 Fiches concurrents — segment terrain (priorité absolue)
 
