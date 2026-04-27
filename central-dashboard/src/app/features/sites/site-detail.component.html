@@ -733,21 +733,31 @@
 
     <!-- TAB: Contenu -->
     <div *ngIf="activeTab === 'content'" class="tab-panel">
-      <!-- Bannière erreurs de lecture vidéo (chantier vidéos manquantes) —
-           visible quand le site a reporté des plantages de lecture côté TV
-           dans les dernières 24h. Source : saasMetrics.videoErrors24h. -->
+      <!-- KPI erreurs de lecture vidéo (chantier vidéos manquantes) —
+           toujours visible pour que l'admin sache que la sonde tourne ;
+           rouge dès que count > 0, neutre à 0. Source : saasMetrics.videoErrors24h. -->
       <a
-        class="video-errors-banner"
-        *ngIf="(saasMetrics?.videoErrors24h || 0) > 0"
+        class="video-errors-card"
+        *ngIf="saasMetrics"
+        [class.has-errors]="(saasMetrics.videoErrors24h || 0) > 0"
         routerLink="/admin/video-health"
-        data-testid="site-content-video-errors-banner"
+        data-testid="site-content-video-errors-card"
       >
-        <span class="vbe-icon">⚠️</span>
-        <span class="vbe-text">
-          <strong>{{ saasMetrics?.videoErrors24h }}</strong>
-          erreur(s) de lecture vidéo dans les 24h sur ce site.
+        <span class="vec-icon">{{ (saasMetrics.videoErrors24h || 0) > 0 ? '⚠️' : '✓' }}</span>
+        <span class="vec-text">
+          <span class="vec-label">Erreurs de lecture vidéo (24h)</span>
+          <span class="vec-value">
+            <strong>{{ saasMetrics.videoErrors24h || 0 }}</strong>
+            <span class="vec-hint">
+              {{
+                (saasMetrics.videoErrors24h || 0) > 0
+                  ? 'plantage(s) côté TV — sonde active'
+                  : 'aucun plantage — sonde active'
+              }}
+            </span>
+          </span>
         </span>
-        <span class="vbe-cta">Voir santé flotte →</span>
+        <span class="vec-cta">Voir santé flotte →</span>
       </a>
       <app-site-content-tab
         [siteId]="siteId"
