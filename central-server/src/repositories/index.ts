@@ -54,6 +54,7 @@ export {
   type ConnectionEventRow,
   type ConnectionEventType,
   type UptimeStats,
+  type DailyUptimeRow,
 } from './connection-events.repository';
 export {
   timelineRepository,
