@@ -64,8 +64,6 @@ const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
 // en Sprint 1-2 pour ajouter la section "Périmètre" formalisée. Frozen — toute
 // nouvelle SPEC doit respecter le format complet.
 const LEGACY_SPECS_PRE_DOMAIN_PIVOT = new Set<string>([
-  'docs/specs/features/sponsor-reports.spec.md',
-  'docs/specs/features/sponsors-rotation.spec.md',
   'docs/specs/features/templates-studio.spec.md',
   'docs/specs/services/cron-scheduler.spec.md',
   'docs/specs/services/socket-service.spec.md',
