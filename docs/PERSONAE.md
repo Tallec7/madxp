@@ -57,23 +57,67 @@ Chaque persona suit un format unique pour comparaison facile :
 
 ---
 
-## 3. 🟢 Représentant club (président / responsable com)
+## 3. 🟢 Représentant club (3 sous-personas)
 
-**En une phrase** : le décideur d'achat du club ET le user quotidien — souvent fusionnés dans les clubs amateurs/semi-pros (président bénévole impliqué techniquement, ou responsable com salarié(e) avec délégation totale).
+> ⚠️ Ce qui était auparavant un seul persona "Président / Resp com" est en réalité **trois métiers distincts** dans un club ambitieux. Ils n'achètent pas la même fonctionnalité, n'ont pas les mêmes KPI, et un PM qui interview "le club" sans les distinguer rate la moitié des signaux.
+
+---
+
+### 3a. 🟢 Président / Dirigeant club
+
+**En une phrase** : décideur d'achat qui paie la facture Neopro et attend une retombée image + sponsoring sans toucher à l'opérationnel — souvent bénévole engagé qui voit Neopro comme un investissement stratégique pour le club.
 
 **Frustration #1 sans Neopro** :
-> *"En préparation du samedi soir, je dois jongler entre Excel scores, ma clé USB pour les pubs sponsors, et l'ordi du club qui plante. Je dois préparer tous les visuels de faits de jeu, l'expérience matchday avec les entrées et buts. Je dois réviser les infos et tout bien préparer à chaque fois — pendant que je devrais accueillir les invités VIP et préparer l'orga match."*
+> *"J'investis 5 000€/an dans un outil pour le club, je veux savoir si mes sponsors sont contents et si on a monté en gamme face aux clubs voisins. Aujourd'hui je n'ai aucun KPI clair, juste des retours d'oreille — et quand un sponsor part en fin de saison, je découvre la raison après coup."*
 
 **Moment "wow" avec Neopro** :
-> *"Le samedi soir, je crée mes templates de pubs sponsors en 10 minutes au lieu d'une heure d'After Effects, je délègue toute l'exécution match au bénévole sans stresser, et le lundi mon partenaire reçoit son rapport ROI sans que j'aie à l'envoyer manuellement — je récupère 4h de cerveau qui passent de l'opérationnel à la stratégie comm/partenaires."*
+> *"Tous les trimestres je reçois un PDF de 4 pages avec les impressions sponsors agrégées, le taux de fidélisation des partenaires, le nombre de prospects sponsoring entrants — je peux le présenter en bureau directeur sans avoir touché à l'outil moi-même."*
 
-**Interactions Neopro** : Dashboard club (préparation matches, gestion sponsors, templates Studio, calendrier diffusion, statistiques sponsors), Remote en tribune les soirs de match, mail mensuel automatique de rapport partenaires
+**Interactions Neopro** : Mail trimestriel automatique (rapport stratégique club), accès dashboard club en lecture (KPI agrégés, jamais le Studio), Remote en tribune les soirs de gala — délègue tout l'opérationnel à 3b/3c.
 
-**Fréquence d'usage** : weekly + intensif les jours de match
+**Fréquence d'usage** : monthly (lecture rapport) — jamais opérationnel quotidien
 
-**Cas d'usage rattaché** — Réseaux sociaux post-match (roadmap LATER) : highlights / score final automatiquement poussés sur Instagram/TikTok du club
+**Source d'info** : ✅ terrain confirmé (NLF — président engagé) | 🟡 à valider pour les clubs où le président est moins technique
 
-**Source d'info** : ✅ terrain confirmé (NLF + autres clients)
+---
+
+### 3b. 🟢 Responsable communication / Community manager club
+
+**En une phrase** : créatif·ve salarié·e ou bénévole expérimenté·e qui produit le contenu matchday du club et anime les réseaux sociaux — l'utilisateur quotidien le plus intensif côté Studio.
+
+**Frustration #1 sans Neopro** :
+> *"Je veux que mes habillages matchday aient l'air pro comme un club de Ligue A, mais je n'ai ni le budget After Effects ni le temps d'apprendre. Je passe mes vendredis soir à bricoler des templates Canva qui ne ressemblent à rien sur l'écran géant, et le lundi je n'ai plus d'énergie pour les réseaux sociaux."*
+
+**Moment "wow" avec Neopro** :
+> *"Le vendredi je crée 5 templates de faits de jeu en 30 minutes dans le Studio, ils tournent automatiquement le samedi soir avec le score live, et le lundi mes highlights sont prêts pour Instagram/TikTok sans que j'aie touché à un logiciel d'édition vidéo — je reprends ma vie le dimanche."*
+
+**Interactions Neopro** : Dashboard club intensif (Studio Remotion, scénarios matchday, calendrier diffusion), preview avant déploiement, sortie vidéo highlights post-match (LATER — réseaux sociaux automatisés)
+
+**Fréquence d'usage** : daily en saison (préparation contenus) + intensif les jours de match
+
+**Source d'info** : ✅ terrain confirmé (NLF + autres clients) — c'est cette persona qui justifie l'investissement Template Studio v2
+
+---
+
+### 3c. 🟡 Responsable partenaires / sponsoring club
+
+**En une phrase** : commercial·e du club (salarié·e ou élu·e bénévole) responsable de fidéliser les sponsors actuels et d'en prospecter de nouveaux — le ROI sponsor est sa raison d'être.
+
+**Frustration #1 sans Neopro** :
+> *"Je perds des sponsors qui me reprochent 'on ne sait pas si notre logo est vu' — et je n'arrive pas à vendre des packs premium parce que je n'ai aucune data pour justifier l'écart de prix entre une bannière statique et un placement vidéo. Je présente des screenshots PowerPoint à des prospects qui haussent les épaules."*
+
+**Moment "wow" avec Neopro** :
+> *"Je signe un nouveau partenaire à 8K€/an au lieu de 3K€ parce que je lui montre en rendez-vous un dashboard live des impressions de mes sponsors actuels — et le mois suivant il reçoit son propre rapport ROI qui justifie sa décision auprès de son directeur."*
+
+**Interactions Neopro** : Dashboard sponsors club (gestion contrats, rotation pondérée, packs bronze/argent/or), portail sponsor partagé en lecture, export PDF pour rendez-vous commercial, rapport mensuel auto envoyé aux sponsors actuels
+
+**Fréquence d'usage** : weekly (préparation rendez-vous + suivi reporting) + intensif en période de renégociation contrats annuels
+
+**Source d'info** : 🟡 capacité code prête (sponsor weighted rotation, sponsor reports) — à valider en interview avec un resp partenaires de club semi-pro
+
+**Lien stratégique** : c'est cette persona qui transforme Neopro d'un "outil tech" en "levier commercial" — sans elle, le ROI sponsor n'est pas activé côté client.
+
+**Cas d'usage rattaché à 3b/3c** — Réseaux sociaux post-match (roadmap LATER) : highlights / score final automatiquement poussés sur Instagram/TikTok du club
 
 ---
 
@@ -117,23 +161,67 @@ Chaque persona suit un format unique pour comparaison facile :
 
 ---
 
-## 6. 🟡 Sponsor local du club
+## 6. 🟡 Sponsor local du club (3 sous-personas)
 
-**En une phrase** : commerçant, artisan, PME locale qui finance le club via un partenariat annuel (ex: 2 000€/an pour son logo en tribune) — bénéficiaire indirect de Neopro, ne touche pas l'outil aujourd'hui.
+> ⚠️ Un commerçant à 1 500€/an et une PME régionale à 15K€/an n'ont **pas du tout les mêmes attentes**. Mêmes touchpoints techniques côté Neopro, mais format de reporting et niveau d'exigence radicalement différents. À distinguer pour calibrer le Sponsor Portal V1 (NEXT #2) et le pricing des packs.
+
+---
+
+### 6a. 🟡 Commerçant de proximité
+
+**En une phrase** : artisan, restaurateur, garage, agence immo locale qui sponsorise le club du coin pour 500€-2 000€/an — geste de soutien autant que stratégie marketing.
 
 **Frustration #1 sans Neopro** :
-> *"Je paie le club 2 000€/an pour avoir mon logo en tribune mais je n'ai aucune idée si quelqu'un l'a vraiment vu."*
+> *"Je donne 1 500€/an au club parce que mon fils y joue et que c'est important pour le quartier. Mais quand ma femme me demande 'tu as vu ton logo passer hier ?' je réponds 'aucune idée'. Je n'attends pas un dashboard pro mais juste un signe que ça vit, sinon l'année prochaine je remets en question le chèque."*
 
-**Moment "wow" avec Neopro** (Sponsor Portal V1, NEXT #2) :
-> *"Je reçois un mail mensuel automatique 'votre logo a été vu 12 800 fois ce mois-ci dans l'arène NLF' avec une capture d'écran de l'affichage et le détail par jour de match — pour la première fois je peux justifier mes 2 000€ à mon directeur financier sans bullshit."*
+**Moment "wow" avec Neopro** :
+> *"Tous les mois je reçois une photo de mon logo sur l'écran du gymnase avec une phrase 'votre logo a été vu 8 400 fois ce mois-ci pendant les matches' — c'est suffisant pour que je sache que c'est utile et que je renouvelle sans hésiter l'année prochaine."*
 
-**Interactions Neopro** :
-- 🟡 Aujourd'hui : aucune interaction directe — le club lui montre des screenshots manuellement
-- 🔜 NEXT (M2-3) : mail mensuel automatique + portail web ROI dédié (login simple, pas dashboard complet)
+**Interactions Neopro** : Mail mensuel auto (format light : 1 photo + 1 chiffre clé) — pas de portail web, pas de login, pas d'export PDF
 
-**Fréquence d'usage** : monthly (lecture mail / portail)
+**Fréquence d'usage** : monthly (lecture mail seulement)
 
-**Source d'info** : 🟡 hypothèse forte renforcée par retours indirects clubs — à valider en interview directe sponsor par le PM
+**Source d'info** : 🟡 hypothèse forte (typologie majoritaire des sponsors clubs amateurs) — à valider terrain par PM via 5 sponsors NLF de cette catégorie
+
+---
+
+### 6b. 🟡 PME régionale
+
+**En une phrase** : PME en croissance (5-50 salariés, ex: cabinet d'expertise comptable régional, banque locale, constructeur, distributeur auto) qui finance plusieurs clubs en région pour 5K-20K€/an et attend un reporting professionnel.
+
+**Frustration #1 sans Neopro** :
+> *"Je sponsorise 4 clubs régionaux pour un budget total de 35K€/an. Mon directeur marketing me demande tous les ans de justifier ce poste face au DAF, et je n'ai que des photos de tribune et un mail 'merci' du président. À ce rythme on va recentrer sur du Google Ads où au moins j'ai des chiffres."*
+
+**Moment "wow" avec Neopro** :
+> *"Je reçois un rapport mensuel consolidé sur mes 4 clubs : impressions totales, breakdown par club, taux de présence aux matches, comparatif Q-1 — je peux le présenter en COMEX et défendre mon budget sport sans complexe par rapport au digital."*
+
+**Interactions Neopro** : Portail web sponsor (login, multi-clubs si applicable, dashboard impressions, export PDF mensuel), peut demander des A/B tests sur les visuels
+
+**Fréquence d'usage** : monthly (lecture rapport) + ponctuel (rendez-vous club, négociation annuelle)
+
+**Source d'info** : 🟡 hypothèse forte (segment cible identifié dans benchmark) — à valider via 2-3 interviews PME sponsors NLF
+
+**Lien stratégique** : c'est le segment qui justifie le pricing premium des packs sponsors et qui ouvre la porte à la persona 7 (annonceur réseau) — un sponsor PME satisfait sur 1 club devient prescripteur sur 4 clubs.
+
+---
+
+### 6c. 🔮 Partenaire institutionnel (collectivité)
+
+**En une phrase** : mairie, conseil départemental, conseil régional, communauté de communes qui finance le club via subvention ou contrat de partenariat — logique politique/territoriale, pas commerciale.
+
+**Frustration #1 sans Neopro** :
+> *"On verse 25K€/an au club et notre logo doit être visible 'lors des matches' selon la convention de partenariat. Quand un élu de l'opposition demande au conseil 'qu'est-ce qu'on a en retour de cet argent public ?', je peux juste dire 'leur logo est dans la salle'. Pas terrible quand on rend des comptes aux contribuables."*
+
+**Moment "wow" avec Neopro** :
+> *"Je reçois un rapport semestriel certifié 'logo collectivité affiché X heures cumulées, Y impressions estimées' que je peux annexer au rapport d'activité de la convention de partenariat — c'est de l'audit-grade, pas du marketing."*
+
+**Interactions Neopro** : Mail/portail rapport semestriel formaté pour usage administratif, possibilité de visualiser les heures précises de diffusion (preuve de respect de la convention de partenariat)
+
+**Fréquence d'usage** : semestrielle (revue convention) + ponctuelle (rapport sur demande élus)
+
+**Source d'info** : 🔮 anticipation (segment moins documenté, à valider via prospection ciblée mairies sportives type "ville sportive partenaire")
+
+**Lien stratégique** : canal de distribution massif si on signe une mairie qui équipe ses 5 clubs locaux d'un coup — modèle "ville sportive partenaire Neopro" à explorer en M6+.
 
 ---
 
@@ -215,16 +303,20 @@ Chaque persona suit un format unique pour comparaison facile :
 
 ## Synthèse pour interview PM/CTO
 
-### Tableau comparatif des 10 personae
+### Tableau comparatif des 14 personae
 
 | # | Persona | Statut | Touchpoint principal | Fréquence | Action prio PM jour 1 |
 |---|---|---|---|---|---|
 | 1 | Super_admin | 🟢 | Dashboard super_admin | daily | (interne — Daisy/futur PM) |
 | 2 | Admin Support | 🟢 | Dashboard admin | daily | Interview pour mesurer charge support |
-| 3 | Représentant club | 🟢 | Dashboard club + Remote | weekly + matchday | **PM jour 1 : interviewer NLF** |
+| 3a | Président / Dirigeant club | 🟢 | Mail trimestriel + dashboard lecture | monthly | **PM jour 1 : interview NLF président** |
+| 3b | Resp communication club | 🟢 | Dashboard club + Studio | daily en saison | **PM jour 1 : interview NLF resp com** |
+| 3c | Resp partenaires club | 🟡 | Dashboard sponsors + portail | weekly + intensif renégo | PM mois 1 : interview resp partenaires NLF |
 | 4 | Staff bénévole | 🟢 | Remote uniquement | matchday | PM mois 1 : observation terrain matchday |
 | 5 | Spectateur tribune | 🟢🔮 | Écran (passif) → QR (futur) | matchday | PM mois 2 : test MVP QR/jeu |
-| 6 | Sponsor local | 🟡 | Mail auto → Portail (futur) | monthly | PM mois 1 : interview 3 sponsors NLF |
+| 6a | Commerçant de proximité | 🟡 | Mail auto light (photo + chiffre) | monthly | PM mois 1 : interview 3 commerçants sponsors |
+| 6b | PME régionale | 🟡 | Portail web sponsor + PDF | monthly | PM mois 1 : interview 2 PME sponsors |
+| 6c | Partenaire institutionnel | 🔮 | Rapport semestriel audit-grade | semestrielle | PM mois 4+ : prospecter 1ère mairie pilote |
 | 7 | Annonceur national | 🔮 | Dashboard annonceur | weekly + monthly | PM mois 3 : signer 1er annonceur réseau |
 | 8 | Régie publicitaire | 🔮 | Dashboard régie multi-tenant | daily + monthly | PM mois 6+ : prospecter 1ère régie |
 | 9 | Agence multi-clubs | 🟡 | Dashboard agency multi-tenant | daily | PM mois 4 : prospecter 1ère agence pilote |
@@ -232,7 +324,7 @@ Chaque persona suit un format unique pour comparaison facile :
 
 ### Pour le pitch en 30 secondes
 
-> *"Neopro sert 10 personae sur 3 niveaux : (1) les utilisateurs club (président, com, bénévole) qui pilotent leur matchday, (2) les bénéficiaires indirects (sponsors locaux, annonceurs réseau, régies, fédérations) qui monétisent l'audience, (3) le spectateur final dont l'engagement justifie tout le pricing. Aujourd'hui on sert solidement les 4 premiers, on ouvre les 6 autres au fil de la roadmap NEXT et LATER."*
+> *"Neopro sert 14 personae sur 3 niveaux : (1) les utilisateurs club — président, resp com, resp partenaires, bénévole — qui pilotent leur matchday avec des attentes très différentes selon leur métier, (2) les bénéficiaires indirects qui monétisent l'audience — du commerçant local à la fédération nationale, en passant par la PME régionale, le partenaire institutionnel, l'annonceur réseau, la régie et l'agence multi-clubs, (3) le spectateur final dont l'engagement justifie tout le pricing. Aujourd'hui on sert solidement les utilisateurs club et l'admin support ; on ouvre progressivement les segments sponsors et le spectateur interactif au fil de la roadmap NEXT et LATER."*
 
 ### TODO Daisy persistants
 
