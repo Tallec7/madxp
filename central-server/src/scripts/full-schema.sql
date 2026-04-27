@@ -1850,6 +1850,24 @@ CREATE TABLE public.metrics (
 
 
 --
+-- Name: connection_events; Type: TABLE; Schema: public; Owner: -
+-- ADR-099: source de vérité de l'uptime, distincte de metrics (samples 5 min).
+--
+
+CREATE TABLE public.connection_events (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    site_id uuid NOT NULL,
+    event_type character varying(20) NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    reason character varying(100),
+    socket_id character varying(64),
+    client_ip character varying(45),
+    CONSTRAINT connection_events_event_type_check
+      CHECK (event_type IN ('connected', 'disconnected'))
+);
+
+
+--
 -- Name: neopro_template_versions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3343,6 +3361,38 @@ ALTER TABLE ONLY public.hostapd_events
 
 ALTER TABLE ONLY public.metrics
     ADD CONSTRAINT metrics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: connection_events connection_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connection_events
+    ADD CONSTRAINT connection_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: connection_events connection_events_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connection_events
+    ADD CONSTRAINT connection_events_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: idx_connection_events_site_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_site_time
+  ON public.connection_events USING btree (site_id, occurred_at DESC);
+
+
+--
+-- Name: idx_connection_events_occurred_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_occurred_at
+  ON public.connection_events USING btree (occurred_at);
 
 
 --

@@ -57,6 +57,7 @@ import {
 } from '../handlers/health-monitor.handler';
 import { alertingService } from './alerting.service';
 import { dbCircuitBreaker } from './db-circuit-breaker.service';
+import { connectionEventsRepository } from '../repositories';
 
 // ============================================================================
 // Lazy service loaders (circular dependency avoidance)
@@ -468,6 +469,13 @@ class SocketService {
       ['online', siteId, clientIp]
     );
 
+    connectionEventsRepository.record({
+      siteId,
+      eventType: 'connected',
+      socketId: socket.id,
+      clientIp,
+    });
+
     alertService.siteOnline(siteId, site.site_name).catch((error) => {
       logger.error('Error sending online alert:', error);
     });
@@ -694,6 +702,13 @@ class SocketService {
           ['offline', siteId]
         ).catch((error) => {
           logger.error('Error updating site status on disconnect:', error);
+        });
+
+        connectionEventsRepository.record({
+          siteId,
+          eventType: 'disconnected',
+          reason,
+          socketId: socket.id,
         });
 
         alertService.siteOffline(siteId, siteName).catch((error) => {
