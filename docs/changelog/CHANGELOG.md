@@ -1,3 +1,9 @@
+# [3.256.0](https://github.com/Tallec7/neopro/compare/v3.255.0...v3.256.0) (2026-04-27)
+
+### Features
+
+- **video-library:** replace orphan FTP video binary + library badge/filter (γ) ([#647](https://github.com/Tallec7/neopro/issues/647)) ([114bc9f](https://github.com/Tallec7/neopro/commit/114bc9f434e60736f2163a5896138be1196f6748)), closes [#641](https://github.com/Tallec7/neopro/issues/641) [#616](https://github.com/Tallec7/neopro/issues/616) [#641](https://github.com/Tallec7/neopro/issues/641)
+
 # [3.255.0](https://github.com/Tallec7/neopro/compare/v3.254.0...v3.255.0) (2026-04-27)
 
 ### Features
