@@ -51,7 +51,7 @@
 **Plateformes retirées (Sprint 0 cleanup, Avril 2026)** :
 
 - ❌ Render.com (legacy démo Socket.IO `neopro.onrender.com` — `render.yaml` supprimé)
-- ❌ Supabase (mirror DB hot-standby — étape `db-backup.yml` retirée, secret peut rester pour réactivation future)
+- ❌ Supabase (DB primaire historique + mirror hot-standby — entièrement migré sur Railway, références retirées du code et de la config)
 
 ---
 
@@ -82,7 +82,6 @@ Tous les 3 jobs gates par GitHub Environment `production` (required reviewer).
 ### 4.3 — `db-backup.yml` (cron 03:00 UTC quotidien)
 
 `pg_dump` Railway prod → upload Hostinger FTP `/public_html/neopro-video/db-backups/` → purge >30j.
-**Mirror Supabase + checksums supprimés Sprint 0.**
 
 ### 4.4 — `frontend-health.yml` (cron \*/10 min + post-release)
 
@@ -115,8 +114,6 @@ Rapport hebdo PR + commits → mail.
 | `CODECOV_TOKEN`              | Upload coverage                                                                                  | Optionnel                                                          |
 | `HOTSPOT_PSK_ENCRYPTION_KEY` | Chiffrement PSK Pi (ADR-074) — **CRITIQUE : si perdu, toute la flotte hotspot est inutilisable** | Jamais (sauf compromission, avec re-chiffrement de toute la table) |
 | `JWT_SECRET`                 | Signature tokens auth                                                                            | Tous les 6 mois (avec invalidation sessions)                       |
-
-**`SUPABASE_URL`** retiré de l'usage actif (Sprint 0). Conservé GitHub Secrets si réactivation future.
 
 ---
 
@@ -163,4 +160,4 @@ Détails : voir `CONTRIBUTING.md` (Sprint 1).
 
 - **Pre-prod** : pas un nouvel env, juste un état de staging stable (smoke E2E vert + Gabin validé) avant tag prod.
 - **Canary** : cohorte 5 Pi recevant l'OTA J-3 avant flotte (à formaliser Sprint 2+).
-- **Hot-standby** : terme retiré du vocabulaire — Supabase mirror supprimé Sprint 0.
+- **Hot-standby** : terme retiré du vocabulaire — mirror DB supprimé Sprint 0 (cf. ADR-070).

@@ -1,7 +1,8 @@
 -- =============================================================
--- DIAGNOSTIC + NETTOYAGE STOCKAGE SUPABASE
--- Date: 2026-04-01
--- Contexte: Free plan 500MB, services restreints
+-- DIAGNOSTIC + NETTOYAGE STOCKAGE POSTGRESQL
+-- Date: 2026-04-01 (rédigé pour Supabase Free, désormais migré Railway)
+-- Contexte historique : Free plan 500MB, services restreints
+-- Reste utile pour diagnostiquer la croissance DB sur Railway
 -- =============================================================
 
 -- ============================================================

@@ -48,7 +48,7 @@ railway restart
 2. Causes fréquentes :
    - **OOM pendant build** : Augmenter temporairement le plan ou optimiser
    - **Healthcheck timeout** : `/live` doit répondre en <100s
-   - **DB inaccessible** : Vérifier Supabase (§3)
+   - **DB inaccessible** : Vérifier PostgreSQL Railway (§3)
 
 3. Si bloqué >5min : annuler le deploy dans le dashboard Railway et redéployer
 
@@ -118,7 +118,7 @@ curl https://API_URL/ready
 
 ---
 
-## 3. BASE DE DONNÉES (SUPABASE)
+## 3. BASE DE DONNÉES (POSTGRESQL — RAILWAY)
 
 ### 3.1 Vérifier la connexion
 
@@ -167,9 +167,9 @@ WHERE status = 'in_progress'
 AND started_at < NOW() - INTERVAL '1 hour';
 ```
 
-### 3.4 Supabase indisponible
+### 3.4 PostgreSQL Railway indisponible
 
-1. Vérifier : https://status.supabase.com
+1. Vérifier : https://status.railway.app
 2. Si down prolongé (>30min) :
    - Les Pi continuent de fonctionner en mode offline
    - Le dashboard sera inaccessible
@@ -231,7 +231,7 @@ Le Pi répond au ping ?
 
 ---
 
-## 5. STOCKAGE VIDÉO (FTP / SUPABASE)
+## 5. STOCKAGE VIDÉO (FTP HOSTINGER)
 
 ### 5.1 FTP Hostinger down
 
@@ -246,8 +246,7 @@ curl -v ftp://FTP_HOST --user FTP_USER:FTP_PASSWORD
 **Impact** :
 
 - Les vidéos déjà sur les Pi continuent de fonctionner
-- Les nouveaux uploads/déploiements échouent
-- Le fallback Supabase est automatique **uniquement pour les nouveaux uploads** (si FTP non configuré)
+- Les nouveaux uploads/déploiements échouent (FTP unique storage backend depuis ADR-085)
 
 **Actions** :
 

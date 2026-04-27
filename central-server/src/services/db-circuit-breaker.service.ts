@@ -1,7 +1,7 @@
 /**
  * Database Circuit Breaker
  *
- * Prevents death-spiral when Supabase/PgBouncer is temporarily unavailable.
+ * Prevents death-spiral when PostgreSQL/PgBouncer is temporarily unavailable.
  * Background services check `isAvailable()` before hitting the DB.
  * When the circuit is open, non-critical queries are skipped, letting the pool
  * recover and prioritizing user-facing requests (login, API calls).

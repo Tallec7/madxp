@@ -53,7 +53,7 @@ if (process.env.NODE_ENV === 'production' && shouldUseSSL && !sslCertificate) {
   logger.warn('='.repeat(80));
   logger.warn('SECURITY NOTE: DATABASE_SSL_CA not configured.');
   logger.warn('Using rejectUnauthorized: false for PostgreSQL connection ONLY.');
-  logger.warn('For better security, provide the Supabase/database CA certificate via:');
+  logger.warn('For better security, provide the database CA certificate via:');
   logger.warn('  - DATABASE_SSL_CA (inline certificate)');
   logger.warn('  - DATABASE_SSL_CA_FILE (path to certificate file)');
   logger.warn('='.repeat(80));
@@ -67,7 +67,7 @@ const getSslConfig = () => {
     return { ca: sslCertificate, rejectUnauthorized: true };
   }
 
-  // For cloud providers (Render, Supabase, Neon, etc.) without explicit CA,
+  // For cloud providers (Railway, Neon, etc.) without explicit CA,
   // rejectUnauthorized: false is required as their certificates are not in the system CA store.
   logger.warn('DATABASE_SSL_CA not set - using rejectUnauthorized: false for cloud provider compatibility');
   return { rejectUnauthorized: false };
@@ -76,19 +76,19 @@ const getSslConfig = () => {
 const sslConfig = getSslConfig();
 
 // Pool size configurable via env : DB_POOL_MAX (défaut: 10)
-// Supabase Transaction Mode (port 6543) : les connexions PgBouncer sont partagées par
+// Railway PgBouncer Transaction Mode (port 6543) : les connexions sont partagées par
 // transaction, pas par session. 10 connexions Node.js assurent une marge suffisante
 // pour absorber les pics (background services + user requests simultanées).
 // En Session Mode (port 5432) un restart Railway causait MaxClientsInSessionMode car
 // ancien + nouveau process réservaient chacun N connexions permanentes.
-// Voir ADR-003 et ADR-015 pour l'historique.
+// Voir ADR-003, ADR-015 et ADR-070 pour l'historique (migration Supabase → Railway).
 const dbPoolMax = parseInt(process.env.DB_POOL_MAX || '10', 10);
 
 // Statement timeout kills queries that hang too long (e.g. when PgBouncer is overloaded).
 // Must be shorter than connectionTimeoutMillis to release pool slots before new connections timeout.
 const statementTimeoutMs = parseInt(process.env.DB_STATEMENT_TIMEOUT || '8000', 10);
 
-// Detect Supabase pooler mode from DATABASE_URL port
+// Detect PgBouncer pooler mode from DATABASE_URL port (Railway / managed PG)
 const dbUrl = process.env.DATABASE_URL || '';
 const poolerMode = dbUrl.includes(':6543') ? 'transaction' : dbUrl.includes(':5432') ? 'session' : 'direct';
 
@@ -118,7 +118,7 @@ logger.info('Database SSL configuration', {
 const pool = new Pool(poolConfig);
 
 // Track consecutive idle-client errors to distinguish transient PgBouncer
-// disconnects (normal with Supabase Transaction Mode) from permanent failures.
+// disconnects (normal with PgBouncer Transaction Mode) from permanent failures.
 let poolErrorCount = 0;
 let poolErrorResetTimer: ReturnType<typeof setTimeout> | null = null;
 const POOL_ERROR_THRESHOLD = 5;     // exit after 5 errors …
@@ -240,10 +240,13 @@ setInterval(() => {
   }
 }, POOL_HEALTH_INTERVAL);
 
-// Periodic DB size monitoring (every 5 min) — detects Supabase quota overruns early
+// Periodic DB size monitoring (every 5 min) — detects DB growth anomalies early
 const DB_SIZE_INTERVAL = 5 * 60 * 1000;
 const DB_SIZE_TABLES = ['video_plays', 'metrics', 'audit_logs', 'remote_commands'];
-const DB_SIZE_WARN_BYTES = 400 * 1024 * 1024; // 400 MB — Supabase free tier limit is 500 MB
+// 400 MB warn threshold — historiquement aligné sur Supabase Free (500 MB), conservé sur
+// Railway comme alarme de croissance (la quota Railway est plus élevée mais l'objectif
+// reste de détecter une hausse anormale qui annonce un bug d'agrégation).
+const DB_SIZE_WARN_BYTES = 400 * 1024 * 1024;
 
 setInterval(async () => {
   const ms = getMetricsService();
@@ -265,11 +268,10 @@ setInterval(async () => {
     ms.recordDbSize(totalBytes);
 
     if (totalBytes > DB_SIZE_WARN_BYTES) {
-      logger.warn('Database size approaching Supabase quota', {
+      logger.warn('Database size growth alarm', {
         sizeBytes: totalBytes,
         sizeMB: Math.round(totalBytes / (1024 * 1024)),
-        quotaMB: 500,
-        usagePercent: Math.round((totalBytes / (500 * 1024 * 1024)) * 100),
+        warnThresholdMB: Math.round(DB_SIZE_WARN_BYTES / (1024 * 1024)),
       });
     }
 

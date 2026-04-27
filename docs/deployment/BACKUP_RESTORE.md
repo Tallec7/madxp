@@ -13,9 +13,9 @@
 │                    COMPOSANTS À SAUVEGARDER                  │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  PostgreSQL   │  │  FTP/Supabase│  │  Raspberry Pi    │  │
-│  │  (Supabase)   │  │  (Vidéos)    │  │  (Config locale) │  │
-│  │  ⬇ Auto daily │  │  ⬇ Non auto  │  │  ⬇ Golden image  │  │
+│  │  PostgreSQL   │  │  FTP Hostinger│  │  Raspberry Pi    │  │
+│  │  (Railway)    │  │  (Vidéos)    │  │  (Config locale) │  │
+│  │  ⬇ Daily GH   │  │  ⬇ Non auto  │  │  ⬇ Golden image  │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐                        │
@@ -28,15 +28,16 @@
 
 ---
 
-## 2. BASE DE DONNÉES (POSTGRESQL / SUPABASE)
+## 2. BASE DE DONNÉES (POSTGRESQL — RAILWAY)
 
-### 2.1 Backups automatiques (Supabase)
+### 2.1 Backups automatiques (GitHub Actions → Hostinger FTP)
 
-Supabase effectue des backups automatiques quotidiens. Accès via le dashboard Supabase :
-- **Fréquence** : Quotidienne
-- **Rétention** : 7 jours (plan Free/Pro)
-- **Type** : Snapshot complet
-- **Accès** : Dashboard Supabase → Project → Database → Backups
+Le workflow `.github/workflows/db-backup.yml` exécute un `pg_dump` quotidien de la
+base Railway et upload le dump sur le FTP Hostinger.
+- **Fréquence** : Quotidienne (cron `0 3 * * *` UTC)
+- **Rétention** : conservée sur FTP (rotation manuelle)
+- **Type** : Dump custom (`pg_dump --format=custom`)
+- **Restauration** : `pg_restore` depuis le dump FTP vers Railway (cf. ADR-070)
 
 ### 2.2 Backup manuel (pg_dump)
 
@@ -115,23 +116,19 @@ lftp -u FTP_USER,FTP_PASSWORD FTP_HOST -e "mirror /videos ./backup_videos; quit"
 
 **Redondance** : Les vidéos déployées existent aussi sur les Pi localement dans `/home/pi/neopro/videos/`. En cas de perte FTP, les vidéos actives sont récupérables depuis les Pi.
 
-### 3.2 Supabase Storage (fallback)
+### 3.2 Backend de stockage
 
-Les vidéos uploadées sans FTP configuré sont dans Supabase Storage.
-
-```bash
-# Via l'API Supabase
-# Dashboard → Storage → Bucket "videos"
-```
-
-### 3.3 Identification du backend
+Toutes les vidéos sont stockées sur **FTP Hostinger** depuis ADR-085 (Supabase Storage
+historique retiré). La colonne `storage_backend` peut encore valoir `'supabase'` pour
+des lignes legacy importées avant la migration ; ces vidéos sont à re-uploader sur FTP
+si elles doivent être servies.
 
 ```sql
--- Vidéos sur FTP (pas de / dans storage_path)
-SELECT filename, storage_path FROM videos WHERE storage_path NOT LIKE '%/%';
+-- Vidéos legacy stockées en mode Supabase (storage_path préfixé d'un dossier)
+SELECT filename, storage_path FROM videos WHERE storage_backend = 'supabase';
 
--- Vidéos sur Supabase (avec / dans storage_path)
-SELECT filename, storage_path FROM videos WHERE storage_path LIKE '%/%';
+-- Vidéos sur FTP (mode actif)
+SELECT filename, storage_path FROM videos WHERE storage_backend = 'ftp';
 ```
 
 ---
@@ -206,7 +203,6 @@ DATABASE_URL
 JWT_SECRET
 ALLOWED_ORIGINS
 FTP_HOST, FTP_USER, FTP_PASSWORD, FTP_PUBLIC_URL
-SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 # Variables optionnelles
 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
@@ -252,7 +248,7 @@ git push origin HEAD:deploy-rollback
 
 ### Hebdomadaire
 
-- [ ] Vérifier que les backups Supabase sont actifs (Dashboard → Backups)
+- [ ] Vérifier que le workflow `db-backup.yml` a tourné dans les dernières 24h (Actions GitHub)
 - [ ] Vérifier l'espace disque FTP (ne pas dépasser 80%)
 - [ ] Vérifier les alertes prédictives dans le dashboard
 

@@ -161,7 +161,7 @@ neopro/
 │   │   ├── services/             # Socket.IO, email, deployment, metrics
 │   │   ├── handlers/             # Socket.IO event handlers
 │   │   ├── types/                # Interfaces TypeScript
-│   │   ├── config/               # Database, logger, Supabase, FTP
+│   │   ├── config/               # Database, logger, FTP
 │   │   └── scripts/              # Migrations, seeds, CLI
 │   └── Dockerfile
 │
@@ -197,7 +197,7 @@ neopro/
 | Frontend Raspberry | Angular 20.3, Socket.IO client 4.8, Video.js 8.x, SCSS        |
 | Frontend Dashboard | Angular 20.3, Chart.js 4.5, Leaflet, ngx-translate (EN/FR/ES) |
 | Backend API        | Node.js 20+, Express 4.18, TypeScript 5.9 strict              |
-| Base de données    | PostgreSQL 15 (Supabase) - Pool: 5 connexions                 |
+| Base de données    | PostgreSQL 18 (Railway) - Pool: 5 connexions                  |
 | Stockage vidéos    | FTP Hostinger (unifié via `storage.service.ts`)               |
 | WebSocket          | Socket.IO 4.8                                                 |
 | Cache              | Redis (Upstash) - optionnel, pour scaling horizontal          |
@@ -420,9 +420,6 @@ FTP_HOST=ftp.example.com
 FTP_USER=xxx
 FTP_PASSWORD=xxx
 FTP_PUBLIC_URL=https://cdn.example.com/videos
-# Fallback Supabase
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=xxx
 
 # === EMAIL (password reset, alertes) ===
 SMTP_HOST=smtp.gmail.com
