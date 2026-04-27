@@ -26,7 +26,7 @@
 | Backend API               | Node.js 20+, Express 4.18, TypeScript strict        |
 | Frontend Dashboard        | Angular 20, Chart.js, Leaflet                       |
 | Frontend Raspberry (edge) | Angular 20, Socket.IO client                        |
-| Base de données           | PostgreSQL 15 (Supabase)                            |
+| Base de données           | PostgreSQL 18 (Railway)                             |
 | Stockage                  | FTP Hostinger                                       |
 | Auth                      | JWT HttpOnly + Bearer + MFA (TOTP)                  |
 | Hébergement               | Railway (API), Hostinger (Dashboard)                |

@@ -283,8 +283,8 @@ export class LegalComponent implements OnInit {
           title: '4. Destinataires des donnees',
           content: [
             'Acces interne : personnel technique habilite, service client.',
-            'Sous-traitants : Supabase Inc. (base de donnees, UE), Render Services Inc. (hebergement), Better Stack (logs, UE).',
-            'Les transferts hors UE sont encadres par le EU-US Data Privacy Framework ou des clauses contractuelles types.'
+            'Sous-traitants : Railway Corp. (base de donnees PostgreSQL et hebergement API, USA), Hostinger International Ltd. (FTP videos, UE), Better Stack (logs, UE).',
+            'Les transferts hors UE (Railway, USA) sont encadres par le EU-US Data Privacy Framework et des clauses contractuelles types (CCT/SCC).'
           ]
         },
         {
@@ -410,9 +410,9 @@ export class LegalComponent implements OnInit {
         {
           title: '2. Hebergement',
           content: [
-            'Serveur applicatif : Render Services, Inc. - 525 Brannan Street, Suite 300, San Francisco, CA 94107, USA',
-            'Base de donnees : Supabase Inc. - 970 Toa Payoh North #07-04, Singapore 318992',
-            'Les serveurs de base de donnees sont situes dans l\'Union Europeenne (Irlande).'
+            'Serveur applicatif et base de donnees : Railway Corp. - 2261 Market Street #4382, San Francisco, CA 94114, USA',
+            'Stockage videos : Hostinger International Ltd. - 61 Lordou Vironos Street, 6023 Larnaca, Chypre (UE)',
+            'Region de deploiement Railway configurable ; transferts hors UE encadres par EU-US Data Privacy Framework et CCT/SCC.'
           ]
         },
         {

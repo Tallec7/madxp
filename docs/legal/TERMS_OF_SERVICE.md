@@ -232,10 +232,10 @@ Siège social : [ADRESSE]
 Directeur de la publication : [NOM]
 
 **Hébergement :**
-Render Services, Inc.
-525 Brannan Street, Suite 300
-San Francisco, CA 94107, USA
+Railway Corp. (API + base de données PostgreSQL)
+2261 Market Street #4382
+San Francisco, CA 94114, USA
 
-Supabase Inc.
-970 Toa Payoh North #07-04
-Singapore 318992
+Hostinger International Ltd. (stockage vidéos FTP)
+61 Lordou Vironos Street
+6023 Larnaca, Chypre (UE)

@@ -34,7 +34,7 @@
 | **Catégories de données** | Email professionnel, nom complet, mot de passe (hashé), rôle, statut, dates de connexion |
 | **Source des données** | Collecte directe lors de la création de compte par un administrateur |
 | **Destinataires internes** | Équipe technique, support client |
-| **Sous-traitants** | Supabase (BDD), Render (hébergement) |
+| **Sous-traitants** | Railway (BDD PostgreSQL + hébergement API) |
 | **Transferts hors UE** | Oui - USA (Render) - EU-US Data Privacy Framework |
 | **Durée de conservation** | Durée du contrat + 3 ans (prescription) |
 | **Mesures de sécurité** | Hachage bcrypt, TLS, MFA disponible, RLS PostgreSQL |
@@ -88,7 +88,7 @@
 | **Catégories de données** | ID site, métriques CPU/RAM/température/disque, version logicielle, IP locale |
 | **Source des données** | Collecte automatique par les boîtiers |
 | **Destinataires internes** | Équipe technique |
-| **Sous-traitants** | Supabase (stockage) |
+| **Sous-traitants** | Hostinger (FTP vidéos), Railway (BDD) |
 | **Transferts hors UE** | Non |
 | **Durée de conservation** | 30 jours (métriques temps réel), 12 mois (agrégats) |
 | **Mesures de sécurité** | Authentification API key, TLS, RLS |
@@ -106,7 +106,7 @@
 | **Catégories de données** | ID vidéo, ID site, horodatage lecture, durée, type de déclenchement |
 | **Source des données** | Collecte automatique lors de la lecture |
 | **Destinataires internes** | Équipe commerciale, sponsors (leurs propres vidéos) |
-| **Sous-traitants** | Supabase (stockage) |
+| **Sous-traitants** | Hostinger (FTP vidéos), Railway (BDD) |
 | **Transferts hors UE** | Non |
 | **Durée de conservation** | 24 mois |
 | **Mesures de sécurité** | Agrégation, RLS pour isolation sponsors |
@@ -171,8 +171,8 @@
 
 | Sous-traitant | Service | Localisation | Garanties | Contrat DPA |
 |---------------|---------|--------------|-----------|-------------|
-| Supabase Inc. | Base de données PostgreSQL, stockage fichiers | UE (Irlande) | CCT | ☐ À signer |
-| Render Services Inc. | Hébergement serveur Node.js | USA | EU-US DPF | ☐ À signer |
+| Railway Corp. | Base de données PostgreSQL + hébergement API Node.js | USA | EU-US DPF + CCT/SCC | ☐ À signer |
+| Hostinger International Ltd. | Stockage vidéos FTP | UE (Chypre) | RGPD natif | ☐ À signer |
 | Better Stack (Logtail) | Centralisation des logs | UE | RGPD natif | ☐ À signer |
 | [Prestataire SMTP] | Envoi d'emails transactionnels | [Lieu] | [À définir] | ☐ À signer |
 
@@ -221,7 +221,7 @@ Une AIPD volontaire pourra être réalisée si :
 | Mesure | Description | Statut |
 |--------|-------------|--------|
 | Chiffrement en transit | TLS 1.3 pour toutes les communications | ✅ Actif |
-| Chiffrement au repos | Supabase encryption at rest | ✅ Actif |
+| Chiffrement au repos | Railway PostgreSQL encryption at rest | ✅ Actif |
 | Hachage mots de passe | bcrypt avec 10 rounds de salage | ✅ Actif |
 | MFA | TOTP disponible pour tous les utilisateurs | ✅ Actif |
 | Isolation multi-tenant | Row-Level Security PostgreSQL | ✅ Actif |

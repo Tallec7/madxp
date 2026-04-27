@@ -107,8 +107,8 @@ Les données personnelles sont traitées pour les finalités suivantes :
 
 | Prestataire | Service | Localisation | Garanties |
 |-------------|---------|--------------|-----------|
-| Supabase Inc. | Base de données, stockage | UE (Irlande) | Clauses contractuelles types |
-| Render Services Inc. | Hébergement serveur | UE | EU-US Data Privacy Framework |
+| Railway Corp. | Base de données PostgreSQL et hébergement API | USA | EU-US Data Privacy Framework + CCT/SCC |
+| Hostinger International Ltd. | Stockage vidéos (FTP) | UE (Chypre) | RGPD compliant |
 | Better Stack (Logtail) | Centralisation des logs | UE | RGPD compliant |
 | [Prestataire SMTP] | Envoi d'emails | [Localisation] | [Garanties] |
 

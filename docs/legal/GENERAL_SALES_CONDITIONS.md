@@ -348,8 +348,8 @@ Durée du contrat + 30 jours pour l'export des données.
 Voir Article 7 de la Politique de Confidentialité.
 
 ### A.6 Sous-traitants autorisés
-- Supabase Inc. (hébergement BDD)
-- Render Services Inc. (hébergement serveur)
+- Railway Corp. (BDD PostgreSQL + hébergement API serveur)
+- Hostinger International Ltd. (stockage vidéos FTP)
 - Better Stack Ltd. (logs centralisés)
 
 ---
