@@ -8,12 +8,13 @@ Le PRD (Product Requirements Document) est conçu pour **aligner plusieurs perso
 
 ## Différence avec ce qui existe déjà
 
-| Doc                      | Rôle                                                    | Quand consulter                                                    |
-| ------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------ |
-| **ADR** (`docs/adr/`)    | "Pourquoi on a décidé ça" — figé au point dans le temps | Quand on s'interroge sur un choix archi historique                 |
-| **`.claude/rules/`**     | Interdits techniques auto-loadés                        | Auto-injecté quand Claude touche un fichier                        |
-| **SPEC** (`docs/specs/`) | "Comment ça marche aujourd'hui en métier" — vivant      | Quand on prépare une évolution / quand on revient sur un composant |
-| **Story Card** (PR body) | "Ce qui a changé dans cette PR" — snapshot ship         | À l'ouverture d'une PR                                             |
+| Doc                                         | Rôle                                                                               | Quand consulter                                                          |
+| ------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **ADR** (`docs/adr/`)                       | "Pourquoi on a décidé ça" — figé au point dans le temps                            | Quand on s'interroge sur un choix archi historique                       |
+| **`.claude/rules/`**                        | Interdits techniques auto-loadés                                                   | Auto-injecté quand Claude touche un fichier                              |
+| **SPEC** (`docs/specs/`)                    | "Comment ça marche aujourd'hui en métier" — vivant                                 | Quand on prépare une évolution / quand on revient sur un composant       |
+| **USE-CASES** (`docs/product/USE-CASES.md`) | "Qui se coordonne avec qui dans un parcours réel" — JTBD + scénarios multi-acteurs | Quand on prépare une démo, un onboarding, ou une priorisation de backlog |
+| **Story Card** (PR body)                    | "Ce qui a changé dans cette PR" — snapshot ship                                    | À l'ouverture d'une PR                                                   |
 
 Aucun chevauchement, chaque doc a un rôle clair.
 
