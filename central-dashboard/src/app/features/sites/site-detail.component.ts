@@ -255,6 +255,15 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
         // Cela détecte les "connexions zombies" où isConnected=true mais la socket est morte
         const isReallyConnected = this.connectionHealth?.isHealthy ?? data.connection.isConnected;
 
+        // ADR-099 — uptime réel dérivé de connection_events (issue #644).
+        // L'ancien calcul `(heartbeat_count / 2880) * 100` confondait la fréquence
+        // des metrics système (5 min) avec celle des heartbeats (30s) → 10% systématique.
+        // On préfère désormais le champ uptime exposé par le backend ; fallback null
+        // (= "—" dans le composant) tant que la table connection_events n'a pas
+        // collecté d'event pour ce site (post-déploiement initial).
+        const uptimeFromBackend: number | null =
+          data.connection.uptime?.percent ?? null;
+
         this.connectionStatus = {
           siteId: data.site.id,
           siteName: data.site.site_name,
@@ -271,9 +280,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
           },
           statistics: {
             heartbeats24h: data.connection.heartbeat_24h.count,
-            uptime24h: Math.min(100, (data.connection.heartbeat_24h.count / 2880) * 100),
+            uptime24h: uptimeFromBackend,
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
-            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
+            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt,
+            disconnectCount24h: data.connection.uptime?.disconnectCount ?? null,
+            longestGapSeconds24h: data.connection.uptime?.longestGapSeconds ?? null
           },
           health: this.connectionHealth || undefined
         };
