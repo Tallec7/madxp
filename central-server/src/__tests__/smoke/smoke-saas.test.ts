@@ -2700,6 +2700,27 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     expect(/['"]VIDEO_REPLACED['"]/.test(content)).toBe(true);
   });
 
+  // PR3 hotfix — contentRoutes est monté sur `/api` (pas `/api/content`), donc
+  // l'URL frontend correcte est `/videos/:id/replace` (ApiService prepend `/api`).
+  // Premier ship avait `/content/videos/:id/replace` → 404 en prod. Pin pour
+  // éviter la régression.
+  it('PR3 — site-content-tab.onReplaceVideoRequest appelle /videos/:id/replace (pas /content/videos)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fnMatch = content.match(/onReplaceVideoRequest\([\s\S]*?(?=\n  [a-zA-Z]+\(|\n  get |\n}\n)/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({
+      callsApiUpload: /this\.api\.upload</.test(fn),
+      correctPath: /`\/videos\/\$\{videoId\}\/replace`/.test(fn),
+      wrongPathAbsent: !/`\/content\/videos\/\$\{videoId\}\/replace`/.test(fn),
+    }).toEqual({
+      callsApiUpload: true,
+      correctPath: true,
+      wrongPathAbsent: true,
+    });
+  });
+
   // PR2.2 — Video FTP orphan audit. La cascade DELETE de PR2 ne couvre que les
   // suppressions API. Les fichiers FTP supprimés directement (FileZilla, SSH)
   // ou les uploads jamais réussis côté FTP (row DB créée mais .mp4 absent) ne

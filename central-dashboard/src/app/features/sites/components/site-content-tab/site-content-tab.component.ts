@@ -324,9 +324,10 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
 
   /**
    * Demande de remplacement du fichier vidéo (chantier vidéos manquantes).
-   * Ouvre un file picker, upload vers `/content/videos/:id/replace`. Le backend
-   * réécrit le binaire FTP, regénère la thumbnail, auto-résout le warning audit
-   * et push le sync-agent (Pi) / SaaS pour invalider les caches.
+   * Ouvre un file picker, upload vers `/api/videos/:id/replace` (contentRoutes
+   * monté sur `/api`, pas `/api/content`). Le backend réécrit le binaire FTP,
+   * regénère la thumbnail, auto-résout le warning audit et push le sync-agent
+   * (Pi) / SaaS pour invalider les caches.
    */
   onReplaceVideoRequest(video: VideoItem): void {
     if (!video.id || this.replacingVideoId) return;
@@ -341,7 +342,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       formData.append('video', file);
       this.replacingVideoId = videoId;
       this.notificationService.info(`Upload de "${file.name}"…`);
-      this.api.upload<{ message: string }>(`/content/videos/${videoId}/replace`, formData).subscribe({
+      this.api.upload<{ message: string }>(`/videos/${videoId}/replace`, formData).subscribe({
         next: () => {
           this.replacingVideoId = null;
           this.notificationService.success(`"${video.filename}" remplacé. La config va être repoussée.`);
