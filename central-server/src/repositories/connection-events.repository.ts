@@ -18,6 +18,13 @@ export interface ConnectionEventRow extends QueryResultRow {
   client_ip: string | null;
 }
 
+export interface DailyUptimeRow {
+  date: Date;
+  online_minutes: number;
+  total_minutes: number;
+  availability_percent: number;
+}
+
 export interface UptimeStats {
   /**
    * Pourcentage du temps connecté sur la fenêtre demandée (0-100).
@@ -177,6 +184,81 @@ class ConnectionEventsRepositoryImpl {
       longestGapSeconds: Math.round(longestGapSeconds),
       currentState: cursorState,
     };
+  }
+
+  /**
+   * Calcule l'uptime jour par jour sur les N derniers jours à partir de
+   * connection_events (source de vérité ADR-099). Retourne une row par jour
+   * dans l'ordre DESC, même si aucun event n'existe (0 minutes online).
+   *
+   * Algorithm: builds connected spans from events, intersects each span with
+   * each calendar day, sums the overlap to get online_seconds per day.
+   */
+  async getDailyUptimeStats(siteId: string, days: number): Promise<DailyUptimeRow[]> {
+    const result = await query<{
+      date: Date;
+      online_minutes: number;
+      total_minutes: number;
+      availability_percent: number;
+    }>(
+      `WITH
+       window_start AS (
+         SELECT (CURRENT_DATE::timestamptz - ($2 || ' days')::interval) AS ts
+       ),
+       days_series AS (
+         SELECT generate_series(
+           CURRENT_DATE - (($2 - 1) || ' days')::interval,
+           CURRENT_DATE,
+           INTERVAL '1 day'
+         )::date AS d
+       ),
+       anchored_events AS (
+         (SELECT event_type, occurred_at
+          FROM connection_events
+          WHERE site_id = $1 AND occurred_at < (SELECT ts FROM window_start)
+          ORDER BY occurred_at DESC LIMIT 1)
+         UNION ALL
+         (SELECT event_type, occurred_at
+          FROM connection_events
+          WHERE site_id = $1 AND occurred_at >= (SELECT ts FROM window_start)
+          ORDER BY occurred_at ASC)
+       ),
+       event_spans AS (
+         SELECT event_type,
+                occurred_at AS span_start,
+                LEAD(occurred_at) OVER (ORDER BY occurred_at) AS span_end_raw
+         FROM anchored_events
+       ),
+       connected_spans AS (
+         SELECT GREATEST(span_start, (SELECT ts FROM window_start)) AS span_start,
+                COALESCE(span_end_raw, NOW()) AS span_end
+         FROM event_spans
+         WHERE event_type = 'connected'
+           AND COALESCE(span_end_raw, NOW()) > (SELECT ts FROM window_start)
+       ),
+       daily_overlap AS (
+         SELECT ds.d,
+                COALESCE(SUM(
+                  GREATEST(0.0, EXTRACT(EPOCH FROM (
+                    LEAST(cs.span_end, ds.d::timestamptz + INTERVAL '1 day') -
+                    GREATEST(cs.span_start, ds.d::timestamptz)
+                  )))
+                ), 0.0) AS online_seconds
+         FROM days_series ds
+         LEFT JOIN connected_spans cs
+           ON cs.span_end > ds.d::timestamptz
+          AND cs.span_start < ds.d::timestamptz + INTERVAL '1 day'
+         GROUP BY ds.d
+       )
+       SELECT d AS date,
+              LEAST(1440, (online_seconds / 60)::integer) AS online_minutes,
+              1440 AS total_minutes,
+              ROUND(LEAST(100.0, online_seconds / 864.0)::numeric, 1)::float AS availability_percent
+       FROM daily_overlap
+       ORDER BY d DESC`,
+      [siteId, days]
+    );
+    return result.rows;
   }
 
   /**

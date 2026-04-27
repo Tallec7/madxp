@@ -686,7 +686,8 @@ class AnalyticsRepositoryImpl {
        FROM (
         SELECT
           site_id,
-          LEAST(100, (COUNT(*) * 100.0 / 2880)) as availability
+          -- FIXME ADR-099: à migrer vers connection_events ; 288 = metrics/5min × 24h
+          LEAST(100, (COUNT(*) * 100.0 / 288)) as availability
         FROM metrics
         WHERE recorded_at >= NOW() - INTERVAL '24 hours'
         GROUP BY site_id
@@ -1059,6 +1060,43 @@ class AnalyticsRepositoryImpl {
       [date]
     );
     return result.rows[0]?.count ?? 0;
+  }
+
+  /**
+   * Disponibilité horaire sur une période arbitraire pour les rapports PDF.
+   * Retourne le nombre d'heures avec au moins un sample metrics sur la période.
+   * Utilisé comme proxy d'uptime dans les rapports (1 row dédupliquée par heure).
+   *
+   * FIXME ADR-099: migrer vers connection_events.getUptimeStatsForWindow
+   * quand cette méthode sera ajoutée au repository.
+   */
+  async getPeriodHourlyAvailability(
+    siteId: string,
+    from: string,
+    to: string
+  ): Promise<{ hoursOnline: number; hoursInPeriod: number; uptimePercent: number }> {
+    const result = await query<{ total_checks: string }>(
+      `SELECT COUNT(*) as total_checks
+       FROM (
+         SELECT RANK() OVER (PARTITION BY DATE_TRUNC('hour', recorded_at) ORDER BY recorded_at DESC) AS rn
+         FROM metrics
+         WHERE site_id = $1
+           AND recorded_at >= $2::date
+           AND recorded_at < ($3::date + INTERVAL '1 day')
+       ) hourly_status
+       WHERE rn = 1`,
+      [siteId, from, to]
+    );
+    const periodStart = new Date(from);
+    const periodEnd = new Date(to);
+    const hoursInPeriod =
+      Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60)) + 24;
+    const hoursOnline = parseInt(result.rows[0]?.total_checks ?? '0', 10);
+    const uptimePercent =
+      hoursInPeriod > 0
+        ? Math.min(100, Math.round((hoursOnline / hoursInPeriod) * 1000) / 10)
+        : 0;
+    return { hoursOnline, hoursInPeriod, uptimePercent };
   }
 }
 

@@ -110,6 +110,57 @@ describe('ADR-099 — connection_events tracking (smoke)', () => {
   });
 
   // ---------------------------------------------------------------------
+  // Issue #655 — garde-fou étendu aux fichiers analytics (régression #644)
+  // Le diviseur 2880 était aussi présent dans analytics.controller.ts,
+  // analytics-dashboard.controller.ts et analytics.repository.ts.
+  // Ces guards empêchent la réintroduction silencieuse du bug.
+  // ---------------------------------------------------------------------
+  describe('analytics files — no bogus 2880 divisor (issue #655)', () => {
+    it('analytics.controller.ts uses connection_events for getClubHealth (not / 2880)', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'controllers/analytics.controller.ts'),
+        'utf8'
+      );
+      expect(src).not.toMatch(/\/\s*2880/);
+      expect(src).toMatch(/connectionEventsRepository\.getUptimeStats/);
+    });
+
+    it('analytics.controller.ts uses getDailyUptimeStats for getClubAvailability (not heartbeats * 0.5)', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'controllers/analytics.controller.ts'),
+        'utf8'
+      );
+      // L'ancienne formule multipliait heartbeats × 0.5 (= 30s) puis divisait par 1440.
+      expect(src).not.toMatch(/heartbeats\s*\*\s*0\.5/);
+      expect(src).toMatch(/getDailyUptimeStats/);
+    });
+
+    it('analytics-dashboard.controller.ts does not divide by 2880', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'controllers/analytics-dashboard.controller.ts'),
+        'utf8'
+      );
+      expect(src).not.toMatch(/\/\s*2880/);
+    });
+
+    it('analytics.repository.ts does not divide by 2880', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'repositories/analytics.repository.ts'),
+        'utf8'
+      );
+      expect(src).not.toMatch(/\/\s*2880/);
+    });
+
+    it('connection-events.repository.ts exposes getDailyUptimeStats', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'repositories/connection-events.repository.ts'),
+        'utf8'
+      );
+      expect(src).toMatch(/async getDailyUptimeStats\(/);
+    });
+  });
+
+  // ---------------------------------------------------------------------
   // ADR-099 follow-up — CRON de purge connection_events (90j par défaut).
   // Sans purge, la table grossirait sans cap. Le smoke ci-dessous gèle :
   // - Le task module + son enregistrement dans le dispatch

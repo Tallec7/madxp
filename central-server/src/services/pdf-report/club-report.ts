@@ -11,6 +11,7 @@
  */
 
 import { query } from '../../config/database';
+import { analyticsRepository } from '../../repositories';
 import logger from '../../config/logger';
 import PDFDocument from 'pdfkit';
 import * as crypto from 'crypto';
@@ -129,30 +130,7 @@ export async function generateClubReport(
     );
 
     // 6. Calculer uptime sur la periode
-    const availabilityResult = await query(
-      `SELECT
-        COUNT(*) as total_checks,
-        COUNT(*) as online_checks
-       FROM (
-         SELECT site_id, recorded_at,
-           RANK() OVER (PARTITION BY DATE_TRUNC('hour', recorded_at) ORDER BY recorded_at DESC) as rn
-         FROM metrics
-         WHERE site_id = $1
-           AND recorded_at >= $2::date
-           AND recorded_at < ($3::date + INTERVAL '1 day')
-       ) hourly_status
-       WHERE rn = 1`,
-      [siteId, from, to]
-    );
-
-    const periodStart = new Date(from);
-    const periodEnd = new Date(to);
-    const hoursInPeriod = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60)) + 24;
-
-    const availability = availabilityResult.rows[0] as { total_checks: string; online_checks: string };
-    const uptimePercent = hoursInPeriod > 0
-      ? Math.min(100, (parseInt(availability.total_checks) / hoursInPeriod) * 100)
-      : 0;
+    const { uptimePercent } = await analyticsRepository.getPeriodHourlyAvailability(siteId, from, to);
 
     // 7. Recuperer les alertes de la periode
     const alertsResult = await query(
