@@ -315,7 +315,7 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   private loadClubGrants(siteId: string): void {
-    this.api.get<{ videoIds: string[] }>(`/content/videos/grants-for-site/${siteId}`)
+    this.api.get<{ videoIds: string[] }>(`/videos/grants-for-site/${siteId}`)
       .subscribe({ next: (res) => { this.clubGrantedVideoIds = new Set(res.videoIds); this.cdr.markForCheck(); } });
   }
 
@@ -323,7 +323,7 @@ export class VideoLibraryComponent implements OnChanges {
     if (!videoId) return;
     this.grantsLoading = true;
     this.videoGrants = [];
-    this.api.get<{ grants: VideoClubGrantRow[] }>(`/content/videos/${videoId}/club-grants`)
+    this.api.get<{ grants: VideoClubGrantRow[] }>(`/videos/${videoId}/club-grants`)
       .subscribe({
         next: (res) => { this.videoGrants = res.grants; this.grantsLoading = false; this.cdr.markForCheck(); },
         error: () => { this.grantsLoading = false; this.cdr.markForCheck(); },
@@ -332,13 +332,13 @@ export class VideoLibraryComponent implements OnChanges {
 
   onAddGrant(siteId: string): void {
     if (!this.detailVideo?.id) return;
-    this.api.post<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants`, { site_id: siteId })
+    this.api.post<{ success: boolean }>(`/videos/${this.detailVideo.id}/club-grants`, { site_id: siteId })
       .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
   }
 
   onRemoveGrant(siteId: string): void {
     if (!this.detailVideo?.id) return;
-    this.api.delete<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants/${siteId}`)
+    this.api.delete<{ success: boolean }>(`/videos/${this.detailVideo.id}/club-grants/${siteId}`)
       .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
   }
 
