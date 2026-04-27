@@ -1,3 +1,9 @@
+## [3.258.1](https://github.com/Tallec7/neopro/compare/v3.258.0...v3.258.1) (2026-04-27)
+
+### Bug Fixes
+
+- **video-library:** replace /content/videos URL prefix ([#657](https://github.com/Tallec7/neopro/issues/657)) ([f85c735](https://github.com/Tallec7/neopro/commit/f85c735436221f9b078dc4a7673acece846e63cf)), closes [#647](https://github.com/Tallec7/neopro/issues/647)
+
 # [3.258.0](https://github.com/Tallec7/neopro/compare/v3.257.0...v3.258.0) (2026-04-27)
 
 ### Features
