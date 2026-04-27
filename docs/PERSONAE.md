@@ -97,6 +97,32 @@ Chaque persona suit un format unique pour comparaison facile :
 
 **Source d'info** : ✅ terrain confirmé (NLF + autres clients) — c'est cette persona qui justifie l'investissement Template Studio v2
 
+**Cas d'usage détaillés** :
+
+#### CU1. Préparation matchday hebdomadaire *(weekly — Studio + scénario match)*
+- *Sans Neopro* : *"Chaque vendredi je repars de zéro sur Canva — 4h pour refaire faits de jeu / intro joueurs / bandeau sponsors, rien n'est réutilisable d'une semaine sur l'autre."*
+- *Avec Neopro* : *"Je clone le scénario de la semaine dernière, j'actualise les noms des joueurs, je preview, je déploie en 45 min — le samedi soir tourne tout seul."*
+
+#### CU2. Animation live pendant le match *(matchday — Remote en tribune)*
+- *Sans Neopro* : *"Pendant le match je suis collé au PC de régie au lieu de profiter de l'ambiance — chaque transition est manuelle et je rate la moitié des moments forts."*
+- *Avec Neopro* : *"Avec la Remote sur ma tablette je suis en tribune, je déclenche les célébrations sur les buts en temps réel, et la mi-temps part toute seule à 25:00."*
+
+#### CU3. Habillage saison / charte graphique club *(once / saison — Studio templates de base)*
+- *Sans Neopro* : *"Quand le club change de sponsor maillot, je reprends 30 templates Canva un par un pour mettre à jour couleurs et logo — 2 jours de boulot pour une modif qui devrait prendre 10 min."*
+- *Avec Neopro* : *"La charte club est définie une fois dans le Studio, tous les templates en héritent — un nouveau partenaire = 1 modif → cascade automatique sur la flotte de visuels."*
+
+#### CU4. 🔮 Highlights + posts réseaux sociaux post-match *(weekly post-match — roadmap LATER)*
+- *Sans Neopro* : *"Le dimanche midi je monte manuellement les highlights pour Insta/TikTok pendant que mes proches déjeunent — je poste lundi 14h, engagement divisé par 3."*
+- *Avec Neopro* : *"À la fin du match Neopro pousse automatiquement le clip 'score final + meilleur moment' sur les réseaux du club, engagement Insta x4 vs publication lundi."*
+
+#### CU5. Communication hors-match *(weekly — calendrier diffusion)*
+- *Sans Neopro* : *"L'écran du gymnase tourne en boucle sur les pubs entre les matches — je voudrais y passer les annonces club (entraînements, AG, résultats jeunes) mais aucun outil simple pour planifier."*
+- *Avec Neopro* : *"Je crée une annonce 'AG mercredi 18h' depuis le Studio, programmée entre 18h et 21h les soirs d'ouverture publique — s'affiche sans toucher au reste."*
+
+#### CU6. Coordination avec 3c (sponsors dans la programmation) *(weekly — dashboard sponsors en lecture)*
+- *Sans Neopro* : *"Le resp partenaires me dit 'fais passer Decathlon plus souvent en mi-temps' — sans outil partagé je dois deviner ce que ça veut dire, on perd 2-3 allers-retours par semaine."*
+- *Avec Neopro* : *"Le resp partenaires configure la rotation pondérée côté dashboard, mes scénarios matchday lisent automatiquement les emplacements alloués — contrat respecté par construction."*
+
 ---
 
 ### 3c. 🟡 Responsable partenaires / sponsoring club
@@ -117,7 +143,39 @@ Chaque persona suit un format unique pour comparaison facile :
 
 **Lien stratégique** : c'est cette persona qui transforme Neopro d'un "outil tech" en "levier commercial" — sans elle, le ROI sponsor n'est pas activé côté client.
 
-**Cas d'usage rattaché à 3b/3c** — Réseaux sociaux post-match (roadmap LATER) : highlights / score final automatiquement poussés sur Instagram/TikTok du club
+**Cas d'usage détaillés** :
+
+#### CU1. Prospection nouveaux sponsors *(weekly — export PDF + dashboard live en RDV)*
+- *Sans Neopro* : *"Je prospecte avec un PPT de 2023 et 3 photos de tribune — quand le prospect demande 'combien de personnes voient mon logo par mois ?' je n'ai aucune réponse, il part sur du Google Ads."*
+- *Avec Neopro* : *"En RDV je sors mon ordi sur Neopro live : '12 800 impressions/mois sur 18 matches, breakdown par contrat' — le prospect signe à 8K€/an au lieu des 3K€ habituels."*
+
+#### CU2. Renégociation annuelle des contrats *(seasonal peak — rapports ROI 12 mois)*
+- *Sans Neopro* : *"En juin chaque sponsor me demande de justifier ses 3K€ — je fabrique des bilans Excel pendant 3 semaines, beaucoup ne renouvellent pas faute d'arguments."*
+- *Avec Neopro* : *"Je clique 'rapport annuel sponsor X', PDF 8 pages avec impressions cumulées + courbe d'évolution + comparatif anonymisé — taux de reconduction passe de 60% à 85%."*
+
+#### CU3. Construction des packs commerciaux *(once + ajustements — dashboard sponsors / rotation pondérée)*
+- *Sans Neopro* : *"Je vends tous mes sponsors au même tarif faute de différencier 'logo bandeau' et 'spot vidéo mi-temps' en termes de visibilité — je laisse de la marge à chaque renouvellement."*
+- *Avec Neopro* : *"Je crée 4 packs bronze/argent/or/platine avec fréquences et emplacements distincts, le dashboard prouve que le pack platine génère 4x plus d'impressions premium — je facture 4x le prix sans débat."*
+
+#### CU4. Onboarding nouveau sponsor signé *(événementiel — dashboard sponsors + Studio)*
+- *Sans Neopro* : *"Sponsor signé mardi → 3 semaines à récupérer son logo HD, le faire retoucher, le pousser au resp com qui l'intègre dans tous les templates — le sponsor s'inquiète avant sa première visibilité."*
+- *Avec Neopro* : *"Sponsor signé mardi, créé dans le dashboard mercredi avec logo et vidéo, premier rapport d'impressions reçu samedi soir après son premier match diffusé — onboarding 4 jours."*
+
+#### CU5. Reporting mensuel automatique aux sponsors actuels *(monthly — mail auto + portail sponsor)*
+- *Sans Neopro* : *"Le 1er du mois : 2 jours à compiler 8 bilans Excel et les envoyer un par un par mail — temps perdu pour la prospection."*
+- *Avec Neopro* : *"Le 1er du mois : 15 min à vérifier les rapports auto envoyés, mot personnalisé pour 2-3 partenaires clés, matinée libérée pour appeler des prospects."*
+
+#### CU6. Allocation des emplacements premium *(weekly — dashboard sponsors)*
+- *Sans Neopro* : *"Mes 3 sponsors majeurs veulent tous 'être visibles à mi-temps' — j'arbitre manuellement chaque match, inévitablement quelqu'un râle."*
+- *Avec Neopro* : *"Je définis une rotation pondérée saisonnière (Decathlon 3x/match mi-temps, banque locale 2x/match bandeau...) — le système tourne, preuve à l'appui en cas de litige."*
+
+#### CU7. Animation relationnelle VIP / soirées partenaires *(event-based — Studio + Remote)*
+- *Sans Neopro* : *"Soirée partenaires en loge un soir de match : je voudrais un message écran 'Bienvenue partenaires CA — dégustation à la mi-temps' mais je dois mailer le resp com 3 jours à l'avance."*
+- *Avec Neopro* : *"Je crée l'animation événementielle 'soirée VIP CA mardi 20h' depuis le dashboard sponsors — s'affiche automatiquement entre 19h45 et 22h sans toucher à la programmation matchday standard."*
+
+#### CU8. Reporting institutionnel pour 6c (collectivités) *(semestriel — export PDF formaté admin)*
+- *Sans Neopro* : *"Quand la mairie demande son rapport semestriel de visibilité, je fabrique un document audit-grade avec heures précises et formats certifiés — 1 journée par collectivité, format jamais standard."*
+- *Avec Neopro* : *"Je clique 'rapport semestriel collectivité' avec dates début/fin, je récupère un PDF formaté admin (heures cumulées, impressions estimées) — annexable directement à la convention de partenariat."*
 
 ---
 
