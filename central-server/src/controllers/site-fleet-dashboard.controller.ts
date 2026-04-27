@@ -11,6 +11,7 @@ import {
   alertRepository,
   softwareUpdateRepository,
   videoFtpAuditRepository,
+  connectionEventsRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -84,6 +85,15 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
 
     // Récupérer les statistiques de connexion récentes (24h)
     const stats = await metricsRepository.get24hStatsForSite(id);
+
+    // Uptime réel basé sur connection_events (ADR-099). Source de vérité fiable,
+    // contrairement au comptage de rows `metrics` qui assumait un intervalle 30s
+    // alors que les samples sont écrits toutes les 5 min — d'où ~10% d'uptime
+    // affiché en permanence pour toute la flotte avant ADR-099 (cf. issue #644).
+    const uptimeStats = await connectionEventsRepository.getUptimeStats(
+      id,
+      parseInt(hours as string)
+    );
 
     // Récupérer l'état de santé détaillé de la connexion WebSocket
     const connectionHealth = socketService.getConnectionHealth(id);
@@ -308,6 +318,17 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
           count: parseInt(stats.heartbeat_count as string),
           firstAt: stats.first_heartbeat,
           lastAt: stats.last_heartbeat,
+        },
+        // ADR-099 — uptime réel dérivé de connection_events. Préférer ces champs
+        // côté front à un calcul basé sur heartbeat_24h (calcul faux historiquement,
+        // cf. issue #644). Si uptimePercent est null, le site est trop récent (pas
+        // encore d'events depuis migration) et il faut afficher un état neutre.
+        uptime: {
+          windowHours: parseInt(hours as string),
+          percent: uptimeStats.uptimePercent,
+          disconnectCount: uptimeStats.disconnectCount,
+          longestGapSeconds: uptimeStats.longestGapSeconds,
+          currentState: uptimeStats.currentState,
         },
       },
       // Nouvel objet health pour détecter les connexions zombies
