@@ -45,7 +45,9 @@ export type AuditAction =
   | 'SUBSCRIPTION_AUTO_UNBLOCKED'
   // Config copy & duplication
   | 'CONFIG_COPIED'
-  | 'SITE_DUPLICATED';
+  | 'SITE_DUPLICATED'
+  // Vidéos manquantes — admin retire la référence d'une vidéo orpheline FTP du site
+  | 'SITE_VIDEO_UNLINKED';
 
 interface AuditLogEntry {
   action: AuditAction;

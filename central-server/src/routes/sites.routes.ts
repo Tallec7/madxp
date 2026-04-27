@@ -40,6 +40,17 @@ router.get('/:id/dashboard', authenticate, monitoringRateLimit, validateParams(p
 // vidéos manquantes — alimente la bannière du tab "Contenu").
 router.get('/:id/ftp-orphans', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteFtpOrphans);
 
+// Retire la référence d'une vidéo orpheline FTP du site (cascade JSONB +
+// push Pi/SaaS). Action manuelle admin/super_admin uniquement, jamais auto.
+router.delete(
+  '/:id/ftp-orphans/:videoId',
+  authenticate,
+  requireRole('admin', 'super_admin'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.idAndVideoId),
+  sitesController.unlinkSiteFtpOrphan,
+);
+
 // Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
 router.get('/:id/timeline', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
 
