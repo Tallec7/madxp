@@ -147,6 +147,11 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 - Pas de Swagger/OpenAPI auto-généré. Quand on devra exposer une API publique partenaire (ADR-021 dans le futur), il faudra le faire.
 - **Effort** : ~2-3j (annotations + génération + hébergement).
 
+### Audit FTP nocturne ne check que `videos.storage_path` (pas `thumbnail_url`)
+- Le CRON `video_ftp_audit` détecte les `.mp4` morts mais ignore les `.jpg` orphelins. Conséquence : on peut avoir des thumbnails sur le FTP sans vidéo associée (rest cause : suppressions FTP manuelles pré-PR avant que le cleanup auto soit ajouté). Pas un bug fonctionnel mais espace gaspillé + confusion possible (vignette qui survit à sa vidéo).
+- **Effort** : ~0.5j. Étendre `video-ftp-audit.service` pour HEAD aussi `buildThumbnailPath(video.id)`, exposer une métrique `neopro_video_ftp_audit_orphan_thumbnails_total`. Pas besoin de schema change si on log juste la métrique (pas de stockage de warning par thumbnail).
+- **Bloquant pour** : rien d'urgent — c'est de l'hygiène FTP. À faire après quelques semaines en prod si on voit une accumulation.
+
 ---
 
 ## ✅ Résolu

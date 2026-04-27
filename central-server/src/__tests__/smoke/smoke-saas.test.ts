@@ -2490,6 +2490,34 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // Garde-fou : la suppression vidéo doit aussi nettoyer le thumbnail FTP
+  // (sans ça, les .jpg restent orphelins, source de confusion : la library
+  // affiche une vignette mais le .mp4 est mort — incident découvert sur
+  // l'audit FTP de NLF, 49 orphelines avec thumbnails encore présents).
+  it('content.controller deleteVideo cleans up thumbnail FTP file', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsDeleteThumbnail: /deleteThumbnail\s+as\s+deleteStorageThumbnail/.test(content),
+      callsDeleteThumbnail: /deleteStorageThumbnail\(buildThumbnailPath/.test(content),
+    }).toEqual({
+      importsDeleteThumbnail: true,
+      callsDeleteThumbnail: true,
+    });
+  });
+
+  it('advertiser-portal.controller deleteVideo cleans up thumbnail FTP file', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'advertiser-portal.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsThumbnailHelpers: /deleteThumbnail[\s,}]/.test(content) && /buildThumbnailPath[\s,}]/.test(content),
+      callsDeleteThumbnail: /deleteThumbnail\(buildThumbnailPath/.test(content),
+    }).toEqual({
+      importsThumbnailHelpers: true,
+      callsDeleteThumbnail: true,
+    });
+  });
+
   it('content.routes mounts GET /videos/:id/usage with validateParams', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts');
     const content = fs.readFileSync(filePath, 'utf8');

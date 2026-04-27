@@ -3,7 +3,7 @@ import logger from '../config/logger';
 import { AuthRequest } from '../types';
 import { videoRepository, deploymentRepository, siteRepository, siteVideoRepository, configProfileRepository } from '../repositories';
 import { removeVideoFromConfig } from '../utils/config-video-cleanup';
-import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl } from '../services/storage.service';
+import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, deleteThumbnail as deleteStorageThumbnail, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl } from '../services/storage.service';
 import thumbnailService from '../services/thumbnail.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { UploadStatus } from '../services/upload-verification.service';
@@ -576,6 +576,18 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
     // Supprimer du stockage FTP
     if (storagePath) {
       await deleteStorageVideo(storagePath);
+    }
+
+    // Supprimer aussi le thumbnail FTP. Best-effort : un échec ne doit pas
+    // bloquer la cascade (la vidéo est déjà supprimée DB+FTP). Avant ce fix,
+    // les thumbnails restaient orphelins sur le FTP, source de confusion
+    // (vignette affichée mais vidéo introuvable côté library).
+    try {
+      await deleteStorageThumbnail(buildThumbnailPath(id));
+    } catch (thumbErr) {
+      logger.warn('Thumbnail cleanup failed (best-effort)', {
+        videoId: id, err: (thumbErr as Error).message,
+      });
     }
 
     // PR2.1 — Cleanup cascade JSONB : retirer la vidéo des
