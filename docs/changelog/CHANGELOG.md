@@ -1,3 +1,9 @@
+# [3.254.0](https://github.com/Tallec7/neopro/compare/v3.253.1...v3.254.0) (2026-04-27)
+
+### Features
+
+- **site-content:** unlink FTP orphan from site (1-click cascade cleanup) ([#643](https://github.com/Tallec7/neopro/issues/643)) ([5c5d487](https://github.com/Tallec7/neopro/commit/5c5d487e51e334dbccb36dc7e32c882d2f153140)), closes [#641](https://github.com/Tallec7/neopro/issues/641) [#616](https://github.com/Tallec7/neopro/issues/616) [#641](https://github.com/Tallec7/neopro/issues/641)
+
 ## [3.253.1](https://github.com/Tallec7/neopro/compare/v3.253.0...v3.253.1) (2026-04-27)
 
 ### Bug Fixes
