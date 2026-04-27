@@ -1,3 +1,9 @@
+# [3.251.0](https://github.com/Tallec7/neopro/compare/v3.250.0...v3.251.0) (2026-04-27)
+
+### Features
+
+- **video-health:** always-visible counters on Remote V2 + site detail ([#634](https://github.com/Tallec7/neopro/issues/634)) ([6ec2a1a](https://github.com/Tallec7/neopro/commit/6ec2a1a73a7a8cff9f3b221b1791f9989de34a26)), closes [#630](https://github.com/Tallec7/neopro/issues/630)
+
 # [3.250.0](https://github.com/Tallec7/neopro/compare/v3.249.0...v3.250.0) (2026-04-26)
 
 ### Features
