@@ -757,34 +757,50 @@ export class SitesListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Retourne le statut de connexion temps réel depuis l'endpoint dédié
-   * qui vérifie les connexions Socket.IO en temps réel
+   * Retourne le statut de connexion temps réel pour la carte d'un site sur la
+   * liste. Combine deux sources avec un veto DB :
+   *
+   * 1. Veto fort : si la DB dit `status='offline'` OU `last_seen_at` > 5 min,
+   *    on retourne `offline` même si le cache socket dit le contraire (le cache
+   *    a un TTL de 60s, donc peut afficher un faux "Connecté" pendant ~1 min
+   *    après une vraie déconnexion — issue #644).
+   * 2. Sinon, on consomme le cache socket temps réel s'il est disponible.
+   * 3. Sinon, fallback sur la DB (status + last_seen_at avec seuil 120s).
+   *
+   * ADR-099 : la formule d'uptime % a été corrigée côté backend, mais ce badge
+   * binaire (online/offline) reste basé sur la fraîcheur du heartbeat, pas sur
+   * un % calculé.
    */
   getRealTimeStatus(site: Site): 'online' | 'offline' | 'warning' | 'unknown' {
-    // Utiliser les données temps réel si disponibles
+    const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
+    const secondsSinceLastSeen = lastSeenAt
+      ? Math.floor((Date.now() - lastSeenAt.getTime()) / 1000)
+      : null;
+
+    // Veto fort sur les faux positifs du cache socket : si la DB est claire
+    // (offline ou last_seen_at trop vieux), c'est la vérité.
+    const dbSaysOffline =
+      site.status === 'offline' ||
+      (secondsSinceLastSeen !== null && secondsSinceLastSeen > 300);
+    if (dbSaysOffline) {
+      return 'offline';
+    }
+
+    // Cache socket temps réel (TTL ~60s) — plus précis que la DB pour
+    // détecter un disconnect très récent dans la fenêtre ≤5 min.
     const connectionStatus = this.connectionStatusMap.get(site.id);
     if (connectionStatus) {
       return connectionStatus.displayStatus;
     }
 
-    // Fallback sur le statut DB (ne devrait pas arriver souvent)
+    // Fallback DB pure
     if (site.status === 'online') {
       return 'online';
     }
-
-    const lastSeenAt = site.last_seen_at ? new Date(site.last_seen_at) : null;
-    if (!lastSeenAt) {
+    if (secondsSinceLastSeen === null) {
       return 'unknown';
     }
-
-    const now = new Date();
-    const secondsSinceLastSeen = Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000);
-
-    if (secondsSinceLastSeen < 120) {
-      return 'warning';
-    } else {
-      return 'offline';
-    }
+    return secondsSinceLastSeen < 120 ? 'warning' : 'offline';
   }
 
   getRealTimeStatusBadge(site: Site): string {

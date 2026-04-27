@@ -255,6 +255,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
         // Cela détecte les "connexions zombies" où isConnected=true mais la socket est morte
         const isReallyConnected = this.connectionHealth?.isHealthy ?? data.connection.isConnected;
 
+        // ADR-099 — uptime via connection_events (issue #644), null tant qu'aucun event collecté.
         this.connectionStatus = {
           siteId: data.site.id,
           siteName: data.site.site_name,
@@ -266,14 +267,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
             secondsSinceLastSeen: data.connection.secondsSinceLastSeen,
             localIp: data.connection.localIp
           },
-          sync: {
-            lastConfigSync: data.connection.lastConfigSync
-          },
+          sync: { lastConfigSync: data.connection.lastConfigSync },
           statistics: {
             heartbeats24h: data.connection.heartbeat_24h.count,
-            uptime24h: Math.min(100, (data.connection.heartbeat_24h.count / 2880) * 100),
+            uptime24h: data.connection.uptime?.percent ?? null,
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
-            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
+            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt,
+            disconnectCount24h: data.connection.uptime?.disconnectCount ?? null,
+            longestGapSeconds24h: data.connection.uptime?.longestGapSeconds ?? null
           },
           health: this.connectionHealth || undefined
         };

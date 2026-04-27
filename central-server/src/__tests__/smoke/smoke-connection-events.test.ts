@@ -108,4 +108,64 @@ describe('ADR-099 — connection_events tracking (smoke)', () => {
       expect(ctrlSrc).not.toMatch(/\/\s*2880/);
     });
   });
+
+  // ---------------------------------------------------------------------
+  // ADR-099 follow-up — CRON de purge connection_events (90j par défaut).
+  // Sans purge, la table grossirait sans cap. Le smoke ci-dessous gèle :
+  // - Le task module + son enregistrement dans le dispatch
+  // - L'extension de check_task_type dans la migration seed
+  // - L'ajout du task type dans CronTaskType
+  // - La métrique Prometheus `recordConnectionEventsPurge`
+  // ---------------------------------------------------------------------
+  describe('CRON purge follow-up', () => {
+    it('connection-events-purge task module exists with executor', () => {
+      const src = fs.readFileSync(
+        path.join(ROOT, 'cron-tasks/connection-events-purge.task.ts'),
+        'utf8'
+      );
+      expect(src).toMatch(/export async function executeConnectionEventsPurgeTask/);
+      expect(src).toMatch(/connectionEventsRepository\.purgeOlderThan/);
+      expect(src).toMatch(/metricsService\.recordConnectionEventsPurge/);
+    });
+
+    it('CronTaskType union contains connection_events_purge', () => {
+      const types = fs.readFileSync(
+        path.join(ROOT, 'cron-tasks/types.ts'),
+        'utf8'
+      );
+      expect(types).toMatch(/'connection_events_purge'/);
+    });
+
+    it('cron-scheduler dispatch wires the executor', () => {
+      const scheduler = fs.readFileSync(
+        path.join(ROOT, 'services/cron-scheduler.service.ts'),
+        'utf8'
+      );
+      expect(scheduler).toMatch(/executeConnectionEventsPurgeTask/);
+      expect(scheduler).toMatch(/connection_events_purge:\s*executeConnectionEventsPurgeTask/);
+    });
+
+    it('seed migration extends check_task_type and inserts a default schedule', () => {
+      const seed = fs.readFileSync(
+        path.join(ROOT, 'scripts/migrations/add-connection-events-purge-cron.sql'),
+        'utf8'
+      );
+      expect(seed).toMatch(/check_task_type/);
+      expect(seed).toMatch(/'connection_events_purge'/);
+      expect(seed).toMatch(/INSERT INTO recurring_schedules/);
+      expect(seed).toMatch(/retentionDays/);
+    });
+
+    it('full-schema CHECK constraint includes connection_events_purge', () => {
+      const schema = fs.readFileSync(path.join(ROOT, 'scripts/full-schema.sql'), 'utf8');
+      expect(schema).toMatch(/connection_events_purge/);
+    });
+
+    it('metricsService exposes recordConnectionEventsPurge counter+gauge', () => {
+      const metrics = fs.readFileSync(path.join(ROOT, 'services/metrics.service.ts'), 'utf8');
+      expect(metrics).toMatch(/recordConnectionEventsPurge\s*\(/);
+      expect(metrics).toMatch(/neopro_connection_events_purged_total/);
+      expect(metrics).toMatch(/neopro_connection_events_rows_current/);
+    });
+  });
 });

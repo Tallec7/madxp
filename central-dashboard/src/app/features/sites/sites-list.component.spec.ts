@@ -505,6 +505,45 @@ describe('SitesListComponent', () => {
 
       expect(sitesService.getAllConnectionStatus).toHaveBeenCalled();
     }));
+
+    // ---------------------------------------------------------------------
+    // Issue #644 / ADR-099 — veto fort sur faux positifs du cache socket.
+    // Si la DB dit que le site est offline ou que last_seen_at > 5 min, on
+    // ne fait pas confiance au cache socket même s'il dit "online".
+    // ---------------------------------------------------------------------
+    it('should override stale cached online with offline when site.status is offline (issue #644)', fakeAsync(() => {
+      // Cache socket désynchronisé : prétend que le site (status DB=offline) est encore en ligne.
+      sitesService.getAllConnectionStatus.and.returnValue(of({
+        sites: [
+          { siteId: '2', siteName: 'Site Nantes', clubName: 'Nantes FC', isConnected: true, displayStatus: 'online' as const, lastSeenAt: new Date(), secondsSinceLastSeen: 5, localIp: null },
+        ],
+        stats: { total: 1, online: 1, warning: 0, offline: 0, unknown: 0 },
+        timestamp: new Date().toISOString(),
+      }));
+      fixture.detectChanges();
+      tick();
+
+      // mockSites[1] a status='offline' en DB. Le veto DB doit l'emporter.
+      const status = component.getRealTimeStatus(mockSites[1]);
+      expect(status).toBe('offline');
+    }));
+
+    it('should override stale cached online with offline when last_seen_at > 5 min', fakeAsync(() => {
+      const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);
+      const staleSite = { ...mockSites[0], status: 'online' as const, last_seen_at: sixMinutesAgo } as Site;
+      sitesService.getAllConnectionStatus.and.returnValue(of({
+        sites: [
+          { siteId: '1', siteName: 'Site Rennes', clubName: 'Rennes FC', isConnected: true, displayStatus: 'online' as const, lastSeenAt: sixMinutesAgo, secondsSinceLastSeen: 360, localIp: null },
+        ],
+        stats: { total: 1, online: 1, warning: 0, offline: 0, unknown: 0 },
+        timestamp: new Date().toISOString(),
+      }));
+      fixture.detectChanges();
+      tick();
+
+      const status = component.getRealTimeStatus(staleSite);
+      expect(status).toBe('offline');
+    }));
   });
 
   describe('deleteSite', () => {
