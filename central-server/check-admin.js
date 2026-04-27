@@ -5,8 +5,7 @@ const DEFAULT_URL = 'postgresql://postgres:postgres@localhost:5432/neopro_centra
 const connectionString = process.env.DATABASE_URL || DEFAULT_URL;
 const shouldUseSSL =
   process.env.NODE_ENV === 'production' ||
-  (process.env.DATABASE_SSL || '').toLowerCase() === 'true' ||
-  connectionString.includes('supabase.co');
+  (process.env.DATABASE_SSL || '').toLowerCase() === 'true';
 
 if (shouldUseSSL) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';

@@ -1,4 +1,4 @@
-name: DB Backup (Railway → Hostinger FTP + Supabase mirror)
+name: DB Backup (Railway → Hostinger FTP)
 
 on:
   schedule:
@@ -115,12 +115,10 @@ jobs:
             fi
           done
 
-      # Mirror Supabase + checksums Railway/Supabase retirés (Sprint 0 cleanup delivery system).
-      # Justification : Supabase n'était pas un endpoint applicatif, juste un mirror passif jamais
-      # utilisé en cas d'incident. Le dump Hostinger FTP (vérifié par sanity check + double upload)
-      # est suffisant pour 50 sites — restauration manuelle Railway depuis FTP < 30 min.
-      # Si besoin futur : restaurer manuellement le mirror sur secrets SUPABASE_URL existants,
-      # ou prévoir un test de restauration mensuel depuis FTP comme garde-fou alternatif.
+      # Mirror Supabase retiré (Sprint 0 cleanup delivery system, ADR-070 / ADR-085).
+      # Le dump Hostinger FTP (vérifié par sanity check + double upload) est suffisant pour
+      # 50 sites — restauration manuelle Railway depuis FTP < 30 min.
+      # Garde-fou alternatif possible : test de restauration mensuel depuis FTP.
 
       - name: Summary
         if: always()
