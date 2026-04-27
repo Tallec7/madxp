@@ -333,3 +333,24 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur lors de la récupération des données du dashboard' });
   }
 };
+
+/**
+ * GET /api/sites/:id/ftp-orphans
+ * Liste détaillée des vidéos FTP orphelines référencées par ce site, pour
+ * alimenter la bannière du tab "Contenu". Source : `video_ftp_audit_warnings`
+ * jointe à `site_videos` (filtré sur `site_id`). Réponse cappée à 100 entrées.
+ */
+export const getSiteFtpOrphans = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const warnings = await videoFtpAuditRepository.findActiveForSite(id, 100);
+    return res.json({
+      siteId: id,
+      total: warnings.length,
+      warnings,
+    });
+  } catch (error) {
+    logger.error('Get site FTP orphans error:', { error, siteId: req.params.id });
+    return res.status(500).json({ error: 'Failed to fetch site FTP orphans' });
+  }
+};

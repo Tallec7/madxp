@@ -506,6 +506,7 @@ export {
   getSiteConnectionStatus,
   getSiteLocalContent,
   getSiteDashboardData,
+  getSiteFtpOrphans,
   getSiteTimeline,
   getFleetHealthData,
   getFleetMetrics,

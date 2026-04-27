@@ -100,6 +100,20 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   orphanedVideoDetails: OrphanedVideoDetail[] = [];
   private filenameToPathsMap: Map<string, string[]> = new Map();
 
+  // FTP orphans (chantier vidéos manquantes — bannière tab Contenu).
+  // Liste des vidéos référencées par ce site dont le fichier FTP est absent.
+  ftpOrphans: Array<{
+    id: string;
+    video_id: string;
+    video_filename: string;
+    video_category: string | null;
+    storage_path: string;
+    status: 'missing' | 'unreachable';
+    first_detected_at: string;
+    last_checked_at: string;
+  }> = [];
+  ftpOrphansExpanded = false;
+
   // Deployed paths
   private deployedPathsMap: Map<string, { deployedPath: string; deployedFilename: string }> = new Map();
 
@@ -243,9 +257,28 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Data Loading
   // ============================================================================
 
+  /**
+   * Charge la liste détaillée des vidéos FTP orphelines référencées par ce site.
+   * Sert la bannière en tête du tab Contenu (chantier vidéos manquantes).
+   * Échec silencieux : si l'endpoint refuse (ex: rôle club, 403), la bannière
+   * reste cachée ; le badge sur le tab donne déjà l'info macro.
+   */
+  private loadFtpOrphans(): void {
+    if (!this.siteId) return;
+    this.sitesService.getFtpOrphans(this.siteId).subscribe({
+      next: (response) => {
+        this.ftpOrphans = response?.warnings || [];
+      },
+      error: () => {
+        this.ftpOrphans = [];
+      },
+    });
+  }
+
   loadContent(): void {
     if (!this.siteId) return;
     this.loading = true;
+    this.loadFtpOrphans();
     this.sitesService.getLocalContent(this.siteId).subscribe({
       next: (response) => {
         this.loading = false;

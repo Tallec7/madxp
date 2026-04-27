@@ -191,6 +191,27 @@ export class SitesService {
     );
   }
 
+  /**
+   * Liste détaillée des vidéos FTP orphelines référencées par ce site.
+   * Source de la bannière du tab "Contenu" (chantier vidéos manquantes).
+   */
+  getFtpOrphans(id: string): Observable<{
+    siteId: string;
+    total: number;
+    warnings: Array<{
+      id: string;
+      video_id: string;
+      video_filename: string;
+      video_category: string | null;
+      storage_path: string;
+      status: 'missing' | 'unreachable';
+      first_detected_at: string;
+      last_checked_at: string;
+    }>;
+  }> {
+    return this.api.get(`/sites/${id}/ftp-orphans`);
+  }
+
   // Timeline des événements récents (P3.4)
   getTimeline(id: string, limit: number = 20): Observable<{
     siteId: string;
