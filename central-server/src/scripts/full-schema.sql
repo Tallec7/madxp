@@ -3372,30 +3372,6 @@ ALTER TABLE ONLY public.connection_events
 
 
 --
--- Name: connection_events connection_events_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.connection_events
-    ADD CONSTRAINT connection_events_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
-
-
---
--- Name: idx_connection_events_site_time; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_connection_events_site_time
-  ON public.connection_events USING btree (site_id, occurred_at DESC);
-
-
---
--- Name: idx_connection_events_occurred_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_connection_events_occurred_at
-  ON public.connection_events USING btree (occurred_at);
-
-
---
 -- Name: neopro_template_versions neopro_template_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5075,6 +5051,30 @@ ALTER TABLE ONLY public.agency_sites
 
 ALTER TABLE ONLY public.alerts
     ADD CONSTRAINT alerts_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: connection_events connection_events_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connection_events
+    ADD CONSTRAINT connection_events_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: idx_connection_events_site_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_site_time
+  ON public.connection_events USING btree (site_id, occurred_at DESC);
+
+
+--
+-- Name: idx_connection_events_occurred_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_occurred_at
+  ON public.connection_events USING btree (occurred_at);
 
 
 --
