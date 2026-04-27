@@ -1,3 +1,10 @@
+## [3.253.1](https://github.com/Tallec7/neopro/compare/v3.253.0...v3.253.1) (2026-04-27)
+
+### Bug Fixes
+
+- **ci:** handle 429 WAF rate limiting in frontend-health probe ([#642](https://github.com/Tallec7/neopro/issues/642)) ([b29bc33](https://github.com/Tallec7/neopro/commit/b29bc3305b709e7eaf0c461279066e381c2fb363)), closes [639/#641](https://github.com/Tallec7/neopro/issues/641)
+- **content:** cleanup thumbnail FTP file on video DELETE (root cause of orphan .jpg files) ([#645](https://github.com/Tallec7/neopro/issues/645)) ([a5b25f2](https://github.com/Tallec7/neopro/commit/a5b25f2811296f4376b8b3c3c4d9325cedc1d8ea))
+
 # [3.253.0](https://github.com/Tallec7/neopro/compare/v3.252.0...v3.253.0) (2026-04-27)
 
 ### Features
