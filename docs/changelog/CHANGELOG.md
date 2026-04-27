@@ -1,3 +1,9 @@
+# [3.258.0](https://github.com/Tallec7/neopro/compare/v3.257.0...v3.258.0) (2026-04-27)
+
+### Features
+
+- **commands:** add /check-db-source slash command ([#653](https://github.com/Tallec7/neopro/issues/653)) ([12c76b7](https://github.com/Tallec7/neopro/commit/12c76b7f630543b203b847cdec12aedb814b9124)), closes [#644](https://github.com/Tallec7/neopro/issues/644)
+
 # [3.257.0](https://github.com/Tallec7/neopro/compare/v3.256.0...v3.257.0) (2026-04-27)
 
 ### Bug Fixes
