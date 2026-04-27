@@ -1,3 +1,9 @@
+# [3.255.0](https://github.com/Tallec7/neopro/compare/v3.254.0...v3.255.0) (2026-04-27)
+
+### Features
+
+- **monitoring:** connection_events as source of truth for site uptime (ADR-099, [#644](https://github.com/Tallec7/neopro/issues/644)) ([#646](https://github.com/Tallec7/neopro/issues/646)) ([56847a0](https://github.com/Tallec7/neopro/commit/56847a0a86bc4b12ff96fe3dcbec228689cbacb9))
+
 # [3.254.0](https://github.com/Tallec7/neopro/compare/v3.253.1...v3.254.0) (2026-04-27)
 
 ### Features
