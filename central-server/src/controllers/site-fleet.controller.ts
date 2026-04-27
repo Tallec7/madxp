@@ -546,6 +546,6 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
 };
 
 // Re-export handlers from split files for barrel compatibility
-export { getSiteDashboardData } from './site-fleet-dashboard.controller';
+export { getSiteDashboardData, getSiteFtpOrphans } from './site-fleet-dashboard.controller';
 export { getSiteTimeline } from './site-fleet-timeline.controller';
 export { getFleetHealthData, getFleetMetrics, getSiteMatchHistory } from './site-fleet-health.controller';
