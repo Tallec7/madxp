@@ -4,7 +4,7 @@
 >
 > **Principe directeur** : honnêteté > brillance. Mieux vaut un doc qui dit "ce truc pue, on le sait" qu'un doc qui passe sous silence. Un fichier `TECH-DEBT.md` honnête est un magnet pour les bons CTO.
 >
-> **Statut** : Live | **Dernière revue** : 2026-04-25 | **Prochaine revue** : tous les 2 mois
+> **Statut** : Live | **Dernière revue** : 2026-04-27 | **Prochaine revue** : tous les 2 mois
 
 ## Comment lire ce doc
 
@@ -56,6 +56,7 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 - **Coût aujourd'hui** : pour répondre "comment va le produit ?" il faut écrire une query SQL ad hoc. Le PM ne pourra pas piloter sans ça.
 - **Effort** : 5-10 métriques business à ajouter dans Prometheus + 1 dashboard Grafana dédié "Business" = ~2-3j. Le contenu des queries existe déjà dans `pitch-deck-metrics.sql`.
 - **Bloquant pour** : recrutement PM (1ère chose qu'il demandera).
+- **Note (2026-04-27)** : la dette voisine "métriques émises sans dashboard" a été traitée par PR #631 (`neopro-blind-spots-cloud.json` + smoke guard). Le pattern audit-then-guard est désormais réplicable pour ce chantier business.
 
 ### Pas de Sentry ou équivalent (error tracking)
 - **Pourquoi** : les erreurs serveur partent en logs Winston + Logtail. Côté frontend (dashboard Angular + raspberry Angular), il n'y a aucune capture des erreurs JS users-side.
@@ -74,6 +75,7 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 - **Coût aujourd'hui** : risque légal modéré (clubs = personnes morales pas personnes physiques pour la majorité). Risque réputationnel si demande RGPD utilisateur dashboard et qu'on ne sait pas répondre en 30 jours.
 - **Effort** : `docs/RGPD.md` 1 page + script `cleanup_user_data(user_id)` testé. ~1j.
 - **Bloquant pour** : signature client entreprise (DPO leur côté demandera).
+- **Avancement (2026-04-27, PR #633)** : registre RGPD (`docs/legal/GDPR_PROCESSING_REGISTER.md`), politique de confidentialité, CGV, mentions légales et page `/legal` du dashboard mis à jour avec les sous-traitants actuels (Railway USA + Hostinger UE). **Reste** : signer DPA Railway (https://railway.com/legal/dpa), écrire `docs/RGPD.md` opérationnel + script `cleanup_user_data(user_id)`.
 
 ### Secrets management : variables d'env Railway sans rotation ni audit
 - **Pourquoi** : `JWT_SECRET`, `HOTSPOT_PSK_ENCRYPTION_KEY`, etc. sont stockés en clair dans Railway env vars. Pas de Vault, pas de rotation automatique, aucun log "qui a accédé à ce secret quand".
@@ -147,7 +149,17 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 
 ---
 
-## ✅ Résolu (cette session, 2026-04-25)
+## ✅ Résolu
+
+### Session 2026-04-27 (cleanup Supabase + observabilité)
+
+| Item | Résolu par |
+|---|---|
+| 30 métriques `neopro_*` émises sans dashboard ni alerte | PR #631 — dashboard catch-all `neopro-blind-spots-cloud.json` + smoke guard `smoke-metrics-observability` (allowlist gelée vide) |
+| Références Supabase mortes éparpillées (code actif, runbooks, README, legal/RGPD) | PR #633 — 27 fichiers nettoyés en 4 commits atomiques (env vars, code backend/frontend, docs ops, docs RGPD/legal) |
+| `@types/react` + `@types/react-dom` non déclarés en devDeps (cassait `ng serve` sur Remotion Studio) | PR #636 — devDeps ajoutés en root |
+
+### Session 2026-04-25 (audit Lead Dev)
 
 Référence : audit Lead Dev session du 25 avril.
 
