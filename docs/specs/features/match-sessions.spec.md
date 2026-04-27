@@ -1,74 +1,98 @@
-# SPEC : Match Sessions
+# SPEC : Match (sessions, scoreboard, historique)
 
 > **Owner** : Daisy
 > **Statut** : Live
-> **Dernière revue** : 2026-04-25
-> **Code principal** :
-> - `central-server/src/handlers/match-config.handler.ts` (création / config)
-> - `central-server/src/handlers/score-update.handler.ts` (update score in-flight)
-> - `central-server/src/cron-tasks/match-autoclose.task.ts` (auto-close CRON)
-> - `central-server/src/repositories/site.repository.ts` (lecture historique)
-> - `raspberry/src/app/components/remote/remote.component.ts` (UI Pi side)
-> **ADR liés** : ADR-093 (persistence + history), ADR-097 (extraction CRON tasks)
-> **Smoke tests** : `central-server/src/__tests__/smoke/smoke-adr093-match-sessions.test.ts`
+> **Dernière revue** : 2026-04-27
+> **ADR liés** : ADR-088 (scoreboard SaaS-first), ADR-093 (persistance sessions + historique), ADR-097 (extraction CRON tasks)
+> **Smoke tests** : `smoke-prop003-scoreboard.test.ts`, `smoke-scoreboard-saas.test.ts`
 > **`.claude/rules/` lié** : `match.md`
 
 ## En une phrase
 
-Un club enregistre une session match (équipes + score) depuis sa télécommande, le central garde l'historique pour les rapports sponsors, et les sessions oubliées sont fermées automatiquement.
+Un club enregistre une session match depuis sa télécommande, les équipes et scores sont persistés pour les rapports sponsors et l'historique, un scoreboard live optionnel reçoit les données des consoles de marque (Bodet/Stramatel) via canal HTTP, et les sessions oubliées sont fermées automatiquement.
+
+## Acteurs impliqués
+
+- **Club staff** : déclenche le match via Remote Pi ou Remote SaaS
+- **Super admin / Operator** : consulte l'historique multi-sites
+- **Dashboard admin** : visualise le scoreboard live en temps réel
+- **Pi / connecteur externe (sim-bodet, sim-stramatel)** : push le score via HTTP API
+
+## Périmètre (ce que ce domaine couvre)
+
+- **Services backend** :
+  - `central-server/src/handlers/match-config.handler.ts` (création / config session)
+  - `central-server/src/handlers/score-update.handler.ts` (update score in-flight)
+  - `central-server/src/cron-tasks/match-autoclose.task.ts` (auto-close CRON)
+  - `central-server/src/repositories/site.repository.ts` (lecture historique)
+- **Scoreboard live** :
+  - `central-server/src/controllers/scoreboard.controller.ts` + routes (push HTTP)
+  - `central-server/src/services/saas-match-state.service.ts` (TTL in-memory)
+  - Simulateurs `sim-bodet-scorepad` + `sim-stramatel` (PROP-003)
+- **Composants UI** :
+  - `raspberry/src/app/components/remote/remote.component.ts` (Remote Pi)
+  - `central-dashboard/src/app/features/scoreboard-live/scoreboard-live.component.ts` (live dashboard)
+  - `central-dashboard/src/app/features/sites/site-detail.component.ts` (historique sessions)
+- **Routes API** :
+  - `POST /api/scoreboard/:siteId/state` (push scorestate ADR-088)
+  - `GET /api/scoreboard/:siteId/state` (hydratation dashboard)
+  - `GET /api/sites/:id/match-history` (historique filtré)
+- **Tables DB** : `club_sessions` (colonnes ADR-093 : `home_team`, `away_team`, `home_score`, `away_score`, `profile_id`, `event_type`, `ended_by`)
+- **ADR** : ADR-088, ADR-093, ADR-097
+- **Smoke tests** : `smoke-prop003-scoreboard.test.ts`, `smoke-scoreboard-saas.test.ts`
+- **`.claude/rules/`** : `match.md`
 
 ## Règles métier (ce qui DOIT marcher)
 
-- **Une session match s'ouvre** quand le Pi (ou la Remote SaaS) émet un évènement `match-config` avec `homeTeam`, `awayTeam`, `profileId`, `eventType`. La row est créée dans `club_sessions` avec `started_at = NOW()`, `ended_at = NULL`.
-- **Le score est mis à jour en live** via l'évènement `score-update` (ne touche que `home_score` / `away_score` ; le `score-update.handler` UPDATE uniquement les sessions `ended_at IS NULL`).
-- **Le score est figé** au moment où `ended_at` est renseigné (par fermeture manuelle OU auto-close). Aucune écriture du score n'est autorisée après.
-- **Une session se ferme automatiquement** dans 2 cas :
-  - **Idle** : aucun `video_plays` depuis 4h ET `started_at` plus vieux que 4h → `ended_at = MAX(last_played_at)` (ou `started_at + 4h` si aucun play)
-  - **Absolute** : `started_at` plus vieux que 24h → `ended_at = started_at + 24h`
-- **Une session auto-fermée** est marquée `ended_by = 'timeout'` ; une session fermée à la main par l'utilisateur a `ended_by = 'user'` ou autre valeur explicite.
-- **L'auto-close émet une métrique Prometheus** `neopro_match_sessions_autoclosed_total{reason="idle"|"absolute"}` à chaque tour de CRON (1×/h).
-- **L'historique des sessions** est exposé via `GET /api/sites/:id/match-history` avec filtres `from`/`to` (validation Joi obligatoire).
-- **Les rapports sponsors période-filtrés** consomment `home_team`, `away_team`, `home_score`, `away_score`, `profile_id`, `event_type` de `club_sessions` (cf. SPEC `sponsors-rotation` à terme).
+- **Ouverture de session** : le Pi (ou Remote SaaS) émet `match-config` avec `homeTeam`, `awayTeam`, `profileId`, `eventType`. Row créée dans `club_sessions` (`started_at = NOW()`, `ended_at = NULL`).
+- **Score live** : `score-update` touche uniquement `home_score`/`away_score` sur les sessions `ended_at IS NULL`.
+- **Score figé** : aucune écriture après `ended_at IS NOT NULL`. Les rapports sponsors dépendent de ces valeurs historiques.
+- **Auto-close** : CRON 1×/h, deux critères indépendants — *idle* (aucun `video_plays` depuis 4h) + *absolute* (session > 24h). Marquée `ended_by = 'timeout'`.
+- **Scoreboard live ADR-088** : `POST /api/scoreboard/:siteId/state` (Bearer `site_api_key`) → in-memory TTL 60s → broadcast Socket.IO room `siteId`. Contrat `ScoreboardMatchState` (basket FIBA : period, chronoMs, homeScore, guestScore, fouls, shotClock…).
+- **PROP-003** : 3 corrections protocolaires verrouillées — Bodet 9600 bps, Pi = TCP server côté Scorepad, Stramatel 0x33 seul porteur état match. Smoke `smoke-prop003-scoreboard` enforced.
+- **Historique** : `GET /api/sites/:id/match-history?from=&to=` retourne les sessions paginées, validation Joi obligatoire. Dashboard affiche badge ⏲️ pour `ended_by = 'timeout'`.
+- **`match_name` legacy** : `COALESCE(match_name, home_team || ' vs ' || away_team)` pour les sessions pré-ADR-093.
 
 ## Comportements observables
 
 | Règle | Comment on vérifie |
 |---|---|
-| Création de session | Dashboard `/sites/<id>/matches` affiche la nouvelle row dans les minutes qui suivent l'évènement Pi |
-| Score live | Dashboard match en cours affiche le score en temps réel via Socket.IO `score-update` |
-| Score figé après ended_at | Re-consulter une session fermée 7j plus tard → score identique |
-| Auto-close idle (4h) | Grafana : `neopro_match_sessions_autoclosed_total{reason="idle"}` augmente |
-| Auto-close absolute (24h) | Grafana : `neopro_match_sessions_autoclosed_total{reason="absolute"}` augmente |
-| Badge UI auto-close | Dashboard affiche un badge ⏲️ "auto" sur les sessions fermées par timeout (filtre `ended_by = 'timeout'`) |
-| API match-history | `curl /api/sites/<id>/match-history?from=2026-04-01&to=2026-04-30` retourne du JSON paginé |
+| Création session | Dashboard `/sites/<id>` → onglet Sessions : nouvelle row visible |
+| Score live Socket.IO | Dashboard match en cours : score mis à jour en temps réel |
+| Score figé | Session fermée re-consultée 7j plus tard : score inchangé |
+| Auto-close idle | Grafana : `neopro_match_sessions_autoclosed_total{reason="idle"}` ↑ |
+| Auto-close absolute | Grafana : `neopro_match_sessions_autoclosed_total{reason="absolute"}` ↑ |
+| Scoreboard live | Dashboard `/scoreboard-live/:siteId` affiche état push via HTTP |
+| PROP-003 | Smoke `smoke-prop003-scoreboard` 4/4 verts |
+| Historique paginé | `curl /api/sites/<id>/match-history?from=...&to=...` retourne JSON paginé |
 
 ## Cas d'edge connus
 
-- **Pi offline au moment du auto-close** : la session reste ouverte, fermée au prochain tick CRON quand l'agrégation tourne (la fermeture est côté cloud, pas Pi-dépendante).
-- **Bulk de `video_plays` arrivant après le timeout idle** : `ended_at` = `MAX(last_played_at)`, pas le timestamp du timeout — la session est étirée.
-- **Plusieurs sessions ouvertes en parallèle pour un même site** : possible si le Pi a planté avant fermeture. L'auto-close les ferme toutes au tick suivant. Pas de constraint UNIQUE sur `(site_id) WHERE ended_at IS NULL` (volontaire).
-- **`match_name` legacy vs `home_team || ' vs ' || away_team`** : les sessions pré-ADR-093 n'ont que `match_name`. Le dashboard utilise `COALESCE(match_name, home_team || ' vs ' || away_team)`.
-- **CRON dormant si la migration `extend-club-sessions-match-fields.sql` n'est pas appliquée** : les colonnes `home_team` etc. n'existent pas → loadSchedules échoue silencieusement, alerté via log Winston `warn`.
+- **Pi offline au moment de l'auto-close** : fermeture côté cloud uniquement, pas Pi-dépendante.
+- **Bulk `video_plays` arrivant après le timeout idle** : `ended_at = MAX(last_played_at)`, session étirée.
+- **Sessions parallèles pour un même site** : possible si Pi planté avant fermeture. Auto-close les ferme toutes au tick suivant.
+- **Scoreboard TTL expiré (60s sans push)** : `GET /api/scoreboard/:siteId/state` retourne 404 ou état vide — le dashboard affiche un placeholder "En attente".
+- **`match_name` legacy vs colonnes ADR-093** : sessions pré-ADR-093 n'ont que `match_name` — COALESCE obligatoire (cf. règle ci-dessus).
+- **CRON dormant si migration `extend-club-sessions-match-fields.sql` non appliquée** : loadSchedules échoue silencieusement, loggé Winston `warn`.
 
 ## Contraintes / NE PAS FAIRE
 
-Voir `.claude/rules/match.md` pour la liste complète des invariants smoke-testés. Règles **métier** spécifiques (pas conventions de code) :
+Voir `.claude/rules/match.md` pour la liste complète (invariants smoke-testés). Règles métier spécifiques :
 
-- Ne jamais réécrire `home_score`/`away_score` après `ended_at IS NOT NULL` (les rapports sponsors comptent dessus pour la période historique).
-- Ne pas afficher `home_score`/`away_score` dans une vue publique sans filtrer `ended_at IS NOT NULL` (sinon scores en cours de match exposés en double-écriture, peut induire des erreurs de comm).
-- Ne pas fermer une session manuellement avec `ended_by = 'timeout'` (réservé au CRON — sinon le badge UI ⏲️ devient mensonger).
+- Ne jamais réécrire `home_score`/`away_score` après `ended_at IS NOT NULL`.
+- Ne jamais utiliser `ended_by = 'timeout'` pour une fermeture manuelle (badge UI deviendrait mensonger).
+- Ne jamais bypasser `authenticateSiteApiKey` sur `POST /api/scoreboard/:siteId/state` (risque de push arbitraire cross-site).
 
-## Ce qui n'est PAS dans le scope
+## Ce qui n'est PAS dans ce domaine
 
-- **Statistiques agrégées par équipe** (somme score sur N matches) → SPEC `analytics` (à venir).
-- **Notifications de fin de match** vers Slack/Email → roadmap, non livré (cf. backlog ci-dessous).
-- **Sessions multi-sets** (volley, tennis, badminton avec score par set) → roadmap.
-- **Validation manuelle d'une session auto-fermée** (réouverture) → roadmap.
+- **Statistiques agrégées par équipe** (cumul sur N matches) → future SPEC Analytics
+- **Notifications de fin de match** (Slack/Email) → roadmap non livré
+- **Sessions multi-sets** (volley, tennis) → roadmap
+- **Rotation sponsors à l'intérieur du matchday** → SPEC [Sponsors & Pubs](sponsors.spec.md)
 
-## Évolutions possibles (backlog léger)
+## Évolutions possibles
 
-- [ ] Permettre la réouverture manuelle d'une session fermée par timeout (avec audit log)
-- [ ] Webhook custom à la fermeture (pour intégrations club)
+- [ ] Réouverture manuelle d'une session fermée par timeout (avec audit log)
+- [ ] Connecteur Pi PROP-003 v2 (byte-level serial/TCP Bodet Scorepad) — ADR-088 contrat déjà prêt
 - [ ] Multi-événement par session (set 1, set 2…) pour sports à sets
-- [ ] Notification Slack à la fermeture si score final inhabituel (>50 ou diff >30)
-- [ ] Vue "récap match" PDF à exporter pour le club
+- [ ] Vue "récap match" PDF exportable pour le club
