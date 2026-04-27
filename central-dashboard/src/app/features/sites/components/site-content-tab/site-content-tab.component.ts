@@ -314,7 +314,6 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-<<<<<<< feat/video-replace-orphan
   /** Set des video.id orphelins FTP, dérivé de `ftpOrphans`. Propagé vers la library. */
   get ftpOrphanVideoIds(): ReadonlySet<string> {
     return new Set(this.ftpOrphans.map(o => o.video_id));
@@ -359,8 +358,6 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     input.click();
   }
 
-=======
->>>>>>> main
   loadContent(): void {
     if (!this.siteId) return;
     this.loading = true;
