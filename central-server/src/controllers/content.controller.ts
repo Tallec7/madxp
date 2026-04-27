@@ -712,6 +712,190 @@ export const unlinkVideoFromSite = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * POST /api/content/videos/:id/replace (multipart, single 'video' file)
+ *
+ * Remplace le binaire d'une vidéo existante en gardant son `id`, `filename` et
+ * `storage_path` intacts. Cas d'usage principal : la vidéo est marquée
+ * orpheline FTP et l'admin a re-récupéré le bon fichier — il l'uploade
+ * depuis le modal de détails, on overwrite à la même URL FTP, toutes les
+ * configs Pi/SaaS qui référencent ce video_id continuent de fonctionner sans
+ * modification.
+ *
+ * Différences avec createVideo :
+ *  - id / filename / storage_path inchangés
+ *  - DB UPDATE plutôt qu'INSERT (file_size, duration via thumbnail meta,
+ *    checksum, updated_at, upload_status, upload_verified_at)
+ *  - Auto-resolve la `video_ftp_audit_warnings` row (DELETE)
+ *  - Notify les sites qui référencent la vidéo (Pi: update_config,
+ *    SaaS: emitSaasConfigUpdated) pour bust le cache du player
+ *  - Audit log VIDEO_REPLACED
+ */
+export const replaceVideo = async (req: AuthRequest, res: Response) => {
+  const file = req.file;
+  const tempFilePath = file?.path;
+  const { id } = req.params;
+
+  try {
+    if (!file) {
+      return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
+    }
+    if (!file.size || file.size === 0) {
+      cleanupTempFile(tempFilePath!);
+      return res.status(400).json({ error: 'Le fichier vidéo est vide (0 octets)' });
+    }
+
+    // Vidéo existante (target du remplacement)
+    const existing = await videoRepository.findVideoById(id);
+    if (!existing) {
+      cleanupTempFile(tempFilePath!);
+      return res.status(404).json({ error: 'Vidéo introuvable' });
+    }
+
+    // Garde la storage_path et le filename existants (overwrite à la même URL FTP).
+    const storagePath = String(existing.storage_path);
+    const filename = String(existing.filename);
+    const checksum = tempFilePath
+      ? await calculateChecksumFromFile(tempFilePath)
+      : '';
+
+    // Re-upload au même chemin FTP (overwrite). Le `uploadVideoFromDisk`
+    // utilise le filename comme path final côté FTP — on lui passe donc
+    // `storagePath` pour overwrite à l'identique.
+    const uploadResult = tempFilePath
+      ? await uploadVideoFromDisk(tempFilePath, file.size, storagePath, file.mimetype)
+      : await uploadVideo(file.buffer, storagePath, file.mimetype);
+
+    if (!uploadResult) {
+      logger.error('Failed to replace video on FTP', { videoId: id, storagePath });
+      return res.status(500).json({
+        error: 'Erreur lors de l\'upload de remplacement vers le stockage.',
+      });
+    }
+
+    const uploadStatus: UploadStatus = uploadResult.verified ? 'ready' : 'failed';
+
+    // UPDATE DB : conserver id/filename/storage_path, mettre à jour le contenu.
+    // file_size via le repository (interface publique) ; les colonnes plus
+    // techniques (checksum, upload_status, upload_verified_at) via SQL direct
+    // — elles n'ont pas vocation à entrer dans `UpdateVideoInput`.
+    await videoRepository.update(id, {
+      file_size: file.size,
+    });
+    const { query } = await import('../config/database');
+    await query(
+      `UPDATE videos
+         SET checksum = $1,
+             upload_status = $2,
+             upload_verified_at = $3,
+             upload_verified_size = $4,
+             updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5`,
+      [checksum, uploadStatus, uploadStatus === 'ready' ? new Date() : null, file.size, id],
+    );
+
+    // Re-générer le thumbnail depuis le nouveau binaire (best-effort).
+    let thumbnailUrl: string | null = existing.thumbnail_url;
+    if (tempFilePath && uploadStatus === 'ready') {
+      try {
+        const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tempFilePath);
+        if (thumbBuffer) {
+          const thumbStoragePath = buildThumbnailPath(id);
+          const thumbResult = await uploadThumbnail(thumbBuffer, thumbStoragePath);
+          if (thumbResult) {
+            thumbnailUrl = getThumbnailUrl(thumbStoragePath);
+            await videoRepository.update(id, { thumbnail_url: thumbnailUrl });
+          }
+        }
+      } catch (thumbError) {
+        logger.warn('Thumbnail re-generation failed (non-blocking)', {
+          videoId: id, error: thumbError instanceof Error ? thumbError.message : String(thumbError),
+        });
+      }
+    }
+
+    // Auto-resolve : si la vidéo était marquée orpheline FTP, retirer le warning.
+    try {
+      const { query } = await import('../config/database');
+      await query(`DELETE FROM video_ftp_audit_warnings WHERE video_id = $1`, [id]);
+    } catch (clearErr) {
+      logger.warn('Failed to clear FTP audit warning after replace', {
+        videoId: id, err: (clearErr as Error).message,
+      });
+    }
+
+    // Notifier les sites qui référencent la vidéo pour bust leur cache.
+    try {
+      const usage = await findVideoUsage(id);
+      const socketService = (await import('../services/socket.service')).default;
+      const commandQueueService = (await import('../services/command-queue.service')).default;
+      for (const site of usage) {
+        try {
+          if (site.site_type === 'saas') {
+            socketService.emitSaasConfigUpdated(site.id, { updatedBy: req.user?.email });
+          } else if (site.site_type === 'pi') {
+            await commandQueueService.sendOrQueue(site.id, 'update_config', {
+              reason: 'video_replaced',
+              videoId: id,
+            });
+          }
+        } catch (notifyErr) {
+          logger.warn('Failed to notify site after replace', {
+            siteId: site.id, videoId: id, err: (notifyErr as Error).message,
+          });
+        }
+      }
+    } catch (usageErr) {
+      logger.warn('Failed to notify sites after replace', {
+        videoId: id, err: (usageErr as Error).message,
+      });
+    }
+
+    // Audit log
+    try {
+      const auditService = (await import('../services/audit.service')).default;
+      await auditService.log({
+        action: 'VIDEO_REPLACED',
+        userId: req.user?.id,
+        targetType: 'video',
+        targetId: id,
+        details: {
+          videoId: id,
+          filename,
+          storagePath,
+          newFileSize: file.size,
+          newChecksum: checksum,
+          uploadStatus,
+        },
+      }, req);
+    } catch (auditErr) {
+      logger.warn('Audit log failed for VIDEO_REPLACED (non-blocking)', {
+        videoId: id, err: (auditErr as Error).message,
+      });
+    }
+
+    metricsService.recordVideoUpload(uploadStatus === 'ready' ? 'success' : 'failed', file.size);
+
+    return res.json({
+      ok: true,
+      videoId: id,
+      filename,
+      storagePath,
+      file_size: file.size,
+      thumbnail_url: thumbnailUrl,
+      upload_status: uploadStatus,
+    });
+  } catch (error) {
+    metricsService.recordVideoUpload('failed');
+    logger.error('Replace video error:', { err: (error as Error).message, videoId: id });
+    return res.status(500).json({ error: 'Erreur lors du remplacement de la vidéo' });
+  } finally {
+    if (tempFilePath) {
+      cleanupTempFile(tempFilePath);
+    }
+  }
+};
+
 // Re-export all handlers for backward compatibility (routes import * as contentController)
 export { getDeployments, getDeployment, createDeployment, updateDeployment, deleteDeployment, getVideosForSite, convertImageToVideo } from './content-deployment.controller';
 export { getVideoVariants, createVideoVariant, createVideoVariantFromVideo, deleteVideoVariant, getVariantCounts } from './content-variant.controller';

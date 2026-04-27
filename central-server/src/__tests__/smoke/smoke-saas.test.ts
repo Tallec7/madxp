@@ -2643,6 +2643,63 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // PR3 — Replace video binary (chantier vidéos manquantes). Permet de re-uploader
+  // un .mp4 sur le même storage_path pour ressusciter une vidéo orpheline FTP sans
+  // la dé-référencer du site. Sans ces invariants la feature ne fonctionne plus :
+  // pas d'écrasement FTP, pas de regen de thumbnail, pas d'auto-résolution warning,
+  // pas de push update_config Pi/SaaS.
+  it('PR3 — content.controller.replaceVideo réécrit FTP, regen thumbnail, auto-résout warning, push sites', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fnMatch = content.match(/export const replaceVideo[\s\S]*?(?=\nexport const \w|$)/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({
+      reusesStoragePath: /existing\.storage_path/.test(fn),
+      uploadsFromDisk: /uploadVideoFromDisk\(/.test(fn),
+      regensThumbnail: /thumbnailService\.generateThumbnailBuffer\(/.test(fn),
+      clearsAuditWarning: /video_ftp_audit_warnings/.test(fn),
+      pushesSites: /commandQueueService\.sendOrQueue\([^,]+,\s*['"]update_config['"]/.test(fn),
+      pushesSaas: /socketService\.emitSaasConfigUpdated\(/.test(fn),
+      auditsReplace: /VIDEO_REPLACED/.test(fn),
+    }).toEqual({
+      reusesStoragePath: true,
+      uploadsFromDisk: true,
+      regensThumbnail: true,
+      clearsAuditWarning: true,
+      pushesSites: true,
+      pushesSaas: true,
+      auditsReplace: true,
+    });
+  });
+
+  it('PR3 — content.routes mount POST /videos/:id/replace avec auth + role + multer + Joi id', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const route = content.match(/router\.post\(\s*['"]\/videos\/:id\/replace['"][\s\S]*?\)\s*;/);
+    expect(route).toBeTruthy();
+    const block = route![0];
+    expect({
+      hasAuth: /authenticate/.test(block),
+      hasRole: /requireRole\(\s*['"]admin['"],\s*['"]operator['"]\s*\)/.test(block),
+      hasMulter: /uploadVideo\.single\(\s*['"]video['"]\s*\)/.test(block),
+      hasIdValidation: /validateParams\(\s*paramSchemas\.id\s*\)/.test(block),
+      callsController: /contentController\.replaceVideo/.test(block),
+    }).toEqual({
+      hasAuth: true,
+      hasRole: true,
+      hasMulter: true,
+      hasIdValidation: true,
+      callsController: true,
+    });
+  });
+
+  it('PR3 — VIDEO_REPLACED listed in AuditAction union (audit.service.ts)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'audit.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(/['"]VIDEO_REPLACED['"]/.test(content)).toBe(true);
+  });
+
   // PR2.2 — Video FTP orphan audit. La cascade DELETE de PR2 ne couvre que les
   // suppressions API. Les fichiers FTP supprimés directement (FileZilla, SSH)
   // ou les uploads jamais réussis côté FTP (row DB créée mais .mp4 absent) ne
