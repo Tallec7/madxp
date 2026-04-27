@@ -354,3 +354,151 @@ export const getSiteFtpOrphans = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: 'Failed to fetch site FTP orphans' });
   }
 };
+
+/**
+ * DELETE /api/sites/:id/ftp-orphans/:videoId
+ * Retire la référence d'une vidéo orpheline FTP de ce site précis.
+ *
+ * Action manuelle déclenchée par admin/super_admin depuis la bannière du tab
+ * Contenu (chantier vidéos manquantes). Scope : un seul site, jamais auto.
+ *
+ * Effets :
+ *  1. DELETE FROM site_videos (la liaison site ↔ vidéo)
+ *  2. removeVideoFromConfig() sur tous les profils du site (config_profiles)
+ *  3. removeVideoFromConfig() sur le local_config_mirror du site
+ *  4. Notify : Pi via commandQueueService('update_config'), SaaS via socket
+ *  5. Audit log SITE_VIDEO_UNLINKED
+ *
+ * Aucune suppression de la ligne `videos` (la vidéo reste dans la bibliothèque
+ * cloud, l'admin peut la re-link à un site plus tard si nécessaire).
+ *
+ * Retour : { ok, removedReferences, profilesCleaned, mirrorCleaned, remainingOrphans }
+ */
+export const unlinkSiteFtpOrphan = async (req: AuthRequest, res: Response) => {
+  const { id: siteId, videoId } = req.params;
+
+  try {
+    // 1. Lookup video filename (pour le strip JSONB par filename — fallback path)
+    const videoRepo = (await import('../repositories/video.repository')).videoRepository;
+    const video = await videoRepo.findVideoById(videoId);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo introuvable' });
+    }
+    const videoFilename = video.filename;
+
+    // 2. Vérifier que la vidéo est bien orpheline FTP référencée par ce site
+    //    (defense-in-depth — l'endpoint ne doit pas servir à débrancher des
+    //    vidéos saines).
+    const orphans = await videoFtpAuditRepository.findActiveForSite(siteId, 200);
+    const isOrphan = orphans.some(w => w.video_id === videoId);
+    if (!isOrphan) {
+      return res.status(400).json({
+        error: 'Cette vidéo n\'est pas marquée comme orpheline FTP pour ce site',
+      });
+    }
+
+    // 3. DELETE FROM site_videos (la liaison)
+    const { query } = await import('../config/database');
+    await query(
+      `DELETE FROM site_videos WHERE site_id = $1 AND video_id = $2`,
+      [siteId, videoId],
+    );
+
+    // 4. Cleanup JSONB : profils du site + local_config_mirror
+    const { removeVideoFromConfig } = await import('../utils/config-video-cleanup');
+    const configProfileRepository = (await import('../repositories/config-profile.repository')).configProfileRepository;
+    const siteRepository = (await import('../repositories/site.repository')).siteRepository;
+
+    let profilesCleaned = 0;
+    let mirrorCleaned = 0;
+    let totalEntriesRemoved = 0;
+
+    const profiles = await configProfileRepository.findBySite(siteId);
+    for (const profile of profiles) {
+      const removed = removeVideoFromConfig(profile.configuration as Record<string, unknown>, {
+        videoId,
+        filename: videoFilename,
+      });
+      if (removed > 0) {
+        await configProfileRepository.replaceConfiguration(profile.id, profile.configuration, req.user?.id);
+        profilesCleaned++;
+        totalEntriesRemoved += removed;
+      }
+    }
+
+    const siteWithMirror = await siteRepository.findWithLocalContent(siteId);
+    if (siteWithMirror?.local_config_mirror) {
+      const removed = removeVideoFromConfig(
+        siteWithMirror.local_config_mirror as Record<string, unknown>,
+        { videoId, filename: videoFilename },
+      );
+      if (removed > 0) {
+        await siteRepository.updateLocalConfigMirror(siteId, siteWithMirror.local_config_mirror);
+        mirrorCleaned = 1;
+        totalEntriesRemoved += removed;
+      }
+    }
+
+    // 5. Notifier le site pour qu'il reload sa config
+    const socketService = (await import('../services/socket.service')).default;
+    const commandQueueService = (await import('../services/command-queue.service')).default;
+    const site = await siteRepository.findConnectionInfo(siteId);
+    try {
+      if (site?.site_type === 'saas') {
+        socketService.emitSaasConfigUpdated(siteId, { updatedBy: req.user?.email });
+      } else if (site?.site_type === 'pi') {
+        await commandQueueService.sendOrQueue(siteId, 'update_config', {
+          reason: 'ftp_orphan_unlinked',
+          videoId,
+        });
+      }
+    } catch (notifyErr) {
+      logger.warn('Failed to notify site after orphan unlink', {
+        siteId, videoId, err: (notifyErr as Error).message,
+      });
+    }
+
+    // 6. Audit log
+    const auditService = (await import('../services/audit.service')).default;
+    await auditService.log({
+      action: 'SITE_VIDEO_UNLINKED',
+      userId: req.user?.id,
+      targetType: 'site_video',
+      targetId: `${siteId}:${videoId}`,
+      details: {
+        siteId,
+        videoId,
+        videoFilename,
+        profilesCleaned,
+        mirrorCleaned,
+        totalEntriesRemoved,
+        reason: 'ftp_orphan',
+      },
+    }, req);
+
+    // 7. Invalider le cache dashboard (TTL 30s) pour que le badge se rafraîchisse
+    //    immédiatement au prochain GET. Le calling code utilise hours=24 par
+    //    défaut ; on invalide aussi la clé sans hours pour couvrir les variantes.
+    memoryCache.invalidate(`site-dashboard:${siteId}:24`);
+    memoryCache.invalidate(`site-dashboard:${siteId}:undefined`);
+
+    // 8. Calculer le compteur restant pour le frontend (UI refresh sans re-fetch)
+    const remainingOrphans = await videoFtpAuditRepository.countActiveForSite(siteId);
+
+    return res.json({
+      ok: true,
+      siteId,
+      videoId,
+      videoFilename,
+      profilesCleaned,
+      mirrorCleaned,
+      totalEntriesRemoved,
+      remainingOrphans,
+    });
+  } catch (error) {
+    logger.error('Unlink site FTP orphan error:', {
+      err: (error as Error).message, siteId, videoId,
+    });
+    return res.status(500).json({ error: 'Failed to unlink video from site' });
+  }
+};

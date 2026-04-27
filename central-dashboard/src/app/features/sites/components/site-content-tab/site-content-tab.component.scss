@@ -394,4 +394,29 @@
     color: #94a3b8;
     margin-left: auto;
   }
+
+  // Bouton "Retirer du site" — discret, devient l'élément actionnable de la
+  // ligne. Disabled pendant l'unlink en cours pour éviter double-click.
+  .fob-unlink {
+    flex-shrink: 0;
+    background: white;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms ease;
+
+    &:hover:not(:disabled) {
+      background: #fee2e2;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+  }
 }

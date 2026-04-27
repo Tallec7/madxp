@@ -32,6 +32,16 @@
           {{ w.status === 'missing' ? 'Manquante' : 'Injoignable' }}
         </span>
         <span class="fob-date">détecté {{ w.first_detected_at | date: 'dd/MM' }}</span>
+        <button
+          class="fob-unlink"
+          type="button"
+          (click)="unlinkOrphanVideo(w)"
+          [disabled]="unlinkingVideoId !== null"
+          [attr.data-testid]="'unlink-orphan-' + w.video_id"
+          title="Retire la référence de cette vidéo du site (cascade JSONB + push config)"
+        >
+          {{ unlinkingVideoId === w.video_id ? '⏳ Retrait…' : 'Retirer du site' }}
+        </button>
       </li>
     </ul>
   </div>

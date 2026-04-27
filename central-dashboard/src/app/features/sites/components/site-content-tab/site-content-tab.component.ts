@@ -275,6 +275,43 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
+  /** State des boutons "Retirer du site" — id de la vidéo en cours d'unlink. */
+  unlinkingVideoId: string | null = null;
+
+  /**
+   * Retire la référence d'une vidéo orpheline FTP de ce site. Confirmation
+   * obligatoire (la cascade modifie config_profiles + local_config_mirror et
+   * push Pi/SaaS). Pas de soft-delete : l'admin doit assumer.
+   */
+  unlinkOrphanVideo(orphan: { video_id: string; video_filename: string }): void {
+    if (this.unlinkingVideoId) return;
+    const confirmed = window.confirm(
+      `Retirer "${orphan.video_filename}" de ce site ?\n\n` +
+      `• Le bouton correspondant sera désactivé sur la télécommande\n` +
+      `• Les boucles, catégories et sponsors qui la référencent seront nettoyés\n` +
+      `• La nouvelle config sera poussée au Pi/SaaS\n\n` +
+      `La vidéo restera dans la bibliothèque cloud (re-link possible plus tard).`
+    );
+    if (!confirmed) return;
+    this.unlinkingVideoId = orphan.video_id;
+    this.sitesService.unlinkFtpOrphan(this.siteId, orphan.video_id).subscribe({
+      next: (response) => {
+        this.unlinkingVideoId = null;
+        this.notificationService.success(
+          `${response.videoFilename} retirée du site (${response.totalEntriesRemoved} référence(s) nettoyée(s)).`
+        );
+        // Refresh : la bannière, le badge tab et la library doivent refléter le changement.
+        this.loadFtpOrphans();
+        this.loadContent();
+      },
+      error: (err) => {
+        this.unlinkingVideoId = null;
+        const message = err?.error?.error || 'Erreur inconnue';
+        this.notificationService.error(`Échec du retrait : ${message}`);
+      },
+    });
+  }
+
   loadContent(): void {
     if (!this.siteId) return;
     this.loading = true;
