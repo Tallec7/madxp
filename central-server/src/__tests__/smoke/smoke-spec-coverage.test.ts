@@ -45,7 +45,7 @@ const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
   'ADR-057', 'ADR-058', 'ADR-060', 'ADR-062', 'ADR-063', 'ADR-064', 'ADR-065',
   'ADR-066', 'ADR-067', 'ADR-068', 'ADR-070', 'ADR-071', 'ADR-072', 'ADR-073',
   'ADR-074', 'ADR-076', 'ADR-078', 'ADR-082', 'ADR-083', 'ADR-085', 'ADR-089',
-  'ADR-091', 'ADR-092', 'ADR-094', 'ADR-098', 'ADR-099', 'ADR-100',
+  'ADR-091', 'ADR-092', 'ADR-094', 'ADR-098', 'ADR-099',
 ]);
 
 const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
