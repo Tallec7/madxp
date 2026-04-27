@@ -40,6 +40,7 @@
 - **Conventions de session formalisées** ([#XXX, cette PR](https://github.com/Tallec7/neopro)) — CLAUDE.md augmenté de 7 blocs (worktree dédiée, Story Card, format de réponse, préfixes d'impact, garde-fous, etc.). Toutes les sessions Claude parallèles seront alignées.
 - **Format SPEC métier introduit** — `docs/specs/` avec 1 SPEC pilote sur les sessions match. Permet de capturer les règles métier vivantes sans dériver comme SAFe.
 - **Garde-fou couverture tests stabilisé** ([#622](https://github.com/Tallec7/neopro/pull/622)) — tout nouveau service backend doit avoir au moins 1 test. 23 services legacy grandfatherés via allowlist gelée. Empêche le seuil de couverture (41%) de dériver à la baisse à chaque ajout, prépare le ratchet vers 60%+.
+- **Build dashboard : 11 erreurs TS éliminées** ([#636](https://github.com/Tallec7/neopro/pull/636)) — `ng build central-dashboard` remontait 11 diagnostics TS (3 causes racines) sur le Studio Player Remotion à cause de `@types/react` / `@types/react-dom` absents du `package.json` racine. Dette révélée après le cleanup Supabase ([#633](https://github.com/Tallec7/neopro/pull/633)). +2 lignes en devDependencies, alignées sur `templates-remotion/`. Karma 580/580.
 
 ---
 
