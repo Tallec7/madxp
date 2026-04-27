@@ -154,7 +154,16 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
     weekCompletionRate: number;
     weekSponsorsDisplayed: number;
     videoErrors24h?: number;
+    /** Orphelines FTP référencées par ce site — alimente le badge tab "Contenu". */
+    ftpOrphansCount?: number;
   } | null = null;
+
+  /** Total des problèmes vidéo signalés pour le site (erreurs 24h + orphelines FTP). */
+  get contentIssuesCount(): number {
+    const m = this.saasMetrics;
+    if (!m) return 0;
+    return (m.videoErrors24h || 0) + (m.ftpOrphansCount || 0);
+  }
 
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
