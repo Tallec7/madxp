@@ -1,3 +1,9 @@
+## [3.258.2](https://github.com/Tallec7/neopro/compare/v3.258.1...v3.258.2) (2026-04-27)
+
+### Bug Fixes
+
+- **analytics:** supprimer les diviseurs /2880 fragiles — migration ADR-099 (issue [#655](https://github.com/Tallec7/neopro/issues/655)) ([#658](https://github.com/Tallec7/neopro/issues/658)) ([cb826fa](https://github.com/Tallec7/neopro/commit/cb826fa4dd4bb62a04e24d4e3aa0d3aa2ea6f827)), closes [#644](https://github.com/Tallec7/neopro/issues/644)
+
 ## [3.258.1](https://github.com/Tallec7/neopro/compare/v3.258.0...v3.258.1) (2026-04-27)
 
 ### Bug Fixes
