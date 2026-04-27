@@ -42,7 +42,7 @@ Issu de l'audit complet du 2026-04-27 (services backend + composants UI + ADR Ac
 | --- | ------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | 1   | Match                     | ✅ Live             | match-sessions + events + templates + history-view + auto-close + scoreboard PROP-003 + scoreboard-saas               |
 | 2   | Templates Studio          | ✅ Live             | runtime + admin studio + designer workflow                                                                            |
-| 3   | SaaS & Club Portal        | ✅ Live (à élargir) | saas-mode + club-portal-dashboard + diagnostic + sponsors-loop + onboarding                                           |
+| 3   | SaaS & Club Portal        | ✅ Live             | saas-mode + club-portal-dashboard + diagnostic + sponsors-loop + onboarding (ADR-040)                                 |
 | 4   | Sponsors & Pubs           | 🟡 Partiel (à fusionner) | sponsors-rotation ✅ + sponsor-reports ✅ + advertiser-portal + agency + sponsor-portal + analytics-sponsors + asset-service |
 | 5   | Vidéo (cycle complet)     | À créer             | content-management + upload-pipeline + categories + video-health + ftp-storage + upload-verification + cascade DELETE |
 | 6   | Déploiement & OTA         | À créer             | deployment + canary + update + orchestrated + canary-monitor + updates UI + staging                                   |
@@ -87,7 +87,7 @@ docs/specs/
 | SPEC                                                             | ADR liés                                                      | Statut | Dernière revue |
 | ---------------------------------------------------------------- | ------------------------------------------------------------- | ------ | -------------- |
 | [features/match-sessions](features/match-sessions.spec.md)       | ADR-088, ADR-093, ADR-097                                     | Live   | 2026-04-27     |
-| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live   | 2026-04-25     |
+| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096 | Live   | 2026-04-27     |
 | [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
 | [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
 | [features/templates-studio](features/templates-studio.spec.md)   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095          | Live   | 2026-04-25     |

@@ -40,7 +40,7 @@ const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
   'ADR-001', 'ADR-004', 'ADR-006', 'ADR-007', 'ADR-008', 'ADR-010', 'ADR-011',
   'ADR-012', 'ADR-013', 'ADR-014', 'ADR-015', 'ADR-021', 'ADR-022', 'ADR-024',
   'ADR-026', 'ADR-027', 'ADR-030', 'ADR-031', 'ADR-032', 'ADR-033', 'ADR-036',
-  'ADR-040', 'ADR-041', 'ADR-042', 'ADR-043', 'ADR-044', 'ADR-045', 'ADR-046',
+  'ADR-041', 'ADR-042', 'ADR-043', 'ADR-044', 'ADR-045', 'ADR-046',
   'ADR-047', 'ADR-048', 'ADR-050', 'ADR-051', 'ADR-052', 'ADR-053', 'ADR-056',
   'ADR-057', 'ADR-058', 'ADR-060', 'ADR-062', 'ADR-063', 'ADR-064', 'ADR-065',
   'ADR-066', 'ADR-067', 'ADR-068', 'ADR-070', 'ADR-071', 'ADR-072', 'ADR-073',
@@ -64,7 +64,6 @@ const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
 // en Sprint 1-2 pour ajouter la section "Périmètre" formalisée. Frozen — toute
 // nouvelle SPEC doit respecter le format complet.
 const LEGACY_SPECS_PRE_DOMAIN_PIVOT = new Set<string>([
-  'docs/specs/features/saas-mode.spec.md',
   'docs/specs/features/sponsor-reports.spec.md',
   'docs/specs/features/sponsors-rotation.spec.md',
   'docs/specs/features/templates-studio.spec.md',
