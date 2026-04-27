@@ -8,7 +8,7 @@ Serveur central de gestion de flotte pour les boîtiers Raspberry Pi NEOPRO.
 | --------------------- | ----------------------------------------------- |
 | Runtime               | Node.js 20+, TypeScript strict                  |
 | Framework             | Express 4.18                                    |
-| Base de données       | PostgreSQL 15 (Supabase)                        |
+| Base de données       | PostgreSQL 18 (Railway)                         |
 | Stockage vidéos       | FTP Hostinger (unifié via `storage.service.ts`) |
 | Stockage mises à jour | FTP séparé (Hostinger)                          |
 | WebSocket             | Socket.IO 4.8                                   |
@@ -35,16 +35,16 @@ npm run dev
 
 ### Configuration Base de Données
 
-1. Créer un projet sur [supabase.com](https://supabase.com)
-2. Récupérer l'URL de connexion : Project Settings > Database > Connection string > URI
+1. Provisionner un PostgreSQL 18 sur [railway.app](https://railway.app)
+2. Récupérer l'URL de connexion privée Railway : Service > Variables > `DATABASE_URL`
 3. Configurer `.env` :
    ```
-   DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+   DATABASE_URL=postgresql://postgres:[password]@postgres.railway.internal:5432/railway
    DATABASE_SSL=true
    ```
 4. Initialiser les tables :
    ```bash
-   # Via Supabase SQL Editor ou psql
+   # En local via psql, ou via Railway shell
    psql $DATABASE_URL -f src/scripts/init-db.sql
    ```
 
@@ -72,8 +72,7 @@ central-server/
 │   ├── config/
 │   │   ├── database.ts              # Connexion PostgreSQL
 │   │   ├── logger.ts                # Winston logging
-│   │   ├── ftp-storage.ts           # Upload FTP Hostinger
-│   │   └── supabase.ts              # Supabase client
+│   │   └── ftp-storage.ts           # Upload FTP Hostinger
 │   ├── controllers/                 # Logique métier par domaine
 │   │   ├── auth.controller.ts
 │   │   ├── sites.controller.ts
@@ -320,7 +319,7 @@ Tables principales :
 - **Rate Limiting** : 100 req/15min en production
 - **CORS** : Origines configurables via env
 - **Helmet** : Headers de sécurité HTTP
-- **SSL** : Connexion Supabase chiffrée
+- **SSL** : Connexion PostgreSQL chiffrée (Railway)
 
 ---
 
@@ -383,7 +382,7 @@ npm test
 src/
 ├── controllers/*.test.ts     # Tests controllers
 ├── middleware/*.test.ts      # Tests middleware
-├── config/__mocks__/         # Mocks (database, logger, supabase)
+├── config/__mocks__/         # Mocks (database, logger)
 └── __tests__/setup.ts        # Configuration Jest
 ```
 
@@ -395,7 +394,7 @@ src/
 
 | Variable        | Description                    | Exemple                             |
 | --------------- | ------------------------------ | ----------------------------------- |
-| DATABASE_URL    | URL PostgreSQL (Supabase)      | postgresql://user:pass@host:5432/db |
+| DATABASE_URL    | URL PostgreSQL (Railway)       | postgresql://user:pass@host:5432/db |
 | JWT_SECRET      | Secret JWT (min 32 caractères) | minimum-32-caracteres-random        |
 | ALLOWED_ORIGINS | CORS origins                   | https://dashboard.example.com       |
 
@@ -427,13 +426,6 @@ src/
 | FTP_UPDATE_PASSWORD   | Mot de passe FTP         | xxx                             |
 | FTP_UPDATE_SECURE     | Connexion sécurisée      | false                           |
 | FTP_UPDATE_PUBLIC_URL | URL publique des updates | https://cdn.example.com/updates |
-
-### Stockage vidéos (Fallback Supabase)
-
-| Variable             | Description          | Exemple                 |
-| -------------------- | -------------------- | ----------------------- |
-| SUPABASE_URL         | URL projet Supabase  | https://xxx.supabase.co |
-| SUPABASE_SERVICE_KEY | Clé service Supabase | eyJhbGci...             |
 
 ### Email (SMTP)
 
