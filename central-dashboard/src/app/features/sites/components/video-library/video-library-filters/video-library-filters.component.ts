@@ -35,6 +35,8 @@ export class VideoLibraryFiltersComponent {
   @Input() categories: string[] = [];
   @Input() configLabelOptions: string[] = [];
   @Input() selectionMode: boolean = false;
+  /** Affiche l'option "❌ Introuvables FTP" uniquement si au moins une vidéo orpheline existe pour ce site. */
+  @Input() hasFtpOrphans: boolean = false;
 
   // Two-way binding outputs
   @Output() searchQueryChange = new EventEmitter<string>();

@@ -48,11 +48,19 @@ jest.mock('../repositories', () => {
     findExistingIds: jest.fn(),
   };
 
+  const mockConnectionEventsRepository = {
+    getUptimeStats: jest.fn(),
+    getDailyUptimeStats: jest.fn(),
+    record: jest.fn(),
+    purgeOlderThan: jest.fn(),
+  };
+
   return {
     analyticsRepository: mockAnalyticsRepository,
     siteRepository: mockSiteRepository,
     advertiserRepository: mockAdvertiserRepository,
     videoRepository: mockVideoRepository,
+    connectionEventsRepository: mockConnectionEventsRepository,
   };
 });
 
@@ -99,10 +107,11 @@ import {
   calculateDailyStats,
   getAnalyticsOverview,
 } from './analytics.controller';
-import { analyticsRepository, siteRepository, advertiserRepository, videoRepository } from '../repositories';
+import { analyticsRepository, connectionEventsRepository, siteRepository, advertiserRepository, videoRepository } from '../repositories';
 
 // Type the mocked repositories for convenience
 const mockedAnalytics = analyticsRepository as jest.Mocked<typeof analyticsRepository>;
+const mockedConnectionEvents = connectionEventsRepository as jest.Mocked<typeof connectionEventsRepository>;
 const mockedSite = siteRepository as unknown as jest.Mocked<Pick<typeof siteRepository, 'findById' | 'exists'>>;
 const mockedAdvertiser = advertiserRepository as unknown as jest.Mocked<Pick<typeof advertiserRepository, 'findExistingIds'>>;
 const mockedVideo = videoRepository as unknown as jest.Mocked<Pick<typeof videoRepository, 'findExistingIds'>>;
@@ -185,7 +194,12 @@ describe('Analytics Controller', () => {
         max_temperature: 70,
       });
 
-      mockedAnalytics.getHeartbeatCount24h.mockResolvedValueOnce(1000);
+      mockedConnectionEvents.getUptimeStats.mockResolvedValueOnce({
+        uptimePercent: 99.5,
+        disconnectCount: 0,
+        longestGapSeconds: 0,
+        currentState: 'connected',
+      });
 
       mockedAnalytics.getAlertCount24h.mockResolvedValueOnce(3);
 
@@ -234,8 +248,8 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockedAnalytics.getDailyHeartbeats.mockResolvedValueOnce([
-        { date: new Date('2025-12-01'), heartbeat_count: '2880', avg_cpu: 45.5, avg_temp: 52.3 },
+      mockedConnectionEvents.getDailyUptimeStats.mockResolvedValueOnce([
+        { date: new Date('2025-12-01'), online_minutes: 1440, total_minutes: 1440, availability_percent: 100 },
       ]);
 
       await getClubAvailability(req, res);
@@ -260,18 +274,18 @@ describe('Analytics Controller', () => {
       });
       const res = createMockResponse();
 
-      mockedAnalytics.getDailyHeartbeats.mockResolvedValueOnce([]);
+      mockedConnectionEvents.getDailyUptimeStats.mockResolvedValueOnce([]);
 
       await getClubAvailability(req, res);
 
-      expect(mockedAnalytics.getDailyHeartbeats).toHaveBeenCalledWith('site-123', 90);
+      expect(mockedConnectionEvents.getDailyUptimeStats).toHaveBeenCalledWith('site-123', 90);
     });
 
     it('should return 500 on database error', async () => {
       const req = createAuthRequest({ params: { siteId: 'site-123' } });
       const res = createMockResponse();
 
-      mockedAnalytics.getDailyHeartbeats.mockRejectedValueOnce(new Error('DB Error'));
+      mockedConnectionEvents.getDailyUptimeStats.mockRejectedValueOnce(new Error('DB Error'));
 
       await getClubAvailability(req, res);
 

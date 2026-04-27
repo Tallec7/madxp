@@ -375,10 +375,28 @@ export interface SiteConnectionStatus {
     lastConfigSync: Date | null;
   };
   statistics: {
+    /**
+     * @deprecated ADR-099 — la table `metrics` est échantillonnée toutes les
+     * 5 min, ce compteur n'est PAS un proxy fiable de la connectivité. Utiliser
+     * `uptime24h` (dérivé de `connection_events`) pour tout calcul de %.
+     * Conservé pour information détaillée et compat ascendante.
+     */
     heartbeats24h: number;
-    uptime24h: number;
+    /**
+     * Pourcentage d'uptime sur 24h (0-100). `null` lorsque la table
+     * `connection_events` (ADR-099) n'a pas encore enregistré d'événement
+     * pour ce site — le composant doit alors afficher un état neutre ("—"),
+     * pas un faux 0%. Avant ADR-099, ce champ était calculé à tort à partir
+     * du compteur de samples `metrics` et plafonnait à ~10% pour la flotte
+     * entière (issue #644).
+     */
+    uptime24h: number | null;
     firstHeartbeat24h: Date | null;
     lastHeartbeat24h: Date | null;
+    /** Nombre de coupures détectées sur 24h (ADR-099). `null` si pas encore d'events. */
+    disconnectCount24h?: number | null;
+    /** Plus longue coupure observée sur 24h, en secondes (ADR-099). `null` si pas d'events. */
+    longestGapSeconds24h?: number | null;
   };
   /** État de santé détaillé de la connexion WebSocket */
   health?: ConnectionHealth;

@@ -64,9 +64,23 @@
       class="tab-btn"
       [class.active]="activeTab === 'content'"
       (click)="activeTab = 'content'"
+      [attr.title]="
+        contentIssuesCount > 0
+          ? (saasMetrics?.ftpOrphansCount || 0) +
+            ' vidéo(s) introuvable(s) FTP + ' +
+            (saasMetrics?.videoErrors24h || 0) +
+            ' erreur(s) de lecture 24h — voir Santé vidéos flotte'
+          : null
+      "
     >
       <span class="tab-icon">📱</span>
       <span class="tab-label">Contenu</span>
+      <span
+        class="tab-badge"
+        *ngIf="contentIssuesCount > 0"
+        data-testid="content-tab-issues-badge"
+        >{{ contentIssuesCount }}</span
+      >
     </button>
     <button
       class="tab-btn"
@@ -733,22 +747,6 @@
 
     <!-- TAB: Contenu -->
     <div *ngIf="activeTab === 'content'" class="tab-panel">
-      <!-- Bannière erreurs de lecture vidéo (chantier vidéos manquantes) —
-           visible quand le site a reporté des plantages de lecture côté TV
-           dans les dernières 24h. Source : saasMetrics.videoErrors24h. -->
-      <a
-        class="video-errors-banner"
-        *ngIf="(saasMetrics?.videoErrors24h || 0) > 0"
-        routerLink="/admin/video-health"
-        data-testid="site-content-video-errors-banner"
-      >
-        <span class="vbe-icon">⚠️</span>
-        <span class="vbe-text">
-          <strong>{{ saasMetrics?.videoErrors24h }}</strong>
-          erreur(s) de lecture vidéo dans les 24h sur ce site.
-        </span>
-        <span class="vbe-cta">Voir santé flotte →</span>
-      </a>
       <app-site-content-tab
         [siteId]="siteId"
         [siteName]="site.site_name || site.club_name || ''"

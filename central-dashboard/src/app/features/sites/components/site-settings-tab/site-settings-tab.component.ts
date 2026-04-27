@@ -754,7 +754,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
    * Returns the URL to use for watermark preview in the dashboard.
    * Priority:
    * 1. watermarkPreviewUrl - Base64 preview during upload
-   * 2. watermarkConfig.cloudUrl - Cloud URL (FTP or Supabase)
+   * 2. watermarkConfig.cloudUrl - Cloud URL (FTP)
    * 3. Fallback to a placeholder image if only local path exists
    *
    * We NEVER use imagePath directly as it's a local Pi path that doesn't exist on the dashboard.
@@ -765,7 +765,7 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
       return this.watermarkPreviewUrl;
     }
 
-    // Priority 2: Cloud URL (from FTP or Supabase)
+    // Priority 2: Cloud URL (FTP)
     if (this.watermarkConfig.cloudUrl) {
       return this.watermarkConfig.cloudUrl;
     }

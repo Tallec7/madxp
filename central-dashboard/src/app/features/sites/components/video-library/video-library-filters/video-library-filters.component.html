@@ -22,6 +22,7 @@
     <option value="in_config">⚙️ Dans la config</option>
     <option value="deploy_error" *ngIf="siteType !== 'saas'">❌ Erreur deploy</option>
     <option value="with_variant">📺 Avec variantes</option>
+    <option value="ftp_orphan" *ngIf="hasFtpOrphans">❌ Introuvables FTP</option>
   </select>
   <select
     [ngModel]="ownerFilter"

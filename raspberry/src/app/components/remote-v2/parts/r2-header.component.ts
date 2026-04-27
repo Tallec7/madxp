@@ -20,6 +20,20 @@ import { CommonModule } from '@angular/common';
         <span>{{ clubName }}</span>
       </button>
       <span class="r2-header-spacer"></span>
+      <!-- Compteur erreurs vidéo session (chantier vidéos manquantes) —
+           toujours visible : neutre à 0, rouge >0. Confirme que la sonde
+           player-state est branchée même quand aucun plantage n'a eu lieu. -->
+      <span
+        class="r2-video-errors-chip"
+        [class.has-errors]="errorsCount > 0"
+        [attr.title]="errorsCount > 0
+          ? errorsCount + ' erreur(s) de lecture vidéo détectée(s) cette session'
+          : 'Aucune erreur de lecture vidéo cette session'"
+        data-testid="remote-v2-video-errors-chip"
+      >
+        <span class="r2-vec-icon">{{ errorsCount > 0 ? '⚠' : '✓' }}</span>
+        <span class="r2-vec-count">{{ errorsCount }}</span>
+      </span>
       <div class="r2-header-actions">
         <button class="r2-icon-btn" aria-label="Recherche" (click)="searchClick.emit()">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -41,6 +55,7 @@ import { CommonModule } from '@angular/common';
 export class R2HeaderComponent {
   @Input() initials = '–';
   @Input() clubName = 'Club';
+  @Input() errorsCount = 0;
   @Output() profileClick = new EventEmitter<void>();
   @Output() searchClick = new EventEmitter<void>();
   @Output() gearClick = new EventEmitter<void>();

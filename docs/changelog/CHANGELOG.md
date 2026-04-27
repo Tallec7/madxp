@@ -1,3 +1,80 @@
+## [3.258.3](https://github.com/Tallec7/neopro/compare/v3.258.2...v3.258.3) (2026-04-27)
+
+### Bug Fixes
+
+- **video-ftp-audit:** distinguish unreachable from missing in probe + UI ([#660](https://github.com/Tallec7/neopro/issues/660)) ([9d521bc](https://github.com/Tallec7/neopro/commit/9d521bce3f64448bc7ce5f412cb9e55e48c9bc9f))
+
+## [3.258.2](https://github.com/Tallec7/neopro/compare/v3.258.1...v3.258.2) (2026-04-27)
+
+### Bug Fixes
+
+- **analytics:** supprimer les diviseurs /2880 fragiles — migration ADR-099 (issue [#655](https://github.com/Tallec7/neopro/issues/655)) ([#658](https://github.com/Tallec7/neopro/issues/658)) ([cb826fa](https://github.com/Tallec7/neopro/commit/cb826fa4dd4bb62a04e24d4e3aa0d3aa2ea6f827)), closes [#644](https://github.com/Tallec7/neopro/issues/644)
+
+## [3.258.1](https://github.com/Tallec7/neopro/compare/v3.258.0...v3.258.1) (2026-04-27)
+
+### Bug Fixes
+
+- **video-library:** replace /content/videos URL prefix ([#657](https://github.com/Tallec7/neopro/issues/657)) ([f85c735](https://github.com/Tallec7/neopro/commit/f85c735436221f9b078dc4a7673acece846e63cf)), closes [#647](https://github.com/Tallec7/neopro/issues/647)
+
+# [3.258.0](https://github.com/Tallec7/neopro/compare/v3.257.0...v3.258.0) (2026-04-27)
+
+### Features
+
+- **commands:** add /check-db-source slash command ([#653](https://github.com/Tallec7/neopro/issues/653)) ([12c76b7](https://github.com/Tallec7/neopro/commit/12c76b7f630543b203b847cdec12aedb814b9124)), closes [#644](https://github.com/Tallec7/neopro/issues/644)
+
+# [3.257.0](https://github.com/Tallec7/neopro/compare/v3.256.0...v3.257.0) (2026-04-27)
+
+### Bug Fixes
+
+- **video-library:** replace endpoint URL prefix (/videos not /content/videos) ([#651](https://github.com/Tallec7/neopro/issues/651)) ([bd8124f](https://github.com/Tallec7/neopro/commit/bd8124fe47fa6903e72d7724d48d1a090434a399)), closes [#647](https://github.com/Tallec7/neopro/issues/647)
+
+### Features
+
+- **monitoring:** connection_events follow-ups — front uptime + CRON purge 90j + local DB helper ([#650](https://github.com/Tallec7/neopro/issues/650)) ([2180bb4](https://github.com/Tallec7/neopro/commit/2180bb4eb535fc6c82741e5ad4c0211177c18e95)), closes [#644](https://github.com/Tallec7/neopro/issues/644) [#646](https://github.com/Tallec7/neopro/issues/646) [#648](https://github.com/Tallec7/neopro/issues/648) [#648](https://github.com/Tallec7/neopro/issues/648) [#648](https://github.com/Tallec7/neopro/issues/648) [#646](https://github.com/Tallec7/neopro/issues/646) [#644](https://github.com/Tallec7/neopro/issues/644) [#644](https://github.com/Tallec7/neopro/issues/644) [#646](https://github.com/Tallec7/neopro/issues/646) [#648](https://github.com/Tallec7/neopro/issues/648)
+
+# [3.256.0](https://github.com/Tallec7/neopro/compare/v3.255.0...v3.256.0) (2026-04-27)
+
+### Features
+
+- **video-library:** replace orphan FTP video binary + library badge/filter (γ) ([#647](https://github.com/Tallec7/neopro/issues/647)) ([114bc9f](https://github.com/Tallec7/neopro/commit/114bc9f434e60736f2163a5896138be1196f6748)), closes [#641](https://github.com/Tallec7/neopro/issues/641) [#616](https://github.com/Tallec7/neopro/issues/616) [#641](https://github.com/Tallec7/neopro/issues/641)
+
+# [3.255.0](https://github.com/Tallec7/neopro/compare/v3.254.0...v3.255.0) (2026-04-27)
+
+### Features
+
+- **monitoring:** connection_events as source of truth for site uptime (ADR-099, [#644](https://github.com/Tallec7/neopro/issues/644)) ([#646](https://github.com/Tallec7/neopro/issues/646)) ([56847a0](https://github.com/Tallec7/neopro/commit/56847a0a86bc4b12ff96fe3dcbec228689cbacb9))
+
+# [3.254.0](https://github.com/Tallec7/neopro/compare/v3.253.1...v3.254.0) (2026-04-27)
+
+### Features
+
+- **site-content:** unlink FTP orphan from site (1-click cascade cleanup) ([#643](https://github.com/Tallec7/neopro/issues/643)) ([5c5d487](https://github.com/Tallec7/neopro/commit/5c5d487e51e334dbccb36dc7e32c882d2f153140)), closes [#641](https://github.com/Tallec7/neopro/issues/641) [#616](https://github.com/Tallec7/neopro/issues/616) [#641](https://github.com/Tallec7/neopro/issues/641)
+
+## [3.253.1](https://github.com/Tallec7/neopro/compare/v3.253.0...v3.253.1) (2026-04-27)
+
+### Bug Fixes
+
+- **ci:** handle 429 WAF rate limiting in frontend-health probe ([#642](https://github.com/Tallec7/neopro/issues/642)) ([b29bc33](https://github.com/Tallec7/neopro/commit/b29bc3305b709e7eaf0c461279066e381c2fb363)), closes [639/#641](https://github.com/Tallec7/neopro/issues/641)
+- **content:** cleanup thumbnail FTP file on video DELETE (root cause of orphan .jpg files) ([#645](https://github.com/Tallec7/neopro/issues/645)) ([a5b25f2](https://github.com/Tallec7/neopro/commit/a5b25f2811296f4376b8b3c3c4d9325cedc1d8ea))
+
+# [3.253.0](https://github.com/Tallec7/neopro/compare/v3.252.0...v3.253.0) (2026-04-27)
+
+### Features
+
+- **site-content:** drill-down banner lists FTP orphans referenced by the site ([#641](https://github.com/Tallec7/neopro/issues/641)) ([095458a](https://github.com/Tallec7/neopro/commit/095458a7ca8d5bd1bc2956209e7992e8a6bede7f))
+
+# [3.252.0](https://github.com/Tallec7/neopro/compare/v3.251.0...v3.252.0) (2026-04-27)
+
+### Features
+
+- **site-detail:** tab Contenu badge counts FTP orphans referenced by site (not just playback errors) ([#639](https://github.com/Tallec7/neopro/issues/639)) ([12f992e](https://github.com/Tallec7/neopro/commit/12f992efca530c4a65b2e9f067ede49b8e9a59c9))
+
+# [3.251.0](https://github.com/Tallec7/neopro/compare/v3.250.0...v3.251.0) (2026-04-27)
+
+### Features
+
+- **video-health:** always-visible counters on Remote V2 + site detail ([#634](https://github.com/Tallec7/neopro/issues/634)) ([6ec2a1a](https://github.com/Tallec7/neopro/commit/6ec2a1a73a7a8cff9f3b221b1791f9989de34a26)), closes [#630](https://github.com/Tallec7/neopro/issues/630)
+
 # [3.250.0](https://github.com/Tallec7/neopro/compare/v3.249.0...v3.250.0) (2026-04-26)
 
 ### Features

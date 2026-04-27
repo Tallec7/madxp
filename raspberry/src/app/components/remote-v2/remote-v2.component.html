@@ -2,6 +2,7 @@
   <app-r2-header
     [initials]="clubInitials"
     [clubName]="currentProfile"
+    [errorsCount]="erroredVideoIds.size"
     (profileClick)="openSheet('profile')"
     (searchClick)="openSheet('search')"
     (gearClick)="openSheet('gear')"

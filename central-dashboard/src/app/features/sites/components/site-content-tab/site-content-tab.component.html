@@ -1,4 +1,51 @@
 <div class="content-tab">
+  <!-- Bannière FTP orphelines (chantier vidéos manquantes) — visible quand
+       le site référence des vidéos dont le fichier est absent du serveur FTP.
+       Source : GET /api/sites/:id/ftp-orphans, alimenté par le CRON nocturne. -->
+  <div
+    class="ftp-orphans-banner"
+    *ngIf="ftpOrphans.length > 0"
+    data-testid="site-ftp-orphans-banner"
+  >
+    <div class="fob-header">
+      <span class="fob-icon">⚠️</span>
+      <div class="fob-text">
+        <strong>{{ ftpOrphans.length }} vidéo(s) introuvable(s) sur le serveur</strong>
+        <span class="fob-hint">
+          Ces vidéos sont référencées par ce site mais leur fichier n'est plus sur le FTP. Elles
+          planteront si quelqu'un les déclenche depuis la télécommande.
+        </span>
+      </div>
+      <button class="fob-toggle" type="button" (click)="ftpOrphansExpanded = !ftpOrphansExpanded">
+        {{ ftpOrphansExpanded ? 'Masquer la liste' : 'Voir la liste' }}
+      </button>
+    </div>
+    <ul class="fob-list" *ngIf="ftpOrphansExpanded">
+      <li *ngFor="let w of ftpOrphans">
+        <code>{{ w.video_filename }}</code>
+        <span class="fob-cat" *ngIf="w.video_category">{{ w.video_category }}</span>
+        <span
+          class="fob-status"
+          [class.is-missing]="w.status === 'missing'"
+          [class.is-unreachable]="w.status === 'unreachable'"
+        >
+          {{ w.status === 'missing' ? 'Manquante' : 'Injoignable' }}
+        </span>
+        <span class="fob-date">détecté {{ w.first_detected_at | date: 'dd/MM' }}</span>
+        <button
+          class="fob-unlink"
+          type="button"
+          (click)="unlinkOrphanVideo(w)"
+          [disabled]="unlinkingVideoId !== null"
+          [attr.data-testid]="'unlink-orphan-' + w.video_id"
+          title="Retire la référence de cette vidéo du site (cascade JSONB + push config)"
+        >
+          {{ unlinkingVideoId === w.video_id ? '⏳ Retrait…' : 'Retirer du site' }}
+        </button>
+      </li>
+    </ul>
+  </div>
+
   <!-- Header -->
   <div class="content-header">
     <div class="header-info">
@@ -115,6 +162,9 @@
     [configVideoTargets]="configVideoTargets"
     [isSuperAdmin]="isSuperAdmin"
     [isClubUser]="isClub"
+    [ftpOrphanVideoIds]="ftpOrphanVideoIds"
+    [ftpUnreachableVideoIds]="ftpUnreachableVideoIds"
+    (replaceVideoRequest)="onReplaceVideoRequest($event)"
     (videoUploaded)="onVideoUploaded($event)"
     (secondaryVariantChanged)="loadContent()"
     (allVideosUploaded)="onAllVideosUploaded($event)"

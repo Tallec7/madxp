@@ -104,6 +104,13 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map(); // Sprint 3: targets each video belongs to
   @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
 
+  /** Set des video.id confirmés absents du FTP (HEAD/Range = 404) — bloque deploy/add-to. */
+  @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+  /** Set des video.id non vérifiables (HEAD/Range timeout/5xx) — warning seulement. */
+  @Input() ftpUnreachableVideoIds: ReadonlySet<string> = new Set<string>();
+  /** Demande de remplacement du binaire — file picker côté parent (site-content-tab). */
+  @Output() replaceVideoRequest = new EventEmitter<VideoItem>();
+
   // ADR-082: Club grants state
   clubGrantedVideoIds: Set<string> = new Set();
   videoGrants: VideoClubGrantRow[] = [];
@@ -310,7 +317,7 @@ export class VideoLibraryComponent implements OnChanges {
   }
 
   private loadClubGrants(siteId: string): void {
-    this.api.get<{ videoIds: string[] }>(`/content/videos/grants-for-site/${siteId}`)
+    this.api.get<{ videoIds: string[] }>(`/videos/grants-for-site/${siteId}`)
       .subscribe({ next: (res) => { this.clubGrantedVideoIds = new Set(res.videoIds); this.cdr.markForCheck(); } });
   }
 
@@ -318,7 +325,7 @@ export class VideoLibraryComponent implements OnChanges {
     if (!videoId) return;
     this.grantsLoading = true;
     this.videoGrants = [];
-    this.api.get<{ grants: VideoClubGrantRow[] }>(`/content/videos/${videoId}/club-grants`)
+    this.api.get<{ grants: VideoClubGrantRow[] }>(`/videos/${videoId}/club-grants`)
       .subscribe({
         next: (res) => { this.videoGrants = res.grants; this.grantsLoading = false; this.cdr.markForCheck(); },
         error: () => { this.grantsLoading = false; this.cdr.markForCheck(); },
@@ -327,13 +334,13 @@ export class VideoLibraryComponent implements OnChanges {
 
   onAddGrant(siteId: string): void {
     if (!this.detailVideo?.id) return;
-    this.api.post<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants`, { site_id: siteId })
+    this.api.post<{ success: boolean }>(`/videos/${this.detailVideo.id}/club-grants`, { site_id: siteId })
       .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
   }
 
   onRemoveGrant(siteId: string): void {
     if (!this.detailVideo?.id) return;
-    this.api.delete<{ success: boolean }>(`/content/videos/${this.detailVideo.id}/club-grants/${siteId}`)
+    this.api.delete<{ success: boolean }>(`/videos/${this.detailVideo.id}/club-grants/${siteId}`)
       .subscribe({ next: () => this.loadVideoGrants(this.detailVideo!.id!) });
   }
 
@@ -412,6 +419,8 @@ export class VideoLibraryComponent implements OnChanges {
       filtered = filtered.filter(v => v.contentStatus !== 'available' && v.contentStatus !== 'to_deploy');
     } else if (this.statusFilter === 'available_only') {
       filtered = filtered.filter(v => v.contentStatus === 'available');
+    } else if (this.statusFilter === 'ftp_orphan') {
+      filtered = filtered.filter(v => !!v.id && this.ftpOrphanVideoIds.has(v.id));
     }
 
     if (this.ownerFilter !== 'all') {
@@ -542,6 +551,10 @@ export class VideoLibraryComponent implements OnChanges {
 
   closeDetail(): void {
     this.detailVideo = null;
+  }
+
+  onReplaceVideoFile(video: VideoItem): void {
+    this.replaceVideoRequest.emit(video);
   }
 
   onPreview(video: VideoItem, event: Event): void {

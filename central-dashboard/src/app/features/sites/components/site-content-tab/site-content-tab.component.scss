@@ -279,3 +279,144 @@
   display: flex;
   justify-content: flex-end;
 }
+
+// Bannière FTP orphelines (chantier vidéos manquantes — tab Contenu).
+.ftp-orphans-banner {
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+
+  .fob-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .fob-icon {
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    line-height: 1.2;
+  }
+
+  .fob-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: #991b1b;
+    line-height: 1.4;
+
+    strong {
+      font-size: 0.95rem;
+    }
+  }
+
+  .fob-hint {
+    font-size: 0.85rem;
+    color: #991b1b;
+    opacity: 0.85;
+  }
+
+  .fob-toggle {
+    flex-shrink: 0;
+    background: white;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms ease;
+
+    &:hover {
+      background: #fee2e2;
+    }
+  }
+
+  .fob-list {
+    list-style: none;
+    margin: 0.85rem 0 0;
+    padding: 0.6rem 0 0;
+    border-top: 1px solid rgba(252, 165, 165, 0.5);
+    max-height: 280px;
+    overflow-y: auto;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.35rem 0;
+      font-size: 0.85rem;
+      color: #475569;
+      flex-wrap: wrap;
+
+      code {
+        font-size: 0.82rem;
+        color: #1e293b;
+        background: white;
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+      }
+    }
+  }
+
+  .fob-cat {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+
+  .fob-status {
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 700;
+
+    &.is-missing {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    &.is-unreachable {
+      background: #fef3c7;
+      color: #92400e;
+    }
+  }
+
+  .fob-date {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-left: auto;
+  }
+
+  // Bouton "Retirer du site" — discret, devient l'élément actionnable de la
+  // ligne. Disabled pendant l'unlink en cours pour éviter double-click.
+  .fob-unlink {
+    flex-shrink: 0;
+    background: white;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 120ms ease;
+
+    &:hover:not(:disabled) {
+      background: #fee2e2;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+  }
+}

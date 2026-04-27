@@ -4,7 +4,7 @@
 >
 > **Principe directeur** : un risque non documenté est un risque sous-estimé. Tout risque ici a été pesé en `proba × impact` et a une mitigation chiffrée — ou explicitement marquée "à accepter".
 >
-> **Statut** : Live | **Dernière revue** : 2026-04-25 | **Prochaine revue** : tous les mois (au lieu de tous les 2 mois pour TECH-DEBT car les risques business bougent vite)
+> **Statut** : Live | **Dernière revue** : 2026-04-27 | **Prochaine revue** : tous les mois (au lieu de tous les 2 mois pour TECH-DEBT car les risques business bougent vite)
 
 ## Comment lire ce doc
 
@@ -63,9 +63,10 @@ Chaque risque est noté avec :
 
 ### R-04 — Perte de la DB Railway sans backup testé
 
-| Proba 2 / Impact 5 / **Score 10** / 🔴 |
+| Proba 2 / Impact 5 / **Score 10** / 🟡 partielle |
 |---|
-| Railway fait des backups Postgres mais aucun restore n'est testé. Si la DB est perdue (incident provider, suppression accidentelle via migration foireuse), on ne sait pas combien on récupère ni quel state on retrouve. |
+| Railway fait des backups Postgres + workflow GitHub `db-backup.yml` exécute un `pg_dump` quotidien → Hostinger FTP (idempotent depuis PR #626). Mirror Supabase historique retiré (PR #633). Restore n'est toujours pas testé automatiquement. Si la DB est perdue (incident provider, suppression accidentelle via migration foireuse), on a un dump à J-1 mais on ne sait pas combien de minutes met le restore. |
+| **Mitigation actuelle** : `db-backup.yml` quotidien, dump custom format, double upload FTP, sanity check >1 MB. |
 | **Mitigation cible** : workflow GitHub Action mensuel qui restore vers une DB éphémère + script de validation + Slack le résultat. |
 | **Effort** : 1j. **Bloqueur** : audit RGPD + sérénité. |
 
@@ -115,8 +116,8 @@ Chaque risque est noté avec :
 
 | Proba 2 / Impact 4 / **Score 8** / 🟡 partielle |
 |---|
-| Railway est notre hébergeur API + Postgres. Son business model n'est pas garanti à 5 ans (cf. évolutions pricing récentes). Migration vers AWS/Render/Fly.io est faisable (déjà Dockerfile-friendly) mais coûte 5-10j de travail. |
-| **Mitigation actuelle** : Dockerfile builder utilisé (cf. CLAUDE.md NE JAMAIS FAIRE Nixpacks), donc portable. |
+| Railway est notre hébergeur API + Postgres **unique** (le mirror Supabase historique a été retiré, cf. ADR-070, ADR-085, PR #633). Son business model n'est pas garanti à 5 ans (cf. évolutions pricing récentes). Migration vers AWS/Render/Fly.io est faisable (déjà Dockerfile-friendly) mais coûte 5-10j de travail. |
+| **Mitigation actuelle** : Dockerfile builder utilisé (cf. CLAUDE.md NE JAMAIS FAIRE Nixpacks), donc portable. Dumps quotidiens FTP Hostinger (PR #626) = la DB est récupérable même si Railway disparaît. |
 | **Mitigation cible** : POC migration documenté (sans la faire) pour réduire le délai en cas d'urgence. |
 | **Effort** : 2j de POC. |
 
@@ -147,11 +148,13 @@ Chaque risque est noté avec :
 
 ### R-13 — Aucune politique RGPD / suppression données users
 
-| Proba 2 / Impact 3 / **Score 6** / 🔴 |
+| Proba 2 / Impact 3 / **Score 6** / 🟡 partielle |
 |---|
 | La DB stocke des emails users dashboard, des audit_logs, des match infos avec noms équipes/joueurs (in directement). Si demande RGPD utilisateur (rare car users = clubs persona morale, mais possible pour les emails admin), on ne sait pas répondre rapidement. |
-| **Mitigation cible** : `docs/RGPD.md` 1 page + script `cleanup_user_data(user_id)` testé. |
-| **Effort** : 1j. |
+| **Mitigation actuelle (PR #633, 2026-04-27)** : registre RGPD à jour (`docs/legal/GDPR_PROCESSING_REGISTER.md`), politique de confidentialité, CGV, mentions légales et page `/legal` du dashboard reflètent les sous-traitants actuels (Railway USA + Hostinger UE Chypre). Encadrement transferts hors UE explicite (EU-US DPF + CCT/SCC). |
+| **Mitigation manquante** : (1) DPA Railway non encore signé (https://railway.com/legal/dpa), (2) `docs/RGPD.md` opérationnel manquant, (3) script `cleanup_user_data(user_id)` non écrit/testé. |
+| **Mitigation cible** : signer DPA Railway + écrire `docs/RGPD.md` + script `cleanup_user_data(user_id)` testé. |
+| **Effort** : 0.5j (signature DPA + doc) + 0.5j (script cleanup). |
 
 ---
 

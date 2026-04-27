@@ -13,8 +13,7 @@
 - [ ] Cloner le repository : `git clone <repo-url> && cd neopro`
 - [ ] Obtenir les accès :
   - [ ] GitHub (lecture/écriture sur le repo)
-  - [ ] Supabase (dashboard - lecture seule minimum)
-  - [ ] Railway (dashboard - lecture seule minimum)
+  - [ ] Railway (dashboard - lecture seule minimum, Postgres + API)
   - [ ] Hostinger FTP (optionnel, pour debug vidéos)
 - [ ] Copier `.env.example` vers `.env` et remplir les valeurs (demander à l'équipe)
 - [ ] Installer les dépendances : `npm install`
@@ -153,7 +152,7 @@ cd e2e && npx playwright test  # E2E (avant merge sur main)
 | Déploiement vidéo | `services/deployment.service.ts`, `commands/deploy-video.js`                                                                                          |
 | Analytics         | `controllers/analytics.controller.ts`, `features/analytics/`                                                                                          |
 | WebSocket         | `services/socket.service.ts`, `sync-agent/src/agent.js`                                                                                               |
-| Stockage vidéo    | `services/ftp-storage.ts`, `config/supabase.ts`                                                                                                       |
+| Stockage vidéo    | `services/storage.service.ts`, `config/ftp-storage.ts`                                                                                                |
 
 ---
 
@@ -262,7 +261,7 @@ await commandQueueService.sendOrQueue(siteId, 'update_config', payload);
 
 - [TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md) - Résolution de problèmes
 - [TESTING_GUIDE.md](technical/TESTING_GUIDE.md) - Guide des tests
-- [VIDEO_STORAGE.md](technical/VIDEO_STORAGE.md) - Double backend FTP/Supabase
+- [VIDEO_STORAGE.md](technical/VIDEO_STORAGE.md) - Storage backend FTP Hostinger
 
 ### Architecture Decision Records
 

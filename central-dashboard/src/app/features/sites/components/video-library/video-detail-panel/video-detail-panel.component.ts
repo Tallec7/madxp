@@ -53,9 +53,14 @@ export class VideoDetailPanelComponent {
   @Input() addToDropdownOpen = false;
   @Input() addToDropdownStyle: Record<string, string> = {};
 
+  /** Set des video.id orphelins FTP pour ce site (chantier vidéos manquantes). */
+  @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+
   @Output() closePanel = new EventEmitter<void>();
   @Output() addGrant = new EventEmitter<string>();
   @Output() removeGrant = new EventEmitter<string>();
+  /** Demande de remplacement du binaire de cette vidéo (file picker côté parent). */
+  @Output() replaceVideoFile = new EventEmitter<VideoItem>();
   @Output() toggleAddTo = new EventEmitter<{ video: VideoItem; event: Event }>();
   @Output() addToTargetSelect = new EventEmitter<{
     video: VideoItem;
@@ -109,5 +114,14 @@ export class VideoDetailPanelComponent {
 
   onRemoveGrant(siteId: string): void {
     this.removeGrant.emit(siteId);
+  }
+
+  /** True si la vidéo affichée est marquée orpheline FTP pour le site courant. */
+  isOrphanedOnFtp(): boolean {
+    return !!this.video?.id && this.ftpOrphanVideoIds.has(this.video.id);
+  }
+
+  onReplaceClick(): void {
+    if (this.video) this.replaceVideoFile.emit(this.video);
   }
 }

@@ -36,6 +36,21 @@ router.get('/:id/connection-status', authenticate, monitoringRateLimit, validate
 // Endpoint agrégé pour dashboard (réduit de 3 requêtes à 1)
 router.get('/:id/dashboard', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteDashboardData);
 
+// Liste détaillée des vidéos FTP orphelines référencées par ce site (chantier
+// vidéos manquantes — alimente la bannière du tab "Contenu").
+router.get('/:id/ftp-orphans', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteFtpOrphans);
+
+// Retire la référence d'une vidéo orpheline FTP du site (cascade JSONB +
+// push Pi/SaaS). Action manuelle admin/super_admin uniquement, jamais auto.
+router.delete(
+  '/:id/ftp-orphans/:videoId',
+  authenticate,
+  requireRole('admin', 'super_admin'),
+  sensitiveRateLimit,
+  validateParams(paramSchemas.idAndVideoId),
+  sitesController.unlinkSiteFtpOrphan,
+);
+
 // Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
 router.get('/:id/timeline', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
 

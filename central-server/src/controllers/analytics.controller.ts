@@ -3,6 +3,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import {
   analyticsRepository,
+  connectionEventsRepository,
   siteRepository,
   type ClubAlertRow,
 } from '../repositories';
@@ -26,12 +27,12 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
     }
 
     // Récupérer les données en parallèle via le repository
-    const [currentMetrics, , , , heartbeats24h, alerts24h] = await Promise.all([
+    const [currentMetrics, , , , uptimeStats, alerts24h] = await Promise.all([
       analyticsRepository.getLatestMetrics(siteId),
       analyticsRepository.getHeartbeatStats30d(siteId),
       analyticsRepository.getAlertStats(siteId),
       analyticsRepository.get24hAverages(siteId),
-      analyticsRepository.getHeartbeatCount24h(siteId),
+      connectionEventsRepository.getUptimeStats(siteId, 24),
       analyticsRepository.getAlertCount24h(siteId),
     ]);
 
@@ -67,8 +68,8 @@ export const getClubHealth = async (req: AuthRequest, res: Response) => {
       issues.push('Site hors ligne');
     }
 
-    // Calculer la disponibilité 24h
-    const availability24h = Math.min(100, (heartbeats24h / 2880) * 100);
+    // Disponibilité 24h depuis connection_events (ADR-099 — source de vérité)
+    const availability24h = uptimeStats.uptimePercent ?? 0;
 
     // Format attendu par le frontend (ClubHealthData)
     res.json({
@@ -106,29 +107,10 @@ export const getClubAvailability = async (req: AuthRequest, res: Response) => {
 
     const daysNum = Math.min(parseInt(days as string) || 30, 90);
 
-    // Récupérer les heartbeats groupés par jour via le repository
-    const rows = await analyticsRepository.getDailyHeartbeats(siteId, daysNum);
+    // Uptime journalier depuis connection_events (ADR-099 — source de vérité)
+    const availability = await connectionEventsRepository.getDailyUptimeStats(siteId, daysNum);
 
-    // Calculer l'uptime par jour (2880 heartbeats max par jour = 48/heure * 24h)
-    // Format attendu par le frontend: { date, total_minutes, online_minutes, availability_percent }
-    const availability = rows.map((row) => {
-      const heartbeats = parseInt(row.heartbeat_count);
-      // Chaque heartbeat = 30 secondes = 0.5 minute
-      const onlineMinutes = Math.round(heartbeats * 0.5);
-      const totalMinutes = 24 * 60; // 1440 minutes par jour
-      const availabilityPercent = Math.min(100, (onlineMinutes / totalMinutes) * 100);
-
-      return {
-        date: row.date,
-        total_minutes: totalMinutes,
-        online_minutes: onlineMinutes,
-        availability_percent: Math.round(availabilityPercent * 10) / 10,
-      };
-    });
-
-    res.json({
-      availability,
-    });
+    res.json({ availability });
   } catch (error) {
     logger.error('Get club availability error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la disponibilité' });

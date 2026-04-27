@@ -2490,6 +2490,34 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // Garde-fou : la suppression vidéo doit aussi nettoyer le thumbnail FTP
+  // (sans ça, les .jpg restent orphelins, source de confusion : la library
+  // affiche une vignette mais le .mp4 est mort — incident découvert sur
+  // l'audit FTP de NLF, 49 orphelines avec thumbnails encore présents).
+  it('content.controller deleteVideo cleans up thumbnail FTP file', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsDeleteThumbnail: /deleteThumbnail\s+as\s+deleteStorageThumbnail/.test(content),
+      callsDeleteThumbnail: /deleteStorageThumbnail\(buildThumbnailPath/.test(content),
+    }).toEqual({
+      importsDeleteThumbnail: true,
+      callsDeleteThumbnail: true,
+    });
+  });
+
+  it('advertiser-portal.controller deleteVideo cleans up thumbnail FTP file', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'advertiser-portal.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      importsThumbnailHelpers: /deleteThumbnail[\s,}]/.test(content) && /buildThumbnailPath[\s,}]/.test(content),
+      callsDeleteThumbnail: /deleteThumbnail\(buildThumbnailPath/.test(content),
+    }).toEqual({
+      importsThumbnailHelpers: true,
+      callsDeleteThumbnail: true,
+    });
+  });
+
   it('content.routes mounts GET /videos/:id/usage with validateParams', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts');
     const content = fs.readFileSync(filePath, 'utf8');
@@ -2615,27 +2643,109 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  // PR3 — Replace video binary (chantier vidéos manquantes). Permet de re-uploader
+  // un .mp4 sur le même storage_path pour ressusciter une vidéo orpheline FTP sans
+  // la dé-référencer du site. Sans ces invariants la feature ne fonctionne plus :
+  // pas d'écrasement FTP, pas de regen de thumbnail, pas d'auto-résolution warning,
+  // pas de push update_config Pi/SaaS.
+  it('PR3 — content.controller.replaceVideo réécrit FTP, regen thumbnail, auto-résout warning, push sites', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fnMatch = content.match(/export const replaceVideo[\s\S]*?(?=\nexport const \w|$)/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({
+      reusesStoragePath: /existing\.storage_path/.test(fn),
+      uploadsFromDisk: /uploadVideoFromDisk\(/.test(fn),
+      regensThumbnail: /thumbnailService\.generateThumbnailBuffer\(/.test(fn),
+      clearsAuditWarning: /video_ftp_audit_warnings/.test(fn),
+      pushesSites: /commandQueueService\.sendOrQueue\([^,]+,\s*['"]update_config['"]/.test(fn),
+      pushesSaas: /socketService\.emitSaasConfigUpdated\(/.test(fn),
+      auditsReplace: /VIDEO_REPLACED/.test(fn),
+    }).toEqual({
+      reusesStoragePath: true,
+      uploadsFromDisk: true,
+      regensThumbnail: true,
+      clearsAuditWarning: true,
+      pushesSites: true,
+      pushesSaas: true,
+      auditsReplace: true,
+    });
+  });
+
+  it('PR3 — content.routes mount POST /videos/:id/replace avec auth + role + multer + Joi id', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'routes', 'content.routes.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const route = content.match(/router\.post\(\s*['"]\/videos\/:id\/replace['"][\s\S]*?\)\s*;/);
+    expect(route).toBeTruthy();
+    const block = route![0];
+    expect({
+      hasAuth: /authenticate/.test(block),
+      hasRole: /requireRole\(\s*['"]admin['"],\s*['"]operator['"]\s*\)/.test(block),
+      hasMulter: /uploadVideo\.single\(\s*['"]video['"]\s*\)/.test(block),
+      hasIdValidation: /validateParams\(\s*paramSchemas\.id\s*\)/.test(block),
+      callsController: /contentController\.replaceVideo/.test(block),
+    }).toEqual({
+      hasAuth: true,
+      hasRole: true,
+      hasMulter: true,
+      hasIdValidation: true,
+      callsController: true,
+    });
+  });
+
+  it('PR3 — VIDEO_REPLACED listed in AuditAction union (audit.service.ts)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'audit.service.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(/['"]VIDEO_REPLACED['"]/.test(content)).toBe(true);
+  });
+
+  // PR3 hotfix — contentRoutes est monté sur `/api` (pas `/api/content`), donc
+  // l'URL frontend correcte est `/videos/:id/replace` (ApiService prepend `/api`).
+  // Premier ship avait `/content/videos/:id/replace` → 404 en prod. Pin pour
+  // éviter la régression.
+  it('PR3 — site-content-tab.onReplaceVideoRequest appelle /videos/:id/replace (pas /content/videos)', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-content-tab', 'site-content-tab.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const fnMatch = content.match(/onReplaceVideoRequest\([\s\S]*?(?=\n  [a-zA-Z]+\(|\n  get |\n}\n)/);
+    expect(fnMatch).toBeTruthy();
+    const fn = fnMatch![0];
+    expect({
+      callsApiUpload: /this\.api\.upload</.test(fn),
+      correctPath: /`\/videos\/\$\{videoId\}\/replace`/.test(fn),
+      wrongPathAbsent: !/`\/content\/videos\/\$\{videoId\}\/replace`/.test(fn),
+    }).toEqual({
+      callsApiUpload: true,
+      correctPath: true,
+      wrongPathAbsent: true,
+    });
+  });
+
   // PR2.2 — Video FTP orphan audit. La cascade DELETE de PR2 ne couvre que les
   // suppressions API. Les fichiers FTP supprimés directement (FileZilla, SSH)
   // ou les uploads jamais réussis côté FTP (row DB créée mais .mp4 absent) ne
   // sont détectés QUE par ce CRON nocturne. L'audit prod confirmé sur incident
   // PR #613 : la vidéo acff5e34 EXISTE en DB mais le fichier FTP avait disparu,
   // sans aucun audit_log de suppression API.
-  it('PR2.2 — video-ftp-audit.service expose auditAllVideos avec HEAD upstream', () => {
+  it('PR2.2 — video-ftp-audit.service expose auditAllVideos avec HEAD-then-Range upstream', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'video-ftp-audit.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       hasService: /class VideoFtpAuditService/.test(content),
       exportsSingleton: /export const videoFtpAuditService\s*=\s*new VideoFtpAuditService\(\)/.test(content),
       headRequest: /method:\s*['"]HEAD['"]/.test(content),
+      // Sur échec HEAD (timeout/5xx) on retry avec un GET Range minimal — Hostinger
+      // refuse parfois HEAD mais accepte Range, élimine les faux positifs unreachable.
+      rangeFallback: /Range:\s*['"]bytes=0-0['"]/.test(content),
       handles404: /response\.status\s*===\s*404/.test(content),
-      timeoutGuard: /AbortController/.test(content) && /HEAD_TIMEOUT_MS/.test(content),
+      timeoutGuard: /AbortController/.test(content) && /PROBE_TIMEOUT_MS/.test(content),
       autoResolve: /clearWarning\(/.test(content),
       recordsMetric: /metricsService\.recordVideoFtpAudit\(/.test(content),
     }).toEqual({
       hasService: true,
       exportsSingleton: true,
       headRequest: true,
+      rangeFallback: true,
       handles404: true,
       timeoutGuard: true,
       autoResolve: true,

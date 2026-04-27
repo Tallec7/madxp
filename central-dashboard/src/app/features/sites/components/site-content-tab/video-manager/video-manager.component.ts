@@ -43,6 +43,9 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [configVideoTargets]="configVideoTargets"
         [siteDisplays]="siteDisplays"
         [availableVideos]="cloudVideos"
+        [ftpOrphanVideoIds]="ftpOrphanVideoIds"
+        [ftpUnreachableVideoIds]="ftpUnreachableVideoIds"
+        (replaceVideoRequest)="replaceVideoRequest.emit($event)"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
@@ -222,6 +225,8 @@ export class VideoManagerComponent {
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() isSuperAdmin = false;
   @Input() isClubUser = false;
+  @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+  @Input() ftpUnreachableVideoIds: ReadonlySet<string> = new Set<string>();
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();
@@ -232,6 +237,7 @@ export class VideoManagerComponent {
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
   @Output() addToTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // ADR-050 Phase 2
   @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
+  @Output() replaceVideoRequest = new EventEmitter<VideoItem>();
 
   selectedVideoPath = '';
   showDeleteModal = false;

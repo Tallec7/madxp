@@ -112,7 +112,8 @@ export const getAnalyticsOverview = async (req: AuthRequest, res: Response) => {
         club_name: row.club_name,
         status: row.status,
         plays_today: parseInt(row.plays_today),
-        availability_24h: Math.min(100, (parseInt(row.heartbeat_count) / 2880) * 100),
+        // FIXME ADR-099: à migrer vers connection_events ; 288 = metrics/5min × 24h
+        availability_24h: Math.min(100, (parseInt(row.heartbeat_count) / 288) * 100),
       })),
     });
   } catch (error) {

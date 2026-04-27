@@ -78,7 +78,8 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 dotenv.config();
 
-// Render ne supporte pas encore IPv6 en sortie, on force la résolution IPv4 des hôtes (Supabase)
+// Force la résolution IPv4 des hôtes externes (legacy : Render ne supportait pas IPv6
+// en sortie ; conservé sur Railway pour compat héritée des Pi en réseaux IPv4-only).
 dns.setDefaultResultOrder('ipv4first');
 
 // Normalize origins by removing trailing slashes for consistent matching

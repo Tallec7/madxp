@@ -72,7 +72,7 @@ describe('VideoFtpAuditService.auditAllVideos (PR2.2)', () => {
     expect(lastCall[1]).toEqual(expect.arrayContaining(['v-missing', 'videos/ac/dead.mp4', 'missing', 404]));
   });
 
-  it('records "unreachable" when HEAD throws (timeout / network error)', async () => {
+  it('records "unreachable" when HEAD AND Range fallback both throw', async () => {
     mockQuery
       .mockResolvedValueOnce({
         rows: [{ id: 'v-net', storage_path: 'videos/xx/x.mp4' }],
@@ -85,8 +85,59 @@ describe('VideoFtpAuditService.auditAllVideos (PR2.2)', () => {
 
     expect(result.unreachable).toBe(1);
     expect(result.missing).toBe(0);
+    // 2 fetch calls: HEAD then Range fallback
+    expect((globalThis.fetch as jest.Mock).mock.calls.length).toBe(2);
+    expect((globalThis.fetch as jest.Mock).mock.calls[0][1].method).toBe('HEAD');
+    expect((globalThis.fetch as jest.Mock).mock.calls[1][1].method).toBe('GET');
+    expect((globalThis.fetch as jest.Mock).mock.calls[1][1].headers).toEqual({ Range: 'bytes=0-0' });
     const lastCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
     expect(lastCall[1]).toEqual(expect.arrayContaining(['v-net', 'unreachable']));
+  });
+
+  it('classifies as "ok" when HEAD fails but Range fallback returns 206 (Hostinger-style HEAD refusal)', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [{ id: 'v-range-ok', storage_path: 'GOLDEN_CUP.mp4' }],
+      } as never)
+      .mockResolvedValueOnce({ rowCount: 0 } as never); // clearWarning DELETE — no prior warning
+
+    let calls = 0;
+    globalThis.fetch = jest.fn().mockImplementation(() => {
+      calls++;
+      if (calls === 1) return Promise.reject(new Error('timeout'));
+      return Promise.resolve({ status: 206, ok: true } as Response);
+    });
+
+    const result = await videoFtpAuditService.auditAllVideos();
+
+    expect(result.unreachable).toBe(0);
+    expect(result.missing).toBe(0);
+    // No warning persisted — clearWarning called instead
+    const dbCalls = mockQuery.mock.calls.map(c => c[0]);
+    expect(dbCalls.some(sql => /DELETE FROM video_ftp_audit_warnings/.test(String(sql)))).toBe(true);
+    expect(dbCalls.some(sql => /INSERT INTO video_ftp_audit_warnings/.test(String(sql)))).toBe(false);
+  });
+
+  it('classifies as "missing" if HEAD fails but Range fallback returns 404', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [{ id: 'v-range-404', storage_path: 'really-gone.mp4' }],
+      } as never)
+      .mockResolvedValueOnce({ rowCount: 1 } as never);
+
+    let calls = 0;
+    globalThis.fetch = jest.fn().mockImplementation(() => {
+      calls++;
+      if (calls === 1) return Promise.reject(new Error('timeout'));
+      return Promise.resolve({ status: 404, ok: false } as Response);
+    });
+
+    const result = await videoFtpAuditService.auditAllVideos();
+
+    expect(result.missing).toBe(1);
+    expect(result.unreachable).toBe(0);
+    const lastCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
+    expect(lastCall[1]).toEqual(expect.arrayContaining(['v-range-404', 'missing', 404]));
   });
 
   it('auto-resolves (DELETE warning) when HEAD returns 200 and a warning existed', async () => {

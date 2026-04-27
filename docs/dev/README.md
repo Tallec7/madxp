@@ -111,8 +111,7 @@ npm run lint
 
 - [Angular Documentation](https://angular.io/docs)
 - [Socket.IO Documentation](https://socket.io/docs/)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Render.com Documentation](https://render.com/docs)
+- [Railway Documentation](https://docs.railway.app)
 
 ---
 

@@ -71,7 +71,8 @@ export type VideoStatusFilter =
   | 'deploy_error'
   | 'with_variant'
   | 'programmed'
-  | 'available_only';
+  | 'available_only'
+  | 'ftp_orphan';
 
 /** Owner filter applied to the library list */
 export type VideoOwnerFilter = 'all' | 'club' | 'neopro';

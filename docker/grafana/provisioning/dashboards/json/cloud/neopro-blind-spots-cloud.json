@@ -221,6 +221,61 @@
       ]
     },
     {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+      "id": 306,
+      "title": "ADR-099 connection_events — rows actuelles",
+      "description": "Volume de la table connection_events après chaque purge quotidienne (rétention 90j par défaut).",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100000 },
+              { "color": "red", "value": 500000 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [{ "expr": "neopro_connection_events_rows_current", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 33 },
+      "id": 307,
+      "title": "ADR-099 purge — rows supprimées (24h)",
+      "description": "Volume purgé sur les dernières 24h. Si 0 trois jours d'affilée et `rows_current` ne baisse pas, le CRON est probablement en panne.",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        { "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }
+      ]
+    },
+    {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
       "id": 400,

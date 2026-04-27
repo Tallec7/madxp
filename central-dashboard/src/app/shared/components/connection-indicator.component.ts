@@ -13,8 +13,12 @@ import { Subscription, interval, startWith, switchMap, catchError, of, tap } fro
       <span class="indicator-dot"></span>
       <span class="indicator-text" *ngIf="showText">{{ statusText }}</span>
       <span class="indicator-details" *ngIf="showDetails && connectionStatus">
-        <span class="uptime" *ngIf="connectionStatus.statistics.uptime24h !== undefined">
+        <span class="uptime" *ngIf="connectionStatus.statistics.uptime24h !== null && connectionStatus.statistics.uptime24h !== undefined">
           {{ connectionStatus.statistics.uptime24h.toFixed(1) }}% uptime
+        </span>
+        <span class="uptime uptime-pending" *ngIf="connectionStatus.statistics.uptime24h === null"
+              title="Aucun événement de connexion enregistré sur la fenêtre 24h. La donnée se remplit au prochain reconnect du Pi (ADR-099).">
+          — uptime
         </span>
         <span class="last-seen" *ngIf="connectionStatus.connection.lastSeenAt">
           {{ formatLastSeen(connectionStatus.connection.secondsSinceLastSeen) }}
@@ -188,9 +192,27 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
       return 'Chargement...';
     }
     const s = this.connectionStatus.statistics;
-    return `Statut: ${this.statusText}
-Uptime 24h: ${s.uptime24h.toFixed(1)}%
-Heartbeats 24h: ${s.heartbeats24h}`;
+    const uptimeLabel = s.uptime24h === null || s.uptime24h === undefined
+      ? '—  (en attente du premier événement)'
+      : `${s.uptime24h.toFixed(1)}%`;
+    const lines = [
+      `Statut: ${this.statusText}`,
+      `Uptime 24h: ${uptimeLabel}`,
+      `Heartbeats 24h: ${s.heartbeats24h}`
+    ];
+    if (s.disconnectCount24h !== null && s.disconnectCount24h !== undefined && s.disconnectCount24h > 0) {
+      lines.push(`Coupures 24h: ${s.disconnectCount24h}`);
+    }
+    if (s.longestGapSeconds24h !== null && s.longestGapSeconds24h !== undefined && s.longestGapSeconds24h > 0) {
+      lines.push(`Plus longue coupure: ${this.formatDuration(s.longestGapSeconds24h)}`);
+    }
+    return lines.join('\n');
+  }
+
+  private formatDuration(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min`;
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)} min`;
   }
 
   formatLastSeen(seconds: number | null): string {

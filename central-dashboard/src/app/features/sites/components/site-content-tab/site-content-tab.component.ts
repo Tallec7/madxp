@@ -13,6 +13,7 @@ import { SocketService } from '../../../../core/services/socket.service';
 import { DraftService, ConfigDraft, OrchestratedDeploymentProgress } from '../../../../core/services/draft.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
+import { ApiService } from '../../../../core/services/api.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -99,6 +100,20 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   repairableOrphanCount = 0;
   orphanedVideoDetails: OrphanedVideoDetail[] = [];
   private filenameToPathsMap: Map<string, string[]> = new Map();
+
+  // FTP orphans (chantier vidéos manquantes — bannière tab Contenu).
+  // Liste des vidéos référencées par ce site dont le fichier FTP est absent.
+  ftpOrphans: Array<{
+    id: string;
+    video_id: string;
+    video_filename: string;
+    video_category: string | null;
+    storage_path: string;
+    status: 'missing' | 'unreachable';
+    first_detected_at: string;
+    last_checked_at: string;
+  }> = [];
+  ftpOrphansExpanded = false;
 
   // Deployed paths
   private deployedPathsMap: Map<string, { deployedPath: string; deployedFilename: string }> = new Map();
@@ -197,6 +212,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private gate: FeatureGateService,
     private cdr: ChangeDetectorRef,
     private videoCategoryService: VideoCategoryService,
+    private api: ApiService,
   ) {}
 
   get isClub(): boolean {
@@ -243,9 +259,123 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   // Data Loading
   // ============================================================================
 
+  /**
+   * Charge la liste détaillée des vidéos FTP orphelines référencées par ce site.
+   * Sert la bannière en tête du tab Contenu (chantier vidéos manquantes).
+   * Échec silencieux : si l'endpoint refuse (ex: rôle club, 403), la bannière
+   * reste cachée ; le badge sur le tab donne déjà l'info macro.
+   */
+  private loadFtpOrphans(): void {
+    if (!this.siteId) return;
+    this.sitesService.getFtpOrphans(this.siteId).subscribe({
+      next: (response) => {
+        this.ftpOrphans = response?.warnings || [];
+      },
+      error: () => {
+        this.ftpOrphans = [];
+      },
+    });
+  }
+
+  /** State des boutons "Retirer du site" — id de la vidéo en cours d'unlink. */
+  unlinkingVideoId: string | null = null;
+
+  /**
+   * Retire la référence d'une vidéo orpheline FTP de ce site. Confirmation
+   * obligatoire (la cascade modifie config_profiles + local_config_mirror et
+   * push Pi/SaaS). Pas de soft-delete : l'admin doit assumer.
+   */
+  unlinkOrphanVideo(orphan: { video_id: string; video_filename: string }): void {
+    if (this.unlinkingVideoId) return;
+    const confirmed = window.confirm(
+      `Retirer "${orphan.video_filename}" de ce site ?\n\n` +
+      `• Le bouton correspondant sera désactivé sur la télécommande\n` +
+      `• Les boucles, catégories et sponsors qui la référencent seront nettoyés\n` +
+      `• La nouvelle config sera poussée au Pi/SaaS\n\n` +
+      `La vidéo restera dans la bibliothèque cloud (re-link possible plus tard).`
+    );
+    if (!confirmed) return;
+    this.unlinkingVideoId = orphan.video_id;
+    this.sitesService.unlinkFtpOrphan(this.siteId, orphan.video_id).subscribe({
+      next: (response) => {
+        this.unlinkingVideoId = null;
+        this.notificationService.success(
+          `${response.videoFilename} retirée du site (${response.totalEntriesRemoved} référence(s) nettoyée(s)).`
+        );
+        // Refresh : la bannière, le badge tab et la library doivent refléter le changement.
+        this.loadFtpOrphans();
+        this.loadContent();
+      },
+      error: (err) => {
+        this.unlinkingVideoId = null;
+        const message = err?.error?.error || 'Erreur inconnue';
+        this.notificationService.error(`Échec du retrait : ${message}`);
+      },
+    });
+  }
+
+  /**
+   * Set des video.id confirmés absents du FTP (status='missing', HEAD/Range = 404).
+   * Bloque deploy/add-to dans la library — re-upload obligatoire.
+   */
+  get ftpOrphanVideoIds(): ReadonlySet<string> {
+    return new Set(this.ftpOrphans.filter(o => o.status === 'missing').map(o => o.video_id));
+  }
+
+  /**
+   * Set des video.id non vérifiables (status='unreachable', HEAD/Range timeout/5xx).
+   * Affiche un warning orange — la vidéo peut très bien fonctionner, c'est juste
+   * que le probe central a échoué (Hostinger refuse HEAD, glitch réseau, etc.).
+   * Ne bloque PAS les actions.
+   */
+  get ftpUnreachableVideoIds(): ReadonlySet<string> {
+    return new Set(this.ftpOrphans.filter(o => o.status === 'unreachable').map(o => o.video_id));
+  }
+
+  /** State : id de la vidéo en cours de remplacement (lock UI). */
+  replacingVideoId: string | null = null;
+
+  /**
+   * Demande de remplacement du fichier vidéo (chantier vidéos manquantes).
+   * Ouvre un file picker, upload vers `/api/videos/:id/replace` (contentRoutes
+   * monté sur `/api`, pas `/api/content`). Le backend réécrit le binaire FTP,
+   * regénère la thumbnail, auto-résout le warning audit et push le sync-agent
+   * (Pi) / SaaS pour invalider les caches.
+   */
+  onReplaceVideoRequest(video: VideoItem): void {
+    if (!video.id || this.replacingVideoId) return;
+    const videoId = video.id;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('video', file);
+      this.replacingVideoId = videoId;
+      this.notificationService.info(`Upload de "${file.name}"…`);
+      this.api.upload<{ message: string }>(`/videos/${videoId}/replace`, formData).subscribe({
+        next: () => {
+          this.replacingVideoId = null;
+          this.notificationService.success(`"${video.filename}" remplacé. La config va être repoussée.`);
+          this.loadFtpOrphans();
+          this.loadContent();
+        },
+        error: (err) => {
+          this.replacingVideoId = null;
+          const message = ErrorExtractor.getMessage(err);
+          this.notificationService.error(`Échec du remplacement : ${message}`);
+        },
+      });
+    };
+    input.click();
+  }
+
   loadContent(): void {
     if (!this.siteId) return;
     this.loading = true;
+    this.loadFtpOrphans();
     this.sitesService.getLocalContent(this.siteId).subscribe({
       next: (response) => {
         this.loading = false;

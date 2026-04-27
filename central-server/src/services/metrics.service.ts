@@ -291,6 +291,23 @@ const videoFtpAuditCurrentOrphansGauge = new Gauge({
   registers: [register],
 });
 
+// ============= Métriques connection_events purge (ADR-099 follow-up) =============
+// CRON quotidien qui purge les rows connection_events plus vieilles que la
+// fenêtre de rétention (90 jours). Sans supervision, un bug silencieux du
+// CRON ferait gonfler la table indéfiniment.
+
+const connectionEventsPurgedTotal = new Counter({
+  name: 'neopro_connection_events_purged_total',
+  help: 'Total connection_events rows deleted by retention purge CRON',
+  registers: [register],
+});
+
+const connectionEventsCurrentRowsGauge = new Gauge({
+  name: 'neopro_connection_events_rows_current',
+  help: 'Current row count in connection_events table after purge',
+  registers: [register],
+});
+
 // ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
 
 const remoteClientVersionTotal = new Counter({
@@ -1046,6 +1063,12 @@ class MetricsService {
     videoFtpAuditDuration.observe(payload.durationMs / 1000);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'missing' }, payload.missing);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'unreachable' }, payload.unreachable);
+  }
+
+  /** ADR-099 follow-up : résultat du CRON de purge connection_events. */
+  recordConnectionEventsPurge(payload: { deleted: number; remaining: number }): void {
+    if (payload.deleted > 0) connectionEventsPurgedTotal.inc(payload.deleted);
+    connectionEventsCurrentRowsGauge.set(payload.remaining);
   }
 
   /** ADR-061: accès télécommande tracé avec client_version pour pilotage sunset */

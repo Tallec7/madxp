@@ -57,6 +57,10 @@ export class VideoLibraryListComponent {
   @Input() allVideosCount: number = 0;
   @Input() filteredVideosCount: number = 0;
   @Input() isAllSelected: boolean = false;
+  /** Set des video.id confirmés absents (HEAD/Range = 404) — désactive deploy/add-to + badge rouge ❌. */
+  @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+  /** Set des video.id non vérifiables (HEAD/Range timeout/5xx) — ne ne désactive pas, badge orange ⚠️. */
+  @Input() ftpUnreachableVideoIds: ReadonlySet<string> = new Set<string>();
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() preview = new EventEmitter<{ video: VideoItem; event: Event }>();
@@ -161,6 +165,16 @@ export class VideoLibraryListComponent {
 
   isDeploying(video: VideoItem): boolean {
     return this.getDeployState(video)?.status === 'deploying';
+  }
+
+  /** True si la vidéo est confirmée absente du FTP (HEAD/Range = 404) — bloque les actions. */
+  isFtpOrphan(video: VideoItem): boolean {
+    return !!video.id && this.ftpOrphanVideoIds.has(video.id);
+  }
+
+  /** True si la vidéo n'a pas pu être vérifiée (HEAD/Range timeout/5xx) — warning seul, ne bloque pas. */
+  isFtpUnreachable(video: VideoItem): boolean {
+    return !!video.id && this.ftpUnreachableVideoIds.has(video.id);
   }
 
   isDeployFailed(video: VideoItem): boolean {

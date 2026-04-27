@@ -154,7 +154,16 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
     weekCompletionRate: number;
     weekSponsorsDisplayed: number;
     videoErrors24h?: number;
+    /** Orphelines FTP référencées par ce site — alimente le badge tab "Contenu". */
+    ftpOrphansCount?: number;
   } | null = null;
+
+  /** Total des problèmes vidéo signalés pour le site (erreurs 24h + orphelines FTP). */
+  get contentIssuesCount(): number {
+    const m = this.saasMetrics;
+    if (!m) return 0;
+    return (m.videoErrors24h || 0) + (m.ftpOrphansCount || 0);
+  }
 
   private readonly route = inject(ActivatedRoute);
   private readonly sitesService = inject(SitesService);
@@ -246,6 +255,7 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
         // Cela détecte les "connexions zombies" où isConnected=true mais la socket est morte
         const isReallyConnected = this.connectionHealth?.isHealthy ?? data.connection.isConnected;
 
+        // ADR-099 — uptime via connection_events (issue #644), null tant qu'aucun event collecté.
         this.connectionStatus = {
           siteId: data.site.id,
           siteName: data.site.site_name,
@@ -257,14 +267,14 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
             secondsSinceLastSeen: data.connection.secondsSinceLastSeen,
             localIp: data.connection.localIp
           },
-          sync: {
-            lastConfigSync: data.connection.lastConfigSync
-          },
+          sync: { lastConfigSync: data.connection.lastConfigSync },
           statistics: {
             heartbeats24h: data.connection.heartbeat_24h.count,
-            uptime24h: Math.min(100, (data.connection.heartbeat_24h.count / 2880) * 100),
+            uptime24h: data.connection.uptime?.percent ?? null,
             firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
-            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt
+            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt,
+            disconnectCount24h: data.connection.uptime?.disconnectCount ?? null,
+            longestGapSeconds24h: data.connection.uptime?.longestGapSeconds ?? null
           },
           health: this.connectionHealth || undefined
         };

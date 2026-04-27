@@ -50,6 +50,13 @@ export {
   type FleetAveragesRow,
 } from './metrics.repository';
 export {
+  connectionEventsRepository,
+  type ConnectionEventRow,
+  type ConnectionEventType,
+  type UptimeStats,
+  type DailyUptimeRow,
+} from './connection-events.repository';
+export {
   timelineRepository,
   type DeploymentTimelineRow,
   type CommandTimelineRow,

@@ -20,6 +20,7 @@ export type AuditAction =
   | 'VIDEO_UPLOADED'
   | 'VIDEO_DELETED'
   | 'VIDEO_DELETED_CASCADE'
+  | 'VIDEO_REPLACED'
   | 'VIDEO_DEPLOYED'
   | 'CONFIG_PUSHED'
   | 'COMMAND_SENT'
@@ -45,7 +46,9 @@ export type AuditAction =
   | 'SUBSCRIPTION_AUTO_UNBLOCKED'
   // Config copy & duplication
   | 'CONFIG_COPIED'
-  | 'SITE_DUPLICATED';
+  | 'SITE_DUPLICATED'
+  // Vidéos manquantes — admin retire la référence d'une vidéo orpheline FTP du site
+  | 'SITE_VIDEO_UNLINKED';
 
 interface AuditLogEntry {
   action: AuditAction;
