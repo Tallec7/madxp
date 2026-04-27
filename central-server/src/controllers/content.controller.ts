@@ -752,9 +752,17 @@ export const replaceVideo = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo introuvable' });
     }
 
-    // Garde la storage_path et le filename existants (overwrite à la même URL FTP).
-    const storagePath = String(existing.storage_path);
+    // `findVideoById` SELECT alias `storage_path AS url` (cf. video.repository.ts).
+    // Lire `existing.storage_path` retourne donc undefined → bug FTP : le upload
+    // écrivait `<chroot>/undefined` à chaque replace, le vrai storage_path n'était
+    // jamais overwrite (cf. logs Railway 2026-04-27, 12 vidéos zombies).
+    const storagePath = String(existing.url ?? '');
     const filename = String(existing.filename);
+    if (!storagePath) {
+      cleanupTempFile(tempFilePath!);
+      logger.error('Replace video: missing storage_path on existing row', { videoId: id });
+      return res.status(500).json({ error: 'Vidéo corrompue (storage_path manquant)' });
+    }
     const checksum = tempFilePath
       ? await calculateChecksumFromFile(tempFilePath)
       : '';

@@ -1,3 +1,15 @@
+## [3.258.5](https://github.com/Tallec7/neopro/compare/v3.258.4...v3.258.5) (2026-04-27)
+
+### Bug Fixes
+
+- **ci:** revert dashboard FTP deploy to pre-[#625](https://github.com/Tallec7/neopro/issues/625) tune (was <1min, regressed to ~11min) ([#668](https://github.com/Tallec7/neopro/issues/668)) ([63fb7c0](https://github.com/Tallec7/neopro/commit/63fb7c0e8eda8be49f5a23eb27c247ce9e5fcdda)), closes [#666](https://github.com/Tallec7/neopro/issues/666)
+
+## [3.258.4](https://github.com/Tallec7/neopro/compare/v3.258.3...v3.258.4) (2026-04-27)
+
+### Bug Fixes
+
+- **replace-video:** upload was writing to <chroot>/undefined (12 zombi videos in prod) ([#666](https://github.com/Tallec7/neopro/issues/666)) ([d890b9c](https://github.com/Tallec7/neopro/commit/d890b9cd4d8a077c57258431284a40314ca71392))
+
 ## [3.258.3](https://github.com/Tallec7/neopro/compare/v3.258.2...v3.258.3) (2026-04-27)
 
 ### Bug Fixes

@@ -1,6 +1,10 @@
 # Specs Neopro
 
-> Une SPEC = règles métier vivantes d'un composant/feature/service. **1 page max**, lisible métier, mise à jour dans la même PR que tout changement de comportement.
+> Une SPEC = règles métier vivantes d'un **domaine métier cohérent** (pas d'un fichier). **1 page max**, lisible métier, mise à jour dans la même PR que tout changement de comportement.
+
+## SPEC = domaine, pas SPEC = fichier
+
+Un domaine métier regroupe N services + N composants + N features qui partagent un parcours utilisateur cohérent. Exemple : la SPEC "Match" couvre `match-sessions`, `scoreboard PROP-003`, `match-history-view`, `match-auto-close` — c'est un seul mental model, pas 4 docs à corréler. Cette approche évite de répliquer l'arborescence du code (inutile, le code suffit) et matérialise les **frontières métier** (irremplaçable, le code ne le dit pas).
 
 ## Pourquoi pas un PRD ?
 
@@ -28,7 +32,31 @@ Aucun chevauchement, chaque doc a un rôle clair.
 | Sous-composant CRUD         | Un controller sur 1 entité                                                       | ❌ Non — le code suffit      |
 | Util / helper               | `formatBytes`, `hashApiKey`                                                      | ❌ Non — pas de règle métier |
 
-**Estimation cible** : 20-25 SPECs au total, vs 250+ règles dans `.claude/rules/` ou 254 US dans SAFe.
+**Estimation cible** : ~15 SPECs domaine au total (audit 2026-04-27), vs 250+ règles dans `.claude/rules/` ou 254 US dans SAFe. Cible précédente "20-25" remplacée après pivot SPEC=domaine.
+
+## Les 15 SPECs domaine cibles
+
+Issu de l'audit complet du 2026-04-27 (services backend + composants UI + ADR Acceptés + suites smoke).
+
+| #   | Domaine                   | Statut              | Couvre                                                                                                                |
+| --- | ------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1   | Match                     | ✅ Live             | match-sessions + events + templates + history-view + auto-close + scoreboard PROP-003 + scoreboard-saas               |
+| 2   | Templates Studio          | ✅ Live             | runtime + admin studio + designer workflow                                                                            |
+| 3   | SaaS & Club Portal        | ✅ Live             | saas-mode + club-portal-dashboard + diagnostic + sponsors-loop + onboarding (ADR-040)                                 |
+| 4   | Sponsors & Pubs           | ✅ Live             | sponsors-rotation + sponsor-reports + advertiser-portal + agency + sponsor-portal + analytics-sponsors + asset-service |
+| 5   | Vidéo (cycle complet)     | ✅ Live             | content-management + upload-pipeline + categories + ftp-storage + upload-verification + cascade DELETE + ADR-100     |
+| 6   | Déploiement & OTA         | À créer             | deployment + canary + update + orchestrated + canary-monitor + updates UI + staging                                   |
+| 7   | Observabilité & Alerting  | À créer             | metrics + health + realtime-stats + connection-events + alerting (4 services) + network-alerts                        |
+| 8   | Pi & Display (edge)       | À créer             | tv-player + status-screens + club-selector + kiosk-pi + display + watchdog + admin panel Pi                           |
+| 9   | Remote (télécommande)     | À créer             | remote-v2 + remote legacy + API publique + feature flag                                                               |
+| 10  | Réseau & Hotspot          | À créer             | hotspot-psk + network-wifi + network-resilience                                                                       |
+| 11  | Auth & Sécurité           | À créer             | mfa + JWT + RLS multi-tenant + rate-limiter + audit-log + api-key-rotation                                            |
+| 12  | Subscription & Billing    | À créer             | subscription-licensing + subscriptions UI + grace periods                                                             |
+| 13  | Sync & Config (Pi↔Cloud)  | À créer             | sync-agent + command-queue + cron-scheduler + socket-service + draft-config                                           |
+| 14  | Reporting & Exports       | À créer             | excel-export + monthly-reports + email + audit traçabilité                                                            |
+| 15  | Dashboard Admin (chassis) | À créer             | layout-navigation + sites-list + users + groups + dashboard-guards                                                    |
+
+> Les SPECs services existantes (`cron-scheduler`, `socket-service`) seront absorbées dans les SPECs domaine pertinentes (#13 Sync & Config) ou conservées comme SPECs services transverses — arbitrage au cas par cas pendant l'écriture.
 
 ## Localisation
 
@@ -79,72 +107,128 @@ docs/specs/
 | Incident production                      | Ajouter ligne "Cas d'edge connus" + lien post-mortem   |
 | 3 mois sans modification                 | SPEC marquée "stale", revue à planifier                |
 
-## Smoke tests prévus (à activer quand 5+ SPECs en place)
+## Smoke tests garde-fous (actifs)
 
-- Chaque ADR `Accepté` doit être référencé dans ≥1 SPEC
-- Chaque service `central-server/src/services/*.service.ts` >300 lignes doit avoir une SPEC dans `docs/specs/services/`
+Le smoke test `smoke-spec-coverage.test.ts` enforce :
+
+- Chaque ADR `Accepté` doit être référencé dans ≥1 SPEC (allowlist gelée pour les ADR pas encore couverts, à faire fondre)
+- Chaque service `central-server/src/services/*.service.ts` >500 lignes doit être mentionné dans ≥1 SPEC domaine (allowlist gelée)
 - Chaque SPEC doit avoir une "Dernière revue" < 6 mois (warning, pas bloquant)
-- Format SPEC respecté : sections obligatoires (En une phrase, Règles métier, Comportements observables, Cas d'edge connus, Ce qui n'est PAS dans le scope) présentes
+- Format SPEC respecté : sections obligatoires présentes (En une phrase, Périmètre, Règles métier, Comportements observables, Cas d'edge connus, Ce qui n'est PAS dans le scope)
+
+Cible : faire fondre les allowlists au fil des Sprints.
+
+## Checklist cohérence (à appliquer à CHAQUE SPEC créée/modifiée)
+
+Avant de marquer une SPEC "Live", vérifier les 6 axes de cohérence :
+
+### 1. Cohérence avec le code (source de vérité)
+
+- [ ] Lire **réellement** chaque fichier listé en "Périmètre" (pas se fier à la mémoire)
+- [ ] Vérifier que les invariants décrits sont bien implémentés (grep des fonctions clés)
+- [ ] Si écart entre SPEC voulue et code actuel → noter dans "Cas d'edge connus" ou "Évolutions possibles", **ne pas inventer un comportement qui n'existe pas**
+
+### 2. Cohérence avec les ADR
+
+- [ ] Lister tous les ADR du périmètre
+- [ ] Pour chaque ADR `Accepté` cité : vérifier que la décision est toujours en place
+- [ ] Pour chaque ADR `Superseded` : ne pas le citer comme actif
+- [ ] Si un ADR du périmètre n'est pas cité → soit l'ajouter, soit justifier explicitement
+
+### 3. Cohérence avec `.claude/rules/`
+
+- [ ] Vérifier qu'aucun "NE JAMAIS FAIRE" de la rule liée n'est contredit par la SPEC
+- [ ] Pointer vers la rule (lien) au lieu de dupliquer les contraintes techniques
+- [ ] Si la SPEC introduit une contrainte technique → vérifier qu'elle ne devrait pas plutôt aller dans `.claude/rules/`
+
+### 4. Cohérence avec les smoke tests
+
+- [ ] Lister les suites smoke du périmètre
+- [ ] Vérifier que chaque "Règle métier" critique a un smoke test correspondant
+- [ ] Si pas de smoke → noter dans "Évolutions possibles" : "ajouter smoke pour règle X"
+
+### 5. Cohérence inter-SPECs (anti-chevauchement)
+
+- [ ] Lire l'index ci-dessus à jour
+- [ ] Pour chaque composant/service cité : vérifier qu'il n'est pas déjà dans une autre SPEC
+- [ ] Si chevauchement → soit fusionner, soit déplacer le composant vers la SPEC la plus naturelle, soit cross-link explicite
+
+### 6. Cohérence du format
+
+- [ ] Sections obligatoires présentes (En une phrase / Acteurs / Périmètre / Règles métier / Comportements observables / Cas d'edge / Hors-scope)
+- [ ] Frontmatter complet (Owner, Statut, Dernière revue, Code principal, ADR liés, Smoke tests, Rules liées)
+- [ ] Longueur cible <100 lignes (au-delà = signal qu'on essaie de remplacer le code)
+- [ ] MAJ de l'index ci-dessus dans la même PR
 
 ---
 
-## Gabarit SPEC
+## Gabarit SPEC domaine
 
 Copier-coller pour créer une nouvelle SPEC :
 
 ```markdown
-# SPEC : <Nom du composant/feature>
+# SPEC : <Nom du domaine métier>
 
 > **Owner** : Daisy
 > **Statut** : Live | Beta | Deprecated
 > **Dernière revue** : YYYY-MM-DD
-> **Code principal** : `path/to/main/file.ts`
-> **ADR liés** : ADR-XXX, ADR-YYY (si applicable)
-> **Smoke tests** : `central-server/src/__tests__/smoke/smoke-X.test.ts`
-> **`.claude/rules/` lié** : `<rule>.md` (si applicable)
 
 ## En une phrase
 
-Ce que ce composant fait pour l'utilisateur final, en langage métier.
+Le job-to-be-done que ce domaine accomplit pour le métier (1 phrase, langage utilisateur).
 
-## Règles métier (ce qui DOIT marcher)
+## Acteurs impliqués
 
-Format : règle = phrase actionnable, métier-readable. Pas de jargon technique.
+Liste des rôles utilisateurs qui interagissent avec ce domaine (super_admin, club, advertiser, etc.).
+Référence : `docs/PERSONAE.md` + `docs/product/USE-CASES.md` si parcours multi-acteurs.
+
+## Périmètre (ce que ce domaine couvre)
+
+Matérialise les frontières du domaine. La SPEC ne traite QUE ce qui est listé ici.
+
+- **Services backend** : `central-server/src/services/<a>.service.ts`, `<b>.service.ts`
+- **Composants UI** : `central-dashboard/src/app/features/<x>/`, `raspberry/src/app/components/<y>/`
+- **Routes API** : `POST /api/...`, `GET /api/...` (si non triviales)
+- **Tables DB** : `table_x`, `table_y` (si schéma central au domaine)
+- **ADR** : ADR-XXX, ADR-YYY
+- **Smoke tests** : `smoke-foo.test.ts`, `smoke-bar.test.ts`
+- **`.claude/rules/`** : `<domain>.md` (si applicable)
+
+## Règles métier (ce qui DOIT marcher cross-composant)
+
+Les invariants qui doivent tenir EN BOUT DE CHAÎNE, peu importe quel composant les implémente. Format : règle = phrase actionnable, métier-readable. Pas de jargon technique.
 
 - Règle 1
 - Règle 2
-- ...
 
 ## Comportements observables
 
-Pour CHAQUE règle métier, comment on vérifie qu'elle marche en prod (UI, métrique, log, dashboard).
+Pour CHAQUE règle métier, comment on vérifie qu'elle marche en prod (UI, métrique Prometheus, log Winston, dashboard).
 
-| Règle | Comment on vérifie                             |
-| ----- | ---------------------------------------------- |
-| ...   | Grafana / Dashboard / Smoke test / Log Winston |
+| Règle | Comment on vérifie                     |
+| ----- | -------------------------------------- |
+| ...   | Grafana / Dashboard / Smoke test / Log |
 
 ## Cas d'edge connus
 
+Pièges réels rencontrés, avec lien post-mortem si applicable.
+
 - Cas 1 : description + comportement attendu
-- Cas 2 : ...
-- (incident YYYY-MM-DD) — [lien vers post-mortem si applicable]
+- (incident YYYY-MM-DD) — [post-mortem](path/to/post-mortem.md)
 
 ## Contraintes / NE PAS FAIRE
 
 Pointer vers `.claude/rules/<X>.md` pour ne pas dupliquer. Lister ICI uniquement les contraintes **métier** (pas conventions de code).
 
 - Contrainte métier 1
-- Contrainte métier 2
 
-## Ce qui n'est PAS dans le scope
+## Ce qui n'est PAS dans ce domaine
 
-Pour éviter la confusion et les questions récurrentes :
+Pour éviter le scope creep et les questions récurrentes :
 
-- Hors-scope 1 (renvoyer vers la SPEC qui couvre)
-- Hors-scope 2
+- Hors-scope 1 → couvert par [SPEC autre domaine](other.spec.md)
 
 ## Évolutions possibles (backlog léger)
 
 - [ ] Évolution 1
-- [ ] Évolution 2
 ```

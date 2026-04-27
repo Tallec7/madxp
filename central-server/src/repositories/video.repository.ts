@@ -234,7 +234,12 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
-   * Recupere une video par ID avec alias storage_path -> url.
+   * Récupère une vidéo par ID avec alias `storage_path AS url`.
+   *
+   * ⚠️ Contrat ADR-100 : le row retourné expose `.url` (la valeur de `storage_path`)
+   * mais **pas** `.storage_path`. Lire `existing.storage_path` retourne `undefined`,
+   * et `String(undefined) === "undefined"` (silently). Tout consumer doit lire `.url`
+   * pour le chemin FTP, jamais `.storage_path`. Smoke test PR3 enforce le contrat.
    */
   async findVideoById(id: string): Promise<VideoRow | null> {
     const result = await query<VideoRow>(
