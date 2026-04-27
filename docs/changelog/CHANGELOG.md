@@ -1,3 +1,13 @@
+# [3.257.0](https://github.com/Tallec7/neopro/compare/v3.256.0...v3.257.0) (2026-04-27)
+
+### Bug Fixes
+
+- **video-library:** replace endpoint URL prefix (/videos not /content/videos) ([#651](https://github.com/Tallec7/neopro/issues/651)) ([bd8124f](https://github.com/Tallec7/neopro/commit/bd8124fe47fa6903e72d7724d48d1a090434a399)), closes [#647](https://github.com/Tallec7/neopro/issues/647)
+
+### Features
+
+- **monitoring:** connection_events follow-ups — front uptime + CRON purge 90j + local DB helper ([#650](https://github.com/Tallec7/neopro/issues/650)) ([2180bb4](https://github.com/Tallec7/neopro/commit/2180bb4eb535fc6c82741e5ad4c0211177c18e95)), closes [#644](https://github.com/Tallec7/neopro/issues/644) [#646](https://github.com/Tallec7/neopro/issues/646) [#648](https://github.com/Tallec7/neopro/issues/648) [#648](https://github.com/Tallec7/neopro/issues/648) [#648](https://github.com/Tallec7/neopro/issues/648) [#646](https://github.com/Tallec7/neopro/issues/646) [#644](https://github.com/Tallec7/neopro/issues/644) [#644](https://github.com/Tallec7/neopro/issues/644) [#646](https://github.com/Tallec7/neopro/issues/646) [#648](https://github.com/Tallec7/neopro/issues/648)
+
 # [3.256.0](https://github.com/Tallec7/neopro/compare/v3.255.0...v3.256.0) (2026-04-27)
 
 ### Features
