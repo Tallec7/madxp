@@ -1,8 +1,41 @@
 # Session : FTP upload path mismatch (Hostinger)
 
-> Démarrée 2026-04-27 18:50 — à reprendre demain matin à tête reposée.
+> Démarrée 2026-04-27 18:50 — **Résolue 2026-04-27** (commit `fe8608c5` + ADR-100).
 
-## Contexte
+## Résolution
+
+**Cause racine** : `videoRepository.findVideoById` SELECT alias `storage_path AS url`.
+`replaceVideo` lisait `String(existing.storage_path)` qui retournait `"undefined"`
+(la string littérale, car `String(undefined) === "undefined"`). Le upload écrivait
+donc `<chroot>/undefined` à chaque replace, le vrai `storage_path` n'était jamais
+overwrite, HTTP 404 garanti.
+
+**Preuves** (logs Railway prod 2026-04-27 18:24:44+) :
+
+```
+filename: "undefined"
+url: "https://kalonpartners.bzh/neopro-video/undefined"
+size: 12842590
+```
+
+**Fix** : commit `fe8608c5` lit `existing.url` au lieu de `existing.storage_path`,
+ajoute un guard 500 si valeur manquante, smoke test PR3 inversé pour bloquer la
+régression. ADR-100 documente le contrat de l'alias.
+
+**Hypothèses initiales fausses** (dépréciées dans le diagnostic ci-dessous) :
+
+- ❌ FTP_PUBLIC_URL serait tronqué — la valeur était correcte (troncature ASCII CLI)
+- ❌ Mismatch chroot vs URL — chroot et URL publique étaient corrects
+- ❌ Bug dans verify FTP — verify saine, c'est l'upload qui passait `"undefined"`
+
+**Backfill nécessaire après deploy de la PR** :
+
+- 12 vidéos zombies à re-uploader via le bouton Replace (liste plus bas)
+- Cleanup `<chroot>/undefined` (~13 MiB) à supprimer en FileZilla manuellement
+
+---
+
+## Contexte (diagnostic original)
 
 Pendant la session du 27/04 (cleanup vidéos orphelines), on a découvert que le bouton **"Remplacer le fichier"** du dashboard (PR #647) ne fonctionne plus correctement en prod. Symptômes :
 
