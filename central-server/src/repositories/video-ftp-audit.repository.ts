@@ -48,6 +48,23 @@ class VideoFtpAuditRepository {
     return result.rows;
   }
 
+  /**
+   * Count active FTP orphans referenced by a specific site, via `site_videos`.
+   * Source du badge tab "Contenu" sur `/sites/:id` (chantier vidéos manquantes) :
+   * une orpheline référencée par ce site = vidéo qui plantera quand quelqu'un
+   * tentera de la jouer côté TV.
+   */
+  async countActiveForSite(siteId: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(DISTINCT w.video_id)::int AS count
+       FROM video_ftp_audit_warnings w
+       JOIN site_videos sv ON sv.video_id = w.video_id
+       WHERE sv.site_id = $1`,
+      [siteId],
+    );
+    return parseInt(String(result.rows[0]?.count || '0'), 10) || 0;
+  }
+
   async countActive(): Promise<{ missing: number; unreachable: number }> {
     const result = await query<{ status: string; count: string }>(
       `SELECT status, COUNT(*)::int AS count

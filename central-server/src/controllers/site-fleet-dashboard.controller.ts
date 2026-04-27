@@ -10,6 +10,7 @@ import {
   siteSponsorRepository,
   alertRepository,
   softwareUpdateRepository,
+  videoFtpAuditRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -147,6 +148,9 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       // Erreurs de lecture vidéo dans les 24 dernières heures (chantier vidéos
       // manquantes — surface UX du counter Prometheus côté club portal).
       videoErrors24h: number;
+      // Orphelines FTP référencées par ce site (chantier vidéos manquantes —
+      // alimente le badge tab "Contenu" sur le site detail).
+      ftpOrphansCount: number;
     } | null = null;
 
     // Engagement metrics sont calculees pour TOUS les sites (SaaS + Pi).
@@ -182,6 +186,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         lastOtaRow,
         activeAlertsCount,
         videoErrors24h,
+        ftpOrphansCount,
       ] = await Promise.all([
         analyticsRepository.getDashboardUsage(id, todayStart.toISOString(), nowDate.toISOString()),
         analyticsRepository.getDashboardUsage(id, yesterdayStart.toISOString(), todayStart.toISOString()),
@@ -206,6 +211,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         softwareUpdateRepository.findLastForSite(id).catch(() => null),
         alertRepository.countActiveForSite(id).catch(() => 0),
         analyticsRepository.countVideoPlaybackErrors(id, last24hStart.toISOString()).catch(() => 0),
+        videoFtpAuditRepository.countActiveForSite(id).catch(() => 0),
       ]);
 
       // #4 — active profile : extraire le nombre de vidéos de boucle + sponsors depuis la config JSONB
@@ -277,6 +283,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
           : null,
         activeAlertsCount,
         videoErrors24h,
+        ftpOrphansCount,
       };
     }
 
