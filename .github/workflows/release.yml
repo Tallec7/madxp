@@ -229,20 +229,23 @@ jobs:
           set -euo pipefail
           test -s dist/central-dashboard/browser/index.html
           test -s dist/central-dashboard/browser/.htaccess
+          # Dashboard payload = dotfiles + ~50 fichiers Angular (petit volume).
+          # Les optims de PR #625 (parallel=5, sync-mode off, --use-pget-n=4,
+          # --only-newer) ont été calibrées pour le SaaS (gros volume) et
+          # ralentissaient le dashboard (<1min → ~11min). Revert local au
+          # tune pré-#625 — voir comment dans le job SaaS plus bas.
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
-            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set net:connection-limit 5;
-            set mirror:parallel-transfer-count 5;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
+            mirror --reverse --delete --verbose \
                    --exclude-glob saas/ --exclude-glob saas \
                    --exclude-glob public_html/ --exclude-glob public_html \
                    --exclude-glob neopro-video/ --exclude-glob neopro-video \
