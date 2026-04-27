@@ -7,14 +7,43 @@
   </div>
 
   <div class="detail-body">
+    <!-- Bandeau orpheline FTP (chantier vidéos manquantes) — visible quand
+         cette vidéo est référencée par le site mais son fichier est absent
+         du FTP. Désactive le player + propose Replace en action principale. -->
+    <div
+      class="ftp-orphan-banner"
+      *ngIf="isOrphanedOnFtp()"
+      data-testid="video-detail-ftp-orphan-banner"
+    >
+      <span class="fob-icon">⚠️</span>
+      <div class="fob-content">
+        <strong>Cette vidéo est introuvable sur le serveur</strong>
+        <span class="fob-hint">
+          Détectée par l'audit FTP nocturne. Va planter en lecture côté TV.
+          Re-uploade le fichier pour la remettre en service, ou retire-la du site.
+        </span>
+      </div>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary fob-replace-btn"
+        (click)="onReplaceClick()"
+        data-testid="video-detail-replace-btn-orphan"
+      >
+        📤 Remplacer le fichier
+      </button>
+    </div>
+
     <!-- Video preview -->
     <div class="detail-preview">
       <video
-        *ngIf="video.source === 'cloud' && video.path"
+        *ngIf="video.source === 'cloud' && video.path && !isOrphanedOnFtp()"
         [src]="video.path"
         controls
         class="detail-video"
       ></video>
+      <div *ngIf="isOrphanedOnFtp()" class="detail-thumb-placeholder ftp-orphan-placeholder">
+        <span>❌ Fichier introuvable sur le serveur</span>
+      </div>
       <div *ngIf="video.source !== 'cloud' || !video.path" class="detail-thumb-placeholder">
         <img *ngIf="video.thumbnailUrl" [src]="video.thumbnailUrl" [alt]="video.displayName" />
         <span *ngIf="!video.thumbnailUrl">🎞️</span>
@@ -161,7 +190,7 @@
 
     <!-- Actions -->
     <div class="detail-section detail-actions-section">
-      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig">
+      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig && !isOrphanedOnFtp()">
         <button
           class="btn btn-primary btn-sm detail-action-btn"
           (click)="onToggleAddTo(video, $event)"
@@ -181,10 +210,23 @@
       </div>
       <button
         class="btn btn-sm btn-primary detail-action-btn"
-        *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying"
+        *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying && !isOrphanedOnFtp()"
         (click)="onDeploy(video, $event)"
       >
         🚀 Déployer sur le Pi
+      </button>
+
+      <!-- Replace button (b) : toujours visible dans la modal pour permettre
+           le remplacement d'une vidéo existante. Pour les orphelines, le
+           bandeau ci-dessus expose déjà le même bouton en action prioritaire. -->
+      <button
+        type="button"
+        class="btn btn-sm btn-outline detail-action-btn"
+        *ngIf="!isOrphanedOnFtp()"
+        (click)="onReplaceClick()"
+        data-testid="video-detail-replace-btn"
+      >
+        📤 Remplacer le fichier
       </button>
       <button
         class="btn btn-sm btn-danger detail-action-btn"

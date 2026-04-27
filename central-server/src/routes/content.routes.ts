@@ -29,6 +29,11 @@ router.delete('/videos/:id/sites/:siteId', authenticate, requireRole('admin'), s
 router.get('/videos/:id/variants', authenticate, adminRateLimit, contentController.getVideoVariants);
 router.post('/videos/variant-counts', authenticate, adminRateLimit, contentController.getVariantCounts);
 router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
+
+// Replace video binary (chantier vidéos manquantes — auto-resolve FTP orphan).
+// Garde id/filename/storage_path inchangés, overwrite le binaire FTP, met à
+// jour file_size + checksum + thumbnail, push les sites pour bust le cache.
+router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'), uploadRateLimit, validateParams(paramSchemas.id), uploadVideo.single('video'), contentController.replaceVideo);
 router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 

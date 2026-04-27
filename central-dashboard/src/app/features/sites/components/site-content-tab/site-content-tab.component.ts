@@ -13,6 +13,7 @@ import { SocketService } from '../../../../core/services/socket.service';
 import { DraftService, ConfigDraft, OrchestratedDeploymentProgress } from '../../../../core/services/draft.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
+import { ApiService } from '../../../../core/services/api.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
 import {
   SiteConfiguration,
@@ -211,6 +212,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     private gate: FeatureGateService,
     private cdr: ChangeDetectorRef,
     private videoCategoryService: VideoCategoryService,
+    private api: ApiService,
   ) {}
 
   get isClub(): boolean {
@@ -310,6 +312,50 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
         this.notificationService.error(`Échec du retrait : ${message}`);
       },
     });
+  }
+
+  /** Set des video.id orphelins FTP, dérivé de `ftpOrphans`. Propagé vers la library. */
+  get ftpOrphanVideoIds(): ReadonlySet<string> {
+    return new Set(this.ftpOrphans.map(o => o.video_id));
+  }
+
+  /** State : id de la vidéo en cours de remplacement (lock UI). */
+  replacingVideoId: string | null = null;
+
+  /**
+   * Demande de remplacement du fichier vidéo (chantier vidéos manquantes).
+   * Ouvre un file picker, upload vers `/content/videos/:id/replace`. Le backend
+   * réécrit le binaire FTP, regénère la thumbnail, auto-résout le warning audit
+   * et push le sync-agent (Pi) / SaaS pour invalider les caches.
+   */
+  onReplaceVideoRequest(video: VideoItem): void {
+    if (!video.id || this.replacingVideoId) return;
+    const videoId = video.id;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('video', file);
+      this.replacingVideoId = videoId;
+      this.notificationService.info(`Upload de "${file.name}"…`);
+      this.api.upload<{ message: string }>(`/content/videos/${videoId}/replace`, formData).subscribe({
+        next: () => {
+          this.replacingVideoId = null;
+          this.notificationService.success(`"${video.filename}" remplacé. La config va être repoussée.`);
+          this.loadFtpOrphans();
+          this.loadContent();
+        },
+        error: (err) => {
+          this.replacingVideoId = null;
+          const message = ErrorExtractor.getMessage(err);
+          this.notificationService.error(`Échec du remplacement : ${message}`);
+        },
+      });
+    };
+    input.click();
   }
 
   loadContent(): void {

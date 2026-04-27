@@ -5,6 +5,7 @@
     *ngFor="let video of pagedVideos"
     [class.selected]="selectedPath === video.path"
     [class.to-deploy]="!video.isOnPi && siteType !== 'saas'"
+    [class.ftp-orphan]="isFtpOrphan(video)"
     (click)="onSelect(video)"
   >
     <div class="card-thumbnail">
@@ -37,6 +38,13 @@
         >
         <span class="duplicate-badge" *ngIf="video.isDuplicate">DOUBLON</span>
         <span class="for-this-site-badge" *ngIf="isUploadedForThisSite(video)">⭐</span>
+        <span
+          class="ftp-orphan-badge"
+          *ngIf="isFtpOrphan(video)"
+          title="Fichier introuvable sur le serveur — re-uploade pour remettre en service."
+          data-testid="video-card-ftp-orphan-badge"
+          >❌ Introuvable FTP</span
+        >
       </div>
       <div class="card-actions">
         <button
@@ -47,7 +55,7 @@
         >
           👁️
         </button>
-        <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig(video)">
+        <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig(video) && !isFtpOrphan(video)">
           <button
             class="action-btn add-to-trigger"
             (click)="onAddToToggle(video, $event)"
@@ -89,7 +97,8 @@
             !video.isOnPi &&
             video.source === 'cloud' &&
             !isDeploying(video) &&
-            !isDeployFailed(video)
+            !isDeployFailed(video) &&
+            !isFtpOrphan(video)
           "
         >
           🚀
@@ -191,6 +200,7 @@
         [class.to-deploy]="!video.isOnPi"
         [class.deploy-failed]="isDeployFailed(video)"
         [class.for-this-site]="isUploadedForThisSite(video)"
+        [class.ftp-orphan]="isFtpOrphan(video)"
         (click)="onSelect(video)"
       >
         <td class="col-checkbox" *ngIf="selectionMode" (click)="$event.stopPropagation()">
@@ -219,6 +229,13 @@
             *ngIf="video.isDuplicate"
             title="Doublon détecté — même fichier qu'une autre vidéo (checksum identique)"
             >DOUBLON</span
+          >
+          <span
+            class="ftp-orphan-badge"
+            *ngIf="isFtpOrphan(video)"
+            title="Fichier introuvable sur le serveur — re-uploade pour remettre en service."
+            data-testid="video-row-ftp-orphan-badge"
+            >❌ Introuvable FTP</span
           >
         </td>
         <td class="col-category" [title]="video.category || ''">{{ video.category || '-' }}</td>
@@ -312,7 +329,7 @@
             </button>
             <div
               class="add-to-wrapper"
-              *ngIf="configTargets.length > 0 && !isLockedForConfig(video)"
+              *ngIf="configTargets.length > 0 && !isLockedForConfig(video) && !isFtpOrphan(video)"
             >
               <button
                 class="action-btn add-to-trigger"
@@ -346,7 +363,8 @@
                 !video.isOnPi &&
                 video.source === 'cloud' &&
                 !isDeploying(video) &&
-                !isDeployFailed(video)
+                !isDeployFailed(video) &&
+                !isFtpOrphan(video)
               "
               [disabled]="isDeploying(video)"
             >

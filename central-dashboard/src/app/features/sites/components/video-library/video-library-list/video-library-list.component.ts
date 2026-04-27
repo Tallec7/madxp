@@ -57,6 +57,8 @@ export class VideoLibraryListComponent {
   @Input() allVideosCount: number = 0;
   @Input() filteredVideosCount: number = 0;
   @Input() isAllSelected: boolean = false;
+  /** Set des video.id orphelins FTP — désactive deploy/add-to + ajoute le badge ❌. */
+  @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
 
   @Output() videoSelect = new EventEmitter<VideoItem>();
   @Output() preview = new EventEmitter<{ video: VideoItem; event: Event }>();
@@ -161,6 +163,11 @@ export class VideoLibraryListComponent {
 
   isDeploying(video: VideoItem): boolean {
     return this.getDeployState(video)?.status === 'deploying';
+  }
+
+  /** True si la vidéo est référencée par le site mais introuvable sur FTP. */
+  isFtpOrphan(video: VideoItem): boolean {
+    return !!video.id && this.ftpOrphanVideoIds.has(video.id);
   }
 
   isDeployFailed(video: VideoItem): boolean {
