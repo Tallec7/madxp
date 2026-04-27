@@ -701,7 +701,13 @@ export const unlinkVideoFromSite = async (req: AuthRequest, res: Response) => {
 
     const removed = await siteVideoRepository.unlink(siteId, id);
     if (!removed) {
-      return res.status(404).json({ error: 'Lien vidéo-site non trouvé' });
+      // Idempotence : la pivot site_videos peut diverger du JSONB mirror /
+      // config_profiles (cf. cascade PR #618). Le bouton "Retirer du site"
+      // est exposé sur SaaS pour toute vidéo cloud visible — y compris
+      // celles jamais liées via site_videos. L'état désiré ("non liée") est
+      // déjà atteint, on renvoie 200 plutôt qu'un 404 utilisateur.
+      logger.info('Video unlink no-op (already not linked)', { videoId: id, siteId });
+      return res.json({ message: 'Vidéo déjà absente du site', alreadyUnlinked: true });
     }
 
     logger.info('Video unlinked from site:', { videoId: id, siteId });
