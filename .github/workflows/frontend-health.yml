@@ -43,25 +43,34 @@ jobs:
             ['/saas/tv?site=ci-probe']='200'
           )
 
-          # Retry up to 3 times with 20s backoff to absorb the FTP deploy
-          # window, during which .htaccess is briefly missing on Hostinger.
+          # Retry up to 5 times to absorb:
+          # - FTP deploy window (briefly missing .htaccess → 404)
+          # - Hostinger/WAF rate limiting (429) — use custom User-Agent and
+          #   exponential backoff on 429 to avoid hammering the WAF.
           failures=0
           report=''
           for route in "${!ROUTES[@]}"; do
             expected="${ROUTES[$route]}"
             actual='000'
-            for attempt in 1 2 3; do
+            for attempt in 1 2 3 4 5; do
               actual=$(curl -sI -o /dev/null -w '%{http_code}' \
                 --max-time 10 \
+                -A "neopro-ci-verify/1.0" \
                 "${BASE}${route}" 2>/dev/null || echo '000')
               if [ "$actual" = "$expected" ]; then
                 break
               fi
-              [ "$attempt" -lt 3 ] && sleep 20
+              if [ "$attempt" -lt 5 ]; then
+                if [ "$actual" = "429" ]; then
+                  sleep $((5 * (2 ** (attempt - 1))))  # 5s, 10s, 20s, 40s
+                else
+                  sleep 20
+                fi
+              fi
             done
             if [ "$actual" != "$expected" ]; then
               failures=$((failures + 1))
-              report+=$'\n'"  ❌ ${route} → got ${actual}, expected ${expected} (after 3 attempts)"
+              report+=$'\n'"  ❌ ${route} → got ${actual}, expected ${expected} (after 5 attempts)"
             else
               report+=$'\n'"  ✅ ${route} → ${actual}"
             fi
@@ -74,7 +83,7 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
           if [ "$failures" -gt 0 ]; then
-            echo "::error::${failures} SPA route(s) returned unexpected status. Likely cause: missing .htaccess SPA fallback on Hostinger (see docs/guides/TROUBLESHOOTING.md)."
+            echo "::error::${failures} SPA route(s) returned unexpected status. Likely cause: missing .htaccess SPA fallback (404) OR Hostinger/WAF rate limiting (429). See docs/guides/TROUBLESHOOTING.md."
             exit 1
           fi
 
@@ -89,7 +98,9 @@ jobs:
 
           Workflow run: ${RUN_URL}
 
-          Likely cause: missing \`.htaccess\` SPA fallback on Hostinger after an FTP clean-slate deploy.
+          Likely cause:
+          - **404** → missing \`.htaccess\` SPA fallback on Hostinger after an FTP clean-slate deploy
+          - **429** → Hostinger/WAF rate limiting (transient — retry usually resolves it)
 
           Runbook: docs/guides/TROUBLESHOOTING.md → \"SPA 404 sur routes profondes\"."
 
