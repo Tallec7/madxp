@@ -115,6 +115,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-096](ADR-096-extract-saas-relay-handler.md)                                | Extraction du SaaS relay vers `handlers/saas-relay.handler.ts` (split socket.service) | Accepté                           | Avr 2026 |
 | [ADR-097](ADR-097-extract-cron-tasks-modules.md)                                | Extraction des CRON tasks vers `cron-tasks/` (split cron-scheduler.service)           | Accepté                           | Avr 2026 |
 | [ADR-098](ADR-098-video-orphan-observability.md)                                | Observabilité vidéos orphelines : compteur temps réel + audit FTP CRON 24h            | Accepté                           | Avr 2026 |
+| [ADR-099](ADR-099-connection-events-uptime-source-of-truth.md)                  | `connection_events` comme source de vérité de l'uptime sites (fix #644 ~10% systématique) | Accepté                       | Avr 2026 |
 
 ### Supersédés
 
