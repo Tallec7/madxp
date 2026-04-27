@@ -1,3 +1,9 @@
+## [3.258.4](https://github.com/Tallec7/neopro/compare/v3.258.3...v3.258.4) (2026-04-27)
+
+### Bug Fixes
+
+- **replace-video:** upload was writing to <chroot>/undefined (12 zombi videos in prod) ([#666](https://github.com/Tallec7/neopro/issues/666)) ([d890b9c](https://github.com/Tallec7/neopro/commit/d890b9cd4d8a077c57258431284a40314ca71392))
+
 ## [3.258.3](https://github.com/Tallec7/neopro/compare/v3.258.2...v3.258.3) (2026-04-27)
 
 ### Bug Fixes
