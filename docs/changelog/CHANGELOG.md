@@ -1,3 +1,9 @@
+## [3.258.3](https://github.com/Tallec7/neopro/compare/v3.258.2...v3.258.3) (2026-04-27)
+
+### Bug Fixes
+
+- **video-ftp-audit:** distinguish unreachable from missing in probe + UI ([#660](https://github.com/Tallec7/neopro/issues/660)) ([9d521bc](https://github.com/Tallec7/neopro/commit/9d521bce3f64448bc7ce5f412cb9e55e48c9bc9f))
+
 ## [3.258.2](https://github.com/Tallec7/neopro/compare/v3.258.1...v3.258.2) (2026-04-27)
 
 ### Bug Fixes
