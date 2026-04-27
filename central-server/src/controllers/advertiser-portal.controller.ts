@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { createReadStream } from 'fs';
 import { readFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadAsset, deleteVideo } from '../services/storage.service';
+import { uploadAsset, deleteVideo, deleteThumbnail, buildThumbnailPath } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { advertiserRepository, campaignRepository } from '../repositories';
 import { advertiserPortalRepository } from '../repositories/advertiser-portal.repository';
@@ -569,12 +569,20 @@ export const deleteAdvertiserVideo = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
-    // Supprimer du stockage FTP
+    // Supprimer du stockage FTP (vidéo + thumbnail). Best-effort : on ne
+    // bloque pas la suppression DB si le FTP a déjà été nettoyé manuellement.
     try {
       const storagePath = String(video.storage_path || video.filename);
       await deleteVideo(storagePath);
     } catch (storageError: unknown) {
       logger.warn('Error deleting video from storage (continuing with DB deletion):', storageError);
+    }
+    try {
+      await deleteThumbnail(buildThumbnailPath(videoId));
+    } catch (thumbErr) {
+      logger.warn('Thumbnail cleanup failed (best-effort)', {
+        videoId, err: (thumbErr as Error).message,
+      });
     }
 
     // Supprimer de la base (cascade supprimera advertiser_videos)
