@@ -648,6 +648,21 @@ td.col-name {
   white-space: nowrap;
 }
 
+// FTP unreachable styling — probe HEAD/Range échoué, fichier peut être OK
+.ftp-unreachable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
+
 .video-card.ftp-orphan {
   border: 1px solid #fecaca;
   background: #fffafa;

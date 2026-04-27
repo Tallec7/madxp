@@ -104,8 +104,10 @@ export class VideoLibraryComponent implements OnChanges {
   @Input() configVideoTargets: Map<string, AddToTarget[]> = new Map(); // Sprint 3: targets each video belongs to
   @Output() removeFromTarget = new EventEmitter<{ video: VideoItem; target: AddToTarget }>(); // Sprint 3
 
-  /** Set des video.id orphelins FTP pour ce site (chantier vidéos manquantes). */
+  /** Set des video.id confirmés absents du FTP (HEAD/Range = 404) — bloque deploy/add-to. */
   @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+  /** Set des video.id non vérifiables (HEAD/Range timeout/5xx) — warning seulement. */
+  @Input() ftpUnreachableVideoIds: ReadonlySet<string> = new Set<string>();
   /** Demande de remplacement du binaire — file picker côté parent (site-content-tab). */
   @Output() replaceVideoRequest = new EventEmitter<VideoItem>();
 

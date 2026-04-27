@@ -110,6 +110,7 @@
       [filteredVideosCount]="filteredVideos.length"
       [isAllSelected]="isAllSelected()"
       [ftpOrphanVideoIds]="ftpOrphanVideoIds"
+      [ftpUnreachableVideoIds]="ftpUnreachableVideoIds"
       (videoSelect)="selectVideo($event)"
       (preview)="onPreview($event.video, $event.event)"
       (deploy)="onDeploy($event.video, $event.event)"

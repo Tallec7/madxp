@@ -314,9 +314,22 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     });
   }
 
-  /** Set des video.id orphelins FTP, dérivé de `ftpOrphans`. Propagé vers la library. */
+  /**
+   * Set des video.id confirmés absents du FTP (status='missing', HEAD/Range = 404).
+   * Bloque deploy/add-to dans la library — re-upload obligatoire.
+   */
   get ftpOrphanVideoIds(): ReadonlySet<string> {
-    return new Set(this.ftpOrphans.map(o => o.video_id));
+    return new Set(this.ftpOrphans.filter(o => o.status === 'missing').map(o => o.video_id));
+  }
+
+  /**
+   * Set des video.id non vérifiables (status='unreachable', HEAD/Range timeout/5xx).
+   * Affiche un warning orange — la vidéo peut très bien fonctionner, c'est juste
+   * que le probe central a échoué (Hostinger refuse HEAD, glitch réseau, etc.).
+   * Ne bloque PAS les actions.
+   */
+  get ftpUnreachableVideoIds(): ReadonlySet<string> {
+    return new Set(this.ftpOrphans.filter(o => o.status === 'unreachable').map(o => o.video_id));
   }
 
   /** State : id de la vidéo en cours de remplacement (lock UI). */
