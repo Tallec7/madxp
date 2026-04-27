@@ -156,6 +156,12 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 
 ## ✅ Résolu
 
+### Session 2026-04-27 (ADR-099 — uptime flotte)
+
+| Item | Résolu par |
+|---|---|
+| Uptime sites flotte bloqué à ~10% systématique (issue #644) — formule `COUNT(metrics) / 2880 * 100` supposait un heartbeat 30s alors que la table `metrics` est échantillonnée toutes les 5 min. Résultat : tous les Pi paraissaient instables en permanence même en parfait état. | ADR-099 — nouvelle table `connection_events` dérivée des connect/disconnect réels (pas de samples). PR #646 (backend), PR #650 (front `uptime.percent`, CRON purge 90j, helper `use-prod-db.sh`). Résolu 2026-04-27. |
+
 ### Session 2026-04-27 (cleanup Supabase + observabilité)
 
 | Item | Résolu par |
