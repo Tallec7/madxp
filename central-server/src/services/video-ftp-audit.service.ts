@@ -18,7 +18,39 @@ import { getVideoUrl } from './storage.service';
 import metricsService from './metrics.service';
 import logger from '../config/logger';
 
-const HEAD_TIMEOUT_MS = 8000;
+const PROBE_TIMEOUT_MS = 15000;
+const FALLBACK_DELAY_MS = 2000;
+
+interface ProbeResult {
+  reachable: boolean;
+  notFound: boolean;
+  httpStatus: number | null;
+  errorMessage?: string;
+}
+
+async function probe(url: string, method: 'HEAD' | 'GET', extraHeaders?: Record<string, string>): Promise<ProbeResult> {
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), PROBE_TIMEOUT_MS);
+    const response = await fetch(url, { method, headers: extraHeaders, signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (response.status === 404) return { reachable: true, notFound: true, httpStatus: 404 };
+    if (response.status >= 500) return { reachable: false, notFound: false, httpStatus: response.status };
+    if (response.status >= 200 && response.status < 400) {
+      return { reachable: true, notFound: false, httpStatus: response.status };
+    }
+    return { reachable: false, notFound: false, httpStatus: response.status };
+  } catch (err) {
+    return { reachable: false, notFound: false, httpStatus: null, errorMessage: (err as Error).message };
+  }
+}
+
+// Skip the fallback delay under jest to keep unit tests fast — production runs
+// in node, jest sets NODE_ENV=test by default.
+const sleep = (ms: number) =>
+  process.env.NODE_ENV === 'test'
+    ? Promise.resolve()
+    : new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export interface AuditResult {
   scanned: number;
@@ -102,30 +134,58 @@ class VideoFtpAuditService {
     return results;
   }
 
+  /**
+   * Probe d'un fichier FTP avec stratégie HEAD-then-Range.
+   *
+   * Hostinger (et d'autres CDN) refusent ou throttlent parfois les requêtes
+   * HEAD sur certains paths, alors que le GET fonctionne. Pour éviter les faux
+   * positifs `unreachable`, on retry avec un GET Range minimal après échec HEAD.
+   *
+   * - HEAD 404 → `missing` (immediate, fichier absent confirmé)
+   * - HEAD 2xx/3xx → `ok` (fichier servable)
+   * - HEAD timeout/5xx → retry GET Range bytes=0-0
+   *   - Range 404 → `missing`
+   *   - Range 2xx/206 → `ok`
+   *   - Range encore en échec → `unreachable` persisté
+   */
   private async checkOne(video: VideoRow): Promise<'missing' | 'unreachable' | 'ok' | 'resolved'> {
     const url = getVideoUrl(video.storage_path);
 
-    let httpStatus: number | null = null;
-    let outcome: 'missing' | 'unreachable' | 'ok' = 'ok';
+    const headResult = await probe(url, 'HEAD');
 
-    try {
-      const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), HEAD_TIMEOUT_MS);
-      const response = await fetch(url, { method: 'HEAD', signal: ctrl.signal });
-      clearTimeout(timeout);
-      httpStatus = response.status;
+    let outcome: 'missing' | 'unreachable' | 'ok';
+    let finalHttpStatus: number | null = headResult.httpStatus;
 
-      if (response.status === 404) outcome = 'missing';
-      else if (response.status >= 500) outcome = 'unreachable';
-      else outcome = 'ok';
-    } catch (err) {
-      // Timeout, DNS error, ECONNRESET, etc.
-      outcome = 'unreachable';
-      logger.warn('Video FTP audit HEAD failed', {
+    if (headResult.notFound) {
+      outcome = 'missing';
+    } else if (headResult.reachable) {
+      outcome = 'ok';
+    } else {
+      // HEAD timeout / 5xx / weird status → fallback Range probe
+      logger.warn('Video FTP audit HEAD failed, retrying with Range', {
         videoId: video.id,
         storagePath: video.storage_path,
-        err: (err as Error).message,
+        httpStatus: headResult.httpStatus,
+        err: headResult.errorMessage,
       });
+      await sleep(FALLBACK_DELAY_MS);
+      const rangeResult = await probe(url, 'GET', { Range: 'bytes=0-0' });
+      finalHttpStatus = rangeResult.httpStatus ?? headResult.httpStatus;
+
+      if (rangeResult.notFound) {
+        outcome = 'missing';
+      } else if (rangeResult.reachable) {
+        outcome = 'ok';
+      } else {
+        outcome = 'unreachable';
+        logger.warn('Video FTP audit Range fallback also failed', {
+          videoId: video.id,
+          storagePath: video.storage_path,
+          headHttpStatus: headResult.httpStatus,
+          rangeHttpStatus: rangeResult.httpStatus,
+          rangeErr: rangeResult.errorMessage,
+        });
+      }
     }
 
     if (outcome === 'ok') {
@@ -133,7 +193,7 @@ class VideoFtpAuditService {
       return cleared ? 'resolved' : 'ok';
     }
 
-    await this.upsertWarning(video.id, video.storage_path, outcome, httpStatus);
+    await this.upsertWarning(video.id, video.storage_path, outcome, finalHttpStatus);
     return outcome;
   }
 

@@ -45,6 +45,13 @@
           data-testid="video-card-ftp-orphan-badge"
           >❌ Introuvable FTP</span
         >
+        <span
+          class="ftp-unreachable-badge"
+          *ngIf="!isFtpOrphan(video) && isFtpUnreachable(video)"
+          title="Le serveur n'a pas pu vérifier ce fichier (timeout). La vidéo peut très bien fonctionner."
+          data-testid="video-card-ftp-unreachable-badge"
+          >⚠️ Non vérifié</span
+        >
       </div>
       <div class="card-actions">
         <button
@@ -236,6 +243,13 @@
             title="Fichier introuvable sur le serveur — re-uploade pour remettre en service."
             data-testid="video-row-ftp-orphan-badge"
             >❌ Introuvable FTP</span
+          >
+          <span
+            class="ftp-unreachable-badge"
+            *ngIf="!isFtpOrphan(video) && isFtpUnreachable(video)"
+            title="Le serveur n'a pas pu vérifier ce fichier (timeout). La vidéo peut très bien fonctionner."
+            data-testid="video-row-ftp-unreachable-badge"
+            >⚠️ Non vérifié</span
           >
         </td>
         <td class="col-category" [title]="video.category || ''">{{ video.category || '-' }}</td>

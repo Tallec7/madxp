@@ -44,6 +44,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         [siteDisplays]="siteDisplays"
         [availableVideos]="cloudVideos"
         [ftpOrphanVideoIds]="ftpOrphanVideoIds"
+        [ftpUnreachableVideoIds]="ftpUnreachableVideoIds"
         (replaceVideoRequest)="replaceVideoRequest.emit($event)"
         (videoSelect)="onVideoSelect($event)"
         (videoPreview)="onVideoPreview($event)"
@@ -225,6 +226,7 @@ export class VideoManagerComponent {
   @Input() isSuperAdmin = false;
   @Input() isClubUser = false;
   @Input() ftpOrphanVideoIds: ReadonlySet<string> = new Set<string>();
+  @Input() ftpUnreachableVideoIds: ReadonlySet<string> = new Set<string>();
 
   @Output() videoUploaded = new EventEmitter<UploadedVideo>();
   @Output() allVideosUploaded = new EventEmitter<UploadedVideo[]>();

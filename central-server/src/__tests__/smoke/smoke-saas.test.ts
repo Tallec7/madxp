@@ -2727,21 +2727,25 @@ describe('ADR-068 — signed URL video stream proxy', () => {
   // sont détectés QUE par ce CRON nocturne. L'audit prod confirmé sur incident
   // PR #613 : la vidéo acff5e34 EXISTE en DB mais le fichier FTP avait disparu,
   // sans aucun audit_log de suppression API.
-  it('PR2.2 — video-ftp-audit.service expose auditAllVideos avec HEAD upstream', () => {
+  it('PR2.2 — video-ftp-audit.service expose auditAllVideos avec HEAD-then-Range upstream', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'video-ftp-audit.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
       hasService: /class VideoFtpAuditService/.test(content),
       exportsSingleton: /export const videoFtpAuditService\s*=\s*new VideoFtpAuditService\(\)/.test(content),
       headRequest: /method:\s*['"]HEAD['"]/.test(content),
+      // Sur échec HEAD (timeout/5xx) on retry avec un GET Range minimal — Hostinger
+      // refuse parfois HEAD mais accepte Range, élimine les faux positifs unreachable.
+      rangeFallback: /Range:\s*['"]bytes=0-0['"]/.test(content),
       handles404: /response\.status\s*===\s*404/.test(content),
-      timeoutGuard: /AbortController/.test(content) && /HEAD_TIMEOUT_MS/.test(content),
+      timeoutGuard: /AbortController/.test(content) && /PROBE_TIMEOUT_MS/.test(content),
       autoResolve: /clearWarning\(/.test(content),
       recordsMetric: /metricsService\.recordVideoFtpAudit\(/.test(content),
     }).toEqual({
       hasService: true,
       exportsSingleton: true,
       headRequest: true,
+      rangeFallback: true,
       handles404: true,
       timeoutGuard: true,
       autoResolve: true,
