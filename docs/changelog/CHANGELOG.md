@@ -1,3 +1,9 @@
+# [3.253.0](https://github.com/Tallec7/neopro/compare/v3.252.0...v3.253.0) (2026-04-27)
+
+### Features
+
+- **site-content:** drill-down banner lists FTP orphans referenced by the site ([#641](https://github.com/Tallec7/neopro/issues/641)) ([095458a](https://github.com/Tallec7/neopro/commit/095458a7ca8d5bd1bc2956209e7992e8a6bede7f))
+
 # [3.252.0](https://github.com/Tallec7/neopro/compare/v3.251.0...v3.252.0) (2026-04-27)
 
 ### Features
