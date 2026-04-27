@@ -8,24 +8,24 @@ Le PRD (Product Requirements Document) est conçu pour **aligner plusieurs perso
 
 ## Différence avec ce qui existe déjà
 
-| Doc | Rôle | Quand consulter |
-|---|---|---|
-| **ADR** (`docs/adr/`) | "Pourquoi on a décidé ça" — figé au point dans le temps | Quand on s'interroge sur un choix archi historique |
-| **`.claude/rules/`** | Interdits techniques auto-loadés | Auto-injecté quand Claude touche un fichier |
-| **SPEC** (`docs/specs/`) | "Comment ça marche aujourd'hui en métier" — vivant | Quand on prépare une évolution / quand on revient sur un composant |
-| **Story Card** (PR body) | "Ce qui a changé dans cette PR" — snapshot ship | À l'ouverture d'une PR |
+| Doc                      | Rôle                                                    | Quand consulter                                                    |
+| ------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------ |
+| **ADR** (`docs/adr/`)    | "Pourquoi on a décidé ça" — figé au point dans le temps | Quand on s'interroge sur un choix archi historique                 |
+| **`.claude/rules/`**     | Interdits techniques auto-loadés                        | Auto-injecté quand Claude touche un fichier                        |
+| **SPEC** (`docs/specs/`) | "Comment ça marche aujourd'hui en métier" — vivant      | Quand on prépare une évolution / quand on revient sur un composant |
+| **Story Card** (PR body) | "Ce qui a changé dans cette PR" — snapshot ship         | À l'ouverture d'une PR                                             |
 
 Aucun chevauchement, chaque doc a un rôle clair.
 
 ## Périmètre — quels composants méritent une SPEC
 
-| Type | Exemples | SPEC ? |
-|---|---|---|
-| Feature transverse complexe | Sponsors rotation, Match sessions, Templates Studio, SaaS mode, OTA, Hotspot PSK | ✅ Oui |
-| Composant client-visible | TV component, Remote, Dashboard sites list, Club portal | ✅ Oui |
-| Service backend critique | Cron scheduler, Socket service, Storage, Deployment, Auth | ✅ Oui |
-| Sous-composant CRUD | Un controller sur 1 entité | ❌ Non — le code suffit |
-| Util / helper | `formatBytes`, `hashApiKey` | ❌ Non — pas de règle métier |
+| Type                        | Exemples                                                                         | SPEC ?                       |
+| --------------------------- | -------------------------------------------------------------------------------- | ---------------------------- |
+| Feature transverse complexe | Sponsors rotation, Match sessions, Templates Studio, SaaS mode, OTA, Hotspot PSK | ✅ Oui                       |
+| Composant client-visible    | TV component, Remote, Dashboard sites list, Club portal                          | ✅ Oui                       |
+| Service backend critique    | Cron scheduler, Socket service, Storage, Deployment, Auth                        | ✅ Oui                       |
+| Sous-composant CRUD         | Un controller sur 1 entité                                                       | ❌ Non — le code suffit      |
+| Util / helper               | `formatBytes`, `hashApiKey`                                                      | ❌ Non — pas de règle métier |
 
 **Estimation cible** : 20-25 SPECs au total, vs 250+ règles dans `.claude/rules/` ou 254 US dans SAFe.
 
@@ -55,25 +55,27 @@ docs/specs/
 
 ## Index des SPECs actives
 
-| SPEC | ADR liés | Statut | Dernière revue |
-|---|---|---|---|
-| [features/match-sessions](features/match-sessions.spec.md) | ADR-093, ADR-097 | Live | 2026-04-25 |
-| [features/saas-mode](features/saas-mode.spec.md) | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live | 2026-04-25 |
-| [features/templates-studio](features/templates-studio.spec.md) | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095 | Live | 2026-04-25 |
-| [services/cron-scheduler](services/cron-scheduler.spec.md) | ADR-097 | Live | 2026-04-25 |
-| [services/socket-service](services/socket-service.spec.md) | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096 | Live | 2026-04-25 |
+| SPEC                                                             | ADR liés                                                      | Statut | Dernière revue |
+| ---------------------------------------------------------------- | ------------------------------------------------------------- | ------ | -------------- |
+| [features/match-sessions](features/match-sessions.spec.md)       | ADR-093, ADR-097                                              | Live   | 2026-04-25     |
+| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live   | 2026-04-25     |
+| [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
+| [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
+| [features/templates-studio](features/templates-studio.spec.md)   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095          | Live   | 2026-04-25     |
+| [services/cron-scheduler](services/cron-scheduler.spec.md)       | ADR-097                                                       | Live   | 2026-04-25     |
+| [services/socket-service](services/socket-service.spec.md)       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096 | Live   | 2026-04-25     |
 
-**Total : 5 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/sponsors-rotation`, `features/hotspot-psk`, `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
+**Total : 7 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/hotspot-psk`, `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
 
 ## Cycle de vie d'une SPEC
 
-| Évènement | Action SPEC |
-|---|---|
-| Nouvelle feature majeure | Créer la SPEC en même temps que le code |
-| PR qui change un comportement métier | MAJ SPEC dans la même PR (smoke test enforced à terme) |
-| PR refactor sans changement comportement | SPEC inchangée — elle décrit le quoi, pas le comment |
-| Incident production | Ajouter ligne "Cas d'edge connus" + lien post-mortem |
-| 3 mois sans modification | SPEC marquée "stale", revue à planifier |
+| Évènement                                | Action SPEC                                            |
+| ---------------------------------------- | ------------------------------------------------------ |
+| Nouvelle feature majeure                 | Créer la SPEC en même temps que le code                |
+| PR qui change un comportement métier     | MAJ SPEC dans la même PR (smoke test enforced à terme) |
+| PR refactor sans changement comportement | SPEC inchangée — elle décrit le quoi, pas le comment   |
+| Incident production                      | Ajouter ligne "Cas d'edge connus" + lien post-mortem   |
+| 3 mois sans modification                 | SPEC marquée "stale", revue à planifier                |
 
 ## Smoke tests prévus (à activer quand 5+ SPECs en place)
 
@@ -115,9 +117,9 @@ Format : règle = phrase actionnable, métier-readable. Pas de jargon technique.
 
 Pour CHAQUE règle métier, comment on vérifie qu'elle marche en prod (UI, métrique, log, dashboard).
 
-| Règle | Comment on vérifie |
-|---|---|
-| ... | Grafana / Dashboard / Smoke test / Log Winston |
+| Règle | Comment on vérifie                             |
+| ----- | ---------------------------------------------- |
+| ...   | Grafana / Dashboard / Smoke test / Log Winston |
 
 ## Cas d'edge connus
 
