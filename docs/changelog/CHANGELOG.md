@@ -1,3 +1,13 @@
+# [3.266.0](https://github.com/Tallec7/neopro/compare/v3.265.2...v3.266.0) (2026-04-28)
+
+### Bug Fixes
+
+- **remote:** restore profile selector + PIN entry in RemoteV2 (ADR-058/092) ([#698](https://github.com/Tallec7/neopro/issues/698)) ([567405f](https://github.com/Tallec7/neopro/commit/567405fb13ebd2690ab7e2e3a9776e1a9e77f77e))
+
+### Features
+
+- **tv-preview-P1:** Prometheus + Grafana + token HMAC + heartbeat snapshot — SPEC-V2-TVMON-01 P1 ([#695](https://github.com/Tallec7/neopro/issues/695)) ([#697](https://github.com/Tallec7/neopro/issues/697)) ([0551cd8](https://github.com/Tallec7/neopro/commit/0551cd8aa62884b449da7f116e5aa99f78bd6365))
+
 ## [3.265.2](https://github.com/Tallec7/neopro/compare/v3.265.1...v3.265.2) (2026-04-28)
 
 ### Bug Fixes
