@@ -157,10 +157,27 @@ export class VideoPlaybackService {
     const phase = this.callbacks?.getActivePhase() ?? 'neutral';
     const loopVideos = this.callbacks?.getLoopVideosForPhase(phase) ?? [];
 
-    // Filter steps without video path and generate weighted playlist
-    const validVideos = loopVideos.filter(v => v?.path);
+    // Filter steps without video path and generate weighted playlist.
+    // ADR-103 Phase 0 : exclude non-video content types (web_page, livestream)
+    // — they would crash the DoubleBuffer (no <video> playable source). Phase 2
+    // will route them to a dedicated WebContentPlayer instead.
+    //
+    // We block via two signals:
+    //   1. `contentType !== 'video'` (clean entries injected by ADR-089).
+    //   2. Synthetic filename pattern `web_page-<ts>` / `livestream-<ts>` —
+    //      protects against legacy/dashboard entries that lost `contentType`
+    //      when added via a video selector (root cause of NLF crash 28/04/2026).
+    const isVideoEntry = (v: Sponsor): boolean => {
+      if (!v?.path) return false;
+      if ((v.contentType ?? 'video') !== 'video') return false;
+      const path = String(v.path);
+      if (/(?:^|\/)(?:web_page|livestream)-\d+$/.test(path)) return false;
+      return true;
+    };
+    const validVideos = loopVideos.filter(isVideoEntry);
     if (validVideos.length !== loopVideos.length) {
-      console.warn(`[VideoPlayback] Filtered out ${loopVideos.length - validVideos.length} step(s) with no video path`);
+      const skipped = loopVideos.length - validVideos.length;
+      console.warn(`[VideoPlayback] Filtered out ${skipped} step(s) (no path, non-video contentType, or synthetic web/live filename — ADR-103 Phase 0 guard)`);
     }
     this._currentLoopVideos = generateWeightedPlaylist(validVideos);
 
