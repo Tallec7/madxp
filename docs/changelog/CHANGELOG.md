@@ -1,3 +1,9 @@
+# [3.264.0](https://github.com/Tallec7/neopro/compare/v3.263.3...v3.264.0) (2026-04-28)
+
+### Features
+
+- **tv-preview:** preview vidéo réel <app-r2-tv-monitor> régie pro PC C — SPEC-V2-TVMON-01 P0 + ADR-101 ([#690](https://github.com/Tallec7/neopro/issues/690)) ([ca28661](https://github.com/Tallec7/neopro/commit/ca2866195064739cda9a84fcfb99d85325961930))
+
 ## [3.263.3](https://github.com/Tallec7/neopro/compare/v3.263.2...v3.263.3) (2026-04-28)
 
 ### Bug Fixes
