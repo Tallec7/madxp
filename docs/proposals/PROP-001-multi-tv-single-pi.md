@@ -451,7 +451,9 @@ Offline             E (natif)                   E (installer Pi)
 
 ### Phase 0 — E1 Pi hub WiFi même contenu (0 jour dev, disponible maintenant)
 
-**Action immédiate pour tout club Pi existant.** Documentation d'installation :
+**Action immédiate pour tout club Pi existant.** Guide d'install ops complet : [`docs/guides/MULTI_TV_HOTSPOT_PI.md`](../guides/MULTI_TV_HOTSPOT_PI.md) (BoM, procédure, validation, troubleshooting).
+
+Résumé :
 
 1. Acheter un Fire TV Stick 4K (~40€) ou utiliser la Smart TV existante
 2. Brancher le Stick en HDMI sur la TV
