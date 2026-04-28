@@ -1,3 +1,9 @@
+## [3.265.1](https://github.com/Tallec7/neopro/compare/v3.265.0...v3.265.1) (2026-04-28)
+
+### Bug Fixes
+
+- **tv-preview:** unblock Pi CDP attach + add SaaS push transport (r2-tv-monitor) ([#692](https://github.com/Tallec7/neopro/issues/692)) ([acf49f4](https://github.com/Tallec7/neopro/commit/acf49f419a00aad3bbc54b213cefac48b232b663)), closes [#690](https://github.com/Tallec7/neopro/issues/690) [#690](https://github.com/Tallec7/neopro/issues/690)
+
 # [3.265.0](https://github.com/Tallec7/neopro/compare/v3.264.0...v3.265.0) (2026-04-28)
 
 ### Features
