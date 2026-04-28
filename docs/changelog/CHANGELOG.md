@@ -1,3 +1,9 @@
+# [3.263.0](https://github.com/Tallec7/neopro/compare/v3.262.0...v3.263.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** refonte PC C en master-detail régie pro (SPEC-V2-LAYOUT-01 §5C) ([#684](https://github.com/Tallec7/neopro/issues/684)) ([1ac1974](https://github.com/Tallec7/neopro/commit/1ac197481e7f448e725ef7e78a4aa27827796714))
+
 # [3.262.0](https://github.com/Tallec7/neopro/compare/v3.261.5...v3.262.0) (2026-04-28)
 
 ### Features
