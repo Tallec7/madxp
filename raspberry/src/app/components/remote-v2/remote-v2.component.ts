@@ -438,12 +438,25 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   /** Catégories affichées pour la phase de nav courante. */
+  /**
+   * Catégories affichées pour la phase de nav courante.
+   *
+   * Contrat aligné sur V1 (`RemoteComponent.getCategoriesForTimeCategory`)
+   * et sur le dashboard "Organisation Télécommande" : les `TimeCategory.id`
+   * sont identiques aux valeurs `phaseId` (`'before' | 'during' | 'after'`),
+   * et `categoryIds` liste les catégories à afficher dans ce bloc phase.
+   *
+   * Bug historique V2 (pré-fix) : le code utilisait une heuristique de
+   * substring `'avant'/'match'/'apres'` qui ne matchait JAMAIS les vrais
+   * ids anglais → fallback systématique sur toutes les catégories,
+   * ignorant complètement le mapping de l'admin. Régression vs V1.
+   */
   phaseCategories(): Category[] {
     if (!this.configuration) return [];
     const timeCats = (this.configuration.timeCategories || []) as TimeCategory[];
-    const targetKey = this.phaseId === 'before' ? 'avant' : this.phaseId === 'during' ? 'match' : 'apres';
-    const tc = timeCats.find(t => t.id.toLowerCase().includes(targetKey));
     const allCats = (this.configuration.categories || []) as Category[];
+    if (timeCats.length === 0) return allCats;
+    const tc = timeCats.find(t => t.id === this.phaseId);
     if (!tc) return allCats;
     return allCats.filter(c => tc.categoryIds?.includes(c.id));
   }
@@ -453,8 +466,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (!this.configuration) return null;
     if (this.loopId === 'neutral') return { name: 'Rotation sponsors par défaut' };
     const timeCats = (this.configuration.timeCategories || []) as TimeCategory[];
-    const targetKey = this.loopId === 'before' ? 'avant' : this.loopId === 'during' ? 'match' : 'apres';
-    const tc = timeCats.find(t => t.id.toLowerCase().includes(targetKey));
+    const tc = timeCats.find(t => t.id === this.loopId);
     const first = tc?.loopVideos?.[0];
     if (!first) return null;
     return { name: first.name || 'Vidéo', duration: (first as { duration?: number }).duration };

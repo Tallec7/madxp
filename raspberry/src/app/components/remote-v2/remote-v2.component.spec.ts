@@ -416,6 +416,67 @@ describe('RemoteV2Component', () => {
     });
   });
 
+  // AUDIT-V2-LAYOUT-01 — parité V1 du filtrage catégories par phase
+  // (bug pré-fix : V2 utilisait substring 'avant'/'match'/'apres' au lieu
+  // des ids anglais → fallback systématique sur toutes les catégories,
+  // ignorant le mapping "Organisation Télécommande" du dashboard).
+  describe('phaseCategories (parité V1)', () => {
+    const allCats = [
+      { id: 'entree', name: 'ENTRÉE' },
+      { id: 'match-cat', name: 'MATCH' },
+      { id: 'infos-club', name: 'INFOS CLUB' },
+      { id: 'focus-partenaires', name: 'FOCUS PARTENAIRES' },
+    ];
+
+    beforeEach(() => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [
+          { id: 'before', name: 'Avant-match', categoryIds: ['entree', 'infos-club', 'focus-partenaires'], loopVideos: [] },
+          { id: 'during', name: 'Match', categoryIds: ['match-cat', 'infos-club', 'focus-partenaires'], loopVideos: [] },
+          { id: 'after', name: 'Après-match', categoryIds: ['infos-club', 'focus-partenaires'], loopVideos: [] },
+        ],
+      } as unknown as Configuration;
+    });
+
+    it('phase before → ENTRÉE + INFOS CLUB + FOCUS PARTENAIRES', () => {
+      component.phaseId = 'before';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['entree', 'infos-club', 'focus-partenaires']);
+    });
+
+    it('phase during → MATCH + INFOS CLUB + FOCUS PARTENAIRES (pas ENTRÉE)', () => {
+      component.phaseId = 'during';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['match-cat', 'infos-club', 'focus-partenaires']);
+      expect(ids).not.toContain('entree');
+    });
+
+    it('phase after → INFOS CLUB + FOCUS PARTENAIRES (ni ENTRÉE ni MATCH)', () => {
+      component.phaseId = 'after';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['infos-club', 'focus-partenaires']);
+    });
+
+    it('fallback toutes catégories si la config n\'a pas de timeCategories', () => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [],
+      } as unknown as Configuration;
+      component.phaseId = 'during';
+      expect(component.phaseCategories().length).toBe(allCats.length);
+    });
+
+    it('fallback toutes catégories si aucune TimeCategory ne match phaseId', () => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [{ id: 'unknown', name: '?', categoryIds: ['entree'], loopVideos: [] }],
+      } as unknown as Configuration;
+      component.phaseId = 'before';
+      expect(component.phaseCategories().length).toBe(allCats.length);
+    });
+  });
+
   // SPEC-V2-LAYOUT-01 — système de préférences de layout (3 mobile × 3 PC)
   describe('layoutClasses (SPEC-V2-LAYOUT-01)', () => {
     it('retourne le couple par défaut (classic / sidebar)', () => {
