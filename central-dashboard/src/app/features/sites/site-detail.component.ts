@@ -181,6 +181,11 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   ngOnInit(): void {
     this.siteId = this.route.snapshot.paramMap.get('id')!;
+    const tabParam = this.route.snapshot.queryParamMap.get('tab') as TabId | null;
+    const VALID_TABS: TabId[] = ['status', 'content', 'settings', 'profiles', 'sponsors', 'subscription', 'debug', 'club-access'];
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      this.activeTab = tabParam;
+    }
     this.loadSite();
     this.loadDashboardData();
 

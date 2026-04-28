@@ -118,7 +118,7 @@ interface FleetVideoHealthResponse {
                   <span class="badge" [class.warn]="row.error_count >= 5">{{ row.error_count }}</span>
                 </td>
                 <td>
-                  <a [routerLink]="['/sites', row.site_id, 'content']">Voir contenu →</a>
+                  <a [routerLink]="['/sites', row.site_id]" [queryParams]="{ tab: 'content' }">Voir contenu →</a>
                 </td>
               </tr>
             </tbody>
