@@ -1,3 +1,9 @@
+## [3.263.1](https://github.com/Tallec7/neopro/compare/v3.263.0...v3.263.1) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** scope strict tv-monitor / pro-sidebar / video-table à PC C ([#686](https://github.com/Tallec7/neopro/issues/686)) ([436c0f0](https://github.com/Tallec7/neopro/commit/436c0f06c238f186c98edf9c016a27556964bbf3))
+
 # [3.263.0](https://github.com/Tallec7/neopro/compare/v3.262.0...v3.263.0) (2026-04-28)
 
 ### Features
