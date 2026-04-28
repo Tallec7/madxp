@@ -8,6 +8,22 @@
 
 ---
 
+## Semaine 18 — 28 Avril – 4 Mai 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Télécommande V2 : icônes harmonisées cross-OS** ([cette PR](https://github.com/Tallec7/neopro)) — les 11 emojis Unicode de la Remote V2 (📷 modifier logo, 🔁 nouveau match, ⏸/▶ chrono, 💡 astuce breaking news, → période suivante, › chevrons prefs, ⚠/✓ statut erreurs vidéo) rendaient différemment selon iPad opérateur, tablette Android régie, PC Windows tribune ou PC Linux centre médias — parfois en tofu illisible. Migration vers une bibliothèque SVG inline contrôlée (`<app-r2-icon>` + registre Lucide MIT, 0 dépendance npm). Affichage pixel-identique partout, icônes teintables (rouge danger / blanc dark mode), accessibilité RGAA correcte (le lecteur d'écran lit "Modifier le logo" au lieu de "appareil photo emoji"). SPEC-V2-ICONS-01.
+
+### 🛡️ Pour la robustesse / production
+
+- (rien cette semaine)
+
+### 🧹 Pour l'équipe (toi + futurs devs)
+
+- (rien cette semaine)
+
+---
+
 ## Semaine 17 — 21-27 Avril 2026
 
 > Audit Lead Dev complet par Claude. Note projet : 78/100 → potentiel 85+ après merge des PRs ouvertes.
