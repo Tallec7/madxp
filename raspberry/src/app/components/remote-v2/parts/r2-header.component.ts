@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { R2IconComponent } from '../icons/r2-icon.component';
 
 /**
  * Header de la Remote V2 : logo NeoPro + pill club cliquable + boutons SVG search/settings.
@@ -8,7 +9,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-r2-header',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [':host { display: contents; }'],
   template: `
@@ -31,7 +32,12 @@ import { CommonModule } from '@angular/common';
           : 'Aucune erreur de lecture vidéo cette session'"
         data-testid="remote-v2-video-errors-chip"
       >
-        <span class="r2-vec-icon">{{ errorsCount > 0 ? '⚠' : '✓' }}</span>
+        <span class="r2-vec-icon">
+          <app-r2-icon
+            [name]="errorsCount > 0 ? 'alert-triangle' : 'check'"
+            [size]="14"
+          ></app-r2-icon>
+        </span>
         <span class="r2-vec-count">{{ errorsCount }}</span>
       </span>
       <div class="r2-header-actions">
