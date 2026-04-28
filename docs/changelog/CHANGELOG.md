@@ -1,3 +1,9 @@
+## [3.263.2](https://github.com/Tallec7/neopro/compare/v3.263.1...v3.263.2) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** scope localStorage SaaS par site/profil + stop persisting ?v2= override ([#688](https://github.com/Tallec7/neopro/issues/688)) ([70c63e2](https://github.com/Tallec7/neopro/commit/70c63e2c7d13af6a7c1e7a34ac3b8aafb2f5d63e))
+
 ## [3.263.1](https://github.com/Tallec7/neopro/compare/v3.263.0...v3.263.1) (2026-04-28)
 
 ### Bug Fixes
