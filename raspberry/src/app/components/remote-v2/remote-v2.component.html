@@ -42,6 +42,58 @@
     (dismiss)="dismissRecordingWarning()"
   ></app-r2-recording-warning>
 
+  <!--
+    SPEC-V2-LAYOUT-01 §5C — Layout régie pro PC C (master-detail).
+    Sidebar gauche (light) + tableau vidéo (centre dark) + aside raccourcis
+    (col 3, ajouté via le SCSS du layout, voir _desktop-pro.scss).
+    Sur les autres layouts, ces 2 composants sont masqués via display:none
+    sur la classe wrapper (cf. `.r2-pro-sidebar-host` / `.r2-video-table-host`).
+  -->
+  <app-r2-pro-sidebar
+    class="r2-pro-sidebar-host"
+    [phaseId]="phaseId"
+    [categories]="phaseCategories()"
+    [selectedCategoryId]="selectedCategoryId"
+    [selectedSubId]="selectedSubId"
+    (phaseChange)="setPhase($event)"
+    (selectCategory)="selectCategory($event)"
+    (selectSubCategory)="selectSubCategory($event)"
+  ></app-r2-pro-sidebar>
+
+  <app-r2-video-table
+    class="r2-video-table-host"
+    [category]="selectedCategory()"
+    [subCategory]="selectedSubCategory()"
+    [playingVideoId]="playingVideoId"
+    [erroredVideoIds]="erroredVideoIds"
+    (playClick)="playVideo($event)"
+  ></app-r2-video-table>
+
+  <aside class="r2-pro-aside" aria-label="Raccourcis et enregistrement">
+    <button
+      class="r2-pro-aside__rec"
+      [class.is-active]="recording"
+      (click)="toggleRecording()"
+    >
+      <span class="r2-pro-aside__rec-dot"></span>
+      <span class="r2-pro-aside__rec-label">
+        {{ recording ? 'Arrêter enregistrement' : 'Démarrer enregistrement' }}
+      </span>
+      <kbd class="r2-pro-aside__rec-key">R</kbd>
+    </button>
+
+    <section class="r2-pro-aside__shortcuts" aria-label="Raccourcis clavier">
+      <div class="r2-pro-aside__shortcuts-title">Raccourcis</div>
+      <ul>
+        <li><kbd>/</kbd><span>Recherche</span></li>
+        <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><span>Phases Avant / Match / Après</span></li>
+        <li><kbd>Espace</kbd><span>Pause boucle</span></li>
+        <li><kbd>R</kbd><span>Enregistrement</span></li>
+        <li><kbd>Esc</kbd><span>Fermer panneau</span></li>
+      </ul>
+    </section>
+  </aside>
+
   <app-r2-widgets
     [enabled]="widgetsEnabled"
     [score]="scoreService.currentScore"

@@ -1,0 +1,124 @@
+// SPEC-V2-LAYOUT-01 §5C — Aside régie pro (col 3) du layout PC C.
+// Bouton "Démarrer enregistrement" pleine largeur + bloc raccourcis clavier.
+// Wrapper masqué par défaut ; révélé par `.layout-desktop-pro`.
+
+.r2-pro-aside {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  color: #ffffff;
+  background: #0e1116;
+  border-left: 1px solid #2a313d;
+
+  &__rec {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #1a1f27;
+    border: 1px solid #2a313d;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    transition: background 120ms, border-color 120ms;
+
+    &:hover {
+      background: #232a35;
+      border-color: #3a4150;
+    }
+
+    &.is-active {
+      background: rgba(204, 56, 78, 0.16);
+      border-color: rgba(204, 56, 78, 0.55);
+      color: #ffd9df;
+    }
+  }
+
+  &__rec-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: #cc384e;
+    flex-shrink: 0;
+  }
+
+  &__rec.is-active &__rec-dot {
+    animation: np-pulse 1.2s ease-in-out infinite;
+  }
+
+  &__rec-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__rec-key {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+
+  &__shortcuts {
+    background: #1a1f27;
+    border: 1px solid #2a313d;
+    border-radius: 8px;
+    padding: 12px 14px;
+
+    &-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #d8d4cb;
+      flex-wrap: wrap;
+    }
+
+    kbd {
+      font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      flex-shrink: 0;
+    }
+
+    li > span {
+      color: #d8d4cb;
+      flex: 1;
+      min-width: 0;
+    }
+  }
+}
