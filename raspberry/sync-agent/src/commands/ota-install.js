@@ -488,7 +488,7 @@ async function extractAndInstall(packagePath, version, stepTracker) {
     }
 
     // Installer les paquets apt manquants
-    const requiredAptPackages = ['x11-utils', 'edid-decode'];
+    const requiredAptPackages = ['x11-utils', 'edid-decode', 'cec-utils', 'ffmpeg', 'xdotool'];
     try {
       const missingPackages = [];
       for (const pkg of requiredAptPackages) {
