@@ -1,1 +1,100 @@
-// SPEC-V2-LAYOUT-01 — variant placeholder, populated in upcoming phases.
+// SPEC-V2-LAYOUT-01 — Mobile C "Tableur ultra-dense"
+// Cible : opérateur très expérimenté, plusieurs matchs/semaine.
+// Vidéos visibles à fold (375×760) : 14.
+//
+// Hero 56 / row 28px / widgets repliés par défaut. Type 12px (RGAA AA — 12px
+// est le minimum acceptable pour la lisibilité).
+//
+// Référence pixel : `MobileC` dans remote-v2-mobile.jsx l. 427-565.
+
+.remote-v2.layout-mobile-compact {
+  @include r2-mobile-only {
+    --r2-hero-h: 56px;
+    --r2-row-h: 28px;
+    --r2-padding-x: 8px;
+    --r2-type-row: 12px;
+
+    .r2-header {
+      padding: 4px 10px;
+      min-height: 56px;
+    }
+
+    .r2-hero {
+      margin: 6px 8px 0;
+      min-height: var(--r2-hero-h);
+    }
+    .r2-hero-eyebrow {
+      display: none; // gain vertical
+    }
+    .r2-hero-main {
+      padding: 4px 8px;
+      gap: 6px;
+    }
+    .r2-tv-thumb {
+      width: 36px;
+      height: 22px;
+    }
+    .r2-hero-info .r2-video-name {
+      font-size: 12px;
+    }
+
+    // Widgets repliés par défaut : si le composant a un état collapsed, le
+    // styler ; sinon on cache le contenu et on laisse un toggle visible 32px.
+    // Le détail UX (toggle) viendra dans une PR séparée si demandé — ici on
+    // applique la règle SCSS qui réduit drastiquement l'empreinte.
+    .r2-widgets {
+      max-height: 32px;
+      overflow: hidden;
+      margin: 4px 8px 0;
+
+      &.is-expanded,
+      &[data-expanded='true'] {
+        max-height: none;
+      }
+    }
+
+    // Liste type tableur — colonnes alignées, séparateur 1px, pas de gap
+    .r2-categories {
+      .r2-video-list,
+      .r2-video-rows,
+      .r2-cat-videos {
+        gap: 0;
+      }
+    }
+
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 2px var(--r2-padding-x);
+      border-bottom: 1px solid $border-subtle;
+      border-radius: 0;
+      gap: 6px;
+      align-items: center;
+
+      .r2-vr-thumb,
+      .r2-video-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 2px;
+      }
+      .r2-vr-name {
+        font-size: var(--r2-type-row);
+        font-weight: 500;
+      }
+      .r2-vr-meta,
+      .r2-vr-duration {
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        flex: 0 0 44px;
+        text-align: right;
+      }
+
+      // Phase chip 60px à gauche pour respect de la grille colonne
+      .r2-vr-phase,
+      .r2-vr-chip {
+        flex: 0 0 60px;
+        font-size: 10px;
+        text-transform: uppercase;
+      }
+    }
+  }
+}
