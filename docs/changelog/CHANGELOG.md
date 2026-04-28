@@ -1,3 +1,9 @@
+## [3.261.3](https://github.com/Tallec7/neopro/compare/v3.261.2...v3.261.3) (2026-04-28)
+
+### Bug Fixes
+
+- **content:** centralize cascade delete UX in VideoDeleteService ([#678](https://github.com/Tallec7/neopro/issues/678)) ([fd3243f](https://github.com/Tallec7/neopro/commit/fd3243f04c1c2dc04391e7ec5934506d121ed330))
+
 ## [3.261.2](https://github.com/Tallec7/neopro/compare/v3.261.1...v3.261.2) (2026-04-28)
 
 ### Bug Fixes
