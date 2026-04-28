@@ -410,7 +410,7 @@ Si le club a besoin de Stramatel ou d'offline → installer un Pi et passer en *
 
 ### Moyen terme — Contenus différenciés (Q3 2026)
 
-→ **Ciblage `targetDisplay`** : Un seul développement (~5 jours) qui bénéficie aux **3 scénarios** D2, E2 et C. Paramètre `?display=N` dans l'URL, sélecteur de display dans la Remote, filtrage Socket.IO côté TV.
+→ **Ciblage `targetDisplay`** : Un seul développement qui bénéficie aux **3 scénarios** D2, E2 et C. Paramètre `?display=N` dans l'URL, sélecteur de display dans la Remote, filtrage Socket.IO côté TV. **Estimation initiale 5j à re-chiffrer** — une partie de la plomberie (registry displays, event `displays-changed`, modèle DB `sites.displays`) est déjà livrée par [PROP-002](./PROP-002-tv-led-dual-output.md) Phases 1-5. Voir Phase 2 ci-dessous pour le détail des tâches restantes.
 
 ### Moyen terme — Optimisation WiFi Pi 5 pour multi-TV
 
@@ -499,19 +499,21 @@ Pour les clubs E1 avec 4+ TV, passer le hotspot Pi 5 en WiFi AC :
 | Script de détection Pi 4 vs Pi 5 pour auto-config WiFi N/AC          | 2h     |
 | Documenter le fallback 2.4GHz pour les devices non-5GHz              | 30min  |
 
-### Phase 2 — Ciblage par display (5 jours dev)
+### Phase 2 — Ciblage par display (5 jours dev → **à re-chiffrer**, voir note ci-dessous)
 
 Commun aux scénarios C, D2 et E2. Backlog unifié :
 
-| Tâche                                           | Fichiers impactés                                 | Effort |
-| ----------------------------------------------- | ------------------------------------------------- | ------ |
-| Paramètre `display` dans URL SaaS + Pi          | `tv.component.ts`, routing                        | 0.5j   |
-| Registry des displays connectés (cloud)         | `central-server/src/services/display-registry.ts` | 1j     |
-| Champ `targetDisplay` dans événements Socket.IO | `socket/handlers.js`, `remote.controller.ts`      | 0.5j   |
-| Filtrage côté TV des commandes non ciblées      | `tv.component.ts`                                 | 0.5j   |
-| Sélecteur de display dans la Remote             | `remote.component.ts/html`                        | 1j     |
-| Dashboard : nommage + monitoring displays       | `central-dashboard/src/app/features/sites/`       | 1j     |
-| Profil par display (assign playlist)            | `config-profiles.controller.ts`                   | 0.5j   |
+| Tâche                                           | Fichiers impactés                                 | Effort initial | Statut réel (audit 2026-04-28)                                                                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Paramètre `display` dans URL SaaS + Pi          | `tv.component.ts`, routing                        | 0.5j           | À faire                                                                                                                                                         |
+| Registry des displays connectés (cloud)         | `central-server/src/services/display-registry.ts` | 1j             | ✅ **Couvert par PROP-002** — `siteRepository.getDisplays/updateDisplays` ([site.repository.ts:750](../../central-server/src/repositories/site.repository.ts))  |
+| Champ `targetDisplay` dans événements Socket.IO | `socket/handlers.js`, `remote.controller.ts`      | 0.5j           | ⚠️ Partiel — `displays-changed` émis ([socket.service.ts:411](../../central-server/src/services/socket.service.ts)), reste à ajouter `targetDisplay` aux events |
+| Filtrage côté TV des commandes non ciblées      | `tv.component.ts`                                 | 0.5j           | À faire                                                                                                                                                         |
+| Sélecteur de display dans la Remote             | `remote.component.ts/html`                        | 1j             | À faire                                                                                                                                                         |
+| Dashboard : nommage + monitoring displays       | `central-dashboard/src/app/features/sites/`       | 1j             | ⚠️ Partiel — modèle DB `sites.displays` JSONB déjà en place via [n-display-model.sql](../../central-server/src/scripts/migrations/n-display-model.sql)          |
+| Profil par display (assign playlist)            | `config-profiles.controller.ts`                   | 0.5j           | À faire                                                                                                                                                         |
+
+> **⚠️ Note de cohérence inter-PROP (ajoutée 2026-04-28)** : depuis la rédaction initiale de cette Phase 2, [PROP-002](./PROP-002-tv-led-dual-output.md) a livré ses **Phases 1-5** ("✅ N-display model fully implemented"). Le modèle technique `sites.displays` JSONB + repository + Socket event `displays-changed` existe déjà. Conséquence : l'estimation initiale de **5 jours** pour la Phase 2 PROP-001 est probablement **surévaluée** — le vrai delta restant porte sur le paramètre URL `?display=N`, le filtrage côté TV, le sélecteur Remote et l'UI dashboard. **À re-chiffrer en s'appuyant sur le code livré par PROP-002 avant tout engagement commercial sur le scénario E2/D2.**
 
 ### Phase 3 — Résilience offline SaaS (future)
 
