@@ -385,6 +385,28 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (this.saasConfig.isSaasMode()) {
       this.currentProfileId = this.saasConfig.getSiteId() || null;
     }
+
+    // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push.
+    // En SaaS, pas de Pi → la TV browser nous envoie des frames JPEG en data
+    // URI via `tv-preview:saas-frame` (relayé par le central-server). On
+    // s'abonne explicitement pour ne pas faire bosser la TV pour rien.
+    if (this.saasConfig.isSaasMode()) {
+      this.setupSaasTvPreviewConsumer();
+    }
+  }
+
+  private setupSaasTvPreviewConsumer(): void {
+    this.socketService.on<{ frame?: string; ts?: number }>('tv-preview:saas-frame', data => {
+      if (data && typeof data.frame === 'string' && data.frame.startsWith('data:image/')) {
+        this.tvPreviewUrl.set(data.frame);
+        this.tvPreviewThrottled.set(false);
+      }
+    });
+    // Subscribe à la connexion + à chaque reconnect (au cas où la TV ait raté
+    // le subscribe initial). Le central-server relay TV ↔ Remote du même site.
+    const subscribe = () => this.socketService.emit('tv-preview:saas-subscribe', {});
+    subscribe();
+    this.socketService.on('reconnect', () => subscribe());
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
@@ -404,6 +426,10 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
+    // SPEC-V2-TVMON-01 — désabonner pour que la TV SaaS arrête sa capture.
+    if (this.saasConfig.isSaasMode()) {
+      try { this.socketService.emit('tv-preview:saas-unsubscribe', {}); } catch { /* socket déjà disconnect */ }
+    }
   }
 
   private widgetsStorageKey(): string {

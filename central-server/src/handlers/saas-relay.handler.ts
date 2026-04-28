@@ -172,6 +172,21 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     socket.to(siteId).emit('match-info-updated', data);
   });
 
+  // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push relay.
+  // En SaaS, pas de Pi → pas de MJPEG. La TV browser capture son <video>
+  // actif vers un canvas et push des frames JPEG en data URI via Socket.IO.
+  // Le central relaye TV ↔ Remote du même site. Pas de persistence : si
+  // personne ne regarde, la TV ne capture rien (subscribe-driven).
+  socket.on('tv-preview:saas-subscribe', () => {
+    socket.to(siteId).emit('tv-preview:saas-subscribe');
+  });
+  socket.on('tv-preview:saas-unsubscribe', () => {
+    socket.to(siteId).emit('tv-preview:saas-unsubscribe');
+  });
+  socket.on('tv-preview:saas-frame', (data: Record<string, unknown>) => {
+    socket.to(siteId).emit('tv-preview:saas-frame', data);
+  });
+
   // ADR-090 — scoreboard-state push depuis la Remote SaaS (pas de JWT : relay socket).
   // Le Remote SaaS est déjà authentifié par son siteId room (saas-register).
   // Le payload est validé par `validateScoreboardStatePush` avant persistence + broadcast.
