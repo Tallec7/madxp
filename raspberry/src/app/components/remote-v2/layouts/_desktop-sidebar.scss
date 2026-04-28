@@ -1,1 +1,128 @@
-// SPEC-V2-LAYOUT-01 — variant placeholder, populated in upcoming phases.
+// SPEC-V2-LAYOUT-01 — PC B "2 colonnes sidebar + browse" (recommandé régie standard)
+// Cible : régie standard, vidéos visibles à fold (1280×820) : 18 (3×6 cards).
+//
+// Layout : grid `320px 1fr` gap 24px.
+//   Sidebar gauche (sticky) : header + hero (120px) + widgets (140px) empilés.
+//   Browse droite : grid auto-fill cards 220×120px, gap 16px.
+//
+// Référence pixel : `Remote V2 Propositions.html` artboard "B · Sidebar+browse"
+// (mocks React `DesktopB` dans remote-v2-desktop.jsx l. 217-456).
+
+@include r2-desktop-up {
+  .remote-v2.layout-desktop-sidebar {
+    --r2-hero-h: 120px;
+    --r2-widgets-h: 140px;
+    --r2-card-h: 120px;
+    --r2-padding-x: 32px;
+    --r2-type-row: 14px;
+
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    padding: 24px var(--r2-padding-x);
+    align-items: start;
+
+    // Header n'est plus sticky en haut de page : il s'intègre dans la sidebar
+    .r2-header {
+      position: relative;
+      top: auto;
+      grid-column: 1 / 2;
+      border-radius: 12px;
+      border: 1px solid $border-subtle;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+
+    // Sidebar empile hero + widgets, sticky sur scroll
+    .r2-hero {
+      grid-column: 1 / 2;
+      margin: 0;
+      position: sticky;
+      top: 24px;
+      min-height: var(--r2-hero-h);
+    }
+    .r2-widgets {
+      grid-column: 1 / 2;
+      margin: 0;
+      position: sticky;
+      top: calc(24px + var(--r2-hero-h) + 12px);
+      min-height: var(--r2-widgets-h);
+    }
+
+    // Le bloc droit (phase tabs + categories + browse) prend la 2e colonne
+    // sur toute la hauteur. Tout ce qui n'est pas explicitement assigné à la
+    // colonne 1 retombe en colonne 2 par défaut grâce à grid-auto-flow.
+    .r2-phase-tabs,
+    .r2-categories,
+    .r2-browse,
+    .r2-recording-warning,
+    .r2-toast,
+    .r2-sheet-backdrop,
+    .r2-sheet {
+      grid-column: 2 / 3;
+    }
+
+    // Bascule la liste vidéo en grid de cards (auto-fill responsive)
+    .r2-categories {
+      .r2-video-list,
+      .r2-video-rows,
+      .r2-cat-videos {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+      }
+    }
+
+    .r2-video-row {
+      flex-direction: column;
+      align-items: stretch;
+      min-height: var(--r2-card-h);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid $border-subtle;
+      background: $surface;
+      gap: 8px;
+
+      &:hover {
+        border-color: $accent;
+        transform: translateY(-1px);
+        transition:
+          border-color 120ms,
+          transform 120ms;
+      }
+
+      .r2-vr-thumb,
+      .r2-video-thumb {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        border-radius: 6px;
+      }
+
+      .r2-vr-name {
+        font-size: var(--r2-type-row);
+        white-space: normal;
+        line-height: 1.3;
+      }
+    }
+
+    // Sheet backdrop & sheets restent dans la colonne 2 mais re-fixés en
+    // overlay quand affichés (la pref sheet et options sheet doivent flotter
+    // au-dessus de tout)
+    .r2-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      grid-column: auto;
+    }
+    .r2-sheet {
+      position: fixed;
+      grid-column: auto;
+    }
+  }
+}
+
+@include r2-wide-up {
+  .remote-v2.layout-desktop-sidebar {
+    grid-template-columns: 360px 1fr;
+    padding: 32px 48px;
+  }
+}
