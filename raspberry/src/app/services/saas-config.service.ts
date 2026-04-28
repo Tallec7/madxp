@@ -220,4 +220,29 @@ export class SaasConfigService {
   public getFeatureOverrides(): Record<string, boolean> {
     return { ...this.featureOverrides };
   }
+
+  /**
+   * Profil sélectionné côté SaaS (clé `neopro_saas_selected_profile`).
+   * Retourne null en mode Pi natif (pas de profil SaaS).
+   */
+  public getSelectedProfileId(): string | null {
+    try {
+      return localStorage.getItem(SELECTED_PROFILE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Construit une clé localStorage scopée par siteId + profileId pour isoler
+   * les préférences entre les sites SaaS partageant le même domaine.
+   * En mode Pi natif (siteId vide), retourne la clé legacy non scopée
+   * (1 Pi = 1 device, le scoping est inutile).
+   */
+  public getScopedStorageKey(base: string): string {
+    const siteId = this.getSiteId();
+    if (!siteId) return base;
+    const profileId = this.getSelectedProfileId() || 'default';
+    return `${base}:${siteId}:${profileId}`;
+  }
 }

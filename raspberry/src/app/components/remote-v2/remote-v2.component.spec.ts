@@ -87,11 +87,16 @@ describe('RemoteV2Component', () => {
     };
     mockSaas = jasmine.createSpyObj('SaasConfigService', [
       'getClubName', 'getSiteName', 'getSiteId', 'isSaasMode', 'getAvailableProfiles', 'loadProfileConfiguration',
+      'getScopedStorageKey', 'getSelectedProfileId',
     ]);
     mockSaas.getClubName.and.returnValue('NEO');
     mockSaas.getSiteName.and.returnValue('NEO');
     mockSaas.getSiteId.and.returnValue('site-123');
     mockSaas.isSaasMode.and.returnValue(false);
+    // Tests vérifient les clés legacy non scopées — le mock retourne la clé brute
+    // (équivalent au comportement Pi natif où siteId est vide → fallback legacy).
+    mockSaas.getScopedStorageKey.and.callFake((base: string) => base);
+    mockSaas.getSelectedProfileId.and.returnValue(null);
 
     mockLocalOptions = jasmine.createSpyObj('LocalOptionsService', [
       'getOptions', 'getOptions$', 'updateOptions', 'updateOverlayOptions', 'updateBreakingNewsOptions',
