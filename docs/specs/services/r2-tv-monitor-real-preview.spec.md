@@ -2,12 +2,14 @@
 
 > **Référence** : SPEC-V2-TVMON-01
 > **Owner** : Daisy
-> **Statut** : 📋 Spec rédigée — implémentation P2 (post-MVP layouts), déclencheur client Premium
+> **Statut** : 🚧 P0 en cours d'implémentation (V1 MJPEG)
 > **Dernière revue** : 2026-04-28
-> **Code principal (futur)** :
-> - `raspberry/server/services/tv-preview.service.js` (nouveau)
-> - `raspberry/src/app/components/remote-v2/parts/r2-tv-monitor.component.ts` (enrichi)
-> **ADR liés** : ADR à créer avant implémentation (numéro à allouer dans `docs/adr/README.md`)
+> **Code principal** :
+> - `raspberry/server/services/tv-preview.service.js`
+> - `raspberry/server/routes/tv-preview.js`
+> - `raspberry/server/socket/handlers.js` (events `tv-preview:*`)
+> - `raspberry/src/app/components/remote-v2/parts/r2-tv-monitor.component.ts`
+> **ADR liés** : [ADR-101](../../adr/ADR-101-tv-preview-mjpeg-strategy.md) — MJPEG V1, WebRTC V2 conditionnel
 > **`.claude/rules/` lié** : `raspberry.md`, `context.md`, `testing.md`
 > **Annexe technique** : [`r2-tv-monitor-real-preview.cdc.html`](./r2-tv-monitor-real-preview.cdc.html) — cahier des charges complet 12 sections (3 options comparées MJPEG/WebRTC/HLS, plan de phases, contrats détaillés)
 
@@ -44,7 +46,7 @@ L'opérateur régie pro qui pilote 30+ vidéos par match en layout PC C (cf. SPE
 | Remote → Pi | `tv-preview:start` | `{ siteId, sessionId, layoutHint: "pc-c" }` |
 | Remote → Pi | `tv-preview:stop` | `{ siteId, sessionId }` |
 | Pi → Remote | `tv-preview:throttled` | `{ reason: "cpu" \| "temp", newFps?, suspended? }` |
-| HTTP | `GET /preview.mjpeg` (admin-server :3001) | `multipart/x-mixed-replace; boundary=frame`, JPEG 640×360 q=70, 10 fps. Auth cookie session-pi (LAN) ou token HMAC 5 min (cloud distant) |
+| HTTP | `GET /preview.mjpeg` (socket-server :3000) | `multipart/x-mixed-replace; boundary=frame`, JPEG 640×360 q=70, 10 fps. Auth via socket auth token (cf. `security.socketAuthToken` config) ou token HMAC 5 min (cloud distant) |
 
 ## Comportements observables
 
@@ -63,7 +65,7 @@ L'opérateur régie pro qui pilote 30+ vidéos par match en layout PC C (cf. SPE
 - **Pi 4** : capacité hardware insuffisante en V1 (charge CPU > 25 % seuil critique). Désactivé via flag `tvPreviewEnabled` + détection sync-agent (`/proc/device-tree/model`).
 - **4G régie (mobile hotspot)** : ~3 Mbps acceptable mais coûteux ; throttle à 5 fps en fallback bande passante.
 - **NAT symétrique côté régie distante** : V1 MJPEG OK si Pi joignable LAN ; V2 WebRTC nécessiterait un serveur TURN (composant infra à provisionner sur déclencheur).
-- **CSP `img-src`** : la Remote charge `'self'` actuellement → étendre à `http://*.local:3001` + `http://192.168.4.1:3001` (IP hotspot Pi). Pas de changement `script-src`.
+- **CSP `img-src`** : la Remote charge `'self'` actuellement → étendre à `http://*.local:3000` + `http://192.168.4.1:3000` (IP hotspot Pi). Pas de changement `script-src`.
 - **Crash GPU V3D** : reuse le mécanisme `GPU_DECODE_FALLBACK_FILE` existant (cf. `.claude/rules/raspberry.md`) — auto-désactivation 30 min sur crash hardware.
 
 ## Déclencheurs migration V1 → V2 (WebRTC)
@@ -82,7 +84,7 @@ Voir `.claude/rules/raspberry.md` pour les invariants techniques smoke-testés. 
 
 - **Ne jamais** dupliquer `--disable-features` / `--enable-features` dans le launch Chromium kiosk pour la capture.
 - **Ne jamais** mettre `--disable-gpu-memory-buffer-video-frames` sur Pi 5 (force software complet → dégrade la TV).
-- **Ne jamais** ouvrir un nouveau port pour le stream — réutiliser le port :3001 admin-server (CSP nginx déjà ouverte).
+- **Ne jamais** ouvrir un nouveau port pour le stream — réutiliser le port :3000 socket-server (CSP nginx déjà ouverte).
 - **Ne jamais** activer le preview en mode SaaS / demo (pas de Pi physique → l'event `tv-preview:capability` ne doit pas être émis).
 - **Ne jamais** retirer le single-subscriber limit (2e connexion = 429) — protège la bande passante du Pi sous charge match.
 
@@ -96,7 +98,7 @@ Voir `.claude/rules/raspberry.md` pour les invariants techniques smoke-testés. 
 
 ## Évolutions possibles (backlog léger)
 
-- [ ] P0 MJPEG MVP Pi 5 (~4 j-h) — capture Puppeteer screencast + JPEG turbo + endpoint admin-server
+- [ ] P0 MJPEG MVP Pi 5 (~4 j-h) — capture Puppeteer screencast + JPEG turbo + endpoint socket-server
 - [ ] P1 robustesse (~3 j-h) — métriques Prometheus, dashboard Grafana, token HMAC, throttle UI
 - [ ] P2 WebRTC migration (~2-7 j-h selon NAT/TURN) — conditionnel signal client
 - [ ] ADR à rédiger avant P0 (stratégie preview Pi → Remote, trade-offs MJPEG/WebRTC/HLS)

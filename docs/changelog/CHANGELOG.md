@@ -1,3 +1,21 @@
+# [3.265.0](https://github.com/Tallec7/neopro/compare/v3.264.0...v3.265.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** persist préférences UX en DB par (site, profil) — ADR-101 ([#691](https://github.com/Tallec7/neopro/issues/691)) ([82b5c3f](https://github.com/Tallec7/neopro/commit/82b5c3f1927b96b84e00dd35b29ab7a4e48c6efd)), closes [#688](https://github.com/Tallec7/neopro/issues/688)
+
+# [3.264.0](https://github.com/Tallec7/neopro/compare/v3.263.3...v3.264.0) (2026-04-28)
+
+### Features
+
+- **tv-preview:** preview vidéo réel <app-r2-tv-monitor> régie pro PC C — SPEC-V2-TVMON-01 P0 + ADR-101 ([#690](https://github.com/Tallec7/neopro/issues/690)) ([ca28661](https://github.com/Tallec7/neopro/commit/ca2866195064739cda9a84fcfb99d85325961930))
+
+## [3.263.3](https://github.com/Tallec7/neopro/compare/v3.263.2...v3.263.3) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** Mobile A polish — widgets grid + overflow + z-index ([#689](https://github.com/Tallec7/neopro/issues/689)) ([84a54bc](https://github.com/Tallec7/neopro/commit/84a54bcdddb5556a06a410036de37ad8d9fe31c9)), closes [#682](https://github.com/Tallec7/neopro/issues/682)
+
 ## [3.263.2](https://github.com/Tallec7/neopro/compare/v3.263.1...v3.263.2) (2026-04-28)
 
 ### Bug Fixes

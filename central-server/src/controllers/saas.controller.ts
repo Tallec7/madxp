@@ -9,7 +9,12 @@
  */
 
 import { Request, Response } from 'express';
-import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
+import {
+  siteRepository,
+  configProfileRepository,
+  videoRepository,
+  remotePreferencesRepository,
+} from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
 import { signVideoStreamToken } from '../services/video-token.service';
 import { metricsService } from '../services/metrics.service';
@@ -479,6 +484,83 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     });
   } catch (error) {
     logger.error('Error loading SaaS profile config', { siteId: req.params.siteId, profileId: req.params.profileId, error });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * GET /api/saas/:siteId/profiles/:profileId/preferences  (ADR-102)
+ *
+ * Charge les préférences UX (prefs + widgets) sauvegardées pour ce profil.
+ * Retourne `{ prefs: {}, widgets: {} }` si aucune ligne — le frontend
+ * applique ses defaults.
+ */
+export async function getRemotePreferences(req: Request, res: Response) {
+  try {
+    const { siteId, profileId } = req.params;
+
+    const profile = await configProfileRepository.findById(profileId);
+    if (!profile || profile.site_id !== siteId) {
+      return res.status(404).json({ error: 'Profil non trouvé' });
+    }
+
+    const row = await remotePreferencesRepository.findBySiteAndProfile(siteId, profileId);
+
+    return res.json({
+      prefs: row?.prefs ?? {},
+      widgets: row?.widgets ?? {},
+      updatedAt: row?.updated_at ?? null,
+    });
+  } catch (error) {
+    logger.error('Error loading remote preferences', {
+      siteId: req.params.siteId,
+      profileId: req.params.profileId,
+      error,
+    });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * PUT /api/saas/:siteId/profiles/:profileId/preferences  (ADR-102)
+ *
+ * Upsert des préférences UX. Body validé par Joi (whitelist stricte). Au
+ * moins un des deux objets `prefs` / `widgets` doit être fourni — l'autre
+ * est conservé tel quel via le `COALESCE` du repository.
+ *
+ * Sécurité : route protégée par `verifyRemotePin` (cf. saas.routes.ts) →
+ * un client doit avoir le même token de device qu'utilisé pour lire la
+ * config du profil. Impossible de polluer les prefs sans le PIN du profil
+ * (si défini), ou ouvert si le profil n'a pas de PIN — comportement
+ * cohérent avec la lecture publique de la config.
+ */
+export async function upsertRemotePreferences(req: Request, res: Response) {
+  try {
+    const { siteId, profileId } = req.params;
+
+    const profile = await configProfileRepository.findById(profileId);
+    if (!profile || profile.site_id !== siteId) {
+      return res.status(404).json({ error: 'Profil non trouvé' });
+    }
+
+    const { prefs, widgets } = req.body as {
+      prefs?: Record<string, unknown>;
+      widgets?: Record<string, unknown>;
+    };
+
+    const row = await remotePreferencesRepository.upsert(siteId, profileId, { prefs, widgets });
+
+    return res.json({
+      prefs: row.prefs,
+      widgets: row.widgets,
+      updatedAt: row.updated_at,
+    });
+  } catch (error) {
+    logger.error('Error upserting remote preferences', {
+      siteId: req.params.siteId,
+      profileId: req.params.profileId,
+      error,
+    });
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 }

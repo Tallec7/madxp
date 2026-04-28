@@ -35,6 +35,7 @@ const hostapdTelemetry = require('./services/hostapd-telemetry');
 const { syncFromCloud: hotspotSyncFromCloud } = require('./services/hotspot-sync');
 const { syncFromCloud: webContentSyncFromCloud } = require('./services/web-content-sync');
 const { syncFromCloud: featureFlagsSyncFromCloud } = require('./services/feature-flags-sync');
+const { bootstrapTvPreviewFlag } = require('./services/tv-preview-bootstrap');
 const licenseCache = require('./license-cache');
 const localSocket = require('./services/local-socket');
 const commands = require('./commands');
@@ -81,6 +82,14 @@ class NeoproSyncAgent {
 
     // Nettoyer les fichiers legacy des versions précédentes (non-bloquant)
     this.cleanupLegacyFiles();
+
+    // SPEC-V2-TVMON-01 / ADR-101 — bootstrap du flag tvPreviewEnabled selon le modèle Pi.
+    // Pi 5 → enabled, Pi 4 / unknown → disabled. Le socket-server lira le flag au boot.
+    try {
+      await bootstrapTvPreviewFlag(config.paths.config);
+    } catch (err) {
+      logger.warn('[tv-preview-bootstrap] failed (non-fatal):', err.message);
+    }
 
     // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS

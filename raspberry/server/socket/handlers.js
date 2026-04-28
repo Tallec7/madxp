@@ -26,11 +26,43 @@ const createStateBroadcaster = require('./state-broadcaster');
  * @fires io#license_update — `{ status: string, reason?: string }`
  * @fires io#license_blocked — `{ status: string, reason?: string }`
  */
-module.exports = function registerSocketHandlers({ io, stateService, configPath, hdmiService }) {
+module.exports = function registerSocketHandlers({ io, stateService, configPath, hdmiService, tvPreviewService }) {
   const broadcaster = createStateBroadcaster(io, stateService);
 
   io.on('connection', (socket) => {
     console.log('Client connect\u00e9:', socket.id);
+
+    /**
+     * SPEC-V2-TVMON-01 / ADR-101 \u2014 TV preview capability negotiation.
+     * \u00c9mis \u00e0 chaque (re)connexion. La Remote ignore une `version` majeure inconnue.
+     * Si le service est d\u00e9sactiv\u00e9 (Pi 4 / SaaS / demo / GPU fallback), l'event annonce
+     * `available: false` et le composant reste sur le placeholder.
+     */
+    if (tvPreviewService && typeof tvPreviewService.capability === 'function') {
+      try {
+        socket.emit('tv-preview:capability', tvPreviewService.capability());
+      } catch (err) {
+        console.warn('[tv-preview] capability emit failed:', err.message);
+      }
+    }
+
+    /**
+     * Remote \u2192 Pi : signale que le composant tv-monitor est ouvert (layout PC C).
+     * Sert de hook pour m\u00e9triques + logs ; la capture d\u00e9marre via la connexion HTTP
+     * /preview.mjpeg (subscribe), pas via cet event.
+     */
+    socket.on('tv-preview:start', (data) => {
+      console.log('[tv-preview] start request', { siteId: data?.siteId, layoutHint: data?.layoutHint });
+    });
+
+    /**
+     * Remote \u2192 Pi : composant ferm\u00e9 / layout chang\u00e9. Si on est dans une strat\u00e9gie
+     * o\u00f9 la capture continue tant qu'un subscriber HTTP est actif, ce event est
+     * informatif \u2014 pas d'action requise c\u00f4t\u00e9 service (l'unsubscribe HTTP fera l'arr\u00eat).
+     */
+    socket.on('tv-preview:stop', (data) => {
+      console.log('[tv-preview] stop signal', { siteId: data?.siteId });
+    });
 
     // --- Initial state sync (send full state to newly connected client) ---
     const state = stateService.getFullState();
