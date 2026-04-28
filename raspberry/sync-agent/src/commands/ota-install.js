@@ -488,7 +488,27 @@ async function extractAndInstall(packagePath, version, stepTracker) {
     }
 
     // Installer les paquets apt manquants
-    const requiredAptPackages = ['x11-utils', 'edid-decode', 'cec-utils', 'ffmpeg', 'xdotool'];
+    // Liste alignée sur install.sh (raspberry/install.sh ~ligne 354).
+    // Si un paquet est manquant sur le Pi (rare mais arrivé), l'OTA le réinstalle
+    // automatiquement. Les paquets purement build-time (git, curl) ou firmware
+    // (firmware-realtek/ralink) sont volontairement exclus.
+    const requiredAptPackages = [
+      'hostapd',
+      'dnsmasq',
+      'avahi-daemon',
+      'nginx',
+      'dhcpcd5',
+      'iw',
+      'rfkill',
+      'unclutter-xfixes',
+      'xdotool',
+      'x11-xserver-utils',
+      'x11-utils',
+      'chromium',
+      'cec-utils',
+      'edid-decode',
+      'ffmpeg'
+    ];
     try {
       const missingPackages = [];
       for (const pkg of requiredAptPackages) {
