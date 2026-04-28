@@ -134,6 +134,19 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  // Dedup signals (ADR-048) — N rows partagent le même fichier physique sur
+  // le FTP. Le badge prévient l'utilisateur que supprimer/replacer touche
+  // potentiellement plusieurs entrées (cf. feedback_video_dedup_checksum_trap).
+  duplicateBadge(video: ContentVideoRow): string | null {
+    if (!video.is_duplicate || !video.dup_count || video.dup_count < 2) return null;
+    return `×${video.dup_count}`;
+  }
+
+  duplicateTooltip(video: ContentVideoRow): string | null {
+    if (!video.is_duplicate || !video.dup_count) return null;
+    return `Ce fichier est référencé par ${video.dup_count} entrées (même contenu détecté par checksum). Aucun doublon de stockage : un seul fichier physique sur le FTP.`;
+  }
+
   // ── Data loading ──
 
   loadVideos(): void {

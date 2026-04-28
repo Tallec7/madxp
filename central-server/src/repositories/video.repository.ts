@@ -211,11 +211,18 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
       paramIndex++;
     }
 
+    // dup_count = nombre de rows partageant le même fichier physique (même
+    // checksum, ou à défaut même storage_path pour les rows legacy sans
+    // checksum). >1 ⇒ doublon. Window function = 1 seule passe SQL, pas de
+    // sous-requête N+1. Voir feedback_video_dedup_checksum_trap.md.
     const dataQuery = `
       SELECT id, filename, original_name, category, subcategory,
              file_size, duration, storage_path as url,
-             thumbnail_url, metadata, created_at, updated_at,
-             content_type, external_url
+             thumbnail_url, metadata, checksum, created_at, updated_at,
+             content_type, external_url,
+             COUNT(*) OVER (
+               PARTITION BY COALESCE(checksum, storage_path)
+             ) AS dup_count
       FROM videos
       ${whereClause}
       ORDER BY created_at DESC

@@ -30,6 +30,12 @@ export interface ContentVideoRow {
   // ADR-089 — Web content as first-class video
   content_type?: 'video' | 'web_page' | 'livestream';
   external_url?: string | null;
+  // Dedup signals (ADR-048) — surfacés pour matérialiser visuellement les
+  // doublons. dup_count = nombre de rows partageant le même fichier physique
+  // (même checksum, ou storage_path pour rows legacy). is_duplicate = dérivé.
+  checksum?: string | null;
+  dup_count?: number;
+  is_duplicate?: boolean;
 }
 
 export interface PaginationInfo {

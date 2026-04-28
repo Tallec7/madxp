@@ -8,6 +8,18 @@
 
 ---
 
+## Semaine 18 — 28 Avril-4 Mai 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- Bibliothèque vidéo : badge `×N` sur les miniatures quand plusieurs entrées DB pointent sur le même fichier physique FTP. Évite la confusion "pourquoi je vois `2_MIN.mp4` deux fois ?" — au survol, une infobulle explique que le contenu est identique (détecté par checksum) et qu'un seul fichier est stocké côté serveur ([#673](https://github.com/Tallec7/neopro/pull/673)).
+
+### 🧹 Pour l'équipe
+
+- 5 garde-fous smoke + 2 invariants `.claude/rules/dashboard.md` pour bloquer toute régression du badge dedup ([#673](https://github.com/Tallec7/neopro/pull/673)).
+
+---
+
 ## Semaine 17 — 21-27 Avril 2026
 
 > Audit Lead Dev complet par Claude. Note projet : 78/100 → potentiel 85+ après merge des PRs ouvertes.
