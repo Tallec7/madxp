@@ -1119,6 +1119,13 @@ $danger-bg: #ffecec;
     border-color: $accent;
   }
 
+  // SPEC-V2-ICONS-01 — gabarit icône + texte (gap fiable, pas de margin sur l'icône)
+  &--with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   &--secondary {
     color: $text-muted;
     font-weight: 600;
@@ -1153,10 +1160,19 @@ $danger-bg: #ffecec;
     color: $accent-deep;
     font-weight: 800;
 
+    // SPEC-V2-ICONS-01 — Lucide "check" via masque SVG, recoloré par background-color.
     &::after {
-      content: '✓';
-      font-size: 14px;
-      color: $accent;
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      background-color: $accent;
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+      mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
     }
   }
 
@@ -1568,6 +1584,14 @@ $danger-bg: #ffecec;
       background: $dark;
       color: #fff;
       border-color: $dark;
+    }
+
+    // SPEC-V2-ICONS-01 — gap icône + label (Pause/Reprendre)
+    &.r2-btn--with-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
   }
 }
@@ -2026,6 +2050,9 @@ $danger-bg: #ffecec;
 }
 
 .r2-quick-msgs-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   padding: 10px;
   background: $bg;
   border-radius: 10px;
@@ -2033,6 +2060,11 @@ $danger-bg: #ffecec;
   color: $text-muted;
   line-height: 1.4;
   margin-bottom: 4px;
+
+  app-r2-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
 }
 
 .r2-quick-msgs-list {

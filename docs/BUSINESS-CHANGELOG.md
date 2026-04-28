@@ -12,6 +12,7 @@
 
 ### 🎯 Pour le club (NLF, prospects)
 
+- **Télécommande V2 : icônes harmonisées cross-OS** ([cette PR](https://github.com/Tallec7/neopro)) — les 11 emojis Unicode de la Remote V2 (📷 modifier logo, 🔁 nouveau match, ⏸/▶ chrono, 💡 astuce breaking news, → période suivante, › chevrons prefs, ⚠/✓ statut erreurs vidéo) rendaient différemment selon iPad opérateur, tablette Android régie, PC Windows tribune ou PC Linux centre médias — parfois en tofu illisible. Migration vers une bibliothèque SVG inline contrôlée (`<app-r2-icon>` + registre Lucide MIT, 0 dépendance npm). Affichage pixel-identique partout, icônes teintables (rouge danger / blanc dark mode), accessibilité RGAA correcte (le lecteur d'écran lit "Modifier le logo" au lieu de "appareil photo emoji"). SPEC-V2-ICONS-01.
 - Bibliothèque vidéo : badge `×N` sur les miniatures quand plusieurs entrées DB pointent sur le même fichier physique FTP. Évite la confusion "pourquoi je vois `2_MIN.mp4` deux fois ?" — au survol, une infobulle explique que le contenu est identique (détecté par checksum) et qu'un seul fichier est stocké côté serveur ([#673](https://github.com/Tallec7/neopro/pull/673)).
 
 ### 🧹 Pour l'équipe

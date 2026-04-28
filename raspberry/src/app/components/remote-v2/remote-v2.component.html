@@ -216,7 +216,10 @@
           <option *ngFor="let p of getAvailablePeriods()" [value]="p">{{ p }}</option>
         </select>
       </div>
-      <button class="r2-menu-item" (click)="nextPeriod()">→ Période suivante</button>
+      <button class="r2-menu-item r2-menu-item--with-icon" (click)="nextPeriod()">
+        <app-r2-icon name="arrow-right" [size]="14"></app-r2-icon>
+        <span>Période suivante</span>
+      </button>
 
       <hr />
 
@@ -233,7 +236,9 @@
               {{ teamShort(scoreService.currentScore.homeTeam) }}
             </span>
             <input type="file" accept="image/*" (change)="onLogoUpload($event, 'home')" hidden />
-            <span class="r2-team-logo-edit">📷</span>
+            <span class="r2-team-logo-edit" aria-hidden="true">
+              <app-r2-icon name="camera" [size]="14"></app-r2-icon>
+            </span>
           </label>
           <input
             type="text"
@@ -268,7 +273,9 @@
               {{ teamShort(scoreService.currentScore.awayTeam) }}
             </span>
             <input type="file" accept="image/*" (change)="onLogoUpload($event, 'away')" hidden />
-            <span class="r2-team-logo-edit">📷</span>
+            <span class="r2-team-logo-edit" aria-hidden="true">
+              <app-r2-icon name="camera" [size]="14"></app-r2-icon>
+            </span>
           </label>
           <input
             type="text"
@@ -313,8 +320,12 @@
 
       <hr />
 
-      <button class="r2-menu-item r2-menu-item--danger" (click)="startNewMatch()">
-        🔁 Démarrer un nouveau match
+      <button
+        class="r2-menu-item r2-menu-item--danger r2-menu-item--with-icon"
+        (click)="startNewMatch()"
+      >
+        <app-r2-icon name="refresh-cw" [size]="14"></app-r2-icon>
+        <span>Démarrer un nouveau match</span>
       </button>
     </div>
   </div>
@@ -601,8 +612,9 @@
     <div class="r2-sheet-body">
       <div class="r2-module-chrono">{{ chronoDisplay }}</div>
       <div class="r2-module-chrono-btns">
-        <button class="dark" (click)="toggleTimer()">
-          {{ timerService.isRunning ? '⏸ Pause' : '▶ Reprendre' }}
+        <button class="dark r2-btn--with-icon" (click)="toggleTimer()">
+          <app-r2-icon [name]="timerService.isRunning ? 'pause' : 'play'" [size]="14"></app-r2-icon>
+          <span>{{ timerService.isRunning ? 'Pause' : 'Reprendre' }}</span>
         </button>
         <button (click)="resetTimer()">RAZ</button>
       </div>
@@ -634,14 +646,15 @@
             <span
               class="r2-quick-msg-remove"
               (click)="$event.stopPropagation(); removeQuickMessage(i)"
-              aria-label="Retirer"
-              >×</span
             >
+              <app-r2-icon name="x" [size]="12" label="Retirer"></app-r2-icon>
+            </span>
           </button>
         </div>
       </div>
       <div class="r2-quick-msgs-hint" *ngIf="quickMessages.length === 0">
-        💡 Astuce : enregistre tes messages récurrents pour les rediffuser en 1 tap.
+        <app-r2-icon name="lightbulb" [size]="14"></app-r2-icon>
+        <span>Astuce : enregistre tes messages récurrents pour les rediffuser en 1 tap.</span>
       </div>
 
       <div class="r2-module-breaking-label">Texte du bandeau</div>

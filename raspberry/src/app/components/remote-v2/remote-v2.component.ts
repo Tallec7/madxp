@@ -44,6 +44,7 @@ import { R2BrowseComponent } from './parts/r2-browse.component';
 import { R2VideoRowComponent } from './parts/r2-video-row.component';
 import { R2GearSheetComponent, GearAction } from './parts/r2-gear-sheet.component';
 import { R2WidgetsToggleSheetComponent } from './parts/r2-widgets-toggle-sheet.component';
+import { R2IconComponent } from './icons/r2-icon.component';
 
 type Phase = 'before' | 'during' | 'after';
 type Loop = 'neutral' | 'before' | 'during' | 'after';
@@ -89,6 +90,7 @@ interface DisplayInfo {
     R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent,
     R2BrowseComponent, R2VideoRowComponent,
     R2GearSheetComponent, R2WidgetsToggleSheetComponent,
+    R2IconComponent,
   ],
   templateUrl: './remote-v2.component.html',
   styleUrl: './remote-v2.component.scss',
@@ -883,7 +885,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   getVideoInitials(video: PiConfigVideoEntry): string {
-    if (!video.name) return '▶';
+    // Sentinelle consommée par <r2-icon name="play"> côté template (SPEC-V2-ICONS-01).
+    if (!video.name) return '__icon_play__';
     const words = video.name.trim().split(/\s+/);
     return words.length >= 2
       ? (words[0][0] + words[1][0]).toUpperCase()
