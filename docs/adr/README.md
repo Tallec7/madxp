@@ -119,6 +119,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-100](ADR-100-find-video-by-id-storage-path-alias-contract.md)              | Contrat de l'alias `storage_path AS url` dans `findVideoById` (incident replace zombi 27/04) | Accepté                           | Avr 2026 |
 | [ADR-101](ADR-101-tv-preview-mjpeg-strategy.md)                                 | Stratégie de preview vidéo Pi → Remote (MJPEG V1, WebRTC V2 conditionnel) — SPEC-V2-TVMON-01 | Accepté                           | Avr 2026 |
 | [ADR-102](ADR-102-remote-preferences-db-persistence.md)                         | Persistance DB des préférences UX télécommande par (site, profil) — amend ADR-062            | Accepté                           | Avr 2026 |
+| [ADR-103](ADR-103-web-and-livestream-content-in-playback-loops.md)              | Pages web & livestreams en mode manuel ET dans les boucles vidéo — étend ADR-089             | Proposé                           | Avr 2026 |
 
 ### Supersédés
 
