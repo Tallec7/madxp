@@ -30,6 +30,18 @@
 
 Le PSK WiFi du hotspot d'un Pi vit chiffré en DB cloud (AES-256-GCM), le Pi le récupère au boot et à chaque rotation déclenchée depuis le dashboard admin, écrit `hostapd.conf` localement et redémarre `hostapd` — le Pi consomme, jamais ne dicte.
 
+## Périmètre
+
+Domaine restreint à la gestion du PSK hotspot du Pi (consommation cloud → écriture locale `hostapd.conf`).
+
+- **Services backend** : `hotspot-config.service.ts`, `hotspot-psk-crypto.service.ts`, `hotspot-config.repository.ts`, `hotspot-config.controller.ts`
+- **Composants Pi** : `raspberry/sync-agent/src/services/hotspot-sync.js`, `raspberry/sync-agent/src/agent.js`, `raspberry/admin/services/hostapd-reader.service.js`
+- **Routes API** : `GET/PUT/POST /api/sites/:id/hotspot-config*`
+- **Tables DB** : `sites.wifi_psk_encrypted`, `sites.wifi_psk_iv`, `sites.wifi_psk_auth_tag`, `sites.wifi_ssid`
+- **ADR** : ADR-073, ADR-074, ADR-076
+- **Smoke tests** : `smoke-network-wifi.test.ts`
+- **`.claude/rules/`** : `hotspot-psk.md`
+
 ## Règles métier (ce qui DOIT marcher)
 
 - **Cloud canonique** : `sites.wifi_psk_encrypted` (+ `wifi_psk_iv`, `wifi_psk_auth_tag`, `wifi_ssid`) est la source unique de vérité. Aucun Pi ne dicte un PSK au cloud (le legacy `POST /bootstrap` est `IF NULL` only).
