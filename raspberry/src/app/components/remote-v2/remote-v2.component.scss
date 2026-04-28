@@ -55,11 +55,44 @@ $danger-bg: #ffecec;
   -webkit-font-smoothing: antialiased;
 }
 
+// ---- Tokens densité (SPEC-V2-LAYOUT-01) ------------------------------------
+// Variables CSS surchargées par les classes `.layout-mobile-*` / `.layout-desktop-*`.
+// Valeurs par défaut = layout actuel (mobile-classic / desktop-sidebar appliqués
+// par defaut via les partials `layouts/_*.scss`).
 .remote-v2 {
+  --r2-hero-h: 200px;
+  --r2-widgets-h: 180px;
+  --r2-row-h: 56px;
+  --r2-card-h: 90px;
+  --r2-padding-x: 16px;
+  --r2-type-row: 15px;
+  --r2-list-header-h: 0px;
+
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   padding-bottom: 24px;
+}
+
+// ---- Breakpoints helpers ---------------------------------------------------
+$bp-tablet-min: 768px;
+$bp-desktop-min: 1024px;
+$bp-wide-min: 1440px;
+
+@mixin r2-mobile-only {
+  @media (max-width: #{$bp-desktop-min - 1}) {
+    @content;
+  }
+}
+@mixin r2-desktop-up {
+  @media (min-width: #{$bp-desktop-min}) {
+    @content;
+  }
+}
+@mixin r2-wide-up {
+  @media (min-width: #{$bp-wide-min}) {
+    @content;
+  }
 }
 
 // ---- Header ---------------------------------------------------------------
@@ -1187,6 +1220,70 @@ $danger-bg: #ffecec;
   color: $text-muted;
   font-size: 12px;
   font-weight: 600;
+}
+
+// SPEC-V2-LAYOUT-01 — section "Affichage" dans la sheet prefs
+.r2-pref-section-title {
+  margin: 18px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-muted;
+  border-top: 1px solid $border-subtle;
+  padding-top: 14px;
+}
+
+.r2-pref-row.r2-pref-row--block {
+  flex-direction: column !important;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 0;
+
+  .r2-pref-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+  }
+}
+
+.r2-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r2-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background 120ms;
+  font-size: 13px;
+  color: $text;
+
+  input[type='radio'] {
+    accent-color: $accent;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  em {
+    color: $text-muted;
+    font-style: normal;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  &:has(input:checked) {
+    border-color: $accent;
+    background: $accent-bg;
+  }
 }
 
 .r2-pref-row {

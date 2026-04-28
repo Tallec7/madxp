@@ -9,11 +9,16 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
+export type LayoutMobile = 'classic' | 'grid' | 'compact';
+export type LayoutDesktop = 'centered' | 'sidebar' | 'pro';
+
 export interface RemotePreferences {
   haptics: boolean;
   highContrast: boolean;
   lockRotation: boolean;
   fontSize: 'normal' | 'large';
+  layoutMobile: LayoutMobile;
+  layoutDesktop: LayoutDesktop;
 }
 
 const STORAGE_KEY = 'neopro_remote_prefs';
@@ -23,6 +28,8 @@ const DEFAULT_PREFS: RemotePreferences = {
   highContrast: false,
   lockRotation: false,
   fontSize: 'normal',
+  layoutMobile: 'classic',
+  layoutDesktop: 'sidebar',
 };
 
 @Injectable({ providedIn: 'root' })

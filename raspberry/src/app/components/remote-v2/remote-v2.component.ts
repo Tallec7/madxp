@@ -184,6 +184,17 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     return H.clubInitials(this.currentProfile);
   }
 
+  /**
+   * Couple de classes appliquées sur la racine `.remote-v2` pour piloter
+   * le layout via préférence utilisateur (SPEC-V2-LAYOUT-01).
+   * Tout le bascule visuel se fait en CSS via ces deux classes ; la couche
+   * TS/template reste mutualisée entre les 6 variantes.
+   */
+  get layoutClasses(): string[] {
+    const p = this.prefsService.prefs;
+    return [`layout-mobile-${p.layoutMobile}`, `layout-desktop-${p.layoutDesktop}`];
+  }
+
   /** Toast (notification fugitive). */
   toast: string | null = null;
   /** Type du toast pour le style ('error' = rouge, sinon neutre). */
