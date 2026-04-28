@@ -1,1 +1,83 @@
-// SPEC-V2-LAYOUT-01 — variant placeholder, populated in upcoming phases.
+// SPEC-V2-LAYOUT-01 — Mobile B "Grid cards 2-col"
+// Cible : profil découverte / sponsors visuels.
+// Vidéos visibles à fold : 6 (cards 175×90 16:9 + nom 2 lignes max).
+//
+// Garde les hauteurs hero/widgets standards (V2 actuel) — la densification
+// se fait uniquement sur la liste vidéo, pour préserver le confort de lecture.
+//
+// Référence pixel : `MobileB` dans remote-v2-mobile.jsx l. 247-425.
+
+.remote-v2.layout-mobile-grid {
+  @include r2-mobile-only {
+    --r2-card-h: 90px;
+    --r2-padding-x: 12px;
+
+    // Bascule la liste en grid 2 colonnes
+    .r2-categories {
+      .r2-video-list,
+      .r2-video-rows,
+      .r2-cat-videos {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 0 var(--r2-padding-x);
+      }
+    }
+
+    .r2-video-row {
+      flex-direction: column;
+      align-items: stretch;
+      min-height: var(--r2-card-h);
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid $border-subtle;
+      background: $surface;
+      gap: 6px;
+
+      // Aperçu 16:9 forcé en haut de la card
+      .r2-vr-thumb,
+      .r2-video-thumb {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        border-radius: 4px;
+      }
+
+      // Nom sur 2 lignes max ellipsé
+      .r2-vr-name {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.25;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      // État playing : bordure accent + badge "EN COURS"
+      &.is-playing,
+      &[data-playing='true'] {
+        border-width: 2px;
+        border-color: $accent;
+        background: $accent-bg;
+
+        &::after {
+          content: 'EN COURS';
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          background: $accent;
+          color: #fff;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          padding: 2px 6px;
+          border-radius: 8px;
+        }
+
+        position: relative;
+      }
+    }
+  }
+}
