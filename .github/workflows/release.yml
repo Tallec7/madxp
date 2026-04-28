@@ -340,20 +340,26 @@ jobs:
           test -s dist/raspberry/browser/.htaccess
           # `mirror --reverse` auto-creates the remote target dir, so the
           # explicit MKD /saas step is no longer needed.
+          # Tune aligné sur deploy-dashboard (pre-#625), depuis #668. Les optims
+          # PR #625 (parallel=5, sync-mode off, --use-pget-n=4, --only-newer)
+          # avaient été conservées ici en pariant sur "gros volume", mais le run
+          # release v3.262.0 (PR #675, SCSS split 6 layouts) a régressé à 11min+
+          # — symptôme/magnitude identiques à la régression dashboard reverted #668.
+          # Cause : tous les chunks Angular ont un hash frais à chaque release →
+          # --only-newer ne sert à rien, et parallel=5 + sync-mode off saturent
+          # Hostinger qui throttle silencieusement.
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
-            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set net:connection-limit 5;
-            set mirror:parallel-transfer-count 5;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
+            mirror --reverse --delete --verbose \
                    dist/raspberry/browser/ /saas/;
           "
           echo "✅ SaaS mirrored to /saas/ (dotfiles included)"
