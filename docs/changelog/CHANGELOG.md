@@ -1,3 +1,9 @@
+## [3.261.4](https://github.com/Tallec7/neopro/compare/v3.261.3...v3.261.4) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** align layout selectors with real DOM (AUDIT-V2-LAYOUT-01) ([#680](https://github.com/Tallec7/neopro/issues/680)) ([daf7ff8](https://github.com/Tallec7/neopro/commit/daf7ff85e3b33b402762601740f8f818f574a03e))
+
 ## [3.261.3](https://github.com/Tallec7/neopro/compare/v3.261.2...v3.261.3) (2026-04-28)
 
 ### Bug Fixes
