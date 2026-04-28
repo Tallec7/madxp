@@ -1,3 +1,9 @@
+## [3.261.5](https://github.com/Tallec7/neopro/compare/v3.261.4...v3.261.5) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** restore V1 parity for phase→categories mapping (AUDIT-V2-LAYOUT-01) ([#682](https://github.com/Tallec7/neopro/issues/682)) ([c5f4cb0](https://github.com/Tallec7/neopro/commit/c5f4cb06ee4b18597a280b55d993920583bca659))
+
 ## [3.261.4](https://github.com/Tallec7/neopro/compare/v3.261.3...v3.261.4) (2026-04-28)
 
 ### Bug Fixes
