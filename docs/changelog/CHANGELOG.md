@@ -1,3 +1,9 @@
+# [3.262.0](https://github.com/Tallec7/neopro/compare/v3.261.5...v3.262.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** hero compact 1-ligne + r2-tv-monitor PC C (AUDIT-V2-LAYOUT-01) ([#683](https://github.com/Tallec7/neopro/issues/683)) ([42f89fe](https://github.com/Tallec7/neopro/commit/42f89fef0f0a0752cb19eeabff5d5ea6817917de))
+
 ## [3.261.5](https://github.com/Tallec7/neopro/compare/v3.261.4...v3.261.5) (2026-04-28)
 
 ### Bug Fixes
