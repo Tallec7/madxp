@@ -1,14 +1,19 @@
 // SPEC-V2-LAYOUT-01 §5C — Composant `<app-r2-tv-monitor>`
-// Le composant est rendu dans tous les layouts (HTML statique) mais masqué
-// par défaut. Seul le layout `desktop-pro` le révèle pour matérialiser la
-// vidéo en cours dans la colonne centrale dark.
+// Rendu dans le template global mais masqué par défaut. Seul le layout
+// `desktop-pro` le révèle (cf. layouts/_desktop-pro.scss).
+//
+// AUDIT visuel post-merge : le `display: none` sur `.r2-tv-monitor-host`
+// était en compétition de spécificité avec le `:host { display: contents }`
+// du composant lui-même → fuite sur Mobile A/B/C en doublon avec le hero
+// existant. Fix : cacher directement le `<section class="r2-tv-monitor">`
+// interne (réveillé uniquement par PC C avec `display: block`).
 
 .r2-tv-monitor-host {
   display: none;
 }
 
 .r2-tv-monitor {
-  display: block;
+  display: none;
   width: 100%;
 
   &.is-idle {

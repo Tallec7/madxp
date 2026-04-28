@@ -61,10 +61,13 @@
     }
 
     // Col 1 — sidebar light, span sur toutes les implicit rows
+    // `display` re-activé ici (override du `display: none` global qui
+    // garantit le scoping strict — cf. _pro-sidebar.scss).
     .r2-pro-sidebar-host {
       display: contents;
     }
     .r2-pro-sidebar {
+      display: flex;
       grid-column: 1 / 2;
       grid-row: 2 / -1;
       min-height: 100%;
@@ -75,6 +78,7 @@
       display: contents;
     }
     .r2-video-table {
+      display: flex;
       grid-column: 2 / 3;
       grid-row: 2 / -1;
       min-height: calc(100vh - 60px);
@@ -85,6 +89,7 @@
       display: contents;
     }
     .r2-tv-monitor {
+      display: block;
       grid-column: 3 / 4;
       padding: 16px 16px 0;
       background: var(--r2-bg);

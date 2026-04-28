@@ -1,13 +1,17 @@
 // SPEC-V2-LAYOUT-01 §5C — Sidebar light (col 1) du layout régie pro PC C.
 // Composant `<app-r2-pro-sidebar>` masqué par défaut sur tous les layouts ;
 // révélé uniquement par `.layout-desktop-pro` (cf. layouts/_desktop-pro.scss).
+//
+// Cf. _tv-monitor.scss : on cible `.r2-pro-sidebar` directement (et pas
+// seulement `.r2-pro-sidebar-host`) car `:host { display: contents }` du
+// composant peut gagner le tie de spécificité contre la classe wrapper.
 
 .r2-pro-sidebar-host {
   display: none;
 }
 
 .r2-pro-sidebar {
-  display: flex;
+  display: none;
   flex-direction: column;
   background: #ffffff;
   color: #14171c;
