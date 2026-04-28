@@ -37,11 +37,12 @@
 
 ## 2. Bill of Materials (par TV supplémentaire)
 
-| Élément                | Référence recommandée             | Prix indicatif | Alternative                                                                                                                 |
-| ---------------------- | --------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Device navigateur HDMI | **Amazon Fire TV Stick 4K**       | ~40€           | Chromecast Google TV (~40€), Smart TV avec navigateur intégré (0€, qualité variable), ancien smartphone Android (recyclage) |
-| Câble HDMI court       | Inclus avec le stick              | 0€             | —                                                                                                                           |
-| Compte Amazon          | Requis pour activer le Fire Stick | 0€             | Compte Google si Chromecast                                                                                                 |
+| Élément                | Recommandé (option A)            | Recommandé (option B)              | Alternatives                                                                                                                    |
+| ---------------------- | -------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Device navigateur HDMI | **Amazon Fire TV Stick 4K** ~40€ | **Chromecast avec Google TV** ~40€ | Smart TV avec navigateur intégré (0€, qualité variable), Mini-PC, ancien smartphone Android, Raspberry Pi 5 en mode SaaS (~80€) |
+| Câble HDMI court       | Inclus avec le stick             | Inclus avec le Chromecast          | —                                                                                                                               |
+| Alim                   | USB depuis port TV (souvent)     | USB-C secteur (fournie)            | —                                                                                                                               |
+| Compte                 | Compte Amazon                    | Compte Google                      | Aucun si Smart TV / mini-PC                                                                                                     |
 
 **Total : ~40€ par TV** (ou 0€ si Smart TV moderne avec navigateur fonctionnel).
 
@@ -59,30 +60,67 @@
 
 ## 4. Procédure d'installation (5 minutes par TV)
 
+> **Aucune des deux options ne nécessite de développement Neopro.** Choisir selon l'écosystème que le club préfère (compte Amazon vs Google) ou ce qu'il a déjà.
+
+### 4.A — Option Amazon Fire TV Stick 4K (Silk Browser)
+
 1. **Brancher** le Fire TV Stick en HDMI sur la TV supplémentaire. Mettre la TV sur la bonne entrée HDMI.
-2. **Activer le stick** : suivre l'assistant de démarrage Fire TV (compte Amazon, langue, etc.). Skipper les étapes optionnelles.
+2. **Activer le stick** : suivre l'assistant de démarrage Fire TV (**compte Amazon requis**, langue, etc.). Skipper les étapes optionnelles.
 3. **Connecter au WiFi** : Settings → Network → choisir `NEOPRO_<club>` → entrer le PSK du club.
-4. **Installer Silk Browser** : Appstore → rechercher "Silk Browser" → Get/Download (gratuit, fait par Amazon).
+4. **Installer Silk Browser** : Appstore → rechercher "Silk Browser" → Get/Download (gratuit, édité par Amazon).
 5. **Charger la page TV** :
    - Ouvrir Silk Browser
    - Barre d'adresse : `http://neopro.local/tv`
-   - Si `neopro.local` ne résout pas, utiliser l'IP de fallback du hotspot Pi : `http://192.168.4.1/tv`
-6. **Plein écran** : utiliser le menu Silk (≡) → "Request desktop site" puis le geste fullscreen, ou installer **Fully Kiosk Browser** (recommandé en prod, voir §5).
+   - Si `neopro.local` ne résout pas → fallback : `http://192.168.4.1/tv` (IP par défaut du Pi en hotspot)
+6. **Plein écran** : menu Silk (≡) → "Request desktop site" puis geste fullscreen, ou installer **Fully Kiosk Browser** (recommandé en prod, voir §5).
 7. **Vérifier l'affichage** : la TV doit afficher la même boucle que le kiosk Pi principal dans les ~5 secondes.
+
+### 4.B — Option Google Chromecast avec Google TV (Chrome)
+
+1. **Brancher** le Chromecast en HDMI sur la TV supplémentaire. Brancher l'alim USB-C (le Chromecast n'est pas alimenté par la TV, contrairement au Fire Stick).
+2. **Activer le device** : suivre l'assistant Google TV (**compte Google requis**, langue, etc.). L'app Google Home sur smartphone facilite la config WiFi.
+3. **Connecter au WiFi** : pendant l'assistant ou ensuite Settings → Network & Internet → choisir `NEOPRO_<club>` → entrer le PSK du club.
+4. **Installer / ouvrir Chrome** : Chrome est généralement préinstallé sur Google TV. Sinon Play Store → "Google Chrome" → Install.
+   - Variante si Chrome refuse de se lancer en plein écran : installer **Fully Kiosk Browser** depuis le Play Store (équivalent Android TV).
+5. **Charger la page TV** :
+   - Ouvrir Chrome
+   - Barre d'adresse : `http://neopro.local/tv`
+   - Si `neopro.local` ne résout pas → fallback : `http://192.168.4.1/tv`
+6. **Plein écran** : Chrome menu ⋮ → mode immersif, ou utiliser Fully Kiosk (recommandé prod, voir §5).
+7. **Vérifier l'affichage** : la TV doit afficher la même boucle que le kiosk Pi principal dans les ~5 secondes.
+
+### Comment choisir entre Fire Stick et Chromecast ?
+
+| Critère                         | Fire TV Stick 4K                     | Chromecast Google TV                             |
+| ------------------------------- | ------------------------------------ | ------------------------------------------------ |
+| Prix                            | ~40€                                 | ~40€                                             |
+| Compte requis                   | Amazon                               | Google                                           |
+| Navigateur                      | Silk Browser (Amazon, basé Chromium) | Chrome (Google, version desktop ~)               |
+| Cycle de mise à jour navigateur | Plus lent (Amazon)                   | Plus rapide (Google) — léger avantage long terme |
+| Télécommande IR fournie         | ✅                                   | ✅ (Bluetooth + IR pour TV)                      |
+| Setup typique                   | 5 min                                | 5 min                                            |
+
+**Règle simple** : si le client a déjà un compte → utiliser celui-là. S'il n'a aucun des deux → préférer **Chromecast** (Chrome plus à jour, écosystème plus standard).
 
 ---
 
 ## 5. Renforcement résilience (recommandé production)
 
-Le navigateur seul peut crasher après plusieurs heures. Pour un usage jour de match (5h+), installer **Fully Kiosk Browser** (Free Edition suffit) :
+Le navigateur seul peut crasher après plusieurs heures. Pour un usage jour de match (5h+), installer **Fully Kiosk Browser** (Free Edition suffit). Disponible sur **les deux plateformes** :
 
-1. Appstore Fire TV → "Fully Kiosk Browser" → Install
-2. Ouvrir l'app, configurer :
+- **Fire TV** : Appstore → "Fully Kiosk Browser" → Install
+- **Google TV / Android TV** : Play Store → "Fully Kiosk Browser" → Install
+
+Configuration commune :
+
+1. Ouvrir l'app, paramétrer :
    - **Start URL** : `http://neopro.local/tv`
    - **Run on device boot** : ON
    - **Auto-reload on idle / network failure** : ON
    - **Kiosk Mode** : ON (empêche de quitter l'app accidentellement)
-3. Désactiver la **mise en veille** du Fire Stick : Settings → Display & Sounds → Screen Saver → Start After → "Never".
+2. Désactiver la **mise en veille** du device :
+   - Fire Stick : Settings → Display & Sounds → Screen Saver → Start After → "Never"
+   - Chromecast Google TV : Settings → System → Display & Sound → Advanced display settings → désactiver l'écran de veille
 
 ---
 
@@ -140,13 +178,16 @@ Comportement non attendu en mode hub local. Vérifier :
 2. Latence Socket.IO sur la 2ᵉ TV : ouvrir la console Silk Browser (paramètres → Developer Options).
 3. Reload de la 2ᵉ TV (`F5` ou Fully Kiosk reload) → re-sync immédiat.
 
-### Le Fire Stick exige un compte Amazon
+### Le device exige un compte (Amazon ou Google)
 
-Friction d'installation connue. Alternatives :
+Friction d'installation connue, mais incontournable sur Fire Stick comme sur Chromecast :
 
-- **Chromecast avec Google TV** (~40€) → compte Google, navigateur Chrome stable.
-- **Smart TV avec navigateur intégré** → 0€, qualité variable selon modèle/année.
-- **Mini-PC ou ancien smartphone** en mode kiosk → flexible mais setup plus long.
+- Pas de compte Amazon ? → **Chromecast Google TV** (~40€, voir §4.B).
+- Pas de compte Google ? → **Fire TV Stick** (~40€, voir §4.A).
+- Aucun des deux et pas envie d'en créer ? Alternatives :
+  - **Smart TV avec navigateur intégré** (Samsung Tizen 2022+, LG webOS 6+, Sony Bravia Android TV 10+) → 0€, qualité variable.
+  - **Mini-PC ou ancien smartphone Android** en mode kiosk → flexible mais setup plus long.
+  - **Raspberry Pi 5 supplémentaire en mode SaaS** (~80€) → plus cher mais navigateur Chromium éprouvé, même stack que le Pi principal.
 
 ---
 
