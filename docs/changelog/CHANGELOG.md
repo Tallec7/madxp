@@ -1,3 +1,9 @@
+# [3.260.0](https://github.com/Tallec7/neopro/compare/v3.259.0...v3.260.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** migrate emojis to SVG icons (SPEC-V2-ICONS-01) ([#674](https://github.com/Tallec7/neopro/issues/674)) ([4d88dcb](https://github.com/Tallec7/neopro/commit/4d88dcb1954d6545026eeabb0ff73d0c1c028ab6))
+
 # [3.259.0](https://github.com/Tallec7/neopro/compare/v3.258.6...v3.259.0) (2026-04-28)
 
 ### Bug Fixes
