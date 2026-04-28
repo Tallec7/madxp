@@ -32,7 +32,7 @@ import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { RemoteScoreService } from '../remote/remote-score.service';
 import { RemoteTimerService } from '../remote/remote-timer.service';
-import { RemotePreferencesService, RemotePreferences } from '../remote/remote-preferences.service';
+import { RemotePreferencesService, RemotePreferences, WidgetsEnabled } from '../remote/remote-preferences.service';
 import { RecordingStateService, RecordingWarningState } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
 import * as H from './remote-v2-helpers';
@@ -53,7 +53,7 @@ type Phase = 'before' | 'during' | 'after';
 type Loop = 'neutral' | 'before' | 'during' | 'after';
 
 /**
- * SPEC-V2-TVMON-01 / ADR-101 — payload du capability event Pi → Remote.
+ * SPEC-V2-TVMON-01 / ADR-102 — payload du capability event Pi → Remote.
  * `version: "1.0"` = MJPEG. `version: "2.0"` (futur) = WebRTC. Une Remote V1
  * ignorera silencieusement toute version majeure inconnue.
  */
@@ -78,13 +78,8 @@ type SheetType =
   | 'widget-chrono'
   | 'widget-breaking';
 
-interface WidgetsEnabled {
-  score: boolean;
-  chrono: boolean;
-  breaking: boolean;
-}
-
-const WIDGETS_STORAGE_KEY_BASE = 'neopro_remote_v2_widgets';
+// WidgetsEnabled est désormais exporté par RemotePreferencesService (ADR-102)
+// pour partager le type entre la persistance DB et le composant V2.
 const RECENT_VIDEOS_STORAGE_KEY_BASE = 'neopro_remote_v2_recent';
 const RECENT_VIDEOS_MAX = 10;
 
@@ -115,7 +110,10 @@ interface DisplayInfo {
   // Encapsulation None : permet le partage des classes .r2-* à tous les sous-composants
   // sans duplication du SCSS. Risque collision mitigé par le préfixe `.r2-`.
   encapsulation: ViewEncapsulation.None,
-  providers: [RemoteScoreService, RemoteTimerService, RemotePreferencesService],
+  // ADR-102 — RemotePreferencesService est providedIn: 'root' (singleton) pour
+  // mutualiser le bootstrap DB et l'état entre V1 / V2. Score & Timer restent
+  // scoped au composant (pattern ADR-051 Phase 4).
+  providers: [RemoteScoreService, RemoteTimerService],
 })
 export class RemoteV2Component implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -177,7 +175,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   private playingTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * SPEC-V2-TVMON-01 / ADR-101 — URL absolue du flux MJPEG (cf. capability event Pi).
+   * SPEC-V2-TVMON-01 / ADR-102 — URL absolue du flux MJPEG (cf. capability event Pi).
    * `null` ⇒ aucun preview disponible (Pi 4 / SaaS / demo / GPU fallback / version
    * non supportée). Le composant `<app-r2-tv-monitor>` reste en placeholder.
    */
@@ -324,7 +322,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       data => this.handlePlayerState(data),
     );
 
-    // SPEC-V2-TVMON-01 / ADR-101 — TV preview capability negotiation.
+    // SPEC-V2-TVMON-01 / ADR-102 — TV preview capability negotiation.
     // Le Pi annonce ses capacités à chaque (re)connexion. Une `version` majeure
     // inconnue → on ignore et reste sur le placeholder (aucun stream).
     this.socketService.on<TvPreviewCapability>('tv-preview:capability', data => {
@@ -347,8 +345,15 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // Expansion par défaut : catégorie alignée sur la phase
     this.setDefaultExpanded();
 
-    // Widgets enabled : restore depuis localStorage
-    this.widgetsEnabled = this.loadWidgetsEnabled();
+    // Widgets enabled : restauré via RemotePreferencesService (DB + cache local).
+    // Le service hydrate widgets$ depuis l'API au boot ; on s'abonne pour
+    // recevoir la valeur DB une fois chargée et écraser le snapshot local.
+    this.widgetsEnabled = this.prefsService.widgets;
+    this.subs.push(
+      this.prefsService.widgets$.subscribe((w) => {
+        this.widgetsEnabled = w;
+      }),
+    );
 
     // Demo mode (skip thumbnails distants)
     this.isDemoMode = this.demoConfigService.isDemoMode();
@@ -406,40 +411,18 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (this.playingTimer) clearTimeout(this.playingTimer);
   }
 
-  private widgetsStorageKey(): string {
-    return this.saasConfig.getScopedStorageKey(WIDGETS_STORAGE_KEY_BASE);
-  }
-
   private recentVideosStorageKey(): string {
     return this.saasConfig.getScopedStorageKey(RECENT_VIDEOS_STORAGE_KEY_BASE);
   }
 
-  private loadWidgetsEnabled(): WidgetsEnabled {
-    try {
-      const raw = localStorage.getItem(this.widgetsStorageKey());
-      if (!raw) return { score: true, chrono: true, breaking: false };
-      const parsed = JSON.parse(raw) as Partial<WidgetsEnabled>;
-      return {
-        score: parsed.score ?? true,
-        chrono: parsed.chrono ?? true,
-        breaking: parsed.breaking ?? false,
-      };
-    } catch {
-      return { score: true, chrono: true, breaking: false };
-    }
-  }
-
-  private persistWidgetsEnabled(): void {
-    try {
-      localStorage.setItem(this.widgetsStorageKey(), JSON.stringify(this.widgetsEnabled));
-    } catch {
-      /* localStorage indisponible (mode privé) — silent */
-    }
-  }
-
+  /**
+   * ADR-102 — Toggle d'un widget délégué à RemotePreferencesService qui
+   * persiste en DB (table remote_preferences) + cache localStorage.
+   * Le BehaviorSubject widgets$ remet à jour `this.widgetsEnabled` via la
+   * souscription enregistrée dans `ngOnInit`.
+   */
   toggleWidget(id: keyof WidgetsEnabled): void {
-    this.widgetsEnabled = { ...this.widgetsEnabled, [id]: !this.widgetsEnabled[id] };
-    this.persistWidgetsEnabled();
+    this.prefsService.updateWidget(id, !this.widgetsEnabled[id]);
   }
 
   /** Routeur du sheet gear → ouvre la sheet correspondante (US-V2-12 sheets extraction). */
@@ -472,7 +455,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * à l'état "boucle" (sinon le bouton reste figé surligné).
    */
   /**
-   * SPEC-V2-TVMON-01 / ADR-101 — réception du capability event MJPEG.
+   * SPEC-V2-TVMON-01 / ADR-102 — réception du capability event MJPEG.
    * `available: false` (Pi 4, SaaS, demo, GPU fallback) → on retire l'URL.
    * Une `version` majeure inconnue (ex. "2.0" pour WebRTC futur) → ignore et reste
    * sur le placeholder pour ne pas casser les vieilles Remote.

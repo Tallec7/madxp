@@ -3,8 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-27
-> **ADR liés** : ADR-005 (RLS multi-tenant), ADR-037 (archi SaaS), ADR-038 (temps réel + observabilité), ADR-039 (tiers), ADR-040 (dashboard insights + tendances), ADR-059 (state-sync SaaS), ADR-069 (delivery strategy), ADR-088 (scoreboard SaaS-first), ADR-096 (extraction SaaS relay)
-> **Smoke tests** : `smoke-saas.test.ts`, `smoke-socket-realtime.test.ts`, `smoke-scoreboard-saas.test.ts`
+> **ADR liés** : ADR-005 (RLS multi-tenant), ADR-037 (archi SaaS), ADR-038 (temps réel + observabilité), ADR-039 (tiers), ADR-040 (dashboard insights + tendances), ADR-059 (state-sync SaaS), ADR-069 (delivery strategy), ADR-088 (scoreboard SaaS-first), ADR-096 (extraction SaaS relay), ADR-102 (persistance DB des préférences UX télécommande par site/profil — amend ADR-062)
+> **Smoke tests** : `smoke-saas.test.ts`, `smoke-socket-realtime.test.ts`, `smoke-scoreboard-saas.test.ts`, `smoke-remote-preferences-db.test.ts`
 > **`.claude/rules/` lié** : `saas.md` (73 règles ADR-037)
 
 ## En une phrase
@@ -42,6 +42,7 @@ Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** 
 ## Règles métier (ce qui DOIT marcher)
 
 ### Architecture SaaS
+
 - **`site_type` est la source de vérité** : `'pi'` (matériel), `'saas'` (navigateur), `'demo'` (vitrine). Un site est exclusivement de UN type — pas de migration runtime.
 - **Delivery strategy centrale** : `deliveryStrategyRegistry.resolve(site)` → `SaasDirectStrategy` pour SaaS, `PiSocketStrategy` pour Pi. Jamais de `if site_type === 'saas'` dispersé.
 - **Relai temps réel** : Remote envoie `command` → `saas-relay.handler` → broadcast `action` à la room `siteId`. Sans ce relai, les TVs SaaS sont muettes.
@@ -49,6 +50,7 @@ Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** 
 - **État in-memory** : `saasStates` Map par `siteId` (score, phase, timer, master-slave). Perdu au reboot — acceptable, client re-pull via `request-state`.
 
 ### Club Portal (ADR-040)
+
 - **Insights dashboard** : 4 KPI + tendances vs hier/semaine précédente (±3% num, ±2pts completion), sparkline SVG 7j, top 3 vidéos semaine, profil actif, sponsors actifs.
 - **Empty state hint** : si aucune activité (`todayVideosPlayed === 0`), afficher CTA → `club/loop` pour onboarder le club.
 - **Diagnostic distance** : `club-diagnostic.component.ts` expose l'état de santé du site (Pi ou SaaS) depuis le cloud — connexion, version, alertes actives, dernière OTA.
@@ -56,6 +58,7 @@ Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** 
 - **Sponsors actifs** : `club-sponsors.component.ts` affiche les sponsors `status='active'` avec logos, impressions semaine et lien vers le portail sponsor.
 
 ### Tiers d'abonnement (ADR-039)
+
 - **Play** (790€/an) : SaaS web, 25 vidéos max, 1 profil, télécommande cloud
 - **Club** (1500€/an) : Pi + tout Play + illimité + hors-ligne + multi-profils
 - **Pro** (2100€/an) : tout Club + sponsors monétisés + rotation pondérée + rapports
@@ -63,15 +66,15 @@ Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** 
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry |
-| Relai SaaS actif | Smoke `saas-relay.handler` : 14 patterns de rebroadcast |
-| Config rechargée | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config` |
-| Master-slave | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect |
-| Insights trends | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine |
-| Empty state hint | Club sans activité voit le CTA `club/loop` |
-| Diagnostic | Composant `club-diagnostic` affiche connexion + alertes actives |
+| Règle                | Comment on vérifie                                                       |
+| -------------------- | ------------------------------------------------------------------------ |
+| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry      |
+| Relai SaaS actif     | Smoke `saas-relay.handler` : 14 patterns de rebroadcast                  |
+| Config rechargée     | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config` |
+| Master-slave         | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect   |
+| Insights trends      | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine                  |
+| Empty state hint     | Club sans activité voit le CTA `club/loop`                               |
+| Diagnostic           | Composant `club-diagnostic` affiche connexion + alertes actives          |
 
 ## Cas d'edge connus
 
