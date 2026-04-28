@@ -64,6 +64,8 @@ interface TvPreviewCapability {
   resolution?: { w: number; h: number };
   fps?: number;
   version?: string;
+  /** Token HMAC TTL 5 min (cloud distant). Présent uniquement si secret Pi-side. */
+  token?: string;
 }
 type SheetType =
   | null
@@ -487,7 +489,11 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
     // Le Pi peut renvoyer une URL relative (`/preview.mjpeg`) ou absolue.
     // Si relative, on la résout via le hostname Socket.IO connu (LAN).
-    const url = this.resolveTvPreviewUrl(cap.url || '/preview.mjpeg');
+    let url = this.resolveTvPreviewUrl(cap.url || '/preview.mjpeg');
+    if (cap.token) {
+      const sep = url.includes('?') ? '&' : '?';
+      url = `${url}${sep}token=${encodeURIComponent(cap.token)}`;
+    }
     this.tvPreviewUrl.set(url);
     this.tvPreviewThrottled.set(false);
   }

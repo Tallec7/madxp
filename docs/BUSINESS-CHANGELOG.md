@@ -22,6 +22,7 @@
 ### 🛡️ Pour la robustesse
 
 - Suppression de vidéo : la modal "cette vidéo est utilisée par X sites, confirmer la suppression cascade ?" s'affiche désormais **partout** (page Contenu admin, Lottie templates, gestion site), plus uniquement sur la gestion site. Avant, supprimer une vidéo référencée depuis Contenu ou Lottie pouvait échouer avec un toast "Erreur" générique, sans aucun moyen de confirmer la cascade. Plus de blocage utilisateur sur ce flux ([#678](https://github.com/Tallec7/neopro/pull/678)).
+- **TV Preview régie pro : observabilité Prometheus + Grafana + token HMAC** (cette PR P1) — la feature P0 (mini-écran live dans la télécommande PC C) gagne le monitoring nécessaire avant ramp prod : 4 nouvelles métriques Prometheus (`neopro_tv_preview_frames_total` / `_throttle_total{reason}` / `_subscribers` / `_current_fps`) labellisées par site, dashboard Grafana dédié (7 panels — subscribers flotte, FPS moyen, throttle events/h, frames/sec par site, throttle par cause CPU/temp, FPS courant par site time-series), et token HMAC TTL 5 min via Socket.IO pour authentifier les Remote distantes (cas régie en mobile hotspot derrière NAT). Le snapshot voyage dans le canal heartbeat existant (30 s), zéro nouveau canal réseau. Permet de détecter en minutes si une régie subit un throttle silencieux ou si un Pi 5 dépasse les seuils en match réel — alerting fin pour ne JAMAIS dégrader la TV publique.
 
 ### 🧹 Pour l'équipe
 
