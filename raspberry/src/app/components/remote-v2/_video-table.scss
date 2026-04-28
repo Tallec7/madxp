@@ -1,16 +1,17 @@
 // SPEC-V2-LAYOUT-01 §5C — Tableau vidéo dense (col 2) du layout régie pro PC C.
 // Composant `<app-r2-video-table>` masqué par défaut ; révélé uniquement
-// par `.layout-desktop-pro`.
+// par `.layout-desktop-pro` (cf. _tv-monitor.scss pour le rationale du
+// `display: none` direct sur la section interne).
 
 .r2-video-table-host {
   display: none;
 }
 
 .r2-video-table {
+  display: none;
   background: #0e1116;
   color: #ffffff;
   height: 100%;
-  display: flex;
   flex-direction: column;
   overflow: hidden;
 
