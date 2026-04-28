@@ -65,6 +65,8 @@ paths:
 - NE PAS retirer le compteur `dragCounter` ni les `@HostListener document:dragenter/dragleave/drop` de `video-library.component.ts` (sans compteur, le flicker des enter/leave imbriqués fait scintiller l'overlay à chaque survol d'enfant — ADR-094, smoke test enforced)
 - NE PAS retirer le filtre `event.dataTransfer.types.includes('Files')` dans les handlers drag global (sans ce filtre, sélectionner du texte ou drag-drop un lien déclenche l'overlay upload de manière trompeuse — ADR-094, smoke test enforced)
 - NE PAS dégater l'overlay `.global-drop-overlay` du guard `*ngIf="siteId && isFileDraggedOverPage"` (sans le check `siteId`, l'overlay s'activerait sur les vues admin sans contexte site → drop avec `lockedSiteId = null` → même fuite que les boutons dégatés — ADR-094, smoke test enforced)
+- NE PAS retirer `dup_count` / `is_duplicate` de la réponse `getVideos` (computed via window function `COUNT(*) OVER (PARTITION BY COALESCE(checksum, storage_path))` dans `findAllPaginated`) — sans ces champs, `content-management.html` ne peut plus afficher le badge `×N` qui prévient l'utilisateur qu'un fichier physique FTP est partagé par plusieurs rows DB (cf. `feedback_video_dedup_checksum_trap.md` — smoke test enforced)
+- NE PAS retirer les inputs `cornerBadge` / `cornerBadgeTooltip` / `cornerBadgeVariant` de `app-video-card` (consommés par `content-management` pour signaler les doublons dedup ADR-048 — smoke test enforced)
 
 ## OTA Dashboard
 

@@ -624,6 +624,60 @@ describe('ContentManagementDataService extraction guard', () => {
   });
 });
 
+describe('Video dedup signals exposure guard (ADR-048 + UX dup badge)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('videoRepository.findAllPaginated must compute dup_count via window function (no N+1)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/video.repository.ts'),
+      'utf-8',
+    );
+    expect(content).toMatch(/COUNT\(\*\)\s+OVER\s*\(/i);
+    expect(content).toMatch(/PARTITION BY COALESCE\(checksum, storage_path\)/);
+    expect(content).toMatch(/AS dup_count/);
+  });
+
+  it('content.controller getVideos must expose dup_count + is_duplicate to dashboard', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/content.controller.ts'),
+      'utf-8',
+    );
+    const getVideosBlock = content.split('export const getVideos')[1]?.split('export const')[0] ?? '';
+    expect(getVideosBlock).toContain('dup_count');
+    expect(getVideosBlock).toContain('is_duplicate');
+  });
+
+  it('ContentVideoRow type exposes dup_count / is_duplicate / checksum', () => {
+    const types = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/content/content-management-data.service.ts'),
+      'utf-8',
+    );
+    const row = types.split('export interface ContentVideoRow')[1]?.split('export interface')[0] ?? '';
+    expect(row).toMatch(/checksum\??:\s*string/);
+    expect(row).toMatch(/dup_count\??:\s*number/);
+    expect(row).toMatch(/is_duplicate\??:\s*boolean/);
+  });
+
+  it('content-management.html wires duplicate badge on video-card', () => {
+    const html = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/content/content-management.component.html'),
+      'utf-8',
+    );
+    expect(html).toContain('[cornerBadge]="duplicateBadge(video)"');
+    expect(html).toContain('[cornerBadgeTooltip]="duplicateTooltip(video)"');
+  });
+
+  it('app-video-card supports cornerBadge inputs (consumed by duplicate signaling)', () => {
+    const card = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/shared/components/video-card/video-card.component.ts'),
+      'utf-8',
+    );
+    expect(card).toMatch(/@Input\(\)\s+cornerBadge\b/);
+    expect(card).toMatch(/@Input\(\)\s+cornerBadgeTooltip\b/);
+    expect(card).toMatch(/@Input\(\)\s+cornerBadgeVariant\b/);
+  });
+});
+
 describe('UsersManagement service extraction guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const usersDir = path.join(repoRoot, 'central-dashboard/src/app/features/admin/users');

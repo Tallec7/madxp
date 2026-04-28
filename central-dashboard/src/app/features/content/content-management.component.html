@@ -99,6 +99,9 @@
         [thumbnailUrl]="video.thumbnail_url || null"
         [thumbnailPlaceholder]="contentTypeIcon(video.content_type)"
         [thumbOverlayLeft]="contentTypeBadge(video.content_type)"
+        [cornerBadge]="duplicateBadge(video)"
+        [cornerBadgeTooltip]="duplicateTooltip(video)"
+        cornerBadgeVariant="warning"
       >
         <ng-container card-actions>
           <button

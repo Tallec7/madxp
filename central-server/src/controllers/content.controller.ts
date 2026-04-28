@@ -44,12 +44,19 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
       pagination.offset
     );
 
-    // Ajouter le titre et transformer l'URL en URL publique accessible
-    const videos = rows.map(video => ({
-      ...video,
-      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
-      url: video.url ? getVideoUrl(video.url as string) : null
-    }));
+    // Ajouter le titre et transformer l'URL en URL publique accessible.
+    // dup_count vient de findAllPaginated (window function) — on l'expose
+    // tel quel + un boolean dérivé `is_duplicate` pour simplifier le front.
+    const videos = rows.map(video => {
+      const dupCount = Number(video.dup_count ?? 1);
+      return {
+        ...video,
+        title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+        url: video.url ? getVideoUrl(video.url as string) : null,
+        dup_count: dupCount,
+        is_duplicate: dupCount > 1,
+      };
+    });
 
     res.json(formatPaginatedResponse(videos, total, pagination));
   } catch (error) {
