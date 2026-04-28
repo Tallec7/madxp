@@ -15,6 +15,11 @@
     --r2-padding-x: 12px;
     --r2-type-row: 14px;
 
+    // Anti-overflow horizontal global — empêche tout enfant trop large de
+    // décaler le viewport et de couper les bords droits (régression mobile
+    // observée sur le widget score "+ EXT").
+    overflow-x: hidden;
+
     // Header compact 56px
     .r2-header {
       padding: 6px 12px;
@@ -22,20 +27,16 @@
     }
 
     // Hero compact 1-ligne — AUDIT-V2-LAYOUT-01 §3 "Hero Boucle active trop chargé".
-    // Stratégie : on garde le template r2-hero complet mais on cache les éléments
-    // verbeux (eyebrow, subline, progress bar, display target wrap, label "Boucle
-    // active") pour comprimer à ~96px max. Les tabs de boucle restent visibles
-    // sous forme de mini segmented compact, intégrés visuellement avec le main row.
     .r2-hero {
       margin: 8px 12px 0;
       min-height: var(--r2-hero-h);
-      max-height: 100px;
+      max-height: 110px;
     }
     .r2-hero-eyebrow {
       padding: 4px 10px 0;
       font-size: 9px;
-      // On masque le texte "À l'antenne" / "Diffusion manuelle" — l'état est
-      // déjà signalé par les badges LIVE / REC + couleur de la TV thumb.
+      // Masque le texte "À l'antenne" / "Diffusion manuelle" — état signalé
+      // par badges LIVE/REC + couleur thumb.
       > span:nth-of-type(1) {
         display: none;
       }
@@ -51,15 +52,14 @@
     .r2-hero .r2-video-name {
       font-size: 13px;
     }
-    // Cache la subline (ex: "X/Y · tourne en fond") pour gagner ~16px
     .r2-hero .r2-video-subline {
       display: none;
     }
-    // Cache le label "Boucle active" (déjà inférable du contexte)
-    .r2-loop-tabs-wrap .r2-hero-section-label {
-      display: none;
+    // Masque "Boucle active" eyebrow ET son icône SVG sœur
+    .r2-loop-tabs-wrap .r2-hero-section-label,
+    .r2-loop-tabs-wrap .r2-hero-section-label * {
+      display: none !important;
     }
-    // Compacte le bandeau loop-tabs : pas de wrap, mini segmented
     .r2-loop-tabs-wrap {
       padding: 2px 8px 6px;
     }
@@ -67,36 +67,82 @@
       padding: 4px 8px;
       font-size: 11px;
     }
-    // Cache le "Cible vidéo" (target display) — accessible via la sheet options
     .r2-display-wrap {
       display: none;
     }
-    // Cache la progress bar verbose pendant lecture manuelle
     .r2-hero-progress {
       display: none;
     }
 
-    // Widgets en grid 2 colonnes (score | chrono), breaking pleine largeur
+    // ---- Widgets : grid 2 colonnes compacte ---------------------------------
+    // FIX overflow droit : on cache les labels "Score" / "Chrono" (redondants
+    // avec les couleurs de fond) pour libérer 48px par cellule et laisser la
+    // place aux badges + buttons sans débordement viewport.
+    // Ajout `position: relative; z-index: 1` pour empêcher le browse-card de
+    // remonter visuellement au-dessus du chrono lors du scroll.
     .r2-widgets {
-      display: grid;
+      display: grid !important;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
       margin: 8px 12px 0;
+      padding: 0;
+      position: relative;
+      z-index: 1;
+      width: auto;
+      max-width: 100%;
+    }
+    .r2-widgets .r2-widget {
+      min-width: 0;
+      padding: 6px 10px;
+      gap: 6px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .r2-widgets .r2-widget-breaking {
+      grid-column: 1 / -1;
+    }
+    // Cache les labels "Score" / "Chrono" en compact — gain 48px/cell
+    .r2-widgets .r2-widget-label:not(.r2-widget-label--breaking) {
+      display: none;
+    }
+    // Compacte les badges équipe pour la cellule étroite
+    .r2-widgets .r2-team-badge {
+      width: 18px;
+      height: 18px;
+      font-size: 8px;
+    }
+    .r2-widgets .r2-score-display {
+      gap: 2px;
+    }
+    .r2-widgets .r2-score-val {
+      font-size: 14px;
+    }
+    .r2-widgets .r2-score-quick {
+      gap: 3px;
+    }
+    .r2-widgets .r2-score-quick-btn {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 5px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .r2-widgets .r2-chrono-display {
+      font-size: 16px;
+    }
+    .r2-widgets .r2-chrono-toggle {
+      padding: 3px 6px;
+      font-size: 9px;
+    }
 
-      .r2-widget {
-        min-width: 0; // permet aux flex children de shrink dans la grid cell
-        padding: 6px 8px;
-      }
-
-      .r2-widget-breaking {
-        grid-column: 1 / -1;
-      }
-
-      // Compacte les boutons +HOM/+EXT pour rentrer dans la grid 1fr
-      .r2-score-quick-btn {
-        font-size: 10px;
-        padding: 4px 6px;
-      }
+    // Browse card : empêche tout overlap avec les widgets via marge propre
+    .r2-browse-card {
+      position: relative;
+      z-index: 0;
+      margin-top: 12px;
     }
 
     // Densification des rows vidéo (sélecteurs DOM réels)
