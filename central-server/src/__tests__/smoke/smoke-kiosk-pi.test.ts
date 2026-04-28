@@ -1809,7 +1809,17 @@ describe('deploy_video concurrent deployment mutex guard', () => {
   });
 });
 
-describe('site-content-tab deploy_video must include checksum', () => {
+describe('site-content-tab onVideoDeploy must use POST /deployments', () => {
+  // Contract enforced (post-#XXX bug "Invalid URL"):
+  // - The site-detail "🚀" button MUST go through POST /deployments so the
+  //   server builds the absolute FTP URL via getVideoUrl(storage_path) and
+  //   tracks the deployment in content_deployments (progress, retry, alerting).
+  // - It MUST NOT call commandService.sendCommand('deploy_video', ...)
+  //   directly with `url: video.path` — `video.path` is a Pi-relative path
+  //   (e.g. `videos/CATEGORY/file.mp4`) and the Pi expects `videoUrl` as an
+  //   absolute HTTPS URL. That shortcut threw "Invalid URL" on every click.
+  // - It MUST still guard against missing checksum (defense-in-depth — server
+  //   also blocks via uploadVerificationService.isVideoReadyForDeployment).
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const siteContentTabPath = path.join(
     repoRoot,
@@ -1821,21 +1831,39 @@ describe('site-content-tab deploy_video must include checksum', () => {
     content = fs.readFileSync(siteContentTabPath, 'utf8');
   });
 
-  it('sendCommand deploy_video payload must include checksum field', () => {
-    // Find the deploy_video sendCommand call and verify it includes checksum
-    const deployMatch = content.match(
-      /sendCommand\([^,]+,\s*'deploy_video'\s*,\s*\{([\s\S]*?)\}\s*\)\s*\.subscribe/
+  it('onVideoDeploy must POST to /deployments with target_type=site', () => {
+    const methodMatch = content.match(
+      /onVideoDeploy\(video[\s\S]*?(?=\n\s{2}\w|\n\s{2}\/\/\s*={3,})/
     );
-    expect({ hasDeployCall: !!deployMatch }).toEqual({ hasDeployCall: true });
+    expect({ hasMethod: !!methodMatch }).toEqual({ hasMethod: true });
+    const body = methodMatch![0];
     expect({
-      includesChecksum: /checksum\s*:/.test(deployMatch![1]),
+      callsDeploymentsEndpoint: /api\.post[^(]*\(\s*['"]\/deployments['"]/.test(body),
+      sendsTargetSite: /target_type\s*:\s*['"]site['"]/.test(body),
+      sendsVideoId: /video_id\s*:\s*video\.id/.test(body),
+      sendsTargetId: /target_id\s*:\s*this\.siteId/.test(body),
     }).toEqual({
-      includesChecksum: true,
+      callsDeploymentsEndpoint: true,
+      sendsTargetSite: true,
+      sendsVideoId: true,
+      sendsTargetId: true,
+    });
+  });
+
+  it('onVideoDeploy must NOT use the legacy sendCommand("deploy_video") shortcut', () => {
+    // Regression guard for the "Invalid URL" bug: the dashboard used to send
+    // `url: video.path` directly which Pi destructured as `videoUrl` (=undefined)
+    // → axios.get(undefined) → "Invalid URL" toast.
+    expect({
+      hasSendCommandDeployVideo: /sendCommand\([^,]+,\s*['"]deploy_video['"]/.test(content),
+      hasUrlVideoPath: /\burl\s*:\s*video\.path\b/.test(content),
+    }).toEqual({
+      hasSendCommandDeployVideo: false,
+      hasUrlVideoPath: false,
     });
   });
 
   it('onVideoDeploy must guard against missing checksum before sending', () => {
-    // The method must check video.checksum and show error if absent
     const methodMatch = content.match(
       /onVideoDeploy\(video[\s\S]*?(?=\n\s{2}\w|\n\s{2}\/\/\s*={3,})/
     );
