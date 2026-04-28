@@ -17,7 +17,7 @@
  *  - Gear menu : Infos match, Profil, Préférences, Options
  *  - Sheets : Match info, Préférences appareil, Options match, Profil, Widget editor
  */
-import { Component, inject, OnInit, OnDestroy, HostListener, NgZone, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, HostListener, NgZone, ViewEncapsulation, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -51,6 +51,20 @@ import { R2IconComponent } from './icons/r2-icon.component';
 
 type Phase = 'before' | 'during' | 'after';
 type Loop = 'neutral' | 'before' | 'during' | 'after';
+
+/**
+ * SPEC-V2-TVMON-01 / ADR-101 — payload du capability event Pi → Remote.
+ * `version: "1.0"` = MJPEG. `version: "2.0"` (futur) = WebRTC. Une Remote V1
+ * ignorera silencieusement toute version majeure inconnue.
+ */
+interface TvPreviewCapability {
+  available: boolean;
+  transport: 'mjpeg' | 'webrtc';
+  url?: string;
+  resolution?: { w: number; h: number };
+  fps?: number;
+  version?: string;
+}
 type SheetType =
   | null
   | 'gear'
@@ -161,6 +175,14 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Vidéo forcée en cours (objet complet, pour subline + barre de progression). */
   playingVideo: PiConfigVideoEntry | null = null;
   private playingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * SPEC-V2-TVMON-01 / ADR-101 — URL absolue du flux MJPEG (cf. capability event Pi).
+   * `null` ⇒ aucun preview disponible (Pi 4 / SaaS / demo / GPU fallback / version
+   * non supportée). Le composant `<app-r2-tv-monitor>` reste en placeholder.
+   */
+  readonly tvPreviewUrl = signal<string | null>(null);
+  readonly tvPreviewThrottled = signal(false);
 
   /** Activation des widgets (persisté localStorage). */
   widgetsEnabled: WidgetsEnabled = { score: true, chrono: true, breaking: false };
@@ -302,6 +324,26 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       data => this.handlePlayerState(data),
     );
 
+    // SPEC-V2-TVMON-01 / ADR-101 — TV preview capability negotiation.
+    // Le Pi annonce ses capacités à chaque (re)connexion. Une `version` majeure
+    // inconnue → on ignore et reste sur le placeholder (aucun stream).
+    this.socketService.on<TvPreviewCapability>('tv-preview:capability', data => {
+      this.handleTvPreviewCapability(data);
+    });
+    this.socketService.on<{ reason: string; suspended?: boolean; newFps?: number }>(
+      'tv-preview:throttled',
+      data => {
+        const isSuspended = !!data?.suspended;
+        const isThrottled = data?.reason === 'cpu' || data?.reason === 'temp';
+        this.tvPreviewThrottled.set(isThrottled || isSuspended);
+        if (isSuspended) {
+          // Le Pi a coupé la capture. La capability n'arrivera pas tout de suite,
+          // donc on retire l'URL pour que le composant repasse en placeholder.
+          this.tvPreviewUrl.set(null);
+        }
+      },
+    );
+
     // Expansion par défaut : catégorie alignée sur la phase
     this.setDefaultExpanded();
 
@@ -429,6 +471,50 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * a une vidéo forcée en cours, on marque l'id en erreur et on ramène l'UI
    * à l'état "boucle" (sinon le bouton reste figé surligné).
    */
+  /**
+   * SPEC-V2-TVMON-01 / ADR-101 — réception du capability event MJPEG.
+   * `available: false` (Pi 4, SaaS, demo, GPU fallback) → on retire l'URL.
+   * Une `version` majeure inconnue (ex. "2.0" pour WebRTC futur) → ignore et reste
+   * sur le placeholder pour ne pas casser les vieilles Remote.
+   */
+  private handleTvPreviewCapability(cap: TvPreviewCapability | null | undefined): void {
+    if (!cap || !cap.available) {
+      this.tvPreviewUrl.set(null);
+      this.tvPreviewThrottled.set(false);
+      return;
+    }
+    const major = (cap.version || '').split('.')[0];
+    if (major !== '1') {
+      this.tvPreviewUrl.set(null);
+      return;
+    }
+    if (cap.transport !== 'mjpeg') {
+      // V1 ne sait que parler MJPEG. Toute autre valeur → ignore (forward-compat).
+      this.tvPreviewUrl.set(null);
+      return;
+    }
+    // Le Pi peut renvoyer une URL relative (`/preview.mjpeg`) ou absolue.
+    // Si relative, on la résout via le hostname Socket.IO connu (LAN).
+    const url = this.resolveTvPreviewUrl(cap.url || '/preview.mjpeg');
+    this.tvPreviewUrl.set(url);
+    this.tvPreviewThrottled.set(false);
+  }
+
+  private resolveTvPreviewUrl(rawUrl: string): string {
+    if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
+    // En LAN, la Remote est accédée via le même hôte que le socket-server. On
+    // utilise window.location.protocol/host. Si le scheme est `https` mais que
+    // le Pi n'expose que http (cas LAN typique), le navigateur bloquera mixed
+    // content — on accepte le fallback placeholder dans ce cas (onerror).
+    try {
+      const loc = window.location;
+      const base = `${loc.protocol}//${loc.host}`;
+      return new URL(rawUrl, base).toString();
+    } catch {
+      return rawUrl;
+    }
+  }
+
   private handlePlayerState(data: { lastError?: string | null }): void {
     if (data?.lastError !== 'play_error') return;
     const failedId = this.playingVideoId;

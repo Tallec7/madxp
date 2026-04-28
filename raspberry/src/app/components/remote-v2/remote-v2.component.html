@@ -34,6 +34,8 @@
     [loopVideoName]="loopVideo()?.name"
     [subline]="heroSubline()"
     [isNeutralLoop]="loopId === 'neutral'"
+    [previewUrl]="tvPreviewUrl()"
+    [throttledNotice]="tvPreviewThrottled()"
   ></app-r2-tv-monitor>
 
   <app-r2-recording-warning

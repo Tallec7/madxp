@@ -498,7 +498,7 @@
 │  (TvComponent)        ┌──→ canvas capture          │      │   ┌─ negotiation Socket.IO ───┐ │
 │   ▼                   │    + libjpeg-turbo encode  │      │   │                           │ │
 │  GPU V3D              │    + multipart HTTP        │      │   │  &lt;img src="http://pi:    │ │
-│   ▼                   │    sur :3001/preview.mjpeg │ ◀─── HTTP ─┤  3001/preview.mjpeg" /&gt; │ │
+│   ▼                   │    sur :3000/preview.mjpeg │ ◀─── HTTP ─┤  3001/preview.mjpeg" /&gt; │ │
 │  HDMI ──→ TV club     │    (10 fps, 640×360, q=70)  │      │   │                           │ │
 │                       │                              │      │   │  fallback: placeholder    │ │
 │  socket-server        │  exposé via socket-server   │      │   │  si onerror ou timeout    │ │
@@ -547,7 +547,7 @@
 </ul>
 
 <h4>Endpoint HTTP multipart</h4>
-<pre><code><span class="tok-com">// Mount sur le serveur Express déjà actif côté Pi (admin panel + socket-server)</span>
+<pre><code><span class="tok-com">// Mount sur le serveur Express déjà actif côté Pi (socket-server (Express + Socket.IO))</span>
 app.get(<span class="tok-str">'/preview.mjpeg'</span>, requireSiteAuth, (req, res) =&gt; {
   res.writeHead(<span class="tok-str">200</span>, {
     <span class="tok-str">'Content-Type'</span>: <span class="tok-str">'multipart/x-mixed-replace; boundary=frame'</span>,
@@ -565,7 +565,7 @@ app.get(<span class="tok-str">'/preview.mjpeg'</span>, requireSiteAuth, (req, re
   req.on(<span class="tok-str">'close'</span>, () =&gt; sub.unsubscribe());
 });</code></pre>
 
-<p><span class="impact infra">🛡️ Infra</span> Le port :3001 est déjà utilisé par admin-server. Pas de nouveau port à ouvrir : on monte la route dans le Express existant (admin-server), avec auth identique au reste du panel.</p>
+<p><span class="impact infra">🛡️ Infra</span> Le port :3000 est déjà utilisé par socket-server. Pas de nouveau port à ouvrir : on monte la route dans le Express existant (socket-server), avec auth identique au reste du panel.</p>
 
 <h3>Côté Remote V2 — composant enrichi</h3>
 
@@ -624,7 +624,7 @@ onImgLoad(): <span class="tok-key">void</span> {
   <span class="tok-str">"data"</span>: {
     <span class="tok-str">"available"</span>: <span class="tok-key">true</span>,
     <span class="tok-str">"transport"</span>: <span class="tok-str">"mjpeg"</span>,                              <span class="tok-com">// futur : "webrtc" en V2</span>
-    <span class="tok-str">"url"</span>: <span class="tok-str">"http://pi.local:3001/preview.mjpeg"</span>,    <span class="tok-com">// résolu côté Pi</span>
+    <span class="tok-str">"url"</span>: <span class="tok-str">"http://pi.local:3000/preview.mjpeg"</span>,    <span class="tok-com">// résolu côté Pi</span>
     <span class="tok-str">"resolution"</span>: { <span class="tok-str">"w"</span>: <span class="tok-str">640</span>, <span class="tok-str">"h"</span>: <span class="tok-str">360</span> },
     <span class="tok-str">"fps"</span>: <span class="tok-str">10</span>,
     <span class="tok-str">"version"</span>: <span class="tok-str">"1.0"</span>
@@ -697,7 +697,7 @@ onImgLoad(): <span class="tok-key">void</span> {
     <tr>
       <td><strong>Mode Pi (matériel club)</strong></td>
       <td>Hotspot du Pi (LAN privé) ou Wi-Fi club (LAN privé)</td>
-      <td>Cookie session opérateur du admin-server (port 3001) — déjà en place</td>
+      <td>Cookie session opérateur du socket-server (port 3001) — déjà en place</td>
     </tr>
     <tr>
       <td><strong>Mode SaaS (navigateur seul, ADR-037)</strong></td>
@@ -715,17 +715,17 @@ onImgLoad(): <span class="tok-key">void</span> {
 <p>L'event <code>tv-preview:capability</code> est émis <strong>uniquement</strong> en mode Pi avec hotspot ou LAN actif. En SaaS/demo, l'event n'arrive jamais → placeholder par défaut. Pas de tentative de stream.</p>
 
 <h3>Auth de l'endpoint MJPEG</h3>
-<p>L'opérateur connecté à la Remote a déjà un cookie <code>session-pi</code> issu du admin-server (auth basique partagée hotspot). Pour les <code>&lt;img&gt;</code> cross-origin, le cookie est envoyé automatiquement si <code>SameSite=Lax</code> et même origine LAN.</p>
+<p>L'opérateur connecté à la Remote a déjà un cookie <code>session-pi</code> issu du socket-server (auth basique partagée hotspot). Pour les <code>&lt;img&gt;</code> cross-origin, le cookie est envoyé automatiquement si <code>SameSite=Lax</code> et même origine LAN.</p>
 <p>Si la Remote tourne en cloud distant (rare mais possible), on émet un <strong>token éphémère 5 min</strong> via Socket.IO et on l'inclut en query string :</p>
-<pre><code><span class="tok-str">"url"</span>: <span class="tok-str">"http://pi.local:3001/preview.mjpeg?t=eyJhbGc..."</span></code></pre>
+<pre><code><span class="tok-str">"url"</span>: <span class="tok-str">"http://pi.local:3000/preview.mjpeg?t=eyJhbGc..."</span></code></pre>
 <p>Le Pi valide la signature HMAC avec une clé partagée connue de tous les composants (déjà en place pour les commandes existantes — cf. <code>command-dispatch.js</code>).</p>
 
 <h3>CSP côté Remote</h3>
-<p>La Remote charge actuellement les ressources en <code>'self'</code> (cf. <code>.claude/rules/raspberry.md</code>). Le stream MJPEG vient d'une URL <code>http://pi.local:3001/...</code> qui peut violer la CSP.</p>
+<p>La Remote charge actuellement les ressources en <code>'self'</code> (cf. <code>.claude/rules/raspberry.md</code>). Le stream MJPEG vient d'une URL <code>http://pi.local:3000/...</code> qui peut violer la CSP.</p>
 <p>Options :</p>
 <ul>
-  <li><strong>Reco</strong> : étendre <code>img-src</code> uniquement à <code>http://*.local:3001</code> et <code>http://192.168.4.1:3001</code> (IP hotspot Pi). Pas de changement de <code>script-src</code>.</li>
-  <li>Alternative : proxy via le Pi admin-server (le Pi proxifie son propre stream sur :3001 → :8080) — plus complexe, pas la peine si la CSP <code>img-src</code> peut être assouplie.</li>
+  <li><strong>Reco</strong> : étendre <code>img-src</code> uniquement à <code>http://*.local:3000</code> et <code>http://192.168.4.1:3000</code> (IP hotspot Pi). Pas de changement de <code>script-src</code>.</li>
+  <li>Alternative : proxy via le Pi socket-server (le Pi proxifie son propre stream sur :3000 → :8080) — plus complexe, pas la peine si la CSP <code>img-src</code> peut être assouplie.</li>
 </ul>
 
 <h3>Risques</h3>
@@ -795,7 +795,7 @@ onImgLoad(): <span class="tok-key">void</span> {
 <h3>Phase P0 — MVP MJPEG Pi 5 (~4 j)</h3>
 <ul>
   <li>Service <code>raspberry/server/services/tv-preview.service.js</code> avec capture Puppeteer screencast + encodage JPEG turbo (1.5 j)</li>
-  <li>Endpoint <code>GET /preview.mjpeg</code> sur admin-server avec auth cookie (0.5 j)</li>
+  <li>Endpoint <code>GET /preview.mjpeg</code> sur socket-server avec auth cookie (0.5 j)</li>
   <li>Capability event <code>tv-preview:capability</code> émis sur connexion socket-server (0.5 j)</li>
   <li>Composant <code>R2TvMonitorComponent</code> enrichi avec <code>&lt;img&gt;</code> + onerror + reconnect (0.5 j)</li>
   <li>CSP étendue côté Remote pour <code>img-src</code> LAN (0.25 j)</li>
@@ -845,7 +845,7 @@ onImgLoad(): <span class="tok-key">void</span> {
   <li>Nouvelle suite <code>smoke-tv-preview.test.js</code> qui vérifie :
     <ul>
       <li>Le service exporte les fonctions attendues</li>
-      <li>L'endpoint <code>/preview.mjpeg</code> est monté dans admin-server</li>
+      <li>L'endpoint <code>/preview.mjpeg</code> est monté dans socket-server</li>
       <li>L'event <code>tv-preview:capability</code> est émis à <code>handleAuthenticated</code></li>
       <li>Le throttle s'active à CPU &gt; 80 %</li>
       <li>Le subscriber unique limit fonctionne</li>
@@ -944,7 +944,7 @@ onImgLoad(): <span class="tok-key">void</span> {
   <li><strong>NE JAMAIS</strong> dupliquer <code>--disable-features</code> ou <code>--enable-features</code> dans le launch Chromium kiosk pour la capture (Chromium n'accepte qu'un seul flag).</li>
   <li><strong>NE JAMAIS</strong> mettre <code>--disable-gpu-memory-buffer-video-frames</code> sur Pi 5 (force software complet).</li>
   <li><strong>Reuse</strong> le mécanisme <code>GPU_DECODE_FALLBACK_FILE</code> existant pour auto-désactiver en cas de crash hardware.</li>
-  <li><strong>Reuse</strong> le port :3001 admin-server (pas de nouveau port à ouvrir CSP nginx).</li>
+  <li><strong>Reuse</strong> le port :3000 socket-server (pas de nouveau port à ouvrir CSP nginx).</li>
 </ul>
 
 <div class="callout info">
