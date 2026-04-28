@@ -115,12 +115,12 @@
         background: rgba(240, 168, 104, 0.08);
       }
 
-      .r2-vr-name {
+      .r2-video-name {
         font-size: var(--r2-type-row);
         color: var(--r2-ink);
       }
-      .r2-vr-meta,
-      .r2-vr-duration {
+      .r2-video-meta,
+      .r2-video-duration {
         color: var(--r2-muted);
       }
     }
@@ -134,8 +134,8 @@
     }
 
     // Texte mute global
-    .r2-text-muted,
-    .r2-vr-meta {
+    .r2-video-meta,
+    .r2-video-duration {
       color: var(--r2-muted);
     }
 

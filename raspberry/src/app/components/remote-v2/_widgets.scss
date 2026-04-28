@@ -12,6 +12,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  // AUDIT-V2-LAYOUT-01 : empêche le widget de dépasser le viewport quand
+  // le contenu interne (badges + score-row + score-quick) est plus large
+  // que la cellule disponible (régression visible Mobile B avant fix grid).
+  min-width: 0;
+  overflow: hidden;
 }
 
 .r2-widget-score {
