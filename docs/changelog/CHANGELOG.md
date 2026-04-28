@@ -1,3 +1,9 @@
+## [3.261.2](https://github.com/Tallec7/neopro/compare/v3.261.1...v3.261.2) (2026-04-28)
+
+### Bug Fixes
+
+- **site-content:** route site-detail deploy through POST /deployments ([#677](https://github.com/Tallec7/neopro/issues/677)) ([c401dbd](https://github.com/Tallec7/neopro/commit/c401dbd77123c10d10b493dc8febd03ef267c4ad)), closes [#2](https://github.com/Tallec7/neopro/issues/2)
+
 ## [3.261.1](https://github.com/Tallec7/neopro/compare/v3.261.0...v3.261.1) (2026-04-28)
 
 ### Bug Fixes
