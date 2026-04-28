@@ -1,6 +1,8 @@
 # Guide — Multi-TV via hotspot Pi (même contenu)
 
-> Procédure terrain pour ajouter une 2ᵉ (ou 3ᵉ/4ᵉ) TV à un site Pi existant **sans tirer de câble HDMI**, en utilisant le hotspot WiFi du Pi comme réseau dédié et un device navigateur (Fire TV Stick ou Chromecast Google TV) sur la TV supplémentaire.
+> Procédure terrain pour ajouter une 2ᵉ (ou 3ᵉ/4ᵉ) TV à un site Pi existant **sans tirer de câble HDMI**, en utilisant le hotspot WiFi du Pi comme réseau dédié et un device navigateur (**Fire TV Stick** ou **Google TV Streamer / Chromecast with Google TV**) sur la TV supplémentaire.
+>
+> ⚠️ **Un simple "Chromecast" sans Google TV ne fonctionne PAS** (dongle de cast passif sans navigateur ni télécommande). Voir §2 BoM pour le détail.
 >
 > Référence design : [PROP-001 — Multi-TV Single Pi, scénario E1](../proposals/PROP-001-multi-tv-single-pi.md).
 
@@ -64,14 +66,23 @@
 
 ## 2. Bill of Materials (par TV supplémentaire)
 
-| Élément                | Recommandé (option A)            | Recommandé (option B)              | Alternatives                                                                                                                    |
-| ---------------------- | -------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Device navigateur HDMI | **Amazon Fire TV Stick 4K** ~40€ | **Chromecast avec Google TV** ~40€ | Smart TV avec navigateur intégré (0€, qualité variable), Mini-PC, ancien smartphone Android, Raspberry Pi 5 en mode SaaS (~80€) |
-| Câble HDMI court       | Inclus avec le stick             | Inclus avec le Chromecast          | —                                                                                                                               |
-| Alim                   | USB depuis port TV (souvent)     | USB-C secteur (fournie)            | —                                                                                                                               |
-| Compte                 | Compte Amazon                    | Compte Google                      | Aucun si Smart TV / mini-PC                                                                                                     |
+| Élément                | Recommandé (option A)            | Recommandé (option B)                          | Alternatives                                                                                                                    |
+| ---------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Device navigateur HDMI | **Amazon Fire TV Stick 4K** ~40€ | **Google TV Streamer (4K)** ~50€ — modèle 2024 | Smart TV avec navigateur intégré (0€, qualité variable), Mini-PC, ancien smartphone Android, Raspberry Pi 5 en mode SaaS (~80€) |
+| Câble HDMI court       | Inclus avec le stick             | Inclus avec le Streamer                        | —                                                                                                                               |
+| Alim                   | USB depuis port TV (souvent)     | USB-C secteur (fournie)                        | —                                                                                                                               |
+| Compte                 | Compte Amazon                    | Compte Google                                  | Aucun si Smart TV / mini-PC                                                                                                     |
 
-**Total : ~40€ par TV** (ou 0€ si Smart TV moderne avec navigateur fonctionnel).
+**Total : ~40-50€ par TV** (ou 0€ si Smart TV moderne avec navigateur fonctionnel).
+
+> **⚠️ Attention au piège "Chromecast"** : il existe deux familles de produits Google qui partagent ce nom — seule la **2ᵉ génération** fonctionne pour Neopro :
+>
+> | Produit                                                                                      | Description                                                                                                                                   | Compatible Neopro ? |
+> | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+> | **Chromecast 1ʳᵉ-3ᵉ gen / Chromecast Ultra** (2013-2020)                                     | Dongle simple **sans télécommande, sans UI, sans navigateur**. Reçoit uniquement du contenu casté depuis un téléphone/laptop via Google Cast. | ❌ **NON**          |
+> | **Google TV Streamer (4K)** 2024 — ou ancien **Chromecast with Google TV (4K/HD)** 2020-2023 | Vrai device Android TV avec **télécommande, UI, Play Store, Chrome préinstallé**. Tu navigues comme sur une Smart TV.                         | ✅ **OUI**          |
+>
+> Lors de l'achat, **vérifier explicitement** : la boîte mentionne "Google TV" ou "with Google TV", contient une télécommande, et le produit a un app store. Un simple "Chromecast" sans cette mention = ancien dongle Cast = **ne marchera pas standalone** (il faudrait laisser un laptop allumé en permanence en train de caster `neopro.local/tv`, pas viable en prod).
 
 ---
 
@@ -102,9 +113,11 @@
 6. **Plein écran** : menu Silk (≡) → "Request desktop site" puis geste fullscreen, ou installer **Fully Kiosk Browser** (recommandé en prod, voir §5).
 7. **Vérifier l'affichage** : la TV doit afficher la même boucle que le kiosk Pi principal dans les ~5 secondes.
 
-### 4.B — Option Google Chromecast avec Google TV (Chrome)
+### 4.B — Option Google TV Streamer / Chromecast with Google TV (Chrome)
 
-1. **Brancher** le Chromecast en HDMI sur la TV supplémentaire. Brancher l'alim USB-C (le Chromecast n'est pas alimenté par la TV, contrairement au Fire Stick).
+> ⚠️ **Vérifier le bon produit avant d'acheter** : le device DOIT avoir une télécommande, une UI Android TV et un app store (Play Store). Voir §2 BoM pour le tableau "Attention au piège Chromecast". Un simple dongle Chromecast (sans Google TV) ne fonctionne pas.
+
+1. **Brancher** le Google TV Streamer (ou Chromecast with Google TV) en HDMI sur la TV supplémentaire. Brancher l'alim USB-C (le device n'est pas alimenté par la TV, contrairement au Fire Stick).
 2. **Activer le device** : suivre l'assistant Google TV (**compte Google requis**, langue, etc.). L'app Google Home sur smartphone facilite la config WiFi.
 3. **Connecter au WiFi** : pendant l'assistant ou ensuite Settings → Network & Internet → choisir `NEOPRO_<club>` → entrer le PSK du club.
 4. **Installer / ouvrir Chrome** : Chrome est généralement préinstallé sur Google TV. Sinon Play Store → "Google Chrome" → Install.
@@ -116,18 +129,18 @@
 6. **Plein écran** : Chrome menu ⋮ → mode immersif, ou utiliser Fully Kiosk (recommandé prod, voir §5).
 7. **Vérifier l'affichage** : la TV doit afficher la même boucle que le kiosk Pi principal dans les ~5 secondes.
 
-### Comment choisir entre Fire Stick et Chromecast ?
+### Comment choisir entre Fire Stick et Google TV Streamer ?
 
-| Critère                         | Fire TV Stick 4K                     | Chromecast Google TV                             |
+| Critère                         | Fire TV Stick 4K                     | Google TV Streamer / Chromecast with Google TV   |
 | ------------------------------- | ------------------------------------ | ------------------------------------------------ |
-| Prix                            | ~40€                                 | ~40€                                             |
+| Prix                            | ~40€                                 | ~50€ (Streamer 2024) / ~40€ (ancien Chromecast)  |
 | Compte requis                   | Amazon                               | Google                                           |
 | Navigateur                      | Silk Browser (Amazon, basé Chromium) | Chrome (Google, version desktop ~)               |
 | Cycle de mise à jour navigateur | Plus lent (Amazon)                   | Plus rapide (Google) — léger avantage long terme |
-| Télécommande IR fournie         | ✅                                   | ✅ (Bluetooth + IR pour TV)                      |
+| Télécommande fournie            | ✅ (IR + voix Alexa)                 | ✅ (Bluetooth + IR pour TV + voix Google)        |
 | Setup typique                   | 5 min                                | 5 min                                            |
 
-**Règle simple** : si le client a déjà un compte → utiliser celui-là. S'il n'a aucun des deux → préférer **Chromecast** (Chrome plus à jour, écosystème plus standard).
+**Règle simple** : si le club a déjà un compte → utiliser celui-là. S'il n'a aucun des deux → préférer **Google TV Streamer** (Chrome plus à jour, écosystème plus standard) en s'assurant d'acheter le bon produit (avec télécommande Google TV, **pas un simple dongle Chromecast**).
 
 ---
 
@@ -219,14 +232,26 @@ Comportement non attendu en mode hub local. Vérifier :
 
 ### Le device exige un compte (Amazon ou Google)
 
-Friction d'installation connue, mais incontournable sur Fire Stick comme sur Chromecast :
+Friction d'installation connue, mais incontournable sur Fire Stick comme sur Google TV Streamer :
 
-- Pas de compte Amazon ? → **Chromecast Google TV** (~40€, voir §4.B).
-- Pas de compte Google ? → **Fire TV Stick** (~40€, voir §4.A).
+- Pas de compte Amazon ? → **Google TV Streamer / Chromecast with Google TV** (~40-50€, voir §4.B). ⚠️ Vérifier que le produit a bien une télécommande Google TV — un simple "Chromecast" sans Google TV ne marche pas.
+- Pas de compte Google ? → **Fire TV Stick 4K** (~40€, voir §4.A).
 - Aucun des deux et pas envie d'en créer ? Alternatives :
   - **Smart TV avec navigateur intégré** (Samsung Tizen 2022+, LG webOS 6+, Sony Bravia Android TV 10+) → 0€, qualité variable.
   - **Mini-PC ou ancien smartphone Android** en mode kiosk → flexible mais setup plus long.
   - **Raspberry Pi 5 supplémentaire en mode SaaS** (~80€) → plus cher mais navigateur Chromium éprouvé, même stack que le Pi principal.
+
+### J'ai acheté un Chromecast et il ne marche pas
+
+Symptôme : le device s'installe, mais aucune option pour ouvrir un navigateur ou taper une URL — il ne propose que de "caster" depuis un téléphone/laptop.
+
+→ Vous avez probablement acheté un **ancien Chromecast (1ʳᵉ-3ᵉ gen ou Chromecast Ultra)** au lieu d'un **Google TV Streamer** ou d'un **Chromecast with Google TV**. Les anciens modèles sont des dongles passifs sans navigateur, incompatibles avec ce setup.
+
+Solutions :
+
+- Renvoyer / revendre le device, racheter un **Google TV Streamer (4K) 2024** ou un **Chromecast with Google TV (4K/HD)** modèle 2020-2023 (vérifier la mention "Google TV" sur la boîte + présence d'une télécommande)
+- Ou basculer sur un **Fire TV Stick 4K** si compte Amazon disponible
+- Workaround temporaire (non viable en prod) : laisser un laptop allumé connecté au hotspot, ouvrir Chrome sur `neopro.local/tv`, et **caster l'onglet** vers l'ancien Chromecast. Le laptop doit rester allumé en permanence — usable seulement pour une démo ponctuelle.
 
 ---
 

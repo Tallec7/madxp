@@ -206,13 +206,13 @@ socket.on('command', (cmd) => {
 
 ### Hardware pour scénario D
 
-| Device TV                                                  | Prix         | Performance                    |
-| ---------------------------------------------------------- | ------------ | ------------------------------ |
-| Smart TV avec navigateur intégré (Samsung Tizen, LG webOS) | 0€ (déjà là) | ⚠️ Variable selon modèle/année |
-| Amazon Fire TV Stick 4K                                    | ~40€         | ✅ Silk Browser stable         |
-| Google Chromecast avec Google TV                           | ~40€         | ✅ Chrome stable               |
-| Mini PC (Intel NUC / Beelink)                              | ~100-150€    | ✅✅ Meilleur navigateur       |
-| Raspberry Pi 5 en mode SaaS                                | ~80€         | ✅ Chromium kiosk éprouvé      |
+| Device TV                                                                     | Prix         | Performance                    |
+| ----------------------------------------------------------------------------- | ------------ | ------------------------------ |
+| Smart TV avec navigateur intégré (Samsung Tizen, LG webOS)                    | 0€ (déjà là) | ⚠️ Variable selon modèle/année |
+| Amazon Fire TV Stick 4K                                                       | ~40€         | ✅ Silk Browser stable         |
+| Google TV Streamer (4K) 2024 / Chromecast with Google TV (4K/HD) 2020-2023 ⚠️ | ~40-50€      | ✅ Chrome stable               |
+| Mini PC (Intel NUC / Beelink)                                                 | ~100-150€    | ✅✅ Meilleur navigateur       |
+| Raspberry Pi 5 en mode SaaS                                                   | ~80€         | ✅ Chromium kiosk éprouvé      |
 
 **Recommandation CTO** : Fire TV Stick 4K — meilleur rapport qualité/prix/fiabilité. Se branche directement en HDMI sur la TV, WiFi intégré, navigateur Silk fonctionnel. Le staff du club le configure en 5 minutes (WiFi + URL + plein écran).
 
@@ -376,13 +376,13 @@ Configuration actuelle (`hostapd.conf`) :
 
 ### Hardware recommandé pour scénario E
 
-| Device                               | Prix | Avantages                                                | Inconvénients                  |
-| ------------------------------------ | ---- | -------------------------------------------------------- | ------------------------------ |
-| **Amazon Fire TV Stick 4K**          | ~40€ | WiFi AC, Silk Browser, HDMI direct, télécommande incluse | Nécessite un compte Amazon     |
-| **Xiaomi Mi TV Stick**               | ~30€ | Moins cher, Android TV                                   | Navigateur moins stable        |
-| **Google Chromecast avec Google TV** | ~40€ | Chrome stable, Google Cast                               | Nécessite un compte Google     |
-| **Smart TV (navigateur intégré)**    | 0€   | Déjà là                                                  | Navigateur souvent lent/ancien |
-| **Ancien smartphone/tablette**       | 0€   | Recyclage                                                | Petit écran, batterie          |
+| Device                                                                                 | Prix    | Avantages                                                | Inconvénients                                                                                                                                      |
+| -------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Amazon Fire TV Stick 4K**                                                            | ~40€    | WiFi AC, Silk Browser, HDMI direct, télécommande incluse | Nécessite un compte Amazon                                                                                                                         |
+| **Xiaomi Mi TV Stick**                                                                 | ~30€    | Moins cher, Android TV                                   | Navigateur moins stable                                                                                                                            |
+| **Google TV Streamer (4K) 2024** ⚠️ ou **Chromecast with Google TV (4K/HD)** 2020-2023 | ~40-50€ | Chrome stable, Google Cast                               | Nécessite un compte Google. ⚠️ NE PAS confondre avec un simple "Chromecast" sans Google TV (dongle de cast passif sans navigateur — incompatible). |
+| **Smart TV (navigateur intégré)**                                                      | 0€      | Déjà là                                                  | Navigateur souvent lent/ancien                                                                                                                     |
+| **Ancien smartphone/tablette**                                                         | 0€      | Recyclage                                                | Petit écran, batterie                                                                                                                              |
 
 **Recommandation** : Fire TV Stick 4K. Se branche en HDMI, WiFi intégré, télécommande IR pour naviguer. Le staff configure en 5 minutes : WiFi `NEOPRO_xxx` → Silk Browser → `neopro.local/tv` → plein écran.
 
