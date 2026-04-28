@@ -51,19 +51,25 @@ La Remote est une page web accessible depuis n'importe quel smartphone. Elle per
 
 ## Matrice de décision
 
-| Critère                  | A — Splitter HDMI | B — HDBaseT       | C — Pi Zero esclaves | D — SaaS cloud        | **E — Pi + devices WiFi**                    |
-| ------------------------ | ----------------- | ----------------- | -------------------- | --------------------- | -------------------------------------------- |
-| Même contenu             | ✅ Natif          | ✅ Natif          | ✅ + différencié     | ✅ + différencié      | **✅ + différencié**                         |
-| Contenus différents      | ❌                | ❌                | ✅                   | ✅                    | **✅**                                       |
-| Distance max             | 10-15m            | 70-100m           | WiFi (~30m)          | WiFi/Ethernet club    | **Hotspot Pi (~30m)**                        |
-| Dev logiciel             | 0                 | 0                 | ~10 jours            | ~5 jours              | **0** (même contenu) / **~5j** (différencié) |
-| Coût hardware/TV         | 15-20€            | 60-100€           | ~45€                 | 0-50€                 | **0-50€** (stick HDMI)                       |
-| Offline total            | ✅                | ✅                | ✅                   | ❌ Dépend internet    | **✅ Tout local**                            |
-| Maintenance flotte       | 1 device          | 1 device          | N+1 devices          | 1 site SaaS           | **1 Pi (inchangé)**                          |
-| Scalabilité (ajouter TV) | Nouveau splitter  | Nouveau récepteur | Nouveau Pi Zero      | Ouvrir une URL        | **Connecter au hotspot**                     |
-| Score Stramatel live     | ✅ série directe  | ✅ série directe  | ✅ Socket.IO relay   | ⚠️ Cloud relay ~200ms | **✅ Socket.IO local 0ms**                   |
-| Remote (télécommande)    | ✅ Inchangée      | ✅ Inchangée      | ⚠️ Adaptation        | ✅ Socket.IO cloud    | **✅ Inchangée**                             |
-| Réseau requis            | Aucun             | Aucun             | Hotspot Pi           | WiFi club + internet  | **Hotspot Pi seul**                          |
+> **Clé de lecture** : le critère décisif n'est pas "≤ 10m vs > 10m" mais **(a) câblage HDMI/Cat6 possible ou non** + **(b) criticité de l'écran** (TV principale match vs ambiance secondaire). Le tableau ci-dessous compare les 5 scénarios sur leurs propriétés intrinsèques ; voir [Recommandation stratégique](#recommandation-stratégique-vision-cto) pour la recommandation par situation.
+
+| Critère                   | A — Splitter HDMI | B — HDBaseT       | C — Pi Zero esclaves | D — SaaS cloud        | **E — Pi + devices WiFi**                        |
+| ------------------------- | ----------------- | ----------------- | -------------------- | --------------------- | ------------------------------------------------ |
+| Même contenu              | ✅ Natif          | ✅ Natif          | ✅ + différencié     | ✅ + différencié      | **✅ + différencié**                             |
+| Contenus différents       | ❌                | ❌                | ✅                   | ✅                    | **✅**                                           |
+| Distance max              | 10-15m            | 70-100m           | WiFi (~30m)          | WiFi/Ethernet club    | **Hotspot Pi (~30m)**                            |
+| Sync frame-perfect        | ✅                | ✅                | ❌ Drift WiFi        | ❌ Drift WiFi/cloud   | **❌ Drift WiFi 1-2s**                           |
+| Fiabilité match-day       | ✅✅ Industrielle | ✅✅ Industrielle | ⚠️ N+1 devices       | ⚠️ Dépend Internet    | **⚠️ Devices grand public (Fully Kiosk requis)** |
+| Dev logiciel              | 0                 | 0                 | ~10 jours            | ~5 jours              | **0** (même contenu) / **~5j** (différencié)     |
+| Coût hardware/TV          | 15-20€            | 60-100€           | ~45€                 | 0-50€                 | **0-50€** (stick HDMI)                           |
+| Offline total             | ✅                | ✅                | ✅                   | ❌ Dépend internet    | **✅ Tout local**                                |
+| Maintenance flotte        | 1 device          | 1 device          | N+1 devices          | 1 site SaaS           | **1 Pi (inchangé)**                              |
+| Monitoring central        | ✅ Pi seul        | ✅ Pi seul        | ❌ Sticks invisibles | ⚠️ Site SaaS visible  | **❌ Sticks invisibles**                         |
+| Watchdog crash navigateur | n/a (HDMI direct) | n/a               | ✅ systemd Pi        | ❌                    | **❌ Sauf Fully Kiosk Browser**                  |
+| Scalabilité (ajouter TV)  | Nouveau splitter  | Nouveau récepteur | Nouveau Pi Zero      | Ouvrir une URL        | **Connecter au hotspot**                         |
+| Score Stramatel live      | ✅ série directe  | ✅ série directe  | ✅ Socket.IO relay   | ⚠️ Cloud relay ~200ms | **✅ Socket.IO local 0ms**                       |
+| Remote (télécommande)     | ✅ Inchangée      | ✅ Inchangée      | ⚠️ Adaptation        | ✅ Socket.IO cloud    | **✅ Inchangée**                                 |
+| Réseau requis             | Aucun             | Aucun             | Hotspot Pi           | WiFi club + internet  | **Hotspot Pi seul**                              |
 
 ---
 
@@ -106,6 +112,8 @@ La Remote est une page web accessible depuis n'importe quel smartphone. Elle per
 **Impact Remote** : **Aucun.** Identique au scénario A.
 
 **Avantages** : 70-100m de portée, câblage Ethernet souvent déjà tiré, PoE possible.
+
+> **Indépendance vis-à-vis du hotspot WiFi** : HDBaseT est un transport **purement matériel** du signal HDMI sur câble Cat6. Il ne consomme **aucun réseau IP** — ni le hotspot Pi, ni le WiFi du club, ni internet. Conséquence : un Pi en mode hotspot uniquement (sans WiFi externe) supporte HDBaseT sans aucun ajustement, et ce **en parallèle du hotspot** qui continue de servir les clients WiFi (Fire Stick, smartphones Remote). Les deux sous-systèmes sont indépendants. Concrètement, on peut combiner : HDMI 0 → splitter ou HDBaseT vers TV1+TV2 (sync parfaite, distance), ET hotspot WiFi → Fire Stick TV3 buvette + smartphones Remote.
 
 ### Scénario C — Pi Zero esclaves (contenus différenciés)
 
