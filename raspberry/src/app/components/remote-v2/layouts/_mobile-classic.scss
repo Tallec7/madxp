@@ -101,8 +101,12 @@
     .r2-widgets .r2-widget-breaking {
       grid-column: 1 / -1;
     }
-    // Cache les labels "Score" / "Chrono" en compact — gain 48px/cell
-    .r2-widgets .r2-widget-label:not(.r2-widget-label--breaking) {
+    // Cache les labels "Score" / "Chrono" en compact — gain 48px/cell.
+    // Cible explicite (parents `.r2-widget-score` / `.r2-widget-chrono`) au lieu
+    // de `:not(.r2-widget-label--breaking)` qui cassait silencieusement la
+    // compilation Sass des rules suivantes (BEM `--` mal interprété par dart-sass).
+    .r2-widgets .r2-widget-score .r2-widget-label,
+    .r2-widgets .r2-widget-chrono .r2-widget-label {
       display: none;
     }
     // Compacte les badges équipe pour la cellule étroite
