@@ -43,16 +43,22 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
 
   // ------------ raspberry : dispatcher component ------------
 
-  it('RemoteHostComponent dispatcher exists and implements 4-step resolution', () => {
+  it('RemoteHostComponent dispatcher exists and implements 3-step resolution', () => {
     const host = 'raspberry/src/app/components/remote/remote-host.component.ts';
     expect(exists(host)).toBe(true);
     const content = read(host);
     // Query param override
     expect(/v2=/.test(content)).toBe(true);
-    // localStorage key
-    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
-    // Cloud feature flag lookup
+    // Pi configuration override (route resolver) before SaaS fallback
+    expect(/featureOverrides/.test(content)).toBe(true);
+    // Cloud feature flag lookup (SaaS)
     expect(/isFeatureEnabled\(\s*['"]remote_v2['"]\s*\)/.test(content)).toBe(true);
+    // Legacy key référencée UNIQUEMENT pour cleanup (removeItem) — jamais écrite.
+    // Multi-tenant SaaS hotfix : `?v2=…` ne doit pas persister en localStorage
+    // (sinon il fuite à tous les sites partageant le domaine).
+    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
+    expect(/localStorage\.setItem\([^)]*v2_override/i.test(content)).toBe(false);
+    expect(/localStorage\.removeItem\(/.test(content)).toBe(true);
   });
 
   it('app.routes.ts uses RemoteHostComponent for /remote (not RemoteComponent directly)', () => {
@@ -66,12 +72,52 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     const v2 = 'raspberry/src/app/components/remote-v2/remote-v2.component.ts';
     expect(exists(v2)).toBe(true);
     const content = read(v2);
-    // Rollback must set override to '0' and reload (guarantees < 10s recovery).
-    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
+    // Rollback navigue vers /remote?v2=0 (override session-only, plus de localStorage).
     expect(/backToV1\s*\(/.test(content)).toBe(true);
+    expect(/queryParams:\s*\{\s*v2:\s*['"]0['"]/.test(content)).toBe(true);
+    // Doit pas réécrire la clé legacy localStorage (multi-tenant SaaS).
+    expect(/localStorage\.setItem\([^)]*neopro_remote_v2_override/.test(content)).toBe(false);
     // Must reuse V1 scoped services (ADR-051 Phase 4) — no logic fork.
     expect(/RemoteScoreService/.test(content)).toBe(true);
     expect(/RemoteTimerService/.test(content)).toBe(true);
+  });
+
+  // ------------ Multi-tenant SaaS : prefs scopées par site/profil ------------
+
+  it('RemotePreferencesService scope la clé localStorage par site + profil', () => {
+    const svc = read(
+      'raspberry/src/app/components/remote/remote-preferences.service.ts',
+    );
+    // SaasConfigService injecté pour récupérer le scope.
+    expect(/SaasConfigService/.test(svc)).toBe(true);
+    expect(/getScopedStorageKey/.test(svc)).toBe(true);
+    // Plus aucune écriture sur la clé globale legacy non scopée.
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_prefs['"]\s*,/.test(svc),
+    ).toBe(false);
+    // Méthode de rechargement après switch de profil.
+    expect(/reloadFromStorage\s*\(/.test(svc)).toBe(true);
+  });
+
+  it('RemoteV2Component scope les clés widgets + recent par site + profil', () => {
+    const v2 = read(
+      'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
+    );
+    // Plus de constantes globales écrites directement — passage par
+    // saasConfig.getScopedStorageKey pour les deux clés.
+    expect(/getScopedStorageKey/.test(v2)).toBe(true);
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_v2_widgets['"]\s*,/.test(v2),
+    ).toBe(false);
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_v2_recent['"]\s*,/.test(v2),
+    ).toBe(false);
+  });
+
+  it('SaasConfigService expose getScopedStorageKey + getSelectedProfileId', () => {
+    const svc = read('raspberry/src/app/services/saas-config.service.ts');
+    expect(/getScopedStorageKey\s*\(/.test(svc)).toBe(true);
+    expect(/getSelectedProfileId\s*\(/.test(svc)).toBe(true);
   });
 
   // ------------ dashboard : feature-gate + toggle ------------

@@ -70,8 +70,8 @@ interface WidgetsEnabled {
   breaking: boolean;
 }
 
-const WIDGETS_STORAGE_KEY = 'neopro_remote_v2_widgets';
-const RECENT_VIDEOS_STORAGE_KEY = 'neopro_remote_v2_recent';
+const WIDGETS_STORAGE_KEY_BASE = 'neopro_remote_v2_widgets';
+const RECENT_VIDEOS_STORAGE_KEY_BASE = 'neopro_remote_v2_recent';
 const RECENT_VIDEOS_MAX = 10;
 
 const OVERLAY_POSITIONS: ScoreOverlayPosition[] = [
@@ -364,9 +364,17 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (this.playingTimer) clearTimeout(this.playingTimer);
   }
 
+  private widgetsStorageKey(): string {
+    return this.saasConfig.getScopedStorageKey(WIDGETS_STORAGE_KEY_BASE);
+  }
+
+  private recentVideosStorageKey(): string {
+    return this.saasConfig.getScopedStorageKey(RECENT_VIDEOS_STORAGE_KEY_BASE);
+  }
+
   private loadWidgetsEnabled(): WidgetsEnabled {
     try {
-      const raw = localStorage.getItem(WIDGETS_STORAGE_KEY);
+      const raw = localStorage.getItem(this.widgetsStorageKey());
       if (!raw) return { score: true, chrono: true, breaking: false };
       const parsed = JSON.parse(raw) as Partial<WidgetsEnabled>;
       return {
@@ -381,7 +389,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   private persistWidgetsEnabled(): void {
     try {
-      localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(this.widgetsEnabled));
+      localStorage.setItem(this.widgetsStorageKey(), JSON.stringify(this.widgetsEnabled));
     } catch {
       /* localStorage indisponible (mode privé) — silent */
     }
@@ -1083,7 +1091,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   private loadRecentVideos(): string[] {
     try {
-      const raw = localStorage.getItem(RECENT_VIDEOS_STORAGE_KEY);
+      const raw = localStorage.getItem(this.recentVideosStorageKey());
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
@@ -1094,7 +1102,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   private persistRecentVideos(): void {
     try {
-      localStorage.setItem(RECENT_VIDEOS_STORAGE_KEY, JSON.stringify(this.recentVideoIds));
+      localStorage.setItem(this.recentVideosStorageKey(), JSON.stringify(this.recentVideoIds));
     } catch {
       /* noop */
     }
@@ -1124,7 +1132,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   // ---- Rollback V1 ------------------------------------------------------
 
   backToV1(): void {
-    localStorage.setItem('neopro_remote_v2_override', '0');
     this.router.navigate(['/remote'], { queryParams: { v2: '0' } });
   }
 }
