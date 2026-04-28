@@ -1,3 +1,9 @@
+# [3.261.0](https://github.com/Tallec7/neopro/compare/v3.260.0...v3.261.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** système de 6 layouts (3 mobile × 3 PC) + SCSS split (SPEC-V2-LAYOUT-01) ([#675](https://github.com/Tallec7/neopro/issues/675)) ([cba57f0](https://github.com/Tallec7/neopro/commit/cba57f05a7cde05015dbedbd41a6dca9b422459e)), closes [#0e1116](https://github.com/Tallec7/neopro/issues/0e1116) [#fff](https://github.com/Tallec7/neopro/issues/fff) [#f0a868](https://github.com/Tallec7/neopro/issues/f0a868)
+
 # [3.260.0](https://github.com/Tallec7/neopro/compare/v3.259.0...v3.260.0) (2026-04-28)
 
 ### Features
