@@ -246,6 +246,24 @@ describe('Club Portal video ownership guards', () => {
     });
   });
 
+  // --- unlinkVideoFromSite must be idempotent (no 404 if pivot is empty) ---
+  // Bug observé en prod 2026-04-27 : 404 sur "Retirer du site" SaaS quand la
+  // vidéo n'avait jamais été liée via site_videos (UI exposait le bouton sans
+  // garde côté lien). L'opération doit être idempotente : 200 + alreadyUnlinked.
+  it('unlinkVideoFromSite must be idempotent (no res.status(404))', () => {
+    const unlinkFn = contentControllerContent.match(
+      /export const unlinkVideoFromSite[\s\S]*?(?=export const \w|$)/
+    );
+    expect(unlinkFn).not.toBeNull();
+    expect({
+      hasNoStatus404: !/res\.status\(404\)/.test(unlinkFn![0]),
+      returnsAlreadyUnlinkedFlag: /alreadyUnlinked\s*:\s*true/.test(unlinkFn![0]),
+    }).toEqual({
+      hasNoStatus404: true,
+      returnsAlreadyUnlinkedFlag: true,
+    });
+  });
+
   // --- updateVideo must block NEOPRO category ---
   it('updateVideo must block NEOPRO category for club users', () => {
     const updateFn = contentControllerContent.match(
