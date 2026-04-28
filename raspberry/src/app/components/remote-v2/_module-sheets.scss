@@ -1,0 +1,147 @@
+// ---- Module sheets (widget-score, widget-chrono, widget-breaking) ---------
+.r2-module-score {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  .r2-module-side {
+    padding: 14px;
+    border-radius: 14px;
+    background: $bg;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .r2-module-team-badge {
+    width: 100%;
+    text-align: center;
+    font-weight: 800;
+    font-size: 12px;
+    color: $text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .r2-module-score-val {
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+    color: $text;
+  }
+
+  .r2-module-score-btns {
+    display: flex;
+    gap: 6px;
+
+    button {
+      width: 44px;
+      height: 40px;
+      border-radius: 10px;
+      border: none;
+      background: $surface;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 800;
+      color: $text;
+
+      &.primary {
+        background: $accent;
+        color: #fff;
+      }
+    }
+  }
+}
+
+.r2-module-chrono {
+  padding: 20px 10px;
+  text-align: center;
+  font-size: 64px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: $text;
+}
+
+.r2-module-chrono-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  button {
+    padding: 12px 10px;
+    border-radius: 10px;
+    background: $bg;
+    color: $text;
+    border: 1px solid $border;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &.dark {
+      background: $dark;
+      color: #fff;
+      border-color: $dark;
+    }
+
+    // SPEC-V2-ICONS-01 — gap icône + label (Pause/Reprendre)
+    &.r2-btn--with-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+  }
+}
+
+.r2-module-breaking-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: $text-muted;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.r2-module-breaking-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid $border;
+  font-family: inherit;
+  font-size: 13px;
+  background: $surface;
+  color: $text;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.r2-module-breaking-btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: none;
+  background: $dark;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.live {
+    background: $danger;
+  }
+}

@@ -1,0 +1,97 @@
+// SPEC-V2-LAYOUT-01 — Mobile A "Liste dense classique" (recommandé régie pro)
+// Cible : opérateur régie qui pilote 30+ vidéos/match.
+// Vidéos visibles à fold (375×760) : 9 (vs 3,5 en V2 actuelle, +157%).
+//
+// Densification :
+//   Header  80 → 56px         Hero    200 → 76px (1 ligne)
+//   Widgets 180 → 64px         Row vid  56 → 40px
+//   Padding 16  → 12px         Type     15 → 14px
+//
+// Référence pixel : `Remote V2 Propositions.html` artboard "A · Liste dense"
+// (mocks React `MobileA` dans remote-v2-mobile.jsx l. 7-153).
+
+.remote-v2.layout-mobile-classic {
+  @include r2-mobile-only {
+    --r2-hero-h: 76px;
+    --r2-widgets-h: 64px;
+    --r2-row-h: 40px;
+    --r2-padding-x: 12px;
+    --r2-type-row: 14px;
+
+    // Header compact 56px
+    .r2-header {
+      padding: 6px 12px;
+      min-height: 56px;
+    }
+
+    // Hero ultra-compact : 1 ligne
+    .r2-hero {
+      margin: 8px 12px 0;
+      min-height: var(--r2-hero-h);
+    }
+    .r2-hero-eyebrow {
+      padding: 4px 10px 0;
+      font-size: 9px;
+    }
+    .r2-hero-main {
+      padding: 4px 10px 6px;
+      gap: 8px;
+    }
+    .r2-tv-thumb {
+      width: 44px;
+      height: 28px;
+    }
+    .r2-hero-info {
+      .r2-video-name {
+        font-size: 13px;
+      }
+      .r2-video-subline {
+        font-size: 10px;
+      }
+    }
+
+    // Widgets en grid 2 colonnes (timer | score), breaking pleine largeur
+    .r2-widgets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 8px 12px 0;
+      min-height: var(--r2-widgets-h);
+
+      .r2-widget {
+        padding: 6px 8px;
+        min-height: 56px;
+      }
+
+      .r2-widget--breaking,
+      .r2-widget-breaking {
+        grid-column: 1 / -1;
+      }
+    }
+
+    // Densification des rows vidéo
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 0 var(--r2-padding-x);
+
+      .r2-vr-name {
+        font-size: var(--r2-type-row);
+      }
+      .r2-vr-thumb,
+      .r2-video-thumb {
+        width: 28px;
+        height: 28px;
+      }
+      .r2-vr-meta,
+      .r2-vr-duration {
+        font-size: 12px;
+      }
+    }
+
+    .r2-categories,
+    .r2-phase-tabs {
+      padding-left: var(--r2-padding-x);
+      padding-right: var(--r2-padding-x);
+    }
+  }
+}

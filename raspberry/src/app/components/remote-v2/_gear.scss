@@ -1,0 +1,73 @@
+// ---- Gear menu items (enriched) -------------------------------------------
+.r2-gear-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 120ms;
+
+  &:hover {
+    background: $border-subtle;
+  }
+
+  .r2-gear-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: $border-subtle;
+    color: $text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .r2-gear-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .r2-gear-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+  }
+
+  .r2-gear-sub {
+    font-size: 11px;
+    color: $text-muted;
+  }
+
+  .r2-gear-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: $text-muted;
+    padding: 2px 10px;
+    background: $border-subtle;
+    border-radius: 99px;
+  }
+
+  .r2-gear-chev {
+    color: $text-muted;
+    font-size: 18px;
+    line-height: 1;
+  }
+}
+
+.r2-gear-sep {
+  height: 6px;
+  background: $border-subtle;
+  margin: 6px 0;
+  border-radius: 3px;
+}

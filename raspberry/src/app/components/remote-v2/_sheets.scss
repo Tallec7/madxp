@@ -1,0 +1,365 @@
+// ---- Sheets (bottom sheets / modals) --------------------------------------
+.r2-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.5);
+  z-index: 200;
+  animation: np-fade-in 150ms ease-out;
+}
+
+@keyframes np-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.r2-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85vh;
+  background: $surface;
+  border-radius: 18px 18px 0 0;
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -10px 30px -8px rgba(16, 24, 40, 0.2);
+  animation: np-sheet-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes np-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.r2-sheet-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid $border-subtle;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+
+  button {
+    width: 30px;
+    height: 30px;
+    border-radius: 99px;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+    font-size: 16px;
+    cursor: pointer;
+
+    &:hover {
+      background: $border-subtle;
+    }
+  }
+}
+
+.r2-sheet-body {
+  padding: 12px 18px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  hr {
+    border: none;
+    border-top: 1px solid $border-subtle;
+    margin: 6px 0;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $text-muted;
+
+    input[type='text'],
+    input[type='number'],
+    input[type='date'],
+    select {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid $border;
+      background: $bg;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: $text;
+      text-transform: none;
+      letter-spacing: normal;
+
+      &:focus {
+        outline: none;
+        border-color: $accent;
+        background: $surface;
+      }
+    }
+  }
+
+  .r2-save-btn {
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: $accent;
+    color: #fff;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 8px;
+
+    &:hover {
+      background: darken($accent, 5%);
+    }
+  }
+}
+
+.r2-menu-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid $border-subtle;
+  background: $surface;
+  color: $text;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: left;
+  transition: all 120ms;
+
+  &:hover {
+    background: $accent-bg;
+    border-color: $accent;
+  }
+
+  // SPEC-V2-ICONS-01 — gabarit icône + texte (gap fiable, pas de margin sur l'icône)
+  &--with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &--secondary {
+    color: $text-muted;
+    font-weight: 600;
+    border-style: dashed;
+
+    &:hover {
+      background: $border-subtle;
+      border-color: $text-muted;
+      border-style: solid;
+    }
+  }
+}
+
+.r2-profile-btn {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid $border-subtle;
+  background: $surface;
+  color: $text;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &.active {
+    background: $accent-bg;
+    border-color: $accent;
+    color: $accent-deep;
+    font-weight: 800;
+
+    // SPEC-V2-ICONS-01 — Lucide "check" via masque SVG, recoloré par background-color.
+    &::after {
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      background-color: $accent;
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+      mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+    }
+  }
+
+  &:hover {
+    background: $bg;
+  }
+}
+
+.r2-empty {
+  padding: 14px;
+  text-align: center;
+  color: $text-muted;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+// SPEC-V2-LAYOUT-01 — section "Affichage" dans la sheet prefs
+.r2-pref-section-title {
+  margin: 18px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-muted;
+  border-top: 1px solid $border-subtle;
+  padding-top: 14px;
+}
+
+.r2-pref-row.r2-pref-row--block {
+  flex-direction: column !important;
+  align-items: stretch;
+  gap: 8px;
+  padding: 10px 0;
+
+  .r2-pref-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+  }
+}
+
+.r2-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r2-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid $border-subtle;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background 120ms;
+  font-size: 13px;
+  color: $text;
+
+  input[type='radio'] {
+    accent-color: $accent;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  em {
+    color: $text-muted;
+    font-style: normal;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  &:has(input:checked) {
+    border-color: $accent;
+    background: $accent-bg;
+  }
+}
+
+.r2-pref-row {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid $border-subtle;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  > span {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  input[type='checkbox'] {
+    width: 44px;
+    height: 26px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: $border;
+    border-radius: 99px;
+    position: relative;
+    cursor: pointer;
+    transition: background 180ms;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 22px;
+      height: 22px;
+      border-radius: 99px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      transition: left 180ms;
+    }
+
+    &:checked {
+      background: $accent;
+
+      &::after {
+        left: 20px;
+      }
+    }
+  }
+
+  input[type='number'] {
+    width: 80px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid $border;
+    background: $bg;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+    text-align: center;
+  }
+
+  select {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid $border;
+    background: $bg;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+  }
+}

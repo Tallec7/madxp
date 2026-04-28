@@ -13,11 +13,13 @@
 ### 🎯 Pour le club (NLF, prospects)
 
 - **Télécommande V2 : icônes harmonisées cross-OS** ([cette PR](https://github.com/Tallec7/neopro)) — les 11 emojis Unicode de la Remote V2 (📷 modifier logo, 🔁 nouveau match, ⏸/▶ chrono, 💡 astuce breaking news, → période suivante, › chevrons prefs, ⚠/✓ statut erreurs vidéo) rendaient différemment selon iPad opérateur, tablette Android régie, PC Windows tribune ou PC Linux centre médias — parfois en tofu illisible. Migration vers une bibliothèque SVG inline contrôlée (`<app-r2-icon>` + registre Lucide MIT, 0 dépendance npm). Affichage pixel-identique partout, icônes teintables (rouge danger / blanc dark mode), accessibilité RGAA correcte (le lecteur d'écran lit "Modifier le logo" au lieu de "appareil photo emoji"). SPEC-V2-ICONS-01.
+- **Télécommande V2 : 6 layouts au choix (3 mobile + 3 PC)** — l'opérateur régie pro qui pilote 30+ vidéos par match passait son temps à scroller : seules 3,5 vidéos étaient visibles sur mobile, et 3 sur PC 27 pouces. Nouveau système de préférence "Affichage" dans les prefs : Mobile {Liste dense recommandée régie / Cartes visuelles / Tableur compact} × PC {Centré confort / Sidebar+browse recommandée / Régie pro sombre [bêta]}. Mobile dense passe à ~9 vidéos visibles (+157 %), PC sidebar à ~18 (+500 %). Choix mémorisé par utilisateur, bascule instantanée sans reload. SPEC-V2-LAYOUT-01.
 - Bibliothèque vidéo : badge `×N` sur les miniatures quand plusieurs entrées DB pointent sur le même fichier physique FTP. Évite la confusion "pourquoi je vois `2_MIN.mp4` deux fois ?" — au survol, une infobulle explique que le contenu est identique (détecté par checksum) et qu'un seul fichier est stocké côté serveur ([#673](https://github.com/Tallec7/neopro/pull/673)).
 
 ### 🧹 Pour l'équipe
 
 - 5 garde-fous smoke + 2 invariants `.claude/rules/dashboard.md` pour bloquer toute régression du badge dedup ([#673](https://github.com/Tallec7/neopro/pull/673)).
+- **Remote V2 : SCSS splitté en 25 partials** (cette PR) — `remote-v2.component.scss` est passé de 2547 lignes à un agrégateur de 50 lignes d'`@import`, le reste réparti en partials par section (~150 lignes max chacun). Réduit la dette de "fichier monstre" identifiée dans CLAUDE.md (vise <400/fichier) et permet aux 6 layouts SPEC-V2-LAYOUT-01 de surcharger les tokens densité (`--r2-hero-h`, `--r2-row-h`...) proprement scopés.
 
 ---
 

@@ -1,0 +1,27 @@
+// SPEC-V2-LAYOUT-01 — PC A "Centré confort 920px"
+// Cible : usage occasionnel / formation / démo.
+// Vidéos visibles à fold (1280×820) : 6 (mobile A étiré).
+//
+// Effort minimum : on contraint la largeur du conteneur racine et on laisse
+// le layout mobile s'appliquer naturellement (aucune transformation grid).
+//
+// Référence pixel : `DesktopA` dans remote-v2-desktop.jsx l. 7-215.
+
+@include r2-desktop-up {
+  .remote-v2.layout-desktop-centered {
+    max-width: 920px;
+    margin: 0 auto;
+
+    // Garde le hero/widgets standards (pas de densification spécifique
+    // à PC ; c'est mobile A étiré, mais sans la classe mobile-classic
+    // si l'utilisateur n'a pas choisi A en mobile)
+    .r2-hero {
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+    .r2-widgets {
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+  }
+}

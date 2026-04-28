@@ -1,0 +1,64 @@
+// ---- Recording warning banner --------------------------------------------
+.r2-rec-warning {
+  margin: 10px 16px 4px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: $danger-bg;
+  border: 1px solid $danger;
+  border-radius: 10px;
+  color: $danger;
+
+  .r2-rec-warning-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: $danger;
+    animation: np-pulse 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .r2-rec-warning-text {
+    flex: 1;
+    font-size: 12px;
+    font-weight: 600;
+    color: $text;
+
+    strong {
+      color: $danger;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  .r2-rec-warning-extend {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    background: $danger;
+    color: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .r2-rec-warning-stop {
+    width: 26px;
+    height: 26px;
+    border-radius: 99px;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba($danger, 0.15);
+    }
+  }
+}

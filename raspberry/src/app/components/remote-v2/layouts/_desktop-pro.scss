@@ -1,0 +1,149 @@
+// SPEC-V2-LAYOUT-01 — PC C "Régie pro 3-col sombre" [bêta]
+// Cible : broadcast pro, opérateur full-time.
+// Vidéos visibles à fold (1280×820) : 30+ via grid 3-col + rows 28px.
+//
+// Layout : grid `240px 1fr 320px` gap 0, séparateurs 1px.
+//   Col gauche : nav phases verticale + comptes par phase.
+//   Col centre : preview + liste 30 lignes 28px.
+//   Col droite : widgets empilés.
+// Theme dark : background #0e1116, ink #fff, accent #f0a868.
+//
+// Référence pixel : `DesktopC` dans remote-v2-desktop.jsx l. 458-773.
+// Note : le composant dédié `r2-tv-monitor` est en backlog (SPEC §5C "Hors
+// scope MVP") — la zone de preview affiche le hero V2 stylisé en dark
+// pour le moment. À itérer en PR séparée quand un client Premium le demande.
+
+@include r2-desktop-up {
+  .remote-v2.layout-desktop-pro {
+    // Tokens dark — surchargent les SCSS $vars pour ce scope uniquement
+    --r2-bg: #0e1116;
+    --r2-surface: #1a1f27;
+    --r2-ink: #ffffff;
+    --r2-muted: #6b7280;
+    --r2-accent: #f0a868;
+    --r2-border: #2a313d;
+    --r2-row-h: 28px;
+    --r2-type-row: 13px;
+
+    background: var(--r2-bg);
+    color: var(--r2-ink);
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    gap: 0;
+    min-height: 100vh;
+
+    // Header s'aplatit comme bandeau top pleine largeur (col 1/-1)
+    .r2-header {
+      grid-column: 1 / -1;
+      background: var(--r2-surface);
+      border-bottom: 1px solid var(--r2-border);
+      color: var(--r2-ink);
+    }
+
+    // Phase tabs deviennent la nav verticale gauche
+    .r2-phase-tabs {
+      grid-column: 1 / 2;
+      grid-row: 2;
+      background: var(--r2-surface);
+      border-right: 1px solid var(--r2-border);
+      flex-direction: column;
+      align-items: stretch;
+      padding: 16px 0;
+      min-height: 100%;
+
+      .r2-phase-tab,
+      button {
+        text-align: left;
+        padding: 10px 16px;
+        background: transparent;
+        color: var(--r2-ink);
+        border-radius: 0;
+        border-left: 2px solid transparent;
+
+        &.active,
+        &.is-active {
+          background: var(--r2-bg);
+          border-left-color: var(--r2-accent);
+        }
+      }
+    }
+
+    // Hero + categories au centre (col 2)
+    .r2-hero {
+      grid-column: 2 / 3;
+      grid-row: 2;
+      margin: 16px;
+      background: #000;
+      color: var(--r2-ink);
+      border: 1px solid var(--r2-border);
+      box-shadow: none;
+    }
+    .r2-categories {
+      grid-column: 2 / 3;
+      grid-row: 2;
+      margin-top: calc(16px + 200px); // sous le hero (rough)
+      background: var(--r2-bg);
+      color: var(--r2-ink);
+      padding-bottom: 24px;
+    }
+
+    // Widgets empilés à droite (col 3)
+    .r2-widgets {
+      grid-column: 3 / 4;
+      grid-row: 2;
+      background: var(--r2-surface);
+      border-left: 1px solid var(--r2-border);
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 100%;
+    }
+
+    // Rows ultra-denses
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 2px 12px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--r2-border);
+      border-radius: 0;
+      color: var(--r2-ink);
+
+      &:hover {
+        background: rgba(240, 168, 104, 0.08);
+      }
+
+      .r2-vr-name {
+        font-size: var(--r2-type-row);
+        color: var(--r2-ink);
+      }
+      .r2-vr-meta,
+      .r2-vr-duration {
+        color: var(--r2-muted);
+      }
+    }
+
+    // Cards éventuelles (héritage de mobile-grid si l'utilisateur a B/pro)
+    .r2-categories .r2-cat-name,
+    .r2-cat-header {
+      color: var(--r2-ink);
+      background: var(--r2-surface);
+      border-bottom: 1px solid var(--r2-border);
+    }
+
+    // Texte mute global
+    .r2-text-muted,
+    .r2-vr-meta {
+      color: var(--r2-muted);
+    }
+
+    // Sheets restent en overlay light (les sheets ne sont pas dark-themed
+    // pour conserver la lisibilité maximale lors de l'édition de prefs)
+    .r2-sheet,
+    .r2-sheet-backdrop {
+      grid-column: auto;
+    }
+  }
+}

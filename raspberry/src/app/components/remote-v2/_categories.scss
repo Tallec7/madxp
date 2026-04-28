@@ -1,0 +1,152 @@
+// ---- Categories accordéon -------------------------------------------------
+.r2-categories {
+  margin: 8px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r2-category {
+  background: $surface;
+  border: 1px solid $border-subtle;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.r2-cat-header {
+  width: 100%;
+  padding: 12px 14px;
+  background: $surface;
+  border: none;
+  color: $text;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+
+  &:hover {
+    background: $bg;
+  }
+
+  .r2-cat-chev {
+    color: $text-muted;
+    flex-shrink: 0;
+    transition: transform 180ms;
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+
+  .r2-cat-name {
+    text-transform: uppercase;
+  }
+
+  .r2-cat-folders {
+    font-size: 10px;
+    font-weight: 700;
+    color: $text-muted;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: $bg;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    flex-shrink: 0;
+  }
+
+  .r2-cat-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: $text-muted;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+}
+
+.r2-cat-content {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.r2-subcat {
+  background: $bg;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.r2-subcat-header {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: $text;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+
+  .r2-cat-chev {
+    color: $text-muted;
+    flex-shrink: 0;
+    transition: transform 180ms;
+
+    &.open {
+      transform: rotate(90deg);
+    }
+  }
+
+  .r2-subcat-name {
+    flex: 1;
+  }
+
+  .r2-subcat-count {
+    font-size: 10px;
+    color: $text-muted;
+    font-weight: 700;
+  }
+}
+
+.r2-videos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 8px;
+}
+
+.r2-video-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid $border-subtle;
+  background: $surface;
+  color: $text;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 120ms;
+
+  &:hover {
+    background: $accent-bg;
+    border-color: $accent;
+  }
+
+  &.playing {
+    background: $yellow;
+    border-color: darken($yellow, 20%);
+    color: $text;
+    font-weight: 800;
+  }
+}

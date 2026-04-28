@@ -1,0 +1,96 @@
+// RemoteV2Component — styles V7 hero-centric.
+// Source: .claude/preview/v7/remote-v7.jsx (POC validé).
+
+// ---- Design tokens V7 ------------------------------------------------------
+$bg: #f5f7f6;
+$surface: #ffffff;
+$text: #101828;
+$text-muted: #4a5565;
+$border: #e5e7eb;
+$border-subtle: #eef1f0;
+$accent: #51b28b;
+$accent-light: #81e3bc;
+$accent-bg: #e6f7ef;
+$accent-deep: #20473c;
+$dark: #101828;
+$live: #ff3b3b;
+$yellow: #ffec85;
+$warn: #8a5c00;
+$warn-bg: #fff4dd;
+$danger: #cc384e;
+$danger-bg: #ffecec;
+
+@keyframes np-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes v7-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+:host {
+  display: block;
+  min-height: 100vh;
+  background: $bg;
+  color: $text;
+  font-family:
+    'Outfit',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+// ---- Tokens densité (SPEC-V2-LAYOUT-01) ------------------------------------
+// Variables CSS surchargées par les classes `.layout-mobile-*` / `.layout-desktop-*`.
+// Valeurs par défaut = layout actuel (mobile-classic / desktop-sidebar appliqués
+// par defaut via les partials `layouts/_*.scss`).
+.remote-v2 {
+  --r2-hero-h: 200px;
+  --r2-widgets-h: 180px;
+  --r2-row-h: 56px;
+  --r2-card-h: 90px;
+  --r2-padding-x: 16px;
+  --r2-type-row: 15px;
+  --r2-list-header-h: 0px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: 24px;
+}
+
+// ---- Breakpoints helpers ---------------------------------------------------
+$bp-tablet-min: 768px;
+$bp-desktop-min: 1024px;
+$bp-wide-min: 1440px;
+
+@mixin r2-mobile-only {
+  @media (max-width: #{$bp-desktop-min - 1}) {
+    @content;
+  }
+}
+@mixin r2-desktop-up {
+  @media (min-width: #{$bp-desktop-min}) {
+    @content;
+  }
+}
+@mixin r2-wide-up {
+  @media (min-width: #{$bp-wide-min}) {
+    @content;
+  }
+}
