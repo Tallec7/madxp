@@ -83,8 +83,18 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       // Skip logging for expected 404s on draft endpoints (no draft = normal state)
       const isDraftEndpoint404 = req.url.includes('/draft') && error.status === 404;
 
-      // Log error to backend (but not for logging endpoint itself or expected draft 404s)
-      if (!isLogEndpoint && !isDraftEndpoint404) {
+      // Skip logging for expected 409s on DELETE /videos/:id — c'est le cascade
+      // guard (PR #613) qui déclenche une UX guidée (modal cascade côté
+      // VideoDeleteService). Polluer la console à chaque cascade confirmée
+      // crée du bruit sans signal.
+      const isExpectedVideoCascade409 =
+        error.status === 409 &&
+        req.method === 'DELETE' &&
+        /\/videos\/[^/?]+(\?|$)/.test(req.url);
+
+      // Log error to backend (but not for logging endpoint itself, expected
+      // draft 404s, or expected cascade 409s)
+      if (!isLogEndpoint && !isDraftEndpoint404 && !isExpectedVideoCascade409) {
         logger.error('HTTP request failed', {
           url: req.url,
           method: req.method,
