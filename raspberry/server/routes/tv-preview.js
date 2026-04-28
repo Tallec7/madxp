@@ -26,13 +26,30 @@ module.exports = function createTvPreviewRouter({ tvPreviewService, getAuthToken
   const requireAuth = typeof getAuthToken === 'function' ? getAuthToken : () => null;
 
   router.get('/preview.mjpeg', (req, res) => {
-    // Auth
-    const required = requireAuth();
-    if (required) {
-      const provided = req.query.token || req.headers['x-preview-token'];
-      if (!provided || provided !== required) {
-        res.status(401).type('text/plain').send('preview auth required');
+    const provided = req.query.token || req.headers['x-preview-token'];
+
+    // SPEC §6 — auth en deux étapes (cloud distant prioritaire) :
+    //  1. Token HMAC TTL 5 min émis via tv-preview:capability (mode cloud distant)
+    //  2. Sinon, fallback sur socketAuthToken (LAN, ADR-073 S2)
+    let authorized = false;
+    if (provided && typeof tvPreviewService.verifyToken === 'function') {
+      const hmacResult = tvPreviewService.verifyToken(provided);
+      if (hmacResult === true) {
+        authorized = true;
+      } else if (hmacResult === false) {
+        res.status(401).type('text/plain').send('preview hmac token invalid or expired');
         return;
+      }
+      // hmacResult === null ⇒ pas de secret HMAC configuré, fallback ci-dessous
+    }
+
+    if (!authorized) {
+      const required = requireAuth();
+      if (required) {
+        if (!provided || provided !== required) {
+          res.status(401).type('text/plain').send('preview auth required');
+          return;
+        }
       }
     }
 
