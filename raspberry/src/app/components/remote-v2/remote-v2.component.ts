@@ -27,7 +27,7 @@ import { Configuration, TimeCategory } from '../../interfaces/configuration.inte
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
-import { SaasConfigService, SaasProfile } from '../../services/saas-config.service';
+import { SaasConfigService, SaasProfile, SaasPinRequiredError } from '../../services/saas-config.service';
 import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/local-options.service';
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { RemoteScoreService } from '../remote/remote-score.service';
@@ -35,6 +35,9 @@ import { RemoteTimerService } from '../remote/remote-timer.service';
 import { RemotePreferencesService, RemotePreferences, WidgetsEnabled } from '../remote/remote-preferences.service';
 import { RecordingStateService, RecordingWarningState } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
+import { ProfileConfigService } from '../../services/profile-config.service';
+import { RemotePinService } from '../../services/remote-pin.service';
+import { ClubSelectorComponent, ClubInfo } from '../club-selector/club-selector.component';
 import * as H from './remote-v2-helpers';
 import { R2HeaderComponent } from './parts/r2-header.component';
 import { R2RecordingWarningComponent } from './parts/r2-recording-warning.component';
@@ -104,6 +107,7 @@ interface DisplayInfo {
     R2BrowseComponent, R2VideoRowComponent,
     R2GearSheetComponent, R2WidgetsToggleSheetComponent,
     R2IconComponent,
+    ClubSelectorComponent,
   ],
   templateUrl: './remote-v2.component.html',
   styleUrl: './remote-v2.component.scss',
@@ -127,6 +131,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   public readonly prefsService = inject(RemotePreferencesService);
   private readonly recordingStateService = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
+  private readonly profileConfigService = inject(ProfileConfigService);
+  private readonly remotePinService = inject(RemotePinService);
   private readonly ngZone = inject(NgZone);
 
   private subs: Subscription[] = [];
@@ -211,6 +217,28 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Profil actif (nom). */
   currentProfile = '';
 
+  /**
+   * Vue boot — gate avant l'écran V2 quand on doit choisir un profil ou
+   * saisir un PIN (ADR-058 / ADR-092). Tant que `bootView !== 'home'`, le
+   * template V2 est masqué (cf. `remote-v2.component.html`).
+   */
+  bootView: 'home' | 'club-selector' | 'pin' = 'home';
+
+  // ---- Club selector (boot multi-profil ou demo) ------------------------
+  selectorClubs: ClubInfo[] = [];
+  selectorLoading = true;
+  selectorError: string | null = null;
+  selectorTitle = 'Sélection du profil';
+  selectorSubtitle = 'Choisissez un profil de configuration';
+
+  // ---- PIN remote SaaS (ADR-058) ----------------------------------------
+  pinRequired = false;
+  pinProfileId: string | null = null;
+  pinProfileName: string | null = null;
+  pinError: string | null = null;
+  pinInput = '';
+  pinSubmitting = false;
+
   /** Initiales (2 lettres max) du club/profil actif pour le badge header. */
   get clubInitials(): string {
     return H.clubInitials(this.currentProfile);
@@ -285,14 +313,62 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // Profil courant
     this.currentProfile = this.saasConfig.getClubName() || this.saasConfig.getSiteName() || 'Club';
 
-    // Profils dispo (SaaS uniquement)
-    if (this.saasConfig.isSaasMode()) {
+    // ADR-058 / ADR-092 — Boot gating : sélection profil + PIN
+    // Doit s'exécuter avant tout `match-config` socket (cf. ADR-093) afin
+    // d'éviter d'émettre un profileId arbitraire avant choix utilisateur.
+    this.isDemoMode = this.demoConfigService.isDemoMode();
+    if (this.isDemoMode) {
+      this.selectorTitle = 'Mode Démo';
+      this.selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
+      this.bootView = 'club-selector';
+      this.selectorLoading = true;
+      this.demoConfigService.getAvailableClubs().subscribe({
+        next: (clubs) => { this.selectorClubs = clubs; this.selectorLoading = false; },
+        error: () => { this.selectorError = 'Impossible de charger la liste des clubs'; this.selectorLoading = false; },
+      });
+    } else if (this.saasConfig.isSaasMode()) {
       this.subs.push(
         this.saasConfig.getAvailableProfiles().subscribe({
-          next: profiles => (this.profiles = profiles),
+          next: profiles => {
+            this.profiles = profiles;
+            if (profiles.length > 1) {
+              this.selectorTitle = 'Sélection du profil';
+              this.selectorSubtitle = 'Choisissez un profil de configuration';
+              this.selectorClubs = profiles.map(p => ({
+                id: p.id,
+                name: p.displayName || p.name,
+                city: p.city || '',
+                sport: p.sport || '',
+              }));
+              this.selectorLoading = false;
+              this.bootView = 'club-selector';
+            } else if (profiles.length === 1 && profiles[0].pinRequired) {
+              this.pinProfileId = profiles[0].id;
+              this.pinProfileName = profiles[0].displayName || profiles[0].name;
+              this.pinRequired = true;
+              this.bootView = 'pin';
+            } else {
+              const siteId = this.saasConfig.getSiteId();
+              this.saasConfig.loadConfiguration(siteId).subscribe({
+                next: () => { /* config déjà chargée par le resolver, rien à faire */ },
+                error: (err) => this.handleSaasLoadError(err, profiles[0]?.id ?? null),
+              });
+            }
+          },
           error: () => (this.profiles = []),
         }),
       );
+    } else {
+      // Mode Pi local — multi-profil non-SaaS (ProfileConfigService)
+      this.profileConfigService.getAvailableProfiles().subscribe(profiles => {
+        if (profiles.length > 1) {
+          this.selectorTitle = 'Sélection du profil';
+          this.selectorSubtitle = 'Choisissez un profil de configuration';
+          this.selectorClubs = profiles;
+          this.selectorLoading = false;
+          this.bootView = 'club-selector';
+        }
+      });
     }
 
     // Socket: initialisation + listeners essentiels
@@ -958,21 +1034,150 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   // ---- Profil (modal) ---------------------------------------------------
 
   selectProfile(p: SaasProfile): void {
-    this.currentProfile = p.displayName || p.name;
     const siteId = this.saasConfig.getSiteId();
-    if (siteId) {
-      this.saasConfig.loadProfileConfiguration(siteId, p.id).subscribe({
-        next: () => {
-          this.showToast(`Profil : ${this.currentProfile}`);
-          this.closeSheet();
-          // Reload pour appliquer la nouvelle config proprement
-          window.location.reload();
-        },
-        error: () => this.showToast('Erreur chargement profil'),
-      });
-    } else {
+    if (!siteId) {
       this.closeSheet();
+      return;
     }
+    const displayName = p.displayName || p.name;
+    this.saasConfig.loadProfileConfiguration(siteId, p.id).subscribe({
+      next: () => {
+        this.currentProfile = displayName;
+        this.currentProfileId = p.id;
+        this.showToast(`Profil : ${displayName}`);
+        this.closeSheet();
+        // Reload pour appliquer la nouvelle config proprement (cohérent V1)
+        window.location.reload();
+      },
+      error: (err) => {
+        // ADR-058 — Si le profil exige un PIN, basculer plein écran sur l'overlay
+        // PIN au lieu de cracher un toast générique (régression vs V1).
+        const pinErr = err as Partial<SaasPinRequiredError> | null;
+        if (pinErr && pinErr.pinRequired === true) {
+          this.closeSheet();
+          this.handleSaasLoadError(err, p.id, displayName);
+        } else {
+          this.showToast('Erreur chargement profil', 'error');
+        }
+      },
+    });
+  }
+
+  // ============================================================================
+  // ADR-058 / ADR-092 — Sélection profil multi-profils + PIN (boot + switch)
+  // ============================================================================
+
+  /** Callback du `<app-club-selector>` (mode démo ou multi-profil SaaS). */
+  onClubSelected(club: ClubInfo): void {
+    if (this.isDemoMode) {
+      this.demoConfigService.loadClubConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.currentProfile = club.name;
+          this.currentProfileId = club.id;
+          this.configuration = this.enrichVideosWithCategoryId(config);
+          this.bootView = 'home';
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => { console.error('Erreur chargement config club demo:', err); },
+      });
+      return;
+    }
+    if (this.saasConfig.isSaasMode()) {
+      const siteId = this.saasConfig.getSiteId();
+      this.saasConfig.loadProfileConfiguration(siteId, club.id).subscribe({
+        next: (config) => {
+          this.currentProfile = club.name;
+          this.currentProfileId = club.id;
+          this.configuration = this.enrichVideosWithCategoryId(config);
+          this.bootView = 'home';
+        },
+        error: (err) => this.handleSaasLoadError(err, club.id, club.name),
+      });
+      return;
+    }
+    // Mode Pi local
+    this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
+      next: (config) => {
+        this.currentProfile = club.name;
+        this.currentProfileId = club.id;
+        this.configuration = this.enrichVideosWithCategoryId(config);
+        this.bootView = 'home';
+        this.socketService.emit('profile-switch', { profileId: club.id });
+      },
+      error: (err) => { console.error('Erreur chargement config profil:', err); },
+    });
+  }
+
+  /** Bascule vers l'overlay PIN si l'erreur est un 401 `pinRequired`. */
+  private handleSaasLoadError(err: unknown, profileId: string | null, profileName?: string): void {
+    const pinErr = err as Partial<SaasPinRequiredError> | null;
+    if (pinErr && pinErr.pinRequired === true) {
+      this.ngZone.run(() => {
+        this.pinRequired = true;
+        this.pinProfileId = pinErr.profileId || profileId;
+        this.pinProfileName = profileName || this.pinProfileName;
+        this.pinError = null;
+        this.pinInput = '';
+        this.bootView = 'pin';
+      });
+      return;
+    }
+    console.error('Erreur chargement config SaaS:', err);
+  }
+
+  /** Soumet le PIN au cloud, recharge la config et bascule sur le home V2. */
+  submitPin(): void {
+    if (this.pinSubmitting) return;
+    const siteId = this.saasConfig.getSiteId();
+    const profileId = this.pinProfileId;
+    if (!siteId || !profileId || !this.pinInput) {
+      this.pinError = 'PIN invalide';
+      return;
+    }
+    this.pinSubmitting = true;
+    this.pinError = null;
+    this.remotePinService.verifyProfilePin(siteId, profileId, this.pinInput).subscribe({
+      next: () => {
+        this.saasConfig.loadProfileConfiguration(siteId, profileId).subscribe({
+          next: (config) => {
+            this.ngZone.run(() => {
+              this.pinRequired = false;
+              this.pinInput = '';
+              this.pinError = null;
+              this.pinSubmitting = false;
+              if (this.pinProfileName) this.currentProfile = this.pinProfileName;
+              this.currentProfileId = profileId;
+              this.configuration = this.enrichVideosWithCategoryId(config);
+              this.bootView = 'home';
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.pinSubmitting = false;
+              this.pinError = 'Impossible de charger la configuration.';
+              console.error('Config load after PIN failed:', err);
+            });
+          },
+        });
+      },
+      error: (err: unknown) => {
+        this.ngZone.run(() => {
+          this.pinSubmitting = false;
+          const httpErr = err as { status?: number; error?: { error?: string; attemptsRemaining?: number; message?: string } };
+          if (httpErr?.status === 429) {
+            this.pinError = httpErr.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+          } else if (httpErr?.status === 401) {
+            const remaining = httpErr.error?.attemptsRemaining;
+            this.pinError = typeof remaining === 'number'
+              ? `PIN incorrect (${remaining} tentative(s) restante(s)).`
+              : 'PIN incorrect.';
+          } else {
+            this.pinError = 'Erreur de vérification du PIN.';
+          }
+          this.pinInput = '';
+        });
+      },
+    });
   }
 
   // ---- Préférences (sheet) ----------------------------------------------
