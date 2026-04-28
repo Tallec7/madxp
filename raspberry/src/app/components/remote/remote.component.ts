@@ -57,7 +57,8 @@ export interface ScoreboardStateV1 {
   imports: [CommonModule, FormsModule, ClubSelectorComponent, LicenseBannerComponent, LicenseBlockRemoteComponent, PreferencesMenuComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss',
-  providers: [RemoteScoreService, RemoteTimerService, RemotePreferencesService],
+  // ADR-102 — RemotePreferencesService est providedIn: 'root' (singleton).
+  providers: [RemoteScoreService, RemoteTimerService],
 })
 export class RemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);

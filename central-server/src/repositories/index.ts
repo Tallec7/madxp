@@ -57,6 +57,10 @@ export {
   type DailyUptimeRow,
 } from './connection-events.repository';
 export {
+  remotePreferencesRepository,
+  type RemotePreferencesRow,
+} from './remote-preferences.repository';
+export {
   timelineRepository,
   type DeploymentTimelineRow,
   type CommandTimelineRow,

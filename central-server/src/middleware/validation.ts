@@ -271,6 +271,26 @@ export const schemas = {
     label: Joi.string().max(128).allow('', null).optional(),
   }),
 
+  // ADR-102 — Remote preferences upsert (PUT /api/saas/:siteId/profiles/:profileId/preferences).
+  // Au moins un des deux objets doit être fourni. Whitelist stricte sur les
+  // clés pour éviter qu'un client malveillant pollue le JSONB avec des champs
+  // arbitraires.
+  remotePreferencesUpsert: Joi.object({
+    prefs: Joi.object({
+      haptics: Joi.boolean(),
+      highContrast: Joi.boolean(),
+      lockRotation: Joi.boolean(),
+      fontSize: Joi.string().valid('normal', 'large'),
+      layoutMobile: Joi.string().valid('classic', 'grid', 'compact'),
+      layoutDesktop: Joi.string().valid('centered', 'sidebar', 'pro'),
+    }).min(1),
+    widgets: Joi.object({
+      score: Joi.boolean(),
+      chrono: Joi.boolean(),
+      breaking: Joi.boolean(),
+    }).min(1),
+  }).or('prefs', 'widgets'),
+
   // ADR-058 — revoke all devices (super_admin endpoint, no body required)
   revokeAllDevices: Joi.object({
     reason: Joi.string().max(64).allow('', null).optional(),
