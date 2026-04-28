@@ -51,19 +51,25 @@ La Remote est une page web accessible depuis n'importe quel smartphone. Elle per
 
 ## Matrice de décision
 
-| Critère                  | A — Splitter HDMI | B — HDBaseT       | C — Pi Zero esclaves | D — SaaS cloud        | **E — Pi + devices WiFi**                    |
-| ------------------------ | ----------------- | ----------------- | -------------------- | --------------------- | -------------------------------------------- |
-| Même contenu             | ✅ Natif          | ✅ Natif          | ✅ + différencié     | ✅ + différencié      | **✅ + différencié**                         |
-| Contenus différents      | ❌                | ❌                | ✅                   | ✅                    | **✅**                                       |
-| Distance max             | 10-15m            | 70-100m           | WiFi (~30m)          | WiFi/Ethernet club    | **Hotspot Pi (~30m)**                        |
-| Dev logiciel             | 0                 | 0                 | ~10 jours            | ~5 jours              | **0** (même contenu) / **~5j** (différencié) |
-| Coût hardware/TV         | 15-20€            | 60-100€           | ~45€                 | 0-50€                 | **0-50€** (stick HDMI)                       |
-| Offline total            | ✅                | ✅                | ✅                   | ❌ Dépend internet    | **✅ Tout local**                            |
-| Maintenance flotte       | 1 device          | 1 device          | N+1 devices          | 1 site SaaS           | **1 Pi (inchangé)**                          |
-| Scalabilité (ajouter TV) | Nouveau splitter  | Nouveau récepteur | Nouveau Pi Zero      | Ouvrir une URL        | **Connecter au hotspot**                     |
-| Score Stramatel live     | ✅ série directe  | ✅ série directe  | ✅ Socket.IO relay   | ⚠️ Cloud relay ~200ms | **✅ Socket.IO local 0ms**                   |
-| Remote (télécommande)    | ✅ Inchangée      | ✅ Inchangée      | ⚠️ Adaptation        | ✅ Socket.IO cloud    | **✅ Inchangée**                             |
-| Réseau requis            | Aucun             | Aucun             | Hotspot Pi           | WiFi club + internet  | **Hotspot Pi seul**                          |
+> **Clé de lecture** : le critère décisif n'est pas "≤ 10m vs > 10m" mais **(a) câblage HDMI/Cat6 possible ou non** + **(b) criticité de l'écran** (TV principale match vs ambiance secondaire). Le tableau ci-dessous compare les 5 scénarios sur leurs propriétés intrinsèques ; voir [Recommandation stratégique](#recommandation-stratégique-vision-cto) pour la recommandation par situation.
+
+| Critère                   | A — Splitter HDMI | B — HDBaseT       | C — Pi Zero esclaves | D — SaaS cloud        | **E — Pi + devices WiFi**                        |
+| ------------------------- | ----------------- | ----------------- | -------------------- | --------------------- | ------------------------------------------------ |
+| Même contenu              | ✅ Natif          | ✅ Natif          | ✅ + différencié     | ✅ + différencié      | **✅ + différencié**                             |
+| Contenus différents       | ❌                | ❌                | ✅                   | ✅                    | **✅**                                           |
+| Distance max              | 10-15m            | 70-100m           | WiFi (~30m)          | WiFi/Ethernet club    | **Hotspot Pi (~30m)**                            |
+| Sync frame-perfect        | ✅                | ✅                | ❌ Drift WiFi        | ❌ Drift WiFi/cloud   | **❌ Drift WiFi 1-2s**                           |
+| Fiabilité match-day       | ✅✅ Industrielle | ✅✅ Industrielle | ⚠️ N+1 devices       | ⚠️ Dépend Internet    | **⚠️ Devices grand public (Fully Kiosk requis)** |
+| Dev logiciel              | 0                 | 0                 | ~10 jours            | ~5 jours              | **0** (même contenu) / **~5j** (différencié)     |
+| Coût hardware/TV          | 15-20€            | 60-100€           | ~45€                 | 0-50€                 | **0-50€** (stick HDMI)                           |
+| Offline total             | ✅                | ✅                | ✅                   | ❌ Dépend internet    | **✅ Tout local**                                |
+| Maintenance flotte        | 1 device          | 1 device          | N+1 devices          | 1 site SaaS           | **1 Pi (inchangé)**                              |
+| Monitoring central        | ✅ Pi seul        | ✅ Pi seul        | ❌ Sticks invisibles | ⚠️ Site SaaS visible  | **❌ Sticks invisibles**                         |
+| Watchdog crash navigateur | n/a (HDMI direct) | n/a               | ✅ systemd Pi        | ❌                    | **❌ Sauf Fully Kiosk Browser**                  |
+| Scalabilité (ajouter TV)  | Nouveau splitter  | Nouveau récepteur | Nouveau Pi Zero      | Ouvrir une URL        | **Connecter au hotspot**                         |
+| Score Stramatel live      | ✅ série directe  | ✅ série directe  | ✅ Socket.IO relay   | ⚠️ Cloud relay ~200ms | **✅ Socket.IO local 0ms**                       |
+| Remote (télécommande)     | ✅ Inchangée      | ✅ Inchangée      | ⚠️ Adaptation        | ✅ Socket.IO cloud    | **✅ Inchangée**                                 |
+| Réseau requis             | Aucun             | Aucun             | Hotspot Pi           | WiFi club + internet  | **Hotspot Pi seul**                              |
 
 ---
 
@@ -106,6 +112,8 @@ La Remote est une page web accessible depuis n'importe quel smartphone. Elle per
 **Impact Remote** : **Aucun.** Identique au scénario A.
 
 **Avantages** : 70-100m de portée, câblage Ethernet souvent déjà tiré, PoE possible.
+
+> **Indépendance vis-à-vis du hotspot WiFi** : HDBaseT est un transport **purement matériel** du signal HDMI sur câble Cat6. Il ne consomme **aucun réseau IP** — ni le hotspot Pi, ni le WiFi du club, ni internet. Conséquence : un Pi en mode hotspot uniquement (sans WiFi externe) supporte HDBaseT sans aucun ajustement, et ce **en parallèle du hotspot** qui continue de servir les clients WiFi (Fire Stick, smartphones Remote). Les deux sous-systèmes sont indépendants. Concrètement, on peut combiner : HDMI 0 → splitter ou HDBaseT vers TV1+TV2 (sync parfaite, distance), ET hotspot WiFi → Fire Stick TV3 buvette + smartphones Remote.
 
 ### Scénario C — Pi Zero esclaves (contenus différenciés)
 
@@ -198,13 +206,13 @@ socket.on('command', (cmd) => {
 
 ### Hardware pour scénario D
 
-| Device TV                                                  | Prix         | Performance                    |
-| ---------------------------------------------------------- | ------------ | ------------------------------ |
-| Smart TV avec navigateur intégré (Samsung Tizen, LG webOS) | 0€ (déjà là) | ⚠️ Variable selon modèle/année |
-| Amazon Fire TV Stick 4K                                    | ~40€         | ✅ Silk Browser stable         |
-| Google Chromecast avec Google TV                           | ~40€         | ✅ Chrome stable               |
-| Mini PC (Intel NUC / Beelink)                              | ~100-150€    | ✅✅ Meilleur navigateur       |
-| Raspberry Pi 5 en mode SaaS                                | ~80€         | ✅ Chromium kiosk éprouvé      |
+| Device TV                                                                     | Prix         | Performance                    |
+| ----------------------------------------------------------------------------- | ------------ | ------------------------------ |
+| Smart TV avec navigateur intégré (Samsung Tizen, LG webOS)                    | 0€ (déjà là) | ⚠️ Variable selon modèle/année |
+| Amazon Fire TV Stick 4K                                                       | ~40€         | ✅ Silk Browser stable         |
+| Google TV Streamer (4K) 2024 / Chromecast with Google TV (4K/HD) 2020-2023 ⚠️ | ~40-50€      | ✅ Chrome stable               |
+| Mini PC (Intel NUC / Beelink)                                                 | ~100-150€    | ✅✅ Meilleur navigateur       |
+| Raspberry Pi 5 en mode SaaS                                                   | ~80€         | ✅ Chromium kiosk éprouvé      |
 
 **Recommandation CTO** : Fire TV Stick 4K — meilleur rapport qualité/prix/fiabilité. Se branche directement en HDMI sur la TV, WiFi intégré, navigateur Silk fonctionnel. Le staff du club le configure en 5 minutes (WiFi + URL + plein écran).
 
@@ -368,13 +376,13 @@ Configuration actuelle (`hostapd.conf`) :
 
 ### Hardware recommandé pour scénario E
 
-| Device                               | Prix | Avantages                                                | Inconvénients                  |
-| ------------------------------------ | ---- | -------------------------------------------------------- | ------------------------------ |
-| **Amazon Fire TV Stick 4K**          | ~40€ | WiFi AC, Silk Browser, HDMI direct, télécommande incluse | Nécessite un compte Amazon     |
-| **Xiaomi Mi TV Stick**               | ~30€ | Moins cher, Android TV                                   | Navigateur moins stable        |
-| **Google Chromecast avec Google TV** | ~40€ | Chrome stable, Google Cast                               | Nécessite un compte Google     |
-| **Smart TV (navigateur intégré)**    | 0€   | Déjà là                                                  | Navigateur souvent lent/ancien |
-| **Ancien smartphone/tablette**       | 0€   | Recyclage                                                | Petit écran, batterie          |
+| Device                                                                                 | Prix    | Avantages                                                | Inconvénients                                                                                                                                      |
+| -------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Amazon Fire TV Stick 4K**                                                            | ~40€    | WiFi AC, Silk Browser, HDMI direct, télécommande incluse | Nécessite un compte Amazon                                                                                                                         |
+| **Xiaomi Mi TV Stick**                                                                 | ~30€    | Moins cher, Android TV                                   | Navigateur moins stable                                                                                                                            |
+| **Google TV Streamer (4K) 2024** ⚠️ ou **Chromecast with Google TV (4K/HD)** 2020-2023 | ~40-50€ | Chrome stable, Google Cast                               | Nécessite un compte Google. ⚠️ NE PAS confondre avec un simple "Chromecast" sans Google TV (dongle de cast passif sans navigateur — incompatible). |
+| **Smart TV (navigateur intégré)**                                                      | 0€      | Déjà là                                                  | Navigateur souvent lent/ancien                                                                                                                     |
+| **Ancien smartphone/tablette**                                                         | 0€      | Recyclage                                                | Petit écran, batterie                                                                                                                              |
 
 **Recommandation** : Fire TV Stick 4K. Se branche en HDMI, WiFi intégré, télécommande IR pour naviguer. Le staff configure en 5 minutes : WiFi `NEOPRO_xxx` → Silk Browser → `neopro.local/tv` → plein écran.
 
@@ -410,7 +418,7 @@ Si le club a besoin de Stramatel ou d'offline → installer un Pi et passer en *
 
 ### Moyen terme — Contenus différenciés (Q3 2026)
 
-→ **Ciblage `targetDisplay`** : Un seul développement (~5 jours) qui bénéficie aux **3 scénarios** D2, E2 et C. Paramètre `?display=N` dans l'URL, sélecteur de display dans la Remote, filtrage Socket.IO côté TV.
+→ **Ciblage `targetDisplay`** : Un seul développement qui bénéficie aux **3 scénarios** D2, E2 et C. Paramètre `?display=N` dans l'URL, sélecteur de display dans la Remote, filtrage Socket.IO côté TV. **Estimation initiale 5j à re-chiffrer** — une partie de la plomberie (registry displays, event `displays-changed`, modèle DB `sites.displays`) est déjà livrée par [PROP-002](./PROP-002-tv-led-dual-output.md) Phases 1-5. Voir Phase 2 ci-dessous pour le détail des tâches restantes.
 
 ### Moyen terme — Optimisation WiFi Pi 5 pour multi-TV
 
@@ -499,19 +507,21 @@ Pour les clubs E1 avec 4+ TV, passer le hotspot Pi 5 en WiFi AC :
 | Script de détection Pi 4 vs Pi 5 pour auto-config WiFi N/AC          | 2h     |
 | Documenter le fallback 2.4GHz pour les devices non-5GHz              | 30min  |
 
-### Phase 2 — Ciblage par display (5 jours dev)
+### Phase 2 — Ciblage par display (5 jours dev → **à re-chiffrer**, voir note ci-dessous)
 
 Commun aux scénarios C, D2 et E2. Backlog unifié :
 
-| Tâche                                           | Fichiers impactés                                 | Effort |
-| ----------------------------------------------- | ------------------------------------------------- | ------ |
-| Paramètre `display` dans URL SaaS + Pi          | `tv.component.ts`, routing                        | 0.5j   |
-| Registry des displays connectés (cloud)         | `central-server/src/services/display-registry.ts` | 1j     |
-| Champ `targetDisplay` dans événements Socket.IO | `socket/handlers.js`, `remote.controller.ts`      | 0.5j   |
-| Filtrage côté TV des commandes non ciblées      | `tv.component.ts`                                 | 0.5j   |
-| Sélecteur de display dans la Remote             | `remote.component.ts/html`                        | 1j     |
-| Dashboard : nommage + monitoring displays       | `central-dashboard/src/app/features/sites/`       | 1j     |
-| Profil par display (assign playlist)            | `config-profiles.controller.ts`                   | 0.5j   |
+| Tâche                                           | Fichiers impactés                                 | Effort initial | Statut réel (audit 2026-04-28)                                                                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Paramètre `display` dans URL SaaS + Pi          | `tv.component.ts`, routing                        | 0.5j           | À faire                                                                                                                                                         |
+| Registry des displays connectés (cloud)         | `central-server/src/services/display-registry.ts` | 1j             | ✅ **Couvert par PROP-002** — `siteRepository.getDisplays/updateDisplays` ([site.repository.ts:750](../../central-server/src/repositories/site.repository.ts))  |
+| Champ `targetDisplay` dans événements Socket.IO | `socket/handlers.js`, `remote.controller.ts`      | 0.5j           | ⚠️ Partiel — `displays-changed` émis ([socket.service.ts:411](../../central-server/src/services/socket.service.ts)), reste à ajouter `targetDisplay` aux events |
+| Filtrage côté TV des commandes non ciblées      | `tv.component.ts`                                 | 0.5j           | À faire                                                                                                                                                         |
+| Sélecteur de display dans la Remote             | `remote.component.ts/html`                        | 1j             | À faire                                                                                                                                                         |
+| Dashboard : nommage + monitoring displays       | `central-dashboard/src/app/features/sites/`       | 1j             | ⚠️ Partiel — modèle DB `sites.displays` JSONB déjà en place via [n-display-model.sql](../../central-server/src/scripts/migrations/n-display-model.sql)          |
+| Profil par display (assign playlist)            | `config-profiles.controller.ts`                   | 0.5j           | À faire                                                                                                                                                         |
+
+> **⚠️ Note de cohérence inter-PROP (ajoutée 2026-04-28)** : depuis la rédaction initiale de cette Phase 2, [PROP-002](./PROP-002-tv-led-dual-output.md) a livré ses **Phases 1-5** ("✅ N-display model fully implemented"). Le modèle technique `sites.displays` JSONB + repository + Socket event `displays-changed` existe déjà. Conséquence : l'estimation initiale de **5 jours** pour la Phase 2 PROP-001 est probablement **surévaluée** — le vrai delta restant porte sur le paramètre URL `?display=N`, le filtrage côté TV, le sélecteur Remote et l'UI dashboard. **À re-chiffrer en s'appuyant sur le code livré par PROP-002 avant tout engagement commercial sur le scénario E2/D2.**
 
 ### Phase 3 — Résilience offline SaaS (future)
 
