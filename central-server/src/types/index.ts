@@ -373,6 +373,18 @@ export interface HeartbeatMessage {
     status: string;
     restarts: number;
   }> | null;
+  /**
+   * SPEC-V2-TVMON-01 / ADR-101 — TV preview metrics snapshot.
+   * Émis à chaque heartbeat (30 s) par le sync-agent qui interroge le socket-server
+   * local. Le central-server alimente Prometheus via `metricsService.recordTvPreview`.
+   */
+  tvPreview?: {
+    framesTotal: number;
+    throttleTotal: { cpu: number; temp: number };
+    subscribers: number;
+    currentFps: number;
+    suspended: boolean;
+  } | null;
 }
 
 // ============================================================================

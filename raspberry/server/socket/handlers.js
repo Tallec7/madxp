@@ -40,7 +40,15 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
      */
     if (tvPreviewService && typeof tvPreviewService.capability === 'function') {
       try {
-        socket.emit('tv-preview:capability', tvPreviewService.capability());
+        const capability = tvPreviewService.capability();
+        // SPEC §6 — émettre un token HMAC TTL 5 min si un secret est configuré
+        // (mode cloud distant). Sans secret, la Remote utilise socketAuthToken
+        // ou rien (LAN privé club).
+        if (capability && capability.available && typeof tvPreviewService.issueToken === 'function') {
+          const token = tvPreviewService.issueToken();
+          if (token) capability.token = token;
+        }
+        socket.emit('tv-preview:capability', capability);
       } catch (err) {
         console.warn('[tv-preview] capability emit failed:', err.message);
       }
@@ -62,6 +70,26 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
      */
     socket.on('tv-preview:stop', (data) => {
       console.log('[tv-preview] stop signal', { siteId: data?.siteId });
+    });
+
+    /**
+     * Sync-agent → Pi (callback) — récupère le snapshot tv-preview courant.
+     * Émis dans le heartbeat sync-agent → central-server pour alimenter Prometheus
+     * (cf. raspberry/sync-agent/src/services/heartbeat.js + central-server
+     * metricsService.recordTvPreview).
+     * Renvoie null si le service est absent / désactivé (Pi 4 / SaaS / demo).
+     */
+    socket.on('get-tv-preview-metrics', (callback) => {
+      if (typeof callback !== 'function') return;
+      try {
+        const snapshot = tvPreviewService && typeof tvPreviewService.getMetrics === 'function'
+          ? tvPreviewService.getMetrics()
+          : null;
+        callback(snapshot);
+      } catch (err) {
+        console.warn('[tv-preview] get-tv-preview-metrics failed:', err.message);
+        callback(null);
+      }
     });
 
     // --- Initial state sync (send full state to newly connected client) ---
