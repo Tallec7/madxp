@@ -1,3 +1,9 @@
+## [3.265.2](https://github.com/Tallec7/neopro/compare/v3.265.1...v3.265.2) (2026-04-28)
+
+### Bug Fixes
+
+- **dashboard:** corriger le lien "Voir contenu" 404 dans santé vidéos flotte ([#694](https://github.com/Tallec7/neopro/issues/694)) ([70dfaa0](https://github.com/Tallec7/neopro/commit/70dfaa0e5ca76da1b7d0343f18593922b325b256))
+
 ## [3.265.1](https://github.com/Tallec7/neopro/compare/v3.265.0...v3.265.1) (2026-04-28)
 
 ### Bug Fixes
