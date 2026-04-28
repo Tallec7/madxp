@@ -173,6 +173,12 @@ export async function handleHeartbeat(
       }
     }
 
+    // SPEC-V2-TVMON-01 / ADR-101 — feed Prometheus depuis le snapshot tv-preview
+    // émis par le sync-agent (qui interroge le socket-server local Pi).
+    if (message.tvPreview) {
+      metricsService.recordTvPreview(siteId, message.tvPreview);
+    }
+
     // Record transition quality metrics (video double-buffer)
     if (message.transitionMetrics) {
       metricsService.recordTransitionMetrics(message.transitionMetrics);

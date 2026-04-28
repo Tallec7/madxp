@@ -331,4 +331,124 @@ describe('SPEC-V2-TVMON-01 / ADR-101 — TV preview MJPEG wiring', () => {
       expect(src).toMatch(/--remote-debugging-address=127\.0\.0\.1/);
     });
   });
+
+  // ========================================================================
+  // P1 — Robustesse (Prometheus + heartbeat + token HMAC + Grafana)
+  // ========================================================================
+
+  describe('P1 Prometheus metrics (central-server)', () => {
+    const file = 'central-server/src/services/metrics.service.ts';
+    let src: string;
+
+    beforeAll(() => {
+      src = read(file);
+    });
+
+    it('declares the 4 tv-preview metrics (frames/throttle/subscribers/fps)', () => {
+      expect(src).toMatch(/neopro_tv_preview_frames_total/);
+      expect(src).toMatch(/neopro_tv_preview_throttle_total/);
+      expect(src).toMatch(/neopro_tv_preview_subscribers/);
+      expect(src).toMatch(/neopro_tv_preview_current_fps/);
+    });
+
+    it('exposes recordTvPreview(siteId, snapshot) with delta tracking', () => {
+      expect(src).toMatch(/\brecordTvPreview\s*\(/);
+      expect(src).toMatch(/_tvPreviewLastSeen/);
+      expect(src).toMatch(/Math\.max\(0,\s*snapshot\.framesTotal\s*-\s*last\.framesTotal\)/);
+    });
+
+    it('counters are labelled by site_id (multi-tenant Prometheus)', () => {
+      expect(src).toMatch(/labelNames:\s*\[\s*'site_id'\s*\]/);
+      expect(src).toMatch(/labelNames:\s*\[\s*'site_id',\s*'reason'\s*\]/);
+    });
+  });
+
+  describe('P1 HeartbeatMessage type carries tvPreview payload', () => {
+    it('type includes optional tvPreview snapshot', () => {
+      const src = read('central-server/src/types/index.ts');
+      expect(src).toMatch(/tvPreview\?:\s*\{/);
+      expect(src).toMatch(/framesTotal:\s*number/);
+      expect(src).toMatch(/throttleTotal:\s*\{\s*cpu:\s*number;\s*temp:\s*number/);
+    });
+  });
+
+  describe('P1 central-server heartbeat handler feeds Prometheus', () => {
+    it('handleHeartbeat calls recordTvPreview when payload present', () => {
+      const src = read('central-server/src/handlers/heartbeat.handler.ts');
+      expect(src).toMatch(/message\.tvPreview/);
+      expect(src).toMatch(/metricsService\.recordTvPreview\(siteId,\s*message\.tvPreview\)/);
+    });
+  });
+
+  describe('P1 Pi heartbeat carries tvPreview snapshot', () => {
+    it('sync-agent heartbeat fetches local tv-preview metrics + includes in payload', () => {
+      const src = read('raspberry/sync-agent/src/services/heartbeat.js');
+      expect(src).toMatch(/fetchLocalTvPreviewMetrics/);
+      expect(src).toMatch(/get-tv-preview-metrics/);
+      expect(src).toMatch(/tvPreview,?$/m);
+    });
+
+    it('Pi socket-server exposes get-tv-preview-metrics callback', () => {
+      const src = read('raspberry/server/socket/handlers.js');
+      expect(src).toMatch(/socket\.on\(['"]get-tv-preview-metrics['"]/);
+      expect(src).toMatch(/tvPreviewService\.getMetrics\(\)/);
+    });
+  });
+
+  describe('P1 Token HMAC TTL 5 min', () => {
+    const file = 'raspberry/server/services/tv-preview.service.js';
+    let src: string;
+
+    beforeAll(() => {
+      src = read(file);
+    });
+
+    it('declares tokenTtlMs default = 5 min', () => {
+      expect(src).toMatch(/tokenTtlMs:\s*5\s*\*\s*60\s*\*\s*1000/);
+    });
+
+    it('exposes issueToken() and verifyToken(rawToken) using HMAC-SHA256', () => {
+      expect(src).toMatch(/issueToken\s*\(\s*\)/);
+      expect(src).toMatch(/verifyToken\s*\(\s*rawToken/);
+      expect(src).toMatch(/createHmac\(['"]sha256['"]/);
+      expect(src).toMatch(/timingSafeEqual/);
+    });
+
+    it('verifyToken returns null without secret (LAN fallback) and false on expiry', () => {
+      expect(src).toMatch(/if\s*\(\s*!secret\s*\)\s*return null/);
+      expect(src).toMatch(/expMs\s*<\s*Date\.now\(\)/);
+    });
+
+    it('Pi socket emits the token in tv-preview:capability when secret configured', () => {
+      const handlers = read('raspberry/server/socket/handlers.js');
+      expect(handlers).toMatch(/tvPreviewService\.issueToken/);
+      expect(handlers).toMatch(/capability\.token\s*=\s*token/);
+    });
+
+    it('Route /preview.mjpeg validates HMAC token before falling back to socketAuthToken', () => {
+      const route = read('raspberry/server/routes/tv-preview.js');
+      expect(route).toMatch(/verifyToken/);
+      expect(route).toMatch(/preview hmac token invalid or expired/);
+    });
+
+    it('Remote V2 parent appends ?token= to the MJPEG URL when capability provides one', () => {
+      const ts = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+      expect(ts).toMatch(/cap\.token/);
+      expect(ts).toMatch(/encodeURIComponent\(cap\.token\)/);
+    });
+  });
+
+  describe('P1 Grafana dashboard provisioned', () => {
+    it('neopro-tv-preview-cloud.json exists with the 4 expected Prometheus targets', () => {
+      const raw = read('docker/grafana/provisioning/dashboards/json/cloud/neopro-tv-preview-cloud.json');
+      const json = JSON.parse(raw);
+      expect(json.uid).toBe('neopro-tv-preview-cloud');
+      expect(json.title).toMatch(/TV Preview/);
+      const exprs = JSON.stringify(json.panels);
+      expect(exprs).toMatch(/neopro_tv_preview_subscribers/);
+      expect(exprs).toMatch(/neopro_tv_preview_frames_total/);
+      expect(exprs).toMatch(/neopro_tv_preview_throttle_total/);
+      expect(exprs).toMatch(/neopro_tv_preview_current_fps/);
+    });
+  });
 });

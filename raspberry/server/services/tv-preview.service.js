@@ -19,6 +19,7 @@
 
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 
 const DEFAULTS = {
   width: 640,
@@ -32,6 +33,8 @@ const DEFAULTS = {
   sweepIntervalMs: 5000,
   // Kiosk Chromium DevTools port (cf. raspberry/admin sudoers + kiosk launcher)
   cdpEndpoint: process.env.KIOSK_CDP_ENDPOINT || 'http://127.0.0.1:9222',
+  // SPEC §6 — token éphémère HMAC TTL 5 min pour les Remote distantes (cloud)
+  tokenTtlMs: 5 * 60 * 1000,
 };
 
 class TvPreviewService {
@@ -65,6 +68,43 @@ class TvPreviewService {
       throttleTotal: { cpu: 0, temp: 0 },
       subscribers: 0,
     };
+    // HMAC secret pour les tokens éphémères (cloud distant). Lazy-getter (peut
+    // venir de configuration.json ou d'une env var injectée par sync-agent).
+    this._hmacSecretGetter = opts.hmacSecretGetter || (() => process.env.TV_PREVIEW_HMAC_SECRET || null);
+  }
+
+  /**
+   * Émet un token signé HMAC-SHA256 valide `tokenTtlMs` (5 min default), à
+   * inclure en query string sur /preview.mjpeg pour les Remote en mode cloud
+   * distant. Renvoie null si aucun secret n'est disponible (LAN-only suffit).
+   *
+   * Format : `<expISO>.<base64url(hmac)>` — pas de payload sensible, juste
+   * une signature anti-replay basée sur l'expiration.
+   */
+  issueToken() {
+    const secret = this._hmacSecretGetter();
+    if (!secret) return null;
+    const expMs = Date.now() + this._opts.tokenTtlMs;
+    const payload = String(expMs);
+    const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+    return `${payload}.${sig}`;
+  }
+
+  /**
+   * Vérifie un token reçu (query ?token=...). Renvoie true si signature valide
+   * ET expiration future. Si aucun secret n'est configuré, renvoie null —
+   * la route doit alors retomber sur l'auth socketAuthToken (cf. ADR-073 S2).
+   */
+  verifyToken(rawToken) {
+    const secret = this._hmacSecretGetter();
+    if (!secret) return null;
+    if (typeof rawToken !== 'string' || !rawToken.includes('.')) return false;
+    const [expStr, sig] = rawToken.split('.', 2);
+    const expMs = Number(expStr);
+    if (!Number.isFinite(expMs) || expMs < Date.now()) return false;
+    const expected = crypto.createHmac('sha256', secret).update(expStr).digest('base64url');
+    if (sig.length !== expected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
   }
 
   /** Capabilities exposées via Socket.IO event tv-preview:capability. */
