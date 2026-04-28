@@ -1,3 +1,9 @@
+## [3.261.1](https://github.com/Tallec7/neopro/compare/v3.261.0...v3.261.1) (2026-04-28)
+
+### Bug Fixes
+
+- **ci:** align SaaS lftp deploy on dashboard pre-[#625](https://github.com/Tallec7/neopro/issues/625) tune (was 1-2min, regressed to 11m+) ([#676](https://github.com/Tallec7/neopro/issues/676)) ([e3d1c36](https://github.com/Tallec7/neopro/commit/e3d1c363f903a5e4cbf9f04f2ce61459eb8bafef)), closes [#668](https://github.com/Tallec7/neopro/issues/668) [#675](https://github.com/Tallec7/neopro/issues/675) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668)
+
 # [3.261.0](https://github.com/Tallec7/neopro/compare/v3.260.0...v3.261.0) (2026-04-28)
 
 ### Features
