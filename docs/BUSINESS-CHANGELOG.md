@@ -25,6 +25,7 @@
 
 ### 🛡️ Pour la robustesse
 
+- **Lien "Voir contenu" dans Santé vidéos flotte corrigé** ([#694](https://github.com/Tallec7/neopro/pull/694)) — cliquer ce lien depuis le tableau des sites avec erreurs de lecture renvoyait une page 404. Le lien pointe désormais directement sur l'onglet Contenu du site concerné.
 - Suppression de vidéo : la modal "cette vidéo est utilisée par X sites, confirmer la suppression cascade ?" s'affiche désormais **partout** (page Contenu admin, Lottie templates, gestion site), plus uniquement sur la gestion site. Avant, supprimer une vidéo référencée depuis Contenu ou Lottie pouvait échouer avec un toast "Erreur" générique, sans aucun moyen de confirmer la cascade. Plus de blocage utilisateur sur ce flux ([#678](https://github.com/Tallec7/neopro/pull/678)).
 
 ### 🧹 Pour l'équipe
