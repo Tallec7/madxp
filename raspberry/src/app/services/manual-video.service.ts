@@ -37,6 +37,19 @@ export class ManualVideoService {
   private _lastPlayTimestamp = 0;
   private static readonly PLAY_DEBOUNCE_MS = 150;
 
+  /**
+   * ADR-103 Phase 0 — only `contentType: 'video'` entries are playable in <video>.
+   * Synthetic filenames `web_page-<ts>` / `livestream-<ts>` (legacy dashboard entries
+   * that lost contentType) are also refused. web_page / livestream must route through
+   * WebContentPlayer (Phase 1), not this service.
+   */
+  static isPlayableVideoEntry(video: PiConfigVideoEntry | null | undefined): boolean {
+    if (!video?.path) return false;
+    if ((video.contentType ?? 'video') !== 'video') return false;
+    if (/(?:^|\/)(?:web_page|livestream)-\d+$/.test(String(video.path))) return false;
+    return true;
+  }
+
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: PiConfigVideoEntry | null = null;
   private _preloadedManualPlayer: HTMLVideoElement | null = null;
@@ -73,6 +86,12 @@ export class ManualVideoService {
    * Joue une vidéo manuelle (master path).
    */
   play(video: PiConfigVideoEntry): void {
+    if (!ManualVideoService.isPlayableVideoEntry(video)) {
+      // ADR-103 Phase 0 — refuse web_page / livestream in <video>.
+      console.warn('[ManualVideo] Refused non-video entry — ADR-103 Phase 0 guard', { path: video?.path, contentType: video?.contentType });
+      return;
+    }
+
     const now = Date.now();
     if (now - this._lastPlayTimestamp < ManualVideoService.PLAY_DEBOUNCE_MS) {
       console.log('tv player : play manual video debounced (too rapid)', video.path);
