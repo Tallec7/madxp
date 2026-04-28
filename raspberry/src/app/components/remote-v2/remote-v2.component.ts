@@ -40,6 +40,7 @@ import { R2HeaderComponent } from './parts/r2-header.component';
 import { R2RecordingWarningComponent } from './parts/r2-recording-warning.component';
 import { R2WidgetsComponent } from './parts/r2-widgets.component';
 import { R2HeroComponent } from './parts/r2-hero.component';
+import { R2TvMonitorComponent } from './parts/r2-tv-monitor.component';
 import { R2BrowseComponent } from './parts/r2-browse.component';
 import { R2VideoRowComponent } from './parts/r2-video-row.component';
 import { R2GearSheetComponent, GearAction } from './parts/r2-gear-sheet.component';
@@ -87,7 +88,7 @@ interface DisplayInfo {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent,
+    R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent, R2TvMonitorComponent,
     R2BrowseComponent, R2VideoRowComponent,
     R2GearSheetComponent, R2WidgetsToggleSheetComponent,
     R2IconComponent,

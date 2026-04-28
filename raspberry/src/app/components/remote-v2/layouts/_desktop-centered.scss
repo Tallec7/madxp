@@ -24,9 +24,27 @@
       min-height: 56px;
     }
 
+    // Hero compact (cf. Mobile A) — éléments verbeux cachés pour ~120px max
     .r2-hero {
       margin: 12px 16px 0;
       min-height: var(--r2-hero-h);
+      max-height: 130px;
+    }
+    .r2-hero-eyebrow > span:nth-of-type(1) {
+      display: none;
+    }
+    .r2-hero .r2-video-subline,
+    .r2-loop-tabs-wrap .r2-hero-section-label,
+    .r2-display-wrap,
+    .r2-hero-progress {
+      display: none;
+    }
+    .r2-loop-tabs-wrap {
+      padding: 2px 12px 6px;
+    }
+    .r2-loop-tabs button {
+      padding: 5px 10px;
+      font-size: 12px;
     }
 
     .r2-widgets {
