@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { interval, Subscription, filter, take } from 'rxjs';
+import { interval, Subscription, filter } from 'rxjs';
 import { VideoCategoryService } from '../../../../core/services/video-category.service';
 import { VideoCategory } from '../../../../core/models/video-category.model';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
@@ -844,24 +844,20 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0 });
       this.cdr.markForCheck();
 
-      this.commandService.sendCommand(this.siteId, 'deploy_video', {
-        videoId: video.id,
-        filename: video.filename,
-        url: video.path,
-        checksum: video.checksum,
-        category: video.category || 'default',
-        originalName: video.displayName,
+      // POST /deployments — same flow as the global Library "🚀 Déployer".
+      // The server builds the absolute FTP URL via getVideoUrl(storage_path)
+      // and creates a content_deployments row, so progress/retry/canary all work.
+      // See pi-socket.strategy.ts which forwards `videoUrl` to the Pi.
+      this.api.post<{ id: string; status: string }>('/deployments', {
+        video_id: video.id,
+        target_type: 'site',
+        target_id: this.siteId,
       }).subscribe({
-        next: (response) => {
-          if (response.queued) {
-            this.notificationService.info(`Déploiement de "${video.filename}" en file d'attente (site hors ligne)`);
-            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
-          } else if (response.commandId) {
-            this.notificationService.info(`Déploiement de "${video.filename}" lancé...`);
-            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
-            this.waitForVideoDeployResult(videoId, video.filename, response.commandId);
-          }
+        next: (deployment) => {
+          this.notificationService.info(`Déploiement de "${video.filename}" lancé...`);
+          this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: deployment.id });
           this.cdr.markForCheck();
+          this.waitForVideoDeployResult(videoId, video.filename, deployment.id);
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
@@ -879,7 +875,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private waitForVideoDeployResult(videoId: string, filename: string, commandId: string): void {
+  private waitForVideoDeployResult(videoId: string, filename: string, deploymentId: string): void {
     this.cleanupVideoDeployTracking(videoId);
     const VIDEO_DEPLOY_TIMEOUT = 10 * 60 * 1000;
 
@@ -900,11 +896,29 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }, VIDEO_DEPLOY_TIMEOUT);
     this.videoDeployTimeouts.set(videoId, timeoutId);
 
-    const completedSub = this.socketService.on<{ siteId: string; commandId: string; commandType: string; status: string; result?: unknown; error?: string }>('command_completed')
-      .pipe(filter(event => event.commandId === commandId), take(1))
+    // Pi → cloud → dashboard : `deploy_progress` events carry deploymentId, progress,
+    // optional `completed: true` on success and optional `error` on failure
+    // (cf. raspberry/sync-agent/src/services/command-dispatch.js + central-server
+    // handlers/deploy-progress.handler.ts which broadcasts to the `dashboard` room).
+    const progressSub = this.socketService.on<{ deploymentId: string; videoId?: string; progress?: number; completed?: boolean; error?: string }>('deploy_progress')
+      .pipe(filter(event => event.deploymentId === deploymentId))
       .subscribe(event => {
-        if (event.status === 'success') {
-          this.videoDeployStates.set(videoId, { status: 'success', commandId });
+        if (event.error) {
+          this.videoDeployStates.set(videoId, { status: 'error', error: event.error, commandId: deploymentId });
+          this.notificationService.error(`Erreur de déploiement pour "${filename}": ${event.error}`);
+          setTimeout(() => {
+            if (this.videoDeployStates.get(videoId)?.status === 'error') {
+              this.videoDeployStates.delete(videoId);
+              this.cdr.markForCheck();
+            }
+          }, 10000);
+          this.cdr.markForCheck();
+          this.cleanupVideoDeployTracking(videoId);
+          return;
+        }
+
+        if (event.completed) {
+          this.videoDeployStates.set(videoId, { status: 'success', commandId: deploymentId });
           this.notificationService.success(`"${filename}" déployé avec succès sur le Pi !`);
           this.loadContent();
           setTimeout(() => {
@@ -913,48 +927,23 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
               this.cdr.markForCheck();
             }
           }, 5000);
-        } else {
-          const errorMsg = event.error || 'Erreur inconnue';
-          this.videoDeployStates.set(videoId, { status: 'error', error: errorMsg, commandId });
-          this.notificationService.error(`Erreur de déploiement pour "${filename}": ${errorMsg}`);
-          setTimeout(() => {
-            if (this.videoDeployStates.get(videoId)?.status === 'error') {
-              this.videoDeployStates.delete(videoId);
-              this.cdr.markForCheck();
-            }
-          }, 10000);
-        }
-        this.cdr.markForCheck();
-        this.cleanupVideoDeployTracking(videoId);
-      });
-    this.videoDeploySubscriptions.set(videoId, completedSub);
-
-    const progressSub = this.socketService.on<{ siteId: string; commandId: string; progress: number }>('deploy_progress')
-      .pipe(filter(event => event.commandId === commandId))
-      .subscribe(event => {
-        const currentState = this.videoDeployStates.get(videoId);
-        if (currentState?.status === 'deploying') {
-          this.videoDeployStates.set(videoId, { ...currentState, progress: event.progress });
           this.cdr.markForCheck();
+          this.cleanupVideoDeployTracking(videoId);
+          return;
         }
-      });
-    completedSub.add(progressSub);
 
-    const timeoutSub = this.socketService.on<{ siteId: string; commandId: string; type: string }>('command_timeout')
-      .pipe(filter(event => event.commandId === commandId), take(1))
-      .subscribe(() => {
-        this.videoDeployStates.set(videoId, { status: 'timeout', error: 'Le serveur a signalé un timeout pour cette commande' });
-        this.notificationService.warning(`Timeout serveur pour le déploiement de "${filename}"`);
-        this.cdr.markForCheck();
-        this.cleanupVideoDeployTracking(videoId);
-        setTimeout(() => {
-          if (this.videoDeployStates.get(videoId)?.status === 'timeout') {
-            this.videoDeployStates.delete(videoId);
+        if (typeof event.progress === 'number') {
+          const currentState = this.videoDeployStates.get(videoId);
+          if (currentState?.status === 'deploying') {
+            this.videoDeployStates.set(videoId, { ...currentState, progress: event.progress });
             this.cdr.markForCheck();
           }
-        }, 15000);
+        }
       });
-    completedSub.add(timeoutSub);
+    this.videoDeploySubscriptions.set(videoId, progressSub);
+    // Stuck deployments are auto-failed by alertingService.checkStuckDeployments
+    // which emits a final `deploy_progress { error }` — no separate command_timeout
+    // listener is needed for content_deployments rows.
   }
 
   private cleanupVideoDeployTracking(videoId: string): void {
