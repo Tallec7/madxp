@@ -67,6 +67,25 @@
   }
 }
 
+.vc__corner-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 4px;
+  cursor: help;
+
+  &--warning {
+    background: #f59e0b;
+    color: #1f2937;
+  }
+}
+
 .vc__body {
   display: flex;
   flex-direction: column;

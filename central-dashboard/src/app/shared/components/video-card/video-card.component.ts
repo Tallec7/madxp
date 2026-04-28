@@ -24,6 +24,13 @@ import { CommonModule } from '@angular/common';
         <span *ngIf="thumbOverlayRight" class="vc__thumb-overlay vc__thumb-overlay--right">{{
           thumbOverlayRight
         }}</span>
+        <span
+          *ngIf="cornerBadge"
+          class="vc__corner-badge"
+          [class.vc__corner-badge--warning]="cornerBadgeVariant === 'warning'"
+          [title]="cornerBadgeTooltip || cornerBadge"
+          >{{ cornerBadge }}</span
+        >
       </div>
       <div class="vc__body">
         <div class="vc__title" [title]="titleTooltip || title">{{ title }}</div>
@@ -53,5 +60,9 @@ export class VideoCardComponent {
   @Input() metaParts: string[] = [];
   @Input() selected = false;
   @Input() clickable = false;
+  /** Corner badge top-right (ex: "×3" pour signaler un doublon dedup). */
+  @Input() cornerBadge: string | null = null;
+  @Input() cornerBadgeTooltip: string | null = null;
+  @Input() cornerBadgeVariant: 'neutral' | 'warning' = 'neutral';
   @Output() cardClick = new EventEmitter<void>();
 }
