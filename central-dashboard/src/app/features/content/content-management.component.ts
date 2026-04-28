@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../core/services/notification.service';
-import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
+import { VideoDeleteService } from '../../core/services/video-delete.service';
 import { Site, Group } from '../../core/models';
 import { Subscription } from 'rxjs';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
@@ -16,7 +16,6 @@ import {
   Deployment,
   VideoDeploymentHistory,
   VideoName,
-  VideoUsage,
 } from './content-management-data.service';
 import { VideoUploadService } from './video-upload.service';
 import { ContentDeploymentService } from './content-deployment.service';
@@ -54,7 +53,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   private readonly dataService = inject(ContentManagementDataService);
   private readonly notificationService = inject(NotificationService);
-  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly videoDeleteService = inject(VideoDeleteService);
   readonly uploadService = inject(VideoUploadService);
   readonly deployService = inject(ContentDeploymentService);
   private subscriptions = new Subscription();
@@ -271,41 +270,20 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
 
   // ── Video CRUD actions ──
 
-  async deleteVideo(video: ContentVideoRow): Promise<void> {
-    // Pré-fetch de l'usage : si la vidéo est sur ≥1 site, la modal de confirmation
-    // liste les sites impactés et la suppression part en cascade. Sinon, simple
-    // confirmation comme avant. Évite les orphelines silencieuses (incident vidéo
-    // morte sur SaaS qui figeait l'écran — cf. PR #613).
-    let usage: VideoUsage | null = null;
-    try {
-      usage = await this.dataService.getVideoUsage(video.id).toPromise() ?? null;
-    } catch {
-      usage = null;
-    }
-
-    const cascade = (usage?.totalSites ?? 0) > 0;
-    const message = cascade && usage
-      ? `Supprimer la vidéo "${video.title}" ?\n\nElle est utilisée par ${usage.totalSites} site(s) :\n${usage.sites.map(s => `• ${s.name} (${s.site_type})`).join('\n')}\n\nLes TVs concernées rechargeront leur configuration sans cette vidéo.`
-      : `Supprimer la vidéo "${video.title}" ?`;
-
-    const ok = await this.confirmDialog.confirm(message, {
-      title: cascade ? 'Suppression cascade' : 'Suppression',
-      confirmLabel: cascade ? 'Supprimer (cascade)' : 'Supprimer',
+  deleteVideo(video: ContentVideoRow): void {
+    this.videoDeleteService.deleteVideoWithCascade(video.id, video.title).subscribe({
+      next: deleted => {
+        if (!deleted) return;
+        this.videos = this.videos.filter(v => v.id !== video.id);
+        this.allVideos = this.allVideos.filter(v => v.id !== video.id);
+      },
+      error: (error: unknown) => {
+        const message = this.dataService.getErrorMessage(error);
+        this.notificationService.error(`Erreur lors de la suppression: ${message}`, {
+          correlationId: this.dataService.getCorrelationId(error)
+        });
+      }
     });
-    if (ok) {
-      this.dataService.deleteVideo(video.id, { cascade }).subscribe({
-        next: () => {
-          this.videos = this.videos.filter(v => v.id !== video.id);
-          this.allVideos = this.allVideos.filter(v => v.id !== video.id);
-        },
-        error: (error: unknown) => {
-          const message = this.dataService.getErrorMessage(error);
-          this.notificationService.error(`Erreur lors de la suppression: ${message}`, {
-            correlationId: this.dataService.getCorrelationId(error)
-          });
-        }
-      });
-    }
   }
 
   // ── Video history modal ──

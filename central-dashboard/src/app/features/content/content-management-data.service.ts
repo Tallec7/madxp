@@ -83,17 +83,6 @@ export interface VideoName {
   file_size: number;
 }
 
-/**
- * Réponse de `GET /api/videos/:id/usage`. Liste les sites qui référencent
- * la vidéo via `site_videos`. Utilisé par le dashboard pour prévenir
- * l'utilisateur avant un DELETE cascade (évite les orphelines silencieuses).
- */
-export interface VideoUsage {
-  videoId: string;
-  totalSites: number;
-  sites: Array<{ id: string; name: string; site_type: string }>;
-}
-
 export interface BulkUploadResponse {
   success: boolean;
   message: string;
@@ -140,20 +129,6 @@ export class ContentManagementDataService {
 
   loadAllVideoNames(): Observable<VideoName[]> {
     return this.api.get<VideoName[]>('/videos/names');
-  }
-
-  deleteVideo(videoId: string, opts?: { cascade?: boolean }): Observable<void> {
-    const qs = opts?.cascade ? '?cascade=true' : '';
-    return this.api.delete<void>(`/videos/${videoId}${qs}`);
-  }
-
-  /**
-   * Récupère la liste des sites qui référencent une vidéo. Utilisé avant
-   * un DELETE pour afficher la modal de confirmation cascade au super_admin
-   * (cf. PR cleanup cascade — incident vidéo morte sur SaaS).
-   */
-  getVideoUsage(videoId: string): Observable<VideoUsage> {
-    return this.api.get<VideoUsage>(`/videos/${videoId}/usage`);
   }
 
   uploadVideo(formData: FormData): Observable<ContentVideoRow> {

@@ -6,6 +6,7 @@ import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { SitesService } from '../../core/services/sites.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService, UploadProgress } from '../../core/services/api.service';
+import { VideoDeleteService } from '../../core/services/video-delete.service';
 import { BrowserRendererService, RenderProgress } from './browser-renderer.service';
 import { TemplateRendererService } from './template-renderer.service';
 import { environment } from '../../../environments/environment';
@@ -47,6 +48,7 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
   private readonly sitesService = inject(SitesService);
   private readonly notifications = inject(NotificationService);
   private readonly api = inject(ApiService);
+  private readonly videoDeleteService = inject(VideoDeleteService);
   private readonly route = inject(ActivatedRoute);
   private readonly browserRenderer = inject(BrowserRendererService);
   private readonly templateRendererSvc = inject(TemplateRendererService);
@@ -505,15 +507,18 @@ export class LottieTemplatesComponent implements OnInit, OnDestroy {
 
   deleteRenderedVideo(): void {
     if (!this.renderedVideo) return;
-    const sub = this.api.delete(`/videos/${this.renderedVideo.id}`).subscribe({
-      next: () => {
-        this.revokeBlobUrl();
-        this.renderedVideo = null;
-        this.rendered = false;
-        this.notifications.success('Video supprimee');
-      },
-      error: () => this.notifications.error('Erreur lors de la suppression')
-    });
+    const sub = this.videoDeleteService
+      .deleteVideoWithCascade(this.renderedVideo.id, this.renderedVideo.title)
+      .subscribe({
+        next: deleted => {
+          if (!deleted) return;
+          this.revokeBlobUrl();
+          this.renderedVideo = null;
+          this.rendered = false;
+          this.notifications.success('Video supprimee');
+        },
+        error: () => this.notifications.error('Erreur lors de la suppression')
+      });
     this.subscriptions.push(sub);
   }
 
