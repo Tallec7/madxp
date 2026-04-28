@@ -255,6 +255,12 @@ export class TvComponent implements OnInit, OnDestroy {
       this.localOptions = options as LocalOptions;
     });
 
+    // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push.
+    // Pas de Pi → pas de MJPEG. La TV browser capture son <video> actif
+    // (loop ou manual) et push des frames JPEG en data URI dès qu'une
+    // Remote V2 s'abonne. Subscribe-driven : 0 capture si personne ne regarde.
+    this.setupSaasPreviewCapture();
+
     this.socketService.on('screenshot-request', () => {
       console.log('[TV] Screenshot request received');
       const activeVideo = this.isManualMode
@@ -344,6 +350,7 @@ export class TvComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy() {
     this.stopPlayerStateProgressTracker();
+    this.teardownSaasPreviewCapture();
 
     if (!this.tvSyncService.isSlaveMode) {
       this.analyticsService.endSession();
@@ -358,6 +365,77 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
     this.localBroadcastSubscriptions = [];
+  }
+
+  // =========================================================================
+  // SaaS TV PREVIEW PUSH (SPEC-V2-TVMON-01 / ADR-101)
+  // =========================================================================
+
+  private saasPreviewSubscribers = 0;
+  private saasPreviewTimer: ReturnType<typeof setInterval> | null = null;
+  private saasPreviewCanvas: HTMLCanvasElement | null = null;
+
+  /** Activated only in SaaS mode + master TV display. */
+  private setupSaasPreviewCapture(): void {
+    const isSaas = (environment as { saasMode?: boolean }).saasMode === true;
+    if (!isSaas) return;
+    if (this.tvSyncService.isSlaveMode) return;
+    if (this.displayType !== 'tv') return;
+
+    this.socketService.on('tv-preview:saas-subscribe', () => {
+      this.saasPreviewSubscribers += 1;
+      if (this.saasPreviewSubscribers === 1) this.startSaasPreviewLoop();
+    });
+    this.socketService.on('tv-preview:saas-unsubscribe', () => {
+      this.saasPreviewSubscribers = Math.max(0, this.saasPreviewSubscribers - 1);
+      if (this.saasPreviewSubscribers === 0) this.stopSaasPreviewLoop();
+    });
+  }
+
+  private teardownSaasPreviewCapture(): void {
+    this.stopSaasPreviewLoop();
+    this.saasPreviewSubscribers = 0;
+  }
+
+  private startSaasPreviewLoop(): void {
+    if (this.saasPreviewTimer) return;
+    if (!this.saasPreviewCanvas) {
+      this.saasPreviewCanvas = document.createElement('canvas');
+      this.saasPreviewCanvas.width = 480;
+      this.saasPreviewCanvas.height = 270;
+    }
+    // ~4 fps, suffisant pour un retour visuel régie. Bande passante bornée
+    // à ~150-300 Ko/s en SaaS (acceptable sur tout réseau LAN/4G régie).
+    this.saasPreviewTimer = setInterval(() => this.emitSaasPreviewFrame(), 250);
+  }
+
+  private stopSaasPreviewLoop(): void {
+    if (this.saasPreviewTimer) {
+      clearInterval(this.saasPreviewTimer);
+      this.saasPreviewTimer = null;
+    }
+  }
+
+  private emitSaasPreviewFrame(): void {
+    const canvas = this.saasPreviewCanvas;
+    if (!canvas || this.saasPreviewSubscribers === 0) return;
+    const player = this.isManualMode
+      ? this.doubleBufferService.getActiveManualPlayer()
+      : this.doubleBufferService.getActivePlayer();
+    if (!player || player.videoWidth === 0 || player.videoHeight === 0) return;
+
+    try {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(player, 0, 0, canvas.width, canvas.height);
+      const frame = canvas.toDataURL('image/jpeg', 0.6);
+      // Send via socket — relayé par central-server saas-relay.handler vers la
+      // Remote V2 du même site. Si la connexion est saturée, le data URI est
+      // simplement droppé côté socket.io (best-effort, pas critique).
+      this.socketService.emit('tv-preview:saas-frame', { frame, ts: Date.now() } as unknown as Command);
+    } catch (err) {
+      console.warn('[TV] SaaS preview capture failed', err);
+    }
   }
 
   // =========================================================================

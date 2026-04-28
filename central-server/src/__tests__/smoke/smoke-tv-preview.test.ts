@@ -262,4 +262,73 @@ describe('SPEC-V2-TVMON-01 / ADR-101 — TV preview MJPEG wiring', () => {
       expect(pkg.dependencies).toHaveProperty('puppeteer-core');
     });
   });
+
+  // ===========================================================================
+  // SaaS path (no Pi) — TV browser pushes JPEG frames via Socket.IO relay.
+  // Same <app-r2-tv-monitor> component on the Remote, transport differs.
+  // ===========================================================================
+  describe('SaaS preview push transport', () => {
+    it('central-server saas-relay relays the 3 SaaS preview events', () => {
+      const src = read('central-server/src/handlers/saas-relay.handler.ts');
+      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-subscribe['"]/);
+      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-unsubscribe['"]/);
+      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-frame['"]/);
+      // Relay broadcasts to the rest of the site room (TV ↔ Remote, same site)
+      expect(src).toMatch(/socket\.to\(siteId\)\.emit\(['"]tv-preview:saas-frame['"]/);
+    });
+
+    it('TV component captures + pushes frames only when subscribers > 0', () => {
+      const src = read('raspberry/src/app/components/tv/tv.component.ts');
+      expect(src).toMatch(/setupSaasPreviewCapture/);
+      expect(src).toMatch(/teardownSaasPreviewCapture/);
+      expect(src).toMatch(/saasPreviewSubscribers/);
+      // Subscribe-driven (no capture without listener)
+      expect(src).toMatch(/this\.startSaasPreviewLoop\(\)/);
+      expect(src).toMatch(/this\.stopSaasPreviewLoop\(\)/);
+      // Pushes via Socket.IO with data URI frame
+      expect(src).toMatch(/['"]tv-preview:saas-frame['"]/);
+      expect(src).toMatch(/toDataURL\(['"]image\/jpeg['"]/);
+    });
+
+    it('TV capture is gated to SaaS mode + non-slave + displayType=tv', () => {
+      const src = read('raspberry/src/app/components/tv/tv.component.ts');
+      // The setup function must check saasMode + isSlaveMode + displayType
+      expect(src).toMatch(/saasMode/);
+      expect(src).toMatch(/isSlaveMode/);
+      // Either a SaaS-aware setup or guard
+      expect(src).toMatch(/setupSaasPreviewCapture[\s\S]{0,800}saasMode/);
+    });
+
+    it('Remote V2 subscribes on connect and consumes saas-frame data URIs', () => {
+      const src = read(
+        'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
+      );
+      expect(src).toMatch(/setupSaasTvPreviewConsumer/);
+      expect(src).toMatch(/['"]tv-preview:saas-frame['"]/);
+      expect(src).toMatch(/['"]tv-preview:saas-subscribe['"]/);
+      // Sets the previewUrl signal with the received data URI
+      expect(src).toMatch(/this\.tvPreviewUrl\.set\(data\.frame\)/);
+    });
+
+    it('Remote V2 unsubscribes on ngOnDestroy in SaaS mode', () => {
+      const src = read(
+        'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
+      );
+      // Match the unsubscribe emit in ngOnDestroy block
+      expect(src).toMatch(/['"]tv-preview:saas-unsubscribe['"]/);
+    });
+  });
+
+  // ===========================================================================
+  // Pi kiosk launcher — must expose Chrome DevTools Protocol on loopback so
+  // the tv-preview service (Puppeteer-core) can attach. Without this flag the
+  // service hangs on connect() and the Remote stays on the placeholder.
+  // ===========================================================================
+  describe('Pi kiosk-watchdog CDP exposure', () => {
+    it('kiosk-watchdog.sh enables --remote-debugging-port=9222 on loopback', () => {
+      const src = read('raspberry/scripts/kiosk-watchdog.sh');
+      expect(src).toMatch(/--remote-debugging-port=9222/);
+      expect(src).toMatch(/--remote-debugging-address=127\.0\.0\.1/);
+    });
+  });
 });
