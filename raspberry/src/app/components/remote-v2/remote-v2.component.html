@@ -1,4 +1,4 @@
-<div class="remote-v2">
+<div class="remote-v2" [ngClass]="layoutClasses">
   <app-r2-header
     [initials]="clubInitials"
     [clubName]="currentProfile"
@@ -403,6 +403,81 @@
           <option value="normal">Normale</option>
           <option value="large">Grande</option>
         </select>
+      </div>
+
+      <!-- SPEC-V2-LAYOUT-01 — section Affichage -->
+      <div class="r2-pref-section-title">Affichage</div>
+
+      <div class="r2-pref-row r2-pref-row--block">
+        <span class="r2-pref-label">Layout mobile</span>
+        <div class="r2-radio-group" role="radiogroup" aria-label="Layout mobile">
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutMobile"
+              value="classic"
+              [checked]="prefsService.prefs.layoutMobile === 'classic'"
+              (change)="updatePref('layoutMobile', 'classic')"
+            />
+            <span>Liste dense <em>(recommandé régie)</em></span>
+          </label>
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutMobile"
+              value="grid"
+              [checked]="prefsService.prefs.layoutMobile === 'grid'"
+              (change)="updatePref('layoutMobile', 'grid')"
+            />
+            <span>Cartes visuelles</span>
+          </label>
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutMobile"
+              value="compact"
+              [checked]="prefsService.prefs.layoutMobile === 'compact'"
+              (change)="updatePref('layoutMobile', 'compact')"
+            />
+            <span>Tableur compact</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="r2-pref-row r2-pref-row--block">
+        <span class="r2-pref-label">Layout PC</span>
+        <div class="r2-radio-group" role="radiogroup" aria-label="Layout PC">
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutDesktop"
+              value="centered"
+              [checked]="prefsService.prefs.layoutDesktop === 'centered'"
+              (change)="updatePref('layoutDesktop', 'centered')"
+            />
+            <span>Centré confort</span>
+          </label>
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutDesktop"
+              value="sidebar"
+              [checked]="prefsService.prefs.layoutDesktop === 'sidebar'"
+              (change)="updatePref('layoutDesktop', 'sidebar')"
+            />
+            <span>Sidebar + browse <em>(recommandé)</em></span>
+          </label>
+          <label class="r2-radio">
+            <input
+              type="radio"
+              name="layoutDesktop"
+              value="pro"
+              [checked]="prefsService.prefs.layoutDesktop === 'pro'"
+              (change)="updatePref('layoutDesktop', 'pro')"
+            />
+            <span>Régie pro sombre <em>[bêta]</em></span>
+          </label>
+        </div>
       </div>
     </div>
   </div>

@@ -1,0 +1,64 @@
+// ---- Widget activation toggles --------------------------------------------
+.r2-widget-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid $border;
+  background: $surface;
+
+  .r2-widget-toggle-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: $border-subtle;
+    color: $text-muted;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .r2-widget-toggle-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .r2-widget-toggle-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: $text;
+  }
+
+  .r2-widget-toggle-sub {
+    font-size: 11px;
+    color: $text-muted;
+  }
+
+  &--score {
+    .r2-widget-toggle-icon {
+      background: $accent-bg;
+      color: $accent;
+    }
+  }
+
+  &--chrono {
+    .r2-widget-toggle-icon {
+      background: $warn-bg;
+      color: $warn;
+    }
+  }
+
+  &--breaking {
+    .r2-widget-toggle-icon {
+      background: $danger-bg;
+      color: $danger;
+    }
+  }
+}

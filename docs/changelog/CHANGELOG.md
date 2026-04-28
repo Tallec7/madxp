@@ -1,3 +1,15 @@
+## [3.261.1](https://github.com/Tallec7/neopro/compare/v3.261.0...v3.261.1) (2026-04-28)
+
+### Bug Fixes
+
+- **ci:** align SaaS lftp deploy on dashboard pre-[#625](https://github.com/Tallec7/neopro/issues/625) tune (was 1-2min, regressed to 11m+) ([#676](https://github.com/Tallec7/neopro/issues/676)) ([e3d1c36](https://github.com/Tallec7/neopro/commit/e3d1c363f903a5e4cbf9f04f2ce61459eb8bafef)), closes [#668](https://github.com/Tallec7/neopro/issues/668) [#675](https://github.com/Tallec7/neopro/issues/675) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668)
+
+# [3.261.0](https://github.com/Tallec7/neopro/compare/v3.260.0...v3.261.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** système de 6 layouts (3 mobile × 3 PC) + SCSS split (SPEC-V2-LAYOUT-01) ([#675](https://github.com/Tallec7/neopro/issues/675)) ([cba57f0](https://github.com/Tallec7/neopro/commit/cba57f05a7cde05015dbedbd41a6dca9b422459e)), closes [#0e1116](https://github.com/Tallec7/neopro/issues/0e1116) [#fff](https://github.com/Tallec7/neopro/issues/fff) [#f0a868](https://github.com/Tallec7/neopro/issues/f0a868)
+
 # [3.260.0](https://github.com/Tallec7/neopro/compare/v3.259.0...v3.260.0) (2026-04-28)
 
 ### Features

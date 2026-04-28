@@ -1,0 +1,35 @@
+// ---- Toast ----------------------------------------------------------------
+.r2-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  background: $dark;
+  color: #fff;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 20px -4px rgba(16, 24, 40, 0.4);
+  z-index: 100;
+  animation: np-toast-in 180ms ease-out;
+
+  // Variant erreur (vidéo manuelle indisponible — feedback chantier vidéos manquantes).
+  &.is-error {
+    background: #cc384e;
+    color: #fff;
+    box-shadow: 0 8px 22px -4px rgba(204, 56, 78, 0.5);
+  }
+}
+
+@keyframes np-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

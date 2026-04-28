@@ -415,4 +415,39 @@ describe('RemoteV2Component', () => {
       expect(component.phaseDivergesFromLoop).toBe(false);
     });
   });
+
+  // SPEC-V2-LAYOUT-01 — système de préférences de layout (3 mobile × 3 PC)
+  describe('layoutClasses (SPEC-V2-LAYOUT-01)', () => {
+    it('retourne le couple par défaut (classic / sidebar)', () => {
+      component.prefsService.reset();
+      expect(component.layoutClasses).toEqual([
+        'layout-mobile-classic',
+        'layout-desktop-sidebar',
+      ]);
+    });
+
+    it('reflète les préférences mises à jour', () => {
+      component.prefsService.update('layoutMobile', 'compact');
+      component.prefsService.update('layoutDesktop', 'pro');
+      expect(component.layoutClasses).toEqual([
+        'layout-mobile-compact',
+        'layout-desktop-pro',
+      ]);
+    });
+
+    it('couvre les 9 combinaisons sans erreur', () => {
+      const mobiles = ['classic', 'grid', 'compact'] as const;
+      const desktops = ['centered', 'sidebar', 'pro'] as const;
+      for (const m of mobiles) {
+        for (const d of desktops) {
+          component.prefsService.update('layoutMobile', m);
+          component.prefsService.update('layoutDesktop', d);
+          expect(component.layoutClasses).toEqual([
+            `layout-mobile-${m}`,
+            `layout-desktop-${d}`,
+          ]);
+        }
+      }
+    });
+  });
 });
