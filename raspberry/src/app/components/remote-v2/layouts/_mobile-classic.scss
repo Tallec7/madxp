@@ -21,17 +21,27 @@
       min-height: 56px;
     }
 
-    // Hero compact
+    // Hero compact 1-ligne — AUDIT-V2-LAYOUT-01 §3 "Hero Boucle active trop chargé".
+    // Stratégie : on garde le template r2-hero complet mais on cache les éléments
+    // verbeux (eyebrow, subline, progress bar, display target wrap, label "Boucle
+    // active") pour comprimer à ~96px max. Les tabs de boucle restent visibles
+    // sous forme de mini segmented compact, intégrés visuellement avec le main row.
     .r2-hero {
       margin: 8px 12px 0;
       min-height: var(--r2-hero-h);
+      max-height: 100px;
     }
     .r2-hero-eyebrow {
       padding: 4px 10px 0;
       font-size: 9px;
+      // On masque le texte "À l'antenne" / "Diffusion manuelle" — l'état est
+      // déjà signalé par les badges LIVE / REC + couleur de la TV thumb.
+      > span:nth-of-type(1) {
+        display: none;
+      }
     }
     .r2-hero-main {
-      padding: 4px 10px 6px;
+      padding: 4px 10px 4px;
       gap: 8px;
     }
     .r2-tv-thumb {
@@ -40,6 +50,30 @@
     }
     .r2-hero .r2-video-name {
       font-size: 13px;
+    }
+    // Cache la subline (ex: "X/Y · tourne en fond") pour gagner ~16px
+    .r2-hero .r2-video-subline {
+      display: none;
+    }
+    // Cache le label "Boucle active" (déjà inférable du contexte)
+    .r2-loop-tabs-wrap .r2-hero-section-label {
+      display: none;
+    }
+    // Compacte le bandeau loop-tabs : pas de wrap, mini segmented
+    .r2-loop-tabs-wrap {
+      padding: 2px 8px 6px;
+    }
+    .r2-loop-tabs button {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    // Cache le "Cible vidéo" (target display) — accessible via la sheet options
+    .r2-display-wrap {
+      display: none;
+    }
+    // Cache la progress bar verbose pendant lecture manuelle
+    .r2-hero-progress {
+      display: none;
     }
 
     // Widgets en grid 2 colonnes (score | chrono), breaking pleine largeur

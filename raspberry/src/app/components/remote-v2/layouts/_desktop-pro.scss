@@ -68,20 +68,29 @@
       }
     }
 
-    // Hero + categories au centre (col 2)
+    // PC C remplace le hero générique par le composant `<app-r2-tv-monitor>`
+    // (preview 16:9 dark — SPEC §5C). Le hero classique est masqué pour
+    // éviter le doublon visuel.
     .r2-hero {
+      display: none;
+    }
+
+    // Active le TV monitor uniquement dans ce layout
+    .r2-tv-monitor-host {
+      display: block;
       grid-column: 2 / 3;
       grid-row: 2;
       margin: 16px;
-      background: #000;
-      color: var(--r2-ink);
-      border: 1px solid var(--r2-border);
-      box-shadow: none;
+      align-self: start;
     }
+
     .r2-categories {
       grid-column: 2 / 3;
       grid-row: 2;
-      margin-top: calc(16px + 200px); // sous le hero (rough)
+      // Aligné sous le tv-monitor — on s'appuie sur grid-auto-flow vertical
+      // au lieu de margin-top hardcodé.
+      align-self: stretch;
+      margin-top: calc(16px + 56.25% + 16px); // 16:9 = 56.25% du width col 2
       background: var(--r2-bg);
       color: var(--r2-ink);
       padding-bottom: 24px;

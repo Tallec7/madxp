@@ -22,6 +22,20 @@
     (alignPhase)="alignPhaseToLoop()"
   ></app-r2-hero>
 
+  <!--
+    SPEC-V2-LAYOUT-01 §5C — Preview "monitor TV" pour le layout régie pro PC C.
+    Rendu uniquement quand `layout-desktop-pro` est actif (visibilité gérée par
+    le SCSS du layout). Sur les autres layouts, le composant est dans le DOM
+    mais masqué via `display: none` (coût négligeable, OnPush + display:contents).
+  -->
+  <app-r2-tv-monitor
+    class="r2-tv-monitor-host"
+    [playingVideo]="playingVideo"
+    [loopVideoName]="loopVideo()?.name"
+    [subline]="heroSubline()"
+    [isNeutralLoop]="loopId === 'neutral'"
+  ></app-r2-tv-monitor>
+
   <app-r2-recording-warning
     [state]="recordingWarning"
     (extend)="extendRecording()"
