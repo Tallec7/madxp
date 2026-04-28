@@ -1,3 +1,9 @@
+## [3.258.6](https://github.com/Tallec7/neopro/compare/v3.258.5...v3.258.6) (2026-04-28)
+
+### Bug Fixes
+
+- **content:** make unlinkVideoFromSite idempotent (no 404 if pivot empty) ([#671](https://github.com/Tallec7/neopro/issues/671)) ([58951e4](https://github.com/Tallec7/neopro/commit/58951e434843e9350bd28ad9d4010b1082185637))
+
 ## [3.258.5](https://github.com/Tallec7/neopro/compare/v3.258.4...v3.258.5) (2026-04-27)
 
 ### Bug Fixes
