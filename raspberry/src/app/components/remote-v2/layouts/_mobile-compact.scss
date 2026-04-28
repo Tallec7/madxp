@@ -2,10 +2,9 @@
 // Cible : opérateur très expérimenté, plusieurs matchs/semaine.
 // Vidéos visibles à fold (375×760) : 14.
 //
-// Hero 56 / row 28px / widgets repliés par défaut. Type 12px (RGAA AA — 12px
-// est le minimum acceptable pour la lisibilité).
-//
-// Référence pixel : `MobileC` dans remote-v2-mobile.jsx l. 427-565.
+// AUDIT-V2-LAYOUT-01 : sélecteurs réels — `.r2-videos` pour le wrapper,
+// `.r2-video-name / .r2-video-thumb / .r2-video-duration / .r2-video-meta`
+// pour les enfants.
 
 .remote-v2.layout-mobile-compact {
   @include r2-mobile-only {
@@ -24,7 +23,7 @@
       min-height: var(--r2-hero-h);
     }
     .r2-hero-eyebrow {
-      display: none; // gain vertical
+      display: none;
     }
     .r2-hero-main {
       padding: 4px 8px;
@@ -34,14 +33,11 @@
       width: 36px;
       height: 22px;
     }
-    .r2-hero-info .r2-video-name {
+    .r2-hero .r2-video-name {
       font-size: 12px;
     }
 
-    // Widgets repliés par défaut : si le composant a un état collapsed, le
-    // styler ; sinon on cache le contenu et on laisse un toggle visible 32px.
-    // Le détail UX (toggle) viendra dans une PR séparée si demandé — ici on
-    // applique la règle SCSS qui réduit drastiquement l'empreinte.
+    // Widgets repliés par défaut, expand on demand
     .r2-widgets {
       max-height: 32px;
       overflow: hidden;
@@ -53,13 +49,10 @@
       }
     }
 
-    // Liste type tableur — colonnes alignées, séparateur 1px, pas de gap
-    .r2-categories {
-      .r2-video-list,
-      .r2-video-rows,
-      .r2-cat-videos {
-        gap: 0;
-      }
+    // Tableur : pas de gap entre rows, séparateur 1px
+    .r2-videos {
+      gap: 0;
+      padding: 0 var(--r2-padding-x);
     }
 
     .r2-video-row {
@@ -70,30 +63,19 @@
       gap: 6px;
       align-items: center;
 
-      .r2-vr-thumb,
       .r2-video-thumb {
         width: 18px;
         height: 18px;
         border-radius: 2px;
       }
-      .r2-vr-name {
+      .r2-video-name {
         font-size: var(--r2-type-row);
         font-weight: 500;
       }
-      .r2-vr-meta,
-      .r2-vr-duration {
+      .r2-video-duration,
+      .r2-video-tag {
         font-size: 11px;
         font-variant-numeric: tabular-nums;
-        flex: 0 0 44px;
-        text-align: right;
-      }
-
-      // Phase chip 60px à gauche pour respect de la grille colonne
-      .r2-vr-phase,
-      .r2-vr-chip {
-        flex: 0 0 60px;
-        font-size: 10px;
-        text-transform: uppercase;
       }
     }
   }

@@ -1,27 +1,44 @@
 // SPEC-V2-LAYOUT-01 — Mobile B "Grid cards 2-col"
 // Cible : profil découverte / sponsors visuels.
-// Vidéos visibles à fold : 6 (cards 175×90 16:9 + nom 2 lignes max).
+// Vidéos visibles à fold : 6 (cards 16:9 + nom 2 lignes max).
 //
-// Garde les hauteurs hero/widgets standards (V2 actuel) — la densification
-// se fait uniquement sur la liste vidéo, pour préserver le confort de lecture.
-//
-// Référence pixel : `MobileB` dans remote-v2-mobile.jsx l. 247-425.
+// AUDIT-V2-LAYOUT-01 :
+// - Bloquant 1 : widgets overflow horizontal — fix par `display: grid` 2-col
+//   sur `.r2-widgets` + min-width: 0 sur les widgets enfants.
+// - Bloquant 2 : grid cards inopérante — sélecteur réel = `.r2-videos`
+//   (pas `.r2-video-list / .r2-video-rows / .r2-cat-videos` qui n'existent pas).
 
 .remote-v2.layout-mobile-grid {
   @include r2-mobile-only {
     --r2-card-h: 90px;
     --r2-padding-x: 12px;
 
-    // Bascule la liste en grid 2 colonnes
-    .r2-categories {
-      .r2-video-list,
-      .r2-video-rows,
-      .r2-cat-videos {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 0 var(--r2-padding-x);
+    // Widgets : grid 2-col (audit Bloquant 1, audit p.531)
+    .r2-widgets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+
+      .r2-widget {
+        min-width: 0;
       }
+      .r2-widget-breaking {
+        grid-column: 1 / -1;
+      }
+      .r2-score-quick-btn {
+        font-size: 10px;
+        padding: 4px 6px;
+      }
+    }
+
+    // Bascule la liste vidéo en grid 2 colonnes (audit Bloquant 2)
+    // Sélecteur réel : `.r2-videos` — wrapper rendu par r2-browse autour
+    // des `<app-r2-video-row>`.
+    .r2-videos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px var(--r2-padding-x);
     }
 
     .r2-video-row {
@@ -33,9 +50,9 @@
       border: 1px solid $border-subtle;
       background: $surface;
       gap: 6px;
+      position: relative;
 
-      // Aperçu 16:9 forcé en haut de la card
-      .r2-vr-thumb,
+      // Aperçu 16:9 forcé en haut de la card (override default 42px square)
       .r2-video-thumb {
         width: 100%;
         height: auto;
@@ -44,7 +61,12 @@
       }
 
       // Nom sur 2 lignes max ellipsé
-      .r2-vr-name {
+      .r2-video-meta {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+      }
+      .r2-video-name {
         font-size: 13px;
         font-weight: 600;
         line-height: 1.25;
@@ -56,8 +78,7 @@
       }
 
       // État playing : bordure accent + badge "EN COURS"
-      &.is-playing,
-      &[data-playing='true'] {
+      &.playing {
         border-width: 2px;
         border-color: $accent;
         background: $accent-bg;
@@ -75,8 +96,6 @@
           padding: 2px 6px;
           border-radius: 8px;
         }
-
-        position: relative;
       }
     }
   }

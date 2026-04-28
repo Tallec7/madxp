@@ -1,14 +1,11 @@
 // SPEC-V2-LAYOUT-01 — Mobile A "Liste dense classique" (recommandé régie pro)
 // Cible : opérateur régie qui pilote 30+ vidéos/match.
-// Vidéos visibles à fold (375×760) : 9 (vs 3,5 en V2 actuelle, +157%).
+// Vidéos visibles à fold (375×760) : 9 (vs 3,5 en V2 actuelle, +157 %).
 //
-// Densification :
-//   Header  80 → 56px         Hero    200 → 76px (1 ligne)
-//   Widgets 180 → 64px         Row vid  56 → 40px
-//   Padding 16  → 12px         Type     15 → 14px
-//
-// Référence pixel : `Remote V2 Propositions.html` artboard "A · Liste dense"
-// (mocks React `MobileA` dans remote-v2-mobile.jsx l. 7-153).
+// Référence pixel : `Remote V2 Propositions.html` artboard "A · Liste dense".
+// AUDIT-V2-LAYOUT-01 : sélecteurs corrigés (les `.r2-vr-*` n'existent pas dans
+// le DOM — vraies classes : `.r2-video-thumb`, `.r2-video-name`,
+// `.r2-video-meta`, `.r2-video-duration`).
 
 .remote-v2.layout-mobile-classic {
   @include r2-mobile-only {
@@ -24,7 +21,7 @@
       min-height: 56px;
     }
 
-    // Hero ultra-compact : 1 ligne
+    // Hero compact
     .r2-hero {
       margin: 8px 12px 0;
       min-height: var(--r2-hero-h);
@@ -41,57 +38,50 @@
       width: 44px;
       height: 28px;
     }
-    .r2-hero-info {
-      .r2-video-name {
-        font-size: 13px;
-      }
-      .r2-video-subline {
-        font-size: 10px;
-      }
+    .r2-hero .r2-video-name {
+      font-size: 13px;
     }
 
-    // Widgets en grid 2 colonnes (timer | score), breaking pleine largeur
+    // Widgets en grid 2 colonnes (score | chrono), breaking pleine largeur
     .r2-widgets {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
       margin: 8px 12px 0;
-      min-height: var(--r2-widgets-h);
 
       .r2-widget {
+        min-width: 0; // permet aux flex children de shrink dans la grid cell
         padding: 6px 8px;
-        min-height: 56px;
       }
 
-      .r2-widget--breaking,
       .r2-widget-breaking {
         grid-column: 1 / -1;
       }
+
+      // Compacte les boutons +HOM/+EXT pour rentrer dans la grid 1fr
+      .r2-score-quick-btn {
+        font-size: 10px;
+        padding: 4px 6px;
+      }
     }
 
-    // Densification des rows vidéo
+    // Densification des rows vidéo (sélecteurs DOM réels)
     .r2-video-row {
       min-height: var(--r2-row-h);
-      padding: 0 var(--r2-padding-x);
+      padding: 4px var(--r2-padding-x);
+      gap: 8px;
 
-      .r2-vr-name {
-        font-size: var(--r2-type-row);
-      }
-      .r2-vr-thumb,
       .r2-video-thumb {
         width: 28px;
         height: 28px;
       }
-      .r2-vr-meta,
-      .r2-vr-duration {
-        font-size: 12px;
+      .r2-video-name {
+        font-size: var(--r2-type-row);
       }
-    }
-
-    .r2-categories,
-    .r2-phase-tabs {
-      padding-left: var(--r2-padding-x);
-      padding-right: var(--r2-padding-x);
+      .r2-video-duration,
+      .r2-video-tag {
+        font-size: 11px;
+      }
     }
   }
 }

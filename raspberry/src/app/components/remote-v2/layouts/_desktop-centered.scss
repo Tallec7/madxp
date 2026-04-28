@@ -1,27 +1,67 @@
 // SPEC-V2-LAYOUT-01 — PC A "Centré confort 920px"
 // Cible : usage occasionnel / formation / démo.
-// Vidéos visibles à fold (1280×820) : 6 (mobile A étiré).
+// Vidéos visibles à fold (1280×820) : 6.
 //
-// Effort minimum : on contraint la largeur du conteneur racine et on laisse
-// le layout mobile s'appliquer naturellement (aucune transformation grid).
+// Spec §5A : "Couleurs et hauteurs : identiques à Mobile A étiré"
+// → applique la densification Mobile A même en viewport desktop.
 //
-// Référence pixel : `DesktopA` dans remote-v2-desktop.jsx l. 7-215.
+// AUDIT-V2-LAYOUT-01 (PC A) : largeur effective trop étroite — sécurise
+// avec `width: 100%` pour ne pas hériter d'une contrainte parente.
 
 @include r2-desktop-up {
   .remote-v2.layout-desktop-centered {
+    width: 100%;
     max-width: 920px;
     margin: 0 auto;
 
-    // Garde le hero/widgets standards (pas de densification spécifique
-    // à PC ; c'est mobile A étiré, mais sans la classe mobile-classic
-    // si l'utilisateur n'a pas choisi A en mobile)
-    .r2-hero {
-      margin-left: 16px;
-      margin-right: 16px;
+    --r2-hero-h: 100px;
+    --r2-row-h: 48px;
+    --r2-padding-x: 16px;
+    --r2-type-row: 14px;
+
+    .r2-header {
+      padding: 8px 16px;
+      min-height: 56px;
     }
+
+    .r2-hero {
+      margin: 12px 16px 0;
+      min-height: var(--r2-hero-h);
+    }
+
     .r2-widgets {
-      margin-left: 16px;
-      margin-right: 16px;
+      margin: 8px 16px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+
+      .r2-widget {
+        min-width: 0;
+      }
+      .r2-widget-breaking {
+        grid-column: 1 / -1;
+      }
+    }
+
+    // Garde la liste en colonne unique (mobile A étiré, pas de grid cards)
+    .r2-videos {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0 var(--r2-padding-x);
+    }
+
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 4px var(--r2-padding-x);
+
+      .r2-video-thumb {
+        width: 32px;
+        height: 32px;
+      }
+      .r2-video-name {
+        font-size: var(--r2-type-row);
+      }
     }
   }
 }
