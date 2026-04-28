@@ -1,3 +1,9 @@
+# [3.265.0](https://github.com/Tallec7/neopro/compare/v3.264.0...v3.265.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** persist préférences UX en DB par (site, profil) — ADR-101 ([#691](https://github.com/Tallec7/neopro/issues/691)) ([82b5c3f](https://github.com/Tallec7/neopro/commit/82b5c3f1927b96b84e00dd35b29ab7a4e48c6efd)), closes [#688](https://github.com/Tallec7/neopro/issues/688)
+
 # [3.264.0](https://github.com/Tallec7/neopro/compare/v3.263.3...v3.264.0) (2026-04-28)
 
 ### Features
