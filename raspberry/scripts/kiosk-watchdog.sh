@@ -876,6 +876,9 @@ start_chromium() {
         --user-data-dir=/tmp/kiosk-primary
     )
 
+    # SPEC-V2-TVMON-01 / ADR-101 — CDP loopback for tv-preview Puppeteer attach.
+    common_flags+=(--remote-debugging-port=9222 --remote-debugging-address=127.0.0.1)
+
     # Flags spécifiques au modèle
     local gpu_flags=()
     if [[ "$PI_MODEL" == "pi5" ]]; then
