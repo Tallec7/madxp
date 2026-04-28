@@ -1,13 +1,15 @@
 # Guide — Multi-TV via hotspot Pi (même contenu)
 
-> Procédure terrain pour ajouter une 2ᵉ (ou 3ᵉ/4ᵉ) TV à un site Pi existant **sans tirer de câble HDMI**, en utilisant le hotspot WiFi du Pi comme réseau dédié et un device navigateur (Fire TV Stick recommandé) sur la TV supplémentaire.
+> Procédure terrain pour ajouter une 2ᵉ (ou 3ᵉ/4ᵉ) TV à un site Pi existant **sans tirer de câble HDMI**, en utilisant le hotspot WiFi du Pi comme réseau dédié et un device navigateur (Fire TV Stick ou Chromecast Google TV) sur la TV supplémentaire.
 >
 > Référence design : [PROP-001 — Multi-TV Single Pi, scénario E1](../proposals/PROP-001-multi-tv-single-pi.md).
 
 **Date** : 2026-04-28
-**Version** : 1.0
+**Version** : 1.1 (ajout matrice de décision + critique honnête fiabilité grand public)
 **Public cible** : installateur Neopro, ops support, staff club autonome
 **Pré-requis** : club avec **Pi déjà installé et opérationnel**.
+
+> **⚠️ À lire avant** : ce guide n'est **PAS** la solution universelle multi-TV. Pour la TV principale d'un match critique, préférer un splitter HDMI actif (scénario A de PROP-001) ou un 2ᵉ Pi 5 en mode SaaS. Voir §1 "Choisir la bonne solution selon la situation" pour la matrice de décision complète. Les Fire Stick / Chromecast sont des devices grand public — bien adaptés aux écrans secondaires (buvette, vestiaires), avec des réserves documentées en §7 pour un usage match-day.
 
 ---
 
@@ -17,21 +19,46 @@
 
 ---
 
-## 1. Quand utiliser ce setup
+## 1. Choisir la bonne solution selon la situation
+
+> **Important** : ce guide n'est pas la seule réponse multi-TV. Le bon choix dépend de **(a) la criticité de l'écran** (TV principale de match vs TV ambiance buvette), **(b) la distance Pi ↔ TV**, et **(c) la possibilité de tirer un câble**.
+
+### Matrice de décision
+
+| Situation                                                  | Solution recommandée                                                                                                                                               | Pourquoi                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **TV principale de match**, câblage HDMI possible, ≤ 10m   | **Splitter HDMI actif** + câble HDMI court ([PROP-001 scénario A](../proposals/PROP-001-multi-tv-single-pi.md#scénario-a--splitter-hdmi-14-direct-distance--10m-)) | Sync frame-perfect, fiabilité industrielle, 1 seul système à monitorer (le Pi)   |
+| **TV principale de match**, câblage possible, 10-100m      | **HDBaseT Cat6** ([PROP-001 scénario B](../proposals/PROP-001-multi-tv-single-pi.md#scénario-b--hdbaset-cat6-distance--10m-))                                      | Idem A mais sur Cat6, indépendant du WiFi/hotspot (transport pur du signal HDMI) |
+| **TV principale**, câblage impossible, ≤ 30m du Pi         | **2ᵉ Pi 5 en mode SaaS** sur le hotspot (~80€)                                                                                                                     | Stack Neopro complète : watchdog, kiosk Chromium, OTA, monitoring central        |
+| **TV secondaire** (buvette, vestiaires, hall), ≤ 30m du Pi | **Ce guide — Fire Stick / Chromecast sur hotspot**                                                                                                                 | Setup 5 min, ~40€, drift 1-2s acceptable hors écran principal                    |
+| **TV secondaire**, 30-50m du Pi                            | Ce guide + **répéteur WiFi** sur SSID `NEOPRO_<club>`                                                                                                              | Étendre la portée du hotspot                                                     |
+| **TV secondaire**, > 50m                                   | HDBaseT, ou WiFi du club + 2ᵉ Pi SaaS                                                                                                                              | Hors portée hotspot                                                              |
+| Aucun Pi installé                                          | [PROP-001 scénario D](../proposals/PROP-001-multi-tv-single-pi.md#scénario-d--saas-multi-url-nouveau--recommandé) (SaaS cloud pur)                                 | Pas l'objet de ce guide                                                          |
+| Contenus différenciés par TV                               | Pas livré à ce jour ([PROP-001 Phase 2](../proposals/PROP-001-multi-tv-single-pi.md#phase-2--ciblage-par-display-5-jours-dev--à-re-chiffrer-voir-note-ci-dessous)) | Phase de dev à venir                                                             |
+
+### Quand utiliser CE guide précisément
 
 ✅ **OK** :
 
-- Club Pi existant, opérationnel
-- 2 à 4 TV même contenu
-- Distance entre Pi et TV supplémentaire ≤ 30m (portée hotspot 2.4GHz)
-- TV non côte à côte (sinon le drift de 1-2s peut se voir)
+- Club Pi existant et opérationnel
+- TV supplémentaire = écran **secondaire** (buvette, vestiaires, hall, totem accueil) — pas l'écran principal de match si la sync frame-perfect ou la fiabilité industrielle sont critiques
+- Distance Pi ↔ TV ≤ 30m (portée hotspot 2.4GHz)
+- Câblage HDMI/Cat6 impossible ou disproportionné (mur, plafond, traversée)
+- Drift visuel de 1-2s acceptable (TV non côte à côte, contenu d'ambiance type sponsors/boucles)
 
-❌ **NE PAS utiliser ce setup** :
+⚠️ **Réserves** (cf. §7 Limitations pour le détail) :
 
-- Sync frame-perfect requis (TV alignées dans la même salle, mur d'images) → utiliser un **splitter HDMI actif** (cf. [PROP-001 scénario A](../proposals/PROP-001-multi-tv-single-pi.md#scénario-a--splitter-hdmi-14-direct-distance--10m-)).
-- Distance > 30m sans répéteur → utiliser **HDBaseT Cat6** (cf. [PROP-001 scénario B](../proposals/PROP-001-multi-tv-single-pi.md#scénario-b--hdbaset-cat6-distance--10m-)).
-- Contenus différenciés par TV → nécessite dev `targetDisplay` ([PROP-001 Phase 2](../proposals/PROP-001-multi-tv-single-pi.md#phase-2--ciblage-par-display-5-jours-dev)), pas livré à ce jour.
-- Club sans Pi → utiliser SaaS cloud ([PROP-001 scénario D](../proposals/PROP-001-multi-tv-single-pi.md#scénario-d--saas-multi-url-nouveau--recommandé)).
+- Fire Stick / Chromecast = devices grand public, fiabilité jour de match (5h+) **non garantie** sans Fully Kiosk Browser
+- Pas de monitoring central des sticks (invisibles côté flotte Neopro)
+- Pas de watchdog natif → un crash navigateur = TV figée jusqu'à intervention humaine
+
+❌ **NE PAS utiliser ce setup pour** :
+
+- Sync frame-perfect requis (TV côte à côte, mur d'images) → splitter HDMI actif (scénario A)
+- TV principale de match avec exigence de fiabilité industrielle → splitter HDMI ou 2ᵉ Pi 5 SaaS
+- Distance > 30m sans répéteur WiFi → HDBaseT Cat6 (scénario B)
+- Contenus différenciés par TV → pas livré à ce jour (PROP-001 Phase 2 à re-chiffrer)
+- Club sans Pi → SaaS cloud (scénario D)
 
 ---
 
@@ -142,11 +169,23 @@ Configuration commune :
 
 ## 7. Limitations à communiquer au club
 
-- **Drift** : les vidéos peuvent décaler de 1-2s entre les 2 TV. Invisible pour des sponsors / boucles ambiance, peut se voir si les TV sont côte à côte. Pour une sync parfaite → splitter HDMI ([PROP-001 scénario A](../proposals/PROP-001-multi-tv-single-pi.md)).
+### Limitations techniques liées au WiFi
+
+- **Drift** : les vidéos peuvent décaler de 1-2s entre les 2 TV (chaque navigateur gère son propre playback). Invisible pour des sponsors / boucles d'ambiance, peut se voir si les TV sont côte à côte. Pour une sync parfaite → splitter HDMI ([PROP-001 scénario A](../proposals/PROP-001-multi-tv-single-pi.md)).
 - **Portée WiFi** : ~30m intérieur. Si la 2ᵉ TV est plus loin → répéteur WiFi configuré sur le même SSID `NEOPRO_<club>`, ou repasser au câblage HDMI/HDBaseT.
 - **Bande passante** : avec le hotspot Pi 5 actuel (WiFi N 2.4GHz), 3-4 TV WiFi en 1080p est confortable. Au-delà → migration WiFi AC 5GHz (cf. [PROP-001 Phase 1.5](../proposals/PROP-001-multi-tv-single-pi.md#phase-15--optimisation-wifi-ac-pour-clubs-multi-tv-05-jour)).
-- **Veille** : si le Fire Stick passe en veille, la TV s'éteint. Désactiver dans Settings → Display & Sounds.
-- **Pas de monitoring central** : les Fire Sticks n'apparaissent pas dans le dashboard (pas de sites séparés). Le Pi reste le seul site monitoré.
+
+### Limitations liées à la nature grand public des sticks
+
+- **Pas de fiabilité industrielle** : Fire Stick / Chromecast sont conçus pour un usage domestique (Netflix le soir, ~2h max), pas pour 5-8h en boucle pendant un match. Risques connus : memory leak du navigateur après plusieurs heures, redémarrages intempestifs pour mise à jour OS poussée par Amazon/Google, retour à l'écran d'accueil avec pubs si l'app navigateur ferme. **Mitigation obligatoire jour de match** : Fully Kiosk Browser (cf. §5).
+- **Pas de watchdog natif** : sur le Pi, un script systemd redémarre Chromium en cas de crash. Sur un stick, **rien**. Si le navigateur freeze, la TV reste figée jusqu'à intervention humaine.
+- **Pas de monitoring central** : les Fire Sticks / Chromecasts n'apparaissent pas dans le dashboard Neopro (le Pi reste le seul site monitoré). Si la 2ᵉ TV crashe en match, **personne n'est alerté côté flotte** — il faut qu'un humain regarde la TV.
+- **Pas d'OTA Neopro** : impossible de pousser une nouvelle version du frontend sur le stick à distance. Le stick recharge automatiquement la version servie par le Pi à chaque reload, mais la mise à jour Silk/Chrome elle-même dépend du cycle de release Amazon/Google.
+- **Veille agressive** : si le Fire Stick passe en veille, la TV s'éteint. À désactiver explicitement dans Settings → Display & Sounds → Screen Saver → "Never".
+
+### Conséquence pratique
+
+Pour la **TV principale d'un match critique** (NLF, finale, événement médiatisé), préférer le scénario A (splitter HDMI actif) ou un 2ᵉ Pi 5 en mode SaaS. Le setup hotspot+stick est **adapté aux écrans secondaires** (buvette, vestiaires, hall, totem) où une TV figée 30 min est récupérable sans gâcher le match.
 
 ---
 
