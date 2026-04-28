@@ -21,6 +21,7 @@
 
 - 5 garde-fous smoke + 2 invariants `.claude/rules/dashboard.md` pour bloquer toute régression du badge dedup ([#673](https://github.com/Tallec7/neopro/pull/673)).
 - **Remote V2 : SCSS splitté en 25 partials** (cette PR) — `remote-v2.component.scss` est passé de 2547 lignes à un agrégateur de 50 lignes d'`@import`, le reste réparti en partials par section (~150 lignes max chacun). Réduit la dette de "fichier monstre" identifiée dans CLAUDE.md (vise <400/fichier) et permet aux 6 layouts SPEC-V2-LAYOUT-01 de surcharger les tokens densité (`--r2-hero-h`, `--r2-row-h`...) proprement scopés.
+- **Pipeline release SaaS débloqué** ([#676](https://github.com/Tallec7/neopro/pull/676)) — le déploiement de la webapp SaaS sur Hostinger s'est mis à traîner 11 min+ (jusqu'à hang sur le run release `v3.262.0` qu'il a fallu cancel manuellement) à cause de réglages FTP trop agressifs (`parallel=5`, `sync-mode off`) qui saturaient l'hébergeur dès que beaucoup de chunks Angular avaient des hashes frais. Mêmes réglages déjà reverted sur le dashboard en PR #668 — pari "gros volume bénéficie encore" invalidé empiriquement, alignement des deux jobs sur le tune pre-#625. Validé : run post-merge = **1m 53s** (vs 11m+ avant).
 
 ---
 
