@@ -41,6 +41,8 @@ import { R2RecordingWarningComponent } from './parts/r2-recording-warning.compon
 import { R2WidgetsComponent } from './parts/r2-widgets.component';
 import { R2HeroComponent } from './parts/r2-hero.component';
 import { R2TvMonitorComponent } from './parts/r2-tv-monitor.component';
+import { R2ProSidebarComponent } from './parts/r2-pro-sidebar.component';
+import { R2VideoTableComponent } from './parts/r2-video-table.component';
 import { R2BrowseComponent } from './parts/r2-browse.component';
 import { R2VideoRowComponent } from './parts/r2-video-row.component';
 import { R2GearSheetComponent, GearAction } from './parts/r2-gear-sheet.component';
@@ -89,6 +91,7 @@ interface DisplayInfo {
   imports: [
     CommonModule, FormsModule,
     R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent, R2TvMonitorComponent,
+    R2ProSidebarComponent, R2VideoTableComponent,
     R2BrowseComponent, R2VideoRowComponent,
     R2GearSheetComponent, R2WidgetsToggleSheetComponent,
     R2IconComponent,
@@ -134,6 +137,14 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** État catégorie ouverte (accordéon). */
   expandedCategories: Record<string, boolean> = {};
   expandedSubs: Record<string, boolean> = {};
+
+  /**
+   * Sélection master-detail pour le layout régie pro PC C.
+   * Indépendant de l'accordéon — la sélection drive la zone détail (col 2)
+   * tandis que l'accordéon ne sert plus que sur les autres layouts.
+   */
+  selectedCategoryId: string | null = null;
+  selectedSubId: string | null = null;
 
   /** Enregistrement en cours. */
   recording = false;
@@ -460,6 +471,42 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     const tc = timeCats.find(t => t.id === this.phaseId);
     if (!tc) return allCats;
     return allCats.filter(c => tc.categoryIds?.includes(c.id));
+  }
+
+  /**
+   * Catégorie sélectionnée dans la sidebar régie pro (col 1) — drive la
+   * zone tableur (col 2). Tombe sur la première phaseCategory si rien n'est
+   * sélectionné, pour que le layout PC C ait toujours du contenu visible.
+   */
+  selectedCategory(): Category | null {
+    const cats = this.phaseCategories();
+    if (cats.length === 0) return null;
+    if (!this.selectedCategoryId) return cats[0];
+    return cats.find(c => c.id === this.selectedCategoryId) || cats[0];
+  }
+
+  /** Sous-catégorie sélectionnée — null si l'utilisateur a cliqué sur la racine. */
+  selectedSubCategory(): Category | null {
+    const cat = this.selectedCategory();
+    if (!cat || !this.selectedSubId) return null;
+    return (cat.subCategories || []).find(s => s.id === this.selectedSubId) || null;
+  }
+
+  /** Handler clic catégorie dans la sidebar pro. */
+  selectCategory(id: string): void {
+    if (this.selectedCategoryId === id) {
+      // Double-clic : déselectionne le sub pour revenir à la racine de la cat
+      this.selectedSubId = null;
+    } else {
+      this.selectedCategoryId = id;
+      this.selectedSubId = null;
+    }
+  }
+
+  /** Handler clic sous-catégorie dans la sidebar pro. */
+  selectSubCategory(payload: { categoryId: string; subId: string }): void {
+    this.selectedCategoryId = payload.categoryId;
+    this.selectedSubId = payload.subId;
   }
 
   /** TimeCategory active pour la boucle (pour afficher sa première vidéo dans le hero). */
