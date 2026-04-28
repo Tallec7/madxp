@@ -1,3 +1,13 @@
+# [3.259.0](https://github.com/Tallec7/neopro/compare/v3.258.6...v3.259.0) (2026-04-28)
+
+### Bug Fixes
+
+- **raspberry:** kiosk-watchdog log() ordre + null byte + OTA apt-get cec-utils/ffmpeg/xdotool ([#672](https://github.com/Tallec7/neopro/issues/672)) ([5b77379](https://github.com/Tallec7/neopro/commit/5b77379009b2419128cd414de03ce599b0c7e2e0))
+
+### Features
+
+- **content:** badge "×N" sur cards vidéo dupliquées (dedup ADR-048 visible) ([#673](https://github.com/Tallec7/neopro/issues/673)) ([781baae](https://github.com/Tallec7/neopro/commit/781baae810c9e072b5b736bc9e3894eb72e139ee))
+
 ## [3.258.6](https://github.com/Tallec7/neopro/compare/v3.258.5...v3.258.6) (2026-04-28)
 
 ### Bug Fixes
