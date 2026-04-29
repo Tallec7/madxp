@@ -375,8 +375,18 @@ export class TvComponent implements OnInit, OnDestroy {
   private saasPreviewCanvas: HTMLCanvasElement | null = null;
   private saasPreviewInflight = false;
 
+  /**
+   * Kill-switch ADR-104 (incident 429 SaaS du 29 avril 2026).
+   * À 4Hz × 2 directions, le push tv-snapshot saturait `remoteRateLimit`
+   * (60/min/IP) partagé avec `/config` et `/videos/stream`. Désactivé en
+   * attendant la migration vers iframe `?preview=1` (cf. ADR-105 à venir).
+   * NE PAS retirer la fonction (smoke-tv-preview vérifie sa présence).
+   */
+  private static readonly TV_SNAPSHOT_HTTP_PULL_ENABLED = false;
+
   /** Activated only in SaaS mode + master TV display. */
   private setupSaasPreviewCapture(): void {
+    if (!TvComponent.TV_SNAPSHOT_HTTP_PULL_ENABLED) return;
     const isSaas = (environment as { saasMode?: boolean }).saasMode === true;
     if (!isSaas) return;
     if (this.tvSyncService.isSlaveMode) return;
