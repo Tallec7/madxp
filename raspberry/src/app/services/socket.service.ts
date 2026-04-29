@@ -188,7 +188,9 @@ export class SocketService {
    * so the dashboard can track which version each SaaS site runs.
    */
   private emitSaasRegisterIfNeeded(): void {
-    if (!(environment as { saasMode?: boolean }).saasMode) return;
+    // Demo mode partage le transport SaaS (browser-only, pas de Pi local).
+    const env = environment as { saasMode?: boolean; demoMode?: boolean };
+    if (!env.saasMode && !env.demoMode) return;
     const params = new URLSearchParams(window.location.search);
     const siteId = params.get('site') || localStorage.getItem('neopro_saas_site_id') || '';
     if (!siteId || !this.socket) return;

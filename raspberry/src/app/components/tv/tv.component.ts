@@ -375,10 +375,11 @@ export class TvComponent implements OnInit, OnDestroy {
   private saasPreviewTimer: ReturnType<typeof setInterval> | null = null;
   private saasPreviewCanvas: HTMLCanvasElement | null = null;
 
-  /** Activated only in SaaS mode + master TV display. */
+  /** Activated in SaaS or demo mode (browser-only, no Pi) + master TV display. */
   private setupSaasPreviewCapture(): void {
-    const isSaas = (environment as { saasMode?: boolean }).saasMode === true;
-    if (!isSaas) return;
+    const env = environment as { saasMode?: boolean; demoMode?: boolean };
+    const isBrowserOnly = env.saasMode === true || env.demoMode === true;
+    if (!isBrowserOnly) return;
     if (this.tvSyncService.isSlaveMode) return;
     if (this.displayType !== 'tv') return;
 

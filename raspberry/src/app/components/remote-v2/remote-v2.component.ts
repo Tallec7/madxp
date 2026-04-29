@@ -488,11 +488,12 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       this.currentProfileId = this.saasConfig.getSiteId() || null;
     }
 
-    // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push.
-    // En SaaS, pas de Pi → la TV browser nous envoie des frames JPEG en data
+    // SPEC-V2-TVMON-01 / ADR-101 — SaaS/demo TV preview push.
+    // Browser-only (pas de Pi) → la TV nous envoie des frames JPEG en data
     // URI via `tv-preview:saas-frame` (relayé par le central-server). On
     // s'abonne explicitement pour ne pas faire bosser la TV pour rien.
-    if (this.saasConfig.isSaasMode()) {
+    // Demo mode partage le même transport SaaS (canvas → JPEG → socket relay).
+    if (this.saasConfig.isSaasMode() || this.isDemoMode) {
       this.setupSaasTvPreviewConsumer();
     }
   }

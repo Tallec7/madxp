@@ -383,7 +383,12 @@ class SocketService {
           'SELECT id, site_name, site_type FROM sites WHERE id = $1',
           [data.siteId]
         );
-        if (result.rows.length === 0 || result.rows[0].site_type !== 'saas') {
+        // Demo sites partagent le transport SaaS (browser-only, central-server
+        // joue le rôle du Socket.IO local du Pi — TV preview push, command relay,
+        // etc.). On accepte donc 'saas' ET 'demo'.
+        const acceptedTypes: string[] = ['saas', 'demo'];
+        const siteType = String(result.rows[0]?.site_type ?? '');
+        if (result.rows.length === 0 || !acceptedTypes.includes(siteType)) {
           // Invalid site — leave room and disconnect relay
           socket.leave(data.siteId);
           return;
