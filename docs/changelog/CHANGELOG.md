@@ -1,3 +1,9 @@
+## [3.270.1](https://github.com/Tallec7/neopro/compare/v3.270.0...v3.270.1) (2026-04-29)
+
+### Bug Fixes
+
+- **saas:** force socket reconnect after Railway redeploy ([#715](https://github.com/Tallec7/neopro/issues/715)) ([f68448e](https://github.com/Tallec7/neopro/commit/f68448e426f8622e086b3db49c33f1770a363fd2))
+
 # [3.270.0](https://github.com/Tallec7/neopro/compare/v3.269.3...v3.270.0) (2026-04-29)
 
 ### Features
