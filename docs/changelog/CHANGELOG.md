@@ -1,3 +1,9 @@
+# [3.271.0](https://github.com/Tallec7/neopro/compare/v3.270.3...v3.271.0) (2026-04-29)
+
+### Features
+
+- **remote:** web/live in MP4 loop rotation — ADR-103 Phase 2b ([#720](https://github.com/Tallec7/neopro/issues/720)) ([1d3112c](https://github.com/Tallec7/neopro/commit/1d3112c9eb6af8af4e0b45ed02c88609dc74f3c7))
+
 ## [3.270.3](https://github.com/Tallec7/neopro/compare/v3.270.2...v3.270.3) (2026-04-29)
 
 ### Bug Fixes
