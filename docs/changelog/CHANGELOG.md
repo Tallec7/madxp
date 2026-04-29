@@ -1,3 +1,9 @@
+## [3.266.1](https://github.com/Tallec7/neopro/compare/v3.266.0...v3.266.1) (2026-04-28)
+
+### Bug Fixes
+
+- **remote:** block web_page/livestream in video pipeline — ADR-103 Phase 0 ([#699](https://github.com/Tallec7/neopro/issues/699)) ([80d8b13](https://github.com/Tallec7/neopro/commit/80d8b13d8ea1fc68b55a401607952fdbda7fd58e))
+
 # [3.266.0](https://github.com/Tallec7/neopro/compare/v3.265.2...v3.266.0) (2026-04-28)
 
 ### Bug Fixes
