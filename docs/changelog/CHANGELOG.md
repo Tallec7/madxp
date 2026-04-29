@@ -1,3 +1,9 @@
+## [3.277.1](https://github.com/Tallec7/neopro/compare/v3.277.0...v3.277.1) (2026-04-29)
+
+### Bug Fixes
+
+- **saas:** kill-switch ADR-104 tv-snapshot HTTP pull (incident 429) ([#728](https://github.com/Tallec7/neopro/issues/728)) ([47816cb](https://github.com/Tallec7/neopro/commit/47816cb7dcca75e72180416049f30eebb6eb69a1))
+
 # [3.277.0](https://github.com/Tallec7/neopro/compare/v3.276.0...v3.277.0) (2026-04-29)
 
 ### Features
