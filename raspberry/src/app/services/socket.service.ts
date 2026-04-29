@@ -77,6 +77,31 @@ export interface LoopState {
   manualVideoStartedAt: number | null;
   manualVideoVisible: boolean; // ADR-034: master signals when manual video is revealed
   updatedAt: number;
+  /**
+   * ADR-103 Phase 1.5b — content type of the current loop step.
+   *   - 'video' (default, optional for back-compat) → DoubleBuffer plays a MP4
+   *   - 'web_page' / 'livestream' → WebContentService plays an iframe / HLS
+   * Slaves use this to route playback to the right service when syncing
+   * from the master state. Older masters (pre-1.5b) omit this field; the
+   * slave defaults to 'video' for back-compat.
+   */
+  currentContentType?: 'video' | 'web_page' | 'livestream';
+  /**
+   * ADR-103 Phase 1.5b — external URL when contentType is web/live. The
+   * slave uses this to load the same iframe / livestream as the master.
+   */
+  currentExternalUrl?: string | null;
+  /**
+   * ADR-103 Phase 1.5b — auto-close duration (ms) for the web/live step.
+   * The slave only needs it for analytics + display countdown — the master
+   * stays in charge of advancing the loop and emitting the next step.
+   */
+  currentDurationMs?: number | null;
+  /**
+   * ADR-103 Phase 1.5b — display name of the current web/live step.
+   * Helpful for slave-side toasts and analytics.
+   */
+  currentName?: string | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
