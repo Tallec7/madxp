@@ -1,3 +1,9 @@
+# [3.269.0](https://github.com/Tallec7/neopro/compare/v3.268.2...v3.269.0) (2026-04-29)
+
+### Features
+
+- **remote:** backend resolves synthetic web/live paths + drops 400 — ADR-103 Phase 2a ([#710](https://github.com/Tallec7/neopro/issues/710)) ([52eda67](https://github.com/Tallec7/neopro/commit/52eda6763eff5f922fabdcb0b3b9e3db5cb02894))
+
 ## [3.268.2](https://github.com/Tallec7/neopro/compare/v3.268.1...v3.268.2) (2026-04-29)
 
 ### Bug Fixes
