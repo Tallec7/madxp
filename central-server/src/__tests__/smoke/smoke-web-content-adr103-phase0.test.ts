@@ -19,10 +19,16 @@ const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 describe('Smoke — ADR-103 Phase 0 web/livestream defensive guards', () => {
   // ------------ raspberry/src/app/services/video-playback.service.ts ------------
 
-  it('video-playback.service.ts — startSeamlessLoop filters non-video contentType', () => {
+  it('video-playback.service.ts — startSeamlessLoop filters by contentType (Phase 0/2b)', () => {
     const src = read('raspberry/src/app/services/video-playback.service.ts');
+    // Phase 0/2b: filter still consults `contentType ?? 'video'`. Phase 0
+    // dropped non-video entries; Phase 2b accepts web/live with http(s)
+    // URL and routes them via dispatchLoopStep / playWebContentInLoop.
     expect(/v\.contentType\s*\?\?\s*['"]video['"]/.test(src)).toBe(true);
-    expect(/!== ['"]video['"]/.test(src)).toBe(true);
+    // Phase 2b: explicit `===` check for `'video'` OR acceptance of
+    // web_page / livestream contentType.
+    expect(/ct === ['"]video['"]/.test(src)).toBe(true);
+    expect(/web_page['"]\s*\|\|\s*ct === ['"]livestream['"]/.test(src)).toBe(true);
   });
 
   it('video-playback.service.ts — startSeamlessLoop blocks synthetic web_page/livestream paths', () => {

@@ -18,6 +18,14 @@ export interface PlaybackCallbacks {
   getIsManualMode: () => boolean;
   getActivePhase: () => 'neutral' | 'before' | 'during' | 'after';
   getLoopVideosForPhase: (phase: 'neutral' | 'before' | 'during' | 'after') => Sponsor[];
+  /**
+   * ADR-103 Phase 2b — invoked when the loop reaches a step whose
+   * `contentType` is `'web_page'` or `'livestream'`. The TV component
+   * forwards to `WebContentService.playInLoop(entry, onComplete)`. The
+   * orchestrator advances to the next loop step when `onComplete` fires.
+   * If the callback is not provided, the orchestrator skips the step.
+   */
+  playWebContentInLoop?: (entry: Sponsor, onComplete: () => void) => void;
 }
 
 export interface TransitionMetrics {
@@ -157,27 +165,32 @@ export class VideoPlaybackService {
     const phase = this.callbacks?.getActivePhase() ?? 'neutral';
     const loopVideos = this.callbacks?.getLoopVideosForPhase(phase) ?? [];
 
-    // Filter steps without video path and generate weighted playlist.
-    // ADR-103 Phase 0 : exclude non-video content types (web_page, livestream)
-    // — they would crash the DoubleBuffer (no <video> playable source). Phase 2
-    // will route them to a dedicated WebContentPlayer instead.
+    // Filter steps that the loop can ACTUALLY play.
     //
-    // We block via two signals:
-    //   1. `contentType !== 'video'` (clean entries injected by ADR-089).
-    //   2. Synthetic filename pattern `web_page-<ts>` / `livestream-<ts>` —
-    //      protects against legacy/dashboard entries that lost `contentType`
-    //      when added via a video selector (root cause of NLF crash 28/04/2026).
-    const isVideoEntry = (v: Sponsor): boolean => {
+    // ADR-103 Phase 0 / 0.5 / 2b — keep two safety nets but allow web/live:
+    //   1. Reject synthetic `web_page-<ts>` / `livestream-<ts>` filenames —
+    //      these are dashboard mishaps that the backend resolver should
+    //      have rewritten to a real URL. If we still see one, the row was
+    //      deleted in DB or the resolver failed; skip to avoid the loop
+    //      crashing on a non-playable path (incident NLF 28/04/2026).
+    //   2. Accept video entries with any path; accept web_page / livestream
+    //      entries provided they have an http(s) URL as path. The orchestrator
+    //      delegates them to WebContentService.playInLoop (Phase 2b).
+    const isPlayableEntry = (v: Sponsor): boolean => {
       if (!v?.path) return false;
-      if ((v.contentType ?? 'video') !== 'video') return false;
       const path = String(v.path);
       if (/(?:^|\/)(?:web_page|livestream)-\d+$/.test(path)) return false;
-      return true;
+      const ct = (v.contentType ?? 'video') as string;
+      if (ct === 'video') return true;
+      if (ct === 'web_page' || ct === 'livestream') {
+        return /^https?:\/\//i.test(path);
+      }
+      return false;
     };
-    const validVideos = loopVideos.filter(isVideoEntry);
+    const validVideos = loopVideos.filter(isPlayableEntry);
     if (validVideos.length !== loopVideos.length) {
       const skipped = loopVideos.length - validVideos.length;
-      console.warn(`[VideoPlayback] Filtered out ${skipped} step(s) (no path, non-video contentType, or synthetic web/live filename — ADR-103 Phase 0 guard)`);
+      console.warn(`[VideoPlayback] Filtered out ${skipped} unplayable step(s) (no path, synthetic filename, or unknown contentType — ADR-103 Phase 0/2b guard)`);
     }
     this._currentLoopVideos = generateWeightedPlaylist(validVideos);
 
@@ -207,12 +220,73 @@ export class VideoPlaybackService {
 
     console.log('[VideoPlayback] Starting loop with', validVideos.length, 'videos at index', startIndex);
 
-    const video = this._currentLoopVideos[startIndex];
-    this.doubleBuffer.playOnActivePlayer(video.path, startIndex);
+    // ADR-103 Phase 2b — dispatcher routes the step by contentType:
+    // MP4 → DoubleBuffer.playOnActivePlayer ; web/live → WebContentService.playInLoop.
+    this.dispatchLoopStep(startIndex);
 
     setTimeout(() => {
       this._isStartingLoop = false;
     }, 500);
+  }
+
+  /**
+   * ADR-103 Phase 2b — central dispatcher for a loop step. Routes by
+   * `contentType` of the entry at `index`. For MP4 entries, plays on the
+   * active loop player (existing behavior). For web/live entries, delegates
+   * to the `playWebContentInLoop` callback (TV component → WebContentService).
+   *
+   * Updates `_currentLoopIndex` so the rest of the orchestrator (timeupdate,
+   * preload, switch) sees the new position.
+   */
+  private dispatchLoopStep(index: number): void {
+    const entry = this._currentLoopVideos[index];
+    if (!entry) {
+      console.warn('[VideoPlayback] dispatchLoopStep: no entry at index', index);
+      return;
+    }
+    this._currentLoopIndex = index;
+
+    if (this.isWebContentEntry(entry)) {
+      // Web/live step. Reset MP4 transition state — the DoubleBuffer is
+      // not driving this step; the WebContentService is.
+      this._switchTriggered = false;
+      this.doubleBuffer.setPendingSwitch(false);
+      const cb = this.callbacks?.playWebContentInLoop;
+      if (!cb) {
+        console.warn('[VideoPlayback] No playWebContentInLoop callback — skipping web/live step');
+        this.advanceLoop();
+        return;
+      }
+      console.log('[VideoPlayback] Dispatching web/live step', { index, name: entry.name, contentType: entry.contentType });
+      cb(entry, () => this.advanceLoop());
+    } else {
+      // MP4 step — DoubleBuffer plays it. The orchestrator's timeupdate /
+      // onVideoEnded handlers will trigger the next step when this one ends.
+      this.doubleBuffer.playOnActivePlayer(entry.path, index);
+    }
+  }
+
+  /**
+   * ADR-103 Phase 2b — advance to the next loop step. Called by:
+   *   - WebContentService.playInLoop completion callback (auto-close or
+   *     1s skip on error).
+   *   - the orchestrator itself when a missing callback forces a skip.
+   *
+   * Wraps mod arithmetic + dispatchLoopStep.
+   */
+  private advanceLoop(): void {
+    if (!this._isLoopMode) return;
+    if (!this._currentLoopVideos.length) return;
+    const next = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;
+    this.dispatchLoopStep(next);
+  }
+
+  /**
+   * ADR-103 Phase 2b — predicate for "this loop step is web/live, not MP4".
+   * Filter pass already guarantees the path is an http(s) URL when web/live.
+   */
+  private isWebContentEntry(entry: Sponsor): boolean {
+    return entry?.contentType === 'web_page' || entry?.contentType === 'livestream';
   }
 
   stopSeamlessLoop(): void {
@@ -320,7 +394,11 @@ export class VideoPlaybackService {
     if (remaining <= preloadThreshold && !this.doubleBuffer.preloadReady && this.doubleBuffer.preloadedIndex === null) {
       const nextIndex = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;
       const nextVideo = this._currentLoopVideos[nextIndex];
-      if (nextVideo?.path) {
+      // ADR-103 Phase 2b — skip MP4 preload if the next loop step is
+      // web/live; the DoubleBuffer cannot preload an iframe URL, and
+      // the orchestrator will route this step to WebContentService at
+      // switch time. The freeze frame already covers the transition.
+      if (nextVideo?.path && !this.isWebContentEntry(nextVideo)) {
         console.log(`[VideoPlayback] Starting late preload, ${remaining.toFixed(1)}s remaining`);
         this.doubleBuffer.preloadOnInactivePlayer(nextVideo.path, nextIndex);
       }
@@ -367,6 +445,16 @@ export class VideoPlaybackService {
 
     const nextIndex = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;
     const nextVideo = this._currentLoopVideos[nextIndex];
+
+    // ADR-103 Phase 2b — fallback path: if next step is web/live, route
+    // directly to the dispatcher instead of preloading + switching the
+    // DoubleBuffer (which would attempt to load an iframe URL into a
+    // <video>, fail with MEDIA_ELEMENT_ERROR, and stall the rotation).
+    if (this.isWebContentEntry(nextVideo)) {
+      console.log(`[VideoPlayback] onVideoEnded → web/live step ${nextIndex}`);
+      this.dispatchLoopStep(nextIndex);
+      return;
+    }
 
     // Preload before switch
     if (nextVideo?.path) {
@@ -434,6 +522,18 @@ export class VideoPlaybackService {
     this.ngZone.run(() => {
       this.callbacks?.onLoopVideoEnded(true);
       const nextIndex = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;
+      const nextVideo = this._currentLoopVideos[nextIndex];
+
+      // ADR-103 Phase 2b — if the next step is web/live, route via the
+      // dispatcher (WebContentService.playInLoop) instead of switching the
+      // DoubleBuffer (which cannot play an iframe / non-MP4 URL).
+      if (this.isWebContentEntry(nextVideo)) {
+        console.log(`[VideoPlayback] Switching to web/live step ${nextIndex}`);
+        this.doubleBuffer.setPendingSwitch(false);
+        this.dispatchLoopStep(nextIndex);
+        return;
+      }
+
       console.log(`[VideoPlayback] Triggering switch to video ${nextIndex}`);
       this.doubleBuffer.switchPlayers(nextIndex);
     });
