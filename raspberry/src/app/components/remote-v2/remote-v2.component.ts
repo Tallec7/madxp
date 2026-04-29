@@ -536,7 +536,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * a une vidéo forcée en cours, on marque l'id en erreur et on ramène l'UI
    * à l'état "boucle" (sinon le bouton reste figé surligné).
    */
-  /**
   private handlePlayerState(data: { lastError?: string | null }): void {
     if (data?.lastError !== 'play_error') return;
     const failedId = this.playingVideoId;

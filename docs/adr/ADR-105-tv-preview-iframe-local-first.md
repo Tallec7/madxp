@@ -1,7 +1,11 @@
-# ADR-105 — Preview TV via iframe local-first
+# ADR-105 : Preview TV via iframe local-first
 
-> **Statut** : Accepté · **Date** : 29 avril 2026 · **Format** : léger
-> **Remplace** : [ADR-101](ADR-101-tv-preview-mjpeg-strategy.md) (MJPEG Pi → Remote, jamais déployé OTA), [ADR-103](ADR-103-tv-preview-layout-mutex.md) (mutex single-subscriber MJPEG), [ADR-104](ADR-104-tv-preview-saas-http-pull.md) (HTTP pull SaaS — incident 429)
+**Date** : 2026-04-29
+**Statut** : Accepté
+**Format** : Léger
+**Remplace** : ADR-101 (MJPEG Pi → Remote, jamais déployé OTA), ADR-103 (mutex single-subscriber MJPEG), ADR-104 (HTTP pull SaaS — incident 429)
+
+---
 
 ## Contexte
 
