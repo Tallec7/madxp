@@ -1,3 +1,9 @@
+## [3.267.1](https://github.com/Tallec7/neopro/compare/v3.267.0...v3.267.1) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** server-side strip + reject synthetic web/live paths — ADR-103 Phase 0.5 ([#701](https://github.com/Tallec7/neopro/issues/701)) ([6d819e8](https://github.com/Tallec7/neopro/commit/6d819e8780f1c99b73957b0d1e2c317f8d290379)), closes [#699](https://github.com/Tallec7/neopro/issues/699)
+
 # [3.267.0](https://github.com/Tallec7/neopro/compare/v3.266.1...v3.267.0) (2026-04-29)
 
 ### Features
