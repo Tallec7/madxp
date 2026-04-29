@@ -1,10 +1,10 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 livrées) — Phase 2b / 1.5 / 3 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 3 livrées) — Phase 2b en cours (PR séparée), Phase 1.5 / 4 à venir
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
-> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`
+> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase3.test.ts`
 > **`.claude/rules/` lié** : —
 
 ## En une phrase
@@ -102,6 +102,12 @@ Stop manuel :
 
 - **Aujourd'hui** : la boucle MP4 (DoubleBuffer) **filtre toujours** les entrées `contentType !== 'video'` (Phase 0 guard) — elles sont ignorées de la rotation auto.
 - **Phase 2b** : `video-playback.service.ts` déléguera à `WebContentService.playInLoop()` quand l'étape suivante a `contentType !== 'video'`. Transition MP4 → web : freeze + fade. À fin du `durationMs` → reprend la boucle MP4 à l'index suivant. Skip ≤ 1s sur erreur.
+
+### Garde-fous backend (Phase 3 livrée)
+
+- **Path synthétique en boucle / catégorie** : 400 `SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` (Phase 0.5 — refusé tant que Phase 2 n'a pas relâché ce garde-fou).
+- **Web/live en boucle sans `durationSeconds`** : 400 `WEB_LOOP_DURATION_REQUIRED` (Phase 3). S'applique à `sponsors[]` et `timeCategories[].loopVideos[]`. **Pas** à `categories[].videos[]` — pour les catégories user (manual launch), `null/0` signifie "pas d'auto-close, la page reste affichée jusqu'à action user", ce qui est un choix valide.
+- Le dashboard surface ces messages via le notification system existant (`ErrorExtractor.getMessage` → toast d'erreur).
 
 ### Tolérance d'erreur
 
