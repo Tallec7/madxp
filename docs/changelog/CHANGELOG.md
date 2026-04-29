@@ -1,3 +1,9 @@
+## [3.267.2](https://github.com/Tallec7/neopro/compare/v3.267.1...v3.267.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** make Web/Live pseudo-category visible — ADR-103 Phase 0.6 ([#703](https://github.com/Tallec7/neopro/issues/703)) ([6992e59](https://github.com/Tallec7/neopro/commit/6992e595360ae2528ed55784fc0fdefffb523daa))
+
 ## [3.267.1](https://github.com/Tallec7/neopro/compare/v3.267.0...v3.267.1) (2026-04-29)
 
 ### Bug Fixes
