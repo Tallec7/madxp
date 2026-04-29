@@ -457,21 +457,25 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /**
    * ADR-105 — URL iframe pour la tuile preview TV.
    *
-   * Le staff (Pi local ou SaaS) charge la Remote V2 sur le même domaine que la TV.
-   * On construit donc une URL same-origin pointant sur la racine TV avec
-   * `?preview=1` (mute audio + skip analytics + skip socket-register côté TV).
-   * En mode SaaS, on injecte `&site=<uuid>` pour garder le scope.
+   * Cible la route TV (`/display/0`) directement, pas la racine `/` qui sert
+   * le HomeComponent picker (deux boutons "Ouvrir la télécommande" / "Afficher
+   * l'écran TV"). Pour SaaS, on respecte aussi le `baseHref` `/saas/` du build
+   * Cloudflare Pages — d'où l'usage de `Router.serializeUrl()` au lieu d'un
+   * concat manuel `${origin}/display/0`.
+   *
+   * Le mode `?preview=1` côté TV component mute l'audio, skip analytics et
+   * skip `saas-register` (la tuile ne doit pas compter comme display).
    */
   private computeTvPreviewIframeUrl(): string | null {
     if (typeof window === 'undefined') return null;
     if (this.demoConfigService.isDemoMode()) return null;
-    const params = new URLSearchParams();
-    params.set('preview', '1');
+    const queryParams: Record<string, string> = { preview: '1' };
     if (this.saasConfig.isSaasMode()) {
       const siteId = this.saasConfig.getSiteId();
-      if (siteId) params.set('site', siteId);
+      if (siteId) queryParams['site'] = siteId;
     }
-    return `${window.location.origin}/?${params.toString()}`;
+    const tree = this.router.createUrlTree(['/display', 0], { queryParams });
+    return `${window.location.origin}${this.router.serializeUrl(tree)}`;
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
