@@ -22,6 +22,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
@@ -497,35 +498,43 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
   }
 
-  private lastTvPreviewFrameAt = 0;
-  private saasSubscribeRetryTimer: ReturnType<typeof setInterval> | null = null;
+  private saasTvPollTimer: ReturnType<typeof setInterval> | null = null;
+  private saasTvPollInflight = false;
 
+  /**
+   * ADR-104 — Architecture HTTP pull pour le mini-aperçu TV "À l'antenne".
+   *
+   * Le relay Socket.IO `tv-preview:saas-frame` était fragile (race
+   * subscribe→register, kick serveur post-deploy Railway, dépendance Redis
+   * adapter cross-replica). Remplacé par un polling HTTP simple : le central
+   * garde la dernière frame TV en mémoire, l'admin la pull en GET ~250ms.
+   */
   private setupSaasTvPreviewConsumer(): void {
-    this.socketService.on<{ frame?: string; ts?: number }>('tv-preview:saas-frame', data => {
-      if (data && typeof data.frame === 'string' && data.frame.startsWith('data:image/')) {
-        this.tvPreviewUrl.set(data.frame);
-        this.tvPreviewThrottled.set(false);
-        this.lastTvPreviewFrameAt = Date.now();
-      }
-    });
-    // Race connue (cf. logs DevTools 29/04/2026) : la Remote émet `saas-subscribe`
-    // AVANT que son propre `saas-register` (qui attache les listeners `tv-preview:*`
-    // côté central via `registerSaasRelay`) ait été traité. Le serveur ignore donc
-    // le subscribe initial. Mêmement, la TV peut ne pas encore être dans la room
-    // au premier subscribe. → Retry périodique toléré tant qu'aucune frame n'arrive.
-    const subscribe = () => this.socketService.emit('tv-preview:saas-subscribe', {});
-    subscribe();
-    this.socketService.on('reconnect', () => {
-      this.lastTvPreviewFrameAt = 0;
-      subscribe();
-    });
-    // Retry tant qu'aucune frame n'a été reçue dans les 4 dernières secondes.
-    // Le coût est négligeable (un emit Socket.IO toutes les 3s) ; s'arrête dès
-    // que la TV commence à pousser des frames.
-    this.saasSubscribeRetryTimer = setInterval(() => {
-      const sinceLast = Date.now() - this.lastTvPreviewFrameAt;
-      if (sinceLast > 4000) subscribe();
-    }, 3000);
+    const apiBase = (environment as { apiUrl?: string }).apiUrl;
+    const siteId = this.saasConfig.getSiteId();
+    if (!apiBase || !siteId) return;
+    const url = `${apiBase}/saas/${siteId}/tv-snapshot`;
+
+    const tick = () => {
+      if (this.saasTvPollInflight) return;
+      this.saasTvPollInflight = true;
+      this.http.get<{ frame?: string; ts?: number }>(url, { observe: 'response' }).subscribe({
+        next: resp => {
+          this.saasTvPollInflight = false;
+          // 204 = pas de frame récente côté serveur (TV pas encore connectée
+          // ou TTL 3s expiré). On laisse le placeholder afficher.
+          if (resp.status === 204) return;
+          const body = resp.body;
+          if (body?.frame && body.frame.startsWith('data:image/')) {
+            this.tvPreviewUrl.set(body.frame);
+            this.tvPreviewThrottled.set(false);
+          }
+        },
+        error: () => { this.saasTvPollInflight = false; },
+      });
+    };
+    tick();
+    this.saasTvPollTimer = setInterval(tick, 250);
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
@@ -545,11 +554,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
-    if (this.saasSubscribeRetryTimer) clearInterval(this.saasSubscribeRetryTimer);
-    // SPEC-V2-TVMON-01 — désabonner pour que la TV SaaS arrête sa capture.
-    if (this.saasConfig.isSaasMode()) {
-      try { this.socketService.emit('tv-preview:saas-unsubscribe', {}); } catch { /* socket déjà disconnect */ }
-    }
+    // ADR-104 — arrêter le polling HTTP de la mini-thumb TV.
+    if (this.saasTvPollTimer) clearInterval(this.saasTvPollTimer);
   }
 
   private recentVideosStorageKey(): string {

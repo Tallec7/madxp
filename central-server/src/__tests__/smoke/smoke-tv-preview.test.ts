@@ -307,58 +307,65 @@ describe('SPEC-V2-TVMON-01 / ADR-101 — TV preview MJPEG wiring', () => {
   });
 
   // ===========================================================================
-  // SaaS path (no Pi) — TV browser pushes JPEG frames via Socket.IO relay.
-  // Same <app-r2-tv-monitor> component on the Remote, transport differs.
+  // SaaS path (no Pi) — ADR-104 : HTTP pull architecture.
+  // TV POST sa frame courante toutes les ~250ms à /api/saas/:siteId/tv-snapshot.
+  // Admin GET cette frame toutes les ~250ms.
+  // Le central garde la dernière frame en mémoire (TTL 3s).
+  // Remplace l'ancien relay Socket.IO `tv-preview:saas-frame` qui souffrait de
+  // races subscribe/register, kicks serveur post-deploy, et de la dépendance
+  // au Redis adapter cross-replica.
   // ===========================================================================
-  describe('SaaS preview push transport', () => {
-    it('central-server saas-relay relays the 3 SaaS preview events', () => {
-      const src = read('central-server/src/handlers/saas-relay.handler.ts');
-      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-subscribe['"]/);
-      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-unsubscribe['"]/);
-      expect(src).toMatch(/socket\.on\(['"]tv-preview:saas-frame['"]/);
-      // Relay broadcasts to the rest of the site room (TV ↔ Remote, same site)
-      expect(src).toMatch(/socket\.to\(siteId\)\.emit\(['"]tv-preview:saas-frame['"]/);
+  describe('SaaS TV snapshot HTTP pull (ADR-104)', () => {
+    it('central-server exposes POST + GET /api/saas/:siteId/tv-snapshot', () => {
+      const routes = read('central-server/src/routes/saas.routes.ts');
+      expect(routes).toMatch(/router\.post\(['"]\/:siteId\/tv-snapshot['"]/);
+      expect(routes).toMatch(/router\.get\(['"]\/:siteId\/tv-snapshot['"]/);
+      // Validation Joi obligatoire sur le POST (frame data: URL)
+      expect(routes).toMatch(/validate\(schemas\.tvSnapshotPush\)/);
     });
 
-    it('TV component captures + pushes frames only when subscribers > 0', () => {
+    it('tvSnapshotService exposes set/get with TTL', () => {
+      const src = read('central-server/src/services/tv-snapshot.service.ts');
+      expect(src).toMatch(/class TvSnapshotService/);
+      expect(src).toMatch(/set\(siteId: string, frame: string\)/);
+      expect(src).toMatch(/get\(siteId: string\)/);
+      // TTL guard pour éviter d'afficher des frames stale après l'arrêt TV
+      expect(src).toMatch(/TTL_MS/);
+    });
+
+    it('TV component POSTs frames at ~250ms cadence in SaaS+master mode', () => {
       const src = read('raspberry/src/app/components/tv/tv.component.ts');
       expect(src).toMatch(/setupSaasPreviewCapture/);
-      expect(src).toMatch(/teardownSaasPreviewCapture/);
-      expect(src).toMatch(/saasPreviewSubscribers/);
-      // Subscribe-driven (no capture without listener)
-      expect(src).toMatch(/this\.startSaasPreviewLoop\(\)/);
-      expect(src).toMatch(/this\.stopSaasPreviewLoop\(\)/);
-      // Pushes via Socket.IO with data URI frame
-      expect(src).toMatch(/['"]tv-preview:saas-frame['"]/);
+      expect(src).toMatch(/setInterval\([\s\S]*?emitSaasPreviewFrame[\s\S]*?250\)/);
+      // POST HTTP vers /api/saas/:siteId/tv-snapshot, plus de socket.emit
+      expect(src).toMatch(/\/saas\/\$\{siteId\}\/tv-snapshot/);
+      expect(src).toMatch(/method:\s*['"]POST['"]/);
       expect(src).toMatch(/toDataURL\(['"]image\/jpeg['"]/);
     });
 
     it('TV capture is gated to SaaS mode + non-slave + displayType=tv', () => {
       const src = read('raspberry/src/app/components/tv/tv.component.ts');
-      // The setup function must check saasMode + isSlaveMode + displayType
       expect(src).toMatch(/saasMode/);
       expect(src).toMatch(/isSlaveMode/);
-      // Either a SaaS-aware setup or guard
       expect(src).toMatch(/setupSaasPreviewCapture[\s\S]{0,800}saasMode/);
     });
 
-    it('Remote V2 subscribes on connect and consumes saas-frame data URIs', () => {
+    it('Remote V2 polls GET /tv-snapshot at ~250ms cadence', () => {
       const src = read(
         'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
       );
       expect(src).toMatch(/setupSaasTvPreviewConsumer/);
-      expect(src).toMatch(/['"]tv-preview:saas-frame['"]/);
-      expect(src).toMatch(/['"]tv-preview:saas-subscribe['"]/);
-      // Sets the previewUrl signal with the received data URI
-      expect(src).toMatch(/this\.tvPreviewUrl\.set\(data\.frame\)/);
+      expect(src).toMatch(/\/saas\/\$\{siteId\}\/tv-snapshot/);
+      expect(src).toMatch(/setInterval\([^)]+,\s*250\)/);
+      // Set the previewUrl signal from the HTTP response body
+      expect(src).toMatch(/this\.tvPreviewUrl\.set\(body\.frame\)/);
     });
 
-    it('Remote V2 unsubscribes on ngOnDestroy in SaaS mode', () => {
+    it('Remote V2 stops polling on ngOnDestroy', () => {
       const src = read(
         'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
       );
-      // Match the unsubscribe emit in ngOnDestroy block
-      expect(src).toMatch(/['"]tv-preview:saas-unsubscribe['"]/);
+      expect(src).toMatch(/clearInterval\(this\.saasTvPollTimer\)/);
     });
   });
 
