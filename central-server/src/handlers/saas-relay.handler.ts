@@ -183,8 +183,25 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
   socket.on('tv-preview:saas-unsubscribe', () => {
     socket.to(siteId).emit('tv-preview:saas-unsubscribe');
   });
+  // Debug throttled (1 log toutes les 5s) pour diagnostiquer "mini-thumb vide"
+  // côté admin SaaS — vérifier que les frames TV arrivent au central et qu'il
+  // y a bien des receivers dans la room siteId. À retirer une fois résolu.
+  let lastSaasFrameLogAt = 0;
   socket.on('tv-preview:saas-frame', (data: Record<string, unknown>) => {
     socket.to(siteId).emit('tv-preview:saas-frame', data);
+    const now = Date.now();
+    if (now - lastSaasFrameLogAt > 5000) {
+      lastSaasFrameLogAt = now;
+      const room = io?.sockets.adapter.rooms.get(siteId);
+      const roomSize = room ? room.size : 0;
+      logger.info('saas-frame relayed (debug)', {
+        siteId,
+        senderId: socket.id,
+        roomSize,
+        receivers: Math.max(0, roomSize - 1),
+        frameLen: typeof data?.frame === 'string' ? (data.frame as string).length : 0,
+      });
+    }
   });
 
   // ADR-090 — scoreboard-state push depuis la Remote SaaS (pas de JWT : relay socket).
