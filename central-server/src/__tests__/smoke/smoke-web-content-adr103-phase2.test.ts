@@ -74,4 +74,17 @@ describe('Smoke — ADR-103 Phase 2a backend resolve', () => {
     expect(/ADR-103 Phase 2/.test(src)).toBe(true);
     expect(/return res\.status\(400\)[^\n]*SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN/.test(src)).toBe(false);
   });
+
+  // ------------ Remote V2 dispatch parity with V1 ------------
+
+  it('remote-v2.component — playVideo dispatches web-page / livestream by contentType (parity with V1)', () => {
+    const src = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    // Three dispatch branches present in playVideo()
+    expect(/v\.contentType === ['"]web_page['"]/.test(src)).toBe(true);
+    expect(/v\.contentType === ['"]livestream['"]/.test(src)).toBe(true);
+    expect(/type: ['"]web-page['"]/.test(src)).toBe(true);
+    expect(/type: ['"]livestream['"]/.test(src)).toBe(true);
+    // Phase 1/2a marker so a future regression points back here
+    expect(/ADR-103 Phase 1\/2a/.test(src)).toBe(true);
+  });
 });
