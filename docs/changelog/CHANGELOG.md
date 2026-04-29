@@ -1,3 +1,9 @@
+# [3.277.0](https://github.com/Tallec7/neopro/compare/v3.276.0...v3.277.0) (2026-04-29)
+
+### Features
+
+- **supervision:** ADR-103 Phase 4 — Prometheus + alertes web/live + clôture ([#726](https://github.com/Tallec7/neopro/issues/726)) ([963aebe](https://github.com/Tallec7/neopro/commit/963aebeab6b5b7c7a2166113375a8301c1ce35ed))
+
 # [3.276.0](https://github.com/Tallec7/neopro/compare/v3.275.0...v3.276.0) (2026-04-29)
 
 ### Features
