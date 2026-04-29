@@ -39,8 +39,17 @@ import { PiConfigVideoEntry } from '../interfaces/video.interface';
 export class WebContentService {
   /** Skip after this delay if the iframe / livestream did not signal "ready". */
   static readonly LOAD_TIMEOUT_MS = 1000;
-  /** Hold the freeze frame this long after `load` to let the iframe paint. */
-  static readonly REVEAL_DELAY_MS = 120;
+  /**
+   * Hold the freeze frame this long after `load`/`loadeddata` AND after two
+   * forced paint cycles to let the iframe actually paint its final frame.
+   * ADR-103 Phase 2.7 — bumped 120 → 250 ms after Daisy reported a residual
+   * flash with variable duration. Cross-origin iframes fire `load` when the
+   * sub-document has finished loading, but the browser may need 2-3 paint
+   * cycles to render fonts/lazy images/layout shifts before stabilizing. We
+   * force two requestAnimationFrame ticks before starting this timer so the
+   * delay starts AFTER the iframe has at least one stable frame on screen.
+   */
+  static readonly REVEAL_DELAY_MS = 250;
   /** CSS opacity transition duration applied to iframe + livestream. */
   static readonly OPACITY_TRANSITION_MS = 200;
 
@@ -101,30 +110,33 @@ export class WebContentService {
 
     const onLoad = (): void => {
       this.clearLoadTimeout();
-      // Phase 2.5 — wait one paint cycle before revealing so cross-origin
-      // pages have time to paint their first frame. Without this delay,
-      // hideFreezeFrame races the iframe's first paint.
+      // ADR-103 Phase 2.7 — `load` fires when the sub-document has finished
+      // loading, but cross-origin iframes may still need 2-3 paint cycles
+      // for fonts/lazy images/layout shifts to settle. We force TWO rAF
+      // ticks (≈33ms) before starting REVEAL_DELAY_MS so the delay starts
+      // AFTER the iframe has put at least one stable frame on screen, not
+      // mid-paint.
       this.clearRevealDelay();
-      this._revealDelayTimer = setTimeout(() => {
-        this._revealDelayTimer = null;
-        // Phase 2.6 — INSTANT show: no opacity transition. Order is critical:
-        // 1) iframe.opacity = 1 (instant, no transition because we set
-        //    transition='none' in registerElements + reset it just before).
-        //    The iframe is now fully opaque BENEATH the freeze frame at z-20.
-        // 2) hideFreezeFrame: freeze opacity 0 — the iframe is fully visible
-        //    at the same instant, so the MP4 underneath is never exposed.
-        iframe.style.transition = 'none';
-        iframe.style.opacity = '1';
-        iframe.style.pointerEvents = 'none';
-        this.doubleBufferService.hideFreezeFrame();
-        this.doubleBufferService.hideBlackOverlay();
-        // Auto-close ONLY after the page actually loaded (counts visible
-        // time, not load latency).
-        if (payload.durationMs && payload.durationMs > 0) {
-          this.clearAutoClose();
-          this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
-        }
-      }, WebContentService.REVEAL_DELAY_MS);
+      this.scheduleAfterTwoFrames(() => {
+        this._revealDelayTimer = setTimeout(() => {
+          this._revealDelayTimer = null;
+          // Phase 2.6 — INSTANT show. Order is critical:
+          //   1) iframe.opacity = 1 (no transition, full opaque under freeze).
+          //   2) hideFreezeFrame: freeze opacity 0 — iframe fully visible at
+          //      that instant, so the MP4 underneath is never exposed.
+          iframe.style.transition = 'none';
+          iframe.style.opacity = '1';
+          iframe.style.pointerEvents = 'none';
+          this.doubleBufferService.hideFreezeFrame();
+          this.doubleBufferService.hideBlackOverlay();
+          // Auto-close ONLY after the page actually loaded (counts visible
+          // time, not load latency).
+          if (payload.durationMs && payload.durationMs > 0) {
+            this.clearAutoClose();
+            this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
+          }
+        }, WebContentService.REVEAL_DELAY_MS);
+      });
     };
     const onError = (): void => {
       console.warn('[WebContent] iframe load error', payload.url);
@@ -166,18 +178,21 @@ export class WebContentService {
     const onLoaded = (): void => {
       this.clearLoadTimeout();
       this.clearRevealDelay();
-      this._revealDelayTimer = setTimeout(() => {
-        this._revealDelayTimer = null;
-        // Phase 2.6 — INSTANT show (cf. showWebPage above for rationale).
-        player.style.transition = 'none';
-        player.style.opacity = '1';
-        this.doubleBufferService.hideFreezeFrame();
-        this.doubleBufferService.hideBlackOverlay();
-        if (payload.durationMs && payload.durationMs > 0) {
-          this.clearAutoClose();
-          this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
-        }
-      }, WebContentService.REVEAL_DELAY_MS);
+      // ADR-103 Phase 2.7 — same paint-stable wait as showWebPage.
+      this.scheduleAfterTwoFrames(() => {
+        this._revealDelayTimer = setTimeout(() => {
+          this._revealDelayTimer = null;
+          // Phase 2.6 — INSTANT show (cf. showWebPage above for rationale).
+          player.style.transition = 'none';
+          player.style.opacity = '1';
+          this.doubleBufferService.hideFreezeFrame();
+          this.doubleBufferService.hideBlackOverlay();
+          if (payload.durationMs && payload.durationMs > 0) {
+            this.clearAutoClose();
+            this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
+          }
+        }, WebContentService.REVEAL_DELAY_MS);
+      });
     };
     const onEnded = (): void => this.returnToLoop(true);
     const onError = (e: Event): void => {
@@ -381,6 +396,23 @@ export class WebContentService {
       clearTimeout(this._loadTimeoutTimer);
       this._loadTimeoutTimer = null;
     }
+  }
+
+  /**
+   * ADR-103 Phase 2.7 — schedule `cb` after two `requestAnimationFrame`
+   * ticks have elapsed. The double rAF guarantees that the browser has
+   * committed at least one paint cycle since the caller (typical pattern
+   * for "wait until the previous DOM mutation is rendered"). Falls back
+   * to setTimeout in environments without rAF (server, tests).
+   */
+  private scheduleAfterTwoFrames(cb: () => void): void {
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      setTimeout(cb, 32);
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => cb());
+    });
   }
 
   private clearRevealDelay(): void {

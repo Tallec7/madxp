@@ -25,7 +25,8 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
 
   it('web-content.service.ts — exposes Phase 2.5 constants (REVEAL_DELAY_MS, OPACITY_TRANSITION_MS)', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
-    expect(/REVEAL_DELAY_MS\s*=\s*120/.test(src)).toBe(true);
+    // Phase 2.7 bumped REVEAL_DELAY_MS 120 → 250 (paint stabilisation).
+    expect(/REVEAL_DELAY_MS\s*=\s*250/.test(src)).toBe(true);
     expect(/OPACITY_TRANSITION_MS\s*=\s*200/.test(src)).toBe(true);
     expect(/ADR-103 Phase 2\.5/.test(src)).toBe(true);
   });
@@ -70,6 +71,17 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
     const block = src.slice(onLoadStart, onLoadStart + 1800);
     expect(/setTimeout\([\s\S]{0,800}hideFreezeFrame/.test(block)).toBe(true);
     expect(/REVEAL_DELAY_MS/.test(block)).toBe(true);
+  });
+
+  it('web-content.service.ts — onLoad waits two rAF ticks before starting reveal delay (Phase 2.7)', () => {
+    const src = read('raspberry/src/app/services/web-content.service.ts');
+    expect(/private scheduleAfterTwoFrames/.test(src)).toBe(true);
+    expect(/requestAnimationFrame\([\s\S]{0,200}requestAnimationFrame/.test(src)).toBe(true);
+    // The helper must be invoked from BOTH onLoad (showWebPage) and
+    // onLoaded (showLivestream) so livestream shows are paint-stable too.
+    const calls = (src.match(/this\.scheduleAfterTwoFrames\(/g) || []).length;
+    expect(calls).toBeGreaterThanOrEqual(2);
+    expect(/Phase 2\.7/.test(src)).toBe(true);
   });
 
   it('web-content.service.ts — teardown captures freeze BEFORE clearing iframe', () => {
