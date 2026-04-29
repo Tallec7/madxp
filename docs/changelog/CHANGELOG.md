@@ -1,3 +1,11 @@
+## [3.278.5](https://github.com/Tallec7/neopro/compare/v3.278.4...v3.278.5) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** SaaS sub-route stubs + content-aware verify (ADR-071) ([#736](https://github.com/Tallec7/neopro/issues/736)) ([a05d873](https://github.com/Tallec7/neopro/commit/a05d873e4c7c0ddb8643723831274a51ed49925c))
+- **hosting:** SaaS sub-route stubs + content-aware verify (ADR-071) ([#737](https://github.com/Tallec7/neopro/issues/737)) ([a49e745](https://github.com/Tallec7/neopro/commit/a49e74535a8024e422a1eb7fa5b0241da77da151))
+- **hosting:** SPEC routing CF Pages SaaS + retrigger release (ADR-071) ([#738](https://github.com/Tallec7/neopro/issues/738)) ([fa9db81](https://github.com/Tallec7/neopro/commit/fa9db8105298b5c5631d9392e24ce40baaa25f31)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
 ## [3.278.4](https://github.com/Tallec7/neopro/compare/v3.278.3...v3.278.4) (2026-04-29)
 
 ### Bug Fixes
