@@ -1,3 +1,9 @@
+# [3.273.0](https://github.com/Tallec7/neopro/compare/v3.272.0...v3.273.0) (2026-04-29)
+
+### Features
+
+- **remote:** refuse web/live loop entries without durationSeconds — ADR-103 Phase 3 (MVP) ([#721](https://github.com/Tallec7/neopro/issues/721)) ([630e0ee](https://github.com/Tallec7/neopro/commit/630e0eea9cf2928ce4382722dacbd854a6d37f3d))
+
 # [3.272.0](https://github.com/Tallec7/neopro/compare/v3.271.0...v3.272.0) (2026-04-29)
 
 ### Features
