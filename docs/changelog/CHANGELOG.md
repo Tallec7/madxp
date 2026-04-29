@@ -1,3 +1,9 @@
+# [3.275.0](https://github.com/Tallec7/neopro/compare/v3.274.0...v3.275.0) (2026-04-29)
+
+### Features
+
+- **dashboard:** ADR-103 Phase 3 v2 — proactive web/live UX in library ([#724](https://github.com/Tallec7/neopro/issues/724)) ([b1e43dd](https://github.com/Tallec7/neopro/commit/b1e43dd671eab2f94b0512ff12b136de8a4e7179))
+
 # [3.274.0](https://github.com/Tallec7/neopro/compare/v3.273.0...v3.274.0) (2026-04-29)
 
 ### Features
