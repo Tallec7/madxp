@@ -90,6 +90,8 @@ docs/specs/
 | [features/saas-mode](features/saas-mode.spec.md)                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102 | Live | 2026-04-29 |
 | [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
 | [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
+| [features/video-cycle](features/video-cycle.spec.md)             | ADR-100                                                       | Live   | 2026-04-29     |
+| [features/web-live-content](features/web-live-content.spec.md)   | ADR-089, ADR-103                                              | Live   | 2026-04-29     |
 | [features/hotspot-psk](features/hotspot-psk.spec.md)             | ADR-073, ADR-074, ADR-076                                     | Live   | 2026-04-27     |
 | [features/templates-studio](features/templates-studio.spec.md)   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095          | Live   | 2026-04-25     |
 | [services/cron-scheduler](services/cron-scheduler.spec.md)       | ADR-097                                                       | Live   | 2026-04-25     |
