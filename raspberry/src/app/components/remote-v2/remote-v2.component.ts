@@ -811,13 +811,37 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (v.id) this.erroredVideoIds.delete(v.id);
     this.playingVideoId = v.id ?? null;
     this.playingVideo = v;
-    this.socketService.emit('command', {
-      type: 'video',
-      data: v,
-      displayIndex: this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10),
-    });
-    this.activeSheet = null;
-    this.showToast(`Diffusé : ${v.name}`);
+
+    const displayIndex = this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10);
+
+    // ADR-103 Phase 1/2a — dispatch by contentType so web_page / livestream
+    // entries are routed to the WebContentService instead of the MP4 manual
+    // player. Mirrors the Remote V1 launchVideo() dispatch.
+    if (v.contentType === 'web_page' && v.externalUrl) {
+      const data = {
+        url: v.externalUrl,
+        durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
+        name: v.name,
+      };
+      this.socketService.emit('command', { type: 'web-page', data, displayIndex });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name} (page web)`);
+    } else if (v.contentType === 'livestream' && v.externalUrl) {
+      const data: { url: string; mimeType: string | null; durationMs: number | null; name: string } = {
+        url: v.externalUrl,
+        mimeType: null,
+        durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
+        name: v.name,
+      };
+      this.socketService.emit('command', { type: 'livestream', data, displayIndex });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name} (livestream)`);
+    } else {
+      this.socketService.emit('command', { type: 'video', data: v, displayIndex });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name}`);
+    }
+
     // Le 2nd écran reprend la boucle automatiquement à la fin de la vidéo forcée.
     if (this.playingTimer) clearTimeout(this.playingTimer);
     const duration = (v.durationSeconds ?? 0) * 1000;
