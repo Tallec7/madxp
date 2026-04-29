@@ -674,7 +674,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
       return;
     }
     if (video.contentType === 'livestream' && video.externalUrl) {
-      const data = {
+      const data: { url: string; mimeType: string | null; durationMs: number | null; name: string } = {
         url: video.externalUrl,
         mimeType: null,
         durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
