@@ -1,3 +1,9 @@
+## [3.267.3](https://github.com/Tallec7/neopro/compare/v3.267.2...v3.267.3) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** retry subscribe SaaS pour absorber le race connect order ([#704](https://github.com/Tallec7/neopro/issues/704)) ([4c92d4c](https://github.com/Tallec7/neopro/commit/4c92d4c3999234a0684b3fb9da3c10cd9d50df0f))
+
 ## [3.267.2](https://github.com/Tallec7/neopro/compare/v3.267.1...v3.267.2) (2026-04-29)
 
 ### Bug Fixes
