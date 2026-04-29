@@ -181,8 +181,9 @@ jobs:
     name: Deploy Central Dashboard to Hostinger
     needs: release
     # ADR-071 phase 2 : gated. Quand `vars.HOSTING == 'cloudflare'`, ce job est
-    # skippé et `deploy-dashboard-cloudflare` prend le relais. Permet la bascule
-    # progressive sans patch CI (flip de variable repo/environment GitHub).
+    # skippé et `deploy-frontend-cloudflare` prend le relais (Option A : un seul
+    # projet Pages pour dashboard + SaaS). Permet la bascule progressive sans
+    # patch CI (flip de variable repo/environment GitHub).
     if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING != 'cloudflare'
     runs-on: ubuntu-latest
     # J4 — gate prod deploy via GitHub Environment "production" (required reviewers).
