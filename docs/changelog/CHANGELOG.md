@@ -1,3 +1,9 @@
+## [3.270.2](https://github.com/Tallec7/neopro/compare/v3.270.1...v3.270.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** instant web/live show (no opacity transition under freeze) — ADR-103 Phase 2.6 ([#716](https://github.com/Tallec7/neopro/issues/716)) ([07846f5](https://github.com/Tallec7/neopro/commit/07846f53cb6fdccc114c38f598380dd0aab9330f))
+
 ## [3.270.1](https://github.com/Tallec7/neopro/compare/v3.270.0...v3.270.1) (2026-04-29)
 
 ### Bug Fixes
