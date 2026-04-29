@@ -2,7 +2,7 @@
 
 > **Owner** : Daisy
 > **Statut** : Live
-> **Dernière revue** : 2026-04-27
+> **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-100 (alias `storage_path AS url` dans `findVideoById`)
 > **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression
