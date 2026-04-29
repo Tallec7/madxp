@@ -1,0 +1,10 @@
+# Cloudflare Pages SPA fallback (ADR-071 phase 2)
+# Remplace raspberry/src/saas-htaccess pour le déploiement SaaS sur Cloudflare Pages.
+#
+# Le SaaS est déployé seul (build `ng build raspberry --configuration=saas`,
+# baseHref `/saas/`). Sur Cloudflare Pages prod, il vit soit sur son propre
+# projet Pages (recommandé), soit en sous-dossier `/saas/` du projet dashboard
+# via routes — dans les deux cas ce fallback couvre les deep routes Angular.
+
+# Toutes les routes SPA → index.html
+/*  /index.html  200

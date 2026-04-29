@@ -1,7 +1,7 @@
 # ADR-071: Migration du hosting frontend (dashboard + SaaS) vers Cloudflare Pages
 
-**Date** : 2026-04-19 (mis à jour 2026-04-23)
-**Statut** : Accepté pour staging (J2 ADR-091) — Proposé pour bascule prod (post-validation)
+**Date** : 2026-04-19 (mis à jour 2026-04-29)
+**Statut** : Accepté — phase 1 (staging) livrée J2 ADR-091, phase 2 (scaffolding prod) livrée 2026-04-29, bascule DNS planifiée post-validation
 **Format** : Léger
 
 ---
@@ -63,3 +63,41 @@ Conserver le DNS `neopro-admin.kalonpartners.bzh` via CNAME vers Pages, bascule 
 - Nouveau fichier `public/_redirects` (ou `dist/_redirects` injecté en build) avec les règles SPA.
 - Nouveau fichier `public/_headers` pour CSP, HSTS, cache-control versionné.
 - Documentation : `docs/technical/ARCHITECTURE.md` — section hosting frontend à mettre à jour.
+
+## Mise en œuvre
+
+### Phase 1 — Staging (✅ livrée — J2 ADR-091)
+
+- Projet Cloudflare Pages `neopro-dashboard` actif sur `neopro-exg.pages.dev`
+- `_redirects` + `_headers` versionnés dans `central-dashboard/cloudflare/`
+- Preview deployments PR activés
+- E2E nightly (`.github/workflows/e2e-staging.yml`) ciblent staging Cloudflare
+
+### Phase 2 — Scaffolding prod (✅ livrée 2026-04-29)
+
+- `raspberry/cloudflare/_redirects` + `_headers` créés (équivalent SaaS).
+- `angular.json` : configurations `saas` + `saas-staging` recopient `cloudflare/_*` dans le build output.
+- `.github/workflows/release.yml` : deux nouveaux jobs `deploy-dashboard-cloudflare` + `deploy-saas-cloudflare` (action `cloudflare/wrangler-action@v3`, `pages deploy`).
+- **Feature flag** : `vars.HOSTING` (GitHub Environment `production`).
+  - `HOSTING != 'cloudflare'` (défaut) → jobs Hostinger lftp actifs (régime actuel).
+  - `HOSTING == 'cloudflare'` → jobs Cloudflare actifs, jobs Hostinger skippés.
+  - Permet de basculer/rollback en flippant la variable, sans patch CI.
+- Override SaaS public URL (custom domain post-NS migration) : `vars.SAAS_PUBLIC_BASE_URL`.
+
+### Phase 3 — Bascule DNS prod (à planifier)
+
+Pré-requis humains :
+
+1. Migration NS de la zone `kalonpartners.bzh` vers Cloudflare.
+2. Création des projets Cloudflare Pages `neopro-dashboard-prod` + `neopro-saas-prod`.
+3. Custom domains `neopro-admin.kalonpartners.bzh` (et URL SaaS) attachés aux projets.
+4. Secrets GitHub `production` : `CLOUDFLARE_API_TOKEN` (scope Pages:Edit), `CLOUDFLARE_ACCOUNT_ID`.
+5. Variable GitHub `production` : `HOSTING=cloudflare` (active la bascule).
+6. Soak window 7 jours minimum avant phase 4.
+
+### Phase 4 — Décommission Hostinger frontend (post-soak)
+
+Hors scope de cette PR (sera couvert par un commit séparé une fois la phase 3 stable) :
+
+- Suppression `central-dashboard/.htaccess`, `raspberry/src/saas-htaccess` et entrées `assets` associées dans `angular.json`.
+- Suppression jobs `deploy-dashboard` + `deploy-saas` (lftp) et secrets `HOSTINGER_FTP_*`.
