@@ -504,8 +504,11 @@ jobs:
       - name: Verify deployment
         run: |
           set -euo pipefail
-          echo "Waiting 15s for CDN propagation..."
-          sleep 15
+          # 30s pour absorber le cold-start TLS cert + cache edge sur le
+          # premier déploiement (15s s'était révélé insuffisant en pratique
+          # lors de la bascule prod ADR-071 phase 3).
+          echo "Waiting 30s for CDN propagation + TLS cold-start..."
+          sleep 30
 
           probe() {
             local url="$1" attempt code
