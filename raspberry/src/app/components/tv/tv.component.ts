@@ -368,12 +368,12 @@ export class TvComponent implements OnInit, OnDestroy {
   }
 
   // =========================================================================
-  // SaaS TV PREVIEW PUSH (SPEC-V2-TVMON-01 / ADR-101)
+  // SaaS TV PREVIEW PUSH (ADR-104 — HTTP pull, replaces Socket.IO relay)
   // =========================================================================
 
-  private saasPreviewSubscribers = 0;
   private saasPreviewTimer: ReturnType<typeof setInterval> | null = null;
   private saasPreviewCanvas: HTMLCanvasElement | null = null;
+  private saasPreviewInflight = false;
 
   /** Activated only in SaaS mode + master TV display. */
   private setupSaasPreviewCapture(): void {
@@ -381,20 +381,15 @@ export class TvComponent implements OnInit, OnDestroy {
     if (!isSaas) return;
     if (this.tvSyncService.isSlaveMode) return;
     if (this.displayType !== 'tv') return;
-
-    this.socketService.on('tv-preview:saas-subscribe', () => {
-      this.saasPreviewSubscribers += 1;
-      if (this.saasPreviewSubscribers === 1) this.startSaasPreviewLoop();
-    });
-    this.socketService.on('tv-preview:saas-unsubscribe', () => {
-      this.saasPreviewSubscribers = Math.max(0, this.saasPreviewSubscribers - 1);
-      if (this.saasPreviewSubscribers === 0) this.stopSaasPreviewLoop();
-    });
+    // ADR-104 — plus de subscribe via Socket.IO. La TV pousse ses frames
+    // dès qu'elle est master+saas. Le central garde uniquement la dernière
+    // frame (TTL 3s). Si personne ne regarde, c'est un POST /api inutile
+    // mais inoffensif (~50KB toutes les 250ms = 200KB/s, payable).
+    this.startSaasPreviewLoop();
   }
 
   private teardownSaasPreviewCapture(): void {
     this.stopSaasPreviewLoop();
-    this.saasPreviewSubscribers = 0;
   }
 
   private startSaasPreviewLoop(): void {
@@ -404,8 +399,7 @@ export class TvComponent implements OnInit, OnDestroy {
       this.saasPreviewCanvas.width = 480;
       this.saasPreviewCanvas.height = 270;
     }
-    // ~4 fps, suffisant pour un retour visuel régie. Bande passante bornée
-    // à ~150-300 Ko/s en SaaS (acceptable sur tout réseau LAN/4G régie).
+    // ~4 fps, suffisant pour un retour visuel régie.
     this.saasPreviewTimer = setInterval(() => this.emitSaasPreviewFrame(), 250);
   }
 
@@ -418,22 +412,36 @@ export class TvComponent implements OnInit, OnDestroy {
 
   private emitSaasPreviewFrame(): void {
     const canvas = this.saasPreviewCanvas;
-    if (!canvas || this.saasPreviewSubscribers === 0) return;
+    if (!canvas || this.saasPreviewInflight) return;
     const player = this.isManualMode
       ? this.doubleBufferService.getActiveManualPlayer()
       : this.doubleBufferService.getActivePlayer();
     if (!player || player.videoWidth === 0 || player.videoHeight === 0) return;
+
+    const siteId = this.saasConfigService.getSiteId();
+    if (!siteId) return;
+    const apiUrl = (environment as { apiUrl?: string }).apiUrl;
+    if (!apiUrl) return;
 
     try {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.drawImage(player, 0, 0, canvas.width, canvas.height);
       const frame = canvas.toDataURL('image/jpeg', 0.6);
-      // Send via socket — relayé par central-server saas-relay.handler vers la
-      // Remote V2 du même site. Si la connexion est saturée, le data URI est
-      // simplement droppé côté socket.io (best-effort, pas critique).
-      this.socketService.emit('tv-preview:saas-frame', { frame, ts: Date.now() } as unknown as Command);
+      // ADR-104 — HTTP POST vers /api/saas/:siteId/tv-snapshot. Le central
+      // garde la dernière frame en mémoire (TTL 3s) ; l'admin la pull en
+      // GET ~250ms. Architecture pull, pas de Socket.IO en jeu pour ce flux.
+      // `keepalive: true` assure l'envoi même si la TV navigue ailleurs.
+      this.saasPreviewInflight = true;
+      fetch(`${apiUrl}/saas/${siteId}/tv-snapshot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frame, ts: Date.now() }),
+        keepalive: true,
+      }).catch(() => { /* best-effort, pas critique */ })
+        .finally(() => { this.saasPreviewInflight = false; });
     } catch (err) {
+      this.saasPreviewInflight = false;
       console.warn('[TV] SaaS preview capture failed', err);
     }
   }

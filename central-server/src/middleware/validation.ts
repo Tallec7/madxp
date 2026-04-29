@@ -275,6 +275,15 @@ export const schemas = {
   // Au moins un des deux objets doit être fourni. Whitelist stricte sur les
   // clés pour éviter qu'un client malveillant pollue le JSONB avec des champs
   // arbitraires.
+  // ADR-104 — TV snapshot push (HTTP pull replaces Socket.IO relay).
+  // Le payload est une data: URL JPEG (~50KB après compression à 0.6).
+  // Limite généreuse à 800k caractères pour couvrir des frames 1280×720
+  // avec qualité dégradée. Le express.json a un limit global de 10mb.
+  tvSnapshotPush: Joi.object({
+    frame: Joi.string().pattern(/^data:image\//).max(800000).required(),
+    ts: Joi.number().optional(),
+  }),
+
   remotePreferencesUpsert: Joi.object({
     prefs: Joi.object({
       haptics: Joi.boolean(),

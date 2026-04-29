@@ -15,6 +15,8 @@ import {
   getSaasProfileConfig,
   getRemotePreferences,
   upsertRemotePreferences,
+  pushTvSnapshot,
+  getTvSnapshot,
 } from '../controllers/saas.controller';
 
 const router = Router();
@@ -34,5 +36,12 @@ router.get('/:siteId/profiles/:profileId/config', remoteRateLimit, validateParam
 // deux : si le profil a un PIN, le token de device est exigé ; sinon ouvert).
 router.get('/:siteId/profiles/:profileId/preferences', remoteRateLimit, validateParams(paramSchemas.siteIdAndProfileId), verifyRemotePin, getRemotePreferences);
 router.put('/:siteId/profiles/:profileId/preferences', remoteRateLimit, validateParams(paramSchemas.siteIdAndProfileId), verifyRemotePin, validate(schemas.remotePreferencesUpsert), upsertRemotePreferences);
+
+// ADR-104 — TV snapshot HTTP pull (mini-thumb "À l'antenne" sur la régie).
+// POST = TV pousse sa frame courante (~250ms cadence).
+// GET  = Admin pull la frame courante (~250ms cadence).
+// Pas de PIN : flux jpeg basse-rés, siteId UUID 128 bits + rate limit suffisent.
+router.post('/:siteId/tv-snapshot', remoteRateLimit, validateParams(paramSchemas.siteId), validate(schemas.tvSnapshotPush), pushTvSnapshot);
+router.get('/:siteId/tv-snapshot', remoteRateLimit, validateParams(paramSchemas.siteId), getTvSnapshot);
 
 export default router;

@@ -18,6 +18,7 @@ import {
 import { getVideoUrl } from '../services/storage.service';
 import { signVideoStreamToken } from '../services/video-token.service';
 import { metricsService } from '../services/metrics.service';
+import { tvSnapshotService } from '../services/tv-snapshot.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
@@ -625,6 +626,47 @@ export async function upsertRemotePreferences(req: Request, res: Response) {
       profileId: req.params.profileId,
       error,
     });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * POST /api/saas/:siteId/tv-snapshot — TV pousse une frame courante
+ * GET  /api/saas/:siteId/tv-snapshot — Admin pull la frame courante
+ *
+ * Architecture HTTP pull pour la mini-thumb "À l'antenne" de la régie SaaS.
+ * Remplace le relay Socket.IO `tv-preview:saas-frame` (qui s'est révélé
+ * fragile : race subscribe→register, kick serveur post-deploy Railway,
+ * dépendance Redis adapter cross-replica). Voir ADR-104.
+ *
+ * - Pas d'auth dédiée : siteId UUID 128 bits + rate limiting (remoteRateLimit)
+ *   suffisent pour ce flux (frame JPEG basse-résolution, pas sensible).
+ * - In-memory : la dernière frame par site, TTL 3s. Si la TV arrête de
+ *   pousser, le GET retourne 204 et l'admin retombe sur le placeholder.
+ */
+export async function pushTvSnapshot(req: Request, res: Response) {
+  try {
+    const { siteId } = req.params;
+    const { frame } = req.body as { frame?: string };
+    if (!frame || !frame.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'frame invalide (data:image/* requis)' });
+    }
+    tvSnapshotService.set(siteId, frame);
+    return res.status(204).end();
+  } catch (error) {
+    logger.error('TV snapshot push error', { siteId: req.params.siteId, error });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+export async function getTvSnapshot(req: Request, res: Response) {
+  try {
+    const { siteId } = req.params;
+    const entry = tvSnapshotService.get(siteId);
+    if (!entry) return res.status(204).end();
+    return res.json({ frame: entry.frame, ts: entry.receivedAt });
+  } catch (error) {
+    logger.error('TV snapshot get error', { siteId: req.params.siteId, error });
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 }
