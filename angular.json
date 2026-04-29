@@ -137,6 +137,16 @@
                   "glob": "socket.io.min.js",
                   "input": "raspberry/src/assets",
                   "output": "assets"
+                },
+                {
+                  "glob": "_redirects",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
+                },
+                {
+                  "glob": "_headers",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
                 }
               ],
               "budgets": [
@@ -180,6 +190,16 @@
                   "glob": "socket.io.min.js",
                   "input": "raspberry/src/assets",
                   "output": "assets"
+                },
+                {
+                  "glob": "_redirects",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
+                },
+                {
+                  "glob": "_headers",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
                 }
               ],
               "budgets": [
