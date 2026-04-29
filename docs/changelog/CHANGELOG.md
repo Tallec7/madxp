@@ -1,3 +1,9 @@
+# [3.278.0](https://github.com/Tallec7/neopro/compare/v3.277.1...v3.278.0) (2026-04-29)
+
+### Features
+
+- **hosting:** cloudflare pages prod scaffolding (ADR-071 phase 2) ([#729](https://github.com/Tallec7/neopro/issues/729)) ([d1e5336](https://github.com/Tallec7/neopro/commit/d1e5336c81a774dc36333ed15deb834d0e0e2ad6))
+
 ## [3.277.1](https://github.com/Tallec7/neopro/compare/v3.277.0...v3.277.1) (2026-04-29)
 
 ### Bug Fixes
