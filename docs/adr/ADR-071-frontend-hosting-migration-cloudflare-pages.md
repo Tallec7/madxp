@@ -111,8 +111,12 @@ Pré-requis humains :
 5. **Modifier le DNS chez Hostinger** : remplacer le record actuel de
    `neopro-admin` par un `CNAME` vers `neopro-frontend-prod.pages.dev`. La zone
    `kalonpartners.bzh` reste chez Hostinger (WordPress + FTP vidéos intacts).
-6. Variable GitHub `production` : `HOSTING=cloudflare` (active la bascule à la
-   prochaine release).
+6. Variable GitHub **Repository** (pas Environment) : `HOSTING=cloudflare`.
+   ⚠️ Doit être au niveau **repository** (Settings → Secrets and variables →
+   Actions → Variables) car les conditions `if:` du workflow sont évaluées
+   AVANT le chargement du contexte environnement. Une variable au niveau
+   Environment serait ignorée par les `if:`. Active la bascule à la
+   prochaine release.
 7. Soak window 7 jours minimum avant phase 4.
 
 ### Phase 4 — Décommission Hostinger frontend (post-soak)
