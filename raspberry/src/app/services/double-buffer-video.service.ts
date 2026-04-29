@@ -185,6 +185,13 @@ export class DoubleBufferVideoService {
 
     console.log(`[DoubleBuffer] Playing video ${videoIndex} on player ${this._activePlayer}:`, videoPath);
 
+    // SPEC-V2-TVMON-01 — défense en profondeur. L'attribut HTML
+    // `crossorigin="anonymous"` est posé en template mais Chrome peut
+    // ignorer la requête CORS si `src` est mutée avant que l'attribut
+    // soit pris en compte. Forcer la propriété DOM avant chaque src
+    // garantit le mode CORS et débloque `canvas.toDataURL()` (push
+    // preview SaaS vers la Remote V2).
+    player.crossOrigin = 'anonymous';
     player.src = videoPath;
     player.load();
 
@@ -288,6 +295,8 @@ export class DoubleBufferVideoService {
 
     // Restaurer preload='auto' si le cleanup l'avait mis à 'none'
     player.preload = 'auto';
+    // SPEC-V2-TVMON-01 — voir commentaire dans playOnActivePlayer.
+    player.crossOrigin = 'anonymous';
     player.src = videoPath;
     player.load();
 
