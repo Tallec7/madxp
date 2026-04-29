@@ -74,6 +74,17 @@ export class TvComponent implements OnInit, OnDestroy {
   // E-23 US-23.5.3: Wrong HDMI port detected (TV on HDMI-1 instead of HDMI-0)
   public wrongPort = false;
 
+  /**
+   * ADR-105 — mode preview iframe.
+   * Activé via `?preview=1` quand la Remote V2 embarque la TV dans un iframe.
+   * Conséquences :
+   *  - audio mute (pas de double son TV + Remote)
+   *  - skip startSession + startRecording (pas de double comptage analytics)
+   *  - skip emit `tv-register` (l'iframe ne doit pas être comptée comme un display
+   *    dans `getSaasClientCount` côté central — cf. saas.md "Compter les onglets")
+   */
+  public isPreviewMode = false;
+
   // ADR-060 Phase 3 couche 2 — QR hotspot pour rejoindre le Pi hors LAN club.
   // Déclenchable via `?fallback=hotspot` (URL) ou via un futur event
   // internet-watchdog → local-broadcast (à câbler quand sync-agent expose).
@@ -149,6 +160,11 @@ export class TvComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   public ngOnInit() {
+    // ADR-105 — mode preview iframe : la Remote V2 charge la TV avec `?preview=1`
+    // pour afficher un mini-monitor sans dégrader la diffusion principale.
+    // Mute audio + skip analytics + skip socket-register.
+    this.isPreviewMode = this.route.snapshot.queryParamMap.get('preview') === '1';
+
     // Phase 5 — PROP-002: read displayIndex from route param /display/:n
     const routeN = this.route.snapshot.params['n'];
     if (routeN !== undefined) {
@@ -158,7 +174,7 @@ export class TvComponent implements OnInit, OnDestroy {
       this.displayIndex = this.route.snapshot.data['displayType'] === 'secondary' ? 1 : 0;
     }
     this.displayType = this.displayIndex === 0 ? 'tv' : this.displayIndex === 1 ? 'secondary' : `display-${this.displayIndex}`;
-    console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}`);
+    console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}, preview: ${this.isPreviewMode}`);
 
     // ADR-060 Phase 3 couche 2 — activation QR hotspot via query param (?fallback=hotspot)
     const fallback = this.route.snapshot.queryParamMap.get('fallback');
@@ -200,8 +216,14 @@ export class TvComponent implements OnInit, OnDestroy {
     // Récupérer le site_id depuis l'API du serveur local (doit être avant startSession pour SaaS)
     this.loadSiteId();
 
-    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage
-    if ((environment as { saasMode?: boolean }).saasMode && !this.tvSyncService.isSlaveMode && this.displayType === 'tv') {
+    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage.
+    // En mode preview (iframe Remote V2), on saute les analytics pour ne pas doubler les compteurs.
+    if (
+      (environment as { saasMode?: boolean }).saasMode
+      && !this.tvSyncService.isSlaveMode
+      && this.displayType === 'tv'
+      && !this.isPreviewMode
+    ) {
       this.recordingState.startRecording(false);
       this.analyticsService.startSession();
     }
@@ -254,12 +276,6 @@ export class TvComponent implements OnInit, OnDestroy {
       console.log('[TV] Options update received via socket:', options);
       this.localOptions = options as LocalOptions;
     });
-
-    // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push.
-    // Pas de Pi → pas de MJPEG. La TV browser capture son <video> actif
-    // (loop ou manual) et push des frames JPEG en data URI dès qu'une
-    // Remote V2 s'abonne. Subscribe-driven : 0 capture si personne ne regarde.
-    this.setupSaasPreviewCapture();
 
     this.socketService.on('screenshot-request', () => {
       console.log('[TV] Screenshot request received');
@@ -350,7 +366,6 @@ export class TvComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy() {
     this.stopPlayerStateProgressTracker();
-    this.teardownSaasPreviewCapture();
 
     if (!this.tvSyncService.isSlaveMode) {
       this.analyticsService.endSession();
@@ -365,95 +380,6 @@ export class TvComponent implements OnInit, OnDestroy {
 
     this.localBroadcastSubscriptions.forEach(sub => sub.unsubscribe());
     this.localBroadcastSubscriptions = [];
-  }
-
-  // =========================================================================
-  // SaaS TV PREVIEW PUSH (ADR-104 — HTTP pull, replaces Socket.IO relay)
-  // =========================================================================
-
-  private saasPreviewTimer: ReturnType<typeof setInterval> | null = null;
-  private saasPreviewCanvas: HTMLCanvasElement | null = null;
-  private saasPreviewInflight = false;
-
-  /**
-   * Kill-switch ADR-104 (incident 429 SaaS du 29 avril 2026).
-   * À 4Hz × 2 directions, le push tv-snapshot saturait `remoteRateLimit`
-   * (60/min/IP) partagé avec `/config` et `/videos/stream`. Désactivé en
-   * attendant la migration vers iframe `?preview=1` (cf. ADR-105 à venir).
-   * NE PAS retirer la fonction (smoke-tv-preview vérifie sa présence).
-   */
-  private static readonly TV_SNAPSHOT_HTTP_PULL_ENABLED = false;
-
-  /** Activated only in SaaS mode + master TV display. */
-  private setupSaasPreviewCapture(): void {
-    if (!TvComponent.TV_SNAPSHOT_HTTP_PULL_ENABLED) return;
-    const isSaas = (environment as { saasMode?: boolean }).saasMode === true;
-    if (!isSaas) return;
-    if (this.tvSyncService.isSlaveMode) return;
-    if (this.displayType !== 'tv') return;
-    // ADR-104 — plus de subscribe via Socket.IO. La TV pousse ses frames
-    // dès qu'elle est master+saas. Le central garde uniquement la dernière
-    // frame (TTL 3s). Si personne ne regarde, c'est un POST /api inutile
-    // mais inoffensif (~50KB toutes les 250ms = 200KB/s, payable).
-    this.startSaasPreviewLoop();
-  }
-
-  private teardownSaasPreviewCapture(): void {
-    this.stopSaasPreviewLoop();
-  }
-
-  private startSaasPreviewLoop(): void {
-    if (this.saasPreviewTimer) return;
-    if (!this.saasPreviewCanvas) {
-      this.saasPreviewCanvas = document.createElement('canvas');
-      this.saasPreviewCanvas.width = 480;
-      this.saasPreviewCanvas.height = 270;
-    }
-    // ~4 fps, suffisant pour un retour visuel régie.
-    this.saasPreviewTimer = setInterval(() => this.emitSaasPreviewFrame(), 250);
-  }
-
-  private stopSaasPreviewLoop(): void {
-    if (this.saasPreviewTimer) {
-      clearInterval(this.saasPreviewTimer);
-      this.saasPreviewTimer = null;
-    }
-  }
-
-  private emitSaasPreviewFrame(): void {
-    const canvas = this.saasPreviewCanvas;
-    if (!canvas || this.saasPreviewInflight) return;
-    const player = this.isManualMode
-      ? this.doubleBufferService.getActiveManualPlayer()
-      : this.doubleBufferService.getActivePlayer();
-    if (!player || player.videoWidth === 0 || player.videoHeight === 0) return;
-
-    const siteId = this.saasConfigService.getSiteId();
-    if (!siteId) return;
-    const apiUrl = (environment as { apiUrl?: string }).apiUrl;
-    if (!apiUrl) return;
-
-    try {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.drawImage(player, 0, 0, canvas.width, canvas.height);
-      const frame = canvas.toDataURL('image/jpeg', 0.6);
-      // ADR-104 — HTTP POST vers /api/saas/:siteId/tv-snapshot. Le central
-      // garde la dernière frame en mémoire (TTL 3s) ; l'admin la pull en
-      // GET ~250ms. Architecture pull, pas de Socket.IO en jeu pour ce flux.
-      // `keepalive: true` assure l'envoi même si la TV navigue ailleurs.
-      this.saasPreviewInflight = true;
-      fetch(`${apiUrl}/saas/${siteId}/tv-snapshot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frame, ts: Date.now() }),
-        keepalive: true,
-      }).catch(() => { /* best-effort, pas critique */ })
-        .finally(() => { this.saasPreviewInflight = false; });
-    } catch (err) {
-      this.saasPreviewInflight = false;
-      console.warn('[TV] SaaS preview capture failed', err);
-    }
   }
 
   // =========================================================================

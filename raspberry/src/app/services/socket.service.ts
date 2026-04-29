@@ -221,10 +221,14 @@ export class SocketService {
   /**
    * In SaaS mode, register with central server on connect/reconnect
    * so the dashboard can track which version each SaaS site runs.
+   *
+   * ADR-105 — `?preview=1` (Remote V2 iframe) ne s'enregistre pas : la tuile
+   * preview ne doit pas être comptée comme un display dans `getSaasClientCount`.
    */
   private emitSaasRegisterIfNeeded(): void {
     if (!(environment as { saasMode?: boolean }).saasMode) return;
     const params = new URLSearchParams(window.location.search);
+    if (params.get('preview') === '1') return;
     const siteId = params.get('site') || localStorage.getItem('neopro_saas_site_id') || '';
     if (!siteId || !this.socket) return;
     // Detect client type: remote tab should not be counted as a screen

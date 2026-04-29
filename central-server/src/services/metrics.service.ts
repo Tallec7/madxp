@@ -282,39 +282,6 @@ const matchSessionsAutoclosedTotal = new Counter({
   registers: [register],
 });
 
-// ============= Métriques TV preview (SPEC-V2-TVMON-01 / ADR-101) =============
-// Frames servies par site (delta entre 2 heartbeats), événements de throttle
-// CPU/temp, et nombre de subscribers actifs. Permet à Grafana d'observer
-// l'usage et la santé du preview MJPEG côté régie pro.
-
-const tvPreviewFramesTotal = new Counter({
-  name: 'neopro_tv_preview_frames_total',
-  help: 'TV preview JPEG frames emitted by the Pi socket-server',
-  labelNames: ['site_id'],
-  registers: [register],
-});
-
-const tvPreviewThrottleTotal = new Counter({
-  name: 'neopro_tv_preview_throttle_total',
-  help: 'TV preview throttle/suspend events (cpu | temp)',
-  labelNames: ['site_id', 'reason'],
-  registers: [register],
-});
-
-const tvPreviewSubscribersGauge = new Gauge({
-  name: 'neopro_tv_preview_subscribers',
-  help: 'Active subscribers on /preview.mjpeg per site (single-subscriber)',
-  labelNames: ['site_id'],
-  registers: [register],
-});
-
-const tvPreviewCurrentFpsGauge = new Gauge({
-  name: 'neopro_tv_preview_current_fps',
-  help: 'Current target FPS per site (10 nominal, 5 throttled, 0 suspended)',
-  labelNames: ['site_id'],
-  registers: [register],
-});
-
 // ============= Métriques Video FTP Audit (PR2.2) =============
 // Détecte les videos.storage_path qui pointent vers un fichier FTP absent
 // (suppression hors API, upload jamais réussi). CRON quotidien 03:00.
@@ -902,21 +869,6 @@ const hotspotPskDecryptErrorsTotal = new Counter({
 // ============= Service Class =============
 
 class MetricsService {
-  /**
-   * SPEC-V2-TVMON-01 / ADR-101 — dernier snapshot tv-preview vu par site, utilisé
-   * pour calculer les deltas avant `Counter.inc()`. Map instance-level :
-   * - cleanup explicite via `resetTvPreviewLastSeen()` (utilisé par les tests).
-   * - taille bornée par le nb de sites actifs (1 entrée / siteId), pas de leak.
-   */
-  private _tvPreviewLastSeen = new Map<string, {
-    framesTotal: number;
-    throttleTotal: { cpu: number; temp: number };
-  }>();
-
-  /** Reset utilisé par les tests pour repartir d'un état neutre. */
-  resetTvPreviewLastSeen(): void {
-    this._tvPreviewLastSeen.clear();
-  }
 
   /**
    * Middleware Express pour collecter les métriques HTTP
@@ -1140,42 +1092,6 @@ class MetricsService {
   /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */
   recordMatchSessionAutoclosed(reason: 'idle' | 'absolute', count = 1): void {
     if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
-  }
-
-  /**
-   * SPEC-V2-TVMON-01 / ADR-101 — snapshot tv-preview reçu via le heartbeat Pi.
-   *
-   * Le Pi envoie des compteurs cumulatifs in-memory (reset au reboot du
-   * socket-server). On calcule les deltas par rapport au dernier snapshot
-   * pour incrémenter les counters Prometheus, et on set les gauges directement.
-   *
-   * Si on détecte un reset (counter < dernier vu), on n'incrémente pas (évite
-   * un faux pic). Acceptable : on perdra au pire ~30 s de frames au reboot.
-   */
-  recordTvPreview(siteId: string, snapshot: {
-    framesTotal: number;
-    throttleTotal: { cpu: number; temp: number };
-    subscribers: number;
-    currentFps: number;
-    suspended: boolean;
-  }): void {
-    if (!siteId || !snapshot) return;
-    const last = this._tvPreviewLastSeen.get(siteId);
-    const frameDelta = last ? Math.max(0, snapshot.framesTotal - last.framesTotal) : 0;
-    const cpuDelta = last ? Math.max(0, snapshot.throttleTotal.cpu - last.throttleTotal.cpu) : 0;
-    const tempDelta = last ? Math.max(0, snapshot.throttleTotal.temp - last.throttleTotal.temp) : 0;
-
-    if (frameDelta > 0) tvPreviewFramesTotal.inc({ site_id: siteId }, frameDelta);
-    if (cpuDelta > 0) tvPreviewThrottleTotal.inc({ site_id: siteId, reason: 'cpu' }, cpuDelta);
-    if (tempDelta > 0) tvPreviewThrottleTotal.inc({ site_id: siteId, reason: 'temp' }, tempDelta);
-
-    tvPreviewSubscribersGauge.set({ site_id: siteId }, snapshot.subscribers);
-    tvPreviewCurrentFpsGauge.set({ site_id: siteId }, snapshot.suspended ? 0 : snapshot.currentFps);
-
-    this._tvPreviewLastSeen.set(siteId, {
-      framesTotal: snapshot.framesTotal,
-      throttleTotal: { cpu: snapshot.throttleTotal.cpu, temp: snapshot.throttleTotal.temp },
-    });
   }
 
   /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */
