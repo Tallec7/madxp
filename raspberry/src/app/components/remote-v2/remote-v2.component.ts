@@ -497,18 +497,35 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
   }
 
+  private lastTvPreviewFrameAt = 0;
+  private saasSubscribeRetryTimer: ReturnType<typeof setInterval> | null = null;
+
   private setupSaasTvPreviewConsumer(): void {
     this.socketService.on<{ frame?: string; ts?: number }>('tv-preview:saas-frame', data => {
       if (data && typeof data.frame === 'string' && data.frame.startsWith('data:image/')) {
         this.tvPreviewUrl.set(data.frame);
         this.tvPreviewThrottled.set(false);
+        this.lastTvPreviewFrameAt = Date.now();
       }
     });
-    // Subscribe à la connexion + à chaque reconnect (au cas où la TV ait raté
-    // le subscribe initial). Le central-server relay TV ↔ Remote du même site.
+    // Race connue (cf. logs DevTools 29/04/2026) : la Remote émet `saas-subscribe`
+    // AVANT que son propre `saas-register` (qui attache les listeners `tv-preview:*`
+    // côté central via `registerSaasRelay`) ait été traité. Le serveur ignore donc
+    // le subscribe initial. Mêmement, la TV peut ne pas encore être dans la room
+    // au premier subscribe. → Retry périodique toléré tant qu'aucune frame n'arrive.
     const subscribe = () => this.socketService.emit('tv-preview:saas-subscribe', {});
     subscribe();
-    this.socketService.on('reconnect', () => subscribe());
+    this.socketService.on('reconnect', () => {
+      this.lastTvPreviewFrameAt = 0;
+      subscribe();
+    });
+    // Retry tant qu'aucune frame n'a été reçue dans les 4 dernières secondes.
+    // Le coût est négligeable (un emit Socket.IO toutes les 3s) ; s'arrête dès
+    // que la TV commence à pousser des frames.
+    this.saasSubscribeRetryTimer = setInterval(() => {
+      const sinceLast = Date.now() - this.lastTvPreviewFrameAt;
+      if (sinceLast > 4000) subscribe();
+    }, 3000);
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
@@ -528,6 +545,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
+    if (this.saasSubscribeRetryTimer) clearInterval(this.saasSubscribeRetryTimer);
     // SPEC-V2-TVMON-01 — désabonner pour que la TV SaaS arrête sa capture.
     if (this.saasConfig.isSaasMode()) {
       try { this.socketService.emit('tv-preview:saas-unsubscribe', {}); } catch { /* socket déjà disconnect */ }
