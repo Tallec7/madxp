@@ -1,3 +1,9 @@
+## [3.278.4](https://github.com/Tallec7/neopro/compare/v3.278.3...v3.278.4) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** \_redirects format strict pour SaaS sub-routes (ADR-071) ([#735](https://github.com/Tallec7/neopro/issues/735)) ([c69252f](https://github.com/Tallec7/neopro/commit/c69252fecb8c4221ff3f7b196c13b079623d2748))
+
 ## [3.278.3](https://github.com/Tallec7/neopro/compare/v3.278.2...v3.278.3) (2026-04-29)
 
 ### Bug Fixes
