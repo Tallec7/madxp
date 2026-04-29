@@ -423,11 +423,16 @@ jobs:
           echo "✅ SaaS deployment verified — SPA fallback works on deep routes"
 
   # ─────────────────────────────────────────────────────────────────────────
-  # ADR-071 phase 2 — Cloudflare Pages (prod)
+  # ADR-071 phase 2 — Cloudflare Pages (prod) — Option A : projet unique
   # ─────────────────────────────────────────────────────────────────────────
+  # Un seul projet Cloudflare Pages héberge dashboard + SaaS (SaaS en
+  # sous-dossier `/saas/`), reproduisant le layout actuel Hostinger. Avantage :
+  # 1 custom domain (`neopro-admin.kalonpartners.bzh`), URLs clients inchangées,
+  # pas de migration NS de zone (un simple CNAME chez Hostinger DNS suffit).
+  #
   # Activé quand `vars.HOSTING == 'cloudflare'` (variable d'environnement
-  # GitHub `production`). Tant que la bascule DNS n'est pas faite, ces jobs
-  # restent inactifs — Hostinger continue de servir prod.
+  # GitHub `production`). Tant que le flag n'est pas flippé, ce job reste
+  # inactif — Hostinger continue de servir prod via les jobs lftp.
   #
   # Pré-requis côté GitHub Environment `production` :
   #   - Variable : HOSTING=cloudflare (flip pour activer)
@@ -435,13 +440,13 @@ jobs:
   #   - Secret   : CLOUDFLARE_ACCOUNT_ID
   #
   # Pré-requis côté Cloudflare :
-  #   - Projet Pages `neopro-dashboard-prod`
-  #   - Projet Pages `neopro-saas-prod`
-  #   - Custom domains attachés (post-migration NS, cf. ADR-071 phase 1)
+  #   - Projet Pages `neopro-frontend-prod` (un seul, dashboard + SaaS combinés)
+  #   - Custom domain `neopro-admin.kalonpartners.bzh` attaché au projet
+  #     (CNAME chez Hostinger DNS → `neopro-frontend-prod.pages.dev`)
   # ─────────────────────────────────────────────────────────────────────────
 
-  deploy-dashboard-cloudflare:
-    name: Deploy Central Dashboard to Cloudflare Pages
+  deploy-frontend-cloudflare:
+    name: Deploy Frontend (dashboard + SaaS) to Cloudflare Pages
     needs: release
     if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING == 'cloudflare'
     runs-on: ubuntu-latest
@@ -466,75 +471,6 @@ jobs:
         run: npm install --no-audit --no-fund
         working-directory: central-dashboard
 
-      - name: Build dashboard (production)
-        run: npm run build:central
-
-      - name: Verify build output
-        run: |
-          set -euo pipefail
-          test -s dist/central-dashboard/browser/index.html
-          test -s dist/central-dashboard/browser/_redirects
-          test -s dist/central-dashboard/browser/_headers
-          echo "✅ Build artefacts présents (index.html + _redirects + _headers)"
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist/central-dashboard/browser --project-name=neopro-dashboard-prod --branch=main
-
-      - name: Verify dashboard deployment
-        run: |
-          set -euo pipefail
-          echo "Waiting 15s for CDN propagation..."
-          sleep 15
-
-          probe() {
-            local url="$1" attempt code
-            for attempt in 1 2 3 4 5; do
-              code=$(curl -sI -o /dev/null -w "%{http_code}" \
-                -A "neopro-ci-verify/1.0" "$url" 2>/dev/null)
-              if [ "$code" != "429" ] && [ "$code" != "000" ]; then
-                echo "$code"; return 0
-              fi
-              sleep $((5 * (2 ** (attempt - 1))))
-            done
-            echo "$code"
-          }
-
-          ROOT_STATUS=$(probe "https://neopro-admin.kalonpartners.bzh/")
-          DEEP_STATUS=$(probe "https://neopro-admin.kalonpartners.bzh/sites/ci-probe")
-          echo "Dashboard root=$ROOT_STATUS deep=/sites/ci-probe=$DEEP_STATUS"
-
-          if [ "$ROOT_STATUS" != "200" ] || [ "$DEEP_STATUS" != "200" ]; then
-            echo "::error::Dashboard Cloudflare Pages deploy failed (root=$ROOT_STATUS deep=$DEEP_STATUS)"
-            exit 1
-          fi
-          echo "✅ Dashboard Cloudflare Pages — racine + SPA fallback OK"
-
-  deploy-saas-cloudflare:
-    name: Deploy SaaS App to Cloudflare Pages
-    needs: [release, deploy-dashboard-cloudflare]
-    if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING == 'cloudflare'
-    runs-on: ubuntu-latest
-    environment: divine-freedom / production
-    permissions:
-      contents: read
-      deployments: write
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Inject version into SaaS app
         run: |
           VERSION="v${{ needs.release.outputs.new_release_version }}"
@@ -542,25 +478,29 @@ jobs:
           export const APP_VERSION = '${VERSION}';" > raspberry/src/app/version.ts
           echo "Injected version: ${VERSION}"
 
-      - name: Build SaaS app (saas configuration)
-        run: npm run build:saas
+      - name: Build dashboard + SaaS combined (prod)
+        # `build:cloudflare:prod` = build:central + build:saas + copie SaaS
+        # dans `dist/central-dashboard/browser/saas/`. Output unifié = ce que
+        # Cloudflare Pages servira sur `neopro-admin.kalonpartners.bzh`.
+        run: npm run build:cloudflare:prod
 
-      - name: Verify SaaS build output
+      - name: Verify build output
         run: |
           set -euo pipefail
-          test -s dist/raspberry/browser/index.html
-          test -s dist/raspberry/browser/_redirects
-          test -s dist/raspberry/browser/_headers
-          echo "✅ SaaS build artefacts présents (index.html + _redirects + _headers)"
+          test -s dist/central-dashboard/browser/index.html
+          test -s dist/central-dashboard/browser/_redirects
+          test -s dist/central-dashboard/browser/_headers
+          test -s dist/central-dashboard/browser/saas/index.html
+          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/, _redirects + _headers)"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist/raspberry/browser --project-name=neopro-saas-prod --branch=main
+          command: pages deploy dist/central-dashboard/browser --project-name=neopro-frontend-prod --branch=main
 
-      - name: Verify SaaS deployment
+      - name: Verify deployment
         run: |
           set -euo pipefail
           echo "Waiting 15s for CDN propagation..."
@@ -579,20 +519,20 @@ jobs:
             echo "$code"
           }
 
-          # NB : URL custom domain SaaS à confirmer post-bascule (ADR-071 phase 1).
-          # Par défaut on probe l'URL `*.pages.dev` du projet — override via
-          # `vars.SAAS_PUBLIC_BASE_URL` quand le custom domain est attaché.
-          BASE="${{ vars.SAAS_PUBLIC_BASE_URL || 'https://neopro-saas-prod.pages.dev' }}"
-          ROOT_STATUS=$(probe "$BASE/")
-          REMOTE_STATUS=$(probe "$BASE/remote?site=ci-probe")
-          TV_STATUS=$(probe "$BASE/tv?site=ci-probe")
-          echo "SaaS base=$BASE root=$ROOT_STATUS remote=$REMOTE_STATUS tv=$TV_STATUS"
+          BASE="https://neopro-admin.kalonpartners.bzh"
+          ROOT=$(probe "$BASE/")
+          DASH_DEEP=$(probe "$BASE/sites/ci-probe")
+          SAAS_ROOT=$(probe "$BASE/saas/")
+          SAAS_REMOTE=$(probe "$BASE/saas/remote?site=ci-probe")
+          SAAS_TV=$(probe "$BASE/saas/tv?site=ci-probe")
+          echo "root=$ROOT dash-deep=$DASH_DEEP saas-root=$SAAS_ROOT saas-remote=$SAAS_REMOTE saas-tv=$SAAS_TV"
 
-          if [ "$ROOT_STATUS" != "200" ] || [ "$REMOTE_STATUS" != "200" ] || [ "$TV_STATUS" != "200" ]; then
-            echo "::error::SaaS Cloudflare Pages deploy failed (root=$ROOT_STATUS remote=$REMOTE_STATUS tv=$TV_STATUS)"
+          if [ "$ROOT" != "200" ] || [ "$DASH_DEEP" != "200" ] \
+             || [ "$SAAS_ROOT" != "200" ] || [ "$SAAS_REMOTE" != "200" ] || [ "$SAAS_TV" != "200" ]; then
+            echo "::error::Cloudflare Pages deploy verify failed"
             exit 1
           fi
-          echo "✅ SaaS Cloudflare Pages — racine + SPA fallback (deep routes) OK"
+          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback OK"
 
   deploy-railway:
     name: Deploy Central Server to Railway
