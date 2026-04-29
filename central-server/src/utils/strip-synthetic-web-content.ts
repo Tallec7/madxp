@@ -1,29 +1,26 @@
 /**
- * ADR-103 Phase 0.5 — Strip synthetic web_page/livestream entries from a config
- * BEFORE the URL resolver runs.
+ * ADR-103 Phase 0.5 / Phase 2 — synthetic web_page/livestream config helpers.
  *
- * The TV-side defensive filter introduced in Phase 0
- * (`raspberry/src/app/services/video-playback.service.ts`) checks `v.path`
- * against the synthetic `web_page-<ts>` / `livestream-<ts>` regex, but at that
- * point `path` has already been transformed to a JWT stream URL by
- * `saas.controller.resolveVideoUrls()` — the synthetic filename is hidden
- * inside the token, never visible as a string. As a result, the TV-side guard
- * never matches, and the rogue entry crashes the DoubleBuffer with
- * MEDIA_ELEMENT_ERROR (NLF SaaS regression observed 2026-04-29 even after
- * Phase 0 deploy v3.266.1).
+ * Phase 0.5 (strip): the TV-side defensive filter
+ * (`raspberry/src/app/services/video-playback.service.ts`) cannot match
+ * synthetic `web_page-<ts>` / `livestream-<ts>` paths once they've been
+ * rewritten to a JWT stream URL by `saas.controller.resolveVideoUrls()`.
+ * `stripSyntheticWebContent` removes them server-side BEFORE URL resolution.
  *
- * Phase 0.5 fixes the filter blind spot at the SOURCE: this helper is invoked
- * server-side, before resolveVideoUrls/buildPublicVideoUrl, when the path is
- * still the raw filename (e.g. `videos/default/web_page-1777392352039`).
+ * Phase 2 (resolve): when the dashboard adds a web_page / livestream video to
+ * a sponsor / loop / category, it currently saves the entry with
+ * `path = synthetic_filename` (no contentType, no externalUrl). Stripping
+ * would lose the entry. Instead, `resolveSyntheticWebContent` looks up the
+ * row in the `videos` table and **rewrites** the entry to the proper
+ * `{ path: external_url, contentType, externalUrl, durationSeconds, name }`
+ * shape so the TV's WebContentService can play it.
  *
- * Stripping policy:
- *   - sponsors[]                  → drop synthetic entries
- *   - timeCategories[].loopVideos[] → drop synthetic entries (loop content only)
- *   - categories[].videos[]       → drop synthetic entries (recursive in subCategories)
+ * Order matters: caller should resolve first (rewrite what we can), then
+ * strip (drop the unresolved leftovers — DB row deleted, mismatched, etc.).
  *
  * Note: the pseudo-category "Web / Live" injected at runtime by
  * `injectWebContentCategory` uses the *external_url* as path (never the
- * synthetic filename), so it is not affected by this filter.
+ * synthetic filename), so it is not affected by either helper.
  */
 
 const SYNTHETIC_WEB_LIVE_RE = /(?:^|\/)(?:web_page|livestream)-\d+$/;
@@ -84,6 +81,153 @@ export interface StrippedConfigSummary {
  * (saas.controller has VideoLike, remote.controller uses unknown[]). The function
  * works structurally on the keys it cares about.
  */
+/**
+ * ADR-103 Phase 2 — resolve synthetic web_page / livestream entries to their
+ * proper runtime shape so they can play in loops and user categories.
+ *
+ * Walks `sponsors[]`, `timeCategories[].loopVideos[]`, and
+ * `categories[].videos[]` (recursive). For each entry whose `path` matches
+ * the synthetic filename pattern AND has a corresponding row in `lookup`,
+ * rewrites it to:
+ *   {
+ *     ...originalEntry,                      // preserve weight, owner, etc.
+ *     path: row.externalUrl,
+ *     contentType: row.contentType,           // 'web_page' | 'livestream'
+ *     externalUrl: row.externalUrl,
+ *     durationSeconds: row.durationSeconds,
+ *     name: originalEntry.name ?? row.name,
+ *     type: row.contentType === 'web_page'
+ *             ? 'text/html'
+ *             : 'application/vnd.apple.mpegurl',
+ *     thumbnailUrl: originalEntry.thumbnailUrl ?? row.thumbnailUrl,
+ *   }
+ *
+ * Entries with synthetic paths NOT in `lookup` are left untouched — the
+ * caller is expected to run `stripSyntheticWebContent` afterwards to drop
+ * those (DB row deleted, lookup race, etc.).
+ *
+ * Returns the list of synthetic filenames seen during the walk so the
+ * caller can do a single batch DB lookup beforehand
+ * (`videoRepository.findWebContentByFilenames`).
+ */
+type WebContentRow = {
+  contentType: 'web_page' | 'livestream';
+  externalUrl: string;
+  durationSeconds: number | null;
+  name: string;
+  thumbnailUrl: string | null;
+};
+
+function syntheticFilename(rawPath: unknown): string | null {
+  if (typeof rawPath !== 'string') return null;
+  const match = rawPath.match(/(?:^|\/)((?:web_page|livestream)-\d+)$/);
+  return match ? match[1] : null;
+}
+
+export function collectSyntheticWebContentFilenames(config: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const visitArr = (arr: unknown): void => {
+    if (!Array.isArray(arr)) return;
+    for (const v of arr) {
+      const f = syntheticFilename((v as { path?: unknown })?.path);
+      if (f) out.add(f);
+    }
+  };
+  visitArr(config.sponsors);
+  if (Array.isArray(config.timeCategories)) {
+    for (const tc of config.timeCategories as Array<{ loopVideos?: unknown }>) {
+      visitArr(tc.loopVideos);
+    }
+  }
+  const visitCats = (cats: unknown): void => {
+    if (!Array.isArray(cats)) return;
+    for (const cat of cats as Array<{ videos?: unknown; subCategories?: unknown }>) {
+      visitArr(cat.videos);
+      visitCats(cat.subCategories);
+    }
+  };
+  visitCats(config.categories);
+  return Array.from(out);
+}
+
+function rewriteEntry(entry: VideoEntryLike, row: WebContentRow): VideoEntryLike {
+  return {
+    ...entry,
+    path: row.externalUrl,
+    contentType: row.contentType,
+    externalUrl: row.externalUrl,
+    durationSeconds: row.durationSeconds,
+    name: (entry as { name?: string }).name ?? row.name,
+    type: row.contentType === 'web_page' ? 'text/html' : 'application/vnd.apple.mpegurl',
+    thumbnailUrl: (entry as { thumbnailUrl?: string | null }).thumbnailUrl ?? row.thumbnailUrl,
+  } as VideoEntryLike;
+}
+
+export interface ResolvedConfigSummary {
+  sponsorsResolved: number;
+  loopVideosResolved: number;
+  categoryVideosResolved: number;
+}
+
+export function resolveSyntheticWebContent(
+  config: Record<string, unknown>,
+  lookup: Map<string, WebContentRow>,
+): ResolvedConfigSummary {
+  const summary: ResolvedConfigSummary = {
+    sponsorsResolved: 0,
+    loopVideosResolved: 0,
+    categoryVideosResolved: 0,
+  };
+  if (lookup.size === 0) return summary;
+
+  const resolveArr = (arr: VideoEntryLike[] | undefined): { out: VideoEntryLike[]; resolved: number } => {
+    if (!Array.isArray(arr)) return { out: [], resolved: 0 };
+    let resolved = 0;
+    const out = arr.map(v => {
+      const f = syntheticFilename(v?.path);
+      if (!f) return v;
+      const row = lookup.get(f);
+      if (!row) return v;
+      resolved++;
+      return rewriteEntry(v, row);
+    });
+    return { out, resolved };
+  };
+
+  if (Array.isArray(config.sponsors)) {
+    const { out, resolved } = resolveArr(config.sponsors as VideoEntryLike[]);
+    config.sponsors = out;
+    summary.sponsorsResolved = resolved;
+  }
+
+  if (Array.isArray(config.timeCategories)) {
+    let total = 0;
+    config.timeCategories = (config.timeCategories as TimeCategoryLike[]).map(tc => {
+      const { out, resolved } = resolveArr(tc.loopVideos);
+      total += resolved;
+      return { ...tc, loopVideos: out };
+    });
+    summary.loopVideosResolved = total;
+  }
+
+  if (Array.isArray(config.categories)) {
+    let total = 0;
+    const walkCats = (cats: CategoryLike[]): CategoryLike[] => cats.map(cat => {
+      const { out, resolved } = resolveArr(cat.videos);
+      total += resolved;
+      return {
+        ...cat,
+        videos: out,
+        subCategories: cat.subCategories ? walkCats(cat.subCategories) : cat.subCategories,
+      };
+    });
+    config.categories = walkCats(config.categories as CategoryLike[]);
+    summary.categoryVideosResolved = total;
+  }
+
+  return summary;
+}
+
 export function stripSyntheticWebContent(config: Record<string, unknown>): StrippedConfigSummary {
   const summary: StrippedConfigSummary = {
     sponsorsRemoved: 0,

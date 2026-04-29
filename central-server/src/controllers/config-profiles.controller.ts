@@ -162,8 +162,11 @@ export const createProfile = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validationError.message });
     }
 
-    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
-    if (rejectIfSyntheticWebContent(res, value.configuration)) return;
+    // ADR-103 Phase 2 — synthetic web_page/livestream paths are now ACCEPTED
+    // on save. Backend resolves them at read time (saas/remote controllers
+    // call resolveSyntheticWebContent before sending to TV/Remote). Phase 0.5
+    // strip remains as a safety net for entries whose DB row got deleted.
+    void rejectIfSyntheticWebContent;
 
     const site = await configHistoryRepository.findSiteBasic(siteId);
     if (!site) {
@@ -221,8 +224,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validationError.message });
     }
 
-    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
-    if (value.configuration && rejectIfSyntheticWebContent(res, value.configuration)) return;
+    // ADR-103 Phase 2 — synthetic paths now resolved server-side at read time.
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
@@ -296,8 +298,11 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
       return res.status(400).json({ error: validationError.message });
     }
 
-    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
-    if (rejectIfSyntheticWebContent(res, value.configuration)) return;
+    // ADR-103 Phase 2 — synthetic web_page/livestream paths are now ACCEPTED
+    // on save. Backend resolves them at read time (saas/remote controllers
+    // call resolveSyntheticWebContent before sending to TV/Remote). Phase 0.5
+    // strip remains as a safety net for entries whose DB row got deleted.
+    void rejectIfSyntheticWebContent;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {

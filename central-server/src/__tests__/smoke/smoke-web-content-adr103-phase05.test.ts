@@ -73,26 +73,26 @@ describe('Smoke — ADR-103 Phase 0.5 server-side guards', () => {
 
   // ------------ config-profiles.controller ------------
 
-  it('config-profiles.controller — refuses save with synthetic web_page/livestream paths', () => {
+  // ------------ config-profiles.controller — Phase 2 lifted the 400 reject ------------
+
+  it('config-profiles.controller — Phase 2 ACCEPTS synthetic paths on save (resolved at read)', () => {
     const src = read('central-server/src/controllers/config-profiles.controller.ts');
+    // The helper is still imported (used as type/legacy) but no longer enforces 400
     expect(/from '\.\.\/utils\/strip-synthetic-web-content'/.test(src)).toBe(true);
-    expect(/findSyntheticWebContentPaths/.test(src)).toBe(true);
-    expect(/SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN/.test(src)).toBe(true);
-    // The 3 mutating endpoints must call the rejection helper
-    const rejectCalls = (src.match(/rejectIfSyntheticWebContent\(/g) || []).length;
-    // helper definition + 3 endpoints (createProfile, updateProfile, updateProfileConfiguration)
-    expect(rejectCalls).toBeGreaterThanOrEqual(4);
+    // ADR-103 Phase 2 marker — the comment that documents why the reject was lifted
+    expect(/ADR-103 Phase 2/.test(src)).toBe(true);
+    // The reject helper exists but is NOT called at the entry of mutating endpoints
+    const callsInEndpoints = (src.match(/^\s+if \(rejectIfSyntheticWebContent/gm) || []).length;
+    expect(callsInEndpoints).toBe(0);
   });
 
-  // ------------ config-history.controller (PUT /api/sites/:id/config — SaaS direct save) ------------
+  // ------------ config-history.controller — Phase 2 lifted the 400 reject ------------
 
-  it('config-history.controller — saveConfigDirect refuses synthetic paths', () => {
+  it('config-history.controller — Phase 2 ACCEPTS synthetic paths on saveConfigDirect', () => {
     const src = read('central-server/src/controllers/config-history.controller.ts');
-    expect(/from '\.\.\/utils\/strip-synthetic-web-content'/.test(src)).toBe(true);
-    expect(/SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN/.test(src)).toBe(true);
-    // The synthetic-path scan must occur in saveConfigDirect (PUT /api/sites/:id/config)
-    const saveStart = src.indexOf('export const saveConfigDirect');
-    const saveBlock = src.slice(saveStart, saveStart + 3500);
-    expect(/isSyntheticWebContentPath/.test(saveBlock)).toBe(true);
+    // ADR-103 Phase 2 marker
+    expect(/ADR-103 Phase 2/.test(src)).toBe(true);
+    // No active 400 reject for SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN
+    expect(/return res\.status\(400\)[^\n]*SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN/.test(src)).toBe(false);
   });
 });
