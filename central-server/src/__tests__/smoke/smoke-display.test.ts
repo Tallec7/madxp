@@ -2857,9 +2857,13 @@ describe('ADR-034 synchronized manual video reveal', () => {
   });
 
   it('emitLoopState MUST include manualVideoVisible: false', () => {
-    // After extraction, emitLoopState is public in tv-sync.service.ts
-    const emitIdx = tvContent.indexOf('emitLoopState(videoIndex: number');
-    const emitMethod = tvContent.slice(emitIdx, emitIdx + 500);
+    // After extraction, emitLoopState method is in tv-sync.service.ts
+    // (concatenated into tvContent in beforeAll). Phase 1.5b made the
+    // signature multi-line — match the method DEFINITION (whitespace-led)
+    // rather than the call sites at the top of the file.
+    const defMatch = tvContent.match(/\n\s+emitLoopState\(([\s\S]*?)\n  \}/);
+    expect(defMatch).not.toBeNull();
+    const emitMethod = defMatch?.[0] ?? '';
     expect({
       hasVisibleFalse: /manualVideoVisible:\s*false/.test(emitMethod),
     }).toEqual({

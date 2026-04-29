@@ -1,3 +1,9 @@
+# [3.274.0](https://github.com/Tallec7/neopro/compare/v3.273.0...v3.274.0) (2026-04-29)
+
+### Features
+
+- **remote:** master/slave sync of web/live content for dual-display — ADR-103 Phase 1.5b ([#723](https://github.com/Tallec7/neopro/issues/723)) ([98189d4](https://github.com/Tallec7/neopro/commit/98189d436f8adcc8721f710a08998799f83f5fdb)), closes [#722](https://github.com/Tallec7/neopro/issues/722)
+
 # [3.273.0](https://github.com/Tallec7/neopro/compare/v3.272.0...v3.273.0) (2026-04-29)
 
 ### Features
