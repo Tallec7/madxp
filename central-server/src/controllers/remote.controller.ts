@@ -28,7 +28,7 @@ import metricsService from '../services/metrics.service';
 import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
-import { injectWebContentCategory } from '../utils/inject-web-content-category';
+import { injectWebContentCategoryEx, registerWebContentInTimeCategories } from '../utils/inject-web-content-category';
 import { stripSyntheticWebContent } from '../utils/strip-synthetic-web-content';
 
 // Lazy import to avoid circular dependency
@@ -280,15 +280,21 @@ export async function getRemoteState(req: Request, res: Response) {
         logger.warn('Remote config: stripped synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
       }
 
-      // ADR-088 — Auto-inject pseudo-category "Web / Live" (shared helper)
-      const baseCategories = await injectWebContentCategory(
-        ((localConfig.categories as unknown[]) || []) as Parameters<typeof injectWebContentCategory>[0],
+      // ADR-088 + ADR-103 Phase 0.6 — pseudo-category "Web / Live" + register
+      // its id in every timeCategory.categoryIds[] so Remote V1 navigation
+      // (per-phase filter) can actually display it.
+      const { categories: baseCategories, hasWebContent } = await injectWebContentCategoryEx(
+        ((localConfig.categories as unknown[]) || []) as Parameters<typeof injectWebContentCategoryEx>[0],
         siteId,
+      );
+      const baseTimeCategories = registerWebContentInTimeCategories(
+        ((localConfig.timeCategories as unknown[]) || []) as Parameters<typeof registerWebContentInTimeCategories>[0],
+        hasWebContent,
       );
       response.config = {
         sponsors: (localConfig.sponsors as unknown[]) || [],
         categories: baseCategories,
-        timeCategories: (localConfig.timeCategories as unknown[]) || [],
+        timeCategories: baseTimeCategories,
         liveScoreEnabled: (localConfig.liveScoreEnabled as boolean) ?? false,
         scoreOverlay: localConfig.scoreOverlay || null,
         watermark: localConfig.watermark || null,

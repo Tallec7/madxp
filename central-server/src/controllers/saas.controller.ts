@@ -22,7 +22,7 @@ import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-met
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
-import { injectWebContentCategory } from '../utils/inject-web-content-category';
+import { injectWebContentCategoryEx, registerWebContentInTimeCategories } from '../utils/inject-web-content-category';
 import { stripSyntheticWebContent } from '../utils/strip-synthetic-web-content';
 import logger from '../config/logger';
 
@@ -300,9 +300,17 @@ export async function getSaasConfig(req: Request, res: Response) {
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
     // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
-    const categoriesWithWeb = await injectWebContentCategory(
-      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+    // ADR-103 Phase 0.6 — also register the pseudo-category id in every
+    // timeCategory.categoryIds[] so the Remote V1 (which filters categories
+    // per phase) actually displays it. Without this, the pseudo-category sits
+    // in `categories[]` but is never reachable from the navigation flow.
+    const { categories: categoriesWithWeb, hasWebContent } = await injectWebContentCategoryEx(
+      resolvedCategories as Parameters<typeof injectWebContentCategoryEx>[0],
       siteId,
+    );
+    const timeCategoriesWithWeb = registerWebContentInTimeCategories(
+      resolvedTimeCategories as Parameters<typeof registerWebContentInTimeCategories>[0],
+      hasWebContent,
     );
 
     const resolvedConfig = {
@@ -311,7 +319,7 @@ export async function getSaasConfig(req: Request, res: Response) {
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
       categories: categoriesWithWeb,
-      timeCategories: resolvedTimeCategories,
+      timeCategories: timeCategoriesWithWeb,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
@@ -464,10 +472,14 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
-    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
-    const categoriesWithWeb = await injectWebContentCategory(
-      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+    // ADR-089 + ADR-103 Phase 0.6 — pseudo-category + register in timeCategories
+    const { categories: categoriesWithWeb, hasWebContent } = await injectWebContentCategoryEx(
+      resolvedCategories as Parameters<typeof injectWebContentCategoryEx>[0],
       siteId,
+    );
+    const timeCategoriesWithWeb = registerWebContentInTimeCategories(
+      resolvedTimeCategories as Parameters<typeof registerWebContentInTimeCategories>[0],
+      hasWebContent,
     );
 
     const resolvedConfig = {
@@ -476,7 +488,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
       categories: categoriesWithWeb,
-      timeCategories: resolvedTimeCategories,
+      timeCategories: timeCategoriesWithWeb,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,

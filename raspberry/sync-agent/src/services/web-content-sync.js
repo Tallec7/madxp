@@ -99,6 +99,31 @@ function mergeWebContent(categories, entries) {
 }
 
 /**
+ * ADR-103 Phase 0.6 — register the web-content pseudo-category in every
+ * timeCategory.categoryIds[] so the Remote V1 (which filters categories per
+ * phase) actually displays "Web / Live". Idempotent. No-op when no entries.
+ *
+ * Pure function — returns a new timeCategories array.
+ */
+function registerWebContentInTimeCategories(timeCategories, hasWebContent) {
+  if (!Array.isArray(timeCategories)) return [];
+  if (!hasWebContent) {
+    // Strip the id if it leaked from a previous sync (entries got removed cloud-side)
+    return timeCategories.map((tc) => {
+      if (!tc || !Array.isArray(tc.categoryIds)) return tc;
+      if (!tc.categoryIds.includes(WEB_CATEGORY_ID)) return tc;
+      return { ...tc, categoryIds: tc.categoryIds.filter((id) => id !== WEB_CATEGORY_ID) };
+    });
+  }
+  return timeCategories.map((tc) => {
+    if (!tc) return tc;
+    const ids = Array.isArray(tc.categoryIds) ? tc.categoryIds : [];
+    if (ids.includes(WEB_CATEGORY_ID)) return tc;
+    return { ...tc, categoryIds: [...ids, WEB_CATEGORY_ID] };
+  });
+}
+
+/**
  * Main entry: fetch web_page / livestream entries from cloud and merge
  * into the local configuration.json pseudo-category.
  *
@@ -140,15 +165,20 @@ async function syncFromCloud({ centralUrl, siteId, apiKey, configPath } = {}) {
     return { action: 'skipped', detail: `read config failed: ${err.message}` };
   }
 
-  const before = Array.isArray(localConfig.categories) ? localConfig.categories : [];
-  const merged = mergeWebContent(before, entries);
+  const beforeCategories = Array.isArray(localConfig.categories) ? localConfig.categories : [];
+  const beforeTimeCategories = Array.isArray(localConfig.timeCategories) ? localConfig.timeCategories : [];
 
-  const changed = JSON.stringify(before) !== JSON.stringify(merged);
-  if (!changed) {
+  const mergedCategories = mergeWebContent(beforeCategories, entries);
+  const mergedTimeCategories = registerWebContentInTimeCategories(beforeTimeCategories, entries.length > 0);
+
+  const categoriesChanged = JSON.stringify(beforeCategories) !== JSON.stringify(mergedCategories);
+  const timeCategoriesChanged = JSON.stringify(beforeTimeCategories) !== JSON.stringify(mergedTimeCategories);
+  if (!categoriesChanged && !timeCategoriesChanged) {
     return { action: 'noop', count: entries.length };
   }
 
-  localConfig.categories = merged;
+  localConfig.categories = mergedCategories;
+  localConfig.timeCategories = mergedTimeCategories;
 
   try {
     await atomicWriteJson(resolvedPath, localConfig);
@@ -160,11 +190,12 @@ async function syncFromCloud({ centralUrl, siteId, apiKey, configPath } = {}) {
   logger.info('web-content-sync: configuration.json updated', {
     action,
     entries: entries.length,
+    timeCategoriesPatched: timeCategoriesChanged,
   });
   return { action, count: entries.length };
 }
 
 module.exports = {
   syncFromCloud,
-  _internal: { mergeWebContent, WEB_CATEGORY_ID },
+  _internal: { mergeWebContent, registerWebContentInTimeCategories, WEB_CATEGORY_ID },
 };

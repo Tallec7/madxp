@@ -64,9 +64,9 @@ describe('Smoke — ADR-103 Phase 0.5 server-side guards', () => {
     const src = read('central-server/src/controllers/remote.controller.ts');
     expect(/from '\.\.\/utils\/strip-synthetic-web-content'/.test(src)).toBe(true);
     expect(/stripSyntheticWebContent\(/.test(src)).toBe(true);
-    // Strip happens inside the PIN-gated block (before injectWebContentCategory)
+    // Strip happens inside the PIN-gated block (before injectWebContentCategory[Ex])
     const stripIdx = src.indexOf('stripSyntheticWebContent(');
-    const injectIdx = src.indexOf('injectWebContentCategory(', stripIdx);
+    const injectIdx = src.search(/injectWebContentCategory(?:Ex)?\(/);
     expect(stripIdx).toBeGreaterThan(0);
     expect(injectIdx).toBeGreaterThan(stripIdx);
   });
