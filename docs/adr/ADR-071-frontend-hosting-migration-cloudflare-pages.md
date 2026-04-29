@@ -73,27 +73,47 @@ Conserver le DNS `neopro-admin.kalonpartners.bzh` via CNAME vers Pages, bascule 
 - Preview deployments PR activés
 - E2E nightly (`.github/workflows/e2e-staging.yml`) ciblent staging Cloudflare
 
-### Phase 2 — Scaffolding prod (✅ livrée 2026-04-29)
+### Phase 2 — Scaffolding prod (✅ livrée 2026-04-29 — **Option A : projet unique**)
 
-- `raspberry/cloudflare/_redirects` + `_headers` créés (équivalent SaaS).
-- `angular.json` : configurations `saas` + `saas-staging` recopient `cloudflare/_*` dans le build output.
-- `.github/workflows/release.yml` : deux nouveaux jobs `deploy-dashboard-cloudflare` + `deploy-saas-cloudflare` (action `cloudflare/wrangler-action@v3`, `pages deploy`).
+Décision Option A : un seul projet Cloudflare Pages héberge dashboard + SaaS,
+SaaS en sous-dossier `/saas/` (reproduit le layout Hostinger actuel). Avantages :
+
+- 1 seul custom domain `neopro-admin.kalonpartners.bzh` (URLs clients inchangées).
+- Pas de migration NS de la zone `kalonpartners.bzh` (qui héberge aussi le site
+  WordPress Hostinger + le FTP vidéos — hors scope, ne bouge pas). Un simple
+  CNAME chez Hostinger DNS suffit pour le sous-domaine.
+- Moins de secrets, moins de jobs CI, moins de surfaces de panne.
+
+Livré :
+
+- `raspberry/cloudflare/_redirects` + `_headers` créés (utilisés en standalone
+  pour les PR previews du SaaS seul ; le `_redirects` du dashboard couvre
+  déjà `/saas/* → /saas/index.html`).
+- `angular.json` : configurations `saas` + `saas-staging` recopient
+  `cloudflare/_*` dans le build output.
+- `package.json` : nouveau script `build:cloudflare:prod` (build dashboard prod
+  + SaaS prod + copie SaaS dans `dist/central-dashboard/browser/saas/`).
+- `.github/workflows/release.yml` : un nouveau job `deploy-frontend-cloudflare`
+  (action `cloudflare/wrangler-action@v3`, `pages deploy`).
 - **Feature flag** : `vars.HOSTING` (GitHub Environment `production`).
   - `HOSTING != 'cloudflare'` (défaut) → jobs Hostinger lftp actifs (régime actuel).
-  - `HOSTING == 'cloudflare'` → jobs Cloudflare actifs, jobs Hostinger skippés.
+  - `HOSTING == 'cloudflare'` → job Cloudflare actif, jobs Hostinger skippés.
   - Permet de basculer/rollback en flippant la variable, sans patch CI.
-- Override SaaS public URL (custom domain post-NS migration) : `vars.SAAS_PUBLIC_BASE_URL`.
 
 ### Phase 3 — Bascule DNS prod (à planifier)
 
 Pré-requis humains :
 
-1. Migration NS de la zone `kalonpartners.bzh` vers Cloudflare.
-2. Création des projets Cloudflare Pages `neopro-dashboard-prod` + `neopro-saas-prod`.
-3. Custom domains `neopro-admin.kalonpartners.bzh` (et URL SaaS) attachés aux projets.
-4. Secrets GitHub `production` : `CLOUDFLARE_API_TOKEN` (scope Pages:Edit), `CLOUDFLARE_ACCOUNT_ID`.
-5. Variable GitHub `production` : `HOSTING=cloudflare` (active la bascule).
-6. Soak window 7 jours minimum avant phase 4.
+1. Création projet Cloudflare Pages `neopro-frontend-prod` (un seul).
+2. Account ID + API Token (scope Pages:Edit) côté Cloudflare.
+3. Secrets GitHub `production` : `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
+4. Custom domain `neopro-admin.kalonpartners.bzh` attaché au projet sur Cloudflare.
+5. **Modifier le DNS chez Hostinger** : remplacer le record actuel de
+   `neopro-admin` par un `CNAME` vers `neopro-frontend-prod.pages.dev`. La zone
+   `kalonpartners.bzh` reste chez Hostinger (WordPress + FTP vidéos intacts).
+6. Variable GitHub `production` : `HOSTING=cloudflare` (active la bascule à la
+   prochaine release).
+7. Soak window 7 jours minimum avant phase 4.
 
 ### Phase 4 — Décommission Hostinger frontend (post-soak)
 
