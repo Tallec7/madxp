@@ -1,3 +1,9 @@
+## [3.269.1](https://github.com/Tallec7/neopro/compare/v3.269.0...v3.269.1) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** skip cache-bust query on data: URLs (SaaS frame path) ([#711](https://github.com/Tallec7/neopro/issues/711)) ([464e00d](https://github.com/Tallec7/neopro/commit/464e00d600e7f472990e73d8b6038d164edf18b3))
+
 # [3.269.0](https://github.com/Tallec7/neopro/compare/v3.268.2...v3.269.0) (2026-04-29)
 
 ### Features
