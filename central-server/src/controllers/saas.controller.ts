@@ -23,6 +23,7 @@ import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-varia
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
 import { injectWebContentCategory } from '../utils/inject-web-content-category';
+import { stripSyntheticWebContent } from '../utils/strip-synthetic-web-content';
 import logger from '../config/logger';
 
 interface VideoLike {
@@ -255,6 +256,16 @@ export async function getSaasConfig(req: Request, res: Response) {
       logger.warn('SaaS config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, error: err });
     }
 
+    // ADR-103 Phase 0.5 — strip synthetic web_page/livestream entries BEFORE
+    // URL resolution. Phase 0 TV-side filter checks `path` after resolveVideoUrls
+    // has rewritten it into a JWT stream URL — the synthetic filename is then
+    // hidden inside the token, so the regex never matches. Stripping here at
+    // the source is the only filet that survives URL resolution.
+    const stripSummary = stripSyntheticWebContent(configuration as Record<string, unknown>);
+    if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
+      logger.warn('SaaS config: stripped synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
+    }
+
     // Résoudre toutes les URLs vidéo (config vide = site fraîchement créé, retourner les defaults)
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
@@ -413,6 +424,12 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       }
     } catch (err) {
       logger.warn('SaaS profile config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, profileId, error: err });
+    }
+
+    // ADR-103 Phase 0.5 — strip synthetic web_page/livestream entries BEFORE URL resolution.
+    const stripSummary = stripSyntheticWebContent(configuration as Record<string, unknown>);
+    if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
+      logger.warn('SaaS profile config: stripped synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, profileId, ...stripSummary });
     }
 
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
