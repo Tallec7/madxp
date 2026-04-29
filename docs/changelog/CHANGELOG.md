@@ -1,3 +1,9 @@
+## [3.278.3](https://github.com/Tallec7/neopro/compare/v3.278.2...v3.278.3) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** doc HOSTING var doit être repository-level, pas env-level (ADR-071) ([#734](https://github.com/Tallec7/neopro/issues/734)) ([efd7407](https://github.com/Tallec7/neopro/commit/efd74074a0d5d42048b226d79ac7127861ad76af)), closes [#2055](https://github.com/Tallec7/neopro/issues/2055) [#2056](https://github.com/Tallec7/neopro/issues/2056)
+
 ## [3.278.2](https://github.com/Tallec7/neopro/compare/v3.278.1...v3.278.2) (2026-04-29)
 
 ### Bug Fixes
