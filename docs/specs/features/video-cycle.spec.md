@@ -3,7 +3,7 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
-> **ADR liés** : ADR-100 (alias `storage_path AS url` dans `findVideoById`)
+> **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`)
 > **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression
 
@@ -56,14 +56,14 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Upload ready | Dashboard bibliothèque : badge `✅ Prête` dans les minutes suivant l'upload |
-| Upload failed | Dashboard : badge `❌ Erreur vérification` + bouton Retry |
-| Replace correct | Vidéo replacée joue le nouveau fichier (pas de 404 FTP) |
-| Cascade DELETE | Après suppression : 0 variante, 0 déploiement actif, fichier FTP absent |
-| Audit FTP | Grafana/log CRON `video-ftp-audit.task` : compteur `neopro_video_ftp_orphans_total` |
-| Club quota | Upload au-delà du quota → 403 avec message "Quota atteint pour votre abonnement" |
+| Règle           | Comment on vérifie                                                                  |
+| --------------- | ----------------------------------------------------------------------------------- |
+| Upload ready    | Dashboard bibliothèque : badge `✅ Prête` dans les minutes suivant l'upload         |
+| Upload failed   | Dashboard : badge `❌ Erreur vérification` + bouton Retry                           |
+| Replace correct | Vidéo replacée joue le nouveau fichier (pas de 404 FTP)                             |
+| Cascade DELETE  | Après suppression : 0 variante, 0 déploiement actif, fichier FTP absent             |
+| Audit FTP       | Grafana/log CRON `video-ftp-audit.task` : compteur `neopro_video_ftp_orphans_total` |
+| Club quota      | Upload au-delà du quota → 403 avec message "Quota atteint pour votre abonnement"    |
 
 ## Cas d'edge connus
 

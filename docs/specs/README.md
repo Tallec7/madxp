@@ -82,7 +82,7 @@ docs/specs/
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------ | -------------- |
 | [features/match-sessions](features/match-sessions.spec.md)     | ADR-088, ADR-093, ADR-097                                                                         | Live   | 2026-04-29     |
 | [features/saas-mode](features/saas-mode.spec.md)               | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102, ADR-105 | Live   | 2026-04-29     |
-| [features/video-cycle](features/video-cycle.spec.md)           | ADR-100                                                                                           | Live   | 2026-04-29     |
+| [features/video-cycle](features/video-cycle.spec.md)           | ADR-022, ADR-100                                                                                  | Live   | 2026-04-29     |
 | [features/sponsors](features/sponsors.spec.md)                 | ADR-035, ADR-093, ADR-097                                                                         | Live   | 2026-04-29     |
 | [features/web-live-content](features/web-live-content.spec.md) | ADR-089, ADR-103                                                                                  | Live   | 2026-04-29     |
 | [features/hotspot-psk](features/hotspot-psk.spec.md)           | ADR-073, ADR-074, ADR-076                                                                         | Live   | 2026-04-27     |
