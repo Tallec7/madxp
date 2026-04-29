@@ -74,6 +74,12 @@ export class WebContentService {
    * `playInLoop()`, cleared by `teardown()`.
    */
   private _loopOnComplete: (() => void) | null = null;
+  /**
+   * ADR-103 Phase 1.5 — Hls instance for the current livestream. Lazy-loaded
+   * when an `.m3u8` URL is requested AND the browser lacks native HLS
+   * support (Chromium kiosk, Firefox). Cleared by teardown.
+   */
+  private _hlsInstance: import('hls.js').default | null = null;
 
   constructor(
     private readonly doubleBufferService: DoubleBufferVideoService,
@@ -178,9 +184,7 @@ export class WebContentService {
     this.hideIframe();
 
     console.log('[WebContent] showing livestream', payload.url);
-    player.src = payload.url;
     player.muted = true;
-    player.load();
 
     const onLoaded = (): void => {
       this.clearLoadTimeout();
@@ -213,6 +217,11 @@ export class WebContentService {
       player.removeEventListener('loadeddata', onLoaded);
       player.removeEventListener('ended', onEnded);
       player.removeEventListener('error', onError);
+      // Phase 1.5 — destroy the hls.js instance attached to this play, if any.
+      if (this._hlsInstance) {
+        try { this._hlsInstance.destroy(); } catch { /* noop */ }
+        this._hlsInstance = null;
+      }
     };
 
     this._loadTimeoutTimer = setTimeout(() => {
@@ -220,9 +229,84 @@ export class WebContentService {
       this.failAndReturn('livestream load timeout');
     }, WebContentService.LOAD_TIMEOUT_MS);
 
-    player.play().catch((err) => {
-      console.error('[WebContent] livestream play() rejected', err);
-      this.failAndReturn('livestream play rejected');
+    // ADR-103 Phase 1.5 — pick the right loader for the source:
+    //   - .m3u8 with native browser support (Safari + iOS) → set src directly.
+    //   - .m3u8 without native support (Chromium kiosk, Firefox) → lazy-load
+    //     hls.js and attach it to the player. hls.js fires its own error
+    //     events that we route to failAndReturn.
+    //   - non-HLS (mp4, webm, etc.) → set src directly, native HTML5 path.
+    const isHls = /\.m3u8(\?|$|#)/i.test(payload.url);
+    const nativeHls = player.canPlayType('application/vnd.apple.mpegurl') !== '';
+
+    if (isHls && !nativeHls) {
+      void this.attachHlsAndPlay(player, payload.url);
+    } else {
+      player.src = payload.url;
+      player.load();
+      player.play().catch((err) => {
+        console.error('[WebContent] livestream play() rejected', err);
+        this.failAndReturn('livestream play rejected');
+      });
+    }
+  }
+
+  /**
+   * ADR-103 Phase 1.5 — lazy-load hls.js and attach it to the livestream
+   * player. Lazy import keeps hls.js out of the main bundle (~500KB) so a
+   * site that never plays a livestream never downloads it.
+   */
+  private async attachHlsAndPlay(player: HTMLVideoElement, url: string): Promise<void> {
+    let HlsCtor: typeof import('hls.js').default | null = null;
+    try {
+      const mod = await import('hls.js');
+      HlsCtor = mod.default ?? null;
+    } catch (err) {
+      console.error('[WebContent] failed to load hls.js dynamically', err);
+      this.failAndReturn('hls.js dynamic import failed');
+      return;
+    }
+
+    if (!HlsCtor || !HlsCtor.isSupported()) {
+      console.error('[WebContent] hls.js not supported on this platform');
+      this.failAndReturn('hls.js not supported');
+      return;
+    }
+
+    // If we were torn down between import() resolution and now, abort.
+    if (!this._isActive || this._livestreamPlayer !== player) {
+      console.log('[WebContent] hls.js attach aborted — service no longer active');
+      return;
+    }
+
+    // Destroy any previous instance defensively (should be cleared by teardown).
+    if (this._hlsInstance) {
+      try { this._hlsInstance.destroy(); } catch { /* noop */ }
+      this._hlsInstance = null;
+    }
+
+    const hls = new HlsCtor({
+      // Conservative defaults; we don't want hls.js to enable controls or
+      // mess with mute. Auto-quality based on first available level.
+      enableWorker: true,
+      // Treat manifest fetch errors as fatal so we hit failAndReturn fast.
+      manifestLoadingTimeOut: 5000,
+      manifestLoadingMaxRetry: 1,
+    });
+    this._hlsInstance = hls;
+    hls.on(HlsCtor.Events.ERROR, (_event, data) => {
+      if (data?.fatal) {
+        console.error('[WebContent] hls.js fatal error', data);
+        this.failAndReturn('hls.js fatal error');
+      }
+    });
+    hls.loadSource(url);
+    hls.attachMedia(player);
+    // The MEDIA_ATTACHED event flow gives us a chance to start playback.
+    hls.on(HlsCtor.Events.MANIFEST_PARSED, () => {
+      player.play().catch((err) => {
+        console.error('[WebContent] livestream play() rejected (post-hls)', err);
+        this.failAndReturn('livestream play rejected (post-hls)');
+      });
     });
   }
 
@@ -397,6 +481,13 @@ export class WebContentService {
     this.clearRevealDelay();
     this.detachIframeListeners();
     this.detachLivestreamListeners();
+    // ADR-103 Phase 1.5 — defensive hls.js cleanup in case the cleanup
+    // closure wasn't installed (early failure path between import resolution
+    // and listener attach).
+    if (this._hlsInstance) {
+      try { this._hlsInstance.destroy(); } catch { /* noop */ }
+      this._hlsInstance = null;
+    }
     // ADR-103 Phase 2.5 — capture a freeze of the underlying loop player
     // BEFORE clearing the iframe / livestream so the close transition has
     // a frame to fade into instead of a brief blank gap.
