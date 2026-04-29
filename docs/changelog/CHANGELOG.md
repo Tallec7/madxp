@@ -1,3 +1,9 @@
+## [3.268.1](https://github.com/Tallec7/neopro/compare/v3.268.0...v3.268.1) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** CORS + crossorigin pour permettre canvas export en SaaS ([#707](https://github.com/Tallec7/neopro/issues/707)) ([9ae6062](https://github.com/Tallec7/neopro/commit/9ae6062fa67a004fc22d0ef5327859b4529a83b4))
+
 # [3.268.0](https://github.com/Tallec7/neopro/compare/v3.267.3...v3.268.0) (2026-04-29)
 
 ### Bug Fixes
