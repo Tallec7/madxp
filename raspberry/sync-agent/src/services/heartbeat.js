@@ -45,16 +45,6 @@ function fetchLocalPlayerState() {
 }
 
 /**
- * SPEC-V2-TVMON-01 / ADR-101 — récupère le snapshot tv-preview depuis le
- * socket-server local. Renvoie null si le service est absent (Pi 4 / GPU
- * fallback / version socket-server pre-P0).
- * @returns {Promise<object|null>}
- */
-function fetchLocalTvPreviewMetrics() {
-  return localSocket.request('get-tv-preview-metrics', 2000);
-}
-
-/**
  * Send a single heartbeat to the central server.
  * @param {object} agent - NeoproSyncAgent instance
  */
@@ -117,14 +107,6 @@ async function sendHeartbeat(agent) {
       const hdmiStatus = await fetchLocalHdmiState();
       const connectedClients = await fetchLocalConnectedClients();
 
-      // Fetch tv-preview snapshot (SPEC-V2-TVMON-01 / ADR-101). Null si désactivé.
-      let tvPreview = null;
-      try {
-        tvPreview = await fetchLocalTvPreviewMetrics();
-      } catch {
-        // Service absent ou socket-server pre-P0 — non-fatal
-      }
-
       // Detect orphan systemd services (crash-looping non-legitimate neopro-* units)
       let orphanServices = null;
       try {
@@ -162,7 +144,6 @@ async function sendHeartbeat(agent) {
         dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
         orphanServices: orphanServices || null,
         failedServices: failedServices || null,
-        tvPreview,
       });
 
       // Enregistrer le succès du heartbeat

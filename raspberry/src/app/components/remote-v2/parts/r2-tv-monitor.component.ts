@@ -2,12 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   Input,
-  OnDestroy,
   OnChanges,
   SimpleChanges,
+  inject,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PiConfigVideoEntry } from '../../../interfaces/video.interface';
 import { R2IconComponent } from '../icons/r2-icon.component';
 
@@ -20,13 +21,14 @@ import { R2IconComponent } from '../icons/r2-icon.component';
  * - MANUAL    : lecture ponctuelle d'une vidéo hors boucle (playingVideo).
  * - IDLE      : ni boucle ni lecture manuelle.
  *
- * V2 du composant (ADR-101 / SPEC-V2-TVMON-01) — preview vidéo réel via MJPEG :
- * - Si `previewUrl` fourni (le parent l'aura reçu via Socket.IO `tv-preview:capability`),
- *   on charge un <img> multipart/x-mixed-replace.
- * - Si l'image fail (onerror) ou ne charge pas, on bascule sur le placeholder visuel
- *   d'origine. Backoff exponentiel sur la reconnexion (1s, 2s, 4s, 8s, cap 30s).
- * - Sur les Pi 4 / SaaS / demo / GPU fallback, le parent ne fournit pas `previewUrl`
- *   et le composant reste en placeholder pur (rétro-compat).
+ * ADR-105 — preview vidéo réel via iframe local-first :
+ * - `previewUrl` = même URL que la TV (avec `?preview=1` pour mute audio +
+ *   skip analytics + skip socket-register côté TV). Construite par le parent
+ *   `RemoteV2Component` à partir de `window.location.origin`.
+ * - 1 iframe = 1 rendu au niveau page ; même staff visualise la même TV.
+ * - Pointer-events désactivés (preview-only, aucune interaction).
+ * - Pas de transport cloud ni de canvas/MJPEG : la fiabilité vient du fait
+ *   qu'on ne fait que charger la même page web.
  */
 @Component({
   selector: 'app-r2-tv-monitor',
@@ -40,36 +42,38 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      border: 0;
+      pointer-events: none;
       opacity: 0;
       transition: opacity 200ms ease;
-      pointer-events: none;
     }
-    .r2-tv-monitor-stream.is-healthy { opacity: 1; }
+    .r2-tv-monitor-stream.is-loaded { opacity: 1; }
     .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
   `],
   template: `
-    <section class="r2-tv-monitor" [class.is-manual]="playingVideo" [class.is-idle]="isIdle" [class.is-streaming]="streamHealthy()">
+    <section class="r2-tv-monitor" [class.is-manual]="playingVideo" [class.is-idle]="isIdle" [class.is-streaming]="streamLoaded()">
       <div class="r2-tv-monitor-frame">
         <span class="r2-tv-monitor-scanline"></span>
         <span class="r2-tv-monitor-status" *ngIf="!isIdle">
           <span class="r2-tv-monitor-dot"></span>
           {{ playingVideo ? 'MANUAL' : 'LIVE' }}
-          <span *ngIf="throttled()" class="r2-tv-monitor-throttle" title="Stream ralenti côté Pi">⚠️</span>
         </span>
         <span class="r2-tv-monitor-status r2-tv-monitor-status--idle" *ngIf="isIdle">
           IDLE
         </span>
-        <img
-          *ngIf="streamSrc()"
+        <iframe
+          *ngIf="safeUrl()"
           class="r2-tv-monitor-stream"
-          [class.is-healthy]="streamHealthy()"
-          [src]="streamSrc()"
-          (load)="onImgLoad()"
-          (error)="onImgError()"
-          alt=""
-          aria-hidden="true" />
-        <div class="r2-tv-monitor-content" [class.is-hidden-by-stream]="streamHealthy()">
+          [class.is-loaded]="streamLoaded()"
+          [src]="safeUrl()"
+          (load)="onIframeLoad()"
+          sandbox="allow-scripts allow-same-origin"
+          loading="lazy"
+          aria-hidden="true"
+          tabindex="-1"
+          title="Preview TV"
+        ></iframe>
+        <div class="r2-tv-monitor-content" [class.is-hidden-by-stream]="streamLoaded()">
           <span class="r2-tv-monitor-icon" aria-hidden="true">
             <app-r2-icon name="play" [size]="32"></app-r2-icon>
           </span>
@@ -83,7 +87,9 @@ import { R2IconComponent } from '../icons/r2-icon.component';
     </section>
   `,
 })
-export class R2TvMonitorComponent implements OnChanges, OnDestroy {
+export class R2TvMonitorComponent implements OnChanges {
+  private readonly sanitizer = inject(DomSanitizer);
+
   /** Vidéo lue en lecture ponctuelle (mode manuel). Override la boucle live. */
   @Input() playingVideo: PiConfigVideoEntry | null = null;
 
@@ -97,48 +103,25 @@ export class R2TvMonitorComponent implements OnChanges, OnDestroy {
   @Input() isNeutralLoop = false;
 
   /**
-   * URL du flux MJPEG (cf. ADR-101). Fournie par le parent via l'event
-   * Socket.IO `tv-preview:capability`. `null` ⇒ Pi 4 / SaaS / demo / GPU fallback,
-   * on reste en placeholder visuel.
+   * URL absolue de la page TV à embarquer dans l'iframe (avec `?preview=1`).
+   * `null` ⇒ demo / état non chargé → placeholder visuel d'origine.
    */
   @Input() previewUrl: string | null = null;
 
-  /** Indique si une dégradation côté Pi a été signalée (`tv-preview:throttled`). */
-  @Input() throttledNotice = false;
-
-  /** État interne — true quand l'<img> a au moins une frame chargée. */
-  readonly streamHealthy = signal(false);
-  readonly streamSrc = signal<string | null>(null);
-  readonly throttled = signal(false);
-
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private backoffMs = 1000;
-  private static readonly MAX_BACKOFF_MS = 30000;
+  readonly safeUrl = signal<SafeResourceUrl | null>(null);
+  readonly streamLoaded = signal(false);
 
   ngOnChanges(changes: SimpleChanges): void {
     if ('previewUrl' in changes) {
-      this.cancelReconnect();
-      this.streamHealthy.set(false);
-      this.backoffMs = 1000;
-      this.streamSrc.set(this.previewUrl ? this.bust(this.previewUrl) : null);
-    }
-    if ('throttledNotice' in changes) {
-      this.throttled.set(!!this.throttledNotice);
+      this.streamLoaded.set(false);
+      this.safeUrl.set(
+        this.previewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl) : null,
+      );
     }
   }
 
-  ngOnDestroy(): void {
-    this.cancelReconnect();
-  }
-
-  onImgLoad(): void {
-    this.streamHealthy.set(true);
-    this.backoffMs = 1000;
-  }
-
-  onImgError(): void {
-    this.streamHealthy.set(false);
-    this.scheduleReconnect();
+  onIframeLoad(): void {
+    this.streamLoaded.set(true);
   }
 
   get isIdle(): boolean {
@@ -156,31 +139,5 @@ export class R2TvMonitorComponent implements OnChanges, OnDestroy {
     if (this.playingVideo) return this.playingVideo.name || 'Vidéo';
     if (this.isNeutralLoop) return 'Rotation par défaut';
     return this.loopVideoName || '—';
-  }
-
-  private scheduleReconnect(): void {
-    if (!this.previewUrl) return;
-    this.cancelReconnect();
-    const delay = this.backoffMs;
-    this.backoffMs = Math.min(this.backoffMs * 2, R2TvMonitorComponent.MAX_BACKOFF_MS);
-    this.reconnectTimer = setTimeout(() => {
-      if (!this.previewUrl) return;
-      this.streamSrc.set(this.bust(this.previewUrl));
-    }, delay);
-  }
-
-  private cancelReconnect(): void {
-    if (this.reconnectTimer !== null) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-  }
-
-  private bust(url: string): string {
-    // data: URLs (SaaS frame path) are unique per frame and would corrupt
-    // the base64 payload if a query string were appended.
-    if (url.startsWith('data:')) return url;
-    const sep = url.includes('?') ? '&' : '?';
-    return `${url}${sep}_t=${Date.now()}`;
   }
 }

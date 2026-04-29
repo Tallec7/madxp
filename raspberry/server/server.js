@@ -24,7 +24,6 @@ const HdmiService = require('./services/hdmi.service');
 const AuthService = require('./services/auth.service');
 const ProfilePinService = require('./services/profile-pin.service');
 const HotspotService = require('./services/hotspot.service');
-const TvPreviewService = require('./services/tv-preview.service');
 
 const stateService = new StateService();
 const licenseService = new LicenseService({ licenseCachePath: LICENSE_CACHE_PATH });
@@ -42,22 +41,6 @@ const analyticsBuffer = new BufferService({
 const hdmiService = new HdmiService();
 const profilePinService = new ProfilePinService({ profilesDir: PROFILES_DIR });
 const hotspotService = new HotspotService({ configPath: CONFIG_PATH });
-
-// TV preview (SPEC-V2-TVMON-01 / ADR-101). Le flag `tvPreviewEnabled` est lu depuis
-// configuration.json (settings.tvPreviewEnabled). Pi 4 / SaaS / demo → false.
-function readTvPreviewEnabled() {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    return cfg?.settings?.tvPreviewEnabled === true;
-  } catch {
-    return false;
-  }
-}
-const tvPreviewService = new TvPreviewService({
-  enabled: readTvPreviewEnabled(),
-  // onThrottle injecté plus bas, après création de `io`
-  gpuFallbackFile: process.env.GPU_DECODE_FALLBACK_FILE || '/var/lib/neopro/gpu-fallback.flag',
-});
 
 // ---------------------------------------------------------------------------
 // Express + HTTP + Socket.IO
@@ -143,7 +126,6 @@ const createHdmiRouter = require('./routes/hdmi');
 const createAuthRouter = require('./routes/auth');
 const createProfilePinRouter = require('./routes/profile-pin');
 const createHotspotRouter = require('./routes/hotspot');
-const createTvPreviewRouter = require('./routes/tv-preview');
 
 app.use(createHealthRouter({ io }));
 app.use(createLicenseRouter({ licenseService }));
@@ -152,19 +134,12 @@ app.use(createHdmiRouter({ hdmiService }));
 app.use(createAuthRouter({ authService }));
 app.use(createProfilePinRouter({ profilePinService }));
 app.use(createHotspotRouter({ hotspotService }));
-app.use(createTvPreviewRouter({ tvPreviewService, getAuthToken: getSocketAuthToken }));
 
 // ---------------------------------------------------------------------------
 // Socket.IO handlers
 // ---------------------------------------------------------------------------
 const registerSocketHandlers = require('./socket/handlers');
-registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH, hdmiService, tvPreviewService });
-
-// Wire throttle notifications → broadcast Socket.IO event tv-preview:throttled.
-// Doit être branché APRÈS `io` est créé (cf. SPEC-V2-TVMON-01 §5).
-tvPreviewService.setThrottleHandler((reason, info) => {
-  io.emit('tv-preview:throttled', { reason, ...info });
-});
+registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH, hdmiService });
 
 // ---------------------------------------------------------------------------
 // Start server

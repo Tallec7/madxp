@@ -56,21 +56,6 @@ import { R2IconComponent } from './icons/r2-icon.component';
 type Phase = 'before' | 'during' | 'after';
 type Loop = 'neutral' | 'before' | 'during' | 'after';
 
-/**
- * SPEC-V2-TVMON-01 / ADR-102 — payload du capability event Pi → Remote.
- * `version: "1.0"` = MJPEG. `version: "2.0"` (futur) = WebRTC. Une Remote V1
- * ignorera silencieusement toute version majeure inconnue.
- */
-interface TvPreviewCapability {
-  available: boolean;
-  transport: 'mjpeg' | 'webrtc';
-  url?: string;
-  resolution?: { w: number; h: number };
-  fps?: number;
-  version?: string;
-  /** Token HMAC TTL 5 min (cloud distant). Présent uniquement si secret Pi-side. */
-  token?: string;
-}
 type SheetType =
   | null
   | 'gear'
@@ -184,24 +169,17 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   private playingTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
-   * SPEC-V2-TVMON-01 / ADR-102 — URL absolue du flux MJPEG (cf. capability event Pi).
-   * `null` ⇒ aucun preview disponible (Pi 4 / SaaS / demo / GPU fallback / version
-   * non supportée). Le composant `<app-r2-tv-monitor>` reste en placeholder.
+   * ADR-105 — Preview TV via iframe local-first.
+   * URL pointant sur la même page TV (`?preview=1` mute audio + skip analytics
+   * + skip socket register) que le TV diffuse. Construit une fois au mount.
+   * `null` si on ne peut pas déterminer l'URL (mode demo ou état non chargé).
    */
   readonly tvPreviewUrl = signal<string | null>(null);
-  readonly tvPreviewThrottled = signal(false);
 
-  /**
-   * ADR-103 — Mutex single-subscriber MJPEG.
-   * `/preview.mjpeg` répond HTTP 429 si un client est déjà branché. Un seul
-   * `<img>` consumer doit être actif dans le DOM. Le layout actif décide :
-   *   - `desktop-pro` (régie PC C) → `<app-r2-tv-monitor>` consomme
-   *   - autres layouts → `<app-r2-hero>` mini-thumb consomme
-   */
   get isProLayout(): boolean {
     return this.prefsService.prefs.layoutDesktop === 'pro';
   }
-  /** URL injectée dans le hero (mini-thumb) hors layout pro. */
+  /** URL injectée dans le hero (mini-thumb) hors layout pro — iframe scaled CSS. */
   heroPreviewUrl(): string | null {
     return this.isProLayout ? null : this.tvPreviewUrl();
   }
@@ -420,25 +398,11 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       data => this.handlePlayerState(data),
     );
 
-    // SPEC-V2-TVMON-01 / ADR-102 — TV preview capability negotiation.
-    // Le Pi annonce ses capacités à chaque (re)connexion. Une `version` majeure
-    // inconnue → on ignore et reste sur le placeholder (aucun stream).
-    this.socketService.on<TvPreviewCapability>('tv-preview:capability', data => {
-      this.handleTvPreviewCapability(data);
-    });
-    this.socketService.on<{ reason: string; suspended?: boolean; newFps?: number }>(
-      'tv-preview:throttled',
-      data => {
-        const isSuspended = !!data?.suspended;
-        const isThrottled = data?.reason === 'cpu' || data?.reason === 'temp';
-        this.tvPreviewThrottled.set(isThrottled || isSuspended);
-        if (isSuspended) {
-          // Le Pi a coupé la capture. La capability n'arrivera pas tout de suite,
-          // donc on retire l'URL pour que le composant repasse en placeholder.
-          this.tvPreviewUrl.set(null);
-        }
-      },
-    );
+    // ADR-105 — Preview TV via iframe local-first.
+    // L'iframe pointe sur la même page TV que celle servie par le Pi/SaaS,
+    // avec `?preview=1` pour mute audio + skip analytics + skip socket register.
+    // Pas de transport cloud, pas de canvas/MJPEG : un seul rendu par browser tab.
+    this.tvPreviewUrl.set(this.computeTvPreviewIframeUrl());
 
     // Expansion par défaut : catégorie alignée sur la phase
     this.setDefaultExpanded();
@@ -488,62 +452,26 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (this.saasConfig.isSaasMode()) {
       this.currentProfileId = this.saasConfig.getSiteId() || null;
     }
-
-    // SPEC-V2-TVMON-01 / ADR-101 — SaaS TV preview push.
-    // En SaaS, pas de Pi → la TV browser nous envoie des frames JPEG en data
-    // URI via `tv-preview:saas-frame` (relayé par le central-server). On
-    // s'abonne explicitement pour ne pas faire bosser la TV pour rien.
-    if (this.saasConfig.isSaasMode()) {
-      this.setupSaasTvPreviewConsumer();
-    }
   }
 
-  private saasTvPollTimer: ReturnType<typeof setInterval> | null = null;
-  private saasTvPollInflight = false;
-
   /**
-   * ADR-104 — Architecture HTTP pull pour le mini-aperçu TV "À l'antenne".
+   * ADR-105 — URL iframe pour la tuile preview TV.
    *
-   * Le relay Socket.IO `tv-preview:saas-frame` était fragile (race
-   * subscribe→register, kick serveur post-deploy Railway, dépendance Redis
-   * adapter cross-replica). Remplacé par un polling HTTP simple : le central
-   * garde la dernière frame TV en mémoire, l'admin la pull en GET ~250ms.
+   * Le staff (Pi local ou SaaS) charge la Remote V2 sur le même domaine que la TV.
+   * On construit donc une URL same-origin pointant sur la racine TV avec
+   * `?preview=1` (mute audio + skip analytics + skip socket-register côté TV).
+   * En mode SaaS, on injecte `&site=<uuid>` pour garder le scope.
    */
-  /**
-   * Kill-switch ADR-104 (incident 429 SaaS du 29 avril 2026).
-   * Aligné avec le flag côté TV (`TvComponent.TV_SNAPSHOT_HTTP_PULL_ENABLED`).
-   * Sans push TV, polling GET inutile + consomme le quota `remoteRateLimit`.
-   * NE PAS retirer la fonction (smoke-tv-preview vérifie sa présence).
-   */
-  private static readonly TV_SNAPSHOT_HTTP_PULL_ENABLED = false;
-
-  private setupSaasTvPreviewConsumer(): void {
-    if (!RemoteV2Component.TV_SNAPSHOT_HTTP_PULL_ENABLED) return;
-    const apiBase = (environment as { apiUrl?: string }).apiUrl;
-    const siteId = this.saasConfig.getSiteId();
-    if (!apiBase || !siteId) return;
-    const url = `${apiBase}/saas/${siteId}/tv-snapshot`;
-
-    const tick = () => {
-      if (this.saasTvPollInflight) return;
-      this.saasTvPollInflight = true;
-      this.http.get<{ frame?: string; ts?: number }>(url, { observe: 'response' }).subscribe({
-        next: resp => {
-          this.saasTvPollInflight = false;
-          // 204 = pas de frame récente côté serveur (TV pas encore connectée
-          // ou TTL 3s expiré). On laisse le placeholder afficher.
-          if (resp.status === 204) return;
-          const body = resp.body;
-          if (body?.frame && body.frame.startsWith('data:image/')) {
-            this.tvPreviewUrl.set(body.frame);
-            this.tvPreviewThrottled.set(false);
-          }
-        },
-        error: () => { this.saasTvPollInflight = false; },
-      });
-    };
-    tick();
-    this.saasTvPollTimer = setInterval(tick, 250);
+  private computeTvPreviewIframeUrl(): string | null {
+    if (typeof window === 'undefined') return null;
+    if (this.demoConfigService.isDemoMode()) return null;
+    const params = new URLSearchParams();
+    params.set('preview', '1');
+    if (this.saasConfig.isSaasMode()) {
+      const siteId = this.saasConfig.getSiteId();
+      if (siteId) params.set('site', siteId);
+    }
+    return `${window.location.origin}/?${params.toString()}`;
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
@@ -563,8 +491,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
-    // ADR-104 — arrêter le polling HTTP de la mini-thumb TV.
-    if (this.saasTvPollTimer) clearInterval(this.saasTvPollTimer);
   }
 
   private recentVideosStorageKey(): string {
@@ -610,58 +536,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * a une vidéo forcée en cours, on marque l'id en erreur et on ramène l'UI
    * à l'état "boucle" (sinon le bouton reste figé surligné).
    */
-  /**
-   * SPEC-V2-TVMON-01 / ADR-102 — réception du capability event MJPEG.
-   * `available: false` (Pi 4, SaaS, demo, GPU fallback) → on retire l'URL.
-   * Une `version` majeure inconnue (ex. "2.0" pour WebRTC futur) → ignore et reste
-   * sur le placeholder pour ne pas casser les vieilles Remote.
-   */
-  private handleTvPreviewCapability(cap: TvPreviewCapability | null | undefined): void {
-    // Mode SaaS : pas de MJPEG côté Pi — on consomme `tv-preview:saas-frame`
-    // (data: URLs poussées par la TV browser via central). Une capability
-    // `available: false` ne doit pas effacer la frame courante.
-    if (this.saasConfig.isSaasMode()) return;
-    if (!cap || !cap.available) {
-      this.tvPreviewUrl.set(null);
-      this.tvPreviewThrottled.set(false);
-      return;
-    }
-    const major = (cap.version || '').split('.')[0];
-    if (major !== '1') {
-      this.tvPreviewUrl.set(null);
-      return;
-    }
-    if (cap.transport !== 'mjpeg') {
-      // V1 ne sait que parler MJPEG. Toute autre valeur → ignore (forward-compat).
-      this.tvPreviewUrl.set(null);
-      return;
-    }
-    // Le Pi peut renvoyer une URL relative (`/preview.mjpeg`) ou absolue.
-    // Si relative, on la résout via le hostname Socket.IO connu (LAN).
-    let url = this.resolveTvPreviewUrl(cap.url || '/preview.mjpeg');
-    if (cap.token) {
-      const sep = url.includes('?') ? '&' : '?';
-      url = `${url}${sep}token=${encodeURIComponent(cap.token)}`;
-    }
-    this.tvPreviewUrl.set(url);
-    this.tvPreviewThrottled.set(false);
-  }
-
-  private resolveTvPreviewUrl(rawUrl: string): string {
-    if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
-    // En LAN, la Remote est accédée via le même hôte que le socket-server. On
-    // utilise window.location.protocol/host. Si le scheme est `https` mais que
-    // le Pi n'expose que http (cas LAN typique), le navigateur bloquera mixed
-    // content — on accepte le fallback placeholder dans ce cas (onerror).
-    try {
-      const loc = window.location;
-      const base = `${loc.protocol}//${loc.host}`;
-      return new URL(rawUrl, base).toString();
-    } catch {
-      return rawUrl;
-    }
-  }
-
   private handlePlayerState(data: { lastError?: string | null }): void {
     if (data?.lastError !== 'play_error') return;
     const failedId = this.playingVideoId;
