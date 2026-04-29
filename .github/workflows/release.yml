@@ -517,7 +517,13 @@ jobs:
           probe() {
             local url="$1" attempt code
             for attempt in 1 2 3 4 5; do
-              code=$(curl -sI -o /dev/null -w "%{http_code}" \
+              # -sL (GET) au lieu de -sIL (HEAD+Location) car Cloudflare retourne
+              # 308 sur HEAD pour `/saas/<route>` (auto-redirect vers slash final
+              # à cause des route stubs ADR-071), et `-IL` ne suit pas toujours
+              # le redirect en CI selon la version curl du runner. `-sL -o /dev/null`
+              # fait un GET complet et `%{http_code}` reporte le statut FINAL après
+              # follow.
+              code=$(curl -sL -o /dev/null -w "%{http_code}" \
                 -A "neopro-ci-verify/1.0" "$url" 2>/dev/null)
               if [ "$code" != "429" ] && [ "$code" != "000" ]; then
                 echo "$code"; return 0
@@ -548,7 +554,7 @@ jobs:
           assert_saas_html() {
             local url="$1"
             local body
-            body=$(curl -s -A "neopro-ci-verify/1.0" "$url")
+            body=$(curl -sL -A "neopro-ci-verify/1.0" "$url")
             if ! echo "$body" | grep -q 'base href="/saas/"'; then
               echo "::error::$url ne sert PAS le HTML SaaS (base href != /saas/) — routing CF cassé"
               echo "$body" | grep -oE '<title>[^<]*</title>|<base[^>]*>' | head -3 || true
