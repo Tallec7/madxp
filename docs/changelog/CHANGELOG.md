@@ -1,3 +1,9 @@
+## [3.278.8](https://github.com/Tallec7/neopro/compare/v3.278.7...v3.278.8) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** SPEC sections obligatoires + verify curl -sL (ADR-071) ([#741](https://github.com/Tallec7/neopro/issues/741)) ([100e8d2](https://github.com/Tallec7/neopro/commit/100e8d274f7356a705c5661bc39be4156f654def)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
 ## [3.278.7](https://github.com/Tallec7/neopro/compare/v3.278.6...v3.278.7) (2026-04-29)
 
 ### Bug Fixes
