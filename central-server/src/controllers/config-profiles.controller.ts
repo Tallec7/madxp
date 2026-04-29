@@ -17,6 +17,7 @@ import { siteRepository } from '../repositories/site.repository';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
+import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
 
 // --------------------------------------------------------------------------
 // Validation schemas
@@ -46,6 +47,64 @@ const updateProfileConfigurationSchema = Joi.object({
   configuration: Joi.object().required(),
   mode: Joi.string().valid('replace', 'merge').optional(),
 });
+
+/**
+ * ADR-103 Phase 0.5 — scan a config for synthetic web_page/livestream entries
+ * (path = `web_page-<ts>` / `livestream-<ts>`) which would crash the TV when
+ * routed through the MP4 pipeline. Returns the offending paths grouped by
+ * location so the caller can build a precise 400 error.
+ */
+function findSyntheticWebContentPaths(config: unknown): string[] {
+  if (!config || typeof config !== 'object') return [];
+  const c = config as Record<string, unknown>;
+  const out: string[] = [];
+
+  const scanArr = (arr: unknown): void => {
+    if (!Array.isArray(arr)) return;
+    for (const v of arr) {
+      const path = (v as { path?: unknown })?.path;
+      if (isSyntheticWebContentPath(path)) out.push(String(path));
+    }
+  };
+
+  scanArr(c.sponsors);
+
+  if (Array.isArray(c.timeCategories)) {
+    for (const tc of c.timeCategories as Array<{ loopVideos?: unknown }>) {
+      scanArr(tc.loopVideos);
+    }
+  }
+
+  const scanCats = (cats: unknown): void => {
+    if (!Array.isArray(cats)) return;
+    for (const cat of cats as Array<{ videos?: unknown; subCategories?: unknown }>) {
+      scanArr(cat.videos);
+      scanCats(cat.subCategories);
+    }
+  };
+  scanCats(c.categories);
+
+  return out;
+}
+
+/**
+ * Build the standard 400 response for synthetic web/livestream paths in a
+ * config save. Returns true if the response was sent.
+ */
+function rejectIfSyntheticWebContent(res: Response, configuration: unknown): boolean {
+  const offenders = findSyntheticWebContentPaths(configuration);
+  if (offenders.length === 0) return false;
+  res.status(400).json({
+    error:
+      "Cette configuration contient des entrées web_page / livestream avec un path synthétique " +
+      "(ex: 'web_page-<timestamp>'), qui font crasher le lecteur TV. " +
+      "Utilisez la pseudo-catégorie 'Web / Live' (auto-générée) pour lancer ces contenus depuis la télécommande, " +
+      "ou laissez-les hors de la boucle vidéo. Voir ADR-089 / ADR-103.",
+    code: 'SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN',
+    offendingPaths: offenders.slice(0, 10),
+  });
+  return true;
+}
 
 // --------------------------------------------------------------------------
 // GET /api/sites/:siteId/profiles
@@ -103,6 +162,9 @@ export const createProfile = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validationError.message });
     }
 
+    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
+    if (rejectIfSyntheticWebContent(res, value.configuration)) return;
+
     const site = await configHistoryRepository.findSiteBasic(siteId);
     if (!site) {
       return res.status(404).json({ error: 'Site non trouve' });
@@ -158,6 +220,9 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     if (validationError) {
       return res.status(400).json({ error: validationError.message });
     }
+
+    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
+    if (value.configuration && rejectIfSyntheticWebContent(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
@@ -230,6 +295,9 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
     if (validationError) {
       return res.status(400).json({ error: validationError.message });
     }
+
+    // ADR-103 Phase 0.5 — refuse configs with synthetic web_page/livestream paths
+    if (rejectIfSyntheticWebContent(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {

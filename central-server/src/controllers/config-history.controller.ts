@@ -6,6 +6,7 @@ import socketService from '../services/socket.service';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
 import { configProfileRepository } from '../repositories/config-profile.repository';
+import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
 
 /**
  * Calcule les différences entre deux configurations
@@ -409,6 +410,40 @@ export const saveConfigDirect = async (req: AuthRequest, res: Response) => {
     const { configuration, mode } = req.body;
     if (!configuration || typeof configuration !== 'object') {
       return res.status(400).json({ error: 'Configuration invalide' });
+    }
+
+    // ADR-103 Phase 0.5 — refuse synthetic web_page/livestream paths
+    const syntheticOffenders: string[] = [];
+    const scan = (arr: unknown): void => {
+      if (!Array.isArray(arr)) return;
+      for (const v of arr) {
+        const p = (v as { path?: unknown })?.path;
+        if (isSyntheticWebContentPath(p)) syntheticOffenders.push(String(p));
+      }
+    };
+    const cfg = configuration as Record<string, unknown>;
+    scan(cfg.sponsors);
+    if (Array.isArray(cfg.timeCategories)) {
+      for (const tc of cfg.timeCategories as Array<{ loopVideos?: unknown }>) scan(tc.loopVideos);
+    }
+    const scanCats = (cats: unknown): void => {
+      if (!Array.isArray(cats)) return;
+      for (const cat of cats as Array<{ videos?: unknown; subCategories?: unknown }>) {
+        scan(cat.videos);
+        scanCats(cat.subCategories);
+      }
+    };
+    scanCats(cfg.categories);
+    if (syntheticOffenders.length > 0) {
+      return res.status(400).json({
+        error:
+          "Cette configuration contient des entrées web_page / livestream avec un path synthétique " +
+          "(ex: 'web_page-<timestamp>'), qui font crasher le lecteur TV. " +
+          "Utilisez la pseudo-catégorie 'Web / Live' (auto-générée) pour lancer ces contenus depuis la télécommande, " +
+          "ou laissez-les hors de la boucle vidéo. Voir ADR-089 / ADR-103.",
+        code: 'SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN',
+        offendingPaths: syntheticOffenders.slice(0, 10),
+      });
     }
 
     if (mode === 'merge') {

@@ -29,6 +29,7 @@ import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
 import { injectWebContentCategory } from '../utils/inject-web-content-category';
+import { stripSyntheticWebContent } from '../utils/strip-synthetic-web-content';
 
 // Lazy import to avoid circular dependency
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -270,6 +271,15 @@ export async function getRemoteState(req: Request, res: Response) {
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
     if (!pinRequired || pinVerified) {
+      // ADR-103 Phase 0.5 — strip synthetic web_page/livestream entries from
+      // sponsors/loopVideos/categories.videos at the source, before they leak
+      // to the Remote and end up in the loop (Phase 0 TV-side guard is bypassed
+      // by URL resolution downstream).
+      const stripSummary = stripSyntheticWebContent(localConfig as Record<string, unknown>);
+      if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
+        logger.warn('Remote config: stripped synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
+      }
+
       // ADR-088 — Auto-inject pseudo-category "Web / Live" (shared helper)
       const baseCategories = await injectWebContentCategory(
         ((localConfig.categories as unknown[]) || []) as Parameters<typeof injectWebContentCategory>[0],
