@@ -55,7 +55,15 @@ export interface VideoPlayEvent {
    * - 'loop_advance' : avancement normal dans la boucle
    * - 'browser_close' : fermeture du navigateur
    */
-  interruption_reason?: 'manual_action' | 'profile_switch' | 'video_error' | 'hdmi_lost' | 'loop_advance' | 'browser_close';
+  interruption_reason?:
+    | 'manual_action'
+    | 'profile_switch'
+    | 'video_error'
+    | 'hdmi_lost'
+    | 'loop_advance'
+    | 'browser_close'
+    /** ADR-103 Phase 1 — web_page / livestream load timed out (>1s) or threw an error */
+    | 'web_load_failed';
 }
 
 /**

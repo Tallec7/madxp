@@ -657,11 +657,13 @@ export class RemoteComponent implements OnInit, OnDestroy {
     const target = this.getCommandTarget();
     const commandId = this.newCommandId();
 
-    // ADR-089 — Dispatch web_page / livestream as dedicated command types
+    // ADR-089 / ADR-103 Phase 1 — dispatch web_page / livestream as dedicated commands.
+    // Pass name + durationMs so the WebContentPlayer can display + auto-close.
     if (video.contentType === 'web_page' && video.externalUrl) {
       const data = {
         url: video.externalUrl,
         durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
+        name: video.name,
       };
       this.localBroadcast.emitCommand({ type: 'web-page', data, commandId, ...(target ? { target } : {}) });
       this.socketService.emit('command', { type: 'web-page', data, commandId, ...(target ? { target } : {}) });
@@ -672,7 +674,12 @@ export class RemoteComponent implements OnInit, OnDestroy {
       return;
     }
     if (video.contentType === 'livestream' && video.externalUrl) {
-      const data: { url: string; mimeType: string | null } = { url: video.externalUrl, mimeType: null };
+      const data = {
+        url: video.externalUrl,
+        mimeType: null,
+        durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
+        name: video.name,
+      };
       this.localBroadcast.emitCommand({ type: 'livestream', data, commandId, ...(target ? { target } : {}) });
       this.socketService.emit('command', { type: 'livestream', data, commandId, ...(target ? { target } : {}) });
       this.addToRecentVideos(video);
