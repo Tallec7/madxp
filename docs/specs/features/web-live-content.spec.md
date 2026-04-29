@@ -1,7 +1,7 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 / 3 v2 livrées) — Phase 4 en attente
+> **Statut** : ✅ Clôturé — toutes phases (0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 / 3 v2 / 4) livrées
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
 > **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`, `smoke-web-content-adr103-phase15a.test.ts`, `smoke-web-content-adr103-phase15b.test.ts`, `smoke-web-content-adr103-phase3.test.ts`

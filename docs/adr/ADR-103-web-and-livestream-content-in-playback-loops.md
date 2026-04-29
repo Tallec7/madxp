@@ -1,7 +1,8 @@
 # ADR-103: Web pages & livestreams in playback loops
 
 **Date** : 2026-04-28
-**Statut** : Proposé
+**Clôture** : 2026-04-29 (Phase 4 — supervision)
+**Statut** : Implémenté & Clôturé
 **Décideurs** : Daisy (PO), Lead Dev
 **Remplace** : —
 **Étend** : ADR-089 (Web Content Phase 1 & 2 — manuel uniquement)
@@ -362,3 +363,42 @@ Si Phase 1 (manuel) s'avère instable : revert ADR-089 → ADR-089 reste mode ma
   - [central-server/src/controllers/web-content.controller.ts](../../central-server/src/controllers/web-content.controller.ts)
   - [central-server/src/controllers/saas.controller.ts](../../central-server/src/controllers/saas.controller.ts)
   - [central-server/src/repositories/video.repository.ts](../../central-server/src/repositories/video.repository.ts)
+
+---
+
+## Clôture (2026-04-29 — Phase 4)
+
+Toutes les phases sont livrées. ADR clôturé.
+
+| Phase  | Scope                                                                                  | Livré le | PR                                                                  |
+| ------ | -------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| 0      | Filets défensifs TV + cleanup DB                                                       | 28/04    | [#699](https://github.com/Tallec7/neopro/pull/699)                  |
+| 0.5    | Strip serveur + reject 400                                                             | 28/04    | [#701](https://github.com/Tallec7/neopro/pull/701)                  |
+| 0.6    | Visibilité Web/Live dans Remote                                                        | 28/04    | [#703](https://github.com/Tallec7/neopro/pull/703)                  |
+| 1      | WebContentService manuel + 1s timeout + analytics `web_load_failed`                    | 28/04    | [#705](https://github.com/Tallec7/neopro/pull/705)                  |
+| 2a     | Backend résout les paths synthétiques au read + drop 400 reject                        | 28/04    | [#710](https://github.com/Tallec7/neopro/pull/710)                  |
+| 2.5    | Take-over manuel propre + anti-flash + bouton Stop Remote V2                           | 28/04    | [#714](https://github.com/Tallec7/neopro/pull/714)                  |
+| 2.6    | Instant show (no opacity transition under freeze)                                      | 28/04    | [#716](https://github.com/Tallec7/neopro/pull/716)                  |
+| 2.7    | Paint-stable reveal (2× rAF + 250ms)                                                   | 28/04    | [#718](https://github.com/Tallec7/neopro/pull/718)                  |
+| 2b     | TV runtime délègue à WebContentService pour la rotation auto                           | 29/04    | [#720](https://github.com/Tallec7/neopro/pull/720)                  |
+| 1.5a   | hls.js lazy-loaded pour livestreams                                                    | 29/04    | —                                                                   |
+| 1.5b   | Master/slave sync of web/live content (dual-display)                                   | 29/04    | [#723](https://github.com/Tallec7/neopro/pull/723)                  |
+| 3      | Backend refuse les saves boucle web/live sans `durationSeconds` (HTTP 400)             | 29/04    | —                                                                   |
+| 3 v2   | Library proactive : icônes 🌐/📡 + prompt durée add-to-loop                            | 29/04    | [#724](https://github.com/Tallec7/neopro/pull/724)                  |
+| **4**  | **Supervision : counters Prometheus + alertes + persistance `web_load_failed` + clôture** | **29/04** | **(cette PR)**                                                  |
+
+### Métriques livrées (Phase 4)
+
+- `neopro_web_content_plays_total{content_type, mode, outcome}` — playback events ; outcome ∈ `started | load_failed | completed | interrupted`.
+- `neopro_web_loop_duration_required_blocks_total{endpoint}` — saves bloqués par le validator Phase 3 ; endpoint ∈ `config-profiles | config-history`.
+- `interruption_reason='web_load_failed'` désormais persisté dans `video_plays` (Phase 1 le générait côté Pi mais le serveur le droppait silencieusement — bug Phase 1 corrigé en Phase 4).
+
+### Alertes Prometheus livrées (Phase 4)
+
+- `WebContentLoadFailedSpike` (warning) — > 6 load_failed/min sur 15 min.
+- `WebLoopDurationRequiredBurst` (info) — > 3 saves bloqués/min sur 10 min ; signal qu'un parcours UX (Remote V1 ?) ne couvre pas le prompt durée.
+
+### Suivi post-clôture
+
+- Si `WebContentLoadFailedSpike` répétitif sur un même site : escalader `WebContent` → bloquer Remote V1 entrée problématique le temps que l'admin corrige l'URL externe.
+- Surveiller la fonte de `web_loop_duration_required_blocks_total` à mesure que la flotte adopte Remote V2 + dashboard Phase 3 v2. Cible : <0.001/sec à T+30 jours.

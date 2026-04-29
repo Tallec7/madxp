@@ -602,3 +602,31 @@ groups:
         annotations:
           summary: "neopro_match_commands_total metric absent"
           description: "No match command metrics in 2h. Either no remote activity (expected off-season) or ADR-059 instrumentation broke. Check remote.controller.ts."
+
+  # Web/Live Content (ADR-103 Phase 4)
+  - name: web_live_content
+    rules:
+      # Spike de pages web / livestreams qui ne chargent pas dans le 1s timeout.
+      # Indique soit une URL externe HS, soit un X-Frame-Options: DENY récent,
+      # soit un Pi sans Internet. Action : checker l'URL dans le dashboard.
+      - alert: WebContentLoadFailedSpike
+        expr: sum(rate(neopro_web_content_plays_total{outcome="load_failed"}[15m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: content
+        annotations:
+          summary: "Web/Live content load failures > 6/min over 15m"
+          description: "{{ $value }} load_failed events/sec on web_page/livestream entries. Check recent web-content rows for broken URLs or X-Frame-Options DENY. Cf. ADR-103."
+
+      # Burst de saves bloqués par le validator durationSeconds — signe que le
+      # prompt Phase 3 v2 ne couvre pas tout (ex: Remote V1, import legacy).
+      - alert: WebLoopDurationRequiredBurst
+        expr: sum(rate(neopro_web_loop_duration_required_blocks_total[10m])) > 0.05
+        for: 5m
+        labels:
+          severity: info
+          category: content
+        annotations:
+          summary: "Multiple saves rejected for missing durationSeconds (web/live)"
+          description: "Le validator backend Phase 3 a refusé {{ $value }} save/sec sur 10 min. Le prompt Phase 3 v2 est-il actif côté UI ? Vérifier site-content-tab.component.ts onAddVideoToTarget."
