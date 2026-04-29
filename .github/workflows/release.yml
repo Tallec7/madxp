@@ -517,7 +517,10 @@ jobs:
           probe() {
             local url="$1" attempt code
             for attempt in 1 2 3 4 5; do
-              code=$(curl -sI -o /dev/null -w "%{http_code}" \
+              # -L : suivre les 308/301 redirects (Cloudflare auto-redirect
+              # `/saas/foo` → `/saas/foo/` quand foo/ contient un index.html
+              # à cause des route stubs ADR-071, browser le suit transparently).
+              code=$(curl -sIL -o /dev/null -w "%{http_code}" \
                 -A "neopro-ci-verify/1.0" "$url" 2>/dev/null)
               if [ "$code" != "429" ] && [ "$code" != "000" ]; then
                 echo "$code"; return 0
@@ -548,7 +551,7 @@ jobs:
           assert_saas_html() {
             local url="$1"
             local body
-            body=$(curl -s -A "neopro-ci-verify/1.0" "$url")
+            body=$(curl -sL -A "neopro-ci-verify/1.0" "$url")
             if ! echo "$body" | grep -q 'base href="/saas/"'; then
               echo "::error::$url ne sert PAS le HTML SaaS (base href != /saas/) — routing CF cassé"
               echo "$body" | grep -oE '<title>[^<]*</title>|<base[^>]*>' | head -3 || true
