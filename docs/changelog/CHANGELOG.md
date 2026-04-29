@@ -1,3 +1,9 @@
+## [3.270.3](https://github.com/Tallec7/neopro/compare/v3.270.2...v3.270.3) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** wait 2× rAF + 250ms before hiding freeze (paint-stable reveal) — ADR-103 Phase 2.7 ([#718](https://github.com/Tallec7/neopro/issues/718)) ([b52493f](https://github.com/Tallec7/neopro/commit/b52493f14d749f869bc6a162fbcd5578ced281b2))
+
 ## [3.270.2](https://github.com/Tallec7/neopro/compare/v3.270.1...v3.270.2) (2026-04-29)
 
 ### Bug Fixes
