@@ -1,3 +1,9 @@
+## [3.278.1](https://github.com/Tallec7/neopro/compare/v3.278.0...v3.278.1) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** commentaire job legacy obsolète post-Option A (ADR-071) ([#732](https://github.com/Tallec7/neopro/issues/732)) ([e62a12a](https://github.com/Tallec7/neopro/commit/e62a12a621a34a3e74f453147db178f6c124ad1c))
+
 # [3.278.0](https://github.com/Tallec7/neopro/compare/v3.277.1...v3.278.0) (2026-04-29)
 
 ### Features
