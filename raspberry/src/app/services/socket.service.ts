@@ -95,6 +95,7 @@ interface SocketIOOptions {
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
+  connect(): void;
   connected: boolean;
   id: string;
 }
@@ -153,6 +154,15 @@ export class SocketService {
       this.socket.on<string>('disconnect', (reason) => {
         this._connected = false;
         console.warn('[Socket] Disconnected, reason:', reason);
+        // Socket.IO ne re-tente pas automatiquement après un disconnect
+        // server-initiated ('io server disconnect'). Cas typique : redeploy
+        // Railway central → io.disconnectSockets(true) sur cleanup. Sans
+        // intervention manuelle, le client SaaS reste mort jusqu'à F5.
+        if (reason === 'io server disconnect' && this.socket) {
+          setTimeout(() => {
+            try { this.socket?.connect(); } catch (e) { console.error('[Socket] Manual reconnect failed:', e); }
+          }, 1500);
+        }
       });
 
       this.socket.on<number>('reconnect', (attempt) => {
