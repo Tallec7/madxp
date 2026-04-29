@@ -1,3 +1,9 @@
+# [3.267.0](https://github.com/Tallec7/neopro/compare/v3.266.1...v3.267.0) (2026-04-29)
+
+### Features
+
+- **remote-v2:** brancher le flux MJPEG dans la mini-thumb du hero (ADR-103) ([#700](https://github.com/Tallec7/neopro/issues/700)) ([b8e2fa7](https://github.com/Tallec7/neopro/commit/b8e2fa75b8d4bfa8437ebe2bfe5756195b618f61)), closes [#690](https://github.com/Tallec7/neopro/issues/690)
+
 ## [3.266.1](https://github.com/Tallec7/neopro/compare/v3.266.0...v3.266.1) (2026-04-28)
 
 ### Bug Fixes
