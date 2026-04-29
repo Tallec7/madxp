@@ -1,3 +1,9 @@
+## [3.278.2](https://github.com/Tallec7/neopro/compare/v3.278.1...v3.278.2) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** augmente wait CDN propagation 15s→30s pour cold-start TLS (ADR-071) ([#733](https://github.com/Tallec7/neopro/issues/733)) ([289713d](https://github.com/Tallec7/neopro/commit/289713da23680cc1fae301885464f8198e19cb4b)), closes [#2055](https://github.com/Tallec7/neopro/issues/2055)
+
 ## [3.278.1](https://github.com/Tallec7/neopro/compare/v3.278.0...v3.278.1) (2026-04-29)
 
 ### Bug Fixes
