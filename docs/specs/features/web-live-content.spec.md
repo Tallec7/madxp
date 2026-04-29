@@ -1,10 +1,10 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 livrées) — Phase 2b / 1.5 / 3 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b livrées) — Phase 1.5 / 3 / 4 en attente
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
-> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`
+> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`
 > **`.claude/rules/` lié** : —
 
 ## En une phrase
@@ -98,10 +98,19 @@ Stop manuel :
 - L'utilisateur peut donc **ajouter** une page web depuis la bibliothèque dans n'importe quelle catégorie/boucle, et la **lancer manuellement depuis cette catégorie** dans la Remote (le dispatch `launchVideo` par contentType est déjà branché — Phase 1).
 - Le strip Phase 0.5 reste actif comme filet de sécurité pour les entrées dont la row DB a été supprimée (lookup miss → strip propre).
 
-### Rotation automatique en boucle (Phase 2b — pas encore livrée)
+### Rotation automatique en boucle (Phase 2b livrée)
 
-- **Aujourd'hui** : la boucle MP4 (DoubleBuffer) **filtre toujours** les entrées `contentType !== 'video'` (Phase 0 guard) — elles sont ignorées de la rotation auto.
-- **Phase 2b** : `video-playback.service.ts` déléguera à `WebContentService.playInLoop()` quand l'étape suivante a `contentType !== 'video'`. Transition MP4 → web : freeze + fade. À fin du `durationMs` → reprend la boucle MP4 à l'index suivant. Skip ≤ 1s sur erreur.
+- Le filtre Phase 0/0.5 ne rejette plus les entrées web/live : il accepte les entrées avec `contentType ∈ {video, web_page, livestream}` et un path valide (http(s) URL pour web/live, n'importe quel path pour video). Les paths synthétiques `web_page-<ts>` / `livestream-<ts>` restent rejetés (filet anti-crash).
+- `VideoPlaybackService.dispatchLoopStep(index)` route l'étape par contentType :
+  - `video` → `DoubleBuffer.playOnActivePlayer` (flux MP4 existant).
+  - `web_page` / `livestream` → callback `playWebContentInLoop(entry, onComplete)` câblée vers `WebContentService.playInLoop()`.
+- À fin du `durationMs` (ou erreur 1s pour skip), `WebContentService` appelle `onComplete()` qui déclenche `advanceLoop()` (incrément modulo + dispatchLoopStep). **Jamais** rejouer la même web/live.
+- Transitions :
+  - **MP4 → web/live** : `triggerSwitch` détecte la transition, capture freeze (z-20), saute le preload MP4 (impossible pour iframe), délègue à `playInLoop`. Le freeze couvre la transition jusqu'à `onLoad + 2× rAF + 250ms` (Phase 2.7).
+  - **Web/live → MP4** : `WebContentService.teardown` capture freeze AVANT de hide l'iframe (Phase 2.5). `advanceLoop` → `dispatchLoopStep` → DoubleBuffer charge le MP4 sous le freeze.
+  - **Web/live → web/live** : `WebContentService.prepareShow` détecte `_isActive`, teardown propre, nouveau show.
+- `onTimeUpdate` skip le late preload MP4 quand l'étape suivante est web/live (rien à preload pour une iframe).
+- Si `playWebContentInLoop` n'est pas câblée (config défensif), l'orchestrateur skip l'étape via `advanceLoop`.
 
 ### Tolérance d'erreur
 
@@ -118,7 +127,7 @@ Stop manuel :
 | Pas de `load` après 1s                                 | Skip silencieux, `video_plays.interruption_reason='web_load_failed'`             |
 | Auto-close `durationMs` atteint                        | TV revient à la boucle MP4 (index `_savedLoopIndex + 1`)                         |
 | Ajouter un web_page à `sponsors[]` ou une catégorie    | Backend accepte (Phase 2a). Au read, l'entrée est résolue → contentType + externalUrl propres pour la Remote / TV |
-| Ajouter un web_page à la boucle MP4 auto-rotation     | Toujours filtré côté TV pour le moment (Phase 2b à venir) |
+| Ajouter un web_page à la boucle MP4 auto-rotation     | Phase 2b livrée : la boucle inclut l'étape web ; à fin du `durationMs`, avance au step suivant. Rotation MP4 ↔ web ↔ MP4 OK. |
 | Supprimer le dernier web_page d'un site                | La pseudo-catégorie "Web / Live" disparaît au reload Remote                      |
 
 ## Cas d'edge connus
@@ -146,8 +155,10 @@ Stop manuel :
 | 0.6   | Visibilité Web/Live dans Remote                | ✅ Livrée   | [#703](https://github.com/Tallec7/neopro/pull/703)          |
 | 1     | WebContentPlayer manuel + 1s timeout + analytics | ✅ Livrée   | [#705](https://github.com/Tallec7/neopro/pull/705)          |
 | 2a    | Backend résout les paths synthétiques au read + drop 400 reject | ✅ Livrée | [#710](https://github.com/Tallec7/neopro/pull/710) |
-| **2.5** | **Take-over manuel propre + anti-flash + bouton Stop Remote V2** | **✅ Livrée** | **(cette PR)**                            |
-| 2b    | TV runtime délègue à WebContentService pour la rotation auto | ⏳ À venir | —                                                  |
+| 2.5   | Take-over manuel propre + anti-flash + bouton Stop Remote V2 | ✅ Livrée | [#714](https://github.com/Tallec7/neopro/pull/714) |
+| 2.6   | Instant show (no opacity transition under freeze)            | ✅ Livrée | [#716](https://github.com/Tallec7/neopro/pull/716) |
+| 2.7   | Paint-stable reveal (2× rAF + 250ms)                          | ✅ Livrée | [#718](https://github.com/Tallec7/neopro/pull/718) |
+| **2b** | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                          |
 | 1.5   | hls.js + master/slave sync                      | ⏳ À venir  | —                                                          |
 | 3     | Dashboard UX (sélecteur, validation, preview)   | ⏳ À venir  | —                                                          |
 | 4     | Supervision + ADR fermeture                     | ⏳ À venir  | —                                                          |

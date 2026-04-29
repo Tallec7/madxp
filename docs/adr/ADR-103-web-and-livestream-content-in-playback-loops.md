@@ -59,8 +59,10 @@ L'implémentation est découpée en **5 phases** livrables indépendamment, chac
 - **Phase 0.6** — Visibilité pseudo-catégorie "Web / Live" dans Remote (registerWebContentInTimeCategories), ~0.5j ✅ livrée (PR #703, v3.267.2)
 - **Phase 1** — Web Content Player en manuel robuste (1s timeout + analytics), ~1j ✅ livrée (PR #705)
 - **Phase 2a** — Backend résout les paths synthétiques au read + drop du 400 reject : web/live ajoutables aux sponsors[]/loopVideos/categories.videos, lançables manuellement depuis n'importe quelle catégorie de la Remote, ~1j ✅ livrée (PR #710)
-- **Phase 2.5** — Take-over propre depuis vidéo manuelle (clear sans resume) + boucle non-pausée + anti-flash (CSS transition, REVEAL_DELAY, freeze pré-close) + bouton Stop Remote V2, ~1j 🔄 en cours
-- **Phase 2b** — TV runtime délègue à WebContentService quand l'étape de boucle a `contentType !== 'video'` (rotation MP4 → web → MP4 automatique), ~3-5j
+- **Phase 2.5** — Take-over propre depuis vidéo manuelle (clear sans resume) + boucle non-pausée + anti-flash + bouton Stop Remote V2, ~1j ✅ livrée (PR #714)
+- **Phase 2.6** — Instant show (no opacity transition under freeze), ~0.5j ✅ livrée (PR #716)
+- **Phase 2.7** — Paint-stable reveal (2× rAF + 250ms), ~0.5j ✅ livrée (PR #718)
+- **Phase 2b** — TV runtime délègue à WebContentService quand l'étape de boucle a `contentType !== 'video'` (rotation MP4 → web → MP4 automatique), ~3-5j 🔄 en cours
 - **Phase 1.5** — hls.js (Chromium HLS) + master/slave sync content_type, ~2-3j
 - **Phase 3** — Dashboard UX (sélecteur, validation, preview), ~4j
 - **Phase 4** — Robustesse, supervision (Prometheus), tests, ADR fermeture, ~3j

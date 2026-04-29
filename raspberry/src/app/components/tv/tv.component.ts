@@ -482,6 +482,12 @@ export class TvComponent implements OnInit, OnDestroy {
       getIsManualMode: () => this.isManualMode,
       getActivePhase: () => this.activePhase,
       getLoopVideosForPhase: (phase) => this.getLoopVideosForPhase(phase),
+      // ADR-103 Phase 2b — when the loop reaches a web_page / livestream
+      // step, delegate to WebContentService.playInLoop. The completion
+      // callback advances the loop to the next step (handled inside
+      // VideoPlaybackService.advanceLoop).
+      playWebContentInLoop: (entry, onComplete) =>
+        this.webContentService.playInLoop(entry, onComplete),
     });
 
     // 3. Initialize ErrorRecovery (watchdog, error handlers, memory cleanup)

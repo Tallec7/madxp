@@ -67,6 +67,13 @@ export class WebContentService {
   private _iframeOnError: (() => void) | null = null;
   private _livestreamCleanup: (() => void) | null = null;
   private _currentAnalyticsVideo: PiConfigVideoEntry | null = null;
+  /**
+   * ADR-103 Phase 2b — when set, the auto-close / failure path calls this
+   * callback (which advances the loop to the next step) instead of
+   * `returnToLoop()` (which restarts the loop at savedIndex+1). Set by
+   * `playInLoop()`, cleared by `teardown()`.
+   */
+  private _loopOnComplete: (() => void) | null = null;
 
   constructor(
     private readonly doubleBufferService: DoubleBufferVideoService,
@@ -223,13 +230,23 @@ export class WebContentService {
    * Public return-to-loop handler.
    *   - completed=true  → entry played its full duration (auto-close fired).
    *   - completed=false → manual stop / navigation. Default.
+   *
+   * ADR-103 Phase 2b — when `_loopOnComplete` is set (i.e. we were
+   * playing as a STEP of the loop), invoke that callback (which advances
+   * the loop) instead of `resumeRotation()` (which restarts the loop at
+   * savedIndex+1, useful only for the manual mode of Phase 1/2.5).
    */
   returnToLoop(completed = false): void {
     if (!this._isActive) return;
-    console.log('[WebContent] returning to loop', { completed });
+    console.log('[WebContent] returning to loop', { completed, loopMode: !!this._loopOnComplete });
     this.endAnalytics(completed, completed ? undefined : 'manual_action');
-    this.teardown();
-    this.resumeRotation();
+    const onComplete = this._loopOnComplete;
+    this.teardown();  // teardown clears _loopOnComplete
+    if (onComplete) {
+      onComplete();
+    } else {
+      this.resumeRotation();
+    }
   }
 
   /** Internal: terminate with `web_load_failed` analytics + skip. */
@@ -237,8 +254,55 @@ export class WebContentService {
     if (!this._isActive) return;
     console.warn('[WebContent] failAndReturn:', reason);
     this.endAnalytics(false, 'web_load_failed');
+    const onComplete = this._loopOnComplete;
     this.teardown();
-    this.resumeRotation();
+    if (onComplete) {
+      // Loop mode: skip this step, advance to next.
+      onComplete();
+    } else {
+      // Manual mode: restart loop.
+      this.resumeRotation();
+    }
+  }
+
+  /**
+   * ADR-103 Phase 2b — play a web/live entry as a STEP of the boucle.
+   * Used by the orchestrator (`video-playback.service`) when a loop
+   * playlist step has `contentType !== 'video'`. The `onComplete`
+   * callback is invoked when:
+   *   - the entry's `durationMs` elapsed (success), OR
+   *   - the load timed out / errored (skip step).
+   * The orchestrator typically advances to the next loop step.
+   *
+   * Differences with `showWebPage` / `showLivestream` (manual mode):
+   *   - returnToLoop() / failAndReturn() call onComplete instead of
+   *     resumeRotation() (which would restart the loop fresh at
+   *     savedIndex+1 — fine for manual, wrong for in-loop where the
+   *     orchestrator already knows how to advance).
+   *   - durationMs is REQUIRED (Phase 2 backend validation should
+   *     guarantee it for entries placed in sponsors[]/loopVideos/etc).
+   */
+  playInLoop(
+    entry: { contentType?: string; path?: string; externalUrl?: string; name?: string; durationSeconds?: number | null },
+    onComplete: () => void,
+  ): void {
+    const contentType = entry?.contentType === 'livestream' ? 'livestream' : 'web_page';
+    const url = (entry?.externalUrl || entry?.path || '').trim();
+    if (!/^https?:\/\//i.test(url)) {
+      console.warn('[WebContent] playInLoop: invalid URL — skipping step', url);
+      onComplete();
+      return;
+    }
+    const durationMs = entry?.durationSeconds && entry.durationSeconds > 0
+      ? entry.durationSeconds * 1000
+      : 30000; // safe fallback so the loop never gets stuck on an entry without duration
+
+    this._loopOnComplete = onComplete;
+    if (contentType === 'web_page') {
+      this.showWebPage({ url, durationMs, name: entry?.name });
+    } else {
+      this.showLivestream({ url, mimeType: null, durationMs, name: entry?.name });
+    }
   }
 
   private resumeRotation(): void {
@@ -340,6 +404,9 @@ export class WebContentService {
     this.hideIframe();
     this.hideLivestream();
     this._isActive = false;
+    // ADR-103 Phase 2b — clear loop callback so a subsequent manual show
+    // doesn't accidentally inherit the in-loop completion behavior.
+    this._loopOnComplete = null;
   }
 
   private detachIframeListeners(): void {
