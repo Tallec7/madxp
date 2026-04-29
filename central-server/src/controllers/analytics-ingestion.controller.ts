@@ -97,7 +97,10 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
         : null;
 
       // PoC Proof of Play: interruption reason
-      const validInterruptionReasons = ['manual_action', 'profile_switch', 'video_error', 'hdmi_lost', 'loop_advance', 'browser_close'];
+      // ADR-103 Phase 4 — `web_load_failed` is emitted by the Pi WebContentService
+      // when an iframe / livestream fails to load within LOAD_TIMEOUT_MS (1s).
+      // Persisting it lets us audit incidents and feeds the Prometheus counter.
+      const validInterruptionReasons = ['manual_action', 'profile_switch', 'video_error', 'hdmi_lost', 'loop_advance', 'browser_close', 'web_load_failed'];
       const interruptionReason = typeof play.interruption_reason === 'string' && validInterruptionReasons.includes(play.interruption_reason)
         ? play.interruption_reason
         : null;
@@ -205,6 +208,19 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
     const videoErrorCount = validPlays.filter(p => p.interruptionReason === 'video_error').length;
     if (videoErrorCount > 0) {
       metricsService.recordVideoPlaybackErrors(site_id, videoErrorCount);
+    }
+
+    // ADR-103 Phase 4 — count web_load_failed events from this batch. Pi-side
+    // signal (1s timeout on iframe/livestream load) — feeds Grafana panel +
+    // alert when a site produces an unusual rate of load failures.
+    const webLoadFailedCount = validPlays.filter(p => p.interruptionReason === 'web_load_failed').length;
+    if (webLoadFailedCount > 0) {
+      // We don't know the contentType here (filename has been resolved to a real
+      // URL by the Pi at this point); emit as 'unknown' label, alert fires on
+      // the aggregate.
+      for (let i = 0; i < webLoadFailedCount; i++) {
+        metricsService.recordWebContentPlay('web_page', 'manual', 'load_failed');
+      }
     }
 
     logger.info('Video plays recorded', { siteId: site_id, count: validPlays.length, totalPlays: validPlays.length });

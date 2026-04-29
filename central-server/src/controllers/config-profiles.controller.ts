@@ -11,6 +11,7 @@ import Joi from 'joi';
 import { AuthRequest, SiteConfiguration } from '../types';
 import logger from '../config/logger';
 import socketService from '../services/socket.service';
+import { metricsService } from '../services/metrics.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
@@ -150,6 +151,8 @@ function findWebLoopEntriesMissingDuration(config: unknown): Array<{ where: stri
 function rejectIfWebLoopMissingDuration(res: Response, configuration: unknown): boolean {
   const offenders = findWebLoopEntriesMissingDuration(configuration);
   if (offenders.length === 0) return false;
+  // ADR-103 Phase 4 — observe blocked saves to detect parcours UX cassés.
+  metricsService.recordWebLoopDurationRequiredBlock('config-profiles');
   res.status(400).json({
     error:
       "Une page web ou un livestream placé dans la boucle (sponsors ou phase) doit avoir une durée d'affichage > 0 secondes. " +
