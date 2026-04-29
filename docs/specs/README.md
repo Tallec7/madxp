@@ -87,7 +87,7 @@ docs/specs/
 | SPEC                                                             | ADR liés                                                      | Statut | Dernière revue |
 | ---------------------------------------------------------------- | ------------------------------------------------------------- | ------ | -------------- |
 | [features/match-sessions](features/match-sessions.spec.md)       | ADR-088, ADR-093, ADR-097                                     | Live   | 2026-04-29     |
-| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-037, ADR-038, ADR-039, ADR-059, ADR-069, ADR-088, ADR-096 | Live   | 2026-04-25     |
+| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102 | Live | 2026-04-29 |
 | [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
 | [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
 | [features/hotspot-psk](features/hotspot-psk.spec.md)             | ADR-073, ADR-074, ADR-076                                     | Live   | 2026-04-27     |
