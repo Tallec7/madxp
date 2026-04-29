@@ -856,6 +856,25 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }, ms);
   }
 
+  /**
+   * ADR-103 Phase 2.5 — bouton Stop du hero. Coupe la diffusion en cours
+   * (vidéo manuelle MP4, page web ou livestream) et fait reprendre la
+   * boucle. Le TV component route `stop-manual` vers
+   * `WebContentService.returnToLoop()` qui gère les 3 cas (Phase 2.5).
+   */
+  stopPlaying(): void {
+    this.notifyUserActivity();
+    if (this.playingTimer) {
+      clearTimeout(this.playingTimer);
+      this.playingTimer = null;
+    }
+    this.playingVideoId = null;
+    this.playingVideo = null;
+    const displayIndex = this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10);
+    this.socketService.emit('command', { type: 'stop-manual', displayIndex });
+    this.showToast('Retour à la boucle');
+  }
+
   // ---- Helpers visuels --------------------------------------------------
 
   homeColor(): string {

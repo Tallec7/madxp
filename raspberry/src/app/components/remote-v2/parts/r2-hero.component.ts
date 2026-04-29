@@ -65,6 +65,16 @@ export interface DisplayInfo {
               [style.animation-duration.s]="playingVideo.durationSeconds || 5"></span>
           </span>
         </div>
+        <!-- ADR-103 Phase 2.5 — bouton Stop pour couper la diffusion en cours
+             (vidéo manuelle, page web ou livestream) et revenir à la boucle. -->
+        <button class="r2-stop-btn-circle" *ngIf="playingVideo" aria-label="Arrêter et revenir à la boucle"
+          title="Arrêter et revenir à la boucle"
+          (click)="stopPlaying.emit()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="6" width="12" height="12" rx="2"/>
+          </svg>
+        </button>
         <button class="r2-loop-btn-circle" *ngIf="!playingVideo" aria-label="Boucle"
           (click)="alignPhase.emit()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -129,4 +139,7 @@ export class R2HeroComponent {
   @Output() setTargetDisplay = new EventEmitter<string>();
   @Output() toggleRecording = new EventEmitter<void>();
   @Output() alignPhase = new EventEmitter<void>();
+  /** ADR-103 Phase 2.5 — émis quand l'utilisateur veut couper la diffusion en cours
+   *  (vidéo manuelle MP4, page web, ou livestream) et reprendre la boucle. */
+  @Output() stopPlaying = new EventEmitter<void>();
 }

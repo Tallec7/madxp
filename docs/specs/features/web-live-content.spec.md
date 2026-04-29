@@ -1,10 +1,10 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a livrées) — Phase 2b / 1.5 / 3 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 livrées) — Phase 2b / 1.5 / 3 / 4 en attente
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
-> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`
+> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`
 > **`.claude/rules/` lié** : —
 
 ## En une phrase
@@ -59,14 +59,34 @@ Un club / operator peut créer des pages web et des livestreams HLS depuis le da
 
 ### Lancement manuel (Phase 1 livrée)
 
-- Remote → clic entrée → `launchVideo()` dispatche par `contentType` :
+- Remote → clic entrée → `launchVideo()` (V1) / `playVideo()` (V2) dispatche par `contentType` :
   - `web_page` → command `web-page` `{ url, durationMs, name }`
   - `livestream` → command `livestream` `{ url, mimeType, durationMs, name }`
 - TV → `WebContentService.showWebPage()` ou `showLivestream()` :
   - Capture freeze-frame du player MP4 actif (anti-flash).
   - **Timeout chargement = 1s** (`LOAD_TIMEOUT_MS`) → si pas de `load`/`loadeddata` sous 1s, skip + retour boucle (`web_load_failed`).
   - À `load` → opacity 1 + démarrage timer `durationMs`.
-  - À fin durée OU action user → return-to-loop : reprend boucle MP4 à `_savedLoopIndex + 1`.
+  - À fin durée OU action user → return-to-loop.
+
+### Take-over + retour à la boucle (Phase 2.5 livrée)
+
+Invariants du retour à la boucle :
+
+1. **Web/live qui prend la main pendant qu'une vidéo manuelle MP4 jouait** : la manuelle est **clearée** (pause + opacity 0 + isManualMode=false) au moment du show. Au returnToLoop → boucle, **jamais** la manuelle. (`clearActiveManualVideoIfAny()`)
+2. **Web/live qui prend la main pendant la boucle MP4** : la boucle **n'est PAS pausée** — elle continue d'avancer silencieusement sous l'iframe. Au returnToLoop → boucle reprend de là où elle a avancé (les players MP4 sont déjà `muted` par défaut, donc pas de double audio). Si la boucle est déjà finie (ended) → restart à `_savedLoopIndex + 1`.
+3. **Web/live à l'intérieur de la boucle (Phase 2b à venir)** : la web/live est elle-même un step de boucle. À fin de durée → `_savedLoopIndex + 1` avance au step suivant. **Jamais** rejouer la même web/live.
+
+Anti-flash :
+- Iframe en `background: #000` (couvre le flash blanc cross-origin pendant le first paint).
+- `transition: opacity 200ms ease` sur iframe + livestream (`OPACITY_TRANSITION_MS`).
+- À `load` / `loadeddata` → délai **120ms** (`REVEAL_DELAY_MS`) avant de cacher le freeze-frame, pour laisser le contenu peindre sa première frame.
+- Au teardown → freeze-frame du loop player capturé **avant** de masquer l'iframe (pas de gap visuel à la fermeture).
+- `iframe.src = 'about:blank'` différé après la durée de transition (la fade-out reste visible).
+
+Stop manuel :
+- **Bouton Stop rouge** dans le hero de la Remote V2 (visible uniquement quand `playingVideo`).
+- Émet `{ type: 'stop-manual' }` via socket.
+- TV component route vers `WebContentService.returnToLoop()` si web/live actif, sinon `ManualVideoService.stopAndReturnToLoop()` si manuel actif.
 
 ### Ajout dans une catégorie utilisateur ou la boucle (Phase 2a livrée)
 
@@ -125,7 +145,8 @@ Un club / operator peut créer des pages web et des livestreams HLS depuis le da
 | 0.5   | Strip serveur + reject 400                     | ✅ Livrée   | [#701](https://github.com/Tallec7/neopro/pull/701)          |
 | 0.6   | Visibilité Web/Live dans Remote                | ✅ Livrée   | [#703](https://github.com/Tallec7/neopro/pull/703)          |
 | 1     | WebContentPlayer manuel + 1s timeout + analytics | ✅ Livrée   | [#705](https://github.com/Tallec7/neopro/pull/705)          |
-| **2a** | **Backend résout les paths synthétiques au read + drop 400 reject** | **✅ Livrée** | **(cette PR)**                          |
+| 2a    | Backend résout les paths synthétiques au read + drop 400 reject | ✅ Livrée | [#710](https://github.com/Tallec7/neopro/pull/710) |
+| **2.5** | **Take-over manuel propre + anti-flash + bouton Stop Remote V2** | **✅ Livrée** | **(cette PR)**                            |
 | 2b    | TV runtime délègue à WebContentService pour la rotation auto | ⏳ À venir | —                                                  |
 | 1.5   | hls.js + master/slave sync                      | ⏳ À venir  | —                                                          |
 | 3     | Dashboard UX (sélecteur, validation, preview)   | ⏳ À venir  | —                                                          |
