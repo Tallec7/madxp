@@ -57,9 +57,10 @@ L'implémentation est découpée en **5 phases** livrables indépendamment, chac
 - **Phase 0** — Stabilisation immédiate (filets défensifs + nettoyage DB, ~1j) ✅ livrée (PR #699, v3.266.1)
 - **Phase 0.5** — Strip serveur + reject 400 sur synthetic paths, ~0.5j ✅ livrée (PR #701, v3.267.1)
 - **Phase 0.6** — Visibilité pseudo-catégorie "Web / Live" dans Remote (registerWebContentInTimeCategories), ~0.5j ✅ livrée (PR #703, v3.267.2)
-- **Phase 1** — Web Content Player en manuel robuste (1s timeout + analytics), ~1j 🔄 en cours
+- **Phase 1** — Web Content Player en manuel robuste (1s timeout + analytics), ~1j ✅ livrée (PR #705)
+- **Phase 2a** — Backend résout les paths synthétiques au read + drop du 400 reject : web/live ajoutables aux sponsors[]/loopVideos/categories.videos, lançables manuellement depuis n'importe quelle catégorie de la Remote, ~1j 🔄 en cours
+- **Phase 2b** — TV runtime délègue à WebContentService quand l'étape de boucle a `contentType !== 'video'` (rotation MP4 → web → MP4 automatique), ~3-5j
 - **Phase 1.5** — hls.js (Chromium HLS) + master/slave sync content_type, ~2-3j
-- **Phase 2** — Boucles avec entrées web/livestream, ~7j
 - **Phase 3** — Dashboard UX (sélecteur, validation, preview), ~4j
 - **Phase 4** — Robustesse, supervision (Prometheus), tests, ADR fermeture, ~3j
 

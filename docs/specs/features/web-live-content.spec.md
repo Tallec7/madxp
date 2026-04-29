@@ -1,10 +1,10 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0/0.5/0.6/1 livrées) — Phase 1.5 / 2 / 3 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a livrées) — Phase 2b / 1.5 / 3 / 4 en attente
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
-> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`
+> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`
 > **`.claude/rules/` lié** : —
 
 ## En une phrase
@@ -68,10 +68,20 @@ Un club / operator peut créer des pages web et des livestreams HLS depuis le da
   - À `load` → opacity 1 + démarrage timer `durationMs`.
   - À fin durée OU action user → return-to-loop : reprend boucle MP4 à `_savedLoopIndex + 1`.
 
-### Rotation automatique en boucle (Phase 2 — pas livrée)
+### Ajout dans une catégorie utilisateur ou la boucle (Phase 2a livrée)
 
-- **Aujourd'hui** : backend rejette `400 SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` toute tentative d'ajout d'une web_page/livestream dans `sponsors[]` / `loopVideos[]` / `categories.videos[]`.
-- **Phase 2** : orchestrateur de boucle déléguera à `WebContentService` quand l'étape suivante a `contentType !== 'video'`. Transition MP4 → web : freeze + fade. `durationMs` requis (validation Joi). Skip ≤ 1s sur erreur.
+- Le backend **accepte** maintenant les entrées web_page/livestream dans `sponsors[]` / `timeCategories[].loopVideos[]` / `categories[].videos[]` (le 400 `SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` a été retiré).
+- Au moment du read (`GET /api/saas/:siteId/config`, `GET /api/saas/:siteId/profiles/:id/config`, `GET /api/remote/:siteId/state`), le backend appelle `resolveSyntheticWebContent` qui :
+  1. Détecte les entrées avec un path `web_page-<ts>` / `livestream-<ts>`
+  2. Lookup la row `videos` correspondante en DB
+  3. Réécrit l'entrée en `{ path: external_url, contentType, externalUrl, durationSeconds, name, type, thumbnailUrl }` AVANT d'envoyer à la TV / Remote
+- L'utilisateur peut donc **ajouter** une page web depuis la bibliothèque dans n'importe quelle catégorie/boucle, et la **lancer manuellement depuis cette catégorie** dans la Remote (le dispatch `launchVideo` par contentType est déjà branché — Phase 1).
+- Le strip Phase 0.5 reste actif comme filet de sécurité pour les entrées dont la row DB a été supprimée (lookup miss → strip propre).
+
+### Rotation automatique en boucle (Phase 2b — pas encore livrée)
+
+- **Aujourd'hui** : la boucle MP4 (DoubleBuffer) **filtre toujours** les entrées `contentType !== 'video'` (Phase 0 guard) — elles sont ignorées de la rotation auto.
+- **Phase 2b** : `video-playback.service.ts` déléguera à `WebContentService.playInLoop()` quand l'étape suivante a `contentType !== 'video'`. Transition MP4 → web : freeze + fade. À fin du `durationMs` → reprend la boucle MP4 à l'index suivant. Skip ≤ 1s sur erreur.
 
 ### Tolérance d'erreur
 
@@ -87,7 +97,8 @@ Un club / operator peut créer des pages web et des livestreams HLS depuis le da
 | Cliquer entrée Web/Live dans la Remote                 | TV affiche l'iframe en ≤ 1s ou skip + retour boucle si erreur                    |
 | Pas de `load` après 1s                                 | Skip silencieux, `video_plays.interruption_reason='web_load_failed'`             |
 | Auto-close `durationMs` atteint                        | TV revient à la boucle MP4 (index `_savedLoopIndex + 1`)                         |
-| Tenter d'ajouter un path synthétique en sponsors[]     | Backend renvoie 400 `SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` (Phase 0.5)           |
+| Ajouter un web_page à `sponsors[]` ou une catégorie    | Backend accepte (Phase 2a). Au read, l'entrée est résolue → contentType + externalUrl propres pour la Remote / TV |
+| Ajouter un web_page à la boucle MP4 auto-rotation     | Toujours filtré côté TV pour le moment (Phase 2b à venir) |
 | Supprimer le dernier web_page d'un site                | La pseudo-catégorie "Web / Live" disparaît au reload Remote                      |
 
 ## Cas d'edge connus
@@ -113,9 +124,10 @@ Un club / operator peut créer des pages web et des livestreams HLS depuis le da
 | 0     | Filets défensifs TV + cleanup DB               | ✅ Livrée   | [#699](https://github.com/Tallec7/neopro/pull/699)          |
 | 0.5   | Strip serveur + reject 400                     | ✅ Livrée   | [#701](https://github.com/Tallec7/neopro/pull/701)          |
 | 0.6   | Visibilité Web/Live dans Remote                | ✅ Livrée   | [#703](https://github.com/Tallec7/neopro/pull/703)          |
-| **1** | **WebContentPlayer manuel + 1s timeout + analytics** | **✅ Livrée** | **(cette PR)**                                  |
+| 1     | WebContentPlayer manuel + 1s timeout + analytics | ✅ Livrée   | [#705](https://github.com/Tallec7/neopro/pull/705)          |
+| **2a** | **Backend résout les paths synthétiques au read + drop 400 reject** | **✅ Livrée** | **(cette PR)**                          |
+| 2b    | TV runtime délègue à WebContentService pour la rotation auto | ⏳ À venir | —                                                  |
 | 1.5   | hls.js + master/slave sync                      | ⏳ À venir  | —                                                          |
-| 2     | Boucles avec entrées web/live                   | ⏳ À venir  | —                                                          |
 | 3     | Dashboard UX (sélecteur, validation, preview)   | ⏳ À venir  | —                                                          |
 | 4     | Supervision + ADR fermeture                     | ⏳ À venir  | —                                                          |
 

@@ -29,7 +29,11 @@ import { generateRemotePinToken } from '../middleware/remote-pin.middleware';
 import { migrateLegacyPinToDefaultProfile } from '../services/pin-migration.service';
 import { LicenseStatusResponse, SiteSubscriptionInfo, SubscriptionPlan, SuspensionReason } from '../types';
 import { injectWebContentCategoryEx, registerWebContentInTimeCategories } from '../utils/inject-web-content-category';
-import { stripSyntheticWebContent } from '../utils/strip-synthetic-web-content';
+import {
+  collectSyntheticWebContentFilenames,
+  resolveSyntheticWebContent,
+  stripSyntheticWebContent,
+} from '../utils/strip-synthetic-web-content';
 
 // Lazy import to avoid circular dependency
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -271,13 +275,26 @@ export async function getRemoteState(req: Request, res: Response) {
 
     // Si pas de PIN ou PIN vérifié → retourner la config complète
     if (!pinRequired || pinVerified) {
-      // ADR-103 Phase 0.5 — strip synthetic web_page/livestream entries from
-      // sponsors/loopVideos/categories.videos at the source, before they leak
-      // to the Remote and end up in the loop (Phase 0 TV-side guard is bypassed
-      // by URL resolution downstream).
-      const stripSummary = stripSyntheticWebContent(localConfig as Record<string, unknown>);
+      // ADR-103 Phase 2 — resolve synthetic web_page/livestream entries to
+      // their real shape (path = external_url, contentType, externalUrl,
+      // durationSeconds) so they can play in loops/categories. Phase 0.5
+      // strip remains as a safety net for entries we couldn't resolve.
+      const cfgAsRecord = localConfig as Record<string, unknown>;
+      const synthFilenames = collectSyntheticWebContentFilenames(cfgAsRecord);
+      if (synthFilenames.length > 0) {
+        try {
+          const lookup = await videoRepository.findWebContentByFilenames(synthFilenames);
+          const resolved = resolveSyntheticWebContent(cfgAsRecord, lookup);
+          if (resolved.sponsorsResolved + resolved.loopVideosResolved + resolved.categoryVideosResolved > 0) {
+            logger.info('Remote config: resolved synthetic web_page/livestream entries (ADR-103 Phase 2)', { siteId, ...resolved });
+          }
+        } catch (err) {
+          logger.warn('Remote config: resolveSyntheticWebContent failed (non-fatal)', { siteId, error: err });
+        }
+      }
+      const stripSummary = stripSyntheticWebContent(cfgAsRecord);
       if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
-        logger.warn('Remote config: stripped synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
+        logger.warn('Remote config: stripped unresolvable synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
       }
 
       // ADR-088 + ADR-103 Phase 0.6 — pseudo-category "Web / Live" + register

@@ -413,6 +413,60 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     return map;
   }
 
+  /**
+   * ADR-103 Phase 2 — batch lookup for web_page / livestream entries by their
+   * synthetic filename (`web_page-<ts>` / `livestream-<ts>`). Returns a map
+   * filename → { content_type, external_url, duration, name } so callers
+   * (saas/remote controllers) can rewrite synthetic config entries in-place
+   * to proper {path: external_url, contentType, externalUrl, durationSeconds}
+   * shape before the TV receives them.
+   */
+  async findWebContentByFilenames(filenames: string[]): Promise<Map<string, {
+    contentType: 'web_page' | 'livestream';
+    externalUrl: string;
+    durationSeconds: number | null;
+    name: string;
+    thumbnailUrl: string | null;
+  }>> {
+    if (filenames.length === 0) return new Map();
+
+    const placeholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{
+      filename: string;
+      content_type: 'web_page' | 'livestream';
+      external_url: string | null;
+      duration: number | null;
+      original_name: string;
+      thumbnail_url: string | null;
+    }>(
+      `SELECT filename, content_type, external_url, duration, original_name, thumbnail_url
+       FROM videos
+       WHERE filename = ANY(ARRAY[${placeholders}])
+         AND content_type IN ('web_page', 'livestream')
+         AND external_url IS NOT NULL`,
+      filenames
+    );
+
+    const map = new Map<string, {
+      contentType: 'web_page' | 'livestream';
+      externalUrl: string;
+      durationSeconds: number | null;
+      name: string;
+      thumbnailUrl: string | null;
+    }>();
+    for (const row of result.rows) {
+      if (!row.external_url) continue;
+      map.set(row.filename, {
+        contentType: row.content_type,
+        externalUrl: row.external_url,
+        durationSeconds: row.duration,
+        name: row.original_name,
+        thumbnailUrl: row.thumbnail_url,
+      });
+    }
+    return map;
+  }
+
   async findThumbnailsByFilenames(filenames: string[]): Promise<Map<string, string>> {
     if (filenames.length === 0) return new Map();
 
