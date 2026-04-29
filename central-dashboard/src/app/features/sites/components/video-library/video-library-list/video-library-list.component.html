@@ -16,8 +16,14 @@
         loading="lazy"
       />
       <div *ngIf="!video.thumbnailUrl" class="card-thumb-placeholder">
-        <span>🎞️</span>
+        <span>{{ getContentTypeIcon(video.contentType) || '🎞️' }}</span>
       </div>
+      <span
+        *ngIf="video.contentType && video.contentType !== 'video'"
+        class="card-content-type-badge"
+        [title]="getContentTypeLabel(video.contentType)"
+        data-testid="video-card-content-type-badge"
+      >{{ getContentTypeIcon(video.contentType) }} {{ getContentTypeLabel(video.contentType) }}</span>
       <span class="card-duration" *ngIf="video.duration">{{ formatDuration(video.duration) }}</span>
       <span class="card-size">{{ formatBytes(video.size) }}</span>
     </div>
@@ -223,6 +229,12 @@
             video.checksum ? video.filename + ' — checksum: ' + video.checksum : video.filename
           "
         >
+          <span
+            *ngIf="video.contentType && video.contentType !== 'video'"
+            class="video-content-type-icon"
+            [title]="getContentTypeLabel(video.contentType)"
+            data-testid="video-row-content-type-icon"
+          >{{ getContentTypeIcon(video.contentType) }}</span>
           <span class="video-name">{{ video.displayName }}</span>
           <span class="video-subcat" *ngIf="video.subcategory">{{ video.subcategory }}</span>
           <span

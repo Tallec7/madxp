@@ -99,6 +99,9 @@ export class VideoReconciliationService {
         checksum: cloud.checksum ?? null,
         configRoles,
         thumbnailUrl: cloud.thumbnail_url ?? null,
+        // ADR-103 Phase 3 v2 — propagate content type metadata for proactive UX.
+        contentType: cloud.contentType ?? 'video',
+        externalUrl: cloud.externalUrl ?? null,
       };
       item.contentStatus = this.computeContentStatus(item, isSaas, input.siteSponsors);
       cloudMapped.push(item);

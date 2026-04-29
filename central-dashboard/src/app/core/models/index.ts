@@ -260,6 +260,9 @@ export interface CloudVideo {
   updatedAt: Date;
   advertiserName?: string | null;
   thumbnail_url?: string | null;
+  // ADR-103 Phase 3 v2 — content type metadata (web_page / livestream / video).
+  contentType?: 'video' | 'web_page' | 'livestream';
+  externalUrl?: string | null;
 }
 
 /**

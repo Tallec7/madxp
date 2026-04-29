@@ -473,6 +473,9 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
       createdAt: v.created_at,
       updatedAt: v.updated_at,
       advertiserName: v.advertiser_name,
+      // ADR-103 Phase 3 v2 — propagate content type metadata.
+      contentType: v.content_type ?? 'video',
+      externalUrl: v.external_url ?? null,
     }));
 
     // Récupérer les IDs des vidéos ayant une variante secondaire

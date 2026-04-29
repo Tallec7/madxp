@@ -70,6 +70,9 @@ export interface CloudVideoRow extends QueryResultRow {
   metadata: Record<string, unknown> | null;
   advertiser_name: string | null;
   thumbnail_url: string | null;
+  // ADR-103 Phase 3 v2 — content type metadata for proactive dashboard UX.
+  content_type: 'video' | 'web_page' | 'livestream' | null;
+  external_url: string | null;
 }
 
 // --------------------------------------------------------------------------
@@ -182,6 +185,8 @@ class TimelineRepositoryImpl {
          v.created_at,
          v.updated_at,
          v.metadata,
+         v.content_type,
+         v.external_url,
          a.name as advertiser_name
        FROM videos v
        LEFT JOIN advertiser_videos av ON av.video_id = v.id

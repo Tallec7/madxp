@@ -50,6 +50,13 @@ export interface LoopVideo {
     contentType?: 'video' | 'web_page' | 'livestream';
     /** URL externe pour web_page / livestream (ADR-089). Ignorée si contentType='video'. */
     externalUrl?: string;
+    /**
+     * Durée d'affichage en secondes pour web_page / livestream (ADR-103 Phase 3).
+     * Obligatoire pour les entrées web/live placées dans la boucle MP4 — le
+     * runtime TV avance au step suivant après `durationSeconds * 1000` ms.
+     * Ignorée si contentType='video' (la durée est intrinsèque au fichier MP4).
+     */
+    durationSeconds?: number;
 }
 
 /**
