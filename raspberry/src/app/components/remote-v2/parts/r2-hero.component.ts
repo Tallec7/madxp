@@ -30,7 +30,18 @@ export interface DisplayInfo {
       </div>
 
       <div class="r2-hero-main">
-        <div class="r2-tv-thumb" [class.is-manual]="playingVideo">
+        <div
+          class="r2-tv-thumb"
+          [class.is-manual]="playingVideo"
+          [class.has-preview]="!!previewUrl"
+        >
+          <img
+            *ngIf="previewUrl"
+            [src]="previewUrl"
+            class="r2-tv-thumb-stream"
+            alt=""
+            aria-hidden="true"
+          />
           <span class="r2-tv-scanline"></span>
           <button
             class="r2-rec-badge"
@@ -107,6 +118,12 @@ export class R2HeroComponent {
   @Input() recording = false;
   @Input() displays: DisplayInfo[] = [];
   @Input() targetDisplay = 'all';
+  /**
+   * URL du flux MJPEG `/preview.mjpeg` du Pi.
+   * Injecté UNIQUEMENT quand le layout actif n'est pas `desktop-pro`
+   * (mutex single-subscriber, cf. ADR-103). Sinon `null` → fallback gradient.
+   */
+  @Input() previewUrl: string | null = null;
 
   @Output() setLoop = new EventEmitter<Loop>();
   @Output() setTargetDisplay = new EventEmitter<string>();

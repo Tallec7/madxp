@@ -94,6 +94,7 @@
       [recording]="recording"
       [displays]="displays"
       [targetDisplay]="targetDisplay"
+      [previewUrl]="heroPreviewUrl()"
       (setLoop)="setLoop($event)"
       (setTargetDisplay)="setTargetDisplay($event)"
       (toggleRecording)="toggleRecording()"
@@ -112,7 +113,7 @@
       [loopVideoName]="loopVideo()?.name"
       [subline]="heroSubline()"
       [isNeutralLoop]="loopId === 'neutral'"
-      [previewUrl]="tvPreviewUrl()"
+      [previewUrl]="monitorPreviewUrl()"
       [throttledNotice]="tvPreviewThrottled()"
     ></app-r2-tv-monitor>
 
@@ -305,9 +306,7 @@
             ></app-r2-video-row>
           </div>
           <div class="r2-search-empty" *ngIf="recentVideos().length === 0">
-            Tape un mot-clé pour parcourir toute la bibliothèque ({{
-              getAllVideos().length
-            }}
+            Tape un mot-clé pour parcourir toute la bibliothèque ({{ getAllVideos().length }}
             vidéos).
           </div>
         </ng-container>
