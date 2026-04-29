@@ -206,6 +206,28 @@
   }
 }
 
+// ADR-103 Phase 2.5 — bouton Stop affiché pendant une diffusion manuelle.
+// Rouge pour signaler "interruption" vs vert (loop) pour signaler "retour".
+.r2-stop-btn-circle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e54c4c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms, background 120ms;
+
+  &:hover {
+    transform: scale(1.05);
+    background: #d23030;
+  }
+}
+
 .r2-hero-section-label {
   font-size: 9px;
   font-weight: 700;

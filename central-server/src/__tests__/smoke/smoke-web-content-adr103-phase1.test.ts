@@ -46,7 +46,8 @@ describe('Smoke — ADR-103 Phase 1 WebContentPlayer', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
     const onLoadStart = src.indexOf('const onLoad =');
     expect(onLoadStart).toBeGreaterThan(0);
-    const onLoadBlock = src.slice(onLoadStart, onLoadStart + 800);
+    // Phase 2.5 grew the onLoad body (REVEAL_DELAY wrapper) — bump window.
+    const onLoadBlock = src.slice(onLoadStart, onLoadStart + 1500);
     expect(/_autoCloseTimer\s*=\s*setTimeout/.test(onLoadBlock)).toBe(true);
     expect(/clearLoadTimeout/.test(onLoadBlock)).toBe(true);
   });

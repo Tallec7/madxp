@@ -727,7 +727,18 @@ export class TvComponent implements OnInit, OnDestroy {
       this.webContentService.showLivestream(payload);
     } else if (command.type === 'stop-manual') {
       if (this.isDuplicateCommand('stop-manual')) return;
-      this.webContentService.returnToLoop();
+      // ADR-103 Phase 2.5 — bouton Stop de la Remote : coupe selon ce qui
+      // joue actuellement (web/live OU vidéo manuelle MP4) et reprend la
+      // boucle. Les 2 services savent retourner à la boucle correctement
+      // (jamais sur la même web/live, jamais sur la même manuelle).
+      if (this.webContentService.isActive) {
+        this.webContentService.returnToLoop();
+      } else if (this.isManualMode) {
+        this.manualVideoService.stopAndReturnToLoop(
+          this.manualPlayerARef.nativeElement,
+          this.manualPlayerBRef.nativeElement,
+        );
+      }
     }
   }
 

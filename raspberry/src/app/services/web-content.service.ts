@@ -2,42 +2,57 @@ import { Injectable, inject } from '@angular/core';
 import { DoubleBufferVideoService } from './double-buffer-video.service';
 import { VideoPlaybackService } from './video-playback.service';
 import { AnalyticsService } from './analytics.service';
+import { ManualVideoService } from './manual-video.service';
 import { WebPagePayload, LivestreamPayload } from '../interfaces/command.interface';
 import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
 /**
- * ADR-089 / ADR-103 Phase 1 — Web page & livestream player.
+ * ADR-089 / ADR-103 Phase 1+2.5 — Web page & livestream player.
  *
  * Robust manual playback for `web_page` and `livestream` entries, isolated
  * from the DoubleBuffer MP4 pipeline so a misbehaving iframe or HLS stream
  * cannot drag the rotation down.
  *
  * Phase 1 hardening:
- *   - 1s load-timeout: if the iframe / livestream does not signal `load`
- *     (resp. `loadeddata`) within `LOAD_TIMEOUT_MS`, skip immediately and
- *     resume the rotation (US tolerance criterion).
- *   - Analytics: each play tracked via AnalyticsService with
- *     contentType + external_url. Failures recorded as
- *     interruption_reason='web_load_failed'.
- *   - Layered cleanup: every show() registers exactly one timer pair and
- *     one set of listeners; switching to another entry or returning to
- *     the loop clears them deterministically.
- *   - Null-safe registration: showWebPage/showLivestream are no-ops if
- *     `registerElements()` was not called yet (defensive — TV component
- *     calls it in ngAfterViewInit).
+ *   - 1s load-timeout on iframe / livestream → skip on failure.
+ *   - Analytics with contentType + interruption_reason='web_load_failed'.
+ *   - Layered cleanup, deterministic teardown.
+ *
+ * Phase 2.5 polish:
+ *   - When taking over from a manual MP4 video, the manual players are
+ *     cleared (paused + hidden + isManualMode=false) so the return-to-loop
+ *     never re-shows the manual entry.
+ *   - The MP4 loop is **not paused** during web/live playback — it keeps
+ *     advancing silently behind the iframe. At returnToLoop:
+ *       - if the loop was running → seamless take-over, no restart.
+ *       - if the loop was paused (we came from manual) → restart at
+ *         savedLoopIndex + 1 (advance, never replay the same step).
+ *   - CSS opacity transition (200ms) on iframe + livestream + black
+ *     background on iframe (covers the cross-origin white flash during
+ *     first paint).
+ *   - Freeze frame held ~100ms after `load` to let cross-origin pages
+ *     actually paint their first frame before the freeze disappears.
+ *   - Freeze frame captured BEFORE clearing the iframe at returnToLoop
+ *     so the close transition is also smooth.
  */
 @Injectable({ providedIn: 'root' })
 export class WebContentService {
   /** Skip after this delay if the iframe / livestream did not signal "ready". */
   static readonly LOAD_TIMEOUT_MS = 1000;
+  /** Hold the freeze frame this long after `load` to let the iframe paint. */
+  static readonly REVEAL_DELAY_MS = 120;
+  /** CSS opacity transition duration applied to iframe + livestream. */
+  static readonly OPACITY_TRANSITION_MS = 200;
 
   private readonly analytics = inject(AnalyticsService);
+  private readonly manualVideoService = inject(ManualVideoService);
 
   private _iframe: HTMLIFrameElement | null = null;
   private _livestreamPlayer: HTMLVideoElement | null = null;
   private _isActive = false;
   private _autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
   private _loadTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private _revealDelayTimer: ReturnType<typeof setTimeout> | null = null;
   private _savedLoopIndex = 0;
   private _iframeOnLoad: (() => void) | null = null;
   private _iframeOnError: (() => void) | null = null;
@@ -54,6 +69,11 @@ export class WebContentService {
   registerElements(iframe: HTMLIFrameElement, livestream: HTMLVideoElement): void {
     this._iframe = iframe;
     this._livestreamPlayer = livestream;
+    // ADR-103 Phase 2.5 — black background covers cross-origin white flash
+    // during first paint; opacity transition smooths show/hide.
+    iframe.style.background = '#000';
+    iframe.style.transition = `opacity ${WebContentService.OPACITY_TRANSITION_MS}ms ease`;
+    livestream.style.transition = `opacity ${WebContentService.OPACITY_TRANSITION_MS}ms ease`;
   }
 
   showWebPage(payload: WebPagePayload): void {
@@ -72,19 +92,26 @@ export class WebContentService {
 
     console.log('[WebContent] showing web page', payload.url);
 
-    // Listeners attached BEFORE setting src so we don't miss the load event.
     const onLoad = (): void => {
       this.clearLoadTimeout();
-      iframe.style.opacity = '1';
-      iframe.style.pointerEvents = 'none';
-      this.doubleBufferService.hideFreezeFrame();
-      this.doubleBufferService.hideBlackOverlay();
-      // Schedule auto-close ONLY after the page actually loaded so durationMs
-      // counts visible time, not load latency.
-      if (payload.durationMs && payload.durationMs > 0) {
-        this.clearAutoClose();
-        this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
-      }
+      // Phase 2.5 — wait one paint cycle before revealing so cross-origin
+      // pages have time to paint their first frame. Without this delay,
+      // hideFreezeFrame races the iframe's first paint and produces a
+      // visible white flash.
+      this.clearRevealDelay();
+      this._revealDelayTimer = setTimeout(() => {
+        this._revealDelayTimer = null;
+        iframe.style.opacity = '1';
+        iframe.style.pointerEvents = 'none';
+        this.doubleBufferService.hideFreezeFrame();
+        this.doubleBufferService.hideBlackOverlay();
+        // Auto-close ONLY after the page actually loaded (counts visible
+        // time, not load latency).
+        if (payload.durationMs && payload.durationMs > 0) {
+          this.clearAutoClose();
+          this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
+        }
+      }, WebContentService.REVEAL_DELAY_MS);
     };
     const onError = (): void => {
       console.warn('[WebContent] iframe load error', payload.url);
@@ -97,9 +124,7 @@ export class WebContentService {
 
     iframe.src = payload.url;
 
-    // 1s timeout — Phase 1 tolerance criterion. If the page does not fire
-    // `load` (X-Frame-Options DENY, network slow, frame-ancestors blocked,
-    // unreachable URL), skip without ever showing a blank frame.
+    // 1s timeout (Phase 1 tolerance criterion).
     this._loadTimeoutTimer = setTimeout(() => {
       console.warn('[WebContent] iframe load timeout after', WebContentService.LOAD_TIMEOUT_MS, 'ms', payload.url);
       this.failAndReturn('iframe load timeout');
@@ -127,15 +152,17 @@ export class WebContentService {
 
     const onLoaded = (): void => {
       this.clearLoadTimeout();
-      player.style.opacity = '1';
-      this.doubleBufferService.hideFreezeFrame();
-      this.doubleBufferService.hideBlackOverlay();
-      // Auto-close after the configured duration if provided (livestreams
-      // are typically infinite — durationMs caps them).
-      if (payload.durationMs && payload.durationMs > 0) {
-        this.clearAutoClose();
-        this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
-      }
+      this.clearRevealDelay();
+      this._revealDelayTimer = setTimeout(() => {
+        this._revealDelayTimer = null;
+        player.style.opacity = '1';
+        this.doubleBufferService.hideFreezeFrame();
+        this.doubleBufferService.hideBlackOverlay();
+        if (payload.durationMs && payload.durationMs > 0) {
+          this.clearAutoClose();
+          this._autoCloseTimer = setTimeout(() => this.returnToLoop(true), payload.durationMs);
+        }
+      }, WebContentService.REVEAL_DELAY_MS);
     };
     const onEnded = (): void => this.returnToLoop(true);
     const onError = (e: Event): void => {
@@ -151,7 +178,6 @@ export class WebContentService {
       player.removeEventListener('error', onError);
     };
 
-    // 1s timeout for play() + first frame. Same tolerance criterion as web pages.
     this._loadTimeoutTimer = setTimeout(() => {
       console.warn('[WebContent] livestream load timeout after', WebContentService.LOAD_TIMEOUT_MS, 'ms', payload.url);
       this.failAndReturn('livestream load timeout');
@@ -188,11 +214,17 @@ export class WebContentService {
   private resumeRotation(): void {
     const activeLoopPlayer = this.doubleBufferService.getActivePlayer();
     if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.playbackService.isLoopMode) {
+      // Loop wasn't running (came from manual, or first boot). Restart at
+      // savedLoopIndex + 1 — ADR-103 Phase 2.5 invariant: web/live retour
+      // toujours au step SUIVANT, jamais le step où on était (ni manual, ni
+      // la même web/live).
       const resumeAt = this._savedLoopIndex + 1;
       this.doubleBufferService.captureAndShowFreezeFrame();
       this.doubleBufferService.resetSwitchState();
       this.playbackService.startSeamlessLoop(resumeAt);
     } else {
+      // Loop kept advancing under the iframe (Phase 2.5 — no pause). Just
+      // hide the freeze frame and let it continue from where it advanced.
       this.doubleBufferService.hideFreezeFrame();
       this.doubleBufferService.hideBlackOverlay();
     }
@@ -203,17 +235,23 @@ export class WebContentService {
     url: string,
     name?: string,
   ): void {
-    // If something else was active, end it cleanly before starting a new one.
+    // If web/live was already active, end it cleanly before starting new.
     if (this._isActive) {
       this.endAnalytics(false, 'manual_action');
       this.teardown();
     }
 
+    // ADR-103 Phase 2.5 — clear active manual MP4 (if any) so the return
+    // goes to LOOP, not back to the manual. We don't call
+    // manualVideoService.stopAndReturnToLoop() because that would restart
+    // the loop, fighting our take-over. We just hide the manual players
+    // and reset the flag.
+    this.clearActiveManualVideoIfAny();
+
     this._savedLoopIndex = this.playbackService.currentLoopIndex;
     this._isActive = true;
 
-    // Synthetic analytics entry — content_type + external_url so the
-    // server-side aggregator can group by web vs live vs video.
+    // Synthetic analytics entry — content_type + external_url.
     this._currentAnalyticsVideo = {
       name: name ?? url,
       type: contentType === 'web_page' ? 'text/html' : 'application/vnd.apple.mpegurl',
@@ -229,6 +267,27 @@ export class WebContentService {
     }
   }
 
+  /**
+   * ADR-103 Phase 2.5 — when web/live takes over from a manual MP4, hide
+   * the manual players and reset the flag so the return-to-loop goes to
+   * the LOOP, never back to the manual. Idempotent: no-op when no manual
+   * is active.
+   */
+  private clearActiveManualVideoIfAny(): void {
+    if (!this.manualVideoService.isManualMode) return;
+    console.log('[WebContent] clearing active manual MP4 to take over');
+    const a = this.doubleBufferService.getActiveManualPlayer();
+    const b = this.doubleBufferService.getInactiveManualPlayer();
+    [a, b].forEach((player) => {
+      if (!player) return;
+      try { player.pause(); } catch { /* noop */ }
+      player.style.opacity = '0';
+      player.removeAttribute('src');
+      try { player.load(); } catch { /* noop */ }
+    });
+    this.manualVideoService.isManualMode = false;
+  }
+
   private endAnalytics(
     completed: boolean,
     interruptionReason?: 'manual_action' | 'web_load_failed',
@@ -241,8 +300,13 @@ export class WebContentService {
   private teardown(): void {
     this.clearAutoClose();
     this.clearLoadTimeout();
+    this.clearRevealDelay();
     this.detachIframeListeners();
     this.detachLivestreamListeners();
+    // ADR-103 Phase 2.5 — capture a freeze of the underlying loop player
+    // BEFORE clearing the iframe / livestream so the close transition has
+    // a frame to fade into instead of a brief blank gap.
+    this.doubleBufferService.captureAndShowFreezeFrame(false);
     this.hideIframe();
     this.hideLivestream();
     this._isActive = false;
@@ -267,16 +331,31 @@ export class WebContentService {
   private hideIframe(): void {
     if (!this._iframe) return;
     this._iframe.style.opacity = '0';
-    this._iframe.src = 'about:blank';
+    // Wait for the CSS opacity transition to finish before clearing the
+    // src — otherwise the iframe goes blank instantly while still visible
+    // mid-fade, which is the close flash.
+    setTimeout(() => {
+      if (!this._iframe) return;
+      // Only clear if we're still in the hidden state (could have been
+      // shown again before the timer fires).
+      if (this._iframe.style.opacity === '0') {
+        this._iframe.src = 'about:blank';
+      }
+    }, WebContentService.OPACITY_TRANSITION_MS);
   }
 
   private hideLivestream(): void {
     const player = this._livestreamPlayer;
     if (!player) return;
     player.style.opacity = '0';
-    player.pause();
-    player.removeAttribute('src');
-    player.load();
+    setTimeout(() => {
+      if (!player) return;
+      if (player.style.opacity === '0') {
+        try { player.pause(); } catch { /* noop */ }
+        player.removeAttribute('src');
+        try { player.load(); } catch { /* noop */ }
+      }
+    }, WebContentService.OPACITY_TRANSITION_MS);
   }
 
   private clearAutoClose(): void {
@@ -290,6 +369,13 @@ export class WebContentService {
     if (this._loadTimeoutTimer) {
       clearTimeout(this._loadTimeoutTimer);
       this._loadTimeoutTimer = null;
+    }
+  }
+
+  private clearRevealDelay(): void {
+    if (this._revealDelayTimer) {
+      clearTimeout(this._revealDelayTimer);
+      this._revealDelayTimer = null;
     }
   }
 }
