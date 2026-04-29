@@ -509,7 +509,16 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * adapter cross-replica). Remplacé par un polling HTTP simple : le central
    * garde la dernière frame TV en mémoire, l'admin la pull en GET ~250ms.
    */
+  /**
+   * Kill-switch ADR-104 (incident 429 SaaS du 29 avril 2026).
+   * Aligné avec le flag côté TV (`TvComponent.TV_SNAPSHOT_HTTP_PULL_ENABLED`).
+   * Sans push TV, polling GET inutile + consomme le quota `remoteRateLimit`.
+   * NE PAS retirer la fonction (smoke-tv-preview vérifie sa présence).
+   */
+  private static readonly TV_SNAPSHOT_HTTP_PULL_ENABLED = false;
+
   private setupSaasTvPreviewConsumer(): void {
+    if (!RemoteV2Component.TV_SNAPSHOT_HTTP_PULL_ENABLED) return;
     const apiBase = (environment as { apiUrl?: string }).apiUrl;
     const siteId = this.saasConfig.getSiteId();
     if (!apiBase || !siteId) return;
