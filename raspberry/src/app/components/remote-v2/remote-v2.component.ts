@@ -602,6 +602,10 @@ export class RemoteV2Component implements OnInit, OnDestroy {
    * sur le placeholder pour ne pas casser les vieilles Remote.
    */
   private handleTvPreviewCapability(cap: TvPreviewCapability | null | undefined): void {
+    // Mode SaaS : pas de MJPEG côté Pi — on consomme `tv-preview:saas-frame`
+    // (data: URLs poussées par la TV browser via central). Une capability
+    // `available: false` ne doit pas effacer la frame courante.
+    if (this.saasConfig.isSaasMode()) return;
     if (!cap || !cap.available) {
       this.tvPreviewUrl.set(null);
       this.tvPreviewThrottled.set(false);
