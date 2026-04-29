@@ -30,14 +30,16 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
     expect(/ADR-103 Phase 2\.5/.test(src)).toBe(true);
   });
 
-  it('web-content.service.ts — registerElements applies opacity transition + iframe black background', () => {
+  it('web-content.service.ts — registerElements sets iframe black background + no default transition (Phase 2.6)', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
     const regStart = src.indexOf('registerElements(iframe');
     expect(regStart).toBeGreaterThan(0);
-    const block = src.slice(regStart, regStart + 800);
+    const block = src.slice(regStart, regStart + 1000);
     expect(/iframe\.style\.background\s*=\s*['"]#000['"]/.test(block)).toBe(true);
-    expect(/transition.*opacity.*OPACITY_TRANSITION_MS/.test(block)).toBe(true);
-    expect(/livestream\.style\.transition/.test(block)).toBe(true);
+    // Phase 2.6: transition disabled by default (instant show; transitions
+    // applied only on close, hidden by freeze frame at z-20).
+    expect(/iframe\.style\.transition\s*=\s*['"]none['"]/.test(block)).toBe(true);
+    expect(/livestream\.style\.transition\s*=\s*['"]none['"]/.test(block)).toBe(true);
   });
 
   it('web-content.service.ts — clears active manual video on take-over (no resume to manual)', () => {
@@ -65,8 +67,8 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
     const onLoadStart = src.indexOf('const onLoad =');
     expect(onLoadStart).toBeGreaterThan(0);
-    const block = src.slice(onLoadStart, onLoadStart + 1200);
-    expect(/setTimeout\([\s\S]{0,400}hideFreezeFrame/.test(block)).toBe(true);
+    const block = src.slice(onLoadStart, onLoadStart + 1800);
+    expect(/setTimeout\([\s\S]{0,800}hideFreezeFrame/.test(block)).toBe(true);
     expect(/REVEAL_DELAY_MS/.test(block)).toBe(true);
   });
 
@@ -82,13 +84,16 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
     expect(freezeIdx).toBeLessThan(hideIframeIdx);
   });
 
-  it('web-content.service.ts — hideIframe defers src=about:blank by transition duration', () => {
+  it('web-content.service.ts — hideIframe is instant under the freeze cover (Phase 2.6)', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
     const hideStart = src.indexOf('private hideIframe()');
     expect(hideStart).toBeGreaterThan(0);
     const block = src.slice(hideStart, hideStart + 700);
-    expect(/setTimeout\([\s\S]+about:blank/.test(block)).toBe(true);
-    expect(/OPACITY_TRANSITION_MS/.test(block)).toBe(true);
+    // Phase 2.6: teardown captures freeze BEFORE this method runs so we
+    // clear the iframe instantly. No setTimeout-deferred about:blank.
+    expect(/about:blank/.test(block)).toBe(true);
+    expect(/iframe\.style\.transition\s*=\s*['"]none['"]/.test(block)).toBe(true);
+    expect(/Phase 2\.6/.test(block)).toBe(true);
   });
 
   it('web-content.service.ts — resumeRotation never restarts at savedLoopIndex (always +1)', () => {

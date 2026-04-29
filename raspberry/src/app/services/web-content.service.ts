@@ -70,10 +70,17 @@ export class WebContentService {
     this._iframe = iframe;
     this._livestreamPlayer = livestream;
     // ADR-103 Phase 2.5 — black background covers cross-origin white flash
-    // during first paint; opacity transition smooths show/hide.
+    // during first paint.
     iframe.style.background = '#000';
-    iframe.style.transition = `opacity ${WebContentService.OPACITY_TRANSITION_MS}ms ease`;
-    livestream.style.transition = `opacity ${WebContentService.OPACITY_TRANSITION_MS}ms ease`;
+    // ADR-103 Phase 2.6 — no opacity transition by default. We apply it
+    // explicitly only when CLOSING (so the close fade-out is hidden behind
+    // the freeze-frame at z-20). On SHOW we want the iframe to become
+    // opaque INSTANTLY: a CSS opacity 0→1 transition on a layer beneath the
+    // freeze-frame means that, the moment we hide the freeze, the half-opaque
+    // iframe shows the MP4 player through itself for ~200ms — that's the
+    // post-Phase 2.5 flash users reported.
+    iframe.style.transition = 'none';
+    livestream.style.transition = 'none';
   }
 
   showWebPage(payload: WebPagePayload): void {
@@ -96,11 +103,17 @@ export class WebContentService {
       this.clearLoadTimeout();
       // Phase 2.5 — wait one paint cycle before revealing so cross-origin
       // pages have time to paint their first frame. Without this delay,
-      // hideFreezeFrame races the iframe's first paint and produces a
-      // visible white flash.
+      // hideFreezeFrame races the iframe's first paint.
       this.clearRevealDelay();
       this._revealDelayTimer = setTimeout(() => {
         this._revealDelayTimer = null;
+        // Phase 2.6 — INSTANT show: no opacity transition. Order is critical:
+        // 1) iframe.opacity = 1 (instant, no transition because we set
+        //    transition='none' in registerElements + reset it just before).
+        //    The iframe is now fully opaque BENEATH the freeze frame at z-20.
+        // 2) hideFreezeFrame: freeze opacity 0 — the iframe is fully visible
+        //    at the same instant, so the MP4 underneath is never exposed.
+        iframe.style.transition = 'none';
         iframe.style.opacity = '1';
         iframe.style.pointerEvents = 'none';
         this.doubleBufferService.hideFreezeFrame();
@@ -155,6 +168,8 @@ export class WebContentService {
       this.clearRevealDelay();
       this._revealDelayTimer = setTimeout(() => {
         this._revealDelayTimer = null;
+        // Phase 2.6 — INSTANT show (cf. showWebPage above for rationale).
+        player.style.transition = 'none';
         player.style.opacity = '1';
         this.doubleBufferService.hideFreezeFrame();
         this.doubleBufferService.hideBlackOverlay();
@@ -329,33 +344,29 @@ export class WebContentService {
   }
 
   private hideIframe(): void {
-    if (!this._iframe) return;
-    this._iframe.style.opacity = '0';
-    // Wait for the CSS opacity transition to finish before clearing the
-    // src — otherwise the iframe goes blank instantly while still visible
-    // mid-fade, which is the close flash.
-    setTimeout(() => {
-      if (!this._iframe) return;
-      // Only clear if we're still in the hidden state (could have been
-      // shown again before the timer fires).
-      if (this._iframe.style.opacity === '0') {
-        this._iframe.src = 'about:blank';
-      }
-    }, WebContentService.OPACITY_TRANSITION_MS);
+    const iframe = this._iframe;
+    if (!iframe) return;
+    // ADR-103 Phase 2.6 — close path:
+    //   1. teardown() captures a freeze frame of the loop player at z-20
+    //      BEFORE this method runs (covers the iframe).
+    //   2. We can therefore clear the iframe instantly — the freeze hides
+    //      the transition. No animated fade-out needed because the user
+    //      never sees the iframe disappear (freeze is on top).
+    iframe.style.transition = 'none';
+    iframe.style.opacity = '0';
+    iframe.src = 'about:blank';
   }
 
   private hideLivestream(): void {
     const player = this._livestreamPlayer;
     if (!player) return;
+    // ADR-103 Phase 2.6 — close path: freeze frame captured by teardown
+    // covers the player at z-20, so we can teardown instantly.
+    player.style.transition = 'none';
     player.style.opacity = '0';
-    setTimeout(() => {
-      if (!player) return;
-      if (player.style.opacity === '0') {
-        try { player.pause(); } catch { /* noop */ }
-        player.removeAttribute('src');
-        try { player.load(); } catch { /* noop */ }
-      }
-    }, WebContentService.OPACITY_TRANSITION_MS);
+    try { player.pause(); } catch { /* noop */ }
+    player.removeAttribute('src');
+    try { player.load(); } catch { /* noop */ }
   }
 
   private clearAutoClose(): void {
