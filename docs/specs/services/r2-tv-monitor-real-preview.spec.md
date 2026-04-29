@@ -5,13 +5,16 @@
 > **Statut** : 🚧 P0 en cours d'implémentation (V1 MJPEG)
 > **Dernière revue** : 2026-04-28
 > **Code principal** :
+>
 > - `raspberry/server/services/tv-preview.service.js`
 > - `raspberry/server/routes/tv-preview.js`
 > - `raspberry/server/socket/handlers.js` (events `tv-preview:*`)
 > - `raspberry/src/app/components/remote-v2/parts/r2-tv-monitor.component.ts`
-> **ADR liés** : [ADR-101](../../adr/ADR-101-tv-preview-mjpeg-strategy.md) — MJPEG V1, WebRTC V2 conditionnel
-> **`.claude/rules/` lié** : `raspberry.md`, `context.md`, `testing.md`
-> **Annexe technique** : [`r2-tv-monitor-real-preview.cdc.html`](./r2-tv-monitor-real-preview.cdc.html) — cahier des charges complet 12 sections (3 options comparées MJPEG/WebRTC/HLS, plan de phases, contrats détaillés)
+>   **ADR liés** :
+> - [ADR-101](../../adr/ADR-101-tv-preview-mjpeg-strategy.md) — MJPEG V1, WebRTC V2 conditionnel
+> - [ADR-103](../../adr/ADR-103-tv-preview-layout-mutex.md) — Mutex layout-driven : hero mini-thumb (mobile/desktop standard) vs monitor 16/9 (régie pro PC C). Garantit un seul consumer MJPEG actif.
+>   **`.claude/rules/` lié** : `raspberry.md`, `context.md`, `testing.md`
+>   **Annexe technique** : [`r2-tv-monitor-real-preview.cdc.html`](./r2-tv-monitor-real-preview.cdc.html) — cahier des charges complet 12 sections (3 options comparées MJPEG/WebRTC/HLS, plan de phases, contrats détaillés)
 
 ## En une phrase
 
@@ -40,25 +43,25 @@ L'opérateur régie pro qui pilote 30+ vidéos par match en layout PC C (cf. SPE
 
 ## Contrat
 
-| Sens | Event / endpoint | Payload / réponse |
-| --- | --- | --- |
-| Pi → Remote | `tv-preview:capability` | `{ available, transport: "mjpeg" \| "webrtc", url, resolution, fps, version }` |
-| Remote → Pi | `tv-preview:start` | `{ siteId, sessionId, layoutHint: "pc-c" }` |
-| Remote → Pi | `tv-preview:stop` | `{ siteId, sessionId }` |
-| Pi → Remote | `tv-preview:throttled` | `{ reason: "cpu" \| "temp", newFps?, suspended? }` |
-| HTTP | `GET /preview.mjpeg` (socket-server :3000) | `multipart/x-mixed-replace; boundary=frame`, JPEG 640×360 q=70, 10 fps. Auth via socket auth token (cf. `security.socketAuthToken` config) ou token HMAC 5 min (cloud distant) |
+| Sens        | Event / endpoint                           | Payload / réponse                                                                                                                                                              |
+| ----------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pi → Remote | `tv-preview:capability`                    | `{ available, transport: "mjpeg" \| "webrtc", url, resolution, fps, version }`                                                                                                 |
+| Remote → Pi | `tv-preview:start`                         | `{ siteId, sessionId, layoutHint: "pc-c" }`                                                                                                                                    |
+| Remote → Pi | `tv-preview:stop`                          | `{ siteId, sessionId }`                                                                                                                                                        |
+| Pi → Remote | `tv-preview:throttled`                     | `{ reason: "cpu" \| "temp", newFps?, suspended? }`                                                                                                                             |
+| HTTP        | `GET /preview.mjpeg` (socket-server :3000) | `multipart/x-mixed-replace; boundary=frame`, JPEG 640×360 q=70, 10 fps. Auth via socket auth token (cf. `security.socketAuthToken` config) ou token HMAC 5 min (cloud distant) |
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-| --- | --- |
-| Layout PC C → preview live | `<img>` rendu avec `is-healthy` class, frames JPEG visibles |
-| Autre layout que PC C | Composant masqué (cf. fix scope PR #686) |
-| Sortie de PC C | Remote émet `tv-preview:stop`, encodage Pi cesse |
-| Pi 4 / SaaS / demo | `available: false` (ou event jamais émis) → placeholder, pas d'erreur console |
-| Throttle CPU > 80 % continu | `tv-preview:throttled` envoyé, badge "Stream ralenti" côté Remote |
-| 2e Remote concurrente | HTTP 429, la 1re continue sans interruption |
-| Métriques Prometheus | `neopro_tv_preview_frames_total`, `neopro_tv_preview_throttle_total{reason}`, `neopro_tv_preview_subscribers` |
+| Règle                       | Comment on vérifie                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Layout PC C → preview live  | `<img>` rendu avec `is-healthy` class, frames JPEG visibles                                                   |
+| Autre layout que PC C       | Composant masqué (cf. fix scope PR #686)                                                                      |
+| Sortie de PC C              | Remote émet `tv-preview:stop`, encodage Pi cesse                                                              |
+| Pi 4 / SaaS / demo          | `available: false` (ou event jamais émis) → placeholder, pas d'erreur console                                 |
+| Throttle CPU > 80 % continu | `tv-preview:throttled` envoyé, badge "Stream ralenti" côté Remote                                             |
+| 2e Remote concurrente       | HTTP 429, la 1re continue sans interruption                                                                   |
+| Métriques Prometheus        | `neopro_tv_preview_frames_total`, `neopro_tv_preview_throttle_total{reason}`, `neopro_tv_preview_subscribers` |
 
 ## Cas d'edge connus
 

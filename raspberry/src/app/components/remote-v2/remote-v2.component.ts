@@ -190,6 +190,25 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   readonly tvPreviewUrl = signal<string | null>(null);
   readonly tvPreviewThrottled = signal(false);
 
+  /**
+   * ADR-103 — Mutex single-subscriber MJPEG.
+   * `/preview.mjpeg` répond HTTP 429 si un client est déjà branché. Un seul
+   * `<img>` consumer doit être actif dans le DOM. Le layout actif décide :
+   *   - `desktop-pro` (régie PC C) → `<app-r2-tv-monitor>` consomme
+   *   - autres layouts → `<app-r2-hero>` mini-thumb consomme
+   */
+  get isProLayout(): boolean {
+    return this.prefsService.prefs.layoutDesktop === 'pro';
+  }
+  /** URL injectée dans le hero (mini-thumb) hors layout pro. */
+  heroPreviewUrl(): string | null {
+    return this.isProLayout ? null : this.tvPreviewUrl();
+  }
+  /** URL injectée dans le monitor 16/9 en layout pro. */
+  monitorPreviewUrl(): string | null {
+    return this.isProLayout ? this.tvPreviewUrl() : null;
+  }
+
   /** Activation des widgets (persisté localStorage). */
   widgetsEnabled: WidgetsEnabled = { score: true, chrono: true, breaking: false };
 

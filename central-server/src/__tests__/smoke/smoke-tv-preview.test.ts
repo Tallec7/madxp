@@ -250,8 +250,51 @@ describe('SPEC-V2-TVMON-01 / ADR-101 — TV preview MJPEG wiring', () => {
     });
 
     it('passes previewUrl and throttledNotice to <app-r2-tv-monitor>', () => {
-      expect(html).toMatch(/\[previewUrl\]="tvPreviewUrl\(\)"/);
+      // ADR-103 — Mutex single-subscriber : monitor reçoit l'URL UNIQUEMENT
+      // en layout `desktop-pro`, sinon `null`. Le hero (mini-thumb) prend
+      // le relais sur les autres layouts.
+      expect(html).toMatch(/\[previewUrl\]="monitorPreviewUrl\(\)"/);
       expect(html).toMatch(/\[throttledNotice\]="tvPreviewThrottled\(\)"/);
+    });
+  });
+
+  // ===========================================================================
+  // ADR-103 — Mini-thumb du hero "À L'ANTENNE" (visible mobile/desktop standard)
+  // Garde-fou : le `<app-r2-hero>` consomme bien `previewUrl` et le rend dans
+  // un `<img>` à l'intérieur de `.r2-tv-thumb`. Sans ça, sur mobile/desktop
+  // standard, le flux MJPEG n'a aucune surface visible.
+  // ===========================================================================
+  describe('ADR-103 — Hero mini-thumb consumes previewUrl', () => {
+    const heroFile = 'raspberry/src/app/components/remote-v2/parts/r2-hero.component.ts';
+    const htmlFile = 'raspberry/src/app/components/remote-v2/remote-v2.component.html';
+    let heroSrc = '';
+    let html = '';
+    beforeAll(() => {
+      heroSrc = read(heroFile);
+      html = read(htmlFile);
+    });
+
+    it('R2HeroComponent declares @Input() previewUrl', () => {
+      expect(heroSrc).toMatch(/@Input\(\)\s+previewUrl\s*:\s*string\s*\|\s*null/);
+    });
+
+    it('template renders <img> consuming previewUrl inside .r2-tv-thumb', () => {
+      // Anti-régression formulation buguée : le placeholder gradient pur
+      // (sans <img>) doit avoir disparu.
+      expect(heroSrc).toMatch(/\[src\]="previewUrl"/);
+      expect(heroSrc).toMatch(/r2-tv-thumb-stream/);
+      expect(heroSrc).toMatch(/\*ngIf="previewUrl"/);
+    });
+
+    it('RemoteV2Component exposes mutex helpers heroPreviewUrl / monitorPreviewUrl', () => {
+      const ts = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+      expect(ts).toMatch(/heroPreviewUrl\(\)\s*:\s*string\s*\|\s*null/);
+      expect(ts).toMatch(/monitorPreviewUrl\(\)\s*:\s*string\s*\|\s*null/);
+      expect(ts).toMatch(/layoutDesktop\s*===\s*['"]pro['"]/);
+    });
+
+    it('hero receives previewUrl via mutex (heroPreviewUrl)', () => {
+      expect(html).toMatch(/<app-r2-hero[\s\S]*?\[previewUrl\]="heroPreviewUrl\(\)"/);
     });
   });
 
