@@ -537,10 +537,29 @@ jobs:
 
           if [ "$ROOT" != "200" ] || [ "$DASH_DEEP" != "200" ] \
              || [ "$SAAS_ROOT" != "200" ] || [ "$SAAS_REMOTE" != "200" ] || [ "$SAAS_TV" != "200" ]; then
-            echo "::error::Cloudflare Pages deploy verify failed"
+            echo "::error::Cloudflare Pages deploy verify failed (HTTP status)"
             exit 1
           fi
-          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback OK"
+
+          # Content-aware verify : sans ça, un 200 qui sert le mauvais HTML
+          # passe silencieusement (cf. incident bascule prod 2026-04-29).
+          # /saas/<route> doit servir le HTML SaaS (`<base href="/saas/">`),
+          # PAS le dashboard (`<base href="/">`).
+          assert_saas_html() {
+            local url="$1"
+            local body
+            body=$(curl -s -A "neopro-ci-verify/1.0" "$url")
+            if ! echo "$body" | grep -q 'base href="/saas/"'; then
+              echo "::error::$url ne sert PAS le HTML SaaS (base href != /saas/) — routing CF cassé"
+              echo "$body" | grep -oE '<title>[^<]*</title>|<base[^>]*>' | head -3 || true
+              exit 1
+            fi
+          }
+          assert_saas_html "$BASE/saas/"
+          assert_saas_html "$BASE/saas/remote?site=ci-probe"
+          assert_saas_html "$BASE/saas/tv?site=ci-probe"
+          assert_saas_html "$BASE/saas/login"
+          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback OK (status + content)"
 
   deploy-railway:
     name: Deploy Central Server to Railway

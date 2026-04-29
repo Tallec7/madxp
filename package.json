@@ -17,7 +17,7 @@
     "build:saas": "ng build raspberry --configuration=saas",
     "build:saas:staging": "ng build raspberry --configuration=saas-staging",
     "build:cloudflare": "npm run build:central:staging && npm run build:saas:staging && mkdir -p dist/central-dashboard/browser/saas && cp -r dist/raspberry/browser/. dist/central-dashboard/browser/saas/",
-    "build:cloudflare:prod": "npm run build:central && npm run build:saas && mkdir -p dist/central-dashboard/browser/saas && cp -r dist/raspberry/browser/. dist/central-dashboard/browser/saas/",
+    "build:cloudflare:prod": "npm run build:central && npm run build:saas && mkdir -p dist/central-dashboard/browser/saas && cp -r dist/raspberry/browser/. dist/central-dashboard/browser/saas/ && bash scripts/cloudflare-saas-route-stubs.sh",
     "deploy:raspberry": "./raspberry/scripts/build-and-deploy.sh",
     "watch": "ng build raspberry --watch --configuration development",
     "watch:central": "ng build central-dashboard --watch --configuration development",
