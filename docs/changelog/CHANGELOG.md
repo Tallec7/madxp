@@ -1,3 +1,9 @@
+## [3.269.2](https://github.com/Tallec7/neopro/compare/v3.269.1...v3.269.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote-v2:** dispatch web-page / livestream by contentType (parity with V1) — ADR-103 Phase 2a ([#712](https://github.com/Tallec7/neopro/issues/712)) ([c7b0435](https://github.com/Tallec7/neopro/commit/c7b0435b414b8650b9dc36223af260fffc83980b)), closes [#705](https://github.com/Tallec7/neopro/issues/705)
+
 ## [3.269.1](https://github.com/Tallec7/neopro/compare/v3.269.0...v3.269.1) (2026-04-29)
 
 ### Bug Fixes
