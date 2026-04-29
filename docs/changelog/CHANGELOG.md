@@ -1,3 +1,9 @@
+# [3.272.0](https://github.com/Tallec7/neopro/compare/v3.271.0...v3.272.0) (2026-04-29)
+
+### Features
+
+- **remote:** hls.js lazy-load for livestream on Chromium — ADR-103 Phase 1.5a ([#722](https://github.com/Tallec7/neopro/issues/722)) ([607c611](https://github.com/Tallec7/neopro/commit/607c611a80ea769486f752bb53906661bee37b78))
+
 # [3.271.0](https://github.com/Tallec7/neopro/compare/v3.270.3...v3.271.0) (2026-04-29)
 
 ### Features
