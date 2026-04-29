@@ -1,8 +1,7 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 3 / 3 v2 livrées) — Phase 1.5b / 4 en attente
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 livrées) — Phase 3 v2 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 / 3 v2 livrées) — Phase 4 en attente
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
 > **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`, `smoke-web-content-adr103-phase15a.test.ts`, `smoke-web-content-adr103-phase15b.test.ts`, `smoke-web-content-adr103-phase3.test.ts`
@@ -157,21 +156,21 @@ Stop manuel :
 
 ## États (Phase de livraison)
 
-| Phase  | Scope                                                            | État          | PR                                                 |
-| ------ | ---------------------------------------------------------------- | ------------- | -------------------------------------------------- |
-| 0      | Filets défensifs TV + cleanup DB                                 | ✅ Livrée     | [#699](https://github.com/Tallec7/neopro/pull/699) |
-| 0.5    | Strip serveur + reject 400                                       | ✅ Livrée     | [#701](https://github.com/Tallec7/neopro/pull/701) |
-| 0.6    | Visibilité Web/Live dans Remote                                  | ✅ Livrée     | [#703](https://github.com/Tallec7/neopro/pull/703) |
-| 1      | WebContentPlayer manuel + 1s timeout + analytics                 | ✅ Livrée     | [#705](https://github.com/Tallec7/neopro/pull/705) |
-| 2a     | Backend résout les paths synthétiques au read + drop 400 reject  | ✅ Livrée     | [#710](https://github.com/Tallec7/neopro/pull/710) |
-| 2.5    | Take-over manuel propre + anti-flash + bouton Stop Remote V2     | ✅ Livrée     | [#714](https://github.com/Tallec7/neopro/pull/714) |
-| 2.6    | Instant show (no opacity transition under freeze)                | ✅ Livrée     | [#716](https://github.com/Tallec7/neopro/pull/716) |
-| 2.7    | Paint-stable reveal (2× rAF + 250ms)                             | ✅ Livrée     | [#718](https://github.com/Tallec7/neopro/pull/718) |
-| **2b** | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                                     |
-| 1.5    | hls.js + master/slave sync                                       | ⏳ À venir    | —                                                  |
-| 3      | Dashboard UX (sélecteur, validation, preview)                    | ⏳ À venir    | —                                                  |
-| **3 v2** | **Library proactive : icônes 🌐/📡 + prompt durée add-to-loop**  | **✅ Livrée** | **(cette PR)**                                   |
-| 4      | Supervision + ADR fermeture                                      | ⏳ À venir    | —                                                  |
+| Phase    | Scope                                                            | État          | PR                                                 |
+| -------- | ---------------------------------------------------------------- | ------------- | -------------------------------------------------- |
+| 0        | Filets défensifs TV + cleanup DB                                 | ✅ Livrée     | [#699](https://github.com/Tallec7/neopro/pull/699) |
+| 0.5      | Strip serveur + reject 400                                       | ✅ Livrée     | [#701](https://github.com/Tallec7/neopro/pull/701) |
+| 0.6      | Visibilité Web/Live dans Remote                                  | ✅ Livrée     | [#703](https://github.com/Tallec7/neopro/pull/703) |
+| 1        | WebContentPlayer manuel + 1s timeout + analytics                 | ✅ Livrée     | [#705](https://github.com/Tallec7/neopro/pull/705) |
+| 2a       | Backend résout les paths synthétiques au read + drop 400 reject  | ✅ Livrée     | [#710](https://github.com/Tallec7/neopro/pull/710) |
+| 2.5      | Take-over manuel propre + anti-flash + bouton Stop Remote V2     | ✅ Livrée     | [#714](https://github.com/Tallec7/neopro/pull/714) |
+| 2.6      | Instant show (no opacity transition under freeze)                | ✅ Livrée     | [#716](https://github.com/Tallec7/neopro/pull/716) |
+| 2.7      | Paint-stable reveal (2× rAF + 250ms)                             | ✅ Livrée     | [#718](https://github.com/Tallec7/neopro/pull/718) |
+| **2b**   | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                                     |
+| 1.5      | hls.js + master/slave sync                                       | ⏳ À venir    | —                                                  |
+| 3        | Dashboard UX (sélecteur, validation, preview)                    | ⏳ À venir    | —                                                  |
+| **3 v2** | **Library proactive : icônes 🌐/📡 + prompt durée add-to-loop**  | **✅ Livrée** | **(cette PR)**                                     |
+| 4        | Supervision + ADR fermeture                                      | ⏳ À venir    | —                                                  |
 
 ## Référence code
 
