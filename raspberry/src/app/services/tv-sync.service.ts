@@ -1,8 +1,9 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { SocketService, LoopState } from './socket.service';
 import { DoubleBufferVideoService } from './double-buffer-video.service';
 import { VideoPlaybackService } from './video-playback.service';
 import { ManualVideoService } from './manual-video.service';
+import { WebContentService } from './web-content.service';
 import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
 /**
@@ -35,6 +36,24 @@ export class TvSyncService {
 
   // Guard anti-race condition (ADR-033)
   private _lastActionReceivedAt = 0;
+  /**
+   * ADR-103 Phase 1.5b — last time the slave handled a content_type
+   * transition (video → web/live or vice versa). Used to ignore stale
+   * `tv-loop-state` messages emitted by the master before the transition
+   * (similar to `_lastActionReceivedAt` for ADR-033).
+   */
+  private _lastContentTypeChangeAt = 0;
+  /**
+   * ADR-103 Phase 1.5b — track what content type the slave is currently
+   * showing locally (synced from master). Used to detect transitions and
+   * avoid replaying the same web/live URL on every state tick.
+   */
+  private _slaveCurrentContentType: 'video' | 'web_page' | 'livestream' = 'video';
+  private _slaveCurrentExternalUrl: string | null = null;
+
+  // ADR-103 Phase 1.5b — WebContentService injected lazily via DI to avoid
+  // bloating the constructor signature.
+  private readonly webContentService = inject(WebContentService);
 
   // Transition quality metrics — slave-specific
   private transitionMetrics = {
@@ -79,8 +98,18 @@ export class TvSyncService {
 
   /**
    * Emit loop state to slaves (master only).
+   *
+   * ADR-103 Phase 1.5b — when the loop step is web/live, pass `webContent`
+   * so the slave routes to its own WebContentService instead of trying to
+   * play `videoPath` as MP4 (which would fail in the DoubleBuffer).
    */
-  emitLoopState(videoIndex: number, videoPath: string, isManualMode: boolean, manualVideoPath?: string): void {
+  emitLoopState(
+    videoIndex: number,
+    videoPath: string,
+    isManualMode: boolean,
+    manualVideoPath?: string,
+    webContent?: { contentType: 'web_page' | 'livestream'; externalUrl: string; durationMs?: number | null; name?: string | null },
+  ): void {
     const state: LoopState = {
       videoIndex,
       videoPath,
@@ -89,11 +118,20 @@ export class TvSyncService {
       manualVideoPath: manualVideoPath || null,
       manualVideoStartedAt: isManualMode ? Date.now() : null,
       manualVideoVisible: false, // ADR-034: loop emissions are never manual-visible
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      currentContentType: webContent?.contentType ?? 'video',
+      currentExternalUrl: webContent?.externalUrl ?? null,
+      currentDurationMs: webContent?.durationMs ?? null,
+      currentName: webContent?.name ?? null,
     };
 
     this.socketService.emit('tv-loop-update', state);
-    console.log('[TV] Master emitted loop state:', { videoIndex, videoPath, isManualMode });
+    console.log('[TV] Master emitted loop state:', {
+      videoIndex,
+      videoPath,
+      isManualMode,
+      contentType: state.currentContentType,
+    });
   }
 
   private registerSocketHandlers(): void {
@@ -171,8 +209,93 @@ export class TvSyncService {
       videoPath: state.videoPath,
       videoIndex: state.videoIndex,
       isManualMode: state.isManualMode,
-      manualVideoPath: state.manualVideoPath
+      manualVideoPath: state.manualVideoPath,
+      contentType: state.currentContentType,
     });
+
+    const masterContentType = state.currentContentType ?? 'video';
+    const masterExternalUrl = state.currentExternalUrl ?? null;
+
+    // ADR-103 Phase 1.5b — CAS 0 : the master is currently in a web/live
+    // step (rotation auto Phase 2b). Mirror the same iframe / livestream
+    // on this slave display.
+    if (!state.isManualMode && masterContentType !== 'video') {
+      const sameAsCurrent =
+        this._slaveCurrentContentType === masterContentType &&
+        this._slaveCurrentExternalUrl === masterExternalUrl &&
+        this.webContentService.isActive;
+      if (sameAsCurrent) {
+        // Already showing the same web/live entry — nothing to do, the
+        // master keeps emitting state ticks but we don't want to reload
+        // the iframe each time (would flash).
+        return;
+      }
+
+      console.log('[TV] Slave: master is in web/live step, mirroring', {
+        contentType: masterContentType,
+        url: masterExternalUrl,
+      });
+      this._lastContentTypeChangeAt = Date.now();
+      this._slaveCurrentContentType = masterContentType;
+      this._slaveCurrentExternalUrl = masterExternalUrl;
+
+      if (!masterExternalUrl) {
+        console.warn('[TV] Slave: master web/live state missing externalUrl, skipping');
+        return;
+      }
+
+      // The master drives the loop advancement — onComplete on the slave
+      // is a no-op (no analytics, no advancement). The next tv-loop-state
+      // emit by the master will move the slave to the next step.
+      this.webContentService.playInLoop(
+        {
+          contentType: masterContentType,
+          path: masterExternalUrl,
+          externalUrl: masterExternalUrl,
+          name: state.currentName ?? undefined,
+          durationSeconds:
+            state.currentDurationMs && state.currentDurationMs > 0
+              ? Math.round(state.currentDurationMs / 1000)
+              : null,
+        },
+        () => { /* slave: master drives advancement */ },
+      );
+      return;
+    }
+
+    // ADR-103 Phase 1.5b — CAS 0bis : we were showing a web/live step but
+    // the master is now back to MP4 (or manual). Tear down the iframe so
+    // the next MP4 frame is visible.
+    if (
+      this._slaveCurrentContentType !== 'video' &&
+      (masterContentType === 'video' || state.isManualMode)
+    ) {
+      console.log('[TV] Slave: master left web/live step, returning to MP4 / manual');
+      this._lastContentTypeChangeAt = Date.now();
+      this._slaveCurrentContentType = 'video';
+      this._slaveCurrentExternalUrl = null;
+      // returnToLoop in slave context: webContent teardown + freeze frame.
+      // The slave's playback stays driven by the next master state tick.
+      if (this.webContentService.isActive) {
+        this.webContentService.returnToLoop(false);
+      }
+    }
+
+    // ADR-103 Phase 1.5b — guard against stale MP4 state arriving WITHIN
+    // 2s of the slave's content_type transition (same pattern as ADR-033
+    // for `_lastActionReceivedAt`). The master's emit ordering can produce
+    // a brief window where an old MP4 state lands after we already routed
+    // to web/live, which would briefly flicker the MP4 underneath.
+    const msSinceContentTypeChange = Date.now() - this._lastContentTypeChangeAt;
+    if (
+      msSinceContentTypeChange < 2000 &&
+      masterContentType === 'video' &&
+      this.webContentService.isActive
+    ) {
+      console.log(`[TV] Slave: ignoring stale MP4 state (content-type changed ${msSinceContentTypeChange}ms ago)`);
+      this.transitionMetrics.staleLoopStateCount++;
+      return;
+    }
 
     // CAS 1: Le master joue une video manuelle
     if (state.isManualMode && state.manualVideoPath) {

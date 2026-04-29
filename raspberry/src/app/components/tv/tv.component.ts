@@ -486,8 +486,28 @@ export class TvComponent implements OnInit, OnDestroy {
       // step, delegate to WebContentService.playInLoop. The completion
       // callback advances the loop to the next step (handled inside
       // VideoPlaybackService.advanceLoop).
-      playWebContentInLoop: (entry, onComplete) =>
-        this.webContentService.playInLoop(entry, onComplete),
+      // ADR-103 Phase 1.5b — also emit `tv-loop-state` with the web/live
+      // payload so dual-display slaves mirror the iframe / livestream
+      // (the emit happens only on master; isSlaveMode no-op).
+      playWebContentInLoop: (entry, onComplete) => {
+        if (this.tvSyncService.tvRole === 'master') {
+          const externalUrl = entry?.externalUrl || entry?.path || '';
+          const durationMs = entry?.durationSeconds ? entry.durationSeconds * 1000 : null;
+          this.tvSyncService.emitLoopState(
+            this.playbackService.currentLoopIndex,
+            externalUrl,
+            false,
+            undefined,
+            {
+              contentType: entry.contentType === 'livestream' ? 'livestream' : 'web_page',
+              externalUrl,
+              durationMs,
+              name: entry?.name ?? null,
+            },
+          );
+        }
+        this.webContentService.playInLoop(entry, onComplete);
+      },
     });
 
     // 3. Initialize ErrorRecovery (watchdog, error handlers, memory cleanup)
