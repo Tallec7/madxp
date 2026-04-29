@@ -471,7 +471,10 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       const siteId = this.saasConfig.getSiteId();
       if (siteId) params.set('site', siteId);
     }
-    return `${window.location.origin}/?${params.toString()}`;
+    // ADR-071 phase 3 : `document.baseURI` respecte le `<base href>` Angular
+    // (`/` sur le Pi, `/saas/` sur Cloudflare Pages SaaS). Sans ça, l'iframe
+    // chargeait le dashboard à la racine au lieu de la TV SaaS.
+    return new URL(`?${params.toString()}`, document.baseURI).toString();
   }
 
   // ---- Enrichissement config (US-V2-01) ---------------------------------
