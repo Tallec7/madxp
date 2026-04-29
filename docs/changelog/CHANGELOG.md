@@ -1,3 +1,9 @@
+# [3.270.0](https://github.com/Tallec7/neopro/compare/v3.269.3...v3.270.0) (2026-04-29)
+
+### Features
+
+- **remote:** web content take-over polish + Stop button + anti-flash — ADR-103 Phase 2.5 ([#714](https://github.com/Tallec7/neopro/issues/714)) ([ec0bb82](https://github.com/Tallec7/neopro/commit/ec0bb82fa86c16377e3d82f6bbc5937c27775989))
+
 ## [3.269.3](https://github.com/Tallec7/neopro/compare/v3.269.2...v3.269.3) (2026-04-29)
 
 ### Bug Fixes
