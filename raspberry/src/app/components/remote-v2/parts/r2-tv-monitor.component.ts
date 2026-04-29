@@ -177,6 +177,9 @@ export class R2TvMonitorComponent implements OnChanges, OnDestroy {
   }
 
   private bust(url: string): string {
+    // data: URLs (SaaS frame path) are unique per frame and would corrupt
+    // the base64 payload if a query string were appended.
+    if (url.startsWith('data:')) return url;
     const sep = url.includes('?') ? '&' : '?';
     return `${url}${sep}_t=${Date.now()}`;
   }
