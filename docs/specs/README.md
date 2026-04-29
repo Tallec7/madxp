@@ -63,41 +63,36 @@ Issu de l'audit complet du 2026-04-27 (services backend + composants UI + ADR Ac
 ```
 docs/specs/
 ├── README.md                        # ce fichier (index + gabarit)
-├── components/
-│   ├── tv-player.spec.md
-│   ├── remote-control.spec.md
-│   └── dashboard-sites.spec.md
 ├── features/
-│   ├── match-sessions.spec.md       # ✅ pilote livré
-│   ├── sponsors-rotation.spec.md
-│   ├── templates-studio.spec.md
-│   ├── saas-mode.spec.md
-│   ├── hotspot-psk.spec.md
-│   ├── ota-deployment.spec.md
-│   └── club-portal.spec.md
+│   ├── hotspot-psk.spec.md          # ✅ Live (ADR-073/074/076)
+│   ├── match-sessions.spec.md       # ✅ Live (ADR-088/093/097)
+│   ├── saas-mode.spec.md            # ✅ Live (ADR-037+)
+│   ├── sponsors.spec.md             # ✅ Live (fusion sponsors-rotation + sponsor-reports)
+│   ├── templates-studio.spec.md     # ✅ Live (pré-pivot, section Périmètre à formaliser)
+│   ├── video-cycle.spec.md          # ✅ Live (ADR-100)
+│   └── web-live-content.spec.md     # ✅ Live (ADR-089/103)
 └── services/
-    ├── cron-scheduler.spec.md
-    ├── socket-service.spec.md
-    ├── storage-service.spec.md
-    └── auth-service.spec.md
+    ├── cron-scheduler.spec.md       # ✅ Live (pré-pivot, section Périmètre à formaliser)
+    ├── r2-tv-monitor-real-preview.spec.md  # ✅ Live (ADR-101/103)
+    └── socket-service.spec.md       # ✅ Live (pré-pivot, section Périmètre à formaliser)
 ```
 
 ## Index des SPECs actives
 
-| SPEC                                                             | ADR liés                                                      | Statut | Dernière revue |
-| ---------------------------------------------------------------- | ------------------------------------------------------------- | ------ | -------------- |
-| [features/match-sessions](features/match-sessions.spec.md)       | ADR-088, ADR-093, ADR-097                                     | Live   | 2026-04-29     |
-| [features/saas-mode](features/saas-mode.spec.md)                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102 | Live | 2026-04-29 |
-| [features/sponsor-reports](features/sponsor-reports.spec.md)     | ADR-035, ADR-097                                              | Live   | 2026-04-27     |
-| [features/sponsors-rotation](features/sponsors-rotation.spec.md) | ADR-035, ADR-093                                              | Live   | 2026-04-27     |
-| [features/video-cycle](features/video-cycle.spec.md)             | ADR-100                                                       | Live   | 2026-04-29     |
-| [features/web-live-content](features/web-live-content.spec.md)   | ADR-089, ADR-103                                              | Live   | 2026-04-29     |
-| [features/hotspot-psk](features/hotspot-psk.spec.md)             | ADR-073, ADR-074, ADR-076                                     | Live   | 2026-04-27     |
-| [features/templates-studio](features/templates-studio.spec.md)   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095          | Live   | 2026-04-25     |
-| [services/cron-scheduler](services/cron-scheduler.spec.md)       | ADR-097                                                       | Live   | 2026-04-25     |
-| [services/socket-service](services/socket-service.spec.md)       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096 | Live   | 2026-04-25     |
+| SPEC                                                                                   | ADR liés                                                                                  | Statut | Dernière revue |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------ | -------------- |
+| [features/match-sessions](features/match-sessions.spec.md)                             | ADR-088, ADR-093, ADR-097                                                                 | Live   | 2026-04-29     |
+| [features/saas-mode](features/saas-mode.spec.md)                                       | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102 | Live   | 2026-04-29     |
+| [features/video-cycle](features/video-cycle.spec.md)                                   | ADR-100                                                                                   | Live   | 2026-04-29     |
+| [features/sponsors](features/sponsors.spec.md)                                         | ADR-035, ADR-093, ADR-097                                                                 | Live   | 2026-04-29     |
+| [features/web-live-content](features/web-live-content.spec.md)                         | ADR-089, ADR-103                                                                          | Live   | 2026-04-29     |
+| [features/hotspot-psk](features/hotspot-psk.spec.md)                                   | ADR-073, ADR-074, ADR-076                                                                 | Live   | 2026-04-27     |
+| [features/templates-studio](features/templates-studio.spec.md)                         | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095                                     | Live   | 2026-04-25     |
+| [services/cron-scheduler](services/cron-scheduler.spec.md)                             | ADR-097                                                                                   | Live   | 2026-04-25     |
+| [services/socket-service](services/socket-service.spec.md)                             | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096                            | Live   | 2026-04-25     |
+| [services/r2-tv-monitor-real-preview](services/r2-tv-monitor-real-preview.spec.md)     | ADR-101, ADR-103                                                                          | Live   | 2026-04-28     |
 
-**Total : 8 SPECs actives** (target final ~20-25). Prochaines à écrire : `features/ota-deployment`, `features/club-portal`, `services/storage-service`, `services/auth-service`, `components/tv-player`, `components/remote-control`, `components/dashboard-sites`.
+**Total : 10 SPECs actives** (target final ~15). Prochaines à écrire (SPECs #6-#15 du tableau cibles) : Déploiement & OTA, Observabilité & Alerting, Pi & Display, Remote, Réseau & Hotspot, Auth & Sécurité, Subscription & Billing, Sync & Config, Reporting & Exports, Dashboard Admin.
 
 ## Cycle de vie d'une SPEC
 
