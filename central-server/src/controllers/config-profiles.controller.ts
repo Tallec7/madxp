@@ -106,6 +106,60 @@ function rejectIfSyntheticWebContent(res: Response, configuration: unknown): boo
   return true;
 }
 
+/**
+ * ADR-103 Phase 3 — find web/live entries in playback loops (sponsors[] or
+ * timeCategories[].loopVideos[]) that LACK a positive `durationSeconds`.
+ * Without a duration, the loop falls back on the WebContentService's 30s
+ * default (Phase 2b safety) — fine to avoid stalling but not a deliberate
+ * editorial choice. Block at save so the dashboard surfaces the issue.
+ *
+ * Categories[].videos[] are NOT checked — they don't auto-rotate, the user
+ * launches them manually from the Remote and `durationMs ?? null` means
+ * "no auto-close" (the page stays until the user navigates away).
+ */
+function findWebLoopEntriesMissingDuration(config: unknown): Array<{ where: string; name: string; contentType: string }> {
+  if (!config || typeof config !== 'object') return [];
+  const c = config as Record<string, unknown>;
+  const out: Array<{ where: string; name: string; contentType: string }> = [];
+
+  const scan = (arr: unknown, where: string): void => {
+    if (!Array.isArray(arr)) return;
+    for (const v of arr as Array<{ contentType?: string; durationSeconds?: number | null; name?: string }>) {
+      const ct = v?.contentType;
+      if (ct !== 'web_page' && ct !== 'livestream') continue;
+      const d = v?.durationSeconds;
+      if (typeof d !== 'number' || !(d > 0)) {
+        out.push({ where, name: v?.name ?? '(sans nom)', contentType: ct });
+      }
+    }
+  };
+
+  scan(c.sponsors, 'sponsors');
+  if (Array.isArray(c.timeCategories)) {
+    for (const tc of c.timeCategories as Array<{ id?: string; loopVideos?: unknown }>) {
+      scan(tc.loopVideos, `timeCategories[${tc?.id ?? '?'}].loopVideos`);
+    }
+  }
+  return out;
+}
+
+/**
+ * Build the standard 400 response for web/live loop entries without
+ * durationSeconds. Returns true if the response was sent.
+ */
+function rejectIfWebLoopMissingDuration(res: Response, configuration: unknown): boolean {
+  const offenders = findWebLoopEntriesMissingDuration(configuration);
+  if (offenders.length === 0) return false;
+  res.status(400).json({
+    error:
+      "Une page web ou un livestream placé dans la boucle (sponsors ou phase) doit avoir une durée d'affichage > 0 secondes. " +
+      "Renseignez le champ 'duration' à la création (page Contenu) ou laissez l'entrée hors de la boucle pour un usage manuel uniquement.",
+    code: 'WEB_LOOP_DURATION_REQUIRED',
+    offenders: offenders.slice(0, 10),
+  });
+  return true;
+}
+
 // --------------------------------------------------------------------------
 // GET /api/sites/:siteId/profiles
 // --------------------------------------------------------------------------
@@ -168,6 +222,11 @@ export const createProfile = async (req: AuthRequest, res: Response) => {
     // strip remains as a safety net for entries whose DB row got deleted.
     void rejectIfSyntheticWebContent;
 
+    // ADR-103 Phase 3 — refuse boucle entries (sponsors/loopVideos) with
+    // contentType web_page/livestream that lack a positive durationSeconds.
+    // The dashboard must collect this from the user before save.
+    if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
+
     const site = await configHistoryRepository.findSiteBasic(siteId);
     if (!site) {
       return res.status(404).json({ error: 'Site non trouve' });
@@ -225,6 +284,8 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     }
 
     // ADR-103 Phase 2 — synthetic paths now resolved server-side at read time.
+    // ADR-103 Phase 3 — refuse loop entries without durationSeconds (web/live).
+    if (value.configuration && rejectIfWebLoopMissingDuration(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
@@ -303,6 +364,11 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
     // call resolveSyntheticWebContent before sending to TV/Remote). Phase 0.5
     // strip remains as a safety net for entries whose DB row got deleted.
     void rejectIfSyntheticWebContent;
+
+    // ADR-103 Phase 3 — refuse boucle entries (sponsors/loopVideos) with
+    // contentType web_page/livestream that lack a positive durationSeconds.
+    // The dashboard must collect this from the user before save.
+    if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {

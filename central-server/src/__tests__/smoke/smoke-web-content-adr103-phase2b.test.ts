@@ -110,7 +110,8 @@ describe('Smoke — ADR-103 Phase 2b loop rotation with web/live', () => {
     const src = read('raspberry/src/app/services/web-content.service.ts');
     const tdIdx = src.indexOf('private teardown()');
     expect(tdIdx).toBeGreaterThan(0);
-    const block = src.slice(tdIdx, tdIdx + 800);
+    // Phase 1.5a grew the teardown body (hls.js destroy block) — bump window.
+    const block = src.slice(tdIdx, tdIdx + 1500);
     expect(/this\._loopOnComplete\s*=\s*null/.test(block)).toBe(true);
   });
 

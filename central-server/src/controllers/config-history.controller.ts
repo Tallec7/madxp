@@ -417,6 +417,38 @@ export const saveConfigDirect = async (req: AuthRequest, res: Response) => {
     // resolveSyntheticWebContent). Phase 0.5 strip remains as a safety net.
     void isSyntheticWebContentPath;
 
+    // ADR-103 Phase 3 — refuse boucle entries (sponsors/loopVideos) where
+    // contentType web_page/livestream lacks a positive durationSeconds.
+    // Same contract as config-profiles.controller.
+    const cfg = configuration as Record<string, unknown>;
+    const offenders: Array<{ where: string; name: string; contentType: string }> = [];
+    const scanLoop = (arr: unknown, where: string): void => {
+      if (!Array.isArray(arr)) return;
+      for (const v of arr as Array<{ contentType?: string; durationSeconds?: number | null; name?: string }>) {
+        const ct = v?.contentType;
+        if (ct !== 'web_page' && ct !== 'livestream') continue;
+        const d = v?.durationSeconds;
+        if (typeof d !== 'number' || !(d > 0)) {
+          offenders.push({ where, name: v?.name ?? '(sans nom)', contentType: ct });
+        }
+      }
+    };
+    scanLoop(cfg.sponsors, 'sponsors');
+    if (Array.isArray(cfg.timeCategories)) {
+      for (const tc of cfg.timeCategories as Array<{ id?: string; loopVideos?: unknown }>) {
+        scanLoop(tc.loopVideos, `timeCategories[${tc?.id ?? '?'}].loopVideos`);
+      }
+    }
+    if (offenders.length > 0) {
+      return res.status(400).json({
+        error:
+          "Une page web ou un livestream placé dans la boucle (sponsors ou phase) doit avoir une durée d'affichage > 0 secondes. " +
+          "Renseignez le champ 'duration' à la création (page Contenu) ou laissez l'entrée hors de la boucle pour un usage manuel uniquement.",
+        code: 'WEB_LOOP_DURATION_REQUIRED',
+        offenders: offenders.slice(0, 10),
+      });
+    }
+
     if (mode === 'merge') {
       await siteRepository.mergeLocalConfigMirror(id, configuration);
     } else {

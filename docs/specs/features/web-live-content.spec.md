@@ -1,10 +1,10 @@
 # SPEC : Web / Live Content (pages web + livestreams)
 
 > **Owner** : Daisy
-> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5b livrées — 1.5a en parallèle PR #722) — Phase 3 / 3 v2 / 4 en attente
+> **Statut** : Live (Phase 0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 livrées) — Phase 3 v2 / 4 en attente
 > **Dernière revue** : 2026-04-29
 > **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
-> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`, `smoke-web-content-adr103-phase15b.test.ts`
+> **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`, `smoke-web-content-adr103-phase15a.test.ts`, `smoke-web-content-adr103-phase15b.test.ts`, `smoke-web-content-adr103-phase3.test.ts`
 > **`.claude/rules/` lié** : —
 
 ## En une phrase
@@ -77,6 +77,7 @@ Invariants du retour à la boucle :
 3. **Web/live à l'intérieur de la boucle (Phase 2b à venir)** : la web/live est elle-même un step de boucle. À fin de durée → `_savedLoopIndex + 1` avance au step suivant. **Jamais** rejouer la même web/live.
 
 Anti-flash :
+
 - Iframe en `background: #000` (couvre le flash blanc cross-origin pendant le first paint).
 - `transition: opacity 200ms ease` sur iframe + livestream (`OPACITY_TRANSITION_MS`).
 - À `load` / `loadeddata` → délai **120ms** (`REVEAL_DELAY_MS`) avant de cacher le freeze-frame, pour laisser le contenu peindre sa première frame.
@@ -84,6 +85,7 @@ Anti-flash :
 - `iframe.src = 'about:blank'` différé après la durée de transition (la fade-out reste visible).
 
 Stop manuel :
+
 - **Bouton Stop rouge** dans le hero de la Remote V2 (visible uniquement quand `playingVideo`).
 - Émet `{ type: 'stop-manual' }` via socket.
 - TV component route vers `WebContentService.returnToLoop()` si web/live actif, sinon `ManualVideoService.stopAndReturnToLoop()` si manuel actif.
@@ -112,6 +114,12 @@ Stop manuel :
 - `onTimeUpdate` skip le late preload MP4 quand l'étape suivante est web/live (rien à preload pour une iframe).
 - Si `playWebContentInLoop` n'est pas câblée (config défensif), l'orchestrateur skip l'étape via `advanceLoop`.
 
+### Garde-fous backend (Phase 3 livrée)
+
+- **Path synthétique en boucle / catégorie** : 400 `SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` (Phase 0.5 — refusé tant que Phase 2 n'a pas relâché ce garde-fou).
+- **Web/live en boucle sans `durationSeconds`** : 400 `WEB_LOOP_DURATION_REQUIRED` (Phase 3). S'applique à `sponsors[]` et `timeCategories[].loopVideos[]`. **Pas** à `categories[].videos[]` — pour les catégories user (manual launch), `null/0` signifie "pas d'auto-close, la page reste affichée jusqu'à action user", ce qui est un choix valide.
+- Le dashboard surface ces messages via le notification system existant (`ErrorExtractor.getMessage` → toast d'erreur).
+
 ### Tolérance d'erreur
 
 - URL inaccessible / `X-Frame-Options: DENY` / livestream qui ne démarre pas / Pi hors-ligne → skip ≤ 1s, métrique `web_load_failed`.
@@ -120,20 +128,20 @@ Stop manuel :
 
 ## Comportements observables
 
-| Action utilisateur                                    | Résultat attendu                                                                  |
-|-------------------------------------------------------|-----------------------------------------------------------------------------------|
-| Créer un web_page depuis Contenu (`POST /web-content`) | Row `videos` créé, apparait dans Remote dans ≤ 1 reload de config                |
-| Cliquer entrée Web/Live dans la Remote                 | TV affiche l'iframe en ≤ 1s ou skip + retour boucle si erreur                    |
-| Pas de `load` après 1s                                 | Skip silencieux, `video_plays.interruption_reason='web_load_failed'`             |
-| Auto-close `durationMs` atteint                        | TV revient à la boucle MP4 (index `_savedLoopIndex + 1`)                         |
-| Ajouter un web_page à `sponsors[]` ou une catégorie    | Backend accepte (Phase 2a). Au read, l'entrée est résolue → contentType + externalUrl propres pour la Remote / TV |
-| Ajouter un web_page à la boucle MP4 auto-rotation     | Phase 2b livrée : la boucle inclut l'étape web ; à fin du `durationMs`, avance au step suivant. Rotation MP4 ↔ web ↔ MP4 OK. |
-| Supprimer le dernier web_page d'un site                | La pseudo-catégorie "Web / Live" disparaît au reload Remote                      |
+| Action utilisateur                                     | Résultat attendu                                                                                                             |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Créer un web_page depuis Contenu (`POST /web-content`) | Row `videos` créé, apparait dans Remote dans ≤ 1 reload de config                                                            |
+| Cliquer entrée Web/Live dans la Remote                 | TV affiche l'iframe en ≤ 1s ou skip + retour boucle si erreur                                                                |
+| Pas de `load` après 1s                                 | Skip silencieux, `video_plays.interruption_reason='web_load_failed'`                                                         |
+| Auto-close `durationMs` atteint                        | TV revient à la boucle MP4 (index `_savedLoopIndex + 1`)                                                                     |
+| Ajouter un web_page à `sponsors[]` ou une catégorie    | Backend accepte (Phase 2a). Au read, l'entrée est résolue → contentType + externalUrl propres pour la Remote / TV            |
+| Ajouter un web_page à la boucle MP4 auto-rotation      | Phase 2b livrée : la boucle inclut l'étape web ; à fin du `durationMs`, avance au step suivant. Rotation MP4 ↔ web ↔ MP4 OK. |
+| Supprimer le dernier web_page d'un site                | La pseudo-catégorie "Web / Live" disparaît au reload Remote                                                                  |
 
 ## Cas d'edge connus
 
 - **Iframe `X-Frame-Options: DENY`** : le navigateur n'émet ni `load` ni `error` → seul le timeout 1s déclenche le skip. Vérifié sur Phase 1.
-- **Livestream HLS sur Chromium kiosk** : sans hls.js, seules les sources HLS natives (Safari) jouent. Sur Pi/Chrome, erreur silencieuse → skip 1s. Phase 1.5 ajoutera hls.js.
+- **Livestream HLS sur Chromium kiosk** : Phase 1.5a livrée — `hls.js` est lazy-loadé via `await import('hls.js')` quand l'URL pointe vers un `.m3u8` ET le navigateur n'a pas de support HLS natif (Chromium kiosk, Firefox). Bundle ≈500KB chargé uniquement quand un livestream démarre, donc 0 coût pour les sites qui ne jouent que des web_page / vidéos. Erreur fatale hls.js → `failAndReturn` → skip step.
 - **Master/slave dual-display** : aujourd'hui le slave ne suit pas le contenu web/live du master. Le DoubleBuffer sync OK pour MP4 mais pas pour iframe. Phase 1.5.
 - **`allow-same-origin` dans la sandbox** : volontaire (clubhouse.scorenco et autres scoreboards live le requièrent). Phase 4 ajoutera une whitelist domaines pour serrer le sandbox sur les sites tiers.
 - **CORS freeze-frame** : `canvas.captureStream()` ne peut pas capturer le contenu d'une iframe cross-origin. Les transitions web → MP4 utilisent un fond noir 200ms au lieu d'un freeze-frame.
@@ -148,20 +156,20 @@ Stop manuel :
 
 ## États (Phase de livraison)
 
-| Phase | Scope                                          | État        | PR                                                         |
-|-------|------------------------------------------------|-------------|------------------------------------------------------------|
-| 0     | Filets défensifs TV + cleanup DB               | ✅ Livrée   | [#699](https://github.com/Tallec7/neopro/pull/699)          |
-| 0.5   | Strip serveur + reject 400                     | ✅ Livrée   | [#701](https://github.com/Tallec7/neopro/pull/701)          |
-| 0.6   | Visibilité Web/Live dans Remote                | ✅ Livrée   | [#703](https://github.com/Tallec7/neopro/pull/703)          |
-| 1     | WebContentPlayer manuel + 1s timeout + analytics | ✅ Livrée   | [#705](https://github.com/Tallec7/neopro/pull/705)          |
-| 2a    | Backend résout les paths synthétiques au read + drop 400 reject | ✅ Livrée | [#710](https://github.com/Tallec7/neopro/pull/710) |
-| 2.5   | Take-over manuel propre + anti-flash + bouton Stop Remote V2 | ✅ Livrée | [#714](https://github.com/Tallec7/neopro/pull/714) |
-| 2.6   | Instant show (no opacity transition under freeze)            | ✅ Livrée | [#716](https://github.com/Tallec7/neopro/pull/716) |
-| 2.7   | Paint-stable reveal (2× rAF + 250ms)                          | ✅ Livrée | [#718](https://github.com/Tallec7/neopro/pull/718) |
-| **2b** | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                          |
-| 1.5   | hls.js + master/slave sync                      | ⏳ À venir  | —                                                          |
-| 3     | Dashboard UX (sélecteur, validation, preview)   | ⏳ À venir  | —                                                          |
-| 4     | Supervision + ADR fermeture                     | ⏳ À venir  | —                                                          |
+| Phase  | Scope                                                            | État          | PR                                                 |
+| ------ | ---------------------------------------------------------------- | ------------- | -------------------------------------------------- |
+| 0      | Filets défensifs TV + cleanup DB                                 | ✅ Livrée     | [#699](https://github.com/Tallec7/neopro/pull/699) |
+| 0.5    | Strip serveur + reject 400                                       | ✅ Livrée     | [#701](https://github.com/Tallec7/neopro/pull/701) |
+| 0.6    | Visibilité Web/Live dans Remote                                  | ✅ Livrée     | [#703](https://github.com/Tallec7/neopro/pull/703) |
+| 1      | WebContentPlayer manuel + 1s timeout + analytics                 | ✅ Livrée     | [#705](https://github.com/Tallec7/neopro/pull/705) |
+| 2a     | Backend résout les paths synthétiques au read + drop 400 reject  | ✅ Livrée     | [#710](https://github.com/Tallec7/neopro/pull/710) |
+| 2.5    | Take-over manuel propre + anti-flash + bouton Stop Remote V2     | ✅ Livrée     | [#714](https://github.com/Tallec7/neopro/pull/714) |
+| 2.6    | Instant show (no opacity transition under freeze)                | ✅ Livrée     | [#716](https://github.com/Tallec7/neopro/pull/716) |
+| 2.7    | Paint-stable reveal (2× rAF + 250ms)                             | ✅ Livrée     | [#718](https://github.com/Tallec7/neopro/pull/718) |
+| **2b** | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                                     |
+| 1.5    | hls.js + master/slave sync                                       | ⏳ À venir    | —                                                  |
+| 3      | Dashboard UX (sélecteur, validation, preview)                    | ⏳ À venir    | —                                                  |
+| 4      | Supervision + ADR fermeture                                      | ⏳ À venir    | —                                                  |
 
 ## Référence code
 
