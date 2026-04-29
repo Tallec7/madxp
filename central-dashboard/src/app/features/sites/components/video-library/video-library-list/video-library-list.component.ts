@@ -17,6 +17,8 @@ import {
   formatDuration,
   getContentStatusLabel,
   getContentStatusClass,
+  getContentTypeIcon,
+  getContentTypeLabel,
   getOwnerTypeLabel,
 } from '../video-library.utils';
 
@@ -80,6 +82,8 @@ export class VideoLibraryListComponent {
   formatDuration = formatDuration;
   getContentStatusLabel = getContentStatusLabel;
   getContentStatusClass = getContentStatusClass;
+  getContentTypeIcon = getContentTypeIcon;
+  getContentTypeLabel = getContentTypeLabel;
   getOwnerTypeLabel = getOwnerTypeLabel;
 
   onSelect(video: VideoItem): void {

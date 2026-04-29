@@ -662,40 +662,72 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     // The config expects local paths (e.g. "videos/BOUCLE/file.mp4"), not cloud URLs
     const configPath = this.resolveConfigPath(video);
 
+    // ADR-103 Phase 3 v2 — proactive duration prompt for web/live entries in
+    // playback loops (sponsors[] + timeCategories[].loopVideos[]). Categories
+    // (action vidéos) are launched manually by the Remote and don't require
+    // durationSeconds. The server enforces this on save (Phase 3 — 400
+    // WEB_LOOP_DURATION_REQUIRED), the prompt is here to surface the
+    // requirement before the user hits save.
+    const isWebLive = video.contentType === 'web_page' || video.contentType === 'livestream';
+    let webDurationSeconds: number | null = null;
+    if (isWebLive && (target.type === 'loop' || target.type === 'match')) {
+      const promptLabel = video.contentType === 'web_page' ? 'page web' : 'livestream';
+      const raw = window.prompt(
+        `Durée d'affichage pour cette ${promptLabel} (en secondes) ?`,
+        '30',
+      );
+      if (raw === null) return; // User cancelled
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        this.notificationService.error('Durée invalide — entrez un nombre de secondes positif.');
+        return;
+      }
+      webDurationSeconds = Math.round(parsed);
+    }
+
+    const buildEntry = (extra: Record<string, unknown> = {}) => {
+      if (isWebLive && webDurationSeconds !== null) {
+        return {
+          path: video.externalUrl ?? configPath,
+          name: video.displayName,
+          contentType: video.contentType,
+          externalUrl: video.externalUrl ?? null,
+          durationSeconds: webDurationSeconds,
+          ...extra,
+        };
+      }
+      return {
+        path: configPath,
+        name: video.displayName,
+        type: 'video/mp4',
+        ...extra,
+      };
+    };
+
     if (target.type === 'loop') {
       // Default loop = sponsors[]
       if (!this.config.sponsors) this.config.sponsors = [];
       const alreadyInLoop = this.config.sponsors.some(
-        (s: { path?: string }) => s.path === configPath
+        (s: { path?: string }) => s.path === configPath || s.path === video.externalUrl
       );
       if (alreadyInLoop) {
         this.notificationService.info('Cette vidéo est déjà dans la boucle');
         return;
       }
-      this.config.sponsors.push({
-        path: configPath,
-        name: video.displayName,
-        type: 'video/mp4',
-        weight: 1,
-      } as never);
+      this.config.sponsors.push(buildEntry({ weight: 1 }) as never);
     } else if (target.type === 'match') {
       // Match phase = timeCategories[].loopVideos[]
       const phase = (this.config.timeCategories || []).find(tc => tc.id === target.id);
       if (!phase) return;
       if (!phase.loopVideos) phase.loopVideos = [];
       const alreadyInPhase = phase.loopVideos.some(
-        (v: { path?: string }) => v.path === configPath
+        (v: { path?: string }) => v.path === configPath || v.path === video.externalUrl
       );
       if (alreadyInPhase) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
-      phase.loopVideos.push({
-        path: configPath,
-        name: video.displayName,
-        type: 'video/mp4',
-        weight: 1,
-      } as never);
+      phase.loopVideos.push(buildEntry({ weight: 1 }) as never);
     } else if (target.type === 'category') {
       // Action category = categories[].videos[]
       if (!this.config.categories) this.config.categories = [];
