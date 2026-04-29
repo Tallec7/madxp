@@ -54,11 +54,14 @@ Implémenter un **Web Content Player Service** parallèle au DoubleBuffer exista
 
 L'implémentation est découpée en **5 phases** livrables indépendamment, chacune apportant de la valeur :
 
-- **Phase 0** — Stabilisation immédiate (filets défensifs + nettoyage DB, ~1j)
-- **Phase 1** — Web Content Player en manuel robuste, ~5j
+- **Phase 0** — Stabilisation immédiate (filets défensifs + nettoyage DB, ~1j) ✅ livrée (PR #699, v3.266.1)
+- **Phase 0.5** — Strip serveur + reject 400 sur synthetic paths, ~0.5j ✅ livrée (PR #701, v3.267.1)
+- **Phase 0.6** — Visibilité pseudo-catégorie "Web / Live" dans Remote (registerWebContentInTimeCategories), ~0.5j ✅ livrée (PR #703, v3.267.2)
+- **Phase 1** — Web Content Player en manuel robuste (1s timeout + analytics), ~1j 🔄 en cours
+- **Phase 1.5** — hls.js (Chromium HLS) + master/slave sync content_type, ~2-3j
 - **Phase 2** — Boucles avec entrées web/livestream, ~7j
 - **Phase 3** — Dashboard UX (sélecteur, validation, preview), ~4j
-- **Phase 4** — Robustesse, supervision, tests, ADR fermeture, ~3j
+- **Phase 4** — Robustesse, supervision (Prometheus), tests, ADR fermeture, ~3j
 
 **Total estimé : 15-21 jours dev + 3-4 semaines calendaires** avec tests fleet (Pi 4, Pi 5, SaaS).
 
@@ -310,11 +313,11 @@ L'implémentation est découpée en **5 phases** livrables indépendamment, chac
 - **Rate limiting création** : la création d'entrées web_page/livestream est limitée à 10/heure/user (anti-abuse).
 - **Auth** : création super_admin / admin / operator / club uniquement (déjà ADR-089).
 
-## Out-of-scope (intentionnellement)
+## Out-of-scope (intentionnellement) — à reconsidérer plus tard
 
-- **Twitch / YouTube live embed** : nécessite leur SDK propriétaire (player Twitch.js, YouTube IFrame API). Hors scope ADR-103. Si besoin métier remonté, faire un ADR-104 dédié.
+- **Twitch / YouTube live embed** : nécessite leur SDK propriétaire (player Twitch.js, YouTube IFrame API). Hors scope ADR-103, Daisy l'a explicitement reporté à un futur ADR (2026-04-29). Tracking : à créer un ADR-104 quand un client demande explicitement.
+- **Cache offline web_page** : Pi sans Internet → skip 1s + retour boucle. Pas de service worker / proxy de pages cachées dans Phase 0-4 (trop instable, mauvaise UX si page périmée). Reporté par Daisy (2026-04-29) — à reconsidérer si un client a un cas d'usage offline solide.
 - **DRM / payant** : pas de support contenu DRM (Widevine, FairPlay).
-- **Cache offline web_page** : Pi sans Internet → skip. Pas de service worker pour cacher les pages web (trop instable, mauvaise UX si page périmée).
 - **Audio mixing** : si un livestream a du son ET un MP4 sponsor a du son, comportement par défaut = mute le MP4 sponsor pendant le livestream. Pas de ducking automatique.
 - **Interactivité utilisateur** : pas de clic/scroll dans l'iframe TV (sandbox sans `allow-pointer-lock`). La TV affiche, ne permet pas l'interaction (la Remote V1 garde le contrôle).
 - **Captures d'écran dashboard preview** : pas de screenshot iframe (cross-origin) ; preview = iframe live dans le dashboard.
