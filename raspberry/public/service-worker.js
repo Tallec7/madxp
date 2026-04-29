@@ -11,11 +11,16 @@
  * - This is necessary because standalone PWA mode alone is insufficient on some
  *   browsers (Chrome Android, older Safari) without a prior user gesture
  *
- * Caching strategy: network-first for all requests (the Pi runs a local server,
- * so offline caching adds no value — the server IS the content source).
+ * Caching strategy: aucune. Le Pi sert le contenu localement, le cache offline
+ * n'a aucune valeur ici — le serveur EST la source de contenu.
+ *
+ * Pas de listener `fetch` : depuis Chrome 89 (2021), l'installabilité PWA ne
+ * requiert plus de fetch handler (manifest + SW enregistré suffisent). Un
+ * listener vide ajoute un overhead par navigation pour zéro bénéfice — voir
+ * le warning Chromium "Fetch event handler is recognized as no-op".
  */
 
-const SW_VERSION = '1.2.0';
+const SW_VERSION = '1.3.0';
 
 // Install: activate immediately (no precaching needed)
 self.addEventListener('install', () => {
@@ -25,15 +30,6 @@ self.addEventListener('install', () => {
 // Activate: claim all clients so the SW takes effect without page reload
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
-});
-
-// Fetch: a listener must exist for PWA installability, but we deliberately
-// do NOT call event.respondWith() — the browser handles every fetch natively.
-// Calling respondWith(fetch(req)) looks like a no-op but is harmful: if the
-// network fetch rejects, the SW turns a transient hiccup into a hard
-// "network error response" that kills the page load.
-self.addEventListener('fetch', () => {
-  // pass-through — browser handles it
 });
 
 // Audio unlock: relay first-interaction signal from any client to all clients.
