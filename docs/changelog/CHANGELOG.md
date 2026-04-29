@@ -1,3 +1,9 @@
+## [3.278.7](https://github.com/Tallec7/neopro/compare/v3.278.6...v3.278.7) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** verify CI suit les 308 redirects Cloudflare (ADR-071) ([#739](https://github.com/Tallec7/neopro/issues/739)) ([d62e6d2](https://github.com/Tallec7/neopro/commit/d62e6d26768f2ffd0c1abd6b63ecb60e73878a4a)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
 ## [3.278.6](https://github.com/Tallec7/neopro/compare/v3.278.5...v3.278.6) (2026-04-29)
 
 ### Bug Fixes
