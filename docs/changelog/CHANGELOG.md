@@ -1,3 +1,13 @@
+# [3.268.0](https://github.com/Tallec7/neopro/compare/v3.267.3...v3.268.0) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** type livestream dispatch payload to clear TS7018 ([#706](https://github.com/Tallec7/neopro/issues/706)) ([9ba3b33](https://github.com/Tallec7/neopro/commit/9ba3b33d6c6c0c1a2c78face435d22cea1a9398c)), closes [#705](https://github.com/Tallec7/neopro/issues/705)
+
+### Features
+
+- **remote:** WebContentPlayer manual robustness — ADR-103 Phase 1 ([#705](https://github.com/Tallec7/neopro/issues/705)) ([f3e481f](https://github.com/Tallec7/neopro/commit/f3e481fd924f67485133b4b091551b4049567fa2))
+
 ## [3.267.3](https://github.com/Tallec7/neopro/compare/v3.267.2...v3.267.3) (2026-04-29)
 
 ### Bug Fixes
