@@ -435,10 +435,14 @@ jobs:
   # GitHub `production`). Tant que le flag n'est pas flippé, ce job reste
   # inactif — Hostinger continue de servir prod via les jobs lftp.
   #
-  # Pré-requis côté GitHub Environment `production` :
-  #   - Variable : HOSTING=cloudflare (flip pour activer)
-  #   - Secret   : CLOUDFLARE_API_TOKEN (scope: Pages:Edit)
-  #   - Secret   : CLOUDFLARE_ACCOUNT_ID
+  # Pré-requis côté GitHub :
+  #   - Repository Variable : HOSTING=cloudflare (flip pour activer)
+  #     ⚠️ DOIT être au niveau repository (Settings → Secrets and variables →
+  #     Actions → Variables), pas Environment, car les conditions `if:` sont
+  #     évaluées avant le chargement du contexte environnement (donc env-level
+  #     vars sont invisibles dans `if:`).
+  #   - Environment Secret  : CLOUDFLARE_API_TOKEN (scope: Pages:Edit)
+  #   - Environment Secret  : CLOUDFLARE_ACCOUNT_ID
   #
   # Pré-requis côté Cloudflare :
   #   - Projet Pages `neopro-frontend-prod` (un seul, dashboard + SaaS combinés)
