@@ -1,3 +1,9 @@
+## [3.268.2](https://github.com/Tallec7/neopro/compare/v3.268.1...v3.268.2) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** forcer player.crossOrigin runtime pour débloquer canvas SaaS ([#709](https://github.com/Tallec7/neopro/issues/709)) ([0aa81cf](https://github.com/Tallec7/neopro/commit/0aa81cf2f7bd3fdb902343bad740910167ced8fe)), closes [#707](https://github.com/Tallec7/neopro/issues/707)
+
 ## [3.268.1](https://github.com/Tallec7/neopro/compare/v3.268.0...v3.268.1) (2026-04-29)
 
 ### Bug Fixes
