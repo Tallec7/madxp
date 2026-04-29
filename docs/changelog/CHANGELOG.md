@@ -1,3 +1,9 @@
+## [3.278.6](https://github.com/Tallec7/neopro/compare/v3.278.5...v3.278.6) (2026-04-29)
+
+### Bug Fixes
+
+- **remote-v2:** tv preview iframe URL respecte baseURI (ADR-071) ([#740](https://github.com/Tallec7/neopro/issues/740)) ([f946ff0](https://github.com/Tallec7/neopro/commit/f946ff007170bafcd1ff35422eab10d2fe4a2fc0))
+
 ## [3.278.5](https://github.com/Tallec7/neopro/compare/v3.278.4...v3.278.5) (2026-04-29)
 
 ### Bug Fixes
