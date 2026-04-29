@@ -419,7 +419,8 @@ describe('SaaS mode guards (ADR-037)', () => {
       allHaveRateLimit,
     }).toEqual({
       // ADR-102 ajoute GET + PUT /preferences (3 → 5).
-      routeCount: 5,
+      // ADR-104 ajoute POST + GET /tv-snapshot (5 → 7).
+      routeCount: 7,
       allHaveRateLimit: true,
     });
   });
