@@ -1,3 +1,9 @@
+## [3.269.3](https://github.com/Tallec7/neopro/compare/v3.269.2...v3.269.3) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** ignore capability event in SaaS mode (preserve saas-frame URL) ([#713](https://github.com/Tallec7/neopro/issues/713)) ([7c236ab](https://github.com/Tallec7/neopro/commit/7c236ab294821749bc6f14a8837dbdfce04a251d))
+
 ## [3.269.2](https://github.com/Tallec7/neopro/compare/v3.269.1...v3.269.2) (2026-04-29)
 
 ### Bug Fixes
