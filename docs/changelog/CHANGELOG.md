@@ -1,3 +1,9 @@
+# [3.276.0](https://github.com/Tallec7/neopro/compare/v3.275.0...v3.276.0) (2026-04-29)
+
+### Features
+
+- **saas:** TV preview via HTTP pull (ADR-104) ([#725](https://github.com/Tallec7/neopro/issues/725)) ([8eedc0f](https://github.com/Tallec7/neopro/commit/8eedc0ffc3078dc03e79b64d3dae21f0a0c25352)), closes [#711](https://github.com/Tallec7/neopro/issues/711) [#713](https://github.com/Tallec7/neopro/issues/713) [#715](https://github.com/Tallec7/neopro/issues/715) [#717](https://github.com/Tallec7/neopro/issues/717) [#723](https://github.com/Tallec7/neopro/issues/723)
+
 # [3.275.0](https://github.com/Tallec7/neopro/compare/v3.274.0...v3.275.0) (2026-04-29)
 
 ### Features
