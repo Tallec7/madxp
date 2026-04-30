@@ -35,9 +35,11 @@ Introduire un **rôle "preview-slave"** distinct du master/slave classique.
 
 **Central-server SaaS relay** (`central-server/src/handlers/saas-relay.handler.ts`) :
 
-- Sur `tv-preview-register` : `socket.join(siteId)` pour recevoir les broadcasts room, **pas** d'ajout à `state.tvInstances`, **pas** d'incrément `getSaasClientCount`.
+- Sur `tv-preview-register` (payload `{ siteId }`) : `socket.join(siteId)` pour recevoir les broadcasts room, **pas** d'ajout à `state.tvInstances`, **pas** d'incrément `getSaasClientCount`.
 - Émet immédiatement `state.loopState` courant si présent.
 - Le `disconnect` n'a rien à nettoyer côté preview (rien n'a été inscrit).
+
+⚠️ **Le listener `tv-preview-register` doit être attaché AU NIVEAU connection global** (`socket.service.ts handleConnection()`), via `registerPreviewSlaveOnSocket(io, socket)`, **PAS** dans `registerSaasRelay()`. Raison : la preview iframe skip volontairement `saas-register` (pour ne pas compter dans `getSaasClientCount`), or `registerSaasRelay` n'est appelé QUE depuis `saas-register`. Si le listener y est gated, il n'est jamais attaché au socket de la preview → l'event est silencieusement ignoré → la preview ne joint jamais la room → 0 broadcast reçu → boucle locale par défaut. C'était le bug initial corrigé par PR #759.
 
 ### Côté client — branche preview-slave dans `TvComponent`
 
@@ -111,6 +113,8 @@ Le preview consomme le même décodeur que la TV principale (deux `<video>` HTML
 - Ne **jamais** retirer la garde `if (this.isPreviewMode) return;` qui protège l'émission de `tv-loop-update` côté client.
 - Ne **jamais** retirer l'appel à `playbackService.startSeamlessLoop()` en preview (sans lui `_currentLoopVideos` reste vide → l'index master ne peut pas être résolu côté preview).
 - Sync **par index**, pas par path (invariant ADR-033 réutilisé).
+- Ne **jamais** déplacer `registerPreviewSlaveOnSocket(io, socket)` depuis `socket.service.ts handleConnection()` vers `registerSaasRelay()` (régression #759 : la preview skip saas-register, donc le listener ne serait jamais attaché → boucle locale par défaut pour toujours).
+- Ne **jamais** retirer le payload `{ siteId }` de l'émission `tv-preview-register` côté client (sans lui le serveur ne peut pas faire `socket.join(siteId)` → 0 broadcast reçu).
 
 ## Référence
 
