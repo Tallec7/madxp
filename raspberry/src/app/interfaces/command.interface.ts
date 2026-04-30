@@ -20,5 +20,8 @@ export interface LivestreamPayload {
 export interface Command {
     type: 'video' | 'sponsors' | 'reload-config' | 'web-page' | 'livestream' | 'stop-manual';
     data?: PiConfigVideoEntry | Configuration | WebPagePayload | LivestreamPayload;
+    /** ADR-081 — cible explicite (indices d'écran) pour dual/multi-display. */
     target?: number[];
+    /** ADR-081 — UUID v4 généré par la remote pour audit & idempotence cloud. */
+    commandId?: string;
 }
