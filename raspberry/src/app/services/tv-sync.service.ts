@@ -87,6 +87,7 @@ export class TvSyncService {
       clearInterval(this.transitionMetricsInterval);
       this.transitionMetricsInterval = null;
     }
+    this.stopPreviewHeartbeat();
   }
 
   /**
@@ -133,6 +134,39 @@ export class TvSyncService {
       contentType: state.currentContentType,
     });
   }
+
+  /**
+   * ADR-106 — heartbeat master → preview-slave for continuous drift
+   * correction. Emits the master's *current* `player.currentTime` every
+   * 1s. The preview applies the correction iff drift > 200ms (cf.
+   * `applyPreviewDriftCorrection` in TvComponent). Slaves classiques
+   * ignore this event — they sync via `tv-loop-state` only.
+   *
+   * Lightweight payload: `{videoIndex, currentTimeMs}`. No persistence
+   * server-side; just relayed to room.
+   */
+  startPreviewHeartbeat(getCurrentTimeMs: () => number, getVideoIndex: () => number): void {
+    if (this.previewHeartbeatInterval) return;
+    this.previewHeartbeatInterval = setInterval(() => {
+      const currentTimeMs = getCurrentTimeMs();
+      const videoIndex = getVideoIndex();
+      if (currentTimeMs <= 0 || videoIndex < 0) return;
+      this.socketService.emit('tv-preview-tick', {
+        videoIndex,
+        currentTimeMs,
+        emittedAt: Date.now(),
+      } as unknown as import('../interfaces/command.interface').Command);
+    }, 1000);
+  }
+
+  stopPreviewHeartbeat(): void {
+    if (this.previewHeartbeatInterval) {
+      clearInterval(this.previewHeartbeatInterval);
+      this.previewHeartbeatInterval = null;
+    }
+  }
+
+  private previewHeartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   private registerSocketHandlers(): void {
     const displayType = this.callbacks!.getDisplayType();

@@ -235,6 +235,14 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     socket.emit('displays-changed', { displays });
   });
 
+  // ADR-106 — preview-slave heartbeat tick (master → preview only).
+  // Relayed to room without persistence; only preview-slaves consume it.
+  socket.on('tv-preview-tick', (data: Record<string, unknown>) => {
+    const instance = state.tvInstances.get(socket.id);
+    if (!instance || instance.role !== 'master') return;
+    socket.to(siteId).emit('tv-preview-tick', data);
+  });
+
   // TV loop update (master → slaves)
   socket.on('tv-loop-update', (data: Record<string, unknown>) => {
     const instance = state.tvInstances.get(socket.id);

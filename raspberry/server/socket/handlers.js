@@ -236,6 +236,19 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
     });
 
     /**
+     * ADR-106 — preview-slave heartbeat tick (master → preview only).
+     * Relayed to all clients in the room except the sender. Slaves
+     * classiques ignorent l'event ; seul le preview-slave l'écoute.
+     * Lightweight payload — no server-side persistence.
+     * @event tv-preview-tick
+     * @param {object} data — `{ videoIndex, currentTimeMs, emittedAt }`
+     */
+    socket.on('tv-preview-tick', (data) => {
+      if (!stateService.isTvMaster(socket.id)) return;
+      socket.broadcast.emit('tv-preview-tick', data);
+    });
+
+    /**
      * TV loop update (master only) — syncs video loop position to all slaves.
      * Ignored if the sender is not the current master.
      * @event tv-loop-update
