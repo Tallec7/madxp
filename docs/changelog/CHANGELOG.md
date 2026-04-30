@@ -1,3 +1,9 @@
+## [3.278.15](https://github.com/Tallec7/neopro/compare/v3.278.14...v3.278.15) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** détection content-type mismatch + strip Link modulepreload (ADR-071) ([#750](https://github.com/Tallec7/neopro/issues/750)) ([b7f9362](https://github.com/Tallec7/neopro/commit/b7f9362d334c948b281e72a3f342044d8d7fbe6e)), closes [748/#749](https://github.com/Tallec7/neopro/issues/749)
+
 ## [3.278.14](https://github.com/Tallec7/neopro/compare/v3.278.13...v3.278.14) (2026-04-30)
 
 ### Bug Fixes
