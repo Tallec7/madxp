@@ -3268,10 +3268,12 @@ describe('Manual video transition flash prevention guards', () => {
     //      la nouvelle vidéo (`activeManualPlayer.removeAttribute('src') + load()`). Le
     //      freeze-frame canvas (z=20) couvre la période sans src.
     const playMethodStart = manualVideoContent.indexOf('play(video: PiConfigVideoEntry)');
-    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 3500);
+    // Slice étendu à 12000 chars : play() fait ~190 lignes après l'ajout du fix
+    // flash-loop manual→manual (HW decoder release + black-overlay + rVFC + commentaires).
+    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 12000);
     expect({
       freezeUsesIsManualToManualFlag: /captureAndShowFreezeFrame\(\s*isManualToManual\s*\)/.test(playMethodBlock),
-      releasesPreviousDecoderInManualToManual: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,400}removeAttribute\(\s*['"]src['"]\s*\)/.test(playMethodBlock),
+      releasesPreviousDecoderInManualToManual: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,3000}removeAttribute\(\s*['"]src['"]\s*\)/.test(playMethodBlock),
     }).toEqual({
       freezeUsesIsManualToManualFlag: true,
       releasesPreviousDecoderInManualToManual: true,

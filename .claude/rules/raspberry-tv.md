@@ -179,7 +179,7 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 ### Preload & Reveal (ADR-034)
 
 - Afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo manuelle depuis la boucle (preload silencieux — opacity 0 + muted)
-- Ajouter un délai 2×rAF + 200ms dans `revealPreloadedVideo()` (la révélation du slave doit être instantanée)
+- Ajouter un délai rAF AVANT `style.opacity = '1'` dans `revealPreloadedVideo()` (la révélation visuelle du slave doit être instantanée). En revanche, un rAF DANS le callback `requestVideoFrameCallback` (`hideAfterPaint`) APRÈS le reveal est nécessaire pour cacher freeze-frame/black-overlay APRÈS le paint commit du nouveau player — sans ça, fenêtre 1-frame où `<video>` est transparent → boucle (z=2) flashe à travers.
 - Oublier `player.muted = true` dans `preloadManualVideo()` ou `player.muted = false` dans `revealPreloadedVideo()`/`cleanupPreloadState()`
 - Oublier `captureAndShowFreezeFrame()` dans la transition manual→manual de `preloadManualVideo()`
 - Appeler `play()` directement dans le handler LocalBroadcast `onCommand()` sans vérifier `isSlaveMode` (même pattern que Socket.IO `action`)
