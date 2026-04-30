@@ -34,7 +34,7 @@ Domaine restreint au mini-aperçu TV embarqué dans la Remote V2 (mobile + table
 5. **Mute permanent** — l'iframe n'émet jamais d'audio (un seul flux audio = celui de la TV physique).
 6. **Compteurs préservés** — `tvInstances`, `getSaasClientCount`, `displays-changed` ne bougent pas quand un preview-slave se connecte ou se déconnecte.
 7. **Lecture seule** — le preview n'émet jamais `tv-loop-update`, `tv-register`, `score-update`, `phase-change` ni aucun signal métier.
-8. **Pas d'analytics** — `analyticsService.startSession()`, `recordingState.startRecording()`, `playbackService.startSeamlessLoop()` skippés (déjà câblé ADR-105 pour les deux premiers, ADR-106 ajoute le skip de `startSeamlessLoop`).
+8. **Pas d'analytics ni de master/slave** — `analyticsService.startSession()` et `recordingState.startRecording()` skippés (ADR-105). `tvSyncService.init()` skippé (ADR-106 — pas d'élection master/slave). `startSeamlessLoop()` reste appelé pour populer la liste de vidéos référencée par l'index du master.
 
 ## Comportements observables
 
@@ -56,7 +56,7 @@ Domaine restreint au mini-aperçu TV embarqué dans la Remote V2 (mobile + table
 - **Ne JAMAIS** ajouter `state.tvInstances.set(...)` dans le handler `tv-preview-register` (casserait l'invariant compteur display).
 - **Ne JAMAIS** émettre `displays-changed` depuis le handler preview (casserait le compteur PROP-002).
 - **Ne JAMAIS** retirer la garde `if (this.isPreviewMode) { return; }` qui empêche `tv-loop-update` côté client.
-- **Ne JAMAIS** appeler `playbackService.startSeamlessLoop()` quand `isPreviewMode === true` (boucle locale parasite, désynchro garantie).
+- **Ne JAMAIS** retirer l'appel à `playbackService.startSeamlessLoop()` en preview (la liste `_currentLoopVideos` est nécessaire pour résoudre l'index emis par le master).
 - **Sync par index** uniquement, jamais par path (pattern master-slave réutilisé).
 
 ## Ce qui n'est PAS dans le scope

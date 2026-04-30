@@ -235,21 +235,6 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     socket.emit('displays-changed', { displays });
   });
 
-  // ADR-106 — preview-slave registration. The Remote V2 mini-thumb iframe
-  // (loaded with `?preview=1`) emits this to receive `tv-loop-state` without
-  // being counted as a display: it does NOT touch `state.tvInstances`, does
-  // NOT broadcast `displays-changed`, and does NOT participate in master/slave
-  // election. The socket is already in the siteId room (joined upstream during
-  // saas-register), so room broadcasts reach it for free — we only need to
-  // emit the current loopState immediately so the new preview doesn't show
-  // a black frame.
-  socket.on('tv-preview-register', () => {
-    logger.info('SaaS preview-slave registered', { siteId, socketId: socket.id });
-    if (state.loopState) {
-      socket.emit('tv-loop-state', state.loopState);
-    }
-  });
-
   // TV loop update (master → slaves)
   socket.on('tv-loop-update', (data: Record<string, unknown>) => {
     const instance = state.tvInstances.get(socket.id);
@@ -269,6 +254,21 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     }
     const displays = getSaasConnectedDisplays(io, siteId);
     socket.emit('displays-changed', { displays });
+  });
+
+  // ADR-106 — preview-slave registration. The Remote V2 mini-thumb iframe
+  // (loaded with `?preview=1`) emits this to receive `tv-loop-state` without
+  // being counted as a display: it does NOT touch state.tvInstances, does
+  // NOT broadcast displays-changed, and does NOT participate in master/slave
+  // election. The socket is already in the siteId room (joined upstream
+  // during saas-register), so room broadcasts reach it for free — we only
+  // need to emit the current loopState immediately so the new preview
+  // doesn't show a black frame.
+  socket.on('tv-preview-register', () => {
+    logger.info('SaaS preview-slave registered', { siteId, socketId: socket.id });
+    if (state.loopState) {
+      socket.emit('tv-loop-state', state.loopState);
+    }
   });
 
   // Cleanup on disconnect — unregister TV + promote slave if master disconnects

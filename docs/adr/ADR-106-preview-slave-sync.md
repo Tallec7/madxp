@@ -44,7 +44,7 @@ Introduire un **rôle "preview-slave"** distinct du master/slave classique.
 Quand `isPreviewMode === true` (déjà détecté par ADR-105 via `?preview=1`) :
 
 - **Skip** `tvSyncService.init()` (pas d'élection master/slave classique — le preview n'est ni l'un ni l'autre).
-- **Skip** `playbackService.startSeamlessLoop()` (pas de boucle locale autonome — la lecture est intégralement pilotée par les `tv-loop-state` reçus).
+- **Garde** `playbackService.startSeamlessLoop()` pour populer `_currentLoopVideos` (l'index emis par le master référence cette liste). La 1ʳᵉ vidéo joue ~50 ms en local le temps que le `tv-loop-state` initial arrive (le serveur l'émet immédiatement sur `tv-preview-register`), puis le sync prend la main.
 - Émet `tv-preview-register` (au lieu de `tv-register`) après l'init du socket.
 - Souscrit à `tv-loop-state` et appelle un nouveau handler `handlePreviewLoopState(state)` qui :
   - Sync par `videoIndex` (jamais `videoPath`, cf. variants secondaires — invariant ADR-033).
@@ -109,7 +109,7 @@ Le preview consomme le même décodeur que la TV principale (deux `<video>` HTML
 - Ne **jamais** ajouter `state.tvInstances.set(...)` dans le handler `tv-preview-register` (casserait l'invariant "preview ne compte pas").
 - Ne **jamais** émettre `displays-changed` depuis le handler `tv-preview-register` (casserait le compteur PROP-002).
 - Ne **jamais** retirer la garde `if (this.isPreviewMode) return;` qui protège l'émission de `tv-loop-update` côté client.
-- Ne **jamais** appeler `playbackService.startSeamlessLoop()` quand `isPreviewMode === true` (boucle locale parasite).
+- Ne **jamais** retirer l'appel à `playbackService.startSeamlessLoop()` en preview (sans lui `_currentLoopVideos` reste vide → l'index master ne peut pas être résolu côté preview).
 - Sync **par index**, pas par path (invariant ADR-033 réutilisé).
 
 ## Référence
