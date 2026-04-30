@@ -91,7 +91,11 @@ export interface TemplateTextField {
   respectAlpha: boolean;
   /** ADR-086 — direction d'animation */
   animationDirection: AnimationDirection;
+  /** SPEC JOUEUR — transformation typographique (CSS text-transform). */
+  textTransform: TextTransform;
 }
+
+export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 export interface TemplateImageSlot {
   id: string;
@@ -207,6 +211,7 @@ export interface TemplateTextFieldRow extends QueryResultRow {
   layer_id: string | null;
   respect_alpha: boolean;
   animation_direction: AnimationDirection;
+  text_transform: TextTransform;
 }
 
 export interface TemplateImageSlotRow extends QueryResultRow {

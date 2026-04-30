@@ -57,6 +57,8 @@ export interface RuntimeTextField {
   respectAlpha?: boolean;
   /** ADR-086 — 'in' (défaut) = arrivée, 'out' = sortie */
   animationDirection?: AnimationDirection;
+  /** SPEC JOUEUR — transformation typographique (CSS text-transform). Défaut 'none'. */
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 }
 
 export interface RuntimeImageSlot {
@@ -229,6 +231,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
                 fontFamily: tf.fontFamily,
                 fontSize: tf.fontSize,
                 textAlign: tf.align,
+                textTransform: tf.textTransform ?? 'none',
                 lineHeight: 1.1,
                 whiteSpace: 'pre-wrap',
                 pointerEvents: 'none',

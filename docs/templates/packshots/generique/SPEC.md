@@ -29,6 +29,7 @@ slots:
     font: GeneralSans
     font_weight: bold
     font_size: 25
+    text_transform: uppercase
     color: '#FFFFFF'
     text_align: center
     position_px: { x: 960, y: 147.3 }
@@ -44,6 +45,7 @@ slots:
     font: GeneralSans
     font_weight: bold
     font_size: 25
+    text_transform: uppercase
     color: '#FFFFFF'
     text_align: center
     position_px: { x: 960, y: 932.7 }
@@ -57,6 +59,7 @@ slots:
     default: "PRÉNOM\nNOM"
     font: Bulevar
     font_size: 389
+    text_transform: uppercase
     color: '#FFFFFF'
     text_align: center
     text_align_v: center

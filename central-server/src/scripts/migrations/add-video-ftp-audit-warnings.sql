@@ -29,6 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_video_ftp_audit_status
   ON video_ftp_audit_warnings (status, last_checked_at DESC);
 
 -- Étendre check_task_type pour autoriser le nouveau task type CRON.
+-- NB : inclure 'connection_events_purge' pour éviter les conflits avec la migration
+-- add-connection-events-purge-cron.sql qui élargit aussi cette liste.
 DO $$
 BEGIN
   ALTER TABLE recurring_schedules DROP CONSTRAINT IF EXISTS check_task_type;
@@ -37,7 +39,7 @@ BEGIN
     CHECK (task_type IN (
       'report', 'cleanup', 'aggregation', 'backup',
       'objective_check', 'pdf_report', 'match_session_autoclose',
-      'video_ftp_audit'
+      'video_ftp_audit', 'connection_events_purge'
     ));
 EXCEPTION WHEN undefined_table THEN
   NULL;

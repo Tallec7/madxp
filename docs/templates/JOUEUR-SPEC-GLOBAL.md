@@ -129,7 +129,7 @@ Ajout via `template_fonts` + endpoint dédié. Conversion serveur `.otf → .wof
 | Asset        | Format                                                       | Règles                                                                       |
 | ------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
 | Logo club    | PNG (détouré recommandé)                                     | Centré dans hexagone safe zone                                               |
-| Photo joueur | **PNG avec canal alpha obligatoire** (`require_alpha: true`) | **Cadrage tête/buste** validé manuellement par super_admin avant publication |
+| Photo joueur | **PNG avec canal alpha obligatoire** (`require_alpha: true`) | **Cadrage initial automatique** (bbox du détourage), user peut décaler horizontalement |
 
 ---
 
@@ -198,7 +198,23 @@ Une fois un master validé par super_admin, le template entre en **état verroui
 
 ### 5.3 Visibilité des backgrounds par user
 
-Recommandation : table `template_backgrounds_grants(background_id, user_id | role)` (pattern ADR-082 video grants). Permet au super_admin de réserver un fond couleur club à un user/club spécifique.
+**Décision Daisy (30/04/2026)** : grants **par user_id** (et non par rôle/site).
+
+Table de jointure :
+
+```sql
+CREATE TABLE template_backgrounds_grants (
+  background_id UUID NOT NULL REFERENCES template_backgrounds(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  granted_by UUID NOT NULL REFERENCES users(id), -- super_admin qui a accordé
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (background_id, user_id)
+);
+```
+
+Pattern : ADR-082 (Video Club Grants). Permet à super_admin de réserver un fond couleur (ex. `LANESTER` couleur club) à des users spécifiques.
+
+Backgrounds **publics** (pas de ligne dans `grants`) → visibles par tous. Backgrounds **restreints** (≥ 1 grant) → visibles uniquement aux users explicitement listés.
 
 ---
 
@@ -258,26 +274,29 @@ Avant lock v1.0, super_admin valide :
 ### 8.1 Côté designer (Daisy)
 
 - [ ] **8 WebM alpha** (1920×1080 @ 25fps)
-  - Joueur Simple : `01-A-hexagone.webm`, `02-B-transition.webm`
-  - Joueur But : `01-A`, `02-B`, `03-C-titre`, `04-D`
+  - Joueur Simple (durée 5'24 = 5960 ms) : `01-A-hexagone.webm`, `02-B-transition.webm`
+  - Joueur But (durée 6'24 = 6960 ms) : `01-A`, `02-B`, `03-C-titre`, `04-D`
   - Packshots : `packshot-generique.webm`, `packshot-img.webm`
-- [ ] **Fonts** : `Bulevar.otf` + `GeneralSans-Bold.otf` + **licences d'usage web**
-- [ ] **PDF page 5 complétée** : font + alignement du nom-club sur PACKSHOT_IMG
+- [ ] **Fonts** : `Bulevar.otf` + `GeneralSans-Bold.otf` ✅ licences confirmées
+- [ ] **Confirmer "ComicSans" du PACKSHOT_IMG** : possible typo pour GeneralSans (incohérence avec packshot générique)
 - [ ] **Délai cible** + **client cible** (NLF, démo, prospect ?)
 
 ### 8.2 Côté Lead Dev (moi)
 
-- [ ] Mesurer durées exactes sur les WebM (s'frames → ms) → MAJ SPECs
-- [ ] Mesurer dimensions exactes safe zones (hexagone + photo) → MAJ SPECs
+- [x] ~~Mesurer durées WebM~~ → 5'24 / 6'24 fournis par Daisy
+- [ ] Mesurer dimensions exactes safe zones (hexagone + photo) → MAJ SPECs sur livraison WebM
 - [ ] Rédiger ADR versioning vs flag `locked`
-- [ ] Rédiger ADR grants visibilité backgrounds (pattern ADR-082)
-- [ ] Process de validation cadrage tête/buste (workflow super_admin)
+- [ ] Rédiger ADR grants visibilité backgrounds (pattern ADR-082, **clé `user_id`**)
+- [ ] Implémenter cadrage auto à l'upload : bbox détourage + `user_offset_x` éditable
 
-### 8.3 À trancher
+### 8.3 Tranchés
 
-- [ ] Q4 : N templates en bibliothèque (vs 1 paramétré + capacité moteur variantes) — hypothèse retenue : **N templates**
-- [ ] Q9 : zoom titre `scaleFrom 0.77 / scaleTo 1.0` (vs nouveau paramètre `fontSizeFrom`) — hypothèse retenue : **scale**
-- [ ] Q14 : `anchor: top` + `fit_mode: fill-width-anchor-top` photo joueur — hypothèse retenue : **oui**
+- [x] Q4 : **N templates en bibliothèque** (pas de capacité moteur variantes)
+- [x] Q9 : zoom titre `scaleFrom 0.77 / scaleTo 1.0` direction out
+- [x] Q14 : `anchor: top` + `fit_mode: fill-width-anchor-top` photo joueur
+- [x] Q15 : cadrage auto à l'upload + `user_offset_x` éditable
+- [x] Q23 : ComicSans bold majuscules / Bulevar majuscules / Numéro 300 px droite, Prénom-nom 150 px gauche
+- [x] Grants backgrounds : par `user_id` (table `template_backgrounds_grants`)
 
 ---
 
@@ -305,7 +324,7 @@ Avant lock v1.0, super_admin valide :
 | 8   | Anim logo intro                  | fixe : 0 % → 119 %, easing linéaire, seul paramètre = taille finale                       |
 | 12  | Caractères max                   | club 40 / prénom-nom 24-30 / numéro 1-2 chiffres                                          |
 | 13  | Wrap nom                         | auto-wrap sur seuil                                                                       |
-| 15  | Photo joueur                     | toujours PNG détourée + cadrage tête/buste validé manuellement                            |
+| 15  | Photo joueur                     | PNG détourée + **cadrage auto à l'upload** (bbox détourage) + `user_offset_x` éditable    |
 | 16  | Layout packshot IMG              | simplifié : fond → photo → numéro/texte (pas de masque z-index)                           |
 | 17  | Logo zoom                        | 0 % → 119 %, freeze dans safe zone hexagone                                               |
 | 18  | Numéro intro                     | même ratio que logo (75 % hexagone)                                                       |
@@ -313,3 +332,10 @@ Avant lock v1.0, super_admin valide :
 | 20  | Résolution                       | 1920×1080 @ 25fps                                                                         |
 | 21  | Backgrounds                      | phase 2, fournis avec nom + code hexa                                                     |
 | 22  | Bloc E                           | coquille = packshot                                                                       |
+| —   | Durée Joueur Simple              | **5'24 @ 25fps = 5960 ms**                                                                |
+| —   | Durée Joueur But                 | **6'24 @ 25fps = 6960 ms**                                                                |
+| —   | Fonts licences web               | ✅ confirmées (Bulevar + GeneralSans)                                                     |
+| —   | PACKSHOT_IMG nom-club            | font ComicSans bold majuscules ⚠ (à confirmer — possible typo pour GeneralSans)           |
+| —   | PACKSHOT_IMG prénom-nom          | Bulevar 150 px majuscules                                                                 |
+| —   | PACKSHOT_IMG numéro              | Bulevar 300 px (= 200 % prénom-nom)                                                       |
+| —   | Grants backgrounds               | clé `user_id` (table `template_backgrounds_grants`, pattern ADR-082)                      |

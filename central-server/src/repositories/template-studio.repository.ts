@@ -94,6 +94,7 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   layerId: r.layer_id,
   respectAlpha: r.respect_alpha,
   animationDirection: r.animation_direction,
+  textTransform: r.text_transform ?? 'none',
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -180,6 +181,7 @@ export interface CreateTextFieldInput {
   layerId?: string | null;
   respectAlpha?: boolean;
   animationDirection?: AnimationDirection;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 }
 
 export type UpdateTextFieldInput = Partial<CreateTextFieldInput>;
@@ -478,8 +480,8 @@ class TemplateStudioRepository {
           font_family, font_size, color, align, appear_at, appear_duration,
           animation, default_value, max_chars, multiline, required, sort_order,
           always_visible, scale_from, scale_to,
-          layer_id, respect_alpha, animation_direction)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+          layer_id, respect_alpha, animation_direction, text_transform)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
        RETURNING *`,
       [
         templateId,
@@ -506,6 +508,7 @@ class TemplateStudioRepository {
         layerId,
         input.respectAlpha ?? false,
         input.animationDirection ?? 'in',
+        input.textTransform ?? 'none',
       ]
     );
     return mapTextField(rows[0]);
@@ -547,6 +550,7 @@ class TemplateStudioRepository {
       layerId: 'layer_id',
       respectAlpha: 'respect_alpha',
       animationDirection: 'animation_direction',
+      textTransform: 'text_transform',
     };
     const fields: string[] = [];
     const values: unknown[] = [];

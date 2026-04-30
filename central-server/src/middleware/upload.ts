@@ -158,6 +158,26 @@ export const uploadUserTemplateImage = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max (ADR-077)
 });
 
+// PNG uniquement — pour POC auto_crop SPEC JOUEUR (require_alpha sera vérifié
+// par png-bbox.service.hasAlphaChannel après upload). Memory storage : photos
+// joueur détourées sont petites (< 20 MB), pas de disque transitoire nécessaire.
+const pngOnlyFilter = (
+  _req: Express.Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  if (file.mimetype === 'image/png') {
+    cb(null, true);
+  } else {
+    cb(new Error(`Seuls les PNG sont acceptés (reçu: ${file.mimetype})`));
+  }
+};
+export const uploadPngBuffer = multer({
+  storage: memoryStorage,
+  fileFilter: pngOnlyFilter,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+
 // Configuration multer pour les paquets de mise à jour — DISK STORAGE (jusqu'à 1GB)
 export const uploadUpdatePackage = multer({
   storage: diskStorage,
