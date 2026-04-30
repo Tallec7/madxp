@@ -1,3 +1,9 @@
+## [3.278.16](https://github.com/Tallec7/neopro/compare/v3.278.15...v3.278.16) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** hero TV thumb iframe scalée 60x38 (ADR-105) ([#751](https://github.com/Tallec7/neopro/issues/751)) ([1588b35](https://github.com/Tallec7/neopro/commit/1588b35301dd61b91667da5fb40a8eeb3ee7ffd2)), closes [#730](https://github.com/Tallec7/neopro/issues/730)
+
 ## [3.278.15](https://github.com/Tallec7/neopro/compare/v3.278.14...v3.278.15) (2026-04-30)
 
 ### Bug Fixes
