@@ -35,9 +35,11 @@
     }
     .r2-hero .r2-video-subline,
     .r2-loop-tabs-wrap .r2-hero-section-label,
-    .r2-display-wrap,
-    .r2-hero-progress {
+    .r2-display-wrap {
       display: none;
+    }
+    .r2-hero-progress {
+      margin: 0 16px 6px;
     }
     .r2-loop-tabs-wrap {
       padding: 2px 12px 6px;

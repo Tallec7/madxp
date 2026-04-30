@@ -72,15 +72,6 @@ export interface DisplayInfo {
           <span class="r2-video-name">{{ playingVideo ? playingVideo.name : (loopVideoName || 'Aucune vidéo') }}</span>
           <span class="r2-video-subline">{{ subline }}</span>
         </div>
-        <div class="r2-hero-progress" *ngIf="playingVideo">
-          <span class="r2-hero-progress-duration" *ngIf="playingVideo.durationSeconds">
-            {{ playingVideo.durationSeconds }}s
-          </span>
-          <span class="r2-hero-progress-bar">
-            <span class="r2-hero-progress-fill"
-              [style.animation-duration.s]="playingVideo.durationSeconds || 5"></span>
-          </span>
-        </div>
         <!-- ADR-103 Phase 2.5 — bouton Stop pour couper la diffusion en cours
              (vidéo manuelle, page web ou livestream) et revenir à la boucle. -->
         <button class="r2-stop-btn-circle" *ngIf="playingVideo" aria-label="Arrêter et revenir à la boucle"
@@ -99,6 +90,16 @@ export interface DisplayInfo {
             <path d="M7 22 3 18l4-4"/><path d="M21 12v4a4 4 0 0 1-4 4H3"/>
           </svg>
         </button>
+      </div>
+
+      <div class="r2-hero-progress" *ngIf="playingVideo">
+        <span class="r2-hero-progress-bar">
+          <span class="r2-hero-progress-fill"
+            [style.animation-duration.s]="playingVideo.durationSeconds || 5"></span>
+        </span>
+        <span class="r2-hero-progress-duration" *ngIf="playingVideo.durationSeconds">
+          {{ playingVideo.durationSeconds }}s
+        </span>
       </div>
 
       <div class="r2-loop-tabs-wrap">
