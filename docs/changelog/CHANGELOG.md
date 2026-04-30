@@ -1,3 +1,9 @@
+## [3.278.19](https://github.com/Tallec7/neopro/compare/v3.278.18...v3.278.19) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** preview TV mini-thumb + consolidation REC/LIVE (ADR-105 Phase A) ([#755](https://github.com/Tallec7/neopro/issues/755)) ([eee58f7](https://github.com/Tallec7/neopro/commit/eee58f735ff1945041ae523de42264a013f313b5)), closes [#752](https://github.com/Tallec7/neopro/issues/752) [#752](https://github.com/Tallec7/neopro/issues/752)
+
 ## [3.278.18](https://github.com/Tallec7/neopro/compare/v3.278.17...v3.278.18) (2026-04-30)
 
 ### Bug Fixes
