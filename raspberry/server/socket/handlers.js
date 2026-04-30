@@ -222,6 +222,20 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
     });
 
     /**
+     * ADR-106 — preview-slave registration. The Remote V2 mini-thumb iframe
+     * (loaded with `?preview=1`) emits this event to receive `tv-loop-state`
+     * broadcasts WITHOUT being counted as a display: it does NOT touch
+     * `tvInstances`, does NOT broadcast `displays-changed`, does NOT
+     * participate in master/slave election.
+     *
+     * @event tv-preview-register
+     */
+    socket.on('tv-preview-register', () => {
+      console.log('[TV-Sync] Preview-slave registered:', socket.id);
+      socket.emit('tv-loop-state', stateService.getLoopState());
+    });
+
+    /**
      * TV loop update (master only) — syncs video loop position to all slaves.
      * Ignored if the sender is not the current master.
      * @event tv-loop-update
