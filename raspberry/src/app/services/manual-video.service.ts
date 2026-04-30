@@ -196,8 +196,28 @@ export class ManualVideoService {
         requestAnimationFrame(() => {
           targetPlayer.style.opacity = '1';
           this.doubleBufferService.swapActiveManualPlayer();
-          this.doubleBufferService.hideFreezeFrame();
-          this.doubleBufferService.hideBlackOverlay();
+
+          // Attendre que le nouveau player ait peint sa PREMIÈRE FRAME avant de
+          // cacher le freeze-frame. Sans ce wait, gap de 1-2 frames où <video>
+          // est transparent (Chromium n'applique pas `background:#000` tant qu'aucune
+          // frame n'est décodée — il render directement la texture vidéo), et la
+          // boucle (z=2) apparaît derrière → flash boucle ~16-32ms perçu.
+          // requestVideoFrameCallback fire au moment exact où la frame est prête à
+          // composer, garantissant un swap pixel-perfect. Fallback rAF immédiat si
+          // API absente (Chromium <92, jamais sur Pi 5 mais safe pour autres builds).
+          type RVFCPlayer = HTMLVideoElement & {
+            requestVideoFrameCallback?: (cb: () => void) => number;
+          };
+          const hideOnPaint = () => {
+            this.doubleBufferService.hideFreezeFrame();
+            this.doubleBufferService.hideBlackOverlay();
+          };
+          const rvfc = (targetPlayer as RVFCPlayer).requestVideoFrameCallback;
+          if (typeof rvfc === 'function') {
+            rvfc.call(targetPlayer, hideOnPaint);
+          } else {
+            hideOnPaint();
+          }
 
           // Tracker (desactive pour les slaves)
           if (!this.callbacks?.getIsSlaveMode()) {
