@@ -369,6 +369,19 @@ export class TvComponent implements OnInit, OnDestroy {
           this.stopManualVideoAndReturnToLoop();
         },
       });
+
+      // ADR-106 — start preview heartbeat ONLY on the master TV. Emits
+      // `tv-preview-tick` every 1s with the master's current playhead
+      // position so any preview-slave can correct drift continuously.
+      this.tvSyncService.startPreviewHeartbeat(
+        () => {
+          const player = this.isManualMode
+            ? this.doubleBufferService.getActiveManualPlayer()
+            : this.doubleBufferService.getActivePlayer();
+          return player && player.currentTime ? player.currentTime * 1000 : 0;
+        },
+        () => this.playbackService.currentLoopIndex,
+      );
     }
   }
 
@@ -405,6 +418,15 @@ export class TvComponent implements OnInit, OnDestroy {
       this.ngZone.run(() => this.handlePreviewLoopState(state));
     });
 
+    // ADR-106 — heartbeat from master with current playhead (1Hz). Used
+    // for continuous drift correction on already-playing video.
+    this.socketService.on<{ videoIndex: number; currentTimeMs: number; emittedAt: number }>(
+      'tv-preview-tick',
+      (tick) => {
+        this.ngZone.run(() => this.handlePreviewTick(tick));
+      },
+    );
+
     // Page Visibility API — pause players when tab is in background to
     // limit decoder usage; resume on return (next state tick re-syncs).
     document.addEventListener('visibilitychange', () => {
@@ -433,6 +455,12 @@ export class TvComponent implements OnInit, OnDestroy {
    * preload+reveal — the master has already done its transition, the preview
    * just catches up.
    *
+   * Drift sources documented in PR #756 review:
+   *  - We DO NOT setTimeout before seeking (introduces +500ms drift).
+   *  - We recalculate `elapsed` AT seek time (not at receive time).
+   *  - We wait for player.readyState >= 3 (HAVE_FUTURE_DATA) before seeking,
+   *    otherwise the seek is ignored or clamped on a half-loaded buffer.
+   *
    * Read-only: never emits tv-loop-update, never participates in election.
    */
   private handlePreviewLoopState(state: LoopState): void {
@@ -449,17 +477,11 @@ export class TvComponent implements OnInit, OnDestroy {
       if (!this.manualVideoService.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
         console.log('[TV] Preview-slave: master in manual mode, mirroring', state.manualVideoPath);
         this.manualVideoService.play(resolvedVideo);
-        if (state.manualVideoStartedAt) {
-          const elapsed = (Date.now() - state.manualVideoStartedAt) / 1000;
-          if (elapsed > 1) {
-            setTimeout(() => {
-              const player = this.doubleBufferService.getActiveManualPlayer();
-              if (player && player.duration && elapsed < player.duration) {
-                player.currentTime = elapsed;
-              }
-            }, 500);
-          }
-        }
+        this.seekPreviewWhenReady(
+          () => this.doubleBufferService.getActiveManualPlayer(),
+          state.manualVideoStartedAt,
+          'manual',
+        );
       }
       return;
     }
@@ -483,8 +505,9 @@ export class TvComponent implements OnInit, OnDestroy {
     const activePlayer = this.doubleBufferService.getActivePlayer();
     const activeSrc = activePlayer?.src || '';
 
-    // Skip if already on the right video
+    // Already on the right video — apply continuous drift correction only.
     if (localVideo?.path && activeSrc.includes(localVideo.path)) {
+      this.applyPreviewDriftCorrection(state.videoStartedAt);
       return;
     }
 
@@ -494,17 +517,97 @@ export class TvComponent implements OnInit, OnDestroy {
       this.doubleBufferService.playOnActivePlayer(localVideo.path, syncIndex);
     }
 
-    // Seek to master's approximate position
-    if (state.videoStartedAt) {
-      const elapsed = (Date.now() - state.videoStartedAt) / 1000;
-      if (elapsed > 1) {
-        setTimeout(() => {
-          const player = this.doubleBufferService.getActivePlayer();
-          if (player && player.duration && elapsed < player.duration) {
-            player.currentTime = elapsed;
-          }
-        }, 500);
+    this.seekPreviewWhenReady(
+      () => this.doubleBufferService.getActivePlayer(),
+      state.videoStartedAt,
+      'loop',
+    );
+  }
+
+  /**
+   * Seek a preview player to (now - startedAt) the moment it has enough
+   * buffered data, then keep correcting drift on subsequent state ticks.
+   * Polls readyState >= 3 (HAVE_FUTURE_DATA) every 50ms, max 2s, then
+   * applies the seek with `elapsed` recomputed at apply-time (not at
+   * call-time — the master's `videoStartedAt` is absolute, not relative).
+   */
+  private seekPreviewWhenReady(
+    getPlayer: () => HTMLVideoElement | null,
+    startedAt: number | null,
+    label: 'loop' | 'manual',
+  ): void {
+    if (!startedAt) return;
+    const start = Date.now();
+    const tick = () => {
+      const player = getPlayer();
+      if (!player) return;
+      if (player.readyState < 3 || !player.duration) {
+        if (Date.now() - start > 2000) {
+          console.warn(`[TV] Preview-slave: ${label} seek timeout, player not ready`);
+          return;
+        }
+        setTimeout(tick, 50);
+        return;
       }
+      // RECOMPUTE elapsed at apply time — using the value captured at
+      // call time would burn ~50–250ms of polling latency into the seek.
+      const elapsed = (Date.now() - startedAt) / 1000;
+      if (elapsed > 0.2 && elapsed < player.duration) {
+        const drift = Math.abs(player.currentTime - elapsed);
+        player.currentTime = elapsed;
+        console.log(
+          `[TV] Preview-slave: ${label} seek → ${elapsed.toFixed(2)}s (drift was ${drift.toFixed(2)}s)`,
+        );
+      }
+    };
+    tick();
+  }
+
+  /**
+   * ADR-106 — handles `tv-preview-tick` heartbeat (1Hz from master).
+   * Authoritative source of truth for the master's current playhead.
+   * Applies drift correction if delta > 200ms; ignored if we're not on
+   * the right videoIndex yet (next tv-loop-state will resync).
+   */
+  private handlePreviewTick(tick: { videoIndex: number; currentTimeMs: number; emittedAt: number }): void {
+    const loopVideos = this.playbackService.currentLoopVideos;
+    if (!loopVideos.length) return;
+    const expectedIndex = tick.videoIndex % loopVideos.length;
+    const expectedVideo = loopVideos[expectedIndex];
+    const player = this.doubleBufferService.getActivePlayer();
+    if (!player || !expectedVideo?.path) return;
+    if (!player.src.includes(expectedVideo.path)) return; // wrong video; tv-loop-state will fix
+    if (player.readyState < 3 || !player.duration) return;
+    // Adjust for one-way network latency (ms since master emit)
+    const networkLatencyMs = Math.max(0, Date.now() - tick.emittedAt);
+    const masterCurrentSec = (tick.currentTimeMs + networkLatencyMs) / 1000;
+    if (masterCurrentSec >= player.duration) return;
+    const drift = player.currentTime - masterCurrentSec;
+    if (Math.abs(drift) > 0.2) {
+      console.log(
+        `[TV] Preview-slave: tick correction local=${player.currentTime.toFixed(2)}s master=${masterCurrentSec.toFixed(2)}s drift=${drift.toFixed(2)}s lat=${networkLatencyMs}ms`,
+      );
+      player.currentTime = masterCurrentSec;
+    }
+  }
+
+  /**
+   * Continuous drift correction on already-playing video. Called from each
+   * state tick when the preview is already on the correct videoIndex.
+   * If drift exceeds 200ms, snap back to the master's elapsed position.
+   */
+  private applyPreviewDriftCorrection(startedAt: number | null): void {
+    if (!startedAt) return;
+    const player = this.doubleBufferService.getActivePlayer();
+    if (!player || player.readyState < 3 || !player.duration) return;
+    const elapsed = (Date.now() - startedAt) / 1000;
+    if (elapsed <= 0 || elapsed >= player.duration) return;
+    const drift = player.currentTime - elapsed;
+    if (Math.abs(drift) > 0.2) {
+      console.log(
+        `[TV] Preview-slave: drift correction local=${player.currentTime.toFixed(2)}s master=${elapsed.toFixed(2)}s drift=${drift.toFixed(2)}s`,
+      );
+      player.currentTime = elapsed;
     }
   }
 
