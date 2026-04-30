@@ -55,16 +55,23 @@
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 
-  // ADR-103 — flux MJPEG `/preview.mjpeg` injecté quand `previewUrl` non null
-  // (mutex single-subscriber : actif uniquement hors layout `desktop-pro`).
-  // Le gradient reste derrière comme fallback pendant le warm-up de la stream.
+  // ADR-105 — iframe TV preview scalée pour tenir dans le thumb 60×38.
+  // L'iframe rend le SPA Angular à sa taille native (800×506, ratio ≈ 60/38)
+  // puis CSS `transform: scale(0.075)` réduit visuellement à 60×38. Le browser
+  // ne re-rend pas, le compositor GPU scale le résultat (technique Figma
+  // pour les page thumbnails). `pointer-events: none` empêche les clicks sur
+  // la TV preview, le gradient reste derrière comme fallback warm-up.
   .r2-tv-thumb-stream {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: inherit;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 506px;
+    border: 0;
+    transform: scale(0.075);
+    transform-origin: top left;
+    pointer-events: none;
+    border-radius: 0;
   }
 
   .r2-tv-scanline {
@@ -220,7 +227,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 120ms, background 120ms;
+  transition:
+    transform 120ms,
+    background 120ms;
 
   &:hover {
     transform: scale(1.05);
