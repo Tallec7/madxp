@@ -746,9 +746,12 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
 
     // Le 2nd écran reprend la boucle automatiquement à la fin de la vidéo forcée.
+    // Le state local `playingVideo` reste exposé pendant toute la durée de la
+    // vidéo pour que la barre de progression du hero ait le temps de se
+    // remplir visuellement (avant ce fix, capé à 5s → barre figée à <17%).
     if (this.playingTimer) clearTimeout(this.playingTimer);
     const duration = (v.durationSeconds ?? 0) * 1000;
-    const ms = duration > 0 ? Math.min(duration, 5000) : 5000;
+    const ms = duration > 0 ? duration : 5000;
     this.playingTimer = setTimeout(() => {
       this.playingVideoId = null;
       this.playingVideo = null;
