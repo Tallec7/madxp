@@ -1,3 +1,9 @@
+## [3.278.17](https://github.com/Tallec7/neopro/compare/v3.278.16...v3.278.17) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** retire iframe preview du mini-thumb hero (ADR-105) ([#752](https://github.com/Tallec7/neopro/issues/752)) ([051ed56](https://github.com/Tallec7/neopro/commit/051ed56019ca121c0fff52cc8d0016e01c3841ce)), closes [#751](https://github.com/Tallec7/neopro/issues/751) [#751](https://github.com/Tallec7/neopro/issues/751)
+
 ## [3.278.16](https://github.com/Tallec7/neopro/compare/v3.278.15...v3.278.16) (2026-04-30)
 
 ### Bug Fixes
