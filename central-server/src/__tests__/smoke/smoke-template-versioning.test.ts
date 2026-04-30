@@ -130,3 +130,33 @@ describe('Backgrounds + grants — ADR-107', () => {
     expect(repo).not.toMatch(/from\s+['"][^'"]*config\/database['"][^;]*Pool/);
   });
 });
+
+describe('PNG auto_crop service — POC SPEC JOUEUR Q15', () => {
+  it('service exposes computeAlphaBbox + hasAlphaChannel', () => {
+    const svc = readFile('services/png-bbox.service.ts');
+    expect(svc).toMatch(/async\s+computeAlphaBbox\s*\(/);
+    expect(svc).toMatch(/async\s+hasAlphaChannel\s*\(/);
+    expect(svc).toContain('export const pngBboxService = new PngBboxService()');
+  });
+
+  it('service uses pngjs (pure JS, no native dep)', () => {
+    const svc = readFile('services/png-bbox.service.ts');
+    expect(svc).toMatch(/from\s+'pngjs'/);
+    expect(svc).not.toMatch(/from\s+'sharp'/);
+  });
+
+  it('AutoCropResult exposes bbox + suggested_offset_x + empty flag', () => {
+    const svc = readFile('services/png-bbox.service.ts');
+    expect(svc).toMatch(/suggested_offset_x:\s*number/);
+    expect(svc).toMatch(/empty:\s*boolean/);
+    expect(svc).toMatch(/alpha_threshold:\s*number/);
+  });
+
+  it('package.json declares pngjs runtime + @types/pngjs devDep', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(centralSrc, '..', 'package.json'), 'utf8')
+    );
+    expect(pkg.dependencies?.pngjs).toBeDefined();
+    expect(pkg.devDependencies?.['@types/pngjs']).toBeDefined();
+  });
+});
