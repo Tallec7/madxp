@@ -147,6 +147,13 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
+### Preview-Slave Sync (ADR-106)
+
+- Déplacer `registerPreviewSlaveOnSocket(io, socket)` depuis `central-server/src/services/socket.service.ts handleConnection()` vers `registerSaasRelay()` (la preview iframe skip `saas-register` pour préserver `getSaasClientCount` — si le listener `tv-preview-register` est gated derrière saas-register, il n'est jamais attaché au socket de la preview → boucle locale par défaut pour toujours, régression #759).
+- Retirer le payload `{ siteId }` de l'émission client `tv-preview-register` dans `tv.component.ts initPreviewSlave()` (sans lui le serveur central ne peut pas faire `socket.join(siteId)` → 0 broadcast reçu).
+- Retirer la fonction exportée `registerPreviewSlaveOnSocket` de `central-server/src/handlers/saas-relay.handler.ts` (point d'extension public utilisé par socket.service.ts).
+- Retirer le handler `tv-preview-tick` de `raspberry/server/socket/handlers.js` ou de `central-server/src/handlers/saas-relay.handler.ts` (heartbeat 1Hz master→preview pour drift correction continue, ADR-106 PR #758).
+
 ### Master-Slave Sync
 
 - Synchroniser le slave dual-display par `videoPath` dans `handleMasterLoopState` (toujours sync par `videoIndex`)

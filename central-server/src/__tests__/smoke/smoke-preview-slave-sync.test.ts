@@ -115,6 +115,42 @@ describe('Smoke — ADR-106 preview-slave sync', () => {
   // ADR document
   // ==========================================================================
 
+  // ==========================================================================
+  // ADR-106 — Routing root cause guard (PR #759)
+  // ==========================================================================
+
+  it('central-server — registerPreviewSlaveOnSocket exported from saas-relay.handler', () => {
+    const src = read('central-server/src/handlers/saas-relay.handler.ts');
+    expect(/export function registerPreviewSlaveOnSocket/.test(src)).toBe(true);
+    // Inside, it must listen for tv-preview-register and join the siteId room
+    const fnIdx = src.indexOf('export function registerPreviewSlaveOnSocket');
+    const block = src.slice(fnIdx, fnIdx + 1500);
+    expect(/socket\.on\(\s*['"]tv-preview-register['"]/.test(block)).toBe(true);
+    expect(/socket\.join\(siteId\)/.test(block)).toBe(true);
+  });
+
+  it('central-server — registerPreviewSlaveOnSocket invoked at connection level (not gated behind saas-register)', () => {
+    const src = read('central-server/src/services/socket.service.ts');
+    // Imported (possibly aliased) and called from handleConnection
+    expect(/registerPreviewSlaveOnSocket/i.test(src)).toBe(true);
+    const handlerIdx = src.indexOf('private async handleConnection');
+    expect(handlerIdx).toBeGreaterThan(-1);
+    const handlerBlock = src.slice(handlerIdx, handlerIdx + 1500);
+    // Either the original name or its alias
+    expect(/registerPreviewSlaveOnSocket\s*\(/i.test(handlerBlock)).toBe(true);
+  });
+
+  it('TvComponent — preview emits tv-preview-register with siteId payload', () => {
+    const src = read('raspberry/src/app/components/tv/tv.component.ts');
+    // Locate the actual method definition (not the JSDoc reference)
+    const fnIdx = src.search(/private\s+initPreviewSlave\s*\(/);
+    expect(fnIdx).toBeGreaterThan(-1);
+    const block = src.slice(fnIdx, fnIdx + 3000);
+    // The payload must include siteId extracted from the URL
+    expect(/siteId/.test(block)).toBe(true);
+    expect(/params\.get\(\s*['"]site['"]\s*\)/.test(block)).toBe(true);
+  });
+
   it('ADR-106 document exists and is referenced from the README index', () => {
     const adr = read('docs/adr/ADR-106-preview-slave-sync.md');
     expect(/Statut.*Accepté/.test(adr)).toBe(true);
