@@ -93,6 +93,38 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     expect(fn).toContain("'no-store'");
   });
 
+  // ------------ Pages Function ROOT catchall (Dashboard) ------------
+
+  it('Pages Function ROOT catchall exists at expected path', () => {
+    // Sans cette Function, `_redirects` `/* /index.html 200` empoisonne le
+    // cache 1 an pour TOUTE l'app dashboard sur les chunks préchargés depuis
+    // une deep route (ex `/sites/123/chunk-X.js`). Cf. ADR-071 phase 3 suite.
+    expect(
+      exists('central-dashboard/cloudflare/functions/[[catchall]].js'),
+    ).toBe(true);
+  });
+
+  it('Pages Function ROOT applique le même guard `isAssetRequest` que SaaS', () => {
+    const fn = read('central-dashboard/cloudflare/functions/[[catchall]].js');
+    expect(/export\s+(const|async\s+function)\s+onRequest/.test(fn)).toBe(true);
+    expect(fn).toContain('env.ASSETS.fetch(request)');
+    expect(fn).toContain('isAssetRequest');
+    expect(/isAssetRequest\s*\(\s*url\.pathname\s*\)/.test(fn)).toBe(true);
+    // Le guard asset DOIT court-circuiter AVANT le fallback HTML.
+    expect(/return\s+response\s*;[\s\S]{0,200}fallbackUrl/.test(fn)).toBe(true);
+    // Override Cache-Control: no-store sur le fallback HTML.
+    expect(fn).toContain("'Cache-Control'");
+    expect(fn).toContain("'no-store'");
+  });
+
+  it('_redirects ne contient PAS la règle `/* /index.html 200`', () => {
+    // La règle SPA fallback racine est désormais gérée par la Pages Function
+    // root (avec guard asset). Garder la règle en plus créerait un double
+    // fallback non-guardé qui empoisonnerait le cache via `_headers` immutable.
+    const redirects = read('central-dashboard/cloudflare/_redirects');
+    expect(/^\s*\/\*\s+\/index\.html\s+200/m.test(redirects)).toBe(false);
+  });
+
   // ------------ build:cloudflare:prod ------------
 
   it('package.json `build:cloudflare:prod` enchaîne route stubs + functions copy', () => {
@@ -104,6 +136,10 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     // du upload dir, requis pour wrangler --workingDirectory).
     expect(buildScript).toContain('dist/central-dashboard/functions/saas');
     expect(buildScript).toContain('[[catchall]].js');
+    // ROOT catchall doit être copié aussi (PR cache poisoning suite).
+    expect(buildScript).toMatch(
+      /dist\/central-dashboard\/functions\/\[\[catchall\]\]\.js/,
+    );
   });
 
   // ------------ release.yml workflow ------------
@@ -116,10 +152,13 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     expect(workflow).toContain('workingDirectory: dist/central-dashboard');
   });
 
-  it('release.yml `Verify build output` checke la présence de la Pages Function', () => {
+  it('release.yml `Verify build output` checke la présence des 2 Pages Functions (saas + root)', () => {
     const workflow = read('.github/workflows/release.yml');
     expect(workflow).toMatch(
       /test\s+-s\s+['"]dist\/central-dashboard\/functions\/saas\/\[\[catchall\]\]\.js['"]/,
+    );
+    expect(workflow).toMatch(
+      /test\s+-s\s+['"]dist\/central-dashboard\/functions\/\[\[catchall\]\]\.js['"]/,
     );
   });
 
