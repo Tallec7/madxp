@@ -77,9 +77,9 @@ class TemplateRenderPropsService {
       selectedOptions
     );
 
-    let mergedLayers = [...tpl.layers];
-    let mergedTextFields = [...tpl.textFields];
-    let mergedImageSlots = [...tpl.imageSlots];
+    const mergedLayers = [...tpl.layers];
+    const mergedTextFields = [...tpl.textFields];
+    const mergedImageSlots = [...tpl.imageSlots];
     let resolvedPackshotTemplateId: string | null = null;
 
     if (packshotRef) {

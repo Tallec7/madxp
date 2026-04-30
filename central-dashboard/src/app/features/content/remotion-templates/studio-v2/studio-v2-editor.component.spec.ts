@@ -69,6 +69,7 @@ function makeView(overrides: Partial<TemplateStudioView> = {}): TemplateStudioVi
         layerId: null,
         respectAlpha: false,
         animationDirection: 'in',
+        visibleIf: null,
       },
     ],
     imageSlots: [
@@ -95,8 +96,10 @@ function makeView(overrides: Partial<TemplateStudioView> = {}): TemplateStudioVi
         animationDirection: 'in',
         scaleFrom: null,
         scaleTo: null,
+        visibleIf: null,
       },
     ],
+    options: [],
     createdAt: '2026-04-20T00:00:00Z',
     updatedAt: '2026-04-20T00:00:00Z',
     ...overrides,
