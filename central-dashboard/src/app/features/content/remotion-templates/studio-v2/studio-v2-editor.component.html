@@ -1,5 +1,36 @@
 <div class="studio-v2">
   <div class="studio-v2__inputs">
+    <!-- PDF JOUEUR §démarrage — choix posés au démarrage par le user
+         (intro_mode logo/numero, packshot generique/img, etc.) -->
+    <section class="block" *ngIf="view.options && view.options.length > 0" data-testid="studio-v2-options">
+      <h3 class="block__title">Options</h3>
+      <p class="block__hint">Choix au démarrage — masque dynamiquement les champs ci-dessous</p>
+      <div class="fields">
+        <div class="field" *ngFor="let opt of view.options" [attr.data-option-key]="opt.key">
+          <label class="field__label">{{ opt.label }}</label>
+          <div class="option-pills" *ngIf="opt.type === 'enum'">
+            <button
+              type="button"
+              *ngFor="let v of opt.values"
+              class="option-pill"
+              [class.option-pill--active]="selectedOptions[opt.key] === v"
+              [disabled]="!opt.userEditable"
+              (click)="onOptionChange(opt.key, v)"
+            >{{ v }}</button>
+          </div>
+          <label class="checkbox-row" *ngIf="opt.type === 'boolean'">
+            <input
+              type="checkbox"
+              [checked]="selectedOptions[opt.key] === 'true'"
+              [disabled]="!opt.userEditable"
+              (change)="onOptionChange(opt.key, $any($event.target).checked ? 'true' : 'false')"
+            />
+            <span>{{ selectedOptions[opt.key] === 'true' ? 'Oui' : 'Non' }}</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
     <section class="block" *ngIf="view.variants.length > 0">
       <h3 class="block__title">Variante</h3>
       <p class="block__hint">Choisis le fond vidéo</p>
@@ -25,7 +56,7 @@
     <section class="block" *ngIf="view.textFields.length > 0">
       <h3 class="block__title">Textes</h3>
       <div class="fields">
-        <div class="field" *ngFor="let tf of view.textFields; trackBy: trackTextField">
+        <div class="field" *ngFor="let tf of view.textFields; trackBy: trackTextField" [hidden]="!isSlotVisible(tf.visibleIf)">
           <label class="field__label">
             {{ tf.label }}
             <span class="field__required" *ngIf="tf.required">*</span>
@@ -59,7 +90,7 @@
       <h3 class="block__title">Images</h3>
       <p class="block__hint">JPEG, PNG ou WebP, max 10 Mo</p>
       <div class="slots">
-        <div class="slot" *ngFor="let s of view.imageSlots; trackBy: trackImageSlot">
+        <div class="slot" *ngFor="let s of view.imageSlots; trackBy: trackImageSlot" [hidden]="!isSlotVisible(s.visibleIf)">
           <label class="slot__label">
             {{ s.label }}
             <span class="field__required" *ngIf="s.required">*</span>

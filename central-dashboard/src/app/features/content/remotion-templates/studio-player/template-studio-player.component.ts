@@ -55,6 +55,8 @@ export interface RuntimePlayerState {
   canvasHeight: number;
   durationSeconds: number;
   fps: number;
+  /** PDF JOUEUR §démarrage — options sélectionnées, propagées au runtime pour visible_if filtering. */
+  selectedOptions?: Record<string, string>;
 }
 
 @Component({
@@ -121,6 +123,7 @@ export class TemplateStudioPlayerComponent implements AfterViewInit, OnChanges, 
       variantId: s.variantId,
       textValues: s.textValues,
       imageUploads: s.imageUploads,
+      selectedOptions: s.selectedOptions ?? {},
     };
     const durationInFrames = Math.max(1, Math.round(s.durationSeconds * s.fps));
     this.root.render(
