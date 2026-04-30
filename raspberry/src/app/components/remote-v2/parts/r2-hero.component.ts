@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, NgZone, OnChanges, OnDestroy, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PiConfigVideoEntry } from '../../../interfaces/video.interface';
@@ -95,10 +95,10 @@ export interface DisplayInfo {
       <div class="r2-hero-progress" *ngIf="playingVideo">
         <span class="r2-hero-progress-bar">
           <span class="r2-hero-progress-fill"
-            [style.animation-duration.s]="playingVideo.durationSeconds || 5"></span>
+            [style.width.%]="progressPercent()"></span>
         </span>
         <span class="r2-hero-progress-duration" *ngIf="playingVideo.durationSeconds">
-          {{ playingVideo.durationSeconds }}s
+          {{ remainingSeconds() }}s
         </span>
       </div>
 
@@ -137,8 +137,9 @@ export interface DisplayInfo {
     </section>
   `,
 })
-export class R2HeroComponent implements OnChanges {
+export class R2HeroComponent implements OnChanges, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly ngZone = inject(NgZone);
 
   @Input() loopId: Loop = 'during';
   @Input() loopVideoName?: string;
@@ -158,6 +159,18 @@ export class R2HeroComponent implements OnChanges {
   readonly safePreviewUrl = signal<SafeResourceUrl | null>(null);
   readonly iframeLoaded = signal(false);
 
+  /**
+   * Barre de progression vidéo manuelle — pilotée par JS (signal + setInterval)
+   * plutôt que par animation CSS. Garantit un reset propre entre vidéos et
+   * une progression alignée sur `playingVideo.durationSeconds` (la même
+   * valeur sert de TTL côté parent — cf. `remote-v2.component.ts:playVideo`).
+   */
+  readonly progressPercent = signal(0);
+  readonly remainingSeconds = signal(0);
+  private progressStart = 0;
+  private progressDurationMs = 0;
+  private progressTimer: ReturnType<typeof setInterval> | null = null;
+
   ngOnChanges(changes: SimpleChanges): void {
     if ('previewUrl' in changes) {
       this.iframeLoaded.set(false);
@@ -165,10 +178,51 @@ export class R2HeroComponent implements OnChanges {
         this.previewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl) : null,
       );
     }
+    if ('playingVideo' in changes) {
+      this.resetProgress();
+      if (this.playingVideo) {
+        this.startProgress(this.playingVideo.durationSeconds || 5);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.resetProgress();
   }
 
   onIframeLoad(): void {
     this.iframeLoaded.set(true);
+  }
+
+  private startProgress(durationSeconds: number): void {
+    this.progressStart = Date.now();
+    this.progressDurationMs = durationSeconds * 1000;
+    this.progressPercent.set(0);
+    this.remainingSeconds.set(durationSeconds);
+    this.ngZone.runOutsideAngular(() => {
+      this.progressTimer = setInterval(() => {
+        const elapsed = Date.now() - this.progressStart;
+        const pct = Math.min(100, (elapsed / this.progressDurationMs) * 100);
+        const remaining = Math.max(0, Math.ceil((this.progressDurationMs - elapsed) / 1000));
+        this.ngZone.run(() => {
+          this.progressPercent.set(pct);
+          this.remainingSeconds.set(remaining);
+        });
+        if (pct >= 100 && this.progressTimer) {
+          clearInterval(this.progressTimer);
+          this.progressTimer = null;
+        }
+      }, 200);
+    });
+  }
+
+  private resetProgress(): void {
+    if (this.progressTimer) {
+      clearInterval(this.progressTimer);
+      this.progressTimer = null;
+    }
+    this.progressPercent.set(0);
+    this.remainingSeconds.set(0);
   }
 
   @Output() setLoop = new EventEmitter<Loop>();

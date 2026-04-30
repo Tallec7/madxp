@@ -177,12 +177,11 @@
 
   .r2-hero-progress-fill {
     display: block;
-    width: 100%;
+    width: 0;
     height: 100%;
     background: $yellow;
-    animation-name: v7-progress;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
+    border-radius: 99px;
+    transition: width 200ms linear;
   }
 }
 
