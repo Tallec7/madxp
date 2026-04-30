@@ -1,3 +1,9 @@
+## [3.278.12](https://github.com/Tallec7/neopro/compare/v3.278.11...v3.278.12) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** suivre le 308 trailing-slash dans Pages Function /saas/\* (ADR-071) ([#745](https://github.com/Tallec7/neopro/issues/745)) ([abfc3c5](https://github.com/Tallec7/neopro/commit/abfc3c5acaab051a361c14b61fc1a7de6d90427c)), closes [#744](https://github.com/Tallec7/neopro/issues/744)
+
 ## [3.278.11](https://github.com/Tallec7/neopro/compare/v3.278.10...v3.278.11) (2026-04-30)
 
 ### Bug Fixes
