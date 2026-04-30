@@ -37,6 +37,18 @@ import { R2IconComponent } from '../icons/r2-icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     :host { display: contents; }
+    /* ADR-105 — _tv-monitor.scss supprimé en Phase 2, on garde ici les
+       règles minimales pour le containment de l'iframe : sans
+       position:relative et aspect-ratio sur .r2-tv-monitor-frame, l'iframe
+       absolute/inset:0 s'anchor sur le <body> et couvre tout le viewport. */
+    .r2-tv-monitor-frame {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #0a0a0a;
+    }
     .r2-tv-monitor-stream {
       position: absolute;
       inset: 0;
@@ -48,7 +60,41 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       transition: opacity 200ms ease;
     }
     .r2-tv-monitor-stream.is-loaded { opacity: 1; }
+    .r2-tv-monitor-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #fff;
+      opacity: 1;
+      transition: opacity 200ms ease;
+      pointer-events: none;
+    }
     .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
+    .r2-tv-monitor-status {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .r2-tv-monitor-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 99px;
+      background: #ef4444;
+    }
   `],
   template: `
     <section class="r2-tv-monitor" [class.is-manual]="playingVideo" [class.is-idle]="isIdle" [class.is-streaming]="streamLoaded()">
