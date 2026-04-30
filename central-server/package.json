@@ -15,6 +15,7 @@
     "db:backfill-legacy-templates-v2": "ts-node src/scripts/backfill-legacy-templates-v2-assets.ts",
     "template:import": "ts-node src/scripts/import-template-spec.ts",
     "template:test-bbox": "ts-node src/scripts/test-png-bbox.ts",
+    "template:preview-bbox": "ts-node src/scripts/preview-bbox-server.ts",
     "test": "jest",
     "test:smoke": "jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit",
     "test:smoke:smart": "bash src/scripts/smart-smoke.sh",

@@ -326,6 +326,12 @@ export {
   type CreateBackgroundInput,
 } from './template-backgrounds.repository';
 export {
+  templateVersionsRepository,
+  type TemplateVersionSnapshot,
+  type TemplateStatus,
+  type ForkOptions,
+} from './template-versions.repository';
+export {
   remotionRenderJobRepository,
   type RemotionRenderJob,
   type RenderJobStatus,

@@ -161,6 +161,82 @@ describe('PNG auto_crop service — POC SPEC JOUEUR Q15', () => {
   });
 });
 
+describe('Versioning API — ADR-106 endpoints publish/fork/list/setDefault', () => {
+  it('repository expose publish + fork + listByTemplate + findVersion + setDefaultVersion', () => {
+    const repo = readFile('repositories/template-versions.repository.ts');
+    expect(repo).toMatch(/async\s+publish\s*\(/);
+    expect(repo).toMatch(/async\s+fork\s*\(/);
+    expect(repo).toMatch(/async\s+listByTemplate\s*\(/);
+    expect(repo).toMatch(/async\s+findVersion\s*\(/);
+    expect(repo).toMatch(/async\s+setDefaultVersion\s*\(/);
+    expect(repo).toContain('export const templateVersionsRepository = new TemplateVersionsRepository()');
+  });
+
+  it('publish utilise une transaction BEGIN/COMMIT/ROLLBACK + FOR UPDATE', () => {
+    const repo = readFile('repositories/template-versions.repository.ts');
+    expect(repo).toMatch(/BEGIN/);
+    expect(repo).toMatch(/COMMIT/);
+    expect(repo).toMatch(/ROLLBACK/);
+    expect(repo).toMatch(/FOR\s+UPDATE/);
+  });
+
+  it('publish refuse already_published et signale version_exists', () => {
+    const repo = readFile('repositories/template-versions.repository.ts');
+    expect(repo).toMatch(/already_published/);
+    expect(repo).toMatch(/version_exists/);
+  });
+
+  it('fork copie les tables filles dynamiquement (information_schema, pas de hardcode)', () => {
+    const repo = readFile('repositories/template-versions.repository.ts');
+    expect(repo).toMatch(/information_schema\.columns/i);
+    // Whitelist défensive contre injection
+    expect(repo).toMatch(/\^\[a-z_\]\[a-z0-9_\]\*\$/);
+    // Boucle sur les 4 tables filles
+    expect(repo).toMatch(/template_layers/);
+    expect(repo).toMatch(/template_text_fields/);
+    expect(repo).toMatch(/template_image_slots/);
+    expect(repo).toMatch(/template_variants/);
+  });
+
+  it('fork refuse invalid_version et fork_exists', () => {
+    const repo = readFile('repositories/template-versions.repository.ts');
+    expect(repo).toMatch(/invalid_version/);
+    expect(repo).toMatch(/fork_exists/);
+  });
+
+  it('controller expose les 4 endpoints versioning', () => {
+    const ctrl = readFile('controllers/template-versioning.controller.ts');
+    expect(ctrl).toMatch(/export\s+const\s+publishTemplateVersion/);
+    expect(ctrl).toMatch(/export\s+const\s+forkTemplateVersion/);
+    expect(ctrl).toMatch(/export\s+const\s+listTemplateV2Versions/);
+    expect(ctrl).toMatch(/export\s+const\s+setTemplateDefaultVersion/);
+  });
+
+  it('controller mappe les erreurs métier vers les bons codes HTTP', () => {
+    const ctrl = readFile('controllers/template-versioning.controller.ts');
+    // 409 sur conflits métier
+    expect(ctrl).toMatch(/already_published[\s\S]*409/);
+    expect(ctrl).toMatch(/fork_exists[\s\S]*409/);
+    // 400 sur validation métier (next_version <= source)
+    expect(ctrl).toMatch(/invalid_version[\s\S]*400/);
+  });
+
+  it('routes montent les 4 endpoints derrière super_admin + Joi', () => {
+    const routes = readFile('routes/template-studio.routes.ts');
+    expect(routes).toMatch(/'\/:id\/publish'[\s\S]*adminOnly[\s\S]*publishTemplateVersion/);
+    expect(routes).toMatch(/'\/:id\/fork'[\s\S]*templateFork[\s\S]*forkTemplateVersion/);
+    expect(routes).toMatch(/'\/:id\/versions'[\s\S]*adminOnly[\s\S]*listTemplateV2Versions/);
+    expect(routes).toMatch(/'\/:id\/default-version'[\s\S]*templateSetDefaultVersion[\s\S]*setTemplateDefaultVersion/);
+  });
+
+  it('Joi schemas templateFork + templateSetDefaultVersion enforcent semver MAJOR.MINOR', () => {
+    const validation = readFile('middleware/validation.ts');
+    // templateFork.next_version pattern semver
+    expect(validation).toMatch(/templateFork:[\s\S]*next_version:[\s\S]*\^\\d\+\\\.\\d\+\$/);
+    expect(validation).toMatch(/templateSetDefaultVersion:[\s\S]*version:[\s\S]*\^\\d\+\\\.\\d\+\$/);
+  });
+});
+
 describe('text_transform — runtime + types + repository plumbing', () => {
   it('TemplateTextField type expose textTransform avec union typée', () => {
     const types = readFile('types/template-studio.types.ts');

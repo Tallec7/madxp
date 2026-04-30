@@ -852,6 +852,21 @@ export const schemas = {
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
 
+  // ADR-106 — fork une version published pour créer une draft v+1
+  templateFork: Joi.object({
+    next_version: Joi.string()
+      .pattern(/^\d+\.\d+$/)
+      .required()
+      .description("Version semver MAJOR.MINOR (ex '1.1', '2.0')"),
+  }),
+
+  // ADR-106 — set default_version (rollback ou promote)
+  templateSetDefaultVersion: Joi.object({
+    version: Joi.string()
+      .pattern(/^\d+\.\d+$/)
+      .required(),
+  }),
+
   // ADR-074 — hotspot config
   hotspotConfigBootstrap: Joi.object({
     ssid: Joi.string().min(1).max(32).required(),
