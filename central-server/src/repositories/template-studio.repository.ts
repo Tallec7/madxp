@@ -95,6 +95,7 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   respectAlpha: r.respect_alpha,
   animationDirection: r.animation_direction,
   textTransform: r.text_transform ?? 'none',
+  visibleIf: r.visible_if ?? null,
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -125,6 +126,7 @@ const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
   animationDirection: r.animation_direction,
   scaleFrom: numOrNull(r.scale_from),
   scaleTo: numOrNull(r.scale_to),
+  visibleIf: r.visible_if ?? null,
 });
 
 export interface CreateVariantInput {

@@ -93,6 +93,8 @@ export interface TemplateTextField {
   animationDirection: AnimationDirection;
   /** SPEC JOUEUR — transformation typographique (CSS text-transform). */
   textTransform: TextTransform;
+  /** PDF JOUEUR — slot conditionnel : visible uniquement si l'expression match (`<key> == "<value>"`). NULL = toujours visible. */
+  visibleIf: string | null;
 }
 
 export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
@@ -126,6 +128,8 @@ export interface TemplateImageSlot {
   animationDirection: AnimationDirection;
   scaleFrom: number | null;
   scaleTo: number | null;
+  /** PDF JOUEUR — slot conditionnel (cf. TemplateTextField.visibleIf). */
+  visibleIf: string | null;
 }
 
 /**
@@ -212,6 +216,7 @@ export interface TemplateTextFieldRow extends QueryResultRow {
   respect_alpha: boolean;
   animation_direction: AnimationDirection;
   text_transform: TextTransform;
+  visible_if: string | null;
 }
 
 export interface TemplateImageSlotRow extends QueryResultRow {
@@ -240,4 +245,5 @@ export interface TemplateImageSlotRow extends QueryResultRow {
   animation_direction: AnimationDirection;
   scale_from: string | null;
   scale_to: string | null;
+  visible_if: string | null;
 }

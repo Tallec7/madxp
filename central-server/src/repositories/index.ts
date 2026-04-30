@@ -332,6 +332,14 @@ export {
   type ForkOptions,
 } from './template-versions.repository';
 export {
+  templateOptionsRepository,
+  type TemplateOption,
+  type TemplateOptionType,
+  type CreateOptionInput,
+  type TemplatePackshotRef,
+  type CreatePackshotRefInput,
+} from './template-options.repository';
+export {
   remotionRenderJobRepository,
   type RemotionRenderJob,
   type RenderJobStatus,
