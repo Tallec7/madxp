@@ -1,3 +1,9 @@
+## [3.282.1](https://github.com/Tallec7/neopro/compare/v3.282.0...v3.282.1) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** masque barre de progression quand durationSeconds manquant ([#779](https://github.com/Tallec7/neopro/issues/779)) ([07a54f1](https://github.com/Tallec7/neopro/commit/07a54f1d6c4a32524968d329a61a2fcb19be4fa5))
+
 # [3.282.0](https://github.com/Tallec7/neopro/compare/v3.281.1...v3.282.0) (2026-04-30)
 
 ### Features
