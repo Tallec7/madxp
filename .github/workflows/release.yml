@@ -496,14 +496,21 @@ jobs:
           test -s dist/central-dashboard/browser/_redirects
           test -s dist/central-dashboard/browser/_headers
           test -s dist/central-dashboard/browser/saas/index.html
-          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/, _redirects + _headers)"
+          # Pages Function catch-all sous /saas/* (ADR-071 phase 3) — gère les
+          # routes SaaS non couvertes par les stubs statiques.
+          test -s 'dist/central-dashboard/functions/saas/[[catchall]].js'
+          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware + _redirects/_headers)"
 
       - name: Deploy to Cloudflare Pages
+        # workingDirectory : wrangler cherche `functions/` à CWD. En cd-ant
+        # dans `dist/central-dashboard`, il auto-détecte le sibling `functions/`
+        # (cf. ADR-071 phase 3 : middleware [[catchall]] sous /saas/*).
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist/central-dashboard/browser --project-name=neopro-frontend-prod --branch=main
+          workingDirectory: dist/central-dashboard
+          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main
 
       - name: Verify deployment
         run: |
