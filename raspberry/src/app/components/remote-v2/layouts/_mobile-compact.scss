@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 — Mobile C "Tableur ultra-dense"
 // Cible : opérateur très expérimenté, plusieurs matchs/semaine.
 // Vidéos visibles à fold (375×760) : 14.
@@ -7,7 +9,7 @@
 // pour les enfants.
 
 .remote-v2.layout-mobile-compact {
-  @include r2-mobile-only {
+  @include tokens.r2-mobile-only {
     --r2-hero-h: 56px;
     --r2-row-h: 28px;
     --r2-padding-x: 8px;
@@ -58,7 +60,7 @@
     .r2-video-row {
       min-height: var(--r2-row-h);
       padding: 2px var(--r2-padding-x);
-      border-bottom: 1px solid $border-subtle;
+      border-bottom: 1px solid tokens.$border-subtle;
       border-radius: 0;
       gap: 6px;
       align-items: center;

@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 §5C — PC C "Régie pro 3-col sombre"
 // Cible : broadcast pro, opérateur full-time.
 //
@@ -16,7 +18,7 @@
 // (`grid-row: 2 / -1`) ; les 3 composants col 3 (tv-monitor, widgets, aside)
 // s'auto-placent en rangs 2, 3, 4 via `grid-column: 3` + `grid-auto-flow: row`.
 
-@include r2-desktop-up {
+@include tokens.r2-desktop-up {
   .remote-v2.layout-desktop-pro {
     --r2-bg: #0e1116;
     --r2-surface: #1a1f27;

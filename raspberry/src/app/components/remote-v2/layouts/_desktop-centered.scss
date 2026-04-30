@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 — PC A "Centré confort 920px"
 // Cible : usage occasionnel / formation / démo.
 // Vidéos visibles à fold (1280×820) : 6.
@@ -8,7 +10,7 @@
 // AUDIT-V2-LAYOUT-01 (PC A) : largeur effective trop étroite — sécurise
 // avec `width: 100%` pour ne pas hériter d'une contrainte parente.
 
-@include r2-desktop-up {
+@include tokens.r2-desktop-up {
   .remote-v2.layout-desktop-centered {
     width: 100%;
     max-width: 920px;

@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Module sheets (widget-score, widget-chrono, widget-breaking) ---------
 .r2-module-score {
   display: grid;
@@ -7,7 +9,7 @@
   .r2-module-side {
     padding: 14px;
     border-radius: 14px;
-    background: $bg;
+    background: tokens.$bg;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -19,7 +21,7 @@
     text-align: center;
     font-weight: 800;
     font-size: 12px;
-    color: $text-muted;
+    color: tokens.$text-muted;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -33,7 +35,7 @@
     line-height: 1;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.04em;
-    color: $text;
+    color: tokens.$text;
   }
 
   .r2-module-score-btns {
@@ -45,15 +47,15 @@
       height: 40px;
       border-radius: 10px;
       border: none;
-      background: $surface;
+      background: tokens.$surface;
       cursor: pointer;
       font-family: inherit;
       font-size: 16px;
       font-weight: 800;
-      color: $text;
+      color: tokens.$text;
 
       &.primary {
-        background: $accent;
+        background: tokens.$accent;
         color: #fff;
       }
     }
@@ -68,7 +70,7 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.05em;
   line-height: 1;
-  color: $text;
+  color: tokens.$text;
 }
 
 .r2-module-chrono-btns {
@@ -79,18 +81,18 @@
   button {
     padding: 12px 10px;
     border-radius: 10px;
-    background: $bg;
-    color: $text;
-    border: 1px solid $border;
+    background: tokens.$bg;
+    color: tokens.$text;
+    border: 1px solid tokens.$border;
     font-family: inherit;
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
 
     &.dark {
-      background: $dark;
+      background: tokens.$dark;
       color: #fff;
-      border-color: $dark;
+      border-color: tokens.$dark;
     }
 
     // SPEC-V2-ICONS-01 — gap icône + label (Pause/Reprendre)
@@ -106,7 +108,7 @@
 .r2-module-breaking-label {
   font-size: 11px;
   font-weight: 700;
-  color: $text-muted;
+  color: tokens.$text-muted;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 6px;
@@ -116,11 +118,11 @@
   width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid $border;
+  border: 1px solid tokens.$border;
   font-family: inherit;
   font-size: 13px;
-  background: $surface;
-  color: $text;
+  background: tokens.$surface;
+  color: tokens.$text;
   resize: none;
   outline: none;
   box-sizing: border-box;
@@ -132,7 +134,7 @@
   padding: 12px 10px;
   border-radius: 10px;
   border: none;
-  background: $dark;
+  background: tokens.$dark;
   color: #fff;
   font-family: inherit;
   font-size: 13px;
@@ -142,6 +144,6 @@
   letter-spacing: 0.04em;
 
   &.live {
-    background: $danger;
+    background: tokens.$danger;
   }
 }

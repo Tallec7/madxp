@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Widget activation toggles --------------------------------------------
 .r2-widget-toggle {
   display: flex;
@@ -5,15 +7,15 @@
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid $border;
-  background: $surface;
+  border: 1px solid tokens.$border;
+  background: tokens.$surface;
 
   .r2-widget-toggle-icon {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: $border-subtle;
-    color: $text-muted;
+    background: tokens.$border-subtle;
+    color: tokens.$text-muted;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -33,32 +35,32 @@
   .r2-widget-toggle-title {
     font-size: 14px;
     font-weight: 700;
-    color: $text;
+    color: tokens.$text;
   }
 
   .r2-widget-toggle-sub {
     font-size: 11px;
-    color: $text-muted;
+    color: tokens.$text-muted;
   }
 
   &--score {
     .r2-widget-toggle-icon {
-      background: $accent-bg;
-      color: $accent;
+      background: tokens.$accent-bg;
+      color: tokens.$accent;
     }
   }
 
   &--chrono {
     .r2-widget-toggle-icon {
-      background: $warn-bg;
-      color: $warn;
+      background: tokens.$warn-bg;
+      color: tokens.$warn;
     }
   }
 
   &--breaking {
     .r2-widget-toggle-icon {
-      background: $danger-bg;
-      color: $danger;
+      background: tokens.$danger-bg;
+      color: tokens.$danger;
     }
   }
 }

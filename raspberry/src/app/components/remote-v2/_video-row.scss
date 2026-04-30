@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Video row (V7) -------------------------------------------------------
 .r2-video-row {
   width: 100%;
@@ -14,12 +16,12 @@
   transition: background 120ms;
 
   &:hover {
-    background: $bg;
+    background: tokens.$bg;
   }
 
   &.playing {
-    background: $accent-bg;
-    border-color: rgba($accent, 0.3);
+    background: tokens.$accent-bg;
+    border-color: rgba(tokens.$accent, 0.3);
   }
 
   // Indicateur visuel : la dernière tentative de lecture a échoué côté TV
@@ -67,7 +69,7 @@
   .r2-video-name {
     font-size: 13px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -82,13 +84,13 @@
 
   .r2-video-duration {
     font-size: 11px;
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-variant-numeric: tabular-nums;
   }
 
   .r2-video-dot {
     font-size: 11px;
-    color: $text-muted;
+    color: tokens.$text-muted;
   }
 
   .r2-video-tag {
@@ -103,12 +105,12 @@
 
     &.is-secondary {
       background: #e0f4ea;
-      color: $accent-deep;
+      color: tokens.$accent-deep;
     }
 
     &.is-sponsor {
-      background: $warn-bg;
-      color: $warn;
+      background: tokens.$warn-bg;
+      color: tokens.$warn;
     }
 
     &.is-link {
@@ -121,15 +123,15 @@
     width: 28px;
     height: 28px;
     border-radius: 99px;
-    background: $bg;
-    color: $dark;
+    background: tokens.$bg;
+    color: tokens.$dark;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 
     &.active {
-      background: $accent;
+      background: tokens.$accent;
       color: #fff;
     }
   }

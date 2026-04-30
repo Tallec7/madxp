@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 — Mobile A "Liste dense classique" (recommandé régie pro)
 // Cible : opérateur régie qui pilote 30+ vidéos/match.
 // Vidéos visibles à fold (375×760) : 9 (vs 3,5 en V2 actuelle, +157 %).
@@ -8,7 +10,7 @@
 // `.r2-video-meta`, `.r2-video-duration`).
 
 .remote-v2.layout-mobile-classic {
-  @include r2-mobile-only {
+  @include tokens.r2-mobile-only {
     --r2-hero-h: 76px;
     --r2-widgets-h: 64px;
     --r2-row-h: 40px;

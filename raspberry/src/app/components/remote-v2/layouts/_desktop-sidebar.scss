@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 — PC B "2 colonnes sidebar + browse" (recommandé régie standard)
 // Cible : régie standard, vidéos visibles à fold (1280×820) : 18 (3×6 cards).
 //
@@ -12,7 +14,7 @@
 //   (`.r2-browse-card`, `.r2-categories`, etc.) sont des grid items directs
 //   de `.remote-v2`.
 
-@include r2-desktop-up {
+@include tokens.r2-desktop-up {
   .remote-v2.layout-desktop-sidebar {
     --r2-hero-h: 120px;
     --r2-widgets-h: 140px;
@@ -32,7 +34,7 @@
       top: auto;
       grid-column: 1 / 2;
       border-radius: 12px;
-      border: 1px solid $border-subtle;
+      border: 1px solid tokens.$border-subtle;
       box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
     }
 
@@ -88,12 +90,12 @@
       min-height: var(--r2-card-h);
       padding: 12px;
       border-radius: 10px;
-      border: 1px solid $border-subtle;
-      background: $surface;
+      border: 1px solid tokens.$border-subtle;
+      background: tokens.$surface;
       gap: 8px;
 
       &:hover {
-        border-color: $accent;
+        border-color: tokens.$accent;
         transform: translateY(-1px);
         transition:
           border-color 120ms,
@@ -125,7 +127,7 @@
   }
 }
 
-@include r2-wide-up {
+@include tokens.r2-wide-up {
   .remote-v2.layout-desktop-sidebar {
     grid-template-columns: 360px 1fr;
     padding: 32px 48px;
