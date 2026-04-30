@@ -63,32 +63,45 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     ).toBe(true);
   });
 
-  it('Pages Function uses fallback-only strategy (no systematic hijack)', () => {
+  it('Pages Function exporte onRequest (contrat CF Pages)', () => {
     const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
-    // L'export `onRequest` doit être présent (contrat Cloudflare Pages Functions)
     expect(/export\s+(const|async\s+function)\s+onRequest/.test(fn)).toBe(true);
-    // Stratégie fallback-only : tente d'abord env.ASSETS.fetch(request) tel quel
     expect(fn).toContain('env.ASSETS.fetch(request)');
-    // Fallback uniquement sur 404 (sans ça, /saas/ root retourne 308 redirect — bug PR #742)
-    expect(/response\.status\s*===\s*404/.test(fn)).toBe(true);
   });
 
-  it('Pages Function NE fallback PAS les assets 404 (guard cache poisoning)', () => {
+  it('Pages Function détecte content-type mismatch sur asset request (guard cache poisoning)', () => {
     const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
-    // Guard critique : un 404 sur asset (`*.js`, `*.css`, etc.) DOIT propager
-    // tel quel. Sans ça, `_headers` `*.js → immutable 1 an` cache le HTML
-    // SPA comme JS chunk pendant 1 an dans le CDN + browsers (bug PR #743).
+    // Guard critique : si CF Pages auto-fallback intrinsèque sert HTML pour
+    // une URL asset (`*.js`/`*.css`/etc.), retourner 404. Sans ça, `_headers`
+    // `*.js → max-age=31536000, immutable` cache le HTML 1 an comme JS chunk.
     expect(fn).toContain('isAssetRequest');
-    expect(/isAssetRequest\s*\(\s*url\.pathname\s*\)/.test(fn)).toBe(true);
-    // Le guard doit court-circuiter AVANT le fallback HTML
-    expect(/return\s+response\s*;[\s\S]{0,200}fallbackUrl/.test(fn)).toBe(true);
+    expect(fn).toContain('isHtmlResponse');
+    // Court-circuit explicite : asset + HTML → notFoundResponse.
+    expect(
+      /isAssetRequest\(url\.pathname\)\s*&&\s*isHtmlResponse\(response\)[\s\S]{0,200}notFoundResponse/.test(
+        fn,
+      ),
+    ).toBe(true);
+    // Le 404 retourné doit avoir Cache-Control no-store.
+    expect(/notFoundResponse[\s\S]{0,300}'Cache-Control':\s*'no-store'/.test(fn)).toBe(
+      true,
+    );
   });
 
-  it('Pages Function override Cache-Control: no-store sur le fallback HTML', () => {
+  it('Pages Function strip les Link rel=modulepreload sur HTML responses', () => {
     const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
-    // Double sécurité : le SPA shell servi en fallback ne doit JAMAIS être
-    // cached (CDN ni browser) pour permettre la récupération après un mauvais
-    // déploiement.
+    // CF Pages auto-injecte des `Link: <chunk-X>; rel="modulepreload"` HTTP
+    // headers depuis les `<link>` du HTML. Ces paths sont relatifs et se
+    // résolvent côté browser RELATIVEMENT À L'URL DE LA RÉPONSE — donc cassés
+    // pour toute deep route (`/saas/display/0/`, etc.). Le strip force le
+    // browser à utiliser les `<link>` du body parsé avec `<base href="/saas/">`.
+    expect(fn).toContain('stripModulePreloadLinks');
+    expect(fn).toContain('rel="modulepreload"');
+  });
+
+  it('Pages Function override Cache-Control: no-store sur HTML response', () => {
+    const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
+    expect(fn).toContain('overrideCacheNoStore');
     expect(fn).toContain("'Cache-Control'");
     expect(fn).toContain("'no-store'");
   });
@@ -96,25 +109,27 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
   // ------------ Pages Function ROOT catchall (Dashboard) ------------
 
   it('Pages Function ROOT catchall exists at expected path', () => {
-    // Sans cette Function, `_redirects` `/* /index.html 200` empoisonne le
-    // cache 1 an pour TOUTE l'app dashboard sur les chunks préchargés depuis
-    // une deep route (ex `/sites/123/chunk-X.js`). Cf. ADR-071 phase 3 suite.
     expect(
       exists('central-dashboard/cloudflare/functions/[[catchall]].js'),
     ).toBe(true);
   });
 
-  it('Pages Function ROOT applique le même guard `isAssetRequest` que SaaS', () => {
+  it('Pages Function ROOT applique les mêmes guards que SaaS', () => {
     const fn = read('central-dashboard/cloudflare/functions/[[catchall]].js');
     expect(/export\s+(const|async\s+function)\s+onRequest/.test(fn)).toBe(true);
     expect(fn).toContain('env.ASSETS.fetch(request)');
+    // Mêmes 3 helpers de défense : mismatch detect + strip preload + no-store
     expect(fn).toContain('isAssetRequest');
-    expect(/isAssetRequest\s*\(\s*url\.pathname\s*\)/.test(fn)).toBe(true);
-    // Le guard asset DOIT court-circuiter AVANT le fallback HTML.
-    expect(/return\s+response\s*;[\s\S]{0,200}fallbackUrl/.test(fn)).toBe(true);
-    // Override Cache-Control: no-store sur le fallback HTML.
-    expect(fn).toContain("'Cache-Control'");
-    expect(fn).toContain("'no-store'");
+    expect(fn).toContain('isHtmlResponse');
+    expect(fn).toContain('stripModulePreloadLinks');
+    expect(fn).toContain('overrideCacheNoStore');
+    expect(fn).toContain('notFoundResponse');
+    // Court-circuit asset+HTML → 404 (idem SaaS)
+    expect(
+      /isAssetRequest\(url\.pathname\)\s*&&\s*isHtmlResponse\(response\)[\s\S]{0,200}notFoundResponse/.test(
+        fn,
+      ),
+    ).toBe(true);
   });
 
   it('_redirects ne contient PAS la règle `/* /index.html 200`', () => {

@@ -1,35 +1,29 @@
 /**
  * Cloudflare Pages Function — catch-all racine `/*` (ADR-071 phase 3 + suite)
  *
- * Pourquoi : Cloudflare Pages applique la règle `_redirects` `/* /index.html 200`
- * pour TOUTES les requêtes 404, y compris les assets `.js`/`.css`/etc. Combiné
- * avec la règle `_headers` `*.js → Cache-Control: max-age=31536000, immutable`,
- * un asset 404 (chunk inexistant à un sous-path) est servi en `200 text/html`
- * puis cached PENDANT 1 AN comme JS chunk dans le CDN + browsers, provoquant
- * des MIME errors persistantes ("Failed to load module script: text/html").
+ * Pourquoi : Cloudflare Pages applique un SPA fallback INTRINSÈQUE pour tous
+ * les paths inconnus (sert `index.html` en 200, même sans `_redirects`).
+ * Combiné avec `_headers` `*.js → max-age=31536000, immutable`, un asset 404
+ * est servi en HTML 200 puis cached comme JS chunk PENDANT 1 AN. Combiné
+ * aussi avec les `Link: <chunk-X>; rel="modulepreload"` HTTP headers que
+ * CF Pages auto-génère (qui se résolvent côté browser **relativement à
+ * l'URL de la réponse**), tout deep route préchargeait des chunks à des
+ * chemins inexistants → MIME errors persistantes.
  *
- * Cas concret observé :
- *   1. Le HTML retourne `Link: <chunk-EWCAUUAQ.js>; rel="modulepreload"`
- *      (auto-généré par CF Pages depuis les `<link>` du HTML).
- *   2. Le browser résout ce Link relativement à l'URL de la réponse
- *      (= la route SPA courante, ex `/sites/123`), AVANT de parser le HTML
- *      et voir `<base href="/">`.
- *   3. Le browser fetch `/sites/123/chunk-EWCAUUAQ.js` → 404 réel.
- *   4. Le `_redirects` SPA fallback retourne `/index.html` en 200 HTML.
- *   5. `_headers` applique `immutable 1 an` sur les `*.js` → cache pourri.
+ * Stratégie de défense en profondeur (identique à `/saas/[[catchall]].js`) :
  *
- * Stratégie identique à la Function `/saas/[[catchall]].js` :
- * 1. Tente de servir le request comme asset statique (env.ASSETS.fetch)
- * 2. Si 308 trailing-slash auto-généré par Cloudflare → suivre le redirect
- *    serveur-side et retourner 200 au client.
- * 3. Si 404 ET path = asset (extension `.js`/`.css`/etc) → propager 404
- *    tel quel. Bloque la pollution du cache via fallback HTML.
- * 4. Si 404 ET path = route SPA (sans extension) → fallback sur /index.html
- *    avec `Cache-Control: no-store` pour empêcher la mise en cache du shell.
+ * 1. Tente env.ASSETS.fetch(request).
+ * 2. Si 308 trailing-slash auto-généré → suivre le redirect serveur-side.
+ * 3. **Détection content-type mismatch** : si le path est un asset
+ *    (`*.js`/`*.css`/etc.) MAIS la réponse est HTML → c'est l'auto-fallback
+ *    intrinsèque de CF Pages. Retourner 404 avec `Cache-Control: no-store`.
+ * 4. **Strip des Link `rel="modulepreload"` headers** sur les responses HTML
+ *    pour empêcher le préchargement chunk depuis un path résolu
+ *    incorrectement (deep routes type `/sites/123/`).
+ * 5. Override `Cache-Control: no-store` sur les responses HTML servies en
+ *    fallback (route SPA) — empêche tout cache transitoire.
  *
- * NB : cette Function REMPLACE la règle `_redirects` `/* /index.html 200`,
- * qui doit être supprimée pour éviter les doubles fallbacks. Elle COEXISTE
- * avec `central-dashboard/cloudflare/functions/saas/[[catchall]].js` :
+ * Coexiste avec `central-dashboard/cloudflare/functions/saas/[[catchall]].js` :
  * Cloudflare Pages route en priorité par spécificité, donc `/saas/*` est
  * intercepté par la Function SaaS, et `/<reste>` par celle-ci.
  */
@@ -42,14 +36,59 @@ const isTrailingSlashRedirect = (response) =>
 
 const isAssetRequest = (pathname) => ASSET_EXTENSION_RE.test(pathname);
 
+const isHtmlResponse = (response) => {
+  const ct = response.headers.get('content-type') || '';
+  return ct.includes('text/html');
+};
+
+const stripModulePreloadLinks = (response) => {
+  const linkHeader = response.headers.get('link');
+  if (!linkHeader || !linkHeader.includes('rel="modulepreload"')) {
+    return response;
+  }
+  const filtered = linkHeader
+    .split(',')
+    .map((d) => d.trim())
+    .filter((d) => !/rel="modulepreload"/.test(d))
+    .join(', ');
+  const headers = new Headers(response.headers);
+  if (filtered) {
+    headers.set('Link', filtered);
+  } else {
+    headers.delete('Link');
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+};
+
+const notFoundResponse = () =>
+  new Response('Not Found', {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
+
+const overrideCacheNoStore = (response) => {
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', 'no-store');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+};
+
 export const onRequest = async (context) => {
   const { request, env } = context;
   const url = new URL(request.url);
 
   let response = await env.ASSETS.fetch(request);
 
-  // Suivre le 308 trailing-slash auto-généré par Cloudflare quand un stub
-  // `/<route>/index.html` existe et que la requête est sans slash final.
   if (isTrailingSlashRedirect(response)) {
     const targetUrl = new URL(response.headers.get('Location'), url);
     if (!targetUrl.search && url.search) {
@@ -58,28 +97,15 @@ export const onRequest = async (context) => {
     response = await env.ASSETS.fetch(new Request(targetUrl, request));
   }
 
-  // Asset 404 → propager. Ne JAMAIS fallback vers HTML pour empêcher la
-  // pollution du cache 1 an via `_headers` `*.js → immutable`.
-  if (response.status === 404 && isAssetRequest(url.pathname)) {
-    return response;
+  // Asset request + HTML response = auto-fallback intrinsèque CF Pages.
+  // Retourner 404 avec no-store pour empêcher pollution du cache 1 an.
+  if (isAssetRequest(url.pathname) && isHtmlResponse(response)) {
+    return notFoundResponse();
   }
 
-  // 404 sur route SPA (sans extension) → fallback /index.html.
-  // Le router Angular gère le routing client-side.
-  if (response.status === 404) {
-    const fallbackUrl = new URL('/', url);
-    const fallbackResponse = await env.ASSETS.fetch(
-      new Request(fallbackUrl, request),
-    );
-    // Override Cache-Control : empêcher CDN/browser de mémoriser cette
-    // réponse fallback. Le SPA shell doit toujours être réévalué.
-    const headers = new Headers(fallbackResponse.headers);
-    headers.set('Cache-Control', 'no-store');
-    return new Response(fallbackResponse.body, {
-      status: fallbackResponse.status,
-      statusText: fallbackResponse.statusText,
-      headers,
-    });
+  // HTML response → strip Link modulepreload + force no-store.
+  if (isHtmlResponse(response)) {
+    return overrideCacheNoStore(stripModulePreloadLinks(response));
   }
 
   return response;
