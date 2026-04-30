@@ -321,6 +321,11 @@ export {
   type UpdateImageSlotInput,
 } from './template-studio.repository';
 export {
+  templateBackgroundsRepository,
+  type TemplateBackground,
+  type CreateBackgroundInput,
+} from './template-backgrounds.repository';
+export {
   remotionRenderJobRepository,
   type RemotionRenderJob,
   type RenderJobStatus,
