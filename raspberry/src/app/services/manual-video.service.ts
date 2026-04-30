@@ -156,19 +156,27 @@ export class ManualVideoService {
       this.doubleBufferService.showBlackOverlay();
     }
 
-    // ETAPE 2b: En manuel→manuel uniquement, libérer le décodeur HW de l'ancien player
-    // AVANT de toucher targetPlayer. Le freeze-frame canvas (z-index 20) couvre la
-    // période où l'ancien player n'a plus de src — le user voit le frame figé du
-    // joueur précédent jusqu'à ce que la nouvelle vidéo soit prête.
+    // ETAPE 2b: En manuel→manuel uniquement, masquer + libérer le décodeur HW de
+    // l'ancien player AVANT de toucher targetPlayer. L'ancien player a un
+    // `background: #000 !important` (cf. tv.component.scss:132) — sans opacity=0,
+    // une fois sa src retirée il afficherait un rectangle noir au-dessus du nouveau
+    // player (à cause de l'ordre DOM : manualPlayerB est APRÈS manualPlayerA, donc
+    // à z-index égal, B couvre A). Le freeze-frame canvas (z=20) couvre la période
+    // de transition — le user voit le frame figé du joueur précédent.
     if (isManualToManual) {
       activeManualPlayer.pause();
+      activeManualPlayer.style.opacity = '0';
+      activeManualPlayer.style.zIndex = '10';
       activeManualPlayer.removeAttribute('src');
       activeManualPlayer.load();
     }
 
-    // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
+    // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement.
+    // z-index 11 → garantit que le nouveau player passe AU-DESSUS de l'ancien
+    // après le reveal (sans ça, ordre DOM décide → écran noir si l'ancien est
+    // un manualPlayerB devant un manualPlayerA nouveau).
     targetPlayer.style.opacity = '0';
-    targetPlayer.style.zIndex = '10';
+    targetPlayer.style.zIndex = '11';
 
     // ETAPE 4: Configurer la source
     targetPlayer.src = video.path;
