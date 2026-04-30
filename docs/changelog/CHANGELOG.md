@@ -1,3 +1,9 @@
+## [3.278.11](https://github.com/Tallec7/neopro/compare/v3.278.10...v3.278.11) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** iframe TV preview cible display/0 (pas la racine picker) ([#744](https://github.com/Tallec7/neopro/issues/744)) ([2c83b2c](https://github.com/Tallec7/neopro/commit/2c83b2c021f82663efa160d5b1b120102204717a)), closes [#740](https://github.com/Tallec7/neopro/issues/740)
+
 ## [3.278.10](https://github.com/Tallec7/neopro/compare/v3.278.9...v3.278.10) (2026-04-30)
 
 ### Bug Fixes
