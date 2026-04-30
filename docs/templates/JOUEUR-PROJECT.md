@@ -7,6 +7,10 @@
 
 → **[JOUEUR-SPEC-GLOBAL.md](JOUEUR-SPEC-GLOBAL.md)** — invariants partagés, contrat utilisateur, verrouillage, cycle de vie, bloquants consolidés.
 
+## Plan d'action (3 semaines)
+
+→ **[JOUEUR-ACTION-PLAN.md](JOUEUR-ACTION-PLAN.md)** — 3 fronts en parallèle, découpage PRs, risques, prochaines étapes.
+
 ## SPECs par composant
 
 | Élément                | Path                                                             | Statut                                                            |
