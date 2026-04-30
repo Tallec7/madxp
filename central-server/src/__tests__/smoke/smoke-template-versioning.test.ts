@@ -237,6 +237,39 @@ describe('Versioning API — ADR-106 endpoints publish/fork/list/setDefault', ()
   });
 });
 
+describe('Auto-crop API — POST /photo/auto-crop (SPEC JOUEUR Q15)', () => {
+  it('controller refuse les requêtes sans fichier (400 no_file)', () => {
+    const ctrl = readFile('controllers/template-photo-autocrop.controller.ts');
+    expect(ctrl).toMatch(/no_file[\s\S]*400/);
+  });
+
+  it('controller enforce require_alpha (refuse PNG opaques avec missing_alpha_channel)', () => {
+    const ctrl = readFile('controllers/template-photo-autocrop.controller.ts');
+    expect(ctrl).toMatch(/hasAlphaChannel/);
+    expect(ctrl).toMatch(/missing_alpha_channel/);
+  });
+
+  it('controller valide threshold dans [0,255] et signale empty_alpha si bbox vide', () => {
+    const ctrl = readFile('controllers/template-photo-autocrop.controller.ts');
+    expect(ctrl).toMatch(/invalid_threshold/);
+    expect(ctrl).toMatch(/empty_alpha/);
+    expect(ctrl).toMatch(/0[\s\S]*255/);
+  });
+
+  it('upload middleware uploadPngBuffer accepte uniquement image/png', () => {
+    const upload = readFile('middleware/upload.ts');
+    expect(upload).toMatch(/export\s+const\s+uploadPngBuffer\s*=\s*multer/);
+    expect(upload).toMatch(/file\.mimetype\s*===\s*'image\/png'/);
+    // memory storage (PNG petits, pas besoin de disque)
+    expect(upload).toMatch(/uploadPngBuffer[\s\S]*storage:\s*memoryStorage/);
+  });
+
+  it('route /photo/auto-crop est gated super_admin + multer single field "photo"', () => {
+    const routes = readFile('routes/template-studio.routes.ts');
+    expect(routes).toMatch(/'\/photo\/auto-crop'[\s\S]*adminOnly[\s\S]*uploadPngBuffer\.single\('photo'\)[\s\S]*autoCropPhoto/);
+  });
+});
+
 describe('text_transform — runtime + types + repository plumbing', () => {
   it('TemplateTextField type expose textTransform avec union typée', () => {
     const types = readFile('types/template-studio.types.ts');
