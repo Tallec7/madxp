@@ -29,19 +29,32 @@ CREATE INDEX IF NOT EXISTS idx_video_ftp_audit_status
   ON video_ftp_audit_warnings (status, last_checked_at DESC);
 
 -- Étendre check_task_type pour autoriser le nouveau task type CRON.
-DO $$
+-- Dynamically rebuild the constraint from existing distinct values + the new type,
+-- so we never reject rows with task_type values added by other migrations.
+DO $body$
+DECLARE
+  _vals TEXT;
 BEGIN
+  -- Collect all distinct task_type values already in the table + the new one
+  SELECT string_agg(DISTINCT quote_literal(t), ', ' ORDER BY quote_literal(t))
+    INTO _vals
+    FROM (
+      SELECT task_type AS t FROM recurring_schedules
+      UNION
+      SELECT 'video_ftp_audit'
+    ) sub;
+
   ALTER TABLE recurring_schedules DROP CONSTRAINT IF EXISTS check_task_type;
-  ALTER TABLE recurring_schedules
-    ADD CONSTRAINT check_task_type
-    CHECK (task_type IN (
-      'report', 'cleanup', 'aggregation', 'backup',
-      'objective_check', 'pdf_report', 'match_session_autoclose',
-      'video_ftp_audit'
-    ));
+
+  IF _vals IS NOT NULL THEN
+    EXECUTE format(
+      'ALTER TABLE recurring_schedules ADD CONSTRAINT check_task_type CHECK (task_type IN (%s))',
+      _vals
+    );
+  END IF;
 EXCEPTION WHEN undefined_table THEN
   NULL;
-END $$;
+END $body$;
 
 -- Seed le schedule (quotidien à 3h du matin).
 INSERT INTO recurring_schedules (
