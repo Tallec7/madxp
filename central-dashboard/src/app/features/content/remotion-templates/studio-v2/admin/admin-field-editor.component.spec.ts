@@ -28,6 +28,7 @@ function makeTextField(): TemplateTextField {
     layerId: null,
     respectAlpha: false,
     animationDirection: 'in',
+    visibleIf: null,
   };
 }
 
@@ -55,6 +56,7 @@ function makeImageSlot(): TemplateImageSlot {
     animationDirection: 'in',
     scaleFrom: null,
     scaleTo: null,
+    visibleIf: null,
   };
 }
 
