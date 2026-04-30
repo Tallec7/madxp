@@ -1,3 +1,9 @@
+# [3.280.0](https://github.com/Tallec7/neopro/compare/v3.279.2...v3.280.0) (2026-04-30)
+
+### Features
+
+- **remote:** show manual playback progress bar on active layouts ([#761](https://github.com/Tallec7/neopro/issues/761)) ([9a43b2b](https://github.com/Tallec7/neopro/commit/9a43b2b60336ad8fbbad2e091d8382b61039e370))
+
 ## [3.279.2](https://github.com/Tallec7/neopro/compare/v3.279.1...v3.279.2) (2026-04-30)
 
 ### Bug Fixes
