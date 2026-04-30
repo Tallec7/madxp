@@ -270,6 +270,63 @@ describe('Auto-crop API — POST /photo/auto-crop (SPEC JOUEUR Q15)', () => {
   });
 });
 
+describe('Backgrounds API — ADR-107 catalogue + grants', () => {
+  it('repository expose listAll + update + listGrants', () => {
+    const repo = readFile('repositories/template-backgrounds.repository.ts');
+    expect(repo).toMatch(/async\s+listAll\s*\(/);
+    expect(repo).toMatch(/async\s+update\s*\(/);
+    expect(repo).toMatch(/async\s+listGrants\s*\(/);
+  });
+
+  it('controller expose 7 handlers (list + get + create + update + grantBulk + listGrants + revoke)', () => {
+    const ctrl = readFile('controllers/template-backgrounds.controller.ts');
+    expect(ctrl).toMatch(/export\s+const\s+listBackgroundsForUser/);
+    expect(ctrl).toMatch(/export\s+const\s+getBackground[^s]/);
+    expect(ctrl).toMatch(/export\s+const\s+createBackground/);
+    expect(ctrl).toMatch(/export\s+const\s+updateBackground/);
+    expect(ctrl).toMatch(/export\s+const\s+grantBackgroundBulk/);
+    expect(ctrl).toMatch(/export\s+const\s+listBackgroundGrants/);
+    expect(ctrl).toMatch(/export\s+const\s+revokeBackgroundGrant/);
+  });
+
+  it('controller cleanup le fichier temp après upload (mémoire / disque)', () => {
+    const ctrl = readFile('controllers/template-backgrounds.controller.ts');
+    expect(ctrl).toMatch(/cleanupTempFile/);
+    expect(ctrl).toMatch(/finally[\s\S]*cleanupTempFile/);
+  });
+
+  it('controller mappe les conflits unique (name) vers 409 name_exists', () => {
+    const ctrl = readFile('controllers/template-backgrounds.controller.ts');
+    expect(ctrl).toMatch(/duplicate\s+key\|unique[\s\S]*409[\s\S]*name_exists/);
+  });
+
+  it('controller filtre les backgrounds restreints sans grant (403 Forbidden)', () => {
+    const ctrl = readFile('controllers/template-backgrounds.controller.ts');
+    expect(ctrl).toMatch(/!bg\.is_public[\s\S]*403[\s\S]*Forbidden/);
+  });
+
+  it('routes monte les endpoints derrière super_admin (sauf list/get visible à tous users authentifiés)', () => {
+    const routes = readFile('routes/template-backgrounds.routes.ts');
+    expect(routes).toMatch(/router\.get\(\s*'\/'[\s\S]*allUsers[\s\S]*listBackgroundsForUser/);
+    expect(routes).toMatch(/router\.post\(\s*'\/'[\s\S]*adminOnly[\s\S]*uploadTemplateAsset\.single\('background'\)[\s\S]*createBackground/);
+    expect(routes).toMatch(/router\.patch[\s\S]*'\/:id'[\s\S]*adminOnly[\s\S]*updateBackground/);
+    expect(routes).toMatch(/router\.post[\s\S]*'\/:id\/grants'[\s\S]*adminOnly[\s\S]*grantBackgroundBulk/);
+    expect(routes).toMatch(/router\.delete[\s\S]*'\/:backgroundId\/grants\/:userId'[\s\S]*adminOnly[\s\S]*revokeBackgroundGrant/);
+  });
+
+  it('Joi schemas backgrounds enforcent hex_color + bulk grant ≤ 500 user_ids', () => {
+    const validation = readFile('middleware/validation.ts');
+    expect(validation).toMatch(/templateBackgroundCreate:[\s\S]*hex_color:[\s\S]*\^#\[0-9A-Fa-f\]\{6\}\$/);
+    expect(validation).toMatch(/templateBackgroundBulkGrant:[\s\S]*user_ids:[\s\S]*\.max\(500\)/);
+  });
+
+  it('routes sont montées dans server.ts sous /api/templates/backgrounds', () => {
+    const server = readFile('server.ts');
+    expect(server).toMatch(/templateBackgroundsRoutes/);
+    expect(server).toMatch(/'\/api\/templates\/backgrounds'[\s\S]*templateBackgroundsRoutes/);
+  });
+});
+
 describe('text_transform — runtime + types + repository plumbing', () => {
   it('TemplateTextField type expose textTransform avec union typée', () => {
     const types = readFile('types/template-studio.types.ts');

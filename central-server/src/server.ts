@@ -69,6 +69,7 @@ import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import { proxyTemplateAsset } from './controllers/remotion-templates.controller';
 import templateStudioRoutes from './routes/template-studio.routes';
+import templateBackgroundsRoutes from './routes/template-backgrounds.routes';
 import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
@@ -548,6 +549,8 @@ app.use('/api/remotion-templates', templateStudioRoutes);
 app.use('/api/remotion-templates', remotionTemplatesRoutes);
 // ADR-075 V3 Phase B — Club self-service templates
 app.use('/api/club/remotion-templates', clubTemplatesRoutes);
+// ADR-107 — Template Backgrounds (catalogue + grants user_id)
+app.use('/api/templates/backgrounds', templateBackgroundsRoutes);
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID

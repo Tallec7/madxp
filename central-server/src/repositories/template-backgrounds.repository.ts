@@ -137,6 +137,65 @@ class TemplateBackgroundsRepository {
     );
     return result.rows[0] ?? null;
   }
+
+  /** Liste tous les backgrounds (admin) y compris archivés. */
+  async listAll(): Promise<TemplateBackground[]> {
+    const result = await query<TemplateBackground>(
+      `SELECT * FROM template_backgrounds ORDER BY archived_at NULLS FIRST, name`
+    );
+    return result.rows;
+  }
+
+  /**
+   * Patch partiel name + is_public + archived (toggle archived_at).
+   * Retourne null si introuvable.
+   */
+  async update(
+    id: string,
+    patch: { name?: string; is_public?: boolean; archived?: boolean }
+  ): Promise<TemplateBackground | null> {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+    if (patch.name !== undefined) {
+      sets.push(`name = $${idx++}`);
+      values.push(patch.name);
+    }
+    if (patch.is_public !== undefined) {
+      sets.push(`is_public = $${idx++}`);
+      values.push(patch.is_public);
+    }
+    if (patch.archived !== undefined) {
+      sets.push(`archived_at = $${idx++}`);
+      values.push(patch.archived ? new Date() : null);
+    }
+    if (sets.length === 0) return this.findById(id);
+
+    values.push(id);
+    const result = await query<TemplateBackground>(
+      `UPDATE template_backgrounds SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /** Liste les user_ids qui ont un grant sur un background. */
+  async listGrants(
+    backgroundId: string
+  ): Promise<{ user_id: string; granted_by: string; granted_at: Date }[]> {
+    const result = await query<{
+      user_id: string;
+      granted_by: string;
+      granted_at: Date;
+    }>(
+      `SELECT user_id, granted_by, granted_at
+       FROM template_backgrounds_grants
+       WHERE background_id = $1
+       ORDER BY granted_at DESC`,
+      [backgroundId]
+    );
+    return result.rows;
+  }
 }
 
 export const templateBackgroundsRepository = new TemplateBackgroundsRepository();
