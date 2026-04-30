@@ -1,3 +1,9 @@
+## [3.279.2](https://github.com/Tallec7/neopro/compare/v3.279.1...v3.279.2) (2026-04-30)
+
+### Bug Fixes
+
+- **adr-106:** preview-slave never joins siteId room (root cause) ([#759](https://github.com/Tallec7/neopro/issues/759)) ([e5a94dd](https://github.com/Tallec7/neopro/commit/e5a94dd341f5d8c2fc236d6d08482e8002ad24a7))
+
 ## [3.279.1](https://github.com/Tallec7/neopro/compare/v3.279.0...v3.279.1) (2026-04-30)
 
 ### Bug Fixes
