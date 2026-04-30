@@ -36,10 +36,15 @@ slots:
       width_pct: 30 # à mesurer sur master
       height_pct: 100
     overflow: bottom
+    # Cadrage par défaut auto à l'upload (réponse Daisy Q15) :
+    # - photo détourée PNG → bbox du contenu non-alpha calculée
+    # - bbox calé en haut + remplissage largeur de la safe zone
+    # - user peut décaler horizontalement (offset_x) si besoin
+    auto_crop: true
+    user_offset_x: 0 # éditable par le user (-100 → +100 % de la safe zone)
     validation_rules:
       - 'PNG avec canal alpha obligatoire (require_alpha)'
-      - 'Cadrage tête/buste validé manuellement par super_admin avant publication'
-      - 'Recommandé : ratio 16:9 portrait'
+      - 'Cadrage initial automatique (bbox du détourage), ajustable horizontalement par user'
 
   - type: text
     key: nom-club-haut-gauche
@@ -49,11 +54,12 @@ slots:
     label: 'Nom du club'
     source_key: nom-club
     default: 'NOM DU CLUB'
-    font: GeneralSans # TODO confirmer (champ vide PDF)
-    font_weight: bold # TODO
-    font_size: 25 # TODO
+    font: ComicSans # ⚠ réponse Daisy 30/04 — vérifier si typo pour GeneralSans (incohérence avec packshot générique qui utilise GeneralSans)
+    font_weight: bold
+    font_size: 25 # TODO confirmer (non précisé dans la réponse Daisy)
+    text_transform: uppercase # majuscules (réponse Daisy)
     color: '#FFFFFF'
-    text_align: left # TODO
+    text_align: left
     position_px: { x: 94, y: 108 }
     max_chars: 40
     respect_alpha: true
@@ -63,9 +69,10 @@ slots:
     layer: PI
     z_index_in_layer: 2
     source_key: nom-club
-    font: GeneralSans
+    font: ComicSans # ⚠ idem nom-club-haut-gauche
     font_weight: bold
     font_size: 25
+    text_transform: uppercase
     color: '#FFFFFF'
     text_align: left
     position_px: { x: 94, y: 992 }
@@ -76,9 +83,10 @@ slots:
     layer: PI
     z_index_in_layer: 2
     source_key: nom-club
-    font: GeneralSans
+    font: ComicSans # ⚠ idem
     font_weight: bold
     font_size: 25
+    text_transform: uppercase
     color: '#FFFFFF'
     text_align: right
     position_px: { x: 1824, y: 992 }
@@ -92,7 +100,8 @@ slots:
     label: 'Prénom / Nom'
     default: "PRÉNOM\nNOM"
     font: Bulevar
-    font_size: 150 # 100 % scale — TODO confirmer
+    font_size: 150 # Scale 100 % (réponse Daisy : numéro = 200 % donc 300 px → prénom-nom = 150 px)
+    text_transform: uppercase # majuscules (réponse Daisy)
     color: '#FFFFFF'
     text_align: left
     text_align_v: center
@@ -134,9 +143,10 @@ Packshot asymétrique : photo joueur détourée centrale, prénom/nom aligné à
 ## Principes
 
 - **Photo joueur PNG détourée obligatoire** (`require_alpha: true`).
-- **Cadrage tête/buste** validé manuellement par super_admin (cf. `validation_rules`). Pas de détection auto en v1.
+- **Cadrage initial automatique** : bbox du contenu non-alpha calculée à l'upload, puis calé en haut + remplit largeur safe zone. **User peut décaler horizontalement** (`user_offset_x`).
 - **Layout simplifié** (cf. réponse Q16) : pas de masque complexe, ordre = fond → photo → numéro/texte.
 - **Numéro = 200 % de la taille du prénom/nom** (300 px vs 150 px). Aligné droite, symétrique du nom (-704 px / +705 px du centre).
+- **Textes en majuscules** (`text_transform: uppercase`) : nom du club + prénom-nom.
 - **Nom du club** répété dans 3 coins, source unique `source_key: nom-club`.
 - **Photo placée sous le numéro** (`z_index_in_layer: 1` < `3`).
 
@@ -151,8 +161,9 @@ Packshot asymétrique : photo joueur détourée centrale, prénom/nom aligné à
 
 ## TODO bloquants
 
-- [ ] **Compléter font + alignement nom du club** (champs vides PDF page 5)
-- [ ] Confirmer `font_size` du prénom/nom (PDF dit "Scale 100 %" sans valeur px de référence)
+- [x] ~~Compléter font + alignement nom du club~~ → **réponse Daisy 30/04 : ComicSans bold majuscules** (à vérifier — possible typo pour GeneralSans)
+- [x] ~~Confirmer font_size prénom/nom~~ → **150 px** (déduit du numéro 300 px = scale 200 %)
+- [x] ~~Process cadrage tête/buste~~ → cadrage auto à l'upload (bbox détourage) + offset_x user
+- [ ] **Confirmer si "ComicSans" est une typo pour "GeneralSans"** (incohérence avec packshot générique)
 - [ ] Mesurer safe zone exacte de la photo joueur (rectangle rouge sur master)
 - [ ] Recevoir WebM `packshot-img.webm`
-- [ ] Définir process de validation cadrage tête/buste (workflow super_admin)

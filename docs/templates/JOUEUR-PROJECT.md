@@ -11,10 +11,10 @@
 
 | Élément                | Path                                                             | Statut                                                            |
 | ---------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Template JOUEUR Simple | [template-joueur-simple/SPEC.md](template-joueur-simple/SPEC.md) | 🟡 Draft v1 — bloqué sur durées + fonts + WebM                    |
-| Template JOUEUR But    | [template-joueur-but/SPEC.md](template-joueur-but/SPEC.md)       | 🟡 Draft v1 — bloqué sur durées + fonts + WebM                    |
-| Packshot Générique     | [packshots/generique/SPEC.md](packshots/generique/SPEC.md)       | 🟡 Draft v1 — bloqué sur WebM                                     |
-| Packshot IMG           | [packshots/img/SPEC.md](packshots/img/SPEC.md)                   | 🔴 Draft v1 — **bloqué sur fonts/alignement nom-club (PDF vide)** |
+| Template JOUEUR Simple | [template-joueur-simple/SPEC.md](template-joueur-simple/SPEC.md) | 🟢 v1.1 — durée 5'24 fixée, attente WebM + fonts                       |
+| Template JOUEUR But    | [template-joueur-but/SPEC.md](template-joueur-but/SPEC.md)       | 🟢 v1.1 — durée 6'24 fixée, attente WebM + fonts                       |
+| Packshot Générique     | [packshots/generique/SPEC.md](packshots/generique/SPEC.md)       | 🟢 v1.1 — uppercase appliqué, attente WebM                             |
+| Packshot IMG           | [packshots/img/SPEC.md](packshots/img/SPEC.md)                   | 🟡 v1.1 — fonts complétées (⚠ "ComicSans" à confirmer), cadrage auto défini |
 
 ## Architecture cible
 

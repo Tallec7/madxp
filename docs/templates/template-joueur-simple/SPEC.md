@@ -3,7 +3,8 @@ template:
   slug: joueur-simple
   name: 'Joueur simple'
   description: 'Annonce joueur courte : intro hexagone (logo OU numéro) puis transition vers packshot (générique ou avec photo)'
-  duration_seconds: null # TODO mesurer sur les WebM livrés
+  duration_seconds: 5.96 # 5'24 @ 25fps = 5960 ms
+  duration_ms: 5960
   canvas:
     width: 1920
     height: 1080
@@ -136,7 +137,8 @@ Annonce joueur courte (≈ 4–5 s estimé, à confirmer sur master livré). App
 
 ## TODO bloquants
 
-- [ ] Mesurer durée totale du master (s'frames → ms)
+- [x] ~~Mesurer durée totale du master~~ → 5'24 @ 25fps = 5960 ms (réponse Daisy)
+- [x] ~~Licences fonts web~~ → confirmées (réponse Daisy)
 - [ ] Confirmer dimensions exactes safe zone hexagone (px sur 1920×1080)
-- [ ] Recevoir fichiers Bulevar.otf + GeneralSans-Bold.otf + licences web
+- [ ] Recevoir fichiers Bulevar.otf + GeneralSans-Bold.otf
 - [ ] Recevoir 2 WebM alpha : `01-A-hexagone.webm` + `02-B-transition.webm`
