@@ -156,6 +156,19 @@ export class ManualVideoService {
       this.doubleBufferService.showBlackOverlay();
     }
 
+    // En manuel→manuel, activer EN PLUS l'overlay noir (z=5) en complément du
+    // freeze-frame (z=20). L'overlay reste invisible au user tant que le
+    // freeze-frame est affiché, mais sert de FILET DE SÉCURITÉ pour la fenêtre
+    // de 1-2 frames entre `hideFreezeFrame()` et le premier paint du nouveau
+    // player. Sans cet overlay : <video> est transparent jusqu'au 1er frame
+    // décodé (Chromium ne render pas le `background:#000` de la balise) →
+    // la boucle (z=2) flashe à travers ce gap. Avec l'overlay (z=5, BG noir
+    // opaque), même si le nouveau player <video> est encore transparent, on
+    // voit du noir au lieu de la boucle. Hidden après requestVideoFrameCallback.
+    if (isManualToManual) {
+      this.doubleBufferService.showBlackOverlay();
+    }
+
     // ETAPE 2b: En manuel→manuel uniquement, masquer + libérer le décodeur HW de
     // l'ancien player AVANT de toucher targetPlayer. L'ancien player a un
     // `background: #000 !important` (cf. tv.component.scss:132) — sans opacity=0,
