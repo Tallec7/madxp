@@ -1,3 +1,9 @@
+## [3.280.1](https://github.com/Tallec7/neopro/compare/v3.280.0...v3.280.1) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** keep playingVideo state for full video duration (progress bar) ([#763](https://github.com/Tallec7/neopro/issues/763)) ([5a12804](https://github.com/Tallec7/neopro/commit/5a1280453ddc5c00cd93dd0e3641f82acf516930))
+
 # [3.280.0](https://github.com/Tallec7/neopro/compare/v3.279.2...v3.280.0) (2026-04-30)
 
 ### Features
