@@ -57,6 +57,8 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
   textValues: Record<string, string> = {};
   imageUploads: Record<string, string> = {};
   uploadingSlot: Record<string, boolean> = {};
+  /** PDF JOUEUR §démarrage — choix posés au démarrage par le user. */
+  selectedOptions: Record<string, string> = {};
 
   playerState: RuntimePlayerState | null = null;
 
@@ -103,8 +105,34 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
     }
     this.imageUploads = {};
     this.uploadingSlot = {};
+    // PDF JOUEUR §démarrage — initialise les options à leur valeur par défaut.
+    this.selectedOptions = {};
+    for (const opt of this.view.options ?? []) {
+      this.selectedOptions[opt.key] = opt.defaultValue;
+    }
     this.recomputePlayerState();
     this.scheduleEmit();
+  }
+
+  /** PDF JOUEUR — change la valeur d'une option et propage au filtrage des slots. */
+  onOptionChange(key: string, value: string): void {
+    this.selectedOptions = { ...this.selectedOptions, [key]: value };
+    this.recomputePlayerState();
+    this.scheduleEmit();
+  }
+
+  /**
+   * Évalue visible_if d'un slot contre selectedOptions courantes.
+   * Cohérent avec le runtime (regex VISIBLE_IF_REGEX dans TemplateRuntime.tsx).
+   */
+  private static readonly VISIBLE_IF_REGEX = /^\s*([a-z_][a-z0-9_]{0,63})\s*==\s*"([^"]{0,200})"\s*$/i;
+  isSlotVisible(visibleIf: string | null | undefined): boolean {
+    if (!visibleIf || visibleIf.trim() === '') return true;
+    const m = StudioV2EditorComponent.VISIBLE_IF_REGEX.exec(visibleIf);
+    if (!m) return true; // fail-open
+    const [, key, expectedValue] = m;
+    const actual = this.selectedOptions[key];
+    return actual !== undefined && actual === expectedValue;
   }
 
   trackVariant(_i: number, v: TemplateVariant): string {
@@ -166,10 +194,13 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
 
   isReady(): boolean {
     if (!this.selectedVariantId) return false;
+    // PDF JOUEUR — required ne s'applique qu'aux slots actuellement visibles.
     for (const tf of this.view.textFields) {
+      if (!this.isSlotVisible(tf.visibleIf)) continue;
       if (tf.required && !(this.textValues[tf.slotKey] ?? '').trim()) return false;
     }
     for (const slot of this.view.imageSlots) {
+      if (!this.isSlotVisible(slot.visibleIf)) continue;
       if (slot.required && !this.imageUploads[slot.slotKey]) return false;
     }
     return true;
@@ -200,6 +231,7 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         appearDuration: tf.appearDuration,
         animation: tf.animation,
         defaultValue: tf.defaultValue,
+        visibleIf: tf.visibleIf,
       })),
       imageSlots: this.view.imageSlots.map((s) => ({
         id: s.id,
@@ -208,10 +240,13 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         appearAt: s.appearAt,
         appearDuration: s.appearDuration,
         animation: s.animation,
+        visibleIf: s.visibleIf,
       })),
       variantId: this.selectedVariantId,
       textValues: { ...this.textValues },
       imageUploads: { ...this.imageUploads },
+      // PDF JOUEUR §démarrage — propagé au runtime pour le filtrage visible_if.
+      selectedOptions: { ...this.selectedOptions },
       // ADR-075 — Canvas dimensions piloté par le template (format picker admin).
       canvasWidth: this.view.canvasWidth,
       canvasHeight: this.view.canvasHeight,
@@ -227,6 +262,7 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         variantId: this.selectedVariantId,
         textValues: { ...this.textValues },
         imageUploads: { ...this.imageUploads },
+        selectedOptions: { ...this.selectedOptions },
       });
       this.readyChange.emit(this.isReady());
     }, 250);

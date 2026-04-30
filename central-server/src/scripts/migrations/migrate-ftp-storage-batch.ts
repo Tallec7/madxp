@@ -32,7 +32,7 @@
  * - Resumable: re-running skips already-migrated videos
  */
 
-import { query, getClient } from '../../config/database';
+import { query } from '../../config/database';
 import {
   buildShardedVideoPath,
   buildThumbnailPath,

@@ -719,7 +719,7 @@ process.on('SIGTERM', async () => {
   try {
     const { logtail } = await import('./config/logger');
     if (logtail) await logtail.flush();
-  } catch (_err) {
+  } catch {
     // non-blocking — shutdown must proceed regardless
   }
 
