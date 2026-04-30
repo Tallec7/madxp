@@ -55,11 +55,12 @@
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 
-  // ADR-105 — pas de preview live dans le mini-thumb 60×38 du hero.
-  // L'iframe SPA Angular ne peut pas être contenue dans 60×38 sans casser le
-  // layout (overflow:hidden ne clip pas les transformed iframes en pratique).
-  // Le mini-thumb reste un placeholder gradient ; le preview live vit dans
-  // `<app-r2-tv-monitor>` du layout desktop-pro qui a la place.
+  // ADR-105 Phase A — preview TV live dans le mini-thumb du hero.
+  // L'iframe est nativement dimensionnée à la taille du thumb (pas de
+  // scale CSS) et contenue par overflow:hidden + position:relative
+  // existants. Le TvComponent est responsive et s'adapte à 60×38.
+  // En layout desktop-pro, le mini-thumb reste placeholder (le monitor
+  // 16/9 col 3 prend le relais via `<app-r2-tv-monitor>`).
 
   .r2-tv-scanline {
     position: absolute;
@@ -111,13 +112,15 @@
     background: $live;
   }
 
+  // ADR-105 Phase A polish — la pastille thumb reste un bouton action.
+  // L'état "recording" est solide (pas de pulsation) — la pulsation rouge
+  // est portée par la pill REC dans l'eyebrow (source unique d'animation).
   &.active {
     background: $live;
     border-color: #fff;
 
     .r2-rec-dot {
       background: #fff;
-      animation: np-pulse 1.2s ease-in-out infinite;
     }
   }
 }

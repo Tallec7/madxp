@@ -179,11 +179,16 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   get isProLayout(): boolean {
     return this.prefsService.prefs.layoutDesktop === 'pro';
   }
-  /** URL injectée dans le hero (mini-thumb) hors layout pro — iframe scaled CSS. */
+  /**
+   * ADR-105 Phase A — preview TV dans le mini-thumb du hero (60×38 mobile,
+   * 96×54 desktop). L'iframe est dimensionnée nativement par .r2-tv-thumb,
+   * pas de scale CSS. Désactivé en layout desktop-pro où le monitor 16/9
+   * de col 3 prend le relais (`<app-r2-tv-monitor>`).
+   */
   heroPreviewUrl(): string | null {
     return this.isProLayout ? null : this.tvPreviewUrl();
   }
-  /** URL injectée dans le monitor 16/9 en layout pro. */
+  /** URL injectée dans le monitor 16/9 col 3 en layout desktop-pro uniquement. */
   monitorPreviewUrl(): string | null {
     return this.isProLayout ? this.tvPreviewUrl() : null;
   }

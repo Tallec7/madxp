@@ -36,19 +36,78 @@ import { R2IconComponent } from '../icons/r2-icon.component';
   imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
-    :host { display: contents; }
-    /* ADR-105 — _tv-monitor.scss supprimé en Phase 2, on garde ici les
-       règles minimales pour le containment de l'iframe : sans
-       position:relative et aspect-ratio sur .r2-tv-monitor-frame, l'iframe
-       absolute/inset:0 s'anchor sur le <body> et couvre tout le viewport. */
+    /* ADR-105 Phase A: le monitor 16/9 est strictement reserve au layout
+       desktop-pro (col 3 master-detail). Sur tous les autres layouts, le
+       preview vit dans le mini-thumb du hero (.r2-tv-thumb). */
+    :host {
+      display: none;
+    }
+    .r2-tv-monitor {
+      display: block;
+    }
+    /* aspect-ratio 16:9 = ratio TV natif. Le frame est l'unique ancestor
+       positionné de l'iframe absolute — garantit le containment.
+       Sans position:relative + aspect-ratio, l'iframe absolute/inset:0
+       s'anchor sur le <body> et couvre tout le viewport (régression
+       observée 2026-04-30 sur viewport mobile). */
     .r2-tv-monitor-frame {
       position: relative;
       aspect-ratio: 16 / 9;
       width: 100%;
+      border-radius: 14px;
       overflow: hidden;
-      border-radius: 12px;
-      background: #0a0a0a;
+      background: #0e1116;
+      box-shadow: 0 8px 20px -8px rgba(16, 24, 40, 0.25);
     }
+    .r2-tv-monitor-status {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+    .r2-tv-monitor-status .r2-tv-monitor-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 99px;
+      background: #ef4444;
+      animation: np-pulse 1.4s ease-in-out infinite;
+    }
+    .r2-tv-monitor-status--idle .r2-tv-monitor-dot { display: none; }
+    .r2-tv-monitor-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.85);
+      text-align: center;
+      padding: 16px;
+      transition: opacity 200ms ease;
+      pointer-events: none;
+    }
+    .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
+    .r2-tv-monitor-info { display: flex; flex-direction: column; gap: 2px; }
+    .r2-tv-monitor-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .r2-tv-monitor-name { font-size: 14px; font-weight: 700; }
+    .r2-tv-monitor-subline { font-size: 11px; color: rgba(255, 255, 255, 0.55); }
     .r2-tv-monitor-stream {
       position: absolute;
       inset: 0;
@@ -60,41 +119,6 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       transition: opacity 200ms ease;
     }
     .r2-tv-monitor-stream.is-loaded { opacity: 1; }
-    .r2-tv-monitor-content {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      color: #fff;
-      opacity: 1;
-      transition: opacity 200ms ease;
-      pointer-events: none;
-    }
-    .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
-    .r2-tv-monitor-status {
-      position: absolute;
-      top: 8px;
-      left: 8px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-    .r2-tv-monitor-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 99px;
-      background: #ef4444;
-    }
   `],
   template: `
     <section class="r2-tv-monitor" [class.is-manual]="playingVideo" [class.is-idle]="isIdle" [class.is-streaming]="streamLoaded()">
