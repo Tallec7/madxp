@@ -1,3 +1,9 @@
+## [3.281.1](https://github.com/Tallec7/neopro/compare/v3.281.0...v3.281.1) (2026-04-30)
+
+### Bug Fixes
+
+- **deploy:** remove restrictive watchPatterns to enable Dockerfile builder on Railway ([#770](https://github.com/Tallec7/neopro/issues/770)) ([cc2f295](https://github.com/Tallec7/neopro/commit/cc2f295d64f69d84d10d6d55303c1cabe5f1b7de))
+
 # [3.281.0](https://github.com/Tallec7/neopro/compare/v3.280.3...v3.281.0) (2026-04-30)
 
 ### Features
