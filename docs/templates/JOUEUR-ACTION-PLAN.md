@@ -57,7 +57,7 @@ Semaine 3
 
 Faisable maintenant, indépendant des assets. Permet d'arriver prêt à l'import.
 
-### 2.1 ADR Versioning des templates (0.5j) — **PRIORITÉ 1**
+### 2.1 ADR Versioning des templates ✅ ADR-106 rédigé
 
 **Objectif** : décider du modèle de verrouillage masters (recommandé : versioning vs flag `locked`).
 
@@ -142,7 +142,7 @@ Suivant le pattern `.claude/rules/templates.md` :
 
 À formaliser avant le 1er master, faisable pendant l'attente assets.
 
-### 3.1 ADR Grants backgrounds (0.5j)
+### 3.1 ADR Grants backgrounds ✅ ADR-107 rédigé
 
 **Objectif** : doc le pattern de visibilité des backgrounds par user_id (cf. SPEC globale §5.3).
 
