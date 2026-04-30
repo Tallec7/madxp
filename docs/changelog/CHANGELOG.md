@@ -1,3 +1,9 @@
+# [3.282.0](https://github.com/Tallec7/neopro/compare/v3.281.1...v3.282.0) (2026-04-30)
+
+### Features
+
+- **templates:** chantier JOUEUR consolidé — versioning + options + packshot pluggable + UI ([#777](https://github.com/Tallec7/neopro/issues/777)) ([b5a6e2e](https://github.com/Tallec7/neopro/commit/b5a6e2e5ad7b031274cc9efd989bb901eff65f5d)), closes [690/#691](https://github.com/Tallec7/neopro/issues/691) [#768](https://github.com/Tallec7/neopro/issues/768) [#766](https://github.com/Tallec7/neopro/issues/766) [#771](https://github.com/Tallec7/neopro/issues/771) [#771](https://github.com/Tallec7/neopro/issues/771) [#773](https://github.com/Tallec7/neopro/issues/773) [#771](https://github.com/Tallec7/neopro/issues/771) [#771](https://github.com/Tallec7/neopro/issues/771) [#773](https://github.com/Tallec7/neopro/issues/773) [#771](https://github.com/Tallec7/neopro/issues/771)
+
 ## [3.281.1](https://github.com/Tallec7/neopro/compare/v3.281.0...v3.281.1) (2026-04-30)
 
 ### Bug Fixes
