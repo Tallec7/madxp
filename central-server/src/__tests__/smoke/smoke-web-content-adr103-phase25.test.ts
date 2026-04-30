@@ -136,8 +136,15 @@ describe('Smoke — ADR-103 Phase 2.5 web content polish', () => {
     // Include the JSDoc above the method (search a bit further back)
     const blockStart = Math.max(0, stopIdx - 600);
     const block = src.slice(blockStart, stopIdx + 1000);
-    expect(/this\.socketService\.emit\(\s*['"]command['"]/.test(block)).toBe(true);
-    expect(/type:\s*['"]stop-manual['"]/.test(block)).toBe(true);
+    // Le contrat est : stopPlaying() doit émettre une commande `stop-manual`.
+    // Depuis la PR de parité V1↔V2 (ADR-081), l'émission passe par le helper
+    // privé `emitCommand({ type: 'stop-manual' })` qui ajoute commandId UUID v4
+    // + target multi-écrans + double broadcast (localBroadcast + socket).
+    // On valide donc le contrat fonctionnel (helper OU emit direct), pas la
+    // string source littérale (anti-pattern smoke-test-mirror-code).
+    const usesHelper = /this\.emitCommand\(\s*\{\s*type:\s*['"]stop-manual['"]/.test(block);
+    const usesDirect = /this\.socketService\.emit\(\s*['"]command['"][\s\S]{0,200}type:\s*['"]stop-manual['"]/.test(block);
+    expect(usesHelper || usesDirect).toBe(true);
     expect(/ADR-103 Phase 2\.5/.test(block)).toBe(true);
   });
 

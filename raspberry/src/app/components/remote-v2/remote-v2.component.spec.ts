@@ -318,6 +318,51 @@ describe('RemoteV2Component', () => {
     });
   });
 
+  // ---- Parité V1/V2 — path d'émission commande (ADR-081) ----
+  describe('emitCommand parity (V1 ↔ V2)', () => {
+    function lastCommandPayload(): Record<string, unknown> | undefined {
+      const calls = mockSocket.emit.calls.allArgs().filter((args) => args[0] === 'command');
+      const last = calls[calls.length - 1];
+      return last?.[1] as Record<string, unknown> | undefined;
+    }
+
+    it('joint un commandId UUID v4 à chaque emit video', () => {
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['type']).toBe('video');
+      expect(typeof p?.['commandId']).toBe('string');
+      expect(p?.['commandId']).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
+    it('joint un commandId à stop-manual', () => {
+      component.stopPlaying();
+      const p = lastCommandPayload();
+      expect(p?.['type']).toBe('stop-manual');
+      expect(typeof p?.['commandId']).toBe('string');
+    });
+
+    it('omet target quand targetDisplay = "all"', () => {
+      component.targetDisplay = 'all';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['target']).toBeUndefined();
+    });
+
+    it('propage target=[N] quand un écran spécifique est ciblé', () => {
+      component.targetDisplay = '1';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['target']).toEqual([1]);
+    });
+
+    it("n'expose plus le champ displayIndex (régression ADR-081)", () => {
+      component.targetDisplay = '0';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p && 'displayIndex' in p).toBe(false);
+    });
+  });
+
   // ---- Widgets activation persistence ----
   describe('widgetsEnabled persistence', () => {
     it('persiste à chaque toggle', () => {

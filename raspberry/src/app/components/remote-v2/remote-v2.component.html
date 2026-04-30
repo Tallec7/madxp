@@ -691,6 +691,30 @@
           </select>
         </label>
         <label class="r2-pref-row">
+          <span>Durée bandeau (s)</span>
+          <select
+            [value]="localOptions.breakingNews?.defaultDuration"
+            (change)="updateBreakingDuration(+$any($event.target).value)"
+          >
+            <option [value]="5">5 s</option>
+            <option [value]="10">10 s</option>
+            <option [value]="15">15 s</option>
+            <option [value]="20">20 s</option>
+            <option [value]="30">30 s</option>
+          </select>
+        </label>
+        <div class="r2-pref-row">
+          <span>Afficher le chrono</span>
+          <button
+            class="r2-switch"
+            [class.on]="localOptions.timer?.enabled"
+            (click)="updateTimerEnabled(!localOptions.timer?.enabled)"
+            aria-label="Afficher le chrono"
+          >
+            <span class="r2-switch-thumb"></span>
+          </button>
+        </div>
+        <label class="r2-pref-row">
           <span>Durée mi-temps (min)</span>
           <input
             type="number"
@@ -707,6 +731,17 @@
             [class.on]="localOptions.timer?.countDown"
             (click)="updateTimerCountDown(!localOptions.timer?.countDown)"
             aria-label="Décompte"
+          >
+            <span class="r2-switch-thumb"></span>
+          </button>
+        </div>
+        <div class="r2-pref-row">
+          <span>Chrono intégré au scoreboard</span>
+          <button
+            class="r2-switch"
+            [class.on]="localOptions.timer?.integratedWithScore"
+            (click)="updateTimerIntegratedWithScore(!localOptions.timer?.integratedWithScore)"
+            aria-label="Chrono intégré au scoreboard"
           >
             <span class="r2-switch-thumb"></span>
           </button>
