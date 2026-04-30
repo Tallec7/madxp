@@ -97,6 +97,66 @@ class TemplateOptionsRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
+  /**
+   * Patch partiel option (label, values, default_value, user_editable, sort_order).
+   * Refuse si default_value n'est pas dans values (data integrity).
+   */
+  async updateOption(
+    id: string,
+    patch: {
+      label?: string;
+      values?: unknown[];
+      default_value?: string;
+      user_editable?: boolean;
+      sort_order?: number;
+    }
+  ): Promise<TemplateOption | null> {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+    if (patch.label !== undefined) {
+      sets.push(`label = $${idx++}`);
+      values.push(patch.label);
+    }
+    if (patch.values !== undefined) {
+      sets.push(`values = $${idx++}`);
+      values.push(JSON.stringify(patch.values));
+    }
+    if (patch.default_value !== undefined) {
+      sets.push(`default_value = $${idx++}`);
+      values.push(patch.default_value);
+    }
+    if (patch.user_editable !== undefined) {
+      sets.push(`user_editable = $${idx++}`);
+      values.push(patch.user_editable);
+    }
+    if (patch.sort_order !== undefined) {
+      sets.push(`sort_order = $${idx++}`);
+      values.push(patch.sort_order);
+    }
+    if (sets.length === 0) {
+      const result = await query<TemplateOption>(
+        `SELECT * FROM template_options WHERE id = $1`,
+        [id]
+      );
+      return result.rows[0] ?? null;
+    }
+    values.push(id);
+    const result = await query<TemplateOption>(
+      `UPDATE template_options SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findOptionById(id: string): Promise<TemplateOption | null> {
+    const result = await query<TemplateOption>(
+      `SELECT * FROM template_options WHERE id = $1`,
+      [id]
+    );
+    return result.rows[0] ?? null;
+  }
+
   /** Liste les packshot refs d'un template parent. */
   async listPackshotRefs(templateId: string): Promise<TemplatePackshotRef[]> {
     const result = await query<TemplatePackshotRef>(
