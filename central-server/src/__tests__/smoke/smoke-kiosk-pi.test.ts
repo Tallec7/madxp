@@ -3252,17 +3252,31 @@ describe('Manual video transition flash prevention guards', () => {
     });
   });
 
-  it('manual-video.service must skip freeze-frame during manual→manual transitions', () => {
-    // In manual→manual, the previous manual player stays visible behind the new one
-    // (z-index double-buffer). Showing a freeze-frame (z=20) would cover it with the
-    // stale pre-captured loop frame, causing the visible loop flash. Freeze-frame /
-    // black overlay must be gated behind "!isManualToManual" (or equivalent).
+  it('manual-video.service must always show freeze-frame and release HW decoder in manual→manual', () => {
+    // Cas d'usage NLF "présentation joueurs" : enchaînement rapide de vidéos manuelles
+    // (1-10s par vidéo, JAMAIS revoir la boucle entre 2). L'ancienne stratégie consistait
+    // à skipper le freeze-frame en manual→manual (laisser l'ancien player visible derrière
+    // le nouveau). Sur Pi 5, ça produit un bug GPU "click-twice" — le compositeur Chromium
+    // ne peut pas allouer un nouveau SharedImage backing tant que l'ancien décodeur HW
+    // tient son slot (`SharedImageBackingFactory` failure pour Y_UV/420/8unorm/1920x1080).
+    //
+    // Nouvelle stratégie (invariants) :
+    //   1. captureAndShowFreezeFrame(isManualToManual) — toujours appelé, l'argument booléen
+    //      propage vers la capture LIVE depuis le player manuel actif (frame du joueur
+    //      précédent), JAMAIS le frame pré-capturé de la boucle.
+    //   2. En manuel→manuel, libérer le décodeur HW de l'ancien player AVANT le load de
+    //      la nouvelle vidéo (`activeManualPlayer.removeAttribute('src') + load()`). Le
+    //      freeze-frame canvas (z=20) couvre la période sans src.
     const playMethodStart = manualVideoContent.indexOf('play(video: PiConfigVideoEntry)');
-    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 3500);
+    // Slice étendu à 12000 chars : play() fait ~190 lignes après l'ajout du fix
+    // flash-loop manual→manual (HW decoder release + black-overlay + rVFC + commentaires).
+    const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 12000);
     expect({
-      hasGuardedFreeze: /if\s*\(\s*!\s*isManualToManual\s*\)[\s\S]{0,400}captureAndShowFreezeFrame/.test(playMethodBlock),
+      freezeUsesIsManualToManualFlag: /captureAndShowFreezeFrame\(\s*isManualToManual\s*\)/.test(playMethodBlock),
+      releasesPreviousDecoderInManualToManual: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,3000}removeAttribute\(\s*['"]src['"]\s*\)/.test(playMethodBlock),
     }).toEqual({
-      hasGuardedFreeze: true,
+      freezeUsesIsManualToManualFlag: true,
+      releasesPreviousDecoderInManualToManual: true,
     });
   });
 });
