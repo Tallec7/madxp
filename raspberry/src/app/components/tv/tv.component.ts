@@ -402,15 +402,26 @@ export class TvComponent implements OnInit, OnDestroy {
    * tick re-syncs).
    */
   private initPreviewSlave(): void {
-    console.log('[TV] ADR-106 — initializing preview-slave mode');
+    // ADR-106 — siteId must be in the payload so the central-server can
+    // join the socket to the siteId room (the preview iframe skips
+    // saas-register per ADR-105, so it never auto-joins). Pi mode is
+    // single-tenant: siteId is unused server-side but harmless.
+    const params = new URLSearchParams(window.location.search);
+    const siteId =
+      params.get('site') ||
+      localStorage.getItem('neopro_saas_site_id') ||
+      '';
+    const payload = { siteId } as unknown as Command;
+
+    console.log('[TV] ADR-106 — initializing preview-slave mode', { siteId });
 
     // Register as preview-slave (no TV instance entry, no display count)
-    this.socketService.emit('tv-preview-register', {} as unknown as Command);
+    this.socketService.emit('tv-preview-register', payload);
 
     // Re-register on socket reconnection
     this.socketService.onReconnect(() => {
       console.log('[TV] Preview-slave: socket reconnected, re-registering');
-      this.socketService.emit('tv-preview-register', {} as unknown as Command);
+      this.socketService.emit('tv-preview-register', payload);
     });
 
     // Receive master loop state — read only, never emit tv-loop-update
