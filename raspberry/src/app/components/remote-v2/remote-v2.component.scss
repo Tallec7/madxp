@@ -9,46 +9,46 @@
 //    DOIT être importé en premier — toutes les autres partials et les
 //    layouts/_*.scss s'appuient sur les variables ($accent, $border, etc.)
 //    et les mixins (r2-mobile-only, r2-desktop-up, r2-wide-up).
-@import 'tokens';
+@use 'tokens';
 
 // 2. Sections cœur (ordre = ordre visuel d'apparition dans le template).
-@import 'header';
-@import 'hero';
-@import 'pro-sidebar';
-@import 'video-table';
-@import 'pro-aside';
-@import 'widgets';
-@import 'tags-breaking';
-@import 'phase-tabs';
-@import 'categories';
-@import 'video-row';
-@import 'video-thumb';
-@import 'video-thumb-img';
-@import 'recording-warning';
+@use 'header';
+@use 'hero';
+@use 'pro-sidebar';
+@use 'video-table';
+@use 'pro-aside';
+@use 'widgets';
+@use 'tags-breaking';
+@use 'phase-tabs';
+@use 'categories';
+@use 'video-row';
+@use 'video-thumb';
+@use 'video-thumb-img';
+@use 'recording-warning';
 
 // 3. Overlays UI (toasts, sheets, modules).
-@import 'toast';
-@import 'sheets';
-@import 'sheet-handle';
-@import 'switch';
-@import 'gear';
-@import 'module-sheets';
-@import 'module-team-color';
-@import 'widget-toggles';
-@import 'team-badges';
-@import 'search-sheet';
-@import 'search-recent';
-@import 'quick-messages';
-@import 'match-info';
-@import 'overlay-position';
+@use 'toast';
+@use 'sheets';
+@use 'sheet-handle';
+@use 'switch';
+@use 'gear';
+@use 'module-sheets';
+@use 'module-team-color';
+@use 'widget-toggles';
+@use 'team-badges';
+@use 'search-sheet';
+@use 'search-recent';
+@use 'quick-messages';
+@use 'match-info';
+@use 'overlay-position';
 
 // 4. Layouts (3 mobile + 3 PC) — surchargent les --r2-* tokens et appliquent
 //    les transformations structurelles (grid, sidebar sticky, dark theme...).
 //    Chaque partial scope tout sous `.remote-v2.layout-*-*` pour qu'aucune
 //    règle ne s'applique sans le couple de classes correct.
-@import 'layouts/mobile-classic';
-@import 'layouts/mobile-grid';
-@import 'layouts/mobile-compact';
-@import 'layouts/desktop-centered';
-@import 'layouts/desktop-sidebar';
-@import 'layouts/desktop-pro';
+@use 'layouts/mobile-classic';
+@use 'layouts/mobile-grid';
+@use 'layouts/mobile-compact';
+@use 'layouts/desktop-centered';
+@use 'layouts/desktop-sidebar';
+@use 'layouts/desktop-pro';

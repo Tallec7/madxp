@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Tag (LIVE etc.) -------------------------------------------------------
 .r2-tag {
   display: inline-flex;
@@ -11,12 +13,12 @@
   text-transform: uppercase;
 
   &--live {
-    background: $danger-bg;
-    color: $danger;
+    background: tokens.$danger-bg;
+    color: tokens.$danger;
   }
 
   &--rec {
-    background: $danger;
+    background: tokens.$danger;
     color: #fff;
     padding: 2px 8px;
     font-size: 10px;
@@ -27,13 +29,13 @@
 
 // ---- Breaking widget ------------------------------------------------------
 .r2-widget-breaking {
-  background: $danger-bg;
-  border: 1px solid $danger;
+  background: tokens.$danger-bg;
+  border: 1px solid tokens.$danger;
   position: relative;
   overflow: hidden;
 
   &.live {
-    background: $surface;
+    background: tokens.$surface;
   }
 
   .r2-breaking-bar {
@@ -42,7 +44,7 @@
     top: 0;
     bottom: 0;
     width: 3px;
-    background: $danger;
+    background: tokens.$danger;
     animation: np-pulse 1.4s ease-in-out infinite;
   }
 
@@ -50,7 +52,7 @@
     font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.12em;
-    color: $danger;
+    color: tokens.$danger;
     text-transform: uppercase;
     width: 48px;
     flex-shrink: 0;
@@ -66,7 +68,7 @@
     font-family: inherit;
     font-size: 12px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -77,7 +79,7 @@
     padding: 5px 9px;
     border-radius: 6px;
     border: none;
-    background: $dark;
+    background: tokens.$dark;
     color: #fff;
     cursor: pointer;
     font-family: inherit;
@@ -88,7 +90,7 @@
     flex-shrink: 0;
 
     &.live {
-      background: $danger;
+      background: tokens.$danger;
     }
   }
 }

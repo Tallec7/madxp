@@ -1,9 +1,11 @@
+@use "tokens";
+
 // ---- Hero "À l'antenne" ---------------------------------------------------
 .r2-hero {
   margin: 12px 16px 0;
   border-radius: 14px;
   overflow: hidden;
-  background: $dark;
+  background: tokens.$dark;
   color: #fff;
   box-shadow: 0 8px 20px -8px rgba(16, 24, 40, 0.25);
 }
@@ -14,7 +16,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: $accent-light;
+  color: tokens.$accent-light;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -23,15 +25,15 @@
     width: 5px;
     height: 5px;
     border-radius: 99px;
-    background: $accent-light;
+    background: tokens.$accent-light;
     animation: np-pulse 1.4s ease-in-out infinite;
   }
 
   &.is-manual {
-    color: $yellow;
+    color: tokens.$yellow;
 
     .r2-hero-dot {
-      background: $yellow;
+      background: tokens.$yellow;
     }
   }
 }
@@ -51,7 +53,7 @@
   border-radius: 8px;
   background:
     radial-gradient(120% 80% at 50% 0%, rgba(129, 227, 188, 0.25), transparent 60%),
-    linear-gradient(135deg, $accent-deep, #0c2a23);
+    linear-gradient(135deg, tokens.$accent-deep, #0c2a23);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 
@@ -109,14 +111,14 @@
     width: 8px;
     height: 8px;
     border-radius: 99px;
-    background: $live;
+    background: tokens.$live;
   }
 
   // ADR-105 Phase A polish — la pastille thumb reste un bouton action.
   // L'état "recording" est solide (pas de pulsation) — la pulsation rouge
   // est portée par la pill REC dans l'eyebrow (source unique d'animation).
   &.active {
-    background: $live;
+    background: tokens.$live;
     border-color: #fff;
 
     .r2-rec-dot {
@@ -179,7 +181,7 @@
     display: block;
     width: 0;
     height: 100%;
-    background: $yellow;
+    background: tokens.$yellow;
     border-radius: 99px;
     transition: width 200ms linear;
   }
@@ -190,8 +192,8 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: $accent-light;
-  color: $dark;
+  background: tokens.$accent-light;
+  color: tokens.$dark;
   border: none;
   cursor: pointer;
   display: flex;
@@ -264,8 +266,8 @@
     transition: all 150ms;
 
     &.active {
-      background: $accent-light;
-      color: $dark;
+      background: tokens.$accent-light;
+      color: tokens.$dark;
       font-weight: 800;
     }
   }
@@ -306,8 +308,8 @@
     gap: 4px;
 
     &.active {
-      background: $accent-light;
-      color: $dark;
+      background: tokens.$accent-light;
+      color: tokens.$dark;
       font-weight: 800;
     }
   }

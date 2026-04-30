@@ -1,9 +1,11 @@
+@use "tokens";
+
 // ---- iOS-style switch (V7Switch) ------------------------------------------
 .r2-switch {
   width: 42px;
   height: 26px;
   border-radius: 99px;
-  background: $border;
+  background: tokens.$border;
   border: none;
   cursor: pointer;
   padding: 0;
@@ -24,7 +26,7 @@
   }
 
   &.on {
-    background: $accent;
+    background: tokens.$accent;
 
     .r2-switch-thumb {
       left: 18px;

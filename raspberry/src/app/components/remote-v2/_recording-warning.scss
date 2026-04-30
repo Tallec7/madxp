@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Recording warning banner --------------------------------------------
 .r2-rec-warning {
   margin: 10px 16px 4px;
@@ -5,16 +7,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: $danger-bg;
-  border: 1px solid $danger;
+  background: tokens.$danger-bg;
+  border: 1px solid tokens.$danger;
   border-radius: 10px;
-  color: $danger;
+  color: tokens.$danger;
 
   .r2-rec-warning-dot {
     width: 8px;
     height: 8px;
     border-radius: 99px;
-    background: $danger;
+    background: tokens.$danger;
     animation: np-pulse 1.4s ease-in-out infinite;
     flex-shrink: 0;
   }
@@ -23,10 +25,10 @@
     flex: 1;
     font-size: 12px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
 
     strong {
-      color: $danger;
+      color: tokens.$danger;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
     }
@@ -36,7 +38,7 @@
     padding: 6px 10px;
     border-radius: 6px;
     border: none;
-    background: $danger;
+    background: tokens.$danger;
     color: #fff;
     font-family: inherit;
     font-size: 11px;
@@ -52,13 +54,13 @@
     border-radius: 99px;
     border: none;
     background: transparent;
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
 
     &:hover {
-      background: rgba($danger, 0.15);
+      background: rgba(tokens.$danger, 0.15);
     }
   }
 }

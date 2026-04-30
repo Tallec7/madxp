@@ -1,3 +1,5 @@
+@use "../tokens";
+
 // SPEC-V2-LAYOUT-01 — Mobile B "Grid cards 2-col"
 // Cible : profil découverte / sponsors visuels.
 // Vidéos visibles à fold : 6 (cards 16:9 + nom 2 lignes max).
@@ -9,7 +11,7 @@
 //   (pas `.r2-video-list / .r2-video-rows / .r2-cat-videos` qui n'existent pas).
 
 .remote-v2.layout-mobile-grid {
-  @include r2-mobile-only {
+  @include tokens.r2-mobile-only {
     --r2-card-h: 90px;
     --r2-padding-x: 12px;
 
@@ -47,8 +49,8 @@
       min-height: var(--r2-card-h);
       padding: 8px;
       border-radius: 8px;
-      border: 1px solid $border-subtle;
-      background: $surface;
+      border: 1px solid tokens.$border-subtle;
+      background: tokens.$surface;
       gap: 6px;
       position: relative;
 
@@ -80,15 +82,15 @@
       // État playing : bordure accent + badge "EN COURS"
       &.playing {
         border-width: 2px;
-        border-color: $accent;
-        background: $accent-bg;
+        border-color: tokens.$accent;
+        background: tokens.$accent-bg;
 
         &::after {
           content: 'EN COURS';
           position: absolute;
           top: 6px;
           right: 6px;
-          background: $accent;
+          background: tokens.$accent;
           color: #fff;
           font-size: 8px;
           font-weight: 800;

@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Search sheet --------------------------------------------------------
 .r2-sheet--full {
   max-height: 92vh;
@@ -9,16 +11,16 @@
   gap: 8px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: $bg;
-  border: 1px solid $border;
+  background: tokens.$bg;
+  border: 1px solid tokens.$border;
 
   &:focus-within {
-    border-color: $accent;
-    background: $surface;
+    border-color: tokens.$accent;
+    background: tokens.$surface;
   }
 
   > svg {
-    color: $text-muted;
+    color: tokens.$text-muted;
     flex-shrink: 0;
   }
 
@@ -30,10 +32,10 @@
     font-family: inherit;
     font-size: 14px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
 
     &::placeholder {
-      color: $text-muted;
+      color: tokens.$text-muted;
       font-weight: 500;
     }
   }
@@ -44,8 +46,8 @@
   height: 22px;
   border-radius: 99px;
   border: none;
-  background: $border;
-  color: $text-muted;
+  background: tokens.$border;
+  color: tokens.$text-muted;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,7 +58,7 @@
 .r2-search-empty {
   padding: 20px 12px;
   text-align: center;
-  color: $text-muted;
+  color: tokens.$text-muted;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
@@ -73,6 +75,6 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: $text-muted;
+  color: tokens.$text-muted;
   padding: 4px 4px 6px;
 }

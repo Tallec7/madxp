@@ -1,3 +1,7 @@
+@use "tokens";
+
+@use "sass:color";
+
 // ---- Sheets (bottom sheets / modals) --------------------------------------
 .r2-sheet-backdrop {
   position: fixed;
@@ -22,7 +26,7 @@
   right: 0;
   bottom: 0;
   max-height: 85vh;
-  background: $surface;
+  background: tokens.$surface;
   border-radius: 18px 18px 0 0;
   z-index: 201;
   display: flex;
@@ -45,7 +49,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid tokens.$border-subtle;
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -57,12 +61,12 @@
     border-radius: 99px;
     border: none;
     background: transparent;
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-size: 16px;
     cursor: pointer;
 
     &:hover {
-      background: $border-subtle;
+      background: tokens.$border-subtle;
     }
   }
 }
@@ -76,7 +80,7 @@
 
   hr {
     border: none;
-    border-top: 1px solid $border-subtle;
+    border-top: 1px solid tokens.$border-subtle;
     margin: 6px 0;
   }
 
@@ -88,7 +92,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: $text-muted;
+    color: tokens.$text-muted;
 
     input[type='text'],
     input[type='number'],
@@ -96,19 +100,19 @@
     select {
       padding: 10px 12px;
       border-radius: 8px;
-      border: 1px solid $border;
-      background: $bg;
+      border: 1px solid tokens.$border;
+      background: tokens.$bg;
       font-family: inherit;
       font-size: 14px;
       font-weight: 600;
-      color: $text;
+      color: tokens.$text;
       text-transform: none;
       letter-spacing: normal;
 
       &:focus {
         outline: none;
-        border-color: $accent;
-        background: $surface;
+        border-color: tokens.$accent;
+        background: tokens.$surface;
       }
     }
   }
@@ -117,7 +121,7 @@
     padding: 12px;
     border-radius: 10px;
     border: none;
-    background: $accent;
+    background: tokens.$accent;
     color: #fff;
     font-family: inherit;
     font-weight: 800;
@@ -128,7 +132,7 @@
     margin-top: 8px;
 
     &:hover {
-      background: darken($accent, 5%);
+      background: color.adjust(tokens.$accent, $lightness: -5%, $space: hsl);
     }
   }
 }
@@ -136,9 +140,9 @@
 .r2-menu-item {
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid $border-subtle;
-  background: $surface;
-  color: $text;
+  border: 1px solid tokens.$border-subtle;
+  background: tokens.$surface;
+  color: tokens.$text;
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -148,8 +152,8 @@
   transition: all 120ms;
 
   &:hover {
-    background: $accent-bg;
-    border-color: $accent;
+    background: tokens.$accent-bg;
+    border-color: tokens.$accent;
   }
 
   // SPEC-V2-ICONS-01 — gabarit icône + texte (gap fiable, pas de margin sur l'icône)
@@ -160,13 +164,13 @@
   }
 
   &--secondary {
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-weight: 600;
     border-style: dashed;
 
     &:hover {
-      background: $border-subtle;
-      border-color: $text-muted;
+      background: tokens.$border-subtle;
+      border-color: tokens.$text-muted;
       border-style: solid;
     }
   }
@@ -175,9 +179,9 @@
 .r2-profile-btn {
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid $border-subtle;
-  background: $surface;
-  color: $text;
+  border: 1px solid tokens.$border-subtle;
+  background: tokens.$surface;
+  color: tokens.$text;
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -188,9 +192,9 @@
   justify-content: space-between;
 
   &.active {
-    background: $accent-bg;
-    border-color: $accent;
-    color: $accent-deep;
+    background: tokens.$accent-bg;
+    border-color: tokens.$accent;
+    color: tokens.$accent-deep;
     font-weight: 800;
 
     // SPEC-V2-ICONS-01 — Lucide "check" via masque SVG, recoloré par background-color.
@@ -199,7 +203,7 @@
       display: inline-block;
       width: 14px;
       height: 14px;
-      background-color: $accent;
+      background-color: tokens.$accent;
       -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
       mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
       -webkit-mask-size: contain;
@@ -210,14 +214,14 @@
   }
 
   &:hover {
-    background: $bg;
+    background: tokens.$bg;
   }
 }
 
 .r2-empty {
   padding: 14px;
   text-align: center;
-  color: $text-muted;
+  color: tokens.$text-muted;
   font-size: 12px;
   font-weight: 600;
 }
@@ -229,8 +233,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: $text-muted;
-  border-top: 1px solid $border-subtle;
+  color: tokens.$text-muted;
+  border-top: 1px solid tokens.$border-subtle;
   padding-top: 14px;
 }
 
@@ -243,7 +247,7 @@
   .r2-pref-label {
     font-size: 13px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
   }
 }
 
@@ -258,31 +262,31 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid $border-subtle;
+  border: 1px solid tokens.$border-subtle;
   border-radius: 8px;
   cursor: pointer;
   transition:
     border-color 120ms,
     background 120ms;
   font-size: 13px;
-  color: $text;
+  color: tokens.$text;
 
   input[type='radio'] {
-    accent-color: $accent;
+    accent-color: tokens.$accent;
     margin: 0;
     flex-shrink: 0;
   }
 
   em {
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-style: normal;
     font-size: 11px;
     margin-left: 4px;
   }
 
   &:has(input:checked) {
-    border-color: $accent;
-    background: $accent-bg;
+    border-color: tokens.$accent;
+    background: tokens.$accent-bg;
   }
 }
 
@@ -291,7 +295,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid $border-subtle;
+  border-bottom: 1px solid tokens.$border-subtle;
 
   &:last-of-type {
     border-bottom: none;
@@ -301,7 +305,7 @@
     flex: 1;
     font-size: 13px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
     text-transform: none;
     letter-spacing: normal;
   }
@@ -311,7 +315,7 @@
     height: 26px;
     appearance: none;
     -webkit-appearance: none;
-    background: $border;
+    background: tokens.$border;
     border-radius: 99px;
     position: relative;
     cursor: pointer;
@@ -331,7 +335,7 @@
     }
 
     &:checked {
-      background: $accent;
+      background: tokens.$accent;
 
       &::after {
         left: 20px;
@@ -343,23 +347,23 @@
     width: 80px;
     padding: 8px 10px;
     border-radius: 8px;
-    border: 1px solid $border;
-    background: $bg;
+    border: 1px solid tokens.$border;
+    background: tokens.$bg;
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
-    color: $text;
+    color: tokens.$text;
     text-align: center;
   }
 
   select {
     padding: 8px 10px;
     border-radius: 8px;
-    border: 1px solid $border;
-    background: $bg;
+    border: 1px solid tokens.$border;
+    background: tokens.$bg;
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;
-    color: $text;
+    color: tokens.$text;
   }
 }

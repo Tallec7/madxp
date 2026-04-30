@@ -1,3 +1,5 @@
+@use "tokens";
+
 // ---- Overlay score position picker ----------------------------------------
 .r2-overlay-pos {
   margin: 4px 0 8px;
@@ -8,15 +10,15 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   padding: 6px;
-  background: $bg;
+  background: tokens.$bg;
   border-radius: 10px;
   aspect-ratio: 16 / 5;
 }
 
 .r2-overlay-pos-cell {
   position: relative;
-  border: 1.5px dashed $border;
-  background: $surface;
+  border: 1.5px dashed tokens.$border;
+  background: tokens.$surface;
   border-radius: 6px;
   cursor: pointer;
   padding: 0;
@@ -26,7 +28,7 @@
     width: 10px;
     height: 10px;
     border-radius: 99px;
-    background: $border;
+    background: tokens.$border;
     align-self: stretch;
     margin: auto;
   }
@@ -50,17 +52,17 @@
   }
 
   &:hover {
-    border-color: $accent;
+    border-color: tokens.$accent;
   }
 
   &.active {
     border-style: solid;
-    border-color: $accent;
-    background: $accent-bg;
-    box-shadow: 0 0 0 2px rgba($accent, 0.15);
+    border-color: tokens.$accent;
+    background: tokens.$accent-bg;
+    box-shadow: 0 0 0 2px rgba(tokens.$accent, 0.15);
 
     .r2-overlay-pos-dot {
-      background: $accent;
+      background: tokens.$accent;
       animation: np-pulse 1.4s ease-in-out infinite;
     }
   }
@@ -71,6 +73,6 @@
   text-align: center;
   font-size: 11px;
   font-weight: 700;
-  color: $accent-deep;
+  color: tokens.$accent-deep;
   letter-spacing: 0.04em;
 }

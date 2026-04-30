@@ -1,3 +1,7 @@
+@use "tokens";
+
+@use "sass:color";
+
 // ---- Categories accordéon -------------------------------------------------
 .r2-categories {
   margin: 8px 16px 0;
@@ -7,8 +11,8 @@
 }
 
 .r2-category {
-  background: $surface;
-  border: 1px solid $border-subtle;
+  background: tokens.$surface;
+  border: 1px solid tokens.$border-subtle;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -16,9 +20,9 @@
 .r2-cat-header {
   width: 100%;
   padding: 12px 14px;
-  background: $surface;
+  background: tokens.$surface;
   border: none;
-  color: $text;
+  color: tokens.$text;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -30,11 +34,11 @@
   text-align: left;
 
   &:hover {
-    background: $bg;
+    background: tokens.$bg;
   }
 
   .r2-cat-chev {
-    color: $text-muted;
+    color: tokens.$text-muted;
     flex-shrink: 0;
     transition: transform 180ms;
 
@@ -50,10 +54,10 @@
   .r2-cat-folders {
     font-size: 10px;
     font-weight: 700;
-    color: $text-muted;
+    color: tokens.$text-muted;
     padding: 1px 6px;
     border-radius: 4px;
-    background: $bg;
+    background: tokens.$bg;
     letter-spacing: 0.04em;
     text-transform: lowercase;
     flex-shrink: 0;
@@ -62,7 +66,7 @@
   .r2-cat-count {
     margin-left: auto;
     font-size: 11px;
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-weight: 700;
     flex-shrink: 0;
   }
@@ -76,7 +80,7 @@
 }
 
 .r2-subcat {
-  background: $bg;
+  background: tokens.$bg;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -86,7 +90,7 @@
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: $text;
+  color: tokens.$text;
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -98,7 +102,7 @@
   text-align: left;
 
   .r2-cat-chev {
-    color: $text-muted;
+    color: tokens.$text-muted;
     flex-shrink: 0;
     transition: transform 180ms;
 
@@ -113,7 +117,7 @@
 
   .r2-subcat-count {
     font-size: 10px;
-    color: $text-muted;
+    color: tokens.$text-muted;
     font-weight: 700;
   }
 }
@@ -128,9 +132,9 @@
 .r2-video-btn {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid $border-subtle;
-  background: $surface;
-  color: $text;
+  border: 1px solid tokens.$border-subtle;
+  background: tokens.$surface;
+  color: tokens.$text;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -139,14 +143,14 @@
   transition: all 120ms;
 
   &:hover {
-    background: $accent-bg;
-    border-color: $accent;
+    background: tokens.$accent-bg;
+    border-color: tokens.$accent;
   }
 
   &.playing {
-    background: $yellow;
-    border-color: darken($yellow, 20%);
-    color: $text;
+    background: tokens.$yellow;
+    border-color: color.adjust(tokens.$yellow, $lightness: -20%, $space: hsl);
+    color: tokens.$text;
     font-weight: 800;
   }
 }
