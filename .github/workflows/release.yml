@@ -499,7 +499,12 @@ jobs:
           # Pages Function catch-all sous /saas/* (ADR-071 phase 3) — gère les
           # routes SaaS non couvertes par les stubs statiques.
           test -s 'dist/central-dashboard/functions/saas/[[catchall]].js'
-          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware + _redirects/_headers)"
+          # Pages Function catch-all racine — bloque le fallback HTML pour les
+          # assets 404 (sinon `_headers *.js → immutable` empoisonne le cache
+          # 1 an avec du HTML servi pour les chunks préchargés depuis une deep
+          # route, cf. ADR-071 phase 3 suite).
+          test -s 'dist/central-dashboard/functions/[[catchall]].js'
+          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware root + saas + _redirects/_headers)"
 
       - name: Deploy to Cloudflare Pages
         # workingDirectory : wrangler cherche `functions/` à CWD. En cd-ant
