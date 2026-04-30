@@ -1,3 +1,9 @@
+## [3.278.14](https://github.com/Tallec7/neopro/compare/v3.278.13...v3.278.14) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function root catchall — bloque cache poisoning dashboard (ADR-071) ([#749](https://github.com/Tallec7/neopro/issues/749)) ([9a78a37](https://github.com/Tallec7/neopro/commit/9a78a37fc25736cc19bdd35caaa49245010f8b3b)), closes [#748](https://github.com/Tallec7/neopro/issues/748)
+
 ## [3.278.13](https://github.com/Tallec7/neopro/compare/v3.278.12...v3.278.13) (2026-04-30)
 
 ### Bug Fixes
