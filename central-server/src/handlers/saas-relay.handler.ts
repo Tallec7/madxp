@@ -264,21 +264,6 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     socket.emit('displays-changed', { displays });
   });
 
-  // ADR-106 — preview-slave registration. The Remote V2 mini-thumb iframe
-  // (loaded with `?preview=1`) emits this to receive `tv-loop-state` without
-  // being counted as a display: it does NOT touch state.tvInstances, does
-  // NOT broadcast displays-changed, and does NOT participate in master/slave
-  // election. The socket is already in the siteId room (joined upstream
-  // during saas-register), so room broadcasts reach it for free — we only
-  // need to emit the current loopState immediately so the new preview
-  // doesn't show a black frame.
-  socket.on('tv-preview-register', () => {
-    logger.info('SaaS preview-slave registered', { siteId, socketId: socket.id });
-    if (state.loopState) {
-      socket.emit('tv-loop-state', state.loopState);
-    }
-  });
-
   // Cleanup on disconnect — unregister TV + promote slave if master disconnects
   socket.on('disconnect', () => {
     saasRelayRegistered.delete(socket.id);
@@ -311,6 +296,35 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
         metricsService.recordSaasStatesCount(saasStates.size);
         logger.info('SaaS state released — no remaining clients', { siteId });
       }
+    }
+  });
+}
+
+/**
+ * ADR-106 — preview-slave handler attached on EVERY socket connection
+ * (not gated behind saas-register, because the preview iframe explicitly
+ * skips saas-register to avoid being counted in getSaasClientCount).
+ *
+ * Payload: `{ siteId }`. The handler does `socket.join(siteId)` so room
+ * broadcasts of `tv-loop-state` and `tv-preview-tick` reach the preview,
+ * then emits the current loopState immediately to avoid a black frame.
+ *
+ * Does NOT register the socket as a TV instance (no master/slave election),
+ * does NOT broadcast displays-changed, does NOT touch getSaasClientCount.
+ */
+export function registerPreviewSlaveOnSocket(io: SocketIOServer | null, socket: Socket): void {
+  socket.on('tv-preview-register', (data: Record<string, unknown>) => {
+    const siteId = (data?.siteId as string) || '';
+    if (!siteId) {
+      logger.warn('tv-preview-register missing siteId, ignoring', { socketId: socket.id });
+      return;
+    }
+    socket.join(siteId);
+    logger.info('Preview-slave joined room', { siteId, socketId: socket.id });
+
+    const state = saasStates.get(siteId);
+    if (state?.loopState) {
+      socket.emit('tv-loop-state', state.loopState);
     }
   });
 }

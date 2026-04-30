@@ -47,6 +47,7 @@ import {
   registerSaasRelay as saasRelayRegister,
   getSaasConnectedDisplays as saasGetConnectedDisplays,
   sweepOrphanSaasStates as saasSweepOrphanStates,
+  registerPreviewSlaveOnSocket as saasRegisterPreviewSlaveOnSocket,
 } from '../handlers/saas-relay.handler';
 import { sendSyncProfilesToSite } from './profile-sync.service';
 import {
@@ -281,6 +282,13 @@ class SocketService {
 
   private async handleConnection(socket: Socket) {
     logger.info('New socket connection', { socketId: socket.id });
+
+    // ADR-106 — preview-slave handler attached to EVERY connection.
+    // The Remote V2 mini-thumb iframe (`?preview=1`) skips saas-register
+    // (so it doesn't count in getSaasClientCount) but still needs to join
+    // the siteId room to receive `tv-loop-state` broadcasts. The handler
+    // joins the room and emits the current loopState immediately.
+    saasRegisterPreviewSlaveOnSocket(this.io, socket);
 
     // Dashboard connection with JWT
     const authData = socket.handshake.auth;
