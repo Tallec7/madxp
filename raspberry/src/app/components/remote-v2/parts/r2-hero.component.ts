@@ -26,8 +26,13 @@ export interface DisplayInfo {
       <div class="r2-hero-eyebrow" [class.is-manual]="playingVideo">
         <span class="r2-hero-dot"></span>
         <span>{{ playingVideo ? "Diffusion manuelle" : "À l'antenne" }}</span>
-        <span class="r2-tag r2-tag--live" *ngIf="recording || loopId === 'during'">LIVE</span>
+        <!-- ADR-105 Phase A polish — un seul indicateur d'état (REC > LIVE).
+             REC prend priorité (état le plus urgent à signaler), LIVE n'apparaît
+             que si la boucle "Match" est active sans enregistrement en cours.
+             La pastille rouge sur le thumb reste un bouton action (toggle REC),
+             pas un indicateur dupliqué. -->
         <span class="r2-tag r2-tag--rec" *ngIf="recording">● REC</span>
+        <span class="r2-tag r2-tag--live" *ngIf="!recording && loopId === 'during'">LIVE</span>
       </div>
 
       <div class="r2-hero-main">

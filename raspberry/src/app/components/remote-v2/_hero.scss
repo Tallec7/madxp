@@ -112,13 +112,15 @@
     background: $live;
   }
 
+  // ADR-105 Phase A polish — la pastille thumb reste un bouton action.
+  // L'état "recording" est solide (pas de pulsation) — la pulsation rouge
+  // est portée par la pill REC dans l'eyebrow (source unique d'animation).
   &.active {
     background: $live;
     border-color: #fff;
 
     .r2-rec-dot {
       background: #fff;
-      animation: np-pulse 1.2s ease-in-out infinite;
     }
   }
 }
