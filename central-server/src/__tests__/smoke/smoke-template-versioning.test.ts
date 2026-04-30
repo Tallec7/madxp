@@ -160,3 +160,39 @@ describe('PNG auto_crop service — POC SPEC JOUEUR Q15', () => {
     expect(pkg.devDependencies?.['@types/pngjs']).toBeDefined();
   });
 });
+
+describe('text_transform — runtime + types + repository plumbing', () => {
+  it('TemplateTextField type expose textTransform avec union typée', () => {
+    const types = readFile('types/template-studio.types.ts');
+    expect(types).toMatch(/textTransform:\s*TextTransform/);
+    expect(types).toMatch(/export\s+type\s+TextTransform\s*=\s*'none'\s*\|\s*'uppercase'\s*\|\s*'lowercase'\s*\|\s*'capitalize'/);
+    // DB row aligné avec la colonne SQL
+    expect(types).toMatch(/text_transform:\s*TextTransform/);
+  });
+
+  it('TemplateRuntime expose textTransform sur RuntimeTextField + applique le style CSS', () => {
+    const runtime = fs.readFileSync(
+      path.join(
+        repoRoot,
+        'templates-remotion',
+        'src',
+        'runtime',
+        'TemplateRuntime.tsx'
+      ),
+      'utf8'
+    );
+    // Type field présent
+    expect(runtime).toMatch(/textTransform\?:\s*'none'\s*\|\s*'uppercase'/);
+    // Consommation dans le style CSS du <div> texte (default 'none')
+    expect(runtime).toMatch(/textTransform:\s*tf\.textTransform\s*\?\?\s*'none'/);
+  });
+
+  it('templateStudioRepository mappe text_transform dans le SELECT (default "none")', () => {
+    const repo = readFile('repositories/template-studio.repository.ts');
+    expect(repo).toMatch(/textTransform:\s*r\.text_transform\s*\?\?\s*'none'/);
+    // INSERT contient la colonne text_transform
+    expect(repo).toMatch(/animation_direction,\s*text_transform\)/);
+    // UPDATE colMap contient le mapping
+    expect(repo).toMatch(/textTransform:\s*'text_transform'/);
+  });
+});
