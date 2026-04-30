@@ -139,15 +139,31 @@ export class ManualVideoService {
     const activeManualPlayer = this.doubleBufferService.getActiveManualPlayer();
     const isManualToManual = activeManualPlayer.style.opacity === '1' && !activeManualPlayer.paused;
 
-    // ETAPE 2: En manuel→manuel, l'ancien player reste visible derrière — pas de freeze-frame
-    // (sinon on capture la boucle via le frame périodique → flash boucle pendant ~500ms).
-    // En boucle→manuel, capturer le freeze-frame depuis le player manuel actif (qui est vide/pausé,
-    // donc isManualMode=true force une capture live depuis le player de boucle via fallback).
-    if (!isManualToManual) {
-      const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(false);
-      if (!freezeOk) {
-        this.doubleBufferService.showBlackOverlay();
-      }
+    // ETAPE 2: Toujours afficher un freeze-frame pour masquer la transition.
+    //
+    // Cas boucle→manuel : isManualMode=false → utilise le frame pré-capturé du player loop.
+    //
+    // Cas manuel→manuel (cas d'usage NLF "présentation joueurs") : isManualMode=true →
+    // capture LIVE depuis le player manuel actif (frame du joueur précédent, JAMAIS de la
+    // boucle — voir double-buffer-video.service.ts:574-595). Sans ce freeze + libération
+    // GPU ci-dessous, sur Pi 5 le compositeur Chromium n'arrive pas à allouer un nouveau
+    // SharedImage backing store quand 2 décodeurs vidéo HW tournent en parallèle, ce qui
+    // provoque le bug "click-twice" : la nouvelle vidéo charge mais ne s'affiche pas, et
+    // le user clique à nouveau pour libérer le slot. Symptôme journalctl :
+    // `SharedImageBackingFactory ... format: (Y_UV, 420, 8unorm), size: 1920x1080`.
+    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(isManualToManual);
+    if (!freezeOk) {
+      this.doubleBufferService.showBlackOverlay();
+    }
+
+    // ETAPE 2b: En manuel→manuel uniquement, libérer le décodeur HW de l'ancien player
+    // AVANT de toucher targetPlayer. Le freeze-frame canvas (z-index 20) couvre la
+    // période où l'ancien player n'a plus de src — le user voit le frame figé du
+    // joueur précédent jusqu'à ce que la nouvelle vidéo soit prête.
+    if (isManualToManual) {
+      activeManualPlayer.pause();
+      activeManualPlayer.removeAttribute('src');
+      activeManualPlayer.load();
     }
 
     // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement

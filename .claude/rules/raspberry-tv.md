@@ -168,11 +168,13 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ### Manual Video Transitions
 
-- Ne pas utiliser `getActiveManualPlayer()` pour les DEUX vidéos dans une transition manuel→manuel (utiliser `getInactiveManualPlayer()` pour la nouvelle et garder l'ancien visible)
+- Ne pas utiliser `getActiveManualPlayer()` pour la NOUVELLE vidéo dans une transition manuel→manuel (utiliser `getInactiveManualPlayer()` — le player actif sert uniquement à capturer le freeze-frame du joueur précédent puis à libérer son décodeur HW)
 - Ne pas appeler `showBlackOverlay()` systématiquement dans `play()` (uniquement en fallback si `captureAndShowFreezeFrame()` échoue)
-- Ne pas supprimer le debounce 500ms dans `play()` de `manual-video.service.ts` (protège le décodeur software contre le spam de commandes)
+- Ne pas supprimer le debounce dans `play()` de `manual-video.service.ts` (protège le décodeur software contre le spam de commandes)
 - Ne pas utiliser le frame pré-capturé (boucle) dans `captureAndShowFreezeFrame(isManualMode=true)` (forcer capture live depuis le player manuel)
 - Ne pas oublier `captureAndShowFreezeFrame()` dans `triggerSwitch()` de `video-playback.service.ts` (le early switch path n'a pas de freeze-frame sinon)
+- Ne pas appeler `captureAndShowFreezeFrame(false)` ou `captureAndShowFreezeFrame()` (sans argument) dans le `play()` de `manual-video.service.ts` (toujours passer le flag booléen `isManualToManual` pour que la capture soit LIVE depuis le player manuel actif en transition manuel→manuel)
+- Ne pas omettre `activeManualPlayer.removeAttribute('src') + load()` en transition manuel→manuel (libère le SharedImage backing du décodeur HW Pi 5 — sans ça, le compositeur Chromium ne peut pas allouer de slot pour le nouveau décodeur, la nouvelle vidéo charge mais ne s'affiche pas → bug click-twice cas d'usage NLF "présentation joueurs". Symptôme journalctl : `SharedImageBackingFactory ... format: (Y_UV, 420, 8unorm), size: 1920x1080` — smoke test enforced)
 
 ### Preload & Reveal (ADR-034)
 
@@ -217,12 +219,16 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ## Transition Manuel→Manuel (double-buffering)
 
+Cas d'usage cible : **présentation joueurs NLF** — speaker enchaîne 1 vidéo joueur par seconde, certaines durent 1s, d'autres 10s. Aucune frame de la boucle ne doit jamais être visible entre 2 vidéos joueur.
+
 Quand une vidéo manuelle est déjà visible et qu'une nouvelle est déclenchée :
 
-1. La nouvelle charge sur `getInactiveManualPlayer()` (z-index 11, invisible)
-2. L'ancien player reste visible (z-index 10) — pas de freeze-frame nécessaire
-3. `canplay` (pas `canplaythrough`) + 1×rAF → reveal immédiat
-4. Ancien player nettoyé + `swapActiveManualPlayer()`
-5. Debounce 500ms protège contre le spam
+1. **Capture freeze-frame LIVE** depuis `getActiveManualPlayer()` (frame du joueur précédent, z=20 — masque la transition)
+2. **Libère le décodeur HW Pi 5** : `activeManualPlayer.pause() + removeAttribute('src') + load()` (sans ça, bug click-twice — le compositeur Chromium ne peut pas allouer un nouveau SharedImage backing tant que l'ancien décodeur tient son slot)
+3. La nouvelle vidéo charge sur `getInactiveManualPlayer()` (z-index 10, opacity 0)
+4. `loadeddata` (premier frame décodé) → `play()` → 1×rAF → opacity=1 → `swapActiveManualPlayer()` → `hideFreezeFrame()`
+5. Debounce 150ms protège contre le spam (rapide consécutifs)
 
-Transition boucle→manuel : freeze-frame + `canplaythrough` + 2×rAF + 200ms (inchangé)
+Le user voit : frame figé du joueur précédent (canvas) → joueur suivant qui démarre. Jamais de noir, jamais de boucle, jamais de freeze pré-capturé de la boucle.
+
+Transition boucle→manuel : freeze-frame pré-capturé + `loadeddata` + 1×rAF (inchangé, pas de libération HW car le loop player utilise un autre slot).
