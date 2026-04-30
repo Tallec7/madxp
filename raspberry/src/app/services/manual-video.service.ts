@@ -221,15 +221,24 @@ export class ManualVideoService {
           type RVFCPlayer = HTMLVideoElement & {
             requestVideoFrameCallback?: (cb: () => void) => number;
           };
-          const hideOnPaint = () => {
-            this.doubleBufferService.hideFreezeFrame();
-            this.doubleBufferService.hideBlackOverlay();
+          // hideOnPaint = doit être appelé APRÈS que la frame soit réellement
+          // peinte/composée. requestVideoFrameCallback fire pendant le DOM update,
+          // potentiellement AVANT le paint final. Le rAF supplémentaire à
+          // l'intérieur garantit qu'on attend le commit de paint avant de
+          // découvrir le canvas/overlay (sinon flash boucle 16-32ms persistant
+          // observé en log : freeze hidden APRÈS le revealed log mais le browser
+          // n'avait pas encore composé la frame du nouveau player).
+          const hideAfterPaint = () => {
+            requestAnimationFrame(() => {
+              this.doubleBufferService.hideFreezeFrame();
+              this.doubleBufferService.hideBlackOverlay();
+            });
           };
           const rvfc = (targetPlayer as RVFCPlayer).requestVideoFrameCallback;
           if (typeof rvfc === 'function') {
-            rvfc.call(targetPlayer, hideOnPaint);
+            rvfc.call(targetPlayer, hideAfterPaint);
           } else {
-            hideOnPaint();
+            hideAfterPaint();
           }
 
           // Tracker (desactive pour les slaves)
@@ -495,20 +504,24 @@ export class ManualVideoService {
     // Attendre que le player ait peint sa première frame avant de cacher le
     // freeze-frame ET le black-overlay. Sans ce wait, fenêtre de 1-2 frames où
     // <video> est transparent (Chromium n'applique pas `background:#000` avant
-    // 1ère frame décodée) → la boucle (z=2) flashe à travers. Fallback rAF
-    // immédiat si requestVideoFrameCallback absent (Chromium <92).
+    // 1ère frame décodée) → la boucle (z=2) flashe à travers.
+    // requestVideoFrameCallback fire pendant le DOM update, potentiellement
+    // AVANT le paint final → on chaîne avec un rAF pour attendre le commit
+    // du paint composé avant de découvrir les couches de masquage.
     type RVFCPlayer = HTMLVideoElement & {
       requestVideoFrameCallback?: (cb: () => void) => number;
     };
-    const hideOnPaint = () => {
-      this.doubleBufferService.hideFreezeFrame();
-      this.doubleBufferService.hideBlackOverlay();
+    const hideAfterPaint = () => {
+      requestAnimationFrame(() => {
+        this.doubleBufferService.hideFreezeFrame();
+        this.doubleBufferService.hideBlackOverlay();
+      });
     };
     const rvfc = (player as RVFCPlayer).requestVideoFrameCallback;
     if (typeof rvfc === 'function') {
-      rvfc.call(player, hideOnPaint);
+      rvfc.call(player, hideAfterPaint);
     } else {
-      hideOnPaint();
+      hideAfterPaint();
     }
 
     this.callbacks?.emitPlayerState({
