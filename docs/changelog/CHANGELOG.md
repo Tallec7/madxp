@@ -1,3 +1,9 @@
+## [3.278.10](https://github.com/Tallec7/neopro/compare/v3.278.9...v3.278.10) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function fallback-only (ne pas hijacker /saas/) (ADR-071) ([#743](https://github.com/Tallec7/neopro/issues/743)) ([746564b](https://github.com/Tallec7/neopro/commit/746564b6a509876759f376489722d15e524e9981)), closes [#742](https://github.com/Tallec7/neopro/issues/742)
+
 ## [3.278.9](https://github.com/Tallec7/neopro/compare/v3.278.8...v3.278.9) (2026-04-30)
 
 ### Bug Fixes
