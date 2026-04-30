@@ -141,5 +141,5 @@ Annonce joueur "BUT" : intro logo + titre animé "BUT" en zoom-out, puis packsho
 ## TODO bloquants
 
 - [x] ~~Mesurer durée totale du master~~ → 6'24 @ 25fps = 6960 ms (réponse Daisy)
-- [ ] Confirmer easing du zoom forme hexagonale (linéaire ou easing custom)
-- [ ] Recevoir 4 WebM alpha
+- [x] ~~Confirmer easing du zoom forme hexagonale~~ → linéaire par défaut, ajustable au frame-compare si écart
+- [ ] **Recevoir 4 WebM alpha** ← seul vrai bloquant
