@@ -1,3 +1,9 @@
+## [3.279.1](https://github.com/Tallec7/neopro/compare/v3.279.0...v3.279.1) (2026-04-30)
+
+### Bug Fixes
+
+- **adr-106:** tighten preview drift to ≤200ms (4 fixes) ([#758](https://github.com/Tallec7/neopro/issues/758)) ([01ca3fe](https://github.com/Tallec7/neopro/commit/01ca3fefa67967964ce7b0e627f77aa41ae8dbfd)), closes [#756](https://github.com/Tallec7/neopro/issues/756)
+
 # [3.279.0](https://github.com/Tallec7/neopro/compare/v3.278.19...v3.279.0) (2026-04-30)
 
 ### Features
