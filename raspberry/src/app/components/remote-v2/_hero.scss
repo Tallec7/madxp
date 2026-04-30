@@ -183,6 +183,11 @@
     animation-name: v7-progress;
     animation-timing-function: linear;
     animation-fill-mode: forwards;
+    // Compense la latence socket dashboard → cloud → Pi → TV (~700ms typique).
+    // L'animation démarre quand `playingVideo` est set localement, mais la TV
+    // ne commence à jouer qu'après le round-trip réseau. Sans ce delay, la
+    // barre se termine ~1s avant la fin réelle de la vidéo.
+    animation-delay: 0.7s;
   }
 }
 
