@@ -1,3 +1,9 @@
+## [3.282.2](https://github.com/Tallec7/neopro/compare/v3.282.1...v3.282.2) (2026-04-30)
+
+### Bug Fixes
+
+- **raspberry:** NLF présentation joueurs — click-twice + flash boucle + SITE_ID flotte ([#778](https://github.com/Tallec7/neopro/issues/778)) ([61f4e9c](https://github.com/Tallec7/neopro/commit/61f4e9c146a4017fcb2e4664ff2c73652a5817eb)), closes [#000](https://github.com/Tallec7/neopro/issues/000)
+
 ## [3.282.1](https://github.com/Tallec7/neopro/compare/v3.282.0...v3.282.1) (2026-04-30)
 
 ### Bug Fixes
