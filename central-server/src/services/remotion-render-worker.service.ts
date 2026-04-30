@@ -9,6 +9,7 @@ import {
   remotionRenderJobRepository,
   type RemotionRenderJob,
 } from '../repositories';
+import { templateRenderPropsService } from './template-render-props.service';
 
 /**
  * In-process Remotion render worker (ADR-054).
@@ -155,7 +156,33 @@ async function processJob(job: RemotionRenderJob): Promise<void> {
       compositionId: template.composition_id,
     });
 
-    await runRemotionRender(template.composition_id, outputPath, job.props, job.id);
+    // PR #769 — pour les templates v2 (data-driven), enrichir job.props avec
+    // layers/slots/variants depuis la DB + résolution packshot pluggable
+    // (template_packshot_refs). Pour les v1 legacy, job.props est utilisé tel
+    // quel (props_schema + default_props).
+    let inputProps: Record<string, unknown> = job.props;
+    const enriched = await templateRenderPropsService.buildV2(
+      job.template_id,
+      job.props as {
+        variantId: string;
+        textValues?: Record<string, string>;
+        imageUploads?: Record<string, string>;
+        selectedOptions?: Record<string, string>;
+      }
+    );
+    if (enriched) {
+      inputProps = enriched as unknown as Record<string, unknown>;
+      if (enriched.resolvedPackshotTemplateId) {
+        logger.info('Render with packshot pluggable resolved', {
+          jobId: job.id,
+          parentTemplateId: job.template_id,
+          packshotTemplateId: enriched.resolvedPackshotTemplateId,
+          totalLayers: enriched.layers.length,
+        });
+      }
+    }
+
+    await runRemotionRender(template.composition_id, outputPath, inputProps, job.id);
 
     const stat = fs.statSync(outputPath);
     if (stat.size === 0) throw new Error('Remotion render produced empty file');
