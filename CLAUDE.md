@@ -243,6 +243,7 @@ Voir `docs/specs/README.md` pour le gabarit complet et l'index des SPECs actives
 - **Nouvelle Map/Set instance-level** → cleanup explicite (sweep périodique OU disconnect handler) + métrique Prometheus pour observer la taille.
 - **Nouveau task CRON** → log Winston `info`/`error` + métrique `neopro_*_total` + smoke test associé.
 - **Nouveau handler/service** → au minimum log Winston `info` au start + log `error` au catch.
+- **Commit `feat`/`fix` non-trivial** → au moins une doc MAJ (`docs/**`, `*.md` racine, ou `.claude/rules/**`). Le hook Husky `.husky/pre-push` warne si oubli (warn-only). Cf. `/end-session` étape 3 pour la grille de mapping diff → doc.
 
 ## Anti-patterns interdits
 
