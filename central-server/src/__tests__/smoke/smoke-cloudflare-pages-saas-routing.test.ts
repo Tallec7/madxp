@@ -73,6 +73,26 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     expect(/response\.status\s*===\s*404/.test(fn)).toBe(true);
   });
 
+  it('Pages Function NE fallback PAS les assets 404 (guard cache poisoning)', () => {
+    const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
+    // Guard critique : un 404 sur asset (`*.js`, `*.css`, etc.) DOIT propager
+    // tel quel. Sans ça, `_headers` `*.js → immutable 1 an` cache le HTML
+    // SPA comme JS chunk pendant 1 an dans le CDN + browsers (bug PR #743).
+    expect(fn).toContain('isAssetRequest');
+    expect(/isAssetRequest\s*\(\s*url\.pathname\s*\)/.test(fn)).toBe(true);
+    // Le guard doit court-circuiter AVANT le fallback HTML
+    expect(/return\s+response\s*;[\s\S]{0,200}fallbackUrl/.test(fn)).toBe(true);
+  });
+
+  it('Pages Function override Cache-Control: no-store sur le fallback HTML', () => {
+    const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
+    // Double sécurité : le SPA shell servi en fallback ne doit JAMAIS être
+    // cached (CDN ni browser) pour permettre la récupération après un mauvais
+    // déploiement.
+    expect(fn).toContain("'Cache-Control'");
+    expect(fn).toContain("'no-store'");
+  });
+
   // ------------ build:cloudflare:prod ------------
 
   it('package.json `build:cloudflare:prod` enchaîne route stubs + functions copy', () => {
