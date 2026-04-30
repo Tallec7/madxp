@@ -104,9 +104,9 @@ import {
             </td>
             <td>{{ formatDate(v.published_at) }}</td>
             <td class="counts">
-              {{ v.layers_snapshot?.length || 0 }}L
-              · {{ v.text_fields_snapshot?.length || 0 }}T
-              · {{ v.image_slots_snapshot?.length || 0 }}I
+              {{ (v.layers_snapshot && v.layers_snapshot.length) || 0 }}L
+              · {{ (v.text_fields_snapshot && v.text_fields_snapshot.length) || 0 }}T
+              · {{ (v.image_slots_snapshot && v.image_slots_snapshot.length) || 0 }}I
             </td>
             <td>
               <button

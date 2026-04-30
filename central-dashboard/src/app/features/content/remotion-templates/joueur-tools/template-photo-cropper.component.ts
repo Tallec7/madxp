@@ -13,7 +13,6 @@ import {
   Output,
   inject,
   signal,
-  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -218,13 +217,15 @@ export class TemplatePhotoCropperComponent {
   error = signal<string | null>(null);
   dragOver = signal(false);
 
-  effectiveBboxCenterX = computed(() => (r: AutoCropResult) => {
-    // Centre bbox naturel + offset utilisateur projeté en pixels.
-    const naturalCx = (r.bbox.left + r.bbox.right) / 2;
+  /**
+   * Centre bbox effectif (canvas-pixels) après application de l'offset utilisateur.
+   * Note : on prend le centre canvas + offset (vs bbox naturel) car offset_x est
+   * normalisé sur le demi-canvas, pas sur la bbox. Cohérent avec l'algorithme serveur.
+   */
+  effectiveBboxCenterX(r: AutoCropResult): number {
     const half = (r.canvas_width - 1) / 2;
-    const userPx = this.offsetOverride() * half;
-    return half + userPx;
-  });
+    return half + this.offsetOverride() * half;
+  }
 
   onFileChange(ev: Event): void {
     const input = ev.target as HTMLInputElement;
