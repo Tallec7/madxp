@@ -852,7 +852,7 @@ export const schemas = {
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
 
-  // ADR-106 — fork une version published pour créer une draft v+1
+  // ADR-108 — fork une version published pour créer une draft v+1
   templateFork: Joi.object({
     next_version: Joi.string()
       .pattern(/^\d+\.\d+$/)
@@ -860,14 +860,14 @@ export const schemas = {
       .description("Version semver MAJOR.MINOR (ex '1.1', '2.0')"),
   }),
 
-  // ADR-106 — set default_version (rollback ou promote)
+  // ADR-108 — set default_version (rollback ou promote)
   templateSetDefaultVersion: Joi.object({
     version: Joi.string()
       .pattern(/^\d+\.\d+$/)
       .required(),
   }),
 
-  // ADR-107 — création d'un background couleur (super_admin upload).
+  // ADR-109 — création d'un background couleur (super_admin upload).
   // Le WebM lui-même passe en multipart/form-data (multer), les autres
   // champs sont validés via ce schema.
   templateBackgroundCreate: Joi.object({
@@ -878,14 +878,14 @@ export const schemas = {
     is_public: Joi.boolean().optional(),
   }),
 
-  // ADR-107 — patch background (rename, toggle public, archiver).
+  // ADR-109 — patch background (rename, toggle public, archiver).
   templateBackgroundUpdate: Joi.object({
     name: Joi.string().min(1).max(80).optional(),
     is_public: Joi.boolean().optional(),
     archived: Joi.boolean().optional(),
   }).min(1),
 
-  // ADR-107 — bulk grant : ajout d'un grant à plusieurs users.
+  // ADR-109 — bulk grant : ajout d'un grant à plusieurs users.
   templateBackgroundBulkGrant: Joi.object({
     user_ids: Joi.array()
       .items(Joi.string().uuid())
@@ -1163,7 +1163,7 @@ export const paramSchemas = {
     profileId: Joi.string().uuid().required(),
     tokenId: Joi.string().uuid().required(),
   }),
-  // ADR-107 — revoke d'un grant background pour un user
+  // ADR-109 — revoke d'un grant background pour un user
   backgroundIdAndUserId: Joi.object({
     backgroundId: Joi.string().uuid().required(),
     userId: Joi.string().uuid().required(),

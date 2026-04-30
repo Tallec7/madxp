@@ -1,5 +1,5 @@
 /**
- * ADR-106 — Version manager super_admin.
+ * ADR-108 — Version manager super_admin.
  *
  * Affiche les versions snapshots d'un template + actions :
  *   - Publish (passer draft → published, lock du master)
@@ -36,7 +36,7 @@ import {
     <section class="version-manager">
       <header class="header">
         <div>
-          <h3>Versions (ADR-106)</h3>
+          <h3>Versions (ADR-108)</h3>
           <p class="muted" *ngIf="currentVersion">
             Version courante : <strong>{{ currentVersion }}</strong>
             ·

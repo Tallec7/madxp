@@ -163,7 +163,7 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/my-templates.component').then(m => m.MyTemplatesComponent)
       },
       {
-        // ADR-106 / ADR-107 / SPEC JOUEUR — outils super_admin chantier templates JOUEUR
+        // ADR-108 / ADR-109 / SPEC JOUEUR — outils super_admin chantier templates JOUEUR
         path: 'content/joueur-tools',
         canActivate: [roleGuard],
         data: { roles: ['super_admin'] },

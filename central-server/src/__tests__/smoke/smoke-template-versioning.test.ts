@@ -1,6 +1,6 @@
 /**
  * Smoke tests — Template versioning + backgrounds grants
- * Garde-fous des contrats ADR-106 + ADR-107.
+ * Garde-fous des contrats ADR-108 + ADR-109.
  * File-based assertions only — no HTTP server boot.
  *
  * Protects :
@@ -32,7 +32,7 @@ function readMigration(): string {
   return fs.readFileSync(migrationFile, 'utf8');
 }
 
-describe('Template versioning — ADR-106', () => {
+describe('Template versioning — ADR-108', () => {
   it('migration adds version + status + published_* columns to neopro_templates', () => {
     const sql = readMigration();
     expect(sql).toMatch(/ALTER\s+TABLE\s+neopro_templates/i);
@@ -83,7 +83,7 @@ describe('Slot capabilities — SPEC JOUEUR (text_transform, auto_crop)', () => 
   });
 });
 
-describe('Backgrounds + grants — ADR-107', () => {
+describe('Backgrounds + grants — ADR-109', () => {
   it('migration creates template_backgrounds with hex_color check + uniqueness', () => {
     const sql = readMigration();
     expect(sql).toMatch(/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+template_backgrounds/i);
@@ -161,7 +161,7 @@ describe('PNG auto_crop service — POC SPEC JOUEUR Q15', () => {
   });
 });
 
-describe('Versioning API — ADR-106 endpoints publish/fork/list/setDefault', () => {
+describe('Versioning API — ADR-108 endpoints publish/fork/list/setDefault', () => {
   it('repository expose publish + fork + listByTemplate + findVersion + setDefaultVersion', () => {
     const repo = readFile('repositories/template-versions.repository.ts');
     expect(repo).toMatch(/async\s+publish\s*\(/);
@@ -270,7 +270,7 @@ describe('Auto-crop API — POST /photo/auto-crop (SPEC JOUEUR Q15)', () => {
   });
 });
 
-describe('Backgrounds API — ADR-107 catalogue + grants', () => {
+describe('Backgrounds API — ADR-109 catalogue + grants', () => {
   it('repository expose listAll + update + listGrants', () => {
     const repo = readFile('repositories/template-backgrounds.repository.ts');
     expect(repo).toMatch(/async\s+listAll\s*\(/);

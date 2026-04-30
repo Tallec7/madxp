@@ -1,4 +1,4 @@
-# ADR-107 : Template Studio v2 — backgrounds couleur et grants par user
+# ADR-109 : Template Studio v2 — backgrounds couleur et grants par user
 
 **Date** : 2026-04-30
 **Statut** : Proposé
@@ -181,7 +181,7 @@ WHERE b.archived_at IS NULL
 
 ## Plan d'implémentation
 
-### Phase 1 — Migration DB (incluse dans la PR ADR-106)
+### Phase 1 — Migration DB (incluse dans la PR ADR-108)
 
 1. Migration `add-template-backgrounds-and-grants.sql` (cf. §2.1)
 2. Repository `templateBackgroundsRepository` avec méthodes :
@@ -216,7 +216,7 @@ WHERE b.archived_at IS NULL
 
 - ADR-082 — Video Club Grants (pattern source)
 - ADR-086 — Template Studio n-layers
-- [ADR-106](ADR-106-template-versioning-and-master-locking.md) — Versioning des templates (couplé)
+- [ADR-108](ADR-108-template-versioning-and-master-locking.md) — Versioning des templates (couplé)
 - [PR #757](https://github.com/Tallec7/neopro/pull/757) — SPEC famille JOUEUR
 - [JOUEUR-SPEC-GLOBAL.md §5.3](../templates/JOUEUR-SPEC-GLOBAL.md) — exigence visibilité backgrounds
 - [JOUEUR-ACTION-PLAN.md §3.1](../templates/JOUEUR-ACTION-PLAN.md) — plan d'implémentation

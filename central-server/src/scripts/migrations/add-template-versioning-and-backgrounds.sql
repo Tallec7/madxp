@@ -1,4 +1,4 @@
--- Migration: Template Versioning + Backgrounds Grants — ADR-106 + ADR-107
+-- Migration: Template Versioning + Backgrounds Grants — ADR-108 + ADR-109
 --
 -- Phase 1 du chantier templates JOUEUR (PR #757) :
 --   1) Versioning des templates (semver, snapshot immutable, fork/rollback)
@@ -10,8 +10,8 @@
 -- template existant, sans changer leur comportement runtime.
 --
 -- Refs :
---   - ADR-106 (versioning + verrouillage)
---   - ADR-107 (backgrounds + grants)
+--   - ADR-108 (versioning + verrouillage)
+--   - ADR-109 (backgrounds + grants)
 --   - SPEC famille JOUEUR : docs/templates/JOUEUR-SPEC-GLOBAL.md
 
 -- =============================================================================
@@ -27,11 +27,11 @@ ALTER TABLE neopro_templates
   ADD COLUMN IF NOT EXISTS parent_template_id UUID REFERENCES neopro_templates(id);
 
 COMMENT ON COLUMN neopro_templates.version IS
-  'ADR-106 : version semver du template (MAJOR.MINOR). Slug + version = identité unique.';
+  'ADR-108 : version semver du template (MAJOR.MINOR). Slug + version = identité unique.';
 COMMENT ON COLUMN neopro_templates.status IS
-  'ADR-106 : draft = mutable, published = locked immutable, archived = rollback only.';
+  'ADR-108 : draft = mutable, published = locked immutable, archived = rollback only.';
 COMMENT ON COLUMN neopro_templates.parent_template_id IS
-  'ADR-106 : si fork, pointe sur la version parente (tracé d''origine).';
+  'ADR-108 : si fork, pointe sur la version parente (tracé d''origine).';
 
 -- Snapshot immutable d'une version publiée
 -- NOTE : table distincte de `neopro_template_versions` (ADR-054/055) qui ne
@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_template_versions_tpl_ver
   ON template_versions (template_id, version);
 
 COMMENT ON TABLE template_versions IS
-  'ADR-106 : snapshots immutables des versions publiées. Source de vérité runtime.';
+  'ADR-108 : snapshots immutables des versions publiées. Source de vérité runtime.';
 
 -- =============================================================================
 -- 2) SLOT CAPABILITIES — extensions ADR-086/095 pour SPECs JOUEUR
@@ -69,7 +69,7 @@ ALTER TABLE template_text_fields
     DEFAULT 'none';
 
 COMMENT ON COLUMN template_text_fields.text_transform IS
-  'ADR-106 (SPEC JOUEUR) : transformation typographique appliquée par le runtime.';
+  'ADR-108 (SPEC JOUEUR) : transformation typographique appliquée par le runtime.';
 
 -- auto_crop + user_offset_x : cadrage auto photo joueur (SPEC packshot IMG)
 -- require_alpha : refuse les PNG sans canal alpha (photo détourée obligatoire)
@@ -87,7 +87,7 @@ COMMENT ON COLUMN template_image_slots.require_alpha IS
   'SPEC JOUEUR : refuse les PNG sans canal alpha (détourage obligatoire).';
 
 -- =============================================================================
--- 3) BACKGROUNDS — catalogue + grants user_id (ADR-107)
+-- 3) BACKGROUNDS — catalogue + grants user_id (ADR-109)
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS template_backgrounds (
@@ -107,7 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_template_backgrounds_public
   WHERE archived_at IS NULL;
 
 COMMENT ON TABLE template_backgrounds IS
-  'ADR-107 : catalogue des fonds couleur WebM alpha. Upload super_admin.';
+  'ADR-109 : catalogue des fonds couleur WebM alpha. Upload super_admin.';
 
 -- Grants user-level (pattern ADR-082 Video Club Grants)
 CREATE TABLE IF NOT EXISTS template_backgrounds_grants (
@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_tbg_user
   ON template_backgrounds_grants (user_id);
 
 COMMENT ON TABLE template_backgrounds_grants IS
-  'ADR-107 : grants user_id pour visibilité restreinte des backgrounds.';
+  'ADR-109 : grants user_id pour visibilité restreinte des backgrounds.';
 
 -- =============================================================================
 -- 4) BACKFILL — templates existants

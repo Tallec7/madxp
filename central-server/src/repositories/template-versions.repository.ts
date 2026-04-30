@@ -1,5 +1,5 @@
 /**
- * ADR-106 — Template Versioning Repository
+ * ADR-108 — Template Versioning Repository
  *
  * Gère le cycle de vie des versions des templates v2 (data-driven studio) :
  *   - publish : draft → published, snapshot immutable des layers/slots/variants
@@ -10,7 +10,7 @@
  * NB : la table `template_versions` est SÉPARÉE de la legacy `neopro_template_versions`
  * (ADR-054/055) qui ne snapshot que props_schema/default_props pour les templates v1.
  *
- * Refs : ADR-106 §2, migration `add-template-versioning-and-backgrounds.sql`.
+ * Refs : ADR-108 §2, migration `add-template-versioning-and-backgrounds.sql`.
  */
 
 import type { QueryResultRow } from 'pg';

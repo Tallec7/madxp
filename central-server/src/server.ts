@@ -549,7 +549,7 @@ app.use('/api/remotion-templates', templateStudioRoutes);
 app.use('/api/remotion-templates', remotionTemplatesRoutes);
 // ADR-075 V3 Phase B — Club self-service templates
 app.use('/api/club/remotion-templates', clubTemplatesRoutes);
-// ADR-107 — Template Backgrounds (catalogue + grants user_id)
+// ADR-109 — Template Backgrounds (catalogue + grants user_id)
 app.use('/api/templates/backgrounds', templateBackgroundsRoutes);
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler

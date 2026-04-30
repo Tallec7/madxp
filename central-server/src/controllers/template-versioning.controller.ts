@@ -1,12 +1,12 @@
 /**
- * ADR-106 — Template Versioning controllers.
+ * ADR-108 — Template Versioning controllers.
  * 4 endpoints super_admin :
  *   - POST  /:id/publish              → snapshot + lock du master
  *   - POST  /:id/fork                 → clone draft v+1 d'un master published
  *   - GET   /:id/versions             → liste les snapshots du template
  *   - PATCH /:id/default-version      → rollback ou promote (set version courante)
  *
- * Refs : ADR-106 §Plan Phase 2.
+ * Refs : ADR-108 §Plan Phase 2.
  */
 
 import type { Response } from 'express';

@@ -21,7 +21,7 @@ PRs prêtes à review :
 
 ### Documentation
 - 5 SPECs livrées : globale transverse + Joueur Simple + Joueur But + 2 packshots
-- 2 ADRs rédigés : ADR-106 (versioning) + ADR-107 (backgrounds + grants)
+- 2 ADRs rédigés : ADR-108 (versioning) + ADR-109 (backgrounds + grants)
 - Plan d'action 3 semaines / 3 fronts (cf. JOUEUR-ACTION-PLAN.md)
 
 ### Backend (PR #760)
@@ -135,8 +135,8 @@ Drop 3-4 photos types (centrée / décalée / différents cadrages) → si le re
 
 - [JOUEUR-SPEC-GLOBAL.md](JOUEUR-SPEC-GLOBAL.md) — vue d'ensemble + invariants
 - [JOUEUR-ACTION-PLAN.md](JOUEUR-ACTION-PLAN.md) — plan détaillé 3 semaines
-- [ADR-106](../adr/ADR-106-template-versioning-and-master-locking.md) — versioning
-- [ADR-107](../adr/ADR-107-template-backgrounds-grants.md) — backgrounds + grants
+- [ADR-108](../adr/ADR-108-template-versioning-and-master-locking.md) — versioning
+- [ADR-109](../adr/ADR-109-template-backgrounds-grants.md) — backgrounds + grants
 - [PR #757](https://github.com/Tallec7/neopro/pull/757) — SPECs + ADRs
 - [PR #760](https://github.com/Tallec7/neopro/pull/760) — code backend + UI
 

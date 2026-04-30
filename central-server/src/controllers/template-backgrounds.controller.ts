@@ -1,5 +1,5 @@
 /**
- * ADR-107 — Template Backgrounds controllers (CRUD + grants).
+ * ADR-109 — Template Backgrounds controllers (CRUD + grants).
  *
  * Endpoints :
  *   GET    /api/templates/backgrounds              → list pour user (filtré grants)

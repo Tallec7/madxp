@@ -15,7 +15,7 @@
  *
  * Refs :
  *   - SPEC PACKSHOT_IMG : docs/templates/packshots/img/SPEC.md (auto_crop)
- *   - ADR-106 §Slot capabilities : require_alpha + auto_crop
+ *   - ADR-108 §Slot capabilities : require_alpha + auto_crop
  */
 
 import { PNG } from 'pngjs';

@@ -1,4 +1,4 @@
-# ADR-106 : Template Studio v2 — versioning et verrouillage des masters
+# ADR-108 : Template Studio v2 — versioning et verrouillage des masters
 
 **Date** : 2026-04-30
 **Statut** : Proposé

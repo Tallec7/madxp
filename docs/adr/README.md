@@ -121,6 +121,8 @@ Un ADR documente une décision technique importante avec :
 | [ADR-103](ADR-103-web-and-livestream-content-in-playback-loops.md)              | Pages web & livestreams en mode manuel ET dans les boucles vidéo — étend ADR-089             | Proposé                           | Avr 2026 |
 | [ADR-105](ADR-105-tv-preview-iframe-local-first.md)                             | Preview TV via iframe local-first (remplace ADR-101 MJPEG + ADR-104 HTTP pull)               | Accepté                           | Avr 2026 |
 | [ADR-106](ADR-106-preview-slave-sync.md)                                        | Sync 1:1 du preview iframe avec le master TV (rôle preview-slave) — étend ADR-105            | Accepté                           | Avr 2026 |
+| [ADR-108](ADR-108-template-versioning-and-master-locking.md)                    | Versioning sémantique des templates v2 + verrouillage des masters (snapshot, fork, rollback) | Proposé                           | Avr 2026 |
+| [ADR-109](ADR-109-template-backgrounds-grants.md)                               | Catalogue backgrounds couleur + grants user_id (pattern ADR-082)                             | Proposé                           | Avr 2026 |
 
 ### Supersédés
 

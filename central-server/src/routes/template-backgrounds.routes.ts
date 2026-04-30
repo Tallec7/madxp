@@ -1,5 +1,5 @@
 /**
- * ADR-107 — Template Backgrounds routes.
+ * ADR-109 — Template Backgrounds routes.
  * Monté sous `/api/templates/backgrounds` dans server.ts.
  */
 

@@ -1,5 +1,5 @@
 /**
- * ADR-107 — Template Backgrounds Repository
+ * ADR-109 — Template Backgrounds Repository
  *
  * Catalogue des fonds couleur WebM alpha (uploads super_admin) + grants user_id
  * pour visibilité restreinte. Pattern aligné avec ADR-082 (Video Club Grants).
@@ -40,7 +40,7 @@ class TemplateBackgroundsRepository {
    * - Backgrounds restreints (is_public = false) : seulement ceux avec un grant
    * - Soft-deleted (archived_at IS NOT NULL) : exclus
    *
-   * Cf. ADR-107 §2.2.
+   * Cf. ADR-109 §2.2.
    */
   async listForUser(userId: string): Promise<TemplateBackground[]> {
     const result = await query<TemplateBackground>(

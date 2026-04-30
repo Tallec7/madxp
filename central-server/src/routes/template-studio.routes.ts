@@ -169,7 +169,7 @@ router.delete(
   ctrl.deleteImageSlot,
 );
 
-// ── Versioning v2 (ADR-106) ────────────────────────────────────────────────
+// ── Versioning v2 (ADR-108) ────────────────────────────────────────────────
 router.post(
   '/:id/publish',
   ...adminOnly,

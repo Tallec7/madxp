@@ -1,5 +1,5 @@
 /**
- * ADR-107 — Backgrounds manager super_admin.
+ * ADR-109 — Backgrounds manager super_admin.
  *
  * Liste les fonds couleur du catalogue avec :
  *   - Upload nouveau background (WebM + name + hex_color + visibility)
@@ -32,7 +32,7 @@ import {
   template: `
     <section class="bg-manager">
       <header>
-        <h3>Backgrounds (ADR-107)</h3>
+        <h3>Backgrounds (ADR-109)</h3>
         <button type="button" class="btn btn-primary" (click)="toggleUpload()">
           {{ uploadOpen() ? '× Annuler' : '+ Upload background' }}
         </button>
