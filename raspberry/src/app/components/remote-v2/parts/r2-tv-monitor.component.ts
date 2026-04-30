@@ -36,12 +36,11 @@ import { R2IconComponent } from '../icons/r2-icon.component';
   imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
-    /* ADR-105 Phase A — le composant rend une card 16:9 sous le hero par
-       défaut (mobile + desktop-centered/sidebar). Le layout desktop-pro
-       l'override pour le placer en col 3 (cf. _desktop-pro.scss). */
+    /* ADR-105 Phase A: le monitor 16/9 est strictement reserve au layout
+       desktop-pro (col 3 master-detail). Sur tous les autres layouts, le
+       preview vit dans le mini-thumb du hero (.r2-tv-thumb). */
     :host {
-      display: block;
-      margin: 12px 16px 0;
+      display: none;
     }
     .r2-tv-monitor {
       display: block;

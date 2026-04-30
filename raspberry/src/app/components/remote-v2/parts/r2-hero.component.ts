@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PiConfigVideoEntry } from '../../../interfaces/video.interface';
 
 export type Loop = 'neutral' | 'before' | 'during' | 'after';
@@ -19,7 +20,7 @@ export interface DisplayInfo {
   standalone: true,
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: [':host { display: contents; }'],
+  styles: [':host{display:contents}.r2-tv-thumb-iframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none;opacity:0;transition:opacity 200ms ease;z-index:1}.r2-tv-thumb-iframe.is-loaded{opacity:1}'],
   template: `
     <section class="r2-hero">
       <div class="r2-hero-eyebrow" [class.is-manual]="playingVideo">
@@ -35,9 +36,23 @@ export interface DisplayInfo {
           [class.is-manual]="playingVideo"
           [class.has-preview]="!!previewUrl"
         >
-          <!-- ADR-105 — pas d'iframe dans le mini-thumb 60x38 (mini-thumb
-               reste un placeholder gradient). Le preview live vit uniquement
-               dans app-r2-tv-monitor en layout desktop-pro. -->
+          <!-- ADR-105 Phase A — preview TV directement dans le mini-thumb du
+               hero. L'iframe est nativement dimensionnée à la taille du thumb
+               (60×38 mobile, 96×54 desktop) — pas de scale CSS, le TvComponent
+               s'adapte responsivement. Containment strict via overflow:hidden
+               du parent (.r2-tv-thumb a déjà position: relative + overflow). -->
+          <iframe
+            *ngIf="safePreviewUrl()"
+            class="r2-tv-thumb-iframe"
+            [class.is-loaded]="iframeLoaded()"
+            [src]="safePreviewUrl()"
+            (load)="onIframeLoad()"
+            sandbox="allow-scripts allow-same-origin"
+            loading="lazy"
+            aria-hidden="true"
+            tabindex="-1"
+            title="Preview TV"
+          ></iframe>
           <span class="r2-tv-scanline"></span>
           <button
             class="r2-rec-badge"
@@ -116,7 +131,9 @@ export interface DisplayInfo {
     </section>
   `,
 })
-export class R2HeroComponent {
+export class R2HeroComponent implements OnChanges {
+  private readonly sanitizer = inject(DomSanitizer);
+
   @Input() loopId: Loop = 'during';
   @Input() loopVideoName?: string;
   @Input() playingVideo: PiConfigVideoEntry | null = null;
@@ -125,13 +142,28 @@ export class R2HeroComponent {
   @Input() displays: DisplayInfo[] = [];
   @Input() targetDisplay = 'all';
   /**
-   * ADR-105 — historiquement utilisé pour le MJPEG mini-thumb du hero, désormais
-   * ignoré (l'iframe SPA ne peut pas être contenue proprement dans 60×38 sans
-   * casser le layout). Conservé pour compatibilité avec le contrat du parent
-   * `RemoteV2Component.heroPreviewUrl()` ; à supprimer si le parent arrête de
-   * le passer. Le preview live vit dans `<app-r2-tv-monitor>` (desktop-pro).
+   * ADR-105 Phase A — URL de l'iframe TV preview, injectée dans le mini-thumb
+   * du hero. Construite par le parent (`RemoteV2Component.heroPreviewUrl()`)
+   * à partir de `document.baseURI + display/0?preview=1`. `null` ⇒ pas
+   * d'iframe, le thumb reste un gradient placeholder.
    */
   @Input() previewUrl: string | null = null;
+
+  readonly safePreviewUrl = signal<SafeResourceUrl | null>(null);
+  readonly iframeLoaded = signal(false);
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if ('previewUrl' in changes) {
+      this.iframeLoaded.set(false);
+      this.safePreviewUrl.set(
+        this.previewUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl) : null,
+      );
+    }
+  }
+
+  onIframeLoad(): void {
+    this.iframeLoaded.set(true);
+  }
 
   @Output() setLoop = new EventEmitter<Loop>();
   @Output() setTargetDisplay = new EventEmitter<string>();
