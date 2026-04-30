@@ -10,15 +10,21 @@
         }}
       </p>
     </div>
-    <button
-      *ngIf="isSuperAdmin"
-      type="button"
-      class="btn btn-primary"
-      (click)="openWizard()"
-      data-testid="create-template-btn"
-    >
-      + Nouveau template
-    </button>
+    <div class="header-actions" *ngIf="isSuperAdmin">
+      <a
+        routerLink="/content/joueur-tools"
+        class="btn btn-secondary"
+        title="Outils super_admin chantier templates JOUEUR (auto-crop, backgrounds, versions)"
+      >🛠 Outils JOUEUR</a>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="openWizard()"
+        data-testid="create-template-btn"
+      >
+        + Nouveau template
+      </button>
+    </div>
   </div>
 
   <app-create-template-wizard
