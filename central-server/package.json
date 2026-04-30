@@ -13,6 +13,7 @@
     "create-admin": "ts-node src/scripts/create-admin.ts",
     "hotspot:status": "ts-node src/scripts/hotspot-bootstrap-status.ts",
     "db:backfill-legacy-templates-v2": "ts-node src/scripts/backfill-legacy-templates-v2-assets.ts",
+    "db:backfill-video-durations": "ts-node src/scripts/backfill-video-durations.ts",
     "template:import": "ts-node src/scripts/import-template-spec.ts",
     "template:test-bbox": "ts-node src/scripts/test-png-bbox.ts",
     "template:preview-bbox": "ts-node src/scripts/preview-bbox-server.ts",
