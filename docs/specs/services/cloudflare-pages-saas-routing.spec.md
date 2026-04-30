@@ -1,6 +1,6 @@
 ---
 status: actif
-last-update: 2026-04-29
+last-update: 2026-04-30
 domain: hosting
 ---
 
@@ -48,6 +48,30 @@ Solution : `scripts/cloudflare-saas-route-stubs.sh` est exécuté en fin de `bui
 - `curl -sL https://neopro-admin.kalonpartners.bzh/sites/<uuid>` retourne le HTML dashboard avec `<base href="/">` et `<title>NEOPRO - Dashboard Central</title>`.
 - Le verify CI (step `Verify deployment` du job `deploy-frontend-cloudflare`) échoue si `assert_saas_html()` ne trouve pas `<base href="/saas/">` sur les routes SaaS.
 - Cloudflare retourne 308 redirect sur `/saas/<route>` (sans slash) → `/saas/<route>/` (avec slash) à cause des index.html stubs ; le browser et `curl -L` suivent transparently.
+
+## Garde-fous anti cache-poisoning (PRs #748/#749/#750)
+
+Cloudflare Pages cumule 4 couches qui empoisonnent le cache de chunks JS si on n'intercepte pas explicitement :
+
+1. **`env.ASSETS.fetch` SPA fallback intrinsèque** : retourne `index.html` 200 pour tout path inconnu, **même sans `_redirects`**.
+2. **`_headers` `/*.js → immutable 1 an`** : s'applique sur l'URL même si le contenu réel est HTML.
+3. **`Link: <chunk-X>; rel="modulepreload"` HTTP headers** : auto-générés par CF Pages depuis les `<link>` du HTML, résolus côté browser **relativement à l'URL de la réponse** (pas au `<base href>`). Sur deep routes (`/saas/display/0/`, etc.), les paths résolvent vers des chemins inexistants.
+4. **Edge cache CDN** : distribue les réponses pourries à 300+ POPs.
+
+**2 Pages Functions appliquent les guards** (`central-dashboard/cloudflare/functions/[[catchall]].js` pour root + `/saas/[[catchall]].js` pour SaaS) :
+
+- `isAssetRequest(url.pathname) && isHtmlResponse(response)` → retourne **404 explicite + `Cache-Control: no-store`** au lieu de laisser CF servir le HTML fallback.
+- `stripModulePreloadLinks(response)` → retire les directives `rel="modulepreload"` des Link headers HTTP. Le browser tombe alors uniquement sur les `<link>` du body HTML, parsés APRÈS `<base href>` et résolus correctement.
+- `overrideCacheNoStore(response)` → force `Cache-Control: no-store` sur tout HTML servi en fallback (route SPA), empêchant tout cache transitoire de polluer le CDN.
+
+Smoke tests `smoke-cloudflare-pages-saas-routing.test.ts` matérialisent ces 3 helpers comme invariants. Toute régression future (suppression d'un guard, retour à un fallback HTML pour asset 404) bloque en CI.
+
+### Recovery après empoisonnement (procédure ops)
+
+Si une fenêtre de bug a empoisonné le cache (CDN + browsers) :
+1. Merger le fix qui colmate la couche fautive.
+2. **Cloudflare Dashboard → Pages → `neopro-frontend-prod` → Caching → Purge Everything** (1 clic, instantané sur le CDN).
+3. Côté users impactés : hard-refresh (Cmd+Shift+R) ou attendre l'expiration (jusqu'à 1 an si `immutable`).
 
 ## Cas d'edge connus
 
