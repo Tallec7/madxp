@@ -1,3 +1,9 @@
+## [3.278.13](https://github.com/Tallec7/neopro/compare/v3.278.12...v3.278.13) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** empêche cache poisoning des chunks via Function fallback (ADR-071) ([#748](https://github.com/Tallec7/neopro/issues/748)) ([96ed3a8](https://github.com/Tallec7/neopro/commit/96ed3a892864e9fe0ad1eca6c8b9551e32d9fffa)), closes [#743](https://github.com/Tallec7/neopro/issues/743)
+
 ## [3.278.12](https://github.com/Tallec7/neopro/compare/v3.278.11...v3.278.12) (2026-04-30)
 
 ### Bug Fixes
