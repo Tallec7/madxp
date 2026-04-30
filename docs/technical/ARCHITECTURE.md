@@ -489,6 +489,43 @@ UI réconciliée (optimistic → autoritaire)
 
 **Coexistence** (ADR-061) : toggle `v1`/`v2` per-siteId localStorage, sunset automatique `2026-11-01`. Métriques `neopro_remote_client_version_total` pour pilotage adoption.
 
+#### Web pages & livestreams dans la boucle (ADR-103)
+
+Contenus first-class non-vidéo intégrés à la rotation MP4 :
+
+```
+Dashboard / Remote V2 (ajout contenu web/live)
+         │ POST /api/sites/:id/web-content  (type: web_page | livestream, durationSeconds)
+         ▼
+Central Server (web-content.controller.ts → web-content.repository.ts)
+         │ INSERT video {content_type: 'web_page'|'livestream', synthetic storage_path}
+         ▼ (Pi)                                                ▼ (SaaS)
+sync-agent (web-content-sync.js)                       saas.controller.ts
+   pull on reconnect + refresh 30min                       inject pseudo-cat 'web-content'
+         │                                                    │
+         ▼                                                    ▼
+Pi Local Server (loop dispatch by contentType)         SaaS frame (iframe / hls.js lazy)
+   web_page  → iframe sandbox + freeze 2× rAF        master/slave sync dual-display
+   livestream → hls.js Chromium                       (Phase 1.5b)
+         │
+         ▼
+TV (paint-stable reveal, anti-flash 250ms)
+```
+
+**Phase 4 supervision** : `neopro_web_content_fetch_total{status}`, `neopro_web_content_loop_dispatch_total{type}`, alertes Prometheus fetch failures + livestream interruptions.
+
+#### TV preview live dans la Remote V2 PC C (régie pro)
+
+Mini-écran live intégré à la Remote — transport différencié SaaS vs Pi local :
+
+| Mode                 | Transport             | ADR     | Détail                                                                                |
+| -------------------- | --------------------- | ------- | ------------------------------------------------------------------------------------- |
+| Pi local LAN         | iframe locale         | ADR-105 | `<iframe>` qui charge `http://neopro.local/tv?display=0` scaled 60×38. 0 latence.     |
+| Pi → Remote distante | MJPEG + HMAC TTL 5min | ADR-101 | Pi 5 capture HDMI → Socket.IO → Remote en mobile hotspot. Throttle CPU/temp.          |
+| SaaS                 | HTTP pull snapshot    | ADR-104 | TV SaaS pousse snapshot R2 → Remote pull périodique. Évite rate-limit Cloudflare 429. |
+
+Single-subscriber par Pi (1 régie = 1 stream). Throttle priorité absolue à la TV publique : si CPU/temp dépasse seuil, le preview s'éteint, **pas la TV**.
+
 ### 4. Multi-config profiles
 
 ```

@@ -1,3 +1,9 @@
+## [3.278.18](https://github.com/Tallec7/neopro/compare/v3.278.17...v3.278.18) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** containment iframe r2-tv-monitor (ADR-105) ([#754](https://github.com/Tallec7/neopro/issues/754)) ([9e453cb](https://github.com/Tallec7/neopro/commit/9e453cb77049ff1af7f21afdfb17f0ca2db34044)), closes [#730](https://github.com/Tallec7/neopro/issues/730)
+
 ## [3.278.17](https://github.com/Tallec7/neopro/compare/v3.278.16...v3.278.17) (2026-04-30)
 
 ### Bug Fixes

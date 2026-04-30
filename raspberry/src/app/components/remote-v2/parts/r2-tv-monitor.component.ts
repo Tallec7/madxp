@@ -46,10 +46,14 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       display: block;
     }
     /* aspect-ratio 16:9 = ratio TV natif. Le frame est l'unique ancestor
-       positionné de l'iframe absolute — garantit le containment. */
+       positionné de l'iframe absolute — garantit le containment.
+       Sans position:relative + aspect-ratio, l'iframe absolute/inset:0
+       s'anchor sur le <body> et couvre tout le viewport (régression
+       observée 2026-04-30 sur viewport mobile). */
     .r2-tv-monitor-frame {
       position: relative;
       aspect-ratio: 16 / 9;
+      width: 100%;
       border-radius: 14px;
       overflow: hidden;
       background: #0e1116;
@@ -91,7 +95,9 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       text-align: center;
       padding: 16px;
       transition: opacity 200ms ease;
+      pointer-events: none;
     }
+    .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
     .r2-tv-monitor-info { display: flex; flex-direction: column; gap: 2px; }
     .r2-tv-monitor-eyebrow {
       font-size: 10px;
@@ -113,7 +119,6 @@ import { R2IconComponent } from '../icons/r2-icon.component';
       transition: opacity 200ms ease;
     }
     .r2-tv-monitor-stream.is-loaded { opacity: 1; }
-    .r2-tv-monitor-content.is-hidden-by-stream { opacity: 0; pointer-events: none; }
   `],
   template: `
     <section class="r2-tv-monitor" [class.is-manual]="playingVideo" [class.is-idle]="isIdle" [class.is-streaming]="streamLoaded()">
