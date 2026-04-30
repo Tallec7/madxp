@@ -84,15 +84,22 @@
       min-height: calc(100vh - 60px);
     }
 
-    // Col 3 stack — chaque élément se place dans sa propre row via auto-flow
+    // Col 3 stack — override le default (card sous le hero) pour placer
+    // le monitor en col 3 du grid pro. `display: contents` sur le host pour
+    // que le grid voie le `<section.r2-tv-monitor>` directement.
     .r2-tv-monitor-host {
       display: contents;
+      margin: 0;
     }
     .r2-tv-monitor {
       display: block;
       grid-column: 3 / 4;
       padding: 16px 16px 0;
       background: var(--r2-bg);
+    }
+    // Le frame du monitor en col 3 garde sa hauteur 16/9 native.
+    .r2-tv-monitor-frame {
+      box-shadow: none;
     }
 
     .r2-widgets {

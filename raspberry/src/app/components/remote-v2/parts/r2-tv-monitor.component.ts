@@ -36,7 +36,73 @@ import { R2IconComponent } from '../icons/r2-icon.component';
   imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
-    :host { display: contents; }
+    /* ADR-105 Phase A — le composant rend une card 16:9 sous le hero par
+       défaut (mobile + desktop-centered/sidebar). Le layout desktop-pro
+       l'override pour le placer en col 3 (cf. _desktop-pro.scss). */
+    :host {
+      display: block;
+      margin: 12px 16px 0;
+    }
+    .r2-tv-monitor {
+      display: block;
+    }
+    /* aspect-ratio 16:9 = ratio TV natif. Le frame est l'unique ancestor
+       positionné de l'iframe absolute — garantit le containment. */
+    .r2-tv-monitor-frame {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0e1116;
+      box-shadow: 0 8px 20px -8px rgba(16, 24, 40, 0.25);
+    }
+    .r2-tv-monitor-status {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+    .r2-tv-monitor-status .r2-tv-monitor-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 99px;
+      background: #ef4444;
+      animation: np-pulse 1.4s ease-in-out infinite;
+    }
+    .r2-tv-monitor-status--idle .r2-tv-monitor-dot { display: none; }
+    .r2-tv-monitor-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.85);
+      text-align: center;
+      padding: 16px;
+      transition: opacity 200ms ease;
+    }
+    .r2-tv-monitor-info { display: flex; flex-direction: column; gap: 2px; }
+    .r2-tv-monitor-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.55);
+    }
+    .r2-tv-monitor-name { font-size: 14px; font-weight: 700; }
+    .r2-tv-monitor-subline { font-size: 11px; color: rgba(255, 255, 255, 0.55); }
     .r2-tv-monitor-stream {
       position: absolute;
       inset: 0;
