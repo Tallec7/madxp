@@ -1,3 +1,9 @@
+# [3.279.0](https://github.com/Tallec7/neopro/compare/v3.278.19...v3.279.0) (2026-04-30)
+
+### Features
+
+- **adr-106:** sync 1:1 preview iframe ↔ master TV (preview-slave) ([#756](https://github.com/Tallec7/neopro/issues/756)) ([2db7e67](https://github.com/Tallec7/neopro/commit/2db7e674911d096a9f0b001e3060712dee2a9801))
+
 ## [3.278.19](https://github.com/Tallec7/neopro/compare/v3.278.18...v3.278.19) (2026-04-30)
 
 ### Bug Fixes
