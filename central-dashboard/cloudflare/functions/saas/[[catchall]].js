@@ -9,20 +9,31 @@
  * MIME errors sur les chunks (le browser résout les Link-header preloads
  * relativement à l'URL de réponse → `/saas/chunk-*.js` qui n'existent pas).
  *
- * Cette Function catch tout `/saas/<anything>` :
- * - Si path = asset statique (extension) → laisser Pages le servir normalement
- * - Sinon → servir `/saas/index.html` (le SaaS Angular router prend le relais)
+ * Stratégie "fallback-only" :
+ * 1. Tente de servir le request comme asset statique (env.ASSETS.fetch)
+ * 2. Si l'asset existe (statut < 400) → retourne tel quel (200, ou 308
+ *    redirect géré par Cloudflare pour les paths sans slash final)
+ * 3. Si 404 (route SaaS non couverte par un stub) → fallback sur /saas/
+ *    qui sert /saas/index.html (SaaS Angular router gère le routing
+ *    client-side et affiche son propre 404 si nécessaire)
+ *
+ * NB : on n'intercepte pas les requests qui réussissent pour ne pas casser
+ * les comportements normaux (route stubs, chunks, assets, 308 redirects de
+ * Cloudflare). Le fallback ne s'active QUE pour les vrais 404.
  */
 
-export const onRequest = async ({ request, env, next }) => {
-  const url = new URL(request.url);
+export const onRequest = async (context) => {
+  const { request, env } = context;
 
-  // Path se termine par une extension de fichier → asset statique, laisser passer
-  if (/\.[a-zA-Z0-9]+$/.test(url.pathname)) {
-    return next();
+  // Try to serve the request as a static asset first
+  const response = await env.ASSETS.fetch(request);
+
+  // 404 only → fallback vers /saas/ (SPA index.html)
+  if (response.status === 404) {
+    const url = new URL(request.url);
+    const fallbackUrl = new URL('/saas/', url);
+    return env.ASSETS.fetch(new Request(fallbackUrl, request));
   }
 
-  // Sinon, servir /saas/index.html (le SaaS Angular router gère le routing client-side)
-  const indexUrl = new URL('/saas/index.html', url);
-  return env.ASSETS.fetch(new Request(indexUrl, request));
+  return response;
 };
