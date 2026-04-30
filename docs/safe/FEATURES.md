@@ -1,6 +1,6 @@
 # Features & User Stories — NEOPRO SAFe
 
-> **Dernière mise à jour** : 23 Avril 2026 <!-- F-15.2 Phase 4 Unified Remote ↔ Simulator ↔ Display (ADR-090) : scoreboard-state source unique, Remote SaaS applyCloudState + scoreboard-state-push, validator football+remote -->
+> **Dernière mise à jour** : 30 Avril 2026 <!-- ADR-071 hosting Cloudflare Pages (phases 2-3 livrées), ADR-103 web/live in loop (phases 1→4 livrées), ADR-104 TV preview HTTP pull SaaS (livré + kill-switch flotté), ADR-105 TV preview iframe local-first Pi (livré). Voir IMPLEMENTED-BACKLOG IMP-VID-29, IMP-PI-43/44/45, IMP-ADM-24. -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
 > Ce document contient les Features/US futures (PI-1 à PI-3) ET les Epics terminés avant PI-1. Les 241 features implémentées (hors SAFe) sont documentées dans [IMPLEMENTED-BACKLOG.md](IMPLEMENTED-BACKLOG.md).
 
