@@ -1,3 +1,9 @@
+# [3.284.0](https://github.com/Tallec7/neopro/compare/v3.283.0...v3.284.0) (2026-04-30)
+
+### Features
+
+- **remote:** backport V1 parity on V2 emit path + 3 match options ([#782](https://github.com/Tallec7/neopro/issues/782)) ([c36ef02](https://github.com/Tallec7/neopro/commit/c36ef02edd10d062fe4dcdc36d69dfb64b2f0206))
+
 # [3.283.0](https://github.com/Tallec7/neopro/compare/v3.282.2...v3.283.0) (2026-04-30)
 
 ### Features
