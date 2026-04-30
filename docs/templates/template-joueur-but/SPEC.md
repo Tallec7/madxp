@@ -3,7 +3,8 @@ template:
   slug: joueur-but
   name: 'Joueur but'
   description: "Annonce joueur 'BUT' avec titre animé puis packshot (générique ou avec photo)"
-  duration_seconds: null # TODO mesurer sur les WebM livrés
+  duration_seconds: 6.96 # 6'24 @ 25fps = 6960 ms
+  duration_ms: 6960
   canvas:
     width: 1920
     height: 1080
@@ -139,6 +140,6 @@ Annonce joueur "BUT" : intro logo + titre animé "BUT" en zoom-out, puis packsho
 
 ## TODO bloquants
 
-- [ ] Mesurer durées exactes sur master (s'frames → ms)
+- [x] ~~Mesurer durée totale du master~~ → 6'24 @ 25fps = 6960 ms (réponse Daisy)
 - [ ] Confirmer easing du zoom forme hexagonale (linéaire ou easing custom)
 - [ ] Recevoir 4 WebM alpha
