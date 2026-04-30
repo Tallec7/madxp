@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { SocketService } from '../../services/socket.service';
+import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { LocalBroadcastService, PhaseChangeEvent, OptionsUpdateEvent } from '../../services/local-broadcast.service';
 import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
@@ -323,45 +323,189 @@ export class TvComponent implements OnInit, OnDestroy {
       })
     );
 
-    // MASTER-SLAVE SYNCHRONISATION — delegated to TvSyncService
-    this.tvSyncService.init({
-      getDisplayType: () => this.displayType,
-      getDisplayIndex: () => this.displayIndex,
-      resolveDisplayVariant: (video) => this.resolveDisplayVariant(video),
-      onRoleAssigned: (_role) => { /* state managed by tvSyncService */ },
-      onDemotion: () => {
-        this.demotionNotice = true;
-        if (this.demotionTimeout) clearTimeout(this.demotionTimeout);
-        this.demotionTimeout = setTimeout(() => { this.demotionNotice = false; }, 8000);
-      },
-      onHdmiStatus: (data) => {
-        if (this.displayType === 'tv') {
-          this.hdmiConnected = data.hdmi0 || data.hdmi1;
-        } else {
-          this.hdmiConnected = data.hdmi1;
-        }
-        this.wrongPort = !!data.wrongPort;
-        if (this.hdmiConnected && !this.bootMetrics.emitted) {
-          this.bootMetrics.hdmiDetectedAt = Date.now();
-          console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
-        }
-      },
-      onPromotion: (reason) => {
-        if (this.displayType === 'secondary') {
-          console.log(`[TV] Failover promotion: switching to TV mode (${reason})`);
-          this.displayType = 'tv';
-        }
-      },
-      onFailoverDemotion: (reason) => {
-        if (this.route.snapshot.data['displayType'] === 'secondary' && this.displayType === 'tv') {
-          console.log(`[TV] Failover demotion: returning to secondary mode (${reason})`);
-          this.displayType = 'secondary';
-        }
-      },
-      onSlaveReturnToLoop: () => {
-        this.stopManualVideoAndReturnToLoop();
-      },
+    if (this.isPreviewMode) {
+      // ADR-106 — preview-slave init (read-only viewer).
+      // Skip master/slave registration (no tvInstances entry, no
+      // displays-changed broadcast, no getSaasClientCount increment).
+      // Loop sync is driven by 'tv-loop-state' broadcasts only.
+      this.initPreviewSlave();
+    } else {
+      // MASTER-SLAVE SYNCHRONISATION — delegated to TvSyncService
+      this.tvSyncService.init({
+        getDisplayType: () => this.displayType,
+        getDisplayIndex: () => this.displayIndex,
+        resolveDisplayVariant: (video) => this.resolveDisplayVariant(video),
+        onRoleAssigned: (_role) => { /* state managed by tvSyncService */ },
+        onDemotion: () => {
+          this.demotionNotice = true;
+          if (this.demotionTimeout) clearTimeout(this.demotionTimeout);
+          this.demotionTimeout = setTimeout(() => { this.demotionNotice = false; }, 8000);
+        },
+        onHdmiStatus: (data) => {
+          if (this.displayType === 'tv') {
+            this.hdmiConnected = data.hdmi0 || data.hdmi1;
+          } else {
+            this.hdmiConnected = data.hdmi1;
+          }
+          this.wrongPort = !!data.wrongPort;
+          if (this.hdmiConnected && !this.bootMetrics.emitted) {
+            this.bootMetrics.hdmiDetectedAt = Date.now();
+            console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
+          }
+        },
+        onPromotion: (reason) => {
+          if (this.displayType === 'secondary') {
+            console.log(`[TV] Failover promotion: switching to TV mode (${reason})`);
+            this.displayType = 'tv';
+          }
+        },
+        onFailoverDemotion: (reason) => {
+          if (this.route.snapshot.data['displayType'] === 'secondary' && this.displayType === 'tv') {
+            console.log(`[TV] Failover demotion: returning to secondary mode (${reason})`);
+            this.displayType = 'secondary';
+          }
+        },
+        onSlaveReturnToLoop: () => {
+          this.stopManualVideoAndReturnToLoop();
+        },
+      });
+    }
+  }
+
+  /**
+   * ADR-106 — preview-slave initialization (only called when isPreviewMode
+   * is true). The Remote V2 mini-thumb iframe loads `?preview=1` and
+   * instantiates a TvComponent that runs as preview-slave: read-only viewer
+   * that mirrors the master's video by listening to `tv-loop-state`
+   * broadcasts, without participating in master/slave election.
+   *
+   * Sync is by `videoIndex` (never `videoPath` — variants secondaires have
+   * different paths). The first state arrives ~50ms after register (server
+   * emits it immediately on `tv-preview-register`), so the local first-frame
+   * flash from `startSeamlessLoop()` is brief and acceptable.
+   *
+   * Page Visibility API: when the Remote tab is hidden, pause the players
+   * to save bandwidth/CPU; resume on visibility return (next tv-loop-state
+   * tick re-syncs).
+   */
+  private initPreviewSlave(): void {
+    console.log('[TV] ADR-106 — initializing preview-slave mode');
+
+    // Register as preview-slave (no TV instance entry, no display count)
+    this.socketService.emit('tv-preview-register', {} as unknown as Command);
+
+    // Re-register on socket reconnection
+    this.socketService.onReconnect(() => {
+      console.log('[TV] Preview-slave: socket reconnected, re-registering');
+      this.socketService.emit('tv-preview-register', {} as unknown as Command);
     });
+
+    // Receive master loop state — read only, never emit tv-loop-update
+    this.socketService.on<LoopState>('tv-loop-state', (state) => {
+      this.ngZone.run(() => this.handlePreviewLoopState(state));
+    });
+
+    // Page Visibility API — pause players when tab is in background to
+    // limit decoder usage; resume on return (next state tick re-syncs).
+    document.addEventListener('visibilitychange', () => {
+      const playerA = this.playerARef?.nativeElement;
+      const playerB = this.playerBRef?.nativeElement;
+      if (document.hidden) {
+        playerA?.pause();
+        playerB?.pause();
+        console.log('[TV] Preview-slave: tab hidden, players paused');
+      } else {
+        // Resume the currently active player; the next tv-loop-state from
+        // the master will re-sync if we drifted while hidden.
+        const active = this.doubleBufferService.getActivePlayer();
+        if (active && active.paused) {
+          active.play().catch(() => { /* user interaction not yet granted */ });
+        }
+        console.log('[TV] Preview-slave: tab visible, players resumed');
+      }
+    });
+  }
+
+  /**
+   * ADR-106 — handles `tv-loop-state` broadcasts in preview-slave mode.
+   * Sync by `videoIndex` (master playlist is the source of truth), seek to
+   * the master's elapsed time. Manual videos are played directly without
+   * preload+reveal — the master has already done its transition, the preview
+   * just catches up.
+   *
+   * Read-only: never emits tv-loop-update, never participates in election.
+   */
+  private handlePreviewLoopState(state: LoopState): void {
+    // CASE 1 — master is playing a manual video
+    if (state.isManualMode && state.manualVideoPath) {
+      const resolvedVideo = this.resolveDisplayVariant({
+        name: state.manualVideoPath.split('/').pop() || 'manual',
+        path: state.manualVideoPath,
+        type: 'video/mp4',
+      } as PiConfigVideoEntry);
+
+      const currentManualPlayer = this.doubleBufferService.getActiveManualPlayer();
+      const currentManualSrc = currentManualPlayer?.src || '';
+      if (!this.manualVideoService.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
+        console.log('[TV] Preview-slave: master in manual mode, mirroring', state.manualVideoPath);
+        this.manualVideoService.play(resolvedVideo);
+        if (state.manualVideoStartedAt) {
+          const elapsed = (Date.now() - state.manualVideoStartedAt) / 1000;
+          if (elapsed > 1) {
+            setTimeout(() => {
+              const player = this.doubleBufferService.getActiveManualPlayer();
+              if (player && player.duration && elapsed < player.duration) {
+                player.currentTime = elapsed;
+              }
+            }, 500);
+          }
+        }
+      }
+      return;
+    }
+
+    // CASE 2 — master is in loop mode
+    if (this.manualVideoService.isManualMode) {
+      console.log('[TV] Preview-slave: master returned to loop, stopping manual');
+      this.stopManualVideoAndReturnToLoop();
+      this.doubleBufferService.hideFreezeFrame();
+      this.doubleBufferService.hideBlackOverlay();
+    }
+
+    const loopVideos = this.playbackService.currentLoopVideos;
+    if (loopVideos.length === 0) {
+      // Loop not yet populated — startSeamlessLoop() is async, retry on next tick
+      return;
+    }
+
+    const syncIndex = state.videoIndex % loopVideos.length;
+    const localVideo = loopVideos[syncIndex];
+    const activePlayer = this.doubleBufferService.getActivePlayer();
+    const activeSrc = activePlayer?.src || '';
+
+    // Skip if already on the right video
+    if (localVideo?.path && activeSrc.includes(localVideo.path)) {
+      return;
+    }
+
+    console.log(`[TV] Preview-slave: syncing to index ${syncIndex} (${localVideo?.path})`);
+    this.doubleBufferService.captureAndShowFreezeFrame();
+    if (localVideo?.path) {
+      this.doubleBufferService.playOnActivePlayer(localVideo.path, syncIndex);
+    }
+
+    // Seek to master's approximate position
+    if (state.videoStartedAt) {
+      const elapsed = (Date.now() - state.videoStartedAt) / 1000;
+      if (elapsed > 1) {
+        setTimeout(() => {
+          const player = this.doubleBufferService.getActivePlayer();
+          if (player && player.duration && elapsed < player.duration) {
+            player.currentTime = elapsed;
+          }
+        }, 500);
+      }
+    }
   }
 
   public ngOnDestroy() {
