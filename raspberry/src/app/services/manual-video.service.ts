@@ -360,8 +360,14 @@ export class ManualVideoService {
     // ADR-034 fix: If replacing an already-visible manual video, capture freeze-frame
     const isReplacingManual = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
     if (isReplacingManual) {
-      console.log('[TV] Slave: manual->manual transition, capturing freeze-frame');
-      this.doubleBufferService.captureAndShowFreezeFrame();
+      console.log('[TV] Slave: manual->manual transition, capturing freeze-frame + black overlay');
+      // Passer isManualMode=true → force la capture LIVE depuis le player manuel actif.
+      // Sans ce flag, on utiliserait le frame pré-capturé de la boucle → flash boucle visible.
+      this.doubleBufferService.captureAndShowFreezeFrame(true);
+      // Black overlay (z=5) en filet de sécurité sous le freeze-frame (z=20). Couvre
+      // la fenêtre de 1-2 frames entre hideFreezeFrame et le 1er paint de la nouvelle
+      // vidéo (Chromium ne render pas le `background:#000` de <video> avant 1ère frame).
+      this.doubleBufferService.showBlackOverlay();
     }
 
     // Player invisible + muted during preload
@@ -486,7 +492,24 @@ export class ManualVideoService {
       });
     }
 
-    this.doubleBufferService.hideFreezeFrame();
+    // Attendre que le player ait peint sa première frame avant de cacher le
+    // freeze-frame ET le black-overlay. Sans ce wait, fenêtre de 1-2 frames où
+    // <video> est transparent (Chromium n'applique pas `background:#000` avant
+    // 1ère frame décodée) → la boucle (z=2) flashe à travers. Fallback rAF
+    // immédiat si requestVideoFrameCallback absent (Chromium <92).
+    type RVFCPlayer = HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number;
+    };
+    const hideOnPaint = () => {
+      this.doubleBufferService.hideFreezeFrame();
+      this.doubleBufferService.hideBlackOverlay();
+    };
+    const rvfc = (player as RVFCPlayer).requestVideoFrameCallback;
+    if (typeof rvfc === 'function') {
+      rvfc.call(player, hideOnPaint);
+    } else {
+      hideOnPaint();
+    }
 
     this.callbacks?.emitPlayerState({
       currentVideo: PlayerStateService.filenameFromPath(video.path),
