@@ -57,7 +57,9 @@ COMMENT ON COLUMN club_sessions.event_type IS
 COMMENT ON COLUMN club_sessions.ended_by IS
   'How the session was closed: remote, timeout, manual. NULL while open.';
 
--- Extend check_task_type to allow 'pdf_report' (legacy) and 'match_session_autoclose' (ADR-093).
+-- Extend check_task_type to include all task types (ADR-093, ADR-099).
+-- NB : include both 'video_ftp_audit' and 'connection_events_purge' to avoid conflicts
+-- with parallel migrations add-video-ftp-audit-warnings.sql and add-connection-events-purge-cron.sql.
 DO $$
 BEGIN
   ALTER TABLE recurring_schedules DROP CONSTRAINT IF EXISTS check_task_type;
@@ -65,7 +67,8 @@ BEGIN
     ADD CONSTRAINT check_task_type
     CHECK (task_type IN (
       'report', 'cleanup', 'aggregation', 'backup',
-      'objective_check', 'pdf_report', 'match_session_autoclose'
+      'objective_check', 'pdf_report', 'match_session_autoclose',
+      'video_ftp_audit', 'connection_events_purge'
     ));
 EXCEPTION WHEN undefined_table THEN
   -- recurring_schedules not yet migrated; skip.
