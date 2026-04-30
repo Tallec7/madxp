@@ -25,11 +25,12 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 - **Effort de mitigation** : `docs/RUNBOOK.md` + `docs/RUNBOOK-INCIDENTS.md` (5 scénarios les plus probables) + un freelance back-up identifié = ~3 jours.
 - **Bloquant pour** : recrutement PM/CTO (le CTO va vouloir savoir comment l'astreinte est couverte avant son arrivée), scaling client (au-delà de 15 sites, 0 backup = inacceptable).
 
-### Hostinger SPOF (Single Point Of Failure)
-- **Pourquoi** : si Hostinger tombe (déjà arrivé en 2025), plus de vidéos servies aux Pi (FTP) ni au dashboard (statique). Aucun plan B documenté ni testé.
-- **Coût aujourd'hui** : risque réputationnel énorme si NLF a un match en live et que les vidéos ne se chargent pas.
-- **Effort de mitigation** : Cloudflare en proxy + cache devant Hostinger (1j) + plan de bascule documenté vers S3/R2 (1j) + test de bascule annuel.
-- **Bloquant pour** : signature de clients > NLF (un acheteur sérieux fera ce check).
+### Hostinger SPOF (Single Point Of Failure) — partiellement mitigé
+- **Pourquoi** : si Hostinger tombe (déjà arrivé en 2025), plus de vidéos servies aux Pi (FTP). Le dashboard et le SaaS ne sont plus impactés depuis la migration Cloudflare Pages (ADR-071 phase 3, 2026-04-29).
+- **Coût aujourd'hui** : risque réputationnel sur les vidéos servies (TV blanche en plein match) si Pi en mode dégradé sans cache local.
+- **Effort de mitigation restant** : Cloudflare en proxy + cache devant FTP Hostinger vidéos (1j) + plan de bascule documenté vers S3/R2 (1j) + test de bascule annuel.
+- **Avancement (2026-04-29, PRs #729→#743)** : frontend migré sur Cloudflare Pages avec deploys atomiques, rollback 1-clic, CDN edge global. Bascule progressive via `vars.HOSTING=cloudflare`. **Reste** : phase 4 cleanup .htaccess + jobs lftp (J+7), puis FTP vidéos.
+- **Bloquant pour** : signature de clients > NLF (un acheteur sérieux fera ce check sur la vidéo).
 
 ### Aucun backup DB testé
 - **Pourquoi** : Railway fait des backups Postgres, mais aucun test de restore documenté. La task CRON `backup` était même une placeholder qui retournait `success: true` sans rien faire (corrigée PR #600).
@@ -155,6 +156,12 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 ---
 
 ## ✅ Résolu
+
+### Session 2026-04-29 (ADR-071 phase 3 — bascule prod Cloudflare Pages)
+
+| Item | Résolu par |
+|---|---|
+| Frontend (dashboard + SaaS) servi via FTP Hostinger + clean-slate (404 intermittents sur deep-links, dotfile bug `.htaccess`, downtime 30-60s par release, pas de rollback atomique, latence hors France) | ADR-071 phase 3 — bascule prod sur Cloudflare Pages projet unique `neopro-frontend-prod` (dashboard + SaaS sous `/saas/`). Activation par `vars.HOSTING=cloudflare`. PRs #729→#743 (13 PRs, 2026-04-29). Cleanup phase 4 (.htaccess + jobs lftp + secrets HOSTINGER_FTP_*) planifiée J+7. |
 
 ### Session 2026-04-27 (ADR-099 — uptime flotte)
 

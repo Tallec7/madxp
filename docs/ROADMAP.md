@@ -120,10 +120,10 @@ Cf. `docs/strategy/BENCHMARK-COMPETITORS.md` pour les 5 différenciateurs forts 
 - **Pourquoi** : sans données terrain, le PM construit dans le vide
 
 ### NX-05 — Cloudflare devant Hostinger + plan bascule R2
-- **Quoi** : proxy + cache Cloudflare devant FTP Hostinger + procédure de bascule documentée vers Cloudflare R2 ou S3
+- **Quoi** : proxy + cache Cloudflare devant FTP Hostinger vidéos + procédure de bascule documentée vers Cloudflare R2 ou S3
 - **Owner** : Daisy + freelance possible
 - **Effort** : 2j
-- **Pourquoi** : mitige R-03 SPOF Hostinger (retiré du NOW)
+- **Pourquoi** : mitige R-03 SPOF Hostinger (retiré du NOW). ⚠️ Le frontend (dashboard + SaaS) a été migré sur Cloudflare Pages le 2026-04-29 (ADR-071 phase 3, PRs #729→#743), donc R-03 ne couvre plus que la composante FTP vidéos.
 
 ### NX-06 — Split `metrics.service.ts` + 4 SPECs critiques + Smoke tests SPEC
 - **Quoi** :

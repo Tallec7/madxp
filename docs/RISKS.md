@@ -50,11 +50,12 @@ Chaque risque est noté avec :
 |---|---|
 | **Type** | Tech / Infra |
 | **Proba** | 3 (Hostinger a déjà eu des pannes en 2025) |
-| **Impact** | 5 (pas de vidéos servies = TV blanche en plein match = nightmare réputation NLF) |
-| **Score** | **15 / 25** |
-| **Statut mitigation** | 🔴 aucune |
-| **Mitigation cible** | Cloudflare en proxy + cache devant Hostinger (1j) + plan documenté de bascule vers Cloudflare R2 ou AWS S3 (1j additionnel). Test annuel obligatoire. |
-| **Effort** | 2j |
+| **Impact** | 4 (réduit après migration frontend Cloudflare 2026-04-29 — pas de vidéos servies = TV blanche en plein match si Pi non-cache) |
+| **Score** | **12 / 25** |
+| **Statut mitigation** | 🟡 partielle |
+| **Mitigation cible** | Cloudflare en proxy + cache devant FTP vidéos Hostinger (1j) + plan documenté de bascule vers Cloudflare R2 ou AWS S3 (1j additionnel). Test annuel obligatoire. |
+| **Effort restant** | 2j |
+| **Mitigation actuelle (2026-04-29, PRs #729→#743)** : ADR-071 phase 3 livrée. **Le frontend (dashboard + SaaS) ne dépend plus de Hostinger** — bascule sur Cloudflare Pages avec deploys atomiques + rollback 1-clic + CDN edge global. Le périmètre du risque R-03 est maintenant réduit à la composante FTP vidéos (`storage.service.ts` + `kalonpartners.bzh/neopro-video/`). Phase 4 cleanup (.htaccess + jobs lftp) planifiée J+7. |
 | **Note** | Le coût Cloudflare R2 sur 7 sites est marginal (~5€/mois pour 100GB). À chiffrer en détail au moment de l'implémentation. |
 
 ---
