@@ -139,6 +139,50 @@
   gap: 14px;
 }
 
+// PDF JOUEUR §démarrage — pills pour options enum
+.option-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.option-pill {
+  padding: 6px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: #1d4ed8;
+    color: #1d4ed8;
+  }
+
+  &--active {
+    background: #1d4ed8;
+    color: #fff;
+    border-color: #1d4ed8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
 .field {
   display: flex;
   flex-direction: column;

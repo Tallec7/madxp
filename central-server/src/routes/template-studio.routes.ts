@@ -212,4 +212,15 @@ router.post(
   autoCropCtrl.autoCropPhoto,
 );
 
+// ── Options template-level (PDF JOUEUR §démarrage) ─────────────────────────
+// Lecture publique pour tous les rôles authentifiés (l'option fait partie du
+// payload de saisie user). Écriture super_admin uniquement (POST/DELETE PR future).
+router.get(
+  '/:id/options',
+  authenticate,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  versioningCtrl.listTemplateOptions,
+);
+
 export default router;

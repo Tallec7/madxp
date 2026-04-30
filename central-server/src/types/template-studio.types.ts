@@ -153,8 +153,22 @@ export interface TemplateV2 {
   layers: TemplateLayer[];
   textFields: TemplateTextField[];
   imageSlots: TemplateImageSlot[];
+  /** PDF JOUEUR §démarrage — options exposées au user. Default [] sur templates legacy sans options. */
+  options: TemplateV2Option[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TemplateV2Option {
+  id: string;
+  templateId: string;
+  key: string;
+  label: string;
+  type: 'enum' | 'boolean';
+  values: string[];
+  defaultValue: string;
+  userEditable: boolean;
+  sortOrder: number;
 }
 
 export interface RenderTemplateRequest {

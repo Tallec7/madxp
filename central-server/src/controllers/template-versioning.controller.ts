@@ -12,7 +12,7 @@
 import type { Response } from 'express';
 import type { AuthRequest } from '../types';
 import logger from '../config/logger';
-import { templateVersionsRepository } from '../repositories';
+import { templateVersionsRepository, templateOptionsRepository } from '../repositories';
 
 export const publishTemplateVersion = async (
   req: AuthRequest,
@@ -125,6 +125,36 @@ export const setTemplateDefaultVersion = async (
     res.json(updated);
   } catch (err) {
     logger.error('templateVersioning.setDefault error', { error: err, id });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * GET /:id/options — liste des options template-level pour saisie user.
+ * PDF JOUEUR §démarrage. Lecture pour tous rôles authentifiés.
+ */
+export const listTemplateOptions = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const options = await templateOptionsRepository.listOptions(id);
+    res.json(
+      options.map((o) => ({
+        id: o.id,
+        templateId: o.template_id,
+        key: o.key,
+        label: o.label,
+        type: o.type,
+        values: Array.isArray(o.values) ? o.values : [],
+        defaultValue: o.default_value,
+        userEditable: o.user_editable,
+        sortOrder: o.sort_order,
+      }))
+    );
+  } catch (err) {
+    logger.error('templateVersioning.listOptions error', { error: err, id });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };

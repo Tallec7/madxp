@@ -29,6 +29,8 @@ export interface RuntimeTextField {
   appearDuration: number;
   animation: AnimationPreset;
   defaultValue: string;
+  /** PDF JOUEUR — slot conditionnel (cf. server runtime). */
+  visibleIf?: string | null;
 }
 
 export interface RuntimeImageSlot {
@@ -38,6 +40,8 @@ export interface RuntimeImageSlot {
   appearAt: number;
   appearDuration: number;
   animation: AnimationPreset;
+  /** PDF JOUEUR — slot conditionnel (cf. server runtime). */
+  visibleIf?: string | null;
 }
 
 export interface RuntimeVariant {
@@ -53,6 +57,19 @@ export interface TemplateRuntimeProps {
   variantId: string;
   textValues: Record<string, string>;
   imageUploads: Record<string, string>;
+  /** PDF JOUEUR §démarrage — propagé pour filtrer les slots conditionnels. */
+  selectedOptions?: Record<string, string>;
+}
+
+/** Cohérent avec server runtime. Format strict, fail-open. */
+const DASHBOARD_VISIBLE_IF_REGEX = /^\s*([a-z_][a-z0-9_]{0,63})\s*==\s*"([^"]{0,200})"\s*$/i;
+function isSlotVisible(visibleIf: string | null | undefined, opts: Record<string, string>): boolean {
+  if (!visibleIf || visibleIf.trim() === '') return true;
+  const m = DASHBOARD_VISIBLE_IF_REGEX.exec(visibleIf);
+  if (!m) return true;
+  const [, key, value] = m;
+  const actual = opts[key];
+  return actual !== undefined && actual === value;
 }
 
 export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
@@ -93,6 +110,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
       })}
 
       {props.textFields.map((tf) => {
+        if (!isSlotVisible(tf.visibleIf, props.selectedOptions ?? {})) return null;
         const value = props.textValues[tf.slotKey] ?? tf.defaultValue;
         if (!value) return null;
         const style = computeAnimation(tf.animation, {
@@ -127,6 +145,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
       })}
 
       {props.imageSlots.map((slot) => {
+        if (!isSlotVisible(slot.visibleIf, props.selectedOptions ?? {})) return null;
         const src = props.imageUploads[slot.slotKey];
         if (!src) return null;
         const style = computeAnimation(slot.animation, {
