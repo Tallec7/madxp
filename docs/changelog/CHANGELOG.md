@@ -1,3 +1,9 @@
+# [3.283.0](https://github.com/Tallec7/neopro/compare/v3.282.2...v3.283.0) (2026-04-30)
+
+### Features
+
+- **scripts:** backfill videos.duration via FFprobe ([#780](https://github.com/Tallec7/neopro/issues/780)) ([7a89e7d](https://github.com/Tallec7/neopro/commit/7a89e7d9ca48126857c385faf9ecdf5c860d2127)), closes [#779](https://github.com/Tallec7/neopro/issues/779)
+
 ## [3.282.2](https://github.com/Tallec7/neopro/compare/v3.282.1...v3.282.2) (2026-04-30)
 
 ### Bug Fixes
