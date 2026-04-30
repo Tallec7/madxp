@@ -1,3 +1,9 @@
+## [3.280.3](https://github.com/Tallec7/neopro/compare/v3.280.2...v3.280.3) (2026-04-30)
+
+### Bug Fixes
+
+- **migrations:** include all task types in check_task_type constraint ([#768](https://github.com/Tallec7/neopro/issues/768)) ([4d6959b](https://github.com/Tallec7/neopro/commit/4d6959b049b08a96f877aa16570ac3c06b657227))
+
 ## [3.280.2](https://github.com/Tallec7/neopro/compare/v3.280.1...v3.280.2) (2026-04-30)
 
 ### Bug Fixes
