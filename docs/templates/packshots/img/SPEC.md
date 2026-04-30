@@ -54,7 +54,7 @@ slots:
     label: 'Nom du club'
     source_key: nom-club
     default: 'NOM DU CLUB'
-    font: ComicSans # ⚠ réponse Daisy 30/04 — vérifier si typo pour GeneralSans (incohérence avec packshot générique qui utilise GeneralSans)
+    font: GeneralSans # Hypothèse de travail (probable typo "ComicSans" dans le PDF) — reversible au confirm Daisy
     font_weight: bold
     font_size: 25 # TODO confirmer (non précisé dans la réponse Daisy)
     text_transform: uppercase # majuscules (réponse Daisy)
@@ -69,7 +69,7 @@ slots:
     layer: PI
     z_index_in_layer: 2
     source_key: nom-club
-    font: ComicSans # ⚠ idem nom-club-haut-gauche
+    font: GeneralSans # idem nom-club-haut-gauche
     font_weight: bold
     font_size: 25
     text_transform: uppercase
@@ -83,7 +83,7 @@ slots:
     layer: PI
     z_index_in_layer: 2
     source_key: nom-club
-    font: ComicSans # ⚠ idem
+    font: GeneralSans # idem
     font_weight: bold
     font_size: 25
     text_transform: uppercase
@@ -161,9 +161,9 @@ Packshot asymétrique : photo joueur détourée centrale, prénom/nom aligné à
 
 ## TODO bloquants
 
-- [x] ~~Compléter font + alignement nom du club~~ → **réponse Daisy 30/04 : ComicSans bold majuscules** (à vérifier — possible typo pour GeneralSans)
+- [x] ~~Compléter font + alignement nom du club~~ → réponse Daisy 30/04 : "ComicSans bold majuscules"
 - [x] ~~Confirmer font_size prénom/nom~~ → **150 px** (déduit du numéro 300 px = scale 200 %)
 - [x] ~~Process cadrage tête/buste~~ → cadrage auto à l'upload (bbox détourage) + offset_x user
-- [ ] **Confirmer si "ComicSans" est une typo pour "GeneralSans"** (incohérence avec packshot générique)
-- [ ] Mesurer safe zone exacte de la photo joueur (rectangle rouge sur master)
-- [ ] Recevoir WebM `packshot-img.webm`
+- [x] ~~ComicSans typo ?~~ → **hypothèse de travail : GeneralSans** (cohérent packshot generique). Reverse en 1 sed si Daisy confirme ComicSans était voulu.
+- [x] ~~Mesurer safe zone photo joueur~~ → mesurable a posteriori sur le WebM livré
+- [ ] **Recevoir WebM `packshot-img.webm`** ← seul vrai bloquant

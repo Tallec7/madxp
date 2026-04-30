@@ -95,6 +95,7 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   respectAlpha: r.respect_alpha,
   animationDirection: r.animation_direction,
   textTransform: r.text_transform ?? 'none',
+  visibleIf: r.visible_if ?? null,
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -125,6 +126,7 @@ const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
   animationDirection: r.animation_direction,
   scaleFrom: numOrNull(r.scale_from),
   scaleTo: numOrNull(r.scale_to),
+  visibleIf: r.visible_if ?? null,
 });
 
 export interface CreateVariantInput {
@@ -232,11 +234,30 @@ class TemplateStudioRepository {
     const row = base.rows[0];
     if (!row || row.schema_version !== 2) return null;
 
-    const [variants, layers, textFields, imageSlots] = await Promise.all([
+    const [variants, layers, textFields, imageSlots, optionRows] = await Promise.all([
       this.listVariants(id),
       this.listLayers(id),
       this.listTextFields(id),
       this.listImageSlots(id),
+      // PDF JOUEUR §démarrage — options exposées au user. Lecture inline pour
+      // garder findV2ById en 1 round-trip Promise.all (au lieu de dépendre du
+      // templateOptionsRepository depuis ici, ce qui causerait un import circulaire).
+      query<{
+        id: string;
+        template_id: string;
+        key: string;
+        label: string;
+        type: 'enum' | 'boolean';
+        values: unknown[];
+        default_value: string;
+        user_editable: boolean;
+        sort_order: number;
+      }>(
+        `SELECT id, template_id, key, label, type, values, default_value, user_editable, sort_order
+         FROM template_options WHERE template_id = $1
+         ORDER BY sort_order ASC, created_at ASC`,
+        [id]
+      ),
     ]);
 
     return {
@@ -255,6 +276,17 @@ class TemplateStudioRepository {
       layers,
       textFields,
       imageSlots,
+      options: optionRows.rows.map((o) => ({
+        id: o.id,
+        templateId: o.template_id,
+        key: o.key,
+        label: o.label,
+        type: o.type,
+        values: Array.isArray(o.values) ? (o.values as string[]) : [],
+        defaultValue: o.default_value,
+        userEditable: o.user_editable,
+        sortOrder: o.sort_order,
+      })),
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     };

@@ -114,6 +114,8 @@ export interface TemplateTextField {
   layerId: string | null;
   respectAlpha: boolean;
   animationDirection: AnimationDirection;
+  /** PDF JOUEUR §démarrage — slot conditionnel `<key> == "<value>"`. NULL = toujours visible. */
+  visibleIf: string | null;
 }
 
 export interface TemplateImageSlot {
@@ -140,6 +142,21 @@ export interface TemplateImageSlot {
   animationDirection: AnimationDirection;
   scaleFrom: number | null;
   scaleTo: number | null;
+  /** PDF JOUEUR §démarrage — slot conditionnel (cf. TemplateTextField.visibleIf). */
+  visibleIf: string | null;
+}
+
+/** Option template-level (PDF JOUEUR §démarrage) — choix posé par le user au démarrage. */
+export interface TemplateOption {
+  id: string;
+  templateId: string;
+  key: string;
+  label: string;
+  type: 'enum' | 'boolean';
+  values: string[];
+  defaultValue: string;
+  userEditable: boolean;
+  sortOrder: number;
 }
 
 /** Vue consolidée retournée par `GET /api/remotion-templates/:id/studio`. */
@@ -159,6 +176,7 @@ export interface TemplateStudioView {
   layers: TemplateLayer[];
   textFields: TemplateTextField[];
   imageSlots: TemplateImageSlot[];
+  options: TemplateOption[]; // PDF JOUEUR §démarrage — défaut [] si template legacy.
   createdAt: string;
   updatedAt: string;
 }
@@ -172,6 +190,8 @@ export interface RenderTemplateRequestV2 {
   variantId: string;
   textValues: Record<string, string>;
   imageUploads: Record<string, string>;
+  /** PDF JOUEUR §démarrage — options sélectionnées par le user (intro_mode, packshot, etc.). */
+  selectedOptions?: Record<string, string>;
 }
 
 export function isV2Template(t: Pick<RemotionTemplate, 'schema_version'>): boolean {

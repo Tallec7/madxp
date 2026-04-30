@@ -139,6 +139,6 @@ Annonce joueur courte (≈ 4–5 s estimé, à confirmer sur master livré). App
 
 - [x] ~~Mesurer durée totale du master~~ → 5'24 @ 25fps = 5960 ms (réponse Daisy)
 - [x] ~~Licences fonts web~~ → confirmées (réponse Daisy)
-- [ ] Confirmer dimensions exactes safe zone hexagone (px sur 1920×1080)
-- [ ] Recevoir fichiers Bulevar.otf + GeneralSans-Bold.otf
-- [ ] Recevoir 2 WebM alpha : `01-A-hexagone.webm` + `02-B-transition.webm`
+- [x] ~~Confirmer dimensions safe zone hexagone~~ → mesurable a posteriori sur les WebM
+- [x] ~~Recevoir fichiers Bulevar.otf + GeneralSans-Bold.otf~~ → web fonts proxies en attendant (Anton + Oswald). Frame-compare déclenchera switch sur .otf si écart visible.
+- [ ] **Recevoir 2 WebM alpha** : `01-A-hexagone.webm` + `02-B-transition.webm` ← seul vrai bloquant

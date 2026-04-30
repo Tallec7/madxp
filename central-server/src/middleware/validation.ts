@@ -894,6 +894,40 @@ export const schemas = {
       .required(),
   }),
 
+  // PDF JOUEUR §démarrage — création option template-level.
+  templateOptionCreate: Joi.object({
+    key: Joi.string()
+      .pattern(/^[a-z_][a-z0-9_]{0,63}$/)
+      .required()
+      .description('Identifiant snake_case (max 64 char)'),
+    label: Joi.string().min(1).max(200).required(),
+    type: Joi.string().valid('enum', 'boolean').default('enum'),
+    values: Joi.array().items(Joi.string().max(80)).min(1).required(),
+    default_value: Joi.string().max(200).required(),
+    user_editable: Joi.boolean().default(true),
+    sort_order: Joi.number().integer().min(0).default(0),
+  }),
+
+  // PDF JOUEUR §démarrage — patch partiel option.
+  templateOptionUpdate: Joi.object({
+    label: Joi.string().min(1).max(200).optional(),
+    values: Joi.array().items(Joi.string().max(80)).min(1).optional(),
+    default_value: Joi.string().max(200).optional(),
+    user_editable: Joi.boolean().optional(),
+    sort_order: Joi.number().integer().min(0).optional(),
+  }).min(1),
+
+  // PDF JOUEUR — création packshot ref (mappe option_value → packshot_template_id).
+  templatePackshotRefCreate: Joi.object({
+    option_key: Joi.string()
+      .pattern(/^[a-z_][a-z0-9_]{0,63}$/)
+      .required(),
+    option_value: Joi.string().max(200).required(),
+    packshot_template_id: Joi.string().uuid().required(),
+    start_at_ms: Joi.number().integer().min(0).max(600000).default(0),
+    z_index_offset: Joi.number().integer().min(0).max(10000).default(100),
+  }),
+
   // ADR-074 — hotspot config
   hotspotConfigBootstrap: Joi.object({
     ssid: Joi.string().min(1).max(32).required(),
@@ -1167,6 +1201,15 @@ export const paramSchemas = {
   backgroundIdAndUserId: Joi.object({
     backgroundId: Joi.string().uuid().required(),
     userId: Joi.string().uuid().required(),
+  }),
+  // PDF JOUEUR §démarrage — option / packshot ref par template
+  idAndOptionId: Joi.object({
+    id: Joi.string().uuid().required(),
+    optionId: Joi.string().uuid().required(),
+  }),
+  idAndPackshotRefId: Joi.object({
+    id: Joi.string().uuid().required(),
+    packshotRefId: Joi.string().uuid().required(),
   }),
 };
 
