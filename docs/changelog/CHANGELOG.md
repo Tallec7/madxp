@@ -1,3 +1,9 @@
+## [3.280.2](https://github.com/Tallec7/neopro/compare/v3.280.1...v3.280.2) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** barre de progression pilotée par JS (alignée durationSeconds) ([#764](https://github.com/Tallec7/neopro/issues/764)) ([5c9a3d6](https://github.com/Tallec7/neopro/commit/5c9a3d65dd7ae88102960667c4cbf43000ae792a))
+
 ## [3.280.1](https://github.com/Tallec7/neopro/compare/v3.280.0...v3.280.1) (2026-04-30)
 
 ### Bug Fixes
