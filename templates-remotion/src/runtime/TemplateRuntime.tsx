@@ -59,6 +59,8 @@ export interface RuntimeTextField {
   animationDirection?: AnimationDirection;
   /** SPEC JOUEUR — transformation typographique (CSS text-transform). Défaut 'none'. */
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  /** PDF JOUEUR — slot conditionnel : "<option_key> == \"<value>\"" — invisible si pas de match. */
+  visibleIf?: string | null;
 }
 
 export interface RuntimeImageSlot {
@@ -83,6 +85,8 @@ export interface RuntimeImageSlot {
   };
   overflow?: Overflow;
   animationDirection?: AnimationDirection;
+  /** PDF JOUEUR — slot conditionnel (cf. RuntimeTextField.visibleIf). */
+  visibleIf?: string | null;
 }
 
 export interface RuntimeVariant {
@@ -100,6 +104,25 @@ export interface TemplateRuntimeProps {
   imageUploads: Record<string, string>;
   canvasWidth: number;
   canvasHeight: number;
+  /** PDF JOUEUR — options sélectionnées par le user (intro_mode, packshot, etc.). Évaluées contre slot.visibleIf. */
+  selectedOptions?: Record<string, string>;
+}
+
+/**
+ * Évalue une expression visible_if (`<option_key> == "<value>"`) contre les options.
+ * Format strict — copié du service backend pour éviter dep cross-package.
+ */
+const VISIBLE_IF_REGEX = /^\s*([a-z_][a-z0-9_]{0,63})\s*==\s*"([^"]{0,200})"\s*$/i;
+function isSlotVisible(
+  visibleIf: string | null | undefined,
+  selectedOptions: Record<string, string>
+): boolean {
+  if (!visibleIf || visibleIf.trim() === '') return true;
+  const m = VISIBLE_IF_REGEX.exec(visibleIf);
+  if (!m) return true; // expression mal formée → fail-open
+  const [, key, expectedValue] = m;
+  const actual = selectedOptions[key];
+  return actual !== undefined && actual === expectedValue;
 }
 
 const isValidSrc = (url: string): boolean => /^(https?:|blob:|data:)/.test(url);
@@ -137,10 +160,14 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
   const stack: Stacked[] = [];
   const TOP = Number.MAX_SAFE_INTEGER;
 
+  // PDF JOUEUR — slots conditionnels filtrés contre selectedOptions avant stacking.
+  const selectedOptions = props.selectedOptions ?? {};
+
   for (const layer of props.layers) {
     stack.push({ kind: 'layer', z: layer.zIndex, layer });
   }
   for (const field of props.textFields) {
+    if (!isSlotVisible(field.visibleIf, selectedOptions)) continue;
     const parent = field.layerId ? layerById.get(field.layerId) : undefined;
     if (parent && field.respectAlpha) {
       stack.push({ kind: 'text', z: parent.zIndex - 0.5, field });
@@ -151,6 +178,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
     }
   }
   for (const slot of props.imageSlots) {
+    if (!isSlotVisible(slot.visibleIf, selectedOptions)) continue;
     const parent = slot.layerId ? layerById.get(slot.layerId) : undefined;
     if (parent) {
       stack.push({ kind: 'image', z: parent.zIndex + 0.5, slot });
