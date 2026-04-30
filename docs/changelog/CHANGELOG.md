@@ -1,3 +1,9 @@
+## [3.278.9](https://github.com/Tallec7/neopro/compare/v3.278.8...v3.278.9) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function catch-all /saas/\* (ADR-071 phase 3) ([#742](https://github.com/Tallec7/neopro/issues/742)) ([dcb0eba](https://github.com/Tallec7/neopro/commit/dcb0eba15070dae20673d109b62d928b6ee9f057)), closes [#737](https://github.com/Tallec7/neopro/issues/737) [#741](https://github.com/Tallec7/neopro/issues/741)
+
 ## [3.278.8](https://github.com/Tallec7/neopro/compare/v3.278.7...v3.278.8) (2026-04-29)
 
 ### Bug Fixes
