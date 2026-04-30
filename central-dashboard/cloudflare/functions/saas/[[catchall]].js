@@ -9,30 +9,45 @@
  * MIME errors sur les chunks (le browser résout les Link-header preloads
  * relativement à l'URL de réponse → `/saas/chunk-*.js` qui n'existent pas).
  *
- * Stratégie "fallback-only" :
+ * Stratégie :
  * 1. Tente de servir le request comme asset statique (env.ASSETS.fetch)
- * 2. Si l'asset existe (statut < 400) → retourne tel quel (200, ou 308
- *    redirect géré par Cloudflare pour les paths sans slash final)
+ * 2. **Si Cloudflare répond 308 trailing-slash** (cas `/saas/tv` → `/saas/tv/`
+ *    parce qu'un stub `/saas/tv/index.html` existe), on suit le redirect
+ *    serveur-side et on retourne 200 au client. Sans ça, les health checks
+ *    SPA (curl sans -L) reçoivent 308 au lieu de 200, et certains user-agents
+ *    parent (iframe Angular Remote V2) cassent leur navigation au redirect.
  * 3. Si 404 (route SaaS non couverte par un stub) → fallback sur /saas/
  *    qui sert /saas/index.html (SaaS Angular router gère le routing
  *    client-side et affiche son propre 404 si nécessaire)
- *
- * NB : on n'intercepte pas les requests qui réussissent pour ne pas casser
- * les comportements normaux (route stubs, chunks, assets, 308 redirects de
- * Cloudflare). Le fallback ne s'active QUE pour les vrais 404.
  */
+
+const isTrailingSlashRedirect = (response) =>
+  (response.status === 308 || response.status === 301) &&
+  response.headers.has('Location');
 
 export const onRequest = async (context) => {
   const { request, env } = context;
 
-  // Try to serve the request as a static asset first
-  const response = await env.ASSETS.fetch(request);
+  let response = await env.ASSETS.fetch(request);
 
-  // 404 only → fallback vers /saas/ (SPA index.html)
+  // Suivre le 308 trailing-slash auto-généré par Cloudflare quand un stub
+  // `/saas/<route>/index.html` existe et que la requête est sans slash final.
+  // On préserve la query string parce que `URL` la conserve via le base + path.
+  if (isTrailingSlashRedirect(response)) {
+    const url = new URL(request.url);
+    const targetUrl = new URL(response.headers.get('Location'), url);
+    // Conserver la query string d'origine si la Location ne la contient pas
+    if (!targetUrl.search && url.search) {
+      targetUrl.search = url.search;
+    }
+    response = await env.ASSETS.fetch(new Request(targetUrl, request));
+  }
+
+  // 404 (route SaaS non couverte par un stub) → fallback SPA index.html
   if (response.status === 404) {
     const url = new URL(request.url);
     const fallbackUrl = new URL('/saas/', url);
-    return env.ASSETS.fetch(new Request(fallbackUrl, request));
+    response = await env.ASSETS.fetch(new Request(fallbackUrl, request));
   }
 
   return response;
