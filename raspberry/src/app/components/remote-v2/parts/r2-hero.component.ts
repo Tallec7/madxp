@@ -1,16 +1,5 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  EventEmitter,
-  Input,
-  OnChanges,
-  Output,
-  SimpleChanges,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PiConfigVideoEntry } from '../../../interfaces/video.interface';
 
 export type Loop = 'neutral' | 'before' | 'during' | 'after';
@@ -46,16 +35,9 @@ export interface DisplayInfo {
           [class.is-manual]="playingVideo"
           [class.has-preview]="!!previewUrl"
         >
-          <iframe
-            *ngIf="safePreviewUrl()"
-            [src]="safePreviewUrl()"
-            class="r2-tv-thumb-stream"
-            sandbox="allow-scripts allow-same-origin"
-            loading="lazy"
-            tabindex="-1"
-            aria-hidden="true"
-            title="Preview TV"
-          ></iframe>
+          <!-- ADR-105 — pas d'iframe dans le mini-thumb 60x38 (mini-thumb
+               reste un placeholder gradient). Le preview live vit uniquement
+               dans app-r2-tv-monitor en layout desktop-pro. -->
           <span class="r2-tv-scanline"></span>
           <button
             class="r2-rec-badge"
@@ -134,9 +116,7 @@ export interface DisplayInfo {
     </section>
   `,
 })
-export class R2HeroComponent implements OnChanges {
-  private readonly sanitizer = inject(DomSanitizer);
-
+export class R2HeroComponent {
   @Input() loopId: Loop = 'during';
   @Input() loopVideoName?: string;
   @Input() playingVideo: PiConfigVideoEntry | null = null;
@@ -145,16 +125,13 @@ export class R2HeroComponent implements OnChanges {
   @Input() displays: DisplayInfo[] = [];
   @Input() targetDisplay = 'all';
   /**
-   * URL absolue de la page TV à embarquer dans la mini-thumb iframe (ADR-105).
-   * Construite par RemoteV2Component.computeTvPreviewIframeUrl() (avec
-   * `?preview=1` pour mute audio + skip analytics + skip socket-register).
-   * Sur layout `desktop-pro`, le parent route l'URL vers `<app-r2-tv-monitor>`
-   * et passe `null` ici (mutex single-iframe).
+   * ADR-105 — historiquement utilisé pour le MJPEG mini-thumb du hero, désormais
+   * ignoré (l'iframe SPA ne peut pas être contenue proprement dans 60×38 sans
+   * casser le layout). Conservé pour compatibilité avec le contrat du parent
+   * `RemoteV2Component.heroPreviewUrl()` ; à supprimer si le parent arrête de
+   * le passer. Le preview live vit dans `<app-r2-tv-monitor>` (desktop-pro).
    */
   @Input() previewUrl: string | null = null;
-
-  /** SafeResourceUrl wrapper — recomputé à chaque changement de previewUrl. */
-  readonly safePreviewUrl = signal<SafeResourceUrl | null>(null);
 
   @Output() setLoop = new EventEmitter<Loop>();
   @Output() setTargetDisplay = new EventEmitter<string>();
@@ -163,14 +140,4 @@ export class R2HeroComponent implements OnChanges {
   /** ADR-103 Phase 2.5 — émis quand l'utilisateur veut couper la diffusion en cours
    *  (vidéo manuelle MP4, page web, ou livestream) et reprendre la boucle. */
   @Output() stopPlaying = new EventEmitter<void>();
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if ('previewUrl' in changes) {
-      this.safePreviewUrl.set(
-        this.previewUrl
-          ? this.sanitizer.bypassSecurityTrustResourceUrl(this.previewUrl)
-          : null,
-      );
-    }
-  }
 }

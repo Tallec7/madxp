@@ -55,24 +55,11 @@
   overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 
-  // ADR-105 — iframe TV preview scalée pour tenir dans le thumb 60×38.
-  // L'iframe rend le SPA Angular à sa taille native (800×506, ratio ≈ 60/38)
-  // puis CSS `transform: scale(0.075)` réduit visuellement à 60×38. Le browser
-  // ne re-rend pas, le compositor GPU scale le résultat (technique Figma
-  // pour les page thumbnails). `pointer-events: none` empêche les clicks sur
-  // la TV preview, le gradient reste derrière comme fallback warm-up.
-  .r2-tv-thumb-stream {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 800px;
-    height: 506px;
-    border: 0;
-    transform: scale(0.075);
-    transform-origin: top left;
-    pointer-events: none;
-    border-radius: 0;
-  }
+  // ADR-105 — pas de preview live dans le mini-thumb 60×38 du hero.
+  // L'iframe SPA Angular ne peut pas être contenue dans 60×38 sans casser le
+  // layout (overflow:hidden ne clip pas les transformed iframes en pratique).
+  // Le mini-thumb reste un placeholder gradient ; le preview live vit dans
+  // `<app-r2-tv-monitor>` du layout desktop-pro qui a la place.
 
   .r2-tv-scanline {
     position: absolute;
