@@ -34,6 +34,7 @@ interface VideoRow {
   filename: string;
   storage_path: string;
   duration: number | null;
+  [key: string]: unknown;
 }
 
 const args = process.argv.slice(2);
