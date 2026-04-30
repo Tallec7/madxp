@@ -1,3 +1,10 @@
+# [3.281.0](https://github.com/Tallec7/neopro/compare/v3.280.3...v3.281.0) (2026-04-30)
+
+### Features
+
+- **templates:** add joueur-tools admin page for template management ([#769](https://github.com/Tallec7/neopro/issues/769)) ([268bc20](https://github.com/Tallec7/neopro/commit/268bc2022fc6ed2e1b7eabf53a4e4d37a4782883)), closes [#764](https://github.com/Tallec7/neopro/issues/764)
+- **templates:** chantier JOUEUR — versioning + backgrounds + auto-crop + UI super_admin ([#766](https://github.com/Tallec7/neopro/issues/766)) ([357c887](https://github.com/Tallec7/neopro/commit/357c887b015856417789ba80f4c4a0ba02231516)), closes [#757](https://github.com/Tallec7/neopro/issues/757) [#758](https://github.com/Tallec7/neopro/issues/758) [#764](https://github.com/Tallec7/neopro/issues/764) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [690/#691](https://github.com/Tallec7/neopro/issues/691)
+
 ## [3.280.3](https://github.com/Tallec7/neopro/compare/v3.280.2...v3.280.3) (2026-04-30)
 
 ### Bug Fixes
