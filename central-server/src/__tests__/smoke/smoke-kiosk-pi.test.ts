@@ -3252,31 +3252,61 @@ describe('Manual video transition flash prevention guards', () => {
     });
   });
 
-  it('manual-video.service must always show freeze-frame and release HW decoder in manual→manual', () => {
+  it('manual-video.service play() MUST delegate masking to prepareSmoothManualTransition helper', () => {
     // Cas d'usage NLF "présentation joueurs" : enchaînement rapide de vidéos manuelles
-    // (1-10s par vidéo, JAMAIS revoir la boucle entre 2). L'ancienne stratégie consistait
-    // à skipper le freeze-frame en manual→manual (laisser l'ancien player visible derrière
-    // le nouveau). Sur Pi 5, ça produit un bug GPU "click-twice" — le compositeur Chromium
-    // ne peut pas allouer un nouveau SharedImage backing tant que l'ancien décodeur HW
-    // tient son slot (`SharedImageBackingFactory` failure pour Y_UV/420/8unorm/1920x1080).
+    // (1-10s par vidéo, JAMAIS revoir la boucle entre 2). Le contrat de transition vit
+    // dans `DoubleBufferVideoService.prepareSmoothManualTransition` (helper extrait
+    // pour DRY entre master `play()` et slave `preloadManualVideo`).
     //
-    // Nouvelle stratégie (invariants) :
-    //   1. captureAndShowFreezeFrame(isManualToManual) — toujours appelé, l'argument booléen
-    //      propage vers la capture LIVE depuis le player manuel actif (frame du joueur
-    //      précédent), JAMAIS le frame pré-capturé de la boucle.
-    //   2. En manuel→manuel, libérer le décodeur HW de l'ancien player AVANT le load de
-    //      la nouvelle vidéo (`activeManualPlayer.removeAttribute('src') + load()`). Le
-    //      freeze-frame canvas (z=20) couvre la période sans src.
+    // Voir SPEC docs/specs/features/manual-video-transitions.spec.md.
     const playMethodStart = manualVideoContent.indexOf('play(video: PiConfigVideoEntry)');
-    // Slice étendu à 12000 chars : play() fait ~190 lignes après l'ajout du fix
-    // flash-loop manual→manual (HW decoder release + black-overlay + rVFC + commentaires).
     const playMethodBlock = manualVideoContent.slice(playMethodStart, playMethodStart + 12000);
     expect({
-      freezeUsesIsManualToManualFlag: /captureAndShowFreezeFrame\(\s*isManualToManual\s*\)/.test(playMethodBlock),
-      releasesPreviousDecoderInManualToManual: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,3000}removeAttribute\(\s*['"]src['"]\s*\)/.test(playMethodBlock),
+      callsPrepareSmoothHelper: /prepareSmoothManualTransition\s*\(\s*activeManualPlayer\s*,\s*isManualToManual\s*\)/.test(playMethodBlock),
+      callsHideMaskingHelper: /hideMaskingLayersAfterPaint\s*\(\s*targetPlayer\s*\)/.test(playMethodBlock),
     }).toEqual({
-      freezeUsesIsManualToManualFlag: true,
-      releasesPreviousDecoderInManualToManual: true,
+      callsPrepareSmoothHelper: true,
+      callsHideMaskingHelper: true,
+    });
+  });
+
+  it('DoubleBufferVideoService MUST expose prepareSmoothManualTransition with correct invariants', () => {
+    // Le helper centralise les 3 invariants critiques du masquage transition :
+    //   1. captureAndShowFreezeFrame(isManualToManual) — capture LIVE en manuel→manuel
+    //      (frame du joueur précédent, JAMAIS le frame pré-capturé de la boucle).
+    //   2. showBlackOverlay() en manuel→manuel — filet de sécurité z=5 sous le freeze
+    //      pour la fenêtre où <video> est transparent avant 1ère frame décodée.
+    //   3. removeAttribute('src') + load() sur l'ancien player en manuel→manuel —
+    //      libère le SharedImage backing GPU Pi 5 (sinon bug click-twice).
+    const helperStart = doubleBufferContent.indexOf('prepareSmoothManualTransition(');
+    const helperBlock = doubleBufferContent.slice(helperStart, helperStart + 2500);
+    expect({
+      hasFreezeWithFlag: /captureAndShowFreezeFrame\(\s*isManualToManual\s*\)/.test(helperBlock),
+      hasBlackOverlayInManualToManual: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,500}showBlackOverlay\s*\(/.test(helperBlock),
+      releasesPreviousDecoder: /if\s*\(\s*isManualToManual\s*\)[\s\S]{0,1500}removeAttribute\(\s*['"]src['"]\s*\)[\s\S]{0,200}\.load\(\)/.test(helperBlock),
+    }).toEqual({
+      hasFreezeWithFlag: true,
+      hasBlackOverlayInManualToManual: true,
+      releasesPreviousDecoder: true,
+    });
+  });
+
+  it('DoubleBufferVideoService MUST expose hideMaskingLayersAfterPaint with rVFC + rAF chain', () => {
+    // Le helper hide doit attendre le PAINT COMMIT (pas juste rVFC). rVFC fire pendant
+    // le DOM update, AVANT le paint final composé → 1 rAF chaîné nécessaire.
+    // Sans ça, fenêtre 1-frame où <video> transparent → boucle (z=2) flashe.
+    const helperStart = doubleBufferContent.indexOf('hideMaskingLayersAfterPaint(');
+    const helperBlock = doubleBufferContent.slice(helperStart, helperStart + 1500);
+    expect({
+      hasRVFC: /requestVideoFrameCallback/.test(helperBlock),
+      hasRAFChain: /requestAnimationFrame/.test(helperBlock),
+      hidesFreezeFrame: /hideFreezeFrame\(\)/.test(helperBlock),
+      hidesBlackOverlay: /hideBlackOverlay\(\)/.test(helperBlock),
+    }).toEqual({
+      hasRVFC: true,
+      hasRAFChain: true,
+      hidesFreezeFrame: true,
+      hidesBlackOverlay: true,
     });
   });
 });

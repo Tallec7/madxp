@@ -139,50 +139,11 @@ export class ManualVideoService {
     const activeManualPlayer = this.doubleBufferService.getActiveManualPlayer();
     const isManualToManual = activeManualPlayer.style.opacity === '1' && !activeManualPlayer.paused;
 
-    // ETAPE 2: Toujours afficher un freeze-frame pour masquer la transition.
-    //
-    // Cas boucle→manuel : isManualMode=false → utilise le frame pré-capturé du player loop.
-    //
-    // Cas manuel→manuel (cas d'usage NLF "présentation joueurs") : isManualMode=true →
-    // capture LIVE depuis le player manuel actif (frame du joueur précédent, JAMAIS de la
-    // boucle — voir double-buffer-video.service.ts:574-595). Sans ce freeze + libération
-    // GPU ci-dessous, sur Pi 5 le compositeur Chromium n'arrive pas à allouer un nouveau
-    // SharedImage backing store quand 2 décodeurs vidéo HW tournent en parallèle, ce qui
-    // provoque le bug "click-twice" : la nouvelle vidéo charge mais ne s'affiche pas, et
-    // le user clique à nouveau pour libérer le slot. Symptôme journalctl :
-    // `SharedImageBackingFactory ... format: (Y_UV, 420, 8unorm), size: 1920x1080`.
-    const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(isManualToManual);
-    if (!freezeOk) {
-      this.doubleBufferService.showBlackOverlay();
-    }
-
-    // En manuel→manuel, activer EN PLUS l'overlay noir (z=5) en complément du
-    // freeze-frame (z=20). L'overlay reste invisible au user tant que le
-    // freeze-frame est affiché, mais sert de FILET DE SÉCURITÉ pour la fenêtre
-    // de 1-2 frames entre `hideFreezeFrame()` et le premier paint du nouveau
-    // player. Sans cet overlay : <video> est transparent jusqu'au 1er frame
-    // décodé (Chromium ne render pas le `background:#000` de la balise) →
-    // la boucle (z=2) flashe à travers ce gap. Avec l'overlay (z=5, BG noir
-    // opaque), même si le nouveau player <video> est encore transparent, on
-    // voit du noir au lieu de la boucle. Hidden après requestVideoFrameCallback.
-    if (isManualToManual) {
-      this.doubleBufferService.showBlackOverlay();
-    }
-
-    // ETAPE 2b: En manuel→manuel uniquement, masquer + libérer le décodeur HW de
-    // l'ancien player AVANT de toucher targetPlayer. L'ancien player a un
-    // `background: #000 !important` (cf. tv.component.scss:132) — sans opacity=0,
-    // une fois sa src retirée il afficherait un rectangle noir au-dessus du nouveau
-    // player (à cause de l'ordre DOM : manualPlayerB est APRÈS manualPlayerA, donc
-    // à z-index égal, B couvre A). Le freeze-frame canvas (z=20) couvre la période
-    // de transition — le user voit le frame figé du joueur précédent.
-    if (isManualToManual) {
-      activeManualPlayer.pause();
-      activeManualPlayer.style.opacity = '0';
-      activeManualPlayer.style.zIndex = '10';
-      activeManualPlayer.removeAttribute('src');
-      activeManualPlayer.load();
-    }
+    // ETAPE 2: Préparer la transition smooth — capture freeze-frame + black-overlay
+    // safety net + libération HW du décodeur précédent (Pi 5 SharedImage saturation).
+    // Voir SPEC docs/specs/features/manual-video-transitions.spec.md pour les
+    // détails (cas d'usage NLF "présentation joueurs", invariants, cas d'edge).
+    this.doubleBufferService.prepareSmoothManualTransition(activeManualPlayer, isManualToManual);
 
     // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement.
     // z-index 11 → garantit que le nouveau player passe AU-DESSUS de l'ancien
@@ -210,36 +171,10 @@ export class ManualVideoService {
           targetPlayer.style.opacity = '1';
           this.doubleBufferService.swapActiveManualPlayer();
 
-          // Attendre que le nouveau player ait peint sa PREMIÈRE FRAME avant de
-          // cacher le freeze-frame. Sans ce wait, gap de 1-2 frames où <video>
-          // est transparent (Chromium n'applique pas `background:#000` tant qu'aucune
-          // frame n'est décodée — il render directement la texture vidéo), et la
-          // boucle (z=2) apparaît derrière → flash boucle ~16-32ms perçu.
-          // requestVideoFrameCallback fire au moment exact où la frame est prête à
-          // composer, garantissant un swap pixel-perfect. Fallback rAF immédiat si
-          // API absente (Chromium <92, jamais sur Pi 5 mais safe pour autres builds).
-          type RVFCPlayer = HTMLVideoElement & {
-            requestVideoFrameCallback?: (cb: () => void) => number;
-          };
-          // hideOnPaint = doit être appelé APRÈS que la frame soit réellement
-          // peinte/composée. requestVideoFrameCallback fire pendant le DOM update,
-          // potentiellement AVANT le paint final. Le rAF supplémentaire à
-          // l'intérieur garantit qu'on attend le commit de paint avant de
-          // découvrir le canvas/overlay (sinon flash boucle 16-32ms persistant
-          // observé en log : freeze hidden APRÈS le revealed log mais le browser
-          // n'avait pas encore composé la frame du nouveau player).
-          const hideAfterPaint = () => {
-            requestAnimationFrame(() => {
-              this.doubleBufferService.hideFreezeFrame();
-              this.doubleBufferService.hideBlackOverlay();
-            });
-          };
-          const rvfc = (targetPlayer as RVFCPlayer).requestVideoFrameCallback;
-          if (typeof rvfc === 'function') {
-            rvfc.call(targetPlayer, hideAfterPaint);
-          } else {
-            hideAfterPaint();
-          }
+          // Cache freeze-frame + black-overlay APRÈS le 1er paint commit du
+          // nouveau player (rVFC + 1 rAF chaîné). Voir SPEC manual-video-transitions
+          // pour le détail timing (rVFC fire avant paint final → rAF nécessaire).
+          this.doubleBufferService.hideMaskingLayersAfterPaint(targetPlayer);
 
           // Tracker (desactive pour les slaves)
           if (!this.callbacks?.getIsSlaveMode()) {
@@ -501,28 +436,9 @@ export class ManualVideoService {
       });
     }
 
-    // Attendre que le player ait peint sa première frame avant de cacher le
-    // freeze-frame ET le black-overlay. Sans ce wait, fenêtre de 1-2 frames où
-    // <video> est transparent (Chromium n'applique pas `background:#000` avant
-    // 1ère frame décodée) → la boucle (z=2) flashe à travers.
-    // requestVideoFrameCallback fire pendant le DOM update, potentiellement
-    // AVANT le paint final → on chaîne avec un rAF pour attendre le commit
-    // du paint composé avant de découvrir les couches de masquage.
-    type RVFCPlayer = HTMLVideoElement & {
-      requestVideoFrameCallback?: (cb: () => void) => number;
-    };
-    const hideAfterPaint = () => {
-      requestAnimationFrame(() => {
-        this.doubleBufferService.hideFreezeFrame();
-        this.doubleBufferService.hideBlackOverlay();
-      });
-    };
-    const rvfc = (player as RVFCPlayer).requestVideoFrameCallback;
-    if (typeof rvfc === 'function') {
-      rvfc.call(player, hideAfterPaint);
-    } else {
-      hideAfterPaint();
-    }
+    // Cache freeze-frame + black-overlay APRÈS le 1er paint commit du player.
+    // Voir SPEC manual-video-transitions § "Architecture du masquage".
+    this.doubleBufferService.hideMaskingLayersAfterPaint(player);
 
     this.callbacks?.emitPlayerState({
       currentVideo: PlayerStateService.filenameFromPath(video.path),
