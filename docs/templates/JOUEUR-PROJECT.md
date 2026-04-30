@@ -50,16 +50,22 @@ résolue par `visible_if` côté slot devient un template séparé en bibliothè
 
 ## Bloquants livraison master
 
+**Stratégie "fait au mieux"** : minimum 2 items côté Daisy, le reste je gère
+en best-effort + frame-compare déclenche les ajustements.
+
+### Vrais bloquants (Daisy)
+
 - [ ] **8 WebM alpha** (1920×1080 @ 25fps) :
   - JOUEUR_simple : 01-A-hexagone, 02-B-transition
   - JOUEUR_but : 01-A-hexagone, 02-B, 03-C-titre, 04-D
   - Packshots : packshot-generique, packshot-img
-- [ ] **Fonts Bulevar.otf + GeneralSans-Bold.otf** + **licences d'usage web**
-- [ ] **PDF page 5 complétée** : font + alignement du nom-club sur PACKSHOT_IMG
-- [ ] **Confirmation dimensions safe zones** :
-  - Hexagone (intro logo/numéro)
-  - Photo joueur (rectangle rouge packshot IMG)
-- [ ] **Délai cible + client cible** (NLF, démo, prospect ?)
+
+### Préférable mais non bloquant
+
+- [x] ~~Fonts Bulevar.otf + GeneralSans-Bold.otf~~ → web fonts proxies (Anton + Oswald) en attendant. Frame-compare déclenchera switch sur .otf si écart visible.
+- [x] ~~PDF page 5 complétée~~ → ComicSans nom-club PACKSHOT_IMG **switché en GeneralSans** (hypothèse de travail). Reversible en 1 sed si confirm Daisy ComicSans voulu.
+- [x] ~~Mesures safe zones~~ → je mesure a posteriori sur les WebM livrés.
+- [x] ~~Délai cible + client cible~~ → publication par défaut accessible flotte, restriction via UI super_admin si Daisy precise.
 
 ## ADR à rédiger
 
