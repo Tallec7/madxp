@@ -28,6 +28,7 @@ import { Configuration, TimeCategory } from '../../interfaces/configuration.inte
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
+import { LocalBroadcastService } from '../../services/local-broadcast.service';
 import { SaasConfigService, SaasProfile, SaasPinRequiredError } from '../../services/saas-config.service';
 import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/local-options.service';
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
@@ -112,6 +113,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
+  private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly saasConfig = inject(SaasConfigService);
   private readonly localOptionsService = inject(LocalOptionsService);
   public readonly scoreService = inject(RemoteScoreService);
@@ -707,6 +709,48 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.expandedSubs[id] = !this.expandedSubs[id];
   }
 
+  /**
+   * ADR-081 Phase 0 — UUID v4 généré par la remote à chaque emit.
+   * Utilise crypto.randomUUID() si dispo (HTTPS/modern browsers), fallback Math.random sinon.
+   * Dupliqué de remote.component.ts pour parité V1/V2.
+   */
+  private newCommandId(): string {
+    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+      const r = (Math.random() * 16) | 0;
+      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Cible d'écran active sous forme `target: number[]` (parité V1 / ADR-081).
+   * `targetDisplay === 'all'` → undefined (la TV diffuse à tous les écrans).
+   * Le contrat `displayIndex: number` était silencieusement ignoré par
+   * `tv.component.ts handleTvCommand()` qui filtre uniquement sur `target`.
+   */
+  private getCommandTarget(): number[] | undefined {
+    if (this.targetDisplay === 'all') return undefined;
+    const idx = parseInt(this.targetDisplay, 10);
+    return Number.isFinite(idx) ? [idx] : undefined;
+  }
+
+  /**
+   * Émission unifiée d'une commande (parité V1) :
+   *  - ajoute `commandId` UUID v4 (ADR-081, audit + idempotence cloud)
+   *  - propage la cible multi-écrans (`target: number[]`)
+   *  - broadcast local (BroadcastChannel) pour les TV co-localisées
+   *  - relais socket pour le master Pi
+   */
+  private emitCommand(payload: { type: 'video' | 'sponsors' | 'web-page' | 'livestream' | 'stop-manual' | 'reload-config'; data?: unknown }): void {
+    const target = this.getCommandTarget();
+    const commandId = this.newCommandId();
+    const enriched = { ...payload, commandId, ...(target ? { target } : {}) };
+    this.localBroadcast.emitCommand(enriched);
+    this.socketService.emit('command', enriched as never);
+  }
+
   playVideo(v: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     this.addToRecentVideos(v);
@@ -714,8 +758,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (v.id) this.erroredVideoIds.delete(v.id);
     this.playingVideoId = v.id ?? null;
     this.playingVideo = v;
-
-    const displayIndex = this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10);
 
     // ADR-103 Phase 1/2a — dispatch by contentType so web_page / livestream
     // entries are routed to the WebContentService instead of the MP4 manual
@@ -726,7 +768,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
         durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
         name: v.name,
       };
-      this.socketService.emit('command', { type: 'web-page', data, displayIndex });
+      this.emitCommand({ type: 'web-page', data });
       this.activeSheet = null;
       this.showToast(`Diffusé : ${v.name} (page web)`);
     } else if (v.contentType === 'livestream' && v.externalUrl) {
@@ -736,11 +778,11 @@ export class RemoteV2Component implements OnInit, OnDestroy {
         durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
         name: v.name,
       };
-      this.socketService.emit('command', { type: 'livestream', data, displayIndex });
+      this.emitCommand({ type: 'livestream', data });
       this.activeSheet = null;
       this.showToast(`Diffusé : ${v.name} (livestream)`);
     } else {
-      this.socketService.emit('command', { type: 'video', data: v, displayIndex });
+      this.emitCommand({ type: 'video', data: v });
       this.activeSheet = null;
       this.showToast(`Diffusé : ${v.name}`);
     }
@@ -772,8 +814,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
     this.playingVideoId = null;
     this.playingVideo = null;
-    const displayIndex = this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10);
-    this.socketService.emit('command', { type: 'stop-manual', displayIndex });
+    this.emitCommand({ type: 'stop-manual' });
     this.showToast('Retour à la boucle');
   }
 
@@ -1184,6 +1225,10 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.localOptionsService.updateOverlayOptions({ scoreEnabled: enabled });
   }
 
+  updateTimerEnabled(enabled: boolean): void {
+    this.localOptionsService.updateTimerOptions({ enabled });
+  }
+
   updateTimerDuration(minutes: number): void {
     this.localOptionsService.updateTimerOptions({ periodDuration: minutes });
   }
@@ -1192,12 +1237,20 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.localOptionsService.updateTimerOptions({ countDown });
   }
 
+  updateTimerIntegratedWithScore(integratedWithScore: boolean): void {
+    this.localOptionsService.updateTimerOptions({ integratedWithScore });
+  }
+
   updateBreakingEnabled(enabled: boolean): void {
     this.localOptionsService.updateBreakingNewsOptions({ enabled });
   }
 
   updateBreakingPosition(position: 'top' | 'bottom'): void {
     this.localOptionsService.updateBreakingNewsOptions({ position });
+  }
+
+  updateBreakingDuration(defaultDuration: number): void {
+    this.localOptionsService.updateBreakingNewsOptions({ defaultDuration });
   }
 
   get breakingLive(): boolean {

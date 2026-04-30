@@ -1,3 +1,27 @@
+# [3.284.0](https://github.com/Tallec7/neopro/compare/v3.283.0...v3.284.0) (2026-04-30)
+
+### Features
+
+- **remote:** backport V1 parity on V2 emit path + 3 match options ([#782](https://github.com/Tallec7/neopro/issues/782)) ([c36ef02](https://github.com/Tallec7/neopro/commit/c36ef02edd10d062fe4dcdc36d69dfb64b2f0206))
+
+# [3.283.0](https://github.com/Tallec7/neopro/compare/v3.282.2...v3.283.0) (2026-04-30)
+
+### Features
+
+- **scripts:** backfill videos.duration via FFprobe ([#780](https://github.com/Tallec7/neopro/issues/780)) ([7a89e7d](https://github.com/Tallec7/neopro/commit/7a89e7d9ca48126857c385faf9ecdf5c860d2127)), closes [#779](https://github.com/Tallec7/neopro/issues/779)
+
+## [3.282.2](https://github.com/Tallec7/neopro/compare/v3.282.1...v3.282.2) (2026-04-30)
+
+### Bug Fixes
+
+- **raspberry:** NLF présentation joueurs — click-twice + flash boucle + SITE_ID flotte ([#778](https://github.com/Tallec7/neopro/issues/778)) ([61f4e9c](https://github.com/Tallec7/neopro/commit/61f4e9c146a4017fcb2e4664ff2c73652a5817eb)), closes [#000](https://github.com/Tallec7/neopro/issues/000)
+
+## [3.282.1](https://github.com/Tallec7/neopro/compare/v3.282.0...v3.282.1) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** masque barre de progression quand durationSeconds manquant ([#779](https://github.com/Tallec7/neopro/issues/779)) ([07a54f1](https://github.com/Tallec7/neopro/commit/07a54f1d6c4a32524968d329a61a2fcb19be4fa5))
+
 # [3.282.0](https://github.com/Tallec7/neopro/compare/v3.281.1...v3.282.0) (2026-04-30)
 
 ### Features

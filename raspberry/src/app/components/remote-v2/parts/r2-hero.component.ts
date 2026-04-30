@@ -92,12 +92,15 @@ export interface DisplayInfo {
         </button>
       </div>
 
-      <div class="r2-hero-progress" *ngIf="playingVideo">
+      <!-- Barre affichée UNIQUEMENT si durationSeconds est renseigné en DB.
+           Sans ça la barre se base sur un fallback 5s qui ne reflète rien :
+           mieux vaut ne rien afficher qu'une barre qui ment. -->
+      <div class="r2-hero-progress" *ngIf="playingVideo && playingVideo.durationSeconds">
         <span class="r2-hero-progress-bar">
           <span class="r2-hero-progress-fill"
             [style.width.%]="progressPercent()"></span>
         </span>
-        <span class="r2-hero-progress-duration" *ngIf="playingVideo.durationSeconds">
+        <span class="r2-hero-progress-duration">
           {{ remainingSeconds() }}s
         </span>
       </div>
