@@ -106,6 +106,19 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     expect(fn).toContain("'no-store'");
   });
 
+  it('Pages Function fait un SPA fallback explicite vers /saas/index.html sur 404 non-asset (display/N arbitraire)', () => {
+    // Sans ce fallback, `/saas/display/29` retourne 404 parce que
+    // `cloudflare-saas-route-stubs.sh` ne prégénère que 0..3. Le SPA
+    // fallback explicite garantit que toute route Angular dynamique
+    // sous /saas/ (display/:n, future deep routes) résout côté client.
+    const fn = read('central-dashboard/cloudflare/functions/saas/[[catchall]].js');
+    // Branche dédiée 404 + non-asset + sous /saas/
+    expect(/response\.status\s*===\s*404[\s\S]{0,300}\/saas\//.test(fn)).toBe(true);
+    expect(/!isAssetRequest\(url\.pathname\)/.test(fn)).toBe(true);
+    // Re-fetch /saas/index.html
+    expect(/['"]\/saas\/index\.html['"]/.test(fn)).toBe(true);
+  });
+
   // ------------ Pages Function ROOT catchall (Dashboard) ------------
 
   it('Pages Function ROOT catchall exists at expected path', () => {

@@ -24,6 +24,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
+import { skip } from 'rxjs/operators';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
@@ -310,10 +311,22 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // Timer: initialisation
     this.timerService.initialize(this.localOptions.timer);
 
-    // Options observable
+    // Options observable + broadcast TV (parité V1 `broadcastOptions()`).
+    // V1 appelle `broadcastOptions()` après chaque setter (9 callsites).
+    // V2 centralise via la subscription : `skip(1)` ignore l'émission
+    // initiale du BehaviorSubject (boot, pas de changement utilisateur),
+    // toute mise à jour suivante est propagée à la TV via socket +
+    // BroadcastChannel local. Sans ça, les toggles options V2 sont des
+    // placebos (timer.enabled, breakingNews.defaultDuration, overlay.position…
+    // jamais reçus par la TV).
     this.subs.push(
       this.localOptionsService.getOptions$().subscribe(opts => {
         this.localOptions = opts;
+      }),
+    );
+    this.subs.push(
+      this.localOptionsService.getOptions$().pipe(skip(1)).subscribe(opts => {
+        this.broadcastOptions(opts);
       }),
     );
 
@@ -383,13 +396,20 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
       'displays-changed',
       data => {
-        this.ngZone.run(() => {
-          this.displays = (data.displays || []).map(d => ({
-            id: String(d.index),
-            label: `display-${d.index}`,
-            status: 'online' as const,
-          }));
-        });
+        this.displays = (data.displays || []).map(d => ({
+          id: String(d.index),
+          label: `display-${d.index}`,
+          status: 'online' as const,
+        }));
+        // Si la cible courante n'est plus connectée (display disparu), on
+        // retombe automatiquement sur "tous". Sinon les commandes suivantes
+        // disparaissent dans le vide. Parité V1 (remote.component.ts:351-353).
+        if (
+          this.targetDisplay !== 'all' &&
+          !this.displays.some(d => d.id === this.targetDisplay)
+        ) {
+          this.targetDisplay = 'all';
+        }
       },
     );
     this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
@@ -408,6 +428,12 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       'player-state',
       data => this.ngZone.run(() => this.handlePlayerState(data)),
     );
+
+    // Parité V1 (remote.component.ts:365) : on demande au serveur Pi/Cloud
+    // de pousser immédiatement le snapshot d'état (score, phase, options,
+    // displays connectés…). Sans ça, la sheet "Cible vidéo" reste vide
+    // jusqu'à ce qu'une TV se (dé)connecte.
+    this.socketService.emit('request-state', {} as never);
 
     // ADR-105 — Preview TV via iframe local-first.
     // L'iframe pointe sur la même page TV que celle servie par le Pi/SaaS,
@@ -1261,15 +1287,49 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     return !!this.localOptions.breakingNews?.enabled;
   }
 
+  /**
+   * Propagation des options à la TV (parité V1 `broadcastOptions()`).
+   * V1 émet sur socket + BroadcastChannel ; V2 fait pareil via cette
+   * méthode centralisée, branchée sur `localOptionsService.getOptions$()`
+   * (skip 1 — pas de broadcast au boot).
+   */
+  private broadcastOptions(opts: LocalOptions): void {
+    this.localBroadcast.broadcast('options-update', opts);
+    this.socketService.emit('options-update', opts as never);
+  }
+
+  /**
+   * Émission breaking news vers la TV (parité V1 `sendBreakingNews()`).
+   * V2 ne faisait que toggle le flag local — la TV n'affichait jamais le
+   * bandeau. Désormais on émet le payload complet `{message, duration,
+   * position, displayMode, target}` sur socket + BroadcastChannel.
+   */
+  private sendBreakingNews(message: string): void {
+    if (!this.localOptions.breakingNews) return;
+    const target = this.getCommandTarget();
+    const news = {
+      message,
+      duration: this.localOptions.breakingNews.defaultDuration,
+      position: this.localOptions.breakingNews.position,
+      displayMode: this.localOptions.breakingNews.displayMode,
+      ...(target ? { target } : {}),
+    };
+    this.localBroadcast.emitBreakingNews(news);
+    this.socketService.emit('breaking-news', news as never);
+  }
+
   toggleBreaking(): void {
     this.notifyUserActivity();
     const next = !this.breakingLive;
     this.localOptionsService.updateBreakingNewsOptions({ enabled: next });
-    if (next && this.breakingText.trim()) {
+    const text = this.breakingText.trim();
+    if (next && text) {
       const existing = this.localOptions.breakingNews?.quickMessages || [];
-      const head = this.breakingText.trim();
-      const dedup = [head, ...existing.filter(m => m !== head)].slice(0, 10);
+      const dedup = [text, ...existing.filter(m => m !== text)].slice(0, 10);
       this.localOptionsService.updateBreakingNewsOptions({ quickMessages: dedup });
+      // Émission réelle vers la TV (le toggle "enabled" seul n'a jamais
+      // déclenché l'overlay — bug placebo détecté audit 2026-05-01).
+      this.sendBreakingNews(text);
     }
     this.showToast(next ? 'Breaking news diffusé' : 'Breaking news retiré');
   }

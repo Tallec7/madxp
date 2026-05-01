@@ -1,3 +1,33 @@
+## [3.284.5](https://github.com/Tallec7/neopro/compare/v3.284.4...v3.284.5) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** supprime max-height hero mobile-classic → section display visible ([#788](https://github.com/Tallec7/neopro/issues/788)) ([c20c2fc](https://github.com/Tallec7/neopro/commit/c20c2fc39606371675d014325723f28a6523ebf5))
+
+## [3.284.4](https://github.com/Tallec7/neopro/compare/v3.284.3...v3.284.4) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** port catchall Pages Function to raspberry SaaS ([#785](https://github.com/Tallec7/neopro/issues/785)) ([0eeea50](https://github.com/Tallec7/neopro/commit/0eeea50dc7688cdef71a766ed04b6604ea543651))
+
+## [3.284.3](https://github.com/Tallec7/neopro/compare/v3.284.2...v3.284.3) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** V2 émet request-state au boot pour recevoir displays-changed ([#787](https://github.com/Tallec7/neopro/issues/787)) ([0284e85](https://github.com/Tallec7/neopro/commit/0284e858f78f1c7f1d46632bc85e9859bfb813f4))
+
+## [3.284.2](https://github.com/Tallec7/neopro/compare/v3.284.1...v3.284.2) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** SPA fallback explicite pour display/:N arbitraire (404 → /saas/index.html) ([#786](https://github.com/Tallec7/neopro/issues/786)) ([6866994](https://github.com/Tallec7/neopro/commit/6866994acb1a06bf27984cf940b19f7e4f4a2391))
+
+## [3.284.1](https://github.com/Tallec7/neopro/compare/v3.284.0...v3.284.1) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** close 4 V2 orchestration holes vs V1 (request-state, breaking-news, options, target-reset) ([#784](https://github.com/Tallec7/neopro/issues/784)) ([7fb1e1c](https://github.com/Tallec7/neopro/commit/7fb1e1ca60b7f4031f0bd8a743389c9976d16e6b))
+
 # [3.284.0](https://github.com/Tallec7/neopro/compare/v3.283.0...v3.284.0) (2026-04-30)
 
 ### Features
