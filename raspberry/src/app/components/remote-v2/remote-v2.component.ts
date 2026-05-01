@@ -134,10 +134,10 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   localOptions!: LocalOptions;
 
   /** Phase de navigation (catégories affichées) — peut différer de la boucle active. */
-  phaseId: Phase = 'during';
+  phaseId: Phase = 'before';
 
   /** Boucle à l'antenne (cloud push vers le TV). 'neutral' = rotation sponsors par défaut. */
-  loopId: Loop = 'during';
+  loopId: Loop = 'neutral';
 
   /** Sheet / modal actif. null = aucune. */
   activeSheet: SheetType = null;
