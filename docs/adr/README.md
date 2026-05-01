@@ -128,7 +128,7 @@ Un ADR documente une décision technique importante avec :
 
 | ID                                        | Titre                                       | Remplacé par                                 | Date     |
 | ----------------------------------------- | ------------------------------------------- | -------------------------------------------- | -------- |
-| [ADR-006](ADR-006-double-buffer-video.md) | Double-buffer vidéo sans préchargement (v1) | [ADR-008](ADR-008-double-buffer-video-pi.md) | Jan 2026 |
+| [ADR-016](ADR-016-double-buffer-video.md) | Double-buffer vidéo sans préchargement (v1) | [ADR-008](ADR-008-double-buffer-video-pi.md) | Jan 2026 |
 | [ADR-009](ADR-009-analytics-removal.md)   | Suppression Analytics (version initiale)    | [ADR-027](ADR-027-analytics-ui-removal.md)   | Fév 2026 |
 
 ### Propositions (décision à prendre)

@@ -1,5 +1,7 @@
 # Tech Debt Register Neopro
 
+> ⚠️ **STALE** — Dernière révision : 2026-04-30. Contenu potentiellement périmé. Revue trimestrielle recommandée.
+
 > **Audience** : Daisy (Lead Dev solo) + futur CTO + futur PM (pour comprendre où va l'énergie tech)
 >
 > **Principe directeur** : honnêteté > brillance. Mieux vaut un doc qui dit "ce truc pue, on le sait" qu'un doc qui passe sous silence. Un fichier `TECH-DEBT.md` honnête est un magnet pour les bons CTO.

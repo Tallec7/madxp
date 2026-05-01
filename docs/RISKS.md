@@ -1,5 +1,7 @@
 # Risk Register Neopro
 
+> ⚠️ **STALE** — Dernière révision : 2026-04-30. Contenu potentiellement périmé. Revue trimestrielle recommandée.
+
 > **Audience** : Daisy + futur PM (où placer son énergie produit) + futur CTO (où placer son énergie infra)
 >
 > **Principe directeur** : un risque non documenté est un risque sous-estimé. Tout risque ici a été pesé en `proba × impact` et a une mitigation chiffrée — ou explicitement marquée "à accepter".

@@ -1,5 +1,7 @@
 # KPIs Neopro
 
+> ⚠️ **STALE** — Dernière révision : 2026-04-25. Contenu potentiellement périmé. Revue mensuelle recommandée.
+
 > **Audience** : futur PM (jour 1 = sait quels chiffres regarder le mardi matin) + futur CTO (sait quoi instrumenter en priorité) + Daisy (référence partagée pour challenger les décisions produit)
 >
 > **Statut** : Live | **Dernière revue** : 2026-04-25 | **Source** : interview Daisy 2026-04-25
