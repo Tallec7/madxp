@@ -250,4 +250,21 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/this\.displays\.some/.test(block)).toBe(true);
     expect(/this\.targetDisplay\s*=\s*['"]all['"]/.test(block)).toBe(true);
   });
+
+  it('saas-register pousse displays-changed au remote SaaS (fix race ADR-106)', () => {
+    // Régression : avant le fix, le remote SaaS ne recevait jamais le snapshot
+    // initial. Son `request-state` partait avant que `registerSaasRelay` n'ait
+    // attaché le handler côté serveur (race ADR-106) → silencieusement dropé.
+    // Le serveur doit donc pousser displays-changed proactivement au remote au
+    // moment du saas-register, sans attendre request-state.
+    const svc = read('central-server/src/services/socket.service.ts');
+    const registerStart = svc.indexOf("socket.on('saas-register'");
+    expect(registerStart).toBeGreaterThan(0);
+    const block = svc.slice(registerStart, registerStart + 3500);
+    // Doit pousser displays-changed directement au socket remote (pas de room
+    // broadcast — éviterait les TVs déjà connectées de re-recevoir l'état).
+    expect(
+      /clientType\s*===\s*['"]saas-remote['"][\s\S]{0,500}socket\.emit\(['"]displays-changed['"]/.test(block),
+    ).toBe(true);
+  });
 });
