@@ -103,7 +103,7 @@ Tableau de bord mis à jour manuellement lors des revues documentaires.
 
 | Indicateur | Cible | Mesuré le | Valeur |
 |------------|-------|-----------|--------|
-| Liens internes cassés | 0 | 2026-05-01 | ~4 connus |
+| Liens internes cassés | 0 | 2026-05-01 | 0 (traité en phase 2) |
 | ADR sans trou de numérotation | ✓ | 2026-05-01 | 8 trous (dont ADR-016 résolu) |
 | Répertoires vides | 0 | 2026-05-01 | 2 (`api/`, `Charte graphique/`) |
 | Fichiers STALE non banderolés | <5 | 2026-05-01 | 0 (traité en phase 1) |
