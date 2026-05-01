@@ -383,17 +383,21 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
       'displays-changed',
       data => {
-        this.displays = (data.displays || []).map(d => ({
-          id: String(d.index),
-          label: `display-${d.index}`,
-          status: 'online' as const,
-        }));
+        this.ngZone.run(() => {
+          this.displays = (data.displays || []).map(d => ({
+            id: String(d.index),
+            label: `display-${d.index}`,
+            status: 'online' as const,
+          }));
+        });
       },
     );
     this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
-      if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
-        this.loopId = data.phase;
-      }
+      this.ngZone.run(() => {
+        if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
+          this.loopId = data.phase;
+        }
+      });
     });
 
     // Feedback erreur vidéo : la TV émet `player-state` avec
@@ -402,7 +406,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // figé en "playing" alors que la TV recovery vers la boucle.
     this.socketService.on<{ lastError?: string | null; isManualMode?: boolean }>(
       'player-state',
-      data => this.handlePlayerState(data),
+      data => this.ngZone.run(() => this.handlePlayerState(data)),
     );
 
     // ADR-105 — Preview TV via iframe local-first.
