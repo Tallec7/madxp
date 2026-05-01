@@ -1,3 +1,9 @@
+## [3.285.1](https://github.com/Tallec7/neopro/compare/v3.285.0...v3.285.1) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** initialiser loopId à 'neutral' dans Remote V2 ([#806](https://github.com/Tallec7/neopro/issues/806)) ([99d3a13](https://github.com/Tallec7/neopro/commit/99d3a132023f5ee982bf5f629cc10c225d363af1))
+
 # [3.285.0](https://github.com/Tallec7/neopro/compare/v3.284.12...v3.285.0) (2026-05-01)
 
 ### Features
