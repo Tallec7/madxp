@@ -19,6 +19,12 @@ const repoRoot = path.resolve(__dirname, '../../../../');
 const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 const exists = (rel: string) => fs.existsSync(path.join(repoRoot, rel));
 
+// Strip JS/TS line and block comments. Used when a smoke test asserts the
+// presence/absence of a code pattern that may also appear in surrounding
+// commentary (justification of why X must NOT be done, etc.).
+const stripComments = (s: string): string =>
+  s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
 describe('Smoke — ADR-092 Remote V2 feature flag', () => {
   // ------------ central-server : expose featureOverrides ------------
 
@@ -253,19 +259,21 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
 
   it("RemoteV2Component n'appelle PAS socketService.initialize() (parité V1, anti-double-socket)", () => {
     // Régression : un second `initialize()` dans ngOnInit du V2 crée un 2e
-    // socket et écrase `this.socket`, leakant le 1er (créé par
-    // app.component.ts:15) avec ses listeners attachés par d'autres services
-    // injectés `providedIn: 'root'` (ex. RecordingStateService). Le serveur
-    // émet alors displays-changed au socket qui a registered, et la réponse
-    // peut atterrir sur le socket SANS le listener V2 selon le timing.
+    // socket et écrase `this.socket`, leakant le 1er (créé par app.component
+    // au boot) avec ses listeners attachés par d'autres services injectés
+    // providedIn: 'root'. Le serveur émet alors displays-changed au socket
+    // qui a registered, et la réponse peut atterrir sur le socket SANS le
+    // listener V2 selon le timing.
     // Diagnostic : 2x "Connecting to socket server" dans les logs Pi.
     const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
-    expect(/socketService\.initialize\(\)/.test(v2)).toBe(false);
+    const stripped = stripComments(v2);
+    expect(/socketService\.initialize\(\)/.test(stripped)).toBe(false);
   });
 
   it("AppComponent reste l'unique caller de socketService.initialize() (singleton de boot)", () => {
     const app = read('raspberry/src/app/app.component.ts');
-    expect(/socketService\.initialize\(\)/.test(app)).toBe(true);
+    const stripped = stripComments(app);
+    expect(/socketService\.initialize\(\)/.test(stripped)).toBe(true);
   });
 
   it('saas-register pousse displays-changed au remote SaaS (fix race ADR-106)', () => {
