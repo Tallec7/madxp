@@ -285,7 +285,7 @@ BEGIN
       0.7, 0.5, 0.30, 1.0,
       0, 0.6, 'fade', 'in',
       '3:4', FALSE, 1,
-      layer_packshot_id, 'top', 'fill-width-anchor-top',
+      layer_packshot_id, 'top-center', 'fill-width-anchor-top',
       0.0, 50.0, 30.0, 100.0,
       'bottom', NULL, NULL
     );
