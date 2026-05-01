@@ -1,3 +1,9 @@
+## [3.284.5](https://github.com/Tallec7/neopro/compare/v3.284.4...v3.284.5) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** supprime max-height hero mobile-classic → section display visible ([#788](https://github.com/Tallec7/neopro/issues/788)) ([c20c2fc](https://github.com/Tallec7/neopro/commit/c20c2fc39606371675d014325723f28a6523ebf5))
+
 ## [3.284.4](https://github.com/Tallec7/neopro/compare/v3.284.3...v3.284.4) (2026-05-01)
 
 ### Bug Fixes
