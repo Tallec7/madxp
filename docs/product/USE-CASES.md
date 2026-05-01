@@ -52,9 +52,9 @@ Format : _"Quand [situation déclenchante], je veux [motivation profonde], pour 
 
 > Quand le vendredi arrive, je veux préparer le show matchday en 45 min au lieu de 4h, pour récupérer mon dimanche et mon énergie pour les réseaux sociaux du lundi.
 
-**JTBD-B2 (Staff bénévole / persona 4)**
+**JTBD-B2 (Opérateur matchday / persona 4)**
 
-> Quand on me demande « tiens le score samedi soir », je veux pouvoir le faire depuis ma place en tribune avec mon téléphone, pour profiter du match au lieu d'être collé à un PC en régie.
+> Quand on me demande de gérer les écrans samedi soir, je veux pouvoir tout faire depuis ma place en tribune avec mon téléphone — one-hand si je commente au micro — pour profiter du match au lieu d'être collé à un PC en régie.
 
 **JTBD-B3 (Spectateur / persona 5 — roadmap LATER)**
 
@@ -70,7 +70,7 @@ Format : _"Quand [situation déclenchante], je veux [motivation profonde], pour 
 
 > Quand juin arrive et que mes 8 sponsors veulent justifier leur reconduction au DAF, je veux qu'un PDF audit-grade parte automatiquement, pour passer le taux de reconduction de 60 % à 85 % sans 3 semaines d'Excel.
 
-**JTBD-C3 (Sponsor / personae 6a, 6b, 6c)**
+**JTBD-C3 (Partenaire / Acheteur media / persona 6 — niveaux 1→4)**
 
 > Quand on m'envoie ma facture annuelle, je veux savoir où mon argent est passé sans avoir à demander, pour ne pas remettre en cause le partenariat l'année prochaine.
 
@@ -80,13 +80,17 @@ Format : _"Quand [situation déclenchante], je veux [motivation profonde], pour 
 
 > Quand je lance une campagne nationale sur 50 clubs, je veux uploader ma vidéo une seule fois et tracker en temps réel, pour ne plus envoyer 50 WeTransfers à l'aveugle.
 
-**JTBD-D2 (Agence multi-clubs / persona 9 — 🟡)**
+**JTBD-D2 (Agence multi-clubs / persona 8 — 🟡)**
 
 > Quand je gère 5 clubs un samedi soir, je veux un seul login et un switcher contextuel, pour ne plus mélanger les pubs entre clients et perdre ma crédibilité.
 
-**JTBD-D3 (Fédération / persona 10 — 🔮)**
+**JTBD-D3 (Fédération / persona 9 — 🔮)**
 
 > Quand je signe un partenariat ligue avec Lidl pour les 28 arènes membres, je veux pousser le contenu en 1 clic à toute la flotte, pour vendre des packs ligue cohérents pour la première fois.
+
+**JTBD-D4 (Installateur / persona 10 — 🟡)**
+
+> Quand un club m'appelle à 19h45 "l'écran est noir", je veux ouvrir un accès distant structuré depuis mon téléphone, pour relancer le kiosk en 2 minutes sans me déplacer.
 
 ---
 
@@ -100,23 +104,23 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Déclencheur** : match programmé samedi 20h, 1 200 spectateurs attendus, 8 sponsors actifs dont 1 PME en renégociation.
 
-**Acteurs** : 1 (Super_admin Daisy), 3a (Président), 3b (Resp com), 3c (Resp partenaires), 4 (Staff bénévole), 5 (Spectateur), 6b (Sponsor PME en observation).
+**Acteurs** : 1 (Super_admin Daisy), 3a (Président), 3b (Resp com), 3c (Resp partenaires), 4 (Opérateur matchday), 5 (Spectateur), 6 niveau 2 (Sponsor PME en observation).
 
 **Trame** :
 
-| Moment         | Acteur | Action                                                                                                       | Touchpoint Neopro                 | SPEC                                                                                                                   |
-| -------------- | ------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Vendredi 18h   | 3b     | Clone le scénario matchday de la semaine, met à jour les noms des joueurs, preview, déploie                  | Dashboard club → Studio Templates | [templates-studio](../specs/features/templates-studio.spec.md)                                                         |
-| Vendredi 19h   | 3c     | Vérifie que le sponsor PME en renégo est bien en pack premium ce samedi (rotation pondérée)                  | Dashboard sponsors                | (à écrire : sponsors-rotation)                                                                                         |
-| Samedi 18h     | 1      | Vérifie Grafana au passage (alerts sites silencieux) — flotte verte, ne fait rien                            | Grafana + Slack #neopro-alerts    | [socket-service](../specs/services/socket-service.spec.md)                                                             |
-| Samedi 19h45   | 4      | Arrive en tribune, ouvre Remote sur sa tablette, voit la session match s'auto-créer au coup d'envoi          | Remote V2                         | [match-sessions](../specs/features/match-sessions.spec.md)                                                             |
-| Samedi 20h-22h | 4 + 3b | Score live + transitions matchday automatiques. 3b déclenche les célébrations sur les buts depuis la tribune | Remote V2 + TV Player             | [match-sessions](../specs/features/match-sessions.spec.md), [socket-service](../specs/services/socket-service.spec.md) |
-| Samedi 22h     | 4      | Quitte le gymnase. La session reste ouverte (oubli)                                                          | —                                 | —                                                                                                                      |
-| Samedi 22h45   | (CRON) | Auto-close de la session inactive, score figé, `ended_by='timeout'`                                          | Cron scheduler                    | [cron-scheduler](../specs/services/cron-scheduler.spec.md), [match-sessions](../specs/features/match-sessions.spec.md) |
-| Samedi 23h     | 5      | (🔮 LATER) A scanné le QR à la mi-temps, son prono apparaît dans le top 3 affiché 30s sur l'écran géant      | Mini-app web mobile               | (à écrire : spectateur-interactif)                                                                                     |
-| Lundi matin    | 3a     | Ouvre son mail, lit le rapport matchday (impressions sponsors, taux de présence) — n'a pas touché à Neopro   | Mail auto rapport hebdo           | (à écrire : sponsor-reports)                                                                                           |
-| Lundi matin    | 3c     | Envoie un mot personnalisé au sponsor PME en renégo avec son rapport individuel auto-généré                  | Portail sponsor + mail            | (à écrire : sponsor-reports)                                                                                           |
-| Lundi midi     | 6b     | Reçoit son rapport mensuel consolidé, le présente en COMEX mardi                                             | Portail web sponsor               | (à écrire : sponsor-reports)                                                                                           |
+| Moment         | Acteur  | Action                                                                                                         | Touchpoint Neopro                 | SPEC                                                                                                                   |
+| -------------- | ------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Vendredi 18h   | 3b      | Clone le scénario matchday de la semaine, met à jour les noms des joueurs, preview, déploie                    | Dashboard club → Studio Templates | [templates-studio](../specs/features/templates-studio.spec.md)                                                         |
+| Vendredi 19h   | 3c      | Vérifie que le sponsor PME en renégo est bien en pack premium ce samedi (rotation pondérée)                    | Dashboard sponsors                | (à écrire : sponsors-rotation)                                                                                         |
+| Samedi 18h     | 1       | Vérifie Grafana au passage (alerts sites silencieux) — flotte verte, ne fait rien                              | Grafana + Slack #neopro-alerts    | [socket-service](../specs/services/socket-service.spec.md)                                                             |
+| Samedi 19h45   | 4       | Arrive en tribune, ouvre Remote sur sa tablette (one-hand), voit la session match s'auto-créer au coup d'envoi | Remote V2                         | [match-sessions](../specs/features/match-sessions.spec.md)                                                             |
+| Samedi 20h-22h | 4 + 3b  | Score live + transitions matchday automatiques. 4 déclenche les célébrations sur les buts depuis la tribune    | Remote V2 + TV Player             | [match-sessions](../specs/features/match-sessions.spec.md), [socket-service](../specs/services/socket-service.spec.md) |
+| Samedi 22h     | 4       | Quitte le gymnase. La session reste ouverte (oubli)                                                            | —                                 | —                                                                                                                      |
+| Samedi 22h45   | (CRON)  | Auto-close de la session inactive, score figé, `ended_by='timeout'`                                            | Cron scheduler                    | [cron-scheduler](../specs/services/cron-scheduler.spec.md), [match-sessions](../specs/features/match-sessions.spec.md) |
+| Samedi 23h     | 5       | (🔮 LATER) A scanné le QR à la mi-temps, son prono apparaît dans le top 3 affiché 30s sur l'écran géant        | Mini-app web mobile               | (à écrire : spectateur-interactif)                                                                                     |
+| Lundi matin    | 3a      | Ouvre son mail, lit le rapport matchday (impressions sponsors, taux de présence) — n'a pas touché à Neopro     | Mail auto rapport hebdo           | (à écrire : sponsor-reports)                                                                                           |
+| Lundi matin    | 3c      | Envoie un mot personnalisé au sponsor PME en renégo avec son rapport individuel auto-généré                    | Portail sponsor + mail            | (à écrire : sponsor-reports)                                                                                           |
+| Lundi midi     | 6 niv.2 | Reçoit son rapport mensuel consolidé, le présente en COMEX mardi                                               | Portail web sponsor               | (à écrire : sponsor-reports)                                                                                           |
 
 **Métrique de succès** : 0 alerte Slack pour 1, scénario matchday déployé en <60 min par 3b, taux de reconduction 6b ≥85% sur l'année.
 
@@ -187,7 +191,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Déclencheur** : à 19h45, un président de club (3a) appelle Daisy paniqué : "la TV est noire, on commence dans 15 minutes".
 
-**Acteurs** : 1 (Super_admin Daisy), 2 (Admin Support — si externe), 3a (Président qui appelle), 4 (Staff bénévole sur place).
+**Acteurs** : 1 (Super_admin Daisy), 2 (Admin Support — si externe), 3a (Président qui appelle), 4 (Opérateur matchday sur place), 10 (Installateur — escalade si Pi reste DOWN >5 min).
 
 **Trame** :
 
@@ -240,7 +244,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Déclencheur** : annonceur national signe un pack "50 clubs en France pour 6 mois", uploade son spot une seule fois.
 
-**Acteurs** : 7 (Annonceur national), 1 (Super_admin Neopro — validation), 3b (Resp com de chaque club — vérifie l'intégration), 4 (Staff jour de match — neutre, ne sait rien du flux).
+**Acteurs** : 7 (Annonceur réseau), 1 (Super_admin Neopro — validation), 3b (Resp com de chaque club — vérifie l'intégration), 4 (Opérateur matchday — neutre, ne sait rien du flux).
 
 **Trame** :
 
@@ -598,27 +602,27 @@ Format compact — à détailler quand priorité PM le justifie.
 
 ## § 5 — Couverture personae × scénarios
 
-| Persona             | S1 Matchday      | S2 Onboarding | S3 Sponsoring   | S4 Incident | S5 Gala   | S6 Annonceur |
-| ------------------- | ---------------- | ------------- | --------------- | ----------- | --------- | ------------ |
-| 1 Super_admin       | ✅               | ✅            | —               | ✅          | —         | ✅           |
-| 2 Admin Support     | —                | ✅            | —               | ✅          | —         | —            |
-| 3a Président        | ✅               | ✅            | ✅              | ✅          | (délègue) | —            |
-| 3b Resp com         | ✅               | ✅            | —               | —           | ✅        | ✅           |
-| 3c Resp partenaires | ✅               | —             | ✅              | —           | ✅        | —            |
-| 4 Staff bénévole    | ✅               | —             | —               | ✅          | —         | (passif)     |
-| 5 Spectateur        | (🔮)             | —             | —               | —           | —         | —            |
-| 6a Commerçant       | —                | —             | (variant léger) | —           | —         | —            |
-| 6b PME              | ✅               | —             | ✅              | —           | —         | —            |
-| 6c Institutionnel   | —                | —             | (variant audit) | —           | —         | —            |
-| 7 Annonceur         | —                | —             | —               | —           | —         | ✅           |
-| 9 Agence            | (futur scenario) | —             | —               | —           | —         | —            |
-| 10 Fédération       | (futur scenario) | —             | —               | —           | —         | (futur)      |
+| Persona                 | S1 Matchday      | S2 Onboarding | S3 Sponsoring          | S4 Incident   | S5 Gala   | S6 Annonceur |
+| ----------------------- | ---------------- | ------------- | ---------------------- | ------------- | --------- | ------------ |
+| 1 Super_admin           | ✅               | ✅            | —                      | ✅            | —         | ✅           |
+| 2 Admin Support         | —                | ✅            | —                      | ✅            | —         | —            |
+| 3a Président            | ✅               | ✅            | ✅                     | ✅            | (délègue) | —            |
+| 3b Resp com             | ✅               | ✅            | —                      | —             | ✅        | ✅           |
+| 3c Resp partenaires     | ✅               | —             | ✅                     | —             | ✅        | —            |
+| 4 Opérateur matchday    | ✅               | —             | —                      | ✅            | —         | (passif)     |
+| 5 Spectateur            | (🔮)             | —             | —                      | —             | —         | —            |
+| 6 Partenaire (niv. 1-4) | niv. 2 ✅        | —             | ✅ (niv. 1-4 variants) | —             | —         | —            |
+| 7 Annonceur réseau      | —                | —             | —                      | —             | —         | ✅           |
+| 8 Agence                | (futur scénario) | —             | —                      | —             | —         | —            |
+| 9 Fédération            | (futur scénario) | —             | —                      | —             | —         | (futur)      |
+| 10 Installateur         | —                | ✅ (J+3)      | —                      | ✅ (escalade) | —         | —            |
 
 **Lecture** :
 
 - Tous les personae 🟢 actifs en prod sont couverts par ≥1 scénario
-- Personae 🔮 (5 spectateur, 7 annonceur, 10 fédération) ont un scénario partiel — à compléter quand un client réel valide l'usage
-- Personae 6a/6c apparaissent en variant dans S3, à formaliser quand le portail sponsor V1 est livré
+- Personae 🔮 (5 spectateur, 7 annonceur, 9 fédération) ont un scénario partiel — à compléter quand un client réel valide l'usage
+- Persona 6 remplace les anciens 6a/6b/6c — S3 couvre le spectre niveaux 1→4 en variants
+- Persona 10 (Installateur) apparaît en S2 (J+3 installation) et S4 (escalade incident)
 
 ---
 
@@ -646,8 +650,9 @@ Format compact — à détailler quand priorité PM le justifie.
 
 ## § 8 — Évolutions possibles
 
-- [ ] Ajouter un scénario "Gestion multi-clubs par une agence régionale" (persona 9)
-- [ ] Ajouter un scénario "Partenariat ligue : Lidl × 28 clubs LNH" (persona 10)
+- [ ] Ajouter un scénario "Gestion multi-clubs par une agence régionale" (persona 8)
+- [ ] Ajouter un scénario "Partenariat ligue : Lidl × 28 clubs LNH" (persona 9)
+- [ ] Ajouter un scénario "Installation + incident : technicien terrain → remote shell" (persona 10)
 - [ ] Ajouter un scénario "Soirée VIP avec mini-app spectateur interactif" (persona 5 — quand QR code livré)
 - [ ] Détailler les CUs des personas 1, 2, 4, 5, 7-10 (aujourd'hui en stubs §3.3) — priorité à arbitrer avec PM
 - [ ] Convertir les 3 GAPs identifiés (§3.4 + §4.4) en CUs catalogués (preview matchday partagé, CRM léger sponsors, NPS sponsor)
