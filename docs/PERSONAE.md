@@ -11,6 +11,12 @@
 > - 🟢 = persona active aujourd'hui en prod (ARR confirmé)
 > - 🟡 = persona partiellement servie aujourd'hui (besoin connu, outil à venir)
 > - 🔮 = persona anticipée (modèle préparé, pas encore client réel — à valider terrain)
+>
+> **À lire en parallèle** — [docs/product/USE-CASES.md](product/USE-CASES.md) regroupe 4 couches qui complètent ce doc :
+> - 📋 **§1 JTBD** (Christensen) — _quel job le persona embauche-t-il Neopro pour faire ?_
+> - 🎬 **§2 Scénarios multi-acteurs** — _comment plusieurs personae se coordonnent dans un parcours réel_
+> - 🗂️ **§3 Catalogue atomique CU** — 44 cas d'usage avec ID stables (`CU-3b-1`, etc.) — _que fait chaque persona, atomiquement_
+> - 🛣️ **§4 Journey maps émotionnels** — 3 journeys clés avec courbe émotionnelle — _comment c'est ressenti dans le temps_
 
 ## Comment lire ce doc
 
@@ -22,6 +28,7 @@ Chaque persona suit un format unique pour comparaison facile :
 - **Touchpoints Neopro** : par quels outils (dashboard, remote, mail auto, écran)
 - **Fréquence d'usage** : daily / weekly / matchday / monthly
 - **Source d'info** : terrain confirmé / hypothèse à valider — un PM saura quoi interviewer en priorité
+- **Cas d'usage** : liste des CUs liés (détails dans [`docs/product/USE-CASES.md`](product/USE-CASES.md) §3)
 
 ---
 

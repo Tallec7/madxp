@@ -124,7 +124,7 @@ L'expérience de production a montré que le Pi doit survivre à des conditions 
 │  Couche 1 : error-recovery vidéo (Angular, dans tv.component)       │
 │    → Skip vidéo corrompue, full reset après 3 erreurs GPU           │
 │    → Watchdog playback 10s, cleanup mémoire préventif 30min         │
-│    → Voir ADR-006                                                    │
+│    → Voir ADR-016                                                    │
 │                                                                      │
 │  Couche 0 : systemd restart policies                                 │
 │    → Restart=always sur tous les services neopro-*                   │
@@ -163,7 +163,7 @@ Le mécanisme de Config Mirror a été renforcé pour éviter les race condition
 
 - [SYNC_ARCHITECTURE.md](../technical/SYNC_ARCHITECTURE.md) - Détails du protocole de synchronisation
 - [COMMAND_QUEUE.md](../technical/COMMAND_QUEUE.md) - Gestion des sites offline
-- ADR-006 : Double-buffer vidéo
+- ADR-016 : Double-buffer vidéo
 - ADR-007 : API Remote publique
 - ADR-011 : Interdiction BSSID lock en mesh
 - ADR-013 : Merge intelligent de configuration
