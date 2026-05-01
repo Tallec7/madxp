@@ -1,3 +1,9 @@
+## [3.285.2](https://github.com/Tallec7/neopro/compare/v3.285.1...v3.285.2) (2026-05-01)
+
+### Bug Fixes
+
+- **templates:** default prenomNom sur une seule ligne (bug \n littéral) ([#808](https://github.com/Tallec7/neopro/issues/808)) ([7642e7b](https://github.com/Tallec7/neopro/commit/7642e7b6039e0d656b387398b82eeed17a8e710a))
+
 ## [3.285.1](https://github.com/Tallec7/neopro/compare/v3.285.0...v3.285.1) (2026-05-01)
 
 ### Bug Fixes
