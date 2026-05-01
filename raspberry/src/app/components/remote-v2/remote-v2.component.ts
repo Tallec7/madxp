@@ -24,12 +24,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
-import { skip } from 'rxjs/operators';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
-import { LocalBroadcastService } from '../../services/local-broadcast.service';
+import { RemoteOrchestratorService, DisplayInfo as OrchestratorDisplayInfo } from '../../services/remote-orchestrator.service';
 import { SaasConfigService, SaasProfile, SaasPinRequiredError } from '../../services/saas-config.service';
 import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/local-options.service';
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
@@ -81,11 +80,7 @@ const OVERLAY_POSITIONS: ScoreOverlayPosition[] = [
   'bottom-left', 'bottom-center', 'bottom-right',
 ];
 
-interface DisplayInfo {
-  id: string;
-  label: string;
-  status: 'online' | 'offline';
-}
+type DisplayInfo = OrchestratorDisplayInfo;
 
 @Component({
   selector: 'app-remote-v2',
@@ -107,14 +102,14 @@ interface DisplayInfo {
   // ADR-102 — RemotePreferencesService est providedIn: 'root' (singleton) pour
   // mutualiser le bootstrap DB et l'état entre V1 / V2. Score & Timer restent
   // scoped au composant (pattern ADR-051 Phase 4).
-  providers: [RemoteScoreService, RemoteTimerService],
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOrchestratorService],
 })
 export class RemoteV2Component implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
-  private readonly localBroadcast = inject(LocalBroadcastService);
+  private readonly orchestrator = inject(RemoteOrchestratorService);
   private readonly saasConfig = inject(SaasConfigService);
   private readonly localOptionsService = inject(LocalOptionsService);
   public readonly scoreService = inject(RemoteScoreService);
@@ -158,11 +153,16 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Enregistrement en cours. */
   recording = false;
 
-  /** Cible d'écran active. "all" ou id d'un display. */
-  targetDisplay = 'all';
-
-  /** Liste des écrans connectés. */
+  /** Liste des écrans connectés (alimentée par RemoteOrchestratorService). */
   displays: DisplayInfo[] = [];
+
+  /** Cible d'écran active. Délégué à l'orchestrator (source de vérité). */
+  get targetDisplay(): string {
+    return this.orchestrator.targetDisplay;
+  }
+  set targetDisplay(id: string) {
+    this.orchestrator.setTargetDisplay(id);
+  }
 
   /** ID de la vidéo forcée en cours (hors boucle). */
   playingVideoId: string | null = null;
@@ -324,11 +324,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
         this.localOptions = opts;
       }),
     );
-    this.subs.push(
-      this.localOptionsService.getOptions$().pipe(skip(1)).subscribe(opts => {
-        this.broadcastOptions(opts);
-      }),
-    );
+    // Propagation options-update vers la TV : centralisée dans
+    // RemoteOrchestratorService.init() (skip(1), pas au boot).
 
     // Profil courant
     this.currentProfile = this.saasConfig.getClubName() || this.saasConfig.getSiteName() || 'Club';
@@ -391,60 +388,28 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       });
     }
 
-    // Socket: listeners essentiels.
-    // NE PAS appeler `socketService.initialize()` ici : app.component.ts:15 le
-    // fait déjà au boot. Un second `initialize()` crée un 2ᵉ socket (sock2)
-    // qui écrase `this.socket`, leakant sock1 (avec ses listeners attachés
-    // par d'autres services injectés `providedIn: 'root'`, ex.
-    // RecordingStateService). Le serveur reçoit alors 2 `saas-register` et
-    // émet `displays-changed` au socket qui a registered — la réponse atterrit
-    // tantôt sur sock1 (sans listener V2) tantôt sur sock2 selon le timing.
-    // Parité V1 (remote.component.ts ne ré-init pas non plus).
-    this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
-      'displays-changed',
-      data => {
-        // ngZone.run obligatoire : Socket.IO callbacks s'exécutent hors zone
-        // Angular → sans ça, *ngIf="displays.length > 0" ne se réévalue jamais.
-        this.ngZone.run(() => {
-          this.displays = (data.displays || []).map(d => ({
-            id: String(d.index),
-            label: `display-${d.index}`,
-            status: 'online' as const,
-          }));
-          // Si la cible courante n'est plus connectée (display disparu), on
-          // retombe automatiquement sur "tous". Sinon les commandes suivantes
-          // disparaissent dans le vide. Parité V1 (remote.component.ts:351-353).
-          if (
-            this.targetDisplay !== 'all' &&
-            !this.displays.some(d => d.id === this.targetDisplay)
-          ) {
-            this.targetDisplay = 'all';
-          }
-        });
-      },
+    // Socket: listeners essentiels — délégués à RemoteOrchestratorService
+    // (extraction ADR-051 Phase 4 V2). Le service attache `displays-changed`,
+    // `phase-change`, `player-state` (avec ngZone.run) et émet `request-state`
+    // au boot pour récupérer le snapshot serveur initial.
+    //
+    // NE PAS appeler `socketService.initialize()` ici ni dans l'orchestrator :
+    // app.component.ts le fait déjà au boot. Un second `initialize()` crée un
+    // 2ᵉ socket qui écrase le 1er, leakant ses listeners (parité V1).
+    this.orchestrator.init();
+    this.subs.push(
+      this.orchestrator.displays$.subscribe(list => {
+        this.displays = list;
+      }),
     );
-    this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
-      this.ngZone.run(() => {
-        if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
-          this.loopId = data.phase;
-        }
-      });
-    });
-
-    // Feedback erreur vidéo : la TV émet `player-state` avec
-    // `lastError: 'play_error'` quand une vidéo manuelle plante (404, format
-    // invalide, timeout réseau). Sans ce listener, le bouton Remote reste
-    // figé en "playing" alors que la TV recovery vers la boucle.
-    this.socketService.on<{ lastError?: string | null; isManualMode?: boolean }>(
-      'player-state',
-      data => this.ngZone.run(() => this.handlePlayerState(data)),
+    this.subs.push(
+      this.orchestrator.phase$.subscribe(phase => {
+        this.loopId = phase;
+      }),
     );
-
-    // Parité V1 (remote.component.ts:365) : on demande au serveur Pi/Cloud
-    // de pousser immédiatement le snapshot d'état (score, phase, options,
-    // displays connectés…). Sans ça, la sheet "Cible vidéo" reste vide
-    // jusqu'à ce qu'une TV se (dé)connecte.
-    this.socketService.emit('request-state', {} as never);
+    this.subs.push(
+      this.orchestrator.playerState$.subscribe(data => this.handlePlayerState(data)),
+    );
 
     // ADR-105 — Preview TV via iframe local-first.
     // L'iframe pointe sur la même page TV que celle servie par le Pi/SaaS,
@@ -544,6 +509,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
+    this.orchestrator.destroy();
   }
 
   private recentVideosStorageKey(): string {
@@ -751,45 +717,12 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   /**
-   * ADR-081 Phase 0 — UUID v4 généré par la remote à chaque emit.
-   * Utilise crypto.randomUUID() si dispo (HTTPS/modern browsers), fallback Math.random sinon.
-   * Dupliqué de remote.component.ts pour parité V1/V2.
-   */
-  private newCommandId(): string {
-    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-    if (c?.randomUUID) return c.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
-      const r = (Math.random() * 16) | 0;
-      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
-
-  /**
-   * Cible d'écran active sous forme `target: number[]` (parité V1 / ADR-081).
-   * `targetDisplay === 'all'` → undefined (la TV diffuse à tous les écrans).
-   * Le contrat `displayIndex: number` était silencieusement ignoré par
-   * `tv.component.ts handleTvCommand()` qui filtre uniquement sur `target`.
-   */
-  private getCommandTarget(): number[] | undefined {
-    if (this.targetDisplay === 'all') return undefined;
-    const idx = parseInt(this.targetDisplay, 10);
-    return Number.isFinite(idx) ? [idx] : undefined;
-  }
-
-  /**
-   * Émission unifiée d'une commande (parité V1) :
-   *  - ajoute `commandId` UUID v4 (ADR-081, audit + idempotence cloud)
-   *  - propage la cible multi-écrans (`target: number[]`)
-   *  - broadcast local (BroadcastChannel) pour les TV co-localisées
-   *  - relais socket pour le master Pi
+   * Émission unifiée d'une commande — déléguée à RemoteOrchestratorService.
+   * Le service ajoute `commandId` UUID v4 (ADR-081), propage la cible
+   * multi-écrans (`target: number[]`), broadcast local + relais socket.
    */
   private emitCommand(payload: { type: 'video' | 'sponsors' | 'web-page' | 'livestream' | 'stop-manual' | 'reload-config'; data?: unknown }): void {
-    const target = this.getCommandTarget();
-    const commandId = this.newCommandId();
-    const enriched = { ...payload, commandId, ...(target ? { target } : {}) };
-    this.localBroadcast.emitCommand(enriched);
-    this.socketService.emit('command', enriched as never);
+    this.orchestrator.emitCommand(payload);
   }
 
   playVideo(v: PiConfigVideoEntry): void {
@@ -929,7 +862,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   setTargetDisplay(id: string): void {
-    this.targetDisplay = id;
+    this.orchestrator.setTargetDisplay(id);
     this.showToast(id === 'all' ? 'Cible : tous les écrans' : `Cible : écran #${id}`);
   }
 
@@ -1299,34 +1232,13 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   /**
-   * Propagation des options à la TV (parité V1 `broadcastOptions()`).
-   * V1 émet sur socket + BroadcastChannel ; V2 fait pareil via cette
-   * méthode centralisée, branchée sur `localOptionsService.getOptions$()`
-   * (skip 1 — pas de broadcast au boot).
-   */
-  private broadcastOptions(opts: LocalOptions): void {
-    this.localBroadcast.broadcast('options-update', opts);
-    this.socketService.emit('options-update', opts as never);
-  }
-
-  /**
-   * Émission breaking news vers la TV (parité V1 `sendBreakingNews()`).
-   * V2 ne faisait que toggle le flag local — la TV n'affichait jamais le
-   * bandeau. Désormais on émet le payload complet `{message, duration,
-   * position, displayMode, target}` sur socket + BroadcastChannel.
+   * Propagation des options + émission breaking news — déléguées à
+   * RemoteOrchestratorService (parité V1 `broadcastOptions()` /
+   * `sendBreakingNews()`). Le service est branché sur
+   * `localOptionsService.getOptions$()` avec `skip(1)` pour `options-update`.
    */
   private sendBreakingNews(message: string): void {
-    if (!this.localOptions.breakingNews) return;
-    const target = this.getCommandTarget();
-    const news = {
-      message,
-      duration: this.localOptions.breakingNews.defaultDuration,
-      position: this.localOptions.breakingNews.position,
-      displayMode: this.localOptions.breakingNews.displayMode,
-      ...(target ? { target } : {}),
-    };
-    this.localBroadcast.emitBreakingNews(news);
-    this.socketService.emit('breaking-news', news as never);
+    this.orchestrator.sendBreakingNews(message);
   }
 
   toggleBreaking(): void {
