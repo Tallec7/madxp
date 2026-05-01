@@ -195,6 +195,22 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/featureOverrides\??:\s*Record<string,\s*boolean>/.test(iface)).toBe(true);
   });
 
+  // ------------ Parité socket V1↔V2 ------------
+
+  it('RemoteV2Component émet request-state au boot (sinon displays-changed jamais reçu)', () => {
+    // Régression : sans cet emit, le serveur ne renvoie jamais displays-changed
+    // et le sélecteur N display reste vide (`displays.length === 0`).
+    // V1 émet à la ligne ~365 de remote.component.ts.
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(v2)).toBe(true);
+  });
+
+  it('RemoteV2Component a un handler displays-changed qui popule this.displays', () => {
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    expect(/['"]displays-changed['"]/.test(v2)).toBe(true);
+    expect(/this\.displays\s*=/.test(v2)).toBe(true);
+  });
+
   // ------------ ADR present ------------
 
   it('ADR-092 is committed alongside the implementation', () => {
