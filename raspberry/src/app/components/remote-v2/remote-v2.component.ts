@@ -413,9 +413,11 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       },
     );
     this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
-      if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
-        this.loopId = data.phase;
-      }
+      this.ngZone.run(() => {
+        if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
+          this.loopId = data.phase;
+        }
+      });
     });
 
     // Feedback erreur vidéo : la TV émet `player-state` avec
@@ -424,7 +426,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // figé en "playing" alors que la TV recovery vers la boucle.
     this.socketService.on<{ lastError?: string | null; isManualMode?: boolean }>(
       'player-state',
-      data => this.handlePlayerState(data),
+      data => this.ngZone.run(() => this.handlePlayerState(data)),
     );
 
     // Parité V1 (remote.component.ts:365) : on demande au serveur Pi/Cloud
