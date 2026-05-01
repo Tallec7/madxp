@@ -1,3 +1,9 @@
+## [3.284.3](https://github.com/Tallec7/neopro/compare/v3.284.2...v3.284.3) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** V2 émet request-state au boot pour recevoir displays-changed ([#787](https://github.com/Tallec7/neopro/issues/787)) ([0284e85](https://github.com/Tallec7/neopro/commit/0284e858f78f1c7f1d46632bc85e9859bfb813f4))
+
 ## [3.284.2](https://github.com/Tallec7/neopro/compare/v3.284.1...v3.284.2) (2026-05-01)
 
 ### Bug Fixes
