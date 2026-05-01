@@ -300,8 +300,8 @@ Note : la partie BD (CHECK constraint + JSONB) est **déjà faite**. Phase rédu
 - [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) — Dual HDMI
 - [ADR-031](../adr/ADR-031-master-slave-video-loop-sync.md) — Sync master-slave
 - [ADR-032](../adr/ADR-032-secondary-variants-restore.md) — Restore variantes secondary
-- [ADR-033](../adr/ADR-033-secondary-variants-nginx-race-condition.md) — Nginx variantes + race condition
-- [ADR-042](../adr/ADR-042-double-buffer-video-service.md) — Double-buffer vidéo
+- [ADR-033](../adr/ADR-033-videos-secondary-serving.md) — Secondary variant serving + race condition fixes
+- [ADR-042](../adr/ADR-042-extract-tv-component-services.md) — Extraction tv.component en 3 services
 - [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md) — Template Studio v2
 - [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md) — Validation dual HDMI
 - [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md) — Validation multi-zone ultra-wide
