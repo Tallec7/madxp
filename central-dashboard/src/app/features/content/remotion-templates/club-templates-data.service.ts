@@ -3,6 +3,9 @@ import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import type {
   RemotionTemplate,
+  RenderJobEnqueued,
+  RenderJobSnapshot,
+  RenderTemplateRequestV2,
   TemplateImageSlot,
   TemplateStudioView,
   TemplateTextField,
@@ -85,5 +88,55 @@ export class ClubTemplatesDataService {
       `/club/remotion-templates/${templateId}/background`,
       form,
     );
+  }
+
+  /**
+   * ADR-077 — Upload d'une image utilisateur (logo club, photo joueur, etc.) liée
+   * à un slot image du template. L'URL retournée est ensuite injectée dans le
+   * payload render v2 sous `imageUploads[slotKey]`.
+   *
+   * Endpoint partagé avec l'admin (`POST /remotion-templates/:id/user-uploads`)
+   * mais autorisé pour les rôles club/operator/advertiser via le middleware
+   * `requireRole(['admin', 'super_admin', 'operator', 'club'])`.
+   */
+  uploadUserImage(
+    templateId: string,
+    file: File,
+    slotKey: string,
+  ): Observable<{ url: string; slot_key: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('slot_key', slotKey);
+    return this.api.upload<{ url: string; slot_key: string }>(
+      `/remotion-templates/${templateId}/user-uploads`,
+      form,
+    );
+  }
+
+  /**
+   * ADR-054 + ADR-075 V2 — Lance un rendu async pour un template v2.
+   * Retourne 202 + `job_id` ; suivre via `pollRenderJob`.
+   *
+   * Endpoint partagé avec l'admin mais ouvert au rôle `club` (cf. routes
+   * `remotion-templates.routes.ts:141`). Le quota côté serveur est appliqué
+   * automatiquement (voir ADR-075 V3 Phase D).
+   */
+  enqueueRenderV2(
+    templateId: string,
+    payload: RenderTemplateRequestV2,
+    title: string,
+  ): Observable<RenderJobEnqueued> {
+    return this.api.post<RenderJobEnqueued>(
+      `/remotion-templates/${templateId}/render`,
+      { props: payload, title },
+    );
+  }
+
+  /**
+   * Polling d'un job de rendu. À appeler toutes les 2s tant que le statut
+   * n'est ni `completed` ni `failed`.
+   */
+  pollRenderJob(jobId: string): Observable<RenderJobSnapshot> {
+    return this.api.get<RenderJobSnapshot>(`/remotion-templates/render-jobs/${jobId}`);
   }
 }
