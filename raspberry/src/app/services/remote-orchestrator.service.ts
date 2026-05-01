@@ -46,6 +46,7 @@ export interface DisplayInfo {
 }
 
 export type Phase = 'before' | 'during' | 'after';
+export type PhaseOrNeutral = Phase | 'neutral';
 
 export type CommandType =
   | 'video'
@@ -94,8 +95,12 @@ export class RemoteOrchestratorService {
 
   /** Liste brute des écrans connectés (format V1 : `{index, type}`). */
   readonly displays$ = new BehaviorSubject<DisplayInfo[]>([]);
-  /** Phase à l'antenne pushée par le serveur (sync inter-onglets / multi-remotes). */
-  readonly phase$ = new Subject<Phase>();
+  /**
+   * Phase à l'antenne pushée par le serveur (sync inter-onglets / multi-remotes).
+   * Émet les 4 valeurs (V1 utilise `'neutral'` aussi pour `activePhase`,
+   * V2 mappe sur `loopId` qui accepte également les 4).
+   */
+  readonly phase$ = new Subject<PhaseOrNeutral>();
   /** État player TV (utilisé pour détecter `play_error` côté composant). */
   readonly playerState$ = new Subject<PlayerStateEvent>();
   /** Score reçu du cloud (post-mutation scoreService — pour CD V1 si besoin). */
@@ -160,10 +165,11 @@ export class RemoteOrchestratorService {
       },
     );
 
-    this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
+    this.socketService.on<{ phase: PhaseOrNeutral }>('phase-change', data => {
       this.ngZone.run(() => {
-        if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
-          this.phase$.next(data.phase);
+        const p = data.phase;
+        if (p === 'neutral' || p === 'before' || p === 'during' || p === 'after') {
+          this.phase$.next(p);
         }
       });
     });
