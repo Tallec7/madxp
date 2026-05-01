@@ -405,6 +405,11 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       data => this.handlePlayerState(data),
     );
 
+    // Parité V1 : demander l'état courant au serveur (displays, phase, etc.)
+    // dès que tous les listeners sont attachés. Sans ça, `displays-changed`
+    // n'est jamais reçu et le sélecteur N display reste vide.
+    this.socketService.emit('request-state', {});
+
     // ADR-105 — Preview TV via iframe local-first.
     // L'iframe pointe sur la même page TV que celle servie par le Pi/SaaS,
     // avec `?preview=1` pour mute audio + skip analytics + skip socket register.
