@@ -1,3 +1,9 @@
+## [3.284.11](https://github.com/Tallec7/neopro/compare/v3.284.10...v3.284.11) (2026-05-01)
+
+### Bug Fixes
+
+- **remote-v2:** unhide .r2-display-wrap sur layouts mobile-classic + desktop-centered ([#794](https://github.com/Tallec7/neopro/issues/794)) ([4c36042](https://github.com/Tallec7/neopro/commit/4c36042260a89c89cca0c657dea8241449e5287c))
+
 ## [3.284.10](https://github.com/Tallec7/neopro/compare/v3.284.9...v3.284.10) (2026-05-01)
 
 ### Bug Fixes
