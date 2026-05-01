@@ -39,6 +39,11 @@ export interface VideoItem extends VideoView {
   checksum?: string | null;         // File integrity checksum
   configRoles?: Set<string>;         // Roles in config: 'boucle', 'match', 'action' (empty = not in config)
   isDuplicate?: boolean;            // Whether another video shares the same checksum (duplicate file)
+  // ADR-103 Phase 3 v2 — content type metadata for proactive UX (icons,
+  // duration prompt before adding to a loop). Populated from the API
+  // response when available. Defaults to 'video' / null when absent.
+  contentType?: 'video' | 'web_page' | 'livestream';
+  externalUrl?: string | null;
 }
 
 /** Target for "Add to" action — identifies where to insert a video in the config */

@@ -7,12 +7,14 @@
 
 import { Router } from 'express';
 import { remoteRateLimit } from '../middleware/user-rate-limit';
-import { validateParams, paramSchemas } from '../middleware/validation';
+import { validateParams, validate, paramSchemas, schemas } from '../middleware/validation';
 import { verifyRemotePin } from '../middleware/remote-pin.middleware';
 import {
   getSaasConfig,
   getSaasProfiles,
   getSaasProfileConfig,
+  getRemotePreferences,
+  upsertRemotePreferences,
 } from '../controllers/saas.controller';
 
 const router = Router();
@@ -26,5 +28,11 @@ router.get('/:siteId/profiles', remoteRateLimit, validateParams(paramSchemas.sit
 
 // Config d'un profil spécifique (ADR-058 — PIN enforced when configured)
 router.get('/:siteId/profiles/:profileId/config', remoteRateLimit, validateParams(paramSchemas.siteIdAndProfileId), verifyRemotePin, getSaasProfileConfig);
+
+// ADR-102 — Préférences UX télécommande (lecture + upsert) par (site, profil).
+// PIN enforcé côté écriture comme côté lecture (verifyRemotePin agit sur les
+// deux : si le profil a un PIN, le token de device est exigé ; sinon ouvert).
+router.get('/:siteId/profiles/:profileId/preferences', remoteRateLimit, validateParams(paramSchemas.siteIdAndProfileId), verifyRemotePin, getRemotePreferences);
+router.put('/:siteId/profiles/:profileId/preferences', remoteRateLimit, validateParams(paramSchemas.siteIdAndProfileId), verifyRemotePin, validate(schemas.remotePreferencesUpsert), upsertRemotePreferences);
 
 export default router;

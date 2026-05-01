@@ -275,4 +275,5 @@ describe('MetricsService', () => {
       expect(metrics).not.toContain('neopro_deployments_total{status="completed"');
     });
   });
+
 });

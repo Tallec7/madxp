@@ -34,6 +34,7 @@ jest.mock('../repositories', () => ({
   // path : la suppression passe direct, sans cascade ni 409).
   siteVideoRepository: {
     findSitesByVideo: jest.fn().mockResolvedValue([]),
+    unlink: jest.fn(),
   },
   // PR2.1 — cascade JSONB : default = aucun profil ne référence la vidéo →
   // pas de cleanup, le test legacy reste vert.
@@ -93,13 +94,14 @@ import {
   createVideo,
   updateVideo,
   deleteVideo as deleteVideoController,
+  unlinkVideoFromSite,
   getDeployments,
   getDeployment,
   createDeployment,
   updateDeployment,
   deleteDeployment,
 } from './content.controller';
-import { videoRepository, deploymentRepository, siteRepository } from '../repositories';
+import { videoRepository, deploymentRepository, siteRepository, siteVideoRepository } from '../repositories';
 import { uploadVideo, deleteVideo as deleteStorageVideo } from '../services/storage.service';
 import deploymentService from '../services/deployment.service';
 import { AuthRequest } from '../types';
@@ -107,6 +109,7 @@ import { AuthRequest } from '../types';
 const mockVideoRepo = videoRepository as jest.Mocked<typeof videoRepository>;
 const mockDeploymentRepo = deploymentRepository as jest.Mocked<typeof deploymentRepository>;
 const mockSiteRepo = siteRepository as jest.Mocked<typeof siteRepository>;
+const mockSiteVideoRepo = siteVideoRepository as jest.Mocked<typeof siteVideoRepository>;
 
 // Helper to create mock response
 const createMockResponse = (): Response => {
@@ -420,6 +423,48 @@ describe('Content Controller', () => {
           affectedSites: [],
           jsonbCleanup: { profilesCleaned: 0, mirrorsCleaned: 0, totalEntriesRemoved: 0 },
         });
+      });
+    });
+
+    describe('unlinkVideoFromSite', () => {
+      it('removes the link and returns 200 when site_videos row exists', async () => {
+        const req = createAuthRequest({ params: { id: 'video-123', siteId: 'site-456' } });
+        const res = createMockResponse();
+        mockSiteVideoRepo.unlink.mockResolvedValueOnce(true);
+
+        await unlinkVideoFromSite(req, res);
+
+        expect(mockSiteVideoRepo.unlink).toHaveBeenCalledWith('site-456', 'video-123');
+        expect(res.status).not.toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({ message: 'Vidéo retirée du site' });
+      });
+
+      it('returns 200 idempotent when no site_videos row exists (no 404)', async () => {
+        // Bug observé en prod 2026-04-27 : le bouton "Retirer du site" est
+        // exposé en SaaS pour toute vidéo cloud visible — y compris celles
+        // jamais liées via site_videos. Avant fix : 404 utilisateur.
+        const req = createAuthRequest({ params: { id: 'video-orphan', siteId: 'site-saas' } });
+        const res = createMockResponse();
+        mockSiteVideoRepo.unlink.mockResolvedValueOnce(false);
+
+        await unlinkVideoFromSite(req, res);
+
+        expect(res.status).not.toHaveBeenCalledWith(404);
+        expect(res.json).toHaveBeenCalledWith({
+          message: 'Vidéo déjà absente du site',
+          alreadyUnlinked: true,
+        });
+      });
+
+      it('returns 500 when the repository throws', async () => {
+        const req = createAuthRequest({ params: { id: 'video-x', siteId: 'site-x' } });
+        const res = createMockResponse();
+        mockSiteVideoRepo.unlink.mockRejectedValueOnce(new Error('DB Error'));
+
+        await unlinkVideoFromSite(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({ error: 'Erreur lors du retrait de la vidéo' });
       });
     });
 

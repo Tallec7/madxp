@@ -11,12 +11,14 @@ import Joi from 'joi';
 import { AuthRequest, SiteConfiguration } from '../types';
 import logger from '../config/logger';
 import socketService from '../services/socket.service';
+import { metricsService } from '../services/metrics.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
+import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
 
 // --------------------------------------------------------------------------
 // Validation schemas
@@ -46,6 +48,120 @@ const updateProfileConfigurationSchema = Joi.object({
   configuration: Joi.object().required(),
   mode: Joi.string().valid('replace', 'merge').optional(),
 });
+
+/**
+ * ADR-103 Phase 0.5 — scan a config for synthetic web_page/livestream entries
+ * (path = `web_page-<ts>` / `livestream-<ts>`) which would crash the TV when
+ * routed through the MP4 pipeline. Returns the offending paths grouped by
+ * location so the caller can build a precise 400 error.
+ */
+function findSyntheticWebContentPaths(config: unknown): string[] {
+  if (!config || typeof config !== 'object') return [];
+  const c = config as Record<string, unknown>;
+  const out: string[] = [];
+
+  const scanArr = (arr: unknown): void => {
+    if (!Array.isArray(arr)) return;
+    for (const v of arr) {
+      const path = (v as { path?: unknown })?.path;
+      if (isSyntheticWebContentPath(path)) out.push(String(path));
+    }
+  };
+
+  scanArr(c.sponsors);
+
+  if (Array.isArray(c.timeCategories)) {
+    for (const tc of c.timeCategories as Array<{ loopVideos?: unknown }>) {
+      scanArr(tc.loopVideos);
+    }
+  }
+
+  const scanCats = (cats: unknown): void => {
+    if (!Array.isArray(cats)) return;
+    for (const cat of cats as Array<{ videos?: unknown; subCategories?: unknown }>) {
+      scanArr(cat.videos);
+      scanCats(cat.subCategories);
+    }
+  };
+  scanCats(c.categories);
+
+  return out;
+}
+
+/**
+ * Build the standard 400 response for synthetic web/livestream paths in a
+ * config save. Returns true if the response was sent.
+ */
+function rejectIfSyntheticWebContent(res: Response, configuration: unknown): boolean {
+  const offenders = findSyntheticWebContentPaths(configuration);
+  if (offenders.length === 0) return false;
+  res.status(400).json({
+    error:
+      "Cette configuration contient des entrées web_page / livestream avec un path synthétique " +
+      "(ex: 'web_page-<timestamp>'), qui font crasher le lecteur TV. " +
+      "Utilisez la pseudo-catégorie 'Web / Live' (auto-générée) pour lancer ces contenus depuis la télécommande, " +
+      "ou laissez-les hors de la boucle vidéo. Voir ADR-089 / ADR-103.",
+    code: 'SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN',
+    offendingPaths: offenders.slice(0, 10),
+  });
+  return true;
+}
+
+/**
+ * ADR-103 Phase 3 — find web/live entries in playback loops (sponsors[] or
+ * timeCategories[].loopVideos[]) that LACK a positive `durationSeconds`.
+ * Without a duration, the loop falls back on the WebContentService's 30s
+ * default (Phase 2b safety) — fine to avoid stalling but not a deliberate
+ * editorial choice. Block at save so the dashboard surfaces the issue.
+ *
+ * Categories[].videos[] are NOT checked — they don't auto-rotate, the user
+ * launches them manually from the Remote and `durationMs ?? null` means
+ * "no auto-close" (the page stays until the user navigates away).
+ */
+function findWebLoopEntriesMissingDuration(config: unknown): Array<{ where: string; name: string; contentType: string }> {
+  if (!config || typeof config !== 'object') return [];
+  const c = config as Record<string, unknown>;
+  const out: Array<{ where: string; name: string; contentType: string }> = [];
+
+  const scan = (arr: unknown, where: string): void => {
+    if (!Array.isArray(arr)) return;
+    for (const v of arr as Array<{ contentType?: string; durationSeconds?: number | null; name?: string }>) {
+      const ct = v?.contentType;
+      if (ct !== 'web_page' && ct !== 'livestream') continue;
+      const d = v?.durationSeconds;
+      if (typeof d !== 'number' || !(d > 0)) {
+        out.push({ where, name: v?.name ?? '(sans nom)', contentType: ct });
+      }
+    }
+  };
+
+  scan(c.sponsors, 'sponsors');
+  if (Array.isArray(c.timeCategories)) {
+    for (const tc of c.timeCategories as Array<{ id?: string; loopVideos?: unknown }>) {
+      scan(tc.loopVideos, `timeCategories[${tc?.id ?? '?'}].loopVideos`);
+    }
+  }
+  return out;
+}
+
+/**
+ * Build the standard 400 response for web/live loop entries without
+ * durationSeconds. Returns true if the response was sent.
+ */
+function rejectIfWebLoopMissingDuration(res: Response, configuration: unknown): boolean {
+  const offenders = findWebLoopEntriesMissingDuration(configuration);
+  if (offenders.length === 0) return false;
+  // ADR-103 Phase 4 — observe blocked saves to detect parcours UX cassés.
+  metricsService.recordWebLoopDurationRequiredBlock('config-profiles');
+  res.status(400).json({
+    error:
+      "Une page web ou un livestream placé dans la boucle (sponsors ou phase) doit avoir une durée d'affichage > 0 secondes. " +
+      "Renseignez le champ 'duration' à la création (page Contenu) ou laissez l'entrée hors de la boucle pour un usage manuel uniquement.",
+    code: 'WEB_LOOP_DURATION_REQUIRED',
+    offenders: offenders.slice(0, 10),
+  });
+  return true;
+}
 
 // --------------------------------------------------------------------------
 // GET /api/sites/:siteId/profiles
@@ -103,6 +219,17 @@ export const createProfile = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: validationError.message });
     }
 
+    // ADR-103 Phase 2 — synthetic web_page/livestream paths are now ACCEPTED
+    // on save. Backend resolves them at read time (saas/remote controllers
+    // call resolveSyntheticWebContent before sending to TV/Remote). Phase 0.5
+    // strip remains as a safety net for entries whose DB row got deleted.
+    void rejectIfSyntheticWebContent;
+
+    // ADR-103 Phase 3 — refuse boucle entries (sponsors/loopVideos) with
+    // contentType web_page/livestream that lack a positive durationSeconds.
+    // The dashboard must collect this from the user before save.
+    if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
+
     const site = await configHistoryRepository.findSiteBasic(siteId);
     if (!site) {
       return res.status(404).json({ error: 'Site non trouve' });
@@ -158,6 +285,10 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     if (validationError) {
       return res.status(400).json({ error: validationError.message });
     }
+
+    // ADR-103 Phase 2 — synthetic paths now resolved server-side at read time.
+    // ADR-103 Phase 3 — refuse loop entries without durationSeconds (web/live).
+    if (value.configuration && rejectIfWebLoopMissingDuration(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
@@ -230,6 +361,17 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
     if (validationError) {
       return res.status(400).json({ error: validationError.message });
     }
+
+    // ADR-103 Phase 2 — synthetic web_page/livestream paths are now ACCEPTED
+    // on save. Backend resolves them at read time (saas/remote controllers
+    // call resolveSyntheticWebContent before sending to TV/Remote). Phase 0.5
+    // strip remains as a safety net for entries whose DB row got deleted.
+    void rejectIfSyntheticWebContent;
+
+    // ADR-103 Phase 3 — refuse boucle entries (sponsors/loopVideos) with
+    // contentType web_page/livestream that lack a positive durationSeconds.
+    // The dashboard must collect this from the user before save.
+    if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {

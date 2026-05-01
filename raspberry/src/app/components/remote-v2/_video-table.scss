@@ -1,0 +1,224 @@
+// SPEC-V2-LAYOUT-01 §5C — Tableau vidéo dense (col 2) du layout régie pro PC C.
+// Composant `<app-r2-video-table>` masqué par défaut ; révélé uniquement
+// par `.layout-desktop-pro` (cf. _tv-monitor.scss pour le rationale du
+// `display: none` direct sur la section interne).
+
+.r2-video-table-host {
+  display: none;
+}
+
+.r2-video-table {
+  display: none;
+  background: #0e1116;
+  color: #ffffff;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 24px 8px;
+    border-bottom: 1px solid #2a313d;
+  }
+
+  &__breadcrumb {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__crumb-cat {
+    color: #ffffff;
+  }
+
+  &__crumb-sep {
+    color: #6b7280;
+    font-weight: 400;
+  }
+
+  &__crumb-sub {
+    color: #f0a868;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  &__count {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+
+  &__grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 16px;
+  }
+
+  &__head {
+    display: grid;
+    grid-template-columns: 32px 1fr 140px 64px 32px;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #2a313d;
+    position: sticky;
+    top: 0;
+    background: #0e1116;
+    z-index: 1;
+
+    .r2-video-table__cell {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6b7280;
+    }
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: 32px 1fr 140px 64px 32px;
+    gap: 12px;
+    padding: 6px 12px;
+    width: 100%;
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 120ms;
+
+    &:hover {
+      background: rgba(240, 168, 104, 0.08);
+    }
+
+    &.is-playing {
+      background: rgba(204, 56, 78, 0.14);
+      box-shadow: inset 2px 0 0 #cc384e;
+    }
+
+    &.is-errored {
+      background: rgba(204, 56, 78, 0.08);
+    }
+  }
+
+  &__cell {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--num {
+      color: #6b7280;
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      text-align: right;
+    }
+
+    &--name {
+      font-weight: 500;
+    }
+
+    &--tags {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 4px;
+      overflow: hidden;
+    }
+
+    &--duration {
+      font-variant-numeric: tabular-nums;
+      color: #6b7280;
+      text-align: right;
+    }
+
+    &--actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+    }
+  }
+
+  &__row.is-playing &__cell--actions {
+    color: #cc384e;
+  }
+
+  &__playing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: #cc384e;
+    box-shadow: 0 0 0 0 rgba(204, 56, 78, 0.6);
+    animation: np-pulse 1.4s ease-in-out infinite;
+  }
+
+  &__tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: rgba(240, 168, 104, 0.15);
+    color: #f0a868;
+    flex-shrink: 0;
+
+    &.is-secondary {
+      background: rgba(81, 178, 139, 0.18);
+      color: #81e3bc;
+    }
+    &.is-link {
+      background: rgba(125, 211, 252, 0.15);
+      color: #7dd3fc;
+    }
+  }
+
+  &__empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  &--placeholder {
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__placeholder {
+    margin: auto;
+    text-align: center;
+    max-width: 320px;
+    padding: 32px;
+
+    &-eyebrow {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #f0a868;
+      margin-bottom: 8px;
+    }
+
+    &-text {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+  }
+}

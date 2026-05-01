@@ -604,7 +604,8 @@ describe('ContentManagementDataService extraction guard', () => {
     expect(content).toContain('class ContentManagementDataService');
     expect(content).toContain('loadVideos');
     expect(content).toContain('loadDeployments');
-    expect(content).toContain('deleteVideo');
+    // Note : `deleteVideo` est désormais centralisé dans VideoDeleteService
+    // (cf. "VideoDeleteService cascade routing guard (PR #613)" plus bas).
     expect(content).toContain('createDeployment');
     expect(content).toContain('convertImageToVideo');
   });
@@ -621,6 +622,60 @@ describe('ContentManagementDataService extraction guard', () => {
     expect(content).not.toMatch(/this\.api\.post\(/);
     expect(content).not.toMatch(/this\.api\.delete\(/);
     expect(content).not.toMatch(/this\.api\.upload\(/);
+  });
+});
+
+describe('Video dedup signals exposure guard (ADR-048 + UX dup badge)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+
+  it('videoRepository.findAllPaginated must compute dup_count via window function (no N+1)', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/video.repository.ts'),
+      'utf-8',
+    );
+    expect(content).toMatch(/COUNT\(\*\)\s+OVER\s*\(/i);
+    expect(content).toMatch(/PARTITION BY COALESCE\(checksum, storage_path\)/);
+    expect(content).toMatch(/AS dup_count/);
+  });
+
+  it('content.controller getVideos must expose dup_count + is_duplicate to dashboard', () => {
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/content.controller.ts'),
+      'utf-8',
+    );
+    const getVideosBlock = content.split('export const getVideos')[1]?.split('export const')[0] ?? '';
+    expect(getVideosBlock).toContain('dup_count');
+    expect(getVideosBlock).toContain('is_duplicate');
+  });
+
+  it('ContentVideoRow type exposes dup_count / is_duplicate / checksum', () => {
+    const types = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/content/content-management-data.service.ts'),
+      'utf-8',
+    );
+    const row = types.split('export interface ContentVideoRow')[1]?.split('export interface')[0] ?? '';
+    expect(row).toMatch(/checksum\??:\s*string/);
+    expect(row).toMatch(/dup_count\??:\s*number/);
+    expect(row).toMatch(/is_duplicate\??:\s*boolean/);
+  });
+
+  it('content-management.html wires duplicate badge on video-card', () => {
+    const html = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/features/content/content-management.component.html'),
+      'utf-8',
+    );
+    expect(html).toContain('[cornerBadge]="duplicateBadge(video)"');
+    expect(html).toContain('[cornerBadgeTooltip]="duplicateTooltip(video)"');
+  });
+
+  it('app-video-card supports cornerBadge inputs (consumed by duplicate signaling)', () => {
+    const card = fs.readFileSync(
+      path.join(repoRoot, 'central-dashboard/src/app/shared/components/video-card/video-card.component.ts'),
+      'utf-8',
+    );
+    expect(card).toMatch(/@Input\(\)\s+cornerBadge\b/);
+    expect(card).toMatch(/@Input\(\)\s+cornerBadgeTooltip\b/);
+    expect(card).toMatch(/@Input\(\)\s+cornerBadgeVariant\b/);
   });
 });
 
@@ -1868,5 +1923,99 @@ describe('429 burst guard — logger backoff + groups deduplication', () => {
   it('GroupsService loadGroups must return pendingLoad for concurrent no-filter calls', () => {
     const content = fs.readFileSync(path.join(dashRoot, 'groups.service.ts'), 'utf-8');
     expect(content).toMatch(/if\s*\(!filters\s*&&\s*this\.pendingLoad\)/);
+  });
+});
+
+// ============================================================
+// VIDEO_IN_USE cascade guard (PR #613) — tous les callers DELETE /videos/:id
+// doivent passer par VideoDeleteService pour garantir la modal cascade.
+// Sans ce garde-fou, un nouveau bouton "supprimer" peut écraser une vidéo
+// référencée par un site → TV figée silencieusement.
+// ============================================================
+describe('VideoDeleteService cascade routing guard (PR #613)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const dashAppRoot = path.join(repoRoot, 'central-dashboard/src/app');
+
+  // Allowlist gelée : seul ce fichier a le droit de faire un DELETE direct
+  // sur /videos/:id. Toute nouvelle entrée doit être justifiée (ADR ou ticket).
+  const ALLOWED_DIRECT_DELETE_FILES = [
+    // Service partagé : implémente le cascade fallback. Source de vérité.
+    path.join('core', 'services', 'video-delete.service.ts'),
+  ].map(rel => path.join(dashAppRoot, rel));
+
+  function walk(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules') continue;
+        out.push(...walk(full));
+      } else if (entry.isFile() && /\.ts$/.test(entry.name) && !/\.spec\.ts$/.test(entry.name)) {
+        out.push(full);
+      }
+    }
+    return out;
+  }
+
+  it('only VideoDeleteService and the allowlisted helpers may issue DELETE /videos/:id', () => {
+    const files = walk(dashAppRoot);
+    const offenders: Array<{ file: string; line: string }> = [];
+
+    // Patterns considérés comme "DELETE direct" :
+    //   this.api.delete<...>(`/videos/${...}`)  — appel ApiService brut
+    //   `/videos/${id}?cascade=...`              — variante avec query string
+    //   sitesService.deleteCloudVideo(           — wrapper legacy
+    //   dataService.deleteVideo(                 — wrapper legacy
+    // On exclut les sous-routes (/sites/, /club-grants/, /variants/, /usage,
+    // /web-content, /grants-for-site, /deployments, /replace, /names) — seul
+    // le DELETE racine `/videos/:id[?cascade=...]` est gardé.
+    const forbidden = [
+      // Backtick-anchored : `/videos/${id}` ou `/videos/${id}?cascade=...`
+      // (exclut les sous-routes /videos/:id/usage, /videos/:id/club-grants, etc.
+      // et les routes parents comme /analytics/advertisers/:id/videos/:vid).
+      /\.delete\s*[<(][^)]*`\/videos\/\$\{[^}]+\}(?:\$\{[^}]*\}|\?cascade=[^`]*)?`/,
+      // Wrappers legacy : si quelqu'un les réintroduit, ils doivent passer
+      // par VideoDeleteService (sinon = DELETE direct sans cascade modal).
+      /sitesService\s*\.\s*deleteCloudVideo\s*\(/,
+    ];
+
+    for (const file of files) {
+      if (ALLOWED_DIRECT_DELETE_FILES.includes(file)) continue;
+      const content = fs.readFileSync(file, 'utf-8');
+      const lines = content.split('\n');
+      lines.forEach((line, idx) => {
+        if (forbidden.some(re => re.test(line))) {
+          offenders.push({ file: path.relative(dashAppRoot, file), line: `${idx + 1}: ${line.trim()}` });
+        }
+      });
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('VideoDeleteService exposes both deleteVideoWithCascade and deleteCloudWithCascadeFallback', () => {
+    const content = fs.readFileSync(
+      path.join(dashAppRoot, 'core/services/video-delete.service.ts'),
+      'utf-8',
+    );
+    expect(content).toMatch(/deleteVideoWithCascade\s*\(/);
+    expect(content).toMatch(/deleteCloudWithCascadeFallback\s*\(/);
+    // Doit checker explicitement le code VIDEO_IN_USE (sinon n'importe quel
+    // 409 déclencherait la modal cascade — risque de fausse confirmation).
+    expect(content).toMatch(/VIDEO_IN_USE/);
+    // Doit appeler la modal de confirmation (ConfirmDialogService) et pas
+    // un window.confirm() natif.
+    expect(content).toMatch(/ConfirmDialogService/);
+  });
+
+  it('error.interceptor must skip logging expected 409s on DELETE /videos/:id', () => {
+    const content = fs.readFileSync(
+      path.join(dashAppRoot, 'core/interceptors/error.interceptor.ts'),
+      'utf-8',
+    );
+    // Pattern : isExpectedVideoCascade409 (ou équivalent) + check méthode + URL + status
+    expect(content).toMatch(/isExpectedVideoCascade409/);
+    expect(content).toMatch(/error\.status\s*===\s*409/);
+    expect(content).toMatch(/req\.method\s*===\s*['"]DELETE['"]/);
   });
 });

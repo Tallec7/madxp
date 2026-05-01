@@ -60,6 +60,33 @@ export function getContentStatusClass(status: VideoContentStatus): string {
   }
 }
 
+/**
+ * ADR-103 Phase 3 v2 — content type icon for proactive UX.
+ * Returns a single emoji icon (or empty string for plain video — the default
+ * thumbnail already conveys "MP4"). Used in card thumbnails, list rows, and
+ * detail panel.
+ */
+export function getContentTypeIcon(
+  contentType: 'video' | 'web_page' | 'livestream' | undefined | null,
+): string {
+  switch (contentType) {
+    case 'web_page': return '🌐';
+    case 'livestream': return '📡';
+    default: return '';
+  }
+}
+
+/** ADR-103 Phase 3 v2 — human label for content type (tooltip + detail panel). */
+export function getContentTypeLabel(
+  contentType: 'video' | 'web_page' | 'livestream' | undefined | null,
+): string {
+  switch (contentType) {
+    case 'web_page': return 'Page web';
+    case 'livestream': return 'Livestream';
+    default: return 'Vidéo';
+  }
+}
+
 export function getOwnerTypeLabel(ownerType: VideoOwnerType): string {
   switch (ownerType) {
     case 'neopro': return 'NEOPRO';

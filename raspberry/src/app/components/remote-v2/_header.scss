@@ -1,0 +1,134 @@
+@use "tokens";
+
+// ---- Header ---------------------------------------------------------------
+.r2-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: tokens.$surface;
+  border-bottom: 1px solid tokens.$border-subtle;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.r2-header-logo {
+  height: 26px;
+  width: auto;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+.r2-header-sep {
+  width: 1px;
+  height: 20px;
+  background: tokens.$border;
+  flex-shrink: 0;
+}
+
+.r2-club-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 99px;
+  background: tokens.$accent-bg;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: tokens.$accent-deep;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  .r2-club-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 99px;
+    background: tokens.$accent-deep;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+
+  .r2-chev {
+    font-size: 9px;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+}
+
+.r2-header-spacer {
+  flex: 1;
+}
+
+.r2-header-actions {
+  display: flex;
+  gap: 2px;
+}
+
+// Chip compteur erreurs vidéo session — chantier vidéos manquantes.
+.r2-video-errors-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 9px;
+  margin-right: 6px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  user-select: none;
+
+  &.has-errors {
+    background: #fef2f2;
+    color: #cc384e;
+    border-color: rgba(204, 56, 78, 0.4);
+  }
+
+  .r2-vec-icon {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .r2-vec-count {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.r2-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 99px;
+  border: none;
+  background: transparent;
+  color: tokens.$text;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 120ms;
+
+  &:hover {
+    background: tokens.$border-subtle;
+  }
+
+  &.rec-active {
+    background: tokens.$danger-bg;
+    color: tokens.$danger;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+}

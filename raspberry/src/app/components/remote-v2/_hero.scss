@@ -1,0 +1,316 @@
+@use "tokens";
+
+// ---- Hero "À l'antenne" ---------------------------------------------------
+.r2-hero {
+  margin: 12px 16px 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: tokens.$dark;
+  color: #fff;
+  box-shadow: 0 8px 20px -8px rgba(16, 24, 40, 0.25);
+}
+
+.r2-hero-eyebrow {
+  padding: 8px 12px 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: tokens.$accent-light;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  .r2-hero-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 99px;
+    background: tokens.$accent-light;
+    animation: np-pulse 1.4s ease-in-out infinite;
+  }
+
+  &.is-manual {
+    color: tokens.$yellow;
+
+    .r2-hero-dot {
+      background: tokens.$yellow;
+    }
+  }
+}
+
+.r2-hero-main {
+  padding: 6px 12px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.r2-tv-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 60px;
+  height: 38px;
+  border-radius: 8px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(129, 227, 188, 0.25), transparent 60%),
+    linear-gradient(135deg, tokens.$accent-deep, #0c2a23);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  // ADR-105 Phase A — preview TV live dans le mini-thumb du hero.
+  // L'iframe est nativement dimensionnée à la taille du thumb (pas de
+  // scale CSS) et contenue par overflow:hidden + position:relative
+  // existants. Le TvComponent est responsive et s'adapte à 60×38.
+  // En layout desktop-pro, le mini-thumb reste placeholder (le monitor
+  // 16/9 col 3 prend le relais via `<app-r2-tv-monitor>`).
+
+  .r2-tv-scanline {
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(129, 227, 188, 0.55), transparent);
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  &.is-manual {
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(255, 236, 133, 0.22), transparent 60%),
+      linear-gradient(135deg, #3a2f0a, #1a1503);
+
+    .r2-tv-scanline {
+      background: linear-gradient(90deg, transparent, rgba(255, 236, 133, 0.55), transparent);
+    }
+  }
+}
+
+.r2-rec-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 99px;
+  z-index: 2;
+  background: rgba(16, 24, 40, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition:
+    background 150ms,
+    border-color 150ms;
+
+  .r2-rec-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: tokens.$live;
+  }
+
+  // ADR-105 Phase A polish — la pastille thumb reste un bouton action.
+  // L'état "recording" est solide (pas de pulsation) — la pulsation rouge
+  // est portée par la pill REC dans l'eyebrow (source unique d'animation).
+  &.active {
+    background: tokens.$live;
+    border-color: #fff;
+
+    .r2-rec-dot {
+      background: #fff;
+    }
+  }
+}
+
+.r2-hero-info {
+  flex: 1;
+  min-width: 0;
+
+  .r2-video-name {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+
+  .r2-video-subline {
+    display: block;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+}
+
+.r2-hero-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+
+  .r2-hero-progress-duration {
+    flex-shrink: 0;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    min-width: 24px;
+    text-align: right;
+  }
+
+  .r2-hero-progress-bar {
+    display: block;
+    flex: 1;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .r2-hero-progress-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: tokens.$yellow;
+    border-radius: 99px;
+    transition: width 200ms linear;
+  }
+}
+
+.r2-loop-btn-circle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: tokens.$accent-light;
+  color: tokens.$dark;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+// ADR-103 Phase 2.5 — bouton Stop affiché pendant une diffusion manuelle.
+// Rouge pour signaler "interruption" vs vert (loop) pour signaler "retour".
+.r2-stop-btn-circle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e54c4c;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 120ms,
+    background 120ms;
+
+  &:hover {
+    transform: scale(1.05);
+    background: #d23030;
+  }
+}
+
+.r2-hero-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0 4px 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+// Segmented loop selector
+.r2-loop-tabs {
+  margin: 0 8px 8px;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+
+  button {
+    flex: 1;
+    padding: 7px 6px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 150ms;
+
+    &.active {
+      background: tokens.$accent-light;
+      color: tokens.$dark;
+      font-weight: 800;
+    }
+  }
+}
+
+.r2-loop-tabs-wrap,
+.r2-display-wrap {
+  padding: 0 8px 8px;
+
+  .r2-hero-section-label {
+    padding-left: 4px;
+  }
+}
+
+// Display target selector
+.r2-display-target {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+
+  button {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    &.active {
+      background: tokens.$accent-light;
+      color: tokens.$dark;
+      font-weight: 800;
+    }
+  }
+}

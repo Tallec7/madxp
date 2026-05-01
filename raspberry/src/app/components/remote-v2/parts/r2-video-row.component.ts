@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 import { PiConfigVideoEntry } from '../../../interfaces/video.interface';
 import { formatDuration, videoTags, VideoTag } from '../remote-v2-helpers';
+import { R2IconComponent } from '../icons/r2-icon.component';
 
 const THUMB_GRADIENTS = [
   'linear-gradient(135deg, #20473c, #51b28b)',
@@ -19,7 +20,7 @@ const THUMB_GRADIENTS = [
 @Component({
   selector: 'app-r2-video-row',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [':host { display: contents; }'],
   template: `
@@ -33,7 +34,12 @@ const THUMB_GRADIENTS = [
       <span class="r2-video-thumb" [style.background]="gradient(video.id || video.path)">
         <img *ngIf="thumbnailUrl(video) as url" [src]="url" [alt]="video.name"
           (error)="onThumbError($event)" loading="lazy"/>
-        <span class="r2-video-thumb-initials">{{ initials(video) }}</span>
+        <span class="r2-video-thumb-initials">
+          <ng-container *ngIf="initials(video) as ini">
+            <app-r2-icon *ngIf="ini === '__icon_play__'" name="play" [size]="18"></app-r2-icon>
+            <ng-container *ngIf="ini !== '__icon_play__'">{{ ini }}</ng-container>
+          </ng-container>
+        </span>
         <span class="r2-video-error-badge" *ngIf="errored" aria-label="Lecture en erreur" title="Dernière lecture en erreur">!</span>
       </span>
       <span class="r2-video-meta">
@@ -90,7 +96,7 @@ export class R2VideoRowComponent {
   }
 
   initials(v: PiConfigVideoEntry): string {
-    if (!v.name) return '▶';
+    if (!v.name) return '__icon_play__';
     const words = v.name.trim().split(/\s+/);
     return words.length >= 2
       ? (words[0][0] + words[1][0]).toUpperCase()

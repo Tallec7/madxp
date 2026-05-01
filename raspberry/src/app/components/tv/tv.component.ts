@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { SocketService } from '../../services/socket.service';
+import { SocketService, LoopState } from '../../services/socket.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { LocalBroadcastService, PhaseChangeEvent, OptionsUpdateEvent } from '../../services/local-broadcast.service';
 import { LocalOptionsService, LocalOptions } from '../../services/local-options.service';
@@ -73,6 +73,17 @@ export class TvComponent implements OnInit, OnDestroy {
 
   // E-23 US-23.5.3: Wrong HDMI port detected (TV on HDMI-1 instead of HDMI-0)
   public wrongPort = false;
+
+  /**
+   * ADR-105 — mode preview iframe.
+   * Activé via `?preview=1` quand la Remote V2 embarque la TV dans un iframe.
+   * Conséquences :
+   *  - audio mute (pas de double son TV + Remote)
+   *  - skip startSession + startRecording (pas de double comptage analytics)
+   *  - skip emit `tv-register` (l'iframe ne doit pas être comptée comme un display
+   *    dans `getSaasClientCount` côté central — cf. saas.md "Compter les onglets")
+   */
+  public isPreviewMode = false;
 
   // ADR-060 Phase 3 couche 2 — QR hotspot pour rejoindre le Pi hors LAN club.
   // Déclenchable via `?fallback=hotspot` (URL) ou via un futur event
@@ -149,6 +160,11 @@ export class TvComponent implements OnInit, OnDestroy {
   // =========================================================================
 
   public ngOnInit() {
+    // ADR-105 — mode preview iframe : la Remote V2 charge la TV avec `?preview=1`
+    // pour afficher un mini-monitor sans dégrader la diffusion principale.
+    // Mute audio + skip analytics + skip socket-register.
+    this.isPreviewMode = this.route.snapshot.queryParamMap.get('preview') === '1';
+
     // Phase 5 — PROP-002: read displayIndex from route param /display/:n
     const routeN = this.route.snapshot.params['n'];
     if (routeN !== undefined) {
@@ -158,7 +174,7 @@ export class TvComponent implements OnInit, OnDestroy {
       this.displayIndex = this.route.snapshot.data['displayType'] === 'secondary' ? 1 : 0;
     }
     this.displayType = this.displayIndex === 0 ? 'tv' : this.displayIndex === 1 ? 'secondary' : `display-${this.displayIndex}`;
-    console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}`);
+    console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}, preview: ${this.isPreviewMode}`);
 
     // ADR-060 Phase 3 couche 2 — activation QR hotspot via query param (?fallback=hotspot)
     const fallback = this.route.snapshot.queryParamMap.get('fallback');
@@ -200,8 +216,14 @@ export class TvComponent implements OnInit, OnDestroy {
     // Récupérer le site_id depuis l'API du serveur local (doit être avant startSession pour SaaS)
     this.loadSiteId();
 
-    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage
-    if ((environment as { saasMode?: boolean }).saasMode && !this.tvSyncService.isSlaveMode && this.displayType === 'tv') {
+    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage.
+    // En mode preview (iframe Remote V2), on saute les analytics pour ne pas doubler les compteurs.
+    if (
+      (environment as { saasMode?: boolean }).saasMode
+      && !this.tvSyncService.isSlaveMode
+      && this.displayType === 'tv'
+      && !this.isPreviewMode
+    ) {
       this.recordingState.startRecording(false);
       this.analyticsService.startSession();
     }
@@ -301,45 +323,303 @@ export class TvComponent implements OnInit, OnDestroy {
       })
     );
 
-    // MASTER-SLAVE SYNCHRONISATION — delegated to TvSyncService
-    this.tvSyncService.init({
-      getDisplayType: () => this.displayType,
-      getDisplayIndex: () => this.displayIndex,
-      resolveDisplayVariant: (video) => this.resolveDisplayVariant(video),
-      onRoleAssigned: (_role) => { /* state managed by tvSyncService */ },
-      onDemotion: () => {
-        this.demotionNotice = true;
-        if (this.demotionTimeout) clearTimeout(this.demotionTimeout);
-        this.demotionTimeout = setTimeout(() => { this.demotionNotice = false; }, 8000);
-      },
-      onHdmiStatus: (data) => {
-        if (this.displayType === 'tv') {
-          this.hdmiConnected = data.hdmi0 || data.hdmi1;
-        } else {
-          this.hdmiConnected = data.hdmi1;
-        }
-        this.wrongPort = !!data.wrongPort;
-        if (this.hdmiConnected && !this.bootMetrics.emitted) {
-          this.bootMetrics.hdmiDetectedAt = Date.now();
-          console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
-        }
-      },
-      onPromotion: (reason) => {
-        if (this.displayType === 'secondary') {
-          console.log(`[TV] Failover promotion: switching to TV mode (${reason})`);
-          this.displayType = 'tv';
-        }
-      },
-      onFailoverDemotion: (reason) => {
-        if (this.route.snapshot.data['displayType'] === 'secondary' && this.displayType === 'tv') {
-          console.log(`[TV] Failover demotion: returning to secondary mode (${reason})`);
-          this.displayType = 'secondary';
-        }
-      },
-      onSlaveReturnToLoop: () => {
-        this.stopManualVideoAndReturnToLoop();
-      },
+    if (this.isPreviewMode) {
+      // ADR-106 — preview-slave init (read-only viewer).
+      // Skip master/slave registration (no tvInstances entry, no
+      // displays-changed broadcast, no getSaasClientCount increment).
+      // Loop sync is driven by 'tv-loop-state' broadcasts only.
+      this.initPreviewSlave();
+    } else {
+      // MASTER-SLAVE SYNCHRONISATION — delegated to TvSyncService
+      this.tvSyncService.init({
+        getDisplayType: () => this.displayType,
+        getDisplayIndex: () => this.displayIndex,
+        resolveDisplayVariant: (video) => this.resolveDisplayVariant(video),
+        onRoleAssigned: (_role) => { /* state managed by tvSyncService */ },
+        onDemotion: () => {
+          this.demotionNotice = true;
+          if (this.demotionTimeout) clearTimeout(this.demotionTimeout);
+          this.demotionTimeout = setTimeout(() => { this.demotionNotice = false; }, 8000);
+        },
+        onHdmiStatus: (data) => {
+          if (this.displayType === 'tv') {
+            this.hdmiConnected = data.hdmi0 || data.hdmi1;
+          } else {
+            this.hdmiConnected = data.hdmi1;
+          }
+          this.wrongPort = !!data.wrongPort;
+          if (this.hdmiConnected && !this.bootMetrics.emitted) {
+            this.bootMetrics.hdmiDetectedAt = Date.now();
+            console.log('[TV] Boot metric: HDMI detected at', this.bootMetrics.hdmiDetectedAt);
+          }
+        },
+        onPromotion: (reason) => {
+          if (this.displayType === 'secondary') {
+            console.log(`[TV] Failover promotion: switching to TV mode (${reason})`);
+            this.displayType = 'tv';
+          }
+        },
+        onFailoverDemotion: (reason) => {
+          if (this.route.snapshot.data['displayType'] === 'secondary' && this.displayType === 'tv') {
+            console.log(`[TV] Failover demotion: returning to secondary mode (${reason})`);
+            this.displayType = 'secondary';
+          }
+        },
+        onSlaveReturnToLoop: () => {
+          this.stopManualVideoAndReturnToLoop();
+        },
+      });
+
+      // ADR-106 — start preview heartbeat ONLY on the master TV. Emits
+      // `tv-preview-tick` every 1s with the master's current playhead
+      // position so any preview-slave can correct drift continuously.
+      this.tvSyncService.startPreviewHeartbeat(
+        () => {
+          const player = this.isManualMode
+            ? this.doubleBufferService.getActiveManualPlayer()
+            : this.doubleBufferService.getActivePlayer();
+          return player && player.currentTime ? player.currentTime * 1000 : 0;
+        },
+        () => this.playbackService.currentLoopIndex,
+      );
+    }
+  }
+
+  /**
+   * ADR-106 — preview-slave initialization (only called when isPreviewMode
+   * is true). The Remote V2 mini-thumb iframe loads `?preview=1` and
+   * instantiates a TvComponent that runs as preview-slave: read-only viewer
+   * that mirrors the master's video by listening to `tv-loop-state`
+   * broadcasts, without participating in master/slave election.
+   *
+   * Sync is by `videoIndex` (never `videoPath` — variants secondaires have
+   * different paths). The first state arrives ~50ms after register (server
+   * emits it immediately on `tv-preview-register`), so the local first-frame
+   * flash from `startSeamlessLoop()` is brief and acceptable.
+   *
+   * Page Visibility API: when the Remote tab is hidden, pause the players
+   * to save bandwidth/CPU; resume on visibility return (next tv-loop-state
+   * tick re-syncs).
+   */
+  private initPreviewSlave(): void {
+    // ADR-106 — siteId must be in the payload so the central-server can
+    // join the socket to the siteId room (the preview iframe skips
+    // saas-register per ADR-105, so it never auto-joins). Pi mode is
+    // single-tenant: siteId is unused server-side but harmless.
+    const params = new URLSearchParams(window.location.search);
+    const siteId =
+      params.get('site') ||
+      localStorage.getItem('neopro_saas_site_id') ||
+      '';
+    const payload = { siteId } as unknown as Command;
+
+    console.log('[TV] ADR-106 — initializing preview-slave mode', { siteId });
+
+    // Register as preview-slave (no TV instance entry, no display count)
+    this.socketService.emit('tv-preview-register', payload);
+
+    // Re-register on socket reconnection
+    this.socketService.onReconnect(() => {
+      console.log('[TV] Preview-slave: socket reconnected, re-registering');
+      this.socketService.emit('tv-preview-register', payload);
     });
+
+    // Receive master loop state — read only, never emit tv-loop-update
+    this.socketService.on<LoopState>('tv-loop-state', (state) => {
+      this.ngZone.run(() => this.handlePreviewLoopState(state));
+    });
+
+    // ADR-106 — heartbeat from master with current playhead (1Hz). Used
+    // for continuous drift correction on already-playing video.
+    this.socketService.on<{ videoIndex: number; currentTimeMs: number; emittedAt: number }>(
+      'tv-preview-tick',
+      (tick) => {
+        this.ngZone.run(() => this.handlePreviewTick(tick));
+      },
+    );
+
+    // Page Visibility API — pause players when tab is in background to
+    // limit decoder usage; resume on return (next state tick re-syncs).
+    document.addEventListener('visibilitychange', () => {
+      const playerA = this.playerARef?.nativeElement;
+      const playerB = this.playerBRef?.nativeElement;
+      if (document.hidden) {
+        playerA?.pause();
+        playerB?.pause();
+        console.log('[TV] Preview-slave: tab hidden, players paused');
+      } else {
+        // Resume the currently active player; the next tv-loop-state from
+        // the master will re-sync if we drifted while hidden.
+        const active = this.doubleBufferService.getActivePlayer();
+        if (active && active.paused) {
+          active.play().catch(() => { /* user interaction not yet granted */ });
+        }
+        console.log('[TV] Preview-slave: tab visible, players resumed');
+      }
+    });
+  }
+
+  /**
+   * ADR-106 — handles `tv-loop-state` broadcasts in preview-slave mode.
+   * Sync by `videoIndex` (master playlist is the source of truth), seek to
+   * the master's elapsed time. Manual videos are played directly without
+   * preload+reveal — the master has already done its transition, the preview
+   * just catches up.
+   *
+   * Drift sources documented in PR #756 review:
+   *  - We DO NOT setTimeout before seeking (introduces +500ms drift).
+   *  - We recalculate `elapsed` AT seek time (not at receive time).
+   *  - We wait for player.readyState >= 3 (HAVE_FUTURE_DATA) before seeking,
+   *    otherwise the seek is ignored or clamped on a half-loaded buffer.
+   *
+   * Read-only: never emits tv-loop-update, never participates in election.
+   */
+  private handlePreviewLoopState(state: LoopState): void {
+    // CASE 1 — master is playing a manual video
+    if (state.isManualMode && state.manualVideoPath) {
+      const resolvedVideo = this.resolveDisplayVariant({
+        name: state.manualVideoPath.split('/').pop() || 'manual',
+        path: state.manualVideoPath,
+        type: 'video/mp4',
+      } as PiConfigVideoEntry);
+
+      const currentManualPlayer = this.doubleBufferService.getActiveManualPlayer();
+      const currentManualSrc = currentManualPlayer?.src || '';
+      if (!this.manualVideoService.isManualMode || !currentManualSrc.includes(resolvedVideo.path)) {
+        console.log('[TV] Preview-slave: master in manual mode, mirroring', state.manualVideoPath);
+        this.manualVideoService.play(resolvedVideo);
+        this.seekPreviewWhenReady(
+          () => this.doubleBufferService.getActiveManualPlayer(),
+          state.manualVideoStartedAt,
+          'manual',
+        );
+      }
+      return;
+    }
+
+    // CASE 2 — master is in loop mode
+    if (this.manualVideoService.isManualMode) {
+      console.log('[TV] Preview-slave: master returned to loop, stopping manual');
+      this.stopManualVideoAndReturnToLoop();
+      this.doubleBufferService.hideFreezeFrame();
+      this.doubleBufferService.hideBlackOverlay();
+    }
+
+    const loopVideos = this.playbackService.currentLoopVideos;
+    if (loopVideos.length === 0) {
+      // Loop not yet populated — startSeamlessLoop() is async, retry on next tick
+      return;
+    }
+
+    const syncIndex = state.videoIndex % loopVideos.length;
+    const localVideo = loopVideos[syncIndex];
+    const activePlayer = this.doubleBufferService.getActivePlayer();
+    const activeSrc = activePlayer?.src || '';
+
+    // Already on the right video — apply continuous drift correction only.
+    if (localVideo?.path && activeSrc.includes(localVideo.path)) {
+      this.applyPreviewDriftCorrection(state.videoStartedAt);
+      return;
+    }
+
+    console.log(`[TV] Preview-slave: syncing to index ${syncIndex} (${localVideo?.path})`);
+    this.doubleBufferService.captureAndShowFreezeFrame();
+    if (localVideo?.path) {
+      this.doubleBufferService.playOnActivePlayer(localVideo.path, syncIndex);
+    }
+
+    this.seekPreviewWhenReady(
+      () => this.doubleBufferService.getActivePlayer(),
+      state.videoStartedAt,
+      'loop',
+    );
+  }
+
+  /**
+   * Seek a preview player to (now - startedAt) the moment it has enough
+   * buffered data, then keep correcting drift on subsequent state ticks.
+   * Polls readyState >= 3 (HAVE_FUTURE_DATA) every 50ms, max 2s, then
+   * applies the seek with `elapsed` recomputed at apply-time (not at
+   * call-time — the master's `videoStartedAt` is absolute, not relative).
+   */
+  private seekPreviewWhenReady(
+    getPlayer: () => HTMLVideoElement | null,
+    startedAt: number | null,
+    label: 'loop' | 'manual',
+  ): void {
+    if (!startedAt) return;
+    const start = Date.now();
+    const tick = () => {
+      const player = getPlayer();
+      if (!player) return;
+      if (player.readyState < 3 || !player.duration) {
+        if (Date.now() - start > 2000) {
+          console.warn(`[TV] Preview-slave: ${label} seek timeout, player not ready`);
+          return;
+        }
+        setTimeout(tick, 50);
+        return;
+      }
+      // RECOMPUTE elapsed at apply time — using the value captured at
+      // call time would burn ~50–250ms of polling latency into the seek.
+      const elapsed = (Date.now() - startedAt) / 1000;
+      if (elapsed > 0.2 && elapsed < player.duration) {
+        const drift = Math.abs(player.currentTime - elapsed);
+        player.currentTime = elapsed;
+        console.log(
+          `[TV] Preview-slave: ${label} seek → ${elapsed.toFixed(2)}s (drift was ${drift.toFixed(2)}s)`,
+        );
+      }
+    };
+    tick();
+  }
+
+  /**
+   * ADR-106 — handles `tv-preview-tick` heartbeat (1Hz from master).
+   * Authoritative source of truth for the master's current playhead.
+   * Applies drift correction if delta > 200ms; ignored if we're not on
+   * the right videoIndex yet (next tv-loop-state will resync).
+   */
+  private handlePreviewTick(tick: { videoIndex: number; currentTimeMs: number; emittedAt: number }): void {
+    const loopVideos = this.playbackService.currentLoopVideos;
+    if (!loopVideos.length) return;
+    const expectedIndex = tick.videoIndex % loopVideos.length;
+    const expectedVideo = loopVideos[expectedIndex];
+    const player = this.doubleBufferService.getActivePlayer();
+    if (!player || !expectedVideo?.path) return;
+    if (!player.src.includes(expectedVideo.path)) return; // wrong video; tv-loop-state will fix
+    if (player.readyState < 3 || !player.duration) return;
+    // Adjust for one-way network latency (ms since master emit)
+    const networkLatencyMs = Math.max(0, Date.now() - tick.emittedAt);
+    const masterCurrentSec = (tick.currentTimeMs + networkLatencyMs) / 1000;
+    if (masterCurrentSec >= player.duration) return;
+    const drift = player.currentTime - masterCurrentSec;
+    if (Math.abs(drift) > 0.2) {
+      console.log(
+        `[TV] Preview-slave: tick correction local=${player.currentTime.toFixed(2)}s master=${masterCurrentSec.toFixed(2)}s drift=${drift.toFixed(2)}s lat=${networkLatencyMs}ms`,
+      );
+      player.currentTime = masterCurrentSec;
+    }
+  }
+
+  /**
+   * Continuous drift correction on already-playing video. Called from each
+   * state tick when the preview is already on the correct videoIndex.
+   * If drift exceeds 200ms, snap back to the master's elapsed position.
+   */
+  private applyPreviewDriftCorrection(startedAt: number | null): void {
+    if (!startedAt) return;
+    const player = this.doubleBufferService.getActivePlayer();
+    if (!player || player.readyState < 3 || !player.duration) return;
+    const elapsed = (Date.now() - startedAt) / 1000;
+    if (elapsed <= 0 || elapsed >= player.duration) return;
+    const drift = player.currentTime - elapsed;
+    if (Math.abs(drift) > 0.2) {
+      console.log(
+        `[TV] Preview-slave: drift correction local=${player.currentTime.toFixed(2)}s master=${elapsed.toFixed(2)}s drift=${drift.toFixed(2)}s`,
+      );
+      player.currentTime = elapsed;
+    }
   }
 
   public ngOnDestroy() {
@@ -404,6 +684,32 @@ export class TvComponent implements OnInit, OnDestroy {
       getIsManualMode: () => this.isManualMode,
       getActivePhase: () => this.activePhase,
       getLoopVideosForPhase: (phase) => this.getLoopVideosForPhase(phase),
+      // ADR-103 Phase 2b — when the loop reaches a web_page / livestream
+      // step, delegate to WebContentService.playInLoop. The completion
+      // callback advances the loop to the next step (handled inside
+      // VideoPlaybackService.advanceLoop).
+      // ADR-103 Phase 1.5b — also emit `tv-loop-state` with the web/live
+      // payload so dual-display slaves mirror the iframe / livestream
+      // (the emit happens only on master; isSlaveMode no-op).
+      playWebContentInLoop: (entry, onComplete) => {
+        if (this.tvSyncService.tvRole === 'master') {
+          const externalUrl = entry?.externalUrl || entry?.path || '';
+          const durationMs = entry?.durationSeconds ? entry.durationSeconds * 1000 : null;
+          this.tvSyncService.emitLoopState(
+            this.playbackService.currentLoopIndex,
+            externalUrl,
+            false,
+            undefined,
+            {
+              contentType: entry.contentType === 'livestream' ? 'livestream' : 'web_page',
+              externalUrl,
+              durationMs,
+              name: entry?.name ?? null,
+            },
+          );
+        }
+        this.webContentService.playInLoop(entry, onComplete);
+      },
     });
 
     // 3. Initialize ErrorRecovery (watchdog, error handlers, memory cleanup)
@@ -649,7 +955,18 @@ export class TvComponent implements OnInit, OnDestroy {
       this.webContentService.showLivestream(payload);
     } else if (command.type === 'stop-manual') {
       if (this.isDuplicateCommand('stop-manual')) return;
-      this.webContentService.returnToLoop();
+      // ADR-103 Phase 2.5 — bouton Stop de la Remote : coupe selon ce qui
+      // joue actuellement (web/live OU vidéo manuelle MP4) et reprend la
+      // boucle. Les 2 services savent retourner à la boucle correctement
+      // (jamais sur la même web/live, jamais sur la même manuelle).
+      if (this.webContentService.isActive) {
+        this.webContentService.returnToLoop();
+      } else if (this.isManualMode) {
+        this.manualVideoService.stopAndReturnToLoop(
+          this.manualPlayerARef.nativeElement,
+          this.manualPlayerBRef.nativeElement,
+        );
+      }
     }
   }
 

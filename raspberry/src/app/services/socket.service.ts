@@ -77,6 +77,31 @@ export interface LoopState {
   manualVideoStartedAt: number | null;
   manualVideoVisible: boolean; // ADR-034: master signals when manual video is revealed
   updatedAt: number;
+  /**
+   * ADR-103 Phase 1.5b — content type of the current loop step.
+   *   - 'video' (default, optional for back-compat) → DoubleBuffer plays a MP4
+   *   - 'web_page' / 'livestream' → WebContentService plays an iframe / HLS
+   * Slaves use this to route playback to the right service when syncing
+   * from the master state. Older masters (pre-1.5b) omit this field; the
+   * slave defaults to 'video' for back-compat.
+   */
+  currentContentType?: 'video' | 'web_page' | 'livestream';
+  /**
+   * ADR-103 Phase 1.5b — external URL when contentType is web/live. The
+   * slave uses this to load the same iframe / livestream as the master.
+   */
+  currentExternalUrl?: string | null;
+  /**
+   * ADR-103 Phase 1.5b — auto-close duration (ms) for the web/live step.
+   * The slave only needs it for analytics + display countdown — the master
+   * stays in charge of advancing the loop and emitting the next step.
+   */
+  currentDurationMs?: number | null;
+  /**
+   * ADR-103 Phase 1.5b — display name of the current web/live step.
+   * Helpful for slave-side toasts and analytics.
+   */
+  currentName?: string | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -95,6 +120,7 @@ interface SocketIOOptions {
 interface Socket {
   on<T>(event: string, callback: (data: T) => void): void;
   emit(event: string, data: unknown): void;
+  connect(): void;
   connected: boolean;
   id: string;
 }
@@ -153,6 +179,15 @@ export class SocketService {
       this.socket.on<string>('disconnect', (reason) => {
         this._connected = false;
         console.warn('[Socket] Disconnected, reason:', reason);
+        // Socket.IO ne re-tente pas automatiquement après un disconnect
+        // server-initiated ('io server disconnect'). Cas typique : redeploy
+        // Railway central → io.disconnectSockets(true) sur cleanup. Sans
+        // intervention manuelle, le client SaaS reste mort jusqu'à F5.
+        if (reason === 'io server disconnect' && this.socket) {
+          setTimeout(() => {
+            try { this.socket?.connect(); } catch (e) { console.error('[Socket] Manual reconnect failed:', e); }
+          }, 1500);
+        }
       });
 
       this.socket.on<number>('reconnect', (attempt) => {
@@ -186,10 +221,14 @@ export class SocketService {
   /**
    * In SaaS mode, register with central server on connect/reconnect
    * so the dashboard can track which version each SaaS site runs.
+   *
+   * ADR-105 — `?preview=1` (Remote V2 iframe) ne s'enregistre pas : la tuile
+   * preview ne doit pas être comptée comme un display dans `getSaasClientCount`.
    */
   private emitSaasRegisterIfNeeded(): void {
     if (!(environment as { saasMode?: boolean }).saasMode) return;
     const params = new URLSearchParams(window.location.search);
+    if (params.get('preview') === '1') return;
     const siteId = params.get('site') || localStorage.getItem('neopro_saas_site_id') || '';
     if (!siteId || !this.socket) return;
     // Detect client type: remote tab should not be counted as a screen

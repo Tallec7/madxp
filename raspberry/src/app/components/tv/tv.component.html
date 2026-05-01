@@ -54,11 +54,16 @@
 <div #blackOverlay class="black-overlay" [hidden]="isLicenseBlocked"></div>
 
 <!-- Double-buffer vidéo pour la BOUCLE (z-index 1-2) -->
+<!-- SPEC-V2-TVMON-01 — `crossorigin="anonymous"` permet à `canvas.drawImage`
+     d'exporter via `toDataURL()` (push preview SaaS vers la Remote V2). Le
+     central-server pose les headers CORS sur `/api/videos/stream` (ADR-068).
+     Sans ces deux côtés, `SecurityError: Tainted canvases may not be exported`. -->
 <video
   #playerA
   class="double-buffer-player player-a"
   playsinline
   muted
+  crossorigin="anonymous"
   [hidden]="isLicenseBlocked"
 ></video>
 <video
@@ -66,6 +71,7 @@
   class="double-buffer-player player-b"
   playsinline
   muted
+  crossorigin="anonymous"
   [hidden]="isLicenseBlocked"
 ></video>
 
@@ -75,6 +81,7 @@
   class="manual-player manual-player-a"
   playsinline
   muted
+  crossorigin="anonymous"
   [hidden]="isLicenseBlocked"
 ></video>
 <video
@@ -82,6 +89,7 @@
   class="manual-player manual-player-b"
   playsinline
   muted
+  crossorigin="anonymous"
   [hidden]="isLicenseBlocked"
 ></video>
 

@@ -87,11 +87,16 @@ describe('RemoteV2Component', () => {
     };
     mockSaas = jasmine.createSpyObj('SaasConfigService', [
       'getClubName', 'getSiteName', 'getSiteId', 'isSaasMode', 'getAvailableProfiles', 'loadProfileConfiguration',
+      'getScopedStorageKey', 'getSelectedProfileId',
     ]);
     mockSaas.getClubName.and.returnValue('NEO');
     mockSaas.getSiteName.and.returnValue('NEO');
     mockSaas.getSiteId.and.returnValue('site-123');
     mockSaas.isSaasMode.and.returnValue(false);
+    // Tests vérifient les clés legacy non scopées — le mock retourne la clé brute
+    // (équivalent au comportement Pi natif où siteId est vide → fallback legacy).
+    mockSaas.getScopedStorageKey.and.callFake((base: string) => base);
+    mockSaas.getSelectedProfileId.and.returnValue(null);
 
     mockLocalOptions = jasmine.createSpyObj('LocalOptionsService', [
       'getOptions', 'getOptions$', 'updateOptions', 'updateOverlayOptions', 'updateBreakingNewsOptions',
@@ -313,6 +318,134 @@ describe('RemoteV2Component', () => {
     });
   });
 
+  // ---- Parité V1/V2 — path d'émission commande (ADR-081) ----
+  describe('emitCommand parity (V1 ↔ V2)', () => {
+    function lastCommandPayload(): Record<string, unknown> | undefined {
+      const calls = mockSocket.emit.calls.allArgs().filter((args) => args[0] === 'command');
+      const last = calls[calls.length - 1];
+      return last?.[1] as Record<string, unknown> | undefined;
+    }
+
+    it('joint un commandId UUID v4 à chaque emit video', () => {
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['type']).toBe('video');
+      expect(typeof p?.['commandId']).toBe('string');
+      expect(p?.['commandId']).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
+    it('joint un commandId à stop-manual', () => {
+      component.stopPlaying();
+      const p = lastCommandPayload();
+      expect(p?.['type']).toBe('stop-manual');
+      expect(typeof p?.['commandId']).toBe('string');
+    });
+
+    it('omet target quand targetDisplay = "all"', () => {
+      component.targetDisplay = 'all';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['target']).toBeUndefined();
+    });
+
+    it('propage target=[N] quand un écran spécifique est ciblé', () => {
+      component.targetDisplay = '1';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p?.['target']).toEqual([1]);
+    });
+
+    it("n'expose plus le champ displayIndex (régression ADR-081)", () => {
+      component.targetDisplay = '0';
+      component.playVideo({ id: 'v1', name: 'V1', type: 'video', path: 'videos/v1.mp4' });
+      const p = lastCommandPayload();
+      expect(p && 'displayIndex' in p).toBe(false);
+    });
+  });
+
+  // ---- Orchestration parity (V1 ↔ V2) — emits que V2 oubliait ----
+  describe('orchestration parity (V1 ↔ V2)', () => {
+    function emitsForEvent(event: string): unknown[] {
+      return mockSocket.emit.calls.allArgs()
+        .filter((args) => args[0] === event)
+        .map((args) => args[1]);
+    }
+    function findHandler(event: string): ((data: unknown) => void) | undefined {
+      const call = mockSocket.on.calls.allArgs().find(args => args[0] === event);
+      return call?.[1] as ((data: unknown) => void) | undefined;
+    }
+
+    it('demande un request-state au boot pour récupérer le snapshot serveur', () => {
+      const events = mockSocket.emit.calls.allArgs().map(a => a[0]);
+      expect(events).toContain('request-state');
+    });
+
+    it('reset la cible si le display ciblé disparaît (parité V1)', () => {
+      const handler = findHandler('displays-changed');
+      expect(handler).toBeDefined();
+      handler?.({ displays: [{ index: 0, type: 'tv' }, { index: 1, type: 'secondary' }] });
+      component.targetDisplay = '1';
+      handler?.({ displays: [{ index: 0, type: 'tv' }] });
+      expect(component.targetDisplay).toBe('all');
+    });
+
+    it('toggleBreaking() émet un payload breaking-news complet quand activé avec texte', () => {
+      component.breakingText = 'BUT pour le HBC !';
+      component['localOptions'] = {
+        ...component['localOptions'],
+        breakingNews: {
+          enabled: false, position: 'bottom', defaultDuration: 15,
+          displayMode: 'scroll', quickMessages: [],
+        },
+      };
+      component.toggleBreaking();
+      const payloads = emitsForEvent('breaking-news');
+      expect(payloads.length).toBeGreaterThan(0);
+      const news = payloads[payloads.length - 1] as Record<string, unknown>;
+      expect(news['message']).toBe('BUT pour le HBC !');
+      expect(news['duration']).toBe(15);
+      expect(news['position']).toBe('bottom');
+    });
+
+    it("toggleBreaking() n'émet rien quand on désactive (pas d'event clear côté TV)", () => {
+      component.breakingText = '';
+      component['localOptions'] = {
+        ...component['localOptions'],
+        breakingNews: {
+          enabled: true, position: 'bottom', defaultDuration: 10,
+          displayMode: 'scroll', quickMessages: [],
+        },
+      };
+      const before = emitsForEvent('breaking-news').length;
+      component.toggleBreaking();
+      const after = emitsForEvent('breaking-news').length;
+      expect(after).toBe(before);
+    });
+
+    it('propage tout changement options à la TV via socket+localBroadcast', () => {
+      // Simule une mise à jour utilisateur (ex: toggle timer enabled)
+      const optionsSubject = mockLocalOptions.getOptions$.calls.mostRecent().returnValue;
+      // Récupère le BehaviorSubject sous-jacent du mock
+      const newOpts = {
+        ...component['localOptions'],
+        timer: { ...component['localOptions'].timer, enabled: false },
+      };
+      // L'observable est créé avec `.asObservable()`, on n'a pas le subject brut.
+      // On valide donc que la méthode privée est bien appelée — proxy via spy
+      // sur localBroadcast.broadcast (déjà observable côté tests).
+      const broadcastSpy = jasmine.createSpy('broadcast');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).localBroadcast.broadcast = broadcastSpy;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).broadcastOptions(newOpts);
+      const events = mockSocket.emit.calls.allArgs().map(a => a[0]);
+      expect(events).toContain('options-update');
+      expect(broadcastSpy).toHaveBeenCalledWith('options-update', jasmine.any(Object));
+      // Suppress unused var
+      void optionsSubject;
+    });
+  });
+
   // ---- Widgets activation persistence ----
   describe('widgetsEnabled persistence', () => {
     it('persiste à chaque toggle', () => {
@@ -413,6 +546,102 @@ describe('RemoteV2Component', () => {
       component.phaseId = 'during';
       component.loopId = 'neutral';
       expect(component.phaseDivergesFromLoop).toBe(false);
+    });
+  });
+
+  // AUDIT-V2-LAYOUT-01 — parité V1 du filtrage catégories par phase
+  // (bug pré-fix : V2 utilisait substring 'avant'/'match'/'apres' au lieu
+  // des ids anglais → fallback systématique sur toutes les catégories,
+  // ignorant le mapping "Organisation Télécommande" du dashboard).
+  describe('phaseCategories (parité V1)', () => {
+    const allCats = [
+      { id: 'entree', name: 'ENTRÉE' },
+      { id: 'match-cat', name: 'MATCH' },
+      { id: 'infos-club', name: 'INFOS CLUB' },
+      { id: 'focus-partenaires', name: 'FOCUS PARTENAIRES' },
+    ];
+
+    beforeEach(() => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [
+          { id: 'before', name: 'Avant-match', categoryIds: ['entree', 'infos-club', 'focus-partenaires'], loopVideos: [] },
+          { id: 'during', name: 'Match', categoryIds: ['match-cat', 'infos-club', 'focus-partenaires'], loopVideos: [] },
+          { id: 'after', name: 'Après-match', categoryIds: ['infos-club', 'focus-partenaires'], loopVideos: [] },
+        ],
+      } as unknown as Configuration;
+    });
+
+    it('phase before → ENTRÉE + INFOS CLUB + FOCUS PARTENAIRES', () => {
+      component.phaseId = 'before';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['entree', 'infos-club', 'focus-partenaires']);
+    });
+
+    it('phase during → MATCH + INFOS CLUB + FOCUS PARTENAIRES (pas ENTRÉE)', () => {
+      component.phaseId = 'during';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['match-cat', 'infos-club', 'focus-partenaires']);
+      expect(ids).not.toContain('entree');
+    });
+
+    it('phase after → INFOS CLUB + FOCUS PARTENAIRES (ni ENTRÉE ni MATCH)', () => {
+      component.phaseId = 'after';
+      const ids = component.phaseCategories().map(c => c.id);
+      expect(ids).toEqual(['infos-club', 'focus-partenaires']);
+    });
+
+    it('fallback toutes catégories si la config n\'a pas de timeCategories', () => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [],
+      } as unknown as Configuration;
+      component.phaseId = 'during';
+      expect(component.phaseCategories().length).toBe(allCats.length);
+    });
+
+    it('fallback toutes catégories si aucune TimeCategory ne match phaseId', () => {
+      component.configuration = {
+        categories: allCats,
+        timeCategories: [{ id: 'unknown', name: '?', categoryIds: ['entree'], loopVideos: [] }],
+      } as unknown as Configuration;
+      component.phaseId = 'before';
+      expect(component.phaseCategories().length).toBe(allCats.length);
+    });
+  });
+
+  // SPEC-V2-LAYOUT-01 — système de préférences de layout (3 mobile × 3 PC)
+  describe('layoutClasses (SPEC-V2-LAYOUT-01)', () => {
+    it('retourne le couple par défaut (classic / sidebar)', () => {
+      component.prefsService.reset();
+      expect(component.layoutClasses).toEqual([
+        'layout-mobile-classic',
+        'layout-desktop-sidebar',
+      ]);
+    });
+
+    it('reflète les préférences mises à jour', () => {
+      component.prefsService.update('layoutMobile', 'compact');
+      component.prefsService.update('layoutDesktop', 'pro');
+      expect(component.layoutClasses).toEqual([
+        'layout-mobile-compact',
+        'layout-desktop-pro',
+      ]);
+    });
+
+    it('couvre les 9 combinaisons sans erreur', () => {
+      const mobiles = ['classic', 'grid', 'compact'] as const;
+      const desktops = ['centered', 'sidebar', 'pro'] as const;
+      for (const m of mobiles) {
+        for (const d of desktops) {
+          component.prefsService.update('layoutMobile', m);
+          component.prefsService.update('layoutDesktop', d);
+          expect(component.layoutClasses).toEqual([
+            `layout-mobile-${m}`,
+            `layout-desktop-${d}`,
+          ]);
+        }
+      }
     });
   });
 });

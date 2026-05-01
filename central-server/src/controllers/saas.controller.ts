@@ -9,7 +9,12 @@
  */
 
 import { Request, Response } from 'express';
-import { siteRepository, configProfileRepository, videoRepository } from '../repositories';
+import {
+  siteRepository,
+  configProfileRepository,
+  videoRepository,
+  remotePreferencesRepository,
+} from '../repositories';
 import { getVideoUrl } from '../services/storage.service';
 import { signVideoStreamToken } from '../services/video-token.service';
 import { metricsService } from '../services/metrics.service';
@@ -17,7 +22,12 @@ import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-met
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
-import { injectWebContentCategory } from '../utils/inject-web-content-category';
+import { injectWebContentCategoryEx, registerWebContentInTimeCategories } from '../utils/inject-web-content-category';
+import {
+  collectSyntheticWebContentFilenames,
+  resolveSyntheticWebContent,
+  stripSyntheticWebContent,
+} from '../utils/strip-synthetic-web-content';
 import logger from '../config/logger';
 
 interface VideoLike {
@@ -250,6 +260,33 @@ export async function getSaasConfig(req: Request, res: Response) {
       logger.warn('SaaS config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, error: err });
     }
 
+    // ADR-103 Phase 2 — first try to RESOLVE synthetic web_page/livestream entries
+    // to their real shape (path = external_url, contentType, externalUrl,
+    // durationSeconds). The dashboard "Add to..." flow saves them with the
+    // synthetic filename until Phase 3 fixes the dashboard. Resolved entries
+    // can play in loops + manual via WebContentService.
+    const cfgAsRecord = configuration as Record<string, unknown>;
+    const synthFilenames = collectSyntheticWebContentFilenames(cfgAsRecord);
+    if (synthFilenames.length > 0) {
+      try {
+        const lookup = await videoRepository.findWebContentByFilenames(synthFilenames);
+        const resolved = resolveSyntheticWebContent(cfgAsRecord, lookup);
+        if (resolved.sponsorsResolved + resolved.loopVideosResolved + resolved.categoryVideosResolved > 0) {
+          logger.info('SaaS config: resolved synthetic web_page/livestream entries (ADR-103 Phase 2)', { siteId, ...resolved });
+        }
+      } catch (err) {
+        logger.warn('SaaS config: resolveSyntheticWebContent failed (non-fatal — strip will catch leftovers)', { siteId, error: err });
+      }
+    }
+
+    // ADR-103 Phase 0.5 — strip any synthetic entries that COULD NOT be resolved
+    // above (DB row deleted, mismatched, etc.). This prevents the TV from
+    // ever seeing a synthetic path that would crash the DoubleBuffer.
+    const stripSummary = stripSyntheticWebContent(cfgAsRecord);
+    if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
+      logger.warn('SaaS config: stripped unresolvable synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, ...stripSummary });
+    }
+
     // Résoudre toutes les URLs vidéo (config vide = site fraîchement créé, retourner les defaults)
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
@@ -284,9 +321,17 @@ export async function getSaasConfig(req: Request, res: Response) {
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
     // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
-    const categoriesWithWeb = await injectWebContentCategory(
-      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+    // ADR-103 Phase 0.6 — also register the pseudo-category id in every
+    // timeCategory.categoryIds[] so the Remote V1 (which filters categories
+    // per phase) actually displays it. Without this, the pseudo-category sits
+    // in `categories[]` but is never reachable from the navigation flow.
+    const { categories: categoriesWithWeb, hasWebContent } = await injectWebContentCategoryEx(
+      resolvedCategories as Parameters<typeof injectWebContentCategoryEx>[0],
       siteId,
+    );
+    const timeCategoriesWithWeb = registerWebContentInTimeCategories(
+      resolvedTimeCategories as Parameters<typeof registerWebContentInTimeCategories>[0],
+      hasWebContent,
     );
 
     const resolvedConfig = {
@@ -295,7 +340,7 @@ export async function getSaasConfig(req: Request, res: Response) {
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
       categories: categoriesWithWeb,
-      timeCategories: resolvedTimeCategories,
+      timeCategories: timeCategoriesWithWeb,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
@@ -410,6 +455,26 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       logger.warn('SaaS profile config: enrichConfigWithAnalyticsMetadata failed (non-fatal)', { siteId, profileId, error: err });
     }
 
+    // ADR-103 Phase 2 — resolve synthetic entries to their real shape, then strip leftovers.
+    const cfgAsRecord = configuration as Record<string, unknown>;
+    const synthFilenames = collectSyntheticWebContentFilenames(cfgAsRecord);
+    if (synthFilenames.length > 0) {
+      try {
+        const lookup = await videoRepository.findWebContentByFilenames(synthFilenames);
+        const resolved = resolveSyntheticWebContent(cfgAsRecord, lookup);
+        if (resolved.sponsorsResolved + resolved.loopVideosResolved + resolved.categoryVideosResolved > 0) {
+          logger.info('SaaS profile config: resolved synthetic web_page/livestream entries (ADR-103 Phase 2)', { siteId, profileId, ...resolved });
+        }
+      } catch (err) {
+        logger.warn('SaaS profile config: resolveSyntheticWebContent failed (non-fatal)', { siteId, profileId, error: err });
+      }
+    }
+
+    const stripSummary = stripSyntheticWebContent(cfgAsRecord);
+    if (stripSummary.sponsorsRemoved + stripSummary.loopVideosRemoved + stripSummary.categoryVideosRemoved > 0) {
+      logger.warn('SaaS profile config: stripped unresolvable synthetic web_page/livestream entries (ADR-103 Phase 0.5)', { siteId, profileId, ...stripSummary });
+    }
+
     const sponsors = (configuration.sponsors as VideoLike[]) || [];
     const categories = (configuration.categories as CategoryLike[]) || [];
     const timeCategories = (configuration.timeCategories as TimeCategoryLike[]) || [];
@@ -442,10 +507,14 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const resolvedCategories = resolveCategories(categoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
     const resolvedTimeCategories = resolveTimeCategories(timeCategoriesWithThumbs, storagePathMap, fuzzyIndex, siteId);
 
-    // ADR-089 — Auto-inject pseudo-category "Web / Live" for Remote raspberry
-    const categoriesWithWeb = await injectWebContentCategory(
-      resolvedCategories as Parameters<typeof injectWebContentCategory>[0],
+    // ADR-089 + ADR-103 Phase 0.6 — pseudo-category + register in timeCategories
+    const { categories: categoriesWithWeb, hasWebContent } = await injectWebContentCategoryEx(
+      resolvedCategories as Parameters<typeof injectWebContentCategoryEx>[0],
       siteId,
+    );
+    const timeCategoriesWithWeb = registerWebContentInTimeCategories(
+      resolvedTimeCategories as Parameters<typeof registerWebContentInTimeCategories>[0],
+      hasWebContent,
     );
 
     const resolvedConfig = {
@@ -454,7 +523,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       version: configuration.version || '1.0',
       sponsors: resolvedSponsors,
       categories: categoriesWithWeb,
-      timeCategories: resolvedTimeCategories,
+      timeCategories: timeCategoriesWithWeb,
       liveScoreEnabled: (configuration.liveScoreEnabled as boolean) ?? false,
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
@@ -482,3 +551,81 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 }
+
+/**
+ * GET /api/saas/:siteId/profiles/:profileId/preferences  (ADR-102)
+ *
+ * Charge les préférences UX (prefs + widgets) sauvegardées pour ce profil.
+ * Retourne `{ prefs: {}, widgets: {} }` si aucune ligne — le frontend
+ * applique ses defaults.
+ */
+export async function getRemotePreferences(req: Request, res: Response) {
+  try {
+    const { siteId, profileId } = req.params;
+
+    const profile = await configProfileRepository.findById(profileId);
+    if (!profile || profile.site_id !== siteId) {
+      return res.status(404).json({ error: 'Profil non trouvé' });
+    }
+
+    const row = await remotePreferencesRepository.findBySiteAndProfile(siteId, profileId);
+
+    return res.json({
+      prefs: row?.prefs ?? {},
+      widgets: row?.widgets ?? {},
+      updatedAt: row?.updated_at ?? null,
+    });
+  } catch (error) {
+    logger.error('Error loading remote preferences', {
+      siteId: req.params.siteId,
+      profileId: req.params.profileId,
+      error,
+    });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+/**
+ * PUT /api/saas/:siteId/profiles/:profileId/preferences  (ADR-102)
+ *
+ * Upsert des préférences UX. Body validé par Joi (whitelist stricte). Au
+ * moins un des deux objets `prefs` / `widgets` doit être fourni — l'autre
+ * est conservé tel quel via le `COALESCE` du repository.
+ *
+ * Sécurité : route protégée par `verifyRemotePin` (cf. saas.routes.ts) →
+ * un client doit avoir le même token de device qu'utilisé pour lire la
+ * config du profil. Impossible de polluer les prefs sans le PIN du profil
+ * (si défini), ou ouvert si le profil n'a pas de PIN — comportement
+ * cohérent avec la lecture publique de la config.
+ */
+export async function upsertRemotePreferences(req: Request, res: Response) {
+  try {
+    const { siteId, profileId } = req.params;
+
+    const profile = await configProfileRepository.findById(profileId);
+    if (!profile || profile.site_id !== siteId) {
+      return res.status(404).json({ error: 'Profil non trouvé' });
+    }
+
+    const { prefs, widgets } = req.body as {
+      prefs?: Record<string, unknown>;
+      widgets?: Record<string, unknown>;
+    };
+
+    const row = await remotePreferencesRepository.upsert(siteId, profileId, { prefs, widgets });
+
+    return res.json({
+      prefs: row.prefs,
+      widgets: row.widgets,
+      updatedAt: row.updated_at,
+    });
+  } catch (error) {
+    logger.error('Error upserting remote preferences', {
+      siteId: req.params.siteId,
+      profileId: req.params.profileId,
+      error,
+    });
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+

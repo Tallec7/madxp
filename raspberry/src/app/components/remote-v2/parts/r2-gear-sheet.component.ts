@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { R2IconComponent } from '../icons/r2-icon.component';
 
 export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'options';
 
@@ -10,7 +11,7 @@ export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'option
 @Component({
   selector: 'app-r2-gear-sheet',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, R2IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [':host { display: contents; }'],
   template: `
@@ -34,7 +35,9 @@ export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'option
               <span class="r2-gear-label">Infos du match</span>
               <span class="r2-gear-sub">Équipes, date, spectateurs</span>
             </span>
-            <span class="r2-gear-chev">›</span>
+            <span class="r2-gear-chev">
+              <app-r2-icon name="chevron-right" [size]="14"></app-r2-icon>
+            </span>
           </button>
           <button class="r2-gear-item" (click)="action.emit('widgets')">
             <span class="r2-gear-icon">🎛️</span>
@@ -42,7 +45,9 @@ export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'option
               <span class="r2-gear-label">Widgets</span>
               <span class="r2-gear-sub">Score, chrono, breaking</span>
             </span>
-            <span class="r2-gear-chev">›</span>
+            <span class="r2-gear-chev">
+              <app-r2-icon name="chevron-right" [size]="14"></app-r2-icon>
+            </span>
           </button>
           <button class="r2-gear-item" (click)="action.emit('profile')">
             <span class="r2-gear-icon">👤</span>
@@ -57,7 +62,9 @@ export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'option
               <span class="r2-gear-label">Préférences appareil</span>
               <span class="r2-gear-sub">Haptique, contraste…</span>
             </span>
-            <span class="r2-gear-chev">›</span>
+            <span class="r2-gear-chev">
+              <app-r2-icon name="chevron-right" [size]="14"></app-r2-icon>
+            </span>
           </button>
           <div class="r2-gear-sep"></div>
           <button class="r2-gear-item" (click)="action.emit('options')">
@@ -66,7 +73,9 @@ export type GearAction = 'matchInfo' | 'widgets' | 'profile' | 'prefs' | 'option
               <span class="r2-gear-label">Options match</span>
               <span class="r2-gear-sub">Score, chrono, template…</span>
             </span>
-            <span class="r2-gear-chev">›</span>
+            <span class="r2-gear-chev">
+              <app-r2-icon name="chevron-right" [size]="14"></app-r2-icon>
+            </span>
           </button>
           <button class="r2-gear-item" (click)="reload.emit()" *ngIf="!isDemoMode">
             <span class="r2-gear-icon">↻</span>

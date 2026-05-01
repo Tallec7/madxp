@@ -1,3 +1,564 @@
+## [3.284.12](https://github.com/Tallec7/neopro/compare/v3.284.11...v3.284.12) (2026-05-01)
+
+### Bug Fixes
+
+- **kiosk:** éviter le faux positif "fenêtre parasite" au boot Chromium ([#795](https://github.com/Tallec7/neopro/issues/795)) ([4d570be](https://github.com/Tallec7/neopro/commit/4d570be91c4335c5f51319a23ea79ed248a302bd))
+
+## [3.284.11](https://github.com/Tallec7/neopro/compare/v3.284.10...v3.284.11) (2026-05-01)
+
+### Bug Fixes
+
+- **remote-v2:** unhide .r2-display-wrap sur layouts mobile-classic + desktop-centered ([#794](https://github.com/Tallec7/neopro/issues/794)) ([4c36042](https://github.com/Tallec7/neopro/commit/4c36042260a89c89cca0c657dea8241449e5287c))
+
+## [3.284.10](https://github.com/Tallec7/neopro/compare/v3.284.9...v3.284.10) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** supprimer double socket.initialize() dans Remote V2 (sheet Cible vidéo vide) ([#793](https://github.com/Tallec7/neopro/issues/793)) ([c9cce44](https://github.com/Tallec7/neopro/commit/c9cce44b4f4e698de8adf393586f046ca5fad9b4)), closes [#791](https://github.com/Tallec7/neopro/issues/791)
+
+## [3.284.9](https://github.com/Tallec7/neopro/compare/v3.284.8...v3.284.9) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** displays-changed snapshot pour saas-remote au saas-register ([#792](https://github.com/Tallec7/neopro/issues/792)) ([60b341d](https://github.com/Tallec7/neopro/commit/60b341d59ce2bb126cff60ec265c5c74e4606675))
+
+## [3.284.8](https://github.com/Tallec7/neopro/compare/v3.284.7...v3.284.8) (2026-05-01)
+
+### Bug Fixes
+
+- **saas:** push displays-changed au Remote lors de saas-register ([#791](https://github.com/Tallec7/neopro/issues/791)) ([797d29b](https://github.com/Tallec7/neopro/commit/797d29baa389e38544addcc5fbd0ae2a7594034f))
+
+## [3.284.7](https://github.com/Tallec7/neopro/compare/v3.284.6...v3.284.7) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** ngZone.run dans displays-changed → \*ngIf se réévalue ([#790](https://github.com/Tallec7/neopro/issues/790)) ([9a2a8ae](https://github.com/Tallec7/neopro/commit/9a2a8aeb8483fe9c480d23eaa469bb82a99312dc))
+
+## [3.284.6](https://github.com/Tallec7/neopro/compare/v3.284.5...v3.284.6) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** ngZone.run sur handlers socket V2 → CD détecte displays/phase/player ([#789](https://github.com/Tallec7/neopro/issues/789)) ([2c4569c](https://github.com/Tallec7/neopro/commit/2c4569cc39a24b263143e002d2e61595a60681e6))
+
+## [3.284.5](https://github.com/Tallec7/neopro/compare/v3.284.4...v3.284.5) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** supprime max-height hero mobile-classic → section display visible ([#788](https://github.com/Tallec7/neopro/issues/788)) ([c20c2fc](https://github.com/Tallec7/neopro/commit/c20c2fc39606371675d014325723f28a6523ebf5))
+
+## [3.284.4](https://github.com/Tallec7/neopro/compare/v3.284.3...v3.284.4) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** port catchall Pages Function to raspberry SaaS ([#785](https://github.com/Tallec7/neopro/issues/785)) ([0eeea50](https://github.com/Tallec7/neopro/commit/0eeea50dc7688cdef71a766ed04b6604ea543651))
+
+## [3.284.3](https://github.com/Tallec7/neopro/compare/v3.284.2...v3.284.3) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** V2 émet request-state au boot pour recevoir displays-changed ([#787](https://github.com/Tallec7/neopro/issues/787)) ([0284e85](https://github.com/Tallec7/neopro/commit/0284e858f78f1c7f1d46632bc85e9859bfb813f4))
+
+## [3.284.2](https://github.com/Tallec7/neopro/compare/v3.284.1...v3.284.2) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** SPA fallback explicite pour display/:N arbitraire (404 → /saas/index.html) ([#786](https://github.com/Tallec7/neopro/issues/786)) ([6866994](https://github.com/Tallec7/neopro/commit/6866994acb1a06bf27984cf940b19f7e4f4a2391))
+
+## [3.284.1](https://github.com/Tallec7/neopro/compare/v3.284.0...v3.284.1) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** close 4 V2 orchestration holes vs V1 (request-state, breaking-news, options, target-reset) ([#784](https://github.com/Tallec7/neopro/issues/784)) ([7fb1e1c](https://github.com/Tallec7/neopro/commit/7fb1e1ca60b7f4031f0bd8a743389c9976d16e6b))
+
+# [3.284.0](https://github.com/Tallec7/neopro/compare/v3.283.0...v3.284.0) (2026-04-30)
+
+### Features
+
+- **remote:** backport V1 parity on V2 emit path + 3 match options ([#782](https://github.com/Tallec7/neopro/issues/782)) ([c36ef02](https://github.com/Tallec7/neopro/commit/c36ef02edd10d062fe4dcdc36d69dfb64b2f0206))
+
+# [3.283.0](https://github.com/Tallec7/neopro/compare/v3.282.2...v3.283.0) (2026-04-30)
+
+### Features
+
+- **scripts:** backfill videos.duration via FFprobe ([#780](https://github.com/Tallec7/neopro/issues/780)) ([7a89e7d](https://github.com/Tallec7/neopro/commit/7a89e7d9ca48126857c385faf9ecdf5c860d2127)), closes [#779](https://github.com/Tallec7/neopro/issues/779)
+
+## [3.282.2](https://github.com/Tallec7/neopro/compare/v3.282.1...v3.282.2) (2026-04-30)
+
+### Bug Fixes
+
+- **raspberry:** NLF présentation joueurs — click-twice + flash boucle + SITE_ID flotte ([#778](https://github.com/Tallec7/neopro/issues/778)) ([61f4e9c](https://github.com/Tallec7/neopro/commit/61f4e9c146a4017fcb2e4664ff2c73652a5817eb)), closes [#000](https://github.com/Tallec7/neopro/issues/000)
+
+## [3.282.1](https://github.com/Tallec7/neopro/compare/v3.282.0...v3.282.1) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** masque barre de progression quand durationSeconds manquant ([#779](https://github.com/Tallec7/neopro/issues/779)) ([07a54f1](https://github.com/Tallec7/neopro/commit/07a54f1d6c4a32524968d329a61a2fcb19be4fa5))
+
+# [3.282.0](https://github.com/Tallec7/neopro/compare/v3.281.1...v3.282.0) (2026-04-30)
+
+### Features
+
+- **templates:** chantier JOUEUR consolidé — versioning + options + packshot pluggable + UI ([#777](https://github.com/Tallec7/neopro/issues/777)) ([b5a6e2e](https://github.com/Tallec7/neopro/commit/b5a6e2e5ad7b031274cc9efd989bb901eff65f5d)), closes [690/#691](https://github.com/Tallec7/neopro/issues/691) [#768](https://github.com/Tallec7/neopro/issues/768) [#766](https://github.com/Tallec7/neopro/issues/766) [#771](https://github.com/Tallec7/neopro/issues/771) [#771](https://github.com/Tallec7/neopro/issues/771) [#773](https://github.com/Tallec7/neopro/issues/773) [#771](https://github.com/Tallec7/neopro/issues/771) [#771](https://github.com/Tallec7/neopro/issues/771) [#773](https://github.com/Tallec7/neopro/issues/773) [#771](https://github.com/Tallec7/neopro/issues/771)
+
+## [3.281.1](https://github.com/Tallec7/neopro/compare/v3.281.0...v3.281.1) (2026-04-30)
+
+### Bug Fixes
+
+- **deploy:** remove restrictive watchPatterns to enable Dockerfile builder on Railway ([#770](https://github.com/Tallec7/neopro/issues/770)) ([cc2f295](https://github.com/Tallec7/neopro/commit/cc2f295d64f69d84d10d6d55303c1cabe5f1b7de))
+
+# [3.281.0](https://github.com/Tallec7/neopro/compare/v3.280.3...v3.281.0) (2026-04-30)
+
+### Features
+
+- **templates:** add joueur-tools admin page for template management ([#769](https://github.com/Tallec7/neopro/issues/769)) ([268bc20](https://github.com/Tallec7/neopro/commit/268bc2022fc6ed2e1b7eabf53a4e4d37a4782883)), closes [#764](https://github.com/Tallec7/neopro/issues/764)
+- **templates:** chantier JOUEUR — versioning + backgrounds + auto-crop + UI super_admin ([#766](https://github.com/Tallec7/neopro/issues/766)) ([357c887](https://github.com/Tallec7/neopro/commit/357c887b015856417789ba80f4c4a0ba02231516)), closes [#757](https://github.com/Tallec7/neopro/issues/757) [#758](https://github.com/Tallec7/neopro/issues/758) [#764](https://github.com/Tallec7/neopro/issues/764) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [#757](https://github.com/Tallec7/neopro/issues/757) [#760](https://github.com/Tallec7/neopro/issues/760) [690/#691](https://github.com/Tallec7/neopro/issues/691)
+
+## [3.280.3](https://github.com/Tallec7/neopro/compare/v3.280.2...v3.280.3) (2026-04-30)
+
+### Bug Fixes
+
+- **migrations:** include all task types in check_task_type constraint ([#768](https://github.com/Tallec7/neopro/issues/768)) ([4d6959b](https://github.com/Tallec7/neopro/commit/4d6959b049b08a96f877aa16570ac3c06b657227))
+
+## [3.280.2](https://github.com/Tallec7/neopro/compare/v3.280.1...v3.280.2) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** barre de progression pilotée par JS (alignée durationSeconds) ([#764](https://github.com/Tallec7/neopro/issues/764)) ([5c9a3d6](https://github.com/Tallec7/neopro/commit/5c9a3d65dd7ae88102960667c4cbf43000ae792a))
+
+## [3.280.1](https://github.com/Tallec7/neopro/compare/v3.280.0...v3.280.1) (2026-04-30)
+
+### Bug Fixes
+
+- **remote:** keep playingVideo state for full video duration (progress bar) ([#763](https://github.com/Tallec7/neopro/issues/763)) ([5a12804](https://github.com/Tallec7/neopro/commit/5a1280453ddc5c00cd93dd0e3641f82acf516930))
+
+# [3.280.0](https://github.com/Tallec7/neopro/compare/v3.279.2...v3.280.0) (2026-04-30)
+
+### Features
+
+- **remote:** show manual playback progress bar on active layouts ([#761](https://github.com/Tallec7/neopro/issues/761)) ([9a43b2b](https://github.com/Tallec7/neopro/commit/9a43b2b60336ad8fbbad2e091d8382b61039e370))
+
+## [3.279.2](https://github.com/Tallec7/neopro/compare/v3.279.1...v3.279.2) (2026-04-30)
+
+### Bug Fixes
+
+- **adr-106:** preview-slave never joins siteId room (root cause) ([#759](https://github.com/Tallec7/neopro/issues/759)) ([e5a94dd](https://github.com/Tallec7/neopro/commit/e5a94dd341f5d8c2fc236d6d08482e8002ad24a7))
+
+## [3.279.1](https://github.com/Tallec7/neopro/compare/v3.279.0...v3.279.1) (2026-04-30)
+
+### Bug Fixes
+
+- **adr-106:** tighten preview drift to ≤200ms (4 fixes) ([#758](https://github.com/Tallec7/neopro/issues/758)) ([01ca3fe](https://github.com/Tallec7/neopro/commit/01ca3fefa67967964ce7b0e627f77aa41ae8dbfd)), closes [#756](https://github.com/Tallec7/neopro/issues/756)
+
+# [3.279.0](https://github.com/Tallec7/neopro/compare/v3.278.19...v3.279.0) (2026-04-30)
+
+### Features
+
+- **adr-106:** sync 1:1 preview iframe ↔ master TV (preview-slave) ([#756](https://github.com/Tallec7/neopro/issues/756)) ([2db7e67](https://github.com/Tallec7/neopro/commit/2db7e674911d096a9f0b001e3060712dee2a9801))
+
+## [3.278.19](https://github.com/Tallec7/neopro/compare/v3.278.18...v3.278.19) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** preview TV mini-thumb + consolidation REC/LIVE (ADR-105 Phase A) ([#755](https://github.com/Tallec7/neopro/issues/755)) ([eee58f7](https://github.com/Tallec7/neopro/commit/eee58f735ff1945041ae523de42264a013f313b5)), closes [#752](https://github.com/Tallec7/neopro/issues/752) [#752](https://github.com/Tallec7/neopro/issues/752)
+
+## [3.278.18](https://github.com/Tallec7/neopro/compare/v3.278.17...v3.278.18) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** containment iframe r2-tv-monitor (ADR-105) ([#754](https://github.com/Tallec7/neopro/issues/754)) ([9e453cb](https://github.com/Tallec7/neopro/commit/9e453cb77049ff1af7f21afdfb17f0ca2db34044)), closes [#730](https://github.com/Tallec7/neopro/issues/730)
+
+## [3.278.17](https://github.com/Tallec7/neopro/compare/v3.278.16...v3.278.17) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** retire iframe preview du mini-thumb hero (ADR-105) ([#752](https://github.com/Tallec7/neopro/issues/752)) ([051ed56](https://github.com/Tallec7/neopro/commit/051ed56019ca121c0fff52cc8d0016e01c3841ce)), closes [#751](https://github.com/Tallec7/neopro/issues/751) [#751](https://github.com/Tallec7/neopro/issues/751)
+
+## [3.278.16](https://github.com/Tallec7/neopro/compare/v3.278.15...v3.278.16) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** hero TV thumb iframe scalée 60x38 (ADR-105) ([#751](https://github.com/Tallec7/neopro/issues/751)) ([1588b35](https://github.com/Tallec7/neopro/commit/1588b35301dd61b91667da5fb40a8eeb3ee7ffd2)), closes [#730](https://github.com/Tallec7/neopro/issues/730)
+
+## [3.278.15](https://github.com/Tallec7/neopro/compare/v3.278.14...v3.278.15) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** détection content-type mismatch + strip Link modulepreload (ADR-071) ([#750](https://github.com/Tallec7/neopro/issues/750)) ([b7f9362](https://github.com/Tallec7/neopro/commit/b7f9362d334c948b281e72a3f342044d8d7fbe6e)), closes [748/#749](https://github.com/Tallec7/neopro/issues/749)
+
+## [3.278.14](https://github.com/Tallec7/neopro/compare/v3.278.13...v3.278.14) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function root catchall — bloque cache poisoning dashboard (ADR-071) ([#749](https://github.com/Tallec7/neopro/issues/749)) ([9a78a37](https://github.com/Tallec7/neopro/commit/9a78a37fc25736cc19bdd35caaa49245010f8b3b)), closes [#748](https://github.com/Tallec7/neopro/issues/748)
+
+## [3.278.13](https://github.com/Tallec7/neopro/compare/v3.278.12...v3.278.13) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** empêche cache poisoning des chunks via Function fallback (ADR-071) ([#748](https://github.com/Tallec7/neopro/issues/748)) ([96ed3a8](https://github.com/Tallec7/neopro/commit/96ed3a892864e9fe0ad1eca6c8b9551e32d9fffa)), closes [#743](https://github.com/Tallec7/neopro/issues/743)
+
+## [3.278.12](https://github.com/Tallec7/neopro/compare/v3.278.11...v3.278.12) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** suivre le 308 trailing-slash dans Pages Function /saas/\* (ADR-071) ([#745](https://github.com/Tallec7/neopro/issues/745)) ([abfc3c5](https://github.com/Tallec7/neopro/commit/abfc3c5acaab051a361c14b61fc1a7de6d90427c)), closes [#744](https://github.com/Tallec7/neopro/issues/744)
+
+## [3.278.11](https://github.com/Tallec7/neopro/compare/v3.278.10...v3.278.11) (2026-04-30)
+
+### Bug Fixes
+
+- **remote-v2:** iframe TV preview cible display/0 (pas la racine picker) ([#744](https://github.com/Tallec7/neopro/issues/744)) ([2c83b2c](https://github.com/Tallec7/neopro/commit/2c83b2c021f82663efa160d5b1b120102204717a)), closes [#740](https://github.com/Tallec7/neopro/issues/740)
+
+## [3.278.10](https://github.com/Tallec7/neopro/compare/v3.278.9...v3.278.10) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function fallback-only (ne pas hijacker /saas/) (ADR-071) ([#743](https://github.com/Tallec7/neopro/issues/743)) ([746564b](https://github.com/Tallec7/neopro/commit/746564b6a509876759f376489722d15e524e9981)), closes [#742](https://github.com/Tallec7/neopro/issues/742)
+
+## [3.278.9](https://github.com/Tallec7/neopro/compare/v3.278.8...v3.278.9) (2026-04-30)
+
+### Bug Fixes
+
+- **hosting:** Pages Function catch-all /saas/\* (ADR-071 phase 3) ([#742](https://github.com/Tallec7/neopro/issues/742)) ([dcb0eba](https://github.com/Tallec7/neopro/commit/dcb0eba15070dae20673d109b62d928b6ee9f057)), closes [#737](https://github.com/Tallec7/neopro/issues/737) [#741](https://github.com/Tallec7/neopro/issues/741)
+
+## [3.278.8](https://github.com/Tallec7/neopro/compare/v3.278.7...v3.278.8) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** SPEC sections obligatoires + verify curl -sL (ADR-071) ([#741](https://github.com/Tallec7/neopro/issues/741)) ([100e8d2](https://github.com/Tallec7/neopro/commit/100e8d274f7356a705c5661bc39be4156f654def)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
+## [3.278.7](https://github.com/Tallec7/neopro/compare/v3.278.6...v3.278.7) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** verify CI suit les 308 redirects Cloudflare (ADR-071) ([#739](https://github.com/Tallec7/neopro/issues/739)) ([d62e6d2](https://github.com/Tallec7/neopro/commit/d62e6d26768f2ffd0c1abd6b63ecb60e73878a4a)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
+## [3.278.6](https://github.com/Tallec7/neopro/compare/v3.278.5...v3.278.6) (2026-04-29)
+
+### Bug Fixes
+
+- **remote-v2:** tv preview iframe URL respecte baseURI (ADR-071) ([#740](https://github.com/Tallec7/neopro/issues/740)) ([f946ff0](https://github.com/Tallec7/neopro/commit/f946ff007170bafcd1ff35422eab10d2fe4a2fc0))
+
+## [3.278.5](https://github.com/Tallec7/neopro/compare/v3.278.4...v3.278.5) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** SaaS sub-route stubs + content-aware verify (ADR-071) ([#736](https://github.com/Tallec7/neopro/issues/736)) ([a05d873](https://github.com/Tallec7/neopro/commit/a05d873e4c7c0ddb8643723831274a51ed49925c))
+- **hosting:** SaaS sub-route stubs + content-aware verify (ADR-071) ([#737](https://github.com/Tallec7/neopro/issues/737)) ([a49e745](https://github.com/Tallec7/neopro/commit/a49e74535a8024e422a1eb7fa5b0241da77da151))
+- **hosting:** SPEC routing CF Pages SaaS + retrigger release (ADR-071) ([#738](https://github.com/Tallec7/neopro/issues/738)) ([fa9db81](https://github.com/Tallec7/neopro/commit/fa9db8105298b5c5631d9392e24ce40baaa25f31)), closes [#737](https://github.com/Tallec7/neopro/issues/737)
+
+## [3.278.4](https://github.com/Tallec7/neopro/compare/v3.278.3...v3.278.4) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** \_redirects format strict pour SaaS sub-routes (ADR-071) ([#735](https://github.com/Tallec7/neopro/issues/735)) ([c69252f](https://github.com/Tallec7/neopro/commit/c69252fecb8c4221ff3f7b196c13b079623d2748))
+
+## [3.278.3](https://github.com/Tallec7/neopro/compare/v3.278.2...v3.278.3) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** doc HOSTING var doit être repository-level, pas env-level (ADR-071) ([#734](https://github.com/Tallec7/neopro/issues/734)) ([efd7407](https://github.com/Tallec7/neopro/commit/efd74074a0d5d42048b226d79ac7127861ad76af)), closes [#2055](https://github.com/Tallec7/neopro/issues/2055) [#2056](https://github.com/Tallec7/neopro/issues/2056)
+
+## [3.278.2](https://github.com/Tallec7/neopro/compare/v3.278.1...v3.278.2) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** augmente wait CDN propagation 15s→30s pour cold-start TLS (ADR-071) ([#733](https://github.com/Tallec7/neopro/issues/733)) ([289713d](https://github.com/Tallec7/neopro/commit/289713da23680cc1fae301885464f8198e19cb4b)), closes [#2055](https://github.com/Tallec7/neopro/issues/2055)
+
+## [3.278.1](https://github.com/Tallec7/neopro/compare/v3.278.0...v3.278.1) (2026-04-29)
+
+### Bug Fixes
+
+- **hosting:** commentaire job legacy obsolète post-Option A (ADR-071) ([#732](https://github.com/Tallec7/neopro/issues/732)) ([e62a12a](https://github.com/Tallec7/neopro/commit/e62a12a621a34a3e74f453147db178f6c124ad1c))
+
+# [3.278.0](https://github.com/Tallec7/neopro/compare/v3.277.1...v3.278.0) (2026-04-29)
+
+### Features
+
+- **hosting:** cloudflare pages prod scaffolding (ADR-071 phase 2) ([#729](https://github.com/Tallec7/neopro/issues/729)) ([d1e5336](https://github.com/Tallec7/neopro/commit/d1e5336c81a774dc36333ed15deb834d0e0e2ad6))
+
+## [3.277.1](https://github.com/Tallec7/neopro/compare/v3.277.0...v3.277.1) (2026-04-29)
+
+### Bug Fixes
+
+- **saas:** kill-switch ADR-104 tv-snapshot HTTP pull (incident 429) ([#728](https://github.com/Tallec7/neopro/issues/728)) ([47816cb](https://github.com/Tallec7/neopro/commit/47816cb7dcca75e72180416049f30eebb6eb69a1))
+
+# [3.277.0](https://github.com/Tallec7/neopro/compare/v3.276.0...v3.277.0) (2026-04-29)
+
+### Features
+
+- **supervision:** ADR-103 Phase 4 — Prometheus + alertes web/live + clôture ([#726](https://github.com/Tallec7/neopro/issues/726)) ([963aebe](https://github.com/Tallec7/neopro/commit/963aebeab6b5b7c7a2166113375a8301c1ce35ed))
+
+# [3.276.0](https://github.com/Tallec7/neopro/compare/v3.275.0...v3.276.0) (2026-04-29)
+
+### Features
+
+- **saas:** TV preview via HTTP pull (ADR-104) ([#725](https://github.com/Tallec7/neopro/issues/725)) ([8eedc0f](https://github.com/Tallec7/neopro/commit/8eedc0ffc3078dc03e79b64d3dae21f0a0c25352)), closes [#711](https://github.com/Tallec7/neopro/issues/711) [#713](https://github.com/Tallec7/neopro/issues/713) [#715](https://github.com/Tallec7/neopro/issues/715) [#717](https://github.com/Tallec7/neopro/issues/717) [#723](https://github.com/Tallec7/neopro/issues/723)
+
+# [3.275.0](https://github.com/Tallec7/neopro/compare/v3.274.0...v3.275.0) (2026-04-29)
+
+### Features
+
+- **dashboard:** ADR-103 Phase 3 v2 — proactive web/live UX in library ([#724](https://github.com/Tallec7/neopro/issues/724)) ([b1e43dd](https://github.com/Tallec7/neopro/commit/b1e43dd671eab2f94b0512ff12b136de8a4e7179))
+
+# [3.274.0](https://github.com/Tallec7/neopro/compare/v3.273.0...v3.274.0) (2026-04-29)
+
+### Features
+
+- **remote:** master/slave sync of web/live content for dual-display — ADR-103 Phase 1.5b ([#723](https://github.com/Tallec7/neopro/issues/723)) ([98189d4](https://github.com/Tallec7/neopro/commit/98189d436f8adcc8721f710a08998799f83f5fdb)), closes [#722](https://github.com/Tallec7/neopro/issues/722)
+
+# [3.273.0](https://github.com/Tallec7/neopro/compare/v3.272.0...v3.273.0) (2026-04-29)
+
+### Features
+
+- **remote:** refuse web/live loop entries without durationSeconds — ADR-103 Phase 3 (MVP) ([#721](https://github.com/Tallec7/neopro/issues/721)) ([630e0ee](https://github.com/Tallec7/neopro/commit/630e0eea9cf2928ce4382722dacbd854a6d37f3d))
+
+# [3.272.0](https://github.com/Tallec7/neopro/compare/v3.271.0...v3.272.0) (2026-04-29)
+
+### Features
+
+- **remote:** hls.js lazy-load for livestream on Chromium — ADR-103 Phase 1.5a ([#722](https://github.com/Tallec7/neopro/issues/722)) ([607c611](https://github.com/Tallec7/neopro/commit/607c611a80ea769486f752bb53906661bee37b78))
+
+# [3.271.0](https://github.com/Tallec7/neopro/compare/v3.270.3...v3.271.0) (2026-04-29)
+
+### Features
+
+- **remote:** web/live in MP4 loop rotation — ADR-103 Phase 2b ([#720](https://github.com/Tallec7/neopro/issues/720)) ([1d3112c](https://github.com/Tallec7/neopro/commit/1d3112c9eb6af8af4e0b45ed02c88609dc74f3c7))
+
+## [3.270.3](https://github.com/Tallec7/neopro/compare/v3.270.2...v3.270.3) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** wait 2× rAF + 250ms before hiding freeze (paint-stable reveal) — ADR-103 Phase 2.7 ([#718](https://github.com/Tallec7/neopro/issues/718)) ([b52493f](https://github.com/Tallec7/neopro/commit/b52493f14d749f869bc6a162fbcd5578ced281b2))
+
+## [3.270.2](https://github.com/Tallec7/neopro/compare/v3.270.1...v3.270.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** instant web/live show (no opacity transition under freeze) — ADR-103 Phase 2.6 ([#716](https://github.com/Tallec7/neopro/issues/716)) ([07846f5](https://github.com/Tallec7/neopro/commit/07846f53cb6fdccc114c38f598380dd0aab9330f))
+
+## [3.270.1](https://github.com/Tallec7/neopro/compare/v3.270.0...v3.270.1) (2026-04-29)
+
+### Bug Fixes
+
+- **saas:** force socket reconnect after Railway redeploy ([#715](https://github.com/Tallec7/neopro/issues/715)) ([f68448e](https://github.com/Tallec7/neopro/commit/f68448e426f8622e086b3db49c33f1770a363fd2))
+
+# [3.270.0](https://github.com/Tallec7/neopro/compare/v3.269.3...v3.270.0) (2026-04-29)
+
+### Features
+
+- **remote:** web content take-over polish + Stop button + anti-flash — ADR-103 Phase 2.5 ([#714](https://github.com/Tallec7/neopro/issues/714)) ([ec0bb82](https://github.com/Tallec7/neopro/commit/ec0bb82fa86c16377e3d82f6bbc5937c27775989))
+
+## [3.269.3](https://github.com/Tallec7/neopro/compare/v3.269.2...v3.269.3) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** ignore capability event in SaaS mode (preserve saas-frame URL) ([#713](https://github.com/Tallec7/neopro/issues/713)) ([7c236ab](https://github.com/Tallec7/neopro/commit/7c236ab294821749bc6f14a8837dbdfce04a251d))
+
+## [3.269.2](https://github.com/Tallec7/neopro/compare/v3.269.1...v3.269.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote-v2:** dispatch web-page / livestream by contentType (parity with V1) — ADR-103 Phase 2a ([#712](https://github.com/Tallec7/neopro/issues/712)) ([c7b0435](https://github.com/Tallec7/neopro/commit/c7b0435b414b8650b9dc36223af260fffc83980b)), closes [#705](https://github.com/Tallec7/neopro/issues/705)
+
+## [3.269.1](https://github.com/Tallec7/neopro/compare/v3.269.0...v3.269.1) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** skip cache-bust query on data: URLs (SaaS frame path) ([#711](https://github.com/Tallec7/neopro/issues/711)) ([464e00d](https://github.com/Tallec7/neopro/commit/464e00d600e7f472990e73d8b6038d164edf18b3))
+
+# [3.269.0](https://github.com/Tallec7/neopro/compare/v3.268.2...v3.269.0) (2026-04-29)
+
+### Features
+
+- **remote:** backend resolves synthetic web/live paths + drops 400 — ADR-103 Phase 2a ([#710](https://github.com/Tallec7/neopro/issues/710)) ([52eda67](https://github.com/Tallec7/neopro/commit/52eda6763eff5f922fabdcb0b3b9e3db5cb02894))
+
+## [3.268.2](https://github.com/Tallec7/neopro/compare/v3.268.1...v3.268.2) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** forcer player.crossOrigin runtime pour débloquer canvas SaaS ([#709](https://github.com/Tallec7/neopro/issues/709)) ([0aa81cf](https://github.com/Tallec7/neopro/commit/0aa81cf2f7bd3fdb902343bad740910167ced8fe)), closes [#707](https://github.com/Tallec7/neopro/issues/707)
+
+## [3.268.1](https://github.com/Tallec7/neopro/compare/v3.268.0...v3.268.1) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** CORS + crossorigin pour permettre canvas export en SaaS ([#707](https://github.com/Tallec7/neopro/issues/707)) ([9ae6062](https://github.com/Tallec7/neopro/commit/9ae6062fa67a004fc22d0ef5327859b4529a83b4))
+
+# [3.268.0](https://github.com/Tallec7/neopro/compare/v3.267.3...v3.268.0) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** type livestream dispatch payload to clear TS7018 ([#706](https://github.com/Tallec7/neopro/issues/706)) ([9ba3b33](https://github.com/Tallec7/neopro/commit/9ba3b33d6c6c0c1a2c78face435d22cea1a9398c)), closes [#705](https://github.com/Tallec7/neopro/issues/705)
+
+### Features
+
+- **remote:** WebContentPlayer manual robustness — ADR-103 Phase 1 ([#705](https://github.com/Tallec7/neopro/issues/705)) ([f3e481f](https://github.com/Tallec7/neopro/commit/f3e481fd924f67485133b4b091551b4049567fa2))
+
+## [3.267.3](https://github.com/Tallec7/neopro/compare/v3.267.2...v3.267.3) (2026-04-29)
+
+### Bug Fixes
+
+- **tv-preview:** retry subscribe SaaS pour absorber le race connect order ([#704](https://github.com/Tallec7/neopro/issues/704)) ([4c92d4c](https://github.com/Tallec7/neopro/commit/4c92d4c3999234a0684b3fb9da3c10cd9d50df0f))
+
+## [3.267.2](https://github.com/Tallec7/neopro/compare/v3.267.1...v3.267.2) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** make Web/Live pseudo-category visible — ADR-103 Phase 0.6 ([#703](https://github.com/Tallec7/neopro/issues/703)) ([6992e59](https://github.com/Tallec7/neopro/commit/6992e595360ae2528ed55784fc0fdefffb523daa))
+
+## [3.267.1](https://github.com/Tallec7/neopro/compare/v3.267.0...v3.267.1) (2026-04-29)
+
+### Bug Fixes
+
+- **remote:** server-side strip + reject synthetic web/live paths — ADR-103 Phase 0.5 ([#701](https://github.com/Tallec7/neopro/issues/701)) ([6d819e8](https://github.com/Tallec7/neopro/commit/6d819e8780f1c99b73957b0d1e2c317f8d290379)), closes [#699](https://github.com/Tallec7/neopro/issues/699)
+
+# [3.267.0](https://github.com/Tallec7/neopro/compare/v3.266.1...v3.267.0) (2026-04-29)
+
+### Features
+
+- **remote-v2:** brancher le flux MJPEG dans la mini-thumb du hero (ADR-103) ([#700](https://github.com/Tallec7/neopro/issues/700)) ([b8e2fa7](https://github.com/Tallec7/neopro/commit/b8e2fa75b8d4bfa8437ebe2bfe5756195b618f61)), closes [#690](https://github.com/Tallec7/neopro/issues/690)
+
+## [3.266.1](https://github.com/Tallec7/neopro/compare/v3.266.0...v3.266.1) (2026-04-28)
+
+### Bug Fixes
+
+- **remote:** block web_page/livestream in video pipeline — ADR-103 Phase 0 ([#699](https://github.com/Tallec7/neopro/issues/699)) ([80d8b13](https://github.com/Tallec7/neopro/commit/80d8b13d8ea1fc68b55a401607952fdbda7fd58e))
+
+# [3.266.0](https://github.com/Tallec7/neopro/compare/v3.265.2...v3.266.0) (2026-04-28)
+
+### Bug Fixes
+
+- **remote:** restore profile selector + PIN entry in RemoteV2 (ADR-058/092) ([#698](https://github.com/Tallec7/neopro/issues/698)) ([567405f](https://github.com/Tallec7/neopro/commit/567405fb13ebd2690ab7e2e3a9776e1a9e77f77e))
+
+### Features
+
+- **tv-preview-P1:** Prometheus + Grafana + token HMAC + heartbeat snapshot — SPEC-V2-TVMON-01 P1 ([#695](https://github.com/Tallec7/neopro/issues/695)) ([#697](https://github.com/Tallec7/neopro/issues/697)) ([0551cd8](https://github.com/Tallec7/neopro/commit/0551cd8aa62884b449da7f116e5aa99f78bd6365))
+
+## [3.265.2](https://github.com/Tallec7/neopro/compare/v3.265.1...v3.265.2) (2026-04-28)
+
+### Bug Fixes
+
+- **dashboard:** corriger le lien "Voir contenu" 404 dans santé vidéos flotte ([#694](https://github.com/Tallec7/neopro/issues/694)) ([70dfaa0](https://github.com/Tallec7/neopro/commit/70dfaa0e5ca76da1b7d0343f18593922b325b256))
+
+## [3.265.1](https://github.com/Tallec7/neopro/compare/v3.265.0...v3.265.1) (2026-04-28)
+
+### Bug Fixes
+
+- **tv-preview:** unblock Pi CDP attach + add SaaS push transport (r2-tv-monitor) ([#692](https://github.com/Tallec7/neopro/issues/692)) ([acf49f4](https://github.com/Tallec7/neopro/commit/acf49f419a00aad3bbc54b213cefac48b232b663)), closes [#690](https://github.com/Tallec7/neopro/issues/690) [#690](https://github.com/Tallec7/neopro/issues/690)
+
+# [3.265.0](https://github.com/Tallec7/neopro/compare/v3.264.0...v3.265.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** persist préférences UX en DB par (site, profil) — ADR-101 ([#691](https://github.com/Tallec7/neopro/issues/691)) ([82b5c3f](https://github.com/Tallec7/neopro/commit/82b5c3f1927b96b84e00dd35b29ab7a4e48c6efd)), closes [#688](https://github.com/Tallec7/neopro/issues/688)
+
+# [3.264.0](https://github.com/Tallec7/neopro/compare/v3.263.3...v3.264.0) (2026-04-28)
+
+### Features
+
+- **tv-preview:** preview vidéo réel <app-r2-tv-monitor> régie pro PC C — SPEC-V2-TVMON-01 P0 + ADR-101 ([#690](https://github.com/Tallec7/neopro/issues/690)) ([ca28661](https://github.com/Tallec7/neopro/commit/ca2866195064739cda9a84fcfb99d85325961930))
+
+## [3.263.3](https://github.com/Tallec7/neopro/compare/v3.263.2...v3.263.3) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** Mobile A polish — widgets grid + overflow + z-index ([#689](https://github.com/Tallec7/neopro/issues/689)) ([84a54bc](https://github.com/Tallec7/neopro/commit/84a54bcdddb5556a06a410036de37ad8d9fe31c9)), closes [#682](https://github.com/Tallec7/neopro/issues/682)
+
+## [3.263.2](https://github.com/Tallec7/neopro/compare/v3.263.1...v3.263.2) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** scope localStorage SaaS par site/profil + stop persisting ?v2= override ([#688](https://github.com/Tallec7/neopro/issues/688)) ([70c63e2](https://github.com/Tallec7/neopro/commit/70c63e2c7d13af6a7c1e7a34ac3b8aafb2f5d63e))
+
+## [3.263.1](https://github.com/Tallec7/neopro/compare/v3.263.0...v3.263.1) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** scope strict tv-monitor / pro-sidebar / video-table à PC C ([#686](https://github.com/Tallec7/neopro/issues/686)) ([436c0f0](https://github.com/Tallec7/neopro/commit/436c0f06c238f186c98edf9c016a27556964bbf3))
+
+# [3.263.0](https://github.com/Tallec7/neopro/compare/v3.262.0...v3.263.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** refonte PC C en master-detail régie pro (SPEC-V2-LAYOUT-01 §5C) ([#684](https://github.com/Tallec7/neopro/issues/684)) ([1ac1974](https://github.com/Tallec7/neopro/commit/1ac197481e7f448e725ef7e78a4aa27827796714))
+
+# [3.262.0](https://github.com/Tallec7/neopro/compare/v3.261.5...v3.262.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** hero compact 1-ligne + r2-tv-monitor PC C (AUDIT-V2-LAYOUT-01) ([#683](https://github.com/Tallec7/neopro/issues/683)) ([42f89fe](https://github.com/Tallec7/neopro/commit/42f89fef0f0a0752cb19eeabff5d5ea6817917de))
+
+## [3.261.5](https://github.com/Tallec7/neopro/compare/v3.261.4...v3.261.5) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** restore V1 parity for phase→categories mapping (AUDIT-V2-LAYOUT-01) ([#682](https://github.com/Tallec7/neopro/issues/682)) ([c5f4cb0](https://github.com/Tallec7/neopro/commit/c5f4cb06ee4b18597a280b55d993920583bca659))
+
+## [3.261.4](https://github.com/Tallec7/neopro/compare/v3.261.3...v3.261.4) (2026-04-28)
+
+### Bug Fixes
+
+- **remote-v2:** align layout selectors with real DOM (AUDIT-V2-LAYOUT-01) ([#680](https://github.com/Tallec7/neopro/issues/680)) ([daf7ff8](https://github.com/Tallec7/neopro/commit/daf7ff85e3b33b402762601740f8f818f574a03e))
+
+## [3.261.3](https://github.com/Tallec7/neopro/compare/v3.261.2...v3.261.3) (2026-04-28)
+
+### Bug Fixes
+
+- **content:** centralize cascade delete UX in VideoDeleteService ([#678](https://github.com/Tallec7/neopro/issues/678)) ([fd3243f](https://github.com/Tallec7/neopro/commit/fd3243f04c1c2dc04391e7ec5934506d121ed330))
+
+## [3.261.2](https://github.com/Tallec7/neopro/compare/v3.261.1...v3.261.2) (2026-04-28)
+
+### Bug Fixes
+
+- **site-content:** route site-detail deploy through POST /deployments ([#677](https://github.com/Tallec7/neopro/issues/677)) ([c401dbd](https://github.com/Tallec7/neopro/commit/c401dbd77123c10d10b493dc8febd03ef267c4ad)), closes [#2](https://github.com/Tallec7/neopro/issues/2)
+
+## [3.261.1](https://github.com/Tallec7/neopro/compare/v3.261.0...v3.261.1) (2026-04-28)
+
+### Bug Fixes
+
+- **ci:** align SaaS lftp deploy on dashboard pre-[#625](https://github.com/Tallec7/neopro/issues/625) tune (was 1-2min, regressed to 11m+) ([#676](https://github.com/Tallec7/neopro/issues/676)) ([e3d1c36](https://github.com/Tallec7/neopro/commit/e3d1c363f903a5e4cbf9f04f2ce61459eb8bafef)), closes [#668](https://github.com/Tallec7/neopro/issues/668) [#675](https://github.com/Tallec7/neopro/issues/675) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668) [#668](https://github.com/Tallec7/neopro/issues/668)
+
+# [3.261.0](https://github.com/Tallec7/neopro/compare/v3.260.0...v3.261.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** système de 6 layouts (3 mobile × 3 PC) + SCSS split (SPEC-V2-LAYOUT-01) ([#675](https://github.com/Tallec7/neopro/issues/675)) ([cba57f0](https://github.com/Tallec7/neopro/commit/cba57f05a7cde05015dbedbd41a6dca9b422459e)), closes [#0e1116](https://github.com/Tallec7/neopro/issues/0e1116) [#fff](https://github.com/Tallec7/neopro/issues/fff) [#f0a868](https://github.com/Tallec7/neopro/issues/f0a868)
+
+# [3.260.0](https://github.com/Tallec7/neopro/compare/v3.259.0...v3.260.0) (2026-04-28)
+
+### Features
+
+- **remote-v2:** migrate emojis to SVG icons (SPEC-V2-ICONS-01) ([#674](https://github.com/Tallec7/neopro/issues/674)) ([4d88dcb](https://github.com/Tallec7/neopro/commit/4d88dcb1954d6545026eeabb0ff73d0c1c028ab6))
+
+# [3.259.0](https://github.com/Tallec7/neopro/compare/v3.258.6...v3.259.0) (2026-04-28)
+
+### Bug Fixes
+
+- **raspberry:** kiosk-watchdog log() ordre + null byte + OTA apt-get cec-utils/ffmpeg/xdotool ([#672](https://github.com/Tallec7/neopro/issues/672)) ([5b77379](https://github.com/Tallec7/neopro/commit/5b77379009b2419128cd414de03ce599b0c7e2e0))
+
+### Features
+
+- **content:** badge "×N" sur cards vidéo dupliquées (dedup ADR-048 visible) ([#673](https://github.com/Tallec7/neopro/issues/673)) ([781baae](https://github.com/Tallec7/neopro/commit/781baae810c9e072b5b736bc9e3894eb72e139ee))
+
+## [3.258.6](https://github.com/Tallec7/neopro/compare/v3.258.5...v3.258.6) (2026-04-28)
+
+### Bug Fixes
+
+- **content:** make unlinkVideoFromSite idempotent (no 404 if pivot empty) ([#671](https://github.com/Tallec7/neopro/issues/671)) ([58951e4](https://github.com/Tallec7/neopro/commit/58951e434843e9350bd28ad9d4010b1082185637))
+
+## [3.258.5](https://github.com/Tallec7/neopro/compare/v3.258.4...v3.258.5) (2026-04-27)
+
+### Bug Fixes
+
+- **ci:** revert dashboard FTP deploy to pre-[#625](https://github.com/Tallec7/neopro/issues/625) tune (was <1min, regressed to ~11min) ([#668](https://github.com/Tallec7/neopro/issues/668)) ([63fb7c0](https://github.com/Tallec7/neopro/commit/63fb7c0e8eda8be49f5a23eb27c247ce9e5fcdda)), closes [#666](https://github.com/Tallec7/neopro/issues/666)
+
+## [3.258.4](https://github.com/Tallec7/neopro/compare/v3.258.3...v3.258.4) (2026-04-27)
+
+### Bug Fixes
+
+- **replace-video:** upload was writing to <chroot>/undefined (12 zombi videos in prod) ([#666](https://github.com/Tallec7/neopro/issues/666)) ([d890b9c](https://github.com/Tallec7/neopro/commit/d890b9cd4d8a077c57258431284a40314ca71392))
+
 ## [3.258.3](https://github.com/Tallec7/neopro/compare/v3.258.2...v3.258.3) (2026-04-27)
 
 ### Bug Fixes

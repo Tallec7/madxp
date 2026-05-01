@@ -8,6 +8,7 @@ Documentation pour installer, configurer et utiliser Neopro.
 - **[../ONLINE_INSTALLATION.md](../ONLINE_INSTALLATION.md)** - Installation en ligne (technique) ✨ v2.0
 - **[INSTALLATION_COMPLETE.md](INSTALLATION_COMPLETE.md)** - Installation complète Raspberry Pi (45 min) ✨ v2.0
 - **[GOLDEN_IMAGE.md](GOLDEN_IMAGE.md)** - Déploiement rapide via image golden (10 min) ✨ v2.0
+- **[MULTI_TV_HOTSPOT_PI.md](MULTI_TV_HOTSPOT_PI.md)** - Ajouter une 2ᵉ/3ᵉ TV via le hotspot du Pi (Fire Stick, ~5 min, zéro dev) 🆕 v3.262
 - **[SSH_SETUP.md](SSH_SETUP.md)** - Configuration SSH et accès distant
 
 ## ⚙️ Configuration

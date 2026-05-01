@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { interval, Subscription, filter, take } from 'rxjs';
+import { interval, Subscription, filter } from 'rxjs';
 import { VideoCategoryService } from '../../../../core/services/video-category.service';
 import { VideoCategory } from '../../../../core/models/video-category.model';
 import { SitesService, PendingDeployment } from '../../../../core/services/sites.service';
@@ -662,40 +662,72 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     // The config expects local paths (e.g. "videos/BOUCLE/file.mp4"), not cloud URLs
     const configPath = this.resolveConfigPath(video);
 
+    // ADR-103 Phase 3 v2 — proactive duration prompt for web/live entries in
+    // playback loops (sponsors[] + timeCategories[].loopVideos[]). Categories
+    // (action vidéos) are launched manually by the Remote and don't require
+    // durationSeconds. The server enforces this on save (Phase 3 — 400
+    // WEB_LOOP_DURATION_REQUIRED), the prompt is here to surface the
+    // requirement before the user hits save.
+    const isWebLive = video.contentType === 'web_page' || video.contentType === 'livestream';
+    let webDurationSeconds: number | null = null;
+    if (isWebLive && (target.type === 'loop' || target.type === 'match')) {
+      const promptLabel = video.contentType === 'web_page' ? 'page web' : 'livestream';
+      const raw = window.prompt(
+        `Durée d'affichage pour cette ${promptLabel} (en secondes) ?`,
+        '30',
+      );
+      if (raw === null) return; // User cancelled
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        this.notificationService.error('Durée invalide — entrez un nombre de secondes positif.');
+        return;
+      }
+      webDurationSeconds = Math.round(parsed);
+    }
+
+    const buildEntry = (extra: Record<string, unknown> = {}) => {
+      if (isWebLive && webDurationSeconds !== null) {
+        return {
+          path: video.externalUrl ?? configPath,
+          name: video.displayName,
+          contentType: video.contentType,
+          externalUrl: video.externalUrl ?? null,
+          durationSeconds: webDurationSeconds,
+          ...extra,
+        };
+      }
+      return {
+        path: configPath,
+        name: video.displayName,
+        type: 'video/mp4',
+        ...extra,
+      };
+    };
+
     if (target.type === 'loop') {
       // Default loop = sponsors[]
       if (!this.config.sponsors) this.config.sponsors = [];
       const alreadyInLoop = this.config.sponsors.some(
-        (s: { path?: string }) => s.path === configPath
+        (s: { path?: string }) => s.path === configPath || s.path === video.externalUrl
       );
       if (alreadyInLoop) {
         this.notificationService.info('Cette vidéo est déjà dans la boucle');
         return;
       }
-      this.config.sponsors.push({
-        path: configPath,
-        name: video.displayName,
-        type: 'video/mp4',
-        weight: 1,
-      } as never);
+      this.config.sponsors.push(buildEntry({ weight: 1 }) as never);
     } else if (target.type === 'match') {
       // Match phase = timeCategories[].loopVideos[]
       const phase = (this.config.timeCategories || []).find(tc => tc.id === target.id);
       if (!phase) return;
       if (!phase.loopVideos) phase.loopVideos = [];
       const alreadyInPhase = phase.loopVideos.some(
-        (v: { path?: string }) => v.path === configPath
+        (v: { path?: string }) => v.path === configPath || v.path === video.externalUrl
       );
       if (alreadyInPhase) {
         this.notificationService.info(`Cette vidéo est déjà dans "${target.label}"`);
         return;
       }
-      phase.loopVideos.push({
-        path: configPath,
-        name: video.displayName,
-        type: 'video/mp4',
-        weight: 1,
-      } as never);
+      phase.loopVideos.push(buildEntry({ weight: 1 }) as never);
     } else if (target.type === 'category') {
       // Action category = categories[].videos[]
       if (!this.config.categories) this.config.categories = [];
@@ -844,24 +876,20 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
       this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0 });
       this.cdr.markForCheck();
 
-      this.commandService.sendCommand(this.siteId, 'deploy_video', {
-        videoId: video.id,
-        filename: video.filename,
-        url: video.path,
-        checksum: video.checksum,
-        category: video.category || 'default',
-        originalName: video.displayName,
+      // POST /deployments — same flow as the global Library "🚀 Déployer".
+      // The server builds the absolute FTP URL via getVideoUrl(storage_path)
+      // and creates a content_deployments row, so progress/retry/canary all work.
+      // See pi-socket.strategy.ts which forwards `videoUrl` to the Pi.
+      this.api.post<{ id: string; status: string }>('/deployments', {
+        video_id: video.id,
+        target_type: 'site',
+        target_id: this.siteId,
       }).subscribe({
-        next: (response) => {
-          if (response.queued) {
-            this.notificationService.info(`Déploiement de "${video.filename}" en file d'attente (site hors ligne)`);
-            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
-          } else if (response.commandId) {
-            this.notificationService.info(`Déploiement de "${video.filename}" lancé...`);
-            this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: response.commandId });
-            this.waitForVideoDeployResult(videoId, video.filename, response.commandId);
-          }
+        next: (deployment) => {
+          this.notificationService.info(`Déploiement de "${video.filename}" lancé...`);
+          this.videoDeployStates.set(videoId, { status: 'deploying', progress: 0, commandId: deployment.id });
           this.cdr.markForCheck();
+          this.waitForVideoDeployResult(videoId, video.filename, deployment.id);
         },
         error: (error) => {
           const message = ErrorExtractor.getMessage(error);
@@ -879,7 +907,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private waitForVideoDeployResult(videoId: string, filename: string, commandId: string): void {
+  private waitForVideoDeployResult(videoId: string, filename: string, deploymentId: string): void {
     this.cleanupVideoDeployTracking(videoId);
     const VIDEO_DEPLOY_TIMEOUT = 10 * 60 * 1000;
 
@@ -900,11 +928,29 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     }, VIDEO_DEPLOY_TIMEOUT);
     this.videoDeployTimeouts.set(videoId, timeoutId);
 
-    const completedSub = this.socketService.on<{ siteId: string; commandId: string; commandType: string; status: string; result?: unknown; error?: string }>('command_completed')
-      .pipe(filter(event => event.commandId === commandId), take(1))
+    // Pi → cloud → dashboard : `deploy_progress` events carry deploymentId, progress,
+    // optional `completed: true` on success and optional `error` on failure
+    // (cf. raspberry/sync-agent/src/services/command-dispatch.js + central-server
+    // handlers/deploy-progress.handler.ts which broadcasts to the `dashboard` room).
+    const progressSub = this.socketService.on<{ deploymentId: string; videoId?: string; progress?: number; completed?: boolean; error?: string }>('deploy_progress')
+      .pipe(filter(event => event.deploymentId === deploymentId))
       .subscribe(event => {
-        if (event.status === 'success') {
-          this.videoDeployStates.set(videoId, { status: 'success', commandId });
+        if (event.error) {
+          this.videoDeployStates.set(videoId, { status: 'error', error: event.error, commandId: deploymentId });
+          this.notificationService.error(`Erreur de déploiement pour "${filename}": ${event.error}`);
+          setTimeout(() => {
+            if (this.videoDeployStates.get(videoId)?.status === 'error') {
+              this.videoDeployStates.delete(videoId);
+              this.cdr.markForCheck();
+            }
+          }, 10000);
+          this.cdr.markForCheck();
+          this.cleanupVideoDeployTracking(videoId);
+          return;
+        }
+
+        if (event.completed) {
+          this.videoDeployStates.set(videoId, { status: 'success', commandId: deploymentId });
           this.notificationService.success(`"${filename}" déployé avec succès sur le Pi !`);
           this.loadContent();
           setTimeout(() => {
@@ -913,48 +959,23 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
               this.cdr.markForCheck();
             }
           }, 5000);
-        } else {
-          const errorMsg = event.error || 'Erreur inconnue';
-          this.videoDeployStates.set(videoId, { status: 'error', error: errorMsg, commandId });
-          this.notificationService.error(`Erreur de déploiement pour "${filename}": ${errorMsg}`);
-          setTimeout(() => {
-            if (this.videoDeployStates.get(videoId)?.status === 'error') {
-              this.videoDeployStates.delete(videoId);
-              this.cdr.markForCheck();
-            }
-          }, 10000);
-        }
-        this.cdr.markForCheck();
-        this.cleanupVideoDeployTracking(videoId);
-      });
-    this.videoDeploySubscriptions.set(videoId, completedSub);
-
-    const progressSub = this.socketService.on<{ siteId: string; commandId: string; progress: number }>('deploy_progress')
-      .pipe(filter(event => event.commandId === commandId))
-      .subscribe(event => {
-        const currentState = this.videoDeployStates.get(videoId);
-        if (currentState?.status === 'deploying') {
-          this.videoDeployStates.set(videoId, { ...currentState, progress: event.progress });
           this.cdr.markForCheck();
+          this.cleanupVideoDeployTracking(videoId);
+          return;
         }
-      });
-    completedSub.add(progressSub);
 
-    const timeoutSub = this.socketService.on<{ siteId: string; commandId: string; type: string }>('command_timeout')
-      .pipe(filter(event => event.commandId === commandId), take(1))
-      .subscribe(() => {
-        this.videoDeployStates.set(videoId, { status: 'timeout', error: 'Le serveur a signalé un timeout pour cette commande' });
-        this.notificationService.warning(`Timeout serveur pour le déploiement de "${filename}"`);
-        this.cdr.markForCheck();
-        this.cleanupVideoDeployTracking(videoId);
-        setTimeout(() => {
-          if (this.videoDeployStates.get(videoId)?.status === 'timeout') {
-            this.videoDeployStates.delete(videoId);
+        if (typeof event.progress === 'number') {
+          const currentState = this.videoDeployStates.get(videoId);
+          if (currentState?.status === 'deploying') {
+            this.videoDeployStates.set(videoId, { ...currentState, progress: event.progress });
             this.cdr.markForCheck();
           }
-        }, 15000);
+        }
       });
-    completedSub.add(timeoutSub);
+    this.videoDeploySubscriptions.set(videoId, progressSub);
+    // Stuck deployments are auto-failed by alertingService.checkStuckDeployments
+    // which emits a final `deploy_progress { error }` — no separate command_timeout
+    // listener is needed for content_deployments rows.
   }
 
   private cleanupVideoDeployTracking(videoId: string): void {

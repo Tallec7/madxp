@@ -49,7 +49,7 @@
               }
             ],
             "styles": ["raspberry/src/styles.scss"],
-            "allowedCommonJsDependencies": ["@xmldom/xmldom"]
+            "allowedCommonJsDependencies": ["@xmldom/xmldom", "qrcode"]
           },
           "configurations": {
             "production": {
@@ -88,8 +88,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
-                  "maximumError": "64kB"
+                  "maximumWarning": "60kB",
+                  "maximumError": "75kB"
                 }
               ],
               "outputHashing": "all"
@@ -109,8 +109,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
-                  "maximumError": "64kB"
+                  "maximumWarning": "60kB",
+                  "maximumError": "75kB"
                 }
               ],
               "outputHashing": "all"
@@ -137,6 +137,16 @@
                   "glob": "socket.io.min.js",
                   "input": "raspberry/src/assets",
                   "output": "assets"
+                },
+                {
+                  "glob": "_redirects",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
+                },
+                {
+                  "glob": "_headers",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
                 }
               ],
               "budgets": [
@@ -147,8 +157,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
-                  "maximumError": "64kB"
+                  "maximumWarning": "60kB",
+                  "maximumError": "75kB"
                 }
               ],
               "outputHashing": "all"
@@ -180,6 +190,16 @@
                   "glob": "socket.io.min.js",
                   "input": "raspberry/src/assets",
                   "output": "assets"
+                },
+                {
+                  "glob": "_redirects",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
+                },
+                {
+                  "glob": "_headers",
+                  "input": "raspberry/cloudflare/",
+                  "output": "/"
                 }
               ],
               "budgets": [
@@ -190,8 +210,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
-                  "maximumError": "64kB"
+                  "maximumWarning": "60kB",
+                  "maximumError": "75kB"
                 }
               ],
               "outputHashing": "all"
@@ -298,7 +318,14 @@
               }
             ],
             "styles": ["central-dashboard/src/styles.scss"],
-            "allowedCommonJsDependencies": ["qrcode", "leaflet"]
+            "allowedCommonJsDependencies": [
+              "qrcode",
+              "leaflet",
+              "react",
+              "react-dom",
+              "react-dom/client",
+              "react/jsx-runtime"
+            ]
           },
           "configurations": {
             "production": {

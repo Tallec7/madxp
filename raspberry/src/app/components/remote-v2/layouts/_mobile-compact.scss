@@ -1,0 +1,84 @@
+@use "../tokens";
+
+// SPEC-V2-LAYOUT-01 — Mobile C "Tableur ultra-dense"
+// Cible : opérateur très expérimenté, plusieurs matchs/semaine.
+// Vidéos visibles à fold (375×760) : 14.
+//
+// AUDIT-V2-LAYOUT-01 : sélecteurs réels — `.r2-videos` pour le wrapper,
+// `.r2-video-name / .r2-video-thumb / .r2-video-duration / .r2-video-meta`
+// pour les enfants.
+
+.remote-v2.layout-mobile-compact {
+  @include tokens.r2-mobile-only {
+    --r2-hero-h: 56px;
+    --r2-row-h: 28px;
+    --r2-padding-x: 8px;
+    --r2-type-row: 12px;
+
+    .r2-header {
+      padding: 4px 10px;
+      min-height: 56px;
+    }
+
+    .r2-hero {
+      margin: 6px 8px 0;
+      min-height: var(--r2-hero-h);
+    }
+    .r2-hero-eyebrow {
+      display: none;
+    }
+    .r2-hero-main {
+      padding: 4px 8px;
+      gap: 6px;
+    }
+    .r2-tv-thumb {
+      width: 36px;
+      height: 22px;
+    }
+    .r2-hero .r2-video-name {
+      font-size: 12px;
+    }
+
+    // Widgets repliés par défaut, expand on demand
+    .r2-widgets {
+      max-height: 32px;
+      overflow: hidden;
+      margin: 4px 8px 0;
+
+      &.is-expanded,
+      &[data-expanded='true'] {
+        max-height: none;
+      }
+    }
+
+    // Tableur : pas de gap entre rows, séparateur 1px
+    .r2-videos {
+      gap: 0;
+      padding: 0 var(--r2-padding-x);
+    }
+
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 2px var(--r2-padding-x);
+      border-bottom: 1px solid tokens.$border-subtle;
+      border-radius: 0;
+      gap: 6px;
+      align-items: center;
+
+      .r2-video-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 2px;
+      }
+      .r2-video-name {
+        font-size: var(--r2-type-row);
+        font-weight: 500;
+      }
+      .r2-video-duration,
+      .r2-video-tag {
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+}

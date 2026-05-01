@@ -1,0 +1,181 @@
+@use "tokens";
+
+// ---- Match info — sport / period / logos / audience -----------------------
+.r2-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: tokens.$text-muted;
+  margin: 4px 0 2px;
+}
+
+.r2-team-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 2px;
+}
+
+.r2-team-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.r2-team-logo-upload {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  cursor: pointer;
+  background: tokens.$bg;
+  border: 1px solid tokens.$border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+  }
+
+  .r2-team-logo-placeholder {
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .r2-team-logo-edit {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 99px;
+    background: tokens.$dark;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  &.has-logo {
+    background: tokens.$surface;
+  }
+}
+
+.r2-team-color-picker {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  &::-webkit-color-swatch {
+    border-radius: 6px;
+    border: 1px solid tokens.$border;
+  }
+}
+
+.r2-team-name-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid tokens.$border;
+  background: tokens.$bg;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: tokens.$text;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    border-color: tokens.$accent;
+    background: tokens.$surface;
+  }
+}
+
+.r2-team-logo-clear {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: tokens.$danger;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    background: tokens.$danger-bg;
+  }
+}
+
+.r2-audience-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid tokens.$border;
+    background: tokens.$bg;
+    color: tokens.$text;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+      background: tokens.$border-subtle;
+    }
+  }
+
+  input {
+    width: 70px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid tokens.$border;
+    background: tokens.$bg;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: tokens.$text;
+    text-align: center;
+  }
+}
+
+.r2-menu-item--danger {
+  color: tokens.$danger;
+  border-color: rgba(tokens.$danger, 0.3);
+
+  &:hover {
+    background: tokens.$danger-bg;
+    border-color: tokens.$danger;
+  }
+}

@@ -211,11 +211,18 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
       paramIndex++;
     }
 
+    // dup_count = nombre de rows partageant le même fichier physique (même
+    // checksum, ou à défaut même storage_path pour les rows legacy sans
+    // checksum). >1 ⇒ doublon. Window function = 1 seule passe SQL, pas de
+    // sous-requête N+1. Voir feedback_video_dedup_checksum_trap.md.
     const dataQuery = `
       SELECT id, filename, original_name, category, subcategory,
              file_size, duration, storage_path as url,
-             thumbnail_url, metadata, created_at, updated_at,
-             content_type, external_url
+             thumbnail_url, metadata, checksum, created_at, updated_at,
+             content_type, external_url,
+             COUNT(*) OVER (
+               PARTITION BY COALESCE(checksum, storage_path)
+             ) AS dup_count
       FROM videos
       ${whereClause}
       ORDER BY created_at DESC
@@ -234,7 +241,12 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
-   * Recupere une video par ID avec alias storage_path -> url.
+   * Récupère une vidéo par ID avec alias `storage_path AS url`.
+   *
+   * ⚠️ Contrat ADR-100 : le row retourné expose `.url` (la valeur de `storage_path`)
+   * mais **pas** `.storage_path`. Lire `existing.storage_path` retourne `undefined`,
+   * et `String(undefined) === "undefined"` (silently). Tout consumer doit lire `.url`
+   * pour le chemin FTP, jamais `.storage_path`. Smoke test PR3 enforce le contrat.
    */
   async findVideoById(id: string): Promise<VideoRow | null> {
     const result = await query<VideoRow>(
@@ -397,6 +409,60 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
     const map = new Map<string, string>();
     for (const row of result.rows) {
       map.set(row.filename, row.storage_path);
+    }
+    return map;
+  }
+
+  /**
+   * ADR-103 Phase 2 — batch lookup for web_page / livestream entries by their
+   * synthetic filename (`web_page-<ts>` / `livestream-<ts>`). Returns a map
+   * filename → { content_type, external_url, duration, name } so callers
+   * (saas/remote controllers) can rewrite synthetic config entries in-place
+   * to proper {path: external_url, contentType, externalUrl, durationSeconds}
+   * shape before the TV receives them.
+   */
+  async findWebContentByFilenames(filenames: string[]): Promise<Map<string, {
+    contentType: 'web_page' | 'livestream';
+    externalUrl: string;
+    durationSeconds: number | null;
+    name: string;
+    thumbnailUrl: string | null;
+  }>> {
+    if (filenames.length === 0) return new Map();
+
+    const placeholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
+    const result = await query<{
+      filename: string;
+      content_type: 'web_page' | 'livestream';
+      external_url: string | null;
+      duration: number | null;
+      original_name: string;
+      thumbnail_url: string | null;
+    }>(
+      `SELECT filename, content_type, external_url, duration, original_name, thumbnail_url
+       FROM videos
+       WHERE filename = ANY(ARRAY[${placeholders}])
+         AND content_type IN ('web_page', 'livestream')
+         AND external_url IS NOT NULL`,
+      filenames
+    );
+
+    const map = new Map<string, {
+      contentType: 'web_page' | 'livestream';
+      externalUrl: string;
+      durationSeconds: number | null;
+      name: string;
+      thumbnailUrl: string | null;
+    }>();
+    for (const row of result.rows) {
+      if (!row.external_url) continue;
+      map.set(row.filename, {
+        contentType: row.content_type,
+        externalUrl: row.external_url,
+        durationSeconds: row.duration,
+        name: row.original_name,
+        thumbnailUrl: row.thumbnail_url,
+      });
     }
     return map;
   }

@@ -1,0 +1,78 @@
+@use "tokens";
+
+// ---- Overlay score position picker ----------------------------------------
+.r2-overlay-pos {
+  margin: 4px 0 8px;
+}
+
+.r2-overlay-pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px;
+  background: tokens.$bg;
+  border-radius: 10px;
+  aspect-ratio: 16 / 5;
+}
+
+.r2-overlay-pos-cell {
+  position: relative;
+  border: 1.5px dashed tokens.$border;
+  background: tokens.$surface;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+
+  .r2-overlay-pos-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background: tokens.$border;
+    align-self: stretch;
+    margin: auto;
+  }
+
+  // Position du dot dans la cell
+  &[data-pos$='-left'] .r2-overlay-pos-dot {
+    margin-left: 4px;
+    margin-right: auto;
+  }
+  &[data-pos$='-right'] .r2-overlay-pos-dot {
+    margin-right: 4px;
+    margin-left: auto;
+  }
+  &[data-pos^='top-'] .r2-overlay-pos-dot {
+    margin-top: 4px;
+    margin-bottom: auto;
+  }
+  &[data-pos^='bottom-'] .r2-overlay-pos-dot {
+    margin-bottom: 4px;
+    margin-top: auto;
+  }
+
+  &:hover {
+    border-color: tokens.$accent;
+  }
+
+  &.active {
+    border-style: solid;
+    border-color: tokens.$accent;
+    background: tokens.$accent-bg;
+    box-shadow: 0 0 0 2px rgba(tokens.$accent, 0.15);
+
+    .r2-overlay-pos-dot {
+      background: tokens.$accent;
+      animation: np-pulse 1.4s ease-in-out infinite;
+    }
+  }
+}
+
+.r2-overlay-pos-hint {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: tokens.$accent-deep;
+  letter-spacing: 0.04em;
+}

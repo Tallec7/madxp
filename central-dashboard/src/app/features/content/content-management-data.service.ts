@@ -30,6 +30,12 @@ export interface ContentVideoRow {
   // ADR-089 — Web content as first-class video
   content_type?: 'video' | 'web_page' | 'livestream';
   external_url?: string | null;
+  // Dedup signals (ADR-048) — surfacés pour matérialiser visuellement les
+  // doublons. dup_count = nombre de rows partageant le même fichier physique
+  // (même checksum, ou storage_path pour rows legacy). is_duplicate = dérivé.
+  checksum?: string | null;
+  dup_count?: number;
+  is_duplicate?: boolean;
 }
 
 export interface PaginationInfo {
@@ -75,17 +81,6 @@ export interface VideoName {
   id: string;
   title: string;
   file_size: number;
-}
-
-/**
- * Réponse de `GET /api/videos/:id/usage`. Liste les sites qui référencent
- * la vidéo via `site_videos`. Utilisé par le dashboard pour prévenir
- * l'utilisateur avant un DELETE cascade (évite les orphelines silencieuses).
- */
-export interface VideoUsage {
-  videoId: string;
-  totalSites: number;
-  sites: Array<{ id: string; name: string; site_type: string }>;
 }
 
 export interface BulkUploadResponse {
@@ -134,20 +129,6 @@ export class ContentManagementDataService {
 
   loadAllVideoNames(): Observable<VideoName[]> {
     return this.api.get<VideoName[]>('/videos/names');
-  }
-
-  deleteVideo(videoId: string, opts?: { cascade?: boolean }): Observable<void> {
-    const qs = opts?.cascade ? '?cascade=true' : '';
-    return this.api.delete<void>(`/videos/${videoId}${qs}`);
-  }
-
-  /**
-   * Récupère la liste des sites qui référencent une vidéo. Utilisé avant
-   * un DELETE pour afficher la modal de confirmation cascade au super_admin
-   * (cf. PR cleanup cascade — incident vidéo morte sur SaaS).
-   */
-  getVideoUsage(videoId: string): Observable<VideoUsage> {
-    return this.api.get<VideoUsage>(`/videos/${videoId}/usage`);
   }
 
   uploadVideo(formData: FormData): Observable<ContentVideoRow> {

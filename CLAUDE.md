@@ -78,6 +78,7 @@ source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts
 - Métriques pitch deck : `central-server/src/scripts/pitch-deck-metrics.sql`
 - **SAFe Pilotage Produit** : `docs/safe/README.md` (Epics, Features, US, Sprint Tracker, Value Streams) — maintenu manuellement, dashboard `/safe/sprints` actif
 - **Specs métier par composant** : `docs/specs/` (1 page par feature/composant — règles métier vivantes, format léger)
+- **Cas d'usage / Scénarios** : `docs/product/USE-CASES.md` (JTBD + parcours multi-acteurs, complément `docs/PERSONAE.md`)
 - **Business changelog** : `docs/BUSINESS-CHANGELOG.md` (récap hebdo des PRs en langage métier)
 
 Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent automatiquement selon les fichiers édités.
@@ -91,10 +92,12 @@ Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent a
 ## Démarrage de session
 
 1. **Worktree dédiée obligatoire** — toute session qui modifie du code crée d'abord sa propre worktree :
+
    ```bash
    git worktree add ../neopro-<slug> -b <type>/<scope>
    cd ../neopro-<slug>
    ```
+
    Ne JAMAIS travailler sur `/Users/gletallec/Documents/NEOPRO/OFFICIEL/neopro` directement (collisions multi-session).
 
 2. **Vérifier les sessions parallèles** : `git worktree list` + `git branch -a`. Si la tâche partage des fichiers avec une worktree active → STOP, signaler à Daisy.
@@ -117,26 +120,31 @@ Les règles détaillées par domaine sont dans `.claude/rules/` et se chargent a
 ## Format de réponse
 
 ### Avant un edit de code
+
 1. État courant : 1 phrase sur ce que je vais faire.
 2. Contraintes vérifiées : grep des smoke tests pinnés au fichier (si applicable).
 3. Plan : étapes numérotées, max 5 lignes.
 
 ### Pendant l'exécution
+
 - 1 ligne par changement majeur, jamais de narration de pensée.
 - Si je découvre un blocker → STOP + question, pas de workaround silencieux.
 
 ### À la fin d'une tâche
+
 1. Diff stats : fichiers / +X / -Y.
 2. Tests verts : nombre / total.
 3. Reste ouvert : bullet list, ou "rien".
 4. Next : 1 ligne d'option, ou "ta main".
 
 ### Niveaux de confiance explicites
+
 - ✅ "Vérifié" = j'ai lu le fichier ou run la commande.
 - ⚠️ "Estimé" = je m'appuie sur mémoire/audit, à valider.
 - ❌ "Inconnu" = je ne sais pas, je le dis.
 
 ### Length budgets
+
 - Réponse à "ok" / "go" : <5 lignes (sauf erreur ou décision majeure).
 - Récap de fin de tâche : <15 lignes structurées.
 - Audit / décision : libre mais structuré (tableaux, sections claires).
@@ -164,6 +172,7 @@ Si la réponse est >50 lignes : ajouter en haut un encadré **TL;DR métier** en
 ## Validation explicite quand "go" / "ok"
 
 Quand Daisy dit "go" ou "ok" sur un changement non-trivial, vérifier mentalement :
+
 - Ai-je expliqué la conséquence métier (pas juste technique) ?
 - Sait-il ce qui peut casser et comment on le verrait en prod ?
 
@@ -176,11 +185,13 @@ Si oui (manifeste : il a posé une question précédente sur le sujet) → go.
 
 ```markdown
 ## Story <YYYY-MM-DD>-<slug>
+
 **En tant que** : <rôle> (ex: super_admin, NLF user, sync-agent, CI, Lead Dev)
 **Je veux** : <capacité, infinitif>
 **Pour** : <bénéfice mesurable, pas technique>
 
 **Livré** :
+
 - <change observable 1>
 - <change observable 2>
 
@@ -207,6 +218,7 @@ Si une session ne livre RIEN visible (juste exploration / debug), ne pas créer 
 Les composants/features qui ont des **règles métier non évidentes du code seul** ont une SPEC dans `docs/specs/`. Format léger (1 page max), vivant, mis à jour dans la même PR que le changement de comportement.
 
 **Périmètre** :
+
 - ✅ Feature transverse complexe (sponsors, match sessions, templates studio, SaaS, OTA, hotspot PSK)
 - ✅ Composant client-visible (TV, Remote, dashboard sites, club portal)
 - ✅ Service backend critique (cron-scheduler, socket, storage, deployment, auth)
@@ -216,6 +228,7 @@ Les composants/features qui ont des **règles métier non évidentes du code seu
 **Localisation** : `docs/specs/{components,features,services}/<name>.spec.md`
 
 **Cycle de vie** :
+
 - Nouvelle feature majeure → créer la SPEC en même temps que le code
 - PR qui change un comportement métier → MAJ SPEC dans la même PR
 - PR refactor sans changement de comportement → SPEC inchangée
@@ -230,6 +243,7 @@ Voir `docs/specs/README.md` pour le gabarit complet et l'index des SPECs actives
 - **Nouvelle Map/Set instance-level** → cleanup explicite (sweep périodique OU disconnect handler) + métrique Prometheus pour observer la taille.
 - **Nouveau task CRON** → log Winston `info`/`error` + métrique `neopro_*_total` + smoke test associé.
 - **Nouveau handler/service** → au minimum log Winston `info` au start + log `error` au catch.
+- **Commit `feat`/`fix` non-trivial** → au moins une doc MAJ (`docs/**`, `*.md` racine, ou `.claude/rules/**`). Le hook Husky `.husky/pre-push` warne si oubli (warn-only). Cf. `/end-session` étape 3 pour la grille de mapping diff → doc.
 
 ## Anti-patterns interdits
 

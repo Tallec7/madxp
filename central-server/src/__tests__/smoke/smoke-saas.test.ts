@@ -246,6 +246,24 @@ describe('Club Portal video ownership guards', () => {
     });
   });
 
+  // --- unlinkVideoFromSite must be idempotent (no 404 if pivot is empty) ---
+  // Bug observé en prod 2026-04-27 : 404 sur "Retirer du site" SaaS quand la
+  // vidéo n'avait jamais été liée via site_videos (UI exposait le bouton sans
+  // garde côté lien). L'opération doit être idempotente : 200 + alreadyUnlinked.
+  it('unlinkVideoFromSite must be idempotent (no res.status(404))', () => {
+    const unlinkFn = contentControllerContent.match(
+      /export const unlinkVideoFromSite[\s\S]*?(?=export const \w|$)/
+    );
+    expect(unlinkFn).not.toBeNull();
+    expect({
+      hasNoStatus404: !/res\.status\(404\)/.test(unlinkFn![0]),
+      returnsAlreadyUnlinkedFlag: /alreadyUnlinked\s*:\s*true/.test(unlinkFn![0]),
+    }).toEqual({
+      hasNoStatus404: true,
+      returnsAlreadyUnlinkedFlag: true,
+    });
+  });
+
   // --- updateVideo must block NEOPRO category ---
   it('updateVideo must block NEOPRO category for club users', () => {
     const updateFn = contentControllerContent.match(
@@ -400,7 +418,8 @@ describe('SaaS mode guards (ADR-037)', () => {
       routeCount: routeLines.length,
       allHaveRateLimit,
     }).toEqual({
-      routeCount: 3,
+      // ADR-102 ajoute GET + PUT /preferences (3 → 5).
+      routeCount: 5,
       allHaveRateLimit: true,
     });
   });
@@ -2648,6 +2667,12 @@ describe('ADR-068 — signed URL video stream proxy', () => {
   // la dé-référencer du site. Sans ces invariants la feature ne fonctionne plus :
   // pas d'écrasement FTP, pas de regen de thumbnail, pas d'auto-résolution warning,
   // pas de push update_config Pi/SaaS.
+  //
+  // Garde-fou storage_path (incident 2026-04-27) : `findVideoById` SELECT alias
+  // `storage_path AS url`, donc lire `existing.storage_path` retourne `undefined`
+  // → le upload FTP écrivait `<chroot>/undefined`, le vrai path n'était jamais
+  // overwrite, et 12 vidéos ressortaient en HTTP 404. Le replace DOIT lire
+  // `existing.url` (la valeur aliasée).
   it('PR3 — content.controller.replaceVideo réécrit FTP, regen thumbnail, auto-résout warning, push sites', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'content.controller.ts');
     const content = fs.readFileSync(filePath, 'utf8');
@@ -2655,7 +2680,10 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     expect(fnMatch).toBeTruthy();
     const fn = fnMatch![0];
     expect({
-      reusesStoragePath: /existing\.storage_path/.test(fn),
+      // Le replace doit lire `existing.url` (valeur aliasée de storage_path), pas
+      // `existing.storage_path` (toujours undefined sur un row findVideoById).
+      readsAliasedStoragePath: /existing\.url/.test(fn),
+      doesNotReadRawStoragePath: !/String\(\s*existing\.storage_path\s*\)/.test(fn),
       uploadsFromDisk: /uploadVideoFromDisk\(/.test(fn),
       regensThumbnail: /thumbnailService\.generateThumbnailBuffer\(/.test(fn),
       clearsAuditWarning: /video_ftp_audit_warnings/.test(fn),
@@ -2663,7 +2691,8 @@ describe('ADR-068 — signed URL video stream proxy', () => {
       pushesSaas: /socketService\.emitSaasConfigUpdated\(/.test(fn),
       auditsReplace: /VIDEO_REPLACED/.test(fn),
     }).toEqual({
-      reusesStoragePath: true,
+      readsAliasedStoragePath: true,
+      doesNotReadRawStoragePath: true,
       uploadsFromDisk: true,
       regensThumbnail: true,
       clearsAuditWarning: true,

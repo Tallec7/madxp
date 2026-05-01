@@ -8,6 +8,10 @@ import { Configuration, TimeCategory, SportType, ScoreOverlayPosition } from '..
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
+import {
+  RemoteOrchestratorService,
+  ScoreboardStateV1 as OrchestratorScoreboardStateV1,
+} from '../../services/remote-orchestrator.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RecordingStateService } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
@@ -33,23 +37,9 @@ import { RemotePreferencesService } from './remote-preferences.service';
 
 type ViewType = 'club-selector' | 'home' | 'time-categories' | 'subcategories' | 'videos' | 'all-videos' | 'options';
 
-// ADR-090 — MatchState v1 payload (scoreboard-state unifié)
-export interface ScoreboardStateV1 {
-  vendor: 'bodet' | 'stramatel' | 'manual' | 'remote';
-  sport: 'basketball' | 'football';
-  period: number;
-  chronoMs: number;
-  clockRunning: boolean;
-  homeScore: number;
-  guestScore: number;
-  homeTeamFouls: number;
-  guestTeamFouls: number;
-  shotClockMs: number;
-  timeoutActive: 'home' | 'guest' | null;
-  timeoutRemainingMs: number;
-  homeTeamName?: string;
-  guestTeamName?: string;
-}
+// ADR-090 — MatchState v1 payload (scoreboard-state unifié).
+// Type source : RemoteOrchestratorService (single source of truth V1+V2).
+export type ScoreboardStateV1 = OrchestratorScoreboardStateV1;
 
 @Component({
   selector: 'app-remote',
@@ -57,7 +47,8 @@ export interface ScoreboardStateV1 {
   imports: [CommonModule, FormsModule, ClubSelectorComponent, LicenseBannerComponent, LicenseBlockRemoteComponent, PreferencesMenuComponent],
   templateUrl: './remote.component.html',
   styleUrl: './remote.component.scss',
-  providers: [RemoteScoreService, RemoteTimerService, RemotePreferencesService],
+  // ADR-102 — RemotePreferencesService est providedIn: 'root' (singleton).
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOrchestratorService],
 })
 export class RemoteComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -76,6 +67,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
   public readonly scoreService = inject(RemoteScoreService);
   public readonly timerService = inject(RemoteTimerService);
+  private readonly orchestrator = inject(RemoteOrchestratorService);
 
   // Getters pour compatibilité template (évite de modifier 1800 lignes de HTML)
   public get currentScore() { return this.scoreService.currentScore; }
@@ -169,9 +161,14 @@ export class RemoteComponent implements OnInit, OnDestroy {
   public isDarkMode = false;
   public isHeaderMenuOpen = false;
 
-  // Display multi-écran (PROP-002)
+  // Display multi-écran (PROP-002) — délégué à RemoteOrchestratorService.
   public connectedDisplays: Array<{ index: number; type: string }> = [];
-  public displayTarget: 'all' | number = 'all';
+  public get displayTarget(): 'all' | number {
+    return this.orchestrator.displayTarget;
+  }
+  public set displayTarget(target: 'all' | number) {
+    this.orchestrator.setDisplayTarget(target);
+  }
 
   // Sports & périodes
   public readonly sportTypes: SportType[] = ['football', 'basketball', 'handball', 'volleyball', 'rugby', 'hockey'];
@@ -321,78 +318,47 @@ export class RemoteComponent implements OnInit, OnDestroy {
       });
     }
 
-    this.socketService.on('score-update', (scoreData: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number }) => {
-      this.ngZone.run(() => {
-        this.scoreService.currentScore = {
-          homeTeam: scoreData.homeTeam || this.scoreService.currentScore.homeTeam,
-          awayTeam: scoreData.awayTeam || this.scoreService.currentScore.awayTeam,
-          homeScore: scoreData.homeScore ?? this.scoreService.currentScore.homeScore,
-          awayScore: scoreData.awayScore ?? this.scoreService.currentScore.awayScore,
-        };
-      });
-    });
-
-    // ADR-090 — scoreboard-state entrant (simulateur dashboard ou autre table)
-    this.socketService.on('scoreboard-state', (state: ScoreboardStateV1 | null) => {
-      if (!state) return;
-      this.ngZone.run(() => {
-        this.applyIncomingScoreboardState(state);
-      });
-    });
-
-    this.socketService.on('phase-change', (data: { phase: 'neutral' | 'before' | 'during' | 'after' }) => {
-      this.ngZone.run(() => { this.activePhase = data.phase; });
-    });
-
-    this.socketService.on('displays-changed', (data: { displays: Array<{ index: number; type: string }> }) => {
-      this.ngZone.run(() => {
-        this.connectedDisplays = data.displays || [];
-        if (typeof this.displayTarget === 'number' && !this.connectedDisplays.some(d => d.index === this.displayTarget)) {
-          this.displayTarget = 'all';
-        }
-      });
-    });
-
-    // Feedback erreur vidéo : la TV émet `player-state` avec
-    // `lastError: 'play_error'` quand une vidéo manuelle plante (404, format
-    // invalide, timeout réseau). Sans ce listener, le bouton Remote reste
-    // figé en "playing" alors que la TV recovery vers la boucle.
-    this.socketService.on('player-state', (data: { lastError?: string | null }) => {
-      this.ngZone.run(() => this.handlePlayerState(data));
-    });
-
-    this.socketService.emit('request-state', {});
+    // Socket listeners + request-state au boot + propagation options-update :
+    // tout est centralisé dans RemoteOrchestratorService (pattern ADR-051
+    // Phase 4, partagé V1/V2 — source de vérité unique pour l'orchestration).
+    this.orchestrator.init();
+    this.subscriptions.push(
+      this.orchestrator.displays$.subscribe(list => {
+        this.connectedDisplays = list;
+      }),
+    );
+    this.subscriptions.push(
+      this.orchestrator.phase$.subscribe(phase => {
+        this.activePhase = phase;
+      }),
+    );
+    this.subscriptions.push(
+      this.orchestrator.playerState$.subscribe(data => this.handlePlayerState(data)),
+    );
+    // L'orchestrator mute parfois les options via service (ADR-090 period
+    // derivation depuis scoreboard-state). On souscrit pour garder le miroir
+    // local `this.localOptions` à jour sans avoir à refresh manuellement.
+    this.subscriptions.push(
+      this.localOptionsService.getOptions$().subscribe(opts => {
+        this.localOptions = opts;
+      }),
+    );
   }
 
   public ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.orchestrator.destroy();
   }
 
   // ============================================================================
   // ADR-090 — Unified scoreboard-state bridge
   // ============================================================================
-
-  /** Applique un scoreboard-state reçu du cloud (simulateur, table de marque). */
-  private applyIncomingScoreboardState(state: ScoreboardStateV1): void {
-    // Guard anti-flash : si l'état cloud matche déjà l'état local (à la seconde
-    // près pour le chrono), no-op — évite les re-render Remote+Display sur les
-    // pushes répétés du simulateur (throttle 500ms) qui ne changent rien.
-    const alreadySynced =
-      state.homeScore === this.scoreService.currentScore.homeScore &&
-      state.guestScore === this.scoreService.currentScore.awayScore &&
-      Math.abs(Math.floor(state.chronoMs / 1000) - this.timerService.currentTime) < 2 &&
-      state.clockRunning === this.timerService.isRunning;
-    if (alreadySynced) return;
-
-    this.scoreService.applyCloudState(state);
-    this.timerService.applyCloudState(state, this.localOptions.timer);
-
-    // Synchroniser la période si dérivable (basket uniquement pour l'instant)
-    if (state.sport === 'basketball' && state.period > 0 && state.period <= this.getAvailablePeriods().length) {
-      this.localOptionsService.setPeriod(state.period - 1);
-      this.localOptions = this.localOptionsService.getOptions();
-    }
-  }
+  //
+  // Le bridge entrant (`scoreboard-state` socket → scoreService.applyCloudState
+  // + timerService.applyCloudState + period derivation basket, avec guard
+  // anti-flash) est centralisé dans `RemoteOrchestratorService` (V1+V2).
+  // Seul reste ici le push outbound (`scoreboard-state-push`) qui est V1-only
+  // et sera étendu au cloud SaaS quand la table de marque externe sera reliée.
 
   /** Construit et pousse le scoreboard-state unifié vers le cloud. */
   private pushScoreboardState(): void {
@@ -615,55 +581,36 @@ export class RemoteComponent implements OnInit, OnDestroy {
   // DISPLAY TARGET (PROP-002)
   // ============================================================================
 
-  private getCommandTarget(): number[] | undefined {
-    return typeof this.displayTarget === 'number' ? [this.displayTarget] : undefined;
-  }
-
   public setDisplayTarget(target: 'all' | number): void {
-    this.displayTarget = target;
+    this.orchestrator.setDisplayTarget(target);
   }
 
   // ============================================================================
   // ACTIONS VIDÉO
   // ============================================================================
-
-  /**
-   * ADR-081 Phase 0 — UUID v4 généré par le remote à chaque emit.
-   * Utilise crypto.randomUUID() si dispo (HTTPS/modern browsers), fallback Math.random sinon.
-   */
-  private newCommandId(): string {
-    const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-    if (c?.randomUUID) return c.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
-      const r = (Math.random() * 16) | 0;
-      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
+  //
+  // emitCommand (commandId UUID v4 ADR-081 + target multi-écrans + local
+  // broadcast + socket emit) est centralisé dans RemoteOrchestratorService.
 
   public launchSponsors(): void {
     this.notifyUserActivity();
-    const target = this.getCommandTarget();
-    const commandId = this.newCommandId();
-    this.localBroadcast.emitCommand({ type: 'sponsors', commandId, ...(target ? { target } : {}) });
-    this.socketService.emit('command', { type: 'sponsors', commandId, ...(target ? { target } : {}) });
+    this.orchestrator.emitCommand({ type: 'sponsors' });
   }
 
   public launchVideo(video: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     // Retry : on retire le marqueur d'erreur précédent pour ce path.
     if (video.path) this.erroredVideoPaths.delete(video.path);
-    const target = this.getCommandTarget();
-    const commandId = this.newCommandId();
 
-    // ADR-089 — Dispatch web_page / livestream as dedicated command types
+    // ADR-089 / ADR-103 Phase 1 — dispatch web_page / livestream as dedicated commands.
+    // Pass name + durationMs so the WebContentPlayer can display + auto-close.
     if (video.contentType === 'web_page' && video.externalUrl) {
       const data = {
         url: video.externalUrl,
         durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
+        name: video.name,
       };
-      this.localBroadcast.emitCommand({ type: 'web-page', data, commandId, ...(target ? { target } : {}) });
-      this.socketService.emit('command', { type: 'web-page', data, commandId, ...(target ? { target } : {}) });
+      this.orchestrator.emitCommand({ type: 'web-page', data });
       this.addToRecentVideos(video);
       this.playingVideoPath = video.path;
       this.displayToast(`${video.name} (page web) lancée`, 'success');
@@ -671,9 +618,13 @@ export class RemoteComponent implements OnInit, OnDestroy {
       return;
     }
     if (video.contentType === 'livestream' && video.externalUrl) {
-      const data: { url: string; mimeType: string | null } = { url: video.externalUrl, mimeType: null };
-      this.localBroadcast.emitCommand({ type: 'livestream', data, commandId, ...(target ? { target } : {}) });
-      this.socketService.emit('command', { type: 'livestream', data, commandId, ...(target ? { target } : {}) });
+      const data: { url: string; mimeType: string | null; durationMs: number | null; name: string } = {
+        url: video.externalUrl,
+        mimeType: null,
+        durationMs: video.durationSeconds ? video.durationSeconds * 1000 : null,
+        name: video.name,
+      };
+      this.orchestrator.emitCommand({ type: 'livestream', data });
       this.addToRecentVideos(video);
       this.playingVideoPath = video.path;
       this.displayToast(`${video.name} (livestream) lancé`, 'success');
@@ -682,8 +633,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     }
 
     this.analyticsService.trackManualTrigger(video);
-    this.localBroadcast.emitCommand({ type: 'video', data: video, commandId, ...(target ? { target } : {}) });
-    this.socketService.emit('command', { type: 'video', data: video, commandId, ...(target ? { target } : {}) });
+    this.orchestrator.emitCommand({ type: 'video', data: video });
     this.addToRecentVideos(video);
     this.playingVideoPath = video.path;
     this.displayToast(`${video.name} lancée sur l'écran`, 'success');
@@ -1104,9 +1054,15 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.displayToast('Options réinitialisées', 'success');
   }
 
+  /**
+   * Wrapper conservé pour minimiser les diffs sur les 9 callsites internes.
+   * Délègue à RemoteOrchestratorService (parité V2). Le service est aussi
+   * branché sur `localOptionsService.getOptions$()` avec `skip(1)` ; ce
+   * push manuel reste utilisé pour les setters qui veulent un broadcast
+   * synchrone immédiat sans attendre l'émission du BehaviorSubject.
+   */
   private broadcastOptions(): void {
-    this.localBroadcast.broadcast('options-update', this.localOptions);
-    this.socketService.emit('options-update', this.localOptions);
+    this.orchestrator.broadcastOptions(this.localOptions);
   }
 
   // ============================================================================
@@ -1216,16 +1172,7 @@ export class RemoteComponent implements OnInit, OnDestroy {
     this.notifyUserActivity();
     const text = message || this.breakingNewsMessage.trim();
     if (!text) return;
-    const target = this.getCommandTarget();
-    const news = {
-      message: text,
-      duration: this.localOptions.breakingNews.defaultDuration,
-      position: this.localOptions.breakingNews.position,
-      displayMode: this.localOptions.breakingNews.displayMode,
-      ...(target ? { target } : {}),
-    };
-    this.localBroadcast.emitBreakingNews(news);
-    this.socketService.emit('breaking-news', news);
+    this.orchestrator.sendBreakingNews(text);
     this.breakingNewsMessage = '';
     this.showBreakingNewsPanel = false;
     this.displayToast('Annonce envoyée', 'success');

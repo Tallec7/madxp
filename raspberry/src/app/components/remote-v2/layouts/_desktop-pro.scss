@@ -1,0 +1,158 @@
+@use "../tokens";
+
+// SPEC-V2-LAYOUT-01 §5C — PC C "Régie pro 3-col sombre"
+// Cible : broadcast pro, opérateur full-time.
+//
+// Layout master-detail-aside :
+//   Col 1 (320px, light) : `<app-r2-pro-sidebar>` — phase tabs + nav catégories
+//   Col 2 (1fr, dark)    : `<app-r2-video-table>` — tableau vidéos sélection
+//   Col 3 (320px, dark)  : `<app-r2-tv-monitor>` (preview LIVE/MANUAL/IDLE)
+//                          + `<app-r2-widgets>` (score, chrono, breaking)
+//                          + `<aside.r2-pro-aside>` (bouton REC + raccourcis)
+//
+// Tous les éléments du template "généraliste" (hero, browse classique,
+// recording-warning) sont masqués pour ce layout — le master-detail dédié
+// les remplace.
+//
+// Stacking col 3 : sidebar et table spannent toutes les implicit rows
+// (`grid-row: 2 / -1`) ; les 3 composants col 3 (tv-monitor, widgets, aside)
+// s'auto-placent en rangs 2, 3, 4 via `grid-column: 3` + `grid-auto-flow: row`.
+
+@include tokens.r2-desktop-up {
+  .remote-v2.layout-desktop-pro {
+    --r2-bg: #0e1116;
+    --r2-surface: #1a1f27;
+    --r2-ink: #ffffff;
+    --r2-muted: #6b7280;
+    --r2-accent: #f0a868;
+    --r2-border: #2a313d;
+
+    background: var(--r2-bg);
+    color: var(--r2-ink);
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    grid-template-rows: auto;
+    grid-auto-rows: min-content;
+    grid-auto-flow: row;
+    gap: 0;
+    min-height: 100vh;
+    padding: 0;
+    align-items: stretch;
+    max-width: none;
+
+    // Header pleine largeur
+    .r2-header {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      background: var(--r2-surface);
+      border-bottom: 1px solid var(--r2-border);
+      color: var(--r2-ink);
+      padding: 10px 18px;
+      position: relative;
+      top: auto;
+
+      .r2-header-sep {
+        background: var(--r2-border);
+      }
+      .r2-icon-btn {
+        color: var(--r2-ink);
+        &:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+      }
+    }
+
+    // Col 1 — sidebar light, span sur toutes les implicit rows
+    // `display` re-activé ici (override du `display: none` global qui
+    // garantit le scoping strict — cf. _pro-sidebar.scss).
+    .r2-pro-sidebar-host {
+      display: contents;
+    }
+    .r2-pro-sidebar {
+      display: flex;
+      grid-column: 1 / 2;
+      grid-row: 2 / -1;
+      min-height: 100%;
+    }
+
+    // Col 2 — tableau vidéo dense, span aussi
+    .r2-video-table-host {
+      display: contents;
+    }
+    .r2-video-table {
+      display: flex;
+      grid-column: 2 / 3;
+      grid-row: 2 / -1;
+      min-height: calc(100vh - 60px);
+    }
+
+    // Col 3 stack — override le default (card sous le hero) pour placer
+    // le monitor en col 3 du grid pro. `display: contents` sur le host pour
+    // que le grid voie le `<section.r2-tv-monitor>` directement.
+    .r2-tv-monitor-host {
+      display: contents;
+      margin: 0;
+    }
+    .r2-tv-monitor {
+      display: block;
+      grid-column: 3 / 4;
+      padding: 16px 16px 0;
+      background: var(--r2-bg);
+    }
+    // Le frame du monitor en col 3 garde sa hauteur 16/9 native.
+    .r2-tv-monitor-frame {
+      box-shadow: none;
+    }
+
+    .r2-widgets {
+      grid-column: 3 / 4;
+      margin: 0;
+      padding: 12px 16px 0;
+      background: var(--r2-bg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+
+      .r2-widget {
+        background: var(--r2-surface);
+        border: 1px solid var(--r2-border);
+        color: var(--r2-ink);
+        overflow: hidden;
+      }
+      .r2-widget-label {
+        color: var(--r2-muted) !important;
+      }
+      .r2-score-quick-btn,
+      .r2-breaking-btn {
+        color: var(--r2-ink);
+      }
+    }
+
+    .r2-pro-aside {
+      grid-column: 3 / 4;
+      display: flex;
+    }
+
+    // Masque ce qui est remplacé par le master-detail
+    .r2-hero,
+    .r2-browse-card,
+    .r2-categories,
+    .r2-recording-warning {
+      display: none;
+    }
+
+    // Sheets restent en overlay (échappent à la grid)
+    .r2-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      grid-column: auto;
+      grid-row: auto;
+    }
+    .r2-sheet {
+      position: fixed;
+      grid-column: auto;
+      grid-row: auto;
+    }
+  }
+}

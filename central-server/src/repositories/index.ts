@@ -57,6 +57,10 @@ export {
   type DailyUptimeRow,
 } from './connection-events.repository';
 export {
+  remotePreferencesRepository,
+  type RemotePreferencesRow,
+} from './remote-preferences.repository';
+export {
   timelineRepository,
   type DeploymentTimelineRow,
   type CommandTimelineRow,
@@ -316,6 +320,25 @@ export {
   type CreateImageSlotInput,
   type UpdateImageSlotInput,
 } from './template-studio.repository';
+export {
+  templateBackgroundsRepository,
+  type TemplateBackground,
+  type CreateBackgroundInput,
+} from './template-backgrounds.repository';
+export {
+  templateVersionsRepository,
+  type TemplateVersionSnapshot,
+  type TemplateStatus,
+  type ForkOptions,
+} from './template-versions.repository';
+export {
+  templateOptionsRepository,
+  type TemplateOption,
+  type TemplateOptionType,
+  type CreateOptionInput,
+  type TemplatePackshotRef,
+  type CreatePackshotRefInput,
+} from './template-options.repository';
 export {
   remotionRenderJobRepository,
   type RemotionRenderJob,

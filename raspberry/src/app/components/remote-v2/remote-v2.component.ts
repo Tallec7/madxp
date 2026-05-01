@@ -17,36 +17,46 @@
  *  - Gear menu : Infos match, Profil, Préférences, Options
  *  - Sheets : Match info, Préférences appareil, Options match, Profil, Widget editor
  */
-import { Component, inject, OnInit, OnDestroy, HostListener, NgZone, ViewEncapsulation } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, HostListener, NgZone, ViewEncapsulation, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { Subscription } from 'rxjs';
 import { Configuration, TimeCategory } from '../../interfaces/configuration.interface';
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
-import { SaasConfigService, SaasProfile } from '../../services/saas-config.service';
+import { RemoteOrchestratorService } from '../../services/remote-orchestrator.service';
+import { SaasConfigService, SaasProfile, SaasPinRequiredError } from '../../services/saas-config.service';
 import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/local-options.service';
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
 import { RemoteScoreService } from '../remote/remote-score.service';
 import { RemoteTimerService } from '../remote/remote-timer.service';
-import { RemotePreferencesService, RemotePreferences } from '../remote/remote-preferences.service';
+import { RemotePreferencesService, RemotePreferences, WidgetsEnabled } from '../remote/remote-preferences.service';
 import { RecordingStateService, RecordingWarningState } from '../../services/recording-state.service';
 import { DemoConfigService } from '../../services/demo-config.service';
+import { ProfileConfigService } from '../../services/profile-config.service';
+import { RemotePinService } from '../../services/remote-pin.service';
+import { ClubSelectorComponent, ClubInfo } from '../club-selector/club-selector.component';
 import * as H from './remote-v2-helpers';
 import { R2HeaderComponent } from './parts/r2-header.component';
 import { R2RecordingWarningComponent } from './parts/r2-recording-warning.component';
 import { R2WidgetsComponent } from './parts/r2-widgets.component';
 import { R2HeroComponent } from './parts/r2-hero.component';
+import { R2TvMonitorComponent } from './parts/r2-tv-monitor.component';
+import { R2ProSidebarComponent } from './parts/r2-pro-sidebar.component';
+import { R2VideoTableComponent } from './parts/r2-video-table.component';
 import { R2BrowseComponent } from './parts/r2-browse.component';
 import { R2VideoRowComponent } from './parts/r2-video-row.component';
 import { R2GearSheetComponent, GearAction } from './parts/r2-gear-sheet.component';
 import { R2WidgetsToggleSheetComponent } from './parts/r2-widgets-toggle-sheet.component';
+import { R2IconComponent } from './icons/r2-icon.component';
 
 type Phase = 'before' | 'during' | 'after';
 type Loop = 'neutral' | 'before' | 'during' | 'after';
+
 type SheetType =
   | null
   | 'gear'
@@ -60,14 +70,9 @@ type SheetType =
   | 'widget-chrono'
   | 'widget-breaking';
 
-interface WidgetsEnabled {
-  score: boolean;
-  chrono: boolean;
-  breaking: boolean;
-}
-
-const WIDGETS_STORAGE_KEY = 'neopro_remote_v2_widgets';
-const RECENT_VIDEOS_STORAGE_KEY = 'neopro_remote_v2_recent';
+// WidgetsEnabled est désormais exporté par RemotePreferencesService (ADR-102)
+// pour partager le type entre la persistance DB et le composant V2.
+const RECENT_VIDEOS_STORAGE_KEY_BASE = 'neopro_remote_v2_recent';
 const RECENT_VIDEOS_MAX = 10;
 
 const OVERLAY_POSITIONS: ScoreOverlayPosition[] = [
@@ -86,22 +91,29 @@ interface DisplayInfo {
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent,
+    R2HeaderComponent, R2RecordingWarningComponent, R2WidgetsComponent, R2HeroComponent, R2TvMonitorComponent,
+    R2ProSidebarComponent, R2VideoTableComponent,
     R2BrowseComponent, R2VideoRowComponent,
     R2GearSheetComponent, R2WidgetsToggleSheetComponent,
+    R2IconComponent,
+    ClubSelectorComponent,
   ],
   templateUrl: './remote-v2.component.html',
   styleUrl: './remote-v2.component.scss',
   // Encapsulation None : permet le partage des classes .r2-* à tous les sous-composants
   // sans duplication du SCSS. Risque collision mitigé par le préfixe `.r2-`.
   encapsulation: ViewEncapsulation.None,
-  providers: [RemoteScoreService, RemoteTimerService, RemotePreferencesService],
+  // ADR-102 — RemotePreferencesService est providedIn: 'root' (singleton) pour
+  // mutualiser le bootstrap DB et l'état entre V1 / V2. Score & Timer restent
+  // scoped au composant (pattern ADR-051 Phase 4).
+  providers: [RemoteScoreService, RemoteTimerService, RemoteOrchestratorService],
 })
 export class RemoteV2Component implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
   private readonly socketService = inject(SocketService);
+  private readonly orchestrator = inject(RemoteOrchestratorService);
   private readonly saasConfig = inject(SaasConfigService);
   private readonly localOptionsService = inject(LocalOptionsService);
   public readonly scoreService = inject(RemoteScoreService);
@@ -109,6 +121,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   public readonly prefsService = inject(RemotePreferencesService);
   private readonly recordingStateService = inject(RecordingStateService);
   private readonly demoConfigService = inject(DemoConfigService);
+  private readonly profileConfigService = inject(ProfileConfigService);
+  private readonly remotePinService = inject(RemotePinService);
   private readonly ngZone = inject(NgZone);
 
   private subs: Subscription[] = [];
@@ -132,14 +146,31 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   expandedCategories: Record<string, boolean> = {};
   expandedSubs: Record<string, boolean> = {};
 
+  /**
+   * Sélection master-detail pour le layout régie pro PC C.
+   * Indépendant de l'accordéon — la sélection drive la zone détail (col 2)
+   * tandis que l'accordéon ne sert plus que sur les autres layouts.
+   */
+  selectedCategoryId: string | null = null;
+  selectedSubId: string | null = null;
+
   /** Enregistrement en cours. */
   recording = false;
 
-  /** Cible d'écran active. "all" ou id d'un display. */
-  targetDisplay = 'all';
-
-  /** Liste des écrans connectés. */
+  /** Liste des écrans connectés (mappée depuis RemoteOrchestratorService au format V2). */
   displays: DisplayInfo[] = [];
+
+  /**
+   * Cible d'écran active sous forme string (compat template V2).
+   * Source de vérité = `orchestrator.displayTarget` (`'all' | number`).
+   */
+  get targetDisplay(): string {
+    const t = this.orchestrator.displayTarget;
+    return t === 'all' ? 'all' : String(t);
+  }
+  set targetDisplay(id: string) {
+    this.orchestrator.setDisplayTargetFromString(id);
+  }
 
   /** ID de la vidéo forcée en cours (hors boucle). */
   playingVideoId: string | null = null;
@@ -147,6 +178,31 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Vidéo forcée en cours (objet complet, pour subline + barre de progression). */
   playingVideo: PiConfigVideoEntry | null = null;
   private playingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * ADR-105 — Preview TV via iframe local-first.
+   * URL pointant sur la même page TV (`?preview=1` mute audio + skip analytics
+   * + skip socket register) que le TV diffuse. Construit une fois au mount.
+   * `null` si on ne peut pas déterminer l'URL (mode demo ou état non chargé).
+   */
+  readonly tvPreviewUrl = signal<string | null>(null);
+
+  get isProLayout(): boolean {
+    return this.prefsService.prefs.layoutDesktop === 'pro';
+  }
+  /**
+   * ADR-105 Phase A — preview TV dans le mini-thumb du hero (60×38 mobile,
+   * 96×54 desktop). L'iframe est dimensionnée nativement par .r2-tv-thumb,
+   * pas de scale CSS. Désactivé en layout desktop-pro où le monitor 16/9
+   * de col 3 prend le relais (`<app-r2-tv-monitor>`).
+   */
+  heroPreviewUrl(): string | null {
+    return this.isProLayout ? null : this.tvPreviewUrl();
+  }
+  /** URL injectée dans le monitor 16/9 col 3 en layout desktop-pro uniquement. */
+  monitorPreviewUrl(): string | null {
+    return this.isProLayout ? this.tvPreviewUrl() : null;
+  }
 
   /** Activation des widgets (persisté localStorage). */
   widgetsEnabled: WidgetsEnabled = { score: true, chrono: true, breaking: false };
@@ -177,9 +233,42 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Profil actif (nom). */
   currentProfile = '';
 
+  /**
+   * Vue boot — gate avant l'écran V2 quand on doit choisir un profil ou
+   * saisir un PIN (ADR-058 / ADR-092). Tant que `bootView !== 'home'`, le
+   * template V2 est masqué (cf. `remote-v2.component.html`).
+   */
+  bootView: 'home' | 'club-selector' | 'pin' = 'home';
+
+  // ---- Club selector (boot multi-profil ou demo) ------------------------
+  selectorClubs: ClubInfo[] = [];
+  selectorLoading = true;
+  selectorError: string | null = null;
+  selectorTitle = 'Sélection du profil';
+  selectorSubtitle = 'Choisissez un profil de configuration';
+
+  // ---- PIN remote SaaS (ADR-058) ----------------------------------------
+  pinRequired = false;
+  pinProfileId: string | null = null;
+  pinProfileName: string | null = null;
+  pinError: string | null = null;
+  pinInput = '';
+  pinSubmitting = false;
+
   /** Initiales (2 lettres max) du club/profil actif pour le badge header. */
   get clubInitials(): string {
     return H.clubInitials(this.currentProfile);
+  }
+
+  /**
+   * Couple de classes appliquées sur la racine `.remote-v2` pour piloter
+   * le layout via préférence utilisateur (SPEC-V2-LAYOUT-01).
+   * Tout le bascule visuel se fait en CSS via ces deux classes ; la couche
+   * TS/template reste mutualisée entre les 6 variantes.
+   */
+  get layoutClasses(): string[] {
+    const p = this.prefsService.prefs;
+    return [`layout-mobile-${p.layoutMobile}`, `layout-desktop-${p.layoutDesktop}`];
   }
 
   /** Toast (notification fugitive). */
@@ -230,58 +319,130 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     // Timer: initialisation
     this.timerService.initialize(this.localOptions.timer);
 
-    // Options observable
+    // Options observable + broadcast TV (parité V1 `broadcastOptions()`).
+    // V1 appelle `broadcastOptions()` après chaque setter (9 callsites).
+    // V2 centralise via la subscription : `skip(1)` ignore l'émission
+    // initiale du BehaviorSubject (boot, pas de changement utilisateur),
+    // toute mise à jour suivante est propagée à la TV via socket +
+    // BroadcastChannel local. Sans ça, les toggles options V2 sont des
+    // placebos (timer.enabled, breakingNews.defaultDuration, overlay.position…
+    // jamais reçus par la TV).
     this.subs.push(
       this.localOptionsService.getOptions$().subscribe(opts => {
         this.localOptions = opts;
       }),
     );
+    // Propagation options-update vers la TV : centralisée dans
+    // RemoteOrchestratorService.init() (skip(1), pas au boot).
 
     // Profil courant
     this.currentProfile = this.saasConfig.getClubName() || this.saasConfig.getSiteName() || 'Club';
 
-    // Profils dispo (SaaS uniquement)
-    if (this.saasConfig.isSaasMode()) {
+    // ADR-058 / ADR-092 — Boot gating : sélection profil + PIN
+    // Doit s'exécuter avant tout `match-config` socket (cf. ADR-093) afin
+    // d'éviter d'émettre un profileId arbitraire avant choix utilisateur.
+    this.isDemoMode = this.demoConfigService.isDemoMode();
+    if (this.isDemoMode) {
+      this.selectorTitle = 'Mode Démo';
+      this.selectorSubtitle = 'Sélectionnez un club pour démarrer la présentation';
+      this.bootView = 'club-selector';
+      this.selectorLoading = true;
+      this.demoConfigService.getAvailableClubs().subscribe({
+        next: (clubs) => { this.selectorClubs = clubs; this.selectorLoading = false; },
+        error: () => { this.selectorError = 'Impossible de charger la liste des clubs'; this.selectorLoading = false; },
+      });
+    } else if (this.saasConfig.isSaasMode()) {
       this.subs.push(
         this.saasConfig.getAvailableProfiles().subscribe({
-          next: profiles => (this.profiles = profiles),
+          next: profiles => {
+            this.profiles = profiles;
+            if (profiles.length > 1) {
+              this.selectorTitle = 'Sélection du profil';
+              this.selectorSubtitle = 'Choisissez un profil de configuration';
+              this.selectorClubs = profiles.map(p => ({
+                id: p.id,
+                name: p.displayName || p.name,
+                city: p.city || '',
+                sport: p.sport || '',
+              }));
+              this.selectorLoading = false;
+              this.bootView = 'club-selector';
+            } else if (profiles.length === 1 && profiles[0].pinRequired) {
+              this.pinProfileId = profiles[0].id;
+              this.pinProfileName = profiles[0].displayName || profiles[0].name;
+              this.pinRequired = true;
+              this.bootView = 'pin';
+            } else {
+              const siteId = this.saasConfig.getSiteId();
+              this.saasConfig.loadConfiguration(siteId).subscribe({
+                next: () => { /* config déjà chargée par le resolver, rien à faire */ },
+                error: (err) => this.handleSaasLoadError(err, profiles[0]?.id ?? null),
+              });
+            }
+          },
           error: () => (this.profiles = []),
         }),
       );
+    } else {
+      // Mode Pi local — multi-profil non-SaaS (ProfileConfigService)
+      this.profileConfigService.getAvailableProfiles().subscribe(profiles => {
+        if (profiles.length > 1) {
+          this.selectorTitle = 'Sélection du profil';
+          this.selectorSubtitle = 'Choisissez un profil de configuration';
+          this.selectorClubs = profiles;
+          this.selectorLoading = false;
+          this.bootView = 'club-selector';
+        }
+      });
     }
 
-    // Socket: initialisation + listeners essentiels
-    this.socketService.initialize();
-    this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
-      'displays-changed',
-      data => {
-        this.displays = (data.displays || []).map(d => ({
+    // Socket: listeners essentiels — délégués à RemoteOrchestratorService
+    // (extraction ADR-051 Phase 4 V2). Le service attache `displays-changed`,
+    // `phase-change`, `player-state` (avec ngZone.run) et émet `request-state`
+    // au boot pour récupérer le snapshot serveur initial.
+    //
+    // NE PAS appeler `socketService.initialize()` ici ni dans l'orchestrator :
+    // app.component.ts le fait déjà au boot. Un second `initialize()` crée un
+    // 2ᵉ socket qui écrase le 1er, leakant ses listeners (parité V1).
+    this.orchestrator.init();
+    this.subs.push(
+      this.orchestrator.displays$.subscribe(list => {
+        // Map du format orchestrator (V1-style `{index, type}`) vers le format
+        // attendu par les sous-composants V2 (`{id, label, status}`).
+        this.displays = list.map(d => ({
           id: String(d.index),
           label: `display-${d.index}`,
           status: 'online' as const,
         }));
-      },
+      }),
     );
-    this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
-      if (data.phase === 'before' || data.phase === 'during' || data.phase === 'after') {
-        this.loopId = data.phase;
-      }
-    });
+    this.subs.push(
+      this.orchestrator.phase$.subscribe(phase => {
+        this.loopId = phase;
+      }),
+    );
+    this.subs.push(
+      this.orchestrator.playerState$.subscribe(data => this.handlePlayerState(data)),
+    );
 
-    // Feedback erreur vidéo : la TV émet `player-state` avec
-    // `lastError: 'play_error'` quand une vidéo manuelle plante (404, format
-    // invalide, timeout réseau). Sans ce listener, le bouton Remote reste
-    // figé en "playing" alors que la TV recovery vers la boucle.
-    this.socketService.on<{ lastError?: string | null; isManualMode?: boolean }>(
-      'player-state',
-      data => this.handlePlayerState(data),
-    );
+    // ADR-105 — Preview TV via iframe local-first.
+    // L'iframe pointe sur la même page TV que celle servie par le Pi/SaaS,
+    // avec `?preview=1` pour mute audio + skip analytics + skip socket register.
+    // Pas de transport cloud, pas de canvas/MJPEG : un seul rendu par browser tab.
+    this.tvPreviewUrl.set(this.computeTvPreviewIframeUrl());
 
     // Expansion par défaut : catégorie alignée sur la phase
     this.setDefaultExpanded();
 
-    // Widgets enabled : restore depuis localStorage
-    this.widgetsEnabled = this.loadWidgetsEnabled();
+    // Widgets enabled : restauré via RemotePreferencesService (DB + cache local).
+    // Le service hydrate widgets$ depuis l'API au boot ; on s'abonne pour
+    // recevoir la valeur DB une fois chargée et écraser le snapshot local.
+    this.widgetsEnabled = this.prefsService.widgets;
+    this.subs.push(
+      this.prefsService.widgets$.subscribe((w) => {
+        this.widgetsEnabled = w;
+      }),
+    );
 
     // Demo mode (skip thumbnails distants)
     this.isDemoMode = this.demoConfigService.isDemoMode();
@@ -320,6 +481,31 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * ADR-105 — URL iframe pour la tuile preview TV.
+   *
+   * Le staff (Pi local ou SaaS) charge la Remote V2 sur le même domaine que la TV.
+   * On construit donc une URL same-origin pointant sur la racine TV avec
+   * `?preview=1` (mute audio + skip analytics + skip socket-register côté TV).
+   * En mode SaaS, on injecte `&site=<uuid>` pour garder le scope.
+   */
+  private computeTvPreviewIframeUrl(): string | null {
+    if (typeof window === 'undefined') return null;
+    if (this.demoConfigService.isDemoMode()) return null;
+    const params = new URLSearchParams();
+    params.set('preview', '1');
+    if (this.saasConfig.isSaasMode()) {
+      const siteId = this.saasConfig.getSiteId();
+      if (siteId) params.set('site', siteId);
+    }
+    // ADR-105 — cible explicitement la route TV `display/0` (pas la racine `/`,
+    // qui sert le HomeComponent picker en SaaS — deux boutons "Ouvrir la
+    // télécommande" / "Afficher l'écran TV"). `document.baseURI` (ADR-071
+    // phase 3) gère le préfixe `/` (Pi) vs `/saas/` (Cloudflare Pages) ; on y
+    // append `display/0?preview=1[&site=<uuid>]` pour atterrir sur la TV.
+    return new URL(`display/0?${params.toString()}`, document.baseURI).toString();
+  }
+
   // ---- Enrichissement config (US-V2-01) ---------------------------------
 
   private enrichVideosWithCategoryId(config: Configuration): Configuration {
@@ -337,34 +523,21 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.subs.forEach(s => s.unsubscribe());
     if (this.toastTimer) clearTimeout(this.toastTimer);
     if (this.playingTimer) clearTimeout(this.playingTimer);
+    this.orchestrator.destroy();
   }
 
-  private loadWidgetsEnabled(): WidgetsEnabled {
-    try {
-      const raw = localStorage.getItem(WIDGETS_STORAGE_KEY);
-      if (!raw) return { score: true, chrono: true, breaking: false };
-      const parsed = JSON.parse(raw) as Partial<WidgetsEnabled>;
-      return {
-        score: parsed.score ?? true,
-        chrono: parsed.chrono ?? true,
-        breaking: parsed.breaking ?? false,
-      };
-    } catch {
-      return { score: true, chrono: true, breaking: false };
-    }
+  private recentVideosStorageKey(): string {
+    return this.saasConfig.getScopedStorageKey(RECENT_VIDEOS_STORAGE_KEY_BASE);
   }
 
-  private persistWidgetsEnabled(): void {
-    try {
-      localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(this.widgetsEnabled));
-    } catch {
-      /* localStorage indisponible (mode privé) — silent */
-    }
-  }
-
+  /**
+   * ADR-102 — Toggle d'un widget délégué à RemotePreferencesService qui
+   * persiste en DB (table remote_preferences) + cache localStorage.
+   * Le BehaviorSubject widgets$ remet à jour `this.widgetsEnabled` via la
+   * souscription enregistrée dans `ngOnInit`.
+   */
   toggleWidget(id: keyof WidgetsEnabled): void {
-    this.widgetsEnabled = { ...this.widgetsEnabled, [id]: !this.widgetsEnabled[id] };
-    this.persistWidgetsEnabled();
+    this.prefsService.updateWidget(id, !this.widgetsEnabled[id]);
   }
 
   /** Routeur du sheet gear → ouvre la sheet correspondante (US-V2-12 sheets extraction). */
@@ -425,14 +598,63 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   /** Catégories affichées pour la phase de nav courante. */
+  /**
+   * Catégories affichées pour la phase de nav courante.
+   *
+   * Contrat aligné sur V1 (`RemoteComponent.getCategoriesForTimeCategory`)
+   * et sur le dashboard "Organisation Télécommande" : les `TimeCategory.id`
+   * sont identiques aux valeurs `phaseId` (`'before' | 'during' | 'after'`),
+   * et `categoryIds` liste les catégories à afficher dans ce bloc phase.
+   *
+   * Bug historique V2 (pré-fix) : le code utilisait une heuristique de
+   * substring `'avant'/'match'/'apres'` qui ne matchait JAMAIS les vrais
+   * ids anglais → fallback systématique sur toutes les catégories,
+   * ignorant complètement le mapping de l'admin. Régression vs V1.
+   */
   phaseCategories(): Category[] {
     if (!this.configuration) return [];
     const timeCats = (this.configuration.timeCategories || []) as TimeCategory[];
-    const targetKey = this.phaseId === 'before' ? 'avant' : this.phaseId === 'during' ? 'match' : 'apres';
-    const tc = timeCats.find(t => t.id.toLowerCase().includes(targetKey));
     const allCats = (this.configuration.categories || []) as Category[];
+    if (timeCats.length === 0) return allCats;
+    const tc = timeCats.find(t => t.id === this.phaseId);
     if (!tc) return allCats;
     return allCats.filter(c => tc.categoryIds?.includes(c.id));
+  }
+
+  /**
+   * Catégorie sélectionnée dans la sidebar régie pro (col 1) — drive la
+   * zone tableur (col 2). Tombe sur la première phaseCategory si rien n'est
+   * sélectionné, pour que le layout PC C ait toujours du contenu visible.
+   */
+  selectedCategory(): Category | null {
+    const cats = this.phaseCategories();
+    if (cats.length === 0) return null;
+    if (!this.selectedCategoryId) return cats[0];
+    return cats.find(c => c.id === this.selectedCategoryId) || cats[0];
+  }
+
+  /** Sous-catégorie sélectionnée — null si l'utilisateur a cliqué sur la racine. */
+  selectedSubCategory(): Category | null {
+    const cat = this.selectedCategory();
+    if (!cat || !this.selectedSubId) return null;
+    return (cat.subCategories || []).find(s => s.id === this.selectedSubId) || null;
+  }
+
+  /** Handler clic catégorie dans la sidebar pro. */
+  selectCategory(id: string): void {
+    if (this.selectedCategoryId === id) {
+      // Double-clic : déselectionne le sub pour revenir à la racine de la cat
+      this.selectedSubId = null;
+    } else {
+      this.selectedCategoryId = id;
+      this.selectedSubId = null;
+    }
+  }
+
+  /** Handler clic sous-catégorie dans la sidebar pro. */
+  selectSubCategory(payload: { categoryId: string; subId: string }): void {
+    this.selectedCategoryId = payload.categoryId;
+    this.selectedSubId = payload.subId;
   }
 
   /** TimeCategory active pour la boucle (pour afficher sa première vidéo dans le hero). */
@@ -440,8 +662,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (!this.configuration) return null;
     if (this.loopId === 'neutral') return { name: 'Rotation sponsors par défaut' };
     const timeCats = (this.configuration.timeCategories || []) as TimeCategory[];
-    const targetKey = this.loopId === 'before' ? 'avant' : this.loopId === 'during' ? 'match' : 'apres';
-    const tc = timeCats.find(t => t.id.toLowerCase().includes(targetKey));
+    const tc = timeCats.find(t => t.id === this.loopId);
     const first = tc?.loopVideos?.[0];
     if (!first) return null;
     return { name: first.name || 'Vidéo', duration: (first as { duration?: number }).duration };
@@ -509,6 +730,15 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.expandedSubs[id] = !this.expandedSubs[id];
   }
 
+  /**
+   * Émission unifiée d'une commande — déléguée à RemoteOrchestratorService.
+   * Le service ajoute `commandId` UUID v4 (ADR-081), propage la cible
+   * multi-écrans (`target: number[]`), broadcast local + relais socket.
+   */
+  private emitCommand(payload: { type: 'video' | 'sponsors' | 'web-page' | 'livestream' | 'stop-manual' | 'reload-config'; data?: unknown }): void {
+    this.orchestrator.emitCommand(payload);
+  }
+
   playVideo(v: PiConfigVideoEntry): void {
     this.notifyUserActivity();
     this.addToRecentVideos(v);
@@ -516,21 +746,64 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     if (v.id) this.erroredVideoIds.delete(v.id);
     this.playingVideoId = v.id ?? null;
     this.playingVideo = v;
-    this.socketService.emit('command', {
-      type: 'video',
-      data: v,
-      displayIndex: this.targetDisplay === 'all' ? undefined : parseInt(this.targetDisplay, 10),
-    });
-    this.activeSheet = null;
-    this.showToast(`Diffusé : ${v.name}`);
+
+    // ADR-103 Phase 1/2a — dispatch by contentType so web_page / livestream
+    // entries are routed to the WebContentService instead of the MP4 manual
+    // player. Mirrors the Remote V1 launchVideo() dispatch.
+    if (v.contentType === 'web_page' && v.externalUrl) {
+      const data = {
+        url: v.externalUrl,
+        durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
+        name: v.name,
+      };
+      this.emitCommand({ type: 'web-page', data });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name} (page web)`);
+    } else if (v.contentType === 'livestream' && v.externalUrl) {
+      const data: { url: string; mimeType: string | null; durationMs: number | null; name: string } = {
+        url: v.externalUrl,
+        mimeType: null,
+        durationMs: v.durationSeconds ? v.durationSeconds * 1000 : null,
+        name: v.name,
+      };
+      this.emitCommand({ type: 'livestream', data });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name} (livestream)`);
+    } else {
+      this.emitCommand({ type: 'video', data: v });
+      this.activeSheet = null;
+      this.showToast(`Diffusé : ${v.name}`);
+    }
+
     // Le 2nd écran reprend la boucle automatiquement à la fin de la vidéo forcée.
+    // Le state local `playingVideo` reste exposé pendant toute la durée de la
+    // vidéo pour que la barre de progression du hero ait le temps de se
+    // remplir visuellement (avant ce fix, capé à 5s → barre figée à <17%).
     if (this.playingTimer) clearTimeout(this.playingTimer);
     const duration = (v.durationSeconds ?? 0) * 1000;
-    const ms = duration > 0 ? Math.min(duration, 5000) : 5000;
+    const ms = duration > 0 ? duration : 5000;
     this.playingTimer = setTimeout(() => {
       this.playingVideoId = null;
       this.playingVideo = null;
     }, ms);
+  }
+
+  /**
+   * ADR-103 Phase 2.5 — bouton Stop du hero. Coupe la diffusion en cours
+   * (vidéo manuelle MP4, page web ou livestream) et fait reprendre la
+   * boucle. Le TV component route `stop-manual` vers
+   * `WebContentService.returnToLoop()` qui gère les 3 cas (Phase 2.5).
+   */
+  stopPlaying(): void {
+    this.notifyUserActivity();
+    if (this.playingTimer) {
+      clearTimeout(this.playingTimer);
+      this.playingTimer = null;
+    }
+    this.playingVideoId = null;
+    this.playingVideo = null;
+    this.emitCommand({ type: 'stop-manual' });
+    this.showToast('Retour à la boucle');
   }
 
   // ---- Helpers visuels --------------------------------------------------
@@ -603,7 +876,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   setTargetDisplay(id: string): void {
-    this.targetDisplay = id;
+    this.orchestrator.setDisplayTargetFromString(id);
     this.showToast(id === 'all' ? 'Cible : tous les écrans' : `Cible : écran #${id}`);
   }
 
@@ -782,21 +1055,150 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   // ---- Profil (modal) ---------------------------------------------------
 
   selectProfile(p: SaasProfile): void {
-    this.currentProfile = p.displayName || p.name;
     const siteId = this.saasConfig.getSiteId();
-    if (siteId) {
-      this.saasConfig.loadProfileConfiguration(siteId, p.id).subscribe({
-        next: () => {
-          this.showToast(`Profil : ${this.currentProfile}`);
-          this.closeSheet();
-          // Reload pour appliquer la nouvelle config proprement
-          window.location.reload();
-        },
-        error: () => this.showToast('Erreur chargement profil'),
-      });
-    } else {
+    if (!siteId) {
       this.closeSheet();
+      return;
     }
+    const displayName = p.displayName || p.name;
+    this.saasConfig.loadProfileConfiguration(siteId, p.id).subscribe({
+      next: () => {
+        this.currentProfile = displayName;
+        this.currentProfileId = p.id;
+        this.showToast(`Profil : ${displayName}`);
+        this.closeSheet();
+        // Reload pour appliquer la nouvelle config proprement (cohérent V1)
+        window.location.reload();
+      },
+      error: (err) => {
+        // ADR-058 — Si le profil exige un PIN, basculer plein écran sur l'overlay
+        // PIN au lieu de cracher un toast générique (régression vs V1).
+        const pinErr = err as Partial<SaasPinRequiredError> | null;
+        if (pinErr && pinErr.pinRequired === true) {
+          this.closeSheet();
+          this.handleSaasLoadError(err, p.id, displayName);
+        } else {
+          this.showToast('Erreur chargement profil', 'error');
+        }
+      },
+    });
+  }
+
+  // ============================================================================
+  // ADR-058 / ADR-092 — Sélection profil multi-profils + PIN (boot + switch)
+  // ============================================================================
+
+  /** Callback du `<app-club-selector>` (mode démo ou multi-profil SaaS). */
+  onClubSelected(club: ClubInfo): void {
+    if (this.isDemoMode) {
+      this.demoConfigService.loadClubConfiguration(club.id).subscribe({
+        next: (config) => {
+          this.currentProfile = club.name;
+          this.currentProfileId = club.id;
+          this.configuration = this.enrichVideosWithCategoryId(config);
+          this.bootView = 'home';
+          this.socketService.emit('command', { type: 'reload-config', data: config });
+        },
+        error: (err) => { console.error('Erreur chargement config club demo:', err); },
+      });
+      return;
+    }
+    if (this.saasConfig.isSaasMode()) {
+      const siteId = this.saasConfig.getSiteId();
+      this.saasConfig.loadProfileConfiguration(siteId, club.id).subscribe({
+        next: (config) => {
+          this.currentProfile = club.name;
+          this.currentProfileId = club.id;
+          this.configuration = this.enrichVideosWithCategoryId(config);
+          this.bootView = 'home';
+        },
+        error: (err) => this.handleSaasLoadError(err, club.id, club.name),
+      });
+      return;
+    }
+    // Mode Pi local
+    this.profileConfigService.loadProfileConfiguration(club.id).subscribe({
+      next: (config) => {
+        this.currentProfile = club.name;
+        this.currentProfileId = club.id;
+        this.configuration = this.enrichVideosWithCategoryId(config);
+        this.bootView = 'home';
+        this.socketService.emit('profile-switch', { profileId: club.id });
+      },
+      error: (err) => { console.error('Erreur chargement config profil:', err); },
+    });
+  }
+
+  /** Bascule vers l'overlay PIN si l'erreur est un 401 `pinRequired`. */
+  private handleSaasLoadError(err: unknown, profileId: string | null, profileName?: string): void {
+    const pinErr = err as Partial<SaasPinRequiredError> | null;
+    if (pinErr && pinErr.pinRequired === true) {
+      this.ngZone.run(() => {
+        this.pinRequired = true;
+        this.pinProfileId = pinErr.profileId || profileId;
+        this.pinProfileName = profileName || this.pinProfileName;
+        this.pinError = null;
+        this.pinInput = '';
+        this.bootView = 'pin';
+      });
+      return;
+    }
+    console.error('Erreur chargement config SaaS:', err);
+  }
+
+  /** Soumet le PIN au cloud, recharge la config et bascule sur le home V2. */
+  submitPin(): void {
+    if (this.pinSubmitting) return;
+    const siteId = this.saasConfig.getSiteId();
+    const profileId = this.pinProfileId;
+    if (!siteId || !profileId || !this.pinInput) {
+      this.pinError = 'PIN invalide';
+      return;
+    }
+    this.pinSubmitting = true;
+    this.pinError = null;
+    this.remotePinService.verifyProfilePin(siteId, profileId, this.pinInput).subscribe({
+      next: () => {
+        this.saasConfig.loadProfileConfiguration(siteId, profileId).subscribe({
+          next: (config) => {
+            this.ngZone.run(() => {
+              this.pinRequired = false;
+              this.pinInput = '';
+              this.pinError = null;
+              this.pinSubmitting = false;
+              if (this.pinProfileName) this.currentProfile = this.pinProfileName;
+              this.currentProfileId = profileId;
+              this.configuration = this.enrichVideosWithCategoryId(config);
+              this.bootView = 'home';
+            });
+          },
+          error: (err) => {
+            this.ngZone.run(() => {
+              this.pinSubmitting = false;
+              this.pinError = 'Impossible de charger la configuration.';
+              console.error('Config load after PIN failed:', err);
+            });
+          },
+        });
+      },
+      error: (err: unknown) => {
+        this.ngZone.run(() => {
+          this.pinSubmitting = false;
+          const httpErr = err as { status?: number; error?: { error?: string; attemptsRemaining?: number; message?: string } };
+          if (httpErr?.status === 429) {
+            this.pinError = httpErr.error?.message || 'Trop de tentatives. Réessayez plus tard.';
+          } else if (httpErr?.status === 401) {
+            const remaining = httpErr.error?.attemptsRemaining;
+            this.pinError = typeof remaining === 'number'
+              ? `PIN incorrect (${remaining} tentative(s) restante(s)).`
+              : 'PIN incorrect.';
+          } else {
+            this.pinError = 'Erreur de vérification du PIN.';
+          }
+          this.pinInput = '';
+        });
+      },
+    });
   }
 
   // ---- Préférences (sheet) ----------------------------------------------
@@ -811,12 +1213,20 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.localOptionsService.updateOverlayOptions({ scoreEnabled: enabled });
   }
 
+  updateTimerEnabled(enabled: boolean): void {
+    this.localOptionsService.updateTimerOptions({ enabled });
+  }
+
   updateTimerDuration(minutes: number): void {
     this.localOptionsService.updateTimerOptions({ periodDuration: minutes });
   }
 
   updateTimerCountDown(countDown: boolean): void {
     this.localOptionsService.updateTimerOptions({ countDown });
+  }
+
+  updateTimerIntegratedWithScore(integratedWithScore: boolean): void {
+    this.localOptionsService.updateTimerOptions({ integratedWithScore });
   }
 
   updateBreakingEnabled(enabled: boolean): void {
@@ -827,19 +1237,36 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.localOptionsService.updateBreakingNewsOptions({ position });
   }
 
+  updateBreakingDuration(defaultDuration: number): void {
+    this.localOptionsService.updateBreakingNewsOptions({ defaultDuration });
+  }
+
   get breakingLive(): boolean {
     return !!this.localOptions.breakingNews?.enabled;
+  }
+
+  /**
+   * Propagation des options + émission breaking news — déléguées à
+   * RemoteOrchestratorService (parité V1 `broadcastOptions()` /
+   * `sendBreakingNews()`). Le service est branché sur
+   * `localOptionsService.getOptions$()` avec `skip(1)` pour `options-update`.
+   */
+  private sendBreakingNews(message: string): void {
+    this.orchestrator.sendBreakingNews(message);
   }
 
   toggleBreaking(): void {
     this.notifyUserActivity();
     const next = !this.breakingLive;
     this.localOptionsService.updateBreakingNewsOptions({ enabled: next });
-    if (next && this.breakingText.trim()) {
+    const text = this.breakingText.trim();
+    if (next && text) {
       const existing = this.localOptions.breakingNews?.quickMessages || [];
-      const head = this.breakingText.trim();
-      const dedup = [head, ...existing.filter(m => m !== head)].slice(0, 10);
+      const dedup = [text, ...existing.filter(m => m !== text)].slice(0, 10);
       this.localOptionsService.updateBreakingNewsOptions({ quickMessages: dedup });
+      // Émission réelle vers la TV (le toggle "enabled" seul n'a jamais
+      // déclenché l'overlay — bug placebo détecté audit 2026-05-01).
+      this.sendBreakingNews(text);
     }
     this.showToast(next ? 'Breaking news diffusé' : 'Breaking news retiré');
   }
@@ -883,7 +1310,8 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   getVideoInitials(video: PiConfigVideoEntry): string {
-    if (!video.name) return '▶';
+    // Sentinelle consommée par <r2-icon name="play"> côté template (SPEC-V2-ICONS-01).
+    if (!video.name) return '__icon_play__';
     const words = video.name.trim().split(/\s+/);
     return words.length >= 2
       ? (words[0][0] + words[1][0]).toUpperCase()
@@ -1009,7 +1437,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   private loadRecentVideos(): string[] {
     try {
-      const raw = localStorage.getItem(RECENT_VIDEOS_STORAGE_KEY);
+      const raw = localStorage.getItem(this.recentVideosStorageKey());
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
@@ -1020,7 +1448,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
 
   private persistRecentVideos(): void {
     try {
-      localStorage.setItem(RECENT_VIDEOS_STORAGE_KEY, JSON.stringify(this.recentVideoIds));
+      localStorage.setItem(this.recentVideosStorageKey(), JSON.stringify(this.recentVideoIds));
     } catch {
       /* noop */
     }
@@ -1050,7 +1478,6 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   // ---- Rollback V1 ------------------------------------------------------
 
   backToV1(): void {
-    localStorage.setItem('neopro_remote_v2_override', '0');
     this.router.navigate(['/remote'], { queryParams: { v2: '0' } });
   }
 }

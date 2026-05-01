@@ -185,6 +185,13 @@ export class DoubleBufferVideoService {
 
     console.log(`[DoubleBuffer] Playing video ${videoIndex} on player ${this._activePlayer}:`, videoPath);
 
+    // SPEC-V2-TVMON-01 — défense en profondeur. L'attribut HTML
+    // `crossorigin="anonymous"` est posé en template mais Chrome peut
+    // ignorer la requête CORS si `src` est mutée avant que l'attribut
+    // soit pris en compte. Forcer la propriété DOM avant chaque src
+    // garantit le mode CORS et débloque `canvas.toDataURL()` (push
+    // preview SaaS vers la Remote V2).
+    player.crossOrigin = 'anonymous';
     player.src = videoPath;
     player.load();
 
@@ -288,6 +295,8 @@ export class DoubleBufferVideoService {
 
     // Restaurer preload='auto' si le cleanup l'avait mis à 'none'
     player.preload = 'auto';
+    // SPEC-V2-TVMON-01 — voir commentaire dans playOnActivePlayer.
+    player.crossOrigin = 'anonymous';
     player.src = videoPath;
     player.load();
 
@@ -612,6 +621,85 @@ export class DoubleBufferVideoService {
     if (this.blackOverlay) {
       this.blackOverlay.style.opacity = '0';
       console.log('[DoubleBuffer] Black overlay hidden');
+    }
+  }
+
+  // ==========================================================================
+  // SMOOTH MANUAL TRANSITION (helpers — cf. SPEC manual-video-transitions)
+  // ==========================================================================
+
+  /**
+   * Prépare une transition manuel→manuel ou boucle→manuel : capture freeze-frame,
+   * active black-overlay safety net, libère le décodeur HW de l'ancien player si
+   * besoin (Pi 5 SharedImage saturation).
+   *
+   * À appeler AVANT de toucher `targetPlayer` (set src + load).
+   *
+   * Cas d'usage :
+   *   - Master `play()` : passer `activeManualPlayer = getActiveManualPlayer()`,
+   *     `isManualToManual = activeManualPlayer.opacity === '1' && !activeManualPlayer.paused`
+   *   - Slave `preloadManualVideo()` : idem (le slave réutilise le même player donc
+   *     `activeManualPlayer === targetPlayer` mais l'opacity de l'instant t indique
+   *     bien si une vidéo manuelle était déjà visible).
+   */
+  prepareSmoothManualTransition(activeManualPlayer: HTMLVideoElement, isManualToManual: boolean): void {
+    // 1. Freeze-frame canvas (z=20) — capture LIVE depuis le player manuel actif
+    //    quand isManualToManual=true (frame du joueur précédent, JAMAIS la boucle).
+    //    Sinon (boucle→manuel) utilise la pré-capture loop.
+    const freezeOk = this.captureAndShowFreezeFrame(isManualToManual);
+    if (!freezeOk) {
+      this.showBlackOverlay();
+    }
+
+    if (isManualToManual) {
+      // 2. Black-overlay (z=5) en filet de sécurité sous le freeze-frame.
+      //    Couvre la fenêtre entre hideFreezeFrame() et le 1er paint du nouveau
+      //    player (Chromium n'applique pas `background:#000` CSS d'un <video>
+      //    avant 1ère frame décodée → boucle z=2 visible à travers sinon).
+      this.showBlackOverlay();
+
+      // 3. Libère le décodeur HW de l'ancien player (Pi 5 SharedImage saturation).
+      //    Sans ça, le compositeur Chromium ne peut pas allouer un SharedImage
+      //    backing pour le décodeur du nouveau player → la nouvelle vidéo charge
+      //    mais ne peint pas → bug "click-twice" (cf. SPEC + PR #778).
+      //    L'opacity=0 + zIndex=10 garantit que le rectangle background:#000 du
+      //    <video> vidé ne couvre pas le nouveau player après l'ordre DOM.
+      activeManualPlayer.pause();
+      activeManualPlayer.style.opacity = '0';
+      activeManualPlayer.style.zIndex = '10';
+      activeManualPlayer.removeAttribute('src');
+      activeManualPlayer.load();
+    }
+  }
+
+  /**
+   * Cache les couches de masquage (freeze-frame + black-overlay) APRÈS le paint
+   * commit du nouveau player. À appeler une fois `targetPlayer.play()` Promise
+   * résolu et `targetPlayer.style.opacity = '1'` posé.
+   *
+   * Utilise `requestVideoFrameCallback` (Chromium 92+) pour détecter qu'une frame
+   * est prête à composer, PUIS un `requestAnimationFrame` chaîné pour attendre le
+   * commit de paint réel (rVFC fire pendant le DOM update, AVANT le paint final
+   * du compositeur — cf. SPEC manual-video-transitions § "Cas d'edge connus").
+   *
+   * Fallback rAF immédiat si l'API rVFC est absente (Chromium <92, jamais sur
+   * Pi 5 mais safe pour autres builds — slave web, tests Karma).
+   */
+  hideMaskingLayersAfterPaint(targetPlayer: HTMLVideoElement): void {
+    type RVFCPlayer = HTMLVideoElement & {
+      requestVideoFrameCallback?: (cb: () => void) => number;
+    };
+    const hideAfterPaint = () => {
+      requestAnimationFrame(() => {
+        this.hideFreezeFrame();
+        this.hideBlackOverlay();
+      });
+    };
+    const rvfc = (targetPlayer as RVFCPlayer).requestVideoFrameCallback;
+    if (typeof rvfc === 'function') {
+      rvfc.call(targetPlayer, hideAfterPaint);
+    } else {
+      hideAfterPaint();
     }
   }
 

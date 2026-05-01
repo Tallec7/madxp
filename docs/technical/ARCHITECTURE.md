@@ -99,7 +99,8 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
 - **`ScoreOverlayComponent`** (ADR-041) : composant standalone extrait de `TvComponent` — gère le score overlay (broadcast/minimal), le timer, les animations de but (popup/fullscreen/slide), les breaking news, et les overlays secondaires. Écoute directement Socket.IO et BroadcastChannel pour `score-update`, `score-reset`, `options-update`, `breaking-news`, `timer-update`. Utilisé via `<app-score-overlay [configuration] [displayType]>` dans le template TV.
 - Config servie par `saas.controller.ts` avec résolution des chemins vidéo en URLs FTP publiques
 - **Build assets SaaS** : la config `saas` dans `angular.json` override les `assets` par défaut — elle DOIT inclure le glob `raspberry/public` (contient `neopro-logo-white.png`, `favicon.ico`, `manifest.json`, `service-worker.js`). Sans ce glob, le splash screen logo request hit le SPA catch-all et retourne `index.html` (422 + MIME `text/html`). Smoke test enforced.
-- **Deploy pipeline** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
+- **Deploy pipeline (Hostinger, régime actuel)** : `deploy-dashboard` s'exécute en premier (clean-slate Hostinger `/`), puis `deploy-saas` déploie dans `/saas/` — le job CI `deploy-saas` doit déclarer `needs: [deploy-dashboard]` pour éviter que le clean-slate efface le build SaaS
+- **Deploy pipeline (Cloudflare Pages, ADR-071 phase 2 — Option A projet unique)** : job alternatif `deploy-frontend-cloudflare` (action `cloudflare/wrangler-action@v3`, un seul projet Pages `neopro-frontend-prod` qui contient dashboard + SaaS sous `/saas/`, build via `npm run build:cloudflare:prod`). Activation par feature flag `vars.HOSTING == 'cloudflare'` côté GitHub Environment `production` ; les jobs Hostinger se skip alors automatiquement. Staging déjà actif sur `neopro-exg.pages.dev` (cf. ADR-091 J2). Bascule prod = phase 3 ADR-071 (un simple CNAME chez Hostinger DNS — pas de migration NS, la zone `kalonpartners.bzh` reste chez Hostinger pour le site WordPress + FTP vidéos).
 - **Routage** : le `.htaccess` dashboard exclut `/saas/` (`RewriteRule ^saas(/.*)?$ - [L]`) ; le `.htaccess` SaaS redirige vers `/saas/index.html`
 - **Navigation** : utiliser `routerLink` (pas `href` absolu) dans `raspberry/src/` — le `baseHref` est `/saas/` en mode SaaS vs `/` en mode Pi
 - **Déploiement vidéo SaaS** : les sites SaaS n'ont pas de Pi — depuis ADR-069, `deployment.service.ts` délègue à `SaasDirectStrategy` (via `deliveryStrategyRegistry` dans `services/delivery/`) qui marque le déploiement `completed` immédiatement (pas de `sendOrQueue` qui attendrait un Pi inexistant). Les vidéos sont servies directement via URL FTP, aucun transfert physique nécessaire. Le monitoring `checkStuckDeployments()` exclut les sites SaaS des alertes "Déploiement bloqué" (v3.127.5+). Les métriques Prometheus `neopro_deployment_delivery_total{strategy,outcome}` exposent le nombre de livraisons par stratégie et issue (sent/queued/completed/failed).
@@ -488,6 +489,43 @@ UI réconciliée (optimistic → autoritaire)
 
 **Coexistence** (ADR-061) : toggle `v1`/`v2` per-siteId localStorage, sunset automatique `2026-11-01`. Métriques `neopro_remote_client_version_total` pour pilotage adoption.
 
+#### Web pages & livestreams dans la boucle (ADR-103)
+
+Contenus first-class non-vidéo intégrés à la rotation MP4 :
+
+```
+Dashboard / Remote V2 (ajout contenu web/live)
+         │ POST /api/sites/:id/web-content  (type: web_page | livestream, durationSeconds)
+         ▼
+Central Server (web-content.controller.ts → web-content.repository.ts)
+         │ INSERT video {content_type: 'web_page'|'livestream', synthetic storage_path}
+         ▼ (Pi)                                                ▼ (SaaS)
+sync-agent (web-content-sync.js)                       saas.controller.ts
+   pull on reconnect + refresh 30min                       inject pseudo-cat 'web-content'
+         │                                                    │
+         ▼                                                    ▼
+Pi Local Server (loop dispatch by contentType)         SaaS frame (iframe / hls.js lazy)
+   web_page  → iframe sandbox + freeze 2× rAF        master/slave sync dual-display
+   livestream → hls.js Chromium                       (Phase 1.5b)
+         │
+         ▼
+TV (paint-stable reveal, anti-flash 250ms)
+```
+
+**Phase 4 supervision** : `neopro_web_content_fetch_total{status}`, `neopro_web_content_loop_dispatch_total{type}`, alertes Prometheus fetch failures + livestream interruptions.
+
+#### TV preview live dans la Remote V2 PC C (régie pro)
+
+Mini-écran live intégré à la Remote — transport différencié SaaS vs Pi local :
+
+| Mode                 | Transport             | ADR     | Détail                                                                                |
+| -------------------- | --------------------- | ------- | ------------------------------------------------------------------------------------- |
+| Pi local LAN         | iframe locale         | ADR-105 | `<iframe>` qui charge `http://neopro.local/tv?display=0` scaled 60×38. 0 latence.     |
+| Pi → Remote distante | MJPEG + HMAC TTL 5min | ADR-101 | Pi 5 capture HDMI → Socket.IO → Remote en mobile hotspot. Throttle CPU/temp.          |
+| SaaS                 | HTTP pull snapshot    | ADR-104 | TV SaaS pousse snapshot R2 → Remote pull périodique. Évite rate-limit Cloudflare 429. |
+
+Single-subscriber par Pi (1 régie = 1 stream). Throttle priorité absolue à la TV publique : si CPU/temp dépasse seuil, le preview s'éteint, **pas la TV**.
+
 ### 4. Multi-config profiles
 
 ```
@@ -523,15 +561,15 @@ Pi Frontend (ProfileConfigService — sélection locale via télécommande)
 
 ## Technologies par composant
 
-| Composant              | Stack                                                                  | Base de données                                                      | Déploiement            |
-| ---------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------- |
-| `raspberry/src`        | Angular 20, native HTML5 video (double-buffer), Socket.IO client       | -                                                                    | Raspberry Pi (systemd) |
-| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                                                    | Raspberry Pi (systemd) |
-| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                                                    | Raspberry Pi (systemd) |
-| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                                                    | Raspberry Pi (systemd) |
-| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Railway PostgreSQL 18 (interne, cf. ADR-070), FTP Hostinger (vidéos) | Railway                |
-| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet, Angular CDK (DragDrop)            | -                                                                    | Hostinger (static)     |
-| `e2e`                  | Playwright                                                             | -                                                                    | CI/CD                  |
+| Composant              | Stack                                                                  | Base de données                                                      | Déploiement                                                      |
+| ---------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `raspberry/src`        | Angular 20, native HTML5 video (double-buffer), Socket.IO client       | -                                                                    | Raspberry Pi (systemd)                                           |
+| `raspberry/server`     | Node.js, Socket.IO 4.8                                                 | -                                                                    | Raspberry Pi (systemd)                                           |
+| `raspberry/admin`      | Express, vanilla JS (dual mode: club/tech)                             | -                                                                    | Raspberry Pi (systemd)                                           |
+| `raspberry/sync-agent` | Node.js 20, Axios, SHA256 checksum                                     | -                                                                    | Raspberry Pi (systemd)                                           |
+| `central-server`       | Node.js 20+, Express 4.18, TypeScript 5.9, Winston, Repository Pattern | Railway PostgreSQL 18 (interne, cf. ADR-070), FTP Hostinger (vidéos) | Railway                                                          |
+| `central-dashboard`    | Angular 20.3, Chart.js 4.5, Leaflet, Angular CDK (DragDrop)            | -                                                                    | Hostinger (static, en migration → Cloudflare Pages, cf. ADR-071) |
+| `e2e`                  | Playwright                                                             | -                                                                    | CI/CD                                                            |
 
 ---
 

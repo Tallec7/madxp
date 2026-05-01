@@ -152,9 +152,17 @@ describe('ADR-088 — Scoreboard SaaS push (backend wiring)', () => {
       expect(timer).toMatch(/onLocalChange/);
     });
 
-    it('RemoteComponent subscribes to scoreboard-state and exposes pushScoreboardState', () => {
+    it('Remote (V1+V2) subscribe to scoreboard-state via orchestrator and exposes pushScoreboardState', () => {
+      // Le listener entrant scoreboard-state vit désormais dans
+      // RemoteOrchestratorService (extraction Phase 4 partagée V1+V2).
+      // Le push outbound (scoreboard-state-push) reste dans RemoteComponent V1
+      // car restreint au mode SaaS et propre au composant.
+      const orch = readRepo('raspberry/src/app/services/remote-orchestrator.service.ts');
+      expect(orch).toMatch(/['"]scoreboard-state['"]/);
+      expect(orch).toMatch(/scoreService\.applyCloudState/);
+      expect(orch).toMatch(/timerService\.applyCloudState/);
+
       const remote = readRepo('raspberry/src/app/components/remote/remote.component.ts');
-      expect(remote).toMatch(/socketService\.on\('scoreboard-state'/);
       expect(remote).toMatch(/pushScoreboardState/);
       expect(remote).toMatch(/scoreboard-state-push/);
       // push restreint au mode SaaS (Pi local garde legacy score-update)

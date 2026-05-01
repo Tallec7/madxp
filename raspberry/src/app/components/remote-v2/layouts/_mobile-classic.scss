@@ -1,0 +1,167 @@
+@use "../tokens";
+
+// SPEC-V2-LAYOUT-01 — Mobile A "Liste dense classique" (recommandé régie pro)
+// Cible : opérateur régie qui pilote 30+ vidéos/match.
+// Vidéos visibles à fold (375×760) : 9 (vs 3,5 en V2 actuelle, +157 %).
+//
+// Référence pixel : `Remote V2 Propositions.html` artboard "A · Liste dense".
+// AUDIT-V2-LAYOUT-01 : sélecteurs corrigés (les `.r2-vr-*` n'existent pas dans
+// le DOM — vraies classes : `.r2-video-thumb`, `.r2-video-name`,
+// `.r2-video-meta`, `.r2-video-duration`).
+
+.remote-v2.layout-mobile-classic {
+  @include tokens.r2-mobile-only {
+    --r2-hero-h: 76px;
+    --r2-widgets-h: 64px;
+    --r2-row-h: 40px;
+    --r2-padding-x: 12px;
+    --r2-type-row: 14px;
+
+    // Anti-overflow horizontal global — empêche tout enfant trop large de
+    // décaler le viewport et de couper les bords droits (régression mobile
+    // observée sur le widget score "+ EXT").
+    overflow-x: hidden;
+
+    // Header compact 56px
+    .r2-header {
+      padding: 6px 12px;
+      min-height: 56px;
+    }
+
+    // Hero compact 1-ligne — AUDIT-V2-LAYOUT-01 §3 "Hero Boucle active trop chargé".
+    // max-height retiré : quand N displays sont connectés, la section "Cible vidéo"
+    // s'ajoute sous les onglets de phase et dépasse 110px (overflow hidden la masquait).
+    .r2-hero {
+      margin: 8px 12px 0;
+      min-height: var(--r2-hero-h);
+    }
+    .r2-hero-eyebrow {
+      padding: 4px 10px 0;
+      font-size: 9px;
+      // Masque le texte "À l'antenne" / "Diffusion manuelle" — état signalé
+      // par badges LIVE/REC + couleur thumb.
+      > span:nth-of-type(1) {
+        display: none;
+      }
+    }
+    .r2-hero-main {
+      padding: 4px 10px 4px;
+      gap: 8px;
+    }
+    .r2-tv-thumb {
+      width: 44px;
+      height: 28px;
+    }
+    .r2-hero .r2-video-name {
+      font-size: 13px;
+    }
+    .r2-hero .r2-video-subline {
+      display: none;
+    }
+    // Masque "Boucle active" eyebrow ET son icône SVG sœur
+    .r2-loop-tabs-wrap .r2-hero-section-label,
+    .r2-loop-tabs-wrap .r2-hero-section-label * {
+      display: none !important;
+    }
+    .r2-loop-tabs-wrap {
+      padding: 2px 8px 6px;
+    }
+    .r2-loop-tabs button {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .r2-hero-progress {
+      margin: 0 12px 6px;
+    }
+
+    // ---- Widgets : grid 2 colonnes compacte ---------------------------------
+    // FIX overflow droit : on cache les labels "Score" / "Chrono" (redondants
+    // avec les couleurs de fond) pour libérer 48px par cellule et laisser la
+    // place aux badges + buttons sans débordement viewport.
+    // Ajout `position: relative; z-index: 1` pour empêcher le browse-card de
+    // remonter visuellement au-dessus du chrono lors du scroll.
+    .r2-widgets {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 8px 12px 0;
+      padding: 0;
+      position: relative;
+      z-index: 1;
+      width: auto;
+      max-width: 100%;
+    }
+    .r2-widgets .r2-widget {
+      min-width: 0;
+      padding: 6px 10px;
+      gap: 6px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .r2-widgets .r2-widget-breaking {
+      grid-column: 1 / -1;
+    }
+    // Cache les labels "Score" / "Chrono" en compact — gain 48px/cell
+    .r2-widgets .r2-widget-label:not(.r2-widget-label--breaking) {
+      display: none;
+    }
+    // Compacte les badges équipe pour la cellule étroite
+    .r2-widgets .r2-team-badge {
+      width: 18px;
+      height: 18px;
+      font-size: 8px;
+    }
+    .r2-widgets .r2-score-display {
+      gap: 2px;
+    }
+    .r2-widgets .r2-score-val {
+      font-size: 14px;
+    }
+    .r2-widgets .r2-score-quick {
+      gap: 3px;
+    }
+    .r2-widgets .r2-score-quick-btn {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 5px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .r2-widgets .r2-chrono-display {
+      font-size: 16px;
+    }
+    .r2-widgets .r2-chrono-toggle {
+      padding: 3px 6px;
+      font-size: 9px;
+    }
+
+    // Browse card : empêche tout overlap avec les widgets via marge propre
+    .r2-browse-card {
+      position: relative;
+      z-index: 0;
+      margin-top: 12px;
+    }
+
+    // Densification des rows vidéo (sélecteurs DOM réels)
+    .r2-video-row {
+      min-height: var(--r2-row-h);
+      padding: 4px var(--r2-padding-x);
+      gap: 8px;
+
+      .r2-video-thumb {
+        width: 28px;
+        height: 28px;
+      }
+      .r2-video-name {
+        font-size: var(--r2-type-row);
+      }
+      .r2-video-duration,
+      .r2-video-tag {
+        font-size: 11px;
+      }
+    }
+  }
+}

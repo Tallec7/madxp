@@ -2731,8 +2731,11 @@ describe('ADR-034 synchronized manual video reveal', () => {
   it('Master play() delayed emission MUST include manualVideoVisible: true', () => {
     // The SECOND emission (after 2×rAF + 200ms) must signal slaves to reveal.
     // After extraction, play() is in manual-video.service.ts (public, not private)
+    // Slice étendu à 12000 chars : depuis l'ajout du fix flash-loop manual→manual
+    // (HW decoder release + black-overlay + rVFC + commentaires explicatifs),
+    // play() fait ~190 lignes / ~9000-10000 chars.
     const playStart = tvContent.indexOf('play(video: PiConfigVideoEntry)');
-    const fullPlayMethod = tvContent.slice(playStart, playStart + 7500);
+    const fullPlayMethod = tvContent.slice(playStart, playStart + 12000);
     // Count occurrences of manualVideoVisible in play()
     const visibleFalseCount = (fullPlayMethod.match(/manualVideoVisible:\s*false/g) || []).length;
     const visibleTrueCount = (fullPlayMethod.match(/manualVideoVisible:\s*true/g) || []).length;
@@ -2857,9 +2860,13 @@ describe('ADR-034 synchronized manual video reveal', () => {
   });
 
   it('emitLoopState MUST include manualVideoVisible: false', () => {
-    // After extraction, emitLoopState is public in tv-sync.service.ts
-    const emitIdx = tvContent.indexOf('emitLoopState(videoIndex: number');
-    const emitMethod = tvContent.slice(emitIdx, emitIdx + 500);
+    // After extraction, emitLoopState method is in tv-sync.service.ts
+    // (concatenated into tvContent in beforeAll). Phase 1.5b made the
+    // signature multi-line — match the method DEFINITION (whitespace-led)
+    // rather than the call sites at the top of the file.
+    const defMatch = tvContent.match(/\n\s+emitLoopState\(([\s\S]*?)\n  \}/);
+    expect(defMatch).not.toBeNull();
+    const emitMethod = defMatch?.[0] ?? '';
     expect({
       hasVisibleFalse: /manualVideoVisible:\s*false/.test(emitMethod),
     }).toEqual({
@@ -3004,17 +3011,22 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
     });
   });
 
-  it('revealPreloadedVideo MUST unmute player and NOT have 2xrAF+200ms delay', () => {
-    const revealMethod = manualContent.slice(
-      manualContent.indexOf('revealPreloadedVideo(): void'),
-      manualContent.indexOf('revealPreloadedVideo(): void') + 2000
-    );
+  it('revealPreloadedVideo MUST unmute player and NOT delay reveal opacity with rAF', () => {
+    // ADR-034 : la révélation visuelle (opacity=1) doit être instantanée.
+    // Un rAF AVANT `style.opacity = '1'` retarderait le reveal → interdit.
+    // En revanche, un rAF DANS le callback rVFC `hideAfterPaint` (APRÈS le reveal)
+    // est requis pour cacher freeze-frame/black-overlay APRÈS le paint commit du
+    // nouveau player — sans ça, fenêtre 1-frame où <video> est transparent et la
+    // boucle flashe à travers (cf. manual-video.service.ts:revealPreloadedVideo).
+    const revealStart = manualContent.indexOf('revealPreloadedVideo(): void');
+    const fullMethod = manualContent.slice(revealStart, revealStart + 2500);
+    const beforeReveal = fullMethod.slice(0, fullMethod.indexOf("opacity = '1'"));
     expect({
-      hasUnmute: /\.muted\s*=\s*false/.test(revealMethod),
-      hasNoRAFDelay: !(/requestAnimationFrame/.test(revealMethod)),
+      hasUnmute: /\.muted\s*=\s*false/.test(fullMethod),
+      hasNoRAFBeforeReveal: !(/requestAnimationFrame/.test(beforeReveal)),
     }).toEqual({
       hasUnmute: true,
-      hasNoRAFDelay: true,
+      hasNoRAFBeforeReveal: true,
     });
   });
 

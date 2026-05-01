@@ -20,6 +20,27 @@ export const streamVideo = async (req: Request, res: Response): Promise<void> =>
   // masque le vrai status (404/401/502) en MEDIA_ELEMENT_ERROR opaque.
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
+  // SPEC-V2-TVMON-01 — pour que la TV SaaS puisse capturer son <video> dans un
+  // canvas (push preview vers la Remote V2), le `<video crossorigin="anonymous">`
+  // exige des headers CORS sur la réponse vidéo. Sans ça :
+  // `SecurityError: Tainted canvases may not be exported` au `toDataURL()`.
+  // Le token JWT TTL 1h fait office d'auth — pas besoin de cookies cross-origin.
+  const requestOrigin = req.headers.origin;
+  if (typeof requestOrigin === 'string' && requestOrigin.length > 0) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   if (!token) {
     metricsService.recordVideoStreamRequest('missing_token');

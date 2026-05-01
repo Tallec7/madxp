@@ -13,6 +13,10 @@ WorkingDirectory=/home/pi/neopro
 Environment=NODE_ENV=production
 Environment=PORT=3000
 
+# Charge SITE_ID, SITE_NAME, CENTRAL_SERVER_URL etc. depuis la config club.
+# Sans cette ligne, /api/site-info retourne null → analytics sponsors sans site_id.
+EnvironmentFile=-/etc/neopro/site.conf
+
 # Commande de lancement du serveur Node.js
 ExecStart=/usr/bin/node /home/pi/neopro/server/server.js
 

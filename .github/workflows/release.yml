@@ -180,7 +180,11 @@ jobs:
   deploy-dashboard:
     name: Deploy Central Dashboard to Hostinger
     needs: release
-    if: needs.release.outputs.new_release_published == 'true'
+    # ADR-071 phase 2 : gated. Quand `vars.HOSTING == 'cloudflare'`, ce job est
+    # skippé et `deploy-frontend-cloudflare` prend le relais (Option A : un seul
+    # projet Pages pour dashboard + SaaS). Permet la bascule progressive sans
+    # patch CI (flip de variable repo/environment GitHub).
+    if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING != 'cloudflare'
     runs-on: ubuntu-latest
     # J4 — gate prod deploy via GitHub Environment "production" (required reviewers).
     # Staging dashboard est auto-déployé par Cloudflare Pages, pas concerné par ce job.
@@ -229,20 +233,23 @@ jobs:
           set -euo pipefail
           test -s dist/central-dashboard/browser/index.html
           test -s dist/central-dashboard/browser/.htaccess
+          # Dashboard payload = dotfiles + ~50 fichiers Angular (petit volume).
+          # Les optims de PR #625 (parallel=5, sync-mode off, --use-pget-n=4,
+          # --only-newer) ont été calibrées pour le SaaS (gros volume) et
+          # ralentissaient le dashboard (<1min → ~11min). Revert local au
+          # tune pré-#625 — voir comment dans le job SaaS plus bas.
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
-            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set net:connection-limit 5;
-            set mirror:parallel-transfer-count 5;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
+            mirror --reverse --delete --verbose \
                    --exclude-glob saas/ --exclude-glob saas \
                    --exclude-glob public_html/ --exclude-glob public_html \
                    --exclude-glob neopro-video/ --exclude-glob neopro-video \
@@ -287,7 +294,8 @@ jobs:
   deploy-saas:
     name: Deploy SaaS App to Hostinger
     needs: [release, deploy-dashboard]
-    if: needs.release.outputs.new_release_published == 'true'
+    # ADR-071 phase 2 : gated avec `deploy-dashboard` (cf. commentaire associé).
+    if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING != 'cloudflare'
     runs-on: ubuntu-latest
     # J4 — même gate que deploy-dashboard ; production = approbation manuelle.
     environment: divine-freedom / production
@@ -337,20 +345,26 @@ jobs:
           test -s dist/raspberry/browser/.htaccess
           # `mirror --reverse` auto-creates the remote target dir, so the
           # explicit MKD /saas step is no longer needed.
+          # Tune aligné sur deploy-dashboard (pre-#625), depuis #668. Les optims
+          # PR #625 (parallel=5, sync-mode off, --use-pget-n=4, --only-newer)
+          # avaient été conservées ici en pariant sur "gros volume", mais le run
+          # release v3.262.0 (PR #675, SCSS split 6 layouts) a régressé à 11min+
+          # — symptôme/magnitude identiques à la régression dashboard reverted #668.
+          # Cause : tous les chunks Angular ont un hash frais à chaque release →
+          # --only-newer ne sert à rien, et parallel=5 + sync-mode off saturent
+          # Hostinger qui throttle silencieusement.
           lftp -c "
             set ftp:ssl-allow yes;
             set ssl:verify-certificate no;
             set ftp:passive-mode on;
             set ftp:use-mlsd on;
-            set ftp:sync-mode off;
             set net:max-retries 10;
             set net:reconnect-interval-base 10;
             set net:reconnect-interval-multiplier 1.5;
             set net:timeout 60;
-            set net:connection-limit 5;
-            set mirror:parallel-transfer-count 5;
+            set mirror:parallel-transfer-count 2;
             open -u \"$FTP_USER\",\"$FTP_PASS\" \"$FTP_SERVER\";
-            mirror --reverse --delete --verbose --only-newer --use-pget-n=4 \
+            mirror --reverse --delete --verbose \
                    dist/raspberry/browser/ /saas/;
           "
           echo "✅ SaaS mirrored to /saas/ (dotfiles included)"
@@ -408,6 +422,162 @@ jobs:
           fi
 
           echo "✅ SaaS deployment verified — SPA fallback works on deep routes"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ADR-071 phase 2 — Cloudflare Pages (prod) — Option A : projet unique
+  # ─────────────────────────────────────────────────────────────────────────
+  # Un seul projet Cloudflare Pages héberge dashboard + SaaS (SaaS en
+  # sous-dossier `/saas/`), reproduisant le layout actuel Hostinger. Avantage :
+  # 1 custom domain (`neopro-admin.kalonpartners.bzh`), URLs clients inchangées,
+  # pas de migration NS de zone (un simple CNAME chez Hostinger DNS suffit).
+  #
+  # Activé quand `vars.HOSTING == 'cloudflare'` (variable d'environnement
+  # GitHub `production`). Tant que le flag n'est pas flippé, ce job reste
+  # inactif — Hostinger continue de servir prod via les jobs lftp.
+  #
+  # Pré-requis côté GitHub :
+  #   - Repository Variable : HOSTING=cloudflare (flip pour activer)
+  #     ⚠️ DOIT être au niveau repository (Settings → Secrets and variables →
+  #     Actions → Variables), pas Environment, car les conditions `if:` sont
+  #     évaluées avant le chargement du contexte environnement (donc env-level
+  #     vars sont invisibles dans `if:`).
+  #   - Environment Secret  : CLOUDFLARE_API_TOKEN (scope: Pages:Edit)
+  #   - Environment Secret  : CLOUDFLARE_ACCOUNT_ID
+  #
+  # Pré-requis côté Cloudflare :
+  #   - Projet Pages `neopro-frontend-prod` (un seul, dashboard + SaaS combinés)
+  #   - Custom domain `neopro-admin.kalonpartners.bzh` attaché au projet
+  #     (CNAME chez Hostinger DNS → `neopro-frontend-prod.pages.dev`)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  deploy-frontend-cloudflare:
+    name: Deploy Frontend (dashboard + SaaS) to Cloudflare Pages
+    needs: release
+    if: needs.release.outputs.new_release_published == 'true' && vars.HOSTING == 'cloudflare'
+    runs-on: ubuntu-latest
+    environment: divine-freedom / production
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install central-dashboard dependencies
+        run: npm install --no-audit --no-fund
+        working-directory: central-dashboard
+
+      - name: Inject version into SaaS app
+        run: |
+          VERSION="v${{ needs.release.outputs.new_release_version }}"
+          echo "// Auto-generated at build time by CI pipeline.
+          export const APP_VERSION = '${VERSION}';" > raspberry/src/app/version.ts
+          echo "Injected version: ${VERSION}"
+
+      - name: Build dashboard + SaaS combined (prod)
+        # `build:cloudflare:prod` = build:central + build:saas + copie SaaS
+        # dans `dist/central-dashboard/browser/saas/`. Output unifié = ce que
+        # Cloudflare Pages servira sur `neopro-admin.kalonpartners.bzh`.
+        run: npm run build:cloudflare:prod
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -s dist/central-dashboard/browser/index.html
+          test -s dist/central-dashboard/browser/_redirects
+          test -s dist/central-dashboard/browser/_headers
+          test -s dist/central-dashboard/browser/saas/index.html
+          # Pages Function catch-all sous /saas/* (ADR-071 phase 3) — gère les
+          # routes SaaS non couvertes par les stubs statiques.
+          test -s 'dist/central-dashboard/functions/saas/[[catchall]].js'
+          # Pages Function catch-all racine — bloque le fallback HTML pour les
+          # assets 404 (sinon `_headers *.js → immutable` empoisonne le cache
+          # 1 an avec du HTML servi pour les chunks préchargés depuis une deep
+          # route, cf. ADR-071 phase 3 suite).
+          test -s 'dist/central-dashboard/functions/[[catchall]].js'
+          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware root + saas + _redirects/_headers)"
+
+      - name: Deploy to Cloudflare Pages
+        # workingDirectory : wrangler cherche `functions/` à CWD. En cd-ant
+        # dans `dist/central-dashboard`, il auto-détecte le sibling `functions/`
+        # (cf. ADR-071 phase 3 : middleware [[catchall]] sous /saas/*).
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: dist/central-dashboard
+          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main
+
+      - name: Verify deployment
+        run: |
+          set -euo pipefail
+          # 30s pour absorber le cold-start TLS cert + cache edge sur le
+          # premier déploiement (15s s'était révélé insuffisant en pratique
+          # lors de la bascule prod ADR-071 phase 3).
+          echo "Waiting 30s for CDN propagation + TLS cold-start..."
+          sleep 30
+
+          probe() {
+            local url="$1" attempt code
+            for attempt in 1 2 3 4 5; do
+              # -sL (GET) au lieu de -sIL (HEAD+Location) car Cloudflare retourne
+              # 308 sur HEAD pour `/saas/<route>` (auto-redirect vers slash final
+              # à cause des route stubs ADR-071), et `-IL` ne suit pas toujours
+              # le redirect en CI selon la version curl du runner. `-sL -o /dev/null`
+              # fait un GET complet et `%{http_code}` reporte le statut FINAL après
+              # follow.
+              code=$(curl -sL -o /dev/null -w "%{http_code}" \
+                -A "neopro-ci-verify/1.0" "$url" 2>/dev/null)
+              if [ "$code" != "429" ] && [ "$code" != "000" ]; then
+                echo "$code"; return 0
+              fi
+              sleep $((5 * (2 ** (attempt - 1))))
+            done
+            echo "$code"
+          }
+
+          BASE="https://neopro-admin.kalonpartners.bzh"
+          ROOT=$(probe "$BASE/")
+          DASH_DEEP=$(probe "$BASE/sites/ci-probe")
+          SAAS_ROOT=$(probe "$BASE/saas/")
+          SAAS_REMOTE=$(probe "$BASE/saas/remote?site=ci-probe")
+          SAAS_TV=$(probe "$BASE/saas/tv?site=ci-probe")
+          echo "root=$ROOT dash-deep=$DASH_DEEP saas-root=$SAAS_ROOT saas-remote=$SAAS_REMOTE saas-tv=$SAAS_TV"
+
+          if [ "$ROOT" != "200" ] || [ "$DASH_DEEP" != "200" ] \
+             || [ "$SAAS_ROOT" != "200" ] || [ "$SAAS_REMOTE" != "200" ] || [ "$SAAS_TV" != "200" ]; then
+            echo "::error::Cloudflare Pages deploy verify failed (HTTP status)"
+            exit 1
+          fi
+
+          # Content-aware verify : sans ça, un 200 qui sert le mauvais HTML
+          # passe silencieusement (cf. incident bascule prod 2026-04-29).
+          # /saas/<route> doit servir le HTML SaaS (`<base href="/saas/">`),
+          # PAS le dashboard (`<base href="/">`).
+          assert_saas_html() {
+            local url="$1"
+            local body
+            body=$(curl -sL -A "neopro-ci-verify/1.0" "$url")
+            if ! echo "$body" | grep -q 'base href="/saas/"'; then
+              echo "::error::$url ne sert PAS le HTML SaaS (base href != /saas/) — routing CF cassé"
+              echo "$body" | grep -oE '<title>[^<]*</title>|<base[^>]*>' | head -3 || true
+              exit 1
+            fi
+          }
+          assert_saas_html "$BASE/saas/"
+          assert_saas_html "$BASE/saas/remote?site=ci-probe"
+          assert_saas_html "$BASE/saas/tv?site=ci-probe"
+          assert_saas_html "$BASE/saas/login"
+          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback OK (status + content)"
 
   deploy-railway:
     name: Deploy Central Server to Railway

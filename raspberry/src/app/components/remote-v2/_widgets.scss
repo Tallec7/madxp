@@ -1,0 +1,234 @@
+@use "tokens";
+
+@use "sass:color";
+
+// ---- Widgets compacts -----------------------------------------------------
+.r2-widgets {
+  margin: 10px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.r2-widget {
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  // AUDIT-V2-LAYOUT-01 : empêche le widget de dépasser le viewport quand
+  // le contenu interne (badges + score-row + score-quick) est plus large
+  // que la cellule disponible (régression visible Mobile B avant fix grid).
+  min-width: 0;
+  overflow: hidden;
+}
+
+.r2-widget-score {
+  background: tokens.$accent-bg;
+  border: 1px solid tokens.$accent;
+
+  .r2-widget-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: tokens.$accent-deep;
+    text-transform: uppercase;
+    width: 48px;
+  }
+}
+
+.r2-widget-chrono {
+  background: tokens.$warn-bg;
+  border: 1px solid tokens.$warn;
+
+  .r2-widget-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: tokens.$warn;
+    text-transform: uppercase;
+    width: 48px;
+  }
+}
+
+.r2-score-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.r2-team-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.r2-score-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.r2-score-quick {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+
+  .r2-score-quick-btn {
+    padding: 5px 8px;
+    border-radius: 6px;
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(1.1);
+    }
+  }
+}
+
+.r2-chrono-toggle {
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: none;
+  background: tokens.$warn;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: color.adjust(tokens.$warn, $lightness: -5%, $space: hsl);
+  }
+}
+
+.r2-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  .r2-team-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: tokens.$text-muted;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+}
+
+.r2-score-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: tokens.$accent;
+    color: #fff;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+      background: color.adjust(tokens.$accent, $lightness: -5%, $space: hsl);
+    }
+  }
+
+  .r2-score-val {
+    font-size: 18px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: tokens.$text;
+    line-height: 1;
+    min-width: 22px;
+    text-align: center;
+  }
+}
+
+.r2-score-sep {
+  color: tokens.$text-muted;
+  font-weight: 700;
+  margin: 0 2px;
+}
+
+.r2-reset-btn {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: tokens.$accent-deep;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(tokens.$accent, 0.15);
+  }
+}
+
+.r2-chrono-display {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: tokens.$text;
+  line-height: 1;
+}
+
+.r2-chrono-btns {
+  display: flex;
+  gap: 4px;
+
+  button {
+    padding: 5px 9px;
+    border-radius: 6px;
+    border: none;
+    background: tokens.$warn;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+
+    &:hover {
+      background: color.adjust(tokens.$warn, $lightness: -5%, $space: hsl);
+    }
+  }
+}

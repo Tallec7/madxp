@@ -37,6 +37,19 @@ export class ManualVideoService {
   private _lastPlayTimestamp = 0;
   private static readonly PLAY_DEBOUNCE_MS = 150;
 
+  /**
+   * ADR-103 Phase 0 — only `contentType: 'video'` entries are playable in <video>.
+   * Synthetic filenames `web_page-<ts>` / `livestream-<ts>` (legacy dashboard entries
+   * that lost contentType) are also refused. web_page / livestream must route through
+   * WebContentPlayer (Phase 1), not this service.
+   */
+  static isPlayableVideoEntry(video: PiConfigVideoEntry | null | undefined): boolean {
+    if (!video?.path) return false;
+    if ((video.contentType ?? 'video') !== 'video') return false;
+    if (/(?:^|\/)(?:web_page|livestream)-\d+$/.test(String(video.path))) return false;
+    return true;
+  }
+
   // ADR-034: Preloaded manual video state for synchronized reveal
   private _preloadedManualVideo: PiConfigVideoEntry | null = null;
   private _preloadedManualPlayer: HTMLVideoElement | null = null;
@@ -73,6 +86,12 @@ export class ManualVideoService {
    * Joue une vidéo manuelle (master path).
    */
   play(video: PiConfigVideoEntry): void {
+    if (!ManualVideoService.isPlayableVideoEntry(video)) {
+      // ADR-103 Phase 0 — refuse web_page / livestream in <video>.
+      console.warn('[ManualVideo] Refused non-video entry — ADR-103 Phase 0 guard', { path: video?.path, contentType: video?.contentType });
+      return;
+    }
+
     const now = Date.now();
     if (now - this._lastPlayTimestamp < ManualVideoService.PLAY_DEBOUNCE_MS) {
       console.log('tv player : play manual video debounced (too rapid)', video.path);
@@ -120,20 +139,18 @@ export class ManualVideoService {
     const activeManualPlayer = this.doubleBufferService.getActiveManualPlayer();
     const isManualToManual = activeManualPlayer.style.opacity === '1' && !activeManualPlayer.paused;
 
-    // ETAPE 2: En manuel→manuel, l'ancien player reste visible derrière — pas de freeze-frame
-    // (sinon on capture la boucle via le frame périodique → flash boucle pendant ~500ms).
-    // En boucle→manuel, capturer le freeze-frame depuis le player manuel actif (qui est vide/pausé,
-    // donc isManualMode=true force une capture live depuis le player de boucle via fallback).
-    if (!isManualToManual) {
-      const freezeOk = this.doubleBufferService.captureAndShowFreezeFrame(false);
-      if (!freezeOk) {
-        this.doubleBufferService.showBlackOverlay();
-      }
-    }
+    // ETAPE 2: Préparer la transition smooth — capture freeze-frame + black-overlay
+    // safety net + libération HW du décodeur précédent (Pi 5 SharedImage saturation).
+    // Voir SPEC docs/specs/features/manual-video-transitions.spec.md pour les
+    // détails (cas d'usage NLF "présentation joueurs", invariants, cas d'edge).
+    this.doubleBufferService.prepareSmoothManualTransition(activeManualPlayer, isManualToManual);
 
-    // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement
+    // ETAPE 3: Garder le player manuel INVISIBLE pendant le chargement.
+    // z-index 11 → garantit que le nouveau player passe AU-DESSUS de l'ancien
+    // après le reveal (sans ça, ordre DOM décide → écran noir si l'ancien est
+    // un manualPlayerB devant un manualPlayerA nouveau).
     targetPlayer.style.opacity = '0';
-    targetPlayer.style.zIndex = '10';
+    targetPlayer.style.zIndex = '11';
 
     // ETAPE 4: Configurer la source
     targetPlayer.src = video.path;
@@ -153,8 +170,11 @@ export class ManualVideoService {
         requestAnimationFrame(() => {
           targetPlayer.style.opacity = '1';
           this.doubleBufferService.swapActiveManualPlayer();
-          this.doubleBufferService.hideFreezeFrame();
-          this.doubleBufferService.hideBlackOverlay();
+
+          // Cache freeze-frame + black-overlay APRÈS le 1er paint commit du
+          // nouveau player (rVFC + 1 rAF chaîné). Voir SPEC manual-video-transitions
+          // pour le détail timing (rVFC fire avant paint final → rAF nécessaire).
+          this.doubleBufferService.hideMaskingLayersAfterPaint(targetPlayer);
 
           // Tracker (desactive pour les slaves)
           if (!this.callbacks?.getIsSlaveMode()) {
@@ -284,8 +304,14 @@ export class ManualVideoService {
     // ADR-034 fix: If replacing an already-visible manual video, capture freeze-frame
     const isReplacingManual = targetPlayer.style.opacity === '1' && !targetPlayer.paused;
     if (isReplacingManual) {
-      console.log('[TV] Slave: manual->manual transition, capturing freeze-frame');
-      this.doubleBufferService.captureAndShowFreezeFrame();
+      console.log('[TV] Slave: manual->manual transition, capturing freeze-frame + black overlay');
+      // Passer isManualMode=true → force la capture LIVE depuis le player manuel actif.
+      // Sans ce flag, on utiliserait le frame pré-capturé de la boucle → flash boucle visible.
+      this.doubleBufferService.captureAndShowFreezeFrame(true);
+      // Black overlay (z=5) en filet de sécurité sous le freeze-frame (z=20). Couvre
+      // la fenêtre de 1-2 frames entre hideFreezeFrame et le 1er paint de la nouvelle
+      // vidéo (Chromium ne render pas le `background:#000` de <video> avant 1ère frame).
+      this.doubleBufferService.showBlackOverlay();
     }
 
     // Player invisible + muted during preload
@@ -410,7 +436,9 @@ export class ManualVideoService {
       });
     }
 
-    this.doubleBufferService.hideFreezeFrame();
+    // Cache freeze-frame + black-overlay APRÈS le 1er paint commit du player.
+    // Voir SPEC manual-video-transitions § "Architecture du masquage".
+    this.doubleBufferService.hideMaskingLayersAfterPaint(player);
 
     this.callbacks?.emitPlayerState({
       currentVideo: PlayerStateService.filenameFromPath(video.path),

@@ -44,12 +44,19 @@ export const getVideos = async (req: AuthRequest, res: Response) => {
       pagination.offset
     );
 
-    // Ajouter le titre et transformer l'URL en URL publique accessible
-    const videos = rows.map(video => ({
-      ...video,
-      title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
-      url: video.url ? getVideoUrl(video.url as string) : null
-    }));
+    // Ajouter le titre et transformer l'URL en URL publique accessible.
+    // dup_count vient de findAllPaginated (window function) — on l'expose
+    // tel quel + un boolean dérivé `is_duplicate` pour simplifier le front.
+    const videos = rows.map(video => {
+      const dupCount = Number(video.dup_count ?? 1);
+      return {
+        ...video,
+        title: (video.metadata as { title?: string })?.title || video.original_name || video.filename,
+        url: video.url ? getVideoUrl(video.url as string) : null,
+        dup_count: dupCount,
+        is_duplicate: dupCount > 1,
+      };
+    });
 
     res.json(formatPaginatedResponse(videos, total, pagination));
   } catch (error) {
@@ -701,7 +708,13 @@ export const unlinkVideoFromSite = async (req: AuthRequest, res: Response) => {
 
     const removed = await siteVideoRepository.unlink(siteId, id);
     if (!removed) {
-      return res.status(404).json({ error: 'Lien vidéo-site non trouvé' });
+      // Idempotence : la pivot site_videos peut diverger du JSONB mirror /
+      // config_profiles (cf. cascade PR #618). Le bouton "Retirer du site"
+      // est exposé sur SaaS pour toute vidéo cloud visible — y compris
+      // celles jamais liées via site_videos. L'état désiré ("non liée") est
+      // déjà atteint, on renvoie 200 plutôt qu'un 404 utilisateur.
+      logger.info('Video unlink no-op (already not linked)', { videoId: id, siteId });
+      return res.json({ message: 'Vidéo déjà absente du site', alreadyUnlinked: true });
     }
 
     logger.info('Video unlinked from site:', { videoId: id, siteId });
@@ -752,9 +765,17 @@ export const replaceVideo = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo introuvable' });
     }
 
-    // Garde la storage_path et le filename existants (overwrite à la même URL FTP).
-    const storagePath = String(existing.storage_path);
+    // `findVideoById` SELECT alias `storage_path AS url` (cf. video.repository.ts).
+    // Lire `existing.storage_path` retourne donc undefined → bug FTP : le upload
+    // écrivait `<chroot>/undefined` à chaque replace, le vrai storage_path n'était
+    // jamais overwrite (cf. logs Railway 2026-04-27, 12 vidéos zombies).
+    const storagePath = String(existing.url ?? '');
     const filename = String(existing.filename);
+    if (!storagePath) {
+      cleanupTempFile(tempFilePath!);
+      logger.error('Replace video: missing storage_path on existing row', { videoId: id });
+      return res.status(500).json({ error: 'Vidéo corrompue (storage_path manquant)' });
+    }
     const checksum = tempFilePath
       ? await calculateChecksumFromFile(tempFilePath)
       : '';

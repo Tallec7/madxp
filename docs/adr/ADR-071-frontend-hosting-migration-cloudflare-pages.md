@@ -1,7 +1,7 @@
 # ADR-071: Migration du hosting frontend (dashboard + SaaS) vers Cloudflare Pages
 
-**Date** : 2026-04-19 (mis à jour 2026-04-23)
-**Statut** : Accepté pour staging (J2 ADR-091) — Proposé pour bascule prod (post-validation)
+**Date** : 2026-04-19 (mis à jour 2026-04-29)
+**Statut** : Accepté — phase 1 (staging) livrée J2 ADR-091, phase 2 (scaffolding prod) livrée 2026-04-29, bascule DNS planifiée post-validation
 **Format** : Léger
 
 ---
@@ -63,3 +63,65 @@ Conserver le DNS `neopro-admin.kalonpartners.bzh` via CNAME vers Pages, bascule 
 - Nouveau fichier `public/_redirects` (ou `dist/_redirects` injecté en build) avec les règles SPA.
 - Nouveau fichier `public/_headers` pour CSP, HSTS, cache-control versionné.
 - Documentation : `docs/technical/ARCHITECTURE.md` — section hosting frontend à mettre à jour.
+
+## Mise en œuvre
+
+### Phase 1 — Staging (✅ livrée — J2 ADR-091)
+
+- Projet Cloudflare Pages `neopro-dashboard` actif sur `neopro-exg.pages.dev`
+- `_redirects` + `_headers` versionnés dans `central-dashboard/cloudflare/`
+- Preview deployments PR activés
+- E2E nightly (`.github/workflows/e2e-staging.yml`) ciblent staging Cloudflare
+
+### Phase 2 — Scaffolding prod (✅ livrée 2026-04-29 — **Option A : projet unique**)
+
+Décision Option A : un seul projet Cloudflare Pages héberge dashboard + SaaS,
+SaaS en sous-dossier `/saas/` (reproduit le layout Hostinger actuel). Avantages :
+
+- 1 seul custom domain `neopro-admin.kalonpartners.bzh` (URLs clients inchangées).
+- Pas de migration NS de la zone `kalonpartners.bzh` (qui héberge aussi le site
+  WordPress Hostinger + le FTP vidéos — hors scope, ne bouge pas). Un simple
+  CNAME chez Hostinger DNS suffit pour le sous-domaine.
+- Moins de secrets, moins de jobs CI, moins de surfaces de panne.
+
+Livré :
+
+- `raspberry/cloudflare/_redirects` + `_headers` créés (utilisés en standalone
+  pour les PR previews du SaaS seul ; le `_redirects` du dashboard couvre
+  déjà `/saas/* → /saas/index.html`).
+- `angular.json` : configurations `saas` + `saas-staging` recopient
+  `cloudflare/_*` dans le build output.
+- `package.json` : nouveau script `build:cloudflare:prod` (build dashboard prod
+  + SaaS prod + copie SaaS dans `dist/central-dashboard/browser/saas/`).
+- `.github/workflows/release.yml` : un nouveau job `deploy-frontend-cloudflare`
+  (action `cloudflare/wrangler-action@v3`, `pages deploy`).
+- **Feature flag** : `vars.HOSTING` (GitHub Environment `production`).
+  - `HOSTING != 'cloudflare'` (défaut) → jobs Hostinger lftp actifs (régime actuel).
+  - `HOSTING == 'cloudflare'` → job Cloudflare actif, jobs Hostinger skippés.
+  - Permet de basculer/rollback en flippant la variable, sans patch CI.
+
+### Phase 3 — Bascule DNS prod (à planifier)
+
+Pré-requis humains :
+
+1. Création projet Cloudflare Pages `neopro-frontend-prod` (un seul).
+2. Account ID + API Token (scope Pages:Edit) côté Cloudflare.
+3. Secrets GitHub `production` : `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`.
+4. Custom domain `neopro-admin.kalonpartners.bzh` attaché au projet sur Cloudflare.
+5. **Modifier le DNS chez Hostinger** : remplacer le record actuel de
+   `neopro-admin` par un `CNAME` vers `neopro-frontend-prod.pages.dev`. La zone
+   `kalonpartners.bzh` reste chez Hostinger (WordPress + FTP vidéos intacts).
+6. Variable GitHub **Repository** (pas Environment) : `HOSTING=cloudflare`.
+   ⚠️ Doit être au niveau **repository** (Settings → Secrets and variables →
+   Actions → Variables) car les conditions `if:` du workflow sont évaluées
+   AVANT le chargement du contexte environnement. Une variable au niveau
+   Environment serait ignorée par les `if:`. Active la bascule à la
+   prochaine release.
+7. Soak window 7 jours minimum avant phase 4.
+
+### Phase 4 — Décommission Hostinger frontend (post-soak)
+
+Hors scope de cette PR (sera couvert par un commit séparé une fois la phase 3 stable) :
+
+- Suppression `central-dashboard/.htaccess`, `raspberry/src/saas-htaccess` et entrées `assets` associées dans `angular.json`.
+- Suppression jobs `deploy-dashboard` + `deploy-saas` (lftp) et secrets `HOSTINGER_FTP_*`.

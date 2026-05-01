@@ -41,6 +41,22 @@ export interface LoopVideo {
             height?: number | null;
         };
     };
+    /**
+     * Type de contenu (ADR-089 / ADR-103). Defaut 'video' (MP4).
+     * Phase 0 : seul 'video' est jouable dans la boucle ; 'web_page' et 'livestream'
+     * sont filtrés défensivement par video-playback.service.ts en attendant
+     * Phase 2 (boucles avec entrées web/livestream).
+     */
+    contentType?: 'video' | 'web_page' | 'livestream';
+    /** URL externe pour web_page / livestream (ADR-089). Ignorée si contentType='video'. */
+    externalUrl?: string;
+    /**
+     * Durée d'affichage en secondes pour web_page / livestream (ADR-103 Phase 3).
+     * Obligatoire pour les entrées web/live placées dans la boucle MP4 — le
+     * runtime TV avance au step suivant après `durationSeconds * 1000` ms.
+     * Ignorée si contentType='video' (la durée est intrinsèque au fichier MP4).
+     */
+    durationSeconds?: number;
 }
 
 /**

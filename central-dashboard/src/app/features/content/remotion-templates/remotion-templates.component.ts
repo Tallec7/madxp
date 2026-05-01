@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -36,6 +37,7 @@ import { isV2Template } from './remotion-templates.types';
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     TranslateModule,
     TemplateGridComponent,
     TemplatePropsFormComponent,

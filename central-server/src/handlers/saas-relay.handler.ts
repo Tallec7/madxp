@@ -235,6 +235,14 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
     socket.emit('displays-changed', { displays });
   });
 
+  // ADR-106 — preview-slave heartbeat tick (master → preview only).
+  // Relayed to room without persistence; only preview-slaves consume it.
+  socket.on('tv-preview-tick', (data: Record<string, unknown>) => {
+    const instance = state.tvInstances.get(socket.id);
+    if (!instance || instance.role !== 'master') return;
+    socket.to(siteId).emit('tv-preview-tick', data);
+  });
+
   // TV loop update (master → slaves)
   socket.on('tv-loop-update', (data: Record<string, unknown>) => {
     const instance = state.tvInstances.get(socket.id);
@@ -288,6 +296,35 @@ export function registerSaasRelay(io: SocketIOServer | null, socket: Socket, sit
         metricsService.recordSaasStatesCount(saasStates.size);
         logger.info('SaaS state released — no remaining clients', { siteId });
       }
+    }
+  });
+}
+
+/**
+ * ADR-106 — preview-slave handler attached on EVERY socket connection
+ * (not gated behind saas-register, because the preview iframe explicitly
+ * skips saas-register to avoid being counted in getSaasClientCount).
+ *
+ * Payload: `{ siteId }`. The handler does `socket.join(siteId)` so room
+ * broadcasts of `tv-loop-state` and `tv-preview-tick` reach the preview,
+ * then emits the current loopState immediately to avoid a black frame.
+ *
+ * Does NOT register the socket as a TV instance (no master/slave election),
+ * does NOT broadcast displays-changed, does NOT touch getSaasClientCount.
+ */
+export function registerPreviewSlaveOnSocket(io: SocketIOServer | null, socket: Socket): void {
+  socket.on('tv-preview-register', (data: Record<string, unknown>) => {
+    const siteId = (data?.siteId as string) || '';
+    if (!siteId) {
+      logger.warn('tv-preview-register missing siteId, ignoring', { socketId: socket.id });
+      return;
+    }
+    socket.join(siteId);
+    logger.info('Preview-slave joined room', { siteId, socketId: socket.id });
+
+    const state = saasStates.get(siteId);
+    if (state?.loopState) {
+      socket.emit('tv-loop-state', state.loopState);
     }
   });
 }

@@ -147,6 +147,13 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
+### Preview-Slave Sync (ADR-106)
+
+- Déplacer `registerPreviewSlaveOnSocket(io, socket)` depuis `central-server/src/services/socket.service.ts handleConnection()` vers `registerSaasRelay()` (la preview iframe skip `saas-register` pour préserver `getSaasClientCount` — si le listener `tv-preview-register` est gated derrière saas-register, il n'est jamais attaché au socket de la preview → boucle locale par défaut pour toujours, régression #759).
+- Retirer le payload `{ siteId }` de l'émission client `tv-preview-register` dans `tv.component.ts initPreviewSlave()` (sans lui le serveur central ne peut pas faire `socket.join(siteId)` → 0 broadcast reçu).
+- Retirer la fonction exportée `registerPreviewSlaveOnSocket` de `central-server/src/handlers/saas-relay.handler.ts` (point d'extension public utilisé par socket.service.ts).
+- Retirer le handler `tv-preview-tick` de `raspberry/server/socket/handlers.js` ou de `central-server/src/handlers/saas-relay.handler.ts` (heartbeat 1Hz master→preview pour drift correction continue, ADR-106 PR #758).
+
 ### Master-Slave Sync
 
 - Synchroniser le slave dual-display par `videoPath` dans `handleMasterLoopState` (toujours sync par `videoIndex`)
@@ -161,16 +168,18 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ### Manual Video Transitions
 
-- Ne pas utiliser `getActiveManualPlayer()` pour les DEUX vidéos dans une transition manuel→manuel (utiliser `getInactiveManualPlayer()` pour la nouvelle et garder l'ancien visible)
+- Ne pas utiliser `getActiveManualPlayer()` pour la NOUVELLE vidéo dans une transition manuel→manuel (utiliser `getInactiveManualPlayer()` — le player actif sert uniquement à capturer le freeze-frame du joueur précédent puis à libérer son décodeur HW)
 - Ne pas appeler `showBlackOverlay()` systématiquement dans `play()` (uniquement en fallback si `captureAndShowFreezeFrame()` échoue)
-- Ne pas supprimer le debounce 500ms dans `play()` de `manual-video.service.ts` (protège le décodeur software contre le spam de commandes)
+- Ne pas supprimer le debounce dans `play()` de `manual-video.service.ts` (protège le décodeur software contre le spam de commandes)
 - Ne pas utiliser le frame pré-capturé (boucle) dans `captureAndShowFreezeFrame(isManualMode=true)` (forcer capture live depuis le player manuel)
 - Ne pas oublier `captureAndShowFreezeFrame()` dans `triggerSwitch()` de `video-playback.service.ts` (le early switch path n'a pas de freeze-frame sinon)
+- Ne pas appeler `captureAndShowFreezeFrame(false)` ou `captureAndShowFreezeFrame()` (sans argument) dans le `play()` de `manual-video.service.ts` (toujours passer le flag booléen `isManualToManual` pour que la capture soit LIVE depuis le player manuel actif en transition manuel→manuel)
+- Ne pas omettre `activeManualPlayer.removeAttribute('src') + load()` en transition manuel→manuel (libère le SharedImage backing du décodeur HW Pi 5 — sans ça, le compositeur Chromium ne peut pas allouer de slot pour le nouveau décodeur, la nouvelle vidéo charge mais ne s'affiche pas → bug click-twice cas d'usage NLF "présentation joueurs". Symptôme journalctl : `SharedImageBackingFactory ... format: (Y_UV, 420, 8unorm), size: 1920x1080` — smoke test enforced)
 
 ### Preload & Reveal (ADR-034)
 
 - Afficher freeze-frame ou overlay noir dans `preloadManualVideo()` pour la première vidéo manuelle depuis la boucle (preload silencieux — opacity 0 + muted)
-- Ajouter un délai 2×rAF + 200ms dans `revealPreloadedVideo()` (la révélation du slave doit être instantanée)
+- Ajouter un délai rAF AVANT `style.opacity = '1'` dans `revealPreloadedVideo()` (la révélation visuelle du slave doit être instantanée). En revanche, un rAF DANS le callback `requestVideoFrameCallback` (`hideAfterPaint`) APRÈS le reveal est nécessaire pour cacher freeze-frame/black-overlay APRÈS le paint commit du nouveau player — sans ça, fenêtre 1-frame où `<video>` est transparent → boucle (z=2) flashe à travers.
 - Oublier `player.muted = true` dans `preloadManualVideo()` ou `player.muted = false` dans `revealPreloadedVideo()`/`cleanupPreloadState()`
 - Oublier `captureAndShowFreezeFrame()` dans la transition manual→manual de `preloadManualVideo()`
 - Appeler `play()` directement dans le handler LocalBroadcast `onCommand()` sans vérifier `isSlaveMode` (même pattern que Socket.IO `action`)
@@ -210,12 +219,16 @@ Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
 ## Transition Manuel→Manuel (double-buffering)
 
+Cas d'usage cible : **présentation joueurs NLF** — speaker enchaîne 1 vidéo joueur par seconde, certaines durent 1s, d'autres 10s. Aucune frame de la boucle ne doit jamais être visible entre 2 vidéos joueur.
+
 Quand une vidéo manuelle est déjà visible et qu'une nouvelle est déclenchée :
 
-1. La nouvelle charge sur `getInactiveManualPlayer()` (z-index 11, invisible)
-2. L'ancien player reste visible (z-index 10) — pas de freeze-frame nécessaire
-3. `canplay` (pas `canplaythrough`) + 1×rAF → reveal immédiat
-4. Ancien player nettoyé + `swapActiveManualPlayer()`
-5. Debounce 500ms protège contre le spam
+1. **Capture freeze-frame LIVE** depuis `getActiveManualPlayer()` (frame du joueur précédent, z=20 — masque la transition)
+2. **Libère le décodeur HW Pi 5** : `activeManualPlayer.pause() + removeAttribute('src') + load()` (sans ça, bug click-twice — le compositeur Chromium ne peut pas allouer un nouveau SharedImage backing tant que l'ancien décodeur tient son slot)
+3. La nouvelle vidéo charge sur `getInactiveManualPlayer()` (z-index 10, opacity 0)
+4. `loadeddata` (premier frame décodé) → `play()` → 1×rAF → opacity=1 → `swapActiveManualPlayer()` → `hideFreezeFrame()`
+5. Debounce 150ms protège contre le spam (rapide consécutifs)
 
-Transition boucle→manuel : freeze-frame + `canplaythrough` + 2×rAF + 200ms (inchangé)
+Le user voit : frame figé du joueur précédent (canvas) → joueur suivant qui démarre. Jamais de noir, jamais de boucle, jamais de freeze pré-capturé de la boucle.
+
+Transition boucle→manuel : freeze-frame pré-capturé + `loadeddata` + 1×rAF (inchangé, pas de libération HW car le loop player utilise un autre slot).

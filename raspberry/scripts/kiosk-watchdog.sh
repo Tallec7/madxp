@@ -28,6 +28,12 @@ MAX_CRASH_COUNT=3  # Après 3 crashs rapides, attendre plus longtemps
 CRASH_WINDOW=300   # Fenêtre de 5 minutes pour compter les crashs
 LXPANEL_KILL_COUNT=0  # Compteur de kills lxpanel (monitoring)
 
+# Helper de log — défini tôt car appelé dès detect_gpu_decode_mode() / detect_pi_model()
+# (auparavant défini ligne ~370, ce qui produisait `log: command not found` au boot).
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
 # GPU Video Decode Mode (Pi 5 uniquement)
 # "hardware" = V4L2 stateless decode (économise ~20% CPU, réduit le coil whine)
 # "software" = decode software (fallback si hardware crashe)
@@ -81,8 +87,10 @@ DISPLAY_FALLBACK_REASON=""
 crash_times=()
 
 # Détecter le modèle de Raspberry Pi
+# `tr -d '\0'` retire le null byte terminant `/proc/device-tree/model`
+# (sans ça, bash log: "warning: command substitution: ignored null byte in input").
 detect_pi_model() {
-    local model=$(cat /proc/device-tree/model 2>/dev/null || echo "")
+    local model=$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || echo "")
     if [[ "$model" == *"Raspberry Pi 5"* ]]; then
         echo "pi5"
     else
@@ -365,10 +373,6 @@ hdmi_reverse_swap() {
     HDMI_SWAPPED=0
     rm -f /tmp/hdmi-swapped
     log "✓ REVERSE-SWAP: HDMI-0 est à nouveau le port principal"
-}
-
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
 # Nettoyer les anciens crashs (plus vieux que CRASH_WINDOW secondes)
@@ -871,6 +875,9 @@ start_chromium() {
         --password-store=basic
         --user-data-dir=/tmp/kiosk-primary
     )
+
+    # SPEC-V2-TVMON-01 / ADR-101 — CDP loopback for tv-preview Puppeteer attach.
+    common_flags+=(--remote-debugging-port=9222 --remote-debugging-address=127.0.0.1)
 
     # Flags spécifiques au modèle
     local gpu_flags=()
@@ -1660,7 +1667,11 @@ main() {
                [[ "$active_window" != *"Chromium"* ]] && \
                [[ "$active_window" != *"chromium"* ]] && \
                [[ "$active_window" != *"Neopro"* ]] && \
-               [[ "$active_window" != *"neopro"* ]]; then
+               [[ "$active_window" != *"neopro"* ]] && \
+               [[ "$active_window" != *"localhost"* ]] && \
+               [[ "$active_window" != *"about:blank"* ]] && \
+               [[ "$active_window" != *"/tv"* ]] && \
+               [[ "$active_window" != *"/remote"* ]]; then
                 log "🚨 FENÊTRE PARASITE détectée: '$active_window' — bloque le kiosk Chromium"
                 # Identifier et tuer le processus parasite
                 local parasite_wid

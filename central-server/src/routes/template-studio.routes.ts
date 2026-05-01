@@ -15,6 +15,10 @@ import { authenticate, requireRole } from '../middleware/auth';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import * as ctrl from '../controllers/template-studio.controller';
+import * as versioningCtrl from '../controllers/template-versioning.controller';
+import * as autoCropCtrl from '../controllers/template-photo-autocrop.controller';
+import * as optionsCtrl from '../controllers/template-options.controller';
+import { uploadPngBuffer } from '../middleware/upload';
 
 const router = Router();
 
@@ -164,6 +168,108 @@ router.delete(
   validateParams(paramSchemas.idAndSlotId),
   sensitiveRateLimit,
   ctrl.deleteImageSlot,
+);
+
+// ── Versioning v2 (ADR-108) ────────────────────────────────────────────────
+router.post(
+  '/:id/publish',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  versioningCtrl.publishTemplateVersion,
+);
+router.post(
+  '/:id/fork',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  validate(schemas.templateFork),
+  sensitiveRateLimit,
+  versioningCtrl.forkTemplateVersion,
+);
+router.get(
+  '/:id/versions',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  versioningCtrl.listTemplateV2Versions,
+);
+router.patch(
+  '/:id/default-version',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  validate(schemas.templateSetDefaultVersion),
+  sensitiveRateLimit,
+  versioningCtrl.setTemplateDefaultVersion,
+);
+
+// ── Auto-crop photo joueur (SPEC JOUEUR Q15) ───────────────────────────────
+// Pas de :id : endpoint global, l'UI uploadera la photo + bbox sera calculée
+// indépendamment du template (l'admin colle ensuite la position dans son slot).
+router.post(
+  '/photo/auto-crop',
+  ...adminOnly,
+  sensitiveRateLimit,
+  uploadPngBuffer.single('photo'),
+  autoCropCtrl.autoCropPhoto,
+);
+
+// ── Options template-level (PDF JOUEUR §démarrage) ─────────────────────────
+// Lecture publique pour tous les rôles authentifiés (l'option fait partie du
+// payload de saisie user). Écriture/suppression super_admin uniquement.
+router.get(
+  '/:id/options',
+  authenticate,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  versioningCtrl.listTemplateOptions,
+);
+router.post(
+  '/:id/options',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  validate(schemas.templateOptionCreate),
+  sensitiveRateLimit,
+  optionsCtrl.createOption,
+);
+router.patch(
+  '/:id/options/:optionId',
+  ...adminOnly,
+  validateParams(paramSchemas.idAndOptionId),
+  validate(schemas.templateOptionUpdate),
+  sensitiveRateLimit,
+  optionsCtrl.updateOption,
+);
+router.delete(
+  '/:id/options/:optionId',
+  ...adminOnly,
+  validateParams(paramSchemas.idAndOptionId),
+  sensitiveRateLimit,
+  optionsCtrl.deleteOption,
+);
+
+// ── Packshot pluggable refs (PDF JOUEUR §démarrage) ────────────────────────
+// Map (option_key, option_value) → packshot_template_id à empiler en surcouche.
+router.get(
+  '/:id/packshot-refs',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  optionsCtrl.listPackshotRefs,
+);
+router.post(
+  '/:id/packshot-refs',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  validate(schemas.templatePackshotRefCreate),
+  sensitiveRateLimit,
+  optionsCtrl.createPackshotRef,
+);
+router.delete(
+  '/:id/packshot-refs/:packshotRefId',
+  ...adminOnly,
+  validateParams(paramSchemas.idAndPackshotRefId),
+  sensitiveRateLimit,
+  optionsCtrl.deletePackshotRef,
 );
 
 export default router;

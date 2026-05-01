@@ -1,0 +1,177 @@
+// SPEC-V2-LAYOUT-01 §5C — Sidebar light (col 1) du layout régie pro PC C.
+// Composant `<app-r2-pro-sidebar>` masqué par défaut sur tous les layouts ;
+// révélé uniquement par `.layout-desktop-pro` (cf. layouts/_desktop-pro.scss).
+//
+// Cf. _tv-monitor.scss : on cible `.r2-pro-sidebar` directement (et pas
+// seulement `.r2-pro-sidebar-host`) car `:host { display: contents }` du
+// composant peut gagner le tie de spécificité contre la classe wrapper.
+
+.r2-pro-sidebar-host {
+  display: none;
+}
+
+.r2-pro-sidebar {
+  display: none;
+  flex-direction: column;
+  background: #ffffff;
+  color: #14171c;
+  border-right: 1px solid #2a313d;
+  height: 100%;
+  padding: 16px 0;
+  overflow-y: auto;
+
+  &__section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #5a6470;
+    padding: 14px 16px 6px;
+  }
+
+  &__phases {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    margin: 0 12px;
+    padding: 4px;
+    background: #f1f1ee;
+    border-radius: 8px;
+
+    button {
+      padding: 6px 8px;
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5a6470;
+      cursor: pointer;
+      transition: background 120ms, color 120ms;
+
+      &:hover {
+        color: #14171c;
+      }
+
+      &.is-active {
+        background: #14171c;
+        color: #ffffff;
+      }
+    }
+  }
+
+  &__cats {
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+  }
+
+  &__cat {
+    margin-top: 2px;
+  }
+
+  &__cat-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+    color: #14171c;
+    transition: background 120ms;
+
+    &:hover {
+      background: #f1f1ee;
+    }
+  }
+
+  &__cat.is-selected > &__cat-btn {
+    background: #e6f7ef;
+    color: #20473c;
+    font-weight: 700;
+    box-shadow: inset 2px 0 0 #51b28b;
+  }
+
+  &__cat-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__cat-count,
+  &__sub-count {
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    color: #5a6470;
+    background: #f1f1ee;
+    padding: 1px 8px;
+    border-radius: 99px;
+    flex-shrink: 0;
+  }
+
+  &__cat.is-selected > &__cat-btn &__cat-count {
+    background: rgba(81, 178, 139, 0.18);
+    color: #20473c;
+  }
+
+  &__subs {
+    list-style: none;
+    margin: 2px 0 6px 18px;
+    padding: 0;
+    border-left: 1px solid #d8d4cb;
+  }
+
+  &__sub-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    font-size: 12px;
+    color: #5a6470;
+    transition: background 120ms, color 120ms;
+
+    &:hover {
+      background: #f1f1ee;
+      color: #14171c;
+    }
+  }
+
+  &__sub.is-selected > &__sub-btn {
+    color: #14171c;
+    font-weight: 600;
+    box-shadow: inset 2px 0 0 #14171c;
+  }
+
+  &__sub-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__empty {
+    padding: 20px 16px;
+    color: #5a6470;
+    font-size: 12px;
+    font-style: italic;
+  }
+}

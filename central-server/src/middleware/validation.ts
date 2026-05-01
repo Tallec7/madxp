@@ -271,6 +271,26 @@ export const schemas = {
     label: Joi.string().max(128).allow('', null).optional(),
   }),
 
+  // ADR-102 — Remote preferences upsert (PUT /api/saas/:siteId/profiles/:profileId/preferences).
+  // Au moins un des deux objets doit être fourni. Whitelist stricte sur les
+  // clés pour éviter qu'un client malveillant pollue le JSONB avec des champs
+  // arbitraires.
+  remotePreferencesUpsert: Joi.object({
+    prefs: Joi.object({
+      haptics: Joi.boolean(),
+      highContrast: Joi.boolean(),
+      lockRotation: Joi.boolean(),
+      fontSize: Joi.string().valid('normal', 'large'),
+      layoutMobile: Joi.string().valid('classic', 'grid', 'compact'),
+      layoutDesktop: Joi.string().valid('centered', 'sidebar', 'pro'),
+    }).min(1),
+    widgets: Joi.object({
+      score: Joi.boolean(),
+      chrono: Joi.boolean(),
+      breaking: Joi.boolean(),
+    }).min(1),
+  }).or('prefs', 'widgets'),
+
   // ADR-058 — revoke all devices (super_admin endpoint, no body required)
   revokeAllDevices: Joi.object({
     reason: Joi.string().max(64).allow('', null).optional(),
@@ -832,6 +852,82 @@ export const schemas = {
     // Pas de body requis, l'ID de la version est dans l'URL.
   }),
 
+  // ADR-108 — fork une version published pour créer une draft v+1
+  templateFork: Joi.object({
+    next_version: Joi.string()
+      .pattern(/^\d+\.\d+$/)
+      .required()
+      .description("Version semver MAJOR.MINOR (ex '1.1', '2.0')"),
+  }),
+
+  // ADR-108 — set default_version (rollback ou promote)
+  templateSetDefaultVersion: Joi.object({
+    version: Joi.string()
+      .pattern(/^\d+\.\d+$/)
+      .required(),
+  }),
+
+  // ADR-109 — création d'un background couleur (super_admin upload).
+  // Le WebM lui-même passe en multipart/form-data (multer), les autres
+  // champs sont validés via ce schema.
+  templateBackgroundCreate: Joi.object({
+    name: Joi.string().min(1).max(80).required(),
+    hex_color: Joi.string()
+      .pattern(/^#[0-9A-Fa-f]{6}$/)
+      .required(),
+    is_public: Joi.boolean().optional(),
+  }),
+
+  // ADR-109 — patch background (rename, toggle public, archiver).
+  templateBackgroundUpdate: Joi.object({
+    name: Joi.string().min(1).max(80).optional(),
+    is_public: Joi.boolean().optional(),
+    archived: Joi.boolean().optional(),
+  }).min(1),
+
+  // ADR-109 — bulk grant : ajout d'un grant à plusieurs users.
+  templateBackgroundBulkGrant: Joi.object({
+    user_ids: Joi.array()
+      .items(Joi.string().uuid())
+      .min(1)
+      .max(500)
+      .required(),
+  }),
+
+  // PDF JOUEUR §démarrage — création option template-level.
+  templateOptionCreate: Joi.object({
+    key: Joi.string()
+      .pattern(/^[a-z_][a-z0-9_]{0,63}$/)
+      .required()
+      .description('Identifiant snake_case (max 64 char)'),
+    label: Joi.string().min(1).max(200).required(),
+    type: Joi.string().valid('enum', 'boolean').default('enum'),
+    values: Joi.array().items(Joi.string().max(80)).min(1).required(),
+    default_value: Joi.string().max(200).required(),
+    user_editable: Joi.boolean().default(true),
+    sort_order: Joi.number().integer().min(0).default(0),
+  }),
+
+  // PDF JOUEUR §démarrage — patch partiel option.
+  templateOptionUpdate: Joi.object({
+    label: Joi.string().min(1).max(200).optional(),
+    values: Joi.array().items(Joi.string().max(80)).min(1).optional(),
+    default_value: Joi.string().max(200).optional(),
+    user_editable: Joi.boolean().optional(),
+    sort_order: Joi.number().integer().min(0).optional(),
+  }).min(1),
+
+  // PDF JOUEUR — création packshot ref (mappe option_value → packshot_template_id).
+  templatePackshotRefCreate: Joi.object({
+    option_key: Joi.string()
+      .pattern(/^[a-z_][a-z0-9_]{0,63}$/)
+      .required(),
+    option_value: Joi.string().max(200).required(),
+    packshot_template_id: Joi.string().uuid().required(),
+    start_at_ms: Joi.number().integer().min(0).max(600000).default(0),
+    z_index_offset: Joi.number().integer().min(0).max(10000).default(100),
+  }),
+
   // ADR-074 — hotspot config
   hotspotConfigBootstrap: Joi.object({
     ssid: Joi.string().min(1).max(32).required(),
@@ -1100,6 +1196,20 @@ export const paramSchemas = {
     siteId: Joi.string().uuid().required(),
     profileId: Joi.string().uuid().required(),
     tokenId: Joi.string().uuid().required(),
+  }),
+  // ADR-109 — revoke d'un grant background pour un user
+  backgroundIdAndUserId: Joi.object({
+    backgroundId: Joi.string().uuid().required(),
+    userId: Joi.string().uuid().required(),
+  }),
+  // PDF JOUEUR §démarrage — option / packshot ref par template
+  idAndOptionId: Joi.object({
+    id: Joi.string().uuid().required(),
+    optionId: Joi.string().uuid().required(),
+  }),
+  idAndPackshotRefId: Joi.object({
+    id: Joi.string().uuid().required(),
+    packshotRefId: Joi.string().uuid().required(),
   }),
 };
 

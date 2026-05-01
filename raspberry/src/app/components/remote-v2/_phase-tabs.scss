@@ -1,0 +1,79 @@
+@use "tokens";
+
+@use "sass:color";
+
+// ---- Phase tabs (carte "Parcourir · temps affiché") -----------------------
+.r2-browse-card {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: tokens.$surface;
+  border: 1px solid tokens.$border;
+}
+
+.r2-browse-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: tokens.$text-muted;
+  margin-bottom: 6px;
+
+  > span:first-of-type {
+    flex: 1;
+  }
+}
+
+.r2-align-btn {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: tokens.$accent-bg;
+  color: tokens.$accent-deep;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  &:hover {
+    background: color.adjust(tokens.$accent-bg, $lightness: -3%, $space: hsl);
+  }
+}
+
+.r2-phase-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: tokens.$bg;
+  border-radius: 10px;
+
+  > button {
+    flex: 1;
+    padding: 7px 4px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: tokens.$text-muted;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 150ms;
+
+    &.active {
+      background: tokens.$surface;
+      color: tokens.$text;
+      font-weight: 800;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+  }
+}

@@ -47,6 +47,7 @@ import {
   registerSaasRelay as saasRelayRegister,
   getSaasConnectedDisplays as saasGetConnectedDisplays,
   sweepOrphanSaasStates as saasSweepOrphanStates,
+  registerPreviewSlaveOnSocket as saasRegisterPreviewSlaveOnSocket,
 } from '../handlers/saas-relay.handler';
 import { sendSyncProfilesToSite } from './profile-sync.service';
 import {
@@ -282,6 +283,13 @@ class SocketService {
   private async handleConnection(socket: Socket) {
     logger.info('New socket connection', { socketId: socket.id });
 
+    // ADR-106 — preview-slave handler attached to EVERY connection.
+    // The Remote V2 mini-thumb iframe (`?preview=1`) skips saas-register
+    // (so it doesn't count in getSaasClientCount) but still needs to join
+    // the siteId room to receive `tv-loop-state` broadcasts. The handler
+    // joins the room and emits the current loopState immediately.
+    saasRegisterPreviewSlaveOnSocket(this.io, socket);
+
     // Dashboard connection with JWT
     const authData = socket.handshake.auth;
     if (authData && authData.token && typeof authData.token === 'string') {
@@ -406,9 +414,18 @@ class SocketService {
         });
 
         // Phase 5 — PROP-002: emit displays-changed to the site room
-        if (data.clientType !== 'saas-remote' && this.io) {
+        if (this.io) {
           const displays = this.getSaasConnectedDisplays(data.siteId);
-          this.io.to(data.siteId).emit('displays-changed', { displays });
+          if (data.clientType === 'saas-remote') {
+            // Remote vient de se connecter : pousser l'état courant directement
+            // à ce socket. Le `request-state` buffered arrive trop tôt (avant
+            // que registerSaasRelay soit attaché) → il est silencieusement
+            // ignoré par le serveur. Ce push proactif garantit que la Remote
+            // reçoit toujours displays-changed au boot, sans race condition.
+            socket.emit('displays-changed', { displays });
+          } else {
+            this.io.to(data.siteId).emit('displays-changed', { displays });
+          }
         }
       } catch (error) {
         logger.error('SaaS register error', { error, siteId: data.siteId });

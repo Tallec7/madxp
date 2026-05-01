@@ -94,6 +94,8 @@ const mapTextField = (r: TemplateTextFieldRow): TemplateTextField => ({
   layerId: r.layer_id,
   respectAlpha: r.respect_alpha,
   animationDirection: r.animation_direction,
+  textTransform: r.text_transform ?? 'none',
+  visibleIf: r.visible_if ?? null,
 });
 
 const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
@@ -124,6 +126,7 @@ const mapImageSlot = (r: TemplateImageSlotRow): TemplateImageSlot => ({
   animationDirection: r.animation_direction,
   scaleFrom: numOrNull(r.scale_from),
   scaleTo: numOrNull(r.scale_to),
+  visibleIf: r.visible_if ?? null,
 });
 
 export interface CreateVariantInput {
@@ -180,6 +183,7 @@ export interface CreateTextFieldInput {
   layerId?: string | null;
   respectAlpha?: boolean;
   animationDirection?: AnimationDirection;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 }
 
 export type UpdateTextFieldInput = Partial<CreateTextFieldInput>;
@@ -230,11 +234,30 @@ class TemplateStudioRepository {
     const row = base.rows[0];
     if (!row || row.schema_version !== 2) return null;
 
-    const [variants, layers, textFields, imageSlots] = await Promise.all([
+    const [variants, layers, textFields, imageSlots, optionRows] = await Promise.all([
       this.listVariants(id),
       this.listLayers(id),
       this.listTextFields(id),
       this.listImageSlots(id),
+      // PDF JOUEUR §démarrage — options exposées au user. Lecture inline pour
+      // garder findV2ById en 1 round-trip Promise.all (au lieu de dépendre du
+      // templateOptionsRepository depuis ici, ce qui causerait un import circulaire).
+      query<{
+        id: string;
+        template_id: string;
+        key: string;
+        label: string;
+        type: 'enum' | 'boolean';
+        values: unknown[];
+        default_value: string;
+        user_editable: boolean;
+        sort_order: number;
+      }>(
+        `SELECT id, template_id, key, label, type, values, default_value, user_editable, sort_order
+         FROM template_options WHERE template_id = $1
+         ORDER BY sort_order ASC, created_at ASC`,
+        [id]
+      ),
     ]);
 
     return {
@@ -253,6 +276,17 @@ class TemplateStudioRepository {
       layers,
       textFields,
       imageSlots,
+      options: optionRows.rows.map((o) => ({
+        id: o.id,
+        templateId: o.template_id,
+        key: o.key,
+        label: o.label,
+        type: o.type,
+        values: Array.isArray(o.values) ? (o.values as string[]) : [],
+        defaultValue: o.default_value,
+        userEditable: o.user_editable,
+        sortOrder: o.sort_order,
+      })),
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),
     };
@@ -478,8 +512,8 @@ class TemplateStudioRepository {
           font_family, font_size, color, align, appear_at, appear_duration,
           animation, default_value, max_chars, multiline, required, sort_order,
           always_visible, scale_from, scale_to,
-          layer_id, respect_alpha, animation_direction)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+          layer_id, respect_alpha, animation_direction, text_transform)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
        RETURNING *`,
       [
         templateId,
@@ -506,6 +540,7 @@ class TemplateStudioRepository {
         layerId,
         input.respectAlpha ?? false,
         input.animationDirection ?? 'in',
+        input.textTransform ?? 'none',
       ]
     );
     return mapTextField(rows[0]);
@@ -547,6 +582,7 @@ class TemplateStudioRepository {
       layerId: 'layer_id',
       respectAlpha: 'respect_alpha',
       animationDirection: 'animation_direction',
+      textTransform: 'text_transform',
     };
     const fields: string[] = [];
     const values: unknown[] = [];

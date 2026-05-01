@@ -251,6 +251,28 @@ const stateSyncRelaysTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Web/Live Content (ADR-103 Phase 4) =============
+// Supervision du contenu web_page / livestream : combien d'entrées sont
+// jouées en boucle, combien échouent au chargement (1s timeout), et combien
+// de fois le backend bloque un save sans durationSeconds.
+
+const webContentPlaysTotal = new Counter({
+  name: 'neopro_web_content_plays_total',
+  help: 'Total web_page / livestream playbacks dispatched by the TV (ADR-103)',
+  labelNames: ['content_type', 'mode', 'outcome'],
+  // content_type: web_page | livestream
+  // mode: manual | loop  (manual = launchVideo / loop = playInLoop)
+  // outcome: started | load_failed | completed | interrupted
+  registers: [register],
+});
+
+const webLoopDurationRequiredBlocksTotal = new Counter({
+  name: 'neopro_web_loop_duration_required_blocks_total',
+  help: 'Total config saves rejected because a web_page / livestream loop entry lacked durationSeconds (ADR-103 Phase 3)',
+  labelNames: ['endpoint'], // config-profiles | config-history
+  registers: [register],
+});
+
 // ============= Métriques Match Sessions Auto-Close (ADR-093) =============
 
 const matchSessionsAutoclosedTotal = new Counter({
@@ -847,6 +869,7 @@ const hotspotPskDecryptErrorsTotal = new Counter({
 // ============= Service Class =============
 
 class MetricsService {
+
   /**
    * Middleware Express pour collecter les métriques HTTP
    */
@@ -1041,6 +1064,29 @@ class MetricsService {
   /** ADR-059: state-sync reçu du Pi et relayé vers la room dashboard */
   recordStateSyncRelay(): void {
     stateSyncRelaysTotal.inc();
+  }
+
+  /**
+   * ADR-103 Phase 4 — playback web_page / livestream observé par la TV.
+   * `mode` distingue manual (launchVideo) vs loop (playInLoop) ;
+   * `outcome` distingue started / load_failed / completed / interrupted.
+   */
+  recordWebContentPlay(
+    contentType: 'web_page' | 'livestream',
+    mode: 'manual' | 'loop',
+    outcome: 'started' | 'load_failed' | 'completed' | 'interrupted',
+  ): void {
+    webContentPlaysTotal.inc({ content_type: contentType, mode, outcome });
+  }
+
+  /**
+   * ADR-103 Phase 4 — save config refusé (HTTP 400 WEB_LOOP_DURATION_REQUIRED)
+   * parce qu'une entrée web/live dans sponsors[] / loopVideos[] manquait sa
+   * `durationSeconds`. Surface les utilisateurs qui n'ont pas vu / ignoré le
+   * prompt Phase 3 v2 — un pic indique un parcours UX cassé.
+   */
+  recordWebLoopDurationRequiredBlock(endpoint: 'config-profiles' | 'config-history'): void {
+    webLoopDurationRequiredBlocksTotal.inc({ endpoint });
   }
 
   /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */

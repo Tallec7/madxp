@@ -19,6 +19,12 @@ const repoRoot = path.resolve(__dirname, '../../../../');
 const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 const exists = (rel: string) => fs.existsSync(path.join(repoRoot, rel));
 
+// Strip JS/TS line and block comments. Used when a smoke test asserts the
+// presence/absence of a code pattern that may also appear in surrounding
+// commentary (justification of why X must NOT be done, etc.).
+const stripComments = (s: string): string =>
+  s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
 describe('Smoke — ADR-092 Remote V2 feature flag', () => {
   // ------------ central-server : expose featureOverrides ------------
 
@@ -43,16 +49,22 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
 
   // ------------ raspberry : dispatcher component ------------
 
-  it('RemoteHostComponent dispatcher exists and implements 4-step resolution', () => {
+  it('RemoteHostComponent dispatcher exists and implements 3-step resolution', () => {
     const host = 'raspberry/src/app/components/remote/remote-host.component.ts';
     expect(exists(host)).toBe(true);
     const content = read(host);
     // Query param override
     expect(/v2=/.test(content)).toBe(true);
-    // localStorage key
-    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
-    // Cloud feature flag lookup
+    // Pi configuration override (route resolver) before SaaS fallback
+    expect(/featureOverrides/.test(content)).toBe(true);
+    // Cloud feature flag lookup (SaaS)
     expect(/isFeatureEnabled\(\s*['"]remote_v2['"]\s*\)/.test(content)).toBe(true);
+    // Legacy key référencée UNIQUEMENT pour cleanup (removeItem) — jamais écrite.
+    // Multi-tenant SaaS hotfix : `?v2=…` ne doit pas persister en localStorage
+    // (sinon il fuite à tous les sites partageant le domaine).
+    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
+    expect(/localStorage\.setItem\([^)]*v2_override/i.test(content)).toBe(false);
+    expect(/localStorage\.removeItem\(/.test(content)).toBe(true);
   });
 
   it('app.routes.ts uses RemoteHostComponent for /remote (not RemoteComponent directly)', () => {
@@ -66,12 +78,52 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     const v2 = 'raspberry/src/app/components/remote-v2/remote-v2.component.ts';
     expect(exists(v2)).toBe(true);
     const content = read(v2);
-    // Rollback must set override to '0' and reload (guarantees < 10s recovery).
-    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
+    // Rollback navigue vers /remote?v2=0 (override session-only, plus de localStorage).
     expect(/backToV1\s*\(/.test(content)).toBe(true);
+    expect(/queryParams:\s*\{\s*v2:\s*['"]0['"]/.test(content)).toBe(true);
+    // Doit pas réécrire la clé legacy localStorage (multi-tenant SaaS).
+    expect(/localStorage\.setItem\([^)]*neopro_remote_v2_override/.test(content)).toBe(false);
     // Must reuse V1 scoped services (ADR-051 Phase 4) — no logic fork.
     expect(/RemoteScoreService/.test(content)).toBe(true);
     expect(/RemoteTimerService/.test(content)).toBe(true);
+  });
+
+  // ------------ Multi-tenant SaaS : prefs scopées par site/profil ------------
+
+  it('RemotePreferencesService scope la clé localStorage par site + profil', () => {
+    const svc = read(
+      'raspberry/src/app/components/remote/remote-preferences.service.ts',
+    );
+    // SaasConfigService injecté pour récupérer le scope.
+    expect(/SaasConfigService/.test(svc)).toBe(true);
+    expect(/getScopedStorageKey/.test(svc)).toBe(true);
+    // Plus aucune écriture sur la clé globale legacy non scopée.
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_prefs['"]\s*,/.test(svc),
+    ).toBe(false);
+    // Méthode de rechargement après switch de profil.
+    expect(/reloadFromStorage\s*\(/.test(svc)).toBe(true);
+  });
+
+  it('RemoteV2Component scope les clés widgets + recent par site + profil', () => {
+    const v2 = read(
+      'raspberry/src/app/components/remote-v2/remote-v2.component.ts',
+    );
+    // Plus de constantes globales écrites directement — passage par
+    // saasConfig.getScopedStorageKey pour les deux clés.
+    expect(/getScopedStorageKey/.test(v2)).toBe(true);
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_v2_widgets['"]\s*,/.test(v2),
+    ).toBe(false);
+    expect(
+      /localStorage\.setItem\(\s*['"]neopro_remote_v2_recent['"]\s*,/.test(v2),
+    ).toBe(false);
+  });
+
+  it('SaasConfigService expose getScopedStorageKey + getSelectedProfileId', () => {
+    const svc = read('raspberry/src/app/services/saas-config.service.ts');
+    expect(/getScopedStorageKey\s*\(/.test(svc)).toBe(true);
+    expect(/getSelectedProfileId\s*\(/.test(svc)).toBe(true);
   });
 
   // ------------ dashboard : feature-gate + toggle ------------
@@ -149,9 +201,169 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/featureOverrides\??:\s*Record<string,\s*boolean>/.test(iface)).toBe(true);
   });
 
+  // ------------ Parité socket V1↔V2 ------------
+
+  it('RemoteV2Component émet request-state au boot (sinon displays-changed jamais reçu)', () => {
+    // Régression : sans cet emit, le serveur ne renvoie jamais displays-changed
+    // et le sélecteur N display reste vide (`displays.length === 0`).
+    // L'emit vit dans RemoteOrchestratorService.init() depuis l'extraction
+    // du service d'orchestration (pattern ADR-051 Phase 4).
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(orch)).toBe(true);
+  });
+
+  it('RemoteOrchestratorService a un handler displays-changed qui popule displays$', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/['"]displays-changed['"]/.test(orch)).toBe(true);
+    expect(/this\.displays\$\.next/.test(orch)).toBe(true);
+  });
+
   // ------------ ADR present ------------
 
   it('ADR-092 is committed alongside the implementation', () => {
     expect(exists('docs/adr/ADR-092-remote-v2-feature-flag-rollout.md')).toBe(true);
+  });
+
+  // ------------ Orchestration parity V1 ↔ V2 (audit 2026-05-01) ------------
+  // Sans ces garde-fous, V2 pourrait silencieusement perdre les emits que V1
+  // fait (request-state au boot, breaking-news, options-update) et tout
+  // l'overlay TV deviendrait muet côté V2 → bug placebo, sunset V1 risqué.
+
+  it('remote-orchestrator demande un request-state au boot (snapshot displays/score/phase)', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(orch)).toBe(true);
+  });
+
+  it('remote-orchestrator émet breaking-news vers la TV via socket + localBroadcast', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/socketService\.emit\(\s*['"]breaking-news['"]/.test(orch)).toBe(true);
+    expect(/localBroadcast\.emitBreakingNews/.test(orch)).toBe(true);
+  });
+
+  it('remote-orchestrator propage les options à la TV (options-update via socket + localBroadcast)', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/socketService\.emit\(\s*['"]options-update['"]/.test(orch)).toBe(true);
+    expect(/localBroadcast\.broadcast\(\s*['"]options-update['"]/.test(orch)).toBe(true);
+    // Le broadcast est branché sur l'observable des options (skip 1 = pas au boot)
+    expect(/getOptions\$\(\)[\s\S]{0,200}skip\(1\)/.test(orch)).toBe(true);
+  });
+
+  it('remote-orchestrator reset displayTarget si le display ciblé disparaît (parité V1)', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    // Cherche le handler displays-changed et la logique de reset
+    const handlerStart = orch.indexOf("'displays-changed'");
+    expect(handlerStart).toBeGreaterThan(0);
+    const block = orch.slice(handlerStart, handlerStart + 1500);
+    expect(/list\.some|displays\.some/.test(block)).toBe(true);
+    expect(/_displayTarget\s*=\s*['"]all['"]/.test(block)).toBe(true);
+  });
+
+  it('remote-orchestrator pont ADR-090 scoreboard-state (score + timer + period)', () => {
+    // Régression : V2 historiquement n'écoutait pas scoreboard-state — la
+    // remote ne se synchronisait pas avec le simulateur dashboard ni les
+    // tables de marque Bodet/Stramatel relayées par le Pi. L'orchestrator
+    // unifie ce bridge pour V1 et V2.
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/['"]scoreboard-state['"]/.test(orch)).toBe(true);
+    expect(/scoreService\.applyCloudState/.test(orch)).toBe(true);
+    expect(/timerService\.applyCloudState/.test(orch)).toBe(true);
+    // Guard anti-flash : skip si l'état local matche déjà
+    expect(/alreadySynced/.test(orch)).toBe(true);
+  });
+
+  it('remote-orchestrator écoute score-update et sync scoreService.currentScore', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/['"]score-update['"]/.test(orch)).toBe(true);
+    expect(/scoreService\.currentScore\s*=/.test(orch)).toBe(true);
+  });
+
+  it("RemoteV2Component n'appelle PAS socketService.initialize() (parité V1, anti-double-socket)", () => {
+    // Régression : un second `initialize()` dans ngOnInit du V2 crée un 2e
+    // socket et écrase `this.socket`, leakant le 1er (créé par app.component
+    // au boot) avec ses listeners attachés par d'autres services injectés
+    // providedIn: 'root'. Le serveur émet alors displays-changed au socket
+    // qui a registered, et la réponse peut atterrir sur le socket SANS le
+    // listener V2 selon le timing.
+    // Diagnostic : 2x "Connecting to socket server" dans les logs Pi.
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    const stripped = stripComments(v2);
+    expect(/socketService\.initialize\(\)/.test(stripped)).toBe(false);
+  });
+
+  it("AppComponent reste l'unique caller de socketService.initialize() (singleton de boot)", () => {
+    const app = read('raspberry/src/app/app.component.ts');
+    const stripped = stripComments(app);
+    expect(/socketService\.initialize\(\)/.test(stripped)).toBe(true);
+  });
+
+  // ------------ V1 utilise aussi RemoteOrchestratorService (source partagée) ------------
+
+  it('RemoteComponent V1 délègue init/destroy à RemoteOrchestratorService', () => {
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    expect(/RemoteOrchestratorService/.test(v1)).toBe(true);
+    expect(/orchestrator\.init\(\)/.test(v1)).toBe(true);
+    expect(/orchestrator\.destroy\(\)/.test(v1)).toBe(true);
+    // Provider scoped au composant (même pattern V2)
+    expect(/providers:\s*\[[^\]]*RemoteOrchestratorService/.test(v1)).toBe(true);
+  });
+
+  it("RemoteComponent V1 n'attache plus inline les listeners socket extraits", () => {
+    // Les listeners displays-changed / phase-change / score-update /
+    // scoreboard-state / player-state / request-state vivent désormais dans
+    // RemoteOrchestratorService. Si on les remet inline dans V1, c'est une
+    // régression de duplication (cf. orchestrator est la source de vérité
+    // depuis ADR-090 + extraction Phase 4).
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    const stripped = stripComments(v1);
+    expect(/socketService\.on\(\s*['"]displays-changed['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]score-update['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]scoreboard-state['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]phase-change['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]player-state['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(stripped)).toBe(false);
+  });
+
+  it("RemoteComponent V1 délègue emitCommand / breaking news / options à l'orchestrator", () => {
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    expect(/orchestrator\.emitCommand/.test(v1)).toBe(true);
+    expect(/orchestrator\.sendBreakingNews/.test(v1)).toBe(true);
+    expect(/orchestrator\.broadcastOptions/.test(v1)).toBe(true);
+  });
+
+  it('saas-register pousse displays-changed au remote SaaS (fix race ADR-106)', () => {
+    // Régression : avant le fix, le remote SaaS ne recevait jamais le snapshot
+    // initial. Son `request-state` partait avant que `registerSaasRelay` n'ait
+    // attaché le handler côté serveur (race ADR-106) → silencieusement dropé.
+    // Le serveur doit donc pousser displays-changed proactivement au remote au
+    // moment du saas-register, sans attendre request-state.
+    const svc = read('central-server/src/services/socket.service.ts');
+    const registerStart = svc.indexOf("socket.on('saas-register'");
+    expect(registerStart).toBeGreaterThan(0);
+    const block = svc.slice(registerStart, registerStart + 3500);
+    // Doit pousser displays-changed directement au socket remote (pas de room
+    // broadcast — éviterait les TVs déjà connectées de re-recevoir l'état).
+    expect(
+      /clientType\s*===\s*['"]saas-remote['"][\s\S]{0,500}socket\.emit\(['"]displays-changed['"]/.test(block),
+    ).toBe(true);
+  });
+
+  it("Layouts mobile-classic + desktop-centered NE masquent PAS .r2-display-wrap (parité V1)", () => {
+    // Régression : Daisy ne voyait pas la sheet "Cible vidéo" sur Remote V2.
+    // Cause = `display: none` sur `.r2-display-wrap` dans les 2 layouts par
+    // défaut. Le listener fire bien, le DOM est rendu, mais CSS le cache.
+    // V1 n'a pas ces overrides → toujours visible. Parité = unhide.
+    const layouts = [
+      'raspberry/src/app/components/remote-v2/layouts/_mobile-classic.scss',
+      'raspberry/src/app/components/remote-v2/layouts/_desktop-centered.scss',
+    ];
+    for (const rel of layouts) {
+      const css = read(rel);
+      // Cherche un sélecteur ciblant .r2-display-wrap suivi d'un display:none
+      // dans le même bloc { ... }. Tolère les sélecteurs combinés (`,`).
+      const blocks = css.match(/[^{}]*\.r2-display-wrap[^{}]*\{[^}]*\}/g) || [];
+      for (const b of blocks) {
+        expect(b.includes('display: none')).toBe(false);
+      }
+    }
   });
 });

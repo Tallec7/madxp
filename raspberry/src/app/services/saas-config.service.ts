@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, tap, map, catchError, throwError } from 'rxjs';
+import { Observable, Subject, of, tap, map, catchError, throwError } from 'rxjs';
 import { Configuration } from '../interfaces/configuration.interface';
 import { environment } from '../../environments/environment';
 
@@ -49,6 +49,15 @@ export class SaasConfigService {
   private selectedConfiguration: Configuration | null = null;
   private siteName: string | null = null;
   private clubName: string | null = null;
+
+  /**
+   * ADR-102 — Émet le `profileId` actif chaque fois que le contexte change
+   * (loadProfileConfiguration / setSelectedConfiguration / clearSelection).
+   * RemotePreferencesService s'y abonne pour re-fetch les prefs DB du nouveau
+   * profil sans dépendre d'un reload de page.
+   */
+  private readonly profileChangedSubject = new Subject<string | null>();
+  readonly profileChanged$ = this.profileChangedSubject.asObservable();
   private featureOverrides: Record<string, boolean> = {};
 
   public isSaasMode(): boolean {
@@ -122,6 +131,7 @@ export class SaasConfigService {
       tap(config => {
         this.selectedConfiguration = config;
         localStorage.setItem(SELECTED_PROFILE_KEY, profileId);
+        this.profileChangedSubject.next(profileId);
       }),
       catchError((err: HttpErrorResponse) => {
         const pinErr = this.toPinRequiredError(err, siteId, profileId);
@@ -190,6 +200,7 @@ export class SaasConfigService {
   public setSelectedConfiguration(config: Configuration, profileId: string): void {
     this.selectedConfiguration = config;
     localStorage.setItem(SELECTED_PROFILE_KEY, profileId);
+    this.profileChangedSubject.next(profileId);
   }
 
   /**
@@ -198,6 +209,7 @@ export class SaasConfigService {
   public clearSelection(): void {
     this.selectedConfiguration = null;
     localStorage.removeItem(SELECTED_PROFILE_KEY);
+    this.profileChangedSubject.next(null);
   }
 
   public getSiteName(): string {
@@ -219,5 +231,30 @@ export class SaasConfigService {
 
   public getFeatureOverrides(): Record<string, boolean> {
     return { ...this.featureOverrides };
+  }
+
+  /**
+   * Profil sélectionné côté SaaS (clé `neopro_saas_selected_profile`).
+   * Retourne null en mode Pi natif (pas de profil SaaS).
+   */
+  public getSelectedProfileId(): string | null {
+    try {
+      return localStorage.getItem(SELECTED_PROFILE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Construit une clé localStorage scopée par siteId + profileId pour isoler
+   * les préférences entre les sites SaaS partageant le même domaine.
+   * En mode Pi natif (siteId vide), retourne la clé legacy non scopée
+   * (1 Pi = 1 device, le scoping est inutile).
+   */
+  public getScopedStorageKey(base: string): string {
+    const siteId = this.getSiteId();
+    if (!siteId) return base;
+    const profileId = this.getSelectedProfileId() || 'default';
+    return `${base}:${siteId}:${profileId}`;
   }
 }
