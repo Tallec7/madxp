@@ -1,3 +1,9 @@
+## [3.284.10](https://github.com/Tallec7/neopro/compare/v3.284.9...v3.284.10) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** supprimer double socket.initialize() dans Remote V2 (sheet Cible vidéo vide) ([#793](https://github.com/Tallec7/neopro/issues/793)) ([c9cce44](https://github.com/Tallec7/neopro/commit/c9cce44b4f4e698de8adf393586f046ca5fad9b4)), closes [#791](https://github.com/Tallec7/neopro/issues/791)
+
 ## [3.284.9](https://github.com/Tallec7/neopro/compare/v3.284.8...v3.284.9) (2026-05-01)
 
 ### Bug Fixes
