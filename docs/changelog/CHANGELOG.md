@@ -1,3 +1,9 @@
+## [3.284.9](https://github.com/Tallec7/neopro/compare/v3.284.8...v3.284.9) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** displays-changed snapshot pour saas-remote au saas-register ([#792](https://github.com/Tallec7/neopro/issues/792)) ([60b341d](https://github.com/Tallec7/neopro/commit/60b341d59ce2bb126cff60ec265c5c74e4606675))
+
 ## [3.284.8](https://github.com/Tallec7/neopro/compare/v3.284.7...v3.284.8) (2026-05-01)
 
 ### Bug Fixes
