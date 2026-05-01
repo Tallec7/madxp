@@ -29,10 +29,11 @@
     }
 
     // Hero compact 1-ligne — AUDIT-V2-LAYOUT-01 §3 "Hero Boucle active trop chargé".
+    // max-height retiré : quand N displays sont connectés, la section "Cible vidéo"
+    // s'ajoute sous les onglets de phase et dépasse 110px (overflow hidden la masquait).
     .r2-hero {
       margin: 8px 12px 0;
       min-height: var(--r2-hero-h);
-      max-height: 110px;
     }
     .r2-hero-eyebrow {
       padding: 4px 10px 0;
