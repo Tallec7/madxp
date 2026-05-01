@@ -296,6 +296,40 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/socketService\.initialize\(\)/.test(stripped)).toBe(true);
   });
 
+  // ------------ V1 utilise aussi RemoteOrchestratorService (source partagée) ------------
+
+  it('RemoteComponent V1 délègue init/destroy à RemoteOrchestratorService', () => {
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    expect(/RemoteOrchestratorService/.test(v1)).toBe(true);
+    expect(/orchestrator\.init\(\)/.test(v1)).toBe(true);
+    expect(/orchestrator\.destroy\(\)/.test(v1)).toBe(true);
+    // Provider scoped au composant (même pattern V2)
+    expect(/providers:\s*\[[^\]]*RemoteOrchestratorService/.test(v1)).toBe(true);
+  });
+
+  it("RemoteComponent V1 n'attache plus inline les listeners socket extraits", () => {
+    // Les listeners displays-changed / phase-change / score-update /
+    // scoreboard-state / player-state / request-state vivent désormais dans
+    // RemoteOrchestratorService. Si on les remet inline dans V1, c'est une
+    // régression de duplication (cf. orchestrator est la source de vérité
+    // depuis ADR-090 + extraction Phase 4).
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    const stripped = stripComments(v1);
+    expect(/socketService\.on\(\s*['"]displays-changed['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]score-update['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]scoreboard-state['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]phase-change['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.on\(\s*['"]player-state['"]/.test(stripped)).toBe(false);
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(stripped)).toBe(false);
+  });
+
+  it("RemoteComponent V1 délègue emitCommand / breaking news / options à l'orchestrator", () => {
+    const v1 = read('raspberry/src/app/components/remote/remote.component.ts');
+    expect(/orchestrator\.emitCommand/.test(v1)).toBe(true);
+    expect(/orchestrator\.sendBreakingNews/.test(v1)).toBe(true);
+    expect(/orchestrator\.broadcastOptions/.test(v1)).toBe(true);
+  });
+
   it('saas-register pousse displays-changed au remote SaaS (fix race ADR-106)', () => {
     // Régression : avant le fix, le remote SaaS ne recevait jamais le snapshot
     // initial. Son `request-state` partait avant que `registerSaasRelay` n'ait
