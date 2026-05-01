@@ -396,20 +396,24 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
       'displays-changed',
       data => {
-        this.displays = (data.displays || []).map(d => ({
-          id: String(d.index),
-          label: `display-${d.index}`,
-          status: 'online' as const,
-        }));
-        // Si la cible courante n'est plus connectée (display disparu), on
-        // retombe automatiquement sur "tous". Sinon les commandes suivantes
-        // disparaissent dans le vide. Parité V1 (remote.component.ts:351-353).
-        if (
-          this.targetDisplay !== 'all' &&
-          !this.displays.some(d => d.id === this.targetDisplay)
-        ) {
-          this.targetDisplay = 'all';
-        }
+        // ngZone.run obligatoire : Socket.IO callbacks s'exécutent hors zone
+        // Angular → sans ça, *ngIf="displays.length > 0" ne se réévalue jamais.
+        this.ngZone.run(() => {
+          this.displays = (data.displays || []).map(d => ({
+            id: String(d.index),
+            label: `display-${d.index}`,
+            status: 'online' as const,
+          }));
+          // Si la cible courante n'est plus connectée (display disparu), on
+          // retombe automatiquement sur "tous". Sinon les commandes suivantes
+          // disparaissent dans le vide. Parité V1 (remote.component.ts:351-353).
+          if (
+            this.targetDisplay !== 'all' &&
+            !this.displays.some(d => d.id === this.targetDisplay)
+          ) {
+            this.targetDisplay = 'all';
+          }
+        });
       },
     );
     this.socketService.on<{ phase: Phase | 'neutral' }>('phase-change', data => {
