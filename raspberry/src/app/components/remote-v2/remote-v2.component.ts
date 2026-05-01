@@ -391,8 +391,15 @@ export class RemoteV2Component implements OnInit, OnDestroy {
       });
     }
 
-    // Socket: initialisation + listeners essentiels
-    this.socketService.initialize();
+    // Socket: listeners essentiels.
+    // NE PAS appeler `socketService.initialize()` ici : app.component.ts:15 le
+    // fait déjà au boot. Un second `initialize()` crée un 2ᵉ socket (sock2)
+    // qui écrase `this.socket`, leakant sock1 (avec ses listeners attachés
+    // par d'autres services injectés `providedIn: 'root'`, ex.
+    // RecordingStateService). Le serveur reçoit alors 2 `saas-register` et
+    // émet `displays-changed` au socket qui a registered — la réponse atterrit
+    // tantôt sur sock1 (sans listener V2) tantôt sur sock2 selon le timing.
+    // Parité V1 (remote.component.ts ne ré-init pas non plus).
     this.socketService.on<{ displays: Array<{ index: number; type: string }> }>(
       'displays-changed',
       data => {
