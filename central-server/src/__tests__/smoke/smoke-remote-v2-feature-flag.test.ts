@@ -248,14 +248,33 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/getOptions\$\(\)[\s\S]{0,200}skip\(1\)/.test(orch)).toBe(true);
   });
 
-  it('remote-orchestrator reset targetDisplay si le display ciblé disparaît (parité V1)', () => {
+  it('remote-orchestrator reset displayTarget si le display ciblé disparaît (parité V1)', () => {
     const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
     // Cherche le handler displays-changed et la logique de reset
     const handlerStart = orch.indexOf("'displays-changed'");
     expect(handlerStart).toBeGreaterThan(0);
     const block = orch.slice(handlerStart, handlerStart + 1500);
     expect(/list\.some|displays\.some/.test(block)).toBe(true);
-    expect(/_targetDisplay\s*=\s*['"]all['"]|targetDisplay\s*=\s*['"]all['"]/.test(block)).toBe(true);
+    expect(/_displayTarget\s*=\s*['"]all['"]/.test(block)).toBe(true);
+  });
+
+  it('remote-orchestrator pont ADR-090 scoreboard-state (score + timer + period)', () => {
+    // Régression : V2 historiquement n'écoutait pas scoreboard-state — la
+    // remote ne se synchronisait pas avec le simulateur dashboard ni les
+    // tables de marque Bodet/Stramatel relayées par le Pi. L'orchestrator
+    // unifie ce bridge pour V1 et V2.
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/['"]scoreboard-state['"]/.test(orch)).toBe(true);
+    expect(/scoreService\.applyCloudState/.test(orch)).toBe(true);
+    expect(/timerService\.applyCloudState/.test(orch)).toBe(true);
+    // Guard anti-flash : skip si l'état local matche déjà
+    expect(/alreadySynced/.test(orch)).toBe(true);
+  });
+
+  it('remote-orchestrator écoute score-update et sync scoreService.currentScore', () => {
+    const orch = read('raspberry/src/app/services/remote-orchestrator.service.ts');
+    expect(/['"]score-update['"]/.test(orch)).toBe(true);
+    expect(/scoreService\.currentScore\s*=/.test(orch)).toBe(true);
   });
 
   it("RemoteV2Component n'appelle PAS socketService.initialize() (parité V1, anti-double-socket)", () => {

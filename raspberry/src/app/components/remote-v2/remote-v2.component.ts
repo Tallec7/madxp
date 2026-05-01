@@ -28,7 +28,7 @@ import { Configuration, TimeCategory } from '../../interfaces/configuration.inte
 import { Category } from '../../interfaces/category.interface';
 import { PiConfigVideoEntry } from '../../interfaces/video.interface';
 import { SocketService } from '../../services/socket.service';
-import { RemoteOrchestratorService, DisplayInfo as OrchestratorDisplayInfo } from '../../services/remote-orchestrator.service';
+import { RemoteOrchestratorService } from '../../services/remote-orchestrator.service';
 import { SaasConfigService, SaasProfile, SaasPinRequiredError } from '../../services/saas-config.service';
 import { LocalOptionsService, LocalOptions, SPORT_LABELS } from '../../services/local-options.service';
 import { SportType, ScoreOverlayPosition } from '../../interfaces/configuration.interface';
@@ -80,7 +80,11 @@ const OVERLAY_POSITIONS: ScoreOverlayPosition[] = [
   'bottom-left', 'bottom-center', 'bottom-right',
 ];
 
-type DisplayInfo = OrchestratorDisplayInfo;
+interface DisplayInfo {
+  id: string;
+  label: string;
+  status: 'online' | 'offline';
+}
 
 @Component({
   selector: 'app-remote-v2',
@@ -153,15 +157,19 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   /** Enregistrement en cours. */
   recording = false;
 
-  /** Liste des écrans connectés (alimentée par RemoteOrchestratorService). */
+  /** Liste des écrans connectés (mappée depuis RemoteOrchestratorService au format V2). */
   displays: DisplayInfo[] = [];
 
-  /** Cible d'écran active. Délégué à l'orchestrator (source de vérité). */
+  /**
+   * Cible d'écran active sous forme string (compat template V2).
+   * Source de vérité = `orchestrator.displayTarget` (`'all' | number`).
+   */
   get targetDisplay(): string {
-    return this.orchestrator.targetDisplay;
+    const t = this.orchestrator.displayTarget;
+    return t === 'all' ? 'all' : String(t);
   }
   set targetDisplay(id: string) {
-    this.orchestrator.setTargetDisplay(id);
+    this.orchestrator.setDisplayTargetFromString(id);
   }
 
   /** ID de la vidéo forcée en cours (hors boucle). */
@@ -399,7 +407,13 @@ export class RemoteV2Component implements OnInit, OnDestroy {
     this.orchestrator.init();
     this.subs.push(
       this.orchestrator.displays$.subscribe(list => {
-        this.displays = list;
+        // Map du format orchestrator (V1-style `{index, type}`) vers le format
+        // attendu par les sous-composants V2 (`{id, label, status}`).
+        this.displays = list.map(d => ({
+          id: String(d.index),
+          label: `display-${d.index}`,
+          status: 'online' as const,
+        }));
       }),
     );
     this.subs.push(
@@ -862,7 +876,7 @@ export class RemoteV2Component implements OnInit, OnDestroy {
   }
 
   setTargetDisplay(id: string): void {
-    this.orchestrator.setTargetDisplay(id);
+    this.orchestrator.setDisplayTargetFromString(id);
     this.showToast(id === 'all' ? 'Cible : tous les écrans' : `Cible : écran #${id}`);
   }
 

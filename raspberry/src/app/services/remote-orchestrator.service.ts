@@ -1,25 +1,35 @@
 /**
  * RemoteOrchestratorService — Orchestration socket / displays / commands /
- * options broadcast / breaking news pour la Remote V2.
+ * options broadcast / breaking news / score-update / scoreboard-state pour
+ * les Remotes V1 et V2.
  *
- * Extrait de RemoteV2Component (pattern ADR-051 Phase 4, comme
- * RemoteScoreService / RemoteTimerService). Le composant reste responsable de
- * la vue ; ce service centralise :
- *   - les listeners Socket.IO `displays-changed` / `phase-change` /
- *     `player-state` (avec `ngZone.run` obligatoire)
- *   - l'emit `request-state` au boot (snapshot initial du serveur)
- *   - la cible d'écran courante (`targetDisplay`) + reset auto si le display
- *     ciblé disparaît (parité V1)
- *   - les commandes unifiées (commandId UUID v4 + target multi-écrans +
+ * Source de vérité pour la couche orchestration (pattern ADR-051 Phase 4,
+ * comme RemoteScoreService / RemoteTimerService). Avant l'extraction, V1
+ * portait la logique inline et V2 dupliquait — ce service consolide pour
+ * que V1 et V2 partagent le même comportement éprouvé.
+ *
+ * Capacités centralisées :
+ *   - listeners Socket.IO `displays-changed` / `phase-change` /
+ *     `player-state` / `score-update` / `scoreboard-state` (ADR-090)
+ *     — tous wrappés `ngZone.run`
+ *   - emit `request-state` au boot (snapshot initial du serveur)
+ *   - cible d'écran (`displayTarget: 'all' | number`) + reset auto si le
+ *     display ciblé disparaît (parité V1)
+ *   - commandes unifiées (commandId UUID v4 + target multi-écrans +
  *     local broadcast + socket emit) — ADR-081
- *   - la propagation des options (`options-update`) au format V1, branchée
+ *   - propagation des options (`options-update`) au format V1, branchée
  *     sur `localOptionsService.getOptions$()` avec `skip(1)` (pas au boot)
- *   - l'émission breaking news au format V1 (`message`/`duration`/`position`/
+ *   - émission breaking news au format V1 (`message`/`duration`/`position`/
  *     `displayMode`/`target`)
+ *   - bridge ADR-090 scoreboard-state : applique sur scoreService +
+ *     timerService + period derivation (basket), avec guard anti-flash
  *
  * Provider : scoped via `providers: [RemoteOrchestratorService]` dans le
- * composant V2. `destroy()` est appelé depuis `ngOnDestroy()` pour nettoyer
- * la souscription options.
+ * composant V1 ou V2. Injection des services scoped peers (`RemoteScoreService`,
+ * `RemoteTimerService`) résolue via le même injector tree.
+ *
+ * `destroy()` est appelé depuis `ngOnDestroy()` pour nettoyer la souscription
+ * options.
  */
 import { Injectable, NgZone, inject } from '@angular/core';
 import { BehaviorSubject, Subject, Subscription } from 'rxjs';
@@ -27,11 +37,12 @@ import { skip } from 'rxjs/operators';
 import { SocketService } from './socket.service';
 import { LocalBroadcastService } from './local-broadcast.service';
 import { LocalOptionsService, LocalOptions } from './local-options.service';
+import { RemoteScoreService, ScoreState } from '../components/remote/remote-score.service';
+import { RemoteTimerService } from '../components/remote/remote-timer.service';
 
 export interface DisplayInfo {
-  id: string;
-  label: string;
-  status: 'online' | 'offline';
+  index: number;
+  type: string;
 }
 
 export type Phase = 'before' | 'during' | 'after';
@@ -54,27 +65,64 @@ export interface PlayerStateEvent {
   isManualMode?: boolean;
 }
 
+/** ADR-090 — État unifié scoreboard partagé Pi/Cloud. */
+export interface ScoreboardStateV1 {
+  vendor: 'bodet' | 'stramatel' | 'manual' | 'remote';
+  sport: 'basketball' | 'football';
+  period: number;
+  chronoMs: number;
+  clockRunning: boolean;
+  homeScore: number;
+  guestScore: number;
+  homeTeamFouls: number;
+  guestTeamFouls: number;
+  shotClockMs: number;
+  timeoutActive: 'home' | 'guest' | null;
+  timeoutRemainingMs: number;
+  homeTeamName?: string;
+  guestTeamName?: string;
+}
+
 @Injectable()
 export class RemoteOrchestratorService {
   private readonly socketService = inject(SocketService);
   private readonly localBroadcast = inject(LocalBroadcastService);
   private readonly localOptionsService = inject(LocalOptionsService);
+  private readonly scoreService = inject(RemoteScoreService);
+  private readonly timerService = inject(RemoteTimerService);
   private readonly ngZone = inject(NgZone);
 
-  /** Liste des écrans connectés — alimentée par `displays-changed` socket. */
+  /** Liste brute des écrans connectés (format V1 : `{index, type}`). */
   readonly displays$ = new BehaviorSubject<DisplayInfo[]>([]);
   /** Phase à l'antenne pushée par le serveur (sync inter-onglets / multi-remotes). */
   readonly phase$ = new Subject<Phase>();
   /** État player TV (utilisé pour détecter `play_error` côté composant). */
   readonly playerState$ = new Subject<PlayerStateEvent>();
+  /** Score reçu du cloud (post-mutation scoreService — pour CD V1 si besoin). */
+  readonly scoreUpdated$ = new Subject<ScoreState>();
+  /** ADR-090 — scoreboard-state appliqué (post-mutation services). */
+  readonly scoreboardApplied$ = new Subject<ScoreboardStateV1>();
 
-  /** Cible d'écran courante. `'all'` = tous les écrans. */
-  private _targetDisplay = 'all';
-  get targetDisplay(): string {
-    return this._targetDisplay;
+  /** Cible d'écran courante. `'all'` = tous les écrans, sinon index display. */
+  private _displayTarget: 'all' | number = 'all';
+  get displayTarget(): 'all' | number {
+    return this._displayTarget;
   }
-  setTargetDisplay(id: string): void {
-    this._targetDisplay = id;
+  setDisplayTarget(target: 'all' | number): void {
+    this._displayTarget = target;
+  }
+
+  /**
+   * Helper rétro-compat V2 : accepte une string ('all' ou index stringifié).
+   * V2 component template manipule des strings ; V1 manipule des numbers.
+   */
+  setDisplayTargetFromString(id: string): void {
+    if (id === 'all') {
+      this._displayTarget = 'all';
+      return;
+    }
+    const idx = parseInt(id, 10);
+    this._displayTarget = Number.isFinite(idx) ? idx : 'all';
   }
 
   private optionsSub: Subscription | null = null;
@@ -95,19 +143,18 @@ export class RemoteOrchestratorService {
         // Angular → sans ça, les *ngIf liés à `displays$` ne se réévaluent jamais.
         this.ngZone.run(() => {
           const list: DisplayInfo[] = (data.displays || []).map(d => ({
-            id: String(d.index),
-            label: `display-${d.index}`,
-            status: 'online' as const,
+            index: d.index,
+            type: d.type,
           }));
           this.displays$.next(list);
           // Si la cible courante n'est plus connectée (display disparu), on
           // retombe automatiquement sur "tous". Sinon les commandes suivantes
           // disparaissent dans le vide. Parité V1.
           if (
-            this._targetDisplay !== 'all' &&
-            !list.some(d => d.id === this._targetDisplay)
+            typeof this._displayTarget === 'number' &&
+            !list.some(d => d.index === this._displayTarget)
           ) {
-            this._targetDisplay = 'all';
+            this._displayTarget = 'all';
           }
         });
       },
@@ -123,6 +170,35 @@ export class RemoteOrchestratorService {
 
     this.socketService.on<PlayerStateEvent>('player-state', data => {
       this.ngZone.run(() => this.playerState$.next(data));
+    });
+
+    // Score push depuis cloud / Pi (parité V1) — sync l'état local du
+    // scoreService sans rebroadcast (évite les boucles).
+    this.socketService.on<{
+      homeTeam: string;
+      awayTeam: string;
+      homeScore: number;
+      awayScore: number;
+    }>('score-update', scoreData => {
+      this.ngZone.run(() => {
+        const cur = this.scoreService.currentScore;
+        const next: ScoreState = {
+          homeTeam: scoreData.homeTeam || cur.homeTeam,
+          awayTeam: scoreData.awayTeam || cur.awayTeam,
+          homeScore: scoreData.homeScore ?? cur.homeScore,
+          awayScore: scoreData.awayScore ?? cur.awayScore,
+        };
+        this.scoreService.currentScore = next;
+        this.scoreUpdated$.next(next);
+      });
+    });
+
+    // ADR-090 — scoreboard-state entrant (simulateur dashboard, table de marque
+    // Bodet/Stramatel relayée par le Pi). Bridge unifié vers scoreService +
+    // timerService + period derivation.
+    this.socketService.on<ScoreboardStateV1 | null>('scoreboard-state', state => {
+      if (!state) return;
+      this.ngZone.run(() => this.applyIncomingScoreboardState(state));
     });
 
     // Parité V1 : on demande au serveur Pi/Cloud de pousser immédiatement le
@@ -147,6 +223,37 @@ export class RemoteOrchestratorService {
   }
 
   /**
+   * ADR-090 — applique un scoreboard-state cloud entrant, avec guard
+   * anti-flash si l'état local matche déjà (à la seconde près pour le chrono).
+   * Évite les re-render Remote+Display sur les pushes répétés du simulateur
+   * (throttle 500ms) qui ne changent rien.
+   */
+  private applyIncomingScoreboardState(state: ScoreboardStateV1): void {
+    const cur = this.scoreService.currentScore;
+    const alreadySynced =
+      state.homeScore === cur.homeScore &&
+      state.guestScore === cur.awayScore &&
+      Math.abs(Math.floor(state.chronoMs / 1000) - this.timerService.currentTime) < 2 &&
+      state.clockRunning === this.timerService.isRunning;
+    if (alreadySynced) return;
+
+    this.scoreService.applyCloudState(state);
+    const opts = this.localOptionsService.getOptions();
+    this.timerService.applyCloudState(state, opts.timer);
+
+    // Synchroniser la période si dérivable (basket uniquement pour l'instant).
+    if (
+      state.sport === 'basketball' &&
+      state.period > 0 &&
+      state.period <= this.localOptionsService.getAvailablePeriods().length
+    ) {
+      this.localOptionsService.setPeriod(state.period - 1);
+    }
+
+    this.scoreboardApplied$.next(state);
+  }
+
+  /**
    * ADR-081 Phase 0 — UUID v4 généré côté remote pour chaque commande
    * (audit + idempotence cloud). Utilise `crypto.randomUUID()` si dispo,
    * fallback Math.random sinon.
@@ -163,12 +270,10 @@ export class RemoteOrchestratorService {
 
   /**
    * Cible d'écran active sous forme `target: number[]` (parité V1 / ADR-081).
-   * `targetDisplay === 'all'` → undefined (la TV diffuse à tous les écrans).
+   * `displayTarget === 'all'` → undefined (la TV diffuse à tous les écrans).
    */
   getCommandTarget(): number[] | undefined {
-    if (this._targetDisplay === 'all') return undefined;
-    const idx = parseInt(this._targetDisplay, 10);
-    return Number.isFinite(idx) ? [idx] : undefined;
+    return typeof this._displayTarget === 'number' ? [this._displayTarget] : undefined;
   }
 
   /**
