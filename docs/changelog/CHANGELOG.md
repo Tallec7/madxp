@@ -1,3 +1,9 @@
+## [3.284.4](https://github.com/Tallec7/neopro/compare/v3.284.3...v3.284.4) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** port catchall Pages Function to raspberry SaaS ([#785](https://github.com/Tallec7/neopro/issues/785)) ([0eeea50](https://github.com/Tallec7/neopro/commit/0eeea50dc7688cdef71a766ed04b6604ea543651))
+
 ## [3.284.3](https://github.com/Tallec7/neopro/compare/v3.284.2...v3.284.3) (2026-05-01)
 
 ### Bug Fixes
