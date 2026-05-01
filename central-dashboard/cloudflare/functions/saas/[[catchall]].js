@@ -107,6 +107,27 @@ export const onRequest = async (context) => {
     return notFoundResponse();
   }
 
+  // SPA fallback explicite : route inconnue sous /saas/ qui n'est pas un
+  // asset (pas d'extension dans le path) → servir /saas/index.html en 200.
+  // Sans ça, des routes dynamiques comme `/saas/display/29` (N display
+  // arbitraire ouvert depuis le bouton "Ouvrir l'écran" du dashboard)
+  // retournent 404 parce que le script `cloudflare-saas-route-stubs.sh`
+  // ne prégénère que `/saas/display/0..3`. Le fallback Angular (router)
+  // prend ensuite le relais côté client pour résoudre `display/:n`.
+  if (
+    response.status === 404 &&
+    url.pathname.startsWith('/saas/') &&
+    !isAssetRequest(url.pathname)
+  ) {
+    const indexUrl = new URL('/saas/index.html', url);
+    if (url.search) indexUrl.search = url.search;
+    const fallback = await env.ASSETS.fetch(new Request(indexUrl, request));
+    if (fallback.ok && isHtmlResponse(fallback)) {
+      return overrideCacheNoStore(stripModulePreloadLinks(fallback));
+    }
+    return fallback;
+  }
+
   // HTML response → strip Link modulepreload + force no-store.
   // Empêche le préchargement chunk depuis un path résolu incorrectement
   // (deep routes) ET la mise en cache du shell SPA.
