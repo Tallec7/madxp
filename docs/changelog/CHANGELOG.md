@@ -1,3 +1,9 @@
+## [3.284.12](https://github.com/Tallec7/neopro/compare/v3.284.11...v3.284.12) (2026-05-01)
+
+### Bug Fixes
+
+- **kiosk:** éviter le faux positif "fenêtre parasite" au boot Chromium ([#795](https://github.com/Tallec7/neopro/issues/795)) ([4d570be](https://github.com/Tallec7/neopro/commit/4d570be91c4335c5f51319a23ea79ed248a302bd))
+
 ## [3.284.11](https://github.com/Tallec7/neopro/compare/v3.284.10...v3.284.11) (2026-05-01)
 
 ### Bug Fixes
