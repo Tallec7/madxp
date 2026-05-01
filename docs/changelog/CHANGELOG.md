@@ -1,3 +1,10 @@
+# [3.285.0](https://github.com/Tallec7/neopro/compare/v3.284.12...v3.285.0) (2026-05-01)
+
+### Features
+
+- **template-studio:** mode "Créer une vidéo" côté club (issue [#803](https://github.com/Tallec7/neopro/issues/803)) ([#804](https://github.com/Tallec7/neopro/issues/804)) ([2dfa363](https://github.com/Tallec7/neopro/commit/2dfa3634438b7ea376d6b6cd5a7dd450170d35b8))
+- **templates:** scaffolding + seed 4 templates JOUEUR (PDF spec Daisy) ([#805](https://github.com/Tallec7/neopro/issues/805)) ([ab21e96](https://github.com/Tallec7/neopro/commit/ab21e969072918a858cdeb7ab7b215f4b07a7140))
+
 ## [3.284.12](https://github.com/Tallec7/neopro/compare/v3.284.11...v3.284.12) (2026-05-01)
 
 ### Bug Fixes
