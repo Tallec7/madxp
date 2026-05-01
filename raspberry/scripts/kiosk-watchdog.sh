@@ -1667,7 +1667,11 @@ main() {
                [[ "$active_window" != *"Chromium"* ]] && \
                [[ "$active_window" != *"chromium"* ]] && \
                [[ "$active_window" != *"Neopro"* ]] && \
-               [[ "$active_window" != *"neopro"* ]]; then
+               [[ "$active_window" != *"neopro"* ]] && \
+               [[ "$active_window" != *"localhost"* ]] && \
+               [[ "$active_window" != *"about:blank"* ]] && \
+               [[ "$active_window" != *"/tv"* ]] && \
+               [[ "$active_window" != *"/remote"* ]]; then
                 log "🚨 FENÊTRE PARASITE détectée: '$active_window' — bloque le kiosk Chromium"
                 # Identifier et tuer le processus parasite
                 local parasite_wid
