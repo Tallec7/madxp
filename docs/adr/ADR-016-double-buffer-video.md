@@ -1,4 +1,4 @@
-# ADR-006: Double-Buffer Vidéo sans Préchargement
+# ADR-016: Double-Buffer Vidéo sans Préchargement
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : ⚠️ Supersédé par [ADR-008](./ADR-008-double-buffer-video-pi.md) — Version initiale simplifiée, remplacée par la version itérée avec freeze-frame pré-capturé et disk cache warming.

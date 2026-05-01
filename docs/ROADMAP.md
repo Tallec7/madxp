@@ -1,5 +1,7 @@
 # Roadmap Neopro
 
+> ⚠️ **STALE** — Dernière révision : 2026-04-25. Contenu potentiellement périmé. Revue mensuelle recommandée.
+
 > **Audience** : futur PM (jour 1 = sait quoi prioriser et quoi refuser) + futur CTO (sait quelles fondations construire) + Daisy (référence partagée pour décider)
 >
 > **Statut** : Live | **Dernière revue** : 2026-04-25 | **Prochaine revue** : tous les mois (la roadmap est vivante, pas figée)

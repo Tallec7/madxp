@@ -349,10 +349,10 @@ Si Phase 1 (manuel) s'avère instable : revert ADR-089 → ADR-089 reste mode ma
 
 ## Références
 
-- [ADR-089 — Web Content Phase 1 & 2 (manuel)](./ADR-089-web-content-pages-livestreams.md) (à vérifier titre exact)
-- [ADR-033 — Master/slave race condition guard](./ADR-033-master-slave-race-condition-guard.md)
-- [ADR-042 — DoubleBuffer architecture](./ADR-042-double-buffer-video.md)
-- [Logs incident NLF 28/04/2026](./incidents/2026-04-28-saas-tv-loop-web_page-crash.md) (à créer en Phase 0)
+- [ADR-089 — Web Content Phase 1 & 2 (manuel)](./ADR-089-web-page-and-livestream-content-types.md)
+- [ADR-033 — Secondary variant serving + race condition fixes](./ADR-033-videos-secondary-serving.md)
+- [ADR-042 — Extraction tv.component en 3 services](./ADR-042-extract-tv-component-services.md)
+- [Logs incident NLF 28/04/2026](../incidents/2026-04-28-saas-tv-loop-web_page-crash.md) (fichier à créer lors du post-mortem)
 - Code :
   - [raspberry/src/app/services/video-playback.service.ts](../../raspberry/src/app/services/video-playback.service.ts)
   - [raspberry/src/app/services/double-buffer-video.service.ts](../../raspberry/src/app/services/double-buffer-video.service.ts)
