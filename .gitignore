@@ -61,3 +61,6 @@ raspberry/admin/public/styles.css.bak
 
 # Claude Code worktrees (agent isolation sandbox)
 .claude/worktrees/
+
+# Drop zone pour assets en cours de transit (WebM, fonts, source AE)
+_incoming/
