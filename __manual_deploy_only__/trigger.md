@@ -135,3 +135,4 @@ Ce dossier matche `watchPatterns` de `railway.json` — commit ici = rebuild pro
 | 2026-05-01T08:52:26Z | 9a2a8aeb | 3.284.7 |
 | 2026-05-01T09:07:03Z | 797d29ba | 3.284.8 |
 | 2026-05-01T09:29:23Z | 60b341d5 | 3.284.9 |
+| 2026-05-01T09:58:40Z | c9cce44b | 3.284.10 |
