@@ -1,3 +1,15 @@
+## [3.284.2](https://github.com/Tallec7/neopro/compare/v3.284.1...v3.284.2) (2026-05-01)
+
+### Bug Fixes
+
+- **cloudflare:** SPA fallback explicite pour display/:N arbitraire (404 → /saas/index.html) ([#786](https://github.com/Tallec7/neopro/issues/786)) ([6866994](https://github.com/Tallec7/neopro/commit/6866994acb1a06bf27984cf940b19f7e4f4a2391))
+
+## [3.284.1](https://github.com/Tallec7/neopro/compare/v3.284.0...v3.284.1) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** close 4 V2 orchestration holes vs V1 (request-state, breaking-news, options, target-reset) ([#784](https://github.com/Tallec7/neopro/issues/784)) ([7fb1e1c](https://github.com/Tallec7/neopro/commit/7fb1e1ca60b7f4031f0bd8a743389c9976d16e6b))
+
 # [3.284.0](https://github.com/Tallec7/neopro/compare/v3.283.0...v3.284.0) (2026-04-30)
 
 ### Features
