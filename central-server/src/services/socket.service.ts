@@ -414,9 +414,18 @@ class SocketService {
         });
 
         // Phase 5 — PROP-002: emit displays-changed to the site room
-        if (data.clientType !== 'saas-remote' && this.io) {
+        if (this.io) {
           const displays = this.getSaasConnectedDisplays(data.siteId);
-          this.io.to(data.siteId).emit('displays-changed', { displays });
+          if (data.clientType === 'saas-remote') {
+            // Remote vient de se connecter : pousser l'état courant directement
+            // à ce socket. Le `request-state` buffered arrive trop tôt (avant
+            // que registerSaasRelay soit attaché) → il est silencieusement
+            // ignoré par le serveur. Ce push proactif garantit que la Remote
+            // reçoit toujours displays-changed au boot, sans race condition.
+            socket.emit('displays-changed', { displays });
+          } else {
+            this.io.to(data.siteId).emit('displays-changed', { displays });
+          }
         }
       } catch (error) {
         logger.error('SaaS register error', { error, siteId: data.siteId });
