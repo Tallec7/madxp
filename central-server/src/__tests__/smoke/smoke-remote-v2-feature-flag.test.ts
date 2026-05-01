@@ -200,4 +200,38 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
   it('ADR-092 is committed alongside the implementation', () => {
     expect(exists('docs/adr/ADR-092-remote-v2-feature-flag-rollout.md')).toBe(true);
   });
+
+  // ------------ Orchestration parity V1 ↔ V2 (audit 2026-05-01) ------------
+  // Sans ces garde-fous, V2 pourrait silencieusement perdre les emits que V1
+  // fait (request-state au boot, breaking-news, options-update) et tout
+  // l'overlay TV deviendrait muet côté V2 → bug placebo, sunset V1 risqué.
+
+  it('remote-v2 demande un request-state au boot (snapshot displays/score/phase)', () => {
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    expect(/socketService\.emit\(\s*['"]request-state['"]/.test(v2)).toBe(true);
+  });
+
+  it('remote-v2 émet breaking-news vers la TV via socket + localBroadcast', () => {
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    expect(/socketService\.emit\(\s*['"]breaking-news['"]/.test(v2)).toBe(true);
+    expect(/localBroadcast\.emitBreakingNews/.test(v2)).toBe(true);
+  });
+
+  it('remote-v2 propage les options à la TV (options-update via socket + localBroadcast)', () => {
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    expect(/socketService\.emit\(\s*['"]options-update['"]/.test(v2)).toBe(true);
+    expect(/localBroadcast\.broadcast\(\s*['"]options-update['"]/.test(v2)).toBe(true);
+    // Le broadcast est branché sur l'observable des options (skip 1 = pas au boot)
+    expect(/getOptions\$\(\)[\s\S]{0,200}skip\(1\)/.test(v2)).toBe(true);
+  });
+
+  it('remote-v2 reset targetDisplay si le display ciblé disparaît (parité V1)', () => {
+    const v2 = read('raspberry/src/app/components/remote-v2/remote-v2.component.ts');
+    // Cherche le handler displays-changed et la logique de reset
+    const handlerStart = v2.indexOf("'displays-changed'");
+    expect(handlerStart).toBeGreaterThan(0);
+    const block = v2.slice(handlerStart, handlerStart + 1500);
+    expect(/this\.displays\.some/.test(block)).toBe(true);
+    expect(/this\.targetDisplay\s*=\s*['"]all['"]/.test(block)).toBe(true);
+  });
 });

@@ -363,6 +363,89 @@ describe('RemoteV2Component', () => {
     });
   });
 
+  // ---- Orchestration parity (V1 ↔ V2) — emits que V2 oubliait ----
+  describe('orchestration parity (V1 ↔ V2)', () => {
+    function emitsForEvent(event: string): unknown[] {
+      return mockSocket.emit.calls.allArgs()
+        .filter((args) => args[0] === event)
+        .map((args) => args[1]);
+    }
+    function findHandler(event: string): ((data: unknown) => void) | undefined {
+      const call = mockSocket.on.calls.allArgs().find(args => args[0] === event);
+      return call?.[1] as ((data: unknown) => void) | undefined;
+    }
+
+    it('demande un request-state au boot pour récupérer le snapshot serveur', () => {
+      const events = mockSocket.emit.calls.allArgs().map(a => a[0]);
+      expect(events).toContain('request-state');
+    });
+
+    it('reset la cible si le display ciblé disparaît (parité V1)', () => {
+      const handler = findHandler('displays-changed');
+      expect(handler).toBeDefined();
+      handler?.({ displays: [{ index: 0, type: 'tv' }, { index: 1, type: 'secondary' }] });
+      component.targetDisplay = '1';
+      handler?.({ displays: [{ index: 0, type: 'tv' }] });
+      expect(component.targetDisplay).toBe('all');
+    });
+
+    it('toggleBreaking() émet un payload breaking-news complet quand activé avec texte', () => {
+      component.breakingText = 'BUT pour le HBC !';
+      component['localOptions'] = {
+        ...component['localOptions'],
+        breakingNews: {
+          enabled: false, position: 'bottom', defaultDuration: 15,
+          displayMode: 'scroll', quickMessages: [],
+        },
+      };
+      component.toggleBreaking();
+      const payloads = emitsForEvent('breaking-news');
+      expect(payloads.length).toBeGreaterThan(0);
+      const news = payloads[payloads.length - 1] as Record<string, unknown>;
+      expect(news['message']).toBe('BUT pour le HBC !');
+      expect(news['duration']).toBe(15);
+      expect(news['position']).toBe('bottom');
+    });
+
+    it("toggleBreaking() n'émet rien quand on désactive (pas d'event clear côté TV)", () => {
+      component.breakingText = '';
+      component['localOptions'] = {
+        ...component['localOptions'],
+        breakingNews: {
+          enabled: true, position: 'bottom', defaultDuration: 10,
+          displayMode: 'scroll', quickMessages: [],
+        },
+      };
+      const before = emitsForEvent('breaking-news').length;
+      component.toggleBreaking();
+      const after = emitsForEvent('breaking-news').length;
+      expect(after).toBe(before);
+    });
+
+    it('propage tout changement options à la TV via socket+localBroadcast', () => {
+      // Simule une mise à jour utilisateur (ex: toggle timer enabled)
+      const optionsSubject = mockLocalOptions.getOptions$.calls.mostRecent().returnValue;
+      // Récupère le BehaviorSubject sous-jacent du mock
+      const newOpts = {
+        ...component['localOptions'],
+        timer: { ...component['localOptions'].timer, enabled: false },
+      };
+      // L'observable est créé avec `.asObservable()`, on n'a pas le subject brut.
+      // On valide donc que la méthode privée est bien appelée — proxy via spy
+      // sur localBroadcast.broadcast (déjà observable côté tests).
+      const broadcastSpy = jasmine.createSpy('broadcast');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).localBroadcast.broadcast = broadcastSpy;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).broadcastOptions(newOpts);
+      const events = mockSocket.emit.calls.allArgs().map(a => a[0]);
+      expect(events).toContain('options-update');
+      expect(broadcastSpy).toHaveBeenCalledWith('options-update', jasmine.any(Object));
+      // Suppress unused var
+      void optionsSubject;
+    });
+  });
+
   // ---- Widgets activation persistence ----
   describe('widgetsEnabled persistence', () => {
     it('persiste à chaque toggle', () => {
