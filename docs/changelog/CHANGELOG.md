@@ -1,3 +1,9 @@
+## [3.285.3](https://github.com/Tallec7/neopro/compare/v3.285.2...v3.285.3) (2026-05-01)
+
+### Bug Fixes
+
+- **templates:** timing apparition textes packshot (appear_at) ([#809](https://github.com/Tallec7/neopro/issues/809)) ([bae3c52](https://github.com/Tallec7/neopro/commit/bae3c52564e1ace765c646e8ba61fe53de4d34e2))
+
 ## [3.285.2](https://github.com/Tallec7/neopro/compare/v3.285.1...v3.285.2) (2026-05-01)
 
 ### Bug Fixes
