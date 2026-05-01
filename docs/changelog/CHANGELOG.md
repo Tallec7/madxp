@@ -1,3 +1,9 @@
+## [3.284.6](https://github.com/Tallec7/neopro/compare/v3.284.5...v3.284.6) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** ngZone.run sur handlers socket V2 → CD détecte displays/phase/player ([#789](https://github.com/Tallec7/neopro/issues/789)) ([2c4569c](https://github.com/Tallec7/neopro/commit/2c4569cc39a24b263143e002d2e61595a60681e6))
+
 ## [3.284.5](https://github.com/Tallec7/neopro/compare/v3.284.4...v3.284.5) (2026-05-01)
 
 ### Bug Fixes
