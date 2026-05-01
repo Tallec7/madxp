@@ -1,3 +1,9 @@
+## [3.284.7](https://github.com/Tallec7/neopro/compare/v3.284.6...v3.284.7) (2026-05-01)
+
+### Bug Fixes
+
+- **remote:** ngZone.run dans displays-changed → \*ngIf se réévalue ([#790](https://github.com/Tallec7/neopro/issues/790)) ([9a2a8ae](https://github.com/Tallec7/neopro/commit/9a2a8aeb8483fe9c480d23eaa469bb82a99312dc))
+
 ## [3.284.6](https://github.com/Tallec7/neopro/compare/v3.284.5...v3.284.6) (2026-05-01)
 
 ### Bug Fixes
