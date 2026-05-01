@@ -267,4 +267,24 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
       /clientType\s*===\s*['"]saas-remote['"][\s\S]{0,500}socket\.emit\(['"]displays-changed['"]/.test(block),
     ).toBe(true);
   });
+
+  it("Layouts mobile-classic + desktop-centered NE masquent PAS .r2-display-wrap (parité V1)", () => {
+    // Régression : Daisy ne voyait pas la sheet "Cible vidéo" sur Remote V2.
+    // Cause = `display: none` sur `.r2-display-wrap` dans les 2 layouts par
+    // défaut. Le listener fire bien, le DOM est rendu, mais CSS le cache.
+    // V1 n'a pas ces overrides → toujours visible. Parité = unhide.
+    const layouts = [
+      'raspberry/src/app/components/remote-v2/layouts/_mobile-classic.scss',
+      'raspberry/src/app/components/remote-v2/layouts/_desktop-centered.scss',
+    ];
+    for (const rel of layouts) {
+      const css = read(rel);
+      // Cherche un sélecteur ciblant .r2-display-wrap suivi d'un display:none
+      // dans le même bloc { ... }. Tolère les sélecteurs combinés (`,`).
+      const blocks = css.match(/[^{}]*\.r2-display-wrap[^{}]*\{[^}]*\}/g) || [];
+      for (const b of blocks) {
+        expect(b.includes('display: none')).toBe(false);
+      }
+    }
+  });
 });
