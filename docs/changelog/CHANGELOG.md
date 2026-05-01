@@ -1,3 +1,9 @@
+## [3.284.8](https://github.com/Tallec7/neopro/compare/v3.284.7...v3.284.8) (2026-05-01)
+
+### Bug Fixes
+
+- **saas:** push displays-changed au Remote lors de saas-register ([#791](https://github.com/Tallec7/neopro/issues/791)) ([797d29b](https://github.com/Tallec7/neopro/commit/797d29baa389e38544addcc5fbd0ae2a7594034f))
+
 ## [3.284.7](https://github.com/Tallec7/neopro/compare/v3.284.6...v3.284.7) (2026-05-01)
 
 ### Bug Fixes
