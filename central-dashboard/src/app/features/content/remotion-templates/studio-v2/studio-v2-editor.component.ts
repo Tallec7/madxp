@@ -250,8 +250,8 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         visibleIf: s.visibleIf,
         // ADR-086 — champs manquants (fix/joueur-preview-runtime-parity)
         animationDirection: s.animationDirection,
-        scaleFrom: s.scaleFrom,
-        scaleTo: s.scaleTo,
+        scaleFrom: s.scaleFrom ?? undefined,
+        scaleTo: s.scaleTo ?? undefined,
         layerId: s.layerId,
         anchor: s.anchor,
         fitMode: s.fitMode,

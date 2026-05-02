@@ -152,7 +152,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
 
   type Stacked =
     | { kind: 'layer'; z: number; layer: RuntimeLayer }
-    | { kind: 'text'; z: number; field: RuntimeTextField }
+    | { kind: 'text'; z: number; tf: RuntimeTextField }
     | { kind: 'image'; z: number; slot: RuntimeImageSlot };
 
   const stack: Stacked[] = [];
@@ -160,19 +160,19 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
   for (const layer of props.layers) {
     stack.push({ kind: 'layer', z: layer.zIndex, layer });
   }
-  for (const field of props.textFields) {
-    if (!isSlotVisible(field.visibleIf, selectedOptions)) continue;
-    const parent = field.layerId ? layerById.get(field.layerId) : undefined;
-    if (parent && field.respectAlpha) {
-      stack.push({ kind: 'text', z: parent.zIndex - 0.5, field });
+  for (const tf of props.textFields) {
+    if (!isSlotVisible(tf.visibleIf, props.selectedOptions ?? {})) continue;
+    const parent = tf.layerId ? layerById.get(tf.layerId) : undefined;
+    if (parent && tf.respectAlpha) {
+      stack.push({ kind: 'text', z: parent.zIndex - 0.5, tf });
     } else if (parent) {
-      stack.push({ kind: 'text', z: parent.zIndex + 0.5, field });
+      stack.push({ kind: 'text', z: parent.zIndex + 0.5, tf });
     } else {
-      stack.push({ kind: 'text', z: TOP, field });
+      stack.push({ kind: 'text', z: TOP, tf });
     }
   }
   for (const slot of props.imageSlots) {
-    if (!isSlotVisible(slot.visibleIf, selectedOptions)) continue;
+    if (!isSlotVisible(slot.visibleIf, props.selectedOptions ?? {})) continue;
     const parent = slot.layerId ? layerById.get(slot.layerId) : undefined;
     if (parent) {
       stack.push({ kind: 'image', z: parent.zIndex + 0.5, slot });
@@ -211,7 +211,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
         }
 
         if (item.kind === 'text') {
-          const tf = item.field;
+          const tf = item.tf;
           const value = props.textValues[tf.slotKey] ?? tf.defaultValue;
           if (!value) return null;
 
