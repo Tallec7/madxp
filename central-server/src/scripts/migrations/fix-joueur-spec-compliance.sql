@@ -182,7 +182,10 @@ INSERT INTO template_layers (template_id, name, video_url, z_index, mask_top, ma
 SELECT t.id, 'A — intro hexagone (logo/numéro)', '', 0, 0, 0, 0, 0, 1400
 FROM neopro_templates t
 WHERE t.name = 'BUT Simple'
-ON CONFLICT DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1 FROM template_layers l2
+    WHERE l2.template_id = t.id AND l2.name = 'A — intro hexagone (logo/numéro)'
+  );
 
 -- =============================================================================
 -- 8. SLOT NUMERO-INTRO — BUT Simple
