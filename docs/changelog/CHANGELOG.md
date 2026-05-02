@@ -1,3 +1,9 @@
+## [3.285.8](https://github.com/Tallec7/neopro/compare/v3.285.7...v3.285.8) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** conformité JOUEUR Simple + BUT à la spec PDF (Option A) ([#817](https://github.com/Tallec7/neopro/issues/817)) ([f2cb58b](https://github.com/Tallec7/neopro/commit/f2cb58b4b5a0de78b4adf16143ce83d4b478cd5b))
+
 ## [3.285.7](https://github.com/Tallec7/neopro/compare/v3.285.6...v3.285.7) (2026-05-02)
 
 ### Bug Fixes
