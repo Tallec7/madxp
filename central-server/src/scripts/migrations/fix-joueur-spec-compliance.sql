@@ -182,7 +182,10 @@ INSERT INTO template_layers (template_id, name, video_url, z_index, mask_top, ma
 SELECT t.id, 'A — intro hexagone (logo/numéro)', '', 0, 0, 0, 0, 0, 1400
 FROM neopro_templates t
 WHERE t.name = 'BUT Simple'
-ON CONFLICT DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1 FROM template_layers l2
+    WHERE l2.template_id = t.id AND l2.name = 'A — intro hexagone (logo/numéro)'
+  );
 
 -- =============================================================================
 -- 8. SLOT NUMERO-INTRO — BUT Simple
@@ -235,9 +238,13 @@ FROM neopro_templates WHERE name = 'Joueur détaillé'
 ON CONFLICT (template_id, key) DO NOTHING;
 
 INSERT INTO template_options (template_id, key, label, type, values, default_value, user_editable, sort_order)
-VALUES
-  ((SELECT id FROM neopro_templates WHERE name = 'BUT Simple'), 'intro_mode', 'Intro', 'enum', '["logo","numero"]'::jsonb, 'logo', true, 1),
-  ((SELECT id FROM neopro_templates WHERE name = 'BUT Simple'), 'packshot', 'Packshot', 'enum', '["generique","img"]'::jsonb, 'generique', true, 2)
+SELECT id, 'intro_mode', 'Intro', 'enum', '["logo","numero"]'::jsonb, 'logo', true, 1
+FROM neopro_templates WHERE name = 'BUT Simple'
+ON CONFLICT (template_id, key) DO NOTHING;
+
+INSERT INTO template_options (template_id, key, label, type, values, default_value, user_editable, sort_order)
+SELECT id, 'packshot', 'Packshot', 'enum', '["generique","img"]'::jsonb, 'generique', true, 2
+FROM neopro_templates WHERE name = 'BUT Simple'
 ON CONFLICT (template_id, key) DO NOTHING;
 
 -- =============================================================================
