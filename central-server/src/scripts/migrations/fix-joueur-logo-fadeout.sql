@@ -43,8 +43,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_generique_id AND slot_key = 'numeroIntro';
 
     RAISE NOTICE 'Updated SIMPLE Générique logo/numero fade-out';
@@ -66,8 +66,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_image_id AND slot_key = 'numeroIntro';
 
     RAISE NOTICE 'Updated SIMPLE Image logo/numero fade-out';
