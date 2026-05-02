@@ -34,8 +34,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_generique_id AND slot_key = 'logoSrc';
 
     UPDATE template_text_fields
@@ -43,8 +43,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_generique_id AND slot_key = 'numeroIntro';
 
     RAISE NOTICE 'Updated SIMPLE Générique logo/numero fade-out';
@@ -57,8 +57,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_image_id AND slot_key = 'logoSrc';
 
     UPDATE template_text_fields
@@ -66,8 +66,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 1.7,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = simple_image_id AND slot_key = 'numeroIntro';
 
     RAISE NOTICE 'Updated SIMPLE Image logo/numero fade-out';
@@ -80,8 +80,8 @@ BEGIN
         animation_direction = 'out',
         appear_at = 2.12,
         appear_duration = 0.5,
-        scale_from = NULL,
-        scale_to = NULL
+        scale_from = 1.0,
+        scale_to = 1.0
     WHERE template_id = but_generique_id AND slot_key = 'logoSrc';
 
     RAISE NOTICE 'Updated BUT Générique logo fade-out';
