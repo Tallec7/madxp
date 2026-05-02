@@ -1,3 +1,9 @@
+## [3.285.10](https://github.com/Tallec7/neopro/compare/v3.285.9...v3.285.10) (2026-05-02)
+
+### Bug Fixes
+
+- **nginx:** add Chrome Private Network Access headers on video responses ([#819](https://github.com/Tallec7/neopro/issues/819)) ([1812b48](https://github.com/Tallec7/neopro/commit/1812b48556cd5506ff46dac9953b30ed8f677558))
+
 ## [3.285.9](https://github.com/Tallec7/neopro/compare/v3.285.8...v3.285.9) (2026-05-02)
 
 ### Bug Fixes
