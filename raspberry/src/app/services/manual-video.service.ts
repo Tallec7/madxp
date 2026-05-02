@@ -426,15 +426,19 @@ export class ManualVideoService {
 
     player.style.opacity = '1';
 
-    // Safe unmute: Chrome pauses on unmute without user interaction
+    // Chrome blocks muted=false on a playing video even with --autoplay-policy=no-user-gesture-required.
+    // Fix: pause → unmute → play() which IS covered by the flag.
+    const savedTime = player.currentTime;
+    player.pause();
     player.muted = false;
-    if (player.paused) {
+    player.currentTime = savedTime;
+    player.play().catch(() => {
       console.warn('[TV] Slave: video paused on unmute (autoplay policy), resuming muted');
       player.muted = true;
       player.play().catch(() => {
         console.error('[TV] Slave: muted play also failed after unmute pause');
       });
-    }
+    });
 
     // Cache freeze-frame + black-overlay APRÈS le 1er paint commit du player.
     // Voir SPEC manual-video-transitions § "Architecture du masquage".
