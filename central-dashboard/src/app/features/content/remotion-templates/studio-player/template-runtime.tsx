@@ -60,8 +60,8 @@ export type Anchor =
   | 'top-left' | 'top-center' | 'top-right'
   | 'center-left' | 'center' | 'center-right'
   | 'bottom-left' | 'bottom-center' | 'bottom-right';
-export type FitMode = 'contain' | 'cover' | 'fill' | 'fill-width-anchor-top' | 'fill-width-anchor-bottom';
-export type Overflow = 'hidden' | 'visible';
+export type FitMode = 'contain' | 'cover' | 'fill-width-anchor-top' | 'fill-height-anchor-left';
+export type Overflow = 'hidden' | 'visible' | 'top' | 'bottom' | 'left' | 'right';
 
 export interface RuntimeImageSlot {
   id: string;
