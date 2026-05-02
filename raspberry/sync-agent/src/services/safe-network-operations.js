@@ -416,64 +416,16 @@ class SafeNetworkOperations {
   }
 
   /**
-   * Compute optimal bgscan parameters based on current signal level.
-   * Default threshold is -70 dBm, but when signal hovers around -68/-70,
-   * bgscan oscillates between short (30s) and long (300s) intervals,
-   * triggering constant roaming scans that destabilize the RTL8192EU.
-   * Lowering the threshold to -75 for "moderate signal" environments keeps
-   * the dongle in calm mode (scan/5min) and avoids unnecessary carrier drops.
+   * Compute optimal bgscan for mesh environments.
+   * Returns '' (disabled) — proactive background scanning sur un mesh avec plusieurs
+   * APs à signal similaire provoque des storms de roaming sur RTL8192EU :
+   * chaque scan déclenche un deauth→reassoc, ce qui peut bloquer la connectivité
+   * pendant 5-15s. Un kiosque doit rester sur son AP jusqu'à perte d'association,
+   * pas roamer proactivement.
    */
   _computeOptimalBgscan() {
-    try {
-      const profile = networkDetector.getFullProfile();
-      const signal = profile?.currentConnection?.signal;
-
-      // Hysteresis: use wider bands to prevent threshold oscillation.
-      // Without hysteresis, signal oscillating between -68 and -73 dBm
-      // caused the threshold to flip between -75 and -70 every ~90s,
-      // each flip triggering wpa_cli reconfigure → deauth → WiFi drop.
-      // Fix: use -70 dBm as decision boundary with 5 dBm hysteresis band:
-      //   - Switch to relaxed (-75) only when signal > -67 (clearly moderate)
-      //   - Switch to aggressive (-70) only when signal <= -78 (clearly weak)
-      //   - In between (-78 to -67): keep whatever threshold is currently configured
-      if (signal && signal > -67) {
-        logger.info('SafeNetworkOperations: using relaxed bgscan threshold for moderate signal', {
-          signal,
-          threshold: -75,
-        });
-        return 'simple:30:-75:300';
-      }
-
-      if (signal && signal <= -78) {
-        logger.info('SafeNetworkOperations: using aggressive bgscan threshold for weak signal', {
-          signal,
-          threshold: -70,
-        });
-        return 'simple:30:-70:300';
-      }
-
-      // Hysteresis band (-78 to -67 dBm): keep current config to avoid flip-flopping
-      // Read current bgscan from config file (sync — this is a compute function, not async)
-      try {
-        const { execSync } = require('child_process');
-        const grepOut = execSync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`, { encoding: 'utf8' });
-        const currentBgscan = grepOut.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
-        if (currentBgscan) {
-          logger.info('SafeNetworkOperations: signal in hysteresis band, keeping current bgscan', {
-            signal,
-            currentBgscan,
-          });
-          return currentBgscan;
-        }
-      } catch {
-        // Fall through to default
-      }
-
-      // Default: standard threshold
-      return 'simple:30:-70:300';
-    } catch {
-      return 'simple:30:-70:300';
-    }
+    logger.info('SafeNetworkOperations: bgscan disabled for mesh stability (RTL8192EU roaming storms)');
+    return '';
   }
 
   /**
@@ -488,7 +440,8 @@ class SafeNetworkOperations {
       // that was causing 15+ disconnects/hour on NLF mesh.
       try {
         const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
-        const currentBgscan = stdout.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
+        // [^"]*  détecte aussi bgscan="" (disabled)
+        const currentBgscan = stdout.trim().match(/bgscan="([^"]*)"/)?.[1];
         if (currentBgscan === bgscan) {
           logger.info('SafeNetworkOperations: bgscan already configured, skipping reconfigure', { bgscan });
           return { success: true, message: `bgscan already configured: ${bgscan}`, skipped: true };
@@ -754,15 +707,16 @@ class SafeNetworkOperations {
       try {
         const optimalBgscan = this._computeOptimalBgscan();
         const { stdout } = await execAsync(`grep "bgscan=" ${this.wpaSupplicantPath} 2>/dev/null || echo ""`);
-        const currentBgscan = stdout.trim().match(/bgscan="([^"]+)"/)?.[1] || '';
+        // [^"]*  (zero-or-more) détecte aussi bgscan="" (disabled) — [^"]+ raterait la valeur vide
+        const currentBgscan = stdout.trim().match(/bgscan="([^"]*)"/)?.[1];
 
-        if (!currentBgscan) {
-          // No bgscan configured yet — add it
+        if (currentBgscan === undefined) {
+          // Aucune ligne bgscan dans le fichier — ajouter
           const result = await this.executeOperation(OPERATIONS.CONFIGURE_BGSCAN, { bgscan: optimalBgscan });
           actions.push({ action: 'configure_bgscan', ...result });
         } else if (currentBgscan !== optimalBgscan) {
-          // bgscan exists but with different threshold — update to match current signal
-          logger.info('SafeNetworkOperations: updating bgscan threshold', {
+          // bgscan configuré mais différent du souhaité — mettre à jour
+          logger.info('SafeNetworkOperations: updating bgscan', {
             current: currentBgscan,
             optimal: optimalBgscan,
           });
