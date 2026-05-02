@@ -1,3 +1,9 @@
+## [3.285.5](https://github.com/Tallec7/neopro/compare/v3.285.4...v3.285.5) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** logo/numéro fade-out après l'intro JOUEUR ([#811](https://github.com/Tallec7/neopro/issues/811)) ([dfa0fc5](https://github.com/Tallec7/neopro/commit/dfa0fc5ec073f0269c08c8ee1420776f9b439638))
+
 ## [3.285.4](https://github.com/Tallec7/neopro/compare/v3.285.3...v3.285.4) (2026-05-02)
 
 ### Bug Fixes
