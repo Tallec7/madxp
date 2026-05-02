@@ -219,10 +219,11 @@ function mergeSponsors(localSponsors, centralSponsors) {
   }
 
   // 2. Préserver les sponsors Club locaux qui ne sont PAS dans la liste du central
-  // (sponsors créés localement via la télécommande ou l'admin Pi)
+  // (sponsors créés localement via la télécommande ou l'admin Pi, jamais réconciliés)
+  // Ne PAS préserver si site_sponsor_id est présent : le central en est la source de vérité,
+  // sa suppression est intentionnelle.
   for (const sponsor of localSponsors) {
-    // Ne garder que les sponsors Club locaux non traités
-    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path)) {
+    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path) && !sponsor.site_sponsor_id) {
       result.push({
         ...sponsor,
         locked: false,
