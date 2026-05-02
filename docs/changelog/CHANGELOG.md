@@ -1,3 +1,9 @@
+## [3.285.4](https://github.com/Tallec7/neopro/compare/v3.285.3...v3.285.4) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** stacking JOUEUR aligné sur BUT Simple V1 ([#810](https://github.com/Tallec7/neopro/issues/810)) ([768461f](https://github.com/Tallec7/neopro/commit/768461f6a6a7303f2cd43f45de3dd869abc3facf)), closes [#809](https://github.com/Tallec7/neopro/issues/809)
+
 ## [3.285.3](https://github.com/Tallec7/neopro/compare/v3.285.2...v3.285.3) (2026-05-01)
 
 ### Bug Fixes
