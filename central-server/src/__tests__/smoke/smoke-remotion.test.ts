@@ -409,7 +409,9 @@ describe('Template Studio v2 (ADR-075)', () => {
 
   it('Root.tsx registers TemplateRuntime composition', () => {
     expect(root).toMatch(/id="TemplateRuntime"/);
-    expect(root).toMatch(/component=\{TemplateRuntime\}/);
+    // Accepte `component={TemplateRuntime}` ET `component={TemplateRuntime as any}`
+    // (le cast `as any` est légitime pour les compositions Remotion custom-typed — PR #81x)
+    expect(root).toMatch(/component=\{TemplateRuntime/);
   });
 
   it('controller records Prometheus supervision metrics on every endpoint', () => {
