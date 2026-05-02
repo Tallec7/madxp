@@ -235,9 +235,13 @@ FROM neopro_templates WHERE name = 'Joueur détaillé'
 ON CONFLICT (template_id, key) DO NOTHING;
 
 INSERT INTO template_options (template_id, key, label, type, values, default_value, user_editable, sort_order)
-VALUES
-  ((SELECT id FROM neopro_templates WHERE name = 'BUT Simple'), 'intro_mode', 'Intro', 'enum', '["logo","numero"]'::jsonb, 'logo', true, 1),
-  ((SELECT id FROM neopro_templates WHERE name = 'BUT Simple'), 'packshot', 'Packshot', 'enum', '["generique","img"]'::jsonb, 'generique', true, 2)
+SELECT id, 'intro_mode', 'Intro', 'enum', '["logo","numero"]'::jsonb, 'logo', true, 1
+FROM neopro_templates WHERE name = 'BUT Simple'
+ON CONFLICT (template_id, key) DO NOTHING;
+
+INSERT INTO template_options (template_id, key, label, type, values, default_value, user_editable, sort_order)
+SELECT id, 'packshot', 'Packshot', 'enum', '["generique","img"]'::jsonb, 'generique', true, 2
+FROM neopro_templates WHERE name = 'BUT Simple'
 ON CONFLICT (template_id, key) DO NOTHING;
 
 -- =============================================================================
