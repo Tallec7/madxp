@@ -1037,6 +1037,39 @@ describe('Template Studio v2 — preview hardening (ADR-075)', () => {
     expect(host).toMatch(/Could not play video/);
     expect(host).toMatch(/_origConsoleError/);
   });
+
+  // Regression guard (ADR-086) — la copie dashboard du runtime doit rester en parité
+  // avec le runtime serveur sur les champs critiques introduits par ADR-086.
+  // Ce test a détecté la divergence silencieuse qui causait le bug
+  // "logo/numero apparaissent à t=2.76s au lieu de t=0" (PR #815).
+  it('dashboard template-runtime.tsx est en parité avec le runtime serveur (ADR-086)', () => {
+    const serverRuntime = fs.readFileSync(
+      path.join(repoRoot, 'templates-remotion/src/runtime/TemplateRuntime.tsx'),
+      'utf8',
+    );
+    const dashRuntime = readDash(
+      'src/app/features/content/remotion-templates/studio-player/template-runtime.tsx',
+    );
+
+    // Champs ADR-086 obligatoires dans les deux runtimes.
+    const criticalPatterns: Array<[RegExp, string]> = [
+      [/animationDirection/, 'animationDirection champ présent'],
+      [/direction:\s*(?:tf|slot)\.animationDirection\s*\?\?\s*'in'/, "direction: <slot>.animationDirection ?? 'in' (passage au computeAnimation)"],
+      [/durationMs/, 'durationMs champ présent (durée layer héritée)'],
+      [/layerId/, 'layerId champ présent (slot ↔ layer parent)'],
+      [/appearDurationSeconds/, 'appearDurationSeconds helper présent (héritage durée)'],
+      [/isSlotVisible/, 'isSlotVisible helper présent (filtrage visible_if)'],
+      [/visibleIf/, 'visibleIf champ présent (slot conditionnel)'],
+      [/respectAlpha/, 'respectAlpha champ présent (z-stacking alpha)'],
+    ];
+
+    for (const [pattern, description] of criticalPatterns) {
+      expect(serverRuntime).toMatch(pattern); // runtime serveur (source de vérité)
+      // dashboard copy must stay in sync — failure here = ADR-086 divergence like PR #815
+      expect(dashRuntime).toMatch(pattern); // runtime dashboard (copie locale)
+      void description; // utilisé par le message d'erreur Jest implicite
+    }
+  });
 });
 
 describe('Template Studio v2 — scaffold placeholders (ADR-075)', () => {
