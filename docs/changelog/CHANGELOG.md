@@ -1,3 +1,9 @@
+## [3.285.9](https://github.com/Tallec7/neopro/compare/v3.285.8...v3.285.9) (2026-05-02)
+
+### Bug Fixes
+
+- **migrations:** idempotence fix-joueur-spec-compliance sur ephemeral PG ([#818](https://github.com/Tallec7/neopro/issues/818)) ([419b24f](https://github.com/Tallec7/neopro/commit/419b24f7d9c687c1f542f9ccf8fa9790ebdf096b))
+
 ## [3.285.8](https://github.com/Tallec7/neopro/compare/v3.285.7...v3.285.8) (2026-05-02)
 
 ### Bug Fixes
