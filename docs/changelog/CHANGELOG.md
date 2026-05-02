@@ -1,3 +1,9 @@
+## [3.285.6](https://github.com/Tallec7/neopro/compare/v3.285.5...v3.285.6) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** duration_ms=0 sur layers JOUEUR pour restaurer timing slots ([#814](https://github.com/Tallec7/neopro/issues/814)) ([9914a4e](https://github.com/Tallec7/neopro/commit/9914a4ea17fa0008ef2a54cfaa6a647c62d686a9))
+
 ## [3.285.5](https://github.com/Tallec7/neopro/compare/v3.285.4...v3.285.5) (2026-05-02)
 
 ### Bug Fixes
