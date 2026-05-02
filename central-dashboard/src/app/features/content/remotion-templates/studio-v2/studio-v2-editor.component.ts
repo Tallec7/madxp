@@ -217,6 +217,7 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         videoUrl: this.previewService.proxyUrl(l.videoUrl),
         zIndex: l.zIndex,
         mask: l.mask,
+        durationMs: l.durationMs,
       })),
       textFields: this.view.textFields.map((tf) => ({
         id: tf.id,
@@ -232,6 +233,12 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         animation: tf.animation,
         defaultValue: tf.defaultValue,
         visibleIf: tf.visibleIf,
+        // ADR-086 — champs manquants (fix/joueur-preview-runtime-parity)
+        animationDirection: tf.animationDirection,
+        scaleFrom: tf.scaleFrom,
+        scaleTo: tf.scaleTo,
+        layerId: tf.layerId,
+        respectAlpha: tf.respectAlpha,
       })),
       imageSlots: this.view.imageSlots.map((s) => ({
         id: s.id,
@@ -241,6 +248,20 @@ export class StudioV2EditorComponent implements OnChanges, OnDestroy {
         appearDuration: s.appearDuration,
         animation: s.animation,
         visibleIf: s.visibleIf,
+        // ADR-086 — champs manquants (fix/joueur-preview-runtime-parity)
+        animationDirection: s.animationDirection,
+        scaleFrom: s.scaleFrom,
+        scaleTo: s.scaleTo,
+        layerId: s.layerId,
+        anchor: s.anchor,
+        fitMode: s.fitMode,
+        safeZone: s.safeTopPct != null ? {
+          topPct: s.safeTopPct,
+          leftPct: s.safeLeftPct,
+          widthPct: s.safeWidthPct,
+          heightPct: s.safeHeightPct,
+        } : undefined,
+        overflow: s.overflow,
       })),
       variantId: this.selectedVariantId,
       textValues: { ...this.textValues },
