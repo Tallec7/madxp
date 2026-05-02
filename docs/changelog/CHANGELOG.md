@@ -1,3 +1,9 @@
+## [3.285.7](https://github.com/Tallec7/neopro/compare/v3.285.6...v3.285.7) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** parité preview dashboard ↔ runtime serveur (animations JOUEUR) ([#815](https://github.com/Tallec7/neopro/issues/815)) ([9df06a0](https://github.com/Tallec7/neopro/commit/9df06a09bc10267ed040ac722b5771330e957c94))
+
 ## [3.285.6](https://github.com/Tallec7/neopro/compare/v3.285.5...v3.285.6) (2026-05-02)
 
 ### Bug Fixes
