@@ -110,7 +110,8 @@ function mergeConfigurations(localConfig, neoProContent) {
   if (neoProContent.sponsors !== undefined) {
     result.sponsors = mergeSponsors(
       localConfig.sponsors || [],
-      neoProContent.sponsors || []
+      neoProContent.sponsors || [],
+      localConfig.localSponsors || []
     );
     logger.info(`[config-merge] Sponsors fusionnés: ${result.sponsors.length} vidéos`);
   }
@@ -199,11 +200,20 @@ function mergeConfigurations(localConfig, neoProContent) {
  * @param {Array} centralSponsors - Sponsors envoyés par le central (source de vérité)
  * @returns {Array} Sponsors fusionnés
  */
-function mergeSponsors(localSponsors, centralSponsors) {
+function mergeSponsors(localSponsors, centralSponsors, reconciledSponsors = []) {
   // Le central envoie la liste complète des sponsors à appliquer
   // On utilise directement cette liste en ajoutant les métadonnées appropriées
   const result = [];
   const processedPaths = new Set();
+
+  // Chemins des sponsors déjà réconciliés dans localSponsors[] (avec centralId).
+  // Ces sponsors ne doivent PAS être re-injectés dans sponsors[] — ils créeraient
+  // des doublons dans la boucle de diffusion.
+  const reconciledPaths = new Set(
+    reconciledSponsors
+      .map(s => s.localPath || s.path)
+      .filter(Boolean)
+  );
 
   // 1. Traiter tous les sponsors du central (NEOPRO et Club confondus)
   for (const sponsor of centralSponsors) {
@@ -219,11 +229,10 @@ function mergeSponsors(localSponsors, centralSponsors) {
   }
 
   // 2. Préserver les sponsors Club locaux qui ne sont PAS dans la liste du central
-  // (sponsors créés localement via la télécommande ou l'admin Pi, jamais réconciliés)
-  // Ne PAS préserver si site_sponsor_id est présent : le central en est la source de vérité,
-  // sa suppression est intentionnelle.
+  // (sponsors créés localement via la télécommande ou l'admin Pi).
+  // Ne PAS préserver si déjà réconcilié dans localSponsors[] (évite les doublons).
   for (const sponsor of localSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path) && !sponsor.site_sponsor_id) {
+    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path) && !reconciledPaths.has(sponsor.path)) {
       result.push({
         ...sponsor,
         locked: false,
