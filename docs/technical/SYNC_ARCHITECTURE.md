@@ -424,9 +424,15 @@ function mergeConfigurations(localConfig, neoProContent) {
 Le central est la **source de vérité** pour les sponsors :
 
 ```javascript
-function mergeSponsors(localSponsors, centralSponsors) {
+// reconciledSponsors = localConfig.localSponsors[] — sponsors déjà réconciliés avec
+// leur centralId. Ne PAS les réinjecter dans sponsors[] (doublon dans la boucle).
+function mergeSponsors(localSponsors, centralSponsors, reconciledSponsors = []) {
   const result = [];
   const processedPaths = new Set();
+
+  const reconciledPaths = new Set(
+    reconciledSponsors.map((s) => s.localPath || s.path).filter(Boolean),
+  );
 
   // 1. Appliquer tous les sponsors du central
   for (const sponsor of centralSponsors) {
@@ -440,8 +446,14 @@ function mergeSponsors(localSponsors, centralSponsors) {
   }
 
   // 2. Préserver les sponsors Club locaux NON présents dans le central
+  //    et NON déjà réconciliés dans localSponsors[] (évite les doublons)
   for (const sponsor of localSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro' && !processedPaths.has(sponsor.path)) {
+    if (
+      !sponsor.locked &&
+      sponsor.owner !== 'neopro' &&
+      !processedPaths.has(sponsor.path) &&
+      !reconciledPaths.has(sponsor.path)
+    ) {
       result.push(sponsor);
     }
   }
