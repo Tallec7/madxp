@@ -44,14 +44,14 @@ Permettre au staff d'un club de piloter la TV en temps réel depuis un smartphon
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| PIN par profil | Dashboard → Site → Remote & Sécurité → liste des device tokens |
-| Rollback V1 < 10s | Dashboard → Settings → décocher "Télécommande V2 (beta)" → reload club |
-| Prefs cross-device | Changer layout sur mobile → vérifier sur PC même (site, profil) |
-| Fallback LAN | Couper internet box → bandeau "LAN" visible sur remote < 3s |
-| Ratio V1/V2 | Prometheus `neopro_remote_client_version_total{version}` |
-| Adoption V2 | Alerte `RemoteLegacyAdoptionLow` si V2 < 70% sur 7j |
+| Règle              | Comment on vérifie                                                     |
+| ------------------ | ---------------------------------------------------------------------- |
+| PIN par profil     | Dashboard → Site → Remote & Sécurité → liste des device tokens         |
+| Rollback V1 < 10s  | Dashboard → Settings → décocher "Télécommande V2 (beta)" → reload club |
+| Prefs cross-device | Changer layout sur mobile → vérifier sur PC même (site, profil)        |
+| Fallback LAN       | Couper internet box → bandeau "LAN" visible sur remote < 3s            |
+| Ratio V1/V2        | Prometheus `neopro_remote_client_version_total{version}`               |
+| Adoption V2        | Alerte `RemoteLegacyAdoptionLow` si V2 < 70% sur 7j                    |
 
 ## Cas d'edge connus
 
