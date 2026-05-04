@@ -8,7 +8,23 @@
 
 ---
 
-## Semaine 18 — 28 Avril-4 Mai 2026
+## Semaine 19 — 5-11 Mai 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Vidéo secondaire NLF plus jamais en erreur 404 après un "replace"** ([#832](https://github.com/Tallec7/neopro/pull/832)) — quand un opérateur remplace le fichier d'un variant secondary (2ᵉ écran HDMI-1), le Pi NLF est désormais notifié automatiquement et télécharge le nouveau fichier. Avant ce fix, le Pi gardait le chemin de l'ancien fichier (absent physiquement) → erreur `code 4 / 404` sur toutes les vidéos manuelles de l'écran secondaire, écran bloqué en boucle en silence. Produit par l'issue #781 diagnostiquée sur le Pi NLF `c994620c`. Si offline au moment du replace, le Pi reçoit la commande à sa prochaine reconnexion.
+
+### 🛡️ Pour la robustesse
+
+*(aucune PR robustesse en S19 — voir S18 ci-dessous)*
+
+### 🧹 Pour l'équipe
+
+*(aucune PR équipe en S19)*
+
+---
+
+## Semaine 18 — 28 Avril-4 Mai 2026 (rattrapage [#795](https://github.com/Tallec7/neopro/pull/795)→[#831](https://github.com/Tallec7/neopro/pull/831))
 
 ### 🎯 Pour le club (NLF, prospects)
 
@@ -50,6 +66,23 @@
 - **Chantier templates JOUEUR : SPECs + ADRs + plan d'action** ([#757](https://github.com/Tallec7/neopro/pull/757)) — reprise du chantier templates vidéo joueur (Simple + But + 2 packshots générique/img). 4 SPECs au format gabarit pour `npm run template:import`, 1 SPEC globale transverse (invariants partagés, contrat utilisateur, verrouillage, cycle de vie), ADR-108 (versioning sémantique des templates avec snapshot immutable + fork explicite + rollback), ADR-109 (catalogue de backgrounds couleur + grants user_id pattern ADR-082), plan d'action 3 semaines / 3 fronts en parallèle. Décisions tranchées avec Daisy : 2 templates distincts vs paramétré, anim logo intro fixée 0→119%, photo joueur PNG détourée + cadrage auto à l'upload + offset_x user, layout packshot IMG simplifié, durées 5'24 / 6'24 @ 25fps. Stack documentaire vivant pour le chantier en cours.
 - **Build Angular 0-warning** ([#772](https://github.com/Tallec7/neopro/pull/772)) — `npm run build` revient à un signal propre (0 warning vs 12 warnings + 33 deprecations Sass omises). Migration mécanique des partials SCSS `remote-v2` (27 fichiers) : `darken()` → `color.adjust()` et `@import` → `@use` via `sass-migrator` officiel — préventif Sass 3.0.0. Budget `anyComponentStyle` raspberry assoupli 50→60 kB pour refléter la taille légitime de l'agrégateur 5-partials. Whitelist CommonJS pour `qrcode` (raspberry, fallback hotspot) et stack React (`react`/`react-dom`/`react-dom/client`/`react/jsx-runtime` côté central-dashboard, imposés par Remotion Player). Bénéfice équipe : tout warning de build qui apparaîtra désormais sera un vrai signal, plus du bruit noyé.
 - **Chantier templates JOUEUR : foundations backend + UI super_admin** ([#760](https://github.com/Tallec7/neopro/pull/760)) — implémentation de tout le backend nécessaire au chantier JOUEUR avant réception des assets Daisy : (1) migration DB consolidée (versioning `neopro_templates.version` + table snapshot `template_versions`, slot capabilities `text_transform`/`auto_crop`/`user_offset_x`/`require_alpha`, catalogue `template_backgrounds` + grants `template_backgrounds_grants` user_id avec PK composite cascade, backfill idempotent passant tous les templates existants en v1.0 published) ; (2) repositories `templateVersionsRepository` (publish + fork transactionnel BEGIN/COMMIT/FOR UPDATE + listVersions + setDefaultVersion, fork via information_schema future-proof contre les migrations futures) et `templateBackgroundsRepository` étendu (listAll + update + listGrants + bulk grant idempotent ON CONFLICT) ; (3) 9 endpoints API gated super_admin avec validation Joi (publish/fork/list/setDefault sur `/api/remotion-templates-studio/:id/...` + photo auto-crop sur `/photo/auto-crop` + backgrounds CRUD/grants sur `/api/templates/backgrounds/...`) ; (4) `text_transform: uppercase` câblé end-to-end DB → repository mapping → TemplateRuntime CSS ; (5) UI Angular super_admin sous `/content/joueur-tools` avec 3 onglets (📸 auto-crop photo cropper avec preview SVG bbox + offset_x slider, 🎨 backgrounds manager avec grants editor inline, 🔒 versions manager avec publish/fork/rollback). Validations : 39/39 smoke versioning + 8/8 png-bbox unit + 309/309 smoke core/wiring/remotion inchangés + tsc strict clean. Reste : reception 8 WebM alpha + fonts Bulevar/GeneralSans + confirmation typo "ComicSans" PDF p.5 → import sur staging avec `npm run template:import`.
+
+- **Templates vidéo JOUEUR NLF : 8 templates opérationnels** ([#805](https://github.com/Tallec7/neopro/pull/805) → [#817](https://github.com/Tallec7/neopro/pull/817), 8 PRs) — le club NLF peut maintenant utiliser 4 templates de présentation joueurs (JOUEUR Simple, JOUEUR Packshot, BUT Simple, BUT Img Joueur V2) conformes à la spec PDF. Stacking, timing des textes, fade-out logo/numéro, prénom+nom sur une seule ligne, timing packshot — tout conforme. Parité preview dashboard ↔ runtime serveur vérifiée.
+- **Studio Club : mode "Créer une vidéo"** ([#804](https://github.com/Tallec7/neopro/pull/804)) — un utilisateur club peut maintenant créer ses propres vidéos de présentation joueur directement depuis le portail club, sans intervention opérateur.
+- **Récepteurs LAN (Fire Stick HD) : lecture instantanée sans buffering** ([#830](https://github.com/Tallec7/neopro/pull/830)) — les écrans secondaires sur Fire Stick HD connectés au hotspot Pi ne subissent plus le délai de pré-chargement visible.
+- **Kiosk Pi : fix du faux positif "fenêtre parasite" au boot** ([#795](https://github.com/Tallec7/neopro/pull/795)) — au démarrage, le watchdog tuait parfois Chromium 35s après le lancement car la fenêtre se nommait `localhost_/tv` avant que Angular pose le titre "Neopro TV". TV plus stable au boot.
+
+### 🛡️ Pour la robustesse (S18 rattrapage)
+
+- **Auth Pi : 2 mots de passe séparés (admin panel vs Remote Angular)** ([#827](https://github.com/Tallec7/neopro/pull/827), [#828](https://github.com/Tallec7/neopro/pull/828)) — `auth.adminPassword` (hash scrypt, pour le panel `/admin`) et `auth.password` (texte pour la Remote Angular) sont désormais séparés, évitant un problème de comparaison plain-text vs hash quand les deux partageaient la même config.
+- **Kiosk Pi : log helper, null bytes, CDP port, filtres fenêtres** ([#829](https://github.com/Tallec7/neopro/pull/829)) — stabilité kiosk Pi améliorée.
+- **Pi 5 + sync : décodage logiciel, mesh bgscan, sponsors centraux autoritaires** ([#819](https://github.com/Tallec7/neopro/pull/819), [#820](https://github.com/Tallec7/neopro/pull/820), [#821](https://github.com/Tallec7/neopro/pull/821)) — headers PNA nginx sur les réponses vidéo (requis Chrome 110+ pour les receivers LAN), autoplay unmute corrigé, merge sponsors réconciliés.
+- **Migrations idempotentes sur CI (PostgreSQL éphémère)** ([#818](https://github.com/Tallec7/neopro/pull/818)) — fix CI : migration `fix-joueur-spec-compliance` plantait sur PostgreSQL éphémère de CI.
+
+### 🧹 Pour l'équipe (S18 rattrapage)
+
+- **Refactor Remote V2 : RemoteOrchestratorService** ([#796](https://github.com/Tallec7/neopro/pull/796), [#797](https://github.com/Tallec7/neopro/pull/797), [#798](https://github.com/Tallec7/neopro/pull/798)) — extraction du service d'orchestration + branchement V1 et V2 sur la même implémentation. Moins de duplication, tests plus faciles.
+- **Documentation vivante : personae, use-cases, GED, Obsidian vault** ([#799](https://github.com/Tallec7/neopro/pull/799) → [#802](https://github.com/Tallec7/neopro/pull/802), [#831](https://github.com/Tallec7/neopro/pull/831)) — refonte complète des personae mai 2026, catalogue use-cases multi-acteurs (JTBD), stabilisation doc GED phases 1-2, MAP.md + vault Obsidian + remote.spec.md pour naviguer l'archi sans grep.
 
 ---
 
