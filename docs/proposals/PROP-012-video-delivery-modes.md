@@ -259,6 +259,47 @@ Gabarit à suivre pour chaque nouveau mode retenu en PI Planning :
 
 ---
 
+## Mode 8 (gap) : Pi-LAN-display
+
+**Découvert le 2026-05-04** : un client (Daisy) a ouvert l'URL display d'un Pi
+voisin (`http://<pi-lan-ip>/tv`) depuis le navigateur Silk d'un Fire Stick HD
+branché à 5m du Pi. Cas d'usage légitime non couvert par les modes 1-7 :
+
+- **Pi serveur** + **browser receiver LAN** sans Internet
+- Club avec mauvaise connexion (Pi marche autonome, TV juste déportée via LAN)
+- TV équipée d'un Fire Stick existant → éviter câble HDMI long ou extender RJ45
+- Multi-écrans LAN (1 Pi → N receivers, recoupe PROP-001)
+
+Ce mode **n'est pas le mode SaaS** (ADR-037 = cloud-served + Internet
+obligatoire). C'est une 3ᵉ voie où le Pi reste l'edge serveur mais le rendu
+display est délégué à un receiver LAN.
+
+**Limites observées Fire Stick HD :**
+
+- Conflit TV-sync multi-slave si le kiosk Chromium local du Pi tourne en
+  parallèle (les deux s'enregistrent comme `slave` → resyncs constants → flash).
+  Workaround actuel : `sudo systemctl stop neopro-kiosk` quand pas de HDMI.
+- Cold-start HTTP/WiFi à chaque play (vs FS local du Pi master) → désync visible
+  entre receivers.
+
+**Mitigations partielles livrées** (cette PR) :
+
+1. `Cache-Control: public, max-age=2592000, immutable` sur nginx `/videos/`
+   → replays d'une vidéo déjà jouée = lecture cache browser local
+2. `LanReceiverPrecacheService` Angular qui précharge en background toutes les
+   vidéos de la config dès l'ouverture de la page display (gating : non-loopback
+   uniquement → no-op pour le kiosk Pi local)
+3. À venir : sync barrier 150ms côté master pour absorber le cold-start résiduel
+   des slaves browser
+
+**Encore ouvert :**
+
+- Auto-désactivation du kiosk Pi local quand un receiver LAN se présente (un seul
+  "primary display" élu) — sinon le bug TV-sync revient au prochain reboot.
+- Formaliser ce mode dans un PROP/ADR dédié ou amender PROP-012.
+
+---
+
 ## Open questions
 
 - [ ] **Priorité business** : Chromecast natif vs. Tizen/webOS — lequel en premier ? (décision PI Planning)
