@@ -1,3 +1,11 @@
+## [3.285.13](https://github.com/Tallec7/neopro/compare/v3.285.12...v3.285.13) (2026-05-04)
+
+### Bug Fixes
+
+- **admin:** séparer auth.adminPassword (scrypt) de auth.password (remote Angular) ([#828](https://github.com/Tallec7/neopro/issues/828)) ([1bf9c25](https://github.com/Tallec7/neopro/commit/1bf9c25254d5c7d7fb51d0d7f9ce87df6f4ad825))
+- **kiosk:** log helper en tête de fichier + tr null byte + CDP port + filtres fenêtres ([#829](https://github.com/Tallec7/neopro/issues/829)) ([2fefc63](https://github.com/Tallec7/neopro/commit/2fefc638328a0e0bf1be95fbf67c1060b6775c02))
+- **pi5+sync:** software decode Pi5, bgscan mesh, sponsors centraux autoritaires ([#821](https://github.com/Tallec7/neopro/issues/821)) ([d40f5fa](https://github.com/Tallec7/neopro/commit/d40f5fa3fb97f8e0cfab70aeb0a6e5af7c2aa121))
+
 ## [3.285.12](https://github.com/Tallec7/neopro/compare/v3.285.11...v3.285.12) (2026-05-04)
 
 ### Bug Fixes
