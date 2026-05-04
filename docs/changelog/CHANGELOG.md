@@ -1,3 +1,9 @@
+# [3.286.0](https://github.com/Tallec7/neopro/compare/v3.285.13...v3.286.0) (2026-05-04)
+
+### Features
+
+- **raspberry:** instant playback for Fire Stick HD LAN receivers ([#830](https://github.com/Tallec7/neopro/issues/830)) ([68bdc76](https://github.com/Tallec7/neopro/commit/68bdc764e8b006e739420560f76c3321b24c6de5))
+
 ## [3.285.13](https://github.com/Tallec7/neopro/compare/v3.285.12...v3.285.13) (2026-05-04)
 
 ### Bug Fixes
