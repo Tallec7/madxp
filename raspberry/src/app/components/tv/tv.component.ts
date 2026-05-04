@@ -19,6 +19,7 @@ import { SaasConfigService } from '../../services/saas-config.service';
 import { ManualVideoService } from '../../services/manual-video.service';
 import { WebContentService } from '../../services/web-content.service';
 import { TvSyncService } from '../../services/tv-sync.service';
+import { LanReceiverPrecacheService } from '../../services/lan-receiver-precache.service';
 import { LicenseBlockComponent } from '../license-block/license-block.component';
 import { WaitingScreenComponent } from '../waiting-screen/waiting-screen.component';
 import { WrongPortScreenComponent } from '../wrong-port-screen/wrong-port-screen.component';
@@ -60,6 +61,7 @@ export class TvComponent implements OnInit, OnDestroy {
   private readonly manualVideoService = inject(ManualVideoService);
   private readonly webContentService = inject(WebContentService);
   private readonly tvSyncService = inject(TvSyncService);
+  private readonly lanPrecacheService = inject(LanReceiverPrecacheService);
 
   private localBroadcastSubscriptions: Subscription[] = [];
 
@@ -236,6 +238,11 @@ export class TvComponent implements OnInit, OnDestroy {
 
     // Initialiser le watermark (délégué au service)
     this.watermarkService.init(this.configuration);
+
+    // Receivers LAN (Fire Stick, smart TV browser) : précharger les vidéos en
+    // background pour éliminer le cold-start HTTP/WiFi sur 1er clic. No-op
+    // sur le kiosk Pi local (loopback) qui lit en FS direct.
+    this.lanPrecacheService.precacheConfiguration(this.configuration);
 
     // Activer le plein écran ET le son au premier clic/touche utilisateur
     const activateFullscreenAndUnmute = () => {
