@@ -64,3 +64,7 @@ raspberry/admin/public/styles.css.bak
 
 # Drop zone pour assets en cours de transit (WebM, fonts, source AE)
 _incoming/
+# Obsidian — workspace local uniquement
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/plugins/dataview/
