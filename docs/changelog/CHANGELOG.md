@@ -1,3 +1,9 @@
+## [3.286.1](https://github.com/Tallec7/neopro/compare/v3.286.0...v3.286.1) (2026-05-04)
+
+### Bug Fixes
+
+- **variants:** dispatch deploy_video to Pi sites after variant replace ([#832](https://github.com/Tallec7/neopro/issues/832)) ([6e230b7](https://github.com/Tallec7/neopro/commit/6e230b7d824178de6f96e352810f4c7fba2a41bc)), closes [#781](https://github.com/Tallec7/neopro/issues/781) [#781](https://github.com/Tallec7/neopro/issues/781) [#781](https://github.com/Tallec7/neopro/issues/781)
+
 # [3.286.0](https://github.com/Tallec7/neopro/compare/v3.285.13...v3.286.0) (2026-05-04)
 
 ### Features
