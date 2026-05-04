@@ -1,3 +1,9 @@
+## [3.285.11](https://github.com/Tallec7/neopro/compare/v3.285.10...v3.285.11) (2026-05-04)
+
+### Bug Fixes
+
+- PNA headers nginx + unmute autoplay + merge sponsors reconciliés ([#820](https://github.com/Tallec7/neopro/issues/820)) ([60fceeb](https://github.com/Tallec7/neopro/commit/60fceebb07e4705bd115407849ae9a5320622ebc))
+
 ## [3.285.10](https://github.com/Tallec7/neopro/compare/v3.285.9...v3.285.10) (2026-05-02)
 
 ### Bug Fixes
