@@ -1023,4 +1023,48 @@ describe('OTA deployment observability guards', () => {
     expect({ hasTimeoutMessage: alertingCombined.includes('Timeout') && alertingCombined.includes('aucune réponse') })
       .toEqual({ hasTimeoutMessage: true });
   });
+
+  it('createVideoVariant must dispatch deploy_video to Pi sites after variant replace (issue #781)', () => {
+    const controller = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/controllers/content-variant.controller.ts'),
+      'utf8'
+    );
+    const deploymentSvc = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/services/deployment.service.ts'),
+      'utf8'
+    );
+    const siteVideoRepo = fs.readFileSync(
+      path.join(repoRoot, 'central-server/src/repositories/site-video.repository.ts'),
+      'utf8'
+    );
+
+    // Controller must import and call dispatchVariantUpdateToSites (both upload and from-video paths)
+    expect({ importsDeploymentService: controller.includes("from '../services/deployment.service'") })
+      .toEqual({ importsDeploymentService: true });
+    const dispatchCallCount = (controller.match(/dispatchVariantUpdateToSites/g) || []).length;
+    expect({ dispatchCalledInBothPaths: dispatchCallCount >= 2 })
+      .toEqual({ dispatchCalledInBothPaths: true });
+    // Must be fire-and-forget (non-blocking, should not await without catch)
+    expect({ isCatchNonBlocking: /dispatchVariantUpdateToSites\(.*\)\.catch/.test(controller) })
+      .toEqual({ isCatchNonBlocking: true });
+
+    // DeploymentService must expose the public method
+    expect({ hasPublicMethod: deploymentSvc.includes('async dispatchVariantUpdateToSites(') })
+      .toEqual({ hasPublicMethod: true });
+    // Must use commandQueueService.sendOrQueue with deploy_video
+    expect({ usesDeployVideo: /sendOrQueue\([\s\S]{0,200}?'deploy_video'/.test(deploymentSvc) })
+      .toEqual({ usesDeployVideo: true });
+    // Must filter to Pi sites only (SaaS excluded)
+    expect({ filtersPiSites: deploymentSvc.includes('findPiSitesByVideo') })
+      .toEqual({ filtersPiSites: true });
+    // Must record Prometheus metric per dispatch outcome
+    expect({ recordsMetric: deploymentSvc.includes('recordVariantReplaceDispatched') })
+      .toEqual({ recordsMetric: true });
+
+    // Repository must have findPiSitesByVideo joining on site_type = 'pi'
+    expect({ hasFindPiSitesByVideo: siteVideoRepo.includes('findPiSitesByVideo') })
+      .toEqual({ hasFindPiSitesByVideo: true });
+    expect({ filtersOnPiType: siteVideoRepo.includes("site_type = 'pi'") })
+      .toEqual({ filtersOnPiType: true });
+  });
 });

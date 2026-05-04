@@ -814,6 +814,15 @@ const secondaryVariantEnrichedCount = new Histogram({
   registers: [register],
 });
 
+// ============= Variant Replace Dispatch (issue #781) =============
+
+const variantReplaceDispatchedTotal = new Counter({
+  name: 'neopro_variant_replace_dispatched_total',
+  help: 'deploy_video commands dispatched to Pi sites after a secondary variant replace',
+  labelNames: ['status'],  // 'sent' | 'queued' | 'failed'
+  registers: [register],
+});
+
 // ============= Template Studio v2 (ADR-075) =============
 
 const templateStudioOperationsTotal = new Counter({
@@ -1366,6 +1375,12 @@ class MetricsService {
 
   recordSponsorAutoResolution(outcome: 'resolved' | 'skipped' | 'unresolved', count: number): void {
     sponsorAutoResolutionTotal.inc({ outcome }, count);
+  }
+
+  // ============= Méthodes Variant Replace Dispatch (issue #781) =============
+
+  recordVariantReplaceDispatched(status: 'sent' | 'queued' | 'failed'): void {
+    variantReplaceDispatchedTotal.inc({ status });
   }
 
   // ============= Méthodes Secondary Variant Enrichment =============

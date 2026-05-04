@@ -6,6 +6,8 @@ import { getVideoUrl, deleteVideo } from './storage.service';
 import { uploadVerificationService } from './upload-verification.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
+import { siteVideoRepository } from '../repositories/site-video.repository';
+import { videoRepository } from '../repositories';
 import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
 import { deliveryStrategyRegistry } from './delivery/strategy-registry';
 import { DeliveryContext, DeliveryDeployment } from './delivery/delivery-strategy.interface';
@@ -765,6 +767,89 @@ class DeploymentService {
       logger.error('Error manually retrying deployment:', { deploymentId, error });
       return false;
     }
+  }
+
+  /**
+   * Dispatches deploy_video to every Pi site that has the parent video assigned,
+   * after a variant create/replace. SaaS sites load variants directly via FTP URL
+   * and are excluded. Fire-and-forget per-site: one failure never blocks the others.
+   */
+  async dispatchVariantUpdateToSites(
+    videoId: string,
+    variant: { filename: string; storage_path: string; checksum: string | null; width: number | null; height: number | null; duration: number | null }
+  ): Promise<void> {
+    const [piSiteIds, video] = await Promise.all([
+      siteVideoRepository.findPiSitesByVideo(videoId),
+      videoRepository.findVideoById(videoId),
+    ]);
+
+    if (!video || piSiteIds.length === 0) {
+      logger.info('dispatchVariantUpdateToSites: no Pi sites to notify', { videoId, piSiteCount: piSiteIds.length });
+      return;
+    }
+
+    const secondaryVariant = {
+      filename: variant.filename,
+      storagePath: variant.storage_path,
+      checksum: variant.checksum,
+      videoUrl: getVideoUrl(variant.storage_path),
+      width: variant.width,
+      height: variant.height,
+      duration: variant.duration,
+    };
+
+    logger.info('dispatchVariantUpdateToSites: dispatching deploy_video to Pi sites', {
+      videoId,
+      variantFilename: variant.filename,
+      piSiteCount: piSiteIds.length,
+    });
+
+    await Promise.allSettled(
+      piSiteIds.map(async (siteId) => {
+        try {
+          let siteSponsorId: string | null = null;
+          try {
+            siteSponsorId = await siteSponsorRepository.resolveSiteSponsorId(videoId, siteId);
+          } catch {
+            // Non-bloquant
+          }
+
+          const commandData = {
+            deploymentId: null,
+            videoId,
+            videoUrl: getVideoUrl(video.url || video.filename),
+            filename: video.filename,
+            originalName: video.original_name,
+            category: video.category || 'default',
+            subcategory: video.subcategory || null,
+            duration: video.duration || 0,
+            checksum: video.checksum || null,
+            sponsorId: null,
+            analyticsCategory: null,
+            siteSponsorId,
+            secondaryVariant,
+          };
+
+          const result = await commandQueueService.sendOrQueue(
+            siteId,
+            'deploy_video',
+            commandData,
+            {
+              priority: 3,
+              description: `Variant secondary replace: ${variant.filename}`,
+              expiresIn: 7 * 24 * 60 * 60 * 1000,
+            }
+          );
+
+          const status = result.sent ? 'sent' : 'queued';
+          metricsService.recordVariantReplaceDispatched(status);
+          logger.info('dispatchVariantUpdateToSites: command dispatched', { siteId, videoId, status, commandId: result.commandId });
+        } catch (err) {
+          metricsService.recordVariantReplaceDispatched('failed');
+          logger.error('dispatchVariantUpdateToSites: failed for site', { siteId, videoId, error: err });
+        }
+      })
+    );
   }
 }
 
