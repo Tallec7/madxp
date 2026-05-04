@@ -8,6 +8,28 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **TV supplémentaires via Amazon Fire Stick HD — instantané et synchronisé** ([#830](https://github.com/Tallec7/neopro/pull/830)) — un club peut désormais brancher un Fire Stick HD sur n'importe quel écran de son complexe (salle de sport, couloir, buvette), ouvrir l'URL du Pi en WiFi, et obtenir exactement le même contenu que la TV principale — sans Internet requis, sans matériel Pi supplémentaire. Trois améliorations en cascade : (1) les vidéos sont mises en cache navigateur au boot (pas de téléchargement à chaque lecture, instantané dès le 2e play) ; (2) le Pi attend 200ms avant d'envoyer le signal "révèle la vidéo" — les Fire Stick HD qui mettent plus de temps à démarrer le décodeur sont déjà prêts quand le signal arrive → tous les écrans affichent la même image au même instant ; (3) si le Pi n'a aucune TV branchée directement, il n'ouvre plus Chromium en arrière-plan (ce "fantôme" provoquait des flashes noirs sur les vrais écrans en se connectant lui aussi comme display). Mode documenté dans PROP-012 (Mode 8 "Pi-LAN-display").
+- **Présentations JOUEUR NLF : salve de correctifs spec PDF** ([#804](https://github.com/Tallec7/neopro/pull/804) → [#817](https://github.com/Tallec7/neopro/pull/817), 12 PRs) — les templates vidéo JOUEUR (photo joueur + nom + numéro + logo club) et BUT (animation but + score) ont été corrigés pour correspondre exactement à la spec PDF remise par Daisy : timing d'apparition des textes, fade-out logo/numéro, stacking des couches animées, valeurs par défaut `prénom NOM` sur une ligne, scale_from/scale_to non-null, conformité runtime dashboard ↔ serveur. Cas d'usage NLF : speaker passe les joueurs en entrée de terrain, 1 clic = 1 vidéo présentée, 0 décalage visible.
+- **Studio vidéo : mode "Créer une vidéo" accessible aux clubs** ([#804](https://github.com/Tallec7/neopro/pull/804)) — un utilisateur club peut maintenant créer lui-même une vidéo depuis le studio, sans passer par un super_admin. Débloque l'autonomie club sur les contenus personnalisés.
+
+### 🛡️ Pour la robustesse
+
+- **Admin Pi : mot de passe séparé de la télécommande** ([#827](https://github.com/Tallec7/neopro/pull/827) + [#828](https://github.com/Tallec7/neopro/pull/828)) — le Pi utilise deux mots de passe distincts : l'un (admin panel :8080) est chiffré avec l'algorithme fort scrypt, l'autre (télécommande Angular) reste en clair pour compatibilité navigateur. Avant ce fix, un mauvais mapping côté admin provoquait des erreurs d'authentification silencieuses. Séparation propre dans `club-config.json` + `auth.adminPassword` / `auth.password`.
+- **Pi 5 : décodage vidéo forcé en logiciel + mesh WiFi + sponsors reconciliés** ([#821](https://github.com/Tallec7/neopro/pull/821)) — trois problèmes Pi 5 spécifiques corrigés : (1) forçage décodage software pour éviter la saturation GPU SharedImage (bug "click-twice" détecté sur Pi NLF) ; (2) `bgscan` mesh désactivé sur l'interface hotspot pour éviter les déconnexions des Fire Stick en itinérance AP ; (3) sponsors "centraux" autoritaires : un sponsor fleet-wide ne peut plus être écrasé par une config locale incohérente.
+- **Headers Chrome Private Network Access sur les vidéos** ([#819](https://github.com/Tallec7/neopro/pull/819) + [#820](https://github.com/Tallec7/neopro/pull/820)) — Chrome 130+ bloque les requêtes cross-origin "private network" (navigateur public → Pi LAN) sans headers explicites. Nouveau `Access-Control-Allow-Private-Network: true` sur toutes les réponses nginx vidéo + fix autoplay unmute pour les browsers strictes. Sans ça, les Fire Stick Chrome-based auraient bloqué les vidéos silencieusement.
+- **Logs watchdog : helper + null bytes + filtres CDP** ([#829](https://github.com/Tallec7/neopro/pull/829)) — debug des redémarrages kiosk rendu plus lisible : fonction helper de log en tête de fichier, `tr` filtre les null bytes dans les titres X11, port CDP isolé par instance Chromium, filtres fenêtres affinés. Sans ça, `journalctl` produisait des lignes illisibles sur les Pi avec des caractères spéciaux.
+
+### 🧹 Pour l'équipe
+
+- **Remote V2 : extraction RemoteOrchestratorService** ([#796](https://github.com/Tallec7/neopro/pull/796) + [#798](https://github.com/Tallec7/neopro/pull/798)) — la logique d'orchestration (quel layout, quel mode, quelle émission) extraite de `remote-v2.component.ts` en service dédié `RemoteOrchestratorService`. V1 branché sur le même service. Session reviews plus rapides, tests unitaires possibles.
+- **Docs : refonte personae + use-cases mai 2026** ([#799](https://github.com/Tallec7/neopro/pull/799) → [#802](https://github.com/Tallec7/neopro/pull/802)) — `PERSONAE.md` revu avec les nouvelles personas mai 2026 (Staff régie, Speaker, Directeur NLF…) + `USE-CASES.md` aligné sur la nomenclature à jour. Utilisable pour le recrutement PM.
+
+---
+
 ## Semaine 18 — 28 Avril-4 Mai 2026
 
 ### 🎯 Pour le club (NLF, prospects)

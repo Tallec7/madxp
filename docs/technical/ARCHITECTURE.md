@@ -118,6 +118,41 @@ En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le c
   - `site-profiles-tab` : warning "Pi hors-ligne", bannière sync Pi masqués
   - Régression prévenue par smoke tests (`SaaS child component guards` + `SaaS config save flow` dans `__tests__/smoke/smoke-saas.test.ts`) et règles `.claude/rules/saas.md`
 
+### Mode Pi-LAN-display (Mode 8 — PR #830)
+
+Gap documenté dans `docs/proposals/PROP-012-video-delivery-modes.md`. Un Pi sert le contenu en LAN ; les displays sont des navigateurs web sur le même réseau (Fire Stick HD, tablette, PC) qui ouvrent `http://<pi-ip>/tv` **sans Internet**.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│              MODE Pi-LAN-display (PR #830)                        │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Pi NLF (192.168.1.111)                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │ nginx :80    │  │ socket :3000  │  │ angular build /tv    │   │
+│  │ /videos/     │  │ master/slave  │  │                      │   │
+│  │ Cache-Control│  │               │  │                      │   │
+│  │ immutable    │  │               │  │                      │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+│                                                                  │
+│  Fire Stick HD / Tablette / PC (même LAN)                        │
+│  → Silk Browser ouvre http://192.168.1.111/tv                    │
+│  → LanReceiverPrecacheService boot-precache toutes les vidéos    │
+│  → Slave socket-server (preload+reveal protocol ADR-034)         │
+│  → Cache browser force-cache (immutable) → 0 réseau 2e lecture   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Services Angular impliqués** :
+- **`LanReceiverPrecacheService`** (`raspberry/src/app/services/`) — détecte si le display est un LAN receiver (`window.location.hostname` ≠ `localhost`/`127.x`/`[::1]`), collecte tous les chemins vidéo de la configuration (sponsors, catégories, time-categories), et lance un precache throttlé (2 parallel, `priority:'low'`, `cache:'force-cache'`, `mode:'no-cors'`) au boot. Appelé depuis `TvComponent.ngOnInit()` après `watermarkService.init()`.
+- **`ManualVideoService`** — sync barrier 200ms (`MANUAL_REVEAL_BARRIER_MS`) avant master reveal quand `getTvRole() === 'master'` pour absorber le cold-start décodeur des slaves lents.
+
+**Prérequis infra** :
+- nginx `Cache-Control: public, max-age=2592000, immutable` sur `/videos/` (`neopro-base.conf` + `neopro-hls.conf` + `nginx-captive-portal.conf`)
+- Kiosk Pi sans HDMI → headless-park automatique (cf. section ci-dessous) pour éviter le ghost slave
+
+**Différence avec SaaS** : le SaaS charge les vidéos via URL FTP cloud ; le Pi-LAN-display accède aux vidéos sur le Pi local (pas d'Internet requis).
+
 ---
 
 ## Architecture multi-packages
@@ -954,6 +989,7 @@ avec des chemins différents.
 - ADR-034 : le slave ne `play()` jamais directement sur `action` — il `preloadManualVideo()` et attend `manualVideoVisible: true`
 - ADR-034 : l'émission immédiate du master porte `manualVideoVisible: false`, seule l'émission delayed porte `true`
 - ADR-034 v3.89.2 : le preload slave est silencieux (opacity 0, muted) — pas de freeze/overlay sauf manual→manual
+- **Sync barrier 200ms (PR #830)** : avant d'émettre `manualVideoVisible: true`, le master attend 200ms (`MANUAL_REVEAL_BARRIER_MS`). Cela donne aux slaves lents (Fire Stick HD, Silk browser, ~80-150ms de cold-start décodeur) le temps de charger la vidéo avant le signal de révélation. Smoke test enforced (`smoke-display.test.ts` — "Palier 3 LAN sync barrier"). Ajuster empiriquement si slaves > 200ms.
 
 **Vidéo manuelle synchronisée (ADR-034 v3.89.2+)** :
 
@@ -1045,6 +1081,15 @@ Pour fonctionner sans internet, le build Angular doit inclure :
 | Buzzer PWM (GPIO 18) | Aucun écran         | 3 bips courts (une seule fois)   |
 
 Scripts : `neopro-led-status.sh` (sysfs `/sys/class/leds/ACT` ou `led0`) et `neopro-buzzer.sh` (PWM `/sys/class/pwm/pwmchip0`)
+
+### Headless-park kiosk (PR #830)
+
+Quand le Pi n'a aucun câble HDMI branché (cas : Pi serveur LAN sans TV propre — le contenu est consommé par des Fire Stick ou navigateurs distants), Chromium tourne inutilement et s'enregistre comme slave sur le socket-server. Ce ghost slave provoque des re-syncs parasites et des flashes noirs sur les vrais displays.
+
+**Comportement** : `kiosk-watchdog.sh` surveille `card{0,1}-HDMI-A-{1,2}/status`. Si aucun HDMI n'est détecté pendant **30s consécutives** (grâce-boot exclu, failover-dual exclu), il appelle `cleanup_chromium()` et passe en mode `KIOSK_HEADLESS_PARKED=true`. Dès qu'un HDMI est reconnecté, `start_chromium()` relance le kiosk automatiquement.
+
+**Constante** : `NO_HDMI_GRACE_S=30` dans `kiosk-watchdog.sh`.
+**Smoke test** : `smoke-kiosk-pi.test.ts` — "kiosk-watchdog.sh must headless-park Chromium when no HDMI is connected".
 
 ### Priorité Kiosk Pi (F-23.3)
 
