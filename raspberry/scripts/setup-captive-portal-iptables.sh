@@ -23,6 +23,7 @@
 set -euo pipefail
 
 AP_INTERFACE="${AP_INTERFACE:-wlan0}"
+UPLINK_INTERFACE="${UPLINK_INTERFACE:-wlan1}"
 HOTSPOT_IP="192.168.4.1"
 NGINX_PORT="80"
 
@@ -61,12 +62,12 @@ NFT_TABLE="neopro_captive"
 iptables_cleanup() {
     while iptables -t nat -D PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; do :; done
     while iptables -t nat -D PREROUTING -i "$AP_INTERFACE" -p tcp --dport 443 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}" 2>/dev/null; do :; done
-    while iptables -t nat -D POSTROUTING -s 192.168.4.0/24 -o "$AP_INTERFACE" -j MASQUERADE 2>/dev/null; do :; done
+    while iptables -t nat -D POSTROUTING -s 192.168.4.0/24 -o "$UPLINK_INTERFACE" -j MASQUERADE 2>/dev/null; do :; done
 }
 
 iptables_install() {
     iptables -t nat -A PREROUTING -i "$AP_INTERFACE" -p tcp --dport 80 -j DNAT --to-destination "${HOTSPOT_IP}:${NGINX_PORT}"
-    iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$AP_INTERFACE" -j MASQUERADE
+    iptables -t nat -A POSTROUTING -s 192.168.4.0/24 -o "$UPLINK_INTERFACE" -j MASQUERADE
 }
 
 iptables_verify() {
@@ -86,7 +87,7 @@ nftables_install() {
     nft add chain ip "$NFT_TABLE" prerouting '{ type nat hook prerouting priority -100 ; }'
     nft add rule ip "$NFT_TABLE" prerouting iifname "$AP_INTERFACE" tcp dport 80 dnat to "${HOTSPOT_IP}:${NGINX_PORT}"
     nft add chain ip "$NFT_TABLE" postrouting '{ type nat hook postrouting priority 100 ; }'
-    nft add rule ip "$NFT_TABLE" postrouting ip saddr 192.168.4.0/24 oifname "$AP_INTERFACE" masquerade
+    nft add rule ip "$NFT_TABLE" postrouting ip saddr 192.168.4.0/24 oifname "$UPLINK_INTERFACE" masquerade
 }
 
 nftables_verify() {
@@ -96,6 +97,13 @@ nftables_verify() {
 # =============================================================================
 # Main
 # =============================================================================
+
+# Activer le routage IP (prérequis pour que le NAT fonctionne)
+echo 1 > /proc/sys/net/ipv4/ip_forward
+if ! grep -q "net.ipv4.ip_forward" /etc/sysctl.d/99-neopro-hotspot.conf 2>/dev/null; then
+    echo "net.ipv4.ip_forward=1" >> /etc/sysctl.d/99-neopro-hotspot.conf
+fi
+log_ok "ip_forward activé (routage hotspot → internet)"
 
 if [[ "$FIREWALL_BACKEND" == "iptables" ]]; then
     iptables_cleanup
@@ -111,6 +119,10 @@ else
     nftables_install
     if nftables_verify; then
         log_ok "Captive portal nftables actif (HTTP → nginx sur ${AP_INTERFACE}, ADR-079)"
+        # Persister les règles pour survivre au reboot
+        nft list ruleset > /etc/nftables.conf
+        systemctl enable nftables 2>/dev/null || true
+        log_ok "Règles nftables persistées (/etc/nftables.conf)"
     else
         log_err "Erreur lors de l'installation des règles nftables"
         exit 1

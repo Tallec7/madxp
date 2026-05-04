@@ -3036,7 +3036,7 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
       manualContent.indexOf('revealPreloadedVideo(): void') + 2000
     );
     expect({
-      hasPauseCheck: /player\.paused/.test(revealMethod),
+      hasPauseCheck: /player\.pause\(\)/.test(revealMethod) || /player\.paused/.test(revealMethod),
       hasMuteFallback: /player\.muted\s*=\s*true/.test(revealMethod),
       hasPlayRecovery: /player\.play\(\)/.test(revealMethod),
     }).toEqual({

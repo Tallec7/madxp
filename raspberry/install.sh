@@ -475,11 +475,11 @@ EOF
     # Configurer les règles iptables captive portal (Android HTTPS connectivity checks)
     # Sans ces règles, Android détecte "pas d'internet" et bascule sur la 4G
     if [ -x ./scripts/setup-captive-portal-iptables.sh ]; then
-        AP_INTERFACE="${WIFI_INTERFACE}" ./scripts/setup-captive-portal-iptables.sh || {
+        AP_INTERFACE="${WIFI_INTERFACE}" UPLINK_INTERFACE="${WIFI_CLIENT_INTERFACE:-wlan1}" ./scripts/setup-captive-portal-iptables.sh || {
             print_warning "Échec de la configuration iptables captive portal (non bloquant)"
         }
     elif [ -x "${INSTALL_DIR}/scripts/setup-captive-portal-iptables.sh" ]; then
-        AP_INTERFACE="${WIFI_INTERFACE}" "${INSTALL_DIR}/scripts/setup-captive-portal-iptables.sh" || {
+        AP_INTERFACE="${WIFI_INTERFACE}" UPLINK_INTERFACE="${WIFI_CLIENT_INTERFACE:-wlan1}" "${INSTALL_DIR}/scripts/setup-captive-portal-iptables.sh" || {
             print_warning "Échec de la configuration iptables captive portal (non bloquant)"
         }
     else
