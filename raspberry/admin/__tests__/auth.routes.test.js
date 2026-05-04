@@ -771,8 +771,11 @@ describe('POST /api/auth/change-password', () => {
       (c) => c[0] === CONFIG_PATH && typeof c[1] === 'string' && c[1].includes('"password"')
     );
     expect(configWrite).toBeDefined();
-    expect(configWrite[1]).toMatch(/"password":\s*"scrypt:[0-9a-f]+:[0-9a-f]+"/);
-    expect(configWrite[1]).not.toContain('"password": "newpass123"');
+    // ADR-073 S4 : le hash scrypt va dans adminPassword, PAS dans password (remote Angular)
+    expect(configWrite[1]).toMatch(/"adminPassword":\s*"scrypt:[0-9a-f]+:[0-9a-f]+"/);
+    expect(configWrite[1]).not.toContain('"adminPassword": "newpass123"');
+    // auth.password (remote Angular plain text) ne doit PAS être écrasé
+    expect(configWrite[1]).not.toMatch(/"password":\s*"scrypt:[0-9a-f]+:[0-9a-f]+"/)
   });
 });
 

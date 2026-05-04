@@ -53,7 +53,9 @@ async function persistHashedPassword(hashedPassword) {
   const data = await fs.readFile(configPath, 'utf8');
   const config = JSON.parse(data);
   if (!config.auth) config.auth = {};
-  config.auth.password = hashedPassword;
+  // auth.adminPassword = champ exclusif du panel admin (scrypt)
+  // auth.password = champ de la remote Angular (plain text depuis central) — ne pas toucher
+  config.auth.adminPassword = hashedPassword;
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
@@ -175,7 +177,8 @@ async function getAdminPassword() {
   try {
     const data = await fs.readFile(configPath, 'utf8');
     const config = JSON.parse(data);
-    return config.auth?.password || null;
+    // Priorité : adminPassword (scrypt, exclusif admin panel) > password (plain text, remote Angular)
+    return config.auth?.adminPassword || config.auth?.password || null;
   } catch (error) {
     console.warn('[auth] Failed to read admin password from config:', error.message);
     return null;
