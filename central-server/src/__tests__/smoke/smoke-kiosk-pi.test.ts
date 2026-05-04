@@ -2804,7 +2804,9 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     });
   });
 
-  // Guard 7: dnsmasq.conf must redirect Android HTTPS check domains
+  // Guard 7: dnsmasq.conf must redirect Android captive portal check domains only
+  // clients3.google.com and play.googleapis.com are intentionally excluded:
+  // Android uses them for real API calls — redirecting them breaks internet detection.
   it('dnsmasq.conf must redirect all Android connectivity check domains', () => {
     const dnsmasq = fs.readFileSync(
       path.join(repoRoot, 'raspberry/config/systemd/dnsmasq.conf'),
@@ -2813,11 +2815,14 @@ describe('Android captive portal iptables (HTTPS connectivity check fix)', () =>
     const requiredDomains = [
       'connectivitycheck.gstatic.com',
       'connectivitycheck.google.com',
-      'clients3.google.com',
-      'play.googleapis.com',
     ];
     const missing = requiredDomains.filter(d => !dnsmasq.includes(`address=/${d}/192.168.4.1`));
     expect({ missingAndroidDomains: missing }).toEqual({ missingAndroidDomains: [] });
+
+    // Guard négatif : ces domaines ne doivent PAS être redirigés (casse la détection internet Android)
+    const forbidden = ['clients3.google.com', 'play.googleapis.com'];
+    const wronglyRedirected = forbidden.filter(d => dnsmasq.includes(`address=/${d}/192.168.4.1`));
+    expect({ wronglyRedirected }).toEqual({ wronglyRedirected: [] });
   });
 });
 
