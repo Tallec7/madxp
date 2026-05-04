@@ -93,6 +93,23 @@ class SiteVideoRepository {
   }
 
   /**
+   * Get Pi site IDs linked to a video (site_type = 'pi' only).
+   * Used to dispatch deploy_video after a variant replace — SaaS sites load
+   * variants directly from FTP URL and do not need a command.
+   */
+  async findPiSitesByVideo(videoId: string): Promise<string[]> {
+    const result = await query<{ site_id: string }>(
+      `SELECT sv.site_id
+       FROM site_videos sv
+       JOIN sites s ON s.id = sv.site_id
+       WHERE sv.video_id = $1 AND s.site_type = 'pi'
+       ORDER BY sv.added_at`,
+      [videoId]
+    );
+    return result.rows.map(r => r.site_id);
+  }
+
+  /**
    * Remove all site links for a video.
    */
   async unlinkAll(videoId: string): Promise<number> {
