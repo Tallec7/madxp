@@ -30,36 +30,25 @@ LXPANEL_KILL_COUNT=0  # Compteur de kills lxpanel (monitoring)
 
 # GPU Video Decode Mode (Pi 5 uniquement)
 # "hardware" = V4L2 stateless decode (économise ~20% CPU, réduit le coil whine)
-# "software" = decode software (fallback si hardware crashe)
-# Le fichier /tmp/gpu-decode-fallback persiste les crashs hardware entre restarts Chromium.
-# Il est supprimé au reboot (tmpfs) → chaque boot re-tente le hardware decode.
-GPU_DECODE_FALLBACK_FILE="/tmp/gpu-decode-fallback"
-GPU_DECODE_CRASH_THRESHOLD=2  # Après 2 crashs rapides avec hardware decode → fallback software
+# "software" = decode software (stable, Pi 5 par défaut)
+# Le fichier de fallback est persistant (hors /tmp) pour survivre aux reboots.
+GPU_DECODE_FALLBACK_FILE="/home/pi/neopro/.gpu-decode-fallback"
+GPU_DECODE_CRASH_THRESHOLD=2  # Conservé pour backward-compat, non utilisé sur Pi 5
 GPU_DECODE_MODE="hardware"    # Valeur par défaut, mise à jour par detect_gpu_decode_mode()
 
-# Détecte le mode de décodage GPU à utiliser (Pi 5 uniquement)
-# Vérifie si le hardware decode a crashé trop souvent → fallback software
+# Détecte le mode de décodage GPU à utiliser.
+# Pi 5 : software par défaut — le décodeur V4L2 stateless hardware provoque des
+# échecs d'allocation SharedImage (Mesa V3D ne peut tenir qu'un slot 1920×1080
+# Y_UV à la fois), ce qui génère des frames noires à chaque transition vidéo.
+# Pi 4 : hardware natif (stable, pas affecté par ce bug).
 detect_gpu_decode_mode() {
     if [[ "$PI_MODEL" != "pi5" ]]; then
         GPU_DECODE_MODE="hardware"  # Pi 4 utilise toujours le hardware decode natif
         return
     fi
 
-    # Vérifier si le fichier de fallback existe (crashs hardware précédents)
-    if [[ -f "$GPU_DECODE_FALLBACK_FILE" ]]; then
-        local crash_count
-        crash_count=$(cat "$GPU_DECODE_FALLBACK_FILE" 2>/dev/null | grep -c "^crash:" || true)
-        crash_count=${crash_count:-0}
-
-        if (( crash_count >= GPU_DECODE_CRASH_THRESHOLD )); then
-            GPU_DECODE_MODE="software"
-            log "⚠️ GPU decode: fallback software (${crash_count} crashs hardware détectés ce boot)"
-            return
-        fi
-    fi
-
-    GPU_DECODE_MODE="hardware"
-    log "🎬 GPU decode: mode hardware (V4L2 stateless)"
+    GPU_DECODE_MODE="software"
+    log "📱 Pi 5: software decode (V4L2 hardware désactivé — SharedImage bug Mesa/V3D)"
 }
 
 # Enregistre un crash GPU decode (pour le mécanisme de fallback)
@@ -901,7 +890,7 @@ start_chromium() {
                 --disable-gpu-vsync
             )
         else
-            log "📱 Pi 5: V3D Mesa + software decode (fallback après crashs hardware)"
+            log "📱 Pi 5: software decode (V4L2 hardware désactivé — SharedImage bug Mesa/V3D)"
             disable_features+=",VaapiVideoDecoder,UseChromeOSDirectVideoDecoder"
             gpu_flags=(
                 --ignore-gpu-blocklist

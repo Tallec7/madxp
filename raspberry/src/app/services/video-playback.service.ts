@@ -498,12 +498,14 @@ export class VideoPlaybackService {
       }
     }, 50);
 
+    // 4000ms : laisser le software decode Pi 5 charger le préload avant de
+    // forcer un switch sur un player non prêt (sinon flash noir au switch).
     const safetyTimeout = setTimeout(() => {
       clearInterval(readyCheckInterval);
       inactivePlayer.removeEventListener('canplaythrough', onReady);
       console.warn('[VideoPlayback] Preload safety timeout, forcing switch');
       doTriggerSwitch();
-    }, 1500);
+    }, 4000);
   }
 
   // ==========================================================================

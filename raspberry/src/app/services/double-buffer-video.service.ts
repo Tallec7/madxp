@@ -253,12 +253,15 @@ export class DoubleBufferVideoService {
       });
     };
 
+    // 4000ms (vs 1500ms historique) : couvre le software decode Pi 5
+    // (V4L2 hardware désactivé suite au bug Mesa SharedImageBackingFactory).
+    // Le 1er frame H.264 1080p en software peut prendre 1.5-3s sous charge.
     const safetyTimeout = setTimeout(() => {
       if (!revealed) {
         console.warn('[DoubleBuffer] Frame detection safety timeout, revealing');
         reveal();
       }
-    }, 1500);
+    }, 4000);
 
     const checkFrame = () => {
       if (revealed) return;
@@ -328,13 +331,14 @@ export class DoubleBufferVideoService {
       newPlayer.play().then(() => {
         // Attendre que le player rende des pixels réels avant de notifier
         let revealed = false;
+        // 4000ms : voir commentaire dans detectFrameAndReveal (software decode Pi 5).
         const safetyTimeout = setTimeout(() => {
           if (!revealed) {
             revealed = true;
             console.warn('[DoubleBuffer] Frame detection safety timeout, revealing anyway');
             finalize();
           }
-        }, 1500);
+        }, 4000);
 
         const finalize = () => {
           // Cacher l'ancien player
