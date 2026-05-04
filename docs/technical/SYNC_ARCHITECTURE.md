@@ -421,14 +421,19 @@ function mergeConfigurations(localConfig, neoProContent) {
 
 #### Merge des Sponsors (Boucle par défaut)
 
-Le central est la **source de vérité** pour les sponsors :
+**`sponsors[]` est 100% sous autorité centrale** (PR #821 — mai 2026) :
+seul ce qu'envoie le central est conservé après un sync. Les sponsors locaux créés
+par un bénévole passent exclusivement par `localSponsors[]` via `mergeSiteSponsors()`.
+
+> ⚠️ Avant PR #821, un step 2 réinjectait les sponsors locaux sans `site_sponsor_id`
+> dans `sponsors[]`, causant la persistance de sponsors supprimés côté central (incident NLF).
 
 ```javascript
-function mergeSponsors(localSponsors, centralSponsors) {
+function mergeSponsors(localSponsors, centralSponsors, reconciledSponsors = []) {
   const result = [];
   const processedPaths = new Set();
 
-  // 1. Appliquer tous les sponsors du central
+  // 1. Appliquer UNIQUEMENT les sponsors du central (source de vérité absolue)
   for (const sponsor of centralSponsors) {
     const isNeopro = sponsor.locked || sponsor.owner === 'neopro';
     result.push({
@@ -439,12 +444,8 @@ function mergeSponsors(localSponsors, centralSponsors) {
     if (sponsor.path) processedPaths.add(sponsor.path);
   }
 
-  // 2. Préserver les sponsors Club locaux NON présents dans le central
-  for (const sponsor of localSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro' && !processedPaths.has(sponsor.path)) {
-      result.push(sponsor);
-    }
-  }
+  // Note : les sponsors locaux ne sont PAS préservés ici.
+  // Ils passent par localSponsors[] via mergeSiteSponsors().
 
   return result;
 }

@@ -8,6 +8,26 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Templates JOUEUR : présentation animée des joueurs sur la TV** ([#805](https://github.com/Tallec7/neopro/pull/805) → [#817](https://github.com/Tallec7/neopro/pull/817), 8 PRs) — photo, nom, numéro, logo, animations d'entrée/sortie conformes à la charte graphique. L'opérateur saisit nom + numéro, la vidéo se génère en quelques secondes et rejoint la boucle. Conçu pour les cérémonies d'entrée des joueurs (handball, basket, foot).
+- **Studio club "Créer une vidéo" accessible depuis le portail club** ([#804](https://github.com/Tallec7/neopro/pull/804)) — un responsable com' club peut créer ses cartes joueurs sans passer par NEOPRO.
+- **Fire Stick : démarrage instantané des vidéos LAN** ([#830](https://github.com/Tallec7/neopro/pull/830)) — pré-cache LAN avant lecture. Fini le blanc au démarrage d'une vidéo, particulièrement visible en mode cérémonie joueurs.
+
+### 🛡️ Pour la robustesse
+
+- **Fix incidents Pi NLF du 2 mai 2026** ([#821](https://github.com/Tallec7/neopro/pull/821) + [#828](https://github.com/Tallec7/neopro/pull/828) + [#829](https://github.com/Tallec7/neopro/pull/829)) — trois bugs : (1) ORA RADIO réapparaissait après sync même supprimé → central désormais autoritaire sur sponsors[] ; (2) login télécommande Angular cassé après admin panel → deux champs séparés `adminPassword`/`password` ; (3) kiosk Pi se redémarrait ~35s après boot (faux positif watchdog).
+- **Headers Chromium Private Network Access sur les vidéos nginx** ([#819](https://github.com/Tallec7/neopro/pull/819) + [#820](https://github.com/Tallec7/neopro/pull/820)) — Chrome 124+ bloquait silencieusement des requêtes vidéo locales Pi. Fix headers PNA + autoplay-with-sound.
+
+### 🧹 Pour l'équipe
+
+- **Refactor Remote V2 : extraction du service d'orchestration** ([#796](https://github.com/Tallec7/neopro/pull/796) + [#798](https://github.com/Tallec7/neopro/pull/798)) — `RemoteOrchestratorService` partagé V1/V2, prépare le sunset V1.
+- **Documentation produit complète** ([#799](https://github.com/Tallec7/neopro/pull/799) → [#802](https://github.com/Tallec7/neopro/pull/802) + [#831](https://github.com/Tallec7/neopro/pull/831)) — refonte personae mai 2026, use cases multi-acteurs, map Obsidian + dependency-cruiser, `remote.spec.md`. Socle pour recrutement PM/CTO.
+
+---
+
 ## Semaine 18 — 28 Avril-4 Mai 2026
 
 ### 🎯 Pour le club (NLF, prospects)

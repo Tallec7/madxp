@@ -6899,3 +6899,57 @@ cd central-server && npx jest --testPathPattern='smoke/smoke-dashboard-guards' -
 - Retirer `rateLimitBackoffUntil` de `LoggerService` (le feedback loop 429 reviendra immédiatement)
 - Retirer `pendingLoad` / `shareReplay` de `GroupsService.loadGroups()` (3+ requêtes simultanées à chaque navigation vers une page contenant des groupes)
 - Augmenter `MAX_BATCH_SIZE` au-delà de 20 sans ajuster `loggingRateLimit` côté serveur (chaque batch = 1 POST par entrée → débit proportionnel)
+
+---
+
+## Incidents Pi prod (NLF — mai 2026)
+
+### Sponsor ORA RADIO réapparaît après "Remplacer" depuis le dashboard
+
+#### Symptômes
+
+- L'opérateur clique "Remplacer" depuis le dashboard
+- Après le prochain sync du Pi, ORA RADIO réapparaît dans la boucle par défaut
+
+#### Cause
+
+`mergeSponsors()` dans `raspberry/sync-agent/src/utils/config-merge.js` avait un step 2 qui réinjectait les sponsors locaux sans `site_sponsor_id` dans `sponsors[]`, même après un Replace. ORA RADIO avait été créé localement sans être réconcilié, donc survivait au merge.
+
+#### Solution (PR #821 — mai 2026)
+
+Le step 2 a été supprimé. `sponsors[]` est maintenant **100% sous autorité centrale** : seul ce qu'envoie le central survit au sync.
+
+**Action manuelle restante si déjà impacté** : supprimer ORA RADIO dans la DB centrale via dashboard → Contenu → Boucle par défaut → Remplacer.
+
+---
+
+### Login télécommande Angular cassé après connexion à l'admin panel (:8080)
+
+#### Symptômes
+
+- Le login fonctionne parfois, échoue parfois avec le même mot de passe
+- Après une connexion à `http://neopro.local:8080`, le login `http://neopro.local:4200/login` cesse de fonctionner
+
+#### Cause
+
+ADR-073 (19/04/2026) a introduit le hashage scrypt dans l'admin panel. À la première connexion admin post-ADR-073, le mot de passe plain text était **remplacé** par son hash scrypt dans `auth.password`. La télécommande Angular compare `password === this.password` (plain text) — le hash scrypt ne matche jamais.
+
+#### Solution (PR #828 — mai 2026)
+
+Deux champs séparés dans `configuration.json` :
+- `auth.adminPassword` : hash scrypt, exclusif admin panel (:8080)
+- `auth.password` : plain text, exclusif télécommande Angular
+
+**Fix urgence sur Pi existant** (si `auth.password` contient déjà un hash scrypt) :
+```bash
+ssh pi@neopro.local
+python3 -c "
+import json
+with open('/home/pi/neopro/webapp/configuration.json') as f:
+    c = json.load(f)
+c['auth']['password'] = 'MOT_DE_PASSE_PLAIN_TEXT'
+with open('/home/pi/neopro/webapp/configuration.json', 'w') as f:
+    json.dump(c, f, indent=2)
+print('Done')
+"
+```
