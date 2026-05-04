@@ -265,6 +265,32 @@ describe('Kiosk watchdog cache management', () => {
     expect({ passwordStoreBasicCount: matches.length >= 2 })
       .toEqual({ passwordStoreBasicCount: true });
   });
+
+  it('kiosk-watchdog.sh must headless-park Chromium when no HDMI is connected (Pi-LAN-display)', () => {
+    // Sans ce park, le Chromium kiosk local tourne en headless inutilement et
+    // se déclare `slave (tv)` sur le socket-server, créant un conflit multi-slave
+    // avec un receiver LAN éventuel (Fire Stick, smart TV browser ouvrant
+    // http://<pi-lan-ip>/tv) → resyncs constants → flash noir.
+    // Découvert le 2026-05-04 ; cf. PROP-012 § "Mode 8 (gap) Pi-LAN-display"
+    // et PR #830.
+    expect({
+      hasGraceConstant: /NO_HDMI_GRACE_S\s*=\s*\d+/.test(watchdog),
+      graceIsNonZero: !/NO_HDMI_GRACE_S\s*=\s*0\b/.test(watchdog),
+      hasParkedFlag: /KIOSK_HEADLESS_PARKED=/.test(watchdog),
+      checksBothHdmiPorts: /!\s*detect_hdmi0_status\s+&&\s+!\s*detect_hdmi1_status/.test(watchdog),
+      callsCleanupOnPark: /KIOSK_HEADLESS_PARKED=true[\s\S]{0,50}|cleanup_chromium[\s\S]{0,200}KIOSK_HEADLESS_PARKED=true/.test(watchdog),
+      restartsOnUnpark: /KIOSK_HEADLESS_PARKED=false[\s\S]{0,200}start_chromium/.test(watchdog),
+      respectsFailoverGrace: /HDMI_FAILOVER_ACTIVE[\s\S]{0,300}NO_HDMI_DETECTED_AT/.test(watchdog),
+    }).toEqual({
+      hasGraceConstant: true,
+      graceIsNonZero: true,
+      hasParkedFlag: true,
+      checksBothHdmiPorts: true,
+      callsCleanupOnPark: true,
+      restartsOnUnpark: true,
+      respectsFailoverGrace: true,
+    });
+  });
 });
 
 describe('neopro-kiosk.service must depend on nginx', () => {
