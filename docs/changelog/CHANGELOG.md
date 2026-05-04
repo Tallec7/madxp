@@ -1,3 +1,9 @@
+## [3.286.2](https://github.com/Tallec7/neopro/compare/v3.286.1...v3.286.2) (2026-05-04)
+
+### Bug Fixes
+
+- **hotspot:** corriger NAT + ip_forward + dnsmasq captive portal + install.sh UPLINK ([#833](https://github.com/Tallec7/neopro/issues/833)) ([c627f0e](https://github.com/Tallec7/neopro/commit/c627f0eb5639a1dfbe511390d6a97c8600f66bb3)), closes [#42](https://github.com/Tallec7/neopro/issues/42) [#42](https://github.com/Tallec7/neopro/issues/42) [#831](https://github.com/Tallec7/neopro/issues/831) [#832](https://github.com/Tallec7/neopro/issues/832)
+
 ## [3.286.1](https://github.com/Tallec7/neopro/compare/v3.286.0...v3.286.1) (2026-05-04)
 
 ### Bug Fixes

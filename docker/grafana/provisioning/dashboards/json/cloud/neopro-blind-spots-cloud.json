@@ -259,9 +259,7 @@
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "color": { "mode": "thresholds" }
         }
@@ -271,9 +269,7 @@
         "graphMode": "area",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
       },
-      "targets": [
-        { "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }
-      ]
+      "targets": [{ "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }]
     },
     {
       "collapsed": false,

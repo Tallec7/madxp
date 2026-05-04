@@ -57,6 +57,54 @@ network={
 
 ## Historique des incidents
 
+### 2 mai 2026 — Hotspot inaccessible (5 bugs cumulés)
+
+**Contexte :**
+
+- Appareils clients incapables de se connecter ou d'avoir internet via NEOPRO-NLF
+- Retour au bureau après match ; le Pi était en place depuis ~3h
+
+**Symptômes :**
+
+- iOS : réseau NEOPRO-NLF affiché comme "captive bloqué" (icône ⚠️)
+- Android : "réseau sans internet", bascule sur 4G automatiquement
+- iPad : déconnexion / re-association en boucle (associate/disassociate loop dans journalctl)
+- Après clic "Réparer automatiquement" : tous les clients éjectés (deauthenticated)
+
+**5 causes racines identifiées :**
+
+1. **`ip_forward = 0`** — aucun paquet hotspot ne transitait vers internet (critique)
+2. **NAT masquerade sur `wlan0` au lieu de `wlan1`** — NAT inopérant (critique)
+3. **`www.apple.com` redirigé vers Pi dans dnsmasq** — iOS marquait le réseau "captive bloqué" et coupait tout routage (critique)
+4. **`play.googleapis.com` / `clients3.google.com` redirigés** — même effet Android (critique)
+5. **Config hostapd ancienne** — pas de PMF, pas de HT capabilities, max_num_sta=10 → iPad ne pouvait pas s'associer (majeur)
+6. **`fix-hotspot.sh --auto-fix` redémarrait hostapd inconditionnellement** — éjectait tous les clients quand le bouton "Réparer" était cliqué alors que le hotspot était déjà UP (majeur)
+
+**Résolution en session :**
+
+- ip_forward forcé + persisté dans sysctl.d
+- nftables NAT corrigé (masquerade sur wlan1)
+- dnsmasq nettoyé (retrait des redirects Apple/Google cassants)
+- hostapd config complète appliquée (PMF, HT caps, max 50 clients)
+- Commits : `9cee706d`, `70910ada`
+
+**Corrections permanentes (PR #xxx) :**
+
+- `setup-captive-portal-iptables.sh` : ip_forward + NAT masquerade sur UPLINK_INTERFACE
+- `dnsmasq.conf` template : uniquement les endpoints captive portal purs
+- `install.sh` : passe UPLINK_INTERFACE dynamiquement
+- `fix-hotspot.sh` : guard — ne redémarre hostapd que s'il est réellement DOWN
+
+**Contraintes matérielles NLF (audit 2026-05-02) :**
+
+- Pas d'ethernet disponible dans la salle → Pi dépend entièrement de wlan1 (USB dongle)
+- wlan1 connecté à NLFH-REGIE à -66 dBm, MCS 2 (~19.5 Mbps) — débit suffisant mais sans marge
+- Toute l'infra NLFH est sur canal 1 → contention élevée
+- Un réseau caché sur canal 6 à -48 dBm crée des interférences avec le hotspot NEOPRO-NLF (ch6)
+- Audit complet : `docs/clients/NLF-NETWORK-AUDIT-2026-05-02.md`
+
+---
+
 ### 18 janvier 2026 - Perte de connexion après déploiement
 
 **Contexte :**

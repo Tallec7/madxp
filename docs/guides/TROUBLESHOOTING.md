@@ -6917,9 +6917,9 @@ cd central-server && npx jest --testPathPattern='smoke/smoke-dashboard-guards' -
 
 #### Solution (PR #821 — mai 2026)
 
-Le step 2 a été supprimé. `sponsors[]` est maintenant **100% sous autorité centrale** : seul ce qu'envoie le central survit au sync.
+Le step 2 a été supprimé. `sponsors[]` est maintenant **100% sous autorité centrale** : seul ce qu'envoie le central survit au sync. Les sponsors locaux du bénévole passent exclusivement par `localSponsors[]` via `mergeSiteSponsors()`.
 
-**Action manuelle restante si déjà impacté** : supprimer ORA RADIO dans la DB centrale via dashboard → Contenu → Boucle par défaut → Remplacer.
+**Action manuelle restante** : supprimer ORA RADIO dans la DB centrale via dashboard → Contenu → Boucle par défaut → Remplacer.
 
 ---
 
@@ -6928,19 +6928,23 @@ Le step 2 a été supprimé. `sponsors[]` est maintenant **100% sous autorité c
 #### Symptômes
 
 - Le login fonctionne parfois, échoue parfois avec le même mot de passe
-- Après une connexion à `http://neopro.local:8080`, le login `http://neopro.local:4200/login` cesse de fonctionner
+- Après une connexion à `http://neopro.local:8080`, le login sur `http://neopro.local:4200/login` cesse de fonctionner
 
 #### Cause
 
-ADR-073 (19/04/2026) a introduit le hashage scrypt dans l'admin panel. À la première connexion admin post-ADR-073, le mot de passe plain text était **remplacé** par son hash scrypt dans `auth.password`. La télécommande Angular compare `password === this.password` (plain text) — le hash scrypt ne matche jamais.
+ADR-073 (19/04/2026) a introduit le hashage scrypt dans l'admin panel. À la première connexion admin post-ADR-073, le mot de passe plain text était **remplacé** par son hash scrypt dans `auth.password` de `configuration.json`. La télécommande Angular compare `password === this.password` (plain text) — le hash scrypt ne matche jamais.
 
 #### Solution (PR #828 — mai 2026)
 
 Deux champs séparés dans `configuration.json` :
+
 - `auth.adminPassword` : hash scrypt, exclusif admin panel (:8080)
 - `auth.password` : plain text, exclusif télécommande Angular
 
+L'admin panel lit `adminPassword` en priorité, avec fallback sur `password` pour les Pi non encore visités depuis ADR-073.
+
 **Fix urgence sur Pi existant** (si `auth.password` contient déjà un hash scrypt) :
+
 ```bash
 ssh pi@neopro.local
 python3 -c "
@@ -6953,3 +6957,63 @@ with open('/home/pi/neopro/webapp/configuration.json', 'w') as f:
 print('Done')
 "
 ```
+
+---
+
+## 42. Hotspot inaccessible — clients sans internet ou iOS "captive bloqué" (v3.285+)
+
+**Symptômes :**
+
+- Appareils obtiennent une IP DHCP mais ne peuvent pas accéder à internet
+- iOS affiche ⚠️ "réseau sans internet" ou détecte un captive portal bloqué
+- Android bascule automatiquement sur 4G
+- iPad déconnecté en boucle (associate/disassociate dans `journalctl -u hostapd`)
+- Après "Réparer automatiquement" : tous les clients éjectés
+
+**Diagnostic :**
+
+```bash
+# 1. Vérifier ip_forward
+cat /proc/sys/net/ipv4/ip_forward
+# Doit afficher 1. Si 0 → cause racine #1
+
+# 2. Vérifier NAT nftables
+sudo nft list ruleset | grep -A5 "postrouting"
+# Doit avoir : oifname "wlan1" masquerade
+# Si oifname "wlan0" → cause racine #2
+
+# 3. Vérifier dnsmasq (redirects dangereux)
+grep -E "apple\.com|googleapis|clients3" /etc/dnsmasq.conf
+# Doit NE PAS contenir www.apple.com, play.googleapis.com, clients3.google.com
+# Si présents → cause racine #3/#4
+
+# 4. Vérifier config hostapd
+grep -E "ieee80211w|ht_capab|max_num_sta" /etc/hostapd/hostapd.conf
+# Doit avoir ieee80211w=1, ht_capab=[HT20]..., max_num_sta=50
+
+# 5. Compter les clients connectés
+sudo iw dev wlan0 station dump | grep -c "^Station"
+```
+
+**Corrections (appliquées en v3.285.x) :**
+
+```bash
+# Activer ip_forward manuellement (si régression)
+echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.d/99-neopro-hotspot.conf
+
+# Corriger NAT (Debian 13 Trixie avec nftables)
+sudo nft delete table ip neopro_captive 2>/dev/null || true
+AP_INTERFACE=wlan0 UPLINK_INTERFACE=wlan1 sudo -E /home/pi/neopro/scripts/setup-captive-portal-iptables.sh
+
+# Vérifier dnsmasq après correction
+sudo systemctl restart dnsmasq
+```
+
+**Cause racine de l'incident NLF 2026-05-02 :**
+5 bugs cumulés depuis la première installation : ip_forward jamais activé, NAT sur la mauvaise interface, redirects DNS iOS/Android cassants, config hostapd ancienne. Cf. `docs/clients/NLF-NETWORK-AUDIT-2026-05-02.md`.
+
+**NE JAMAIS FAIRE :**
+
+- Rediriger `www.apple.com`, `play.googleapis.com` ou `clients3.google.com` dans dnsmasq → iOS/Android coupent le routage (smoke test enforced dans `smoke-kiosk-pi`)
+- Laisser `fix-hotspot.sh --auto-fix` redémarrer hostapd si déjà UP → éjecte les clients

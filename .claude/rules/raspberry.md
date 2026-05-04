@@ -178,6 +178,7 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 
 - Réintroduire la règle `iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j DNAT --to 192.168.4.1:80` (ou son équivalent nftables) dans `raspberry/scripts/setup-captive-portal-iptables.sh` ou `fix-fleet-pi.sh` — casse le handshake TLS sur `captive.apple.com` → iOS affiche une page blanche dans la Captive Wi-Fi sheet. Seul le DNAT port 80 est autorisé (smoke test enforced)
 - Supprimer `captive-portal.html` de la copie webapp dans `build-raspberry.sh` ou retirer le bloc `try_files /captive-portal.html` des configs nginx (`install.sh`, `nginx-captive-portal.conf`) → iOS retomberait sur `Success` brut, UX cassée
+- Ajouter `address=/clients3.google.com/192.168.4.1` ou `address=/play.googleapis.com/192.168.4.1` dans `dnsmasq.conf` — Android utilise ces domaines pour des appels API réels (Play Store, Google Services) ; les rediriger vers le Pi casse la détection internet Android → le réseau est marqué "sans internet" par Android (smoke test enforced : guard négatif dans `smoke-kiosk-pi.test.ts`)
 
 ### Hardware
 

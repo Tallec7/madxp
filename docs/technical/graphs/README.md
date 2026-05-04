@@ -10,20 +10,20 @@ Générés par [dependency-cruiser](https://github.com/sverweij/dependency-cruis
 
 ## Graphes disponibles
 
-| Fichier | Périmètre | Commande |
-|---|---|---|
-| [central-server-archi.svg](central-server-archi.svg) | Vue macro — modules par couche | `npm run graph:archi` |
-| [remote.svg](remote.svg) | Domaine Remote — controllers + middleware + repos | voir ci-dessous |
+| Fichier                                              | Périmètre                                         | Commande              |
+| ---------------------------------------------------- | ------------------------------------------------- | --------------------- |
+| [central-server-archi.svg](central-server-archi.svg) | Vue macro — modules par couche                    | `npm run graph:archi` |
+| [remote.svg](remote.svg)                             | Domaine Remote — controllers + middleware + repos | voir ci-dessous       |
 
 ## Légende des couleurs
 
-| Couleur | Couche |
-|---|---|
-| Violet | `controllers/` |
-| Vert | `services/` |
-| Orange | `repositories/` |
-| Jaune | `middleware/` |
-| Cyan | `routes/` |
+| Couleur | Couche          |
+| ------- | --------------- |
+| Violet  | `controllers/`  |
+| Vert    | `services/`     |
+| Orange  | `repositories/` |
+| Jaune   | `middleware/`   |
+| Cyan    | `routes/`       |
 
 ## Générer un graph par domaine
 
