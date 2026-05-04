@@ -21,7 +21,10 @@
     "test:smoke": "jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit",
     "test:smoke:smart": "bash src/scripts/smart-smoke.sh",
     "lint": "eslint --no-warn-ignored src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "graph": "depcruise src --config .dependency-cruiser.cjs --output-type dot | dot -T svg > ../docs/technical/graphs/central-server.svg && echo '✓ central-server.svg'",
+    "graph:archi": "depcruise src --config .dependency-cruiser.cjs --output-type archi | dot -T svg > ../docs/technical/graphs/central-server-archi.svg && echo '✓ central-server-archi.svg'",
+    "graph:domain": "depcruise src/controllers/$DOMAIN.controller.ts src/services --config .dependency-cruiser.cjs --output-type dot | dot -T svg > ../docs/technical/graphs/$DOMAIN.svg && echo '✓ $DOMAIN.svg'"
   },
   "keywords": [
     "neopro",
@@ -88,6 +91,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^9.0.7",
     "@types/yamljs": "^0.2.34",
+    "dependency-cruiser": "^16.10.4",
     "eslint": "^9.39.4",
     "jest": "^29.7.0",
     "nodemon": "^3.0.2",

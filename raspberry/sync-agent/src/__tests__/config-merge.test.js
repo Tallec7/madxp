@@ -761,13 +761,17 @@ describe('Config Merge Module', () => {
       expect(merged.localSponsors).toBeUndefined();
     });
 
-    it('should preserve club sponsors in sponsors[] loop through merge', () => {
+    it('central is authoritative for sponsors[]: removed sponsors do not survive merge', () => {
+      // Regression guard for ORA RADIO bug (fix/nginx-pna-video-headers):
+      // A local sponsor removed from the central dashboard must NOT reappear
+      // after sync, regardless of site_sponsor_id presence.
       const localConfig = {
         version: '1.0',
         categories: [],
         sponsors: [
           { path: 'neopro_ad.mp4', locked: true, owner: 'neopro', site_sponsor_id: 'uuid-1' },
           { path: 'dupont_spot.mp4', locked: false, owner: 'club', _sponsorLocalId: 'ls_123', site_sponsor_id: 'uuid-2' },
+          { path: 'ora_radio.mp4', locked: false, owner: 'club', site_sponsor_id: null },
         ],
       };
 
@@ -781,15 +785,13 @@ describe('Config Merge Module', () => {
 
       const merged = mergeConfigurations(localConfig, neoProContent);
 
-      // Should have NEOPRO sponsor updated + club sponsor preserved
-      const neoProSponsors = merged.sponsors.filter(s => s.owner === 'neopro');
-      const clubSponsors = merged.sponsors.filter(s => s.owner === 'club');
-
-      expect(neoProSponsors).toHaveLength(1);
-      expect(neoProSponsors[0].path).toBe('neopro_ad_v2.mp4');
-      expect(clubSponsors).toHaveLength(1);
-      expect(clubSponsors[0].path).toBe('dupont_spot.mp4');
-      expect(clubSponsors[0]._sponsorLocalId).toBe('ls_123');
+      // Central sends only neopro_ad_v2.mp4 → that is the entire sponsors[] list.
+      // dupont_spot.mp4 and ora_radio.mp4 were removed from central → must NOT appear.
+      expect(merged.sponsors).toHaveLength(1);
+      expect(merged.sponsors[0].path).toBe('neopro_ad_v2.mp4');
+      const removedPaths = merged.sponsors.map(s => s.path);
+      expect(removedPaths).not.toContain('dupont_spot.mp4');
+      expect(removedPaths).not.toContain('ora_radio.mp4');
     });
   });
 

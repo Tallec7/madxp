@@ -1,3 +1,53 @@
+## [3.286.1](https://github.com/Tallec7/neopro/compare/v3.286.0...v3.286.1) (2026-05-04)
+
+### Bug Fixes
+
+- **variants:** dispatch deploy_video to Pi sites after variant replace ([#832](https://github.com/Tallec7/neopro/issues/832)) ([6e230b7](https://github.com/Tallec7/neopro/commit/6e230b7d824178de6f96e352810f4c7fba2a41bc)), closes [#781](https://github.com/Tallec7/neopro/issues/781) [#781](https://github.com/Tallec7/neopro/issues/781) [#781](https://github.com/Tallec7/neopro/issues/781)
+
+# [3.286.0](https://github.com/Tallec7/neopro/compare/v3.285.13...v3.286.0) (2026-05-04)
+
+### Features
+
+- **raspberry:** instant playback for Fire Stick HD LAN receivers ([#830](https://github.com/Tallec7/neopro/issues/830)) ([68bdc76](https://github.com/Tallec7/neopro/commit/68bdc764e8b006e739420560f76c3321b24c6de5))
+
+## [3.285.13](https://github.com/Tallec7/neopro/compare/v3.285.12...v3.285.13) (2026-05-04)
+
+### Bug Fixes
+
+- **admin:** séparer auth.adminPassword (scrypt) de auth.password (remote Angular) ([#828](https://github.com/Tallec7/neopro/issues/828)) ([1bf9c25](https://github.com/Tallec7/neopro/commit/1bf9c25254d5c7d7fb51d0d7f9ce87df6f4ad825))
+- **kiosk:** log helper en tête de fichier + tr null byte + CDP port + filtres fenêtres ([#829](https://github.com/Tallec7/neopro/issues/829)) ([2fefc63](https://github.com/Tallec7/neopro/commit/2fefc638328a0e0bf1be95fbf67c1060b6775c02))
+- **pi5+sync:** software decode Pi5, bgscan mesh, sponsors centraux autoritaires ([#821](https://github.com/Tallec7/neopro/issues/821)) ([d40f5fa](https://github.com/Tallec7/neopro/commit/d40f5fa3fb97f8e0cfab70aeb0a6e5af7c2aa121))
+
+## [3.285.12](https://github.com/Tallec7/neopro/compare/v3.285.11...v3.285.12) (2026-05-04)
+
+### Bug Fixes
+
+- **admin:** séparer auth.adminPassword (scrypt) de auth.password (remote plain text) ([#827](https://github.com/Tallec7/neopro/issues/827)) ([877d650](https://github.com/Tallec7/neopro/commit/877d6500e934668181afef995ef86c43422ba179))
+
+## [3.285.11](https://github.com/Tallec7/neopro/compare/v3.285.10...v3.285.11) (2026-05-04)
+
+### Bug Fixes
+
+- PNA headers nginx + unmute autoplay + merge sponsors reconciliés ([#820](https://github.com/Tallec7/neopro/issues/820)) ([60fceeb](https://github.com/Tallec7/neopro/commit/60fceebb07e4705bd115407849ae9a5320622ebc))
+
+## [3.285.10](https://github.com/Tallec7/neopro/compare/v3.285.9...v3.285.10) (2026-05-02)
+
+### Bug Fixes
+
+- **nginx:** add Chrome Private Network Access headers on video responses ([#819](https://github.com/Tallec7/neopro/issues/819)) ([1812b48](https://github.com/Tallec7/neopro/commit/1812b48556cd5506ff46dac9953b30ed8f677558))
+
+## [3.285.9](https://github.com/Tallec7/neopro/compare/v3.285.8...v3.285.9) (2026-05-02)
+
+### Bug Fixes
+
+- **migrations:** idempotence fix-joueur-spec-compliance sur ephemeral PG ([#818](https://github.com/Tallec7/neopro/issues/818)) ([419b24f](https://github.com/Tallec7/neopro/commit/419b24f7d9c687c1f542f9ccf8fa9790ebdf096b))
+
+## [3.285.8](https://github.com/Tallec7/neopro/compare/v3.285.7...v3.285.8) (2026-05-02)
+
+### Bug Fixes
+
+- **templates:** conformité JOUEUR Simple + BUT à la spec PDF (Option A) ([#817](https://github.com/Tallec7/neopro/issues/817)) ([f2cb58b](https://github.com/Tallec7/neopro/commit/f2cb58b4b5a0de78b4adf16143ce83d4b478cd5b))
+
 ## [3.285.7](https://github.com/Tallec7/neopro/compare/v3.285.6...v3.285.7) (2026-05-02)
 
 ### Bug Fixes

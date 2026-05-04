@@ -2748,6 +2748,26 @@ describe('ADR-034 synchronized manual video reveal', () => {
     });
   });
 
+  it('Palier 3 (LAN sync barrier) MUST gate master reveal+emit on barrier ms', () => {
+    // Master-side delay between own preload-ready and visible:true emit, to let
+    // slow slaves (Fire Stick HD, browser receivers) catch up. Without this barrier,
+    // fast slaves reveal in sync but slow slaves arrive late via _pendingReveal,
+    // causing a visible desync side-by-side. See PR #830 / Palier 3.
+    const manualVideoServicePath = path.join(repoRoot, 'raspberry/src/app/services/manual-video.service.ts');
+    const manualSrc = fs.readFileSync(manualVideoServicePath, 'utf8');
+    expect({
+      hasBarrierConstant: /MANUAL_REVEAL_BARRIER_MS\s*=\s*\d+/.test(manualSrc),
+      barrierIsNonZero: !/MANUAL_REVEAL_BARRIER_MS\s*=\s*0\b/.test(manualSrc),
+      hasMasterGate: /getTvRole\(\)\s*===\s*'master'[\s\S]{0,200}MANUAL_REVEAL_BARRIER_MS/.test(manualSrc),
+      hasSetTimeoutWrap: /setTimeout\(\s*revealAndEmit\s*,\s*barrierMs\s*\)/.test(manualSrc),
+    }).toEqual({
+      hasBarrierConstant: true,
+      barrierIsNonZero: true,
+      hasMasterGate: true,
+      hasSetTimeoutWrap: true,
+    });
+  });
+
   it('Slave action handler MUST call preloadManualVideo instead of play', () => {
     // When isSlaveMode is true, the command handler must call preloadManualVideo, not play.
     // After extraction, handleTvCommand delegates to manualVideoService.preloadManualVideo / .play

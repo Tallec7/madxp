@@ -38,6 +38,21 @@ export class ManualVideoService {
   private static readonly PLAY_DEBOUNCE_MS = 150;
 
   /**
+   * Sync barrier (Palier 3) : délai entre le moment où le master a chargé sa
+   * propre vidéo et l'émission du `manualVideoVisible: true` (+ son propre
+   * reveal). Donne aux slaves "lents" (Fire Stick HD, browser receiver LAN
+   * avec décodeur Silk plus lent que V3D Pi) le temps de finir leur preload
+   * avant le reveal synchronisé. Sans ce barrier, les slaves rapides révèlent
+   * en sync avec le master mais les lents arrivent en retard via
+   * `_pendingReveal` → désync visible côte à côte.
+   *
+   * 200ms couvre le cold-start typique de Silk Fire Stick HD (mesuré ~80-150ms
+   * post-preload) avec un peu de marge. Trade-off : le master TV affiche son
+   * freeze-frame 200ms plus longtemps (invisible UX vu le masking layer).
+   */
+  private static readonly MANUAL_REVEAL_BARRIER_MS = 200;
+
+  /**
    * ADR-103 Phase 0 — only `contentType: 'video'` entries are playable in <video>.
    * Synthetic filenames `web_page-<ts>` / `livestream-<ts>` (legacy dashboard entries
    * that lost contentType) are also refused. web_page / livestream must route through
@@ -168,6 +183,14 @@ export class ManualVideoService {
         // Le setTimeout(200) + double rAF historiques ajoutaient ~230ms perçus
         // sans bénéfice vs un rAF simple post-play() sur Pi 4/5 (hardware decode).
         requestAnimationFrame(() => {
+          // Palier 3 : sync barrier master-side. Master attend
+          // MANUAL_REVEAL_BARRIER_MS avant de révéler ET d'émettre
+          // visible:true, pour absorber le cold-start des slaves browser
+          // (Fire Stick HD, smart TV). Slaves uniquement → no-op (le slave
+          // reveal est déjà gated par `revealPreloadedVideo` côté tv-sync).
+          const isMaster = this.callbacks?.getTvRole() === 'master';
+          const barrierMs = isMaster ? ManualVideoService.MANUAL_REVEAL_BARRIER_MS : 0;
+          const revealAndEmit = () => {
           targetPlayer.style.opacity = '1';
           this.doubleBufferService.swapActiveManualPlayer();
 
@@ -215,6 +238,15 @@ export class ManualVideoService {
 
           const visibleMs = Math.round(performance.now() - latencyT0);
           console.log(`tv player : manual video playing, freeze frame hidden (+${visibleMs}ms)`);
+          if (barrierMs > 0) {
+            console.log(`tv player : sync barrier applied for slaves (+${barrierMs}ms)`);
+          }
+          };
+          if (barrierMs > 0) {
+            setTimeout(revealAndEmit, barrierMs);
+          } else {
+            revealAndEmit();
+          }
         });
       }).catch(err => {
         console.error('tv player : error playing manual video', err);

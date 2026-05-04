@@ -6,6 +6,7 @@ import type { DisplayType } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
+import deploymentService from '../services/deployment.service';
 
 // ============================================================================
 // Video Variants (E-22: LED dual output)
@@ -120,6 +121,11 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       filename: variantFilename,
     });
 
+    // Notify Pi sites that have this video — fire-and-forget, must not block the response
+    deploymentService.dispatchVariantUpdateToSites(id, variant).catch((err) => {
+      logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
+    });
+
     res.status(201).json({
       ...variant,
       url: uploadResult.url,
@@ -193,6 +199,11 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       videoId: id,
       displayType,
       sourceVideoId,
+    });
+
+    // Notify Pi sites that have this video — fire-and-forget, must not block the response
+    deploymentService.dispatchVariantUpdateToSites(id, variant).catch((err) => {
+      logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
     });
 
     res.status(201).json({

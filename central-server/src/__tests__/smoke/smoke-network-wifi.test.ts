@@ -272,21 +272,14 @@ describe('Bgscan reconfigure deauth prevention', () => {
       .toEqual({ checksCurrentConfig: true });
   });
 
-  // Guard: _computeOptimalBgscan must use hysteresis to prevent threshold oscillation
-  it('_computeOptimalBgscan must use hysteresis band (not sharp threshold)', () => {
-    // Must have hysteresis band where current config is preserved
-    expect({ hasHysteresisBand: safeOps.includes('hysteresis band') })
-      .toEqual({ hasHysteresisBand: true });
-    // Must NOT use -72 as sharp boundary (oscillation zone for NLF signal)
-    const computeFn = safeOps.match(/_computeOptimalBgscan[\s\S]*?return 'simple:30:-70:300';\s*\}/);
+  // Guard: _computeOptimalBgscan doit désactiver bgscan (retourner '')
+  // Raison : bgscan sur mesh RTL8192EU provoque des roaming storms — toute valeur
+  // simple:30:... déclenche un deauth toutes les 30s entre APs à signal similaire.
+  it('_computeOptimalBgscan must disable bgscan (return empty string)', () => {
+    const computeFn = safeOps.match(/_computeOptimalBgscan\(\)\s*\{[\s\S]*?\}/);
     expect(computeFn).not.toBeNull();
-    // The decision boundaries must have >5 dBm gap (hysteresis)
-    const upperBound = computeFn![0].match(/signal > (-\d+)/);
-    const lowerBound = computeFn![0].match(/signal <= (-\d+)/);
-    if (upperBound && lowerBound) {
-      const gap = Number(upperBound[1]) - Number(lowerBound[1]);
-      expect({ hysteresisGap: Math.abs(gap) >= 5 }).toEqual({ hysteresisGap: true });
-    }
+    expect({ disablesBgscan: /return\s+''/.test(computeFn![0]) })
+      .toEqual({ disablesBgscan: true });
   });
 });
 
@@ -652,20 +645,22 @@ describe('WiFi recovery progressive back-off & mesh guards (v3.99.4)', () => {
     }).toEqual({ checksProfileType: true });
   });
 
-  // Guard 9: Dynamic bgscan — safe-network-operations must compute optimal threshold
-  it('safe-network-operations must have _computeOptimalBgscan() with signal-based threshold', () => {
+  // Guard 9: bgscan désactivé en mesh — _computeOptimalBgscan doit retourner ''
+  // Raison : RTL8192EU + APs mesh à signal similaire → bgscan déclenche des roaming
+  // storms (deauth/reassoc toutes les 30s), provoquant des coupures réseau répétées.
+  // Un kiosque doit rester sur son AP jusqu'à perte d'association, pas roamer proactivement.
+  it('safe-network-operations must have _computeOptimalBgscan() returning empty string (disabled)', () => {
     expect({
       hasCompute: /_computeOptimalBgscan\(\)/.test(safeOpsContent),
     }).toEqual({ hasCompute: true });
-    // Must check signal level (not just use a fixed threshold)
     const computeFn = safeOpsContent.match(
-      /_computeOptimalBgscan\(\)\s*\{[\s\S]*?return\s+'simple:/
+      /_computeOptimalBgscan\(\)\s*\{[\s\S]*?\}/
     );
     expect(computeFn).not.toBeNull();
-    // Must check signal level with hysteresis (not a sharp -72 boundary)
+    // Must return '' to disable bgscan (not a simple: threshold)
     expect({
-      checksSignal: /signal\s*>\s*-6[5-9]/.test(computeFn![0]),
-    }).toEqual({ checksSignal: true });
+      disablesBgscan: /return\s+''/.test(computeFn![0]),
+    }).toEqual({ disablesBgscan: true });
   });
 
   // Guard 10: autoOptimize must use _computeOptimalBgscan, not hardcoded bgscan

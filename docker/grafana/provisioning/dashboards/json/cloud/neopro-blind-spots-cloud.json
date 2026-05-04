@@ -259,9 +259,7 @@
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
+            "steps": [{ "color": "green", "value": null }]
           },
           "color": { "mode": "thresholds" }
         }
@@ -271,9 +269,7 @@
         "graphMode": "area",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
       },
-      "targets": [
-        { "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }
-      ]
+      "targets": [{ "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }]
     },
     {
       "collapsed": false,
@@ -662,7 +658,22 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 87 },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 87 },
+      "id": 805,
+      "title": "Variant replace dispatch to Pi",
+      "description": "deploy_video commands dispatched to Pi sites after secondary variant replace (issue #781)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_variant_replace_dispatched_total{scrape_job=\"NEOPRO\"}[1h])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 8, "y": 87 },
       "id": 804,
       "title": "Memory GC runs (rate 5m)",
       "type": "timeseries",
