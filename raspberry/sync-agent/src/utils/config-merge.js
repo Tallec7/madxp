@@ -228,19 +228,9 @@ function mergeSponsors(localSponsors, centralSponsors, reconciledSponsors = []) 
     }
   }
 
-  // 2. Préserver les sponsors Club locaux qui ne sont PAS dans la liste du central
-  // (sponsors créés localement via la télécommande ou l'admin Pi).
-  // Ne PAS préserver si déjà réconcilié dans localSponsors[] (évite les doublons).
-  for (const sponsor of localSponsors) {
-    if (!sponsor.locked && sponsor.owner !== 'neopro' && sponsor.path && !processedPaths.has(sponsor.path) && !reconciledPaths.has(sponsor.path)) {
-      result.push({
-        ...sponsor,
-        locked: false,
-        owner: sponsor.owner || 'club',
-      });
-      logger.debug(`[config-merge] Sponsor local préservé (non présent dans central): ${sponsor.path}`);
-    }
-  }
+  // Note: les sponsors locaux sans site_sponsor_id ne sont PAS préservés.
+  // Le tableau sponsors[] est 100% sous autorité centrale (cf. commentaire en tête de fonction).
+  // Les vrais sponsors locaux du bénévole passent par localSponsors[] via mergeSiteSponsors().
 
   logger.info(`[config-merge] Sponsors fusionnés: ${result.length} (${centralSponsors.length} du central)`);
   return result;
