@@ -1,3 +1,9 @@
+## [3.285.12](https://github.com/Tallec7/neopro/compare/v3.285.11...v3.285.12) (2026-05-04)
+
+### Bug Fixes
+
+- **admin:** séparer auth.adminPassword (scrypt) de auth.password (remote plain text) ([#827](https://github.com/Tallec7/neopro/issues/827)) ([877d650](https://github.com/Tallec7/neopro/commit/877d6500e934668181afef995ef86c43422ba179))
+
 ## [3.285.11](https://github.com/Tallec7/neopro/compare/v3.285.10...v3.285.11) (2026-05-04)
 
 ### Bug Fixes
