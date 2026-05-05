@@ -67,6 +67,8 @@ export interface RuntimeTextField {
   textShadow?: string;
   /** ButSimple parity — lineHeight ratio (défaut 1.1). */
   lineHeight?: number;
+  /** ButSimple parity — fontWeight CSS (défaut 'normal' = 400). */
+  fontWeight?: number | string;
 }
 
 export interface RuntimeImageSlot {
@@ -284,6 +286,7 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
                 color: tf.color,
                 fontFamily: tf.fontFamily,
                 fontSize: tf.fontSize,
+                fontWeight: tf.fontWeight ?? 'normal',
                 textAlign: tf.align,
                 textTransform: tf.textTransform ?? 'none',
                 lineHeight: tf.lineHeight ?? 1.1,
