@@ -1,5 +1,6 @@
 import { query } from '../config/database';
 import { Alert } from '../types';
+import { metricsService } from '../services/metrics.service';
 import { BaseRepository } from './base.repository';
 
 // --------------------------------------------------------------------------
@@ -7,7 +8,7 @@ import { BaseRepository } from './base.repository';
 // --------------------------------------------------------------------------
 
 export interface CreateAlertInput {
-  site_id: string;
+  site_id: string | null;
   alert_type: string;
   severity: Alert['severity'];
   message: string;
@@ -56,22 +57,49 @@ class AlertRepositoryImpl extends BaseRepository<Alert> {
   }
 
   /**
-   * Cree une nouvelle alerte.
+   * Cree ou bumpe une alerte (upsert dedup, ADR-111).
+   *
+   * Si une alerte active du meme (site_id, alert_type) existe deja, on bumpe
+   * `last_seen_at` + `occurrences` au lieu d'inserer une nouvelle row. Cela protege
+   * la DB du spam des emitters en boucle (ex: cron stuck-deployments avec cooldown
+   * in-memory reset a chaque restart Railway). Voir cleanup 2026-05-05 : 22 688 rows.
    */
   async create(input: CreateAlertInput): Promise<Alert> {
-    const result = await query<Alert>(
+    const params = [
+      input.site_id,
+      input.alert_type,
+      input.severity,
+      input.message,
+      JSON.stringify(input.metadata || {}),
+    ];
+
+    // IS NOT DISTINCT FROM gere correctement NULL = NULL (alertes globales sans site).
+    const updated = await query<Alert>(
+      `UPDATE alerts
+         SET last_seen_at = NOW(),
+             occurrences = occurrences + 1,
+             severity = $3,
+             message = $4,
+             metadata = $5
+       WHERE site_id IS NOT DISTINCT FROM $1
+         AND alert_type = $2
+         AND status = 'active'
+       RETURNING *`,
+      params
+    );
+
+    if (updated.rowCount && updated.rowCount > 0) {
+      metricsService.recordAlertDedupSkipped(input.alert_type);
+      return updated.rows[0];
+    }
+
+    const inserted = await query<Alert>(
       `INSERT INTO alerts (site_id, alert_type, severity, message, metadata, status)
        VALUES ($1, $2, $3, $4, $5, 'active')
        RETURNING *`,
-      [
-        input.site_id,
-        input.alert_type,
-        input.severity,
-        input.message,
-        JSON.stringify(input.metadata || {}),
-      ]
+      params
     );
-    return result.rows[0];
+    return inserted.rows[0];
   }
 
   /**

@@ -1400,6 +1400,8 @@ CREATE TABLE public.alerts (
     status character varying(20) DEFAULT 'active'::character varying,
     created_at timestamp without time zone DEFAULT now(),
     resolved_at timestamp without time zone,
+    last_seen_at timestamp without time zone DEFAULT now() NOT NULL,
+    occurrences integer DEFAULT 1 NOT NULL,
     CONSTRAINT check_severity CHECK (((severity)::text = ANY (ARRAY[('info'::character varying)::text, ('warning'::character varying)::text, ('critical'::character varying)::text]))),
     CONSTRAINT check_status_alert CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('acknowledged'::character varying)::text, ('resolved'::character varying)::text])))
 );
@@ -3920,6 +3922,13 @@ CREATE INDEX idx_alerts_site ON public.alerts USING btree (site_id, created_at D
 --
 
 CREATE INDEX idx_alerts_status ON public.alerts USING btree (status, severity);
+
+
+--
+-- Name: idx_alerts_dedup_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_dedup_active ON public.alerts USING btree (site_id, alert_type) WHERE ((status)::text = 'active'::text);
 
 
 --

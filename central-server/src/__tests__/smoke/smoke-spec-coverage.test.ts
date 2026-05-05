@@ -56,11 +56,11 @@ const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
   'excel-export.service.ts',
   'subscription.service.ts',
   'canary-deployment.service.ts',
-  'alerting.service.ts',
+  // alerting.service.ts + alerting-checks.service.ts retirees 2026-05-05 :
+  // couvertes par docs/specs/services/alert-repository.spec.md (ADR-111).
   'safe-parser.service.ts',
   'update-deployment.service.ts',
   'orchestrated-deployment.service.ts',
-  'alerting-checks.service.ts',
 ]);
 
 // SPECs livrées avant le pivot SPEC=domaine (2026-04-27). Elles seront réécrites

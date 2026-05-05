@@ -105,6 +105,13 @@ const alertsTotal = new Counter({
   registers: [register],
 });
 
+const alertsDedupSkippedTotal = new Counter({
+  name: 'neopro_alerts_dedup_skipped_total',
+  help: 'Number of alert inserts deduplicated into an existing active alert (ADR-111)',
+  labelNames: ['type'],
+  registers: [register],
+});
+
 const activeAlertsGauge = new Gauge({
   name: 'neopro_active_alerts',
   help: 'Number of currently active alerts',
@@ -989,6 +996,10 @@ class MetricsService {
 
   recordAlert(severity: string, type: string): void {
     alertsTotal.inc({ severity, type });
+  }
+
+  recordAlertDedupSkipped(type: string): void {
+    alertsDedupSkippedTotal.inc({ type });
   }
 
   recordActiveAlerts(severity: string, count: number): void {
