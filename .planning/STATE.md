@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Phase 3 Plan 01 done — Ready for Plan 02 (test render render-queue extension + endpoints)
-stopped_at: Completed 03-gate-publication-01-PLAN.md
-last_updated: '2026-05-05T20:30:00.000Z'
-last_activity: 2026-05-05 — Phase 3 Plan 01 livré (migration test_render_* + CRON cleanup hebdo + métrique Prometheus + Grafana panel)
+status: Phase 3 Plan 02 done — Ready for Plan 03 (test render async backend POST /:id/test-render + worker hook)
+stopped_at: Completed 03-gate-publication-02-PLAN.md
+last_updated: '2026-05-05T21:00:00.000Z'
+last_activity: 2026-05-05 — Phase 3 Plan 02 livré (validation registry 8 règles + GET /:id/validation + smoke RED→GREEN itère sur registre)
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 10
-  percent: 71
+  completed_plans: 11
+  percent: 79
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 3 of 3 (Gate publication) — IN PROGRESS
-Plan: 01 of 5 — DONE
-Status: Phase 3 Plan 01 done — Ready for Plan 02 (test render render-queue extension + endpoints)
-Last activity: 2026-05-05 — Phase 3 Plan 01 livré (migration test*render*\* + CRON cleanup hebdo + métrique Prometheus + Grafana panel)
+Plan: 02 of 5 — DONE
+Status: Phase 3 Plan 02 done — Ready for Plan 03 (test render async backend POST /:id/test-render + worker hook)
+Last activity: 2026-05-05 — Phase 3 Plan 02 livré (validation registry 8 règles + GET /:id/validation + smoke RED→GREEN itère sur registre)
 
-Progress: [███████░░░] 71% (10/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 1/5)
+Progress: [████████░░] 79% (11/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 2/5)
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [███████░░░] 71% (10/14 plans total — Phase 1 5/
 | 01    | 05   | ~25 min  | 2     | 8     | 2026-05-05 |
 | 02    | 01   | ~10 min  | 2     | 2     | 2026-05-05 |
 | 03    | 01   | ~25 min  | 2     | 8     | 2026-05-05 |
+| 03    | 02   | ~25 min  | 2     | 13    | 2026-05-05 |
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
@@ -108,6 +109,12 @@ Recent decisions affecting current work:
 - Phase 3 Plan 01 : Migration cible `neopro_templates` (table reelle), pas `templates` (PLAN.md utilisait nom abrege). Smoke regex agnostique, GREEN sans modif.
 - Phase 3 Plan 01 : CRON handler scanne `/test-renders/` a plat (root) ; recursion (per-templateId subdirs) ajoutee Plan 02 quand upload sera implemente.
 - Phase 3 Plan 01 deviation Rule 2 : Grafana panel ajoute (neopro-blind-spots-cloud.json id 308) — auto-fix de smoke-metrics-observability bloquant.
+- Phase 3 Plan 02 : Validation registry pattern (8 règles, 7 errors + 1 warning). Ajout d'une 9e règle = 1 fichier + 1 entrée array, pas de if/else dispatcher. Smoke itère sur le registre.
+- Phase 3 Plan 02 : ValidationContext est une projection légère (NOT TemplateV2) — packshotRefs absent de TemplateV2, test_render_at/status hors v2, publishedTargets précalculé Set<string> O(1). Découplage évite d'inflater TemplateV2 avec des concerns publish-gate.
+- Phase 3 Plan 02 : KNOWN_FONTS allowlist serveur duplique FONT_FAMILIES dashboard (23 polices). template_fonts table n'existe pas (Memory note 2026-05-05) — sync manuel jusqu'à ADR-110 v3.2.
+- Phase 3 Plan 02 : recent_test_render_24h en warning, pas error — admin peut publier sans relancer un rendu si elle fait confiance au dernier état connu. Affiché en bandeau orange, n'invalide pas Publier.
+- Phase 3 Plan 02 : HEAD probes `assets_resolve_http_200` avec AbortSignal.timeout(3000) — 8 layers worst-case = 24s, sous le budget UX du panel publish-gate.
+- Phase 3 Plan 02 deviation Rule 3 : `query<T>()` exige `T extends QueryResultRow`, types inline rejetés (TS2344) — déclaration de `TemplateRenderRow` + `TemplateIdRow` interfaces extending QueryResultRow.
 
 ### Pending Todos
 
@@ -121,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T20:30:00.000Z
-Stopped at: Completed 03-gate-publication-01-PLAN.md
+Last session: 2026-05-05T21:00:00.000Z
+Stopped at: Completed 03-gate-publication-02-PLAN.md
 Resume file: None
