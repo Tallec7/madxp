@@ -1,3 +1,9 @@
+## [3.287.1](https://github.com/Tallec7/neopro/compare/v3.287.0...v3.287.1) (2026-05-05)
+
+### Bug Fixes
+
+- **content:** wire bulkDelete output in video-manager to cloud delete flow ([#839](https://github.com/Tallec7/neopro/issues/839)) ([e5f23ee](https://github.com/Tallec7/neopro/commit/e5f23ee9b489edb9bd0dcb80eb76d23378b65224)), closes [#613](https://github.com/Tallec7/neopro/issues/613)
+
 # [3.287.0](https://github.com/Tallec7/neopro/compare/v3.286.4...v3.287.0) (2026-05-05)
 
 ### Features
