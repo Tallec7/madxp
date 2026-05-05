@@ -15,16 +15,21 @@
         routerLink="/content/joueur-tools"
         class="btn btn-secondary"
         title="Outils super_admin chantier templates JOUEUR (auto-crop, backgrounds, versions)"
-      >🛠 Outils JOUEUR</a>
+        >🛠 Outils JOUEUR</a
+      >
       <button
         type="button"
         class="btn btn-primary"
-        (click)="openWizard()"
+        (click)="onNewTemplate()"
         data-testid="create-template-btn"
       >
         + Nouveau template
       </button>
     </div>
+  </div>
+
+  <div class="rt__error" *ngIf="duplicateError()" role="alert">
+    {{ duplicateError() }}
   </div>
 
   <app-create-template-wizard
@@ -68,8 +73,10 @@
     [selectedId]="selectedTemplate?.id ?? null"
     [isAdmin]="isAdmin"
     [loading]="loading"
+    [duplicatingId]="duplicatingCardId()"
     (cardSelect)="selectTemplate($event)"
     (publishToggle)="togglePublish($event)"
+    (duplicateRequested)="onDuplicateFromCard($event)"
   ></app-template-grid>
 
   <div class="render-panel" *ngIf="selectedTemplate">

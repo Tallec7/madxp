@@ -51,6 +51,16 @@ import type { RemotionTemplate } from './remotion-templates.types';
         >
           {{ template.published ? '✓ Publié' : 'Publier' }}
         </button>
+        <button
+          type="button"
+          class="btn-duplicate"
+          [attr.aria-label]="'Dupliquer ' + template.name"
+          [disabled]="duplicating"
+          (click)="onDuplicate($event)"
+          data-testid="card-duplicate-btn"
+        >
+          {{ duplicating ? 'Duplication…' : '⎘ Dupliquer' }}
+        </button>
       </div>
     </div>
   `,
@@ -101,15 +111,28 @@ import type { RemotionTemplate } from './remotion-templates.types';
       cursor: pointer;
     }
     .btn-publish.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+    .btn-duplicate {
+      font-size: 12px;
+      padding: 4px 12px;
+      margin-left: 6px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .btn-duplicate:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-duplicate:hover:not(:disabled) { background: #f3f4f6; }
   `],
 })
 export class TemplateCardComponent {
   @Input({ required: true }) template!: RemotionTemplate;
   @Input() selected = false;
   @Input() isAdmin = false;
+  @Input() duplicating = false;
 
   @Output() cardSelect = new EventEmitter<RemotionTemplate>();
   @Output() publishToggle = new EventEmitter<RemotionTemplate>();
+  @Output() duplicateRequested = new EventEmitter<RemotionTemplate>();
 
   onSelect(): void {
     this.cardSelect.emit(this.template);
@@ -118,5 +141,10 @@ export class TemplateCardComponent {
   onTogglePublish(event: Event): void {
     event.stopPropagation();
     this.publishToggle.emit(this.template);
+  }
+
+  onDuplicate(event: Event): void {
+    event.stopPropagation();
+    this.duplicateRequested.emit(this.template);
   }
 }
