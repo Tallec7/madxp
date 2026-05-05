@@ -10,31 +10,32 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 1 of 3 (Fondations)
-Plan: 03 of 5 — DONE (next: 04)
+Plan: 04 of 5 — DONE (next: 05)
 Status: In progress
-Last activity: 2026-05-05 — Plan 03 livré (Wizard shell signal-based + Step 1 Identité ReactiveForms, INSERT immédiat + resume via /new/:id)
+Last activity: 2026-05-05 — Plan 04 livré (Step 2 Fonds animés drag-reorder transactionnel + Step 3 Zones modifiables ReactiveForms avec layer_id obligatoire P1)
 
-Progress: [██████░░░░] 60% (3/5 plans of phase 1)
+Progress: [████████░░] 80% (4/5 plans of phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: ~27 min
-- Total execution time: ~80 min
+- Total plans completed: 4
+- Average duration: ~30 min
+- Total execution time: ~120 min
 
 **By Phase:**
 
-| Phase         | Plans | Total   | Avg/Plan |
-| ------------- | ----- | ------- | -------- |
-| 01-fondations | 3/5   | ~80 min | ~27 min  |
+| Phase         | Plans | Total    | Avg/Plan |
+| ------------- | ----- | -------- | -------- |
+| 01-fondations | 4/5   | ~120 min | ~30 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
 | 01    | 01   | ~30 min  | 4     | 9     | 2026-05-05 |
 | 01    | 02   | ~25 min  | 2     | 9     | 2026-05-05 |
 | 01    | 03   | ~25 min  | 2     | 6     | 2026-05-05 |
+| 01    | 04   | ~40 min  | 2     | 9     | 2026-05-05 |
 
 _Updated after each plan completion_
 
@@ -62,6 +63,13 @@ Recent decisions affecting current work:
 - Plan 03 deviation : `TemplateStudioView` est plat (camelCase à la racine) — pas de `view.template` envelope
 - Plan 03 deviation : `@Output() submit` interdit par `@angular-eslint/no-output-native` → renommé en `next` (convention pour tous les step components downstream)
 - Plan 03 deviation : verbes UI standards (`Suivant`, `Annuler`...) bloqués par `scripts/check-hardcoded-i18n.js` → utiliser synonymes non-blocklistés (`Continuer →`, `← Retour`, `Abandonner`) tant que i18n complet pas déployé Phase 3
+- Plan 04 : Step 2 (Fonds animés) drag-reorder via @angular/cdk + POST /:id/layers/reorder transactionnel (BEGIN/COMMIT, ownership check, 400 layer_ownership_mismatch). Optimistic UI avec revert-on-error.
+- Plan 04 : Step 3 (Zones modifiables) ReactiveForms 2 sub-tabs texte/image, layer_id Validators.required + UI button gated `layers().length === 0` (Pitfall P1 mirror du Joi NOT NULL).
+- Plan 04 : SAFE_ZONE_PRESETS keys === DB fit_mode CHECK values (4 presets) ; anchor inféré (top-center, center-left, center, center) du preset.
+- Plan 04 deviation : route mountée sur `/api/remotion-templates` (pas `/api/remotion-templates-studio` comme dans le PLAN — le router Studio est mounté FIRST sur le même prefix que le legacy).
+- Plan 04 deviation : `createImageSlot` n'appliquait pas le fallback layer_id NOT NULL (mirroring `createTextField`) — ajouté en plan 04 pour cohérence ADR-086.
+- Plan 04 deviation : `visibleIf` était unreachable depuis l'API publique (column existait depuis ADR-086 mais set uniquement par duplicateDeep) — Joi + INSERT + colMap étendus en plan 04.
+- Plan 04 deviation i18n : « Supprimer » blocklisté → synonyme « Retirer » utilisé (extension Plan 03 deviation list).
 
 ### Pending Todos
 
@@ -76,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-05
-Stopped at: Completed 01-fondations-03-PLAN.md — 2 commits (30abd375, c8bae67d) + SUMMARY. Ready for plan 04 (Steps 2 + 3 — Fonds animés + Zones modifiables).
+Stopped at: Completed 01-fondations-04-PLAN.md — 3 commits (0a60d266, 230b2ee0, c93ee999) + SUMMARY. Ready for plan 05 (Options club + publish).
 Resume file: None

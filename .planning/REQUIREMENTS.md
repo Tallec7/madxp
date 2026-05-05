@@ -17,8 +17,8 @@
 - [ ] **WIZARD-01**: Super_admin peut créer un template via un wizard 4 étapes (Identité → Fonds animés → Zones modifiables → Options club)
 - [ ] **WIZARD-02**: L'étape 1 (Identité) crée immédiatement une row DB ; les étapes suivantes font des PATCH — jamais de perte en cas de fermeture navigateur
 - [ ] **WIZARD-03**: La navigation retour dans le wizard préserve toutes les données saisies sans les effacer
-- [ ] **WIZARD-04**: Super_admin peut réordonner les fonds animés (layers) par drag-and-drop dans l'étape 2
-- [ ] **WIZARD-05**: Super_admin peut configurer les propriétés d'une zone (libellé, police, taille, couleur, alignement, limite caractères, condition d'apparition) dans l'étape 3
+- [x] **WIZARD-04**: Super_admin peut réordonner les fonds animés (layers) par drag-and-drop dans l'étape 2 — DONE 2026-05-05 (Plan 01-fondations-04)
+- [x] **WIZARD-05**: Super_admin peut configurer les propriétés d'une zone (libellé, police, taille, couleur, alignement, limite caractères, condition d'apparition) dans l'étape 3 — DONE 2026-05-05 (Plan 01-fondations-04)
 
 ### Duplication (DUP)
 
@@ -93,8 +93,8 @@
 | WIZARD-01   | Phase 1 (A) | Pending        |
 | WIZARD-02   | Phase 1 (A) | Pending        |
 | WIZARD-03   | Phase 1 (A) | Pending        |
-| WIZARD-04   | Phase 1 (A) | Pending        |
-| WIZARD-05   | Phase 1 (A) | Pending        |
+| WIZARD-04   | Phase 1 (A) | Done (Plan 04) |
+| WIZARD-05   | Phase 1 (A) | Done (Plan 04) |
 | DUP-01      | Phase 1 (A) | Pending        |
 | DUP-02      | Phase 1 (A) | Done (plan 01) |
 | PREV-01     | Phase 2 (B) | Pending        |
