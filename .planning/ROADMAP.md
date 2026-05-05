@@ -49,13 +49,12 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 4. L'étape 4 indique automatiquement combien de zones sont reliées à chaque option via visible_if ("2 zones reliées à cette option") — sans action de l'utilisateur.
 5. Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun "layer", "slot", "pix_fmt" visible) — un smoke test garantit qu'aucune clé DB ne peut être introduite sans faire échouer le test.
 
-**Plans**: 5 plans
+**Plans**: 4 plans
 
-- [ ] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests)
-- [ ] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard)
-- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
-- [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
-- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
+- [ ] 02-ux-interactive-01-PLAN.md — Vocabulary smoke banlist + ERROR_MESSAGES (UX-01)
+- [ ] 02-ux-interactive-02-PLAN.md — Player live integration + per-layer proxyUrl + hybrid debounce/blur (PREV-01/02/03)
+- [ ] 02-ux-interactive-03-PLAN.md — Animation cards UX (4 presets + Aucune animation, hover preview) (UX-02)
+- [ ] 02-ux-interactive-04-PLAN.md — visible_if click-to-highlight + transactional renameOptionKey (UX-03)
 
 ### Phase 3: Gate de publication
 
@@ -81,7 +80,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Fondations       | 2/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | 0/?            | Not started | -          |
+| 2. UX interactive   | 0/4            | In planning | -          |
 | 3. Gate publication | 0/?            | Not started | -          |
 
 ---
