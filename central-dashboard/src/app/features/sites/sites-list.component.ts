@@ -140,8 +140,9 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           </div>
 
           <div class="site-footer">
-            <span class="site-version">
+            <span class="site-version" [class.site-version--update]="isOutdated(site)">
               {{ formatVersion(site) }}
+              <span class="update-badge" *ngIf="isOutdated(site)">↑ MAJ</span>
             </span>
             <div class="site-actions">
               <button
@@ -490,6 +491,24 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       background: #f1f5f9;
       border-radius: 4px;
       color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .site-version--update {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .update-badge {
+      font-family: inherit;
+      font-size: 0.625rem;
+      font-weight: 700;
+      background: #f59e0b;
+      color: white;
+      padding: 1px 5px;
+      border-radius: 3px;
     }
 
     .site-actions {
@@ -674,6 +693,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
 
   // Map des statuts de connexion temps réel (siteId -> status)
   connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  latestOtaVersion: string | null = null;
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
 
@@ -706,6 +726,10 @@ export class SitesListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSites();
     this.loadConnectionStatus();
+    this.sitesService.getLatestOtaVersion().subscribe({
+      next: ({ version }) => { this.latestOtaVersion = version; },
+      error: () => { /* non-bloquant : la page reste fonctionnelle sans cette info */ }
+    });
     // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
     this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
@@ -896,6 +920,12 @@ export class SitesListComponent implements OnInit, OnDestroy {
    */
   getUsageTooltip(_site: Site): string {
     return '';
+  }
+
+  isOutdated(site: Site): boolean {
+    if (site.site_type === 'saas' || site.site_type === 'demo') return false;
+    if (!site.software_version || !this.latestOtaVersion) return false;
+    return site.software_version !== this.latestOtaVersion;
   }
 
   getSiteTypeLabel(type: string | undefined): string {

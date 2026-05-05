@@ -110,6 +110,20 @@ class SoftwareUpdateRepositoryImpl extends BaseRepository<SoftwareUpdateRow> {
   // ---- Software Updates ----
 
   /**
+   * Retourne la version de la dernière update prête (upload_status='ready').
+   * Utilisé par la page Sites pour afficher "À jour / MAJ dispo" par carte Pi.
+   */
+  async findLatestVersion(): Promise<string | null> {
+    const result = await query<{ version: string }>(
+      `SELECT version FROM software_updates
+       WHERE upload_status = 'ready'
+       ORDER BY created_at DESC
+       LIMIT 1`
+    );
+    return result.rows[0]?.version ?? null;
+  }
+
+  /**
    * Liste toutes les mises a jour avec aliases pour le frontend.
    */
   async findAllUpdates(): Promise<SoftwareUpdateRow[]> {

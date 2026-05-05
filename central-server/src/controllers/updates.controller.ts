@@ -27,6 +27,19 @@ const updatesFeatureUnavailable = (tableName: string) => ({
   message: `La table ${tableName} n'existe pas encore. Exécutez le script SQL (central-server/src/scripts/init-db.sql) pour l'initialiser.`,
 });
 
+export const getLatestVersion = async (_req: AuthRequest, res: Response) => {
+  try {
+    const version = await softwareUpdateRepository.findLatestVersion();
+    res.json({ version });
+  } catch (error) {
+    if (isTableMissingError(error, 'software_updates')) {
+      return res.json({ version: null });
+    }
+    logger.error('Error fetching latest version:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de la version' });
+  }
+};
+
 export const getUpdates = async (req: AuthRequest, res: Response) => {
   try {
     const updates = await softwareUpdateRepository.findAllUpdates();

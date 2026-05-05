@@ -137,6 +137,10 @@ export class SitesService {
     return this.api.get('/sites/connection-status');
   }
 
+  getLatestOtaVersion(): Observable<{ version: string | null }> {
+    return this.api.get('/updates/latest');
+  }
+
   /**
    * Get fleet health data for the admin dashboard
    * Aggregates connection status, metrics, versions, and at-risk sites
