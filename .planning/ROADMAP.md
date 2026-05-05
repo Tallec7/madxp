@@ -78,11 +78,11 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 ## Progress
 
-| Phase               | Plans Complete | Status      | Completed |
-| ------------------- | -------------- | ----------- | --------- |
-| 1. Fondations       | 2/5            | In progress | -         |
-| 2. UX interactive   | 0/?            | Not started | -         |
-| 3. Gate publication | 0/?            | Not started | -         |
+| Phase               | Plans Complete | Status      | Completed  |
+| ------------------- | -------------- | ----------- | ---------- |
+| 1. Fondations       | 2/5            | Complete    | 2026-05-05 |
+| 2. UX interactive   | 0/?            | Not started | -          |
+| 3. Gate publication | 0/?            | Not started | -          |
 
 ---
 
