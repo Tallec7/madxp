@@ -10,29 +10,30 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 1 of 3 (Fondations)
-Plan: 01 of 5 — DONE (next: 02)
+Plan: 02 of 5 — DONE (next: 03)
 Status: In progress
-Last activity: 2026-05-05 — Plan 01 livré (backend foundations: ffprobe + duplicateDeep + asset guards + 3 smoke tests)
+Last activity: 2026-05-05 — Plan 02 livré (Asset Manager UI : composant dual-context modal+page, 3 endpoints library super_admin, 3 méthodes data service)
 
-Progress: [██░░░░░░░░] 20% (1/5 plans of phase 1)
+Progress: [████░░░░░░] 40% (2/5 plans of phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1
-- Average duration: ~30 min
-- Total execution time: ~30 min
+- Total plans completed: 2
+- Average duration: ~28 min
+- Total execution time: ~55 min
 
 **By Phase:**
 
 | Phase         | Plans | Total   | Avg/Plan |
 | ------------- | ----- | ------- | -------- |
-| 01-fondations | 1/5   | ~30 min | ~30 min  |
+| 01-fondations | 2/5   | ~55 min | ~28 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
 | 01    | 01   | ~30 min  | 4     | 9     | 2026-05-05 |
+| 01    | 02   | ~25 min  | 2     | 9     | 2026-05-05 |
 
 _Updated after each plan completion_
 
@@ -52,6 +53,9 @@ Recent decisions affecting current work:
 - Plan 01 deviation : asset upload handler vit dans `remotion-templates.controller.ts`, pas `template-studio.controller.ts` (réf plan obsolète)
 - Plan 01 deviation : `pool` est default-export — utiliser `getClient()` typé pour les transactions
 - Plan 01 deviation : colonnes plan template aspirationnelles — alignées sur full-schema.sql réel (pas de `template_layers.alpha`/`parent_layer_id`/`safe_zone`/`fit_mode` ; `template_options.key` pas `option_key`)
+- Plan 02 : Asset Manager dual-context (modal | page) — 1 composant standalone qui rend en modal (wizard) ET en page (route super_admin) selon `@Input context` + `route.snapshot.data.context`
+- Plan 02 : asset id déterministe sha256(url).slice(0,16) — pas de table template_assets en Plan 02, l'URL FTP reste la PK logique (table dédiée sera Phase 2 si nécessaire)
+- Plan 02 deviation : `ftpService.delete()` n'existe pas — utiliser `deleteFileFromFtp(filename)` depuis `config/ftp-storage` + helper `stripPublicPrefix(url)` pour reconstruire le storage path
 
 ### Pending Todos
 
@@ -66,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-05
-Stopped at: Completed 01-fondations-01-PLAN.md — 3 commits (5f54107a, e5148499, 167abd9a) + SUMMARY. Ready for plan 02 (Asset Manager UI).
+Stopped at: Completed 01-fondations-02-PLAN.md — 2 commits (10eda5e8, 9951e068) + SUMMARY. Ready for plan 03 (Wizard shell + Step 1 Identité).
 Resume file: None

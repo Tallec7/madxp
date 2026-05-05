@@ -8,7 +8,7 @@
 
 ### Asset Manager (ASSET)
 
-- [ ] **ASSET-01**: Super_admin peut parcourir tous les assets WebM dans une grille (thumbnail, durée, dimensions, flag alpha, nombre de templates qui l'utilisent)
+- [x] **ASSET-01**: Super_admin peut parcourir tous les assets WebM dans une grille (thumbnail, durée, dimensions, flag alpha, nombre de templates qui l'utilisent)
 - [x] **ASSET-02**: Super_admin peut uploader un fichier WebM ; le système valide le format et détecte le canal alpha (yuva420p via ffprobe côté serveur)
 - [x] **ASSET-03**: Le système bloque la suppression d'un asset WebM référencé par ≥1 layer de template publié
 
@@ -87,7 +87,7 @@
 
 | Requirement | Phase       | Status         |
 | ----------- | ----------- | -------------- |
-| ASSET-01    | Phase 1 (A) | Pending        |
+| ASSET-01    | Phase 1 (A) | Done (plan 02) |
 | ASSET-02    | Phase 1 (A) | Done (plan 01) |
 | ASSET-03    | Phase 1 (A) | Done (plan 01) |
 | WIZARD-01   | Phase 1 (A) | Pending        |
