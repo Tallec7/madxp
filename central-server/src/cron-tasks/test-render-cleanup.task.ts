@@ -28,7 +28,7 @@ export async function executeTestRenderCleanupTask(
 
   let scanned = 0;
   let deleted = 0;
-  let errors = 0;
+  const errors = 0;
 
   try {
     // Liste les templateId-subdirs (faux-positifs filtrés par try/catch sur
