@@ -32,6 +32,13 @@ import type { WizardState, WizardStep } from '../wizard-state.types';
 })
 export class WizardPreviewPanelComponent {
   @Input({ required: true }) state!: WizardState;
+  /**
+   * Plan 02-04 / UX-03 — Set by the shell when the admin clicks the inline
+   * « ✓ N zones reliées » counter in Step 4. Triggers a yellow border + banner
+   * over the player to signal which option is being inspected. Auto-cleared
+   * by the shell after 4s.
+   */
+  @Input() highlightedOptionKey: string | null = null;
   @Output() goToStep = new EventEmitter<WizardStep>();
 
   get hasLayer(): boolean {

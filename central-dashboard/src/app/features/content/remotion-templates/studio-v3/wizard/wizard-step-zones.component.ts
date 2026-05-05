@@ -173,6 +173,7 @@ function mapAnimationToPayload(
           <li
             *ngFor="let tf of textFields(); trackBy: trackById"
             class="wsz__item"
+            [id]="'zone-' + tf.id"
           >
             <span class="wsz__item-label">{{ tf.label }}</span>
             <span class="wsz__item-meta"
@@ -311,6 +312,7 @@ function mapAnimationToPayload(
           <li
             *ngFor="let s of imageSlots(); trackBy: trackById"
             class="wsz__item"
+            [id]="'zone-' + s.id"
           >
             <span class="wsz__item-label">{{ s.label }}</span>
             <span class="wsz__item-meta"
