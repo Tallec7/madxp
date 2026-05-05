@@ -95,7 +95,7 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
         <span class="install-banner-icon">⚠️</span>
         <span>
           <strong>{{ unbootstrappedSites.length }} site{{ unbootstrappedSites.length > 1 ? 's' : '' }} Pi à installer</strong>
-          — {{ unbootstrappedSites.map(s => s.club_name).join(', ') }} n'ont jamais bootstrappé.
+          — {{ unbootstrappedNames }} n'ont jamais bootstrappé.
         </span>
         <a class="install-banner-cta" [routerLink]="['/updates']">Voir les mises à jour →</a>
       </div>
@@ -972,6 +972,10 @@ export class SitesListComponent implements OnInit, OnDestroy {
 
   get unbootstrappedSites(): Site[] {
     return this.allSites.filter(s => this.isUnbootstrapped(s));
+  }
+
+  get unbootstrappedNames(): string {
+    return this.unbootstrappedSites.map(s => s.club_name).join(', ');
   }
 
   isUnbootstrapped(site: Site): boolean {
