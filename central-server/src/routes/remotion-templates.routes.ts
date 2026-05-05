@@ -5,7 +5,7 @@ import {
   sensitiveRateLimit,
   templateUserUploadRateLimit,
 } from '../middleware/user-rate-limit';
-import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
+import { validate, validateParams, paramSchemas, schemas, testRenderSchemas } from '../middleware/validation';
 import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
 import * as ctrl from '../controllers/remotion-templates.controller';
 
@@ -160,6 +160,21 @@ router.post(
   uploadUserTemplateImage.single('file'),
   validate(schemas.templateUserUploadBody),
   ctrl.uploadUserImageAsset,
+);
+
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — Async test render (super_admin only)
+// Body is sealed (no user input), fixtures injected server-side.
+// The job reuses `remotion_render_jobs` and is discriminated by the title
+// prefix `test-render:`. See controllers/remotion-templates.controller.ts and
+// services/remotion-render-worker.service.ts for the matching hooks.
+router.post(
+  '/:id/test-render',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(testRenderSchemas.params),
+  validate(testRenderSchemas.body),
+  sensitiveRateLimit,
+  ctrl.createTestRender,
 );
 
 // Render — admin/operator libre, club doit avoir la feature video_templates

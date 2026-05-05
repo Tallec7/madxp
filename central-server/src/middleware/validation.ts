@@ -1150,6 +1150,17 @@ export const schemas = {
 };
 
 // ============================================================================
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — Test render endpoint schemas
+// ============================================================================
+// Body is sealed (`unknown(false)`) — fixtures are injected server-side, no
+// user input is ever accepted on POST /api/remotion-templates/:id/test-render.
+
+export const testRenderSchemas = {
+  params: Joi.object({ id: Joi.string().uuid().required() }),
+  body: Joi.object({}).unknown(false),
+};
+
+// ============================================================================
 // Reusable param schemas
 // ============================================================================
 

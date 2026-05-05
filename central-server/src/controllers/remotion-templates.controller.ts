@@ -945,3 +945,86 @@ export const deleteLibraryAsset = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
+
+// ============================================================================
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — Async test render endpoint
+// ============================================================================
+
+/**
+ * Server-side fixtures injected into every test render. Mirrors the dashboard
+ * `PREVIEW_FIXTURES` (Phase 2) so the admin sees the same placeholder values
+ * in the live preview and the rendered MP4. No user input is ever accepted —
+ * the body is sealed (`Joi.object({}).unknown(false)`), keeping the surface
+ * area minimal and audit-friendly.
+ */
+const TEST_RENDER_FIXTURES: Record<string, string> = {
+  player_first_name: 'PRÉNOM',
+  player_last_name: 'NOM',
+  club_name: 'NOM DU CLUB',
+  player_photo_url: 'https://placehold.co/600x800?text=PHOTO',
+  club_logo_url: 'https://placehold.co/200x200?text=LOGO',
+};
+
+/**
+ * POST /api/remotion-templates/:id/test-render → 202 { jobId, templateId, status }
+ *
+ * Reuses the existing `remotion_render_jobs` queue (ADR-054/055). The job is
+ * discriminated from production renders via the `title` prefix `test-render:` —
+ * the worker (`remotion-render-worker.service.ts`) branches on this prefix to
+ * upload to `/test-renders/{templateId}/{ts}.mp4` instead of the standard
+ * `videos/templates/` path and to update `neopro_templates.test_render_*`
+ * tracking columns rather than inserting a `videos` row.
+ */
+export const createTestRender = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    const view = await templateStudioRepository.findV2ById(id);
+    if (!view) {
+      return res.status(404).json({ error: 'template_not_found' });
+    }
+
+    // Build defaults for every option the template exposes so the test render
+    // exercises the same `selectedOptions` path the production render uses.
+    const optionDefaults: Record<string, string | boolean> = {};
+    for (const opt of view.options ?? []) {
+      const fallback = Array.isArray(opt.values) && opt.values.length > 0 ? opt.values[0] : '';
+      optionDefaults[opt.key] = (opt.defaultValue ?? fallback) as string;
+    }
+
+    const props: Record<string, unknown> = {
+      ...TEST_RENDER_FIXTURES,
+      ...optionDefaults,
+    };
+
+    const job = await remotionRenderJobRepository.create({
+      template_id: id,
+      props,
+      title: `test-render:${id}:${Date.now()}`,
+      requested_by: req.user?.id ?? null,
+      requested_for_site_id: null,
+    });
+
+    await templateStudioRepository.updateTestRenderTracking(id, {
+      status: 'queued',
+      at: new Date(),
+    });
+
+    logger.info('Test render enqueued', {
+      templateId: id,
+      jobId: job.id,
+      actor: req.user?.id ?? null,
+    });
+
+    return res.status(202).json({
+      jobId: job.id,
+      templateId: id,
+      status: 'queued',
+    });
+  } catch (error) {
+    logger.error('createTestRender error', {
+      error: error instanceof Error ? error.message : String(error),
+      templateId: id,
+    });
+    return res.status(500).json({ error: 'internal_error' });
+  }
+};
