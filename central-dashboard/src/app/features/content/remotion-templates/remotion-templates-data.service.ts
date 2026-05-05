@@ -379,6 +379,24 @@ export class RemotionTemplatesDataService {
     return this.api.delete<void>(`/remotion-templates/${templateId}/layers/${layerId}`);
   }
 
+  /**
+   * ADR-110 / Plan 04 / WIZARD-04 — Reorder all layers of a template.
+   * Single transactional call (BEGIN/COMMIT server-side) — returns the
+   * new ordered list (z_index ASC) so the caller can replace its signal
+   * in one shot. Mounted on `/api/remotion-templates-studio` (NOT the
+   * Studio router is mounted on `/api/remotion-templates` BEFORE the legacy
+   * router (server.ts) so this URL hits `template-studio.routes.ts`.
+   */
+  reorderLayers(
+    templateId: string,
+    orderedLayerIds: string[],
+  ): Observable<TemplateLayer[]> {
+    return this.api.post<TemplateLayer[]>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/layers/reorder`,
+      { orderedLayerIds },
+    );
+  }
+
   createTextField(
     templateId: string,
     payload: TemplateTextFieldCreate,

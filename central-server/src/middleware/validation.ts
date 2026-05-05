@@ -964,6 +964,14 @@ export const schemas = {
     }).optional(),
     durationMs: Joi.number().integer().min(0).max(600000).optional(),
   }),
+
+  // ADR-110 / Plan 04 — single transactional reorder of all layers of a
+  // template. Repository wraps the N updates in BEGIN/COMMIT and returns
+  // the new ordered list. Ownership check on the repo side rejects layerIds
+  // that don't belong to :id.
+  templateStudioLayersReorder: Joi.object({
+    orderedLayerIds: Joi.array().items(Joi.string().uuid()).min(1).required(),
+  }),
   templateStudioLayerUpdate: Joi.object({
     name: Joi.string().max(100).optional(),
     videoUrl: Joi.string().uri().max(2000).optional(),
@@ -1003,6 +1011,7 @@ export const schemas = {
     layerId: Joi.string().uuid().allow(null).optional(),
     respectAlpha: Joi.boolean().optional(),
     animationDirection: Joi.string().valid('in', 'out').optional(),
+    visibleIf: Joi.string().max(200).allow(null, '').optional(),
   }),
   templateStudioTextFieldUpdate: Joi.object({
     slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),
@@ -1068,6 +1077,7 @@ export const schemas = {
     animationDirection: Joi.string().valid('in', 'out').optional(),
     scaleFrom: Joi.number().min(0).max(5).allow(null).optional(),
     scaleTo: Joi.number().min(0).max(5).allow(null).optional(),
+    visibleIf: Joi.string().max(200).allow(null, '').optional(),
   }),
   templateStudioImageSlotUpdate: Joi.object({
     slotKey: Joi.string().max(64).pattern(/^[a-zA-Z][a-zA-Z0-9_]*$/).optional(),

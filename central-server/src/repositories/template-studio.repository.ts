@@ -184,6 +184,8 @@ export interface CreateTextFieldInput {
   respectAlpha?: boolean;
   animationDirection?: AnimationDirection;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  /** PDF JOUEUR §démarrage — slot conditionnel `<key> == "<value>"`. NULL = toujours visible. */
+  visibleIf?: string | null;
 }
 
 export type UpdateTextFieldInput = Partial<CreateTextFieldInput>;
@@ -212,6 +214,8 @@ export interface CreateImageSlotInput {
   animationDirection?: AnimationDirection;
   scaleFrom?: number | null;
   scaleTo?: number | null;
+  /** PDF JOUEUR §démarrage — slot conditionnel (cf. CreateTextFieldInput.visibleIf). */
+  visibleIf?: string | null;
 }
 
 export type UpdateImageSlotInput = Partial<CreateImageSlotInput>;
@@ -475,6 +479,59 @@ class TemplateStudioRepository {
   }
 
   /**
+   * ADR-110 / Plan 04 / WIZARD-04 — single transactional reorder of all
+   * layers of a template. The N updates run inside one BEGIN/COMMIT
+   * (ROLLBACK on any throw) so the z_index sequence is never partially
+   * applied. Ownership check rejects layerIds that don't belong to the
+   * given template (defense-in-depth — Joi already validates uuid shape
+   * but does not check FK ownership).
+   *
+   * Returns the new ordered list (z_index ASC) so the caller can replace
+   * the dashboard signal in one shot.
+   *
+   * Throws `Error('layer_ownership_mismatch')` if any id doesn't belong
+   * to `templateId` — controller maps to 400.
+   */
+  async reorderLayers(
+    templateId: string,
+    orderedLayerIds: string[]
+  ): Promise<TemplateLayer[]> {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+      const owned: { rows: Array<{ id: string }> } = await client.query(
+        `SELECT id FROM template_layers
+          WHERE template_id = $1 AND id = ANY($2::uuid[])`,
+        [templateId, orderedLayerIds]
+      );
+      if (owned.rows.length !== orderedLayerIds.length) {
+        throw new Error('layer_ownership_mismatch');
+      }
+      for (let i = 0; i < orderedLayerIds.length; i++) {
+        await client.query(
+          `UPDATE template_layers
+              SET z_index = $1
+            WHERE id = $2 AND template_id = $3`,
+          [i + 1, orderedLayerIds[i], templateId]
+        );
+      }
+      await client.query('COMMIT');
+      const result: { rows: TemplateLayerRow[] } = await client.query(
+        `SELECT * FROM template_layers
+          WHERE template_id = $1
+          ORDER BY z_index ASC`,
+        [templateId]
+      );
+      return result.rows.map(mapLayer);
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * ADR-110 / ASSET-03 / pitfall P5 — count published layers (other than
    * the candidate) that share the same video_url as the layer about to be
    * deleted. If > 0, the controller returns 409 to prevent orphaning a
@@ -574,8 +631,8 @@ class TemplateStudioRepository {
           font_family, font_size, color, align, appear_at, appear_duration,
           animation, default_value, max_chars, multiline, required, sort_order,
           always_visible, scale_from, scale_to,
-          layer_id, respect_alpha, animation_direction, text_transform)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
+          layer_id, respect_alpha, animation_direction, text_transform, visible_if)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
        RETURNING *`,
       [
         templateId,
@@ -603,6 +660,7 @@ class TemplateStudioRepository {
         input.respectAlpha ?? false,
         input.animationDirection ?? 'in',
         input.textTransform ?? 'none',
+        input.visibleIf ?? null,
       ]
     );
     return mapTextField(rows[0]);
@@ -645,6 +703,7 @@ class TemplateStudioRepository {
       respectAlpha: 'respect_alpha',
       animationDirection: 'animation_direction',
       textTransform: 'text_transform',
+      visibleIf: 'visible_if',
     };
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -694,15 +753,32 @@ class TemplateStudioRepository {
     templateId: string,
     input: CreateImageSlotInput
   ): Promise<TemplateImageSlot> {
+    // ADR-086 — layer_id est NOT NULL. Si absent, on rattache au premier layer
+    // (z_index ASC) du template. Si aucun layer n'existe, on en crée un vide
+    // (cohérent avec createTextField).
+    let layerId = input.layerId ?? null;
+    if (!layerId) {
+      const existing = await this.listLayers(templateId);
+      if (existing.length > 0) {
+        layerId = existing[0].id;
+      } else {
+        const fallback = await this.createLayer(templateId, {
+          name: 'Layer par défaut',
+          videoUrl: '',
+          zIndex: 1,
+        });
+        layerId = fallback.id;
+      }
+    }
     const { rows } = await query<TemplateImageSlotRow>(
       `INSERT INTO template_image_slots
          (template_id, slot_key, label, position_x, position_y, width, height,
           appear_at, appear_duration, animation, aspect_ratio, required, sort_order,
           layer_id, anchor, fit_mode,
           safe_top_pct, safe_left_pct, safe_width_pct, safe_height_pct,
-          overflow, animation_direction, scale_from, scale_to)
+          overflow, animation_direction, scale_from, scale_to, visible_if)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
-               $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+               $14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
        RETURNING *`,
       [
         templateId,
@@ -718,7 +794,7 @@ class TemplateStudioRepository {
         input.aspectRatio ?? null,
         input.required ?? false,
         input.sortOrder ?? 0,
-        input.layerId ?? null,
+        layerId,
         input.anchor ?? 'center',
         input.fitMode ?? 'contain',
         input.safeTopPct ?? null,
@@ -729,6 +805,7 @@ class TemplateStudioRepository {
         input.animationDirection ?? 'in',
         input.scaleFrom ?? null,
         input.scaleTo ?? null,
+        input.visibleIf ?? null,
       ]
     );
     return mapImageSlot(rows[0]);
@@ -770,6 +847,7 @@ class TemplateStudioRepository {
       animationDirection: 'animation_direction',
       scaleFrom: 'scale_from',
       scaleTo: 'scale_to',
+      visibleIf: 'visible_if',
     };
     const fields: string[] = [];
     const values: unknown[] = [];
