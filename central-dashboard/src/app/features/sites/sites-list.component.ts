@@ -73,6 +73,12 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           <option value="blocked">🚫 Bloqués</option>
           <option value="trial">🎁 Essai</option>
         </select>
+        <select [(ngModel)]="typeFilter" (ngModelChange)="applyFilters()">
+          <option value="">Tous les types</option>
+          <option value="pi">📡 Pi</option>
+          <option value="saas">🌐 SaaS</option>
+          <option value="demo">🎬 Demo</option>
+        </select>
         <button class="btn btn-secondary" (click)="clearFilters()" *ngIf="hasActiveFilters()">
           Effacer les filtres
         </button>
@@ -91,7 +97,17 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
         <div class="sites-grid" *ngIf="viewMode === 'grid' && sitesList.length > 0">
         <div *ngFor="let site of sites$ | async" class="site-card card">
           <div class="site-header">
-            <h3>{{ site.club_name }}</h3>
+            <div class="site-title-block">
+              <h3>{{ site.club_name }}</h3>
+              <div class="site-type-chips">
+                <span class="chip chip-type chip-type-{{ site.site_type ?? 'pi' }}">
+                  {{ getSiteTypeLabel(site.site_type) }}
+                </span>
+                <span class="chip chip-plan" *ngIf="site.subscription_plan">
+                  {{ site.subscription_plan | titlecase }}
+                </span>
+              </div>
+            </div>
             <div class="site-badges">
               <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
                 {{ getRealTimeStatusText(site) }}
@@ -106,7 +122,7 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
             </div>
           </div>
 
-          <p class="site-name">{{ site.site_name }}</p>
+          <p class="site-name" *ngIf="site.site_name !== site.club_name">{{ site.site_name }}</p>
 
           <div class="site-detail">
             <span class="detail-icon">📍</span>
@@ -120,12 +136,12 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
           <div class="site-detail">
             <span class="detail-icon">🕒</span>
-            <span>{{ formatLastSeen(site.last_seen_at) }}</span>
+            <span>{{ formatLastSeenForSite(site) }}</span>
           </div>
 
           <div class="site-footer">
             <span class="site-version">
-              {{ formatVersion(site.software_version) }}
+              {{ formatVersion(site) }}
             </span>
             <div class="site-actions">
               <button
@@ -361,13 +377,46 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       align-items: flex-start;
     }
 
+    .site-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
     .site-header h3 {
       margin: 0;
       font-size: 1.125rem;
       color: #0f172a;
       font-weight: 600;
-      flex: 1;
-      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .site-type-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .chip-type-pi   { background: #e0e7ff; color: #4338ca; }
+    .chip-type-saas { background: #cffafe; color: #0e7490; }
+    .chip-type-demo { background: #f3e8ff; color: #7e22ce; }
+
+    .chip-plan {
+      background: #f1f5f9;
+      color: #475569;
     }
 
     .site-badges {
@@ -618,6 +667,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
   statusFilter = '';
   regionFilter = '';
   subscriptionFilter = '';
+  typeFilter = '';
   showCreateModal = false;
   showEditModal = false;
   viewMode: 'grid' | 'map' = 'grid';
@@ -692,6 +742,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
     if (this.statusFilter) filters['status'] = this.statusFilter;
     if (this.regionFilter) filters['region'] = this.regionFilter;
     if (this.subscriptionFilter) filters['subscription'] = this.subscriptionFilter;
+    if (this.typeFilter) filters['site_type'] = this.typeFilter;
 
     this.sitesService.loadSites(filters).subscribe();
   }
@@ -701,11 +752,12 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.statusFilter = '';
     this.regionFilter = '';
     this.subscriptionFilter = '';
+    this.typeFilter = '';
     this.loadSites();
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.searchTerm || this.statusFilter || this.regionFilter || this.subscriptionFilter);
+    return !!(this.searchTerm || this.statusFilter || this.regionFilter || this.subscriptionFilter || this.typeFilter);
   }
 
   /**
@@ -844,6 +896,17 @@ export class SitesListComponent implements OnInit, OnDestroy {
    */
   getUsageTooltip(_site: Site): string {
     return '';
+  }
+
+  getSiteTypeLabel(type: string | undefined): string {
+    const labels: Record<string, string> = { pi: '📡 Pi', saas: '🌐 SaaS', demo: '🎬 Demo' };
+    return labels[type ?? 'pi'] ?? '📡 Pi';
+  }
+
+  formatLastSeenForSite(site: Site): string {
+    if (site.site_type === 'saas') return '—';
+    if (site.site_type === 'demo') return '—';
+    return this.formatLastSeen(site.last_seen_at);
   }
 
   formatLastSeen(date: Date | null): string {
