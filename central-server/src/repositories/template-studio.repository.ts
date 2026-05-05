@@ -4,7 +4,7 @@
  */
 
 import type { QueryResultRow } from 'pg';
-import { query } from '../config/database';
+import { query, getClient } from '../config/database';
 import type {
   TemplateV2,
   TemplateVariant,
@@ -760,6 +760,270 @@ class TemplateStudioRepository {
       [slotId]
     );
     return (rowCount ?? 0) > 0;
+  }
+
+  /**
+   * ADR-110 / DUP-02 / pitfall P4 — Transactional deep clone.
+   *
+   * Clones a template across the 6 child tables in a single BEGIN/COMMIT
+   * transaction. If any INSERT fails, ROLLBACK leaves the DB pristine
+   * (no orphan template + zero half-cloned children). The new template
+   * starts unpublished and is named `<source> (copie)` unless the
+   * caller overrides.
+   *
+   * Tables cloned (FK chain) :
+   *   1. neopro_templates           (root, new id)
+   *   2. template_variants          (FK template_id)
+   *   3. template_layers            (FK template_id, build layerIdMap)
+   *   4. template_text_fields       (FK template_id + layer_id, REMAP via layerIdMap)
+   *   5. template_image_slots       (FK template_id + layer_id, REMAP via layerIdMap)
+   *   6. template_options           (FK template_id only)
+   *   7. template_packshot_refs     (FK template_id; packshot_template_id kept as-is, no recursion)
+   *
+   * file_url / video_url / background_video_url are byte-identical to
+   * source (ADR-110 SPEC: assets are SHARED, never copied physically —
+   * the FTP layer is content-addressed by URL).
+   */
+  async duplicateDeep(
+    sourceId: string,
+    opts?: { name?: string; createdBy?: string | null }
+  ): Promise<TemplateV2> {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Clone neopro_templates root
+      const src = await client.query(
+        `SELECT * FROM neopro_templates WHERE id = $1`,
+        [sourceId]
+      );
+      if (src.rows.length === 0) throw new Error('source_template_not_found');
+      const s = src.rows[0];
+      const newName = opts?.name?.trim() || `${s.name} (copie)`;
+      // composition_id has no UNIQUE constraint but is used as a Remotion
+      // bundle key — suffix with a base36 timestamp to keep clones distinct.
+      const newCompositionId = `${s.composition_id}-copie-${Date.now().toString(36)}`;
+      const tpl: { rows: Array<{ id: string }> } = await client.query(
+        `INSERT INTO neopro_templates
+           (name, composition_id, description, props_schema, default_props,
+            thumbnail_url, published, created_by, schema_version,
+            duration_seconds, fps, site_id, canvas_width, canvas_height)
+         VALUES ($1,$2,$3,$4,$5,$6,false,$7,$8,$9,$10,$11,$12,$13)
+         RETURNING id`,
+        [
+          newName,
+          newCompositionId,
+          s.description,
+          JSON.stringify(s.props_schema ?? {}),
+          JSON.stringify(s.default_props ?? {}),
+          s.thumbnail_url,
+          opts?.createdBy ?? null,
+          s.schema_version,
+          s.duration_seconds,
+          s.fps,
+          s.site_id,
+          s.canvas_width,
+          s.canvas_height,
+        ]
+      );
+      const newId = tpl.rows[0].id;
+
+      // 2. Clone template_variants (no remap needed downstream in our 6 tables)
+      const variants = await client.query(
+        `SELECT * FROM template_variants WHERE template_id = $1`,
+        [sourceId]
+      );
+      for (const v of variants.rows) {
+        await client.query(
+          `INSERT INTO template_variants
+             (template_id, name, background_video_url, thumbnail_url, sort_order)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [newId, v.name, v.background_video_url, v.thumbnail_url, v.sort_order]
+        );
+      }
+
+      // 3. Clone template_layers — build layerIdMap REQUIRED for steps 4/5.
+      const layers = await client.query(
+        `SELECT * FROM template_layers WHERE template_id = $1 ORDER BY z_index`,
+        [sourceId]
+      );
+      const layerIdMap: Record<string, string> = {};
+      for (const l of layers.rows) {
+        const r: { rows: Array<{ id: string }> } = await client.query(
+          `INSERT INTO template_layers
+             (template_id, name, video_url, z_index,
+              mask_top, mask_bottom, mask_left, mask_right, duration_ms)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+           RETURNING id`,
+          [
+            newId,
+            l.name,
+            l.video_url,
+            l.z_index,
+            l.mask_top,
+            l.mask_bottom,
+            l.mask_left,
+            l.mask_right,
+            l.duration_ms,
+          ]
+        );
+        layerIdMap[l.id] = r.rows[0].id;
+      }
+
+      // 4. Clone template_text_fields — REMAP layer_id via layerIdMap.
+      // layer_id is NOT NULL on this table per ADR-086 invariant.
+      const textFields = await client.query(
+        `SELECT * FROM template_text_fields WHERE template_id = $1`,
+        [sourceId]
+      );
+      for (const tf of textFields.rows) {
+        const newLayerId = layerIdMap[tf.layer_id];
+        if (!newLayerId) {
+          throw new Error(`layer_id_remap_missing_for_text_field_${tf.id}`);
+        }
+        await client.query(
+          `INSERT INTO template_text_fields
+             (template_id, slot_key, label, position_x, position_y, max_width,
+              font_family, font_size, color, align, appear_at, appear_duration,
+              animation, default_value, max_chars, multiline, required, sort_order,
+              always_visible, scale_from, scale_to,
+              layer_id, respect_alpha, animation_direction, visible_if)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+          [
+            newId,
+            tf.slot_key,
+            tf.label,
+            tf.position_x,
+            tf.position_y,
+            tf.max_width,
+            tf.font_family,
+            tf.font_size,
+            tf.color,
+            tf.align,
+            tf.appear_at,
+            tf.appear_duration,
+            tf.animation,
+            tf.default_value,
+            tf.max_chars,
+            tf.multiline,
+            tf.required,
+            tf.sort_order,
+            tf.always_visible,
+            tf.scale_from,
+            tf.scale_to,
+            newLayerId,
+            tf.respect_alpha,
+            tf.animation_direction,
+            tf.visible_if ?? null,
+          ]
+        );
+      }
+
+      // 5. Clone template_image_slots — REMAP layer_id via layerIdMap (nullable).
+      const imgSlots = await client.query(
+        `SELECT * FROM template_image_slots WHERE template_id = $1`,
+        [sourceId]
+      );
+      for (const im of imgSlots.rows) {
+        const newLayerId = im.layer_id ? layerIdMap[im.layer_id] ?? null : null;
+        await client.query(
+          `INSERT INTO template_image_slots
+             (template_id, slot_key, label, position_x, position_y, width, height,
+              appear_at, appear_duration, animation, aspect_ratio, required, sort_order,
+              anchor, fit_mode,
+              safe_top_pct, safe_left_pct, safe_width_pct, safe_height_pct,
+              overflow, animation_direction, layer_id, scale_from, scale_to, visible_if)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+          [
+            newId,
+            im.slot_key,
+            im.label,
+            im.position_x,
+            im.position_y,
+            im.width,
+            im.height,
+            im.appear_at,
+            im.appear_duration,
+            im.animation,
+            im.aspect_ratio,
+            im.required,
+            im.sort_order,
+            im.anchor,
+            im.fit_mode,
+            im.safe_top_pct,
+            im.safe_left_pct,
+            im.safe_width_pct,
+            im.safe_height_pct,
+            im.overflow,
+            im.animation_direction,
+            newLayerId,
+            im.scale_from,
+            im.scale_to,
+            im.visible_if ?? null,
+          ]
+        );
+      }
+
+      // 6. Clone template_options (no FK remap — single template_id).
+      const optionRows = await client.query(
+        `SELECT * FROM template_options WHERE template_id = $1`,
+        [sourceId]
+      );
+      for (const o of optionRows.rows) {
+        await client.query(
+          `INSERT INTO template_options
+             (template_id, key, label, type, values, default_value, user_editable, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [
+            newId,
+            o.key,
+            o.label,
+            o.type,
+            JSON.stringify(o.values ?? []),
+            o.default_value,
+            o.user_editable,
+            o.sort_order,
+          ]
+        );
+      }
+
+      // 7. Clone template_packshot_refs (packshot_template_id kept — no recursion).
+      const refs = await client.query(
+        `SELECT * FROM template_packshot_refs WHERE template_id = $1`,
+        [sourceId]
+      );
+      for (const ref of refs.rows) {
+        await client.query(
+          `INSERT INTO template_packshot_refs
+             (template_id, option_key, option_value, packshot_template_id, start_at_ms, z_index_offset)
+           VALUES ($1,$2,$3,$4,$5,$6)`,
+          [
+            newId,
+            ref.option_key,
+            ref.option_value,
+            ref.packshot_template_id,
+            ref.start_at_ms,
+            ref.z_index_offset,
+          ]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      const fresh = await this.findV2ById(newId);
+      if (!fresh) {
+        // V2 view returned null (source was schema_version=1) — clone still
+        // exists in DB, but caller's contract expects a TemplateV2. We surface
+        // a typed error so the controller can map to a 400.
+        throw new Error('clone_not_v2_readable');
+      }
+      return fresh;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   /**

@@ -12,6 +12,7 @@ import {
   remotionRenderJobRepository,
   siteRepository,
 } from '../repositories';
+import { templateStudioRepository } from '../repositories/template-studio.repository';
 import { metricsService } from '../services/metrics.service';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 import { clubTemplateQuotaService } from '../services/club-template-quota.service';
@@ -615,16 +616,34 @@ export const duplicateTemplate = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { name } = req.body as { name?: string };
 
-    const copy = await remotionTemplatesRepository.duplicate(id, {
+    // ADR-110 / DUP-02 / pitfall P4 — transactional deep clone across the
+    // 6 child tables. Replaces the legacy shallow `remotionTemplatesRepository.duplicate`
+    // which only cloned the root row and left children orphaned.
+    const copy = await templateStudioRepository.duplicateDeep(id, {
       name,
       createdBy: req.user?.id ?? null,
     });
 
-    if (!copy) return res.status(404).json({ error: 'Template non trouvé' });
-
-    logger.info('Template duplicated', { sourceId: id, newId: copy.id, userId: req.user?.id });
+    logger.info('Template duplicated (deep)', {
+      sourceId: id,
+      newId: copy.id,
+      userId: req.user?.id,
+    });
     res.status(201).json(copy);
   } catch (error) {
+    const msg = (error as Error)?.message ?? '';
+    if (msg === 'source_template_not_found') {
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+    if (msg === 'clone_not_v2_readable') {
+      // Source template was schema_version=1 (legacy) — deep clone is only
+      // meaningful for v2/v3 templates. Surface a 400 so the UI can hint
+      // the user to migrate the source first.
+      return res.status(400).json({
+        error: 'duplicate_requires_v2',
+        message: 'La duplication profonde requiert un template v2 (data-driven).',
+      });
+    }
     logger.error('duplicateTemplate error', { error, id: req.params.id });
     res.status(500).json({ error: 'Erreur serveur' });
   }
