@@ -272,8 +272,28 @@
       "targets": [{ "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }]
     },
     {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+      "id": 308,
+      "title": "ADR-110 PUB-02 — Test renders cleaned (7j)",
+      "description": "Volume de test renders FTP supprimés par le CRON hebdo (Sunday 03:00, TTL 7d). Si 0 sur 14j d'affilée alors que des templates ont été test-rendered, le CRON est probablement en panne ou le bucket /test-renders/ vide.",
+      "type": "timeseries",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (result) (increase(neopro_test_renders_cleaned_total[24h]))",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
       "id": 400,
       "title": "TV / Playback (Pi)",
       "type": "row"
