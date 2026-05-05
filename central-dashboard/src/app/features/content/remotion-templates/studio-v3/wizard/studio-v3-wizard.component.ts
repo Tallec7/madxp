@@ -31,6 +31,7 @@ import {
 } from '../wizard-state.types';
 import { WizardStepBackgroundsComponent } from './wizard-step-backgrounds.component';
 import { WizardStepIdentityComponent } from './wizard-step-identity.component';
+import { WizardStepZonesComponent } from './wizard-step-zones.component';
 
 const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
 
@@ -41,6 +42,7 @@ const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
     CommonModule,
     WizardStepIdentityComponent,
     WizardStepBackgroundsComponent,
+    WizardStepZonesComponent,
   ],
   templateUrl: './studio-v3-wizard.component.html',
   styleUrls: ['./studio-v3-wizard.component.scss'],

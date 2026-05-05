@@ -49,14 +49,22 @@
       </div>
     </div>
 
-    <!-- Step 3 placeholder — wired by plan 04 (Zones modifiables). -->
-    <div [hidden]="currentStep() !== 3" class="v3w__placeholder">
+    <!-- Step 3 — Zones modifiables (Plan 04 / WIZARD-05). -->
+    <app-wizard-step-zones
+      *ngIf="state().templateId as tplId3"
+      [hidden]="currentStep() !== 3"
+      [templateId]="tplId3"
+      [layers]="layersSignal"
+      [textFields]="textFieldsSignal"
+      [imageSlots]="imageSlotsSignal"
+      (textFieldsChange)="onTextFieldsChange($event)"
+      (imageSlotsChange)="onImageSlotsChange($event)"
+      (prev)="goToStep(2)"
+      (next)="goToStep(4)"
+    ></app-wizard-step-zones>
+    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 3" class="v3w__placeholder">
       <h2>Étape 3 — Zones modifiables</h2>
-      <p>L'éditeur de zones texte / image arrive en plan 04.</p>
-      <div class="v3w__nav">
-        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
-        <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant →</button>
-      </div>
+      <p>Validez d'abord l'étape 1 pour créer le template.</p>
     </div>
 
     <!-- Step 4 placeholder — wired by plan 05 (Options club). -->
