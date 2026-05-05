@@ -1005,9 +1005,9 @@ class TemplateStudioRepository {
              (template_id, slot_key, label, position_x, position_y, max_width,
               font_family, font_size, color, align, appear_at, appear_duration,
               animation, default_value, max_chars, multiline, required, sort_order,
-              always_visible, scale_from, scale_to,
-              layer_id, respect_alpha, animation_direction, visible_if)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+              always_visible, scale_from, scale_to, visible_if,
+              layer_id, respect_alpha, animation_direction, text_transform)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
           [
             newId,
             tf.slot_key,
@@ -1030,10 +1030,11 @@ class TemplateStudioRepository {
             tf.always_visible,
             tf.scale_from,
             tf.scale_to,
+            tf.visible_if ?? null,
             newLayerId,
             tf.respect_alpha,
             tf.animation_direction,
-            tf.visible_if ?? null,
+            tf.text_transform ?? 'none',
           ]
         );
       }
