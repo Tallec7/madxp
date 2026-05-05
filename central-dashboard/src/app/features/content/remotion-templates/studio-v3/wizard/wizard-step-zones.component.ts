@@ -26,20 +26,24 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   EventEmitter,
   inject,
   Input,
+  OnInit,
   Output,
   WritableSignal,
   computed,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { debounceTime } from 'rxjs/operators';
 
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
 import type {
@@ -190,7 +194,12 @@ interface ImageZoneFormShape {
 
           <label class="wsz__field">
             <span>Libellé</span>
-            <input type="text" formControlName="label" maxlength="80" />
+            <input
+              type="text"
+              formControlName="label"
+              maxlength="80"
+              (blur)="previewPropsChange.emit()"
+            />
           </label>
 
           <div class="wsz__row">
@@ -241,6 +250,7 @@ interface ImageZoneFormShape {
               type="text"
               formControlName="visibleIf"
               placeholder='ex: profil == "match"'
+              (blur)="previewPropsChange.emit()"
             />
           </label>
 
@@ -313,7 +323,12 @@ interface ImageZoneFormShape {
 
           <label class="wsz__field">
             <span>Libellé</span>
-            <input type="text" formControlName="label" maxlength="80" />
+            <input
+              type="text"
+              formControlName="label"
+              maxlength="80"
+              (blur)="previewPropsChange.emit()"
+            />
           </label>
 
           <label class="wsz__field">
@@ -331,6 +346,7 @@ interface ImageZoneFormShape {
               type="text"
               formControlName="visibleIf"
               placeholder='ex: profil == "match"'
+              (blur)="previewPropsChange.emit()"
             />
           </label>
 
@@ -529,7 +545,7 @@ interface ImageZoneFormShape {
     `,
   ],
 })
-export class WizardStepZonesComponent {
+export class WizardStepZonesComponent implements OnInit {
   @Input({ required: true }) templateId!: string;
   @Input({ required: true }) layers!: WritableSignal<TemplateLayer[]>;
   @Input({ required: true }) textFields!: WritableSignal<TemplateTextField[]>;
@@ -551,6 +567,7 @@ export class WizardStepZonesComponent {
   @Output() previewPropsChange = new EventEmitter<void>();
 
   private dataService = inject(RemotionTemplatesDataService);
+  private destroyRef = inject(DestroyRef);
 
   readonly fonts = FONT_FAMILIES;
   readonly presets = SAFE_ZONE_PRESETS;
@@ -610,6 +627,29 @@ export class WizardStepZonesComponent {
     }),
     visibleIf: new FormControl<string>('', { nonNullable: true }),
   });
+
+  /**
+   * Plan 02-02 (PREV-01) — Hybrid debounce/blur wiring.
+   * Visual controls (dropdowns/colors/numbers) push to the live Player via
+   * debounceTime(300). Text inputs (label, visibleIf) use (blur) on the
+   * <input> element directly (see template) — avoids re-render per keystroke.
+   */
+  ngOnInit(): void {
+    const emit = (): void => this.previewPropsChange.emit();
+    const pipe300 = <T>(ctrl: { valueChanges: import('rxjs').Observable<T> }) =>
+      ctrl.valueChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef));
+
+    pipe300(this.textForm.controls.fontFamily).subscribe(emit);
+    pipe300(this.textForm.controls.fontSize).subscribe(emit);
+    pipe300(this.textForm.controls.color).subscribe(emit);
+    pipe300(this.textForm.controls.textAlign).subscribe(emit);
+    pipe300(this.textForm.controls.maxChars).subscribe(emit);
+    // layerId on both forms is a dropdown — debounce too (visual control).
+    pipe300(this.textForm.controls.layerId).subscribe(emit);
+
+    pipe300(this.imageForm.controls.safeZonePreset).subscribe(emit);
+    pipe300(this.imageForm.controls.layerId).subscribe(emit);
+  }
 
   trackById(_: number, x: { id: string }): string {
     return x.id;
