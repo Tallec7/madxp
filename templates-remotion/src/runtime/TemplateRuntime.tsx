@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import {
   computeAnimation,
   AnimationPreset,
@@ -61,6 +61,12 @@ export interface RuntimeTextField {
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   /** PDF JOUEUR — slot conditionnel : "<option_key> == \"<value>\"" — invisible si pas de match. */
   visibleIf?: string | null;
+  /** ButSimple parity — espacement lettres en px (défaut 0). */
+  letterSpacing?: number;
+  /** ButSimple parity — text-shadow CSS string (ex: "2px 4px 8px rgba(0,0,0,0.3)"). */
+  textShadow?: string;
+  /** ButSimple parity — lineHeight ratio (défaut 1.1). */
+  lineHeight?: number;
 }
 
 export interface RuntimeImageSlot {
@@ -190,6 +196,26 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
+      <style>{`
+        @font-face {
+          font-family: 'Bulevar';
+          src: url('${staticFile('Bulevar-Regular.otf')}') format('opentype');
+          font-weight: 400;
+          font-style: normal;
+        }
+        @font-face {
+          font-family: 'GeneralSans';
+          src: url('${staticFile('GeneralSans-Semibold.otf')}') format('opentype');
+          font-weight: 600;
+          font-style: normal;
+        }
+        @font-face {
+          font-family: 'General Sans';
+          src: url('${staticFile('GeneralSans-Semibold.otf')}') format('opentype');
+          font-weight: 600;
+          font-style: normal;
+        }
+      `}</style>
       {bgSrc ? (
         <OffthreadVideo
           src={bgSrc}
@@ -260,7 +286,9 @@ export const TemplateRuntime: React.FC<TemplateRuntimeProps> = (props) => {
                 fontSize: tf.fontSize,
                 textAlign: tf.align,
                 textTransform: tf.textTransform ?? 'none',
-                lineHeight: 1.1,
+                lineHeight: tf.lineHeight ?? 1.1,
+                letterSpacing: tf.letterSpacing ? `${tf.letterSpacing}px` : 'normal',
+                textShadow: tf.textShadow ?? 'none',
                 whiteSpace: 'pre-wrap',
                 pointerEvents: 'none',
               }}
