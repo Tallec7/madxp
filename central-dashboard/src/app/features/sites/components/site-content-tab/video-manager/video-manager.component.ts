@@ -1,10 +1,11 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { concat, forkJoin } from 'rxjs';
 import { SitesService } from '../../../../../core/services/sites.service';
 import { SiteCommandService } from '../../../../../core/services/site-command.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { VideoDeleteService } from '../../../../../core/services/video-delete.service';
+import { ConfirmDialogService } from '../../../../../core/services/confirm-dialog.service';
 import { ErrorExtractor } from '../../../../../core/utils/error-extractor';
 import { LocalVideo, CloudVideo, LocalStorage, SiteSponsor, DisplayConfig } from '../../../../../core/models';
 import { VideoLibraryComponent, VideoItem, VideoDeployState, AddToTarget } from '../../video-library/video-library.component';
@@ -50,6 +51,7 @@ import { VideoVariantPanelComponent } from '../../../../content/video-variant-pa
         (videoPreview)="onVideoPreview($event)"
         (videoDeploy)="videoDeploy.emit($event)"
         (videoDelete)="onVideoDelete($event)"
+        (bulkDelete)="onBulkDelete($event)"
         (videoVariant)="onVideoVariant($event)"
         (secondaryVariantChanged)="closeVariantModal()"
         (variantChanged)="onVariantChanged($event)"
@@ -265,6 +267,7 @@ export class VideoManagerComponent {
     private commandService: SiteCommandService,
     private notificationService: NotificationService,
     private videoDeleteService: VideoDeleteService,
+    private confirmDialog: ConfirmDialogService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -289,6 +292,33 @@ export class VideoManagerComponent {
     this.deleteCanPi = video.isOnPi;
     this.deleteCanCloud = !!video.id;
     this.showDeleteModal = true;
+  }
+
+  onBulkDelete(videos: VideoItem[]): void {
+    const cloudVideos = videos.filter(v => !!v.id);
+    if (cloudVideos.length === 0) return;
+    const s = cloudVideos.length > 1 ? 's' : '';
+    this.confirmDialog.confirm(
+      `Supprimer ${cloudVideos.length} vidéo${s} du cloud ?`,
+      { title: 'Suppression groupée', confirmLabel: 'Supprimer' }
+    ).then(ok => {
+      if (!ok) return;
+      concat(...cloudVideos.map(v =>
+        this.videoDeleteService.deleteCloudWithCascadeFallback(v.id!, v.displayName || v.filename)
+      )).subscribe({
+        complete: () => {
+          this.notificationService.success(`${cloudVideos.length} vidéo${s} supprimée${s}`);
+          this.videoDeleted.emit();
+          this.cdr.markForCheck();
+        },
+        error: (err: unknown) => {
+          const message = ErrorExtractor.getMessage(err);
+          this.notificationService.error(`Erreur lors de la suppression : ${message}`);
+          this.videoDeleted.emit();
+          this.cdr.markForCheck();
+        }
+      });
+    });
   }
 
   executeDelete(choice: 'pi' | 'cloud' | 'both' | 'unlink'): void {
