@@ -258,6 +258,19 @@ router.delete(
   sensitiveRateLimit,
   optionsCtrl.deleteOption,
 );
+// ADR-110 / Plan 02-04 / UX-03 — atomic rename of an option key.
+// Repo wraps 4 UPDATEs in BEGIN/COMMIT/ROLLBACK across template_options,
+// template_packshot_refs, template_text_fields.visible_if, template_image_slots.visible_if.
+// super_admin guard is mandatory (template composition is fleet-wide).
+router.post(
+  '/:id/options/:optionId/rename',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(paramSchemas.idAndOptionId),
+  validate(schemas.templateStudioOptionRename),
+  sensitiveRateLimit,
+  ctrl.renameOptionKey,
+);
 
 // ── Packshot pluggable refs (PDF JOUEUR §démarrage) ────────────────────────
 // Map (option_key, option_value) → packshot_template_id à empiler en surcouche.
