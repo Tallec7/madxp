@@ -24,66 +24,84 @@
       {{ err }}
     </div>
 
-    <app-wizard-step-identity
-      [hidden]="currentStep() !== 1"
-      [initialValue]="state().identity"
-      [saving]="saving()"
-      (next)="onStep1Submit($event)"
-    ></app-wizard-step-identity>
+    <div class="v3w__panes">
+      <div class="v3w__form">
+        <app-wizard-step-identity
+          [hidden]="currentStep() !== 1"
+          [initialValue]="state().identity"
+          [saving]="saving()"
+          (next)="onStep1Submit($event)"
+        ></app-wizard-step-identity>
 
-    <!-- Step 2 — Fonds animés (Plan 04 / WIZARD-04). -->
-    <app-wizard-step-backgrounds
-      *ngIf="state().templateId as tplId"
-      [hidden]="currentStep() !== 2"
-      [templateId]="tplId"
-      [layers]="layersSignal"
-      (layersChange)="onLayersChange($event)"
-      (prev)="goToStep(1)"
-      (next)="goToStep(3)"
-    ></app-wizard-step-backgrounds>
-    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 2" class="v3w__placeholder">
-      <h2>Étape 2 — Fonds animés</h2>
-      <p>Validez d'abord l'étape 1 pour créer le template.</p>
-      <div class="v3w__nav">
-        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+        <!-- Step 2 — Fonds animés (Plan 04 / WIZARD-04). -->
+        <app-wizard-step-backgrounds
+          *ngIf="state().templateId as tplId"
+          [hidden]="currentStep() !== 2"
+          [templateId]="tplId"
+          [layers]="layersSignal"
+          (layersChange)="onLayersChange($event)"
+          (prev)="goToStep(1)"
+          (next)="goToStep(3)"
+        ></app-wizard-step-backgrounds>
+        <div *ngIf="!state().templateId" [hidden]="currentStep() !== 2" class="v3w__placeholder">
+          <h2>Étape 2 — Fonds animés</h2>
+          <p>Validez d'abord l'étape 1 pour créer le template.</p>
+          <div class="v3w__nav">
+            <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+          </div>
+        </div>
+
+        <!-- Step 3 — Zones modifiables (Plan 04 / WIZARD-05). -->
+        <app-wizard-step-zones
+          *ngIf="state().templateId as tplId3"
+          [hidden]="currentStep() !== 3"
+          [templateId]="tplId3"
+          [layers]="layersSignal"
+          [textFields]="textFieldsSignal"
+          [imageSlots]="imageSlotsSignal"
+          (textFieldsChange)="onTextFieldsChange($event)"
+          (imageSlotsChange)="onImageSlotsChange($event)"
+          (previewPropsChange)="onPreviewPropsChange()"
+          (prev)="goToStep(2)"
+          (next)="goToStep(4)"
+        ></app-wizard-step-zones>
+        <div *ngIf="!state().templateId" [hidden]="currentStep() !== 3" class="v3w__placeholder">
+          <h2>Étape 3 — Zones modifiables</h2>
+          <p>Validez d'abord l'étape 1 pour créer le template.</p>
+        </div>
+
+        <!-- Step 4 — Options club (Plan 05 / WIZARD-01). -->
+        <app-wizard-step-options
+          *ngIf="state().templateId as tplId4"
+          [hidden]="currentStep() !== 4"
+          [templateId]="tplId4"
+          [options]="optionsSignal"
+          [zones]="zonesSignal"
+          (optionsChange)="onOptionsChange($event)"
+          (prev)="goToStep(3)"
+          (finished)="onFinish()"
+        ></app-wizard-step-options>
+        <div *ngIf="!state().templateId" [hidden]="currentStep() !== 4" class="v3w__placeholder">
+          <h2>Étape 4 — Options club</h2>
+          <p>Validez d'abord l'étape 1 pour créer le template.</p>
+          <div class="v3w__nav">
+            <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Step 3 — Zones modifiables (Plan 04 / WIZARD-05). -->
-    <app-wizard-step-zones
-      *ngIf="state().templateId as tplId3"
-      [hidden]="currentStep() !== 3"
-      [templateId]="tplId3"
-      [layers]="layersSignal"
-      [textFields]="textFieldsSignal"
-      [imageSlots]="imageSlotsSignal"
-      (textFieldsChange)="onTextFieldsChange($event)"
-      (imageSlotsChange)="onImageSlotsChange($event)"
-      (prev)="goToStep(2)"
-      (next)="goToStep(4)"
-    ></app-wizard-step-zones>
-    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 3" class="v3w__placeholder">
-      <h2>Étape 3 — Zones modifiables</h2>
-      <p>Validez d'abord l'étape 1 pour créer le template.</p>
-    </div>
-
-    <!-- Step 4 — Options club (Plan 05 / WIZARD-01). -->
-    <app-wizard-step-options
-      *ngIf="state().templateId as tplId4"
-      [hidden]="currentStep() !== 4"
-      [templateId]="tplId4"
-      [options]="optionsSignal"
-      [zones]="zonesSignal"
-      (optionsChange)="onOptionsChange($event)"
-      (prev)="goToStep(3)"
-      (finished)="onFinish()"
-    ></app-wizard-step-options>
-    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 4" class="v3w__placeholder">
-      <h2>Étape 4 — Options club</h2>
-      <p>Validez d'abord l'étape 1 pour créer le template.</p>
-      <div class="v3w__nav">
-        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
-      </div>
+      <!--
+        PREV-01 / Pitfall P3 — Player panel mounted EXACTLY ONCE here, as a
+        sibling of the form pane. NEVER wrap in *ngIf (would unmount/remount
+        the React root on every step nav and leak GPU SharedImage on Pi5).
+        Only [hidden] toggles visibility on steps 1-2.
+      -->
+      <app-wizard-preview-panel
+        class="v3w__preview"
+        [hidden]="currentStep() < 3"
+        [state]="state()"
+        (goToStep)="goToStep($event)"
+      ></app-wizard-preview-panel>
     </div>
   </section>
 </div>

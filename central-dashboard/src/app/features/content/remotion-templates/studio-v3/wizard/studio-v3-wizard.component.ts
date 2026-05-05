@@ -15,6 +15,7 @@ import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
+import { RemotionPreviewService } from '../../remotion-preview.service';
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
 import type {
   TemplateImageSlot,
@@ -23,6 +24,7 @@ import type {
   TemplateStudioView,
   TemplateTextField,
 } from '../../remotion-templates.types';
+import type { RuntimePlayerState } from '../../studio-player/template-studio-player.component';
 import {
   DEFAULT_WIZARD_STATE,
   IdentityFormValue,
@@ -30,6 +32,8 @@ import {
   WizardState,
   WizardStep,
 } from '../wizard-state.types';
+import { PREVIEW_FIXTURES } from './preview-fixtures';
+import { WizardPreviewPanelComponent } from './wizard-preview-panel.component';
 import { WizardStepBackgroundsComponent } from './wizard-step-backgrounds.component';
 import { WizardStepIdentityComponent } from './wizard-step-identity.component';
 import { WizardStepOptionsComponent } from './wizard-step-options.component';
@@ -46,6 +50,7 @@ const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
     WizardStepBackgroundsComponent,
     WizardStepZonesComponent,
     WizardStepOptionsComponent,
+    WizardPreviewPanelComponent,
   ],
   templateUrl: './studio-v3-wizard.component.html',
   styleUrls: ['./studio-v3-wizard.component.scss'],
@@ -55,6 +60,7 @@ export class StudioV3WizardComponent implements OnInit {
   // Router kept for future programmatic nav (cancel button, etc. plan 05).
   private router = inject(Router);
   private dataService = inject(RemotionTemplatesDataService);
+  private previewService = inject(RemotionPreviewService);
   private location = inject(Location);
 
   readonly stepLabels = STEP_LABELS;
@@ -88,6 +94,29 @@ export class StudioV3WizardComponent implements OnInit {
       this.textFieldsSignal.set(s.zones.textFields);
       this.imageSlotsSignal.set(s.zones.imageSlots);
       this.optionsSignal.set(s.options);
+    });
+
+    /**
+     * PREV-01 — Recompute previewState whenever the wizard inputs change
+     * (identity / layers / zones). The Player is mounted ONCE in the shell
+     * (Pitfall P3) and re-renders only via @Input changes — never destroyed.
+     */
+    effect(() => {
+      const s = this.state();
+      // Don't compute until step 1 is done — no Player visible yet.
+      if (!s.templateId || s.layers.length === 0) {
+        if (s.previewState !== null) {
+          // Reset when layers go to zero (e.g. user deletes the last layer).
+          this.state.update((cur) => ({ ...cur, previewState: null }));
+        }
+        return;
+      }
+      const next = this.computePreviewState(s);
+      // Replace only when the reference would actually change to avoid
+      // an effect feedback loop on the same data.
+      if (next !== s.previewState) {
+        this.state.update((cur) => ({ ...cur, previewState: next }));
+      }
     });
   }
 
@@ -225,6 +254,72 @@ export class StudioV3WizardComponent implements OnInit {
 
   nextStep(): void {
     this.currentStep.update((s) => (s < 4 ? ((s + 1) as WizardStep) : s));
+  }
+
+  /**
+   * PREV-01 / PREV-02 — Build a fully-proxied RuntimePlayerState from the
+   * current wizard state. Per-layer/per-variant proxyUrl() is delegated to
+   * the service (Pitfall P2). Empty user fields fall back to FR fixtures
+   * ('PRÉNOM NOM', 'NOM DU CLUB', logo placeholder, photo placeholder).
+   *
+   * Triggered by the constructor effect AND by Step 3's previewPropsChange
+   * output (Plan 02-02 / Task 3 — hybrid debounce/blur).
+   */
+  private computePreviewState(s: WizardState): RuntimePlayerState {
+    const textValues: Record<string, string> = {};
+    for (const tf of s.zones.textFields) {
+      const dv = (tf.defaultValue ?? '').trim();
+      if (dv) {
+        textValues[tf.slotKey] = dv;
+        continue;
+      }
+      // Fixture fallback when admin left the default empty.
+      const lower = `${tf.slotKey} ${tf.label}`.toLowerCase();
+      if (lower.includes('club')) {
+        textValues[tf.slotKey] = PREVIEW_FIXTURES.clubName;
+      } else if (lower.includes('prenom') || lower.includes('first')) {
+        textValues[tf.slotKey] = PREVIEW_FIXTURES.playerFirstName;
+      } else if (lower.includes('nom') || lower.includes('last') || lower.includes('name')) {
+        textValues[tf.slotKey] = PREVIEW_FIXTURES.playerLastName;
+      } else {
+        textValues[tf.slotKey] = PREVIEW_FIXTURES.playerFullName;
+      }
+    }
+
+    const imageUploads: Record<string, string> = {};
+    for (const slot of s.zones.imageSlots) {
+      const lower = `${slot.slotKey} ${slot.label}`.toLowerCase();
+      imageUploads[slot.slotKey] = lower.includes('logo')
+        ? PREVIEW_FIXTURES.logoUrl
+        : PREVIEW_FIXTURES.photoUrl;
+    }
+
+    return this.previewService.buildRuntimePlayerState({
+      layers: s.layers,
+      // Wizard v3 has no variants column on layers — pass empty array; the
+      // service still maps it through proxyUrl recursively (no-op when empty).
+      variants: [],
+      textFields: s.zones.textFields,
+      imageSlots: s.zones.imageSlots,
+      canvasWidth: s.identity.width,
+      canvasHeight: s.identity.height,
+      durationSeconds: s.identity.durationSec,
+      fps: s.identity.fps,
+      textValues,
+      imageUploads,
+    }) as unknown as RuntimePlayerState;
+  }
+
+  /**
+   * Plan 02-02 / PREV-01 — Step 3 emits previewPropsChange after a
+   * debounced control change OR a (blur) on a text input. We just bump the
+   * effect by re-setting the state; the constructor effect picks it up.
+   */
+  onPreviewPropsChange(): void {
+    const s = this.state();
+    if (!s.templateId || s.layers.length === 0) return;
+    const next = this.computePreviewState(s);
+    this.state.update((cur) => ({ ...cur, previewState: next }));
   }
 
   private slugify(s: string): string {
