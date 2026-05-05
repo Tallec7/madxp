@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Phase 3 Plan 04 done — Ready for Plan 05 (Phase 3 final plan)
-stopped_at: Completed 03-gate-publication-04-PLAN.md
-last_updated: '2026-05-05T22:00:00.000Z'
-last_activity: 2026-05-05 — Phase 3 Plan 04 livré (Wizard Step 5 Validation [hidden]-mounted + Player toggle Aperçu live/Rendu de test + VALIDATION_RULE_LABELS 8 entries figées + smoke 8/8 RED→GREEN)
+status: Milestone v3.0 COMPLETE — All 14 plans shipped (Phase 1 5/5 + Phase 2 4/4 + Phase 3 5/5). Ready for gsd-verifier cross-phase audit.
+stopped_at: Completed 03-gate-publication-05-PLAN.md (Phase 3 closure)
+last_updated: '2026-05-05T22:35:00.000Z'
+last_activity: 2026-05-05 — Phase 3 Plan 05 livré (Publish/Unpublish endpoints validation-gated + audit Winston structured + UX card unpublish ConfirmDialog FR + smoke 5/5 RED→GREEN + UAT 11/11 approved)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 3 of 3 (Gate publication) — IN PROGRESS
-Plan: 04 of 5 — DONE
-Status: Phase 3 Plan 04 done — Ready for Plan 05 (Phase 3 final plan)
-Last activity: 2026-05-05 — Phase 3 Plan 04 livré (Wizard Step 5 Validation [hidden]-mounted + Player toggle Aperçu live/Rendu de test + VALIDATION_RULE_LABELS 8 entries figées + smoke 8/8 RED→GREEN)
+Phase: 3 of 3 (Gate publication) — COMPLETE
+Plan: 05 of 5 — DONE
+Status: Milestone v3.0 COMPLETE — All 14 plans shipped (Phase 1 5/5 + Phase 2 4/4 + Phase 3 5/5). Ready for gsd-verifier cross-phase audit.
+Last activity: 2026-05-05 — Phase 3 Plan 05 livré (Publish/Unpublish endpoints validation-gated + audit Winston structured + UX card unpublish ConfirmDialog FR + smoke 5/5 RED→GREEN + UAT 11/11 approved)
 
-Progress: [█████████░] 93% (13/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 4/5)
+Progress: [██████████] 100% (14/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 5/5)
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 93% (13/14 plans total — Phase 1 5/
 | 03    | 02   | ~25 min  | 2     | 13    | 2026-05-05 |
 | 03    | 03   | ~25 min  | 2     | 7     | 2026-05-05 |
 | 03    | 04   | ~30 min  | 2     | 12    | 2026-05-05 |
+| 03    | 05   | ~35 min  | 3     | 9     | 2026-05-05 |
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
@@ -129,6 +130,13 @@ Recent decisions affecting current work:
 - Phase 3 Plan 04 : Deep-link `Corriger →` utilise `Router.navigate({ queryParams: { focus: entityId }, queryParamsHandling: 'merge', replaceUrl: true })` — sharable + refresh-safe. Auto-clear highlight 4s.
 - Phase 3 Plan 04 deviation : `dataService.getRenderJob(jobId)` du PLAN n'existe pas → `pollRenderJob(jobId)` legacy ADR-054 réutilisée (worker Plan 03-03 discrimine via `title.startsWith('test-render:')` — pas besoin nouveau endpoint).
 - Phase 3 Plan 04 deviation : ng build production échoue sur Node 18 (Angular 20 exige Node 20.19+). `tsc --noEmit -p tsconfig.json` exécuté à la place — exit 0, type-safety préservée. Production build sera re-vérifié sur CI Node 20+.
+- Phase 3 Plan 05 : Publish autorité serveur — controller `publishTemplate` re-runValidation et retourne 409 même si UI Plan 04 n'a pas affiché de rules en rouge (race possible 2 onglets). UI gating est UX, serveur est autorité finale.
+- Phase 3 Plan 05 : Audit Winston shape figée `{ action, actor_id, template_id, timestamp }` (pas message string) — réutilisable pour future audits super_admin (template.duplicated, assets_replaced).
+- Phase 3 Plan 05 : MODAL_MESSAGES const séparé d'ERROR_MESSAGES (vocabulary.constants.ts) — modales != erreurs, lexiques distincts pour smoke banlist + i18n future.
+- Phase 3 Plan 05 : Modale unpublish via ConfirmDialog partagé (réutilisé dashboard) — bind FR vocabulary keys, Annuler banlisté Phase 1 → "Abandonner", `window.confirm` interdit (couvert smoke acceptance criteria).
+- Phase 3 Plan 05 : `templateStudioRepository.updatePublishedFlag(id, bool)` thin method — controllers strict repo-pattern, 0 bare query() (CLAUDE.md NE JAMAIS FAIRE).
+- Phase 3 Plan 05 : 0 deviation — RED 5/5 → GREEN 5/5, smoke v3 régression-free, tsc clean, UAT 11/11 approved.
+- **Milestone v3.0 COMPLETE 2026-05-05** : 14/14 plans, ROADMAP success criteria atteints (Phase 1 4/4, Phase 2 5/5, Phase 3 3/3). Ready for gsd-verifier.
 
 ### Pending Todos
 
@@ -142,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T22:00:00.000Z
-Stopped at: Completed 03-gate-publication-04-PLAN.md
+Last session: 2026-05-05T22:35:00.000Z
+Stopped at: Completed 03-gate-publication-05-PLAN.md (Milestone v3.0 COMPLETE)
 Resume file: None

@@ -12,7 +12,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 - [x] **Phase 1: Fondations** - Wizard 4 étapes (sans preview) + Asset Manager + duplication atomique — **COMPLETE 2026-05-05**
 - [x] **Phase 2: UX interactive** - Preview Remotion temps réel + vocabulaire métier figé + preset cards (completed 2026-05-05)
-- [ ] **Phase 3: Gate de publication** - Checklist automatique 8 critères + test render + règles smoke
+- [x] **Phase 3: Gate de publication** - Checklist automatique 8 critères + test render + règles smoke — **COMPLETE 2026-05-05**
 
 ## Phase Details
 
@@ -73,15 +73,15 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 - [x] 03-gate-publication-02-PLAN.md — Validation registry server-side (8 rules + GET /:id/validation + smoke TEST-03 itère sur registre) (PUB-01, TEST-03) — DONE 2026-05-05 (commits a0a709cd, 1976ebca)
 - [x] 03-gate-publication-03-PLAN.md — Test render async backend: POST /:id/test-render + worker hook + tracking (PUB-02) — DONE 2026-05-05 (commits 6cadcb03, 7429da37)
 - [x] 03-gate-publication-04-PLAN.md — Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé (PUB-01, PUB-02) — DONE 2026-05-05 (commits 65e2a91d, ff57bd29)
-- [ ] 03-gate-publication-05-PLAN.md — Publish/Unpublish endpoints (validation-gated) + audit Winston structured + UX card unpublish (PUB-01)
+- [x] 03-gate-publication-05-PLAN.md — Publish/Unpublish endpoints (validation-gated) + audit Winston structured + UX card unpublish (PUB-01) — DONE 2026-05-05 (commits 29031900, b4138c2b)
 
 ## Progress
 
-| Phase               | Plans Complete | Status      | Completed  |
-| ------------------- | -------------- | ----------- | ---------- |
-| 1. Fondations       | 5/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | 4/4            | Complete    | 2026-05-05 |
-| 3. Gate publication | 4/5            | In Progress | -          |
+| Phase               | Plans Complete | Status   | Completed  |
+| ------------------- | -------------- | -------- | ---------- |
+| 1. Fondations       | 5/5            | Complete | 2026-05-05 |
+| 2. UX interactive   | 4/4            | Complete | 2026-05-05 |
+| 3. Gate publication | 5/5            | Complete | 2026-05-05 |
 
 ---
 
