@@ -1,13 +1,13 @@
 ---
 tags: [remote, feature, v1, v2, telecommande]
-updated: 2026-05-04
+updated: 2026-05-05
 ---
 
 # SPEC : Remote (Télécommande)
 
 > **Owner** : Daisy
 > **Statut** : Live
-> **Dernière revue** : 2026-05-04
+> **Dernière revue** : 2026-05-05
 
 ## En une phrase
 
@@ -34,6 +34,7 @@ Permettre au staff d'un club de piloter la TV en temps réel depuis un smartphon
 
 ## Règles métier
 
+- La route `/remote` (Pi Angular) et `/remote/:siteId` (SaaS) sont **publiques** — pas d'authGuard Angular requis. Protection optionnelle : PIN profil (ADR-058) activable par profil.
 - Un staff peut piloter son profil **sans compte dashboard** — seul un PIN profil suffit (ADR-058)
 - Le PIN est **par profil**, pas par site — révocable par device individuellement
 - Le Pi peut valider un PIN **hors-ligne** (bcrypt local, sync via `sync_profiles`)

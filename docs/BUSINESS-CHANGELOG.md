@@ -12,6 +12,7 @@
 
 ### 🎯 Pour le club (NLF, prospects)
 
+- **Télécommande Pi accessible sans login** ([#835](https://github.com/Tallec7/neopro/pull/835)) — un bénévole ou staff scannant le QR code du Pi n'a plus besoin de compte dashboard pour accéder à la télécommande. Comportement aligné avec la version SaaS. Si un club veut restreindre l'accès, le PIN profil reste disponible.
 - **Templates JOUEUR : présentation animée des joueurs sur la TV** ([#805](https://github.com/Tallec7/neopro/pull/805) → [#817](https://github.com/Tallec7/neopro/pull/817), 8 PRs) — photo, nom, numéro, logo, animations d'entrée/sortie conformes à la charte graphique. L'opérateur saisit nom + numéro, la vidéo se génère en quelques secondes et rejoint la boucle. Conçu pour les cérémonies d'entrée des joueurs (handball, basket, foot).
 - **Studio club "Créer une vidéo" accessible depuis le portail club** ([#804](https://github.com/Tallec7/neopro/pull/804)) — un responsable com' club peut créer ses cartes joueurs sans passer par NEOPRO.
 - **Fire Stick : démarrage instantané des vidéos LAN** ([#830](https://github.com/Tallec7/neopro/pull/830)) — pré-cache LAN avant lecture. Fini le blanc au démarrage d'une vidéo, particulièrement visible en mode cérémonie joueurs.
@@ -19,6 +20,7 @@
 
 ### 🛡️ Pour la robustesse
 
+- **Fix hotspot captive portal Pi NLF** ([#833](https://github.com/Tallec7/neopro/pull/833)) — le hotspot distribuait du DHCP valide mais aucun accès internet (ip_forward désactivé + masquerade manquant sur l'uplink). Les redirections DNS Apple/Google supprimées car elles marquaient le réseau "captive bloqué" côté iOS/Android. Incident 02/05/2026 résolu.
 - **Fix incidents Pi NLF du 2 mai 2026** ([#821](https://github.com/Tallec7/neopro/pull/821) + [#828](https://github.com/Tallec7/neopro/pull/828) + [#829](https://github.com/Tallec7/neopro/pull/829)) — trois bugs : (1) ORA RADIO réapparaissait après sync même supprimé → central désormais autoritaire sur sponsors[] ; (2) login télécommande Angular cassé après admin panel → deux champs séparés `adminPassword`/`password` ; (3) kiosk Pi se redémarrait ~35s après boot (faux positif watchdog).
 - **Headers Chromium Private Network Access sur les vidéos nginx** ([#819](https://github.com/Tallec7/neopro/pull/819) + [#820](https://github.com/Tallec7/neopro/pull/820)) — Chrome 124+ bloquait silencieusement des requêtes vidéo locales Pi. Fix headers PNA + autoplay-with-sound.
 
