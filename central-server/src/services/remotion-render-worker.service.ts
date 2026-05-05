@@ -9,7 +9,14 @@ import {
   remotionRenderJobRepository,
   type RemotionRenderJob,
 } from '../repositories';
+import { templateStudioRepository } from '../repositories/template-studio.repository';
 import { templateRenderPropsService } from './template-render-props.service';
+
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — discriminator for test render jobs.
+// The controller `createTestRender` enqueues with `title: 'test-render:<id>:<ts>'`
+// so the worker can branch the upload destination + tracking writes without
+// introducing a parallel job table.
+const TEST_RENDER_TITLE_PREFIX = 'test-render:';
 
 /**
  * In-process Remotion render worker (ADR-054).
@@ -134,10 +141,27 @@ async function runRemotionRender(
 
 async function processJob(job: RemotionRenderJob): Promise<void> {
   const outputPath = path.join(os.tmpdir(), `remotion-render-${job.id}.mp4`);
+  const isTestRender = job.title.startsWith(TEST_RENDER_TITLE_PREFIX);
 
+  // PUB-02 — test renders skip the published gate (admin-only flow against an
+  // unpublished draft) and use `findById` rather than `findPublishedById`.
   try {
-    const template = await remotionTemplatesRepository.findPublishedById(job.template_id);
+    if (isTestRender) {
+      await templateStudioRepository.updateTestRenderTracking(job.template_id, {
+        status: 'rendering',
+      });
+    }
+
+    const template = isTestRender
+      ? await remotionTemplatesRepository.findById(job.template_id)
+      : await remotionTemplatesRepository.findPublishedById(job.template_id);
     if (!template) {
+      if (isTestRender) {
+        await templateStudioRepository.updateTestRenderTracking(job.template_id, {
+          status: 'failed',
+          at: new Date(),
+        });
+      }
       await remotionRenderJobRepository.markFailed(job.id, 'Template non trouvé ou non publié');
       return;
     }
@@ -190,6 +214,39 @@ async function processJob(job: RemotionRenderJob): Promise<void> {
     // Phase: uploading (95-100%)
     await remotionRenderJobRepository.updateProgress(job.id, 95, 'uploading');
 
+    // PUB-02 — test renders go to /test-renders/{templateId}/{ts}.mp4 and
+    // never insert a `videos` row (CRON `test_render_cleanup` Plan 01 will
+    // sweep them after 7d). Tracking is persisted on `neopro_templates`.
+    if (isTestRender) {
+      const testStoragePath = `test-renders/${job.template_id}/${Date.now()}.mp4`;
+      const testUploadResult = await uploadVideoFromDisk(
+        outputPath,
+        stat.size,
+        testStoragePath,
+        'video/mp4',
+      );
+      if (!testUploadResult) throw new Error('FTP upload failed');
+      await templateStudioRepository.updateTestRenderTracking(job.template_id, {
+        status: 'success',
+        url: testUploadResult.url,
+        at: new Date(),
+      });
+      // Test renders never produce a `videos` row — use the dedicated repo
+      // method that leaves `video_id` NULL while still flipping status to
+      // 'completed' so the dashboard polling exits.
+      await remotionRenderJobRepository.markCompletedWithoutVideo(job.id, {
+        video_url: testUploadResult.url,
+        file_size: stat.size,
+      });
+      logger.info('Test render success', {
+        jobId: job.id,
+        templateId: job.template_id,
+        url: testUploadResult.url,
+        fileSize: stat.size,
+      });
+      return;
+    }
+
     const safeTitle = job.title.replace(/[^a-zA-Z0-9_-]/g, '_');
     const storagePath = `videos/templates/${safeTitle}_${Date.now()}.mp4`;
     const uploadResult = await uploadVideoFromDisk(outputPath, stat.size, storagePath, 'video/mp4');
@@ -230,7 +287,25 @@ async function processJob(job: RemotionRenderJob): Promise<void> {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error('Render job failed', { jobId: job.id, error: message });
+    if (isTestRender) {
+      logger.error('Test render failed', {
+        jobId: job.id,
+        templateId: job.template_id,
+        error: message,
+      });
+      await templateStudioRepository.updateTestRenderTracking(job.template_id, {
+        status: 'failed',
+        at: new Date(),
+      }).catch((trackErr) => {
+        logger.error('Test render tracking update failed', {
+          jobId: job.id,
+          templateId: job.template_id,
+          error: trackErr instanceof Error ? trackErr.message : String(trackErr),
+        });
+      });
+    } else {
+      logger.error('Render job failed', { jobId: job.id, error: message });
+    }
     await remotionRenderJobRepository.markFailed(job.id, message);
   } finally {
     try {

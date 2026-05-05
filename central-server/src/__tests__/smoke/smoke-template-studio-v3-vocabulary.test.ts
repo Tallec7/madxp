@@ -103,6 +103,53 @@ describe('Template Studio v3 — vocabulary lock (TEST-01)', () => {
     expect(content).toMatch(/asset_in_use\s*:\s*['"][^'"]+['"]/);
   });
 
+  // ── Phase 3 Plan 04 / PUB-01 — VALIDATION_RULE_LABELS lock ───────────────
+  // Locks the FR labels that the wizard step 5 publish-gate panel exposes
+  // for each backend validation rule (8 rules from Plan 02). Adding a 9th
+  // rule means adding a 9th entry here in the same PR — otherwise the
+  // dashboard would show the raw rule_id (jargon DB) to the admin.
+  describe('VALIDATION_RULE_LABELS (Phase 3 PUB-01)', () => {
+    it('exports 8 FR labels matching server rule IDs', () => {
+      expect(content).toMatch(/VALIDATION_RULE_LABELS/);
+      const expectedIds = [
+        'at_least_one_layer',
+        'assets_resolve_http_200',
+        'fonts_known',
+        'zones_in_safe_zone',
+        'visible_if_keys_exist',
+        'packshot_refs_options_match',
+        'packshot_refs_target_published',
+        'recent_test_render_24h',
+      ];
+      for (const id of expectedIds) {
+        expect(content).toMatch(new RegExp(`${id}\\s*:\\s*['"]`));
+      }
+    });
+
+    it('declares ERROR_MESSAGES.test_render_failed in FR', () => {
+      expect(content).toMatch(/test_render_failed:\s*['"]Le rendu de test a échoué/);
+    });
+
+    it('VALIDATION_RULE_LABELS values contain no DB jargon', () => {
+      const m = content.match(/VALIDATION_RULE_LABELS[\s\S]*?\}\s*(?:as\s+const\s*)?;/);
+      expect(m).not.toBeNull();
+      const block = m![0];
+      for (const banned of [
+        'layer',
+        'slot',
+        'pix_fmt',
+        'option_key',
+        'composition_id',
+        'scaleFrom',
+        'scaleTo',
+        'durationMs',
+        'visible_if',
+      ]) {
+        expect(block).not.toMatch(new RegExp(`['"]${banned}['"]`));
+      }
+    });
+  });
+
   it('no studio-v3/ source file leaks DB jargon as a string-quoted value', () => {
     const files = listFilesRecursive(studioV3Dir, ['.ts', '.html']);
     // Exclude vocabulary.constants.ts from this scan — it intentionally

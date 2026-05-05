@@ -39,14 +39,14 @@
 
 ### Gate de publication (PUB)
 
-- [ ] **PUB-01**: Le bouton "Publier" reste désactivé tant que les 8 critères de la checklist automatique ne sont pas tous verts (≥1 fond, fonts connues, zones en safe-zone, `visible_if` cohérents avec les options, `packshot_refs` pointant vers templates publiés)
-- [ ] **PUB-02**: Super_admin peut lancer un rendu de test avec données factices avant de publier ; le résultat s'affiche dans le Player intégré
+- [x] **PUB-01**: Le bouton "Publier" reste désactivé tant que les 8 critères de la checklist automatique ne sont pas tous verts (≥1 fond, fonts connues, zones en safe-zone, `visible_if` cohérents avec les options, `packshot_refs` pointant vers templates publiés)
+- [x] **PUB-02**: Super_admin peut lancer un rendu de test avec données factices avant de publier ; le résultat s'affiche dans le Player intégré
 
 ### Smoke tests (TEST)
 
 - [x] **TEST-01**: Smoke test `smoke-template-studio-v3-vocabulary` : le mapping UI↔DB est figé — tout changement de clé fait échouer le test
 - [x] **TEST-02**: Smoke test `smoke-template-studio-v3-duplicate` : la duplication clone toutes les rows des 6 tables sans dupliquer les assets WebM (COUNT avant/après + vérif `file_url` identiques)
-- [ ] **TEST-03**: Smoke test `smoke-template-studio-v3-validation` : la checklist pré-publication rejette un template incomplet selon les 8 critères
+- [x] **TEST-03**: Smoke test `smoke-template-studio-v3-validation` : la checklist pré-publication rejette un template incomplet selon les 8 critères
 - [x] **TEST-04**: Smoke test `smoke-template-studio-v3-asset-manager` : l'upload WebM est refusé si pas de canal alpha quand `respect_alpha=true` est requis
 
 ## v2 Requirements (déféré)
@@ -103,11 +103,11 @@
 | UX-01       | Phase 2 (B) | Pending        |
 | UX-02       | Phase 2 (B) | Complete       |
 | UX-03       | Phase 2 (B) | Complete       |
-| PUB-01      | Phase 3 (C) | Pending        |
-| PUB-02      | Phase 3 (C) | Pending        |
+| PUB-01      | Phase 3 (C) | Complete       |
+| PUB-02      | Phase 3 (C) | Complete       |
 | TEST-01     | Phase 1 (A) | Done (plan 01) |
 | TEST-02     | Phase 1 (A) | Done (plan 01) |
-| TEST-03     | Phase 3 (C) | Pending        |
+| TEST-03     | Phase 3 (C) | Complete       |
 | TEST-04     | Phase 1 (A) | Done (plan 01) |
 
 **Coverage:**

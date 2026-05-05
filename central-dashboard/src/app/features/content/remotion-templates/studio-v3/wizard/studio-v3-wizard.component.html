@@ -90,6 +90,26 @@
             <button type="button" class="btn" (click)="prevStep()">← Retour</button>
           </div>
         </div>
+
+        <!-- Step 5 — Validation / Publish gate (Plan 03-04 / PUB-01 + PUB-02). -->
+        <app-wizard-step-publish
+          *ngIf="state().templateId as tplId5"
+          [hidden]="currentStep() !== 5"
+          [templateId]="tplId5"
+          [validationResults]="validationResults()"
+          [testRenderInProgress]="testRenderInProgress()"
+          [testRenderError]="testRenderError()"
+          (requestTestRender)="onRequestTestRender()"
+          (publish)="onPublish()"
+          (fixHint)="onFixHint($event)"
+        ></app-wizard-step-publish>
+        <div *ngIf="!state().templateId" [hidden]="currentStep() !== 5" class="v3w__placeholder">
+          <h2>Étape 5 — Validation</h2>
+          <p>Validez d'abord l'étape 1 pour créer le template.</p>
+          <div class="v3w__nav">
+            <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+          </div>
+        </div>
       </div>
 
       <!--
@@ -102,7 +122,11 @@
         class="v3w__preview"
         [hidden]="currentStep() < 3"
         [state]="state()"
+        [currentStep]="currentStep()"
         [highlightedOptionKey]="highlightedOptionKey()"
+        [previewMode]="previewService.mode()"
+        [testRenderUrl]="previewService.testRenderUrl()"
+        (previewModeChange)="onPreviewModeChange($event)"
         (goToStep)="goToStep($event)"
       ></app-wizard-preview-panel>
     </div>

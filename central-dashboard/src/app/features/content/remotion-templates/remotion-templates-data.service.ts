@@ -171,6 +171,29 @@ export class RemotionTemplatesDataService {
   }
 
   /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Publish gate.
+   * POST /api/remotion-templates/:id/publish — server runs validation registry,
+   * 409 if any rule with severity=error fails. 200 otherwise.
+   */
+  publishTemplate(id: string): Observable<{ id: string; published: true }> {
+    return this.api.post<{ id: string; published: true }>(
+      `/remotion-templates/${id}/publish`,
+      {},
+    );
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Unpublish.
+   * POST /api/remotion-templates/:id/unpublish — super_admin only, no gate.
+   */
+  unpublishTemplate(id: string): Observable<{ id: string; published: false }> {
+    return this.api.post<{ id: string; published: false }>(
+      `/remotion-templates/${id}/unpublish`,
+      {},
+    );
+  }
+
+  /**
    * ADR-075 — Toggle schema_version 1 ↔ 2 (super_admin UI).
    * 409 si schema_version=2 demandé sans shadow data (variants/text_fields/image_slots).
    */
@@ -587,6 +610,46 @@ export class RemotionTemplatesDataService {
       .get<RemotionTemplate[]>(`/remotion-templates`)
       .pipe(map((list) => list.filter((t) => t.published)));
   }
+
+  // ── Phase 3 Plan 04 — Publish-gate UI (PUB-01 + PUB-02) ──────────────────
+
+  /**
+   * Plan 03-04 / PUB-01 — Fetch the 8-rule validation result for the
+   * publish-gate panel (super_admin). Backend registry is owned by
+   * `central-server/src/services/template-validation/index.ts` (Plan 03-02).
+   */
+  getValidation(
+    templateId: string,
+  ): Observable<{ results: ValidationResultDto[] }> {
+    return this.api.get<{ results: ValidationResultDto[] }>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/validation`,
+    );
+  }
+
+  /**
+   * Plan 03-04 / PUB-02 — Trigger an async test render. Body is sealed
+   * server-side (Plan 03-03 — `Joi.object({}).unknown(false)`); fixtures
+   * are injected by the controller. Returns the job id; caller should
+   * poll `pollRenderJob` until status=completed|failed.
+   */
+  createTestRender(
+    templateId: string,
+  ): Observable<RenderJobEnqueued> {
+    return this.api.post<RenderJobEnqueued>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/test-render`,
+      {},
+    );
+  }
+}
+
+// ── Plan 03-04 — Validation DTO (mirrors server contract) ────────────────
+
+export interface ValidationResultDto {
+  rule_id: string;
+  ok: boolean;
+  severity: 'error' | 'warning';
+  message?: string;
+  fixHint?: { step: number; entityId?: string };
 }
 
 // ── snake_case → camelCase mappers (Plan 05) ─────────────────────────────

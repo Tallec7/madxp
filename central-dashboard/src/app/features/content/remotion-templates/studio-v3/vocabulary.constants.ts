@@ -63,6 +63,53 @@ export const ERROR_MESSAGES = {
     "Une option avec l'identifiant « {KEY} » existe déjà sur ce template.",
   option_value_in_use:
     'Cette valeur est utilisée par {N} zones, qui deviendront toujours visibles si vous la supprimez. Continuer ?',
+  // Plan 03-04 / PUB-02 — async test render failure toast.
+  test_render_failed:
+    'Le rendu de test a échoué — vérifiez vos fonds animés et fonts.',
+  // Plan 03-05 / PUB-01 — publish/unpublish toasts + refused publish toast.
+  template_published: 'Template publié.',
+  template_unpublished: 'Template dépublié.',
+  validation_failed: 'Publication refusée — corrigez les critères en rouge.',
 } as const;
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES;
+
+/**
+ * Plan 03-05 / PUB-01 — FR copy for the unpublish confirmation modal.
+ *
+ * Separate from `ERROR_MESSAGES` — modals are not errors, and the keys
+ * must be distinguishable for the smoke banlist. The CTAs avoid the
+ * blocklisted "Annuler" verb (Phase 1 i18n decision).
+ *
+ * Bound by `template-card.component` and consumed via the shared
+ * `ConfirmDialogService`.
+ */
+export const MODAL_MESSAGES = {
+  unpublish_confirm_title: 'Dépublier ce template ?',
+  unpublish_confirm_body:
+    'Il ne sera plus disponible pour les nouveaux clubs.',
+  unpublish_confirm_cta: 'Confirmer',
+  unpublish_cancel_cta: 'Abandonner',
+} as const;
+
+/**
+ * Plan 03-04 / PUB-01 — FR labels for the 8 backend validation rules
+ * exposed by `GET /api/remotion-templates/:id/validation` (Plan 03-02).
+ *
+ * Keys are the canonical `rule_id` (snake_case) returned by the server
+ * registry. The values are the user-facing FR labels rendered in the
+ * wizard step 5 publish-gate checklist. Adding a 9th rule means adding a
+ * 9th entry here in the SAME PR — the smoke `VALIDATION_RULE_LABELS`
+ * locks the contract.
+ */
+export const VALIDATION_RULE_LABELS: Record<string, string> = {
+  at_least_one_layer: 'Au moins un fond animé empilé',
+  assets_resolve_http_200: 'Tous les fonds résolvent (accessibles en ligne)',
+  fonts_known: 'Toutes les polices sont connues',
+  zones_in_safe_zone: 'Toutes les zones sont en zone sûre',
+  visible_if_keys_exist: "Conditions d'apparition cohérentes avec les options",
+  packshot_refs_options_match: 'Vidéos packshot correspondent aux options',
+  packshot_refs_target_published:
+    'Vidéos packshot pointent vers des templates publiés',
+  recent_test_render_24h: 'Test de rendu réussi récemment (24h)',
+};

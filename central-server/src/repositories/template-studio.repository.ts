@@ -1273,6 +1273,56 @@ class TemplateStudioRepository {
   }
 
   /**
+   * ADR-110 / Phase 03 / Plan 03 / PUB-02 — Update the 3 test_render tracking
+   * columns added by `add-template-test-render-tracking.sql` (Plan 01) on
+   * `neopro_templates`. Single parameterized UPDATE — no transaction needed,
+   * the columns are NULL-able defaults and admins consume the row via
+   * `findV2ById` → `published`/`updatedAt` are unaffected.
+   *
+   * Status transitions emitted by callers :
+   *   - controller.createTestRender : 'queued' (after enqueue)
+   *   - worker.processJob (start)   : 'rendering'
+   *   - worker.processJob (success) : 'success' + url + at
+   *   - worker.processJob (failure) : 'failed' + at
+   */
+  async updateTestRenderTracking(
+    templateId: string,
+    patch: { status: 'queued' | 'rendering' | 'success' | 'failed'; url?: string; at?: Date },
+  ): Promise<void> {
+    const sets: string[] = ['test_render_status = $2'];
+    const params: unknown[] = [templateId, patch.status];
+    let idx = 3;
+    if (patch.url !== undefined) {
+      sets.push(`test_render_url = $${idx++}`);
+      params.push(patch.url);
+    }
+    if (patch.at !== undefined) {
+      sets.push(`test_render_at = $${idx++}`);
+      params.push(patch.at);
+    }
+    await query(
+      `UPDATE neopro_templates SET ${sets.join(', ')} WHERE id = $1`,
+      params,
+    );
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Toggle the `published` flag on
+   * `neopro_templates`. Single parameterized UPDATE — no transaction needed.
+   * Controllers MUST go through this method (CLAUDE.md NE JAMAIS FAIRE :
+   * "Importer ../config/database dans les controllers").
+   *
+   * The publish flow gate (validation registry refusal on error severity)
+   * is enforced upstream in the controller — this method is a thin sink.
+   */
+  async updatePublishedFlag(templateId: string, published: boolean): Promise<void> {
+    await query(
+      'UPDATE neopro_templates SET published = $2 WHERE id = $1',
+      [templateId, published],
+    );
+  }
+
+  /**
    * ADR-075 — Scaffold placeholders pour un template legacy.
    * Crée 1 variant + 1 text field + 1 image slot si absents, pour débloquer
    * le flip v1→v2. Idempotent : chaque ressource est créée uniquement si sa

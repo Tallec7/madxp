@@ -20,6 +20,7 @@ import {
 } from '@angular/core';
 
 import { TemplateStudioPlayerComponent } from '../../studio-player/template-studio-player.component';
+import type { PreviewMode } from '../../remotion-preview.service';
 import type { WizardState, WizardStep } from '../wizard-state.types';
 
 @Component({
@@ -39,6 +40,16 @@ export class WizardPreviewPanelComponent {
    * by the shell after 4s.
    */
   @Input() highlightedOptionKey: string | null = null;
+  /**
+   * Plan 03-04 / PUB-02 — Mounted on the wizard shell, the toggle is only
+   * visible on Step 5 (controlled via [hidden]="currentStep() !== 5"). The
+   * Player itself stays mounted (Pitfall P3) — we only swap the visible
+   * source between the live preview state and the rendered MP4.
+   */
+  @Input() currentStep: WizardStep = 1;
+  @Input() previewMode: PreviewMode = 'live';
+  @Input() testRenderUrl: string | null = null;
+  @Output() previewModeChange = new EventEmitter<PreviewMode>();
   @Output() goToStep = new EventEmitter<WizardStep>();
 
   get hasLayer(): boolean {
@@ -47,5 +58,9 @@ export class WizardPreviewPanelComponent {
 
   onGoToBackgrounds(): void {
     this.goToStep.emit(2);
+  }
+
+  onModeChange(mode: PreviewMode): void {
+    this.previewModeChange.emit(mode);
   }
 }

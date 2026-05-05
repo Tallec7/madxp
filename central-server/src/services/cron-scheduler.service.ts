@@ -30,6 +30,7 @@ import { executePdfReportTask } from '../cron-tasks/pdf-report.task';
 import { executeMatchAutoCloseTask } from '../cron-tasks/match-autoclose.task';
 import { executeVideoFtpAuditTask } from '../cron-tasks/video-ftp-audit.task';
 import { executeConnectionEventsPurgeTask } from '../cron-tasks/connection-events-purge.task';
+import { executeTestRenderCleanupTask } from '../cron-tasks/test-render-cleanup.task';
 
 // Re-export pour préserver la compatibilité des imports externes
 export { RecurringSchedule, ExecutionResult, CronTaskType } from '../cron-tasks/types';
@@ -49,6 +50,7 @@ const TASK_EXECUTORS: Record<CronTaskType, (s: RecurringSchedule) => Promise<Exe
   match_session_autoclose: executeMatchAutoCloseTask,
   video_ftp_audit: executeVideoFtpAuditTask,
   connection_events_purge: executeConnectionEventsPurgeTask,
+  test_render_cleanup: executeTestRenderCleanupTask,
 };
 
 async function dispatchTask(schedule: RecurringSchedule): Promise<ExecutionResult> {

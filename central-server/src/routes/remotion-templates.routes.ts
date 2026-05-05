@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireSuperAdmin } from '../middleware/auth';
 import {
   adminRateLimit,
   sensitiveRateLimit,
   templateUserUploadRateLimit,
 } from '../middleware/user-rate-limit';
-import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
+import { validate, validateParams, paramSchemas, schemas, testRenderSchemas } from '../middleware/validation';
 import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
 import * as ctrl from '../controllers/remotion-templates.controller';
 
@@ -113,14 +113,27 @@ router.post(
   ctrl.restoreTemplateVersion,
 );
 
-// Publication / dépublication — admin uniquement
-router.patch(
+// Publication — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+// POST + super_admin only + validation gate enforced server-side via the
+// validation registry (Plan 03-02). 409 if any rule severity=error fails.
+router.post(
   '/:id/publish',
   authenticate,
-  requireRole('admin', 'super_admin'),
+  requireSuperAdmin(),
   validateParams(paramSchemas.id),
   sensitiveRateLimit,
   ctrl.publishTemplate,
+);
+
+// Dépublication — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+// No validation gate, super_admin can always retract. Audit via Winston.
+router.post(
+  '/:id/unpublish',
+  authenticate,
+  requireSuperAdmin(),
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  ctrl.unpublishTemplate,
 );
 
 // ADR-075 — toggle schema_version 1 ↔ 2 (super_admin uniquement)
@@ -160,6 +173,21 @@ router.post(
   uploadUserTemplateImage.single('file'),
   validate(schemas.templateUserUploadBody),
   ctrl.uploadUserImageAsset,
+);
+
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — Async test render (super_admin only)
+// Body is sealed (no user input), fixtures injected server-side.
+// The job reuses `remotion_render_jobs` and is discriminated by the title
+// prefix `test-render:`. See controllers/remotion-templates.controller.ts and
+// services/remotion-render-worker.service.ts for the matching hooks.
+router.post(
+  '/:id/test-render',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(testRenderSchemas.params),
+  validate(testRenderSchemas.body),
+  sensitiveRateLimit,
+  ctrl.createTestRender,
 );
 
 // Render — admin/operator libre, club doit avoir la feature video_templates

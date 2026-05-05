@@ -14,9 +14,13 @@
 import { CommonModule, Location } from '@angular/common';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription, interval } from 'rxjs';
 
 import { RemotionPreviewService } from '../../remotion-preview.service';
-import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
+import {
+  RemotionTemplatesDataService,
+  type ValidationResultDto,
+} from '../../remotion-templates-data.service';
 import type {
   TemplateImageSlot,
   TemplateLayer,
@@ -25,10 +29,12 @@ import type {
   TemplateTextField,
 } from '../../remotion-templates.types';
 import type { RuntimePlayerState } from '../../studio-player/template-studio-player.component';
+import { ERROR_MESSAGES } from '../vocabulary.constants';
 import {
   DEFAULT_WIZARD_STATE,
   IdentityFormValue,
   STEP_LABELS,
+  ValidationResult,
   WizardState,
   WizardStep,
 } from '../wizard-state.types';
@@ -37,9 +43,10 @@ import { WizardPreviewPanelComponent } from './wizard-preview-panel.component';
 import { WizardStepBackgroundsComponent } from './wizard-step-backgrounds.component';
 import { WizardStepIdentityComponent } from './wizard-step-identity.component';
 import { WizardStepOptionsComponent } from './wizard-step-options.component';
+import { WizardStepPublishComponent } from './wizard-step-publish.component';
 import { WizardStepZonesComponent } from './wizard-step-zones.component';
 
-const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
+const ALL_STEPS: WizardStep[] = [1, 2, 3, 4, 5];
 
 @Component({
   selector: 'app-studio-v3-wizard',
@@ -50,6 +57,7 @@ const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
     WizardStepBackgroundsComponent,
     WizardStepZonesComponent,
     WizardStepOptionsComponent,
+    WizardStepPublishComponent,
     WizardPreviewPanelComponent,
   ],
   templateUrl: './studio-v3-wizard.component.html',
@@ -60,7 +68,8 @@ export class StudioV3WizardComponent implements OnInit {
   // Router kept for future programmatic nav (cancel button, etc. plan 05).
   private router = inject(Router);
   private dataService = inject(RemotionTemplatesDataService);
-  private previewService = inject(RemotionPreviewService);
+  // Public — read by the preview panel template (mode + testRenderUrl signals).
+  readonly previewService = inject(RemotionPreviewService);
   private location = inject(Location);
 
   readonly stepLabels = STEP_LABELS;
@@ -94,6 +103,15 @@ export class StudioV3WizardComponent implements OnInit {
    */
   highlightedOptionKey = signal<string | null>(null);
 
+  // ── Plan 03-04 / PUB-01 + PUB-02 — Step 5 state ────────────────────────
+  validationResults = signal<ValidationResult[]>([]);
+  testRenderInProgress = signal<boolean>(false);
+  testRenderError = signal<string | null>(null);
+  private testRenderJobId = signal<string | null>(null);
+  private testRenderPollSub: Subscription | null = null;
+  /** Plan 03-04 — entity hint emitted by step 5 "Corriger →" deep-link. */
+  highlightedEntityId = signal<string | null>(null);
+
   constructor() {
     effect(() => {
       const s = this.state();
@@ -123,6 +141,19 @@ export class StudioV3WizardComponent implements OnInit {
       // an effect feedback loop on the same data.
       if (next !== s.previewState) {
         this.state.update((cur) => ({ ...cur, previewState: next }));
+      }
+    });
+
+    /**
+     * Plan 03-04 / PUB-01 — Fetch (or re-fetch) the 8-rule validation
+     * registry when the admin enters step 5. Runs again on subsequent
+     * step-5 entries so that fixes done in steps 2-4 are reflected.
+     */
+    effect(() => {
+      const step = this.currentStep();
+      const id = this.state().templateId;
+      if (step === 5 && id) {
+        this.fetchValidation(id);
       }
     });
   }
@@ -174,6 +205,7 @@ export class StudioV3WizardComponent implements OnInit {
     if (!view.layers || view.layers.length === 0) return 2;
     const zoneCount = (view.textFields?.length ?? 0) + (view.imageSlots?.length ?? 0);
     if (zoneCount === 0) return 3;
+    if ((view.options?.length ?? 0) === 0) return 4;
     return 4;
   }
 
@@ -244,9 +276,13 @@ export class StudioV3WizardComponent implements OnInit {
     this.state.update((s) => ({ ...s, options }));
   }
 
-  /** WIZARD-01 — Step 4 « Terminer » → retour à la liste des templates. */
+  /**
+   * WIZARD-01 → Plan 03-04 — Step 4 « Terminer » avance vers Step 5 (gate
+   * de publication). L'utilisateur ne quitte le wizard qu'après publication
+   * (ou Abandonner explicite).
+   */
   onFinish(): void {
-    this.router.navigate(['/content/templates-remotion']);
+    this.currentStep.set(5);
   }
 
   /**
@@ -299,7 +335,144 @@ export class StudioV3WizardComponent implements OnInit {
   }
 
   nextStep(): void {
-    this.currentStep.update((s) => (s < 4 ? ((s + 1) as WizardStep) : s));
+    this.currentStep.update((s) => (s < 5 ? ((s + 1) as WizardStep) : s));
+  }
+
+  // ── Plan 03-04 / PUB-01 — Validation fetch + deep-link ────────────────
+
+  private fetchValidation(templateId: string): void {
+    this.dataService.getValidation(templateId).subscribe({
+      next: (res) => {
+        this.validationResults.set(
+          (res.results || []).map((r) => this.toValidationResult(r)),
+        );
+      },
+      error: () => {
+        this.validationResults.set([]);
+      },
+    });
+  }
+
+  private toValidationResult(dto: ValidationResultDto): ValidationResult {
+    return {
+      rule_id: dto.rule_id,
+      ok: dto.ok,
+      severity: dto.severity,
+      message: dto.message,
+      fixHint: dto.fixHint,
+    };
+  }
+
+  /**
+   * Plan 03-04 / PUB-01 — Click on "Corriger →" inside step 5. Deep-link
+   * back to the faulty step + scroll the targeted entity (zone / layer /
+   * option) into view. Also pushes a `?focus=` query param so the URL
+   * reflects the deep-link target (sharable / refresh-safe).
+   */
+  onFixHint(hint: { step: number; entityId?: string }): void {
+    const targetStep = (Math.min(Math.max(hint.step, 1), 5) as WizardStep);
+    if (hint.entityId) {
+      this.highlightedEntityId.set(hint.entityId);
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { focus: hint.entityId },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+    this.currentStep.set(targetStep);
+    setTimeout(() => {
+      if (hint.entityId) {
+        document
+          .getElementById(`zone-${hint.entityId}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      // Auto-clear highlight after 4s (mirror highlightedOptionKey UX).
+      setTimeout(() => this.highlightedEntityId.set(null), 4000);
+    }, 0);
+  }
+
+  // ── Plan 03-04 / PUB-02 — Test render flow ────────────────────────────
+
+  /** Triggered by step 5 "Lancer un rendu de test" button. */
+  onRequestTestRender(): void {
+    const id = this.state().templateId;
+    if (!id || this.testRenderInProgress()) return;
+    this.testRenderError.set(null);
+    this.testRenderInProgress.set(true);
+    this.dataService.createTestRender(id).subscribe({
+      next: (job) => {
+        this.testRenderJobId.set(job.job_id);
+        this.startTestRenderPolling(job.job_id);
+      },
+      error: () => {
+        this.testRenderInProgress.set(false);
+        this.testRenderError.set(ERROR_MESSAGES.test_render_failed);
+      },
+    });
+  }
+
+  private startTestRenderPolling(jobId: string): void {
+    this.stopTestRenderPolling();
+    this.testRenderPollSub = interval(2000).subscribe(() => {
+      this.dataService.pollRenderJob(jobId).subscribe({
+        next: (snap) => {
+          const status = (snap.status || '').toLowerCase();
+          if (status === 'completed' || status === 'success') {
+            this.stopTestRenderPolling();
+            this.testRenderInProgress.set(false);
+            const url = (snap as { video_url?: string }).video_url;
+            if (url) {
+              this.previewService.loadTestRenderUrl(url);
+            }
+          } else if (status === 'failed' || status === 'error') {
+            this.stopTestRenderPolling();
+            this.testRenderInProgress.set(false);
+            this.testRenderError.set(ERROR_MESSAGES.test_render_failed);
+          }
+        },
+        error: () => {
+          this.stopTestRenderPolling();
+          this.testRenderInProgress.set(false);
+          this.testRenderError.set(ERROR_MESSAGES.test_render_failed);
+        },
+      });
+    });
+  }
+
+  private stopTestRenderPolling(): void {
+    if (this.testRenderPollSub) {
+      this.testRenderPollSub.unsubscribe();
+      this.testRenderPollSub = null;
+    }
+  }
+
+  /** Step 5 toggle "Aperçu live / Rendu de test" → swap Player source. */
+  onPreviewModeChange(mode: 'live' | 'test-render'): void {
+    this.previewService.setMode(mode);
+  }
+
+  /**
+   * Step 5 "Publier ce template" — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+   *
+   * Calls the new gated endpoint POST /:id/publish (server runs the
+   * validation registry, 409 if any error rule fails). On success, exits
+   * the wizard. On 409, re-fetches validation so the checklist can show
+   * the freshly-failed rules; on any other failure, re-fetches as well.
+   */
+  onPublish(): void {
+    const id = this.state().templateId;
+    if (!id) return;
+    this.dataService.publishTemplate(id).subscribe({
+      next: () => {
+        this.router.navigate(['/content/templates-remotion']);
+      },
+      error: () => {
+        // Soft failure (409 validation_failed or other) — re-fetch the
+        // validation list so the checklist shows the up-to-date red rules.
+        this.fetchValidation(id);
+      },
+    });
   }
 
   /**

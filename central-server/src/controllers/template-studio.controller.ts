@@ -16,6 +16,7 @@ import {
   remotionTemplatesRepository,
 } from '../repositories';
 import { metricsService } from '../services/metrics.service';
+import { runValidation } from '../services/template-validation';
 
 type StudioResource = 'variant' | 'layer' | 'text_field' | 'image_slot' | 'studio_view';
 type StudioOperation = 'create' | 'update' | 'delete' | 'list' | 'get';
@@ -401,6 +402,28 @@ export const scaffoldStudio = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     record('studio_view', 'create', 'error');
     logError('scaffoldStudio', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ── GET /api/remotion-templates/:id/validation (ADR-110 / Plan 03-02 / TEST-03)
+// Runs the 8-rule registry server-side and returns the ordered ValidationResult[].
+// Source of truth for the publish gate — frontend must NOT re-implement the
+// logic, only consume + cache + invalidate on dirty.
+export const getValidation = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const results = await runValidation(id);
+    record('studio_view', 'get', 'success');
+    res.json({ results });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'template_not_found') {
+      record('studio_view', 'get', 'not_found');
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+    record('studio_view', 'get', 'error');
+    logError('getValidation', req, error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
