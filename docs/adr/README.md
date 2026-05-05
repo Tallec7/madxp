@@ -123,6 +123,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-106](ADR-106-preview-slave-sync.md)                                        | Sync 1:1 du preview iframe avec le master TV (rôle preview-slave) — étend ADR-105            | Accepté                           | Avr 2026 |
 | [ADR-108](ADR-108-template-versioning-and-master-locking.md)                    | Versioning sémantique des templates v2 + verrouillage des masters (snapshot, fork, rollback) | Proposé                           | Avr 2026 |
 | [ADR-109](ADR-109-template-backgrounds-grants.md)                               | Catalogue backgrounds couleur + grants user_id (pattern ADR-082)                             | Proposé                           | Avr 2026 |
+| [ADR-110](ADR-110-template-studio-v3-task-oriented-admin-ux.md)                 | Template Studio v3 — UX admin orientée tâche (wizard + asset manager + vocabulaire métier)   | Proposé                           | Mai 2026 |
 
 ### Supersédés
 

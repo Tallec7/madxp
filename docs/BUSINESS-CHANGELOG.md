@@ -26,6 +26,7 @@
 
 - **Refactor Remote V2 : extraction du service d'orchestration** ([#796](https://github.com/Tallec7/neopro/pull/796) + [#798](https://github.com/Tallec7/neopro/pull/798)) — `RemoteOrchestratorService` partagé V1/V2, prépare le sunset V1.
 - **Documentation produit complète** ([#799](https://github.com/Tallec7/neopro/pull/799) → [#802](https://github.com/Tallec7/neopro/pull/802) + [#831](https://github.com/Tallec7/neopro/pull/831)) — refonte personae mai 2026, use cases multi-acteurs, map Obsidian + dependency-cruiser, `remote.spec.md`. Socle pour recrutement PM/CTO.
+- **Cible UX Template Studio v3 formalisée** ([#836](https://github.com/Tallec7/neopro/pull/836)) — ADR-110 + SPEC vivante + maquette HTML interactive validée. Audit autonomie admin face au PDF JOUEUR : Daisy non autonome aujourd'hui (vocabulaire technique exposé, workflow éclaté entre SPEC.md / CLI / SQL / UI partial). v3 cible : wizard 4 étapes + asset manager + vocabulaire métier strict, sans terminal ni SQL. Contrat exécutable pour ~2-3 sem de dev à venir, débloque l'exposition future aux clubs (Phase D).
 
 ---
 

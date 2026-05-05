@@ -22,8 +22,11 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 
 ### Fonts
 
-- **Hardcoder une police dans `FONT_FAMILIES`** du dashboard (`admin-field-editor.component.ts`). Passer par la table `template_fonts` + endpoint `GET /api/remotion-templates/fonts`.
-- **Référencer une police absente de `template_fonts`.** Le validator Joi côté serveur doit refuser une référence à une police inconnue.
+> **État réel (vérifié 2026-05-05)** : la table `template_fonts` N'EXISTE PAS en DB. Les polices sont hardcodées dans `FONT_FAMILIES` à `admin-field-editor.component.ts:63`. La migration vers table DB est planifiée en ADR-110 Phase v3.2.
+
+- **Ajouter une police dans `FONT_FAMILIES` sans tester le rendu Remotion.** Seules les polices disponibles dans `templates-remotion/public/fonts/` fonctionnent au render. Ajouter la police côté dashboard ET côté worker Remotion en même temps.
+- **Supprimer une police de `FONT_FAMILIES` sans vérifier les templates existants** (`SELECT DISTINCT font_family FROM template_text_fields`). Une suppression casse silencieusement le rendu.
+- ~~Hardcoder dans `FONT_FAMILIES` / passer par `template_fonts`~~ : la table n'existe pas encore — règle suspendue jusqu'à implémentation ADR-110 v3.2.
 
 ### API / upload
 
