@@ -69,19 +69,19 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 **Plans**: 5 plans
 
-- [ ] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests)
-- [ ] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard)
-- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
-- [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
-- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
+- [ ] 03-gate-publication-01-PLAN.md — Backend foundations: migration test*render*\* columns + CRON test_render_cleanup + Prometheus metric (PUB-02)
+- [ ] 03-gate-publication-02-PLAN.md — Validation registry server-side (8 rules + GET /:id/validation + smoke TEST-03 itère sur registre) (PUB-01, TEST-03)
+- [ ] 03-gate-publication-03-PLAN.md — Test render async backend: POST /:id/test-render + worker hook + tracking (PUB-02)
+- [ ] 03-gate-publication-04-PLAN.md — Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé (PUB-01, PUB-02)
+- [ ] 03-gate-publication-05-PLAN.md — Publish/Unpublish endpoints (validation-gated) + audit Winston structured + UX card unpublish (PUB-01)
 
 ## Progress
 
-| Phase               | Plans Complete | Status      | Completed  |
-| ------------------- | -------------- | ----------- | ---------- |
-| 1. Fondations       | 5/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | 1/4            | Complete    | 2026-05-05 |
-| 3. Gate publication | 0/?            | Not started | -          |
+| Phase               | Plans Complete | Status   | Completed  |
+| ------------------- | -------------- | -------- | ---------- |
+| 1. Fondations       | 5/5            | Complete | 2026-05-05 |
+| 2. UX interactive   | 4/4            | Complete | 2026-05-05 |
+| 3. Gate publication | 0/5            | Planned  | -          |
 
 ---
 
