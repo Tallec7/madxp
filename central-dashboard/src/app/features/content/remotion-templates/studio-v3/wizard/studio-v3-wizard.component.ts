@@ -12,13 +12,14 @@
  */
 
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
 import type {
   TemplateImageSlot,
   TemplateLayer,
+  TemplateOption,
   TemplateStudioView,
   TemplateTextField,
 } from '../../remotion-templates.types';
@@ -31,6 +32,7 @@ import {
 } from '../wizard-state.types';
 import { WizardStepBackgroundsComponent } from './wizard-step-backgrounds.component';
 import { WizardStepIdentityComponent } from './wizard-step-identity.component';
+import { WizardStepOptionsComponent } from './wizard-step-options.component';
 import { WizardStepZonesComponent } from './wizard-step-zones.component';
 
 const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
@@ -43,6 +45,7 @@ const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
     WizardStepIdentityComponent,
     WizardStepBackgroundsComponent,
     WizardStepZonesComponent,
+    WizardStepOptionsComponent,
   ],
   templateUrl: './studio-v3-wizard.component.html',
   styleUrls: ['./studio-v3-wizard.component.scss'],
@@ -75,6 +78,8 @@ export class StudioV3WizardComponent implements OnInit {
   imageSlotsSignal = signal<TemplateImageSlot[]>(
     DEFAULT_WIZARD_STATE.zones.imageSlots,
   );
+  optionsSignal = signal<TemplateOption[]>(DEFAULT_WIZARD_STATE.options);
+  zonesSignal = computed(() => this.state().zones);
 
   constructor() {
     effect(() => {
@@ -82,6 +87,7 @@ export class StudioV3WizardComponent implements OnInit {
       this.layersSignal.set(s.layers);
       this.textFieldsSignal.set(s.zones.textFields);
       this.imageSlotsSignal.set(s.zones.imageSlots);
+      this.optionsSignal.set(s.options);
     });
   }
 
@@ -124,6 +130,11 @@ export class StudioV3WizardComponent implements OnInit {
   }
 
   private computeResumeStep(view: TemplateStudioView): WizardStep {
+    // Plan 05 / DUP-01 — quand on arrive depuis une duplication, on saute
+    // direct à l'étape 3 (zones modifiables) pour adapter les textes/images
+    // du clone, comme prévu par SPEC §Workflow Dupliquer.
+    const fromDup = this.route.snapshot.queryParamMap.get('from') === 'duplicate';
+    if (fromDup) return 3;
     if (!view.layers || view.layers.length === 0) return 2;
     const zoneCount = (view.textFields?.length ?? 0) + (view.imageSlots?.length ?? 0);
     if (zoneCount === 0) return 3;
@@ -190,6 +201,16 @@ export class StudioV3WizardComponent implements OnInit {
       ...s,
       zones: { ...s.zones, imageSlots },
     }));
+  }
+
+  /** WIZARD-01 — Step 4 emits options list after every mutation. */
+  onOptionsChange(options: TemplateOption[]): void {
+    this.state.update((s) => ({ ...s, options }));
+  }
+
+  /** WIZARD-01 — Step 4 « Terminer » → retour à la liste des templates. */
+  onFinish(): void {
+    this.router.navigate(['/content/templates-remotion']);
   }
 
   goToStep(s: WizardStep): void {

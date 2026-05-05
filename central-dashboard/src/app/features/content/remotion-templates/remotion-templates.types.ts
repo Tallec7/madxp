@@ -159,6 +159,21 @@ export interface TemplateOption {
   sortOrder: number;
 }
 
+/**
+ * Mapping option_value → packshot_template_id (PDF JOUEUR §démarrage).
+ * Permet d'empiler une vidéo packshot en surcouche selon la valeur d'une option.
+ * Backend table: `template_packshot_refs` (FK option_key → template_options.key).
+ */
+export interface TemplatePackshotRef {
+  id: string;
+  templateId: string;
+  optionKey: string;
+  optionValue: string;
+  packshotTemplateId: string;
+  startAtMs: number;
+  zIndexOffset: number;
+}
+
 /** Vue consolidée retournée par `GET /api/remotion-templates/:id/studio`. */
 export interface TemplateStudioView {
   id: string;

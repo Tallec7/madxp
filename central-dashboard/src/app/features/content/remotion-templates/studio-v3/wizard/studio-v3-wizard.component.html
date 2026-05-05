@@ -67,10 +67,20 @@
       <p>Validez d'abord l'étape 1 pour créer le template.</p>
     </div>
 
-    <!-- Step 4 placeholder — wired by plan 05 (Options club). -->
-    <div [hidden]="currentStep() !== 4" class="v3w__placeholder">
+    <!-- Step 4 — Options club (Plan 05 / WIZARD-01). -->
+    <app-wizard-step-options
+      *ngIf="state().templateId as tplId4"
+      [hidden]="currentStep() !== 4"
+      [templateId]="tplId4"
+      [options]="optionsSignal"
+      [zones]="zonesSignal"
+      (optionsChange)="onOptionsChange($event)"
+      (prev)="goToStep(3)"
+      (finished)="onFinish()"
+    ></app-wizard-step-options>
+    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 4" class="v3w__placeholder">
       <h2>Étape 4 — Options club</h2>
-      <p>Les options proposées au club arrivent en plan 05.</p>
+      <p>Validez d'abord l'étape 1 pour créer le template.</p>
       <div class="v3w__nav">
         <button type="button" class="btn" (click)="prevStep()">← Retour</button>
       </div>

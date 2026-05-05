@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import type {
   Anchor,
@@ -14,6 +15,8 @@ import type {
   RenderTemplateRequestV2,
   TemplateImageSlot,
   TemplateLayer,
+  TemplateOption,
+  TemplatePackshotRef,
   TemplatePropDef,
   TemplateStudioView,
   TemplateTextField,
@@ -446,4 +449,140 @@ export class RemotionTemplatesDataService {
   deleteImageSlot(templateId: string, slotId: string): Observable<void> {
     return this.api.delete<void>(`/remotion-templates/${templateId}/image-slots/${slotId}`);
   }
+
+  // ── ADR-110 / Plan 05 — Template Options + Packshot Refs ─────────────────
+  // Routes mounted on `/api/remotion-templates` (template-studio.routes.ts L210-273).
+  // Backend returns snake_case rows (SELECT * FROM template_options). The
+  // dashboard `TemplateOption` interface is camelCase (used by getStudioView),
+  // so we normalize via rxjs `map`.
+
+  /**
+   * Plan 05 / WIZARD-01 — Crée une option club (enum | boolean).
+   * Le backend valide via `schemas.templateOptionCreate` (snake_case).
+   * 409 `key_exists` si l'option existe déjà sur ce template.
+   */
+  createOption(
+    templateId: string,
+    payload: {
+      key: string;
+      label: string;
+      type: 'enum' | 'boolean';
+      values: string[];
+      default_value: string;
+      user_editable?: boolean;
+      sort_order?: number;
+    },
+  ): Observable<TemplateOption> {
+    return this.api
+      .post<TemplateOptionRow>(
+        `/remotion-templates/${encodeURIComponent(templateId)}/options`,
+        payload,
+      )
+      .pipe(map(mapTemplateOptionRow));
+  }
+
+  deleteOption(templateId: string, optionId: string): Observable<void> {
+    return this.api.delete<void>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/options/${encodeURIComponent(optionId)}`,
+    );
+  }
+
+  /**
+   * Plan 05 / WIZARD-01 — Liste les packshot refs (option_value → packshot_template_id).
+   */
+  listPackshotRefs(templateId: string): Observable<TemplatePackshotRef[]> {
+    return this.api
+      .get<TemplatePackshotRefRow[]>(
+        `/remotion-templates/${encodeURIComponent(templateId)}/packshot-refs`,
+      )
+      .pipe(map((rows) => rows.map(mapPackshotRefRow)));
+  }
+
+  /**
+   * Plan 05 / WIZARD-01 — Crée un mapping (option_key, option_value) → packshot_template_id.
+   * Backend payload snake_case (validation Joi `templatePackshotRefCreate`).
+   */
+  createPackshotRef(
+    templateId: string,
+    payload: {
+      option_key: string;
+      option_value: string;
+      packshot_template_id: string;
+      start_at_ms?: number;
+      z_index_offset?: number;
+    },
+  ): Observable<TemplatePackshotRef> {
+    return this.api
+      .post<TemplatePackshotRefRow>(
+        `/remotion-templates/${encodeURIComponent(templateId)}/packshot-refs`,
+        payload,
+      )
+      .pipe(map(mapPackshotRefRow));
+  }
+
+  deletePackshotRef(templateId: string, refId: string): Observable<void> {
+    return this.api.delete<void>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/packshot-refs/${encodeURIComponent(refId)}`,
+    );
+  }
+
+  /**
+   * Plan 05 / WIZARD-01 — Liste les templates publiés disponibles comme packshot.
+   * Filtré client-side (le contrôleur legacy ne supporte pas de query param).
+   */
+  listPublishedTemplates(): Observable<RemotionTemplate[]> {
+    return this.api
+      .get<RemotionTemplate[]>(`/remotion-templates`)
+      .pipe(map((list) => list.filter((t) => t.published)));
+  }
+}
+
+// ── snake_case → camelCase mappers (Plan 05) ─────────────────────────────
+
+interface TemplateOptionRow {
+  id: string;
+  template_id: string;
+  key: string;
+  label: string;
+  type: 'enum' | 'boolean';
+  values: unknown;
+  default_value: string;
+  user_editable: boolean;
+  sort_order: number;
+}
+
+interface TemplatePackshotRefRow {
+  id: string;
+  template_id: string;
+  option_key: string;
+  option_value: string;
+  packshot_template_id: string;
+  start_at_ms: number;
+  z_index_offset: number;
+}
+
+function mapTemplateOptionRow(row: TemplateOptionRow): TemplateOption {
+  return {
+    id: row.id,
+    templateId: row.template_id,
+    key: row.key,
+    label: row.label,
+    type: row.type,
+    values: Array.isArray(row.values) ? (row.values as string[]) : [],
+    defaultValue: row.default_value,
+    userEditable: row.user_editable,
+    sortOrder: row.sort_order,
+  };
+}
+
+function mapPackshotRefRow(row: TemplatePackshotRefRow): TemplatePackshotRef {
+  return {
+    id: row.id,
+    templateId: row.template_id,
+    optionKey: row.option_key,
+    optionValue: row.option_value,
+    packshotTemplateId: row.packshot_template_id,
+    startAtMs: row.start_at_ms,
+    zIndexOffset: row.z_index_offset,
+  };
 }
