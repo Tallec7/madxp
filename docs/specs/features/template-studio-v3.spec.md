@@ -17,6 +17,17 @@
 
 Le Template Studio v3 ajoute une couche UX admin par-dessus le moteur v2 existant pour qu'un super_admin (Daisy ou un designer non-Neopro) puisse **créer, dupliquer, configurer et publier un template sans terminal, sans SQL, sans connaître les concepts DB**, en utilisant exclusivement un vocabulaire métier.
 
+## Périmètre
+
+- **Services backend** : `central-server/src/controllers/template-studio.controller.ts`, `central-server/src/repositories/template-studio.repository.ts`
+- **Composants UI (à créer)** : `central-dashboard/src/app/features/content/remotion-templates/studio-v3/` (wizard, asset manager, validation)
+- **Composants UI existants (cohabitation)** : `studio-v2/admin/` (admin-canvas-overlay, admin-field-editor, admin-layers-panel)
+- **Tables DB** : `neopro_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_options`, `template_packshot_refs`, `template_variants`
+- **Routes API** : `POST /api/remotion-templates` (create), `POST /api/remotion-templates/:id/duplicate`, `POST /api/remotion-templates/:id/validate`, `POST /api/remotion-templates/upload`
+- **ADR** : ADR-110 (v3), ADR-086 (moteur n-layers), ADR-095 (admin UX v2), ADR-108 (versioning), ADR-109 (backgrounds grants)
+- **Smoke tests (à créer)** : `smoke-template-studio-v3-vocabulary.test.ts`, `smoke-template-studio-v3-wizard-validation.test.ts`, `smoke-template-studio-v3-duplicate.test.ts`
+- **`.claude/rules/`** : `templates.md`
+
 ## Personas et autonomie cible
 
 | Persona | Action | Autonomie cible v3 | Autonomie actuelle v2 |
@@ -120,6 +131,17 @@ Le bouton "Publier" est désactivé tant que la checklist suivante n'est pas ver
 7. Tous les `template_packshot_refs.packshot_template_id` pointent vers un template publié
 8. ≥ 1 test render réussi avec données factices dans les 24h précédentes (warning, pas blocker)
 
+## Comportements observables
+
+| Règle | Comment on vérifie |
+|---|---|
+| Wizard crée un template sans SQL ni CLI | Smoke test `smoke-template-studio-v3-wizard-validation` + CU1 manuel < 15 min |
+| Duplication clone toutes les rows DB sans dupliquer les assets | Smoke test `smoke-template-studio-v3-duplicate` : COUNT rows avant/après + vérif `file_url` identiques |
+| Bouton "Publier" bloqué si checklist incomplète | Smoke test vérifie les 8 critères de la checklist pré-publication |
+| Upload WebM refusé si pas alpha + `respect_alpha=true` | Smoke test `smoke-template-studio-v3-asset-manager` |
+| Vocabulaire UI ↔ DB figé (mapping non-régressé) | Smoke test `smoke-template-studio-v3-vocabulary` — changement de clé = rouge |
+| Test render Remotion disponible avant publication | Log Winston `info` + retour player + feedback UI étape 5 |
+
 ## Cas d'usage canoniques (à exécuter manuellement avant chaque release)
 
 ### CU1 : Daisy crée le template "Joueur Simple — Image" depuis le PDF
@@ -153,7 +175,7 @@ Le bouton "Publier" est désactivé tant que la checklist suivante n'est pas ver
 
 **Critère succès** : terminé sans assistance Neopro, < 10 min, vocabulaire UI suffisant pour comprendre.
 
-## Edge cases connus
+## Cas d'edge connus
 
 - **Asset WebM uploadé sans alpha alors qu'utilisé par un slot `respect_alpha=true`** : refus à l'upload, message "Ce fond est utilisé par une zone qui nécessite la transparence — ré-exportez en yuva420p".
 - **Suppression d'une option utilisée par un `visible_if`** : confirmation modale "Cette option est utilisée par 2 zones, qui deviendront toujours visibles si vous la supprimez. Continuer ?".
@@ -180,6 +202,15 @@ Le bouton "Publier" est désactivé tant que la checklist suivante n'est pas ver
 - `smoke-template-studio-v3-wizard-validation.test.ts` : la checklist pré-publication refuse un template incomplet selon les 8 critères listés.
 - `smoke-template-studio-v3-duplicate.test.ts` : la duplication clone toutes les rows DB liées sans dupliquer les assets WebM.
 - `smoke-template-studio-v3-asset-manager.test.ts` : l'upload refuse les WebM sans alpha quand `respect_alpha=true` requis.
+
+## Ce qui n'est PAS dans ce domaine
+
+- **Moteur Remotion** (`TemplateRuntime.tsx`) → inchangé, couvert par SPEC [features/templates-studio](templates-studio.spec.md)
+- **UI club portal pour consommer un template** → Phase D ultérieure (hors scope v3)
+- **Versioning visuel / rollback templates** → v3.4, ADR-108
+- **Table `template_fonts`** → v3.2 (fonts hardcodées dans `FONT_FAMILIES` en attendant)
+- **Bibliothèque de fonds switchables côté club** → v3.1 (exploite `template_variants` existant)
+- **CLI `template:import`** → reste actif pour seeding bulk, non remplacé par v3
 
 ## Notes d'évolution future (hors scope v3 initial)
 
