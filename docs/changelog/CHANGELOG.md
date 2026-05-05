@@ -1,3 +1,10 @@
+# [3.290.0](https://github.com/Tallec7/neopro/compare/v3.289.0...v3.290.0) (2026-05-05)
+
+### Features
+
+- **v3:** Phase 1 — Fondations (Wizard 4 étapes + Asset Manager + duplication atomique) ([#843](https://github.com/Tallec7/neopro/issues/843)) ([101bcaf](https://github.com/Tallec7/neopro/commit/101bcaf61119c94a4fe3f4bf7eddfb4af1ac06b5)), closes [#836](https://github.com/Tallec7/neopro/issues/836) [#836](https://github.com/Tallec7/neopro/issues/836) [#836](https://github.com/Tallec7/neopro/issues/836)
+- **v3:** Phase 2 + Phase 3 — UX interactive + Gate de publication ([#846](https://github.com/Tallec7/neopro/issues/846)) ([27cba37](https://github.com/Tallec7/neopro/commit/27cba37f7c0cd3adc3df7bd4346892bdda2faa42)), closes [#845](https://github.com/Tallec7/neopro/issues/845)
+
 # [3.289.0](https://github.com/Tallec7/neopro/compare/v3.288.0...v3.289.0) (2026-05-05)
 
 ### Features
