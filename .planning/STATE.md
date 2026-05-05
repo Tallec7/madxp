@@ -9,26 +9,26 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 1 of 3 (Fondations)
-Plan: 04 of 5 — DONE (next: 05)
-Status: In progress
-Last activity: 2026-05-05 — Plan 04 livré (Step 2 Fonds animés drag-reorder transactionnel + Step 3 Zones modifiables ReactiveForms avec layer_id obligatoire P1)
+Phase: 1 of 3 (Fondations) — COMPLETE
+Plan: 05 of 5 — DONE
+Status: Ready for verifier (next phase: 02-ux-interactive)
+Last activity: 2026-05-05 — Plan 05 livré (Step 4 Options club + bouton Dupliquer sur card → wizard step 3 via ?from=duplicate, contrats Plan 01-04 honorés end-to-end)
 
-Progress: [████████░░] 80% (4/5 plans of phase 1)
+Progress: [██████████] 100% (5/5 plans of phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: ~30 min
-- Total execution time: ~120 min
+- Total plans completed: 5
+- Average duration: ~29 min
+- Total execution time: ~145 min
 
 **By Phase:**
 
 | Phase         | Plans | Total    | Avg/Plan |
 | ------------- | ----- | -------- | -------- |
-| 01-fondations | 4/5   | ~120 min | ~30 min  |
+| 01-fondations | 5/5   | ~145 min | ~29 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
@@ -36,6 +36,7 @@ Progress: [████████░░] 80% (4/5 plans of phase 1)
 | 01    | 02   | ~25 min  | 2     | 9     | 2026-05-05 |
 | 01    | 03   | ~25 min  | 2     | 6     | 2026-05-05 |
 | 01    | 04   | ~40 min  | 2     | 9     | 2026-05-05 |
+| 01    | 05   | ~25 min  | 2     | 8     | 2026-05-05 |
 
 _Updated after each plan completion_
 
@@ -70,6 +71,14 @@ Recent decisions affecting current work:
 - Plan 04 deviation : `createImageSlot` n'appliquait pas le fallback layer_id NOT NULL (mirroring `createTextField`) — ajouté en plan 04 pour cohérence ADR-086.
 - Plan 04 deviation : `visibleIf` était unreachable depuis l'API publique (column existait depuis ADR-086 mais set uniquement par duplicateDeep) — Joi + INSERT + colMap étendus en plan 04.
 - Plan 04 deviation i18n : « Supprimer » blocklisté → synonyme « Retirer » utilisé (extension Plan 03 deviation list).
+- Plan 05 : Step 4 (Options club) data-driven sur les colonnes DB réelles (`template_options.key` PAS `option_key` ; `template_packshot_refs.option_key` IS correct comme FK). Compteur « ✓ N zones reliées » via regex `\b{key}\s*==` sur `visibleIf` text+image.
+- Plan 05 : Bouton Dupliquer sur card → POST /api/remotion-templates/:id/duplicate (route legacy, branchée sur duplicateDeep par Plan 01) → router.navigate avec `?from=duplicate` consommé par computeResumeStep refiné qui force step 3.
+- Plan 05 : « + Nouveau template » sur la liste repointé du modal V2 legacy vers `router.navigate('/content/templates-remotion/new')` (wizard V3). V2 reste accessible programmatiquement pour rollback Phase 2.
+- Plan 05 deviation : `@Output() finish` bloqué par `@angular-eslint/no-output-native` (collision DOM Animation event onfinish) → renommé `finished` (extension Plan 03 list `submit` → `next`).
+- Plan 05 deviation i18n : « Oui / Non » (Oui+Non blocklistés) + « En cours… » (En cours blocklisté) → « Activé / Désactivé » + « Retrait… ».
+- Plan 05 deviation : `<label>` non-associated → `<span class="wso__packshot-label">` (label-has-associated-control ESLint).
+- Plan 05 : Backend renvoie snake_case (SELECT \*) → adapters dataservice (`mapTemplateOptionRow`, `mapPackshotRefRow`) normalisent vers camelCase pour cohérence avec `getStudioView` Plan 03.
+- Plan 05 : Phase 1 COMPLETE (5/5 plans, 13/13 requirements, 4/4 success criteria ROADMAP). Ready for `gsd-verifier`.
 
 ### Pending Todos
 
@@ -84,5 +93,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-05
-Stopped at: Completed 01-fondations-04-PLAN.md — 3 commits (0a60d266, 230b2ee0, c93ee999) + SUMMARY. Ready for plan 05 (Options club + publish).
+Stopped at: Completed 01-fondations-05-PLAN.md — 2 commits (dbc82201, 2eb8c702) + SUMMARY. Phase 1 COMPLETE (5/5). Ready for gsd-verifier and Phase 2 (UX interactive).
 Resume file: None

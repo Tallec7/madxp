@@ -10,7 +10,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 ## Phases
 
-- [ ] **Phase 1: Fondations** - Wizard 4 étapes (sans preview) + Asset Manager + duplication atomique
+- [x] **Phase 1: Fondations** - Wizard 4 étapes (sans preview) + Asset Manager + duplication atomique — **COMPLETE 2026-05-05**
 - [ ] **Phase 2: UX interactive** - Preview Remotion temps réel + vocabulaire métier figé + preset cards
 - [ ] **Phase 3: Gate de publication** - Checklist automatique 8 critères + test render + règles smoke
 
@@ -34,7 +34,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 - [x] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard) — DONE 2026-05-05 (commits 10eda5e8, 9951e068)
 - [x] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next) — DONE 2026-05-05 (commits 30abd375, c8bae67d)
 - [x] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id) — DONE 2026-05-05 (commits 0a60d266, 230b2ee0, c93ee999)
-- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
+- [x] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow — DONE 2026-05-05 (commits dbc82201, 2eb8c702)
 
 ### Phase 2: UX interactive
 
