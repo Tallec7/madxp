@@ -1,3 +1,9 @@
+# [3.289.0](https://github.com/Tallec7/neopro/compare/v3.288.0...v3.289.0) (2026-05-05)
+
+### Features
+
+- **template-studio-v3:** Phase 1 — Fondations (Asset Manager + Wizard 4 steps + Duplicate) ([#840](https://github.com/Tallec7/neopro/issues/840)) ([a063091](https://github.com/Tallec7/neopro/commit/a0630915c4edac189bc55a5346c06ceea918dcf4)), closes [#836](https://github.com/Tallec7/neopro/issues/836) [#836](https://github.com/Tallec7/neopro/issues/836) [#836](https://github.com/Tallec7/neopro/issues/836)
+
 # [3.288.0](https://github.com/Tallec7/neopro/compare/v3.287.1...v3.288.0) (2026-05-05)
 
 ### Features
