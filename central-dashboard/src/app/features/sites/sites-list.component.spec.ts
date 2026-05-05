@@ -42,13 +42,16 @@ describe('SitesListComponent', () => {
   const sitesSubject = new BehaviorSubject<Site[]>(mockSites);
 
   beforeEach(async () => {
-    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites', 'createSite', 'updateSite', 'deleteSite', 'getAllConnectionStatus'], {
+    const sitesServiceMock = jasmine.createSpyObj('SitesService', ['loadSites', 'createSite', 'updateSite', 'deleteSite', 'getAllConnectionStatus', 'getLatestOtaVersion', 'getActiveSessions', 'getSitesMiniHealth'], {
       sites$: sitesSubject.asObservable(),
     });
     sitesServiceMock.loadSites.and.returnValue(of({ sites: mockSites, total: 2, page: 1, totalPages: 1 }));
     sitesServiceMock.createSite.and.returnValue(of({ id: '3', site_name: 'New Site' }));
     sitesServiceMock.updateSite.and.returnValue(of({ id: '1', site_name: 'Updated Site' }));
     sitesServiceMock.deleteSite.and.returnValue(of(undefined));
+    sitesServiceMock.getLatestOtaVersion.and.returnValue(of({ version: null }));
+    sitesServiceMock.getActiveSessions.and.returnValue(of({ sessions: [] }));
+    sitesServiceMock.getSitesMiniHealth.and.returnValue(of({ sites: [] }));
     sitesServiceMock.getAllConnectionStatus.and.returnValue(of({
       sites: [
         { siteId: '1', siteName: 'Site Rennes', clubName: 'Rennes FC', isConnected: true, displayStatus: 'online', lastSeenAt: new Date(), secondsSinceLastSeen: 0, localIp: null },
