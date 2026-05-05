@@ -1,0 +1,13 @@
+<div class="wpp">
+  <ng-container *ngIf="hasLayer; else placeholder">
+    <app-template-studio-player [state]="state.previewState!" />
+  </ng-container>
+  <ng-template #placeholder>
+    <div class="wpp__empty">
+      <p class="wpp__empty-msg">Ajoutez un fond animé pour voir l'aperçu.</p>
+      <button type="button" class="wpp__empty-cta" (click)="onGoToBackgrounds()">
+        Aller à l'étape Fonds animés
+      </button>
+    </div>
+  </ng-template>
+</div>

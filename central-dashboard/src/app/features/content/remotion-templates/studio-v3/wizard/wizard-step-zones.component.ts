@@ -540,6 +540,15 @@ export class WizardStepZonesComponent {
   @Output() prev = new EventEmitter<void>();
   /** Plan 03 contract — NEVER `submit` (forbidden by no-output-native). */
   @Output() next = new EventEmitter<void>();
+  /**
+   * Plan 02-02 (PREV-01) — hybrid live preview update:
+   * - debounceTime(300) on dropdowns/colors/numbers (visual controls)
+   * - (blur) event on text inputs (label, visibleIf) to avoid re-render per keystroke
+   * Parent (StudioV3WizardComponent) catches the event and recomputes
+   * state.previewState via RemotionPreviewService.buildRuntimePlayerState.
+   * Stub here to honor the contract; real wiring lands in Task 3.
+   */
+  @Output() previewPropsChange = new EventEmitter<void>();
 
   private dataService = inject(RemotionTemplatesDataService);
 
