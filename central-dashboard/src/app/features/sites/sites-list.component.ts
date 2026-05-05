@@ -20,7 +20,12 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
   template: `
     <div class="page-container">
       <div class="page-header">
-        <h1>Sites ({{ (sites$ | async)?.length || 0 }})</h1>
+        <h1>
+          Sites ({{ (sites$ | async)?.length || 0 }})
+          <span class="header-alert" *ngIf="unbootstrappedSites.length > 0">
+            · <span class="header-alert-count">{{ unbootstrappedSites.length }} à installer</span>
+          </span>
+        </h1>
         <div class="header-actions">
           <div class="view-toggle">
             <button
@@ -84,6 +89,16 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
         </button>
       </div>
 
+      <!-- Banner Pi à installer -->
+      <div class="install-banner" *ngIf="unbootstrappedSites.length > 0 && viewMode === 'grid'">
+        <span class="install-banner-icon">⚠️</span>
+        <span>
+          <strong>{{ unbootstrappedSites.length }} site{{ unbootstrappedSites.length > 1 ? 's' : '' }} Pi à installer</strong>
+          — {{ unbootstrappedSites.map(s => s.club_name).join(', ') }} n'ont jamais bootstrappé.
+        </span>
+        <a class="install-banner-cta" [routerLink]="['/updates']">Voir les mises à jour →</a>
+      </div>
+
       <ng-container *ngIf="(sites$ | async) as sitesList">
         <!-- Map View -->
         <app-sites-map
@@ -94,8 +109,11 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
         </app-sites-map>
 
         <!-- Grid View -->
-        <div class="sites-grid" *ngIf="viewMode === 'grid' && sitesList.length > 0">
-        <div *ngFor="let site of sites$ | async" class="site-card card">
+        <ng-container *ngIf="viewMode === 'grid' && sitesList.length > 0">
+
+        <!-- Section : sites actifs -->
+        <div class="sites-grid">
+        <div *ngFor="let site of activeSites" class="site-card card">
           <div class="site-header">
             <div class="site-title-block">
               <h3>{{ site.club_name }}</h3>
@@ -177,6 +195,59 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           </div>
         </div>
       </div>
+
+        <!-- Section : Pi à installer -->
+        <ng-container *ngIf="unbootstrappedSites.length > 0">
+          <div class="section-divider">
+            <span class="section-divider-line"></span>
+            <span class="section-divider-label">⚠ À installer ({{ unbootstrappedSites.length }})</span>
+            <span class="section-divider-line"></span>
+          </div>
+          <div class="sites-grid">
+            <div *ngFor="let site of unbootstrappedSites" class="site-card card card--unbootstrapped">
+              <div class="site-header">
+                <div class="site-title-block">
+                  <h3>{{ site.club_name }}</h3>
+                  <div class="site-type-chips">
+                    <span class="chip chip-type chip-type-pi">📡 Pi</span>
+                    <span class="chip chip-plan" *ngIf="site.subscription_plan">{{ site.subscription_plan | titlecase }}</span>
+                  </div>
+                </div>
+                <span class="badge badge-warning">⚠ Jamais bootstrappé</span>
+              </div>
+              <p class="site-name" *ngIf="site.site_name !== site.club_name">{{ site.site_name }}</p>
+              <div class="site-detail">
+                <span class="detail-icon">📍</span>
+                <span>{{ site.location?.city }}, {{ site.location?.region }}</span>
+              </div>
+              <div class="site-detail" *ngIf="site.sports && site.sports.length > 0">
+                <span class="detail-icon">⚽</span>
+                <span>{{ site.sports.join(', ') }}</span>
+              </div>
+              <div class="site-detail">
+                <span class="detail-icon">📅</span>
+                <span>Créé {{ formatLastSeen(site.created_at) }}</span>
+              </div>
+              <div class="onboarding-cta">
+                <p class="onboarding-text">Pi non installé sur site. Préparer le matériel ?</p>
+                <button class="btn btn-install" [routerLink]="['/sites', site.id]">
+                  📦 Préparer l'installation
+                </button>
+              </div>
+              <div class="site-footer">
+                <span class="site-version">—</span>
+                <div class="site-actions">
+                  <button class="btn-icon" [routerLink]="['/sites', site.id]" title="Voir les détails">👁️</button>
+                  <button class="btn-icon" (click)="editSite(site)" title="Éditer">✏️</button>
+                  <button class="btn-icon" (click)="duplicateSite(site)" title="Dupliquer le site">📋</button>
+                  <button class="btn-icon btn-danger" (click)="deleteSite(site)" title="Supprimer">🗑️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        </ng-container>
 
         <!-- Empty State for Grid -->
         <div class="empty-state card" *ngIf="viewMode === 'grid' && sitesList.length === 0">
@@ -658,6 +729,79 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       border-top: 1px solid #e2e8f0;
     }
 
+    /* Header alert count */
+    .header-alert { font-size: 0.875rem; font-weight: 400; }
+    .header-alert-count { color: #ea580c; font-weight: 600; }
+
+    /* Install banner */
+    .install-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-left: 4px solid #ea580c;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+      color: #7c2d12;
+    }
+    .install-banner-icon { font-size: 1.25rem; flex-shrink: 0; }
+    .install-banner-cta {
+      margin-left: auto;
+      background: #ea580c;
+      color: white;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .install-banner-cta:hover { background: #c2410c; }
+
+    /* Section divider */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2rem 0 1rem;
+    }
+    .section-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .section-divider-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    /* Card unbootstrapped */
+    .card--unbootstrapped { border-left: 3px solid #ea580c; }
+
+    /* Onboarding CTA block */
+    .onboarding-cta {
+      background: #fff7ed;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .onboarding-text { color: #7c2d12; font-size: 0.8125rem; margin-bottom: 10px; }
+    .btn-install {
+      background: #ea580c;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-install:hover { background: #c2410c; }
+
     @media (max-width: 768px) {
       .sites-grid {
         grid-template-columns: 1fr;
@@ -682,6 +826,8 @@ export class SitesListComponent implements OnInit, OnDestroy {
   readonly formatVersion = formatVersion;
 
   sites$ = this.sitesService.sites$;
+  allSites: Site[] = [];
+  private sitesSubscription?: Subscription;
   searchTerm = '';
   statusFilter = '';
   regionFilter = '';
@@ -723,9 +869,22 @@ export class SitesListComponent implements OnInit, OnDestroy {
   };
   editSportsInput = '';
 
+  get activeSites(): Site[] {
+    return this.allSites.filter(s => !this.isUnbootstrapped(s));
+  }
+
+  get unbootstrappedSites(): Site[] {
+    return this.allSites.filter(s => this.isUnbootstrapped(s));
+  }
+
+  isUnbootstrapped(site: Site): boolean {
+    return site.site_type === 'pi' && !site.last_seen_at;
+  }
+
   ngOnInit(): void {
     this.loadSites();
     this.loadConnectionStatus();
+    this.sitesSubscription = this.sites$.subscribe(sites => { this.allSites = sites; });
     this.sitesService.getLatestOtaVersion().subscribe({
       next: ({ version }) => { this.latestOtaVersion = version; },
       error: () => { /* non-bloquant : la page reste fonctionnelle sans cette info */ }
@@ -739,6 +898,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.connectionStatusSubscription?.unsubscribe();
     this.refreshSubscription?.unsubscribe();
+    this.sitesSubscription?.unsubscribe();
   }
 
   private loadConnectionStatus(): void {
