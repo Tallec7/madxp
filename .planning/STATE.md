@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Phase 3 Plan 03 done — Ready for Plan 04 (Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé)
-stopped_at: Completed 03-gate-publication-03-PLAN.md
-last_updated: '2026-05-05T21:30:00.000Z'
-last_activity: 2026-05-05 — Phase 3 Plan 03 livré (POST /:id/test-render + worker hook + tracking, smoke 5/5 RED→GREEN, FK-safe markCompletedWithoutVideo)
+status: Phase 3 Plan 04 done — Ready for Plan 05 (Phase 3 final plan)
+stopped_at: Completed 03-gate-publication-04-PLAN.md
+last_updated: '2026-05-05T22:00:00.000Z'
+last_activity: 2026-05-05 — Phase 3 Plan 04 livré (Wizard Step 5 Validation [hidden]-mounted + Player toggle Aperçu live/Rendu de test + VALIDATION_RULE_LABELS 8 entries figées + smoke 8/8 RED→GREEN)
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
-  percent: 86
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 3 of 3 (Gate publication) — IN PROGRESS
-Plan: 03 of 5 — DONE
-Status: Phase 3 Plan 03 done — Ready for Plan 04 (Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé)
-Last activity: 2026-05-05 — Phase 3 Plan 03 livré (POST /:id/test-render + worker hook + tracking, smoke 5/5 RED→GREEN, FK-safe markCompletedWithoutVideo)
+Plan: 04 of 5 — DONE
+Status: Phase 3 Plan 04 done — Ready for Plan 05 (Phase 3 final plan)
+Last activity: 2026-05-05 — Phase 3 Plan 04 livré (Wizard Step 5 Validation [hidden]-mounted + Player toggle Aperçu live/Rendu de test + VALIDATION_RULE_LABELS 8 entries figées + smoke 8/8 RED→GREEN)
 
-Progress: [█████████░] 86% (12/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 3/5)
+Progress: [█████████░] 93% (13/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 4/5)
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 86% (12/14 plans total — Phase 1 5/
 | 03    | 01   | ~25 min  | 2     | 8     | 2026-05-05 |
 | 03    | 02   | ~25 min  | 2     | 13    | 2026-05-05 |
 | 03    | 03   | ~25 min  | 2     | 7     | 2026-05-05 |
+| 03    | 04   | ~30 min  | 2     | 12    | 2026-05-05 |
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
@@ -122,6 +123,12 @@ Recent decisions affecting current work:
 - Phase 3 Plan 03 : Body Joi sealed `Joi.object({}).unknown(false)` — fixtures TEST_RENDER_FIXTURES injectées 100% côté serveur (PRÉNOM/NOM/NOM DU CLUB + URLs placehold.co), zéro surface client.
 - Phase 3 Plan 03 deviation : `getStudioView` repo n'existe pas (controller helper) → `findV2ById` (TemplateV2). Adapter via `view.options[].defaultValue ?? values[0]` pour computer les defaults injectés dans `props`.
 - Phase 3 Plan 03 deviation : `validate(schema, 'params'|'body')` overload n'existe pas dans `middleware/validation.ts` — utilisation de `validateParams` + `validate` séparés (les 2 schemas restent référencés depuis le route file via `testRenderSchemas.params` + `.body`, smoke contract préservé).
+- Phase 3 Plan 04 : Step 5 monté via `[hidden]="currentStep() !== 5"` (Pitfall P3 — sibling Player reste monté). Toggle « Aperçu live / Rendu de test » même pattern : visible step 5 uniquement via `[hidden]`. `<video>` test-render `*ngIf="testRenderUrl"` (lazy mount) puis `[hidden]` pour swap source — jamais 2 décodeurs HD HW en parallèle (Pi5 SharedImage trap).
+- Phase 3 Plan 04 : VALIDATION_RULE_LABELS = 8 entrées FR figées par smoke `(Phase 3 PUB-01)` + ban-list élargie (`'visible_if'` ajouté aux jargons interdits dans VALIDATION_RULE_LABELS values). ERROR_MESSAGES.test_render_failed = string verbatim de SPEC L184.
+- Phase 3 Plan 04 : Step 4 `Terminer` désormais → Step 5 (gate de publication), plus jamais de leave wizard direct. Cancel/Abandonner reste la sortie explicite.
+- Phase 3 Plan 04 : Deep-link `Corriger →` utilise `Router.navigate({ queryParams: { focus: entityId }, queryParamsHandling: 'merge', replaceUrl: true })` — sharable + refresh-safe. Auto-clear highlight 4s.
+- Phase 3 Plan 04 deviation : `dataService.getRenderJob(jobId)` du PLAN n'existe pas → `pollRenderJob(jobId)` legacy ADR-054 réutilisée (worker Plan 03-03 discrimine via `title.startsWith('test-render:')` — pas besoin nouveau endpoint).
+- Phase 3 Plan 04 deviation : ng build production échoue sur Node 18 (Angular 20 exige Node 20.19+). `tsc --noEmit -p tsconfig.json` exécuté à la place — exit 0, type-safety préservée. Production build sera re-vérifié sur CI Node 20+.
 
 ### Pending Todos
 
@@ -135,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T21:30:00.000Z
-Stopped at: Completed 03-gate-publication-03-PLAN.md
+Last session: 2026-05-05T22:00:00.000Z
+Stopped at: Completed 03-gate-publication-04-PLAN.md
 Resume file: None
