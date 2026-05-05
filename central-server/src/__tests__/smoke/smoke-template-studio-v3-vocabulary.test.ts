@@ -23,7 +23,21 @@ const studioV3Dir = path.join(
 );
 const vocabFile = path.join(studioV3Dir, 'vocabulary.constants.ts');
 
-const BANLIST = ['layer', 'slot', 'pix_fmt', 'option_key', 'composition_id'] as const;
+const BANLIST = [
+  'layer',
+  'slot',
+  'pix_fmt',
+  'option_key',
+  'composition_id',
+  // Plan 02-03 (UX-02) — animation numeric params must NOT leak to the UI.
+  // The runtime engine is parametric (scaleFrom/scaleTo/durationMs baked into
+  // each preset); the v3 admin only sees named cards (Apparition, Glissement,
+  // Zoom arrière, Logo Pop, Aucune animation). Banning these strings as quoted
+  // user-facing literals locks the anti-feature.
+  'scaleFrom',
+  'scaleTo',
+  'durationMs',
+] as const;
 
 function listFilesRecursive(dir: string, exts: string[]): string[] {
   const out: string[] = [];
