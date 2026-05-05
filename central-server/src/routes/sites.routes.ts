@@ -27,6 +27,9 @@ router.get('/debug/connections', authenticate, requireRole('admin'), adminRateLi
 // Route globale pour le résumé de la queue (doit être avant /:id)
 router.get('/queue/summary', authenticate, adminRateLimit, sitesController.getQueueSummary);
 
+// Sessions match actives sur toute la flotte (doit être avant /:id)
+router.get('/active-sessions', authenticate, monitoringRateLimit, sitesController.getActiveSessions);
+
 router.get('/:id', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSite);
 
 router.get('/:id/metrics', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMetrics);

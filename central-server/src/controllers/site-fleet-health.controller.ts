@@ -259,6 +259,27 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
  * Get match history for a specific site
  * Returns recent matches with audience estimates, videos played, and duration
  */
+export const getActiveSessions = async (_req: AuthRequest, res: Response) => {
+  try {
+    const sessions = await siteRepository.getActiveSessions();
+    res.json({
+      sessions: sessions.map(s => ({
+        sessionId: s.id,
+        siteId: s.site_id,
+        startedAt: s.started_at,
+        homeTeam: s.home_team,
+        awayTeam: s.away_team,
+        homeScore: s.home_score,
+        awayScore: s.away_score,
+        eventType: s.event_type ?? 'match',
+      })),
+    });
+  } catch (error) {
+    logger.error('Error fetching active sessions:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des sessions actives' });
+  }
+};
+
 export const getSiteMatchHistory = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

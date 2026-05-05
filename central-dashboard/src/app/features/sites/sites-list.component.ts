@@ -10,6 +10,7 @@ import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteConnectionSummary, SubscriptionDisplayStatus } from '../../core/models';
 import { formatVersion } from './utils/version';
+import { ActiveSession } from '../../core/models';
 import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
 import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
@@ -141,6 +142,21 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           </div>
 
           <p class="site-name" *ngIf="site.site_name !== site.club_name">{{ site.site_name }}</p>
+
+          <!-- Match live strip -->
+          <div class="match-strip" *ngIf="activeSessionsMap.has(site.id)">
+            <span class="live-badge">LIVE</span>
+            <span class="match-teams">
+              {{ activeSessionsMap.get(site.id)?.homeTeam || '?' }}
+              vs
+              {{ activeSessionsMap.get(site.id)?.awayTeam || '?' }}
+            </span>
+            <span class="match-score" *ngIf="activeSessionsMap.get(site.id)?.homeScore !== null">
+              {{ activeSessionsMap.get(site.id)?.homeScore }}
+              —
+              {{ activeSessionsMap.get(site.id)?.awayScore }}
+            </span>
+          </div>
 
           <div class="site-detail">
             <span class="detail-icon">📍</span>
@@ -729,6 +745,31 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       border-top: 1px solid #e2e8f0;
     }
 
+    /* Match live strip */
+    .match-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(90deg, #fef2f2, #fff);
+      border-top: 1px solid #fecaca;
+      border-bottom: 1px solid #fecaca;
+      padding: 8px 1rem;
+      font-size: 0.8125rem;
+      margin: 0 -1rem;
+    }
+    .live-badge {
+      background: #dc2626;
+      color: white;
+      font-size: 0.625rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .match-teams { font-weight: 600; color: #0f172a; flex: 1; }
+    .match-score { font-weight: 700; color: #0f172a; flex-shrink: 0; }
+
     /* Header alert count */
     .header-alert { font-size: 0.875rem; font-weight: 400; }
     .header-alert-count { color: #ea580c; font-weight: 600; }
@@ -839,6 +880,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
 
   // Map des statuts de connexion temps réel (siteId -> status)
   connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  activeSessionsMap = new Map<string, ActiveSession>();
   latestOtaVersion: string | null = null;
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
@@ -887,11 +929,13 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.sitesSubscription = this.sites$.subscribe(sites => { this.allSites = sites; });
     this.sitesService.getLatestOtaVersion().subscribe({
       next: ({ version }) => { this.latestOtaVersion = version; },
-      error: () => { /* non-bloquant : la page reste fonctionnelle sans cette info */ }
+      error: () => { /* non-bloquant */ }
     });
-    // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
+    this.loadActiveSessions();
+    // Rafraîchir connexion + sessions actives toutes les 60 secondes
     this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
+      this.loadActiveSessions();
     });
   }
 
@@ -899,6 +943,18 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.connectionStatusSubscription?.unsubscribe();
     this.refreshSubscription?.unsubscribe();
     this.sitesSubscription?.unsubscribe();
+  }
+
+  private loadActiveSessions(): void {
+    this.sitesService.getActiveSessions().subscribe({
+      next: ({ sessions }) => {
+        this.activeSessionsMap.clear();
+        for (const s of sessions) {
+          this.activeSessionsMap.set(s.siteId, s);
+        }
+      },
+      error: () => { /* non-bloquant */ }
+    });
   }
 
   private loadConnectionStatus(): void {

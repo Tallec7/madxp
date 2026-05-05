@@ -141,6 +141,10 @@ export class SitesService {
     return this.api.get('/updates/latest');
   }
 
+  getActiveSessions(): Observable<{ sessions: import('../models').ActiveSession[] }> {
+    return this.api.get('/sites/active-sessions');
+  }
+
   /**
    * Get fleet health data for the admin dashboard
    * Aggregates connection status, metrics, versions, and at-risk sites

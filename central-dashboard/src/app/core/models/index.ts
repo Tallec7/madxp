@@ -520,6 +520,20 @@ export interface Match {
 }
 
 /**
+ * Session match active (ended_at IS NULL) — utilisée par la page Sites pour le bandeau LIVE
+ */
+export interface ActiveSession {
+  sessionId: string;
+  siteId: string;
+  startedAt: Date;
+  homeTeam: string | null;
+  awayTeam: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  eventType: string;
+}
+
+/**
  * Match history response from API
  */
 export interface MatchHistoryData {

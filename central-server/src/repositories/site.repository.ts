@@ -138,6 +138,17 @@ export interface SiteLocalContentRow extends QueryResultRow {
   secondary_display_enabled: boolean;
 }
 
+export interface ActiveSessionRow extends QueryResultRow {
+  id: string;
+  site_id: string;
+  started_at: Date;
+  home_team: string | null;
+  away_team: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  event_type: string | null;
+}
+
 export interface MatchRow extends QueryResultRow {
   id: string;
   started_at: Date;
@@ -680,6 +691,21 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       [id]
     );
     return result.rows[0] || null;
+  }
+
+  /**
+   * Retourne toutes les sessions match actives (ended_at IS NULL) pour tous les sites.
+   * Utilisé par la page Sites pour afficher le bandeau "LIVE" sur les cartes.
+   */
+  async getActiveSessions(): Promise<ActiveSessionRow[]> {
+    const result = await query<ActiveSessionRow>(
+      `SELECT id, site_id, started_at,
+              home_team, away_team, home_score, away_score, event_type
+       FROM club_sessions
+       WHERE ended_at IS NULL
+       ORDER BY started_at DESC`
+    );
+    return result.rows;
   }
 
   /**
