@@ -1,0 +1,35 @@
+<button
+  type="button"
+  class="anim-card"
+  [class.anim-card--selected]="selected"
+  [attr.data-card]="cardKey"
+  (click)="onSelect()"
+>
+  <div class="anim-card__preview" [attr.data-preset]="cardKey">
+    <div class="anim-card__shape"></div>
+  </div>
+  <div class="anim-card__name">{{ label }}</div>
+
+  <div
+    *ngIf="selected && supportsDirection"
+    class="anim-card__toggle"
+    (click)="$event.stopPropagation()"
+  >
+    <button
+      type="button"
+      class="anim-card__seg"
+      [class.anim-card__seg--active]="direction === 'in'"
+      (click)="onSetDirection('in', $event)"
+    >
+      Apparition
+    </button>
+    <button
+      type="button"
+      class="anim-card__seg"
+      [class.anim-card__seg--active]="direction === 'out'"
+      (click)="onSetDirection('out', $event)"
+    >
+      Sortie
+    </button>
+  </div>
+</button>

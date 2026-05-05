@@ -1,0 +1,11 @@
+<div class="anim-picker">
+  <app-animation-card
+    *ngFor="let c of cards"
+    [cardKey]="c.key"
+    [label]="c.label"
+    [selected]="selectedKey === c.key"
+    [direction]="currentDirection"
+    (cardSelect)="onSelectCard(c.key)"
+    (directionChange)="onDirectionChange($event)"
+  />
+</div>
