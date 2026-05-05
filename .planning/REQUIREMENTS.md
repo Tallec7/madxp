@@ -9,8 +9,8 @@
 ### Asset Manager (ASSET)
 
 - [ ] **ASSET-01**: Super_admin peut parcourir tous les assets WebM dans une grille (thumbnail, durée, dimensions, flag alpha, nombre de templates qui l'utilisent)
-- [ ] **ASSET-02**: Super_admin peut uploader un fichier WebM ; le système valide le format et détecte le canal alpha (yuva420p via ffprobe côté serveur)
-- [ ] **ASSET-03**: Le système bloque la suppression d'un asset WebM référencé par ≥1 layer de template publié
+- [x] **ASSET-02**: Super_admin peut uploader un fichier WebM ; le système valide le format et détecte le canal alpha (yuva420p via ffprobe côté serveur)
+- [x] **ASSET-03**: Le système bloque la suppression d'un asset WebM référencé par ≥1 layer de template publié
 
 ### Wizard de création (WIZARD)
 
@@ -23,7 +23,7 @@
 ### Duplication (DUP)
 
 - [ ] **DUP-01**: Super_admin peut dupliquer n'importe quel template via un bouton "Dupliquer" sur la card ; le clone s'ouvre directement à l'étape 3
-- [ ] **DUP-02**: La duplication clone atomiquement les 6 tables liées en une seule transaction DB (`neopro_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_options`, `template_packshot_refs`) ; les `file_url` des WebM sont partagées (pas copiées physiquement)
+- [x] **DUP-02**: La duplication clone atomiquement les 6 tables liées en une seule transaction DB (`neopro_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_options`, `template_packshot_refs`) ; les `file_url` des WebM sont partagées (pas copiées physiquement)
 
 ### Aperçu temps réel (PREV)
 
@@ -44,10 +44,10 @@
 
 ### Smoke tests (TEST)
 
-- [ ] **TEST-01**: Smoke test `smoke-template-studio-v3-vocabulary` : le mapping UI↔DB est figé — tout changement de clé fait échouer le test
-- [ ] **TEST-02**: Smoke test `smoke-template-studio-v3-duplicate` : la duplication clone toutes les rows des 6 tables sans dupliquer les assets WebM (COUNT avant/après + vérif `file_url` identiques)
+- [x] **TEST-01**: Smoke test `smoke-template-studio-v3-vocabulary` : le mapping UI↔DB est figé — tout changement de clé fait échouer le test
+- [x] **TEST-02**: Smoke test `smoke-template-studio-v3-duplicate` : la duplication clone toutes les rows des 6 tables sans dupliquer les assets WebM (COUNT avant/après + vérif `file_url` identiques)
 - [ ] **TEST-03**: Smoke test `smoke-template-studio-v3-validation` : la checklist pré-publication rejette un template incomplet selon les 8 critères
-- [ ] **TEST-04**: Smoke test `smoke-template-studio-v3-asset-manager` : l'upload WebM est refusé si pas de canal alpha quand `respect_alpha=true` est requis
+- [x] **TEST-04**: Smoke test `smoke-template-studio-v3-asset-manager` : l'upload WebM est refusé si pas de canal alpha quand `respect_alpha=true` est requis
 
 ## v2 Requirements (déféré)
 
@@ -85,30 +85,30 @@
 
 ## Traceability
 
-| Requirement | Phase       | Status  |
-| ----------- | ----------- | ------- |
-| ASSET-01    | Phase 1 (A) | Pending |
-| ASSET-02    | Phase 1 (A) | Pending |
-| ASSET-03    | Phase 1 (A) | Pending |
-| WIZARD-01   | Phase 1 (A) | Pending |
-| WIZARD-02   | Phase 1 (A) | Pending |
-| WIZARD-03   | Phase 1 (A) | Pending |
-| WIZARD-04   | Phase 1 (A) | Pending |
-| WIZARD-05   | Phase 1 (A) | Pending |
-| DUP-01      | Phase 1 (A) | Pending |
-| DUP-02      | Phase 1 (A) | Pending |
-| PREV-01     | Phase 2 (B) | Pending |
-| PREV-02     | Phase 2 (B) | Pending |
-| PREV-03     | Phase 2 (B) | Pending |
-| UX-01       | Phase 2 (B) | Pending |
-| UX-02       | Phase 2 (B) | Pending |
-| UX-03       | Phase 2 (B) | Pending |
-| PUB-01      | Phase 3 (C) | Pending |
-| PUB-02      | Phase 3 (C) | Pending |
-| TEST-01     | Phase 1 (A) | Pending |
-| TEST-02     | Phase 1 (A) | Pending |
-| TEST-03     | Phase 3 (C) | Pending |
-| TEST-04     | Phase 1 (A) | Pending |
+| Requirement | Phase       | Status         |
+| ----------- | ----------- | -------------- |
+| ASSET-01    | Phase 1 (A) | Pending        |
+| ASSET-02    | Phase 1 (A) | Done (plan 01) |
+| ASSET-03    | Phase 1 (A) | Done (plan 01) |
+| WIZARD-01   | Phase 1 (A) | Pending        |
+| WIZARD-02   | Phase 1 (A) | Pending        |
+| WIZARD-03   | Phase 1 (A) | Pending        |
+| WIZARD-04   | Phase 1 (A) | Pending        |
+| WIZARD-05   | Phase 1 (A) | Pending        |
+| DUP-01      | Phase 1 (A) | Pending        |
+| DUP-02      | Phase 1 (A) | Done (plan 01) |
+| PREV-01     | Phase 2 (B) | Pending        |
+| PREV-02     | Phase 2 (B) | Pending        |
+| PREV-03     | Phase 2 (B) | Pending        |
+| UX-01       | Phase 2 (B) | Pending        |
+| UX-02       | Phase 2 (B) | Pending        |
+| UX-03       | Phase 2 (B) | Pending        |
+| PUB-01      | Phase 3 (C) | Pending        |
+| PUB-02      | Phase 3 (C) | Pending        |
+| TEST-01     | Phase 1 (A) | Done (plan 01) |
+| TEST-02     | Phase 1 (A) | Done (plan 01) |
+| TEST-03     | Phase 3 (C) | Pending        |
+| TEST-04     | Phase 1 (A) | Done (plan 01) |
 
 **Coverage:**
 
