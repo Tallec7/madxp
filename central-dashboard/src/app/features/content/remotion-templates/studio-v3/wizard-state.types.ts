@@ -13,6 +13,7 @@ import type {
   TemplateImageSlot,
   TemplateOption,
 } from '../remotion-templates.types';
+import type { RuntimePlayerState } from '../studio-player/template-studio-player.component';
 
 export interface IdentityFormValue {
   name: string;
@@ -29,6 +30,8 @@ export interface WizardState {
   layers: TemplateLayer[];
   zones: { textFields: TemplateTextField[]; imageSlots: TemplateImageSlot[] };
   options: TemplateOption[];
+  /** Plan 02-02 (PREV-01) — current props snapshot fed to the live Player. Null until step 3 is reached. */
+  previewState?: RuntimePlayerState | null;
 }
 
 export const DEFAULT_WIZARD_STATE: WizardState = {
@@ -44,6 +47,7 @@ export const DEFAULT_WIZARD_STATE: WizardState = {
   layers: [],
   zones: { textFields: [], imageSlots: [] },
   options: [],
+  previewState: null,
 };
 
 export type WizardStep = 1 | 2 | 3 | 4;
