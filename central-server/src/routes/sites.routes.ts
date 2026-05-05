@@ -30,6 +30,9 @@ router.get('/queue/summary', authenticate, adminRateLimit, sitesController.getQu
 // Sessions match actives sur toute la flotte (doit être avant /:id)
 router.get('/active-sessions', authenticate, monitoringRateLimit, sitesController.getActiveSessions);
 
+// Mini health strip pour la page Sites (CPU/mem/temp/disk/alertes par Pi)
+router.get('/mini-health', authenticate, monitoringRateLimit, sitesController.getSitesMiniHealth);
+
 router.get('/:id', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSite);
 
 router.get('/:id/metrics', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMetrics);

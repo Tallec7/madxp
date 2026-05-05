@@ -149,6 +149,15 @@ export interface ActiveSessionRow extends QueryResultRow {
   event_type: string | null;
 }
 
+export interface SiteMiniHealthRow extends QueryResultRow {
+  site_id: string;
+  cpu_percent: number | null;
+  memory_percent: number | null;
+  temperature: number | null;
+  disk_percent: number | null;
+  active_alert_count: number;
+}
+
 export interface MatchRow extends QueryResultRow {
   id: string;
   started_at: Date;
@@ -574,6 +583,25 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
         s.last_seen_at,
         (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
       FROM sites s
+    `);
+    return result.rows;
+  }
+
+  /**
+   * Retourne les métriques de santé légères pour tous les sites Pi.
+   * Utilisé par la page Sites pour le mini-strip santé sur chaque carte.
+   */
+  async getSitesMiniHealth(): Promise<SiteMiniHealthRow[]> {
+    const result = await query<SiteMiniHealthRow>(`
+      SELECT
+        s.id AS site_id,
+        (SELECT cpu_usage    FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS cpu_percent,
+        (SELECT memory_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS memory_percent,
+        (SELECT temperature  FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS temperature,
+        (SELECT disk_usage   FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS disk_percent,
+        (SELECT COUNT(*)::int FROM alerts WHERE site_id = s.id AND status = 'active') AS active_alert_count
+      FROM sites s
+      WHERE s.site_type = 'pi'
     `);
     return result.rows;
   }

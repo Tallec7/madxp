@@ -259,6 +259,25 @@ export const getFleetMetrics = async (req: AuthRequest, res: Response) => {
  * Get match history for a specific site
  * Returns recent matches with audience estimates, videos played, and duration
  */
+export const getSitesMiniHealth = async (_req: AuthRequest, res: Response) => {
+  try {
+    const rows = await siteRepository.getSitesMiniHealth();
+    res.json({
+      sites: rows.map(r => ({
+        siteId: r.site_id,
+        cpuPercent: r.cpu_percent,
+        memoryPercent: r.memory_percent,
+        temperature: r.temperature,
+        diskPercent: r.disk_percent,
+        alertCount: r.active_alert_count,
+      })),
+    });
+  } catch (error) {
+    logger.error('Error fetching sites mini health:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des métriques' });
+  }
+};
+
 export const getActiveSessions = async (_req: AuthRequest, res: Response) => {
   try {
     const sessions = await siteRepository.getActiveSessions();

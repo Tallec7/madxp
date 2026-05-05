@@ -10,7 +10,7 @@ import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteConnectionSummary, SubscriptionDisplayStatus } from '../../core/models';
 import { formatVersion } from './utils/version';
-import { ActiveSession } from '../../core/models';
+import { ActiveSession, SiteMiniHealth } from '../../core/models';
 import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
 import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
@@ -171,6 +171,39 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           <div class="site-detail">
             <span class="detail-icon">🕒</span>
             <span>{{ formatLastSeenForSite(site) }}</span>
+          </div>
+
+          <!-- Mini health strip — Pi uniquement, si métriques disponibles -->
+          <div class="health-strip" *ngIf="site.site_type === 'pi' && miniHealthMap.has(site.id)">
+            <div class="health-cell">
+              <span class="health-label">🌡️ Temp</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.temperature ?? 0) > 70"
+                [class.health-danger]="(miniHealthMap.get(site.id)?.temperature ?? 0) > 80">
+                {{ miniHealthMap.get(site.id)?.temperature !== null ? (miniHealthMap.get(site.id)?.temperature + '°C') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">🖥️ CPU</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.cpuPercent ?? 0) > 80">
+                {{ miniHealthMap.get(site.id)?.cpuPercent !== null ? (miniHealthMap.get(site.id)?.cpuPercent + '%') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">💾 RAM</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.memoryPercent ?? 0) > 85">
+                {{ miniHealthMap.get(site.id)?.memoryPercent !== null ? (miniHealthMap.get(site.id)?.memoryPercent + '%') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">⚠️ Alertes</span>
+              <span class="health-value"
+                [class.health-danger]="(miniHealthMap.get(site.id)?.alertCount ?? 0) > 0">
+                {{ miniHealthMap.get(site.id)?.alertCount ?? 0 }}
+              </span>
+            </div>
           </div>
 
           <div class="site-footer">
@@ -770,6 +803,27 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
     .match-teams { font-weight: 600; color: #0f172a; flex: 1; }
     .match-score { font-weight: 700; color: #0f172a; flex-shrink: 0; }
 
+    /* Health strip */
+    .health-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 4px;
+    }
+    .health-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .health-label { font-size: 0.625rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .health-value { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+    .health-value.health-warn   { color: #ea580c; }
+    .health-value.health-danger { color: #dc2626; }
+
     /* Header alert count */
     .header-alert { font-size: 0.875rem; font-weight: 400; }
     .header-alert-count { color: #ea580c; font-weight: 600; }
@@ -881,6 +935,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
   // Map des statuts de connexion temps réel (siteId -> status)
   connectionStatusMap = new Map<string, SiteConnectionSummary>();
   activeSessionsMap = new Map<string, ActiveSession>();
+  miniHealthMap = new Map<string, SiteMiniHealth>();
   latestOtaVersion: string | null = null;
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
@@ -932,10 +987,12 @@ export class SitesListComponent implements OnInit, OnDestroy {
       error: () => { /* non-bloquant */ }
     });
     this.loadActiveSessions();
+    this.loadMiniHealth();
     // Rafraîchir connexion + sessions actives toutes les 60 secondes
     this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
       this.loadActiveSessions();
+      this.loadMiniHealth();
     });
   }
 
@@ -943,6 +1000,16 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.connectionStatusSubscription?.unsubscribe();
     this.refreshSubscription?.unsubscribe();
     this.sitesSubscription?.unsubscribe();
+  }
+
+  private loadMiniHealth(): void {
+    this.sitesService.getSitesMiniHealth().subscribe({
+      next: ({ sites }) => {
+        this.miniHealthMap.clear();
+        for (const s of sites) { this.miniHealthMap.set(s.siteId, s); }
+      },
+      error: () => { /* non-bloquant */ }
+    });
   }
 
   private loadActiveSessions(): void {
