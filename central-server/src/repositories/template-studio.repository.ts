@@ -474,6 +474,27 @@ class TemplateStudioRepository {
     return (rowCount ?? 0) > 0;
   }
 
+  /**
+   * ADR-110 / ASSET-03 / pitfall P5 — count published layers (other than
+   * the candidate) that share the same video_url as the layer about to be
+   * deleted. If > 0, the controller returns 409 to prevent orphaning a
+   * WebM that's still referenced by a published template.
+   *
+   * "Published" is determined by `neopro_templates.published = true`.
+   */
+  async countLayersSharingVideoUrl(layerId: string): Promise<number> {
+    const r = await query<{ cnt: string }>(
+      `SELECT COUNT(*)::text AS cnt
+         FROM template_layers tl
+         JOIN neopro_templates t ON t.id = tl.template_id
+        WHERE tl.video_url = (SELECT video_url FROM template_layers WHERE id = $1)
+          AND tl.id <> $1
+          AND t.published = true`,
+      [layerId]
+    );
+    return parseInt(r.rows[0]?.cnt ?? '0', 10);
+  }
+
   // ---------- Text fields ----------
 
   async listTextFields(templateId: string): Promise<TemplateTextField[]> {

@@ -209,6 +209,27 @@ export const updateLayer = async (req: AuthRequest, res: Response): Promise<void
 };
 
 export const deleteLayer = async (req: AuthRequest, res: Response): Promise<void> => {
+  // ADR-110 / ASSET-03 / pitfall P5 — guard against orphaning a WebM still
+  // referenced by another published layer. We block the delete with 409
+  // and surface usedByPublishedCount so the UI can prompt the admin.
+  try {
+    const { layerId } = req.params;
+    const usedByPublishedCount = await templateStudioRepository.countLayersSharingVideoUrl(layerId);
+    if (usedByPublishedCount > 0) {
+      record('layer', 'delete', 'conflict');
+      res.status(409).json({
+        error: 'asset_in_use',
+        message: `Ce fond est utilisé par ${usedByPublishedCount} autre(s) template(s) publié(s).`,
+        detail: { usedByPublishedCount },
+      });
+      return;
+    }
+  } catch (error) {
+    record('layer', 'delete', 'error');
+    logError('deleteLayer', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+    return;
+  }
   await handleDelete(req, res, 'deleteLayer', 'layer', 'Couche non trouvée', () =>
     templateStudioRepository.deleteLayer(req.params.layerId)
   );

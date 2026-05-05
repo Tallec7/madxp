@@ -5,6 +5,7 @@ import http from 'http';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { uploadAsset, getAssetUrl } from '../services/storage.service';
+import { thumbnailService } from '../services/thumbnail.service';
 import {
   remotionTemplatesRepository,
   remotionTemplateVersionsRepository,
@@ -311,6 +312,15 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
   try {
     const { id } = req.params;
     const { prop_key } = req.body as { prop_key?: string };
+    // ADR-110 / pitfall P10 — Template Studio v3 : when respect_alpha is
+    // required by the consuming layer, we MUST detect the alpha channel
+    // BEFORE uploading and reject yuv420p exports. Accepts both snake_case
+    // (form-data convention) and camelCase (JSON body convention).
+    const respectAlphaRaw =
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respect_alpha ??
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respectAlpha;
+    const respectAlpha =
+      respectAlphaRaw === true || respectAlphaRaw === 'true' || respectAlphaRaw === '1';
 
     if (!file || !filePath) {
       return res.status(400).json({ error: 'Fichier requis' });
@@ -320,6 +330,23 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
     if (!template) {
       cleanupFile(filePath);
       return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    // ADR-110 / P10 — extract metadata via ffprobe and reject alpha-required
+    // uploads with a non-alpha pix_fmt BEFORE shipping bytes to FTP.
+    const metadata = await thumbnailService.extractMetadata(filePath);
+    if (respectAlpha && metadata.hasAlpha === false) {
+      cleanupFile(filePath);
+      logger.warn('Template asset upload rejected — alpha required', {
+        templateId: id,
+        pixFmt: metadata.pixFmt,
+      });
+      return res.status(400).json({
+        error: 'asset_alpha_required',
+        message:
+          'Ce fond nécessite la transparence — ré-exportez en yuva420p (le fichier reçu n\'a pas de canal alpha).',
+        detail: { detectedPixFmt: metadata.pixFmt, hasAlpha: metadata.hasAlpha },
+      });
     }
 
     // ADR-075 V2 : les variants/layers passent sans prop_key — l'URL est
@@ -343,8 +370,22 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
       await remotionTemplatesRepository.updateDefaultProps(id, updatedDefaultProps);
     }
 
-    logger.info('Template asset uploaded', { templateId: id, prop_key: prop_key ?? '(studio-v2)', url: publicUrl });
-    res.json({ url: publicUrl, prop_key: prop_key ?? null });
+    logger.info('Template asset uploaded', {
+      templateId: id,
+      prop_key: prop_key ?? '(studio-v2)',
+      url: publicUrl,
+      pixFmt: metadata.pixFmt,
+      hasAlpha: metadata.hasAlpha,
+    });
+    res.json({
+      url: publicUrl,
+      prop_key: prop_key ?? null,
+      pixFmt: metadata.pixFmt,
+      hasAlpha: metadata.hasAlpha,
+      width: metadata.width,
+      height: metadata.height,
+      durationMs: Math.round(metadata.duration * 1000),
+    });
   } catch (error) {
     if (filePath) cleanupFile(filePath);
     logger.error('uploadTemplateAsset error', { error, id: req.params.id });

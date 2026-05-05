@@ -92,6 +92,9 @@ FROM node:20-slim AS runner
 WORKDIR /app
 
 # Install runtime dependencies (ffmpeg + canvas native libs + Chromium for Puppeteer)
+# NB: ffprobe ships with the ffmpeg apt package — used by thumbnail.service.ts
+# (ADR-110 / pitfall P10) for `pix_fmt` based alpha detection on Template
+# Studio v3 asset uploads. Do NOT remove ffmpeg from the runtime stage.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libjpeg62-turbo libgif7 librsvg2-2 libpixman-1-0 \
     chromium \
