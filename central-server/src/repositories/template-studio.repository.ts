@@ -1307,6 +1307,22 @@ class TemplateStudioRepository {
   }
 
   /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Toggle the `published` flag on
+   * `neopro_templates`. Single parameterized UPDATE — no transaction needed.
+   * Controllers MUST go through this method (CLAUDE.md NE JAMAIS FAIRE :
+   * "Importer ../config/database dans les controllers").
+   *
+   * The publish flow gate (validation registry refusal on error severity)
+   * is enforced upstream in the controller — this method is a thin sink.
+   */
+  async updatePublishedFlag(templateId: string, published: boolean): Promise<void> {
+    await query(
+      'UPDATE neopro_templates SET published = $2 WHERE id = $1',
+      [templateId, published],
+    );
+  }
+
+  /**
    * ADR-075 — Scaffold placeholders pour un template legacy.
    * Crée 1 variant + 1 text field + 1 image slot si absents, pour débloquer
    * le flip v1→v2. Idempotent : chaque ressource est créée uniquement si sa

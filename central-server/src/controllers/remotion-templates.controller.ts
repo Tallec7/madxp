@@ -16,6 +16,7 @@ import {
 } from '../repositories';
 import { templateStudioRepository } from '../repositories/template-studio.repository';
 import { metricsService } from '../services/metrics.service';
+import { runValidation } from '../services/template-validation';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 import { clubTemplateQuotaService } from '../services/club-template-quota.service';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
@@ -225,19 +226,70 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
 };
 
 /**
- * PATCH /api/remotion-templates/:id/publish
- * Publie ou dépublie un template (admin only)
+ * POST /api/remotion-templates/:id/publish
+ * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Publish gate.
+ *
+ * Runs the validation registry (Plan 03-02). If any rule has
+ * `severity === 'error'` AND `ok === false`, refuses with 409
+ * `{ error: 'validation_failed', failed_rules: [rule_id...] }`.
+ * Otherwise calls `templateStudioRepository.updatePublishedFlag(id, true)`
+ * and emits a Winston structured audit log.
+ *
+ * Repository pattern enforced — bare `query()` is forbidden in controllers
+ * (CLAUDE.md NE JAMAIS FAIRE), so the SQL UPDATE lives in the repo.
  */
 export const publishTemplate = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-    const { published } = req.body;
-    const template = await remotionTemplatesRepository.setPublished(id, Boolean(published));
-    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
-    res.json(template);
+    const results = await runValidation(id);
+    const errors = results.filter((r) => r.severity === 'error' && !r.ok);
+    if (errors.length > 0) {
+      logger.info('Template publish refused', {
+        templateId: id,
+        failed_rules: errors.map((e) => e.rule_id),
+      });
+      return res.status(409).json({
+        error: 'validation_failed',
+        failed_rules: errors.map((e) => e.rule_id),
+      });
+    }
+    await templateStudioRepository.updatePublishedFlag(id, true);
+    logger.info('template.published', {
+      action: 'template.published',
+      actor_id: req.user?.id ?? null,
+      template_id: id,
+      timestamp: new Date().toISOString(),
+    });
+    res.status(200).json({ id, published: true });
   } catch (error) {
-    logger.error('publishTemplate error', { error, id: req.params.id });
-    res.status(500).json({ error: 'Erreur serveur' });
+    if (error instanceof Error && error.message === 'template_not_found') {
+      return res.status(404).json({ error: 'template_not_found' });
+    }
+    logger.error('publishTemplate error', { error, templateId: id });
+    res.status(500).json({ error: 'internal_error' });
+  }
+};
+
+/**
+ * POST /api/remotion-templates/:id/unpublish
+ * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Unpublish (super_admin only).
+ * No validation gate — admin can always retract a template.
+ * Emits a Winston structured audit log.
+ */
+export const unpublishTemplate = async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    await templateStudioRepository.updatePublishedFlag(id, false);
+    logger.info('template.unpublished', {
+      action: 'template.unpublished',
+      actor_id: req.user?.id ?? null,
+      template_id: id,
+      timestamp: new Date().toISOString(),
+    });
+    res.status(200).json({ id, published: false });
+  } catch (error) {
+    logger.error('unpublishTemplate error', { error, templateId: id });
+    res.status(500).json({ error: 'internal_error' });
   }
 };
 

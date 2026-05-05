@@ -34,8 +34,8 @@ const repoFile = path.join(
 describe('Template Studio v3 — publish gate + unpublish + audit (Phase 3 PUB-01)', () => {
   it('A: routes /:id/publish + /:id/unpublish registered with requireSuperAdmin', () => {
     const routes = fs.readFileSync(routeFile, 'utf8');
-    expect(routes).toMatch(/router\.post\(['"]\/:id\/publish['"]/);
-    expect(routes).toMatch(/router\.post\(['"]\/:id\/unpublish['"]/);
+    expect(routes).toMatch(/router\.post\(\s*['"]\/:id\/publish['"]/);
+    expect(routes).toMatch(/router\.post\(\s*['"]\/:id\/unpublish['"]/);
     expect(routes).toMatch(/requireSuperAdmin/);
   });
 

@@ -171,6 +171,29 @@ export class RemotionTemplatesDataService {
   }
 
   /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Publish gate.
+   * POST /api/remotion-templates/:id/publish — server runs validation registry,
+   * 409 if any rule with severity=error fails. 200 otherwise.
+   */
+  publishTemplate(id: string): Observable<{ id: string; published: true }> {
+    return this.api.post<{ id: string; published: true }>(
+      `/remotion-templates/${id}/publish`,
+      {},
+    );
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Unpublish.
+   * POST /api/remotion-templates/:id/unpublish — super_admin only, no gate.
+   */
+  unpublishTemplate(id: string): Observable<{ id: string; published: false }> {
+    return this.api.post<{ id: string; published: false }>(
+      `/remotion-templates/${id}/unpublish`,
+      {},
+    );
+  }
+
+  /**
    * ADR-075 — Toggle schema_version 1 ↔ 2 (super_admin UI).
    * 409 si schema_version=2 demandé sans shadow data (variants/text_fields/image_slots).
    */

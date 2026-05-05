@@ -452,17 +452,24 @@ export class StudioV3WizardComponent implements OnInit {
     this.previewService.setMode(mode);
   }
 
-  /** Step 5 "Publier ce template" → flip published flag, then exit. */
+  /**
+   * Step 5 "Publier ce template" — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+   *
+   * Calls the new gated endpoint POST /:id/publish (server runs the
+   * validation registry, 409 if any error rule fails). On success, exits
+   * the wizard. On 409, re-fetches validation so the checklist can show
+   * the freshly-failed rules; on any other failure, re-fetches as well.
+   */
   onPublish(): void {
     const id = this.state().templateId;
     if (!id) return;
-    this.dataService.togglePublish(id, true).subscribe({
+    this.dataService.publishTemplate(id).subscribe({
       next: () => {
         this.router.navigate(['/content/templates-remotion']);
       },
       error: () => {
-        // Soft failure — re-fetch validation in case server-side rules
-        // have shifted since last fetch.
+        // Soft failure (409 validation_failed or other) — re-fetch the
+        // validation list so the checklist shows the up-to-date red rules.
         this.fetchValidation(id);
       },
     });

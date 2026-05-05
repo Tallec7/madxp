@@ -66,9 +66,31 @@ export const ERROR_MESSAGES = {
   // Plan 03-04 / PUB-02 — async test render failure toast.
   test_render_failed:
     'Le rendu de test a échoué — vérifiez vos fonds animés et fonts.',
+  // Plan 03-05 / PUB-01 — publish/unpublish toasts + refused publish toast.
+  template_published: 'Template publié.',
+  template_unpublished: 'Template dépublié.',
+  validation_failed: 'Publication refusée — corrigez les critères en rouge.',
 } as const;
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES;
+
+/**
+ * Plan 03-05 / PUB-01 — FR copy for the unpublish confirmation modal.
+ *
+ * Separate from `ERROR_MESSAGES` — modals are not errors, and the keys
+ * must be distinguishable for the smoke banlist. The CTAs avoid the
+ * blocklisted "Annuler" verb (Phase 1 i18n decision).
+ *
+ * Bound by `template-card.component` and consumed via the shared
+ * `ConfirmDialogService`.
+ */
+export const MODAL_MESSAGES = {
+  unpublish_confirm_title: 'Dépublier ce template ?',
+  unpublish_confirm_body:
+    'Il ne sera plus disponible pour les nouveaux clubs.',
+  unpublish_confirm_cta: 'Confirmer',
+  unpublish_cancel_cta: 'Abandonner',
+} as const;
 
 /**
  * Plan 03-04 / PUB-01 — FR labels for the 8 backend validation rules

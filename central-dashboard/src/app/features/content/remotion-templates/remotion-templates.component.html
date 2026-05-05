@@ -72,11 +72,13 @@
     [templates]="filteredTemplates"
     [selectedId]="selectedTemplate?.id ?? null"
     [isAdmin]="isAdmin"
+    [currentUserRole]="currentUserRole"
     [loading]="loading"
     [duplicatingId]="duplicatingCardId()"
     (cardSelect)="selectTemplate($event)"
     (publishToggle)="togglePublish($event)"
     (duplicateRequested)="onDuplicateFromCard($event)"
+    (unpublishRequested)="onUnpublishRequested($event)"
   ></app-template-grid>
 
   <div class="render-panel" *ngIf="selectedTemplate">

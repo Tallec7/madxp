@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { RemotionTemplate } from './remotion-templates.types';
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
+import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
 
 /**
  * Carte d'un template dans la grille de sélection.
@@ -42,7 +44,25 @@ import type { RemotionTemplate } from './remotion-templates.types';
       </div>
 
       <div class="tpl-admin-actions" *ngIf="isAdmin">
+        <!--
+          ADR-110 / Phase 03 / Plan 05 / PUB-01 — when the template is
+          already published AND the user is super_admin, the publish
+          button becomes a guarded "Dépublier" entry that opens the
+          shared ConfirmDialogService modal (FR copy from MODAL_MESSAGES).
+          Native browser confirm dialogs are forbidden — Phase 1 i18n decision.
+        -->
         <button
+          *ngIf="template.published && currentUserRole === 'super_admin'"
+          type="button"
+          class="btn-publish active tc__unpublish"
+          [attr.aria-label]="'Dépublier ' + template.name"
+          (click)="onUnpublishClick($event)"
+          data-testid="card-unpublish-btn"
+        >
+          Dépublier
+        </button>
+        <button
+          *ngIf="!(template.published && currentUserRole === 'super_admin')"
           type="button"
           class="btn-publish"
           [class.active]="template.published"
@@ -129,10 +149,20 @@ export class TemplateCardComponent {
   @Input() selected = false;
   @Input() isAdmin = false;
   @Input() duplicating = false;
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — only super_admin sees the
+   * "Dépublier" CTA on a published template. Other admin roles still see
+   * the legacy publish toggle.
+   */
+  @Input() currentUserRole: string | null = null;
 
   @Output() cardSelect = new EventEmitter<RemotionTemplate>();
   @Output() publishToggle = new EventEmitter<RemotionTemplate>();
   @Output() duplicateRequested = new EventEmitter<RemotionTemplate>();
+  @Output() unpublishRequested = new EventEmitter<RemotionTemplate>();
+
+  private confirmDialog = inject(ConfirmDialogService);
+  protected readonly MODAL_MESSAGES = MODAL_MESSAGES;
 
   onSelect(): void {
     this.cardSelect.emit(this.template);
@@ -141,6 +171,25 @@ export class TemplateCardComponent {
   onTogglePublish(event: Event): void {
     event.stopPropagation();
     this.publishToggle.emit(this.template);
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — guarded unpublish click.
+   *
+   * Opens the shared ConfirmDialog (NO native browser confirm — Phase 1 ban) with
+   * FR copy bound to MODAL_MESSAGES. On confirm, emits unpublishRequested
+   * — the parent list calls dataService.unpublishTemplate() and reloads.
+   */
+  async onUnpublishClick(event: Event): Promise<void> {
+    event.stopPropagation();
+    const confirmed = await this.confirmDialog.confirm(MODAL_MESSAGES.unpublish_confirm_body, {
+      title: MODAL_MESSAGES.unpublish_confirm_title,
+      confirmLabel: MODAL_MESSAGES.unpublish_confirm_cta,
+      cancelLabel: MODAL_MESSAGES.unpublish_cancel_cta,
+      confirmStyle: 'danger',
+    });
+    if (!confirmed) return;
+    this.unpublishRequested.emit(this.template);
   }
 
   onDuplicate(event: Event): void {

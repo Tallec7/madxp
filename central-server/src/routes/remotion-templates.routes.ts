@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireSuperAdmin } from '../middleware/auth';
 import {
   adminRateLimit,
   sensitiveRateLimit,
@@ -113,14 +113,27 @@ router.post(
   ctrl.restoreTemplateVersion,
 );
 
-// Publication / dépublication — admin uniquement
-router.patch(
+// Publication — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+// POST + super_admin only + validation gate enforced server-side via the
+// validation registry (Plan 03-02). 409 if any rule severity=error fails.
+router.post(
   '/:id/publish',
   authenticate,
-  requireRole('admin', 'super_admin'),
+  requireSuperAdmin(),
   validateParams(paramSchemas.id),
   sensitiveRateLimit,
   ctrl.publishTemplate,
+);
+
+// Dépublication — ADR-110 / Phase 03 / Plan 05 / PUB-01.
+// No validation gate, super_admin can always retract. Audit via Winston.
+router.post(
+  '/:id/unpublish',
+  authenticate,
+  requireSuperAdmin(),
+  validateParams(paramSchemas.id),
+  sensitiveRateLimit,
+  ctrl.unpublishTemplate,
 );
 
 // ADR-075 — toggle schema_version 1 ↔ 2 (super_admin uniquement)
