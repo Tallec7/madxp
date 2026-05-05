@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Ready for Plan 04 (visible_if click-to-highlight + transactional renameOptionKey)
-stopped_at: Completed 02-ux-interactive-04-PLAN.md
-last_updated: '2026-05-05T19:31:24.706Z'
-last_activity: 2026-05-05 — Phase 2 Plan 03 livré (AnimationCard + AnimationPicker, 5 cards visuelles, hover preview, banlist scaleFrom/scaleTo/durationMs)
+status: Phase 3 Plan 01 done — Ready for Plan 02 (test render render-queue extension + endpoints)
+stopped_at: Completed 03-gate-publication-01-PLAN.md
+last_updated: '2026-05-05T20:30:00.000Z'
+last_activity: 2026-05-05 — Phase 3 Plan 01 livré (migration test_render_* + CRON cleanup hebdo + métrique Prometheus + Grafana panel)
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 57
+  total_plans: 14
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 2 of 3 (UX interactive) — IN PROGRESS
-Plan: 03 of 4 — DONE
-Status: Ready for Plan 04 (visible_if click-to-highlight + transactional renameOptionKey)
-Last activity: 2026-05-05 — Phase 2 Plan 03 livré (AnimationCard + AnimationPicker, 5 cards visuelles, hover preview, banlist scaleFrom/scaleTo/durationMs)
+Phase: 3 of 3 (Gate publication) — IN PROGRESS
+Plan: 01 of 5 — DONE
+Status: Phase 3 Plan 01 done — Ready for Plan 02 (test render render-queue extension + endpoints)
+Last activity: 2026-05-05 — Phase 3 Plan 01 livré (migration test*render*\* + CRON cleanup hebdo + métrique Prometheus + Grafana panel)
 
-Progress: [█████░░░░░] 57% (8/14 plans total — Phase 1 5/5 + Phase 2 3/4)
+Progress: [███████░░░] 71% (10/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 1/5)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [█████░░░░░] 57% (8/14 plans total — Phase 1 5/5
 | 01    | 04   | ~40 min  | 2     | 9     | 2026-05-05 |
 | 01    | 05   | ~25 min  | 2     | 8     | 2026-05-05 |
 | 02    | 01   | ~10 min  | 2     | 2     | 2026-05-05 |
+| 03    | 01   | ~25 min  | 2     | 8     | 2026-05-05 |
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - Phase 2 Plan 01 : Banlist directory-wide via `listFilesRecursive` + regex `(['"])${banned}\\1` (quoted bare word only — accepte templateLayer/slotKey/etc comme identifiers). Exclut vocabulary.constants.ts (couvert par Test 3 stricter).
 - Phase 2 Plan 01 : Convention placeholder `{N}` interpolé côté caller via `.replace('{N}', String(value))` — pas de dépendance ICU plural lib.
 - Phase 2 Plan 01 : 0 deviation — plan exécuté tel quel, RED → GREEN propre, smoke 5/5 + smart 180/180 + ng build clean.
+- Phase 3 Plan 01 : Migration cible `neopro_templates` (table reelle), pas `templates` (PLAN.md utilisait nom abrege). Smoke regex agnostique, GREEN sans modif.
+- Phase 3 Plan 01 : CRON handler scanne `/test-renders/` a plat (root) ; recursion (per-templateId subdirs) ajoutee Plan 02 quand upload sera implemente.
+- Phase 3 Plan 01 deviation Rule 2 : Grafana panel ajoute (neopro-blind-spots-cloud.json id 308) — auto-fix de smoke-metrics-observability bloquant.
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T19:25:25.824Z
-Stopped at: Completed 02-ux-interactive-04-PLAN.md
+Last session: 2026-05-05T20:30:00.000Z
+Stopped at: Completed 03-gate-publication-01-PLAN.md
 Resume file: None

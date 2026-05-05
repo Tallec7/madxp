@@ -40,7 +40,7 @@
 ### Gate de publication (PUB)
 
 - [ ] **PUB-01**: Le bouton "Publier" reste désactivé tant que les 8 critères de la checklist automatique ne sont pas tous verts (≥1 fond, fonts connues, zones en safe-zone, `visible_if` cohérents avec les options, `packshot_refs` pointant vers templates publiés)
-- [ ] **PUB-02**: Super_admin peut lancer un rendu de test avec données factices avant de publier ; le résultat s'affiche dans le Player intégré
+- [x] **PUB-02**: Super_admin peut lancer un rendu de test avec données factices avant de publier ; le résultat s'affiche dans le Player intégré
 
 ### Smoke tests (TEST)
 
@@ -104,7 +104,7 @@
 | UX-02       | Phase 2 (B) | Complete       |
 | UX-03       | Phase 2 (B) | Complete       |
 | PUB-01      | Phase 3 (C) | Pending        |
-| PUB-02      | Phase 3 (C) | Pending        |
+| PUB-02      | Phase 3 (C) | Complete       |
 | TEST-01     | Phase 1 (A) | Done (plan 01) |
 | TEST-02     | Phase 1 (A) | Done (plan 01) |
 | TEST-03     | Phase 3 (C) | Pending        |
