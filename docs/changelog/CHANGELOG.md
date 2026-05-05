@@ -1,3 +1,9 @@
+# [3.288.0](https://github.com/Tallec7/neopro/compare/v3.287.1...v3.288.0) (2026-05-05)
+
+### Features
+
+- **alerts:** dedup au niveau alertRepository (upsert + occurrences) — ADR-111 ([#841](https://github.com/Tallec7/neopro/issues/841)) ([bfbc33b](https://github.com/Tallec7/neopro/commit/bfbc33bb7d3cddcc3daa4b5a04d643fbdc65ab1c))
+
 ## [3.287.1](https://github.com/Tallec7/neopro/compare/v3.287.0...v3.287.1) (2026-05-05)
 
 ### Bug Fixes
