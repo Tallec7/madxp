@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Template Studio v3 — Maquette UX admin</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --surface: #14171f;
+    --surface-2: #1c2030;
+    --border: #2a2f3e;
+    --text: #e7eaf0;
+    --muted: #8a92a6;
+    --accent: #5b8cff;
+    --accent-soft: rgba(91,140,255,.12);
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --err: #f87171;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,'SF Pro Text','Inter',system-ui,sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+  button { font-family:inherit; cursor:pointer; }
+
+  /* Layout principal */
+  .app { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; }
+  .logo { font-weight:700; font-size:16px; margin-bottom:32px; display:flex; align-items:center; gap:8px; }
+  .logo-dot { width:10px; height:10px; background:var(--accent); border-radius:3px; }
+  .nav-group { font-size:11px; text-transform:uppercase; color:var(--muted); margin:24px 0 8px; letter-spacing:.5px; }
+  .nav-item { padding:8px 10px; border-radius:6px; cursor:pointer; color:var(--muted); display:flex; align-items:center; gap:8px; }
+  .nav-item:hover { background:var(--surface-2); color:var(--text); }
+  .nav-item.active { background:var(--accent-soft); color:var(--accent); }
+
+  .main { padding:32px 40px; max-width:1400px; }
+  .breadcrumb { color:var(--muted); font-size:13px; margin-bottom:8px; }
+  .breadcrumb a { color:var(--accent); text-decoration:none; cursor:pointer; }
+  h1 { font-size:24px; margin:0 0 4px; font-weight:600; }
+  .subtitle { color:var(--muted); margin-bottom:32px; }
+
+  /* Boutons */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:6px; font-size:13px; font-weight:500; border:1px solid var(--border); background:var(--surface-2); color:var(--text); transition:all .15s; }
+  .btn:hover { border-color:var(--accent); }
+  .btn-primary { background:var(--accent); border-color:var(--accent); color:white; }
+  .btn-primary:hover { background:#4a7cf0; }
+  .btn-ghost { background:transparent; border-color:transparent; color:var(--muted); }
+  .btn-ghost:hover { color:var(--text); background:var(--surface-2); }
+
+  /* Vue 1 — Liste templates */
+  .toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+  .filters { display:flex; gap:8px; }
+  .chip { padding:6px 12px; border-radius:14px; background:var(--surface-2); font-size:12px; color:var(--muted); cursor:pointer; }
+  .chip.active { background:var(--accent-soft); color:var(--accent); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; transition:all .15s; cursor:pointer; }
+  .card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .thumb { aspect-ratio:16/9; background:linear-gradient(135deg,#1f2937,#0f172a); display:flex; align-items:center; justify-content:center; font-size:32px; position:relative; }
+  .thumb.green { background:linear-gradient(135deg,#065f46,#022c22); }
+  .thumb.yellow { background:linear-gradient(135deg,#78350f,#451a03); }
+  .thumb.blue { background:linear-gradient(135deg,#1e3a8a,#172554); }
+  .thumb.red { background:linear-gradient(135deg,#7f1d1d,#450a0a); }
+  .thumb-badge { position:absolute; top:10px; right:10px; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:600; }
+  .badge-pub { background:rgba(74,222,128,.2); color:var(--ok); }
+  .badge-draft { background:rgba(251,191,36,.2); color:var(--warn); }
+  .card-body { padding:14px 16px; }
+  .card-title { font-weight:600; font-size:14px; margin-bottom:4px; }
+  .card-meta { color:var(--muted); font-size:12px; }
+  .card-actions { padding:0 16px 14px; display:flex; gap:6px; }
+
+  /* Card "ajouter" */
+  .card-new { display:flex; align-items:center; justify-content:center; aspect-ratio:16/9.7; border:2px dashed var(--border); border-radius:var(--radius); color:var(--muted); cursor:pointer; transition:all .15s; }
+  .card-new:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+
+  /* Vue 2 — Wizard */
+  .wizard { display:grid; grid-template-columns:280px 1fr; gap:32px; align-items:start; }
+  .stepper { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; position:sticky; top:32px; }
+  .step { display:flex; gap:12px; padding:12px 0; position:relative; }
+  .step:not(:last-child)::after { content:''; position:absolute; left:13px; top:38px; bottom:-6px; width:2px; background:var(--border); }
+  .step.done::after, .step.active::after { background:var(--accent); }
+  .step-num { width:28px; height:28px; border-radius:50%; background:var(--surface-2); border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; z-index:1; }
+  .step.active .step-num { border-color:var(--accent); color:var(--accent); }
+  .step.done .step-num { background:var(--accent); border-color:var(--accent); color:white; }
+  .step-content h4 { margin:2px 0 2px; font-size:13px; font-weight:600; }
+  .step-content p { margin:0; color:var(--muted); font-size:12px; }
+
+  .wizard-pane { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:32px; }
+  .wizard-pane h2 { margin:0 0 4px; font-size:20px; }
+  .wizard-pane .lead { color:var(--muted); margin-bottom:24px; font-size:13px; }
+
+  /* Form */
+  .form-row { margin-bottom:20px; }
+  label { display:block; font-size:13px; margin-bottom:6px; font-weight:500; }
+  .help { color:var(--muted); font-size:12px; margin-top:4px; }
+  input[type=text], input[type=number], select, textarea { width:100%; padding:9px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:inherit; font-size:13px; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); }
+
+  .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  /* Wizard step 2 — Calques visuels */
+  .layers-stack { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .layer-card { display:flex; gap:14px; padding:12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; align-items:center; }
+  .layer-thumb { width:120px; aspect-ratio:16/9; border-radius:4px; background:#000; position:relative; overflow:hidden; flex-shrink:0; }
+  .layer-thumb video { width:100%; height:100%; object-fit:cover; }
+  .layer-info { flex:1; }
+  .layer-info .layer-name { font-weight:600; font-size:13px; }
+  .layer-info .layer-meta { color:var(--muted); font-size:12px; }
+  .layer-actions { display:flex; gap:4px; }
+  .icon-btn { width:30px; height:30px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--muted); display:inline-flex; align-items:center; justify-content:center; }
+  .icon-btn:hover { color:var(--accent); border-color:var(--accent); }
+  .add-layer { padding:14px; border:2px dashed var(--border); border-radius:8px; text-align:center; color:var(--muted); cursor:pointer; }
+  .add-layer:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Wizard step 3 — Éditeur live (split) */
+  .split { display:grid; grid-template-columns:380px 1fr; gap:24px; align-items:start; }
+  .editor { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:18px; max-height:560px; overflow-y:auto; }
+  .editor h3 { margin:0 0 14px; font-size:14px; }
+  .zone-item { padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:6px; margin-bottom:10px; }
+  .zone-item.selected { border-color:var(--accent); background:rgba(91,140,255,.04); }
+  .zone-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .zone-name { font-weight:600; font-size:13px; }
+  .zone-type { font-size:11px; color:var(--muted); padding:2px 6px; background:var(--surface-2); border-radius:3px; }
+
+  .preview-pane { position:sticky; top:32px; }
+  .preview-frame { aspect-ratio:16/9; background:#000; border-radius:8px; position:relative; overflow:hidden; border:1px solid var(--border); }
+  .preview-bg { position:absolute; inset:0; background:linear-gradient(135deg,#065f46,#022c22); }
+  .preview-bg::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 30% 50%, rgba(255,255,255,.08), transparent 60%); }
+  .preview-zone { position:absolute; border:1px dashed rgba(91,140,255,.5); background:rgba(91,140,255,.08); display:flex; align-items:center; justify-content:center; font-size:11px; color:rgba(255,255,255,.6); pointer-events:none; }
+  .preview-zone.selected { border-color:var(--accent); border-style:solid; background:rgba(91,140,255,.18); }
+  .preview-zone-handle { position:absolute; width:8px; height:8px; background:var(--accent); border:1px solid white; }
+  .preview-zone-handle.tl { top:-5px; left:-5px; }
+  .preview-zone-handle.tr { top:-5px; right:-5px; }
+  .preview-zone-handle.bl { bottom:-5px; left:-5px; }
+  .preview-zone-handle.br { bottom:-5px; right:-5px; }
+
+  .timeline { margin-top:14px; padding:12px; background:var(--surface); border-radius:8px; border:1px solid var(--border); }
+  .timeline-bar { height:32px; background:var(--surface-2); border-radius:4px; position:relative; overflow:hidden; }
+  .timeline-segment { position:absolute; height:100%; display:flex; align-items:center; justify-content:center; font-size:10px; color:white; }
+  .timeline-controls { display:flex; align-items:center; gap:12px; margin-top:10px; font-size:12px; color:var(--muted); }
+  .play-btn { width:28px; height:28px; border-radius:50%; background:var(--accent); border:none; color:white; display:inline-flex; align-items:center; justify-content:center; }
+
+  /* Étape 4 — Options user */
+  .option-builder { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:18px; margin-bottom:14px; }
+  .option-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .option-values { display:flex; gap:8px; flex-wrap:wrap; }
+  .option-pill { padding:6px 12px; background:var(--surface); border:1px solid var(--border); border-radius:14px; font-size:12px; }
+  .option-pill .x { margin-left:6px; opacity:.5; cursor:pointer; }
+  .option-impact { margin-top:14px; padding:12px; background:var(--accent-soft); border-radius:6px; font-size:12px; color:var(--accent); border-left:3px solid var(--accent); }
+
+  /* Footer wizard */
+  .wizard-footer { display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+
+  /* Modal asset manager */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:100; padding:40px; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); width:100%; max-width:900px; max-height:80vh; overflow:hidden; display:flex; flex-direction:column; }
+  .modal-head { padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .modal-body { padding:24px; overflow-y:auto; }
+  .asset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+  .asset-card { background:var(--surface-2); border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer; transition:all .15s; }
+  .asset-card:hover { border-color:var(--accent); }
+  .asset-thumb { aspect-ratio:16/9; background:#000; display:flex; align-items:center; justify-content:center; font-size:24px; }
+  .asset-info { padding:8px 12px; }
+  .asset-name { font-size:12px; font-weight:600; }
+  .asset-meta { font-size:11px; color:var(--muted); }
+  .asset-flag { display:inline-block; padding:1px 6px; font-size:10px; background:rgba(74,222,128,.15); color:var(--ok); border-radius:3px; margin-top:4px; }
+
+  /* Vues toggle */
+  .view { display:none; }
+  .view.active { display:block; }
+
+  /* Boîte d'aide contextuelle */
+  .hint { margin-top:14px; padding:12px 14px; background:rgba(91,140,255,.06); border-left:3px solid var(--accent); border-radius:0 6px 6px 0; font-size:12px; color:var(--muted); }
+  .hint strong { color:var(--text); }
+
+  /* Tabs préset animation */
+  .preset-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:8px; }
+  .preset-card { padding:12px; background:var(--surface-2); border:1px solid var(--border); border-radius:6px; text-align:center; cursor:pointer; font-size:12px; }
+  .preset-card.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+  .preset-emoji { font-size:20px; display:block; margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><span class="logo-dot"></span> Neopro Admin</div>
+    <div class="nav-group">Contenu</div>
+    <div class="nav-item">📁 Bibliothèque vidéos</div>
+    <div class="nav-item">🎯 Sponsors</div>
+    <div class="nav-item active">🎬 Templates vidéo</div>
+    <div class="nav-item">🎨 Fonds animés</div>
+    <div class="nav-group">Flotte</div>
+    <div class="nav-item">📺 Écrans clubs</div>
+    <div class="nav-item">📊 Analytics</div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ VUE 1 — Liste ============ -->
+    <section id="v-list" class="view active">
+      <div class="breadcrumb">Templates vidéo</div>
+      <h1>Mes templates</h1>
+      <p class="subtitle">7 templates publiés. Validez vos masters ici, les clubs les utilisent ensuite en autonomie.</p>
+
+      <div class="toolbar">
+        <div class="filters">
+          <span class="chip active">Tous (7)</span>
+          <span class="chip">Publiés (6)</span>
+          <span class="chip">Brouillons (1)</span>
+          <span class="chip">Joueur (4)</span>
+        </div>
+        <button class="btn btn-primary" onclick="showView('v-wizard')">＋ Nouveau template</button>
+      </div>
+
+      <div class="grid">
+        <!-- Cards -->
+        <div class="card" onclick="showView('v-editor')">
+          <div class="thumb green">
+            <span>👤</span>
+            <span class="thumb-badge badge-pub">Publié</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Joueur Simple — Générique</div>
+            <div class="card-meta">2 fonds animés · 4 zones · 2 options · 5,9 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="thumb yellow">
+            <span>🌟</span>
+            <span class="thumb-badge badge-pub">Publié</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Joueur Simple — Image</div>
+            <div class="card-meta">2 fonds animés · 5 zones · 2 options · 5,9 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="thumb blue">
+            <span>⚽</span>
+            <span class="thumb-badge badge-pub">Publié</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Joueur But — Générique</div>
+            <div class="card-meta">4 fonds animés · 5 zones · 2 options · 8,2 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="thumb red">
+            <span>🏀</span>
+            <span class="thumb-badge badge-pub">Publié</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Joueur But — Image</div>
+            <div class="card-meta">4 fonds animés · 6 zones · 2 options · 8,2 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="thumb green">
+            <span>📦</span>
+            <span class="thumb-badge badge-pub">Publié</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Packshot Générique</div>
+            <div class="card-meta">1 fond animé · 3 zones · 0 option · 3,2 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="thumb yellow">
+            <span>📷</span>
+            <span class="thumb-badge badge-draft">Brouillon</span>
+          </div>
+          <div class="card-body">
+            <div class="card-title">Packshot Image</div>
+            <div class="card-meta">1 fond animé · 4 zones · 0 option · 3,2 s</div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost">Modifier</button>
+            <button class="btn btn-ghost">Dupliquer</button>
+            <button class="btn btn-ghost">Aperçu</button>
+          </div>
+        </div>
+
+        <div class="card-new" onclick="showView('v-wizard')">
+          <div style="text-align:center">
+            <div style="font-size:32px; margin-bottom:6px">＋</div>
+            Créer un template
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VUE 2 — Wizard nouveau template ============ -->
+    <section id="v-wizard" class="view">
+      <div class="breadcrumb"><a onclick="showView('v-list')">Templates</a> › Nouveau</div>
+      <h1>Créer un nouveau template</h1>
+      <p class="subtitle">4 étapes. Une fois publié, vos clubs pourront générer des vidéos en autonomie.</p>
+
+      <div class="wizard">
+        <div class="stepper">
+          <div class="step done">
+            <div class="step-num">✓</div>
+            <div class="step-content"><h4>Identité</h4><p>Nom, durée, format</p></div>
+          </div>
+          <div class="step active">
+            <div class="step-num">2</div>
+            <div class="step-content"><h4>Fonds animés</h4><p>Empilez vos calques vidéo</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content"><h4>Zones modifiables</h4><p>Textes & images des clubs</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-content"><h4>Options club</h4><p>Choix au démarrage</p></div>
+          </div>
+        </div>
+
+        <div class="wizard-pane">
+          <h2>Étape 2 — Fonds animés</h2>
+          <p class="lead">Choisissez les vidéos de fond qui composent ce template. Chaque fond se joue par-dessus le précédent. Les clubs ne pourront pas les modifier.</p>
+
+          <div class="layers-stack">
+            <div class="layer-card">
+              <div class="layer-thumb" style="background:linear-gradient(135deg,#065f46,#022c22)">
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px">⬢</div>
+              </div>
+              <div class="layer-info">
+                <div class="layer-name">Bloc A — Hexagone d'intro</div>
+                <div class="layer-meta">JOUEUR_simple_A.webm · 5,9 s · de 0,0 s à 5,9 s · ✅ transparence</div>
+              </div>
+              <div class="layer-actions">
+                <button class="icon-btn" title="Monter">↑</button>
+                <button class="icon-btn" title="Descendre">↓</button>
+                <button class="icon-btn" title="Remplacer">↻</button>
+                <button class="icon-btn" title="Supprimer">×</button>
+              </div>
+            </div>
+
+            <div class="layer-card">
+              <div class="layer-thumb" style="background:linear-gradient(135deg,#1e3a8a,#172554)">
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:24px">↗</div>
+              </div>
+              <div class="layer-info">
+                <div class="layer-name">Bloc B — Transition révélation</div>
+                <div class="layer-meta">JOUEUR_simple_B.webm · 5,9 s · de 0,0 s à 5,9 s · ✅ transparence</div>
+              </div>
+              <div class="layer-actions">
+                <button class="icon-btn">↑</button>
+                <button class="icon-btn">↓</button>
+                <button class="icon-btn">↻</button>
+                <button class="icon-btn">×</button>
+              </div>
+            </div>
+
+            <div class="add-layer" onclick="document.getElementById('asset-modal').classList.add('show')">
+              ＋ Ajouter un fond animé
+            </div>
+          </div>
+
+          <div class="hint">
+            <strong>💡 À savoir.</strong> Les fonds animés sont des fichiers <code>.webm</code> avec transparence, fournis par votre designer. Vous les uploadez une fois, ils deviennent réutilisables sur tous vos templates depuis la page <a style="color:var(--accent); cursor:pointer">Fonds animés</a>.
+          </div>
+
+          <div class="wizard-footer">
+            <button class="btn">← Retour</button>
+            <div style="display:flex; gap:8px">
+              <button class="btn btn-ghost">Enregistrer le brouillon</button>
+              <button class="btn btn-primary" onclick="showView('v-editor')">Suivant : zones modifiables →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VUE 3 — Éditeur live (étape 3 wizard) ============ -->
+    <section id="v-editor" class="view">
+      <div class="breadcrumb"><a onclick="showView('v-list')">Templates</a> › <a onclick="showView('v-wizard')">Nouveau</a> › Zones modifiables</div>
+      <h1>Définissez les zones que les clubs pourront remplir</h1>
+      <p class="subtitle">Cliquez et déplacez sur l'aperçu. Les positions se règlent visuellement, pas en chiffres.</p>
+
+      <div class="split">
+        <div class="editor">
+          <h3>Zones du template</h3>
+
+          <div class="zone-item selected">
+            <div class="zone-head">
+              <span class="zone-name">Prénom et nom du joueur</span>
+              <span class="zone-type">Texte</span>
+            </div>
+            <div class="form-row" style="margin-bottom:10px">
+              <label>Police</label>
+              <select>
+                <option>Bulevar (Bold)</option>
+                <option>General Sans</option>
+                <option>Anton</option>
+              </select>
+            </div>
+            <div class="row-2" style="margin-bottom:10px">
+              <div>
+                <label>Taille</label>
+                <input type="text" value="389 px" />
+              </div>
+              <div>
+                <label>Couleur</label>
+                <input type="text" value="#FFFFFF" />
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom:10px">
+              <label>Limite de caractères <span style="color:var(--muted); font-weight:normal">(par ligne)</span></label>
+              <input type="number" value="14" />
+              <div class="help">Au-delà, le club voit un avertissement.</div>
+            </div>
+            <div class="form-row">
+              <label>Quand cette zone apparaît-elle ?</label>
+              <select>
+                <option>Toujours visible</option>
+                <option>Seulement avec : Packshot = Générique</option>
+                <option>Seulement avec : Packshot = Image</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="zone-item">
+            <div class="zone-head">
+              <span class="zone-name">Nom du club (haut)</span>
+              <span class="zone-type">Texte</span>
+            </div>
+          </div>
+
+          <div class="zone-item">
+            <div class="zone-head">
+              <span class="zone-name">Nom du club (bas)</span>
+              <span class="zone-type">Texte</span>
+            </div>
+          </div>
+
+          <div class="zone-item">
+            <div class="zone-head">
+              <span class="zone-name">Logo du club (intro)</span>
+              <span class="zone-type">Image</span>
+            </div>
+            <div class="help" style="padding-top:8px">N'apparaît que si Intro = Logo</div>
+          </div>
+
+          <div class="zone-item">
+            <div class="zone-head">
+              <span class="zone-name">Numéro joueur (intro)</span>
+              <span class="zone-type">Texte</span>
+            </div>
+            <div class="help" style="padding-top:8px">N'apparaît que si Intro = Numéro</div>
+          </div>
+
+          <div class="zone-item">
+            <div class="zone-head">
+              <span class="zone-name">Photo joueur</span>
+              <span class="zone-type">Image</span>
+            </div>
+            <div class="help" style="padding-top:8px">N'apparaît que si Packshot = Image</div>
+          </div>
+
+          <button class="btn" style="width:100%; margin-top:8px">＋ Ajouter une zone</button>
+
+          <div class="hint" style="margin-top:14px">
+            <strong>Animation de la zone sélectionnée.</strong> Choisissez l'effet d'apparition.
+            <div class="preset-grid" style="margin-top:10px">
+              <div class="preset-card active"><span class="preset-emoji">🔍</span>Zoom out reverse</div>
+              <div class="preset-card"><span class="preset-emoji">↗</span>Glissement</div>
+              <div class="preset-card"><span class="preset-emoji">✨</span>Apparition</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-pane">
+          <div class="preview-frame">
+            <div class="preview-bg"></div>
+
+            <!-- Zones positionnées (% du frame) -->
+            <div class="preview-zone" style="top:13%; left:50%; transform:translateX(-50%); width:25%; height:5%;">
+              <span style="font-size:9px; letter-spacing:1px; color:rgba(255,255,255,.85); font-weight:600">NOM DU CLUB</span>
+            </div>
+
+            <div class="preview-zone selected" style="top:38%; left:50%; transform:translateX(-50%); width:60%; height:24%; flex-direction:column; line-height:1;">
+              <span style="font-family:Georgia, serif; font-weight:900; font-size:34px; color:white; letter-spacing:1px">PRÉNOM</span>
+              <span style="font-family:Georgia, serif; font-weight:900; font-size:34px; color:white; letter-spacing:1px">NOM</span>
+              <span class="preview-zone-handle tl"></span>
+              <span class="preview-zone-handle tr"></span>
+              <span class="preview-zone-handle bl"></span>
+              <span class="preview-zone-handle br"></span>
+            </div>
+
+            <div class="preview-zone" style="top:86%; left:50%; transform:translateX(-50%); width:25%; height:5%;">
+              <span style="font-size:9px; letter-spacing:1px; color:rgba(255,255,255,.85); font-weight:600">NOM DU CLUB</span>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <div style="font-size:12px; color:var(--muted); margin-bottom:8px">Frise temporelle (5,9 s)</div>
+            <div class="timeline-bar">
+              <div class="timeline-segment" style="left:0; width:35%; background:rgba(74,222,128,.4)">A — Hexagone</div>
+              <div class="timeline-segment" style="left:35%; width:35%; background:rgba(91,140,255,.4)">B — Transition</div>
+              <div class="timeline-segment" style="left:70%; width:30%; background:rgba(251,191,36,.4)">Packshot</div>
+            </div>
+            <div class="timeline-controls">
+              <button class="play-btn">▶</button>
+              <span>2,4 s / 5,9 s</span>
+              <span style="margin-left:auto; font-size:11px">🟢 Aperçu en direct</span>
+            </div>
+          </div>
+
+          <div class="hint" style="margin-top:14px">
+            <strong>Astuce.</strong> Cliquez n'importe quelle zone du template à gauche pour l'éditer. Glissez les poignées dans l'aperçu pour la repositionner.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1px solid var(--border)">
+        <button class="btn" onclick="showView('v-wizard')">← Retour : fonds animés</button>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-ghost">Enregistrer le brouillon</button>
+          <button class="btn btn-primary" onclick="showView('v-options')">Suivant : options club →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VUE 4 — Étape 4 wizard : Options club ============ -->
+    <section id="v-options" class="view">
+      <div class="breadcrumb"><a onclick="showView('v-list')">Templates</a> › Nouveau › Options club</div>
+      <h1>Choix proposés au club au démarrage</h1>
+      <p class="subtitle">Définissez les options que le club pourra changer avant de générer la vidéo. Le reste est verrouillé.</p>
+
+      <div style="max-width:760px">
+
+        <div class="option-builder">
+          <div class="option-head">
+            <div>
+              <div style="font-weight:600; font-size:14px">Type d'intro</div>
+              <div style="color:var(--muted); font-size:12px">Le club choisit ce qui apparaît dans l'hexagone d'ouverture</div>
+            </div>
+            <button class="icon-btn">×</button>
+          </div>
+          <label>Choix possibles</label>
+          <div class="option-values">
+            <span class="option-pill">Logo du club <span class="x">×</span></span>
+            <span class="option-pill">Numéro joueur <span class="x">×</span></span>
+            <span class="option-pill" style="border-style:dashed; opacity:.6; cursor:pointer">＋ ajouter</span>
+          </div>
+          <div class="option-impact">
+            ✓ Détecté automatiquement : <strong>2 zones</strong> de votre template sont reliées à cette option<br/>
+            (« Logo du club (intro) » et « Numéro joueur (intro) »)
+          </div>
+        </div>
+
+        <div class="option-builder">
+          <div class="option-head">
+            <div>
+              <div style="font-weight:600; font-size:14px">Type de packshot</div>
+              <div style="color:var(--muted); font-size:12px">Le club choisit la finition à la fin de la vidéo</div>
+            </div>
+            <button class="icon-btn">×</button>
+          </div>
+          <label>Choix possibles</label>
+          <div class="option-values">
+            <span class="option-pill">Générique (sans photo) <span class="x">×</span></span>
+            <span class="option-pill">Avec photo joueur <span class="x">×</span></span>
+            <span class="option-pill" style="border-style:dashed; opacity:.6; cursor:pointer">＋ ajouter</span>
+          </div>
+          <label style="margin-top:14px">Vidéo packshot à empiler à la fin</label>
+          <div class="row-2">
+            <div>
+              <div style="font-size:12px; color:var(--muted); margin-bottom:4px">Si « Générique »</div>
+              <select><option>Packshot Générique</option></select>
+            </div>
+            <div>
+              <div style="font-size:12px; color:var(--muted); margin-bottom:4px">Si « Avec photo »</div>
+              <select><option>Packshot Image</option></select>
+            </div>
+          </div>
+          <div class="option-impact">
+            ✓ Détecté automatiquement : <strong>1 zone</strong> conditionnelle (« Photo joueur ») apparaît seulement si « Avec photo »
+          </div>
+        </div>
+
+        <button class="btn" style="width:100%">＋ Ajouter une option club</button>
+
+        <div class="hint" style="margin-top:24px">
+          <strong>Aperçu de ce que le club verra :</strong> 2 listes déroulantes au démarrage (« Type d'intro », « Type de packshot ») + 4 champs à remplir (prénom-nom, club, logo, photo). 30 secondes pour générer une vidéo.
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:32px; padding-top:20px; border-top:1px solid var(--border)">
+          <button class="btn" onclick="showView('v-editor')">← Retour : zones modifiables</button>
+          <div style="display:flex; gap:8px">
+            <button class="btn btn-ghost">Enregistrer le brouillon</button>
+            <button class="btn btn-primary" onclick="showView('v-validate')">Valider et publier →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VUE 5 — Validation finale ============ -->
+    <section id="v-validate" class="view">
+      <div class="breadcrumb"><a onclick="showView('v-list')">Templates</a> › Nouveau › Validation</div>
+      <h1>Tout est prêt ?</h1>
+      <p class="subtitle">Avant publication, on vérifie que tout est cohérent. Le club ne peut pas le casser.</p>
+
+      <div style="max-width:680px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px">
+        <h3 style="margin-top:0">Joueur Simple — Image</h3>
+
+        <div style="display:flex; flex-direction:column; gap:14px; margin-top:20px">
+          <div style="display:flex; gap:12px; align-items:flex-start">
+            <span style="color:var(--ok); font-size:18px">✓</span>
+            <div>
+              <strong>2 fonds animés OK</strong>
+              <div style="color:var(--muted); font-size:12px">Bloc A et Bloc B uploadés, transparence détectée, durées cohérentes.</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start">
+            <span style="color:var(--ok); font-size:18px">✓</span>
+            <div>
+              <strong>5 zones modifiables</strong>
+              <div style="color:var(--muted); font-size:12px">Toutes dans la zone sûre, polices disponibles (Bulevar, General Sans).</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start">
+            <span style="color:var(--ok); font-size:18px">✓</span>
+            <div>
+              <strong>2 options club configurées</strong>
+              <div style="color:var(--muted); font-size:12px">« Type d'intro » (Logo / Numéro) et « Type de packshot » (Générique / Image).</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:flex-start">
+            <span style="color:var(--warn); font-size:18px">⚠</span>
+            <div>
+              <strong>Test en données factices recommandé</strong>
+              <div style="color:var(--muted); font-size:12px">Cliquez ci-dessous pour générer une vidéo de test « Lise Le Priellec / UCKNEF / numéro 4 » et la prévisualiser.</div>
+              <button class="btn" style="margin-top:8px">▶ Lancer le test</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:32px; padding-top:20px; border-top:1px solid var(--border)">
+          <button class="btn" onclick="showView('v-options')">← Retour</button>
+          <button class="btn" onclick="showView('v-list')">Enregistrer en brouillon</button>
+          <button class="btn btn-primary" style="margin-left:auto" onclick="showView('v-list')">✓ Publier ce template</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ MODAL — Asset Manager fonds animés ============ -->
+<div id="asset-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h3 style="margin:0">Bibliothèque de fonds animés</h3>
+        <div style="color:var(--muted); font-size:12px">14 fonds disponibles. Cliquez pour empiler dans le template.</div>
+      </div>
+      <div style="display:flex; gap:8px">
+        <button class="btn">＋ Uploader un .webm</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('asset-modal').classList.remove('show')">×</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#065f46,#022c22)">⬢</div>
+          <div class="asset-info">
+            <div class="asset-name">JOUEUR_simple_A</div>
+            <div class="asset-meta">5,9 s · 1920×1080</div>
+            <span class="asset-flag">✓ alpha</span>
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#1e3a8a,#172554)">↗</div>
+          <div class="asset-info">
+            <div class="asset-name">JOUEUR_simple_B</div>
+            <div class="asset-meta">5,9 s · 1920×1080</div>
+            <span class="asset-flag">✓ alpha</span>
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#7f1d1d,#450a0a)">⚽</div>
+          <div class="asset-info">
+            <div class="asset-name">JOUEUR_but_A</div>
+            <div class="asset-meta">8,2 s · 1920×1080</div>
+            <span class="asset-flag">✓ alpha</span>
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#78350f,#451a03)">📦</div>
+          <div class="asset-info">
+            <div class="asset-name">PACKSHOT_GENERIQUE</div>
+            <div class="asset-meta">3,2 s · 1920×1080</div>
+            <span class="asset-flag">✓ alpha</span>
+          </div>
+        </div>
+        <div class="asset-card">
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#065f46,#064e3b)">📷</div>
+          <div class="asset-info">
+            <div class="asset-name">PACKSHOT_IMG</div>
+            <div class="asset-meta">3,2 s · 1920×1080</div>
+            <span class="asset-flag">✓ alpha</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

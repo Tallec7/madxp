@@ -88,6 +88,7 @@ docs/specs/
 | [features/web-live-content](features/web-live-content.spec.md)                 | ADR-089, ADR-103                                                                                  | Live   | 2026-04-29     |
 | [features/hotspot-psk](features/hotspot-psk.spec.md)                           | ADR-073, ADR-074, ADR-076                                                                         | Live   | 2026-04-27     |
 | [features/templates-studio](features/templates-studio.spec.md)                 | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095                                              | Live   | 2026-04-25     |
+| [features/template-studio-v3](features/template-studio-v3.spec.md)             | ADR-110                                                                                           | Proposed | 2026-05-05   |
 | [services/cron-scheduler](services/cron-scheduler.spec.md)                     | ADR-097                                                                                           | Live   | 2026-04-25     |
 | [services/socket-service](services/socket-service.spec.md)                     | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096                                     | Live   | 2026-04-25     |
 
