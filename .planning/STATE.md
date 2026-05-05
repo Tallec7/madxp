@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Phase 3 Plan 02 done — Ready for Plan 03 (test render async backend POST /:id/test-render + worker hook)
-stopped_at: Completed 03-gate-publication-02-PLAN.md
-last_updated: '2026-05-05T21:00:00.000Z'
-last_activity: 2026-05-05 — Phase 3 Plan 02 livré (validation registry 8 règles + GET /:id/validation + smoke RED→GREEN itère sur registre)
+status: Phase 3 Plan 03 done — Ready for Plan 04 (Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé)
+stopped_at: Completed 03-gate-publication-03-PLAN.md
+last_updated: '2026-05-05T21:30:00.000Z'
+last_activity: 2026-05-05 — Phase 3 Plan 03 livré (POST /:id/test-render + worker hook + tracking, smoke 5/5 RED→GREEN, FK-safe markCompletedWithoutVideo)
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
-  percent: 79
+  completed_plans: 12
+  percent: 86
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 3 of 3 (Gate publication) — IN PROGRESS
-Plan: 02 of 5 — DONE
-Status: Phase 3 Plan 02 done — Ready for Plan 03 (test render async backend POST /:id/test-render + worker hook)
-Last activity: 2026-05-05 — Phase 3 Plan 02 livré (validation registry 8 règles + GET /:id/validation + smoke RED→GREEN itère sur registre)
+Plan: 03 of 5 — DONE
+Status: Phase 3 Plan 03 done — Ready for Plan 04 (Wizard Step 5 'Validation' UI + Player toggle 'Aperçu live / Rendu de test' + vocabulaire FR figé)
+Last activity: 2026-05-05 — Phase 3 Plan 03 livré (POST /:id/test-render + worker hook + tracking, smoke 5/5 RED→GREEN, FK-safe markCompletedWithoutVideo)
 
-Progress: [████████░░] 79% (11/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 2/5)
+Progress: [█████████░] 86% (12/14 plans total — Phase 1 5/5 + Phase 2 4/4 + Phase 3 3/5)
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [████████░░] 79% (11/14 plans total — Phase 1 5/
 | 02    | 01   | ~10 min  | 2     | 2     | 2026-05-05 |
 | 03    | 01   | ~25 min  | 2     | 8     | 2026-05-05 |
 | 03    | 02   | ~25 min  | 2     | 13    | 2026-05-05 |
+| 03    | 03   | ~25 min  | 2     | 7     | 2026-05-05 |
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
@@ -115,6 +116,12 @@ Recent decisions affecting current work:
 - Phase 3 Plan 02 : recent_test_render_24h en warning, pas error — admin peut publier sans relancer un rendu si elle fait confiance au dernier état connu. Affiché en bandeau orange, n'invalide pas Publier.
 - Phase 3 Plan 02 : HEAD probes `assets_resolve_http_200` avec AbortSignal.timeout(3000) — 8 layers worst-case = 24s, sous le budget UX du panel publish-gate.
 - Phase 3 Plan 02 deviation Rule 3 : `query<T>()` exige `T extends QueryResultRow`, types inline rejetés (TS2344) — déclaration de `TemplateRenderRow` + `TemplateIdRow` interfaces extending QueryResultRow.
+- Phase 3 Plan 03 : Title prefix discriminator (`test-render:<id>:<ts>`) sur `remotion_render_jobs` — évite ENUM `job_kind` ou table parallèle. Worker branche sur prefix : upload `/test-renders/{templateId}/{ts}.mp4`, tracking `neopro_templates.test_render_status`, jamais d'INSERT `videos`.
+- Phase 3 Plan 03 : `markCompletedWithoutVideo` (nouveau sur remotion-render-job.repository.ts) — FK-safe (video_id NULL) pour les test renders qui n'ont pas de row `videos`. Sans ça, `markCompleted` violerait `video_id REFERENCES videos(id)`.
+- Phase 3 Plan 03 : test render skip `findPublishedById` → `findById` (admin teste un draft non publié, gate de publication c'est justement le but du flow).
+- Phase 3 Plan 03 : Body Joi sealed `Joi.object({}).unknown(false)` — fixtures TEST_RENDER_FIXTURES injectées 100% côté serveur (PRÉNOM/NOM/NOM DU CLUB + URLs placehold.co), zéro surface client.
+- Phase 3 Plan 03 deviation : `getStudioView` repo n'existe pas (controller helper) → `findV2ById` (TemplateV2). Adapter via `view.options[].defaultValue ?? values[0]` pour computer les defaults injectés dans `props`.
+- Phase 3 Plan 03 deviation : `validate(schema, 'params'|'body')` overload n'existe pas dans `middleware/validation.ts` — utilisation de `validateParams` + `validate` séparés (les 2 schemas restent référencés depuis le route file via `testRenderSchemas.params` + `.body`, smoke contract préservé).
 
 ### Pending Todos
 
@@ -128,6 +135,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T21:00:00.000Z
-Stopped at: Completed 03-gate-publication-02-PLAN.md
+Last session: 2026-05-05T21:30:00.000Z
+Stopped at: Completed 03-gate-publication-03-PLAN.md
 Resume file: None
