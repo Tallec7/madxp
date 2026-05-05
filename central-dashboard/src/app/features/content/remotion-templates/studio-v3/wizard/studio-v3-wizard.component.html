@@ -70,7 +70,7 @@
           <p>Validez d'abord l'étape 1 pour créer le template.</p>
         </div>
 
-        <!-- Step 4 — Options club (Plan 05 / WIZARD-01). -->
+        <!-- Step 4 — Options club (Plan 05 / WIZARD-01 + Plan 02-04 / UX-03). -->
         <app-wizard-step-options
           *ngIf="state().templateId as tplId4"
           [hidden]="currentStep() !== 4"
@@ -78,6 +78,8 @@
           [options]="optionsSignal"
           [zones]="zonesSignal"
           (optionsChange)="onOptionsChange($event)"
+          (linkedZonesClick)="onLinkedZonesClick($event)"
+          (zonesRefreshNeeded)="onZonesRefreshNeeded()"
           (prev)="goToStep(3)"
           (finished)="onFinish()"
         ></app-wizard-step-options>
@@ -100,6 +102,7 @@
         class="v3w__preview"
         [hidden]="currentStep() < 3"
         [state]="state()"
+        [highlightedOptionKey]="highlightedOptionKey()"
         (goToStep)="goToStep($event)"
       ></app-wizard-preview-panel>
     </div>

@@ -19,6 +19,26 @@
   overflow: hidden;
 }
 
+/* Plan 02-04 / UX-03 — visual highlight when admin clicks the inline
+   « ✓ N zones reliées » counter in Step 4. Yellow inset border + banner
+   so the link option↔zone is unambiguous. Auto-cleared after 4s. */
+.wpp--highlight {
+  box-shadow: 0 0 0 4px #facc15 inset;
+}
+
+.wpp__highlight-banner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: #facc15;
+  color: #1f2937;
+  font-size: 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
 .wpp__empty {
   color: #d1d5db;
   text-align: center;

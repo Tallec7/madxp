@@ -87,6 +87,13 @@ export class StudioV3WizardComponent implements OnInit {
   optionsSignal = signal<TemplateOption[]>(DEFAULT_WIZARD_STATE.options);
   zonesSignal = computed(() => this.state().zones);
 
+  /**
+   * Plan 02-04 / UX-03 — When set, the preview panel paints a highlight
+   * banner + yellow border around the player to signal which option is
+   * being inspected. Auto-cleared after 4s to avoid sticky state.
+   */
+  highlightedOptionKey = signal<string | null>(null);
+
   constructor() {
     effect(() => {
       const s = this.state();
@@ -240,6 +247,45 @@ export class StudioV3WizardComponent implements OnInit {
   /** WIZARD-01 — Step 4 « Terminer » → retour à la liste des templates. */
   onFinish(): void {
     this.router.navigate(['/content/templates-remotion']);
+  }
+
+  /**
+   * Plan 02-04 / UX-03 — Click on inline « ✓ N zones reliées » counter in Step 4.
+   * Switches to Step 3 (so the zone list is visible), highlights the linked
+   * zones in the Player, and scrolls the first matching zone card into view.
+   * Auto-clears the highlight after 4s.
+   */
+  onLinkedZonesClick(optionKey: string): void {
+    this.highlightedOptionKey.set(optionKey);
+    if (this.currentStep() !== 3) this.goToStep(3);
+    setTimeout(() => {
+      const re = new RegExp(`\\b${optionKey}\\s*==`);
+      const z = this.state().zones;
+      const tf = (z.textFields || []).find(
+        (f) => f.visibleIf && re.test(f.visibleIf),
+      );
+      const slot = (z.imageSlots || []).find(
+        (s) => s.visibleIf && re.test(s.visibleIf),
+      );
+      const target = tf ?? slot;
+      if (target) {
+        document
+          .getElementById(`zone-${target.id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      // Auto-clear after the user has had time to spot the highlight.
+      setTimeout(() => this.highlightedOptionKey.set(null), 4000);
+    }, 0);
+  }
+
+  /**
+   * Plan 02-04 / UX-03 — After a successful renameOptionKey, re-fetch the
+   * full studio view so visible_if strings on text_fields / image_slots
+   * pick up the regex rewrite (counter recomputes against the new key).
+   */
+  onZonesRefreshNeeded(): void {
+    const id = this.state().templateId;
+    if (id) this.resumeFromId(id);
   }
 
   goToStep(s: WizardStep): void {

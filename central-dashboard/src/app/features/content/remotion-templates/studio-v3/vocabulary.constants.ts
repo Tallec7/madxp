@@ -58,6 +58,11 @@ export const ERROR_MESSAGES = {
     'Ce template ne peut pas être dupliqué (version 1 — migration requise).',
   asset_in_use:
     "Cet asset est utilisé par {N} template(s) publié(s) — désassignez-le d'abord.",
+  // Plan 02-04 / UX-03 — surfaces backend errors + value-removal modal text.
+  option_key_conflict:
+    "Une option avec l'identifiant « {KEY} » existe déjà sur ce template.",
+  option_value_in_use:
+    'Cette valeur est utilisée par {N} zones, qui deviendront toujours visibles si vous la supprimez. Continuer ?',
 } as const;
 
 export type ErrorMessageCode = keyof typeof ERROR_MESSAGES;

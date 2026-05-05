@@ -1,4 +1,4 @@
-<div class="wpp">
+<div class="wpp" [class.wpp--highlight]="!!highlightedOptionKey">
   <ng-container *ngIf="hasLayer; else placeholder">
     <app-template-studio-player [state]="state.previewState!" />
   </ng-container>
@@ -10,4 +10,7 @@
       </button>
     </div>
   </ng-template>
+  <div class="wpp__highlight-banner" *ngIf="highlightedOptionKey">
+    Surlignage : {{ highlightedOptionKey }}
+  </div>
 </div>
