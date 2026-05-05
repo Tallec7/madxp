@@ -51,7 +51,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 **Plans**: 4 plans
 
-- [ ] 02-ux-interactive-01-PLAN.md — Vocabulary smoke banlist + ERROR_MESSAGES (UX-01)
+- [x] 02-ux-interactive-01-PLAN.md — Vocabulary smoke banlist + ERROR_MESSAGES (UX-01) — DONE 2026-05-05 (commits c764fe89, 107f3d9c)
 - [ ] 02-ux-interactive-02-PLAN.md — Player live integration + per-layer proxyUrl + hybrid debounce/blur (PREV-01/02/03)
 - [ ] 02-ux-interactive-03-PLAN.md — Animation cards UX (4 presets + Aucune animation, hover preview) (UX-02)
 - [ ] 02-ux-interactive-04-PLAN.md — visible_if click-to-highlight + transactional renameOptionKey (UX-03)
@@ -79,8 +79,8 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
-| 1. Fondations       | 2/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | 0/4            | In planning | -          |
+| 1. Fondations       | 5/5            | Complete    | 2026-05-05 |
+| 2. UX interactive   | 1/4            | In progress | -          |
 | 3. Gate publication | 0/?            | Not started | -          |
 
 ---

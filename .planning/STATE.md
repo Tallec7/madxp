@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 01-fondations-05-PLAN.md — 2 commits (dbc82201, 2eb8c702) + SUMMARY. Phase 1 COMPLETE (5/5). Ready for gsd-verifier and Phase 2 (UX interactive).
-last_updated: '2026-05-05T09:08:31.989Z'
-last_activity: 2026-05-05 — Plan 05 livré (Step 4 Options club + bouton Dupliquer sur card → wizard step 3 via ?from=duplicate, contrats Plan 01-04 honorés end-to-end)
+status: executing
+stopped_at: Completed 02-ux-interactive-01-PLAN.md — 2 commits (c764fe89, 107f3d9c) + SUMMARY. Vocabulary smoke 5/5 GREEN, ERROR_MESSAGES shipped. Ready for Plan 02 (Player live).
+last_updated: '2026-05-05T09:55:00.000Z'
+last_activity: 2026-05-05 — Phase 2 Plan 01 livré (banlist directory-wide + ERROR_MESSAGES const FR pour les 3 codes Phase 1)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_plans: 14
+  completed_plans: 6
+  percent: 43
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 ## Current Position
 
-Phase: 1 of 3 (Fondations) — COMPLETE
-Plan: 05 of 5 — DONE
-Status: Ready for verifier (next phase: 02-ux-interactive)
-Last activity: 2026-05-05 — Plan 05 livré (Step 4 Options club + bouton Dupliquer sur card → wizard step 3 via ?from=duplicate, contrats Plan 01-04 honorés end-to-end)
+Phase: 2 of 3 (UX interactive) — IN PROGRESS
+Plan: 01 of 4 — DONE
+Status: Ready for Plan 02 (Player live integration)
+Last activity: 2026-05-05 — Phase 2 Plan 01 livré (banlist directory-wide + ERROR_MESSAGES const FR pour les 3 codes Phase 1)
 
-Progress: [██████████] 100% (5/5 plans of phase 1)
+Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5 + Phase 2 1/4)
 
 ## Performance Metrics
 
@@ -42,9 +42,10 @@ Progress: [██████████] 100% (5/5 plans of phase 1)
 
 **By Phase:**
 
-| Phase         | Plans | Total    | Avg/Plan |
-| ------------- | ----- | -------- | -------- |
-| 01-fondations | 5/5   | ~145 min | ~29 min  |
+| Phase             | Plans | Total    | Avg/Plan |
+| ----------------- | ----- | -------- | -------- |
+| 01-fondations     | 5/5   | ~145 min | ~29 min  |
+| 02-ux-interactive | 1/4   | ~10 min  | ~10 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
@@ -53,6 +54,7 @@ Progress: [██████████] 100% (5/5 plans of phase 1)
 | 01    | 03   | ~25 min  | 2     | 6     | 2026-05-05 |
 | 01    | 04   | ~40 min  | 2     | 9     | 2026-05-05 |
 | 01    | 05   | ~25 min  | 2     | 8     | 2026-05-05 |
+| 02    | 01   | ~10 min  | 2     | 2     | 2026-05-05 |
 
 _Updated after each plan completion_
 
@@ -95,6 +97,10 @@ Recent decisions affecting current work:
 - Plan 05 deviation : `<label>` non-associated → `<span class="wso__packshot-label">` (label-has-associated-control ESLint).
 - Plan 05 : Backend renvoie snake_case (SELECT \*) → adapters dataservice (`mapTemplateOptionRow`, `mapPackshotRefRow`) normalisent vers camelCase pour cohérence avec `getStudioView` Plan 03.
 - Plan 05 : Phase 1 COMPLETE (5/5 plans, 13/13 requirements, 4/4 success criteria ROADMAP). Ready for `gsd-verifier`.
+- Phase 2 Plan 01 : ERROR_MESSAGES const (`as const`) avec 3 codes Phase 1 (asset_alpha_required, duplicate_requires_v2, asset_in_use) + ErrorMessageCode type. Stockage co-localisé avec VOCABULARY_MAP (single source of truth lexicon v3).
+- Phase 2 Plan 01 : Banlist directory-wide via `listFilesRecursive` + regex `(['"])${banned}\\1` (quoted bare word only — accepte templateLayer/slotKey/etc comme identifiers). Exclut vocabulary.constants.ts (couvert par Test 3 stricter).
+- Phase 2 Plan 01 : Convention placeholder `{N}` interpolé côté caller via `.replace('{N}', String(value))` — pas de dépendance ICU plural lib.
+- Phase 2 Plan 01 : 0 deviation — plan exécuté tel quel, RED → GREEN propre, smoke 5/5 + smart 180/180 + ng build clean.
 
 ### Pending Todos
 
@@ -109,5 +115,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-05
-Stopped at: Completed 01-fondations-05-PLAN.md — 2 commits (dbc82201, 2eb8c702) + SUMMARY. Phase 1 COMPLETE (5/5). Ready for gsd-verifier and Phase 2 (UX interactive).
+Stopped at: Completed 02-ux-interactive-01-PLAN.md — 2 commits (c764fe89, 107f3d9c) + SUMMARY. Vocabulary smoke 5/5 GREEN, ERROR_MESSAGES shipped. Ready for Plan 02 (Player live).
 Resume file: None
