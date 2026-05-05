@@ -33,6 +33,17 @@ router.get(
   ctrl.getStudioView,
 );
 
+// ── Gate de publication (ADR-110 / Plan 03-02 / TEST-03)
+// Runs the 8-rule validation registry server-side. Source of truth for the
+// publish-gate checklist consumed by the wizard step 5 in Plan 03-04.
+router.get(
+  '/:id/validation',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  ctrl.getValidation,
+);
+
 // ── Scaffold placeholders (débloque flip v1→v2)
 router.post(
   '/:id/studio/scaffold',
@@ -257,6 +268,19 @@ router.delete(
   validateParams(paramSchemas.idAndOptionId),
   sensitiveRateLimit,
   optionsCtrl.deleteOption,
+);
+// ADR-110 / Plan 02-04 / UX-03 — atomic rename of an option key.
+// Repo wraps 4 UPDATEs in BEGIN/COMMIT/ROLLBACK across template_options,
+// template_packshot_refs, template_text_fields.visible_if, template_image_slots.visible_if.
+// super_admin guard is mandatory (template composition is fleet-wide).
+router.post(
+  '/:id/options/:optionId/rename',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(paramSchemas.idAndOptionId),
+  validate(schemas.templateStudioOptionRename),
+  sensitiveRateLimit,
+  ctrl.renameOptionKey,
 );
 
 // ── Packshot pluggable refs (PDF JOUEUR §démarrage) ────────────────────────

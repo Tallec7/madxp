@@ -1147,6 +1147,182 @@ class TemplateStudioRepository {
   }
 
   /**
+   * ADR-110 / Plan 02-04 / UX-03 — Atomic rename of an option key.
+   *
+   * Updates 4 surfaces in a single BEGIN/COMMIT transaction:
+   *  1. template_options.key                   (the rename itself)
+   *  2. template_packshot_refs.option_key      (FK propagation)
+   *  3. template_text_fields.visible_if        (regex rewrite of `\b<old>\s*==`)
+   *  4. template_image_slots.visible_if        (regex rewrite of `\b<old>\s*==`)
+   *
+   * PG `\m`/`\M` are word-boundary escapes (left/right) — equivalent to JS `\b`.
+   * Any failure → ROLLBACK (no drift). Throws:
+   *   - 'option_key_conflict' when newKey is already used by another option
+   *     on the same template.
+   *   - 'option_not_found'    when (templateId, optionId) row does not exist.
+   */
+  async renameOptionKey(
+    templateId: string,
+    optionId: string,
+    newKey: string,
+  ): Promise<{
+    id: string;
+    key: string;
+    updatedTextFields: number;
+    updatedImageSlots: number;
+    updatedPackshotRefs: number;
+  }> {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Lock the option row + read its current key (defense-in-depth FK check)
+      const existing: { rows: Array<{ id: string; key: string }> } = await client.query(
+        `SELECT id, key FROM template_options
+          WHERE id = $1 AND template_id = $2
+          FOR UPDATE`,
+        [optionId, templateId],
+      );
+      if (existing.rows.length === 0) {
+        throw new Error('option_not_found');
+      }
+      const oldKey = existing.rows[0].key;
+      if (oldKey === newKey) {
+        // No-op rename — commit empty transaction and return zero counts.
+        await client.query('COMMIT');
+        return {
+          id: optionId,
+          key: newKey,
+          updatedTextFields: 0,
+          updatedImageSlots: 0,
+          updatedPackshotRefs: 0,
+        };
+      }
+
+      // 2. Conflict check — another option on the same template already uses newKey.
+      const conflict: { rows: Array<{ id: string }> } = await client.query(
+        `SELECT id FROM template_options
+          WHERE template_id = $1 AND key = $2 AND id <> $3`,
+        [templateId, newKey, optionId],
+      );
+      if (conflict.rows.length > 0) {
+        throw new Error('option_key_conflict');
+      }
+
+      // 3. Rename the option itself.
+      await client.query(
+        `UPDATE template_options
+            SET key = $1, updated_at = NOW()
+          WHERE id = $2 AND template_id = $3`,
+        [newKey, optionId, templateId],
+      );
+
+      // 4. Propagate FK to packshot_refs.
+      const refs = await client.query(
+        `UPDATE template_packshot_refs
+            SET option_key = $1
+          WHERE template_id = $2 AND option_key = $3`,
+        [newKey, templateId, oldKey],
+      );
+
+      // 5. Rewrite visible_if on text_fields. PG word-boundary regex `\m...\M`
+      //    is the equivalent of JS `\b`. We capture the optional whitespace
+      //    between key and `==` so the rewrite preserves admin formatting.
+      const tf = await client.query(
+        `UPDATE template_text_fields
+            SET visible_if = regexp_replace(
+              visible_if,
+              '\\m' || $1 || '\\M(\\s*)==',
+              $2 || '\\1==',
+              'g'
+            )
+          WHERE template_id = $3
+            AND visible_if ~ ('\\m' || $1 || '\\M\\s*==')`,
+        [oldKey, newKey, templateId],
+      );
+
+      // 6. Same rewrite for image_slots.
+      const is = await client.query(
+        `UPDATE template_image_slots
+            SET visible_if = regexp_replace(
+              visible_if,
+              '\\m' || $1 || '\\M(\\s*)==',
+              $2 || '\\1==',
+              'g'
+            )
+          WHERE template_id = $3
+            AND visible_if ~ ('\\m' || $1 || '\\M\\s*==')`,
+        [oldKey, newKey, templateId],
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        id: optionId,
+        key: newKey,
+        updatedTextFields: tf.rowCount ?? 0,
+        updatedImageSlots: is.rowCount ?? 0,
+        updatedPackshotRefs: refs.rowCount ?? 0,
+      };
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 03 / PUB-02 — Update the 3 test_render tracking
+   * columns added by `add-template-test-render-tracking.sql` (Plan 01) on
+   * `neopro_templates`. Single parameterized UPDATE — no transaction needed,
+   * the columns are NULL-able defaults and admins consume the row via
+   * `findV2ById` → `published`/`updatedAt` are unaffected.
+   *
+   * Status transitions emitted by callers :
+   *   - controller.createTestRender : 'queued' (after enqueue)
+   *   - worker.processJob (start)   : 'rendering'
+   *   - worker.processJob (success) : 'success' + url + at
+   *   - worker.processJob (failure) : 'failed' + at
+   */
+  async updateTestRenderTracking(
+    templateId: string,
+    patch: { status: 'queued' | 'rendering' | 'success' | 'failed'; url?: string; at?: Date },
+  ): Promise<void> {
+    const sets: string[] = ['test_render_status = $2'];
+    const params: unknown[] = [templateId, patch.status];
+    let idx = 3;
+    if (patch.url !== undefined) {
+      sets.push(`test_render_url = $${idx++}`);
+      params.push(patch.url);
+    }
+    if (patch.at !== undefined) {
+      sets.push(`test_render_at = $${idx++}`);
+      params.push(patch.at);
+    }
+    await query(
+      `UPDATE neopro_templates SET ${sets.join(', ')} WHERE id = $1`,
+      params,
+    );
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — Toggle the `published` flag on
+   * `neopro_templates`. Single parameterized UPDATE — no transaction needed.
+   * Controllers MUST go through this method (CLAUDE.md NE JAMAIS FAIRE :
+   * "Importer ../config/database dans les controllers").
+   *
+   * The publish flow gate (validation registry refusal on error severity)
+   * is enforced upstream in the controller — this method is a thin sink.
+   */
+  async updatePublishedFlag(templateId: string, published: boolean): Promise<void> {
+    await query(
+      'UPDATE neopro_templates SET published = $2 WHERE id = $1',
+      [templateId, published],
+    );
+  }
+
+  /**
    * ADR-075 — Scaffold placeholders pour un template legacy.
    * Crée 1 variant + 1 text field + 1 image slot si absents, pour débloquer
    * le flip v1→v2. Idempotent : chaque ressource est créée uniquement si sa

@@ -320,6 +320,18 @@ const videoFtpAuditCurrentOrphansGauge = new Gauge({
   registers: [register],
 });
 
+// ============= Métriques Test Render Cleanup (ADR-110 Phase 3 PUB-02) =============
+// CRON hebdomadaire qui purge les test renders FTP plus vieux que 7 jours
+// (ADR-110 Phase 3, PUB-02). Sans supervision, un bug silencieux du CRON
+// laisserait grossir /test-renders/* indéfiniment côté FTP Hostinger.
+
+const testRendersCleanedTotal = new Counter({
+  name: 'neopro_test_renders_cleaned_total',
+  help: 'Total test render files cleaned by the weekly cleanup CRON (ADR-110 Phase 3 PUB-02)',
+  labelNames: ['result'], // success | error
+  registers: [register],
+});
+
 // ============= Métriques connection_events purge (ADR-099 follow-up) =============
 // CRON quotidien qui purge les rows connection_events plus vieilles que la
 // fenêtre de rétention (90 jours). Sans supervision, un bug silencieux du
@@ -1129,6 +1141,11 @@ class MetricsService {
     videoFtpAuditDuration.observe(payload.durationMs / 1000);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'missing' }, payload.missing);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'unreachable' }, payload.unreachable);
+  }
+
+  /** ADR-110 Phase 3 PUB-02 : un fichier test render supprimé par le CRON cleanup. */
+  recordTestRendersCleaned(result: 'success' | 'error'): void {
+    testRendersCleanedTotal.inc({ result });
   }
 
   /** ADR-099 follow-up : résultat du CRON de purge connection_events. */

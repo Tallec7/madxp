@@ -125,6 +125,32 @@ class RemotionRenderJobRepository {
     return result.rows[0] || null;
   }
 
+  /**
+   * ADR-110 / Phase 03 / Plan 03 / PUB-02 — mark a test render job complete
+   * without inserting a `videos` row. Test renders don't surface in the video
+   * library — their lifecycle ends at the FTP `/test-renders/` upload + the
+   * `neopro_templates.test_render_*` tracking columns.
+   */
+  async markCompletedWithoutVideo(
+    id: string,
+    output: { video_url: string; file_size: number }
+  ): Promise<RemotionRenderJob | null> {
+    const result = await query<RemotionRenderJob>(
+      `UPDATE remotion_render_jobs
+       SET status = 'completed',
+           progress = 100,
+           phase = NULL,
+           video_id = NULL,
+           video_url = $1,
+           file_size = $2,
+           completed_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [output.video_url, output.file_size, id]
+    );
+    return result.rows[0] || null;
+  }
+
   async markFailed(id: string, errorMessage: string): Promise<RemotionRenderJob | null> {
     const result = await query<RemotionRenderJob>(
       `UPDATE remotion_render_jobs

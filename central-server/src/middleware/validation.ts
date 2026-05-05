@@ -1116,6 +1116,22 @@ export const schemas = {
     scaleFrom: Joi.number().min(0).max(5).allow(null).optional(),
     scaleTo: Joi.number().min(0).max(5).allow(null).optional(),
   }).min(1),
+  // ADR-110 / Plan 02-04 / UX-03 — atomic rename of an option key.
+  // Validates the body of POST /:id/options/:optionId/rename. The repo
+  // handles transactional propagation across template_options, packshot_refs,
+  // text_fields.visible_if, image_slots.visible_if (BEGIN/COMMIT/ROLLBACK).
+  templateStudioOptionRename: Joi.object({
+    newKey: Joi.string()
+      .pattern(/^[a-z][a-z0-9_]*$/)
+      .min(1)
+      .max(64)
+      .required()
+      .messages({
+        'string.pattern.base':
+          'newKey must be snake_case ASCII (start with letter, then [a-z0-9_]).',
+      }),
+  }),
+
   // ADR-082 — Video club grants
   addVideoClubGrant: Joi.object({
     site_id: Joi.string().uuid().required(),
@@ -1131,6 +1147,17 @@ export const schemas = {
     thumbnailUrl: Joi.string().uri().allow(null, '').optional(),
     uploadedForSiteId: Joi.string().uuid().allow(null).optional(),
   }),
+};
+
+// ============================================================================
+// ADR-110 / Phase 03 / Plan 03 / PUB-02 — Test render endpoint schemas
+// ============================================================================
+// Body is sealed (`unknown(false)`) — fixtures are injected server-side, no
+// user input is ever accepted on POST /api/remotion-templates/:id/test-render.
+
+export const testRenderSchemas = {
+  params: Joi.object({ id: Joi.string().uuid().required() }),
+  body: Joi.object({}).unknown(false),
 };
 
 // ============================================================================

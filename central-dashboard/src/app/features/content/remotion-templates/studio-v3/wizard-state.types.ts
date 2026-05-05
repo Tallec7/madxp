@@ -13,6 +13,7 @@ import type {
   TemplateImageSlot,
   TemplateOption,
 } from '../remotion-templates.types';
+import type { RuntimePlayerState } from '../studio-player/template-studio-player.component';
 
 export interface IdentityFormValue {
   name: string;
@@ -29,6 +30,8 @@ export interface WizardState {
   layers: TemplateLayer[];
   zones: { textFields: TemplateTextField[]; imageSlots: TemplateImageSlot[] };
   options: TemplateOption[];
+  /** Plan 02-02 (PREV-01) — current props snapshot fed to the live Player. Null until step 3 is reached. */
+  previewState?: RuntimePlayerState | null;
 }
 
 export const DEFAULT_WIZARD_STATE: WizardState = {
@@ -44,13 +47,28 @@ export const DEFAULT_WIZARD_STATE: WizardState = {
   layers: [],
   zones: { textFields: [], imageSlots: [] },
   options: [],
+  previewState: null,
 };
 
-export type WizardStep = 1 | 2 | 3 | 4;
+export type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 export const STEP_LABELS: Record<WizardStep, { title: string; subtitle: string }> = {
   1: { title: 'Identité', subtitle: 'Nom, durée, format' },
   2: { title: 'Fonds animés', subtitle: 'Empilez vos calques vidéo' },
   3: { title: 'Zones modifiables', subtitle: 'Texte, image, animations' },
   4: { title: 'Options club', subtitle: "Choix proposés à l'utilisateur" },
+  5: { title: 'Validation', subtitle: 'Rendu de test + publication' },
 };
+
+/**
+ * Plan 03-04 / PUB-01 — Result of a single validation rule check returned
+ * by `GET /api/remotion-templates/:id/validation`. The shape mirrors the
+ * server registry contract (`central-server/src/services/template-validation/types.ts`).
+ */
+export interface ValidationResult {
+  rule_id: string;
+  ok: boolean;
+  severity: 'error' | 'warning';
+  message?: string;
+  fixHint?: { step: number; entityId?: string };
+}

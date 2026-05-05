@@ -25,6 +25,7 @@ import type {
   TemplateVersion,
 } from './remotion-templates.types';
 import { isV2Template } from './remotion-templates.types';
+import { ERROR_MESSAGES } from './studio-v3/vocabulary.constants';
 
 /**
  * Orchestrateur de la page Templates Remotion.
@@ -249,6 +250,39 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
         this.notifications.success(updated.published ? 'Template publié' : 'Template dépublié');
       },
       error: () => this.notifications.error('Erreur lors de la publication'),
+    });
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — current authenticated user role,
+   * passed down to TemplateGrid → TemplateCard. Only `super_admin` sees the
+   * "Dépublier" CTA on a published template.
+   */
+  get currentUserRole(): string | null {
+    return this.authService.getCurrentUser()?.role ?? null;
+  }
+
+  /**
+   * ADR-110 / Phase 03 / Plan 05 / PUB-01 — handler emitted by TemplateCard
+   * AFTER the user confirms the unpublish modal (ConfirmDialogService).
+   * Calls the new POST /:id/unpublish endpoint, optimistically updates
+   * the local list, and surfaces the FR toast.
+   */
+  onUnpublishRequested(tpl: RemotionTemplate): void {
+    this.dataService.unpublishTemplate(tpl.id).subscribe({
+      next: () => {
+        const idx = this.templates.findIndex((t) => t.id === tpl.id);
+        if (idx !== -1) {
+          const updated = { ...this.templates[idx], published: false } as RemotionTemplate;
+          this.templates = [
+            ...this.templates.slice(0, idx),
+            updated,
+            ...this.templates.slice(idx + 1),
+          ];
+        }
+        this.notifications.success(ERROR_MESSAGES.template_unpublished);
+      },
+      error: () => this.notifications.error('Erreur lors de la dépublication'),
     });
   }
 

@@ -1,0 +1,16 @@
+/**
+ * AnimationPicker layout — responsive grid, 3 columns desktop, 1 column mobile.
+ * 5 cards (4 presets + "Aucune animation").
+ */
+
+.anim-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .anim-picker {
+    grid-template-columns: 1fr;
+  }
+}
