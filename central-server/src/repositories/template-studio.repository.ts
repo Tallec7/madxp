@@ -495,6 +495,47 @@ class TemplateStudioRepository {
     return parseInt(r.rows[0]?.cnt ?? '0', 10);
   }
 
+  /**
+   * ADR-110 / Plan 02 — variant of `countLayersSharingVideoUrl` that takes the
+   * URL directly (no layerId). Used by the library-level DELETE to decide
+   * whether the asset is still referenced by ≥1 published template.
+   */
+  async countLayersSharingVideoUrlByUrl(url: string): Promise<number> {
+    const r = await query<{ cnt: string }>(
+      `SELECT COUNT(*)::text AS cnt
+         FROM template_layers tl
+         JOIN neopro_templates t ON t.id = tl.template_id
+        WHERE tl.video_url = $1
+          AND t.published = true`,
+      [url]
+    );
+    return parseInt(r.rows[0]?.cnt ?? '0', 10);
+  }
+
+  /**
+   * ADR-110 / Plan 02 — list distinct `template_layers.video_url` rows with
+   * their first-use timestamp + total reference count across the fleet
+   * (published or not). Powers the v3 Asset Manager library grid.
+   */
+  async listDistinctLayerAssets(): Promise<
+    Array<{ url: string; uploadedAt: string; usedByCount: number }>
+  > {
+    const r = await query<{ url: string; uploaded_at: Date; used_by_count: string }>(
+      `SELECT video_url AS url,
+              MIN(created_at) AS uploaded_at,
+              COUNT(*)::text AS used_by_count
+         FROM template_layers
+        WHERE video_url IS NOT NULL AND video_url <> ''
+        GROUP BY video_url
+        ORDER BY MIN(created_at) DESC`
+    );
+    return r.rows.map((row) => ({
+      url: row.url,
+      uploadedAt: row.uploaded_at instanceof Date ? row.uploaded_at.toISOString() : String(row.uploaded_at),
+      usedByCount: parseInt(row.used_by_count, 10),
+    }));
+  }
+
   // ---------- Text fields ----------
 
   async listTextFields(templateId: string): Promise<TemplateTextField[]> {

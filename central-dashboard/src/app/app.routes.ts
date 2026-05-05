@@ -156,6 +156,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
+        // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
+        path: 'content/templates-remotion/assets',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'], context: 'page' },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/asset-manager/asset-manager-modal.component'
+          ).then((m) => m.AssetManagerModalComponent),
+      },
+      {
         // ADR-075 V3 Phase B — Self-service club templates
         path: 'content/my-templates',
         canActivate: [roleGuard],

@@ -211,6 +211,24 @@ export interface AssetUploadResult {
 }
 
 /**
+ * ADR-110 / Plan 02 — Library-level WebM asset metadata returned by
+ * GET /api/remotion-templates/assets and POST /api/remotion-templates/library/upload.
+ * `id` is a deterministic sha256(url).slice(0,16) derived server-side
+ * (assets are not yet a first-class table — the URL is the primary key).
+ */
+export interface WebmAssetMetadata {
+  id: string;
+  url: string;
+  durationMs: number;
+  width: number;
+  height: number;
+  hasAlpha: boolean;
+  pixFmt: string;
+  uploadedAt: string;
+  usedByCount: number;
+}
+
+/**
  * Snapshot of a template version (audit/restore, ADR-055).
  */
 export interface TemplateVersion {

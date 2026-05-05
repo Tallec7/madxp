@@ -19,6 +19,7 @@ import type {
   TemplateTextField,
   TemplateVariant,
   TemplateVersion,
+  WebmAssetMetadata,
 } from './remotion-templates.types';
 
 /** Payload create variant — id + templateId sont injectés par le serveur. */
@@ -195,6 +196,28 @@ export class RemotionTemplatesDataService {
     formData.append('file', file);
     formData.append('prop_key', propKey);
     return this.api.upload<AssetUploadResult>(`/remotion-templates/${templateId}/assets`, formData);
+  }
+
+  // ── ADR-110 / Plan 02 — Library Asset Manager (super_admin) ───────────────
+  // Distincts d'`uploadAsset` (per-template) : ces méthodes ciblent la
+  // bibliothèque flat (catalogue de WebM partagés entre templates).
+
+  listLibraryAssets(): Observable<WebmAssetMetadata[]> {
+    return this.api.get<WebmAssetMetadata[]>('/remotion-templates/assets');
+  }
+
+  uploadLibraryAsset(
+    file: File,
+    opts: { respectAlpha?: boolean } = {},
+  ): Observable<WebmAssetMetadata> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('respect_alpha', String(opts.respectAlpha ?? false));
+    return this.api.upload<WebmAssetMetadata>('/remotion-templates/library/upload', formData);
+  }
+
+  deleteLibraryAsset(assetId: string): Observable<void> {
+    return this.api.delete<void>(`/remotion-templates/assets/${encodeURIComponent(assetId)}`);
   }
 
   /**
