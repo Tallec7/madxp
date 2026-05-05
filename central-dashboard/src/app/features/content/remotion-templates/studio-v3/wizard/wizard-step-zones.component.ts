@@ -47,10 +47,16 @@ import { debounceTime } from 'rxjs/operators';
 
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
 import type {
+  AnimationDirection,
+  AnimationPreset,
   TemplateImageSlot,
   TemplateLayer,
   TemplateTextField,
 } from '../../remotion-templates.types';
+import {
+  AnimationPickerComponent,
+  type AnimationValue,
+} from './animation-picker.component';
 
 /**
  * Hardcoded font list — `template_fonts` table does not yet exist (cf.
@@ -96,6 +102,7 @@ interface TextZoneFormShape {
   textAlign: FormControl<'left' | 'center' | 'right'>;
   maxChars: FormControl<number>;
   visibleIf: FormControl<string>;
+  animation: FormControl<AnimationValue>;
 }
 
 interface ImageZoneFormShape {
@@ -103,12 +110,28 @@ interface ImageZoneFormShape {
   label: FormControl<string>;
   safeZonePreset: FormControl<SafeZonePresetKey>;
   visibleIf: FormControl<string>;
+  animation: FormControl<AnimationValue>;
+}
+
+/**
+ * Plan 02-03 — Map AnimationValue (UI shape) to backend payload (separate
+ * `animation` preset string + `animationDirection`). Backend supports
+ * `'none'` as a preset (= "Aucune animation") so null values map to
+ * `{ animation: 'none' }` — no schema changes needed (cf. AnimationPreset
+ * union in remotion-templates.types.ts).
+ */
+function mapAnimationToPayload(
+  v: AnimationValue,
+): { animation: AnimationPreset; animationDirection?: AnimationDirection } {
+  if (!v) return { animation: 'none' };
+  if (v.preset === 'logo-pop') return { animation: 'logo-pop' };
+  return { animation: v.preset, animationDirection: v.direction };
 }
 
 @Component({
   selector: 'app-wizard-step-zones',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AnimationPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="wsz">
@@ -254,6 +277,14 @@ interface ImageZoneFormShape {
             />
           </label>
 
+          <div class="wsz__field">
+            <span>Animation</span>
+            <app-animation-picker
+              [value]="textForm.controls.animation.value"
+              (valueChange)="onAnimationChange('text', $event)"
+            />
+          </div>
+
           <div class="wsz__form-actions">
             <button
               type="button"
@@ -349,6 +380,14 @@ interface ImageZoneFormShape {
               (blur)="previewPropsChange.emit()"
             />
           </label>
+
+          <div class="wsz__field">
+            <span>Animation</span>
+            <app-animation-picker
+              [value]="imageForm.controls.animation.value"
+              (valueChange)="onAnimationChange('image', $event)"
+            />
+          </div>
 
           <div class="wsz__form-actions">
             <button
@@ -611,6 +650,8 @@ export class WizardStepZonesComponent implements OnInit {
       validators: [Validators.required, Validators.min(1), Validators.max(200)],
     }),
     visibleIf: new FormControl<string>('', { nonNullable: true }),
+    /** Plan 02-03 / UX-02 — null = "Aucune animation" (mapped to 'none' on submit). */
+    animation: new FormControl<AnimationValue>(null),
   });
 
   imageForm = new FormGroup<ImageZoneFormShape>({
@@ -626,6 +667,8 @@ export class WizardStepZonesComponent implements OnInit {
       validators: [Validators.required],
     }),
     visibleIf: new FormControl<string>('', { nonNullable: true }),
+    /** Plan 02-03 / UX-02 — null = "Aucune animation" (mapped to 'none' on submit). */
+    animation: new FormControl<AnimationValue>(null),
   });
 
   /**
@@ -655,6 +698,22 @@ export class WizardStepZonesComponent implements OnInit {
     return x.id;
   }
 
+  /**
+   * Plan 02-03 / UX-02 — Animation picker change handler.
+   * Updates the active form's animation control (text or image) and emits
+   * `previewPropsChange` so the live Player picks up the new motion within
+   * the existing hybrid wiring (instant: discrete picker click, no debounce).
+   */
+  onAnimationChange(scope: 'text' | 'image', value: AnimationValue): void {
+    const ctrl =
+      scope === 'text'
+        ? this.textForm.controls.animation
+        : this.imageForm.controls.animation;
+    ctrl.setValue(value);
+    ctrl.markAsDirty();
+    this.previewPropsChange.emit();
+  }
+
   openTextForm(): void {
     this.errorMsg.set(null);
     const firstLayer = this.layers()[0];
@@ -667,6 +726,7 @@ export class WizardStepZonesComponent implements OnInit {
       textAlign: 'center',
       maxChars: 40,
       visibleIf: '',
+      animation: null,
     });
     this.showTextForm.set(true);
   }
@@ -683,6 +743,7 @@ export class WizardStepZonesComponent implements OnInit {
       label: '',
       safeZonePreset: 'contain',
       visibleIf: '',
+      animation: null,
     });
     this.showImageForm.set(true);
   }
@@ -703,6 +764,7 @@ export class WizardStepZonesComponent implements OnInit {
       return;
     }
     this.creating.set(true);
+    const anim = mapAnimationToPayload(v.animation);
     this.dataService
       .createTextField(this.templateId, {
         slotKey: `text_${Date.now().toString(36)}`,
@@ -716,6 +778,7 @@ export class WizardStepZonesComponent implements OnInit {
         appearAt: 0,
         maxChars: v.maxChars,
         layerId: v.layerId,
+        ...anim,
       })
       .subscribe({
         next: (tf) => {
@@ -754,6 +817,7 @@ export class WizardStepZonesComponent implements OnInit {
       return;
     }
     this.creating.set(true);
+    const anim = mapAnimationToPayload(v.animation);
     this.dataService
       .createImageSlot(this.templateId, {
         slotKey: `img_${Date.now().toString(36)}`,
@@ -766,6 +830,7 @@ export class WizardStepZonesComponent implements OnInit {
         layerId: v.layerId,
         anchor: preset.anchor,
         fitMode: preset.key,
+        ...anim,
       })
       .subscribe({
         next: (s) => {
