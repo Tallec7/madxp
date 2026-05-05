@@ -8,7 +8,6 @@ import { Category } from './interfaces/category.interface';
 import { inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, tap, catchError, of } from 'rxjs';
-import { authGuard } from './guards/auth.guard';
 import { DemoConfigService } from './services/demo-config.service';
 import { ProfileConfigService } from './services/profile-config.service';
 import { SaasConfigService } from './services/saas-config.service';
@@ -134,6 +133,6 @@ export const routes: Routes = [
     { path: 'display/:n', component: TvComponent, resolve: { configuration: getConfiguration } },
     { path: 'tv', redirectTo: 'display/0', pathMatch: 'full' },
     { path: 'secondary', redirectTo: 'display/1', pathMatch: 'full' },
-    { path: 'remote', component: RemoteHostComponent, resolve: { configuration: getConfiguration }, canActivate: [authGuard] },
+    { path: 'remote', component: RemoteHostComponent, resolve: { configuration: getConfiguration } },
     { path: '**', redirectTo: 'display/0' }
 ];
