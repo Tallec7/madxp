@@ -14,6 +14,7 @@ import { dbCircuitBreaker } from './db-circuit-breaker.service';
 import { canaryMonitorService } from './canary-monitor.service';
 import { alertNotifier } from './alerting-notifier.service';
 import { AlertingChecks } from './alerting-checks.service';
+import { alertRepository } from '../repositories/alert.repository';
 
 // Re-export types for backward compatibility (consumers import from alerting.service)
 export type { AlertSeverity, AlertStatus, AlertThreshold, Alert } from './alerting.types';
@@ -180,36 +181,28 @@ class AlertingService {
   async createAlert(alert: Omit<Alert, 'id' | 'status' | 'createdAt'>): Promise<string> {
     await this.ensureTables();
 
-    // NOTE: threshold_id n'existe pas dans la table alerts en production
-    // On l'omet de l'INSERT pour éviter les erreurs
-    const result = await query<{ id: string; [key: string]: unknown }>(
-      `INSERT INTO ${this.tableName}
-       (site_id, alert_type, severity, status, message, metadata)
-       VALUES ($1, $2, $3, 'active', $4, $5)
-       RETURNING id`,
-      [
-        alert.siteId || null,
-        alert.type,
-        alert.severity,
-        alert.message,
-        JSON.stringify(alert.metadata),
-      ]
-    );
+    // ADR-111 : passer par alertRepository.create() qui upsert sur (site_id, alert_type)
+    // actif. Cela protege la DB du spam des emitters en boucle (cooldown in-memory
+    // resette au redemarrage, etc.).
+    const created = await alertRepository.create({
+      site_id: alert.siteId || (null as unknown as string),
+      alert_type: alert.type,
+      severity: alert.severity,
+      message: alert.message,
+      metadata: alert.metadata,
+    });
 
-    const alertId = result.rows[0].id;
-
-    // Mettre à jour les métriques
     metricsService.recordAlert(alert.severity, alert.type);
     await this.updateActiveAlertsMetrics();
 
     logger.warn('Alert created', {
-      id: alertId,
+      id: created.id,
       type: alert.type,
       severity: alert.severity,
       siteId: alert.siteId,
     });
 
-    return alertId;
+    return created.id;
   }
 
   /**

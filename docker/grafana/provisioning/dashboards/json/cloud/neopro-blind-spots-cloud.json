@@ -684,6 +684,21 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 94 },
+      "id": 806,
+      "title": "Alerts dedup skipped (ADR-111)",
+      "description": "Inserts d'alertes deduplicates dans une row active existante (bumpe occurrences au lieu de spam). Pic = emitter en boucle d'un type donne.",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_alerts_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",

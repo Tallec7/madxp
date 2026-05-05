@@ -124,6 +124,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-108](ADR-108-template-versioning-and-master-locking.md)                    | Versioning sémantique des templates v2 + verrouillage des masters (snapshot, fork, rollback) | Proposé                           | Avr 2026 |
 | [ADR-109](ADR-109-template-backgrounds-grants.md)                               | Catalogue backgrounds couleur + grants user_id (pattern ADR-082)                             | Proposé                           | Avr 2026 |
 | [ADR-110](ADR-110-template-studio-v3-task-oriented-admin-ux.md)                 | Template Studio v3 — UX admin orientée tâche (wizard + asset manager + vocabulaire métier)   | Proposé                           | Mai 2026 |
+| [ADR-111](ADR-111-alert-repository-dedup.md)                                    | Dédup au niveau alertRepository (upsert + occurrences) — neutralise les emitters en boucle   | Accepté                           | Mai 2026 |
 
 ### Supersédés
 

@@ -27,11 +27,18 @@ jest.mock('../config/logger', () => mockLogger);
 // Mock metrics service
 const mockRecordAlert = jest.fn();
 const mockRecordActiveAlerts = jest.fn();
+const mockRecordAlertDedupSkipped = jest.fn();
 jest.mock('./metrics.service', () => ({
   __esModule: true,
   default: {
     recordAlert: (severity: string, type: string) => mockRecordAlert(severity, type),
     recordActiveAlerts: (severity: string, count: number) => mockRecordActiveAlerts(severity, count),
+    recordAlertDedupSkipped: (type: string) => mockRecordAlertDedupSkipped(type),
+  },
+  metricsService: {
+    recordAlert: (severity: string, type: string) => mockRecordAlert(severity, type),
+    recordActiveAlerts: (severity: string, count: number) => mockRecordActiveAlerts(severity, count),
+    recordAlertDedupSkipped: (type: string) => mockRecordAlertDedupSkipped(type),
   },
 }));
 
@@ -170,7 +177,8 @@ describe('AlertingService', () => {
 
       mockQuery
         .mockResolvedValueOnce({ rows: [thresholdDbRow] }) // getThresholdsByMetric
-        .mockResolvedValueOnce({ rows: [{ id: 'alert-1' }] }) // INSERT alert (ensureTables already done)
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // ADR-111 dedup UPDATE (no-match)
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-1' }] }) // INSERT alert
         .mockResolvedValueOnce({ rows: [] }); // updateActiveAlertsMetrics
 
       await alertingService.evaluateMetric('site-123', 'cpu_usage', 95);
@@ -281,9 +289,11 @@ describe('AlertingService', () => {
     });
 
     it('should create alert and update metrics', async () => {
+      // ADR-111 : alertRepository.create() = UPDATE (no-match) puis INSERT, puis updateActiveAlertsMetrics
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'alert-123' }] })
-        .mockResolvedValueOnce({ rows: [{ severity: 'warning', count: '5' }] });
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // UPDATE no-match
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-123' }] }) // INSERT returning
+        .mockResolvedValueOnce({ rows: [{ severity: 'warning', count: '5' }] }); // metrics SELECT
 
       const alertId = await alertingService.createAlert({
         siteId: 'site-123',
@@ -303,8 +313,9 @@ describe('AlertingService', () => {
 
     it('should handle alert without siteId', async () => {
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'alert-123' }] })
-        .mockResolvedValueOnce({ rows: [] });
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // UPDATE no-match
+        .mockResolvedValueOnce({ rows: [{ id: 'alert-123' }] }) // INSERT returning
+        .mockResolvedValueOnce({ rows: [] }); // metrics SELECT
 
       await alertingService.createAlert({
         type: 'System Alert',
@@ -313,9 +324,11 @@ describe('AlertingService', () => {
         metadata: {},
       });
 
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.arrayContaining([null]) // null siteId
+      // L'INSERT (2e call) doit avoir null comme site_id
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('INSERT INTO alerts'),
+        expect.arrayContaining([null])
       );
     });
   });
@@ -1022,18 +1035,19 @@ describe('AlertingService', () => {
 
       await alertingService.checkStuckRenderJobs();
 
-      // An INSERT INTO alerts (or similar) must be called with severity=warning
-      const insertCall = mockQuery.mock.calls.find(
-        c => typeof c[0] === 'string' && c[0].includes('INSERT INTO')
-          && Array.isArray(c[1]) && c[1].includes('warning'),
+      // ADR-111 : alertRepository.create() peut UPDATE (dedup) OU INSERT.
+      // Dans les 2 cas, severity=warning + site_id='site-1' doivent etre passes.
+      const alertCall = mockQuery.mock.calls.find(
+        c => typeof c[0] === 'string'
+          && (c[0].includes('INSERT INTO alerts') || c[0].includes('UPDATE alerts'))
+          && Array.isArray(c[1]) && c[1].includes('warning') && c[1].includes('site-1'),
       );
-      expect(insertCall).toBeDefined();
-      expect(insertCall?.[1]).toEqual(expect.arrayContaining(['site-1']));
+      expect(alertCall).toBeDefined();
     });
 
     it('creates a critical alert AND auto-fails the job when stuck >= 30 minutes', async () => {
-      // Default fallback must return an id so createAlert can resolve (it does
-      // INSERT … RETURNING id internally — a hollow {rows: []} would crash).
+      // Default fallback : INSERT/UPDATE alertes doivent renvoyer un id (alertRepository.create
+      // appelle UPDATE puis INSERT, les deux RETURNING *).
       mockQuery.mockResolvedValue({ rows: [{ id: 'alert-r-2' }], rowCount: 1 });
       mockQuery
         .mockResolvedValueOnce({
