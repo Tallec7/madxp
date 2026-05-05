@@ -1116,6 +1116,22 @@ export const schemas = {
     scaleFrom: Joi.number().min(0).max(5).allow(null).optional(),
     scaleTo: Joi.number().min(0).max(5).allow(null).optional(),
   }).min(1),
+  // ADR-110 / Plan 02-04 / UX-03 — atomic rename of an option key.
+  // Validates the body of POST /:id/options/:optionId/rename. The repo
+  // handles transactional propagation across template_options, packshot_refs,
+  // text_fields.visible_if, image_slots.visible_if (BEGIN/COMMIT/ROLLBACK).
+  templateStudioOptionRename: Joi.object({
+    newKey: Joi.string()
+      .pattern(/^[a-z][a-z0-9_]*$/)
+      .min(1)
+      .max(64)
+      .required()
+      .messages({
+        'string.pattern.base':
+          'newKey must be snake_case ASCII (start with letter, then [a-z0-9_]).',
+      }),
+  }),
+
   // ADR-082 — Video club grants
   addVideoClubGrant: Joi.object({
     site_id: Joi.string().uuid().required(),

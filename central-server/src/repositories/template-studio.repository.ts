@@ -1147,6 +1147,132 @@ class TemplateStudioRepository {
   }
 
   /**
+   * ADR-110 / Plan 02-04 / UX-03 — Atomic rename of an option key.
+   *
+   * Updates 4 surfaces in a single BEGIN/COMMIT transaction:
+   *  1. template_options.key                   (the rename itself)
+   *  2. template_packshot_refs.option_key      (FK propagation)
+   *  3. template_text_fields.visible_if        (regex rewrite of `\b<old>\s*==`)
+   *  4. template_image_slots.visible_if        (regex rewrite of `\b<old>\s*==`)
+   *
+   * PG `\m`/`\M` are word-boundary escapes (left/right) — equivalent to JS `\b`.
+   * Any failure → ROLLBACK (no drift). Throws:
+   *   - 'option_key_conflict' when newKey is already used by another option
+   *     on the same template.
+   *   - 'option_not_found'    when (templateId, optionId) row does not exist.
+   */
+  async renameOptionKey(
+    templateId: string,
+    optionId: string,
+    newKey: string,
+  ): Promise<{
+    id: string;
+    key: string;
+    updatedTextFields: number;
+    updatedImageSlots: number;
+    updatedPackshotRefs: number;
+  }> {
+    const client = await getClient();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Lock the option row + read its current key (defense-in-depth FK check)
+      const existing: { rows: Array<{ id: string; key: string }> } = await client.query(
+        `SELECT id, key FROM template_options
+          WHERE id = $1 AND template_id = $2
+          FOR UPDATE`,
+        [optionId, templateId],
+      );
+      if (existing.rows.length === 0) {
+        throw new Error('option_not_found');
+      }
+      const oldKey = existing.rows[0].key;
+      if (oldKey === newKey) {
+        // No-op rename — commit empty transaction and return zero counts.
+        await client.query('COMMIT');
+        return {
+          id: optionId,
+          key: newKey,
+          updatedTextFields: 0,
+          updatedImageSlots: 0,
+          updatedPackshotRefs: 0,
+        };
+      }
+
+      // 2. Conflict check — another option on the same template already uses newKey.
+      const conflict: { rows: Array<{ id: string }> } = await client.query(
+        `SELECT id FROM template_options
+          WHERE template_id = $1 AND key = $2 AND id <> $3`,
+        [templateId, newKey, optionId],
+      );
+      if (conflict.rows.length > 0) {
+        throw new Error('option_key_conflict');
+      }
+
+      // 3. Rename the option itself.
+      await client.query(
+        `UPDATE template_options
+            SET key = $1, updated_at = NOW()
+          WHERE id = $2 AND template_id = $3`,
+        [newKey, optionId, templateId],
+      );
+
+      // 4. Propagate FK to packshot_refs.
+      const refs = await client.query(
+        `UPDATE template_packshot_refs
+            SET option_key = $1
+          WHERE template_id = $2 AND option_key = $3`,
+        [newKey, templateId, oldKey],
+      );
+
+      // 5. Rewrite visible_if on text_fields. PG word-boundary regex `\m...\M`
+      //    is the equivalent of JS `\b`. We capture the optional whitespace
+      //    between key and `==` so the rewrite preserves admin formatting.
+      const tf = await client.query(
+        `UPDATE template_text_fields
+            SET visible_if = regexp_replace(
+              visible_if,
+              '\\m' || $1 || '\\M(\\s*)==',
+              $2 || '\\1==',
+              'g'
+            )
+          WHERE template_id = $3
+            AND visible_if ~ ('\\m' || $1 || '\\M\\s*==')`,
+        [oldKey, newKey, templateId],
+      );
+
+      // 6. Same rewrite for image_slots.
+      const is = await client.query(
+        `UPDATE template_image_slots
+            SET visible_if = regexp_replace(
+              visible_if,
+              '\\m' || $1 || '\\M(\\s*)==',
+              $2 || '\\1==',
+              'g'
+            )
+          WHERE template_id = $3
+            AND visible_if ~ ('\\m' || $1 || '\\M\\s*==')`,
+        [oldKey, newKey, templateId],
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        id: optionId,
+        key: newKey,
+        updatedTextFields: tf.rowCount ?? 0,
+        updatedImageSlots: is.rowCount ?? 0,
+        updatedPackshotRefs: refs.rowCount ?? 0,
+      };
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * ADR-075 — Scaffold placeholders pour un template legacy.
    * Crée 1 variant + 1 text field + 1 image slot si absents, pour débloquer
    * le flip v1→v2. Idempotent : chaque ressource est créée uniquement si sa
