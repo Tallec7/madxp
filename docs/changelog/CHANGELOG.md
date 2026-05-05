@@ -1,3 +1,9 @@
+## [3.286.3](https://github.com/Tallec7/neopro/compare/v3.286.2...v3.286.3) (2026-05-05)
+
+### Bug Fixes
+
+- **upload:** convertir les erreurs fileFilter en UploadTypeError → 400 au lieu de 500 ([784a5e3](https://github.com/Tallec7/neopro/commit/784a5e354fd3445f26b8eb51061dd7785fe8927b))
+
 ## [3.286.2](https://github.com/Tallec7/neopro/compare/v3.286.1...v3.286.2) (2026-05-04)
 
 ### Bug Fixes
