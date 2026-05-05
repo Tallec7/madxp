@@ -30,6 +30,14 @@ const diskStorage = multer.diskStorage({
 // Storage mémoire conservé pour les petits fichiers (images < 50MB)
 const memoryStorage = multer.memoryStorage();
 
+// Erreur typée pour les rejets de fileFilter — détectée dans error-handler.ts → 400
+export class UploadTypeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UploadTypeError';
+  }
+}
+
 // Filtre pour n'accepter que les vidéos
 const videoFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimes = [
@@ -44,7 +52,7 @@ const videoFilter = (_req: Express.Request, file: Express.Multer.File, cb: multe
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: MP4, WebM, OGG, MOV, AVI, MKV`));
+    cb(new UploadTypeError(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: MP4, WebM, OGG, MOV, AVI, MKV`));
   }
 };
 
@@ -61,7 +69,7 @@ const updatePackageFilter = (_req: Express.Request, file: Express.Multer.File, c
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: .gz, .zip, .tar`));
+    cb(new UploadTypeError(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: .gz, .zip, .tar`));
   }
 };
 
@@ -77,7 +85,7 @@ const imageFilter = (_req: Express.Request, file: Express.Multer.File, cb: multe
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: JPG, PNG, WEBP`));
+    cb(new UploadTypeError(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: JPG, PNG, WEBP`));
   }
 };
 
@@ -109,7 +117,7 @@ const templateFilter = (_req: Express.Request, file: Express.Multer.File, cb: mu
   } else if (file.fieldname.startsWith('image_') && imageMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type de fichier non autorisé pour le champ "${file.fieldname}": ${file.mimetype}`));
+    cb(new UploadTypeError(`Type de fichier non autorisé pour le champ "${file.fieldname}": ${file.mimetype}`));
   }
 };
 
@@ -127,7 +135,7 @@ const templateAssetFilter = (_req: Express.Request, file: Express.Multer.File, c
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type non autorisé: ${file.mimetype}. Formats acceptés: WebM, MP4`));
+    cb(new UploadTypeError(`Type non autorisé: ${file.mimetype}. Formats acceptés: WebM, MP4`));
   }
 };
 
@@ -148,7 +156,7 @@ const userImageFilter = (
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`Type non autorisé: ${file.mimetype}. Formats acceptés: JPEG, PNG, WebP`));
+    cb(new UploadTypeError(`Type non autorisé: ${file.mimetype}. Formats acceptés: JPEG, PNG, WebP`));
   }
 };
 
@@ -169,7 +177,7 @@ const pngOnlyFilter = (
   if (file.mimetype === 'image/png') {
     cb(null, true);
   } else {
-    cb(new Error(`Seuls les PNG sont acceptés (reçu: ${file.mimetype})`));
+    cb(new UploadTypeError(`Seuls les PNG sont acceptés (reçu: ${file.mimetype})`));
   }
 };
 export const uploadPngBuffer = multer({

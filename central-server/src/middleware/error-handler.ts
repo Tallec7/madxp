@@ -8,6 +8,7 @@ import {
   ApiErrorResponse,
   isAppError,
 } from '../types/errors';
+import { UploadTypeError } from './upload';
 import logger from '../config/logger';
 
 /**
@@ -194,6 +195,12 @@ export const errorHandler = (
   if (err.name === 'TokenExpiredError') {
     const appError = new AppError(ErrorCode.AUTH_TOKEN_EXPIRED);
     handleAppError(appError, correlationReq, res);
+    return;
+  }
+
+  // Upload file-type rejections from fileFilter (cb(new UploadTypeError(...)))
+  if (err instanceof UploadTypeError) {
+    res.status(400).json({ error: err.message });
     return;
   }
 
