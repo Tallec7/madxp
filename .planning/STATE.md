@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-ux-interactive-01-PLAN.md — 2 commits (c764fe89, 107f3d9c) + SUMMARY. Vocabulary smoke 5/5 GREEN, ERROR_MESSAGES shipped. Ready for Plan 02 (Player live).
-last_updated: '2026-05-05T09:55:00.000Z'
-last_activity: 2026-05-05 — Phase 2 Plan 01 livré (banlist directory-wide + ERROR_MESSAGES const FR pour les 3 codes Phase 1)
+status: Ready for Plan 03 (Animation cards UX)
+stopped_at: Completed 02-ux-interactive-02-PLAN.md
+last_updated: '2026-05-05T10:25:00.000Z'
+last_activity: 2026-05-05 — Phase 2 Plan 02 livré (Player Remotion live mounted-once + buildRuntimePlayerState per-layer proxy + hybrid debounce(300)/blur)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 14
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
   percent: 43
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 2 of 3 (UX interactive) — IN PROGRESS
-Plan: 01 of 4 — DONE
-Status: Ready for Plan 02 (Player live integration)
-Last activity: 2026-05-05 — Phase 2 Plan 01 livré (banlist directory-wide + ERROR_MESSAGES const FR pour les 3 codes Phase 1)
+Plan: 02 of 4 — DONE
+Status: Ready for Plan 03 (Animation cards UX)
+Last activity: 2026-05-05 — Phase 2 Plan 02 livré (Player Remotion live mounted-once + buildRuntimePlayerState per-layer proxy + hybrid debounce(300)/blur)
 
 Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5 + Phase 2 1/4)
 
@@ -57,6 +57,7 @@ Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5
 | 02    | 01   | ~10 min  | 2     | 2     | 2026-05-05 |
 
 _Updated after each plan completion_
+| Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05
-Stopped at: Completed 02-ux-interactive-01-PLAN.md — 2 commits (c764fe89, 107f3d9c) + SUMMARY. Vocabulary smoke 5/5 GREEN, ERROR_MESSAGES shipped. Ready for Plan 02 (Player live).
+Last session: 2026-05-05T10:08:12.651Z
+Stopped at: Completed 02-ux-interactive-02-PLAN.md
 Resume file: None
