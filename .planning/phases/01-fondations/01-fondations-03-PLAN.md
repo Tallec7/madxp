@@ -10,7 +10,6 @@ files_modified:
   - central-dashboard/src/app/features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component.scss
   - central-dashboard/src/app/features/content/remotion-templates/studio-v3/wizard/wizard-step-identity.component.ts
   - central-dashboard/src/app/features/content/remotion-templates/studio-v3/wizard-state.types.ts
-  - central-dashboard/src/app/features/content/remotion-templates/remotion-templates-data.service.ts
   - central-dashboard/src/app/app.routes.ts
 autonomous: true
 requirements: [WIZARD-01, WIZARD-02, WIZARD-03]
@@ -20,6 +19,7 @@ must_haves:
     - 'Step 1 (Identité) creates the neopro_templates row immediately on Next; templateId is stored in WizardState'
     - 'Closing the browser after Step 1 does NOT lose data: re-entering the wizard with /new/:id resumes at the appropriate step'
     - 'Pressing Back preserves all field values (form state held in WizardState parent, not in step component local state)'
+    - 'Vocabulary labels (étape titles, field labels) come from VOCABULARY_MAP / hardcoded SPEC strings — never DB jargon'
   artifacts:
     - path: central-dashboard/src/app/features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component.ts
       provides: 'Wizard shell — currentStep signal, WizardState holder, step navigation'
@@ -37,9 +37,15 @@ must_haves:
       pattern: "@Output\\(\\) submit"
     - from: StudioV3WizardComponent
       to: RemotionTemplatesDataService.createTemplate
-      via: 'POST /api/remotion-templates on step 1 Next'
+      via: 'POST /api/remotion-templates with { name, composition_id, ... }'
       pattern: "createTemplate\\("
 ---
+
+## Plan 01 contracts consumed
+
+This plan does not directly consume Plan 01 backend artifacts (those are wired by Plans 02/04/05). It does consume the frontend constant Plan 01 froze:
+
+- `VOCABULARY_MAP` from `central-dashboard/src/app/features/content/remotion-templates/studio-v3/vocabulary.constants.ts` — every visible étape title and field label MUST come from this map or from the SPEC's frozen French copy. Adding new labels requires updating the SPEC + smoke-template-studio-v3-vocabulary in the same commit.
 
 <objective>
 Build the wizard shell + Step 1 (Identité) — the entry point of the v3 creation flow.
@@ -58,16 +64,27 @@ Output: Single Angular route, parent shell with signal-based step state, Step 1 
 @.planning/REQUIREMENTS.md
 @.planning/research/ARCHITECTURE.md (Pattern 1, Pattern 2)
 @.planning/research/STACK.md (Section 1: ReactiveForms)
+@.planning/phases/01-fondations/01-fondations-01-SUMMARY.md
 @docs/specs/features/template-studio-v3.spec.md (Étape 1 — Identité, lines 64-69)
 @docs/templates/mockups/template-studio-v3-mockup.html (.wizard, .stepper, .form-row sections)
 @central-dashboard/src/app/features/content/remotion-templates/remotion-templates-data.service.ts
 @central-dashboard/src/app/features/content/remotion-templates/studio-v3/vocabulary.constants.ts
 
 <interfaces>
-Existing data service methods (already present at remotion-templates-data.service.ts):
-  createTemplate(payload: CreateTemplatePayload): Observable<RemotionTemplate>
-  // Payload shape: { name, description?, compositionId?, durationSeconds, fps, canvasWidth, canvasHeight }
-  getTemplateById(id: string): Observable<RemotionTemplate>
+EXISTING data service methods (already present in remotion-templates-data.service.ts):
+  createTemplate(payload: {
+    name: string;
+    composition_id: string;            // snake_case — match existing method signature at line 269
+    description?: string | null;
+    props_schema?: TemplatePropDef[];
+    default_props?: Record<string, unknown>;
+  }): Observable<RemotionTemplate>
+  getTemplateById(id: string): Observable<RemotionTemplate>     // alias of getStudioView for v3 — verify; if missing, use getTemplate from existing methods
+
+NOTE: existing createTemplate signature does NOT take canvasWidth/canvasHeight/durationSeconds/fps as top-level fields (those live in default_props). The wizard's Step 1 form collects them, but the POST body shape must match the existing endpoint. Two approaches:
+(a) Pack identity fields into default_props: { duration_seconds, fps, canvas_width, canvas_height }
+(b) Extend the backend createTemplate Joi schema (templateCreateSchema) to accept top-level identity fields
+For Phase 1 minimum, use approach (a) — no backend schema change required. The runtime reads default_props.canvas_width etc. anyway.
 
 Existing precedent (DO NOT modify, just imitate the pattern):
 central-dashboard/.../create-template-wizard.component.ts → existing v2 wizard with internal step state (template-driven forms)
@@ -83,15 +100,17 @@ options: TemplateOption[]; // plan 05
 </interfaces>
 
 <step_1_insert_columns>
-On Step 1 "Suivant" click, POST /api/remotion-templates with body:
+On Step 1 "Suivant" click, POST /api/remotion-templates with body matching the EXISTING createTemplate Joi schema:
 {
 name: form.value.name, // required, 3-120 chars
+composition_id: slugify(form.value.name) + '-' + Date.now().toString(36),
 description: form.value.description || null,
-compositionId: slugify(form.value.name) + '-' + Date.now().toString(36), // auto-slug, no user input
-durationSeconds: form.value.durationSec, // default 5.9
-fps: form.value.fps, // default 30
-canvasWidth: form.value.width, // default 1920
-canvasHeight: form.value.height // default 1080
+default_props: {
+duration_seconds: form.value.durationSec, // 5.9 default
+fps: form.value.fps, // 30 default
+canvas_width: form.value.width, // 1920 default
+canvas_height: form.value.height, // 1080 default
+}
 }
 
 The backend INSERTs neopro_templates with published=false; returns the new template id.
@@ -106,12 +125,12 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
   <read_first>
     - central-dashboard/src/app/features/content/remotion-templates/create-template-wizard.component.ts (precedent)
     - central-dashboard/src/app/app.routes.ts
-    - central-dashboard/src/app/features/content/remotion-templates/remotion-templates-data.service.ts (createTemplate, getTemplateById signatures)
+    - central-dashboard/src/app/features/content/remotion-templates/remotion-templates-data.service.ts (createTemplate signature line 269)
     - docs/templates/mockups/template-studio-v3-mockup.html (.wizard / .stepper structure)
   </read_first>
   <behavior>
     - Test 1: Navigating to /content/templates-remotion/new mounts StudioV3WizardComponent with currentStep === 1, templateId === null
-    - Test 2: Navigating to /content/templates-remotion/new/:id calls dataService.getTemplateById(id), populates WizardState, sets currentStep to first incomplete step (Step 2 if identity exists)
+    - Test 2: Navigating to /content/templates-remotion/new/:id calls dataService.getStudioView(id) (or getTemplate fallback if v1), populates WizardState, sets currentStep to first incomplete step (Step 2 if identity exists)
     - Test 3: prevStep() decrements currentStep but never below 1; nextStep() increments but never above 4
     - Test 4: Stepper UI in left sidebar shows 4 steps with active/done classes per mockup
     - Test 5: Right pane uses [hidden] (NOT *ngIf) to switch between step sub-components — Step 1 stays mounted when navigating forward, preserving form state
@@ -189,26 +208,34 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
       }
 
       private resumeFromId(id: string) {
-        this.dataService.getTemplateById(id).subscribe(tpl => {
+        // getStudioView returns 404 for v1 templates — for Phase 1, only v2/v3 templates are resumable
+        this.dataService.getStudioView(id).subscribe(view => {
+          const tpl = view.template;
+          const dp = (tpl.default_props ?? {}) as Record<string, number>;
           this.state.update(s => ({
             ...s,
             templateId: tpl.id,
             identity: {
               name: tpl.name,
               description: tpl.description ?? '',
-              durationSec: Number(tpl.durationSeconds),
-              fps: tpl.fps,
-              width: tpl.canvasWidth,
-              height: tpl.canvasHeight,
+              durationSec: Number(dp['duration_seconds'] ?? 5.9),
+              fps: Number(dp['fps'] ?? 30),
+              width: Number(dp['canvas_width'] ?? 1920),
+              height: Number(dp['canvas_height'] ?? 1080),
             },
+            layers: view.layers ?? [],
+            zones: { textFields: view.textFields ?? [], imageSlots: view.imageSlots ?? [] },
           }));
-          this.currentStep.set(this.computeResumeStep(tpl));
+          this.currentStep.set(this.computeResumeStep(view));
         });
       }
 
-      private computeResumeStep(tpl: RemotionTemplate): WizardStep {
-        // Plan 04 will extend this with layer/zone presence checks
-        return 2;
+      private computeResumeStep(view: { layers?: unknown[]; textFields?: unknown[]; imageSlots?: unknown[] }): WizardStep {
+        // Plan 05 will refine to also consider options + ?from=duplicate query param
+        if (!view.layers || view.layers.length === 0) return 2;
+        const zoneCount = (view.textFields?.length ?? 0) + (view.imageSlots?.length ?? 0);
+        if (zoneCount === 0) return 3;
+        return 4;
       }
 
       onStep1Submit(value: IdentityFormValue) {
@@ -222,15 +249,17 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
           return;
         }
 
-        const compositionId = this.slugify(value.name) + '-' + Date.now().toString(36);
+        const composition_id = this.slugify(value.name) + '-' + Date.now().toString(36);
         this.dataService.createTemplate({
           name: value.name,
-          description: value.description || undefined,
-          compositionId,
-          durationSeconds: value.durationSec,
-          fps: value.fps,
-          canvasWidth: value.width,
-          canvasHeight: value.height,
+          composition_id,
+          description: value.description || null,
+          default_props: {
+            duration_seconds: value.durationSec,
+            fps: value.fps,
+            canvas_width: value.width,
+            canvas_height: value.height,
+          },
         }).subscribe({
           next: tpl => {
             this.state.update(s => ({ ...s, templateId: tpl.id }));
@@ -310,9 +339,9 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
   <acceptance_criteria>
     - `grep -n "currentStep = signal<" {wizard.component.ts}` returns 1
     - `grep -n "\\[hidden\\]" {wizard.component.html}` returns ≥3 (one per step container)
-    - `grep -n "\\*ngIf" {wizard.component.html}` returns 0 occurrences gating step containers (only allowed for non-step elements)
     - `grep -n "templates-remotion/new" central-dashboard/src/app/app.routes.ts` returns 2 matches (with and without :id)
     - `grep -n "location.replaceState" {wizard.component.ts}` returns 1
+    - `grep -n "composition_id" {wizard.component.ts}` returns 1 (matches existing dataService.createTemplate signature)
     - Build succeeds
   </acceptance_criteria>
   <done>Wizard route mounts; stepper sidebar visible; placeholder panes for steps 2-4; ready to plug Step 1.</done>
@@ -458,7 +487,7 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
   2. URL becomes /new/{uuid}; current step is 2 (placeholder visible)
   3. Click step 1 in stepper → form still shows "Test1" + 5.9 (back nav preserves data)
   4. Refresh browser at /new/{uuid} → resumes at step 2; clicking step 1 shows the saved values
-- `npm run test:smoke:smart` → no regression
+- `npm run test:smoke:smart` → no regression (especially smoke-template-studio-v3-vocabulary stays green)
 </verification>
 
 <success_criteria>
@@ -467,6 +496,7 @@ WizardState.templateId is set; URL is replaced (history.replaceState) to /conten
 - WIZARD-02: Step 1 INSERT happens immediately; URL replaceState supports resume
 - WIZARD-03: Back navigation preserves form values
 - [hidden] used on step containers (P2 prevention)
+- createTemplate payload matches existing snake_case signature (composition_id, default_props.{duration_seconds,fps,canvas_width,canvas_height})
   </success_criteria>
 
 <output>
