@@ -11,7 +11,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 ## Phases
 
 - [x] **Phase 1: Fondations** - Wizard 4 étapes (sans preview) + Asset Manager + duplication atomique — **COMPLETE 2026-05-05**
-- [ ] **Phase 2: UX interactive** - Preview Remotion temps réel + vocabulaire métier figé + preset cards
+- [x] **Phase 2: UX interactive** - Preview Remotion temps réel + vocabulaire métier figé + preset cards (completed 2026-05-05)
 - [ ] **Phase 3: Gate de publication** - Checklist automatique 8 critères + test render + règles smoke
 
 ## Phase Details
@@ -80,7 +80,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 | Phase               | Plans Complete | Status      | Completed  |
 | ------------------- | -------------- | ----------- | ---------- |
 | 1. Fondations       | 5/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | 1/4            | In progress | -          |
+| 2. UX interactive   | 1/4            | Complete    | 2026-05-05 |
 | 3. Gate publication | 0/?            | Not started | -          |
 
 ---
