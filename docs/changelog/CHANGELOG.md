@@ -1,3 +1,9 @@
+# [3.287.0](https://github.com/Tallec7/neopro/compare/v3.286.4...v3.287.0) (2026-05-05)
+
+### Features
+
+- **sites-list:** différenciation UX Pi/SaaS — version, santé, match, onboarding ([#837](https://github.com/Tallec7/neopro/issues/837)) ([372ef9f](https://github.com/Tallec7/neopro/commit/372ef9ffea300fa4e3b94693cedb48af5b079983))
+
 ## [3.286.4](https://github.com/Tallec7/neopro/compare/v3.286.3...v3.286.4) (2026-05-05)
 
 ### Bug Fixes
