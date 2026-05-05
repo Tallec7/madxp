@@ -28,7 +28,13 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 3. Super_admin peut dupliquer n'importe quel template depuis sa card : le clone s'ouvre à l'étape 3, toutes les tables liées sont clonées en une seule transaction, les WebM ne sont pas dupliqués sur FTP.
 4. Les smoke tests `smoke-template-studio-v3-vocabulary`, `smoke-template-studio-v3-duplicate` et `smoke-template-studio-v3-asset-manager` sont verts — le vocabulaire UI est figé, la duplication couvre les 6 tables, l'upload sans alpha est rejeté.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests)
+- [ ] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard)
+- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
+- [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
+- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
 
 ### Phase 2: UX interactive
 
@@ -43,7 +49,13 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 4. L'étape 4 indique automatiquement combien de zones sont reliées à chaque option via visible_if ("2 zones reliées à cette option") — sans action de l'utilisateur.
 5. Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun "layer", "slot", "pix_fmt" visible) — un smoke test garantit qu'aucune clé DB ne peut être introduite sans faire échouer le test.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests)
+- [ ] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard)
+- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
+- [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
+- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
 
 ### Phase 3: Gate de publication
 
@@ -56,7 +68,13 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 2. Super_admin peut lancer un rendu de test avec données factices depuis le wizard : le résultat s'affiche dans le Player intégré, et un template dont le rendu échoue ne peut pas être publié.
 3. Le smoke test `smoke-template-studio-v3-validation` est vert — il confirme que la checklist rejette un template incomplet selon chacun des 8 critères, en utilisant un registre extensible (pas des if/else hardcodés).
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests)
+- [ ] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard)
+- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
+- [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
+- [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
 
 ## Progress
 
