@@ -33,6 +33,17 @@ router.get(
   ctrl.getStudioView,
 );
 
+// ── Gate de publication (ADR-110 / Plan 03-02 / TEST-03)
+// Runs the 8-rule validation registry server-side. Source of truth for the
+// publish-gate checklist consumed by the wizard step 5 in Plan 03-04.
+router.get(
+  '/:id/validation',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  adminRateLimit,
+  ctrl.getValidation,
+);
+
 // ── Scaffold placeholders (débloque flip v1→v2)
 router.post(
   '/:id/studio/scaffold',
