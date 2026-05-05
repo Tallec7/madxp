@@ -12,11 +12,16 @@
  */
 
 import { CommonModule, Location } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
-import type { TemplateStudioView } from '../../remotion-templates.types';
+import type {
+  TemplateImageSlot,
+  TemplateLayer,
+  TemplateStudioView,
+  TemplateTextField,
+} from '../../remotion-templates.types';
 import {
   DEFAULT_WIZARD_STATE,
   IdentityFormValue,
@@ -24,6 +29,7 @@ import {
   WizardState,
   WizardStep,
 } from '../wizard-state.types';
+import { WizardStepBackgroundsComponent } from './wizard-step-backgrounds.component';
 import { WizardStepIdentityComponent } from './wizard-step-identity.component';
 
 const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
@@ -31,7 +37,11 @@ const ALL_STEPS: WizardStep[] = [1, 2, 3, 4];
 @Component({
   selector: 'app-studio-v3-wizard',
   standalone: true,
-  imports: [CommonModule, WizardStepIdentityComponent],
+  imports: [
+    CommonModule,
+    WizardStepIdentityComponent,
+    WizardStepBackgroundsComponent,
+  ],
   templateUrl: './studio-v3-wizard.component.html',
   styleUrls: ['./studio-v3-wizard.component.scss'],
 })
@@ -49,6 +59,29 @@ export class StudioV3WizardComponent implements OnInit {
   state = signal<WizardState>({ ...DEFAULT_WIZARD_STATE });
   saving = signal<boolean>(false);
   loadError = signal<string | null>(null);
+
+  /**
+   * Mirror signals owned by this shell — step components consume them as
+   * `WritableSignal` inputs and call `.set(...)` for optimistic UI. The
+   * effect below keeps them in sync with the canonical `state` signal.
+   * (Plan 03 pattern: form state lifted, step component is pure I/O.)
+   */
+  layersSignal = signal<TemplateLayer[]>(DEFAULT_WIZARD_STATE.layers);
+  textFieldsSignal = signal<TemplateTextField[]>(
+    DEFAULT_WIZARD_STATE.zones.textFields,
+  );
+  imageSlotsSignal = signal<TemplateImageSlot[]>(
+    DEFAULT_WIZARD_STATE.zones.imageSlots,
+  );
+
+  constructor() {
+    effect(() => {
+      const s = this.state();
+      this.layersSignal.set(s.layers);
+      this.textFieldsSignal.set(s.zones.textFields);
+      this.imageSlotsSignal.set(s.zones.imageSlots);
+    });
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -130,6 +163,31 @@ export class StudioV3WizardComponent implements OnInit {
           this.saving.set(false);
         },
       });
+  }
+
+  /**
+   * WIZARD-04 — Step 2 emits the new layer list after every mutation
+   * (drag-reorder, create, delete). We funnel it back into the canonical
+   * state signal so back-nav to Step 1 + return to Step 2 keeps the data.
+   */
+  onLayersChange(layers: TemplateLayer[]): void {
+    this.state.update((s) => ({ ...s, layers }));
+  }
+
+  /** WIZARD-05 — Step 3 emits text-fields list after every mutation. */
+  onTextFieldsChange(textFields: TemplateTextField[]): void {
+    this.state.update((s) => ({
+      ...s,
+      zones: { ...s.zones, textFields },
+    }));
+  }
+
+  /** WIZARD-05 — Step 3 emits image-slots list after every mutation. */
+  onImageSlotsChange(imageSlots: TemplateImageSlot[]): void {
+    this.state.update((s) => ({
+      ...s,
+      zones: { ...s.zones, imageSlots },
+    }));
   }
 
   goToStep(s: WizardStep): void {

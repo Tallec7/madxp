@@ -31,13 +31,21 @@
       (next)="onStep1Submit($event)"
     ></app-wizard-step-identity>
 
-    <!-- Step 2 placeholder — wired by plan 04 (Fonds animés). -->
-    <div [hidden]="currentStep() !== 2" class="v3w__placeholder">
+    <!-- Step 2 — Fonds animés (Plan 04 / WIZARD-04). -->
+    <app-wizard-step-backgrounds
+      *ngIf="state().templateId as tplId"
+      [hidden]="currentStep() !== 2"
+      [templateId]="tplId"
+      [layers]="layersSignal"
+      (layersChange)="onLayersChange($event)"
+      (prev)="goToStep(1)"
+      (next)="goToStep(3)"
+    ></app-wizard-step-backgrounds>
+    <div *ngIf="!state().templateId" [hidden]="currentStep() !== 2" class="v3w__placeholder">
       <h2>Étape 2 — Fonds animés</h2>
-      <p>Le sélecteur de calques arrive en plan 04.</p>
+      <p>Validez d'abord l'étape 1 pour créer le template.</p>
       <div class="v3w__nav">
         <button type="button" class="btn" (click)="prevStep()">← Retour</button>
-        <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant →</button>
       </div>
     </div>
 
