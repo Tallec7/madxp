@@ -63,3 +63,47 @@
     background: #1d4ed8;
   }
 }
+
+/* Plan 03-04 / PUB-02 — Aperçu live / Rendu de test toggle. */
+.wpp__toggle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  background: rgba(17, 24, 39, 0.85);
+  border-radius: 6px;
+  padding: 2px;
+  z-index: 2;
+}
+
+.wpp__toggle-btn {
+  background: transparent;
+  border: none;
+  color: #d1d5db;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    color: #fff;
+  }
+}
+
+.wpp__toggle--active {
+  background: #2563eb;
+  color: #fff !important;
+}
+
+.wpp__test-render {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}

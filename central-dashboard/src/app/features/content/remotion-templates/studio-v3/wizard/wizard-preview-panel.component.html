@@ -1,6 +1,50 @@
 <div class="wpp" [class.wpp--highlight]="!!highlightedOptionKey">
+  <!--
+    Plan 03-04 / PUB-02 — Toggle « Aperçu live / Rendu de test ».
+    Visible only on step 5 via [hidden]="currentStep !== 5" — NEVER *ngIf
+    (Pitfall P3, the sibling Player must stay mounted to avoid GPU
+    SharedImage leaks on Pi5).
+  -->
+  <div class="wpp__toggle" [hidden]="currentStep !== 5" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      class="wpp__toggle-btn"
+      [class.wpp__toggle--active]="previewMode === 'live'"
+      [attr.aria-selected]="previewMode === 'live'"
+      (click)="onModeChange('live')"
+    >
+      Aperçu live
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="wpp__toggle-btn"
+      [class.wpp__toggle--active]="previewMode === 'test-render'"
+      [attr.aria-selected]="previewMode === 'test-render'"
+      [disabled]="!testRenderUrl"
+      (click)="onModeChange('test-render')"
+    >
+      Rendu de test
+    </button>
+  </div>
+
   <ng-container *ngIf="hasLayer; else placeholder">
-    <app-template-studio-player [state]="state.previewState!" />
+    <!-- Live Player — hidden when test-render mode is active. -->
+    <app-template-studio-player
+      [hidden]="previewMode === 'test-render' && !!testRenderUrl"
+      [state]="state.previewState!"
+    />
+    <!-- Rendered MP4 — visible only when test render is loaded + mode active. -->
+    <video
+      *ngIf="testRenderUrl"
+      [hidden]="previewMode !== 'test-render'"
+      class="wpp__test-render"
+      [src]="testRenderUrl"
+      controls
+      playsinline
+      preload="auto"
+    ></video>
   </ng-container>
   <ng-template #placeholder>
     <div class="wpp__empty">

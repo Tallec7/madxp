@@ -1,6 +1,9 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { environment } from '@env/environment';
+
+/** Plan 03-04 / PUB-02 — preview mode toggled by wizard step 5. */
+export type PreviewMode = 'live' | 'test-render';
 
 /**
  * Logique dédiée à l'iframe de preview Remotion.
@@ -11,6 +14,30 @@ import { environment } from '@env/environment';
 @Injectable({ providedIn: 'root' })
 export class RemotionPreviewService {
   private sanitizer = inject(DomSanitizer);
+
+  /**
+   * Plan 03-04 / PUB-02 — current preview mode + last test-render URL.
+   * The Player stays mounted (Pitfall P3) — only the source toggles
+   * between the live wizard state and the rendered MP4.
+   */
+  private readonly _mode = signal<PreviewMode>('live');
+  private readonly _testRenderUrl = signal<string | null>(null);
+  readonly mode = this._mode.asReadonly();
+  readonly testRenderUrl = this._testRenderUrl.asReadonly();
+
+  setMode(mode: PreviewMode): void {
+    this._mode.set(mode);
+  }
+
+  loadTestRenderUrl(url: string): void {
+    this._testRenderUrl.set(url);
+    this._mode.set('test-render');
+  }
+
+  resetTestRender(): void {
+    this._testRenderUrl.set(null);
+    this._mode.set('live');
+  }
 
   /** Base du central-server (sans `/api`) — utilisée pour l'iframe et le proxy. */
   get serverBase(): string {
