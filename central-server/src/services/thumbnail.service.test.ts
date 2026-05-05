@@ -245,6 +245,8 @@ describe('ThumbnailService', () => {
         codec: 'unknown',
         bitrate: 0,
         fps: 0,
+        pixFmt: '',
+        hasAlpha: false,
       });
     });
 
@@ -273,6 +275,8 @@ describe('ThumbnailService', () => {
         codec: 'h264',
         bitrate: 5000000,
         fps: 30,
+        pixFmt: '',
+        hasAlpha: false,
       });
     });
 
@@ -336,6 +340,8 @@ describe('ThumbnailService', () => {
         codec: 'unknown',
         bitrate: 0,
         fps: 0,
+        pixFmt: '',
+        hasAlpha: false,
       });
     });
 
@@ -353,6 +359,8 @@ describe('ThumbnailService', () => {
         codec: 'unknown',
         bitrate: 0,
         fps: 0,
+        pixFmt: '',
+        hasAlpha: false,
       });
     });
   });

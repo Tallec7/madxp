@@ -8,14 +8,28 @@ import path from 'path';
 import fs from 'fs';
 import logger from '../config/logger';
 
-interface VideoMetadata {
+export interface VideoMetadata {
   duration: number;
   width: number;
   height: number;
   codec: string;
   bitrate: number;
   fps: number;
+  /** ADR-110 / Template Studio v3 — pixel format reported by ffprobe */
+  pixFmt: string;
+  /** ADR-110 / pitfall P10 — true if pix_fmt declares an alpha channel */
+  hasAlpha: boolean;
 }
+
+/**
+ * ADR-110 (Template Studio v3 / pitfall P10) — detect alpha from pix_fmt.
+ * Covers the ffmpeg formats actually used by AE/Remotion exports : yuva*,
+ * rgba/argb/abgr/bgra, a420 (10/12 bit). Anything else (yuv420p, yuv422p,
+ * rgb24, ...) → no alpha.
+ */
+const ALPHA_PIX_FMT_RE = /^(yuva|rgba|argb|abgr|bgra|a420)/i;
+const computeHasAlpha = (pixFmt: string | null | undefined): boolean =>
+  ALPHA_PIX_FMT_RE.test(pixFmt ?? '');
 
 class ThumbnailService {
   private thumbnailDir: string;
@@ -140,6 +154,8 @@ class ThumbnailService {
       codec: 'unknown',
       bitrate: 0,
       fps: 0,
+      pixFmt: '',
+      hasAlpha: false,
     };
 
     if (!fs.existsSync(videoPath)) {
@@ -151,7 +167,8 @@ class ThumbnailService {
       const output = await this.runFfprobe([
         '-v', 'error',
         '-select_streams', 'v:0',
-        '-show_entries', 'stream=width,height,codec_name,bit_rate,r_frame_rate:format=duration',
+        // ADR-110 — `pix_fmt` is required for alpha detection (P10).
+        '-show_entries', 'stream=width,height,codec_name,bit_rate,r_frame_rate,pix_fmt:format=duration',
         '-of', 'json',
         videoPath,
       ]);
@@ -167,6 +184,8 @@ class ThumbnailService {
         fps = den > 0 ? num / den : 0;
       }
 
+      const pixFmt: string = stream.pix_fmt || '';
+
       return {
         duration: parseFloat(format.duration) || 0,
         width: stream.width || 0,
@@ -174,6 +193,8 @@ class ThumbnailService {
         codec: stream.codec_name || 'unknown',
         bitrate: parseInt(stream.bit_rate, 10) || 0,
         fps: Math.round(fps * 100) / 100,
+        pixFmt,
+        hasAlpha: computeHasAlpha(pixFmt),
       };
     } catch (error) {
       logger.error('Failed to extract video metadata:', error);

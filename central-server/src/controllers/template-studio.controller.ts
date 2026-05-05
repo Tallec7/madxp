@@ -209,9 +209,64 @@ export const updateLayer = async (req: AuthRequest, res: Response): Promise<void
 };
 
 export const deleteLayer = async (req: AuthRequest, res: Response): Promise<void> => {
+  // ADR-110 / ASSET-03 / pitfall P5 — guard against orphaning a WebM still
+  // referenced by another published layer. We block the delete with 409
+  // and surface usedByPublishedCount so the UI can prompt the admin.
+  try {
+    const { layerId } = req.params;
+    const usedByPublishedCount = await templateStudioRepository.countLayersSharingVideoUrl(layerId);
+    if (usedByPublishedCount > 0) {
+      record('layer', 'delete', 'conflict');
+      res.status(409).json({
+        error: 'asset_in_use',
+        message: `Ce fond est utilisé par ${usedByPublishedCount} autre(s) template(s) publié(s).`,
+        detail: { usedByPublishedCount },
+      });
+      return;
+    }
+  } catch (error) {
+    record('layer', 'delete', 'error');
+    logError('deleteLayer', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+    return;
+  }
   await handleDelete(req, res, 'deleteLayer', 'layer', 'Couche non trouvée', () =>
     templateStudioRepository.deleteLayer(req.params.layerId)
   );
+};
+
+/**
+ * ADR-110 / Plan 04 / WIZARD-04 — Reorder all layers of a template in a
+ * single transaction. Body: `{ orderedLayerIds: string[] }`. Returns the
+ * new ordered list (z_index ASC). Maps the repo `layer_ownership_mismatch`
+ * error to 400.
+ */
+export const reorderLayers = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { orderedLayerIds } = req.body as { orderedLayerIds: string[] };
+  try {
+    if (!(await assertTemplateExists(id))) {
+      record('layer', 'update', 'not_found');
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+    const layers = await templateStudioRepository.reorderLayers(id, orderedLayerIds);
+    record('layer', 'update', 'success');
+    res.json(layers);
+  } catch (error) {
+    if ((error as Error)?.message === 'layer_ownership_mismatch') {
+      record('layer', 'update', 'conflict');
+      res.status(400).json({
+        error: 'layer_ownership_mismatch',
+        message:
+          "Un ou plusieurs fonds animés n'appartiennent pas à ce template.",
+      });
+      return;
+    }
+    record('layer', 'update', 'error');
+    logError('reorderLayers', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 };
 
 // ── Text fields

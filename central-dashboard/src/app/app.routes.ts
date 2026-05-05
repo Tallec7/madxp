@@ -156,6 +156,36 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
+        // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
+        path: 'content/templates-remotion/assets',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'], context: 'page' },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/asset-manager/asset-manager-modal.component'
+          ).then((m) => m.AssetManagerModalComponent),
+      },
+      {
+        // ADR-110 / Plan 03 — Wizard de création v3, Étape 1 (Identité)
+        path: 'content/templates-remotion/new',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
+          ).then((m) => m.StudioV3WizardComponent),
+      },
+      {
+        // ADR-110 / Plan 03 — Wizard de création v3, reprise par templateId
+        path: 'content/templates-remotion/new/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
+          ).then((m) => m.StudioV3WizardComponent),
+      },
+      {
         // ADR-075 V3 Phase B — Self-service club templates
         path: 'content/my-templates',
         canActivate: [roleGuard],

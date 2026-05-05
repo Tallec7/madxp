@@ -21,8 +21,10 @@ import type { RemotionTemplate } from './remotion-templates.types';
         [template]="tpl"
         [selected]="selectedId === tpl.id"
         [isAdmin]="isAdmin"
+        [duplicating]="duplicatingId === tpl.id"
         (cardSelect)="cardSelect.emit($event)"
         (publishToggle)="publishToggle.emit($event)"
+        (duplicateRequested)="duplicateRequested.emit($event)"
       ></app-template-card>
     </div>
 
@@ -50,9 +52,11 @@ export class TemplateGridComponent {
   @Input() selectedId: string | null = null;
   @Input() isAdmin = false;
   @Input() loading = false;
+  @Input() duplicatingId: string | null = null;
 
   @Output() cardSelect = new EventEmitter<RemotionTemplate>();
   @Output() publishToggle = new EventEmitter<RemotionTemplate>();
+  @Output() duplicateRequested = new EventEmitter<RemotionTemplate>();
 
   trackById(_index: number, tpl: RemotionTemplate): string {
     return tpl.id;

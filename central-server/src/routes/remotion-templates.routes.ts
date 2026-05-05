@@ -15,6 +15,32 @@ const router = Router();
 // wrapper `sensitiveRateLimit` de ce router (30/min) — sinon les range requests
 // de <video> Remotion saturent le quota et cascade en NotSameOrigin.
 
+// ── ADR-110 / Plan 02 — Library-level Asset Manager (super_admin) ───────────
+// IMPORTANT : ces routes sont déclarées AVANT les routes /:id pour éviter que
+// /assets, /library/upload se fassent capturer par le matcher /:id.
+router.get(
+  '/assets',
+  authenticate,
+  requireRole('super_admin'),
+  adminRateLimit,
+  ctrl.listLibraryAssets,
+);
+router.post(
+  '/library/upload',
+  authenticate,
+  requireRole('super_admin'),
+  sensitiveRateLimit,
+  uploadTemplateAsset.single('file'),
+  ctrl.uploadLibraryAsset,
+);
+router.delete(
+  '/assets/:assetId',
+  authenticate,
+  requireRole('super_admin'),
+  sensitiveRateLimit,
+  ctrl.deleteLibraryAsset,
+);
+
 // Lecture — admin voit tout, club voit uniquement les publiés (feature-gated)
 router.get(
   '/',

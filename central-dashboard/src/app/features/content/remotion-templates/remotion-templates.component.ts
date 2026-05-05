@@ -1,7 +1,7 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -55,6 +55,13 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
   private dataService = inject(RemotionTemplatesDataService);
   private notifications = inject(NotificationService);
   private authService = inject(AuthService);
+  private router = inject(Router);
+
+  // Plan 05 / DUP-01 — per-card duplicate UX (button on each grid card,
+  // routes to /content/templates-remotion/new/:id?from=duplicate which
+  // forces wizard step 3 via computeResumeStep).
+  duplicatingCardId = signal<string | null>(null);
+  duplicateError = signal<string | null>(null);
 
   templates: RemotionTemplate[] = [];
   selectedTemplate: RemotionTemplate | null = null;
@@ -476,6 +483,53 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
       error: () => {
         this.duplicating = false;
         this.notifications.error('Échec de la duplication');
+      },
+    });
+  }
+
+  // ── Plan 05 / DUP-01 + WIZARD-01 — V3 wizard CTAs ───────────────────────
+
+  /**
+   * Plan 05 — « + Nouveau template » route vers le wizard V3 (4 étapes).
+   * Le wizard legacy V2 (`openWizard()`) reste disponible mais n'est plus
+   * exposé sur la page liste — il sera retiré dans une prochaine phase.
+   */
+  onNewTemplate(): void {
+    this.router.navigate(['/content/templates-remotion/new']);
+  }
+
+  /**
+   * Plan 05 / DUP-01 — Duplicate depuis la carte template (super_admin).
+   * Sur succès → route vers /content/templates-remotion/new/:newId avec
+   * queryParam `from=duplicate` que `StudioV3WizardComponent.computeResumeStep`
+   * lit pour forcer l'étape 3 (zones modifiables — SPEC §Workflow Dupliquer).
+   *
+   * Sur 400 `duplicate_requires_v2` (Plan 01 backend contract), surface
+   * un message FR explicite ; toute autre erreur → message générique.
+   */
+  onDuplicateFromCard(tpl: RemotionTemplate): void {
+    if (!this.isSuperAdmin) return;
+    this.duplicatingCardId.set(tpl.id);
+    this.duplicateError.set(null);
+    this.dataService.duplicateTemplate(tpl.id).subscribe({
+      next: (copy) => {
+        this.duplicatingCardId.set(null);
+        this.router.navigate(
+          ['/content/templates-remotion/new', copy.id],
+          { queryParams: { from: 'duplicate' } },
+        );
+      },
+      error: (err: { status?: number; error?: { error?: string } }) => {
+        this.duplicatingCardId.set(null);
+        if (err?.status === 400 && err?.error?.error === 'duplicate_requires_v2') {
+          this.duplicateError.set(
+            'Cette template legacy v1 doit être migrée avant duplication.',
+          );
+        } else {
+          this.duplicateError.set(
+            'Duplication échouée — réessayez ou consultez les logs.',
+          );
+        }
       },
     });
   }

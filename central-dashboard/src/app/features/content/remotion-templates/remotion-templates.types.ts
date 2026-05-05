@@ -159,6 +159,21 @@ export interface TemplateOption {
   sortOrder: number;
 }
 
+/**
+ * Mapping option_value → packshot_template_id (PDF JOUEUR §démarrage).
+ * Permet d'empiler une vidéo packshot en surcouche selon la valeur d'une option.
+ * Backend table: `template_packshot_refs` (FK option_key → template_options.key).
+ */
+export interface TemplatePackshotRef {
+  id: string;
+  templateId: string;
+  optionKey: string;
+  optionValue: string;
+  packshotTemplateId: string;
+  startAtMs: number;
+  zIndexOffset: number;
+}
+
 /** Vue consolidée retournée par `GET /api/remotion-templates/:id/studio`. */
 export interface TemplateStudioView {
   id: string;
@@ -208,6 +223,24 @@ export interface RenderResult {
 export interface AssetUploadResult {
   url: string;
   prop_key: string;
+}
+
+/**
+ * ADR-110 / Plan 02 — Library-level WebM asset metadata returned by
+ * GET /api/remotion-templates/assets and POST /api/remotion-templates/library/upload.
+ * `id` is a deterministic sha256(url).slice(0,16) derived server-side
+ * (assets are not yet a first-class table — the URL is the primary key).
+ */
+export interface WebmAssetMetadata {
+  id: string;
+  url: string;
+  durationMs: number;
+  width: number;
+  height: number;
+  hasAlpha: boolean;
+  pixFmt: string;
+  uploadedAt: string;
+  usedByCount: number;
 }
 
 /**

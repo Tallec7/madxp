@@ -1,16 +1,20 @@
 import { Request, Response } from 'express';
 import * as fs from 'fs';
+import { createHash } from 'crypto';
 import https from 'https';
 import http from 'http';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { uploadAsset, getAssetUrl } from '../services/storage.service';
+import { deleteFileFromFtp } from '../config/ftp-storage';
+import { thumbnailService, type VideoMetadata } from '../services/thumbnail.service';
 import {
   remotionTemplatesRepository,
   remotionTemplateVersionsRepository,
   remotionRenderJobRepository,
   siteRepository,
 } from '../repositories';
+import { templateStudioRepository } from '../repositories/template-studio.repository';
 import { metricsService } from '../services/metrics.service';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 import { clubTemplateQuotaService } from '../services/club-template-quota.service';
@@ -311,6 +315,15 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
   try {
     const { id } = req.params;
     const { prop_key } = req.body as { prop_key?: string };
+    // ADR-110 / pitfall P10 — Template Studio v3 : when respect_alpha is
+    // required by the consuming layer, we MUST detect the alpha channel
+    // BEFORE uploading and reject yuv420p exports. Accepts both snake_case
+    // (form-data convention) and camelCase (JSON body convention).
+    const respectAlphaRaw =
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respect_alpha ??
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respectAlpha;
+    const respectAlpha =
+      respectAlphaRaw === true || respectAlphaRaw === 'true' || respectAlphaRaw === '1';
 
     if (!file || !filePath) {
       return res.status(400).json({ error: 'Fichier requis' });
@@ -320,6 +333,23 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
     if (!template) {
       cleanupFile(filePath);
       return res.status(404).json({ error: 'Template non trouvé' });
+    }
+
+    // ADR-110 / P10 — extract metadata via ffprobe and reject alpha-required
+    // uploads with a non-alpha pix_fmt BEFORE shipping bytes to FTP.
+    const metadata = await thumbnailService.extractMetadata(filePath);
+    if (respectAlpha && metadata.hasAlpha === false) {
+      cleanupFile(filePath);
+      logger.warn('Template asset upload rejected — alpha required', {
+        templateId: id,
+        pixFmt: metadata.pixFmt,
+      });
+      return res.status(400).json({
+        error: 'asset_alpha_required',
+        message:
+          'Ce fond nécessite la transparence — ré-exportez en yuva420p (le fichier reçu n\'a pas de canal alpha).',
+        detail: { detectedPixFmt: metadata.pixFmt, hasAlpha: metadata.hasAlpha },
+      });
     }
 
     // ADR-075 V2 : les variants/layers passent sans prop_key — l'URL est
@@ -343,8 +373,22 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
       await remotionTemplatesRepository.updateDefaultProps(id, updatedDefaultProps);
     }
 
-    logger.info('Template asset uploaded', { templateId: id, prop_key: prop_key ?? '(studio-v2)', url: publicUrl });
-    res.json({ url: publicUrl, prop_key: prop_key ?? null });
+    logger.info('Template asset uploaded', {
+      templateId: id,
+      prop_key: prop_key ?? '(studio-v2)',
+      url: publicUrl,
+      pixFmt: metadata.pixFmt,
+      hasAlpha: metadata.hasAlpha,
+    });
+    res.json({
+      url: publicUrl,
+      prop_key: prop_key ?? null,
+      pixFmt: metadata.pixFmt,
+      hasAlpha: metadata.hasAlpha,
+      width: metadata.width,
+      height: metadata.height,
+      durationMs: Math.round(metadata.duration * 1000),
+    });
   } catch (error) {
     if (filePath) cleanupFile(filePath);
     logger.error('uploadTemplateAsset error', { error, id: req.params.id });
@@ -574,16 +618,34 @@ export const duplicateTemplate = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const { name } = req.body as { name?: string };
 
-    const copy = await remotionTemplatesRepository.duplicate(id, {
+    // ADR-110 / DUP-02 / pitfall P4 — transactional deep clone across the
+    // 6 child tables. Replaces the legacy shallow `remotionTemplatesRepository.duplicate`
+    // which only cloned the root row and left children orphaned.
+    const copy = await templateStudioRepository.duplicateDeep(id, {
       name,
       createdBy: req.user?.id ?? null,
     });
 
-    if (!copy) return res.status(404).json({ error: 'Template non trouvé' });
-
-    logger.info('Template duplicated', { sourceId: id, newId: copy.id, userId: req.user?.id });
+    logger.info('Template duplicated (deep)', {
+      sourceId: id,
+      newId: copy.id,
+      userId: req.user?.id,
+    });
     res.status(201).json(copy);
   } catch (error) {
+    const msg = (error as Error)?.message ?? '';
+    if (msg === 'source_template_not_found') {
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
+    if (msg === 'clone_not_v2_readable') {
+      // Source template was schema_version=1 (legacy) — deep clone is only
+      // meaningful for v2/v3 templates. Surface a 400 so the UI can hint
+      // the user to migrate the source first.
+      return res.status(400).json({
+        error: 'duplicate_requires_v2',
+        message: 'La duplication profonde requiert un template v2 (data-driven).',
+      });
+    }
     logger.error('duplicateTemplate error', { error, id: req.params.id });
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -684,6 +746,202 @@ export const getRenderJob = async (req: AuthRequest, res: Response) => {
       error: error instanceof Error ? error.message : error,
       jobId: req.params['jobId'],
     });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ── ADR-110 / Plan 02 — Library-level Asset Manager (super_admin) ────────────
+
+/**
+ * Reads the FTP_PUBLIC_URL prefix and returns the storage path portion of an
+ * asset URL (used to call deleteFileFromFtp / re-derive a deterministic id).
+ */
+const stripPublicPrefix = (url: string): string => {
+  const base = process.env['FTP_PUBLIC_URL'] ?? '';
+  if (base && url.startsWith(base)) {
+    const stripped = url.slice(base.length);
+    return stripped.startsWith('/') ? stripped.slice(1) : stripped;
+  }
+  // Fallback : strip protocol+host blindly so we still get a usable path.
+  try {
+    const u = new URL(url);
+    return u.pathname.startsWith('/') ? u.pathname.slice(1) : u.pathname;
+  } catch {
+    return url;
+  }
+};
+
+const assetIdFromUrl = (url: string): string =>
+  createHash('sha256').update(url).digest('hex').slice(0, 16);
+
+/**
+ * In-memory metadata cache for library assets. Populated on upload
+ * (cheap — we already ran ffprobe) and lazily on first list call for legacy
+ * URLs (best-effort, falls back to defaults if ffprobe is unreachable
+ * because the file lives on FTP).
+ *
+ * TTL: 5 min — keeps `usedByCount` from drifting too far if the user is
+ * actively wiring layers in another tab.
+ */
+interface LibraryAssetCacheEntry {
+  meta: VideoMetadata;
+  cachedAt: number;
+}
+const LIBRARY_ASSET_CACHE = new Map<string, LibraryAssetCacheEntry>();
+const LIBRARY_ASSET_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const getCachedMeta = (url: string): VideoMetadata | null => {
+  const entry = LIBRARY_ASSET_CACHE.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > LIBRARY_ASSET_CACHE_TTL_MS) {
+    LIBRARY_ASSET_CACHE.delete(url);
+    return null;
+  }
+  return entry.meta;
+};
+
+const setCachedMeta = (url: string, meta: VideoMetadata): void => {
+  LIBRARY_ASSET_CACHE.set(url, { meta, cachedAt: Date.now() });
+};
+
+/**
+ * GET /api/remotion-templates/assets
+ * List all WebM assets currently referenced by ≥1 template_layer (super_admin).
+ * Metadata served from cache when available (populated on upload). Legacy
+ * uncached URLs surface with safe defaults — the user can re-upload to
+ * refresh the metadata.
+ */
+export const listLibraryAssets = async (_req: AuthRequest, res: Response) => {
+  try {
+    const rows = await templateStudioRepository.listDistinctLayerAssets();
+    const assets = rows.map((r) => {
+      const meta = getCachedMeta(r.url);
+      return {
+        id: assetIdFromUrl(r.url),
+        url: r.url,
+        durationMs: meta ? Math.round(meta.duration * 1000) : 0,
+        width: meta?.width ?? 0,
+        height: meta?.height ?? 0,
+        hasAlpha: meta?.hasAlpha ?? false,
+        pixFmt: meta?.pixFmt ?? '',
+        uploadedAt: r.uploadedAt,
+        usedByCount: r.usedByCount,
+      };
+    });
+    res.json(assets);
+  } catch (error) {
+    logger.error('listLibraryAssets failed', { error });
+    res.status(500).json({ error: 'list_failed' });
+  }
+};
+
+/**
+ * POST /api/remotion-templates/library/upload
+ * Standalone WebM upload (no template binding). Same alpha-gate as
+ * `uploadTemplateAssetController`. Returns WebmAssetMetadata.
+ */
+export const uploadLibraryAsset = async (req: AuthRequest, res: Response) => {
+  const file = req.file as Express.Multer.File | undefined;
+  const filePath = file?.path;
+
+  try {
+    const respectAlphaRaw =
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respect_alpha ??
+      (req.body as { respect_alpha?: unknown; respectAlpha?: unknown }).respectAlpha;
+    const respectAlpha =
+      respectAlphaRaw === true || respectAlphaRaw === 'true' || respectAlphaRaw === '1';
+
+    if (!file || !filePath) {
+      return res.status(400).json({ error: 'Fichier requis' });
+    }
+
+    const metadata = await thumbnailService.extractMetadata(filePath);
+    if (respectAlpha && metadata.hasAlpha === false) {
+      cleanupFile(filePath);
+      logger.warn('Library asset upload rejected — alpha required', {
+        pixFmt: metadata.pixFmt,
+      });
+      return res.status(400).json({
+        error: 'asset_alpha_required',
+        message:
+          'Ce fond nécessite la transparence — ré-exportez en yuva420p (le fichier reçu n\'a pas de canal alpha).',
+        detail: { detectedPixFmt: metadata.pixFmt, hasAlpha: metadata.hasAlpha },
+      });
+    }
+
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `template-assets/library/${Date.now()}-${safeName}`;
+    const buffer = fs.readFileSync(filePath);
+    const result = await uploadAsset(buffer, storagePath, file.mimetype);
+    cleanupFile(filePath);
+
+    if (!result) {
+      return res.status(500).json({ error: 'Échec upload FTP' });
+    }
+
+    const publicUrl = getAssetUrl(storagePath);
+    setCachedMeta(publicUrl, metadata);
+
+    logger.info('Library asset uploaded', {
+      url: publicUrl,
+      pixFmt: metadata.pixFmt,
+      hasAlpha: metadata.hasAlpha,
+    });
+
+    res.status(201).json({
+      id: assetIdFromUrl(publicUrl),
+      url: publicUrl,
+      durationMs: Math.round(metadata.duration * 1000),
+      width: metadata.width,
+      height: metadata.height,
+      hasAlpha: metadata.hasAlpha,
+      pixFmt: metadata.pixFmt,
+      uploadedAt: new Date().toISOString(),
+      usedByCount: 0,
+    });
+  } catch (error) {
+    if (filePath) cleanupFile(filePath);
+    logger.error('uploadLibraryAsset error', { error });
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+/**
+ * DELETE /api/remotion-templates/assets/:assetId
+ * Delete a library asset. Returns 409 with `usedByPublishedCount` if the
+ * asset is still referenced by ≥1 published template (Plan 01 contract).
+ * Returns 204 on success.
+ */
+export const deleteLibraryAsset = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assetId } = req.params;
+    const rows = await templateStudioRepository.listDistinctLayerAssets();
+    const match = rows.find((r) => assetIdFromUrl(r.url) === assetId);
+    if (!match) {
+      return res.status(404).json({ error: 'asset_not_found' });
+    }
+
+    const usedByPublishedCount =
+      await templateStudioRepository.countLayersSharingVideoUrlByUrl(match.url);
+    if (usedByPublishedCount > 0) {
+      return res.status(409).json({
+        error: 'asset_in_use',
+        message: `Ce fond est utilisé par ${usedByPublishedCount} autre(s) template(s) publié(s).`,
+        detail: { usedByPublishedCount },
+      });
+    }
+
+    const storagePath = stripPublicPrefix(match.url);
+    const deleted = await deleteFileFromFtp(storagePath);
+    if (!deleted) {
+      logger.warn('deleteLibraryAsset FTP delete returned false', { storagePath });
+    }
+    LIBRARY_ASSET_CACHE.delete(match.url);
+
+    logger.info('Library asset deleted', { url: match.url, assetId });
+    res.status(204).send();
+  } catch (error) {
+    logger.error('deleteLibraryAsset error', { error, assetId: req.params['assetId'] });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };

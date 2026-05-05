@@ -105,6 +105,18 @@ router.delete(
   sensitiveRateLimit,
   ctrl.deleteLayer,
 );
+// ADR-110 / Plan 04 / WIZARD-04 — single transactional reorder.
+// POST (not PATCH) because the body holds the full target order, and the
+// op replaces every z_index in one go (no partial state). Distinct verb +
+// distinct sub-path from /:id/layers/:layerId so no Express matcher conflict.
+router.post(
+  '/:id/layers/reorder',
+  ...adminOnly,
+  validateParams(paramSchemas.id),
+  validate(schemas.templateStudioLayersReorder),
+  sensitiveRateLimit,
+  ctrl.reorderLayers,
+);
 
 // ── Text fields ─────────────────────────────────────────────────────────────
 router.get(
