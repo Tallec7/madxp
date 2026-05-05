@@ -1,3 +1,9 @@
+## [3.286.4](https://github.com/Tallec7/neopro/compare/v3.286.3...v3.286.4) (2026-05-05)
+
+### Bug Fixes
+
+- **remote:** rendre le remote Pi accessible sans login ([#835](https://github.com/Tallec7/neopro/issues/835)) ([9f08bb5](https://github.com/Tallec7/neopro/commit/9f08bb5184446d829fa6de91fb19f06f1a7c355e))
+
 ## [3.286.3](https://github.com/Tallec7/neopro/compare/v3.286.2...v3.286.3) (2026-05-05)
 
 ### Bug Fixes
