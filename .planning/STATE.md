@@ -4,7 +4,7 @@ milestone: v3.0
 milestone_name: milestone
 status: Ready for Plan 04 (visible_if click-to-highlight + transactional renameOptionKey)
 stopped_at: Completed 02-ux-interactive-04-PLAN.md
-last_updated: '2026-05-05T19:25:25.829Z'
+last_updated: '2026-05-05T19:31:24.706Z'
 last_activity: 2026-05-05 — Phase 2 Plan 03 livré (AnimationCard + AnimationPicker, 5 cards visuelles, hover preview, banlist scaleFrom/scaleTo/durationMs)
 progress:
   total_phases: 3
