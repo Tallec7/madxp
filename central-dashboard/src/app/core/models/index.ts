@@ -520,6 +520,32 @@ export interface Match {
 }
 
 /**
+ * Métriques santé légères par site Pi — utilisées pour le mini-strip sur la carte Site
+ */
+export interface SiteMiniHealth {
+  siteId: string;
+  cpuPercent: number | null;
+  memoryPercent: number | null;
+  temperature: number | null;
+  diskPercent: number | null;
+  alertCount: number;
+}
+
+/**
+ * Session match active (ended_at IS NULL) — utilisée par la page Sites pour le bandeau LIVE
+ */
+export interface ActiveSession {
+  sessionId: string;
+  siteId: string;
+  startedAt: Date;
+  homeTeam: string | null;
+  awayTeam: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  eventType: string;
+}
+
+/**
  * Match history response from API
  */
 export interface MatchHistoryData {

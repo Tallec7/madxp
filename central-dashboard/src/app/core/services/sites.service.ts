@@ -137,6 +137,18 @@ export class SitesService {
     return this.api.get('/sites/connection-status');
   }
 
+  getLatestOtaVersion(): Observable<{ version: string | null }> {
+    return this.api.get('/updates/latest');
+  }
+
+  getActiveSessions(): Observable<{ sessions: import('../models').ActiveSession[] }> {
+    return this.api.get('/sites/active-sessions');
+  }
+
+  getSitesMiniHealth(): Observable<{ sites: import('../models').SiteMiniHealth[] }> {
+    return this.api.get('/sites/mini-health');
+  }
+
   /**
    * Get fleet health data for the admin dashboard
    * Aggregates connection status, metrics, versions, and at-risk sites

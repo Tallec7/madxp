@@ -512,4 +512,6 @@ export {
   getFleetHealthData,
   getFleetMetrics,
   getSiteMatchHistory,
+  getActiveSessions,
+  getSitesMiniHealth,
 } from './site-fleet.controller';

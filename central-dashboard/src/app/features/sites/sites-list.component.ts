@@ -10,6 +10,7 @@ import { LoggerService } from '../../core/services/logger.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { Site, SiteConnectionSummary, SubscriptionDisplayStatus } from '../../core/models';
 import { formatVersion } from './utils/version';
+import { ActiveSession, SiteMiniHealth } from '../../core/models';
 import { SubscriptionBadgeComponent } from '../../shared/components/subscription-badge/subscription-badge.component';
 import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
@@ -20,7 +21,12 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
   template: `
     <div class="page-container">
       <div class="page-header">
-        <h1>Sites ({{ (sites$ | async)?.length || 0 }})</h1>
+        <h1>
+          Sites ({{ (sites$ | async)?.length || 0 }})
+          <span class="header-alert" *ngIf="unbootstrappedSites.length > 0">
+            · <span class="header-alert-count">{{ unbootstrappedSites.length }} à installer</span>
+          </span>
+        </h1>
         <div class="header-actions">
           <div class="view-toggle">
             <button
@@ -73,9 +79,25 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           <option value="blocked">🚫 Bloqués</option>
           <option value="trial">🎁 Essai</option>
         </select>
+        <select [(ngModel)]="typeFilter" (ngModelChange)="applyFilters()">
+          <option value="">Tous les types</option>
+          <option value="pi">📡 Pi</option>
+          <option value="saas">🌐 SaaS</option>
+          <option value="demo">🎬 Demo</option>
+        </select>
         <button class="btn btn-secondary" (click)="clearFilters()" *ngIf="hasActiveFilters()">
           Effacer les filtres
         </button>
+      </div>
+
+      <!-- Banner Pi à installer -->
+      <div class="install-banner" *ngIf="unbootstrappedSites.length > 0 && viewMode === 'grid'">
+        <span class="install-banner-icon">⚠️</span>
+        <span>
+          <strong>{{ unbootstrappedSites.length }} site{{ unbootstrappedSites.length > 1 ? 's' : '' }} Pi à installer</strong>
+          — {{ unbootstrappedNames }} n'ont jamais bootstrappé.
+        </span>
+        <a class="install-banner-cta" [routerLink]="['/updates']">Voir les mises à jour →</a>
       </div>
 
       <ng-container *ngIf="(sites$ | async) as sitesList">
@@ -88,10 +110,23 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
         </app-sites-map>
 
         <!-- Grid View -->
-        <div class="sites-grid" *ngIf="viewMode === 'grid' && sitesList.length > 0">
-        <div *ngFor="let site of sites$ | async" class="site-card card">
+        <ng-container *ngIf="viewMode === 'grid' && sitesList.length > 0">
+
+        <!-- Section : sites actifs -->
+        <div class="sites-grid">
+        <div *ngFor="let site of activeSites" class="site-card card">
           <div class="site-header">
-            <h3>{{ site.club_name }}</h3>
+            <div class="site-title-block">
+              <h3>{{ site.club_name }}</h3>
+              <div class="site-type-chips">
+                <span class="chip chip-type chip-type-{{ site.site_type ?? 'pi' }}">
+                  {{ getSiteTypeLabel(site.site_type) }}
+                </span>
+                <span class="chip chip-plan" *ngIf="site.subscription_plan">
+                  {{ site.subscription_plan | titlecase }}
+                </span>
+              </div>
+            </div>
             <div class="site-badges">
               <span class="badge" [class]="'badge-' + getRealTimeStatusBadge(site)">
                 {{ getRealTimeStatusText(site) }}
@@ -106,7 +141,22 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
             </div>
           </div>
 
-          <p class="site-name">{{ site.site_name }}</p>
+          <p class="site-name" *ngIf="site.site_name !== site.club_name">{{ site.site_name }}</p>
+
+          <!-- Match live strip -->
+          <div class="match-strip" *ngIf="activeSessionsMap.has(site.id)">
+            <span class="live-badge">LIVE</span>
+            <span class="match-teams">
+              {{ activeSessionsMap.get(site.id)?.homeTeam || '?' }}
+              vs
+              {{ activeSessionsMap.get(site.id)?.awayTeam || '?' }}
+            </span>
+            <span class="match-score" *ngIf="activeSessionsMap.get(site.id)?.homeScore !== null">
+              {{ activeSessionsMap.get(site.id)?.homeScore }}
+              —
+              {{ activeSessionsMap.get(site.id)?.awayScore }}
+            </span>
+          </div>
 
           <div class="site-detail">
             <span class="detail-icon">📍</span>
@@ -120,12 +170,46 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
 
           <div class="site-detail">
             <span class="detail-icon">🕒</span>
-            <span>{{ formatLastSeen(site.last_seen_at) }}</span>
+            <span>{{ formatLastSeenForSite(site) }}</span>
+          </div>
+
+          <!-- Mini health strip — Pi uniquement, si métriques disponibles -->
+          <div class="health-strip" *ngIf="site.site_type === 'pi' && miniHealthMap.has(site.id)">
+            <div class="health-cell">
+              <span class="health-label">🌡️ Temp</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.temperature ?? 0) > 70"
+                [class.health-danger]="(miniHealthMap.get(site.id)?.temperature ?? 0) > 80">
+                {{ miniHealthMap.get(site.id)?.temperature !== null ? (miniHealthMap.get(site.id)?.temperature + '°C') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">🖥️ CPU</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.cpuPercent ?? 0) > 80">
+                {{ miniHealthMap.get(site.id)?.cpuPercent !== null ? (miniHealthMap.get(site.id)?.cpuPercent + '%') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">💾 RAM</span>
+              <span class="health-value"
+                [class.health-warn]="(miniHealthMap.get(site.id)?.memoryPercent ?? 0) > 85">
+                {{ miniHealthMap.get(site.id)?.memoryPercent !== null ? (miniHealthMap.get(site.id)?.memoryPercent + '%') : '—' }}
+              </span>
+            </div>
+            <div class="health-cell">
+              <span class="health-label">⚠️ Alertes</span>
+              <span class="health-value"
+                [class.health-danger]="(miniHealthMap.get(site.id)?.alertCount ?? 0) > 0">
+                {{ miniHealthMap.get(site.id)?.alertCount ?? 0 }}
+              </span>
+            </div>
           </div>
 
           <div class="site-footer">
-            <span class="site-version">
-              {{ formatVersion(site.software_version) }}
+            <span class="site-version" [class.site-version--update]="isOutdated(site)">
+              {{ formatVersion(site) }}
+              <span class="update-badge" *ngIf="isOutdated(site)">↑ MAJ</span>
             </span>
             <div class="site-actions">
               <button
@@ -160,6 +244,59 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
           </div>
         </div>
       </div>
+
+        <!-- Section : Pi à installer -->
+        <ng-container *ngIf="unbootstrappedSites.length > 0">
+          <div class="section-divider">
+            <span class="section-divider-line"></span>
+            <span class="section-divider-label">⚠ À installer ({{ unbootstrappedSites.length }})</span>
+            <span class="section-divider-line"></span>
+          </div>
+          <div class="sites-grid">
+            <div *ngFor="let site of unbootstrappedSites" class="site-card card card--unbootstrapped">
+              <div class="site-header">
+                <div class="site-title-block">
+                  <h3>{{ site.club_name }}</h3>
+                  <div class="site-type-chips">
+                    <span class="chip chip-type chip-type-pi">📡 Pi</span>
+                    <span class="chip chip-plan" *ngIf="site.subscription_plan">{{ site.subscription_plan | titlecase }}</span>
+                  </div>
+                </div>
+                <span class="badge badge-warning">⚠ Jamais bootstrappé</span>
+              </div>
+              <p class="site-name" *ngIf="site.site_name !== site.club_name">{{ site.site_name }}</p>
+              <div class="site-detail">
+                <span class="detail-icon">📍</span>
+                <span>{{ site.location?.city }}, {{ site.location?.region }}</span>
+              </div>
+              <div class="site-detail" *ngIf="site.sports && site.sports.length > 0">
+                <span class="detail-icon">⚽</span>
+                <span>{{ site.sports.join(', ') }}</span>
+              </div>
+              <div class="site-detail">
+                <span class="detail-icon">📅</span>
+                <span>Créé {{ formatLastSeen(site.created_at) }}</span>
+              </div>
+              <div class="onboarding-cta">
+                <p class="onboarding-text">Pi non installé sur site. Préparer le matériel ?</p>
+                <button class="btn btn-install" [routerLink]="['/sites', site.id]">
+                  📦 Préparer l'installation
+                </button>
+              </div>
+              <div class="site-footer">
+                <span class="site-version">—</span>
+                <div class="site-actions">
+                  <button class="btn-icon" [routerLink]="['/sites', site.id]" title="Voir les détails">👁️</button>
+                  <button class="btn-icon" (click)="editSite(site)" title="Éditer">✏️</button>
+                  <button class="btn-icon" (click)="duplicateSite(site)" title="Dupliquer le site">📋</button>
+                  <button class="btn-icon btn-danger" (click)="deleteSite(site)" title="Supprimer">🗑️</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        </ng-container>
 
         <!-- Empty State for Grid -->
         <div class="empty-state card" *ngIf="viewMode === 'grid' && sitesList.length === 0">
@@ -361,13 +498,46 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       align-items: flex-start;
     }
 
+    .site-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
     .site-header h3 {
       margin: 0;
       font-size: 1.125rem;
       color: #0f172a;
       font-weight: 600;
-      flex: 1;
-      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .site-type-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .chip-type-pi   { background: #e0e7ff; color: #4338ca; }
+    .chip-type-saas { background: #cffafe; color: #0e7490; }
+    .chip-type-demo { background: #f3e8ff; color: #7e22ce; }
+
+    .chip-plan {
+      background: #f1f5f9;
+      color: #475569;
     }
 
     .site-badges {
@@ -441,6 +611,24 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       background: #f1f5f9;
       border-radius: 4px;
       color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .site-version--update {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .update-badge {
+      font-family: inherit;
+      font-size: 0.625rem;
+      font-weight: 700;
+      background: #f59e0b;
+      color: white;
+      padding: 1px 5px;
+      border-radius: 3px;
     }
 
     .site-actions {
@@ -590,6 +778,125 @@ import { SitesMapComponent } from './components/sites-map/sites-map.component';
       border-top: 1px solid #e2e8f0;
     }
 
+    /* Match live strip */
+    .match-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(90deg, #fef2f2, #fff);
+      border-top: 1px solid #fecaca;
+      border-bottom: 1px solid #fecaca;
+      padding: 8px 1rem;
+      font-size: 0.8125rem;
+      margin: 0 -1rem;
+    }
+    .live-badge {
+      background: #dc2626;
+      color: white;
+      font-size: 0.625rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .match-teams { font-weight: 600; color: #0f172a; flex: 1; }
+    .match-score { font-weight: 700; color: #0f172a; flex-shrink: 0; }
+
+    /* Health strip */
+    .health-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 4px;
+    }
+    .health-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .health-label { font-size: 0.625rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .health-value { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+    .health-value.health-warn   { color: #ea580c; }
+    .health-value.health-danger { color: #dc2626; }
+
+    /* Header alert count */
+    .header-alert { font-size: 0.875rem; font-weight: 400; }
+    .header-alert-count { color: #ea580c; font-weight: 600; }
+
+    /* Install banner */
+    .install-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-left: 4px solid #ea580c;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+      color: #7c2d12;
+    }
+    .install-banner-icon { font-size: 1.25rem; flex-shrink: 0; }
+    .install-banner-cta {
+      margin-left: auto;
+      background: #ea580c;
+      color: white;
+      text-decoration: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .install-banner-cta:hover { background: #c2410c; }
+
+    /* Section divider */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2rem 0 1rem;
+    }
+    .section-divider-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .section-divider-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    /* Card unbootstrapped */
+    .card--unbootstrapped { border-left: 3px solid #ea580c; }
+
+    /* Onboarding CTA block */
+    .onboarding-cta {
+      background: #fff7ed;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .onboarding-text { color: #7c2d12; font-size: 0.8125rem; margin-bottom: 10px; }
+    .btn-install {
+      background: #ea580c;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-install:hover { background: #c2410c; }
+
     @media (max-width: 768px) {
       .sites-grid {
         grid-template-columns: 1fr;
@@ -614,16 +921,22 @@ export class SitesListComponent implements OnInit, OnDestroy {
   readonly formatVersion = formatVersion;
 
   sites$ = this.sitesService.sites$;
+  allSites: Site[] = [];
+  private sitesSubscription?: Subscription;
   searchTerm = '';
   statusFilter = '';
   regionFilter = '';
   subscriptionFilter = '';
+  typeFilter = '';
   showCreateModal = false;
   showEditModal = false;
   viewMode: 'grid' | 'map' = 'grid';
 
   // Map des statuts de connexion temps réel (siteId -> status)
   connectionStatusMap = new Map<string, SiteConnectionSummary>();
+  activeSessionsMap = new Map<string, ActiveSession>();
+  miniHealthMap = new Map<string, SiteMiniHealth>();
+  latestOtaVersion: string | null = null;
   private connectionStatusSubscription?: Subscription;
   private refreshSubscription?: Subscription;
 
@@ -653,18 +966,66 @@ export class SitesListComponent implements OnInit, OnDestroy {
   };
   editSportsInput = '';
 
+  get activeSites(): Site[] {
+    return this.allSites.filter(s => !this.isUnbootstrapped(s));
+  }
+
+  get unbootstrappedSites(): Site[] {
+    return this.allSites.filter(s => this.isUnbootstrapped(s));
+  }
+
+  get unbootstrappedNames(): string {
+    return this.unbootstrappedSites.map(s => s.club_name).join(', ');
+  }
+
+  isUnbootstrapped(site: Site): boolean {
+    return site.site_type === 'pi' && !site.last_seen_at;
+  }
+
   ngOnInit(): void {
     this.loadSites();
     this.loadConnectionStatus();
-    // Rafraîchir les statuts de connexion toutes les 60 secondes (reduced from 30s to avoid rate limiting)
+    this.sitesSubscription = this.sites$.subscribe(sites => { this.allSites = sites; });
+    this.sitesService.getLatestOtaVersion().subscribe({
+      next: ({ version }) => { this.latestOtaVersion = version; },
+      error: () => { /* non-bloquant */ }
+    });
+    this.loadActiveSessions();
+    this.loadMiniHealth();
+    // Rafraîchir connexion + sessions actives toutes les 60 secondes
     this.refreshSubscription = interval(60000).subscribe(() => {
       this.loadConnectionStatus();
+      this.loadActiveSessions();
+      this.loadMiniHealth();
     });
   }
 
   ngOnDestroy(): void {
     this.connectionStatusSubscription?.unsubscribe();
     this.refreshSubscription?.unsubscribe();
+    this.sitesSubscription?.unsubscribe();
+  }
+
+  private loadMiniHealth(): void {
+    this.sitesService.getSitesMiniHealth().subscribe({
+      next: ({ sites }) => {
+        this.miniHealthMap.clear();
+        for (const s of sites) { this.miniHealthMap.set(s.siteId, s); }
+      },
+      error: () => { /* non-bloquant */ }
+    });
+  }
+
+  private loadActiveSessions(): void {
+    this.sitesService.getActiveSessions().subscribe({
+      next: ({ sessions }) => {
+        this.activeSessionsMap.clear();
+        for (const s of sessions) {
+          this.activeSessionsMap.set(s.siteId, s);
+        }
+      },
+      error: () => { /* non-bloquant */ }
+    });
   }
 
   private loadConnectionStatus(): void {
@@ -692,6 +1053,7 @@ export class SitesListComponent implements OnInit, OnDestroy {
     if (this.statusFilter) filters['status'] = this.statusFilter;
     if (this.regionFilter) filters['region'] = this.regionFilter;
     if (this.subscriptionFilter) filters['subscription'] = this.subscriptionFilter;
+    if (this.typeFilter) filters['site_type'] = this.typeFilter;
 
     this.sitesService.loadSites(filters).subscribe();
   }
@@ -701,11 +1063,12 @@ export class SitesListComponent implements OnInit, OnDestroy {
     this.statusFilter = '';
     this.regionFilter = '';
     this.subscriptionFilter = '';
+    this.typeFilter = '';
     this.loadSites();
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.searchTerm || this.statusFilter || this.regionFilter || this.subscriptionFilter);
+    return !!(this.searchTerm || this.statusFilter || this.regionFilter || this.subscriptionFilter || this.typeFilter);
   }
 
   /**
@@ -844,6 +1207,23 @@ export class SitesListComponent implements OnInit, OnDestroy {
    */
   getUsageTooltip(_site: Site): string {
     return '';
+  }
+
+  isOutdated(site: Site): boolean {
+    if (site.site_type === 'saas' || site.site_type === 'demo') return false;
+    if (!site.software_version || !this.latestOtaVersion) return false;
+    return site.software_version !== this.latestOtaVersion;
+  }
+
+  getSiteTypeLabel(type: string | undefined): string {
+    const labels: Record<string, string> = { pi: '📡 Pi', saas: '🌐 SaaS', demo: '🎬 Demo' };
+    return labels[type ?? 'pi'] ?? '📡 Pi';
+  }
+
+  formatLastSeenForSite(site: Site): string {
+    if (site.site_type === 'saas') return '—';
+    if (site.site_type === 'demo') return '—';
+    return this.formatLastSeen(site.last_seen_at);
   }
 
   formatLastSeen(date: Date | null): string {

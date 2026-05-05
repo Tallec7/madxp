@@ -138,6 +138,26 @@ export interface SiteLocalContentRow extends QueryResultRow {
   secondary_display_enabled: boolean;
 }
 
+export interface ActiveSessionRow extends QueryResultRow {
+  id: string;
+  site_id: string;
+  started_at: Date;
+  home_team: string | null;
+  away_team: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  event_type: string | null;
+}
+
+export interface SiteMiniHealthRow extends QueryResultRow {
+  site_id: string;
+  cpu_percent: number | null;
+  memory_percent: number | null;
+  temperature: number | null;
+  disk_percent: number | null;
+  active_alert_count: number;
+}
+
 export interface MatchRow extends QueryResultRow {
   id: string;
   started_at: Date;
@@ -568,6 +588,25 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   }
 
   /**
+   * Retourne les métriques de santé légères pour tous les sites Pi.
+   * Utilisé par la page Sites pour le mini-strip santé sur chaque carte.
+   */
+  async getSitesMiniHealth(): Promise<SiteMiniHealthRow[]> {
+    const result = await query<SiteMiniHealthRow>(`
+      SELECT
+        s.id AS site_id,
+        (SELECT cpu_usage    FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS cpu_percent,
+        (SELECT memory_usage FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS memory_percent,
+        (SELECT temperature  FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS temperature,
+        (SELECT disk_usage   FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) AS disk_percent,
+        (SELECT COUNT(*)::int FROM alerts WHERE site_id = s.id AND status = 'active') AS active_alert_count
+      FROM sites s
+      WHERE s.site_type = 'pi'
+    `);
+    return result.rows;
+  }
+
+  /**
    * Recupere tous les sites avec metriques pour la sante de la flotte.
    */
   async getFleetHealth(): Promise<FleetHealthRow[]> {
@@ -680,6 +719,21 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       [id]
     );
     return result.rows[0] || null;
+  }
+
+  /**
+   * Retourne toutes les sessions match actives (ended_at IS NULL) pour tous les sites.
+   * Utilisé par la page Sites pour afficher le bandeau "LIVE" sur les cartes.
+   */
+  async getActiveSessions(): Promise<ActiveSessionRow[]> {
+    const result = await query<ActiveSessionRow>(
+      `SELECT id, site_id, started_at,
+              home_team, away_team, home_score, away_score, event_type
+       FROM club_sessions
+       WHERE ended_at IS NULL
+       ORDER BY started_at DESC`
+    );
+    return result.rows;
   }
 
   /**

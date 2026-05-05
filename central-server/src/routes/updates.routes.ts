@@ -10,6 +10,7 @@ const router = Router();
 // Update routes - rate limits per-route pour éviter que les GET consomment le budget des POST
 router.get('/updates', authenticate, adminRateLimit, updatesController.getUpdates);
 // IMPORTANT: Routes spécifiques DOIVENT être avant :id pour éviter que Express interprète le path comme un ID
+router.get('/updates/latest', authenticate, adminRateLimit, updatesController.getLatestVersion);
 router.get('/updates/ftp-test', authenticate, requireRole('admin'), adminRateLimit, updatesController.testFtpUpdateConnection);
 router.get('/updates/:id', authenticate, adminRateLimit, validateParams(paramSchemas.id), updatesController.getUpdate);
 // Diagnostic: vérifier si l'URL du package est accessible
