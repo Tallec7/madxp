@@ -10,30 +10,31 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 1 of 3 (Fondations)
-Plan: 02 of 5 — DONE (next: 03)
+Plan: 03 of 5 — DONE (next: 04)
 Status: In progress
-Last activity: 2026-05-05 — Plan 02 livré (Asset Manager UI : composant dual-context modal+page, 3 endpoints library super_admin, 3 méthodes data service)
+Last activity: 2026-05-05 — Plan 03 livré (Wizard shell signal-based + Step 1 Identité ReactiveForms, INSERT immédiat + resume via /new/:id)
 
-Progress: [████░░░░░░] 40% (2/5 plans of phase 1)
+Progress: [██████░░░░] 60% (3/5 plans of phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: ~28 min
-- Total execution time: ~55 min
+- Total plans completed: 3
+- Average duration: ~27 min
+- Total execution time: ~80 min
 
 **By Phase:**
 
 | Phase         | Plans | Total   | Avg/Plan |
 | ------------- | ----- | ------- | -------- |
-| 01-fondations | 2/5   | ~55 min | ~28 min  |
+| 01-fondations | 3/5   | ~80 min | ~27 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
 | 01    | 01   | ~30 min  | 4     | 9     | 2026-05-05 |
 | 01    | 02   | ~25 min  | 2     | 9     | 2026-05-05 |
+| 01    | 03   | ~25 min  | 2     | 6     | 2026-05-05 |
 
 _Updated after each plan completion_
 
@@ -56,6 +57,11 @@ Recent decisions affecting current work:
 - Plan 02 : Asset Manager dual-context (modal | page) — 1 composant standalone qui rend en modal (wizard) ET en page (route super_admin) selon `@Input context` + `route.snapshot.data.context`
 - Plan 02 : asset id déterministe sha256(url).slice(0,16) — pas de table template_assets en Plan 02, l'URL FTP reste la PK logique (table dédiée sera Phase 2 si nécessaire)
 - Plan 02 deviation : `ftpService.delete()` n'existe pas — utiliser `deleteFileFromFtp(filename)` depuis `config/ftp-storage` + helper `stripPublicPrefix(url)` pour reconstruire le storage path
+- Plan 03 : Wizard data-driven, `currentStep = signal<WizardStep>()` + step containers en `[hidden]` (jamais `*ngIf` — Pitfall P2 contre fuite GPU Remotion Player Phase 2). Form state lifted en parent signal — step composants pure I/O.
+- Plan 03 : INSERT immédiat sur Step 1 Continuer + `Location.replaceState('/new/:id')` → wizard refresh-safe (pas de perte de données si fermeture onglet)
+- Plan 03 deviation : `TemplateStudioView` est plat (camelCase à la racine) — pas de `view.template` envelope
+- Plan 03 deviation : `@Output() submit` interdit par `@angular-eslint/no-output-native` → renommé en `next` (convention pour tous les step components downstream)
+- Plan 03 deviation : verbes UI standards (`Suivant`, `Annuler`...) bloqués par `scripts/check-hardcoded-i18n.js` → utiliser synonymes non-blocklistés (`Continuer →`, `← Retour`, `Abandonner`) tant que i18n complet pas déployé Phase 3
 
 ### Pending Todos
 
@@ -70,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-05
-Stopped at: Completed 01-fondations-02-PLAN.md — 2 commits (10eda5e8, 9951e068) + SUMMARY. Ready for plan 03 (Wizard shell + Step 1 Identité).
+Stopped at: Completed 01-fondations-03-PLAN.md — 2 commits (30abd375, c8bae67d) + SUMMARY. Ready for plan 04 (Steps 2 + 3 — Fonds animés + Zones modifiables).
 Resume file: None

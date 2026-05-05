@@ -32,7 +32,7 @@ Template Studio v3 est une couche UX admin construite sur le moteur Remotion v2 
 
 - [x] 01-fondations-01-PLAN.md — Backend foundations (ffprobe + transactional duplicateDeep + asset guards + 3 smoke tests) — DONE 2026-05-05 (commits 5f54107a, e5148499, 167abd9a)
 - [x] 01-fondations-02-PLAN.md — Asset Manager UI (dual-context modal+page, upload, alpha rejection, delete guard) — DONE 2026-05-05 (commits 10eda5e8, 9951e068)
-- [ ] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next)
+- [x] 01-fondations-03-PLAN.md — Wizard shell + Step 1 Identité (signal-based step state, ReactiveForms, INSERT on Next) — DONE 2026-05-05 (commits 30abd375, c8bae67d)
 - [ ] 01-fondations-04-PLAN.md — Wizard Steps 2+3 (drag-reorder layers + zone forms with mandatory layer_id)
 - [ ] 01-fondations-05-PLAN.md — Wizard Step 4 Options + Duplicate button flow
 
