@@ -1,0 +1,63 @@
+<div class="v3w" [class.v3w--has-error]="loadError() !== null">
+  <aside class="v3w__stepper" aria-label="Étapes du wizard">
+    <div
+      *ngFor="let s of allSteps"
+      class="v3w__step"
+      [class.v3w__step--active]="currentStep() === s"
+      [class.v3w__step--done]="currentStep() > s"
+      [class.v3w__step--locked]="s > currentStep() && !state().templateId"
+      (click)="goToStep(s)"
+      role="button"
+      tabindex="0"
+      [attr.aria-current]="currentStep() === s ? 'step' : null"
+    >
+      <div class="v3w__step-num">{{ s }}</div>
+      <div class="v3w__step-content">
+        <h4>{{ stepLabels[s].title }}</h4>
+        <p>{{ stepLabels[s].subtitle }}</p>
+      </div>
+    </div>
+  </aside>
+
+  <section class="v3w__pane">
+    <div *ngIf="loadError() as err" class="v3w__error" role="alert">
+      {{ err }}
+    </div>
+
+    <app-wizard-step-identity
+      [hidden]="currentStep() !== 1"
+      [initialValue]="state().identity"
+      [saving]="saving()"
+      (next)="onStep1Submit($event)"
+    ></app-wizard-step-identity>
+
+    <!-- Step 2 placeholder — wired by plan 04 (Fonds animés). -->
+    <div [hidden]="currentStep() !== 2" class="v3w__placeholder">
+      <h2>Étape 2 — Fonds animés</h2>
+      <p>Le sélecteur de calques arrive en plan 04.</p>
+      <div class="v3w__nav">
+        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+        <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant →</button>
+      </div>
+    </div>
+
+    <!-- Step 3 placeholder — wired by plan 04 (Zones modifiables). -->
+    <div [hidden]="currentStep() !== 3" class="v3w__placeholder">
+      <h2>Étape 3 — Zones modifiables</h2>
+      <p>L'éditeur de zones texte / image arrive en plan 04.</p>
+      <div class="v3w__nav">
+        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+        <button type="button" class="btn btn-primary" (click)="nextStep()">Suivant →</button>
+      </div>
+    </div>
+
+    <!-- Step 4 placeholder — wired by plan 05 (Options club). -->
+    <div [hidden]="currentStep() !== 4" class="v3w__placeholder">
+      <h2>Étape 4 — Options club</h2>
+      <p>Les options proposées au club arrivent en plan 05.</p>
+      <div class="v3w__nav">
+        <button type="button" class="btn" (click)="prevStep()">← Retour</button>
+      </div>
+    </div>
+  </section>
+</div>

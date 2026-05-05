@@ -166,6 +166,26 @@ export const routes: Routes = [
           ).then((m) => m.AssetManagerModalComponent),
       },
       {
+        // ADR-110 / Plan 03 — Wizard de création v3, Étape 1 (Identité)
+        path: 'content/templates-remotion/new',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
+          ).then((m) => m.StudioV3WizardComponent),
+      },
+      {
+        // ADR-110 / Plan 03 — Wizard de création v3, reprise par templateId
+        path: 'content/templates-remotion/new/:id',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import(
+            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
+          ).then((m) => m.StudioV3WizardComponent),
+      },
+      {
         // ADR-075 V3 Phase B — Self-service club templates
         path: 'content/my-templates',
         canActivate: [roleGuard],
