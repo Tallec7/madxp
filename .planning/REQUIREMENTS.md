@@ -34,7 +34,7 @@
 ### Vocabulaire métier & UX (UX)
 
 - [ ] **UX-01**: Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun jargon DB : "fond animé" et non "layer", "zone modifiable" et non "slot")
-- [ ] **UX-02**: Le type d'animation est présenté sous forme de cards visuelles nommées (Apparition, Glissement, Zoom arrière, Logo Pop) — aucun paramètre numérique (scaleFrom/scaleTo) n'est exposé à l'utilisateur
+- [x] **UX-02**: Le type d'animation est présenté sous forme de cards visuelles nommées (Apparition, Glissement, Zoom arrière, Logo Pop) — aucun paramètre numérique (scaleFrom/scaleTo) n'est exposé à l'utilisateur
 - [ ] **UX-03**: L'étape 4 affiche automatiquement quelles zones sont reliées à chaque option via `visible_if` ("✓ 2 zones reliées à cette option")
 
 ### Gate de publication (PUB)
@@ -101,7 +101,7 @@
 | PREV-02     | Phase 2 (B) | Complete       |
 | PREV-03     | Phase 2 (B) | Complete       |
 | UX-01       | Phase 2 (B) | Pending        |
-| UX-02       | Phase 2 (B) | Pending        |
+| UX-02       | Phase 2 (B) | Complete       |
 | UX-03       | Phase 2 (B) | Pending        |
 | PUB-01      | Phase 3 (C) | Pending        |
 | PUB-02      | Phase 3 (C) | Pending        |

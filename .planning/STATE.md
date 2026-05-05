@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
-status: Ready for Plan 03 (Animation cards UX)
-stopped_at: Completed 02-ux-interactive-02-PLAN.md
-last_updated: '2026-05-05T10:25:00.000Z'
-last_activity: 2026-05-05 — Phase 2 Plan 02 livré (Player Remotion live mounted-once + buildRuntimePlayerState per-layer proxy + hybrid debounce(300)/blur)
+status: Ready for Plan 04 (visible_if click-to-highlight + transactional renameOptionKey)
+stopped_at: Completed 02-ux-interactive-03-PLAN.md
+last_updated: '2026-05-05T14:30:00.000Z'
+last_activity: 2026-05-05 — Phase 2 Plan 03 livré (AnimationCard + AnimationPicker, 5 cards visuelles, hover preview, banlist scaleFrom/scaleTo/durationMs)
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
-  percent: 43
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ## Current Position
 
 Phase: 2 of 3 (UX interactive) — IN PROGRESS
-Plan: 02 of 4 — DONE
-Status: Ready for Plan 03 (Animation cards UX)
-Last activity: 2026-05-05 — Phase 2 Plan 02 livré (Player Remotion live mounted-once + buildRuntimePlayerState per-layer proxy + hybrid debounce(300)/blur)
+Plan: 03 of 4 — DONE
+Status: Ready for Plan 04 (visible_if click-to-highlight + transactional renameOptionKey)
+Last activity: 2026-05-05 — Phase 2 Plan 03 livré (AnimationCard + AnimationPicker, 5 cards visuelles, hover preview, banlist scaleFrom/scaleTo/durationMs)
 
-Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5 + Phase 2 1/4)
+Progress: [█████░░░░░] 57% (8/14 plans total — Phase 1 5/5 + Phase 2 3/4)
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5
 | Phase             | Plans | Total    | Avg/Plan |
 | ----------------- | ----- | -------- | -------- |
 | 01-fondations     | 5/5   | ~145 min | ~29 min  |
-| 02-ux-interactive | 1/4   | ~10 min  | ~10 min  |
+| 02-ux-interactive | 3/4   | ~55 min  | ~18 min  |
 
 | Phase | Plan | Duration | Tasks | Files | Date       |
 | ----- | ---- | -------- | ----- | ----- | ---------- |
@@ -58,6 +58,7 @@ Progress: [████░░░░░░] 43% (6/14 plans total — Phase 1 5/5
 
 _Updated after each plan completion_
 | Phase 02-ux-interactive P02 | 25min | 3 tasks | 11 files |
+| Phase 02-ux-interactive P03 | 20min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-05T10:08:12.651Z
-Stopped at: Completed 02-ux-interactive-02-PLAN.md
+Last session: 2026-05-05T14:29:10.389Z
+Stopped at: Completed 02-ux-interactive-03-PLAN.md
 Resume file: None
