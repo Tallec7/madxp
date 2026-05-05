@@ -488,6 +488,58 @@ export class RemotionTemplatesDataService {
   }
 
   /**
+   * Plan 02-04 / UX-03 — Patch an option (label, values, default_value, etc.).
+   * Used by the value-removal flow + future inline label edit.
+   */
+  updateOption(
+    templateId: string,
+    optionId: string,
+    payload: {
+      label?: string;
+      values?: string[];
+      default_value?: string;
+      user_editable?: boolean;
+      sort_order?: number;
+    },
+  ): Observable<TemplateOption> {
+    return this.api
+      .patch<TemplateOptionRow>(
+        `/remotion-templates/${encodeURIComponent(templateId)}/options/${encodeURIComponent(optionId)}`,
+        payload,
+      )
+      .pipe(map(mapTemplateOptionRow));
+  }
+
+  /**
+   * Plan 02-04 / UX-03 — Atomic rename of an option key.
+   * Backend wraps 4 UPDATEs in BEGIN/COMMIT (template_options,
+   * packshot_refs, text_fields.visible_if, image_slots.visible_if).
+   * 400 `option_key_conflict` if newKey already exists on this template.
+   */
+  renameOptionKey(
+    templateId: string,
+    optionId: string,
+    newKey: string,
+  ): Observable<{
+    id: string;
+    key: string;
+    updatedTextFields: number;
+    updatedImageSlots: number;
+    updatedPackshotRefs: number;
+  }> {
+    return this.api.post<{
+      id: string;
+      key: string;
+      updatedTextFields: number;
+      updatedImageSlots: number;
+      updatedPackshotRefs: number;
+    }>(
+      `/remotion-templates/${encodeURIComponent(templateId)}/options/${encodeURIComponent(optionId)}/rename`,
+      { newKey },
+    );
+  }
+
+  /**
    * Plan 05 / WIZARD-01 — Liste les packshot refs (option_value → packshot_template_id).
    */
   listPackshotRefs(templateId: string): Observable<TemplatePackshotRef[]> {

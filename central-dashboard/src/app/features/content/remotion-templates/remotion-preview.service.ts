@@ -53,6 +53,77 @@ export class RemotionPreviewService {
   }
 
   /**
+   * Build a fully-proxied RuntimePlayerState for the wizard live Player
+   * (Plan 02-02 / Pitfall P2). Every nested FTP URL — `layers[].videoUrl`
+   * AND `variants[].backgroundVideoUrl` — is passed through proxyUrl()
+   * individually. Do NOT shortcut by calling the shallow `proxyFtpUrls`
+   * helper on the whole runtime state — it only walks top-level string keys
+   * and would leave the nested URLs raw, causing silent CORB black panels.
+   *
+   * Reference v2 implementation: studio-v2/admin/admin-studio-panel.component.ts
+   * `recomputePlayerState()` (lines 338-360) — same per-element proxy pattern.
+   *
+   * Returned shape is structurally compatible with `RuntimePlayerState` from
+   * `studio-player/template-studio-player.component.ts` (kept duck-typed to
+   * avoid coupling the service to the React-rooted player component).
+   */
+  buildRuntimePlayerState<
+    L extends { videoUrl: string },
+    V extends { backgroundVideoUrl: string },
+    T,
+    I,
+  >(view: {
+    layers?: L[];
+    variants?: V[];
+    textFields?: T[];
+    imageSlots?: I[];
+    canvasWidth: number;
+    canvasHeight: number;
+    durationSeconds: number;
+    fps: number;
+    variantId?: string;
+    textValues?: Record<string, string>;
+    imageUploads?: Record<string, string>;
+    selectedOptions?: Record<string, string>;
+  }): {
+    layers: L[];
+    variants: V[];
+    textFields: T[];
+    imageSlots: I[];
+    canvasWidth: number;
+    canvasHeight: number;
+    durationSeconds: number;
+    fps: number;
+    variantId: string;
+    textValues: Record<string, string>;
+    imageUploads: Record<string, string>;
+    selectedOptions?: Record<string, string>;
+  } {
+    const layers = (view.layers ?? []).map((l) => ({
+      ...l,
+      videoUrl: this.proxyUrl(l.videoUrl),
+    }));
+    const variants = (view.variants ?? []).map((v) => ({
+      ...v,
+      backgroundVideoUrl: this.proxyUrl(v.backgroundVideoUrl),
+    }));
+    return {
+      layers,
+      variants,
+      textFields: view.textFields ?? [],
+      imageSlots: view.imageSlots ?? [],
+      canvasWidth: view.canvasWidth,
+      canvasHeight: view.canvasHeight,
+      durationSeconds: view.durationSeconds,
+      fps: view.fps,
+      variantId: view.variantId ?? variants[0]?.['id' as keyof V] as unknown as string ?? '',
+      textValues: view.textValues ?? {},
+      imageUploads: view.imageUploads ?? {},
+      selectedOptions: view.selectedOptions,
+    };
+  }
+
+  /**
    * Envoie les props courantes à l'iframe via `postMessage`.
    * Retourne `true` si le postMessage a été envoyé, `false` sinon (iframe non prête).
    */

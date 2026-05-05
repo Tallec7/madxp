@@ -27,15 +27,15 @@
 
 ### Aperçu temps réel (PREV)
 
-- [ ] **PREV-01**: Les étapes 3, 4 et 5 affichent un Player Remotion (panneau droit) qui se rafraîchit sous 300ms après chaque modification du formulaire
-- [ ] **PREV-02**: L'aperçu se remplit automatiquement avec des données factices quand les champs utilisateur sont vides ("PRÉNOM NOM", "NOM DU CLUB", logo et photo placeholder Neopro)
-- [ ] **PREV-03**: Le Player est monté une seule fois dans le shell wizard avec `[hidden]` sur les étapes 1-2 — jamais recréé par étape (prévient le leak GPU SharedImage)
+- [x] **PREV-01**: Les étapes 3, 4 et 5 affichent un Player Remotion (panneau droit) qui se rafraîchit sous 300ms après chaque modification du formulaire
+- [x] **PREV-02**: L'aperçu se remplit automatiquement avec des données factices quand les champs utilisateur sont vides ("PRÉNOM NOM", "NOM DU CLUB", logo et photo placeholder Neopro)
+- [x] **PREV-03**: Le Player est monté une seule fois dans le shell wizard avec `[hidden]` sur les étapes 1-2 — jamais recréé par étape (prévient le leak GPU SharedImage)
 
 ### Vocabulaire métier & UX (UX)
 
 - [ ] **UX-01**: Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun jargon DB : "fond animé" et non "layer", "zone modifiable" et non "slot")
-- [ ] **UX-02**: Le type d'animation est présenté sous forme de cards visuelles nommées (Apparition, Glissement, Zoom arrière, Logo Pop) — aucun paramètre numérique (scaleFrom/scaleTo) n'est exposé à l'utilisateur
-- [ ] **UX-03**: L'étape 4 affiche automatiquement quelles zones sont reliées à chaque option via `visible_if` ("✓ 2 zones reliées à cette option")
+- [x] **UX-02**: Le type d'animation est présenté sous forme de cards visuelles nommées (Apparition, Glissement, Zoom arrière, Logo Pop) — aucun paramètre numérique (scaleFrom/scaleTo) n'est exposé à l'utilisateur
+- [x] **UX-03**: L'étape 4 affiche automatiquement quelles zones sont reliées à chaque option via `visible_if` ("✓ 2 zones reliées à cette option")
 
 ### Gate de publication (PUB)
 
@@ -97,12 +97,12 @@
 | WIZARD-05   | Phase 1 (A) | Done (Plan 04) |
 | DUP-01      | Phase 1 (A) | Pending        |
 | DUP-02      | Phase 1 (A) | Done (plan 01) |
-| PREV-01     | Phase 2 (B) | Pending        |
-| PREV-02     | Phase 2 (B) | Pending        |
-| PREV-03     | Phase 2 (B) | Pending        |
+| PREV-01     | Phase 2 (B) | Complete       |
+| PREV-02     | Phase 2 (B) | Complete       |
+| PREV-03     | Phase 2 (B) | Complete       |
 | UX-01       | Phase 2 (B) | Pending        |
-| UX-02       | Phase 2 (B) | Pending        |
-| UX-03       | Phase 2 (B) | Pending        |
+| UX-02       | Phase 2 (B) | Complete       |
+| UX-03       | Phase 2 (B) | Complete       |
 | PUB-01      | Phase 3 (C) | Pending        |
 | PUB-02      | Phase 3 (C) | Pending        |
 | TEST-01     | Phase 1 (A) | Done (plan 01) |

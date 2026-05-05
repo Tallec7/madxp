@@ -35,3 +35,34 @@ export const ANIMATION_PRESET_LABELS = {
   zoom: 'Zoom arrière',
   'logo-pop': 'Logo Pop',
 } as const;
+
+/**
+ * Frozen FR translations for backend error codes (snake_case).
+ *
+ * Backend stays language-agnostic: routes return `{ error: '<code>' }`
+ * and the dashboard looks the message up via `ERROR_MESSAGES[code]`.
+ * Adding a new backend code requires:
+ *   1. Adding the entry below (FR string).
+ *   2. Updating smoke-template-studio-v3-vocabulary if the new code
+ *      is a Phase 1/2/3 contract that should be locked.
+ *
+ * `{N}` placeholders are interpolated by the caller, e.g.:
+ *   ERROR_MESSAGES.asset_in_use.replace('{N}', String(usedByPublishedCount))
+ *
+ * Plan 02/03/04 will add more entries (preview-related codes etc.).
+ */
+export const ERROR_MESSAGES = {
+  asset_alpha_required:
+    'Ce fond nécessite la transparence (canal alpha) — ré-exportez en yuva420p.',
+  duplicate_requires_v2:
+    'Ce template ne peut pas être dupliqué (version 1 — migration requise).',
+  asset_in_use:
+    "Cet asset est utilisé par {N} template(s) publié(s) — désassignez-le d'abord.",
+  // Plan 02-04 / UX-03 — surfaces backend errors + value-removal modal text.
+  option_key_conflict:
+    "Une option avec l'identifiant « {KEY} » existe déjà sur ce template.",
+  option_value_in_use:
+    'Cette valeur est utilisée par {N} zones, qui deviendront toujours visibles si vous la supprimez. Continuer ?',
+} as const;
+
+export type ErrorMessageCode = keyof typeof ERROR_MESSAGES;

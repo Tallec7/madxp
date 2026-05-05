@@ -47,6 +47,7 @@ import type {
   TemplatePackshotRef,
   TemplateTextField,
 } from '../../remotion-templates.types';
+import { ERROR_MESSAGES } from '../vocabulary.constants';
 
 interface OptionFormShape {
   key: FormControl<string>;
@@ -84,7 +85,43 @@ interface OptionFormShape {
               <span class="wso__pill wso__pill--type">
                 {{ typePillLabel(opt.type) }}
               </span>
-              <span class="wso__pill wso__pill--key">{{ opt.key }}</span>
+              <ng-container *ngIf="renamingOptionId() !== opt.id; else renameForm">
+                <span class="wso__pill wso__pill--key">{{ opt.key }}</span>
+                <button
+                  type="button"
+                  class="wso__btn wso__btn--link"
+                  (click)="openRename(opt)"
+                  [attr.aria-label]="'Renommer ' + opt.key"
+                >
+                  Renommer
+                </button>
+              </ng-container>
+              <ng-template #renameForm>
+                <input
+                  type="text"
+                  class="wso__rename-input"
+                  [value]="renameDraft()"
+                  (input)="onRenameInput($event)"
+                  maxlength="64"
+                  placeholder="nouvelle_cle"
+                />
+                <button
+                  type="button"
+                  class="wso__btn wso__btn--primary wso__btn--small"
+                  (click)="submitRename(opt)"
+                  [disabled]="renaming()"
+                >
+                  Sauvegarder
+                </button>
+                <button
+                  type="button"
+                  class="wso__btn wso__btn--ghost wso__btn--small"
+                  (click)="cancelRename()"
+                  [disabled]="renaming()"
+                >
+                  Abandonner
+                </button>
+              </ng-template>
             </div>
             <button
               type="button"
@@ -97,6 +134,10 @@ interface OptionFormShape {
             </button>
           </div>
 
+          <p class="wso__rename-error" *ngIf="renamingOptionId() === opt.id && renameError()">
+            {{ renameError() }}
+          </p>
+
           <div class="wso__values">
             <span
               class="wso__value-pill"
@@ -105,12 +146,26 @@ interface OptionFormShape {
               [title]="v === opt.defaultValue ? 'Valeur par défaut' : ''"
             >
               {{ v }}
+              <button
+                *ngIf="opt.type === 'enum' && opt.values.length > 1 && v !== opt.defaultValue"
+                type="button"
+                class="wso__value-pill-x"
+                (click)="removeValue(opt, v)"
+                [attr.aria-label]="'Retirer la valeur ' + v"
+              >
+                ×
+              </button>
             </span>
           </div>
 
-          <div class="wso__linked">
+          <button
+            type="button"
+            class="wso__linked-counter"
+            (click)="onLinkedZonesClick(opt.key)"
+            [attr.aria-label]="'Voir les zones reliées à ' + opt.key"
+          >
             ✓ {{ countLinkedZones(opt.key) }} zone(s) reliée(s) à cette option
-          </div>
+          </button>
 
           <!-- Mapping packshot par valeur (uniquement pour type=enum) -->
           <div class="wso__packshots" *ngIf="opt.type === 'enum'">
@@ -304,10 +359,68 @@ interface OptionFormShape {
         color: #065f46;
         font-weight: 600;
       }
-      .wso__linked {
-        font-size: 12px;
+      .wso__linked-counter {
+        background: transparent;
+        border: none;
+        padding: 4px 0;
+        margin: 0 0 12px;
         color: #059669;
-        margin-bottom: 12px;
+        cursor: pointer;
+        font-size: 12px;
+        text-align: left;
+        display: block;
+        &:hover {
+          text-decoration: underline;
+        }
+        &:focus-visible {
+          outline: 2px solid #2563eb;
+          outline-offset: 2px;
+          border-radius: 2px;
+        }
+      }
+      .wso__rename-input {
+        margin-left: 8px;
+        padding: 4px 8px;
+        border: 1px solid #2563eb;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-width: 220px;
+      }
+      .wso__rename-error {
+        color: #b91c1c;
+        font-size: 12px;
+        margin: 0 0 8px;
+      }
+      .wso__btn--link {
+        background: transparent;
+        color: #2563eb;
+        padding: 2px 6px;
+        font-size: 11px;
+        border: none;
+        margin-left: 4px;
+        cursor: pointer;
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+      .wso__btn--small {
+        padding: 4px 8px;
+        font-size: 11px;
+        margin-left: 4px;
+      }
+      .wso__value-pill-x {
+        background: transparent;
+        border: none;
+        margin-left: 4px;
+        cursor: pointer;
+        color: #6b7280;
+        padding: 0 2px;
+        font-size: 14px;
+        line-height: 1;
+        &:hover {
+          color: #b91c1c;
+        }
       }
       .wso__packshots {
         border-top: 1px dashed #d1d5db;
@@ -433,6 +546,18 @@ export class WizardStepOptionsComponent implements OnInit {
   @Output() optionsChange = new EventEmitter<TemplateOption[]>();
   @Output() prev = new EventEmitter<void>();
   @Output() finished = new EventEmitter<void>();
+  /**
+   * Plan 02-04 / UX-03 — emitted when admin clicks the inline « ✓ N zones
+   * reliées » counter. The shell uses it to highlight zones in the Player +
+   * scroll Step 3 zone list into view.
+   */
+  @Output() linkedZonesClick = new EventEmitter<string>();
+  /**
+   * Plan 02-04 / UX-03 — emitted after a successful renameOptionKey so the
+   * shell can re-fetch getStudioView and refresh the canonical state with
+   * the rewritten visible_if strings (counter recomputes against new key).
+   */
+  @Output() zonesRefreshNeeded = new EventEmitter<void>();
 
   publishedTemplates = signal<RemotionTemplate[]>([]);
   packshotRefs = signal<TemplatePackshotRef[]>([]);
@@ -441,6 +566,12 @@ export class WizardStepOptionsComponent implements OnInit {
   creating = signal<boolean>(false);
   deleting = signal<string | null>(null);
   formError = signal<string | null>(null);
+
+  // Plan 02-04 / UX-03 — inline rename UI state
+  renamingOptionId = signal<string | null>(null);
+  renameDraft = signal<string>('');
+  renaming = signal<boolean>(false);
+  renameError = signal<string | null>(null);
 
   form: FormGroup<OptionFormShape> = new FormGroup<OptionFormShape>({
     key: new FormControl<string>('', {
@@ -680,5 +811,120 @@ export class WizardStepOptionsComponent implements OnInit {
     } else {
       create();
     }
+  }
+
+  /**
+   * Plan 02-04 / UX-03 — bubble up to the shell so it can highlight the
+   * linked zones in the Player and scroll Step 3 list into view.
+   */
+  onLinkedZonesClick(optionKey: string): void {
+    this.linkedZonesClick.emit(optionKey);
+  }
+
+  /**
+   * Plan 02-04 / UX-03 — remove a single value from an option's enum list.
+   * If ≥1 zone references this value via `<key> == '<value>'` in visible_if,
+   * shows a FR confirmation modal (those zones become always-visible if the
+   * value is removed). Approve → PATCH the option's `values`; cancel → abort.
+   */
+  removeValue(opt: TemplateOption, value: string): void {
+    if (value === opt.defaultValue) return; // never remove the default
+    if (opt.values.length <= 1) return; // need at least one value
+    // Count zones referencing this specific (key, value) pair via visible_if.
+    // Match `<key>` whole-word, optional whitespace, `==`, optional whitespace,
+    // then the value enclosed in single or double quotes. Mirrors backend regex.
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`\\b${opt.key}\\s*==\\s*['"]${escaped}['"]`);
+    const z = this.zones();
+    const linked =
+      (z.textFields || []).filter((f) => f.visibleIf && re.test(f.visibleIf))
+        .length +
+      (z.imageSlots || []).filter((s) => s.visibleIf && re.test(s.visibleIf))
+        .length;
+    if (linked > 0) {
+      const msg = ERROR_MESSAGES.option_value_in_use.replace(
+        '{N}',
+        String(linked),
+      );
+      if (!window.confirm(msg)) return;
+    }
+    const nextValues = opt.values.filter((v) => v !== value);
+    this.dataService
+      .updateOption(this.templateId, opt.id, { values: nextValues })
+      .subscribe({
+        next: (updated) => {
+          const next = this.options().map((o) =>
+            o.id === opt.id ? updated : o,
+          );
+          this.options.set(next);
+          this.optionsChange.emit(next);
+        },
+      });
+  }
+
+  // ── Rename UI (Plan 02-04 / UX-03) ─────────────────────────────────────
+
+  openRename(opt: TemplateOption): void {
+    this.renameError.set(null);
+    this.renameDraft.set(opt.key);
+    this.renamingOptionId.set(opt.id);
+  }
+
+  cancelRename(): void {
+    this.renamingOptionId.set(null);
+    this.renameDraft.set('');
+    this.renameError.set(null);
+  }
+
+  onRenameInput(ev: Event): void {
+    const target = ev.target as HTMLInputElement;
+    this.renameDraft.set(target.value);
+  }
+
+  submitRename(opt: TemplateOption): void {
+    const newKey = this.renameDraft().trim();
+    if (!newKey || !/^[a-z][a-z0-9_]*$/.test(newKey)) {
+      this.renameError.set(
+        'Identifiant invalide (snake_case, lettre puis a-z 0-9 _).',
+      );
+      return;
+    }
+    if (newKey === opt.key) {
+      this.cancelRename();
+      return;
+    }
+    this.renaming.set(true);
+    this.renameError.set(null);
+    this.dataService
+      .renameOptionKey(this.templateId, opt.id, newKey)
+      .subscribe({
+        next: (res) => {
+          this.renaming.set(false);
+          // Optimistic local update of the option key. The shell re-fetches
+          // getStudioView via zonesRefreshNeeded to refresh visible_if
+          // strings on text_fields / image_slots.
+          const next = this.options().map((o) =>
+            o.id === opt.id ? { ...o, key: res.key } : o,
+          );
+          this.options.set(next);
+          this.optionsChange.emit(next);
+          // Refresh packshot refs (their option_key was rewritten too).
+          this.dataService.listPackshotRefs(this.templateId).subscribe({
+            next: (refs) => this.packshotRefs.set(refs),
+          });
+          this.zonesRefreshNeeded.emit();
+          this.cancelRename();
+        },
+        error: (err) => {
+          this.renaming.set(false);
+          if (err?.error?.error === 'option_key_conflict') {
+            this.renameError.set(
+              ERROR_MESSAGES.option_key_conflict.replace('{KEY}', newKey),
+            );
+          } else {
+            this.renameError.set('Renommage échoué — réessayez.');
+          }
+        },
+      });
   }
 }

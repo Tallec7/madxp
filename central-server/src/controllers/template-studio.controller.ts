@@ -269,6 +269,61 @@ export const reorderLayers = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+/**
+ * ADR-110 / Plan 02-04 / UX-03 — Atomic rename of an option key.
+ *
+ * POST /:id/options/:optionId/rename — body { newKey }.
+ * Repo wraps 4 UPDATEs in a single BEGIN/COMMIT (ROLLBACK on any throw):
+ *   - template_options.key
+ *   - template_packshot_refs.option_key
+ *   - template_text_fields.visible_if   (regex rewrite)
+ *   - template_image_slots.visible_if   (regex rewrite)
+ *
+ * Maps repo errors:
+ *   - 'option_key_conflict' → 400 (newKey already used by another option)
+ *   - 'option_not_found'    → 404
+ */
+export const renameOptionKey = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id, optionId } = req.params as { id: string; optionId: string };
+  const { newKey } = req.body as { newKey: string };
+  try {
+    if (!(await assertTemplateExists(id))) {
+      record('studio_view', 'update', 'not_found');
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+    const result = await templateStudioRepository.renameOptionKey(id, optionId, newKey);
+    record('studio_view', 'update', 'success');
+    logger.info('Template option renamed', {
+      templateId: id,
+      optionId,
+      newKey,
+      counts: {
+        textFields: result.updatedTextFields,
+        imageSlots: result.updatedImageSlots,
+        packshotRefs: result.updatedPackshotRefs,
+      },
+      userId: req.user?.id,
+    });
+    res.status(200).json(result);
+  } catch (error) {
+    const msg = (error as Error)?.message;
+    if (msg === 'option_key_conflict') {
+      record('studio_view', 'update', 'conflict');
+      res.status(400).json({ error: 'option_key_conflict' });
+      return;
+    }
+    if (msg === 'option_not_found') {
+      record('studio_view', 'update', 'not_found');
+      res.status(404).json({ error: 'option_not_found' });
+      return;
+    }
+    record('studio_view', 'update', 'error');
+    logError('renameOptionKey', req, error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
 // ── Text fields
 export const listTextFields = async (req: AuthRequest, res: Response): Promise<void> => {
   await handleRead(req, res, 'listTextFields', 'text_field', 'list', async () => {

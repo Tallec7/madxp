@@ -26,27 +26,37 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   EventEmitter,
   inject,
   Input,
+  OnInit,
   Output,
   WritableSignal,
   computed,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { debounceTime } from 'rxjs/operators';
 
 import { RemotionTemplatesDataService } from '../../remotion-templates-data.service';
 import type {
+  AnimationDirection,
+  AnimationPreset,
   TemplateImageSlot,
   TemplateLayer,
   TemplateTextField,
 } from '../../remotion-templates.types';
+import {
+  AnimationPickerComponent,
+  type AnimationValue,
+} from './animation-picker.component';
 
 /**
  * Hardcoded font list — `template_fonts` table does not yet exist (cf.
@@ -92,6 +102,7 @@ interface TextZoneFormShape {
   textAlign: FormControl<'left' | 'center' | 'right'>;
   maxChars: FormControl<number>;
   visibleIf: FormControl<string>;
+  animation: FormControl<AnimationValue>;
 }
 
 interface ImageZoneFormShape {
@@ -99,12 +110,28 @@ interface ImageZoneFormShape {
   label: FormControl<string>;
   safeZonePreset: FormControl<SafeZonePresetKey>;
   visibleIf: FormControl<string>;
+  animation: FormControl<AnimationValue>;
+}
+
+/**
+ * Plan 02-03 — Map AnimationValue (UI shape) to backend payload (separate
+ * `animation` preset string + `animationDirection`). Backend supports
+ * `'none'` as a preset (= "Aucune animation") so null values map to
+ * `{ animation: 'none' }` — no schema changes needed (cf. AnimationPreset
+ * union in remotion-templates.types.ts).
+ */
+function mapAnimationToPayload(
+  v: AnimationValue,
+): { animation: AnimationPreset; animationDirection?: AnimationDirection } {
+  if (!v) return { animation: 'none' };
+  if (v.preset === 'logo-pop') return { animation: 'logo-pop' };
+  return { animation: v.preset, animationDirection: v.direction };
 }
 
 @Component({
   selector: 'app-wizard-step-zones',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, AnimationPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="wsz">
@@ -146,6 +173,7 @@ interface ImageZoneFormShape {
           <li
             *ngFor="let tf of textFields(); trackBy: trackById"
             class="wsz__item"
+            [id]="'zone-' + tf.id"
           >
             <span class="wsz__item-label">{{ tf.label }}</span>
             <span class="wsz__item-meta"
@@ -190,7 +218,12 @@ interface ImageZoneFormShape {
 
           <label class="wsz__field">
             <span>Libellé</span>
-            <input type="text" formControlName="label" maxlength="80" />
+            <input
+              type="text"
+              formControlName="label"
+              maxlength="80"
+              (blur)="previewPropsChange.emit()"
+            />
           </label>
 
           <div class="wsz__row">
@@ -241,8 +274,17 @@ interface ImageZoneFormShape {
               type="text"
               formControlName="visibleIf"
               placeholder='ex: profil == "match"'
+              (blur)="previewPropsChange.emit()"
             />
           </label>
+
+          <div class="wsz__field">
+            <span>Animation</span>
+            <app-animation-picker
+              [value]="textForm.controls.animation.value"
+              (valueChange)="onAnimationChange('text', $event)"
+            />
+          </div>
 
           <div class="wsz__form-actions">
             <button
@@ -270,6 +312,7 @@ interface ImageZoneFormShape {
           <li
             *ngFor="let s of imageSlots(); trackBy: trackById"
             class="wsz__item"
+            [id]="'zone-' + s.id"
           >
             <span class="wsz__item-label">{{ s.label }}</span>
             <span class="wsz__item-meta"
@@ -313,7 +356,12 @@ interface ImageZoneFormShape {
 
           <label class="wsz__field">
             <span>Libellé</span>
-            <input type="text" formControlName="label" maxlength="80" />
+            <input
+              type="text"
+              formControlName="label"
+              maxlength="80"
+              (blur)="previewPropsChange.emit()"
+            />
           </label>
 
           <label class="wsz__field">
@@ -331,8 +379,17 @@ interface ImageZoneFormShape {
               type="text"
               formControlName="visibleIf"
               placeholder='ex: profil == "match"'
+              (blur)="previewPropsChange.emit()"
             />
           </label>
+
+          <div class="wsz__field">
+            <span>Animation</span>
+            <app-animation-picker
+              [value]="imageForm.controls.animation.value"
+              (valueChange)="onAnimationChange('image', $event)"
+            />
+          </div>
 
           <div class="wsz__form-actions">
             <button
@@ -529,7 +586,7 @@ interface ImageZoneFormShape {
     `,
   ],
 })
-export class WizardStepZonesComponent {
+export class WizardStepZonesComponent implements OnInit {
   @Input({ required: true }) templateId!: string;
   @Input({ required: true }) layers!: WritableSignal<TemplateLayer[]>;
   @Input({ required: true }) textFields!: WritableSignal<TemplateTextField[]>;
@@ -540,8 +597,18 @@ export class WizardStepZonesComponent {
   @Output() prev = new EventEmitter<void>();
   /** Plan 03 contract — NEVER `submit` (forbidden by no-output-native). */
   @Output() next = new EventEmitter<void>();
+  /**
+   * Plan 02-02 (PREV-01) — hybrid live preview update:
+   * - debounceTime(300) on dropdowns/colors/numbers (visual controls)
+   * - (blur) event on text inputs (label, visibleIf) to avoid re-render per keystroke
+   * Parent (StudioV3WizardComponent) catches the event and recomputes
+   * state.previewState via RemotionPreviewService.buildRuntimePlayerState.
+   * Stub here to honor the contract; real wiring lands in Task 3.
+   */
+  @Output() previewPropsChange = new EventEmitter<void>();
 
   private dataService = inject(RemotionTemplatesDataService);
+  private destroyRef = inject(DestroyRef);
 
   readonly fonts = FONT_FAMILIES;
   readonly presets = SAFE_ZONE_PRESETS;
@@ -585,6 +652,8 @@ export class WizardStepZonesComponent {
       validators: [Validators.required, Validators.min(1), Validators.max(200)],
     }),
     visibleIf: new FormControl<string>('', { nonNullable: true }),
+    /** Plan 02-03 / UX-02 — null = "Aucune animation" (mapped to 'none' on submit). */
+    animation: new FormControl<AnimationValue>(null),
   });
 
   imageForm = new FormGroup<ImageZoneFormShape>({
@@ -600,10 +669,51 @@ export class WizardStepZonesComponent {
       validators: [Validators.required],
     }),
     visibleIf: new FormControl<string>('', { nonNullable: true }),
+    /** Plan 02-03 / UX-02 — null = "Aucune animation" (mapped to 'none' on submit). */
+    animation: new FormControl<AnimationValue>(null),
   });
+
+  /**
+   * Plan 02-02 (PREV-01) — Hybrid debounce/blur wiring.
+   * Visual controls (dropdowns/colors/numbers) push to the live Player via
+   * debounceTime(300). Text inputs (label, visibleIf) use (blur) on the
+   * <input> element directly (see template) — avoids re-render per keystroke.
+   */
+  ngOnInit(): void {
+    const emit = (): void => this.previewPropsChange.emit();
+    const pipe300 = <T>(ctrl: { valueChanges: import('rxjs').Observable<T> }) =>
+      ctrl.valueChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef));
+
+    pipe300(this.textForm.controls.fontFamily).subscribe(emit);
+    pipe300(this.textForm.controls.fontSize).subscribe(emit);
+    pipe300(this.textForm.controls.color).subscribe(emit);
+    pipe300(this.textForm.controls.textAlign).subscribe(emit);
+    pipe300(this.textForm.controls.maxChars).subscribe(emit);
+    // layerId on both forms is a dropdown — debounce too (visual control).
+    pipe300(this.textForm.controls.layerId).subscribe(emit);
+
+    pipe300(this.imageForm.controls.safeZonePreset).subscribe(emit);
+    pipe300(this.imageForm.controls.layerId).subscribe(emit);
+  }
 
   trackById(_: number, x: { id: string }): string {
     return x.id;
+  }
+
+  /**
+   * Plan 02-03 / UX-02 — Animation picker change handler.
+   * Updates the active form's animation control (text or image) and emits
+   * `previewPropsChange` so the live Player picks up the new motion within
+   * the existing hybrid wiring (instant: discrete picker click, no debounce).
+   */
+  onAnimationChange(scope: 'text' | 'image', value: AnimationValue): void {
+    const ctrl =
+      scope === 'text'
+        ? this.textForm.controls.animation
+        : this.imageForm.controls.animation;
+    ctrl.setValue(value);
+    ctrl.markAsDirty();
+    this.previewPropsChange.emit();
   }
 
   openTextForm(): void {
@@ -618,6 +728,7 @@ export class WizardStepZonesComponent {
       textAlign: 'center',
       maxChars: 40,
       visibleIf: '',
+      animation: null,
     });
     this.showTextForm.set(true);
   }
@@ -634,6 +745,7 @@ export class WizardStepZonesComponent {
       label: '',
       safeZonePreset: 'contain',
       visibleIf: '',
+      animation: null,
     });
     this.showImageForm.set(true);
   }
@@ -654,6 +766,7 @@ export class WizardStepZonesComponent {
       return;
     }
     this.creating.set(true);
+    const anim = mapAnimationToPayload(v.animation);
     this.dataService
       .createTextField(this.templateId, {
         slotKey: `text_${Date.now().toString(36)}`,
@@ -667,6 +780,7 @@ export class WizardStepZonesComponent {
         appearAt: 0,
         maxChars: v.maxChars,
         layerId: v.layerId,
+        ...anim,
       })
       .subscribe({
         next: (tf) => {
@@ -705,6 +819,7 @@ export class WizardStepZonesComponent {
       return;
     }
     this.creating.set(true);
+    const anim = mapAnimationToPayload(v.animation);
     this.dataService
       .createImageSlot(this.templateId, {
         slotKey: `img_${Date.now().toString(36)}`,
@@ -717,6 +832,7 @@ export class WizardStepZonesComponent {
         layerId: v.layerId,
         anchor: preset.anchor,
         fitMode: preset.key,
+        ...anim,
       })
       .subscribe({
         next: (s) => {

@@ -96,6 +96,33 @@
   min-height: 480px;
 }
 
+/*
+ * PREV-01 — 2-pane split for steps 3-4 (form left, live Player right).
+ * On steps 1-2 the preview panel is [hidden] but kept mounted (Pitfall P3).
+ * Below 1280px we stack vertically (preview slides under the form) for tablet.
+ */
+.v3w__panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.v3w__form {
+  min-width: 0; /* allow form children to shrink inside grid cell */
+}
+
+.v3w__preview {
+  display: block;
+  width: 100%;
+}
+
+@media (max-width: 1280px) {
+  .v3w__panes {
+    grid-template-columns: 1fr;
+  }
+}
+
 .v3w__error {
   padding: 12px 16px;
   border-radius: 8px;

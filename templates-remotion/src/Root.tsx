@@ -73,6 +73,165 @@ const joueurSimpleGeneriqueTestProps: TemplateRuntimeProps = {
   selectedOptions: { intro_mode: 'logo' },
 };
 
+// ─── Props de test — Joueur Simple Image (avec photo joueur détourée) ────────
+// 3 layers : A intro + B transition + P packshot image
+// Durée : 5.96s @ 25fps (149 frames)
+const joueurSimpleImageTestProps: TemplateRuntimeProps = {
+  variants: [{ id: 'v1', backgroundVideoUrl: '' }],
+  variantId: 'v1',
+  layers: [
+    { id: 'a', videoUrl: `${BASE}/JOUEUR_simple_A.webm`, zIndex: 0, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'b', videoUrl: `${BASE}/JOUEUR_simple_B.webm`, zIndex: 1, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'p', videoUrl: `${BASE}/PACKSHOT_IMG.webm`, zIndex: 2, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+  ],
+  imageSlots: [
+    {
+      id: 'logo', slotKey: 'logoSrc',
+      position: { x: 0.5, y: 0.5, width: 0.25, height: 0.5 },
+      appearAt: 0, appearDuration: 1.7,
+      animation: 'zoom', animationDirection: 'in',
+      scaleFrom: 0.0, scaleTo: 1.19,
+      layerId: 'a', anchor: 'center', fitMode: 'contain', overflow: 'hidden',
+      safeZone: { topPct: 25, leftPct: 37.5, widthPct: 25, heightPct: 50 },
+      visibleIf: 'intro_mode == "logo"',
+    },
+    {
+      id: 'photo', slotKey: 'photoJoueur',
+      position: { x: 0.7, y: 0.5, width: 0.30, height: 1.0 },
+      appearAt: 0, appearDuration: 0.6,
+      animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', anchor: 'top-center', fitMode: 'fill-width-anchor-top', overflow: 'bottom',
+      safeZone: { topPct: 0, leftPct: 50, widthPct: 30, heightPct: 100 },
+    },
+  ],
+  textFields: [
+    {
+      id: 'num', slotKey: 'numeroIntro', defaultValue: '10',
+      position: { x: 0.5, y: 0.5 }, maxWidth: 0.25,
+      fontFamily: 'sans-serif', fontSize: 400, color: '#FFFFFF', align: 'center',
+      appearAt: 0, appearDuration: 1.7, animation: 'zoom', animationDirection: 'in',
+      scaleFrom: 0.0, scaleTo: 1.19,
+      layerId: 'a', respectAlpha: false, visibleIf: 'intro_mode == "numero"',
+    },
+    {
+      id: 'club-tl', slotKey: 'clubTopLeft', defaultValue: 'NOM DU CLUB',
+      position: { x: 0.049, y: 0.1 }, maxWidth: 0.4,
+      fontFamily: 'sans-serif', fontSize: 25, color: '#FFFFFF', align: 'left',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'club-bl', slotKey: 'clubBottomLeft', defaultValue: 'NOM DU CLUB',
+      position: { x: 0.049, y: 0.918 }, maxWidth: 0.4,
+      fontFamily: 'sans-serif', fontSize: 25, color: '#FFFFFF', align: 'left',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'club-br', slotKey: 'clubBottomRight', defaultValue: 'NOM DU CLUB',
+      position: { x: 0.95, y: 0.918 }, maxWidth: 0.4,
+      fontFamily: 'sans-serif', fontSize: 25, color: '#FFFFFF', align: 'right',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'prenom', slotKey: 'prenomNom', defaultValue: 'PRÉNOM\nNOM',
+      position: { x: 0.133, y: 0.5 }, maxWidth: 0.45,
+      fontFamily: 'sans-serif', fontSize: 150, color: '#FFFFFF', align: 'left',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'numero', slotKey: 'numero', defaultValue: '10',
+      position: { x: 0.867, y: 0.5 }, maxWidth: 0.15,
+      fontFamily: 'sans-serif', fontSize: 300, color: '#FFFFFF', align: 'right',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: false,
+    },
+  ],
+  textValues: { clubTopLeft: 'FC NANTES', clubBottomLeft: 'FC NANTES', clubBottomRight: 'FC NANTES', prenomNom: 'KEVIN\nDUPONT', numero: '9', numeroIntro: '9' },
+  imageUploads: {
+    logoSrc: 'https://upload.wikimedia.org/wikipedia/fr/thumb/f/f5/Nantes_FC_2019.svg/200px-Nantes_FC_2019.svg',
+    photoJoueur: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/320px-Camponotus_flavomarginatus_ant.jpg',
+  },
+  canvasWidth: 1920,
+  canvasHeight: 1080,
+  selectedOptions: { intro_mode: 'logo' },
+};
+
+// ─── Props de test — Joueur But Générique ─────────────────────────────────────
+// 5 layers : A intro logo + B transition1 + C titre+pattern + D transition2 + P packshot
+// Durée : 6.96s @ 25fps (174 frames)
+const joueurButGeneriqueTestProps: TemplateRuntimeProps = {
+  variants: [{ id: 'v1', backgroundVideoUrl: '' }],
+  variantId: 'v1',
+  layers: [
+    { id: 'a', videoUrl: `${BASE}/JOUEUR_but_A.webm`, zIndex: 0, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'b', videoUrl: `${BASE}/JOUEUR_but_B.webm`, zIndex: 1, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'c', videoUrl: `${BASE}/JOUEUR_but_C.webm`, zIndex: 2, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'd', videoUrl: `${BASE}/JOUEUR_but_D.webm`, zIndex: 3, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+    { id: 'p', videoUrl: `${BASE}/PACKSHOT_GENERIQUE.webm`, zIndex: 4, mask: { top: 0, bottom: 0, left: 0, right: 0 }, durationMs: 0 },
+  ],
+  imageSlots: [
+    {
+      id: 'logo', slotKey: 'logoSrc',
+      position: { x: 0.5, y: 0.5, width: 0.25, height: 0.5 },
+      appearAt: 0, appearDuration: 2.12,
+      animation: 'zoom', animationDirection: 'in',
+      scaleFrom: 0.0, scaleTo: 1.19,
+      layerId: 'a', anchor: 'center', fitMode: 'contain', overflow: 'hidden',
+      safeZone: { topPct: 25, leftPct: 37.5, widthPct: 25, heightPct: 50 },
+    },
+  ],
+  textFields: [
+    {
+      id: 'titre', slotKey: 'titre', defaultValue: 'BUT',
+      position: { x: 0.5, y: 0.5 }, maxWidth: 0.85,
+      fontFamily: 'sans-serif', fontSize: 389, color: '#FFFFFF', align: 'center',
+      appearAt: 0.92, appearDuration: 1.2, animation: 'zoom', animationDirection: 'out',
+      scaleFrom: 0.77, scaleTo: 1.0,
+      layerId: 'c', respectAlpha: true,
+    },
+    {
+      id: 'club-h', slotKey: 'nomClubHaut', defaultValue: 'NOM DU CLUB',
+      position: { x: 0.5, y: 0.136 }, maxWidth: 0.8,
+      fontFamily: 'sans-serif', fontSize: 25, color: '#FFFFFF', align: 'center',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'club-b', slotKey: 'nomClubBas', defaultValue: 'NOM DU CLUB',
+      position: { x: 0.5, y: 0.864 }, maxWidth: 0.8,
+      fontFamily: 'sans-serif', fontSize: 25, color: '#FFFFFF', align: 'center',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+    {
+      id: 'prenom', slotKey: 'prenomNom', defaultValue: 'PRÉNOM\nNOM',
+      position: { x: 0.5, y: 0.5 }, maxWidth: 0.85,
+      fontFamily: 'sans-serif', fontSize: 389, color: '#FFFFFF', align: 'center',
+      appearAt: 0, appearDuration: 0.6, animation: 'fade', animationDirection: 'in',
+      scaleFrom: 1.0, scaleTo: 1.0,
+      layerId: 'p', respectAlpha: true,
+    },
+  ],
+  textValues: { nomClubHaut: 'FC NANTES', nomClubBas: 'FC NANTES', prenomNom: 'KEVIN\nDUPONT', titre: 'BUT' },
+  imageUploads: {
+    logoSrc: 'https://upload.wikimedia.org/wikipedia/fr/thumb/f/f5/Nantes_FC_2019.svg/200px-Nantes_FC_2019.svg',
+  },
+  canvasWidth: 1920,
+  canvasHeight: 1080,
+  selectedOptions: {},
+};
+
 export const Root: React.FC = () => {
   return (
     <>
@@ -135,6 +294,34 @@ export const Root: React.FC = () => {
           canvasWidth: 1920,
           canvasHeight: 1080,
         }}
+      />
+
+      {/* ── DEV ONLY — Joueur Simple Image (photo joueur détourée, packshot IMG) ──
+          intro_mode: 'logo' | 'numero' (modifier selectedOptions dans le JSON editor).
+          Vérifier : photo droite, textes club 3 coins, prénom-nom gauche, numéro géant droite. */}
+      <Composition
+        id="JoueurSimpleImageTest"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component={TemplateRuntime as any}
+        durationInFrames={149}
+        fps={25}
+        width={1920}
+        height={1080}
+        defaultProps={joueurSimpleImageTestProps}
+      />
+
+      {/* ── DEV ONLY — Joueur But Générique (5 layers, titre BUT zoom-out) ──────
+          Vérifier : logo intro apparaît + zoom, titre "BUT" zoom-out à t=0.92s,
+          packshot générique avec prénom-nom centré. */}
+      <Composition
+        id="JoueurButGeneriqueTest"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component={TemplateRuntime as any}
+        durationInFrames={174}
+        fps={25}
+        width={1920}
+        height={1080}
+        defaultProps={joueurButGeneriqueTestProps}
       />
 
       {/* ── DEV ONLY — Joueur Simple Générique (props après toutes les migrations) ──
