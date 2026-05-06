@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 5 DETECT — Plan 03 cross-cutting wiring shipped (state.service expose receivers, server.js bootstrappe ReceiversService avec io wrapper, sync-agent whitelist receiver-* events ; 47/47 tests state.service GREEN)
-stopped_at: Completed 05-detect-03-PLAN.md
-last_updated: "2026-05-06T11:06:00.000Z"
-last_activity: "2026-05-06 — Plan 05-detect-03 complété (TDD : 45bd492 RED + b7285bd GREEN, puis ac0881d server.js + 2ab6da9 sync-agent whitelist)"
+status: Phase 5 DETECT — Plan 01 ReceiversService shipped (10/10 Jest tests green ; passive dnsmasq.leases watch + arp -an fallback)
+stopped_at: Completed 05-detect-02-PLAN.md
+last_updated: "2026-05-06T10:31:33.245Z"
+last_activity: "2026-05-06 — Plan 05-detect-01 complété (TDD : cf7fa13 RED + 1a4df9b GREEN, 10 tests verts)"
 progress:
   total_phases: 6
   completed_phases: 2
