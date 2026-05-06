@@ -128,6 +128,7 @@ const createHdmiRouter = require('./routes/hdmi');
 const createAuthRouter = require('./routes/auth');
 const createProfilePinRouter = require('./routes/profile-pin');
 const createHotspotRouter = require('./routes/hotspot');
+const createCaptiveRouter = require('./routes/captive');
 
 app.use(createHealthRouter({ io }));
 app.use(createLicenseRouter({ licenseService }));
@@ -136,6 +137,7 @@ app.use(createHdmiRouter({ hdmiService }));
 app.use(createAuthRouter({ authService }));
 app.use(createProfilePinRouter({ profilePinService }));
 app.use(createHotspotRouter({ hotspotService }));
+app.use('/api/captive', createCaptiveRouter({ receiversService, configPath: CONFIG_PATH }));
 
 // ---------------------------------------------------------------------------
 // Socket.IO handlers
