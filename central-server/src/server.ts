@@ -628,11 +628,11 @@ const startServer = async () => {
 
     // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
     // Économise ~30-60s sur le premier render après un déploiement Railway.
-    const {
-      prewarmRemotionBundle,
-      startRenderWorker,
-    } = await import('./services/remotion-render-worker.service');
-    prewarmRemotionBundle();
+    // 2026-05-06 : prewarm désactivé temporairement pour valider l'hypothèse
+    // OOM transitoire (Chromium co-localisé) à l'origine des 502 intermittents
+    // observés sur neopro-admin.kalonpartners.bzh. Réactiver après diagnostic.
+    const { startRenderWorker } = await import('./services/remotion-render-worker.service');
+    // prewarmRemotionBundle();  // disabled — see comment above
     // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
     startRenderWorker();
 
