@@ -28,7 +28,7 @@ export function normalizeFilename(name: string): string {
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // É→e, È→e
     .replace(/\.[^.]+$/, '')                           // strip extension
-    .replace(/[\s\-]+/g, '_')                          // spaces/dashes → underscore
+    .replace(/[\s-]+/g, '_')                            // spaces/dashes → underscore
     .replace(/^_+|_+$/g, '');                          // trim leading/trailing underscores
 }
 
