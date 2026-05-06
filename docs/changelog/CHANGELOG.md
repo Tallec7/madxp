@@ -1,3 +1,9 @@
+## [3.292.7](https://github.com/Tallec7/neopro/compare/v3.292.6...v3.292.7) (2026-05-06)
+
+### Bug Fixes
+
+- **saas:** skip LAN precache in SaaS mode to unblock first video play ([#869](https://github.com/Tallec7/neopro/issues/869)) ([dfdc3c8](https://github.com/Tallec7/neopro/commit/dfdc3c85b06a72b3440b18a36648a7ceb8c3edf0))
+
 ## [3.292.6](https://github.com/Tallec7/neopro/compare/v3.292.5...v3.292.6) (2026-05-06)
 
 ### Bug Fixes
