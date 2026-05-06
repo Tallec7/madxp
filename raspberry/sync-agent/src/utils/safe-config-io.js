@@ -10,27 +10,94 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const logger = require('../logger');
+
+// Per-path serialization queue to avoid concurrent writes racing on the
+// same target file. Each entry is the tail Promise of the queue for that
+// path; new writes chain onto it via .then(). Cleared once the queue is
+// idle so the Map does not grow unbounded.
+const writeQueues = new Map();
+
+let tmpCounter = 0;
+
+function buildTmpPath(filePath) {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  // Keep `.${base}.tmp` as a stable substring (smoke tests + log greps),
+  // but suffix with pid + monotonic counter + 4 random bytes so two
+  // concurrent writers (in-process or cross-process) never collide on
+  // the same temp file. ENOENT on rename was caused by the previous
+  // fixed name being overwritten then renamed-away by a racing call.
+  const unique = `${process.pid}.${tmpCounter++}.${crypto.randomBytes(4).toString('hex')}`;
+  return path.join(dir, `.${base}.tmp.${unique}`);
+}
+
+async function runExclusive(filePath, fn) {
+  const key = path.resolve(filePath);
+  const prev = writeQueues.get(key) || Promise.resolve();
+  // Swallow prior errors so one failed write does not poison the queue.
+  const next = prev.catch(() => undefined).then(fn);
+  writeQueues.set(key, next);
+  try {
+    return await next;
+  } finally {
+    // If we are still the tail (no later write enqueued), drop the entry.
+    if (writeQueues.get(key) === next) {
+      writeQueues.delete(key);
+    }
+  }
+}
 
 /**
  * Atomically write JSON to a file.
- * Writes to a temp file in the same directory, then renames (atomic on Linux).
- * This prevents corruption if the Pi loses power mid-write.
+ * Writes to a unique temp file in the same directory, then renames
+ * (atomic on Linux). Per-path mutex serializes concurrent callers so
+ * no write is silently overwritten before its rename completes.
  *
  * @param {string} filePath - Target file path
  * @param {object} data - JSON-serializable data
  */
 async function atomicWriteJson(filePath, data) {
-  const dir = path.dirname(filePath);
-  const tmpPath = path.join(dir, `.${path.basename(filePath)}.tmp`);
+  return runExclusive(filePath, async () => {
+    const tmpPath = buildTmpPath(filePath);
 
-  const json = JSON.stringify(data, null, 2);
+    const json = JSON.stringify(data, null, 2);
 
-  // Validate JSON is serializable before writing
-  JSON.parse(json);
+    // Validate JSON is serializable before writing
+    JSON.parse(json);
 
-  await fs.writeFile(tmpPath, json, 'utf-8');
-  await fs.rename(tmpPath, filePath);
+    try {
+      await fs.writeFile(tmpPath, json, 'utf-8');
+      await fs.rename(tmpPath, filePath);
+    } catch (err) {
+      // Best-effort cleanup of leftover tmp on failure (non-fatal).
+      try { await fs.unlink(tmpPath); } catch { /* ignore */ }
+      throw err;
+    }
+  });
+}
+
+/**
+ * Sweep stale `.${basename}.tmp.*` files left over by a crashed write
+ * (process killed between writeFile and rename). Safe to call at boot.
+ *
+ * @param {string} filePath - Same path that would be passed to atomicWriteJson
+ */
+async function cleanupOrphanTmpFiles(filePath) {
+  try {
+    const dir = path.dirname(filePath);
+    const base = path.basename(filePath);
+    const prefix = `.${base}.tmp`;
+    const entries = await fs.readdir(dir);
+    await Promise.all(
+      entries
+        .filter(f => f.startsWith(prefix))
+        .map(f => fs.unlink(path.join(dir, f)).catch(() => undefined))
+    );
+  } catch {
+    // Directory missing or unreadable — nothing to clean.
+  }
 }
 
 /**
@@ -193,4 +260,9 @@ async function tryRestoreFromBackup(configPath) {
   }
 }
 
-module.exports = { atomicWriteJson, safeReadConfig, tryTruncateJson };
+module.exports = {
+  atomicWriteJson,
+  safeReadConfig,
+  tryTruncateJson,
+  cleanupOrphanTmpFiles,
+};
