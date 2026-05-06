@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (dnsmasq DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme, 7 smoke tests Phase 6)
-stopped_at: Completed 06-captive-03-PLAN.md
-last_updated: "2026-05-06T14:00:14Z"
-last_activity: "2026-05-06 — Plan 06-captive-03 complété (commits 4db7348 feat + f5f796f test ; ADR-079 invariant respecté, aucun DNAT 443)"
+status: Phase 6 CAPTIVE — Plan 04 Task 1 (Angular bootstrap router) committed 58bcecf, Task 2 (Pi RACC manual validation) PENDING checkpoint:human-verify
+stopped_at: Plan 06-captive-04 — checkpoint:human-verify Task 2 awaiting Pi RACC validation
+last_updated: "2026-05-06T14:10:00Z"
+last_activity: "2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf — AppComponent bootstrap router whoami fetch + location.replace + anti-flash #000 + 4 Karma specs). Awaiting Pi RACC manual validation on real Fire Stick (Test 1-4)."
 progress:
   total_phases: 6
   completed_phases: 2
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 Phase: 6 — CAPTIVE — Fire Stick → page Neopro (en cours)
 Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 complete (configs + wait page + build + smoke), 04 (Angular bootstrap router)
 Status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme Socket.IO + polling 5s)
-Last activity: 2026-05-06 — Plan 06-captive-03 complété (commits 4db7348 feat + f5f796f test ; ADR-079 invariant respecté)
-Next: Plan 06-captive-04 — Angular bootstrap router (consume /api/captive/whoami)
+Last activity: 2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf), checkpoint:human-verify pending Pi RACC
+Next: Resume Plan 06-captive-04 Task 2 — manual validation on Pi RACC (Test 1-4 / Fire Stick réel)
 
 ## Accumulated Context
 
