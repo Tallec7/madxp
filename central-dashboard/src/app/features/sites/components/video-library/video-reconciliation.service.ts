@@ -22,6 +22,16 @@ export interface ReconciliationResult {
 
 const NEOPRO_OWNER_TOKENS = ['SPONSORS', 'NEOPRO', 'PUBLICITES', 'ANIMATIONS', 'PUB_'];
 
+/** Normalize a filename for fuzzy matching: lowercase, strip accents, strip extension, collapse spaces/dashes/underscores. */
+export function normalizeFilename(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // É→e, È→e
+    .replace(/\.[^.]+$/, '')                           // strip extension
+    .replace(/[\s\-]+/g, '_')                          // spaces/dashes → underscore
+    .replace(/^_+|_+$/g, '');                          // trim leading/trailing underscores
+}
+
 @Injectable({ providedIn: 'root' })
 export class VideoReconciliationService {
   /**
@@ -44,6 +54,16 @@ export class VideoReconciliationService {
       input.videos.filter(v => v.checksum).map(v => [v.checksum!, v])
     );
 
+    // Third-tier fallback: normalized filename (strips accents, collapses spaces↔underscores)
+    const localByNormalizedName = new Map<string, LocalVideo[]>();
+    for (const v of input.videos) {
+      const normKey = normalizeFilename(v.filename);
+      if (!localByNormalizedName.has(normKey)) {
+        localByNormalizedName.set(normKey, []);
+      }
+      localByNormalizedName.get(normKey)!.push(v);
+    }
+
     const seenCloudIds = new Set<string>();
     const matchedLocalPaths = new Set<string>();
     const cloudMapped: VideoItem[] = [];
@@ -63,6 +83,14 @@ export class VideoReconciliationService {
         localMatch = locals.find(l => !matchedLocalPaths.has(l.path));
         if (localMatch) {
           isOnPi = true;
+        } else {
+          // Third tier: normalized name (accents + spaces↔underscores)
+          const normKey = normalizeFilename(cloud.filename);
+          const normLocals = localByNormalizedName.get(normKey) || [];
+          localMatch = normLocals.find(l => !matchedLocalPaths.has(l.path));
+          if (localMatch) {
+            isOnPi = true;
+          }
         }
       }
       if (localMatch) matchedLocalPaths.add(localMatch.path);
