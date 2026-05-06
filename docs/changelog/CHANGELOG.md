@@ -1,3 +1,9 @@
+## [3.292.3](https://github.com/Tallec7/neopro/compare/v3.292.2...v3.292.3) (2026-05-06)
+
+### Bug Fixes
+
+- **network:** NetworkWatchdog plus réactif sur Wi-Fi instable + métrique cycles ([#823](https://github.com/Tallec7/neopro/issues/823)) ([#858](https://github.com/Tallec7/neopro/issues/858)) ([9c1c0a8](https://github.com/Tallec7/neopro/commit/9c1c0a8724ca86c02d304719b50e61a30931e5ee))
+
 ## [3.292.2](https://github.com/Tallec7/neopro/compare/v3.292.1...v3.292.2) (2026-05-06)
 
 ### Bug Fixes
