@@ -47,7 +47,15 @@
         [class.amm__card--clickable]="context === 'modal'"
       >
         <div class="amm__thumb">
-          <video [src]="a.url" muted playsinline preload="metadata"></video>
+          <!--
+            preload="none" évite que N <video> WebM saturent les slots de décodage
+            du navigateur quand la modale ouvre (Chromium freeze l'UI thread
+            au-delà de ~6 décodeurs concurrents — VP8/VP9 software decode coûteux).
+            Cf. memory pi5_gpu_sharedimage_saturation, applicable côté dev macOS aussi.
+            TODO: générer un poster JPEG côté serveur via ffmpeg pour preview
+            instantané sans frais GPU.
+          -->
+          <video [src]="a.url" muted playsinline preload="none"></video>
         </div>
         <div class="amm__body">
           <div class="amm__name" [title]="filenameOf(a.url)">{{ filenameOf(a.url) }}</div>
@@ -59,7 +67,7 @@
           </div>
           <div class="amm__used">Utilisé par {{ a.usedByCount }} template(s)</div>
         </div>
-        <button type="button" class="amm__delete" (click)="onDelete(a, $event)">Supprimer</button>
+        <button type="button" class="amm__delete" (click)="onDelete(a, $event)">Retirer</button>
       </article>
     </div>
 
