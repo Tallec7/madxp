@@ -53,7 +53,10 @@
 2. Quand un Fire Stick quitte le hotspot, sa disparition est détectée et émise via socket.
 3. Après reboot du Pi, le mapping MAC↔display assigné est restauré sans appel cloud (cache local).
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 05-detect-01-receivers-service-PLAN.md — receivers.service.js core (dnsmasq.leases watch + ARP fallback + diff + emit) (DETECT-01, DETECT-02)
+- [ ] 05-detect-02-cache-resilience-PLAN.md — Cache local résilient .receivers-cache.json (loadCache/saveCache + assignDisplay/unassignDisplay + reboot scenario tests) (DETECT-03)
+- [ ] 05-detect-03-state-syncagent-integration-PLAN.md — state.service.js extension + server.js wiring + sync-agent whitelist (DETECT-01, DETECT-02, DETECT-03)
 
 ### Phase 6: CAPTIVE — Fire Stick → page Neopro
 
@@ -117,7 +120,7 @@
 | 2. UX interactive      | v3.0      | 4/4            | Complete    | 2026-05-05 |
 | 3. Gate publication    | v3.0      | 5/5            | Complete    | 2026-05-05 |
 | 4. DATA                | v4.0      | 1/2            | In Progress | -          |
-| 5. DETECT              | v4.0      | 0/0            | Not started | -          |
+| 5. DETECT              | v4.0      | 0/3            | In Progress | -          |
 | 6. CAPTIVE             | v4.0      | 0/0            | Not started | -          |
 | 7. CLOUD               | v4.0      | 0/0            | Not started | -          |
 | 8. DASHBOARD           | v4.0      | 0/0            | Not started | -          |
