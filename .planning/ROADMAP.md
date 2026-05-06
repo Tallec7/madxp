@@ -19,7 +19,7 @@
 ### v4.0 — Multi-écrans Fire Stick
 
 - [x] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository ✅ 2026-05-06
-- [ ] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local
+- [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
 - [ ] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display
 - [ ] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected`
 - [ ] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
@@ -120,7 +120,7 @@
 | 2. UX interactive      | v3.0      | 4/4            | Complete    | 2026-05-05 |
 | 3. Gate publication    | v3.0      | 5/5            | Complete    | 2026-05-05 |
 | 4. DATA                | v4.0      | 1/2            | In Progress | -          |
-| 5. DETECT              | v4.0      | 0/3            | In Progress | -          |
+| 5. DETECT              | 3/3 | Complete   | 2026-05-06 | -          |
 | 6. CAPTIVE             | v4.0      | 0/0            | Not started | -          |
 | 7. CLOUD               | v4.0      | 0/0            | Not started | -          |
 | 8. DASHBOARD           | v4.0      | 0/0            | Not started | -          |

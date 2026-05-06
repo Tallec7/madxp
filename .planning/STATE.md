@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 5 DETECT — Plan 01 ReceiversService shipped (10/10 Jest tests green ; passive dnsmasq.leases watch + arp -an fallback)
-stopped_at: Completed 05-detect-01-PLAN.md (1 task TDD, 2 commits cf7fa13 RED + 1a4df9b GREEN)
-last_updated: "2026-05-06T10:30:00.000Z"
-last_activity: "2026-05-06 — Plan 05-detect-01 complété (TDD : cf7fa13 RED + 1a4df9b GREEN, 10 tests verts)"
+status: Phase 5 DETECT — Plan 03 cross-cutting wiring shipped (state.service expose receivers, server.js bootstrappe ReceiversService avec io wrapper, sync-agent whitelist receiver-* events ; 47/47 tests state.service GREEN)
+stopped_at: Completed 05-detect-03-PLAN.md
+last_updated: "2026-05-06T11:06:00.000Z"
+last_activity: "2026-05-06 — Plan 05-detect-03 complété (TDD : 45bd492 RED + b7285bd GREEN, puis ac0881d server.js + 2ab6da9 sync-agent whitelist)"
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 5
 ---
 
 # Project State
@@ -41,6 +41,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 05-detect-01: console.info/warn (helpers.js raspberry/server n'expose pas Winston ; cohérence avec hdmi.service.js)
 - 05-detect-01: pas de cache TTL — l'état Map<mac, {kind, lastSeenAt}> EST la source de vérité, refresh à chaque tick (10s leases / 30s ARP)
 - 05-detect-01: emit `connected-receivers-changed` uniquement sur diff de set membership (add/remove MAC) — `lastSeenAt` refresh sans déclencher d'emit
+- 05-detect-03: io.emit wrapper dans server.js (vs event listener) — Socket.IO server n'expose pas `.on('emit')`, le wrap est le pattern standard pour intercepter des emits ciblés sans coupler ReceiversService au state.service
+- 05-detect-03: setReceivers résilient (warn + ignore) plutôt que throw — un payload corrompu ne doit pas crasher le state.service partagé par tout le serveur Pi
+- 05-detect-03: sync-agent whitelist seul cette phase (pas de handler agent.js) — pré-requis Phase 7 pattern ADR-074
 - 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
 - 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
@@ -64,6 +67,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T10:30:00.000Z
-Stopped at: Completed 05-detect-01-PLAN.md (cf7fa13 RED + 1a4df9b GREEN)
+Last session: 2026-05-06T10:28:25.825Z
+Stopped at: Completed 05-detect-02-PLAN.md
 Resume file: None
