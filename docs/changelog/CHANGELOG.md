@@ -1,3 +1,9 @@
+## [3.292.12](https://github.com/Tallec7/neopro/compare/v3.292.11...v3.292.12) (2026-05-06)
+
+### Bug Fixes
+
+- **content:** update_config payload + audit orphan site_sponsors ([#874](https://github.com/Tallec7/neopro/issues/874)) ([3a2c6a3](https://github.com/Tallec7/neopro/commit/3a2c6a3289b7ceac5121666fcd61afbff8906688))
+
 ## [3.292.11](https://github.com/Tallec7/neopro/compare/v3.292.10...v3.292.11) (2026-05-06)
 
 ### Bug Fixes
