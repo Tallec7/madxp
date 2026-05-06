@@ -140,6 +140,16 @@
   gap: 16px;
 }
 
+/*
+ * `display: flex` above overrides the UA stylesheet's [hidden] { display: none }
+ * (class > attribute on equal-specificity tie). Without this rule, all 4
+ * placeholders for steps 2-5 stack visibly when the template is fresh
+ * (state().templateId === null) on a new wizard route.
+ */
+.v3w__placeholder[hidden] {
+  display: none;
+}
+
 .v3w__placeholder h2 {
   margin: 0;
   font-size: 20px;
