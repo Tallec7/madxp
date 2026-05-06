@@ -121,7 +121,7 @@ Pré-requis humains :
 
 ### Phase 4 — Décommission Hostinger frontend (post-soak)
 
-**✅ Livrée 2026-05-06** (PR #849). Après 7 jours de soak stable sur Cloudflare Pages.
+**✅ Livrée 2026-05-06** (PR #850). Après 7 jours de soak stable sur Cloudflare Pages.
 
 Fichiers supprimés :
 - `central-dashboard/.htaccess` — Apache rewrite rules SPA fallback dashboard
