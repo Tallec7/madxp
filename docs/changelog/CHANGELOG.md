@@ -1,3 +1,9 @@
+## [3.292.2](https://github.com/Tallec7/neopro/compare/v3.292.1...v3.292.2) (2026-05-06)
+
+### Bug Fixes
+
+- **kiosk:** désactiver V4L2 par défaut sur Pi 5 — SharedImage crash au boot ([#857](https://github.com/Tallec7/neopro/issues/857)) ([bf78fb7](https://github.com/Tallec7/neopro/commit/bf78fb730e0ea96deaed2b191bd64a983694c759))
+
 ## [3.292.1](https://github.com/Tallec7/neopro/compare/v3.292.0...v3.292.1) (2026-05-06)
 
 ### Bug Fixes
