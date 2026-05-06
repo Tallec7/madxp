@@ -82,6 +82,15 @@ class NeoproSyncAgent {
     // Nettoyer les fichiers legacy des versions précédentes (non-bloquant)
     this.cleanupLegacyFiles();
 
+    // Sweep orphan `.configuration.json.tmp.*` left by a previous crash
+    // between writeFile and rename (cf. safe-config-io atomic write).
+    try {
+      const { cleanupOrphanTmpFiles } = require('./utils/safe-config-io');
+      await cleanupOrphanTmpFiles(config.paths.config);
+    } catch (err) {
+      logger.warn('Orphan tmp cleanup failed', { error: err.message });
+    }
+
     // Démarrer l'envoi des analytics immédiatement (indépendant du WebSocket)
     // Les analytics sont envoyées via HTTP, pas besoin d'attendre la connexion WS
     this.startAnalyticsSync();

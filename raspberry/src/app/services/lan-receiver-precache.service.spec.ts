@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { LanReceiverPrecacheService } from './lan-receiver-precache.service';
 import { Configuration } from '../interfaces/configuration.interface';
+import { environment } from '../../environments/environment';
 
 describe('LanReceiverPrecacheService', () => {
   let service: LanReceiverPrecacheService;
@@ -35,6 +36,34 @@ describe('LanReceiverPrecacheService', () => {
     it('returns true on neopro.local', () => {
       spyOnProperty(window, 'location', 'get').and.returnValue({ hostname: 'neopro.local' } as Location);
       expect(service.isLanReceiver()).toBe(true);
+    });
+
+    it('returns false in SaaS mode even on a public host (regression guard: Chrome cache deadlock)', () => {
+      const previous = environment.saasMode;
+      environment.saasMode = true;
+      try {
+        spyOnProperty(window, 'location', 'get').and.returnValue({ hostname: 'app.neopro.com' } as Location);
+        expect(service.isLanReceiver()).toBe(false);
+      } finally {
+        environment.saasMode = previous;
+      }
+    });
+  });
+
+  describe('precacheConfiguration in SaaS mode', () => {
+    it('skips entirely (regression guard: video stall on first play)', async () => {
+      const previous = environment.saasMode;
+      environment.saasMode = true;
+      try {
+        spyOnProperty(window, 'location', 'get').and.returnValue({ hostname: 'app.neopro.com' } as Location);
+        service.precacheConfiguration({
+          sponsors: [{ path: 'https://kalonpartners.bzh/neopro-video/videos/a.mp4' }],
+        } as unknown as Configuration);
+        await new Promise(r => setTimeout(r, 50));
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        environment.saasMode = previous;
+      }
     });
   });
 

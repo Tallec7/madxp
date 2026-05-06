@@ -1,6 +1,8 @@
 {
-  "annotations": { "list": [] },
-  "description": "Métriques émises par le code mais absentes des autres dashboards. Vise à révéler les angles morts pour décider lesquelles promouvoir vers les dashboards principaux ou retirer du code.",
+  "annotations": {
+    "list": []
+  },
+  "description": "M\u00e9triques \u00e9mises par le code mais absentes des autres dashboards. Vise \u00e0 r\u00e9v\u00e9ler les angles morts pour d\u00e9cider lesquelles promouvoir vers les dashboards principaux ou retirer du code.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -11,7 +13,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["neopro"],
+      "tags": [
+        "neopro"
+      ],
       "targetBlank": false,
       "title": "Neopro Dashboards",
       "type": "dashboards"
@@ -21,14 +25,27 @@
   "panels": [
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 100,
-      "title": "ADR-074 — Hotspot PSK (rotation flotte)",
+      "title": "ADR-074 \u2014 Hotspot PSK (rotation flotte)",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
       "id": 101,
       "title": "PSK bootstrap attempts (rate 5m)",
       "type": "timeseries",
@@ -41,8 +58,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
       "id": 102,
       "title": "PSK rotation attempts (rate 5m)",
       "type": "timeseries",
@@ -55,8 +80,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
       "id": 103,
       "title": "PSK decrypt errors (CRITIQUE)",
       "type": "stat",
@@ -65,33 +98,63 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
       "targets": [
-        { "expr": "sum(increase(neopro_hotspot_psk_decrypt_errors_total[1h]))", "refId": "A" }
+        {
+          "expr": "sum(increase(neopro_hotspot_psk_decrypt_errors_total[1h]))",
+          "refId": "A"
+        }
       ]
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
       "id": 200,
-      "title": "ADR-093 — Match Sessions",
+      "title": "ADR-093 \u2014 Match Sessions",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
       "id": 201,
       "title": "Match sessions auto-closed (par raison, 24h)",
       "type": "timeseries",
@@ -104,8 +167,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
       "id": 202,
       "title": "Match commands (par type)",
       "type": "timeseries",
@@ -119,14 +190,27 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "id": 300,
-      "title": "Vidéos — Cascade DELETE & FTP audit (PR #613-#618)",
+      "title": "Vid\u00e9os \u2014 Cascade DELETE & FTP audit (PR #613-#618)",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 19 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 19
+      },
       "id": 301,
       "title": "FTP orphans current",
       "type": "stat",
@@ -135,25 +219,55 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 50 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "neopro_video_ftp_orphans_current", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "neopro_video_ftp_orphans_current",
+          "refId": "A"
+        }
+      ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 19 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 19
+      },
       "id": 302,
       "title": "FTP audit warnings (1h)",
       "type": "stat",
@@ -162,25 +276,50 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
       "targets": [
-        { "expr": "sum(increase(neopro_video_ftp_audit_warnings_total[1h]))", "refId": "A" }
+        {
+          "expr": "sum(increase(neopro_video_ftp_audit_warnings_total[1h]))",
+          "refId": "A"
+        }
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 19 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
       "id": 303,
       "title": "FTP audit scanned (rate 5m)",
       "type": "timeseries",
@@ -193,8 +332,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
       "id": 304,
       "title": "FTP audit duration p95",
       "type": "timeseries",
@@ -207,8 +354,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
       "id": 305,
       "title": "ADR-082 Video club grants (par action)",
       "type": "timeseries",
@@ -221,66 +376,132 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
       "id": 306,
-      "title": "ADR-099 connection_events — rows actuelles",
-      "description": "Volume de la table connection_events après chaque purge quotidienne (rétention 90j par défaut).",
+      "title": "ADR-099 connection_events \u2014 rows actuelles",
+      "description": "Volume de la table connection_events apr\u00e8s chaque purge quotidienne (r\u00e9tention 90j par d\u00e9faut).",
       "type": "stat",
       "fieldConfig": {
         "defaults": {
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 100000 },
-              { "color": "red", "value": 500000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 100000
+              },
+              {
+                "color": "red",
+                "value": 500000
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
         "justifyMode": "center",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "neopro_connection_events_rows_current", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "neopro_connection_events_rows_current",
+          "refId": "A"
+        }
+      ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 33 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
       "id": 307,
-      "title": "ADR-099 purge — rows supprimées (24h)",
-      "description": "Volume purgé sur les dernières 24h. Si 0 trois jours d'affilée et `rows_current` ne baisse pas, le CRON est probablement en panne.",
+      "title": "ADR-099 purge \u2014 rows supprim\u00e9es (24h)",
+      "description": "Volume purg\u00e9 sur les derni\u00e8res 24h. Si 0 trois jours d'affil\u00e9e et `rows_current` ne baisse pas, le CRON est probablement en panne.",
       "type": "stat",
       "fieldConfig": {
         "defaults": {
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "increase(neopro_connection_events_purged_total[24h])", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "increase(neopro_connection_events_purged_total[24h])",
+          "refId": "A"
+        }
+      ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 33
+      },
       "id": 308,
-      "title": "ADR-110 PUB-02 — Test renders cleaned (7j)",
-      "description": "Volume de test renders FTP supprimés par le CRON hebdo (Sunday 03:00, TTL 7d). Si 0 sur 14j d'affilée alors que des templates ont été test-rendered, le CRON est probablement en panne ou le bucket /test-renders/ vide.",
+      "title": "ADR-110 PUB-02 \u2014 Test renders cleaned (7j)",
+      "description": "Volume de test renders FTP supprim\u00e9s par le CRON hebdo (Sunday 03:00, TTL 7d). Si 0 sur 14j d'affil\u00e9e alors que des templates ont \u00e9t\u00e9 test-rendered, le CRON est probablement en panne ou le bucket /test-renders/ vide.",
       "type": "timeseries",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" }
+          "color": {
+            "mode": "palette-classic"
+          }
         }
       },
       "targets": [
@@ -293,14 +514,27 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 39
+      },
       "id": 400,
       "title": "TV / Playback (Pi)",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 34 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 34
+      },
       "id": 401,
       "title": "Video playback errors (par type)",
       "type": "timeseries",
@@ -313,8 +547,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 34 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 34
+      },
       "id": 402,
       "title": "Video stream requests (par status)",
       "type": "timeseries",
@@ -327,8 +569,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 34 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 34
+      },
       "id": 403,
       "title": "GPU decode fallback (rate 5m)",
       "type": "timeseries",
@@ -341,8 +591,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 41 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 41
+      },
       "id": 404,
       "title": "Video preload reveal vs cleanup",
       "type": "timeseries",
@@ -360,8 +618,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 41 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 41
+      },
       "id": 405,
       "title": "Video stale loop state (CRITIQUE)",
       "type": "timeseries",
@@ -374,8 +640,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 41 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 41
+      },
       "id": 406,
       "title": "Video path resolution (par strategy)",
       "type": "timeseries",
@@ -389,14 +663,27 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
       "id": 500,
       "title": "Template Studio v2",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 49 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 49
+      },
       "id": 501,
       "title": "Template Studio operations",
       "type": "timeseries",
@@ -409,8 +696,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 49 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 49
+      },
       "id": 502,
       "title": "Template asset proxy upstream",
       "type": "timeseries",
@@ -423,30 +718,62 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 49 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 49
+      },
       "id": 503,
       "title": "Templates snapshot (count)",
       "type": "stat",
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "neopro_templates_snapshot", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "neopro_templates_snapshot",
+          "refId": "A"
+        }
+      ]
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
       "id": 600,
       "title": "Auth / MFA",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 57 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 57
+      },
       "id": 601,
-      "title": "MFA setup (par étape)",
+      "title": "MFA setup (par \u00e9tape)",
       "type": "timeseries",
       "targets": [
         {
@@ -457,8 +784,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 57 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 57
+      },
       "id": 602,
       "title": "Legacy PIN migrations",
       "type": "timeseries",
@@ -471,28 +806,60 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 57 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 57
+      },
       "id": 603,
       "title": "Profile device tokens active",
       "type": "stat",
       "options": {
         "colorMode": "value",
         "graphMode": "area",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "sum(neopro_profile_device_tokens_active)", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "sum(neopro_profile_device_tokens_active)",
+          "refId": "A"
+        }
+      ]
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 64 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
       "id": 700,
-      "title": "Infra / Résilience",
+      "title": "Infra / R\u00e9silience",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 65 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 65
+      },
       "id": 701,
       "title": "DB circuit breaker state",
       "type": "stat",
@@ -501,20 +868,40 @@
           "mappings": [
             {
               "options": {
-                "0": { "color": "green", "text": "CLOSED" },
-                "1": { "color": "yellow", "text": "HALF" },
-                "2": { "color": "red", "text": "OPEN" }
+                "0": {
+                  "color": "green",
+                  "text": "CLOSED"
+                },
+                "1": {
+                  "color": "yellow",
+                  "text": "HALF"
+                },
+                "2": {
+                  "color": "red",
+                  "text": "OPEN"
+                }
               },
               "type": "value"
             }
           ],
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 2 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
             ]
           }
         }
@@ -522,14 +909,33 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "textMode": "value"
       },
-      "targets": [{ "expr": "neopro_db_circuit_breaker_state", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "neopro_db_circuit_breaker_state",
+          "refId": "A"
+        }
+      ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 65 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 65
+      },
       "id": 702,
       "title": "Canary rollbacks (1h)",
       "type": "stat",
@@ -538,23 +944,50 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "options": {
         "colorMode": "background",
         "graphMode": "area",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
-      "targets": [{ "expr": "sum(increase(neopro_canary_rollbacks_total[1h]))", "refId": "A" }]
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_canary_rollbacks_total[1h]))",
+          "refId": "A"
+        }
+      ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 65 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 65
+      },
       "id": 703,
       "title": "Orphan services detected",
       "type": "timeseries",
@@ -567,8 +1000,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 65 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 65
+      },
       "id": 704,
       "title": "Rate limit near exhaustion",
       "type": "timeseries",
@@ -581,8 +1022,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 72 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 72
+      },
       "id": 705,
       "title": "State sync relays (par type)",
       "type": "timeseries",
@@ -595,8 +1044,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 72 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 72
+      },
       "id": 706,
       "title": "License status pushes",
       "type": "timeseries",
@@ -609,8 +1066,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 72 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 72
+      },
       "id": 707,
       "title": "FTP retries",
       "type": "timeseries",
@@ -624,14 +1089,27 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 79 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 79
+      },
       "id": 800,
       "title": "Web / WiFi / Variants",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 80 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 80
+      },
       "id": 801,
       "title": "Web content fetch",
       "type": "timeseries",
@@ -644,8 +1122,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 80 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 80
+      },
       "id": 802,
       "title": "WiFi config (par action)",
       "type": "timeseries",
@@ -658,8 +1144,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 80 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 80
+      },
       "id": 803,
       "title": "Secondary variant enrichment",
       "type": "timeseries",
@@ -677,8 +1171,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 87 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 87
+      },
       "id": 805,
       "title": "Variant replace dispatch to Pi",
       "description": "deploy_video commands dispatched to Pi sites after secondary variant replace (issue #781)",
@@ -692,8 +1194,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 8, "y": 87 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 8,
+        "y": 87
+      },
       "id": 804,
       "title": "Memory GC runs (rate 5m)",
       "type": "timeseries",
@@ -706,8 +1216,16 @@
       ]
     },
     {
-      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 94 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 94
+      },
       "id": 806,
       "title": "Alerts dedup skipped (ADR-111)",
       "description": "Inserts d'alertes deduplicates dans une row active existante (bumpe occurrences au lieu de spam). Pic = emitter en boucle d'un type donne.",
@@ -719,13 +1237,45 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 94
+      },
+      "id": 807,
+      "title": "Zombie socket recoveries (issue #824)",
+      "description": "Nombre de reconnexions forc\u00e9es par le health check suite \u00e0 un heartbeat ACK timeout (TCP zombie). Un pic indique une coupure r\u00e9seau silencieuse d\u00e9tect\u00e9e c\u00f4t\u00e9 sync-agent.",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_sync_agent_zombie_socket_recoveries_total{scrape_job=\"NEOPRO\"}[5m]))",
+          "legendFormat": "recoveries/s",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": ["neopro", "blind-spots", "audit"],
-  "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
+  "tags": [
+    "neopro",
+    "blind-spots",
+    "audit"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "NeoPro Blind Spots",

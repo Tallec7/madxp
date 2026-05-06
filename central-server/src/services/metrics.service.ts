@@ -519,9 +519,24 @@ const networkRecoveryAttemptsTotal = new Counter({
   registers: [register],
 });
 
+// Issue #823 : un "cycle" = série de tentatives jusqu'au cooldown du watchdog.
+// Permet d'identifier les sites avec un réseau récurrent instable (ex. NLF NLFH-REGIE).
+const networkRecoveryCyclesTotal = new Counter({
+  name: 'neopro_network_recovery_cycles_total',
+  help: 'Total recovery cycles (attempts exhausted → cooldown) by Pi watchdog',
+  labelNames: ['site_id', 'interface'],
+  registers: [register],
+});
+
 const heartbeatsTotal = new Counter({
   name: 'neopro_heartbeats_total',
   help: 'Total heartbeats received from Pi sites',
+  registers: [register],
+});
+
+const zombieSocketRecoveriesTotal = new Counter({
+  name: 'neopro_sync_agent_zombie_socket_recoveries_total',
+  help: 'Total zombie socket recoveries detected by Pi sync-agent health check (issue #824)',
   registers: [register],
 });
 
@@ -1286,8 +1301,18 @@ class MetricsService {
     }
   }
 
+  recordNetworkRecoveryCycle(siteId: string, interfaceName: string): void {
+    networkRecoveryCyclesTotal.inc({ site_id: siteId, interface: interfaceName });
+  }
+
   recordHeartbeat(): void {
     heartbeatsTotal.inc();
+  }
+
+  recordZombieSocketRecovery(count = 1): void {
+    for (let i = 0; i < count; i++) {
+      zombieSocketRecoveriesTotal.inc();
+    }
   }
 
   recordKioskStatus(alive: number, restartCount: number): void {

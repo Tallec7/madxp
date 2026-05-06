@@ -1,3 +1,76 @@
+## [3.292.12](https://github.com/Tallec7/neopro/compare/v3.292.11...v3.292.12) (2026-05-06)
+
+### Bug Fixes
+
+- **content:** update_config payload + audit orphan site_sponsors ([#874](https://github.com/Tallec7/neopro/issues/874)) ([3a2c6a3](https://github.com/Tallec7/neopro/commit/3a2c6a3289b7ceac5121666fcd61afbff8906688))
+
+## [3.292.11](https://github.com/Tallec7/neopro/compare/v3.292.10...v3.292.11) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** untrack all WebM template assets ([#873](https://github.com/Tallec7/neopro/issues/873)) ([3e70b9d](https://github.com/Tallec7/neopro/commit/3e70b9d7d3a8b6ef13c96af49e2af3e40bf0e73f)), closes [#870](https://github.com/Tallec7/neopro/issues/870)
+
+## [3.292.10](https://github.com/Tallec7/neopro/compare/v3.292.9...v3.292.10) (2026-05-06)
+
+### Bug Fixes
+
+- **sync-agent:** prevent ENOENT race in atomicWriteJson on configuration.json ([#872](https://github.com/Tallec7/neopro/issues/872)) ([28ebe76](https://github.com/Tallec7/neopro/commit/28ebe76072ea9f64e9804c0e95137956f6ff6337))
+
+## [3.292.9](https://github.com/Tallec7/neopro/compare/v3.292.8...v3.292.9) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** untrack templates-remotion WebM assets ([#871](https://github.com/Tallec7/neopro/issues/871)) ([fa1dcf0](https://github.com/Tallec7/neopro/commit/fa1dcf0da51428691d4290c61a0d775eeb9ccdf7))
+
+## [3.292.8](https://github.com/Tallec7/neopro/compare/v3.292.7...v3.292.8) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** exclude templates-remotion WebM assets from Cloudflare Pages ([#870](https://github.com/Tallec7/neopro/issues/870)) ([79ac310](https://github.com/Tallec7/neopro/commit/79ac31058658d10a70096fb5eadc112bca087263))
+
+## [3.292.7](https://github.com/Tallec7/neopro/compare/v3.292.6...v3.292.7) (2026-05-06)
+
+### Bug Fixes
+
+- **saas:** skip LAN precache in SaaS mode to unblock first video play ([#869](https://github.com/Tallec7/neopro/issues/869)) ([dfdc3c8](https://github.com/Tallec7/neopro/commit/dfdc3c85b06a72b3440b18a36648a7ceb8c3edf0))
+
+## [3.292.6](https://github.com/Tallec7/neopro/compare/v3.292.5...v3.292.6) (2026-05-06)
+
+### Bug Fixes
+
+- **sync-agent:** align sanitizeFilename with backend storage_path ([#866](https://github.com/Tallec7/neopro/issues/866)) ([#868](https://github.com/Tallec7/neopro/issues/868)) ([9dd16a6](https://github.com/Tallec7/neopro/commit/9dd16a696490a69db595cb5b8be7819e2d363a53))
+
+## [3.292.5](https://github.com/Tallec7/neopro/compare/v3.292.4...v3.292.5) (2026-05-06)
+
+### Bug Fixes
+
+- **env:** refuse boot if DATABASE_URL points to orphaned Supabase (ADR-070) ([#864](https://github.com/Tallec7/neopro/issues/864)) ([b00ce98](https://github.com/Tallec7/neopro/commit/b00ce98c7e4c657741ac7d65d4e1cee60970879f)), closes [#863](https://github.com/Tallec7/neopro/issues/863)
+
+## [3.292.4](https://github.com/Tallec7/neopro/compare/v3.292.3...v3.292.4) (2026-05-06)
+
+### Bug Fixes
+
+- **deploy-progress:** throttle in_progress DB writes to protect PG pool ([#861](https://github.com/Tallec7/neopro/issues/861)) ([aff4959](https://github.com/Tallec7/neopro/commit/aff4959f37bb07dd58681afa33e5b7fe615be56c))
+- **sync-agent:** zombie socket non détecté 11h — heartbeat ACK obligatoire ([#824](https://github.com/Tallec7/neopro/issues/824)) ([#859](https://github.com/Tallec7/neopro/issues/859)) ([58156d7](https://github.com/Tallec7/neopro/commit/58156d7c9b56942cbe3716d356d8808cfd1fe52d))
+
+## [3.292.3](https://github.com/Tallec7/neopro/compare/v3.292.2...v3.292.3) (2026-05-06)
+
+### Bug Fixes
+
+- **network:** NetworkWatchdog plus réactif sur Wi-Fi instable + métrique cycles ([#823](https://github.com/Tallec7/neopro/issues/823)) ([#858](https://github.com/Tallec7/neopro/issues/858)) ([9c1c0a8](https://github.com/Tallec7/neopro/commit/9c1c0a8724ca86c02d304719b50e61a30931e5ee))
+
+## [3.292.2](https://github.com/Tallec7/neopro/compare/v3.292.1...v3.292.2) (2026-05-06)
+
+### Bug Fixes
+
+- **kiosk:** désactiver V4L2 par défaut sur Pi 5 — SharedImage crash au boot ([#857](https://github.com/Tallec7/neopro/issues/857)) ([bf78fb7](https://github.com/Tallec7/neopro/commit/bf78fb730e0ea96deaed2b191bd64a983694c759))
+
+## [3.292.1](https://github.com/Tallec7/neopro/compare/v3.292.0...v3.292.1) (2026-05-06)
+
+### Bug Fixes
+
+- **provisioning:** seed SaaS default profile with minimal config keys (issue [#842](https://github.com/Tallec7/neopro/issues/842)) ([#856](https://github.com/Tallec7/neopro/issues/856)) ([98bcfef](https://github.com/Tallec7/neopro/commit/98bcfefb3989efcef4d7a1297076154aa6c58a5e))
+
 # [3.292.0](https://github.com/Tallec7/neopro/compare/v3.291.1...v3.292.0) (2026-05-06)
 
 ### Features

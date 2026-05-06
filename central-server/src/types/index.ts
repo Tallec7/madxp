@@ -384,6 +384,8 @@ export interface HeartbeatMessage {
     status: string;
     restarts: number;
   }> | null;
+  /** Number of zombie socket recoveries since last successful heartbeat ACK (issue #824) */
+  zombieSocketRecoveries?: number;
 }
 
 // ============================================================================

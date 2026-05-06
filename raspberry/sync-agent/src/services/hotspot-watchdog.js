@@ -226,6 +226,16 @@ async function hotspotWatchLoop(ctx) {
             recoveryAttempts: ctx.state.hotspot.recoveryAttempts,
             timestamp: new Date().toISOString(),
           });
+
+          // Issue #823 : tracker les cycles de recovery par site (cf. internet-watchdog).
+          ctx.socketRef.emit('network_recovery_cycle', {
+            siteId: config.site.id,
+            interface: 'hotspot',
+            attempts: ctx.state.hotspot.recoveryAttempts,
+            cooldownMs: ctx.RECOVERY_COOLDOWN,
+            issues: health.issues,
+            timestamp: new Date().toISOString(),
+          });
         }
       }
     }

@@ -40,7 +40,7 @@ import {
 } from '../handlers/config-sync.handler';
 import { handleDeployProgress, handleUpdateProgress } from '../handlers/deploy-progress.handler';
 import { sendLicenseStatus } from '../handlers/license.handler';
-import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRollback } from '../handlers/network-resilience.handler';
+import { handleNetworkAlert, handleNetworkRecovered, handleNetworkRecoveryCycle, handleNetworkRollback } from '../handlers/network-resilience.handler';
 import { handleHostapdEvent } from '../handlers/hostapd-events.handler';
 import { handleRecordingState, RecordingStateMessage } from '../handlers/recording-state.handler';
 import {
@@ -505,7 +505,7 @@ class SocketService {
     // Wire up event handlers — delegate to handler files
     const ctx = this.ctx;
     const handlers = {
-      heartbeat: (message: HeartbeatMessage) => handleHeartbeat(ctx, siteId, message),
+      heartbeat: (message: HeartbeatMessage, ack?: () => void) => handleHeartbeat(ctx, siteId, message, ack),
       command_result: (cmdResult: CommandResult) =>
         handleCommandResult(ctx, siteId, cmdResult, clearPendingConfig),
       deploy_progress: (progress: Record<string, unknown>) => handleDeployProgress(ctx, siteId, progress),
@@ -519,6 +519,7 @@ class SocketService {
       network_alert: (alert: Record<string, unknown>) => handleNetworkAlert(ctx, siteId, alert),
       network_rollback: (rollback: Record<string, unknown>) => handleNetworkRollback(ctx, siteId, rollback),
       network_recovered: (payload: Record<string, unknown>) => handleNetworkRecovered(ctx, siteId, payload),
+      network_recovery_cycle: (payload: Record<string, unknown>) => handleNetworkRecoveryCycle(ctx, siteId, payload),
       hostapd_event: (payload: Record<string, unknown>) => handleHostapdEvent(ctx, siteId, payload),
       'recording-state': (message: RecordingStateMessage) => handleRecordingState(ctx, siteId, message),
     };
@@ -545,6 +546,7 @@ class SocketService {
     socket.on('network_alert', withMetrics('network_alert', handlers.network_alert));
     socket.on('network_rollback', withMetrics('network_rollback', handlers.network_rollback));
     socket.on('network_recovered', withMetrics('network_recovered', handlers.network_recovered));
+    socket.on('network_recovery_cycle', withMetrics('network_recovery_cycle', handlers.network_recovery_cycle));
     socket.on('hostapd_event', withMetrics('hostapd_event', handlers.hostapd_event));
     socket.on('recording-state', withMetrics('recording-state', handlers['recording-state']));
 
@@ -664,6 +666,7 @@ class SocketService {
       socket.off('network_alert', handlers.network_alert);
       socket.off('network_rollback', handlers.network_rollback);
       socket.off('network_recovered', handlers.network_recovered);
+      socket.off('network_recovery_cycle', handlers.network_recovery_cycle);
       socket.off('hostapd_event', handlers.hostapd_event);
       socket.off('recording-state', handlers['recording-state']);
       delete (socket as any)._neoHandlers;

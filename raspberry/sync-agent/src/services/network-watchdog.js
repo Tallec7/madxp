@@ -56,8 +56,13 @@ function _getUsbCycleGuard() {
 const HOTSPOT_CHECK_INTERVAL = 30 * 1000;
 const INTERNET_CHECK_INTERVAL = 60 * 1000;
 const CLOUD_CHECK_INTERVAL = 30 * 1000;
-const MAX_RECOVERY_ATTEMPTS = 6;
-const RECOVERY_COOLDOWN = 5 * 60 * 1000;
+// Issue #823 (NLF NLFH-REGIE) : sur réseaux instables faible-débit, 6 tentatives
+// puis 5 min de cooldown = ~5+ min offline par incident. Élargi à 8 tentatives
+// (couvre 2 cycles backoff complets supplémentaires) et cooldown ramené à 2 min
+// (= durée du backoff max PHASE_BACKOFF_DELAYS[5]) pour redémarrer la recovery
+// plus tôt après épuisement.
+const MAX_RECOVERY_ATTEMPTS = 8;
+const RECOVERY_COOLDOWN = 2 * 60 * 1000;
 const GRACE_PERIOD_DURATION = 60 * 1000;
 
 const PHASE_BACKOFF_DELAYS = [
