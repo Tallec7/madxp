@@ -694,28 +694,6 @@ describe('SaaS deployment pipeline guards', () => {
     });
   });
 
-  // --- Dashboard .htaccess excludes /saas/ from SPA catch-all ---
-  it('Dashboard .htaccess must exclude /saas/ from SPA catch-all', () => {
-    const filePath = path.join(repoRoot, 'central-dashboard', '.htaccess');
-    const content = fs.readFileSync(filePath, 'utf8');
-    expect({
-      hasSaasExclusion: content.includes('^saas(/.*)?$'),
-    }).toEqual({
-      hasSaasExclusion: true,
-    });
-  });
-
-  // --- SaaS .htaccess rewrites to /saas/index.html ---
-  it('SaaS .htaccess must rewrite all requests to /saas/index.html', () => {
-    const filePath = path.join(repoRoot, 'raspberry', 'src', 'saas-htaccess');
-    const content = fs.readFileSync(filePath, 'utf8');
-    expect({
-      rewritesToSaasIndex: content.includes('/saas/index.html'),
-    }).toEqual({
-      rewritesToSaasIndex: true,
-    });
-  });
-
   // --- angular.json SaaS config excludes admin assets ---
   it('angular.json SaaS build config must not include raspberry/admin/public assets', () => {
     const filePath = path.join(repoRoot, 'angular.json');
@@ -774,20 +752,6 @@ describe('SaaS deployment pipeline guards', () => {
       includesPublicAssets: hasPublicAssets,
     }).toEqual({
       includesPublicAssets: true,
-    });
-  });
-
-  // --- release.yml deploy-saas depends on deploy-dashboard ---
-  it('release.yml deploy-saas job must declare deploy-dashboard as a dependency', () => {
-    const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
-    const content = fs.readFileSync(filePath, 'utf8');
-    // Extract deploy-saas block and verify it needs deploy-dashboard
-    const deploySaasBlock = content.match(/deploy-saas:[\s\S]*?(?=\n  \w|$)/);
-    expect(deploySaasBlock).not.toBeNull();
-    expect({
-      needsDeployDashboard: deploySaasBlock![0].includes('deploy-dashboard'),
-    }).toEqual({
-      needsDeployDashboard: true,
     });
   });
 
@@ -862,7 +826,8 @@ describe('SaaS deployment pipeline guards', () => {
     const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
     const content = fs.readFileSync(filePath, 'utf8');
     const versionInjectionIndex = content.indexOf('Inject version into SaaS app');
-    const saasBuildIndex = content.indexOf('Build SaaS app');
+    // ADR-071 phase 4 : step renommé dans deploy-frontend-cloudflare
+    const saasBuildIndex = content.indexOf('build:cloudflare:prod');
     expect({
       hasVersionInjection: versionInjectionIndex > -1,
       injectionBeforeBuild: versionInjectionIndex < saasBuildIndex,

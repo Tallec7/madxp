@@ -287,11 +287,6 @@
               "central-dashboard/src/favicon.ico",
               "central-dashboard/src/assets",
               {
-                "glob": ".htaccess",
-                "input": "central-dashboard/",
-                "output": "/"
-              },
-              {
                 "glob": "sw.js",
                 "input": "central-dashboard/src/",
                 "output": "/"
