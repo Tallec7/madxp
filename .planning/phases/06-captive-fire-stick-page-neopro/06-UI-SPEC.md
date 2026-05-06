@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-05-06
+revised: 2026-05-06
 ---
 
 # Phase 6 — UI Design Contract
@@ -76,7 +77,7 @@ System sans-serif, three sizes, **two weights**. All values are **declared in pi
 **Constraints:**
 
 - MAC display must hit **128px (8rem) minimum** at 1920×1080 to stay legible at 3 m on a 32"-55" TV (verified rule of thumb: 1px viewing-pixel per 1 mm of viewing distance ≈ 100 px height for 3 m).
-- **Two weights only**: `400` for body, `700` for heading and MAC display. Hierarchy comes from **size** (24 → 48 → 128), not from intermediate weights. No `300`/`500`/`600`/`800` — kept minimal to match system font availability across Fire OS firmwares and to satisfy the 2-weights-max design constraint.
+- **Two weights only**: `400` for body, `700` for heading **and** MAC display. Hierarchy comes from **size** (24 → 48 → 128), not from intermediate weights. No `300`/`500`/`600`/`800` — kept minimal to match system font availability across Fire OS firmwares and to satisfy the 2-weights-max design constraint.
 - No italic, no underline, no text-transform. The MAC must display in **uppercase** (visual convention for hex MACs in dictée context — `0C:43:F9:36:04:77` not `0c:43:f9:36:04:77`).
 
 ---
@@ -217,7 +218,7 @@ The page passes design review when:
 4. After the admin assigns the MAC in the dashboard, the Fire Stick switches to the Neopro view in **<2 s** (target: <500 ms via Socket.IO; <5 s worst case via polling).
 5. The page contains zero text in English. All copy is in French verbatim from the table above.
 6. The MAC is uppercase, with `:` separators, in the format `XX:XX:XX:XX:XX:XX`.
-7. **Typography uses exactly 2 weights** (`400` body, `700` heading + MAC). No `font-weight: 600` or any other intermediate weight in the page source.
+7. **Typography uses exactly 2 weights** (`400` body, `700` heading + MAC). No `font-weight: 600` or any other intermediate weight in the page source or in any CSS snippet shipped with the captive page.
 
 ---
 
@@ -228,7 +229,7 @@ These were Claude's discretion per phase brief. Recording explicitly so executor
 - **Locale:** French only. No EN fallback. Bénévoles and admins are FR.
 - **Theme:** Dark (`#000` background) — TV viewing, not desktop.
 - **Fonts:** system stack, no custom font load. Performance > brand consistency for this surface.
-- **Font weights:** `400` and `700` only. Heading hierarchy via size, not weight.
+- **Font weights:** `400` and `700` only — exactly 2 weights. Heading hierarchy via size, not weight.
 - **No logo:** page is intentionally pre-brand. Neopro brand lands post-assignment in the TV view.
 - **Polling interval:** 5 s (compromise between demo UX and Pi load).
 - **Redirect verb:** `location.replace()` not `location.href = ...` (no history pollution).
