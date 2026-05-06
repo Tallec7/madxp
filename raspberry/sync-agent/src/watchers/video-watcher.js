@@ -338,13 +338,13 @@ class VideoWatcher {
   }
 
   /**
-   * Calcule le checksum MD5 d'un fichier (plus rapide que SHA256)
+   * Calcule le checksum SHA256 d'un fichier.
    * @param {string} filePath Chemin du fichier
-   * @returns {Promise<string>} Checksum MD5
+   * @returns {Promise<string>} Checksum SHA256
    */
   async calculateChecksum(filePath) {
     return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('md5');
+      const hash = crypto.createHash('sha256');
       const stream = fs.createReadStream(filePath);
 
       stream.on('data', (data) => hash.update(data));

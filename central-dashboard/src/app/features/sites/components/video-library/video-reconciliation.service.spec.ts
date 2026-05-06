@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { VideoReconciliationService, ReconciliationInput } from './video-reconciliation.service';
+import { VideoReconciliationService, ReconciliationInput, normalizeFilename } from './video-reconciliation.service';
 import { LocalVideo, CloudVideo, SiteSponsor } from '../../../../core/models';
 
 describe('VideoReconciliationService', () => {
@@ -170,6 +170,39 @@ describe('VideoReconciliationService', () => {
     expect(result.allVideos[0].variantCount).toBe(3);
     expect(result.allVideos[0].variantTypes).toEqual(['secondary', 'led']);
     expect(result.allVideos[0].hasSecondaryVariant).toBeTrue();
+  });
+
+  // Regression guard: spaces vs underscores + accents (NLF Bottière site, 109 unmatched Pi videos)
+  it('matches cloud "ENTREE.mp4" to Pi local "ENTRÉE.mp4" via normalizeFilename fallback', () => {
+    const local = mkLocal({ filename: 'ENTRÉE.mp4', path: '/local/ENTRÉE.mp4', checksum: null });
+    const cloud = mkCloud({ filename: 'ENTREE.mp4', checksum: null });
+    const result = service.reconcile(baseInput({ videos: [local], cloudVideos: [cloud] }));
+
+    expect(result.allVideos.length).toBe(1);
+    expect(result.allVideos[0].isOnPi).toBeTrue();
+  });
+
+  it('matches cloud "00_neopro.mp4" to Pi local "00 neopro.mp4" via normalizeFilename fallback', () => {
+    const local = mkLocal({ filename: '00 neopro.mp4', path: '/local/00 neopro.mp4', checksum: null });
+    const cloud = mkCloud({ filename: '00_neopro.mp4', checksum: null });
+    const result = service.reconcile(baseInput({ videos: [local], cloudVideos: [cloud] }));
+
+    expect(result.allVideos.length).toBe(1);
+    expect(result.allVideos[0].isOnPi).toBeTrue();
+  });
+
+  describe('normalizeFilename', () => {
+    it('lowercases, strips accents, strips extension, collapses separators', () => {
+      expect(normalizeFilename('ENTRÉE.mp4')).toBe('entree');
+      expect(normalizeFilename('00 neopro.mp4')).toBe('00_neopro');
+      expect(normalizeFilename('00_neopro.mp4')).toBe('00_neopro');
+      expect(normalizeFilename('Côte d\'Ivoire.mp4')).toBe('cote_d\'ivoire');
+    });
+
+    it('treats spaces, dashes and underscores as equivalent', () => {
+      expect(normalizeFilename('foo bar.mp4')).toBe(normalizeFilename('foo_bar.mp4'));
+      expect(normalizeFilename('foo-bar.mp4')).toBe(normalizeFilename('foo_bar.mp4'));
+    });
   });
 
   it('marks contentStatus "sponsor" when advertiser is linked to a site sponsor with videos', () => {
