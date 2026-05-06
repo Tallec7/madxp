@@ -1,3 +1,9 @@
+## [3.292.6](https://github.com/Tallec7/neopro/compare/v3.292.5...v3.292.6) (2026-05-06)
+
+### Bug Fixes
+
+- **sync-agent:** align sanitizeFilename with backend storage_path ([#866](https://github.com/Tallec7/neopro/issues/866)) ([#868](https://github.com/Tallec7/neopro/issues/868)) ([9dd16a6](https://github.com/Tallec7/neopro/commit/9dd16a696490a69db595cb5b8be7819e2d363a53))
+
 ## [3.292.5](https://github.com/Tallec7/neopro/compare/v3.292.4...v3.292.5) (2026-05-06)
 
 ### Bug Fixes
