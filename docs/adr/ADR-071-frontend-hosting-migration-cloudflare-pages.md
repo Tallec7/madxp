@@ -1,7 +1,7 @@
 # ADR-071: Migration du hosting frontend (dashboard + SaaS) vers Cloudflare Pages
 
-**Date** : 2026-04-19 (mis à jour 2026-04-29)
-**Statut** : Accepté — phase 1 (staging) livrée J2 ADR-091, phase 2 (scaffolding prod) livrée 2026-04-29, bascule DNS planifiée post-validation
+**Date** : 2026-04-19 (mis à jour 2026-05-06)
+**Statut** : Accepté — phase 4 cleanup livrée 2026-05-06, bascule complète Cloudflare Pages
 **Format** : Léger
 
 ---
@@ -121,7 +121,16 @@ Pré-requis humains :
 
 ### Phase 4 — Décommission Hostinger frontend (post-soak)
 
-Hors scope de cette PR (sera couvert par un commit séparé une fois la phase 3 stable) :
+**✅ Livrée 2026-05-06** (PR #849). Après 7 jours de soak stable sur Cloudflare Pages.
 
-- Suppression `central-dashboard/.htaccess`, `raspberry/src/saas-htaccess` et entrées `assets` associées dans `angular.json`.
-- Suppression jobs `deploy-dashboard` + `deploy-saas` (lftp) et secrets `HOSTINGER_FTP_*`.
+Fichiers supprimés :
+- `central-dashboard/.htaccess` — Apache rewrite rules SPA fallback dashboard
+- `raspberry/src/saas-htaccess` — Apache rewrite rules SPA fallback SaaS
+- Entrée `.htaccess` dans `angular.json` (project `central-dashboard`)
+- Job `deploy-dashboard` (lftp Hostinger) dans `release.yml`
+- Job `deploy-saas` (lftp Hostinger) dans `release.yml`
+- Condition `vars.HOSTING != 'cloudflare'` (gating Hostinger — plus de chemin alternatif)
+
+Reste à faire manuellement (signalé en PR description) :
+- Suppression secrets GitHub `HOSTINGER_FTP_SERVER`, `HOSTINGER_FTP_USERNAME`, `HOSTINGER_FTP_PASSWORD` (env `production`)
+- Suppression variable GitHub `vars.HOSTING` (devenue inutile)
