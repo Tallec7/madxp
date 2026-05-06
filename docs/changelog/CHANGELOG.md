@@ -1,3 +1,9 @@
+## [3.292.10](https://github.com/Tallec7/neopro/compare/v3.292.9...v3.292.10) (2026-05-06)
+
+### Bug Fixes
+
+- **sync-agent:** prevent ENOENT race in atomicWriteJson on configuration.json ([#872](https://github.com/Tallec7/neopro/issues/872)) ([28ebe76](https://github.com/Tallec7/neopro/commit/28ebe76072ea9f64e9804c0e95137956f6ff6337))
+
 ## [3.292.9](https://github.com/Tallec7/neopro/compare/v3.292.8...v3.292.9) (2026-05-06)
 
 ### Bug Fixes
