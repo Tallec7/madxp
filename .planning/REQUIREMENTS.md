@@ -11,8 +11,8 @@
 
 ### DETECT — Pi détecte les receivers
 
-- [ ] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
-- [ ] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
+- [x] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
+- [x] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
 - [ ] **DETECT-03** : Le Pi cache localement le mapping MAC↔display pour résilience offline (Pi off → recovery au reboot)
 
 ### CAPTIVE — Fire Stick → page Neopro

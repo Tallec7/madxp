@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 4 DATA shipped — DisplayConfig.receiver type + Joi + migration + repository methods (24/24 tests green sur site.repository.test.ts)
-stopped_at: Completed 04-data-02-PLAN.md (1 task TDD, 2 commits b54931f + c9fe025)
-last_updated: "2026-05-06T10:04:18.165Z"
-last_activity: "2026-05-06 — Plan 04-data-02 complété (TDD : b54931f RED + c9fe025 GREEN)"
+status: Phase 5 DETECT — Plan 01 ReceiversService shipped (10/10 Jest tests green ; passive dnsmasq.leases watch + arp -an fallback)
+stopped_at: Completed 05-detect-01-PLAN.md (1 task TDD, 2 commits cf7fa13 RED + 1a4df9b GREEN)
+last_updated: "2026-05-06T10:30:00.000Z"
+last_activity: "2026-05-06 — Plan 05-detect-01 complété (TDD : cf7fa13 RED + 1a4df9b GREEN, 10 tests verts)"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 4 — DATA — Modèle DisplayConfig étendu (✅ complete)
-Plan: 01 complete (receiver-schema), 02 complete (receiver-repository)
-Status: Phase 4 DATA shipped — DisplayConfig.receiver type + Joi + migration + repository methods (24/24 tests green sur site.repository.test.ts)
-Last activity: 2026-05-06 — Plan 04-data-02 complété (TDD : b54931f RED + c9fe025 GREEN)
-Next: Phase 5 — DETECT (Pi détecte les receivers via dnsmasq.leases + ARP)
+Phase: 5 — DETECT — Pi détecte les receivers (en cours)
+Plan: 01 complete (receivers-service), 02 next (cache résilience), 03 (state.service + sync-agent)
+Status: Phase 5 DETECT — Plan 01 ReceiversService shipped (10/10 Jest tests green ; passive dnsmasq.leases watch + arp -an fallback)
+Last activity: 2026-05-06 — Plan 05-detect-01 complété (TDD : cf7fa13 RED + 1a4df9b GREEN, 10 tests verts)
+Next: Plan 05-detect-02 — cache résilience (persistence locale receivers cross-reboot)
 
 ## Accumulated Context
 
@@ -38,6 +38,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Decisions (v4.0)
 
+- 05-detect-01: console.info/warn (helpers.js raspberry/server n'expose pas Winston ; cohérence avec hdmi.service.js)
+- 05-detect-01: pas de cache TTL — l'état Map<mac, {kind, lastSeenAt}> EST la source de vérité, refresh à chaque tick (10s leases / 30s ARP)
+- 05-detect-01: emit `connected-receivers-changed` uniquement sur diff de set membership (add/remove MAC) — `lastSeenAt` refresh sans déclencher d'emit
 - 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
 - 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
@@ -61,6 +64,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T10:01:16.157Z
-Stopped at: Completed 04-data-02-PLAN.md (1 task TDD, 2 commits b54931f + c9fe025)
+Last session: 2026-05-06T10:30:00.000Z
+Stopped at: Completed 05-detect-01-PLAN.md (cf7fa13 RED + 1a4df9b GREEN)
 Resume file: None
