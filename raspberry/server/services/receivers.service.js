@@ -48,12 +48,15 @@ const AMAZON_OUIS = [
 ];
 
 const MAC_REGEX = /^[0-9a-f]{2}(:[0-9a-f]{2}){5}$/i;
-const ARP_LINE_REGEX = /at ([0-9a-f:]{17}) \[ether\] on wlan0/gi;
+// Capture IP + MAC. Format `arp -an`: `? (192.168.4.23) at 0c:43:f9:36:04:77 [ether] on wlan0`
+const ARP_LINE_REGEX = /\(([\d.]+)\) at ([0-9a-f:]{17}) \[ether\] on wlan0/gi;
 
 class ReceiversService {
   constructor() {
     /** @type {Map<string, { kind: string, lastSeenAt: string, displayIndex: number|null }>} */
     this._state = new Map();
+    /** @type {Map<string, string>} ip → mac (lowercase). Populé par _scanLeases + _scanArp. */
+    this._ipToMac = new Map();
     this._lastLeasesMtime = 0;
     this._io = null;
     this._leasesInterval = null;
@@ -117,6 +120,24 @@ class ReceiversService {
         displayIndex: v.displayIndex ?? null,
       }))
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+  }
+
+  /**
+   * Lookup inverse IP → MAC, sans appel système (lit la Map populée par
+   * `_scanLeases` + `_scanArp`). Normalise les IPv4-mapped IPv6
+   * (`::ffff:192.168.4.X` → `192.168.4.X`) que Express voit derrière nginx
+   * `listen [::]:80`.
+   *
+   * Plan 06-captive-01 (CAPTIVE-02). Utilisé par l'endpoint
+   * `/api/captive/whoami` pour décider de la redirection Fire Stick.
+   *
+   * @param {string} ip
+   * @returns {string|null} MAC lowercase ou null si IP inconnue
+   */
+  resolveMacByIp(ip) {
+    if (!ip || typeof ip !== 'string') return null;
+    const normalized = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+    return this._ipToMac.get(normalized) || null;
   }
 
   /**
@@ -289,6 +310,11 @@ class ReceiversService {
       const mac = fields[1].toLowerCase();
       if (!MAC_REGEX.test(mac)) continue;
       currentMacs.add(mac);
+      // Populate reverse IP→MAC map (Plan 06-captive-01) — used by resolveMacByIp
+      const ip = fields[2];
+      if (ip) {
+        this._ipToMac.set(ip, mac);
+      }
     }
 
     let changed = false;
@@ -351,8 +377,13 @@ class ReceiversService {
     const nowIso = new Date().toISOString();
 
     for (const m of matches) {
-      const mac = m[1].toLowerCase();
+      const ip = m[1];
+      const mac = m[2].toLowerCase();
       if (!MAC_REGEX.test(mac)) continue;
+      // Populate reverse IP→MAC map (Plan 06-captive-01)
+      if (ip) {
+        this._ipToMac.set(ip, mac);
+      }
       if (this._state.has(mac)) {
         // Refresh lastSeenAt only — not a state change
         this._state.get(mac).lastSeenAt = nowIso;
