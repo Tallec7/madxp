@@ -71,28 +71,26 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 
 ## Traceability
 
-_Auto-rempli par le roadmapper après création de ROADMAP.md_
+| REQ-ID       | Phase           | Plan |
+| ------------ | --------------- | ---- |
+| DATA-01      | Phase 4 (DATA)      | TBD  |
+| DATA-02      | Phase 4 (DATA)      | TBD  |
+| DATA-03      | Phase 4 (DATA)      | TBD  |
+| DETECT-01    | Phase 5 (DETECT)    | TBD  |
+| DETECT-02    | Phase 5 (DETECT)    | TBD  |
+| DETECT-03    | Phase 5 (DETECT)    | TBD  |
+| CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD  |
+| CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD  |
+| CAPTIVE-03   | Phase 6 (CAPTIVE)   | TBD  |
+| CAPTIVE-04   | Phase 6 (CAPTIVE)   | TBD  |
+| CLOUD-01     | Phase 7 (CLOUD)     | TBD  |
+| CLOUD-02     | Phase 7 (CLOUD)     | TBD  |
+| CLOUD-03     | Phase 7 (CLOUD)     | TBD  |
+| CLOUD-04     | Phase 7 (CLOUD)     | TBD  |
+| DASHBOARD-01 | Phase 8 (DASHBOARD) | TBD  |
+| DASHBOARD-02 | Phase 8 (DASHBOARD) | TBD  |
+| DASHBOARD-03 | Phase 8 (DASHBOARD) | TBD  |
+| OBSERVE-01   | Phase 9 (OBSERVE)   | TBD  |
+| OBSERVE-02   | Phase 9 (OBSERVE)   | TBD  |
 
-| REQ-ID       | Phase | Plan |
-| ------------ | ----- | ---- |
-| DETECT-01    | —     | —    |
-| DETECT-02    | —     | —    |
-| DETECT-03    | —     | —    |
-| CAPTIVE-01   | —     | —    |
-| CAPTIVE-02   | —     | —    |
-| CAPTIVE-03   | —     | —    |
-| CAPTIVE-04   | —     | —    |
-| DATA-01      | —     | —    |
-| DATA-02      | —     | —    |
-| DATA-03      | —     | —    |
-| CLOUD-01     | —     | —    |
-| CLOUD-02     | —     | —    |
-| CLOUD-03     | —     | —    |
-| CLOUD-04     | —     | —    |
-| DASHBOARD-01 | —     | —    |
-| DASHBOARD-02 | —     | —    |
-| DASHBOARD-03 | —     | —    |
-| OBSERVE-01   | —     | —    |
-| OBSERVE-02   | —     | —    |
-
-**18 requirements** | **6 catégories** | Research skipped (POC + pattern PROP-002 known)
+**18 requirements** | **6 catégories** | **Coverage: 18/18** ✓ | Research skipped (POC + pattern PROP-002 known)
