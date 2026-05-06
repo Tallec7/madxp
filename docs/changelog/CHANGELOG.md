@@ -1,3 +1,9 @@
+## [3.292.1](https://github.com/Tallec7/neopro/compare/v3.292.0...v3.292.1) (2026-05-06)
+
+### Bug Fixes
+
+- **provisioning:** seed SaaS default profile with minimal config keys (issue [#842](https://github.com/Tallec7/neopro/issues/842)) ([#856](https://github.com/Tallec7/neopro/issues/856)) ([98bcfef](https://github.com/Tallec7/neopro/commit/98bcfefb3989efcef4d7a1297076154aa6c58a5e))
+
 # [3.292.0](https://github.com/Tallec7/neopro/compare/v3.291.1...v3.292.0) (2026-05-06)
 
 ### Features
