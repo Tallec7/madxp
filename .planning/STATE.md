@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 6 CAPTIVE — Plan 01 resolveMacByIp shipped (26/26 Jest tests green ; pure Map IP→MAC reverse lookup + IPv4-mapped IPv6 normalization)
-stopped_at: Completed 06-captive-01-PLAN.md
-last_updated: "2026-05-06T14:00:00.000Z"
-last_activity: "2026-05-06 — Plan 06-captive-01 complété (TDD : 84f0448 RED + e354961 GREEN, 26 tests verts)"
+status: Phase 6 CAPTIVE — Plan 02 captive route /api/captive/whoami shipped (8/8 new + 168/168 total Jest tests green ; createCaptiveRouter wiré dans server.js)
+stopped_at: Completed 06-captive-02-PLAN.md
+last_updated: "2026-05-06T13:59:10.714Z"
+last_activity: "2026-05-06 — Plan 06-captive-02 complété (TDD : 3dbc5bc RED + 2ead49d GREEN + b54242e wire, 168/168 tests verts)"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 ## Current Position
 
 Phase: 6 — CAPTIVE — Fire Stick → page Neopro (en cours)
-Plan: 01 complete (resolveMacByIp), 02 next (captive route + server wiring), 03 (configs + wait page + install), 04 (Angular bootstrap router)
-Status: Phase 6 CAPTIVE — Plan 01 resolveMacByIp shipped (26/26 Jest tests green ; pure Map IP→MAC reverse lookup + IPv4-mapped IPv6 normalization)
-Last activity: 2026-05-06 — Plan 06-captive-01 complété (TDD : 84f0448 RED + e354961 GREEN, 26 tests verts)
-Next: Plan 06-captive-02 — captive route /api/captive/whoami + server.js wiring
+Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 in parallel (configs + wait page + install), 04 (Angular bootstrap router)
+Status: Phase 6 CAPTIVE — Plan 02 captive route /api/captive/whoami shipped (8/8 new + 168/168 total Jest tests green ; createCaptiveRouter wiré dans server.js)
+Last activity: 2026-05-06 — Plan 06-captive-02 complété (TDD : 3dbc5bc RED + 2ead49d GREEN + b54242e wire, 168/168 tests verts)
+Next: Plan 06-captive-04 — Angular bootstrap router (consume /api/captive/whoami)
 
 ## Accumulated Context
 
@@ -51,6 +51,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 06-captive-01: reverse-lookup via Map<ip, mac> dédiée populée par _scanLeases/_scanArp existants — O(1), zéro nouvel appel système (vs reverse-iterate _state ou shell exec `ip neigh`)
 - 06-captive-01: normalisation IPv4-mapped IPv6 (`::ffff:` → IPv4) au lookup, pas à l'insertion — single edge case côté Express boundary, évite de toucher chaque parse de lease dnsmasq
 - 06-captive-01: ARP_LINE_REGEX étendue pour capturer IP (group 1) + MAC (group 2) en une passe — backward-compatible avec _scanArp existant
+- 06-captive-02: createCaptiveRouter factory pattern (cohérent health/hotspot) — guards d'invariants au boot fail-fast
+- 06-captive-02: fallback résilient erreur fs (200 + displayIndex=null vs 5xx) — la MAC est connue, le bénévole peut assigner depuis dashboard
+- 06-captive-02: case-insensitive MAC compare au lookup boundary (toLowerCase côté requête + config) — defensive contre édition humaine de configuration.json
+- 06-captive-02: supertest@^7.2.2 ajouté en devDep raspberry/server (premier usage) — fondation pour futures routes testées HTTP
 - 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
 - 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
@@ -74,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T13:54:16.228Z
-Stopped at: Completed 06-captive-01-PLAN.md
+Last session: 2026-05-06T13:59:10.707Z
+Stopped at: Completed 06-captive-02-PLAN.md
 Resume file: None
