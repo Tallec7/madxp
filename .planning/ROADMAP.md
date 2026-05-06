@@ -39,7 +39,7 @@
 3. Le code applicatif peut lire et écrire le récepteur d'un display via le repository (`getReceiverForDisplay`, `setReceiver`) sans toucher au JSONB brut.
 
 **Plans**: 2 plans
-- [ ] 04-data-01-receiver-schema-PLAN.md — Migration backfill + DisplayConfig.receiver TS + Joi (DATA-01, DATA-02)
+- [x] 04-data-01-receiver-schema-PLAN.md — Migration backfill + DisplayConfig.receiver TS + Joi (DATA-01, DATA-02) ✅ 2026-05-06
 - [ ] 04-data-02-receiver-repository-PLAN.md — siteRepository.getReceiverForDisplay + setReceiver (DATA-03)
 
 ### Phase 5: DETECT — Pi détecte les receivers
@@ -116,7 +116,7 @@
 | 1. Fondations          | v3.0      | 5/5            | Complete    | 2026-05-05 |
 | 2. UX interactive      | v3.0      | 4/4            | Complete    | 2026-05-05 |
 | 3. Gate publication    | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 4. DATA                | v4.0      | 0/2            | Planned     | -          |
+| 4. DATA                | v4.0      | 1/2            | In Progress | -          |
 | 5. DETECT              | v4.0      | 0/0            | Not started | -          |
 | 6. CAPTIVE             | v4.0      | 0/0            | Not started | -          |
 | 7. CLOUD               | v4.0      | 0/0            | Not started | -          |
