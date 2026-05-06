@@ -47,7 +47,25 @@
         [class.amm__card--clickable]="context === 'modal'"
       >
         <div class="amm__thumb">
-          <video [src]="a.url" muted playsinline preload="metadata"></video>
+          <!--
+            ADR-110 — preview = <img posterUrl> quand le serveur a généré le
+            poster JPEG à l'upload (1ère frame, 320:-1, q=2). Fallback
+            <video preload="none"> pour les assets legacy (poster non encore
+            backfillé). preload="none" évite que N décodeurs WebM saturent
+            le navigateur ; cf. memory pi5_gpu_sharedimage_saturation.
+            Run `npm run backfill:asset-posters` côté serveur pour
+            retro-fitter les legacy.
+          -->
+          <img
+            *ngIf="a.posterUrl as posterUrl; else videoFallback"
+            [src]="posterUrl"
+            [alt]="filenameOf(a.url)"
+            loading="lazy"
+            decoding="async"
+          />
+          <ng-template #videoFallback>
+            <video [src]="a.url" muted playsinline preload="none"></video>
+          </ng-template>
         </div>
         <div class="amm__body">
           <div class="amm__name" [title]="filenameOf(a.url)">{{ filenameOf(a.url) }}</div>
@@ -59,7 +77,7 @@
           </div>
           <div class="amm__used">Utilisé par {{ a.usedByCount }} template(s)</div>
         </div>
-        <button type="button" class="amm__delete" (click)="onDelete(a, $event)">Supprimer</button>
+        <button type="button" class="amm__delete" (click)="onDelete(a, $event)">Retirer</button>
       </article>
     </div>
 
