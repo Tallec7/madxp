@@ -20,6 +20,14 @@ let updateDeploymentService: {
   updateProgress: (deploymentId: string, progress: number) => Promise<void>;
 } | null = null;
 
+// Throttle in_progress DB writes per deployment to protect the PG pool when a Pi
+// streams many chunks (incident 2026-05-06: 20+ vidéos déployées en parallèle sur
+// Pi RACC → pool size 5 saturé, "timeout exceeded when trying to connect").
+// Only intermediate in_progress events are throttled — completed/failed/error always fire.
+const PROGRESS_UPDATE_MIN_INTERVAL_MS = 1000;
+const PROGRESS_UPDATE_MIN_DELTA = 5;
+const lastProgressWriteByDeployment = new Map<string, { at: number; progress: number }>();
+
 const getUpdateDeploymentService = async () => {
   if (!updateDeploymentService) {
     const module = await import('../services/update-deployment.service');
@@ -50,6 +58,7 @@ export async function handleDeployProgress(
         typeof progressValue === 'number' && Number.isFinite(progressValue) && progressValue >= 100;
 
       if (error) {
+        lastProgressWriteByDeployment.delete(deploymentId as string);
         await query(
           `UPDATE content_deployments
            SET status = 'failed', error_message = $1, completed_at = NOW()
@@ -58,6 +67,7 @@ export async function handleDeployProgress(
         );
         resolvedStatus = 'failed';
       } else if (completed || isCompletedByProgress) {
+        lastProgressWriteByDeployment.delete(deploymentId as string);
         await query(
           `UPDATE content_deployments
            SET status = 'completed', progress = 100, completed_at = NOW(),
@@ -84,12 +94,25 @@ export async function handleDeployProgress(
           }
         }
       } else {
-        await query(
-          `UPDATE content_deployments
-           SET progress = $1, status = 'in_progress'
-           WHERE id = $2`,
-          [Math.round((progressValue as number) || 0), deploymentId]
-        );
+        const roundedProgress = Math.round((progressValue as number) || 0);
+        const now = Date.now();
+        const last = lastProgressWriteByDeployment.get(deploymentId as string);
+        const shouldSkip =
+          last !== undefined &&
+          now - last.at < PROGRESS_UPDATE_MIN_INTERVAL_MS &&
+          Math.abs(roundedProgress - last.progress) < PROGRESS_UPDATE_MIN_DELTA &&
+          roundedProgress !== 0 &&
+          roundedProgress < 100;
+
+        if (!shouldSkip) {
+          lastProgressWriteByDeployment.set(deploymentId as string, { at: now, progress: roundedProgress });
+          await query(
+            `UPDATE content_deployments
+             SET progress = $1, status = 'in_progress'
+             WHERE id = $2`,
+            [roundedProgress, deploymentId]
+          );
+        }
       }
     } else if (videoId) {
       // Fallback: mise à jour par videoId
