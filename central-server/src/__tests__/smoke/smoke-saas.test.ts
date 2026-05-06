@@ -826,7 +826,8 @@ describe('SaaS deployment pipeline guards', () => {
     const filePath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
     const content = fs.readFileSync(filePath, 'utf8');
     const versionInjectionIndex = content.indexOf('Inject version into SaaS app');
-    const saasBuildIndex = content.indexOf('Build SaaS app');
+    // ADR-071 phase 4 : step renommé dans deploy-frontend-cloudflare
+    const saasBuildIndex = content.indexOf('build:cloudflare:prod');
     expect({
       hasVersionInjection: versionInjectionIndex > -1,
       injectionBeforeBuild: versionInjectionIndex < saasBuildIndex,
