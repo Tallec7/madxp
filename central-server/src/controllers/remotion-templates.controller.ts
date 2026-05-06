@@ -8,6 +8,7 @@ import logger from '../config/logger';
 import { uploadAsset, getAssetUrl } from '../services/storage.service';
 import { deleteFileFromFtp } from '../config/ftp-storage';
 import { thumbnailService, type VideoMetadata } from '../services/thumbnail.service';
+import { generateAndUploadPoster } from '../services/asset-poster.service';
 import {
   remotionTemplatesRepository,
   remotionTemplateVersionsRepository,
@@ -412,13 +413,19 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
     const buffer = fs.readFileSync(filePath);
     const result = await uploadAsset(buffer, storagePath, file.mimetype);
 
-    cleanupFile(filePath);
-
     if (!result) {
+      cleanupFile(filePath);
       return res.status(500).json({ error: 'Échec upload FTP' });
     }
 
+    // ADR-110 — best-effort poster generation BEFORE local cleanup (same
+    // contract as uploadLibraryAsset). Cached so the next listLibraryAssets
+    // call surfaces it.
+    const posterUrl = await generateAndUploadPoster(filePath, storagePath);
+    cleanupFile(filePath);
+
     const publicUrl = getAssetUrl(storagePath);
+    setCachedMeta(publicUrl, metadata, posterUrl);
 
     if (prop_key) {
       const updatedDefaultProps = { ...(template.default_props as Record<string, unknown>), [prop_key]: publicUrl };
@@ -429,11 +436,13 @@ export const uploadTemplateAssetController = async (req: AuthRequest, res: Respo
       templateId: id,
       prop_key: prop_key ?? '(studio-v2)',
       url: publicUrl,
+      posterUrl,
       pixFmt: metadata.pixFmt,
       hasAlpha: metadata.hasAlpha,
     });
     res.json({
       url: publicUrl,
+      posterUrl,
       prop_key: prop_key ?? null,
       pixFmt: metadata.pixFmt,
       hasAlpha: metadata.hasAlpha,
@@ -837,23 +846,33 @@ const assetIdFromUrl = (url: string): string =>
  */
 interface LibraryAssetCacheEntry {
   meta: VideoMetadata;
+  /** ADR-110 — JPEG poster URL generated at upload time, null on legacy/best-effort failure. */
+  posterUrl: string | null;
   cachedAt: number;
 }
 const LIBRARY_ASSET_CACHE = new Map<string, LibraryAssetCacheEntry>();
 const LIBRARY_ASSET_CACHE_TTL_MS = 5 * 60 * 1000;
 
-const getCachedMeta = (url: string): VideoMetadata | null => {
+const getCachedEntry = (url: string): LibraryAssetCacheEntry | null => {
   const entry = LIBRARY_ASSET_CACHE.get(url);
   if (!entry) return null;
   if (Date.now() - entry.cachedAt > LIBRARY_ASSET_CACHE_TTL_MS) {
     LIBRARY_ASSET_CACHE.delete(url);
     return null;
   }
-  return entry.meta;
+  return entry;
 };
 
-const setCachedMeta = (url: string, meta: VideoMetadata): void => {
-  LIBRARY_ASSET_CACHE.set(url, { meta, cachedAt: Date.now() });
+const getCachedMeta = (url: string): VideoMetadata | null => {
+  return getCachedEntry(url)?.meta ?? null;
+};
+
+const setCachedMeta = (
+  url: string,
+  meta: VideoMetadata,
+  posterUrl: string | null = null,
+): void => {
+  LIBRARY_ASSET_CACHE.set(url, { meta, posterUrl, cachedAt: Date.now() });
 };
 
 /**
@@ -867,10 +886,16 @@ export const listLibraryAssets = async (_req: AuthRequest, res: Response) => {
   try {
     const rows = await templateStudioRepository.listDistinctLayerAssets();
     const assets = rows.map((r) => {
-      const meta = getCachedMeta(r.url);
+      const entry = getCachedEntry(r.url);
+      const meta = entry?.meta ?? null;
       return {
         id: assetIdFromUrl(r.url),
         url: r.url,
+        // ADR-110 — posterUrl is null when uncached (legacy upload) ; the
+        // dashboard falls back to <video preload="none"> in that case. The
+        // backfill:asset-posters npm script can retro-fit posters without
+        // a deploy.
+        posterUrl: entry?.posterUrl ?? null,
         durationMs: meta ? Math.round(meta.duration * 1000) : 0,
         width: meta?.width ?? 0,
         height: meta?.height ?? 0,
@@ -925,17 +950,25 @@ export const uploadLibraryAsset = async (req: AuthRequest, res: Response) => {
     const storagePath = `template-assets/library/${Date.now()}-${safeName}`;
     const buffer = fs.readFileSync(filePath);
     const result = await uploadAsset(buffer, storagePath, file.mimetype);
-    cleanupFile(filePath);
 
     if (!result) {
+      cleanupFile(filePath);
       return res.status(500).json({ error: 'Échec upload FTP' });
     }
 
+    // ADR-110 — best-effort poster generation BEFORE local cleanup. The
+    // dashboard renders <img src=posterUrl> in the asset library modal to
+    // avoid saturating the browser's VP8/VP9 decode slots when ≥6 cards
+    // mount at once. A null posterUrl falls back to <video preload="none">.
+    const posterUrl = await generateAndUploadPoster(filePath, storagePath);
+    cleanupFile(filePath);
+
     const publicUrl = getAssetUrl(storagePath);
-    setCachedMeta(publicUrl, metadata);
+    setCachedMeta(publicUrl, metadata, posterUrl);
 
     logger.info('Library asset uploaded', {
       url: publicUrl,
+      posterUrl,
       pixFmt: metadata.pixFmt,
       hasAlpha: metadata.hasAlpha,
     });
@@ -943,6 +976,7 @@ export const uploadLibraryAsset = async (req: AuthRequest, res: Response) => {
     res.status(201).json({
       id: assetIdFromUrl(publicUrl),
       url: publicUrl,
+      posterUrl,
       durationMs: Math.round(metadata.duration * 1000),
       width: metadata.width,
       height: metadata.height,
