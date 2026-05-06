@@ -4,6 +4,10 @@ node_modules*
 *.mov
 *.avi
 *.mkv
+
+# Remotion template assets — too heavy for git/CF Pages (>25 MiB),
+# served from FTP Hostinger in prod (ADR-075/077). Designers keep them locally.
+templates-remotion/public/*.webm
 dist/
 
 .angular/
