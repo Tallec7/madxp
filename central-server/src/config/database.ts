@@ -92,6 +92,18 @@ const statementTimeoutMs = parseInt(process.env.DB_STATEMENT_TIMEOUT || '8000', 
 const dbUrl = process.env.DATABASE_URL || '';
 const poolerMode = dbUrl.includes(':6543') ? 'transaction' : dbUrl.includes(':5432') ? 'session' : 'direct';
 
+// Guard ADR-070 : refuser de démarrer si DATABASE_URL pointe encore sur l'ancienne
+// instance Supabase orpheline. Sans ça, le serveur boot silencieusement contre des
+// données gelées (ou timeout) et provoque des faux diagnostics (cf. issue #863).
+if (dbUrl.includes('supabase.co')) {
+  const message =
+    'DATABASE_URL pointe sur l\'ancienne instance Supabase (ADR-070). ' +
+    'Bascule via `./scripts/use-prod-db.sh` ou met à jour central-server/.env ' +
+    'avec l\'URL Railway. Voir issue #863.';
+  logger.error(message, { dbUrlHost: dbUrl.replace(/:[^@]*@/, ':***@') });
+  throw new Error(message);
+}
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
   ssl: sslConfig,
