@@ -27,6 +27,8 @@
 
 ### 🧹 Pour l'équipe
 
+- **Sync-agent Pi : noms de fichiers vidéo alignés sur le backend** ([#868](https://github.com/Tallec7/neopro/pull/868), closes [#866](https://github.com/Tallec7/neopro/issues/866)) — le Pi téléchargeait les vidéos avec espaces dans le nom (`TV_PART07_KING JOUET.mp4`) tandis que le backend les stocke avec underscores (`TV_PART07_KING_JOUET.mp4`). Désync silencieuse qui cassait le matching cloud↔local du dashboard et compliquait le diagnostic prod (8 vidéos affectées sur le Pi Bottière). Sanitizer Pi reproduit désormais la logique exacte du backend. Investigation déclenchée par un screenshot Daisy 2026-05-06.
+- **Cleanup `.env` Supabase orpheline ouvert en issue** ([#863](https://github.com/Tallec7/neopro/issues/863)) — `central-server/.env` local pointe encore sur l'ancienne DB Supabase post-ADR-070. Source de faux diagnostics récurrents. À purger.
 - **POC validé : multi-display Fire Stick sans internet club** (session 2026-05-05/06, pas de PR — vision dans `.planning/firestick-poc/VISION.md`) — Fire Sticks Amazon (~30€) connectés au Wi-Fi du Pi peuvent diffuser Neopro sur N TVs supplémentaires d'un club, sans aucun internet requis. Permet de proposer du multi-écran à coût matériel divisé par 3 vs N Pi (~90€). Mécanisme : DNS hijack ciblé sur 2 endpoints Amazon + nginx local. Pas encore en prod, refonte propre planifiée en phase GSD dédiée (3-5j dev : auto-discovery MAC côté Pi + dashboard `displays-editor` étendu avec colonne "Récepteur").
 
 - **Refactor Remote V2 : extraction du service d'orchestration** ([#796](https://github.com/Tallec7/neopro/pull/796) + [#798](https://github.com/Tallec7/neopro/pull/798)) — `RemoteOrchestratorService` partagé V1/V2, prépare le sunset V1.
