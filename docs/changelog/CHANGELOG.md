@@ -1,3 +1,9 @@
+## [3.292.15](https://github.com/Tallec7/neopro/compare/v3.292.14...v3.292.15) (2026-05-06)
+
+### Bug Fixes
+
+- **ci:** remove invalid --verbose flag from wrangler pages deploy ([#877](https://github.com/Tallec7/neopro/issues/877)) ([99b5ecc](https://github.com/Tallec7/neopro/commit/99b5ecc2a89051c6c126009eb26e764cdb28b7b5)), closes [#865](https://github.com/Tallec7/neopro/issues/865) [#865](https://github.com/Tallec7/neopro/issues/865)
+
 ## [3.292.14](https://github.com/Tallec7/neopro/compare/v3.292.13...v3.292.14) (2026-05-06)
 
 ### Bug Fixes
