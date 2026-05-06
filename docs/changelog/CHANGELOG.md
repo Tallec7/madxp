@@ -1,3 +1,9 @@
+## [3.290.1](https://github.com/Tallec7/neopro/compare/v3.290.0...v3.290.1) (2026-05-06)
+
+### Bug Fixes
+
+- **template-studio-v3:** hide step placeholders properly when not active ([#848](https://github.com/Tallec7/neopro/issues/848)) ([6da7a17](https://github.com/Tallec7/neopro/commit/6da7a17acb7afb8cbb8c8d3769536f8f7cb9239a))
+
 # [3.290.0](https://github.com/Tallec7/neopro/compare/v3.289.0...v3.290.0) (2026-05-05)
 
 ### Features
