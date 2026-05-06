@@ -505,7 +505,7 @@ class SocketService {
     // Wire up event handlers — delegate to handler files
     const ctx = this.ctx;
     const handlers = {
-      heartbeat: (message: HeartbeatMessage) => handleHeartbeat(ctx, siteId, message),
+      heartbeat: (message: HeartbeatMessage, ack?: () => void) => handleHeartbeat(ctx, siteId, message, ack),
       command_result: (cmdResult: CommandResult) =>
         handleCommandResult(ctx, siteId, cmdResult, clearPendingConfig),
       deploy_progress: (progress: Record<string, unknown>) => handleDeployProgress(ctx, siteId, progress),

@@ -1,6 +1,12 @@
 /**
  * Heartbeat — periodic health reporting to central server.
  * Extracted from agent.js (ADR-044).
+ *
+ * Issue #824: lastSuccessfulHeartbeat is only updated when the server ACKs the
+ * heartbeat. In a TCP zombie state socket.emit() succeeds locally (data is
+ * buffered in the OS TCP send queue) without the server ever receiving it.
+ * Updating the timestamp unconditionally after emit() made the health check
+ * at startConnectionHealthCheck() blind to zombie connections for hours.
  */
 
 const logger = require('../logger');
@@ -9,6 +15,15 @@ const metricsCollector = require('../metrics');
 const { getVersionInfo } = require('../utils/version-info');
 const connectionStatus = require('./connection-status');
 const localSocket = require('./local-socket');
+
+// Zombie socket recoveries since last successful heartbeat ACK.
+// Included in the next heartbeat payload so the central server can count them
+// in Prometheus (neopro_sync_agent_zombie_socket_recoveries_total).
+let pendingZombieRecoveries = 0;
+
+function incrementZombieRecovery() {
+  pendingZombieRecoveries += 1;
+}
 
 /**
  * Fetch recording state from local Pi server via persistent connection.
@@ -125,7 +140,16 @@ async function sendHeartbeat(agent) {
         // Ignore — non-critical monitoring data
       }
 
-      agent.socket.emit('heartbeat', {
+      // Capture and reset the pending counter atomically before the emit so we
+      // don't lose increments that arrive while the ACK round-trip is in-flight.
+      const capturedZombieRecoveries = pendingZombieRecoveries;
+
+      // socket.timeout(5000).emit() sends the heartbeat and waits for a server
+      // ACK within 5 s. lastSuccessfulHeartbeat is ONLY updated when the server
+      // confirms receipt. In a TCP zombie state emit() would succeed locally
+      // (data buffered in OS TCP queue) but the ACK callback would time out,
+      // keeping lastSuccessfulHeartbeat stale so the health check can detect it.
+      agent.socket.timeout(5000).emit('heartbeat', {
         siteId: config.site.id,
         timestamp: Date.now(),
         metrics,
@@ -144,10 +168,25 @@ async function sendHeartbeat(agent) {
         dualDisplayActive: !!(hdmiStatus && hdmiStatus.hdmi0 && hdmiStatus.hdmi1),
         orphanServices: orphanServices || null,
         failedServices: failedServices || null,
+        zombieSocketRecoveries: capturedZombieRecoveries > 0 ? capturedZombieRecoveries : undefined,
+      }, (err) => {
+        if (!err) {
+          // Server confirmed receipt — connection is genuinely alive.
+          agent.lastSuccessfulHeartbeat = Date.now();
+          pendingZombieRecoveries = 0;
+        } else {
+          // ACK timed out — server did not receive the heartbeat within 5 s.
+          // This is the normal signature of a TCP zombie connection. Do NOT
+          // update lastSuccessfulHeartbeat so startConnectionHealthCheck() will
+          // detect the stale threshold (60 s) and force a reconnection.
+          logger.debug('Heartbeat ACK timeout — zombie state suspected', {
+            error: err.message,
+            timeSinceLastHeartbeat: agent.lastSuccessfulHeartbeat
+              ? Date.now() - agent.lastSuccessfulHeartbeat
+              : null,
+          });
+        }
       });
-
-      // Enregistrer le succès du heartbeat
-      agent.lastSuccessfulHeartbeat = Date.now();
 
       logger.debug('Heartbeat sent', {
         cpu: metrics.cpu,
@@ -217,6 +256,7 @@ function startConnectionHealthCheck(agent) {
         });
         agent.connected = false;
         connectionStatus.setConnected(false, 'health_check_stale_heartbeat');
+        incrementZombieRecovery();
 
         // Forcer déconnexion puis reconnexion propre
         if (agent.socket) {
@@ -247,4 +287,5 @@ module.exports = {
   sendHeartbeat,
   startHeartbeat,
   startConnectionHealthCheck,
+  incrementZombieRecovery,
 };
