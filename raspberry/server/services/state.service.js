@@ -79,6 +79,11 @@ class StateService {
       manualVideoVisible: false, // ADR-034: master signals when manual video is revealed
       updatedAt: Date.now(),
     };
+
+    // v4.0 Phase 5 — Fire Stick receivers auto-discovery (DETECT-01/02/03)
+    // Snapshot fed by ReceiversService via stateService.setReceivers() on each emit.
+    // Array<{ mac, kind, lastSeenAt, displayIndex: number | null }>
+    this._receivers = [];
   }
 
   // --- Score ---
@@ -266,6 +271,20 @@ class StateService {
     return this.getHdmiState();
   }
 
+  // --- Receivers (v4.0 Phase 5 — Fire Stick auto-discovery) ---
+  getReceivers() {
+    return this._receivers.map((r) => ({ ...r }));
+  }
+
+  setReceivers(receivers) {
+    if (!Array.isArray(receivers)) {
+      console.warn('[StateService] setReceivers ignored: input not an array');
+      return this.getReceivers();
+    }
+    this._receivers = receivers.map((r) => ({ ...r }));
+    return this.getReceivers();
+  }
+
   // --- TV Registration (Master-Slave) ---
   // Pi kiosk (displayType==='tv') always gets master priority.
   // If a kiosk registers and a non-kiosk master exists, the kiosk takes over.
@@ -364,6 +383,7 @@ class StateService {
       recordingState: this.getRecordingState(),
       loopState: this.getLoopState(),
       hdmiState: this.getHdmiState(),
+      receivers: this.getReceivers(),
     };
   }
 
