@@ -159,6 +159,9 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
 
     // Auto-creer un profil de configuration par defaut
+    // Pour les sites SaaS, on initialise avec les clés minimales pour éviter l'alerte saas_empty_profile
+    const defaultProfileConfiguration =
+      site_type === 'saas' ? { sponsors: [], categories: [], timeCategories: [] } : {};
     try {
       await configProfileRepository.create({
         siteId: id,
@@ -167,7 +170,7 @@ export const createSite = async (req: AuthRequest, res: Response) => {
         city: location?.city || undefined,
         sport: Array.isArray(sports) && sports.length > 0 ? sports[0] : undefined,
         isDefault: true,
-        configuration: {},
+        configuration: defaultProfileConfiguration,
         createdBy: req.user?.id,
       });
       logger.info('Default config profile created', { siteId: id });

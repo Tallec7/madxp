@@ -463,6 +463,36 @@ describe('SaaS mode guards (ADR-037)', () => {
     });
   });
 
+  // --- issue #842 : createSite must seed SaaS default profile with minimal keys ---
+  // Un profil par défaut avec configuration={} déclenche l'alerte saas_empty_profile
+  // toutes les ~30 min (checkEmptySaasProfiles). Le provisionnement doit injecter
+  // les clés minimales pour les sites SaaS dès la création.
+  it('sites.controller.ts createSite must use non-empty configuration for saas default profile (issue #842)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'sites.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const createFn = content.match(/export const createSite[\s\S]*?(?=export const \w|$)/);
+    expect(createFn).not.toBeNull();
+    const fnBody = createFn![0];
+    expect({
+      // Vérifie que la config du profil est conditionnée par site_type
+      hasConditionalConfig:
+        /site_type\s*===\s*['"]saas['"]/.test(fnBody) &&
+        fnBody.includes('defaultProfileConfiguration'),
+      // Vérifie que les 3 clés minimales sont présentes pour SaaS
+      hasSponsors: fnBody.includes("sponsors"),
+      hasCategories: fnBody.includes("categories"),
+      hasTimeCategories: fnBody.includes("timeCategories"),
+      // Vérifie que la config conditionnelle est bien passée au repository
+      passesConditionalConfig: fnBody.includes('configuration: defaultProfileConfiguration'),
+    }).toEqual({
+      hasConditionalConfig: true,
+      hasSponsors: true,
+      hasCategories: true,
+      hasTimeCategories: true,
+      passesConditionalConfig: true,
+    });
+  });
+
   // --- Site type in types/index.ts ---
   it('Site interface must include site_type field', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'types', 'index.ts');
