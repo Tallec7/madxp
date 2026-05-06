@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.0
-milestone_name: Multi-écrans Fire Stick
-status: roadmap_ready
-stopped_at: Roadmap v4.0 created — awaiting /gsd:plan-phase 4
-last_updated: '2026-05-06T10:30:00.000Z'
-last_activity: 2026-05-06 — Roadmap v4.0 créée (6 phases 4-9, 18/18 requirements mappés)
+milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
+status: "Phase 04 in progress — Plan 01 complete, Plan 02 next"
+stopped_at: Completed 04-data-01-PLAN.md (3 tasks, 3 commits)
+last_updated: "2026-05-06T09:53:59.587Z"
+last_activity: 2026-05-06 — Plan 04-data-01 complété (DisplayConfig.receiver type + Joi + migration backfill HDMI #0)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 4 — DATA — Modèle DisplayConfig étendu (not started)
-Plan: —
-Status: Roadmap v4.0 ready, awaiting `/gsd:plan-phase 4`
-Last activity: 2026-05-06 — Roadmap v4.0 créée (6 phases 4-9, coverage 18/18)
+Phase: 4 — DATA — Modèle DisplayConfig étendu (in progress)
+Plan: 01 complete (receiver-schema), 02 next (receiver-repository)
+Status: Plan 04-data-01 done — DisplayConfig.receiver type + migration + Joi validator (6 tests green)
+Last activity: 2026-05-06 — Plan 04-data-01 complété (3 commits: afe1823, 908d7ba, 6005000)
 
 ## Accumulated Context
 
@@ -38,6 +37,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Decisions (v4.0)
 
+- 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
+- 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - v4.0 = MVP terrain bénévole-grade (1 Pi + N Fire Sticks ~30€ par TV) — pivot infra multi-écrans
 - v4.1 (futur) = polish (TWA APK fullscreen, SaaS Fire Stick, MAC allowlist, captive auto-launch, Réassigner UX, alertes)
 - Research skippé — POC technique validé 2026-05-05 sur Pi RACC, vision détaillée dans `.planning/firestick-poc/VISION.md`
@@ -57,6 +58,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T10:30:00.000Z
-Stopped at: Roadmap v4.0 prête — phase 4 (DATA) à planifier
-Resume file: .planning/ROADMAP.md (phases 4-9)
+Last session: 2026-05-06T09:53:59.584Z
+Stopped at: Completed 04-data-01-PLAN.md (3 tasks, 3 commits)
+Resume file: None
