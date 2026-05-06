@@ -32,12 +32,21 @@ const METRICS_PERSIST_INTERVAL_MS = 5 * 60 * 1000;
 export async function handleHeartbeat(
   ctx: SocketContext,
   siteId: string,
-  message: HeartbeatMessage
+  message: HeartbeatMessage,
+  ack?: () => void
 ): Promise<void> {
   try {
     // Le heartbeat prouve que la connexion est vivante
     ctx.lastPongReceived.set(siteId, Date.now());
     metricsService.recordHeartbeat();
+
+    // ACK immediately — the Pi uses this to confirm the connection is genuinely
+    // alive and updates lastSuccessfulHeartbeat only on ACK receipt (issue #824).
+    ack?.();
+
+    if (message.zombieSocketRecoveries && message.zombieSocketRecoveries > 0) {
+      metricsService.recordZombieSocketRecovery(message.zombieSocketRecoveries);
+    }
 
     const now = Date.now();
     const lastInsert = ctx.lastMetricsInsertAt.get(siteId) ?? 0;

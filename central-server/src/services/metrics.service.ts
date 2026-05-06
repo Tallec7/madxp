@@ -534,6 +534,12 @@ const heartbeatsTotal = new Counter({
   registers: [register],
 });
 
+const zombieSocketRecoveriesTotal = new Counter({
+  name: 'neopro_sync_agent_zombie_socket_recoveries_total',
+  help: 'Total zombie socket recoveries detected by Pi sync-agent health check (issue #824)',
+  registers: [register],
+});
+
 // ============= Métriques Video Transition =============
 
 const videoTransitionEarlySwitchTotal = new Counter({
@@ -1301,6 +1307,12 @@ class MetricsService {
 
   recordHeartbeat(): void {
     heartbeatsTotal.inc();
+  }
+
+  recordZombieSocketRecovery(count = 1): void {
+    for (let i = 0; i < count; i++) {
+      zombieSocketRecoveriesTotal.inc();
+    }
   }
 
   recordKioskStatus(alive: number, restartCount: number): void {
