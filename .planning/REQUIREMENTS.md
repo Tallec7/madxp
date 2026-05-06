@@ -26,7 +26,7 @@
 
 - [ ] **DATA-01** : `DisplayConfig` JSONB étendu avec `receiver?: { kind: 'pi_native'|'firestick'|'browser', mac?, last_seen_at? }`
 - [ ] **DATA-02** : Migration safe : `displays` existants restent valides (defaults `pi_native` pour HDMI #0)
-- [ ] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
+- [x] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
 
 ### CLOUD — API + sync-agent
 
