@@ -1,6 +1,7 @@
 node_modules
 node_modules*
 *.mp4
+*.webm
 *.mov
 *.avi
 *.mkv

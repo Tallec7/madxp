@@ -294,4 +294,112 @@ describe('SiteRepository', () => {
       );
     });
   });
+
+  // --------------------------------------------------------------------------
+  // receiver methods (v4.0 DATA-03)
+  // --------------------------------------------------------------------------
+
+  describe('receiver methods (v4.0 DATA-03)', () => {
+    describe('getReceiverForDisplay', () => {
+      it('retourne le receiver existant', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{
+            displays: [
+              { index: 0, name: 'TV', type: 'tv', receiver: { kind: 'pi_native' } },
+              { index: 1, name: 'Bar', type: 'tv', receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF' } },
+            ],
+          }],
+        });
+
+        const r = await siteRepository.getReceiverForDisplay('site-1', 1);
+
+        expect(r).toEqual({ kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF' });
+      });
+
+      it('retourne null si display sans receiver', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ displays: [{ index: 0, name: 'TV', type: 'tv' }] }],
+        });
+
+        const r = await siteRepository.getReceiverForDisplay('site-1', 0);
+
+        expect(r).toBeNull();
+      });
+
+      it('retourne null si index hors borne', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ displays: [{ index: 0, name: 'TV', type: 'tv' }] }],
+        });
+
+        const r = await siteRepository.getReceiverForDisplay('site-1', 99);
+
+        expect(r).toBeNull();
+      });
+
+      it('retourne null si site inexistant', async () => {
+        mockQuery.mockResolvedValueOnce({ rows: [] });
+
+        const r = await siteRepository.getReceiverForDisplay('ghost', 0);
+
+        expect(r).toBeNull();
+      });
+    });
+
+    describe('setReceiver', () => {
+      it('écrit un firestick sans toucher les autres displays', async () => {
+        // SELECT (getDisplays)
+        mockQuery.mockResolvedValueOnce({
+          rows: [{
+            displays: [
+              { index: 0, name: 'TV', type: 'tv', receiver: { kind: 'pi_native' } },
+              { index: 1, name: 'Bar', type: 'tv' },
+            ],
+          }],
+        });
+        // UPDATE (updateDisplays)
+        mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+        await siteRepository.setReceiver('site-1', 1, {
+          kind: 'firestick',
+          mac: 'AA:BB:CC:DD:EE:FF',
+          last_seen_at: '2026-05-06T10:00:00Z',
+        });
+
+        expect(mockQuery).toHaveBeenCalledTimes(2);
+        const updateCall = mockQuery.mock.calls[1];
+        const payload = JSON.parse((updateCall[1] as unknown[])[0] as string);
+        expect(payload[0]).toEqual({ index: 0, name: 'TV', type: 'tv', receiver: { kind: 'pi_native' } });
+        expect(payload[1].receiver).toEqual({
+          kind: 'firestick',
+          mac: 'AA:BB:CC:DD:EE:FF',
+          last_seen_at: '2026-05-06T10:00:00Z',
+        });
+      });
+
+      it('désassigne avec null', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{
+            displays: [{ index: 0, name: 'TV', type: 'tv', receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF' } }],
+          }],
+        });
+        mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+        await siteRepository.setReceiver('site-1', 0, null);
+
+        const payload = JSON.parse((mockQuery.mock.calls[1][1] as unknown[])[0] as string);
+        expect(payload[0].receiver).toBeNull();
+      });
+
+      it('throw si index hors borne (pas de display fantôme)', async () => {
+        mockQuery.mockResolvedValueOnce({
+          rows: [{ displays: [{ index: 0, name: 'TV', type: 'tv' }] }],
+        });
+
+        await expect(
+          siteRepository.setReceiver('site-1', 99, { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF' })
+        ).rejects.toThrow(/display index 99 not found/);
+        expect(mockQuery).toHaveBeenCalledTimes(1); // pas d'UPDATE
+      });
+    });
+  });
 });

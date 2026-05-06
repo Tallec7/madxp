@@ -1022,6 +1022,13 @@ COMMENT ON COLUMN public.sites.wifi_psk_auth_tag IS 'ADR-074: 16-byte GCM auth t
 
 
 --
+-- Name: COLUMN sites.displays; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sites.displays IS 'N-display config: [{index, name, type, resolution, receiver?: {kind: pi_native|firestick|browser, mac?, last_seen_at?}}]. NULL = legacy dual (tv + secondary). HDMI #0 défaulte à receiver.kind=pi_native (v4.0 DATA-02).';
+
+
+--
 -- Name: COLUMN sites.wifi_ssid; Type: COMMENT; Schema: public; Owner: -
 --
 

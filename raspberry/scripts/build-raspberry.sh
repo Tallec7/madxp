@@ -378,6 +378,13 @@ cp -r dist/raspberry/browser/* ${DEPLOY_DIR}/webapp/
 # Copier la page captive portal (servie par nginx pour iOS/Android)
 [ -f "raspberry/captive-portal.html" ] && cp raspberry/captive-portal.html ${DEPLOY_DIR}/webapp/captive-portal.html
 
+# Phase 6 - CAPTIVE-03 : copier la page d'attente Fire Stick standalone
+# Servie par nginx via location = /captive/wait → /home/pi/neopro/webapp/firestick-wait.html
+if [ -f "raspberry/webapp-captive/firestick-wait.html" ]; then
+    cp raspberry/webapp-captive/firestick-wait.html ${DEPLOY_DIR}/webapp/firestick-wait.html
+    print_success "firestick-wait.html copiée → webapp/"
+fi
+
 # Modifier l'environnement dans le build pour pointer vers la config raspberry
 # (L'application utilisera automatiquement environment.raspberry.ts)
 

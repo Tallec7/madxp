@@ -15,6 +15,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <!-- Socket.IO client local (pas de CDN pour fonctionner hors-ligne) -->
     <script src="assets/socket.io.min.js"></script>
+    <!-- Phase 6 anti-flash : matche firestick-wait.html background pour éviter le flash blanc
+         pendant la décision du bootstrap router AppComponent (CAPTIVE-02, CAPTIVE-04). -->
+    <style>
+      html,
+      body {
+        background: #000000;
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
     <!-- Splash boot inline — s'affiche instantanément avant le bootstrap Angular.

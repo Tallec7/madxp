@@ -3504,3 +3504,72 @@ describe('Manual video launch latency invariants (ADR-057)', () => {
       .toEqual({ hasVisibleDelta: true });
   });
 });
+
+describe('Phase 6 — Fire Stick Captive Portal', () => {
+  const REPO_ROOT = path.resolve(__dirname, '../../../..');
+
+  it('dnsmasq.conf hijacks firetvcaptiveportal.com (CAPTIVE-01)', () => {
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/systemd/dnsmasq.conf'),
+      'utf8'
+    );
+    expect(conf).toContain('address=/firetvcaptiveportal.com/192.168.4.1');
+  });
+
+  it('dnsmasq.conf hijacks spectrum.s3.amazonaws.com (CAPTIVE-01)', () => {
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/systemd/dnsmasq.conf'),
+      'utf8'
+    );
+    expect(conf).toContain('address=/spectrum.s3.amazonaws.com/192.168.4.1');
+  });
+
+  it('nginx serves Fire OS kindle-wifi probe (CAPTIVE-01)', () => {
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/nginx/neopro-base.conf'),
+      'utf8'
+    );
+    expect(conf).toMatch(/location\s*=\s*\/kindle-wifi\/wifistub\.html/);
+    expect(conf).toContain('Success');
+  });
+
+  it('nginx proxies /api/captive/whoami with X-Real-IP forwarded (CAPTIVE-02)', () => {
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/nginx/neopro-base.conf'),
+      'utf8'
+    );
+    expect(conf).toContain('/api/captive/whoami');
+    expect(conf).toMatch(/proxy_set_header\s+X-Real-IP\s+\$remote_addr/);
+  });
+
+  it('nginx serves /captive/wait from firestick-wait.html (CAPTIVE-03)', () => {
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/nginx/neopro-base.conf'),
+      'utf8'
+    );
+    expect(conf).toContain('/captive/wait');
+    expect(conf).toContain('firestick-wait.html');
+  });
+
+  it('firestick-wait.html exists with required markers (CAPTIVE-03, CAPTIVE-04)', () => {
+    const html = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/webapp-captive/firestick-wait.html'),
+      'utf8'
+    );
+    expect(html).toContain('data-mac');
+    expect(html).toContain('connected-receivers-changed');
+    expect(html).toContain('/api/captive/whoami');
+    expect(html).toContain('/socket.io/socket.io.js');
+    expect(html).toContain('128px'); // UI-SPEC : MAC display
+  });
+
+  it('ADR-079 invariant: no DNAT 443 introduced by Phase 6', () => {
+    const iptables = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
+      'utf8'
+    );
+    // Aucune règle DNAT vers port 443 ni redirection depuis port 443
+    expect(iptables).not.toMatch(/--dport\s+443[^\n]*-j\s+DNAT/);
+    expect(iptables).not.toMatch(/--to-destination\s+\S+:443/);
+  });
+});

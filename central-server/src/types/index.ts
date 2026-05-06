@@ -91,12 +91,23 @@ export interface Site {
   displays?: DisplayConfig[] | null;
 }
 
-/** N-display configuration entry (PROP-002 Phase 5) */
+/** N-display configuration entry (PROP-002 Phase 5, étendu v4.0 DATA-01) */
 export interface DisplayConfig {
   index: number;
   name: string;
   type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
   resolution?: string; // e.g. '1920x1080', '1920x384'
+  /** v4.0: identité du récepteur physique. NULL ou absent = display non assigné. */
+  receiver?: DisplayReceiver | null;
+}
+
+/** v4.0 DATA-01: récepteur physique d'un display (Pi natif HDMI, Fire Stick WiFi, browser SaaS) */
+export interface DisplayReceiver {
+  kind: 'pi_native' | 'firestick' | 'browser';
+  /** MAC address (format 'XX:XX:XX:XX:XX:XX'). Requis pour firestick, optionnel sinon. */
+  mac?: string;
+  /** ISO 8601 timestamp de la dernière apparition observée par le Pi. */
+  last_seen_at?: string;
 }
 
 // Group types
