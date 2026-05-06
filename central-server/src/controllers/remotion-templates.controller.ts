@@ -863,10 +863,6 @@ const getCachedEntry = (url: string): LibraryAssetCacheEntry | null => {
   return entry;
 };
 
-const getCachedMeta = (url: string): VideoMetadata | null => {
-  return getCachedEntry(url)?.meta ?? null;
-};
-
 const setCachedMeta = (
   url: string,
   meta: VideoMetadata,
