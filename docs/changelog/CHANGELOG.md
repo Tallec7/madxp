@@ -1,3 +1,9 @@
+# [3.292.0](https://github.com/Tallec7/neopro/compare/v3.291.1...v3.292.0) (2026-05-06)
+
+### Features
+
+- **asset-poster:** thumbnails WebM dans l'asset modal Template Studio v3 ([#854](https://github.com/Tallec7/neopro/issues/854)) ([4b463ee](https://github.com/Tallec7/neopro/commit/4b463eed5ca5bb9f448564a38b0fc2ea8a74001b)), closes [#852](https://github.com/Tallec7/neopro/issues/852) [#843](https://github.com/Tallec7/neopro/issues/843) [#846](https://github.com/Tallec7/neopro/issues/846) [#848](https://github.com/Tallec7/neopro/issues/848) [#852](https://github.com/Tallec7/neopro/issues/852)
+
 ## [3.291.1](https://github.com/Tallec7/neopro/compare/v3.291.0...v3.291.1) (2026-05-06)
 
 ### Bug Fixes
