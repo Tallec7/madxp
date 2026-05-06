@@ -1,3 +1,9 @@
+## [3.291.1](https://github.com/Tallec7/neopro/compare/v3.291.0...v3.291.1) (2026-05-06)
+
+### Bug Fixes
+
+- **video-library:** normalize filenames for Pi↔cloud reconciliation (accents + spaces↔underscores) ([#853](https://github.com/Tallec7/neopro/issues/853)) ([8dc725c](https://github.com/Tallec7/neopro/commit/8dc725cf59570f1757dae4d7b54f55a90dfaffc5))
+
 # [3.291.0](https://github.com/Tallec7/neopro/compare/v3.290.2...v3.291.0) (2026-05-06)
 
 ### Features
