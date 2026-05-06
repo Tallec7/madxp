@@ -723,6 +723,11 @@
           "expr": "rate(neopro_network_recovery_attempts_total{job=~\"$job\"}[5m])",
           "legendFormat": "Recovery Attempts",
           "refId": "B"
+        },
+        {
+          "expr": "sum(increase(neopro_network_recovery_cycles_total{job=~\"$job\"}[1h])) by (site_id, interface)",
+          "legendFormat": "Cycles {{site_id}} ({{interface}})",
+          "refId": "C"
         }
       ],
       "title": "Network Rollbacks & Recovery",

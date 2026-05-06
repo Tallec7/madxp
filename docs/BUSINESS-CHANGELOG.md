@@ -23,6 +23,7 @@
 
 - **Fix incidents Pi NLF du 2 mai 2026** ([#821](https://github.com/Tallec7/neopro/pull/821) + [#828](https://github.com/Tallec7/neopro/pull/828) + [#829](https://github.com/Tallec7/neopro/pull/829)) — trois bugs : (1) ORA RADIO réapparaissait après sync même supprimé → central désormais autoritaire sur sponsors[] ; (2) login télécommande Angular cassé après admin panel → deux champs séparés `adminPassword`/`password` ; (3) kiosk Pi se redémarrait ~35s après boot (faux positif watchdog).
 - **Headers Chromium Private Network Access sur les vidéos nginx** ([#819](https://github.com/Tallec7/neopro/pull/819) + [#820](https://github.com/Tallec7/neopro/pull/820)) — Chrome 124+ bloquait silencieusement des requêtes vidéo locales Pi. Fix headers PNA + autoplay-with-sound.
+- **Watchdog réseau Pi plus réactif sur Wi-Fi instable** (issue [#823](https://github.com/Tallec7/neopro/issues/823)) — sur le réseau régie NLF (`NLFH-REGIE`, 6.5 Mbps), 2 coupures internet de 5+ min ont eu lieu pendant un match (2 mai 2026). Le watchdog épuisait ses 6 tentatives puis attendait 5 min avant de réessayer. Élargi à 8 tentatives + cooldown ramené à 2 min ; nouveau compteur Prometheus `neopro_network_recovery_cycles_total{site_id}` pour identifier les sites à réseau récurrent instable depuis Grafana.
 
 ### 🧹 Pour l'équipe
 

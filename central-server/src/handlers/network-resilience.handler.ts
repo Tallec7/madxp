@@ -215,3 +215,44 @@ export async function handleNetworkRecovered(
     logger.error('Error handling network_recovered:', { siteId, error });
   }
 }
+
+/**
+ * Issue #823 — Handle a network_recovery_cycle event from the Pi's NetworkWatchdog.
+ * Emitted when MAX_RECOVERY_ATTEMPTS is exhausted and the watchdog enters cooldown.
+ * Used to track recurring instability per site (Prometheus metric).
+ */
+export async function handleNetworkRecoveryCycle(
+  ctx: SocketContext,
+  siteId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  try {
+    const { interface: interfaceName, attempts, cooldownMs, issues, timestamp } = payload;
+    const iface = String(interfaceName || 'unknown');
+
+    logger.warn('Network recovery cycle exhausted on site', {
+      siteId,
+      interface: iface,
+      attempts,
+      cooldownMs,
+      issues,
+      watchdogTimestamp: timestamp,
+    });
+
+    metricsService.recordNetworkRecoveryCycle(siteId, iface);
+
+    const io = ctx.getIO();
+    if (io) {
+      io.to('dashboard').emit('network_recovery_cycle', {
+        siteId,
+        interface: iface,
+        attempts,
+        cooldownMs,
+        issues,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    logger.error('Error handling network_recovery_cycle:', { siteId, error });
+  }
+}

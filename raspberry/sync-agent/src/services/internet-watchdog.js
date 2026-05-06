@@ -697,6 +697,17 @@ async function internetWatchLoop(ctx) {
             recoveryAttempts: ctx.state.internet.recoveryAttempts,
             timestamp: new Date().toISOString(),
           });
+
+          // Issue #823 : un "cycle" = série de tentatives jusqu'au cooldown.
+          // Permet de tracker la fréquence des incidents par site (Prometheus).
+          ctx.socketRef.emit('network_recovery_cycle', {
+            siteId: config.site.id,
+            interface: 'internet',
+            attempts: ctx.state.internet.recoveryAttempts,
+            cooldownMs: ctx.RECOVERY_COOLDOWN,
+            issues: health.issues,
+            timestamp: new Date().toISOString(),
+          });
         }
       }
     }
