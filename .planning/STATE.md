@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 6 CAPTIVE — Plan 02 captive route /api/captive/whoami shipped (8/8 new + 168/168 total Jest tests green ; createCaptiveRouter wiré dans server.js)
-stopped_at: Completed 06-captive-02-PLAN.md
-last_updated: "2026-05-06T13:59:10.714Z"
-last_activity: "2026-05-06 — Plan 06-captive-02 complété (TDD : 3dbc5bc RED + 2ead49d GREEN + b54242e wire, 168/168 tests verts)"
+status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (dnsmasq DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme, 7 smoke tests Phase 6)
+stopped_at: Completed 06-captive-03-PLAN.md
+last_updated: "2026-05-06T14:00:14Z"
+last_activity: "2026-05-06 — Plan 06-captive-03 complété (commits 4db7348 feat + f5f796f test ; ADR-079 invariant respecté, aucun DNAT 443)"
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 9
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 ## Current Position
 
 Phase: 6 — CAPTIVE — Fire Stick → page Neopro (en cours)
-Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 in parallel (configs + wait page + install), 04 (Angular bootstrap router)
-Status: Phase 6 CAPTIVE — Plan 02 captive route /api/captive/whoami shipped (8/8 new + 168/168 total Jest tests green ; createCaptiveRouter wiré dans server.js)
-Last activity: 2026-05-06 — Plan 06-captive-02 complété (TDD : 3dbc5bc RED + 2ead49d GREEN + b54242e wire, 168/168 tests verts)
+Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 complete (configs + wait page + build + smoke), 04 (Angular bootstrap router)
+Status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme Socket.IO + polling 5s)
+Last activity: 2026-05-06 — Plan 06-captive-03 complété (commits 4db7348 feat + f5f796f test ; ADR-079 invariant respecté)
 Next: Plan 06-captive-04 — Angular bootstrap router (consume /api/captive/whoami)
 
 ## Accumulated Context
@@ -55,6 +55,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 06-captive-02: fallback résilient erreur fs (200 + displayIndex=null vs 5xx) — la MAC est connue, le bénévole peut assigner depuis dashboard
 - 06-captive-02: case-insensitive MAC compare au lookup boundary (toLowerCase côté requête + config) — defensive contre édition humaine de configuration.json
 - 06-captive-02: supertest@^7.2.2 ajouté en devDep raspberry/server (premier usage) — fondation pour futures routes testées HTTP
+- 06-captive-03: vanilla HTML standalone pour wait page (pas Angular) — boot avant Angular DL, servi par nginx static
+- 06-captive-03: dual mécanisme Socket.IO push (<200ms) + polling 5s safety net — Socket.IO peut échouer derrière proxy captif, polling = filet
+- 06-captive-03: DNS hijack restreint à 2 domaines Fire OS (pas de wildcard, pas clients3.google.com) — wildcards casseraient Android/iOS (rule .claude/rules/raspberry.md)
+- 06-captive-03: X-Real-IP forward obligatoire dans nginx proxy /api/captive/whoami — sans ça Express voit 127.0.0.1, MAC lookup échoue
+- 06-captive-03: window.location.replace (pas href=) pour éviter pollution historique sur télécommande Fire Stick
 - 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
 - 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
@@ -78,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T13:59:10.707Z
-Stopped at: Completed 06-captive-02-PLAN.md
+Last session: 2026-05-06T14:01:15.154Z
+Stopped at: Completed 06-captive-03-PLAN.md
 Resume file: None

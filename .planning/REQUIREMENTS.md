@@ -17,7 +17,7 @@
 
 ### CAPTIVE — Fire Stick → page Neopro
 
-- [ ] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
+- [x] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
 - [x] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
 - [x] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
 - [x] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
@@ -81,8 +81,8 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 | DETECT-03    | Phase 5 (DETECT)    | TBD  |
 | CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD  |
 | CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD  |
-| CAPTIVE-03   | Phase 6 (CAPTIVE)   | TBD  |
-| CAPTIVE-04   | Phase 6 (CAPTIVE)   | TBD  |
+| CAPTIVE-03   | Phase 6 (CAPTIVE)   | 06-captive-03 |
+| CAPTIVE-04   | Phase 6 (CAPTIVE)   | 06-captive-03 |
 | CLOUD-01     | Phase 7 (CLOUD)     | TBD  |
 | CLOUD-02     | Phase 7 (CLOUD)     | TBD  |
 | CLOUD-03     | Phase 7 (CLOUD)     | TBD  |
