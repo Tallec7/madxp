@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
 
@@ -11,6 +12,10 @@ const execAsync = util.promisify(exec);
  * pour détecter les MACs présentes sur `wlan0`. Calcule un diff de l'état précédent
  * vs courant et émet `connected-receivers-changed` à chaque transition (idempotent).
  *
+ * Plan 05-detect-02 ajoute un cache local résilient
+ * (`/home/pi/neopro/.receivers-cache.json`) pour persister le mapping MAC↔display
+ * assigné, restauré au reboot sans appel cloud.
+ *
  * Pattern reproduit depuis `hdmi.service.js` (PROP-002 phase 5) — classe avec état
  * interne, parsing fs, fallback chains, pas de cache TTL (état refresh à chaque tick).
  *
@@ -22,6 +27,12 @@ const execAsync = util.promisify(exec);
 const LEASES_PATH = '/var/lib/misc/dnsmasq.leases';
 const LEASES_POLL_MS = 10000; // 10s
 const ARP_POLL_MS = 30000; // 30s
+
+const CACHE_PATH = path.join(
+  process.env.NEOPRO_ROOT || '/home/pi/neopro',
+  '.receivers-cache.json'
+);
+const CACHE_VERSION = 1;
 
 // OUI Amazon (3 premiers octets MAC, lowercase) — Fire TV / Fire Stick
 const AMAZON_OUIS = [
@@ -41,7 +52,7 @@ const ARP_LINE_REGEX = /at ([0-9a-f:]{17}) \[ether\] on wlan0/gi;
 
 class ReceiversService {
   constructor() {
-    /** @type {Map<string, { kind: string, lastSeenAt: string }>} */
+    /** @type {Map<string, { kind: string, lastSeenAt: string, displayIndex: number|null }>} */
     this._state = new Map();
     this._lastLeasesMtime = 0;
     this._io = null;
@@ -51,11 +62,15 @@ class ReceiversService {
 
   /**
    * Démarre les polls (10s leases / 30s ARP) + scan initial immédiat.
+   * Charge d'abord le cache local pour résilience reboot (cf. Plan 05-detect-02).
    * @param {object} io - Instance Socket.IO (doit exposer `.emit(event, payload)`)
    */
   start(io) {
     this._io = io;
     console.info('[Receivers] Service started');
+
+    // Restore mapping from local cache BEFORE the first scan (offline-resilient).
+    this.loadCache();
 
     this._leasesInterval = setInterval(() => this._scanLeases(), LEASES_POLL_MS);
     this._arpInterval = setInterval(() => {
@@ -91,12 +106,136 @@ class ReceiversService {
   }
 
   /**
-   * @returns {Array<{mac: string, kind: string, lastSeenAt: string}>}
+   * @returns {Array<{mac: string, kind: string, lastSeenAt: string, displayIndex: number|null}>}
    */
   getReceivers() {
     return Array.from(this._state.entries())
-      .map(([mac, v]) => ({ mac, ...v }))
+      .map(([mac, v]) => ({
+        mac,
+        kind: v.kind,
+        lastSeenAt: v.lastSeenAt,
+        displayIndex: v.displayIndex ?? null,
+      }))
       .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+  }
+
+  /**
+   * Charge le cache local et hydrate `_state`. Synchrone, best-effort.
+   * Tolère ENOENT, JSON corrompu, version inconnue (warn + state vide, pas de throw).
+   */
+  loadCache() {
+    let content;
+    try {
+      content = fs.readFileSync(CACHE_PATH, 'utf8');
+    } catch (err) {
+      if (err && err.code === 'ENOENT') {
+        return; // No cache yet — first boot
+      }
+      console.warn('[Receivers] cache read failed:', err.message);
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (err) {
+      console.warn('[Receivers] cache JSON corrupt:', err.message);
+      return;
+    }
+
+    if (!parsed || parsed.version !== CACHE_VERSION) {
+      console.warn(`[Receivers] cache version mismatch (got=${parsed && parsed.version}, expected=${CACHE_VERSION})`);
+      return;
+    }
+
+    if (!Array.isArray(parsed.assignments)) {
+      return;
+    }
+
+    let restored = 0;
+    for (const entry of parsed.assignments) {
+      if (!entry || typeof entry.mac !== 'string') continue;
+      const mac = entry.mac.toLowerCase();
+      if (!MAC_REGEX.test(mac)) continue;
+      const kind = entry.kind === 'firestick' || entry.kind === 'browser'
+        ? entry.kind
+        : this._inferKind(mac);
+      const displayIndex = typeof entry.displayIndex === 'number' ? entry.displayIndex : null;
+      const lastSeenAt = typeof entry.lastSeenAt === 'string'
+        ? entry.lastSeenAt
+        : new Date(0).toISOString();
+      this._state.set(mac, { kind, lastSeenAt, displayIndex });
+      restored += 1;
+    }
+
+    console.info(`[Receivers] cache restored count=${restored}`);
+  }
+
+  /**
+   * Persiste atomiquement le mapping courant (`tmp` + `rename`).
+   * Best-effort : log warn en cas d'échec, ne throw pas.
+   */
+  saveCache() {
+    const assignments = Array.from(this._state.entries()).map(([mac, v]) => ({
+      mac,
+      kind: v.kind,
+      displayIndex: v.displayIndex ?? null,
+      lastSeenAt: v.lastSeenAt,
+    }));
+    const payload = {
+      version: CACHE_VERSION,
+      savedAt: new Date().toISOString(),
+      assignments,
+    };
+    const tmpPath = CACHE_PATH + '.tmp';
+    try {
+      fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2));
+      fs.renameSync(tmpPath, CACHE_PATH);
+    } catch (err) {
+      console.warn('[Receivers] cache write failed:', err.message);
+    }
+  }
+
+  /**
+   * Assigne un displayIndex à une MAC. Crée l'entry si inconnue (kind inféré).
+   * Persiste immédiatement le cache + émet `connected-receivers-changed`.
+   * @param {string} mac
+   * @param {number} displayIndex
+   */
+  assignDisplay(mac, displayIndex) {
+    if (typeof mac !== 'string' || !MAC_REGEX.test(mac)) {
+      console.warn('[Receivers] assignDisplay: invalid mac', mac);
+      return;
+    }
+    const macLower = mac.toLowerCase();
+    const existing = this._state.get(macLower);
+    const nowIso = new Date().toISOString();
+    this._state.set(macLower, {
+      kind: existing?.kind || this._inferKind(macLower),
+      lastSeenAt: existing?.lastSeenAt || nowIso,
+      displayIndex,
+    });
+    this.saveCache();
+    this._emitChange();
+    console.info(`[Receivers] assigned mac=${macLower} displayIndex=${displayIndex}`);
+  }
+
+  /**
+   * Retire l'assignement (displayIndex = null) mais préserve l'entry.
+   * @param {string} mac
+   */
+  unassignDisplay(mac) {
+    if (typeof mac !== 'string' || !MAC_REGEX.test(mac)) {
+      console.warn('[Receivers] unassignDisplay: invalid mac', mac);
+      return;
+    }
+    const macLower = mac.toLowerCase();
+    const existing = this._state.get(macLower);
+    if (!existing) return;
+    this._state.set(macLower, { ...existing, displayIndex: null });
+    this.saveCache();
+    this._emitChange();
+    console.info(`[Receivers] unassigned mac=${macLower}`);
   }
 
   /**
@@ -158,7 +297,11 @@ class ReceiversService {
     // Add / update
     for (const mac of currentMacs) {
       if (!this._state.has(mac)) {
-        this._state.set(mac, { kind: this._inferKind(mac), lastSeenAt: nowIso });
+        this._state.set(mac, {
+          kind: this._inferKind(mac),
+          lastSeenAt: nowIso,
+          displayIndex: null,
+        });
         changed = true;
         console.info(`[Receivers] connected mac=${mac} kind=${this._state.get(mac).kind}`);
       } else {
@@ -168,9 +311,15 @@ class ReceiversService {
       }
     }
 
-    // Remove disappeared MACs
+    // Remove disappeared MACs — but ONLY if they are NOT assigned (Plan 02 :
+    // une MAC assignée temporairement offline reste dans le state pour
+    // résilience reboot / Fire Stick éteint).
     for (const mac of Array.from(this._state.keys())) {
       if (!currentMacs.has(mac)) {
+        const entry = this._state.get(mac);
+        if (entry && entry.displayIndex != null) {
+          continue; // preserved (assigned)
+        }
         this._state.delete(mac);
         changed = true;
         console.info(`[Receivers] disconnected mac=${mac}`);
@@ -208,7 +357,11 @@ class ReceiversService {
         // Refresh lastSeenAt only — not a state change
         this._state.get(mac).lastSeenAt = nowIso;
       } else {
-        this._state.set(mac, { kind: this._inferKind(mac), lastSeenAt: nowIso });
+        this._state.set(mac, {
+          kind: this._inferKind(mac),
+          lastSeenAt: nowIso,
+          displayIndex: null,
+        });
         changed = true;
         console.info(`[Receivers] connected (via ARP) mac=${mac} kind=${this._state.get(mac).kind}`);
       }
