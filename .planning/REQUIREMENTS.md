@@ -14,15 +14,15 @@
 
 ### Wizard de création (WIZARD)
 
-- [ ] **WIZARD-01**: Super_admin peut créer un template via un wizard 4 étapes (Identité → Fonds animés → Zones modifiables → Options club)
-- [ ] **WIZARD-02**: L'étape 1 (Identité) crée immédiatement une row DB ; les étapes suivantes font des PATCH — jamais de perte en cas de fermeture navigateur
-- [ ] **WIZARD-03**: La navigation retour dans le wizard préserve toutes les données saisies sans les effacer
+- [x] **WIZARD-01**: Super_admin peut créer un template via un wizard 4 étapes (Identité → Fonds animés → Zones modifiables → Options club) — DONE 2026-05-05 (Plan 01-fondations-05)
+- [x] **WIZARD-02**: L'étape 1 (Identité) crée immédiatement une row DB ; les étapes suivantes font des PATCH — jamais de perte en cas de fermeture navigateur — DONE 2026-05-05 (Plan 01-fondations-03)
+- [x] **WIZARD-03**: La navigation retour dans le wizard préserve toutes les données saisies sans les effacer — DONE 2026-05-05 (Plan 01-fondations-03)
 - [x] **WIZARD-04**: Super_admin peut réordonner les fonds animés (layers) par drag-and-drop dans l'étape 2 — DONE 2026-05-05 (Plan 01-fondations-04)
 - [x] **WIZARD-05**: Super_admin peut configurer les propriétés d'une zone (libellé, police, taille, couleur, alignement, limite caractères, condition d'apparition) dans l'étape 3 — DONE 2026-05-05 (Plan 01-fondations-04)
 
 ### Duplication (DUP)
 
-- [ ] **DUP-01**: Super_admin peut dupliquer n'importe quel template via un bouton "Dupliquer" sur la card ; le clone s'ouvre directement à l'étape 3
+- [x] **DUP-01**: Super_admin peut dupliquer n'importe quel template via un bouton "Dupliquer" sur la card ; le clone s'ouvre directement à l'étape 3 — DONE 2026-05-05 (Plan 01-fondations-05)
 - [x] **DUP-02**: La duplication clone atomiquement les 6 tables liées en une seule transaction DB (`neopro_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_options`, `template_packshot_refs`) ; les `file_url` des WebM sont partagées (pas copiées physiquement)
 
 ### Aperçu temps réel (PREV)
@@ -33,7 +33,7 @@
 
 ### Vocabulaire métier & UX (UX)
 
-- [ ] **UX-01**: Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun jargon DB : "fond animé" et non "layer", "zone modifiable" et non "slot")
+- [x] **UX-01**: Toute l'interface wizard utilise exclusivement du vocabulaire métier (aucun jargon DB : "fond animé" et non "layer", "zone modifiable" et non "slot") — DONE 2026-05-05 (Plan 02-ux-interactive-01)
 - [x] **UX-02**: Le type d'animation est présenté sous forme de cards visuelles nommées (Apparition, Glissement, Zoom arrière, Logo Pop) — aucun paramètre numérique (scaleFrom/scaleTo) n'est exposé à l'utilisateur
 - [x] **UX-03**: L'étape 4 affiche automatiquement quelles zones sont reliées à chaque option via `visible_if` ("✓ 2 zones reliées à cette option")
 
@@ -90,17 +90,17 @@
 | ASSET-01    | Phase 1 (A) | Done (plan 02) |
 | ASSET-02    | Phase 1 (A) | Done (plan 01) |
 | ASSET-03    | Phase 1 (A) | Done (plan 01) |
-| WIZARD-01   | Phase 1 (A) | Pending        |
-| WIZARD-02   | Phase 1 (A) | Pending        |
-| WIZARD-03   | Phase 1 (A) | Pending        |
+| WIZARD-01   | Phase 1 (A) | Done (plan 05) |
+| WIZARD-02   | Phase 1 (A) | Done (plan 03) |
+| WIZARD-03   | Phase 1 (A) | Done (plan 03) |
 | WIZARD-04   | Phase 1 (A) | Done (Plan 04) |
 | WIZARD-05   | Phase 1 (A) | Done (Plan 04) |
-| DUP-01      | Phase 1 (A) | Pending        |
+| DUP-01      | Phase 1 (A) | Done (plan 05) |
 | DUP-02      | Phase 1 (A) | Done (plan 01) |
 | PREV-01     | Phase 2 (B) | Complete       |
 | PREV-02     | Phase 2 (B) | Complete       |
 | PREV-03     | Phase 2 (B) | Complete       |
-| UX-01       | Phase 2 (B) | Pending        |
+| UX-01       | Phase 2 (B) | Complete       |
 | UX-02       | Phase 2 (B) | Complete       |
 | UX-03       | Phase 2 (B) | Complete       |
 | PUB-01      | Phase 3 (C) | Complete       |
@@ -119,4 +119,4 @@
 ---
 
 _Requirements defined: 2026-05-05_
-_Last updated: 2026-05-05 — milestone v3.0 initial definition (ADR-110 + research)_
+_Last updated: 2026-05-06 — doc sync: WIZARD-01/02/03, DUP-01, UX-01 checkboxes updated to match VERIFICATION.md (audit v3.0)_
