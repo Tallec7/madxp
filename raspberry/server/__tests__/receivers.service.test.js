@@ -346,6 +346,41 @@ describe('ReceiversService', () => {
     });
   });
 
+  // ─────────────── Plan 06-captive-01 (resolveMacByIp) ───────────────
+
+  describe('resolveMacByIp', () => {
+    it('returns mac for IP seen in dnsmasq.leases', () => {
+      mockLeases('1700000000 0c:43:f9:36:04:77 192.168.4.23 firetv abcd\n', 1000);
+      service._scanLeases();
+      expect(service.resolveMacByIp('192.168.4.23')).toBe('0c:43:f9:36:04:77');
+    });
+
+    it('normalizes IPv4-mapped IPv6 (::ffff:X) before lookup', () => {
+      mockLeases('1700000000 0c:43:f9:36:04:77 192.168.4.23 firetv abcd\n', 1000);
+      service._scanLeases();
+      expect(service.resolveMacByIp('::ffff:192.168.4.23')).toBe('0c:43:f9:36:04:77');
+    });
+
+    it('returns null for unknown IP', () => {
+      mockLeases('1700000000 0c:43:f9:36:04:77 192.168.4.23 firetv abcd\n', 1000);
+      service._scanLeases();
+      expect(service.resolveMacByIp('10.0.0.99')).toBeNull();
+    });
+
+    it('returns null for falsy / non-string input', () => {
+      expect(service.resolveMacByIp('')).toBeNull();
+      expect(service.resolveMacByIp(null)).toBeNull();
+      expect(service.resolveMacByIp(undefined)).toBeNull();
+      expect(service.resolveMacByIp(42)).toBeNull();
+    });
+
+    it('_scanArp populates _ipToMac when arp output includes IP', async () => {
+      mockArp('? (192.168.4.42) at 08:e6:38:aa:bb:cc [ether] on wlan0\n');
+      await service._scanArp();
+      expect(service.resolveMacByIp('192.168.4.42')).toBe('08:e6:38:aa:bb:cc');
+    });
+  });
+
   describe('_scanLeases — assigned MAC preservation', () => {
     it('preserves an assigned MAC (displayIndex !== null) when it disappears from leases', () => {
       service.start(io);
