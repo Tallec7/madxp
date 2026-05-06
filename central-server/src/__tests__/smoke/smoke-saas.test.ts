@@ -2945,6 +2945,57 @@ describe('ADR-068 — signed URL video stream proxy', () => {
       signsWithSiteId: true,
     });
   });
+
+  // PR-849 — Régression coût egress Railway
+  // Quand le proxy est OFF (défaut), buildPublicVideoUrl NE DOIT PAS produire
+  // d'URL Railway (/api/videos/stream). Assertion négative : si quelqu'un
+  // retire le gate ou inverse la condition, ce test faillit.
+  it('buildPublicVideoUrl OFF-path must not contain /api/videos/stream (no Railway egress)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    // Extraire uniquement la branche "proxy disabled" (retour anticipé)
+    // La structure est : if (proxy !== 'true') { return getVideoUrl(...) }
+    // On vérifie que le return dans la branche OFF ne référence pas le stream path
+    const offBranchMatch = content.match(/VIDEO_STREAM_PROXY_ENABLED[^}]+return getVideoUrl[^}]+}/s);
+    expect(offBranchMatch).not.toBeNull();
+    const offBranch = offBranchMatch![0];
+    expect(offBranch).not.toMatch(/\/api\/videos\/stream/);
+    expect(offBranch).not.toMatch(/signVideoStreamToken/);
+  });
+
+  // PR-849 — Garde-fou anti-proxy accidentel
+  // Seul video-stream.controller.ts est autorisé à faire pipe(res) sur du
+  // contenu binaire vidéo. Un nouveau controller qui piperrait des vidéos
+  // via Railway recréerait le problème d'egress silencieusement.
+  it('no controller other than video-stream.controller should pipe binary video upstream (egress guard)', () => {
+    const controllersDir = path.join(repoRoot, 'central-server', 'src', 'controllers');
+    const files = fs.readdirSync(controllersDir).filter(f => f.endsWith('.ts') && !f.includes('.test.'));
+    const allowlisted = ['video-stream.controller.ts', 'admin.controller.ts']; // admin = logs (text, not video)
+    const violations: string[] = [];
+    for (const file of files) {
+      if (allowlisted.includes(file)) continue;
+      const src = fs.readFileSync(path.join(controllersDir, file), 'utf8');
+      // Détecter pipe(res) couplé à un fetch upstream (pattern proxy vidéo)
+      if (/Readable\.fromWeb[\s\S]{0,300}\.pipe\(res\)/.test(src)) {
+        violations.push(file);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  // PR-849 — Le .htaccess CORS doit rester dans le repo
+  // Si quelqu'un supprime cors-htaccess.txt, les freeze-frame transitions
+  // SaaS cassent (SecurityError canvas) sans message d'erreur évident.
+  it('cors-htaccess.txt must exist in scripts-ops and contain required CORS headers', () => {
+    const htaccessPath = path.join(repoRoot, 'central-server', 'scripts-ops', 'cors-htaccess.txt');
+    expect(fs.existsSync(htaccessPath)).toBe(true);
+    const content = fs.readFileSync(htaccessPath, 'utf8');
+    expect({
+      hasAllowOrigin: content.includes('Access-Control-Allow-Origin'),
+      hasCORP: content.includes('Cross-Origin-Resource-Policy'),
+      hasExposeHeaders: content.includes('Access-Control-Expose-Headers'),
+    }).toEqual({ hasAllowOrigin: true, hasCORP: true, hasExposeHeaders: true });
+  });
 });
 
 // ============================================================
