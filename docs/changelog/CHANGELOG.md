@@ -1,3 +1,9 @@
+## [3.292.14](https://github.com/Tallec7/neopro/compare/v3.292.13...v3.292.14) (2026-05-06)
+
+### Bug Fixes
+
+- **ci:** pin wrangler version to unblock prod Cloudflare Pages deploy ([#876](https://github.com/Tallec7/neopro/issues/876)) ([35ac048](https://github.com/Tallec7/neopro/commit/35ac0481d43ffcd21492ba3baa5150beb7f0b7cf)), closes [#865](https://github.com/Tallec7/neopro/issues/865)
+
 ## [3.292.13](https://github.com/Tallec7/neopro/compare/v3.292.12...v3.292.13) (2026-05-06)
 
 ### Bug Fixes
