@@ -321,6 +321,71 @@ describe('StateService', () => {
       expect(state).toHaveProperty('loopState');
       expect(state).toHaveProperty('hdmiState');
     });
+
+    it('should include receivers array (v4.0 Phase 5)', () => {
+      const state = service.getFullState();
+      expect(state).toHaveProperty('receivers');
+      expect(Array.isArray(state.receivers)).toBe(true);
+      expect(state.receivers).toEqual([]);
+    });
+  });
+
+  // --- Receivers (v4.0 Phase 5 — Fire Stick auto-discovery) ---
+  describe('Receivers (v4.0 Phase 5)', () => {
+    it('should return empty array by default', () => {
+      expect(service.getReceivers()).toEqual([]);
+    });
+
+    it('should set and get receivers', () => {
+      const sample = [
+        { mac: '0c:43:f9:36:04:77', kind: 'firestick', lastSeenAt: '2026-05-06T10:00:00Z', displayIndex: 1 },
+      ];
+      service.setReceivers(sample);
+      const got = service.getReceivers();
+      expect(got).toHaveLength(1);
+      expect(got[0].mac).toBe('0c:43:f9:36:04:77');
+      expect(got[0].kind).toBe('firestick');
+      expect(got[0].displayIndex).toBe(1);
+    });
+
+    it('should return defensive copies (external mutation does not affect state)', () => {
+      const sample = [
+        { mac: '0c:43:f9:36:04:77', kind: 'firestick', lastSeenAt: '2026-05-06T10:00:00Z', displayIndex: 1 },
+      ];
+      service.setReceivers(sample);
+      const got = service.getReceivers();
+      got[0].mac = 'mutated';
+      got.push({ mac: 'extra', kind: 'browser', lastSeenAt: 'x', displayIndex: null });
+      const second = service.getReceivers();
+      expect(second).toHaveLength(1);
+      expect(second[0].mac).toBe('0c:43:f9:36:04:77');
+    });
+
+    it('should ignore non-array input (warn + keep state)', () => {
+      const sample = [
+        { mac: '0c:43:f9:36:04:77', kind: 'firestick', lastSeenAt: '2026-05-06T10:00:00Z', displayIndex: 1 },
+      ];
+      service.setReceivers(sample);
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      service.setReceivers('not-an-array');
+      service.setReceivers(null);
+      service.setReceivers({ mac: 'oops' });
+      warnSpy.mockRestore();
+      const got = service.getReceivers();
+      expect(got).toHaveLength(1);
+      expect(got[0].mac).toBe('0c:43:f9:36:04:77');
+    });
+
+    it('should expose receivers in getFullState()', () => {
+      const sample = [
+        { mac: '0c:43:f9:36:04:77', kind: 'firestick', lastSeenAt: '2026-05-06T10:00:00Z', displayIndex: 0 },
+        { mac: '08:e6:38:aa:bb:cc', kind: 'firestick', lastSeenAt: '2026-05-06T10:01:00Z', displayIndex: 1 },
+      ];
+      service.setReceivers(sample);
+      const full = service.getFullState();
+      expect(full.receivers).toHaveLength(2);
+      expect(full.receivers[0].mac).toBe('0c:43:f9:36:04:77');
+    });
   });
 
   // --- Transition Metrics (E-23 US-23.4.5 + US-23.6.5) ---
