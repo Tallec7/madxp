@@ -1,3 +1,9 @@
+## [3.292.11](https://github.com/Tallec7/neopro/compare/v3.292.10...v3.292.11) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** untrack all WebM template assets ([#873](https://github.com/Tallec7/neopro/issues/873)) ([3e70b9d](https://github.com/Tallec7/neopro/commit/3e70b9d7d3a8b6ef13c96af49e2af3e40bf0e73f)), closes [#870](https://github.com/Tallec7/neopro/issues/870)
+
 ## [3.292.10](https://github.com/Tallec7/neopro/compare/v3.292.9...v3.292.10) (2026-05-06)
 
 ### Bug Fixes
