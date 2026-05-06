@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.0
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-gate-publication-05-PLAN.md (Milestone v3.0 COMPLETE)
-last_updated: '2026-05-05T21:08:40.008Z'
-last_activity: 2026-05-05 — Phase 3 Plan 05 livré (Publish/Unpublish endpoints validation-gated + audit Winston structured + UX card unpublish ConfirmDialog FR + smoke 5/5 RED→GREEN + UAT 11/11 approved)
+milestone_name: Template Studio v3
+status: complete
+stopped_at: Milestone v3.0 archived 2026-05-06
+last_updated: '2026-05-06T09:00:00.000Z'
+last_activity: 2026-05-06 — Milestone v3.0 complete. 22/22 requirements, 3 phases, 14 plans, 53 smoke tests GREEN. Archived to .planning/milestones/.
 progress:
   total_phases: 3
   completed_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Phase 1 — Fondations (ready to plan)
+**Current focus:** Milestone v3.0 SHIPPED — Next: /gsd:new-milestone
 
 ## Current Position
 
