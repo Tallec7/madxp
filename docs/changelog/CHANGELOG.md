@@ -1,3 +1,9 @@
+## [3.292.8](https://github.com/Tallec7/neopro/compare/v3.292.7...v3.292.8) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** exclude templates-remotion WebM assets from Cloudflare Pages ([#870](https://github.com/Tallec7/neopro/issues/870)) ([79ac310](https://github.com/Tallec7/neopro/commit/79ac31058658d10a70096fb5eadc112bca087263))
+
 ## [3.292.7](https://github.com/Tallec7/neopro/compare/v3.292.6...v3.292.7) (2026-05-06)
 
 ### Bug Fixes
