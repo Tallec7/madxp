@@ -35,6 +35,9 @@ docker compose up prometheus alertmanager grafana  # Grafana (3000) + Prometheus
 # Base de données
 cd central-server && npm run db:migrate
 
+# Template Studio v3 — backfill posters JPEG des assets WebM legacy (post-merge feature poster)
+cd central-server && npm run backfill:asset-posters
+
 # Pitch deck / métriques de traction
 source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
 ```

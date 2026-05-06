@@ -105,6 +105,7 @@ Le vocabulaire UI est **strictement métier**. Le vocabulaire DB reste technique
 - Page dédiée `/templates/assets` accessible depuis sidebar admin
 - Grille des WebM uploadés sur Railway (et FTP en v3.1)
 - Métadonnées affichées : nom, durée, dimensions, flag alpha, date upload, nombre de templates qui l'utilisent
+- **Poster JPEG** généré côté serveur via ffmpeg (1ère frame, scale 320:-1, q=2) à l'upload — stocké à `<basename>.poster.jpg` dans le même répertoire FTP. Affiché en `<img loading="lazy" decoding="async">` dans la modale ; fallback `<video preload="none">` pour les assets legacy sans poster (préserve le freeze-fix). Backfill via `npm run backfill:asset-posters`.
 - Upload super_admin only, refus si :
   - Pas WebM
   - Pas alpha quand prévu pour layer avec slot `respect_alpha=true`
