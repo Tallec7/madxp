@@ -8,8 +8,9 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../config/logger';
-import { SiteConfiguration } from '../types';
+import { SiteConfiguration, SiteSponsorDeployment } from '../types';
 import { configProfileRepository } from '../repositories/config-profile.repository';
+import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
@@ -107,4 +108,88 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
   });
 
   return profiles.length;
+}
+
+/**
+ * Build the enriched neoProContent payload for a site's default profile.
+ *
+ * Used by callers that need to push a fresh `update_config` to the Pi after
+ * a server-side mutation that invalidates the deployed config (cascade delete,
+ * video replace, FTP orphan unlink). Goes through the full enrichment chain
+ * (sponsor auto-resolution → display variants → analytics metadata) per
+ * `.claude/rules/services.md`.
+ *
+ * Returns null if the site has no default profile (SaaS provisioning hole or
+ * caller mistakenly invoked on a non-Pi site).
+ */
+export async function buildEnrichedNeoProContent(
+  siteId: string
+): Promise<{
+  neoProContent: {
+    sponsors: SiteConfiguration['sponsors'];
+    categories: SiteConfiguration['categories'];
+    timeCategories: SiteConfiguration['timeCategories'];
+    categoryMappings: SiteConfiguration['categoryMappings'];
+    liveScoreEnabled: SiteConfiguration['liveScoreEnabled'];
+    scoreOverlay: SiteConfiguration['scoreOverlay'];
+    siteSponsors: SiteSponsorDeployment[];
+  };
+} | null> {
+  const profile = await configProfileRepository.findDefaultForSite(siteId);
+  if (!profile) {
+    logger.warn('buildEnrichedNeoProContent: no default profile for site', { siteId });
+    return null;
+  }
+
+  let enrichedConfig = profile.configuration as SiteConfiguration;
+
+  try {
+    const { configuration: resolved, resolved: resolvedCount } =
+      await autoResolveSponsorIds(siteId, enrichedConfig);
+    if (resolvedCount > 0) enrichedConfig = resolved;
+  } catch (err) {
+    logger.warn('Sponsor auto-resolution failed in buildEnrichedNeoProContent (non-fatal)', {
+      siteId, error: (err as Error).message,
+    });
+  }
+
+  try {
+    await enrichConfigWithDisplayVariants(enrichedConfig);
+  } catch (err) {
+    logger.warn('Display variant enrichment failed in buildEnrichedNeoProContent (non-fatal)', {
+      siteId, error: (err as Error).message,
+    });
+  }
+
+  try {
+    await enrichConfigWithAnalyticsMetadata(enrichedConfig);
+  } catch (err) {
+    logger.warn('Analytics metadata enrichment failed in buildEnrichedNeoProContent (non-fatal)', {
+      siteId, error: (err as Error).message,
+    });
+  }
+
+  const sponsorRows = await siteSponsorRepository.getSponsorsForDeployment(siteId);
+  const siteSponsors: SiteSponsorDeployment[] = sponsorRows.map(row => ({
+    id: row.id,
+    name: row.name,
+    display_name: row.name,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+    logoUrl: row.logo_url,
+    videoFilenames: row.video_filenames || [],
+    isActive: true,
+  }));
+
+  return {
+    neoProContent: {
+      sponsors: enrichedConfig.sponsors,
+      categories: enrichedConfig.categories,
+      timeCategories: enrichedConfig.timeCategories,
+      categoryMappings: enrichedConfig.categoryMappings,
+      liveScoreEnabled: enrichedConfig.liveScoreEnabled,
+      scoreOverlay: enrichedConfig.scoreOverlay,
+      siteSponsors,
+    },
+  };
 }
