@@ -201,16 +201,17 @@ describe('Smoke — Cloudflare Pages SaaS routing (ADR-071)', () => {
     expect(workflow).toContain('base href="/saas/"');
   });
 
-  it('release.yml gate les jobs Hostinger sur vars.HOSTING != "cloudflare"', () => {
+  it('release.yml ADR-071 phase 4 : jobs Hostinger supprimés, deploy-frontend-cloudflare seul job frontend', () => {
     const workflow = read('.github/workflows/release.yml');
-    // Les 2 jobs Hostinger lftp doivent être gated pour permettre la bascule
-    // par flippage de vars.HOSTING (cf. ADR-071 phase 2).
-    expect(/deploy-dashboard:[\s\S]{0,500}vars\.HOSTING\s*!=\s*['"]cloudflare/.test(workflow)).toBe(
-      true,
-    );
-    expect(/deploy-saas:[\s\S]{0,500}vars\.HOSTING\s*!=\s*['"]cloudflare/.test(workflow)).toBe(
-      true,
-    );
+    // Phase 4 cleanup : les jobs lftp Hostinger ont été supprimés — plus de
+    // chemin alternatif Hostinger. Le gate vars.HOSTING n'a plus de raison
+    // d'exister.
+    expect(workflow).not.toContain('deploy-dashboard:');
+    expect(workflow).not.toContain('deploy-saas:');
+    expect(workflow).not.toContain('vars.HOSTING');
+    // Le seul job frontend restant est deploy-frontend-cloudflare, activé
+    // uniquement par new_release_published (plus de gate HOSTING).
+    expect(workflow).toContain('deploy-frontend-cloudflare:');
   });
 
   // ------------ SPEC ------------
