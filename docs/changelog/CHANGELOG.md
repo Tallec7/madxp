@@ -1,3 +1,9 @@
+# [3.291.0](https://github.com/Tallec7/neopro/compare/v3.290.2...v3.291.0) (2026-05-06)
+
+### Features
+
+- **template-studio-v3:** asset poster thumbnails (ffmpeg first-frame JPEG) ([#852](https://github.com/Tallec7/neopro/issues/852)) ([6678225](https://github.com/Tallec7/neopro/commit/6678225d78cb13964c7612bf5764de8facc0acc3))
+
 ## [3.290.2](https://github.com/Tallec7/neopro/compare/v3.290.1...v3.290.2) (2026-05-06)
 
 ### Bug Fixes
