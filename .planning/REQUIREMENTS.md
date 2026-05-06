@@ -18,7 +18,7 @@
 ### CAPTIVE — Fire Stick → page Neopro
 
 - [ ] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
-- [ ] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
+- [x] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
 - [ ] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
 - [ ] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
 
