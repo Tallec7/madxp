@@ -1,3 +1,9 @@
+## [3.292.5](https://github.com/Tallec7/neopro/compare/v3.292.4...v3.292.5) (2026-05-06)
+
+### Bug Fixes
+
+- **env:** refuse boot if DATABASE_URL points to orphaned Supabase (ADR-070) ([#864](https://github.com/Tallec7/neopro/issues/864)) ([b00ce98](https://github.com/Tallec7/neopro/commit/b00ce98c7e4c657741ac7d65d4e1cee60970879f)), closes [#863](https://github.com/Tallec7/neopro/issues/863)
+
 ## [3.292.4](https://github.com/Tallec7/neopro/compare/v3.292.3...v3.292.4) (2026-05-06)
 
 ### Bug Fixes
