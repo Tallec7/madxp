@@ -1,7 +1,7 @@
 ---
 phase: 6
 slug: captive-fire-stick-page-neopro
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-05-06
