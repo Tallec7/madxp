@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Multi-écrans Fire Stick
-status: planning
-stopped_at: Defining requirements
-last_updated: '2026-05-06T10:00:00.000Z'
-last_activity: 2026-05-06 — Milestone v4.0 started (Fire Stick POC validated 2026-05-05, vision approved)
+status: roadmap_ready
+stopped_at: Roadmap v4.0 created — awaiting /gsd:plan-phase 4
+last_updated: '2026-05-06T10:30:00.000Z'
+last_activity: 2026-05-06 — Roadmap v4.0 créée (6 phases 4-9, 18/18 requirements mappés)
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade). Defining requirements.
+**Current focus:** Milestone v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade). Roadmap prête, planification phase 4 à démarrer.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 4 — DATA — Modèle DisplayConfig étendu (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-06 — Milestone v4.0 started, research skipped (POC + pattern PROP-002 known)
+Status: Roadmap v4.0 ready, awaiting `/gsd:plan-phase 4`
+Last activity: 2026-05-06 — Roadmap v4.0 créée (6 phases 4-9, coverage 18/18)
 
 ## Accumulated Context
 
@@ -44,6 +44,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Pattern à reproduire : `hdmi.service.js` (EDID/CEC) → `receivers.service.js` (dnsmasq.leases + ARP)
 - Source de vérité = DB cloud ; le Pi cache localement pour résilience offline
 - Modèle de données = extension `DisplayConfig` JSONB (PROP-002 réutilisé), pas de nouvelle table
+- Roadmap 6 phases : DATA → DETECT → CAPTIVE → CLOUD → DASHBOARD → OBSERVE (dépendances data-first, cloud après Pi-side, observe en dernier)
 
 ### Pending Todos
 
@@ -56,6 +57,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T10:00:00.000Z
-Stopped at: Milestone v4.0 — defining requirements
-Resume file: .planning/firestick-poc/VISION.md (vision source)
+Last session: 2026-05-06T10:30:00.000Z
+Stopped at: Roadmap v4.0 prête — phase 4 (DATA) à planifier
+Resume file: .planning/ROADMAP.md (phases 4-9)
