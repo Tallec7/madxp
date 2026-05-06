@@ -1,3 +1,10 @@
+## [3.292.4](https://github.com/Tallec7/neopro/compare/v3.292.3...v3.292.4) (2026-05-06)
+
+### Bug Fixes
+
+- **deploy-progress:** throttle in_progress DB writes to protect PG pool ([#861](https://github.com/Tallec7/neopro/issues/861)) ([aff4959](https://github.com/Tallec7/neopro/commit/aff4959f37bb07dd58681afa33e5b7fe615be56c))
+- **sync-agent:** zombie socket non détecté 11h — heartbeat ACK obligatoire ([#824](https://github.com/Tallec7/neopro/issues/824)) ([#859](https://github.com/Tallec7/neopro/issues/859)) ([58156d7](https://github.com/Tallec7/neopro/commit/58156d7c9b56942cbe3716d356d8808cfd1fe52d))
+
 ## [3.292.3](https://github.com/Tallec7/neopro/compare/v3.292.2...v3.292.3) (2026-05-06)
 
 ### Bug Fixes
