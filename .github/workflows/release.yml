@@ -242,7 +242,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: dist/central-dashboard
-          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main
+          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main --verbose
 
       - name: Verify deployment
         run: |
