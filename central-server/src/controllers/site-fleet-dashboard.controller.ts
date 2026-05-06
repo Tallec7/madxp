@@ -468,10 +468,20 @@ export const unlinkSiteFtpOrphan = async (req: AuthRequest, res: Response) => {
       if (site?.site_type === 'saas') {
         socketService.emitSaasConfigUpdated(siteId, { updatedBy: req.user?.email });
       } else if (site?.site_type === 'pi') {
-        await commandQueueService.sendOrQueue(siteId, 'update_config', {
-          reason: 'ftp_orphan_unlinked',
-          videoId,
-        });
+        const { buildEnrichedNeoProContent } = await import('../services/profile-sync.service');
+        const built = await buildEnrichedNeoProContent(siteId);
+        if (!built) {
+          logger.warn('Skipping update_config after orphan unlink: no default profile', {
+            siteId, videoId,
+          });
+        } else {
+          await commandQueueService.sendOrQueue(siteId, 'update_config', {
+            neoProContent: built.neoProContent,
+            mode: 'merge',
+            reason: 'ftp_orphan_unlinked',
+            videoId,
+          });
+        }
       }
     } catch (notifyErr) {
       logger.warn('Failed to notify site after orphan unlink', {
