@@ -1,3 +1,9 @@
+## [3.290.2](https://github.com/Tallec7/neopro/compare/v3.290.1...v3.290.2) (2026-05-06)
+
+### Bug Fixes
+
+- **infra:** disable Railway video stream proxy, serve videos directly from Hostinger FTP ([#849](https://github.com/Tallec7/neopro/issues/849)) ([c2d378f](https://github.com/Tallec7/neopro/commit/c2d378ff46d5a3e25072634f12dd556d3473a541))
+
 ## [3.290.1](https://github.com/Tallec7/neopro/compare/v3.290.0...v3.290.1) (2026-05-06)
 
 ### Bug Fixes
