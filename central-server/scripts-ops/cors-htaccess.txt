@@ -1,0 +1,11 @@
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Range, Content-Type"
+    Header always set Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges"
+    Header always set Cross-Origin-Resource-Policy "cross-origin"
+</IfModule>
+
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=204,L]
