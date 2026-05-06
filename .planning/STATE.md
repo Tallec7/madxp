@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: completed
+status: Phase 4 DATA shipped — DisplayConfig.receiver type + Joi + migration + repository methods (24/24 tests green sur site.repository.test.ts)
 stopped_at: Completed 04-data-02-PLAN.md (1 task TDD, 2 commits b54931f + c9fe025)
-last_updated: "2026-05-06T10:01:16.160Z"
-last_activity: "2026-05-06 — Plan 04-data-01 complété (3 commits: afe1823, 908d7ba, 6005000)"
+last_updated: "2026-05-06T10:04:18.165Z"
+last_activity: "2026-05-06 — Plan 04-data-02 complété (TDD : b54931f RED + c9fe025 GREEN)"
 progress:
   total_phases: 6
   completed_phases: 1
