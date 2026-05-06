@@ -24,6 +24,7 @@ const HdmiService = require('./services/hdmi.service');
 const AuthService = require('./services/auth.service');
 const ProfilePinService = require('./services/profile-pin.service');
 const HotspotService = require('./services/hotspot.service');
+const ReceiversService = require('./services/receivers.service');
 
 const stateService = new StateService();
 const licenseService = new LicenseService({ licenseCachePath: LICENSE_CACHE_PATH });
@@ -41,6 +42,7 @@ const analyticsBuffer = new BufferService({
 const hdmiService = new HdmiService();
 const profilePinService = new ProfilePinService({ profilesDir: PROFILES_DIR });
 const hotspotService = new HotspotService({ configPath: CONFIG_PATH });
+const receiversService = new ReceiversService();
 
 // ---------------------------------------------------------------------------
 // Express + HTTP + Socket.IO
@@ -140,6 +142,25 @@ app.use(createHotspotRouter({ hotspotService }));
 // ---------------------------------------------------------------------------
 const registerSocketHandlers = require('./socket/handlers');
 registerSocketHandlers({ io, stateService, configPath: CONFIG_PATH, hdmiService });
+
+// ---------------------------------------------------------------------------
+// v4.0 Phase 5 — Fire Stick receivers auto-discovery (DETECT-01/02/03)
+// ---------------------------------------------------------------------------
+// Wrapper around io.emit so each `connected-receivers-changed` event also
+// updates the stateService snapshot. This keeps getFullState() (initial
+// sync on TV/remote connect) coherent with the live socket emissions.
+const ioForReceivers = {
+  emit: (event, data) => {
+    if (event === 'connected-receivers-changed' && data && Array.isArray(data.receivers)) {
+      stateService.setReceivers(data.receivers);
+    }
+    io.emit(event, data);
+  },
+};
+receiversService.start(ioForReceivers);
+
+process.on('SIGTERM', () => { try { receiversService.stop(); } catch (_e) { /* noop */ } });
+process.on('SIGINT', () => { try { receiversService.stop(); } catch (_e) { /* noop */ } });
 
 // ---------------------------------------------------------------------------
 // Start server
