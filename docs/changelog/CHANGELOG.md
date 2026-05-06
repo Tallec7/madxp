@@ -1,3 +1,21 @@
+## [3.292.14](https://github.com/Tallec7/neopro/compare/v3.292.13...v3.292.14) (2026-05-06)
+
+### Bug Fixes
+
+- **ci:** pin wrangler version to unblock prod Cloudflare Pages deploy ([#876](https://github.com/Tallec7/neopro/issues/876)) ([35ac048](https://github.com/Tallec7/neopro/commit/35ac0481d43ffcd21492ba3baa5150beb7f0b7cf)), closes [#865](https://github.com/Tallec7/neopro/issues/865)
+
+## [3.292.13](https://github.com/Tallec7/neopro/compare/v3.292.12...v3.292.13) (2026-05-06)
+
+### Bug Fixes
+
+- **pages:** untrack webm assets on milestone-v4 branch ([#875](https://github.com/Tallec7/neopro/issues/875)) ([242f5e5](https://github.com/Tallec7/neopro/commit/242f5e5023d7ae32f7053d705ad55aca3688e881)), closes [#0](https://github.com/Tallec7/neopro/issues/0) [#0](https://github.com/Tallec7/neopro/issues/0) [#000](https://github.com/Tallec7/neopro/issues/000) [#000](https://github.com/Tallec7/neopro/issues/000)
+
+## [3.292.12](https://github.com/Tallec7/neopro/compare/v3.292.11...v3.292.12) (2026-05-06)
+
+### Bug Fixes
+
+- **content:** update_config payload + audit orphan site_sponsors ([#874](https://github.com/Tallec7/neopro/issues/874)) ([3a2c6a3](https://github.com/Tallec7/neopro/commit/3a2c6a3289b7ceac5121666fcd61afbff8906688))
+
 ## [3.292.11](https://github.com/Tallec7/neopro/compare/v3.292.10...v3.292.11) (2026-05-06)
 
 ### Bug Fixes

@@ -13,6 +13,7 @@ import { calculateChecksum, calculateChecksumFromFile, fixMulterEncoding, genera
 import socketService from '../services/socket.service';
 import { commandQueueService } from '../services/command-queue.service';
 import { auditService } from '../services/audit.service';
+import { buildEnrichedNeoProContent } from '../services/profile-sync.service';
 
 // Upload/download/delete functions are provided by storage.service.ts
 // - uploadVideo(buffer, filename, contentType)
@@ -658,7 +659,16 @@ export const deleteVideo = async (req: AuthRequest, res: Response) => {
           if (site.site_type === 'saas') {
             socketService.emitSaasConfigUpdated(site.id, { updatedBy: req.user?.email });
           } else if (site.site_type === 'pi') {
+            const built = await buildEnrichedNeoProContent(site.id);
+            if (!built) {
+              logger.warn('Skipping update_config after cascade delete: no default profile', {
+                siteId: site.id, videoId: id,
+              });
+              continue;
+            }
             await commandQueueService.sendOrQueue(site.id, 'update_config', {
+              neoProContent: built.neoProContent,
+              mode: 'merge',
               reason: 'video_deleted_cascade',
               videoId: id,
             });
@@ -855,7 +865,16 @@ export const replaceVideo = async (req: AuthRequest, res: Response) => {
           if (site.site_type === 'saas') {
             socketService.emitSaasConfigUpdated(site.id, { updatedBy: req.user?.email });
           } else if (site.site_type === 'pi') {
+            const built = await buildEnrichedNeoProContent(site.id);
+            if (!built) {
+              logger.warn('Skipping update_config after replace: no default profile', {
+                siteId: site.id, videoId: id,
+              });
+              continue;
+            }
             await commandQueueService.sendOrQueue(site.id, 'update_config', {
+              neoProContent: built.neoProContent,
+              mode: 'merge',
               reason: 'video_replaced',
               videoId: id,
             });

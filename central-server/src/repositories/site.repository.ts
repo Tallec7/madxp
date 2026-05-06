@@ -1,7 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 
-import { Site, UserRole, DisplayConfig } from '../types';
+import { Site, UserRole, DisplayConfig, DisplayReceiver } from '../types';
 import { findRowsReferencingInJsonb } from '../utils/jsonb-references';
 import { BaseRepository } from './base.repository';
 
@@ -795,7 +795,7 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   }
 
   // --------------------------------------------------------------------------
-  // N-Display management (Phase 5H)
+  // N-Display management (Phase 5H + v4.0 receivers)
   // --------------------------------------------------------------------------
 
   /**
@@ -818,6 +818,45 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       'UPDATE sites SET displays = $1::jsonb, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(displays), id]
     );
+  }
+
+  /**
+   * v4.0 DATA-03: lit le récepteur assigné à un display.
+   * Compose getDisplays() — pas de query() direct (repository pattern).
+   * @returns le receiver, ou null si display non assigné, index hors borne, ou site inexistant.
+   */
+  async getReceiverForDisplay(
+    siteId: string,
+    displayIndex: number
+  ): Promise<DisplayReceiver | null> {
+    const displays = await this.getDisplays(siteId);
+    const display = displays.find(d => d.index === displayIndex);
+    if (!display) return null;
+    return display.receiver ?? null;
+  }
+
+  /**
+   * v4.0 DATA-03: écrit (ou désassigne avec `null`) le récepteur d'un display.
+   * Préserve les autres displays. Throw si le displayIndex n'existe pas
+   * (ne crée jamais de display fantôme — la création passe par updateDisplays).
+   * Compose getDisplays() + updateDisplays() — pas de query() direct.
+   */
+  async setReceiver(
+    siteId: string,
+    displayIndex: number,
+    receiver: DisplayReceiver | null
+  ): Promise<void> {
+    const displays = await this.getDisplays(siteId);
+    const target = displays.find(d => d.index === displayIndex);
+    if (!target) {
+      throw new Error(
+        `setReceiver: display index ${displayIndex} not found for site ${siteId}`
+      );
+    }
+    const updated: DisplayConfig[] = displays.map(d =>
+      d.index === displayIndex ? { ...d, receiver } : d
+    );
+    await this.updateDisplays(siteId, updated);
   }
 
   // --------------------------------------------------------------------------

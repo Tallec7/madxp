@@ -143,6 +143,11 @@ export const schemas = {
         name: Joi.string().max(100).required(),
         type: Joi.string().pattern(/^[a-z0-9-]+$/).max(50).required(),
         resolution: Joi.string().pattern(/^\d{1,5}x\d{1,5}$/).max(20).optional(),
+        receiver: Joi.object({
+          kind: Joi.string().valid('pi_native', 'firestick', 'browser').required(),
+          mac: Joi.string().pattern(/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/).optional(),
+          last_seen_at: Joi.string().isoDate().optional(),
+        }).optional().allow(null),
       })
     ).min(1).max(20).required(),
   }),

@@ -11,22 +11,22 @@
 
 ### DETECT — Pi détecte les receivers
 
-- [ ] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
-- [ ] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
-- [ ] **DETECT-03** : Le Pi cache localement le mapping MAC↔display pour résilience offline (Pi off → recovery au reboot)
+- [x] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
+- [x] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
+- [x] **DETECT-03** : Le Pi cache localement le mapping MAC↔display pour résilience offline (Pi off → recovery au reboot)
 
 ### CAPTIVE — Fire Stick → page Neopro
 
-- [ ] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
-- [ ] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
-- [ ] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
-- [ ] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
+- [x] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
+- [x] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
+- [x] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
+- [x] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
 
 ### DATA — Modèle DisplayConfig étendu
 
 - [ ] **DATA-01** : `DisplayConfig` JSONB étendu avec `receiver?: { kind: 'pi_native'|'firestick'|'browser', mac?, last_seen_at? }`
 - [ ] **DATA-02** : Migration safe : `displays` existants restent valides (defaults `pi_native` pour HDMI #0)
-- [ ] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
+- [x] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
 
 ### CLOUD — API + sync-agent
 
@@ -81,8 +81,8 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 | DETECT-03    | Phase 5 (DETECT)    | TBD  |
 | CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD  |
 | CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD  |
-| CAPTIVE-03   | Phase 6 (CAPTIVE)   | TBD  |
-| CAPTIVE-04   | Phase 6 (CAPTIVE)   | TBD  |
+| CAPTIVE-03   | Phase 6 (CAPTIVE)   | 06-captive-03 |
+| CAPTIVE-04   | Phase 6 (CAPTIVE)   | 06-captive-03 |
 | CLOUD-01     | Phase 7 (CLOUD)     | TBD  |
 | CLOUD-02     | Phase 7 (CLOUD)     | TBD  |
 | CLOUD-03     | Phase 7 (CLOUD)     | TBD  |

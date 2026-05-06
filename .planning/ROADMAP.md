@@ -18,8 +18,8 @@
 
 ### v4.0 — Multi-écrans Fire Stick
 
-- [ ] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository
-- [ ] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local
+- [x] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository ✅ 2026-05-06
+- [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
 - [ ] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display
 - [ ] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected`
 - [ ] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
@@ -38,7 +38,9 @@
 2. Tous les sites existants en prod (NLF, RACC) restent fonctionnels après migration sans intervention manuelle (HDMI #0 défaulte à `pi_native`).
 3. Le code applicatif peut lire et écrire le récepteur d'un display via le repository (`getReceiverForDisplay`, `setReceiver`) sans toucher au JSONB brut.
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [x] 04-data-01-receiver-schema-PLAN.md — Migration backfill + DisplayConfig.receiver TS + Joi (DATA-01, DATA-02) ✅ 2026-05-06
+- [x] 04-data-02-receiver-repository-PLAN.md — siteRepository.getReceiverForDisplay + setReceiver (DATA-03) ✅ 2026-05-06
 
 ### Phase 5: DETECT — Pi détecte les receivers
 
@@ -51,7 +53,10 @@
 2. Quand un Fire Stick quitte le hotspot, sa disparition est détectée et émise via socket.
 3. Après reboot du Pi, le mapping MAC↔display assigné est restauré sans appel cloud (cache local).
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 05-detect-01-receivers-service-PLAN.md — receivers.service.js core (dnsmasq.leases watch + ARP fallback + diff + emit) (DETECT-01, DETECT-02)
+- [ ] 05-detect-02-cache-resilience-PLAN.md — Cache local résilient .receivers-cache.json (loadCache/saveCache + assignDisplay/unassignDisplay + reboot scenario tests) (DETECT-03)
+- [ ] 05-detect-03-state-syncagent-integration-PLAN.md — state.service.js extension + server.js wiring + sync-agent whitelist (DETECT-01, DETECT-02, DETECT-03)
 
 ### Phase 6: CAPTIVE — Fire Stick → page Neopro
 
@@ -66,7 +71,11 @@
 4. Une fois l'admin assigne la MAC à distance, la page Fire Stick bascule automatiquement vers Neopro sans toucher la télécommande Fire Stick.
 5. Les configs `dnsmasq` + `nginx` sont déployées par `install.sh` / `prepare-image.sh` (pas de manuel sur chaque Pi).
 
-**Plans**: TBD
+**Plans**: 4 plans
+- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
+- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
 
 ### Phase 7: CLOUD — API + sync-agent
 
@@ -80,7 +89,11 @@
 3. Un event `receiver-detected` ou `receiver-disconnected` envoyé par le Pi est accepté par le sync-agent (whitelist) et traité côté cloud.
 4. Quand un admin assigne une MAC à un display côté cloud, le Pi reçoit l'assignation via socket et met à jour son cache local sans reboot.
 
-**Plans**: TBD
+**Plans**: 4 plans
+- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
+- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
 
 ### Phase 8: DASHBOARD — UX admin assignation
 
@@ -93,7 +106,11 @@
 2. Le bouton [Assigner ▾] ouvre un dropdown pré-rempli avec les MACs auto-détectées par le Pi (pas de champ texte libre).
 3. Le bouton [Désassigner] détache une MAC d'un display sans casser la configuration du display ni les autres assignations.
 
-**Plans**: TBD
+**Plans**: 4 plans
+- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
+- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
 
 ### Phase 9: OBSERVE — Métriques + smoke
 
@@ -105,7 +122,11 @@
 1. La métrique `neopro_receivers_total{site_id, status}` est exposée sur `/metrics` et incrémentée par les transitions detected/assigned/disconnected.
 2. La suite `smoke-receivers-discovery` échoue si l'event `receiver-detected` est retiré de la whitelist sync-agent, si la route API disparaît, si la colonne dashboard est retirée, ou si les configs nginx/dnsmasq ne sont plus posées par `install.sh`.
 
-**Plans**: TBD
+**Plans**: 4 plans
+- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
+- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
+- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
 
 ## Progress
 
@@ -114,8 +135,8 @@
 | 1. Fondations          | v3.0      | 5/5            | Complete    | 2026-05-05 |
 | 2. UX interactive      | v3.0      | 4/4            | Complete    | 2026-05-05 |
 | 3. Gate publication    | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 4. DATA                | v4.0      | 0/0            | Not started | -          |
-| 5. DETECT              | v4.0      | 0/0            | Not started | -          |
+| 4. DATA                | v4.0      | 1/2            | In Progress | -          |
+| 5. DETECT              | 3/3 | Complete   | 2026-05-06 | -          |
 | 6. CAPTIVE             | v4.0      | 0/0            | Not started | -          |
 | 7. CLOUD               | v4.0      | 0/0            | Not started | -          |
 | 8. DASHBOARD           | v4.0      | 0/0            | Not started | -          |
