@@ -135,7 +135,7 @@ describe('Deploy Video Handler', () => {
       const result = await deployVideo.execute(baseVideoData, jest.fn());
 
       expect(result.success).toBe(true);
-      expect(result.path).toContain('Test Video.mp4');
+      expect(result.path).toContain('Test_Video.mp4');
       expect(fs.ensureDir).toHaveBeenCalled();
     });
 
@@ -610,6 +610,26 @@ describe('Deploy Video Handler', () => {
       expect(result.success).toBe(true);
     });
 
+    // Régression issue #866 — le sanitizer doit aligner le filename Pi sur le
+    // storage_path backend (espaces → underscore, strip apostrophes/&) pour
+    // que le matching cloud↔local du dashboard fonctionne via tier 2 (filename
+    // exact lowercase).
+    it('aligns filename with backend storage_path (issue #866)', async () => {
+      setupDownloadMock();
+
+      const cases = [
+        { originalName: 'TV_PART07_KING JOUET.mp4', expected: 'TV_PART07_KING_JOUET.mp4' },
+        { originalName: "TV_PART01_L'AGENCE ET VOUS.mp4", expected: 'TV_PART01_LAGENCE_ET_VOUS.mp4' },
+        { originalName: 'TV_PART03_SPORT&WELNESS.mp4', expected: 'TV_PART03_SPORTWELNESS.mp4' },
+      ];
+
+      for (const { originalName, expected } of cases) {
+        const result = await deployVideo.execute({ ...baseVideoData, originalName }, jest.fn());
+        expect(result.success).toBe(true);
+        expect(result.path).toContain(expected);
+      }
+    });
+
     it('should generate a unique filename when the target already exists', async () => {
       setupDownloadMock();
 
@@ -624,7 +644,7 @@ describe('Deploy Video Handler', () => {
         if (p.includes('configuration.json')) return Promise.resolve(true);
         // First call for the exact path returns true (file exists)
         // Second call for (1) version returns false
-        if (p.includes('Test Video.mp4') && !p.includes('(1)')) {
+        if (p.includes('Test_Video.mp4') && !p.includes('(1)')) {
           return Promise.resolve(true);
         }
         return Promise.resolve(false);

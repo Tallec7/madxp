@@ -27,11 +27,18 @@ function sanitizeFilename(name) {
   const ext = path.extname(trimmed) || fallbackExt;
   const base = path.basename(trimmed, ext) || fallbackBase;
 
+  // Aligné sur le sanitizer backend (central-server/src/controllers/content.helpers.ts:52)
+  // pour que le filename local Pi matche le storage_path cloud (issue #866).
+  // Le backend produit p.ex. "L'AGENCE ET VOUS.mp4" → "LAGENCE_ET_VOUS.mp4".
   const safeBase = base
-    .replace(ILLEGAL_FILENAME_CHARS, '-')
-    .replace(/\s+/g, ' ')
-    .replace(/-+/g, '-')
-    .trim();
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')        // accents (É → e, È → e)
+    .replace(ILLEGAL_FILENAME_CHARS, '_')   // caractères interdits FS → _
+    .replace(/\s+/g, '_')                    // espaces → _
+    .replace(/[^a-zA-Z0-9_.-]/g, '')         // strip ponctuation (apostrophes, &, etc.)
+    .replace(/_+/g, '_')                     // collapse underscores
+    .replace(/^[_.-]+|[_.-]+$/g, '')         // trim leading/trailing _, ., -
+    .substring(0, 100);                      // limite backend
 
   const sanitizedBase = safeBase || fallbackBase;
   const safeExt = (ext || fallbackExt).replace(/[^a-zA-Z0-9.]/g, '').toLowerCase() || fallbackExt;
