@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Configuration } from '../interfaces/configuration.interface';
 import { Category } from '../interfaces/category.interface';
+import { environment } from '../../environments/environment';
 
 const MAX_PARALLEL = 2;
 const PRECACHE_PRIORITY: RequestPriority = 'low';
@@ -31,6 +32,13 @@ export class LanReceiverPrecacheService {
    */
   isLanReceiver(): boolean {
     if (typeof window === 'undefined') return false;
+    // Mode SaaS (ADR-037) : vidéos servies par CDN public (kalonpartners.bzh),
+    // pas par un nginx Pi local avec Cache-Control immutable. Le precache
+    // déclenche un download de toute la playlist via fetch(force-cache) qui
+    // peut deadlocker le write-lock cache HTTP de Chrome avec le <video>
+    // element jouant la même URL → stall (readyState=0, networkState=2)
+    // → boucle AbortError du watchdog. Skip systématique en SaaS.
+    if (environment.saasMode) return false;
     const host = window.location.hostname;
     if (!host) return false;
     if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
