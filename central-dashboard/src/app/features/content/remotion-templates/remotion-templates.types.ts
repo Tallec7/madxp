@@ -234,6 +234,14 @@ export interface AssetUploadResult {
 export interface WebmAssetMetadata {
   id: string;
   url: string;
+  /**
+   * ADR-110 — JPEG poster URL generated server-side at upload time
+   * (`<basename>.poster.jpg` in the same FTP folder). Null for legacy
+   * uploads predating the poster pipeline ; the dashboard falls back to
+   * `<video preload="none">` when null. Run the `backfill:asset-posters`
+   * server script to retro-fit legacy assets.
+   */
+  posterUrl: string | null;
   durationMs: number;
   width: number;
   height: number;
