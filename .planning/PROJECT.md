@@ -10,6 +10,7 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ## Current State
 
+**In progress:** v4.0 — Multi-écrans Fire Stick (started 2026-05-06)
 **Shipped:** v3.0 — Template Studio v3 (2026-05-06)
 
 - Wizard 5 étapes (Identité → Fonds → Zones → Options → Publication) opérationnel
@@ -42,12 +43,34 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ### Active
 
-<!-- Next milestone — à définir via /gsd:new-milestone -->
+**Current Milestone: v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)**
 
-- [ ] UI club portal : sélection template + saisie des 4-6 champs → génération vidéo joueur (v3.3)
-- [ ] Bibliothèque de fonds switchables côté club (`template_variants`) (v3.1)
-- [ ] Table `template_fonts` réelle en DB (v3.2 — ADR-110 §v3.2)
-- [ ] Versioning visuel / rollback templates (v3.4 — exploitera ADR-108)
+**Goal :** Un bénévole branche un Fire Stick sur une TV du club, l'admin assigne la MAC à distance depuis le dashboard, la TV affiche Neopro plein écran. Zéro déplacement technique.
+
+**Target features :**
+
+- Détection passive Pi-side des MACs connectées au hotspot (`receivers.service.js` — pattern HDMI mirror)
+- Captive portal Fire Stick (DNS hijack + nginx) → page Neopro assignée OU page d'attente avec MAC
+- Modèle `DisplayConfig.receiver` JSONB + migration safe (PROP-002 réutilisé)
+- API `/api/sites/:id/connected-receivers` + sync-agent event whitelist
+- Dashboard `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
+- Métriques `neopro_receivers_total` + smoke `smoke-receivers-discovery`
+
+**Future (déclencheurs explicites — v4.1+) :**
+
+- [ ] APK TWA fullscreen Fire Stick (trigger : retour terrain "URL bar Silk")
+- [ ] Scénario SaaS Fire Stick (token URL/cookie) (trigger : 1er client SaaS)
+- [ ] MAC allowlist hostapd (trigger : rotation PSK bloquante)
+- [ ] Captive auto-launch boot Silk (trigger : friction documentée)
+- [ ] Bouton "Réassigner" côté Fire Stick (trigger : déplacement TV)
+- [ ] Alertes Alertmanager Fire Stick offline (trigger : 2ᵉ client déployé)
+
+**Backlog Template Studio (futurs milestones) :**
+
+- [ ] UI club portal : sélection template + saisie des 4-6 champs → génération vidéo joueur (Template Studio v3.3)
+- [ ] Bibliothèque de fonds switchables côté club (`template_variants`) (Template Studio v3.1)
+- [ ] Table `template_fonts` réelle en DB (Template Studio v3.2 — ADR-110 §v3.2)
+- [ ] Versioning visuel / rollback templates (Template Studio v3.4 — exploitera ADR-108)
 
 ### Out of Scope
 
@@ -82,4 +105,4 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ---
 
-_Last updated: 2026-05-06 — après milestone v3.0 (Template Studio v3 — ADR-110)_
+_Last updated: 2026-05-06 — démarrage milestone v4.0 (Multi-écrans Fire Stick) — POC validé 2026-05-05_
