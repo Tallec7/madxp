@@ -1230,6 +1230,22 @@ describe('GPU decode mode (Pi 5 V4L2 hardware decode)', () => {
       .toEqual({ callsDetect: true });
   });
 
+  it('detect_gpu_decode_mode must unconditionally set software on Pi 5 (regression #822)', () => {
+    // Pi 5 crashes Chromium on boot due to SharedImage Y_UV allocation failure (Mesa V3D).
+    // The fix (issue #822) disables V4L2 hardware decode by default on Pi 5 — no crash-count
+    // check, no conditional fallback. Any re-introduction of the crash-count branch would
+    // leave Pi 5 starting in hardware mode until 2 crashes are recorded (= broken boot).
+    const detectFn = watchdog.match(/detect_gpu_decode_mode\(\)\s*\{[\s\S]*?\n\}/);
+    expect(detectFn).not.toBeNull();
+    const fnBody = detectFn![0];
+    expect({ noHardwareDefaultOnPi5: !fnBody.includes('GPU_DECODE_MODE="hardware"\n    log') })
+      .toEqual({ noHardwareDefaultOnPi5: true });
+    expect({ noCrashCountCheck: !fnBody.includes('GPU_DECODE_CRASH_THRESHOLD') })
+      .toEqual({ noCrashCountCheck: true });
+    expect({ softwareSetForPi5: fnBody.includes('GPU_DECODE_MODE="software"') })
+      .toEqual({ softwareSetForPi5: true });
+  });
+
   it('kiosk-status.json must include gpuDecodeMode', () => {
     // The kiosk status JSON must report the current GPU decode mode
     // so the central dashboard can monitor which Pi's are using hardware vs software decode.
