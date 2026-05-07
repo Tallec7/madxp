@@ -3568,8 +3568,11 @@ describe('Phase 6 — Fire Stick Captive Portal', () => {
       path.join(REPO_ROOT, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
       'utf8'
     );
-    // Aucune règle DNAT vers port 443 ni redirection depuis port 443
-    expect(iptables).not.toMatch(/--dport\s+443[^\n]*-j\s+DNAT/);
+    // Aucune règle DNAT vers port 443 ajoutée (-A) ou vérifiée (-C). Le cleanup
+    // (-D) sur port 443 est volontaire — il supprime d'éventuelles règles
+    // legacy laissées par d'anciens installs, et doit rester.
+    expect(iptables).not.toMatch(/iptables[^\n]*-[AC][^\n]+--dport\s+443[^\n]*-j\s+DNAT/);
+    expect(iptables).not.toMatch(/nft\s+add\s+rule[^\n]+dport\s+443[^\n]+dnat/);
     expect(iptables).not.toMatch(/--to-destination\s+\S+:443/);
   });
 });
