@@ -231,7 +231,11 @@ jobs:
           # 1 an avec du HTML servi pour les chunks préchargés depuis une deep
           # route, cf. ADR-071 phase 3 suite).
           test -s 'dist/central-dashboard/functions/[[catchall]].js'
-          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware root + saas + _redirects/_headers)"
+          # i18n assets — leur absence casserait silencieusement l'app si la
+          # Git integration CF Pages écrase un bon déploiement wrangler.
+          test -s dist/central-dashboard/browser/assets/i18n/fr.json
+          test -s dist/central-dashboard/browser/assets/i18n/en.json
+          echo "✅ Build artefacts présents (dashboard + SaaS sous /saas/ + functions middleware root + saas + _redirects/_headers + i18n)"
 
       - name: Deploy to Cloudflare Pages
         # workingDirectory : wrangler cherche `functions/` à CWD. En cd-ant
@@ -305,7 +309,14 @@ jobs:
           assert_saas_html "$BASE/saas/remote?site=ci-probe"
           assert_saas_html "$BASE/saas/tv?site=ci-probe"
           assert_saas_html "$BASE/saas/login"
-          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback OK (status + content)"
+          # Vérification asset i18n — détecte si la Git integration CF Pages
+          # a écrasé le déploiement wrangler avec un build sans i18n.
+          I18N=$(probe "$BASE/assets/i18n/fr.json")
+          if [ "$I18N" != "200" ]; then
+            echo "::error::$BASE/assets/i18n/fr.json → $I18N (i18n asset manquant en prod, Git integration CF Pages a probablement écrasé le déploiement wrangler)"
+            exit 1
+          fi
+          echo "✅ Frontend Cloudflare Pages — dashboard + SaaS + SPA fallback + i18n OK (status + content)"
 
   deploy-railway:
     name: Deploy Central Server to Railway
