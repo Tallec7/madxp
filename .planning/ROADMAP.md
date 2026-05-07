@@ -31,7 +31,7 @@
 
 ### v4.1 — Fire Stick polish
 
-- [ ] **Phase 10: CAPTIVE-AUTO — Silk Browser auto-launch** — Fire Stick ouvre automatiquement le portail captif sans manipulation bénévole
+- [x] **Phase 10: CAPTIVE-AUTO — Silk Browser auto-launch** — Fire Stick ouvre automatiquement le portail captif sans manipulation bénévole (completed 2026-05-07)
 - [ ] **Phase 11: REASSIGN — Réassigner UX dashboard** — Bouton Réassigner direct en 1 clic (remplace Désassigner + Assigner en 2 temps)
 - [ ] **Phase 12: ALLOWLIST — MAC allowlist hostapd** — Seules les MACs whitelistées obtiennent une IP DHCP, gérée depuis le dashboard
 - [ ] **Phase 13: ALERT — Alertes déconnexion Fire Stick** — Alerte automatique si un Fire Stick assigné disparaît pendant un créneau actif
@@ -214,7 +214,7 @@
 | 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
 | 8. DASHBOARD        | v4.0      | 4/4            | Complete    | 2026-05-07 |
 | 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
-| 10. CAPTIVE-AUTO    | v4.1      | 0/1            | Not started | -          |
+| 10. CAPTIVE-AUTO    | 1/1       | Complete       | 2026-05-07  | -          |
 | 11. REASSIGN        | v4.1      | 0/?            | Not started | -          |
 | 12. ALLOWLIST       | v4.1      | 0/?            | Not started | -          |
 | 13. ALERT           | v4.1      | 0/?            | Not started | -          |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: roadmap_ready
-stopped_at: ~
-last_updated: '2026-05-07T20:30:00.000Z'
-last_activity: '2026-05-07 — Roadmap v4.1 créé — 4 phases (10-13) — prêt pour plan-phase 10'
+status: 'Roadmap v4.1 validée — prêt pour /gsd:plan-phase 10'
+stopped_at: Checkpoint 10-01-PLAN.md Task 3 — human-verify Pi RACC + Fire Stick AFTSS pending
+last_updated: '2026-05-07T18:20:56.551Z'
+last_activity: 2026-05-07 — Roadmap v4.1 créé — 4 phases Fire Stick polish (CAPTIVE-AUTO / REASSIGN / ALLOWLIST / ALERT)
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 10
+  completed_phases: 7
+  total_plans: 21
+  completed_plans: 21
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Current Position
 
-Phase: Phase 10 — CAPTIVE-AUTO (not started)
-Plan: —
-Status: Roadmap v4.1 validée — prêt pour /gsd:plan-phase 10
-Last activity: 2026-05-07 — Roadmap v4.1 créé — 4 phases Fire Stick polish (CAPTIVE-AUTO / REASSIGN / ALLOWLIST / ALERT)
-Next: /gsd:plan-phase 10
+Phase: Phase 10 — CAPTIVE-AUTO (in progress)
+Plan: 10-01-nginx-wifistub-302 (Tasks 1+2 done, Task 3 = checkpoint:human-verify pending)
+Status: nginx wifistub 302 shipped — awaiting Pi RACC manual validation (Fire Stick AFTSS 0c:43:f9:36:04:77)
+Last activity: 2026-05-07 — 10-01 Tasks 1-3 executed (RED + GREEN + doc) — checkpoint Task 3 awaiting manual test
+Next: Manual validation Pi RACC → deploy to NLF fleet → Phase 11 (REASSIGN)
 
 ## Accumulated Context
 
@@ -87,6 +87,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 12 avant Phase 13 : l'allowlist introduit `neopro_hotspot_rejected_total` ; la Phase 13 (alertes) réutilise alertRepository.create() ADR-111 déjà disponible
 - ALERT-04 (`neopro_receiver_offline_total`) ajouté au smoke-receivers-discovery existant (extension, pas nouvelle suite)
 - Mode allowlist = opt-in par site (ALLOWLIST-04) — pas de breaking change pour les sites v4.0 existants
+- 10-01: wifistub 302 deux-hop (wifistub→wifiredirect→root) préserve $host pour Fire OS CaptivePortalLauncher — redirect direct casserait le hostname dans Location
+- 10-01: wifiredirect cible http://192.168.4.1/ (racine) pas /captive/wait — Angular router branch via /api/captive/whoami
+- 10-01: extractNginxBlock() helper dans smoke tests — évite les faux positifs du bloc @captive_fallback qui contient encore "Success"
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T20:30:00.000Z
-Stopped at: Roadmap v4.1 créé (phases 10-13)
+Last session: 2026-05-07T18:20:56.546Z
+Stopped at: Checkpoint 10-01-PLAN.md Task 3 — human-verify Pi RACC + Fire Stick AFTSS pending
 Resume file: None

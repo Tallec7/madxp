@@ -52,9 +52,9 @@
 
 ### CAPTIVE — Auto-launch Silk Browser
 
-- [ ] **CAPTIVE-05** : Quand un Fire Stick se connecte au hotspot Pi, le Silk Browser s'ouvre automatiquement sur la page captive sans que le bénévole n'ait à ouvrir manuellement un navigateur
-- [ ] **CAPTIVE-06** : L'auto-launch fonctionne au boot du Fire Stick (premier démarrage après connexion hotspot) sans manipulation de la télécommande
-- [ ] **CAPTIVE-07** : Si l'auto-launch échoue (Fire Stick hors hotspot, timeout), la page d'attente reste accessible manuellement — aucune régression comportement v4.0
+- [x] **CAPTIVE-05** : Quand un Fire Stick se connecte au hotspot Pi, le Silk Browser s'ouvre automatiquement sur la page captive sans que le bénévole n'ait à ouvrir manuellement un navigateur
+- [x] **CAPTIVE-06** : L'auto-launch fonctionne au boot du Fire Stick (premier démarrage après connexion hotspot) sans manipulation de la télécommande
+- [x] **CAPTIVE-07** : Si l'auto-launch échoue (Fire Stick hors hotspot, timeout), la page d'attente reste accessible manuellement — aucune régression comportement v4.0
 
 ### ASSIGN — Réassigner UX dashboard
 
