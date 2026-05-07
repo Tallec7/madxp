@@ -3572,4 +3572,30 @@ describe('Phase 6 — Fire Stick Captive Portal', () => {
     expect(iptables).not.toMatch(/--dport\s+443[^\n]*-j\s+DNAT/);
     expect(iptables).not.toMatch(/--to-destination\s+\S+:443/);
   });
+
+  it('install.sh wires neopro-base.conf OR contains the 3 captive markers (Phase 6 gap closure)', () => {
+    const installSh = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/install.sh'),
+      'utf8'
+    );
+
+    // Préférence : cp depuis neopro-base.conf (source de vérité, post-Phase 6 plan-05)
+    const usesSourceOfTruth =
+      /cp\s+["']?\$\{?INSTALL_DIR\}?[^"']*config\/nginx\/neopro-base\.conf/.test(installSh) ||
+      /cp\s+[^\n]*config\/nginx\/neopro-base\.conf/.test(installSh);
+
+    // Fallback acceptable : heredoc inline mais qui contient les 3 routes captives
+    const hasKindleWifi = installSh.includes('kindle-wifi/wifistub.html');
+    const hasWhoami = installSh.includes('/api/captive/whoami');
+    const hasCaptiveWait = installSh.includes('/captive/wait');
+    const heredocHasAllMarkers = hasKindleWifi && hasWhoami && hasCaptiveWait;
+
+    if (!(usesSourceOfTruth || heredocHasAllMarkers)) {
+      throw new Error(
+        `install.sh missing both neopro-base.conf cp AND captive markers ` +
+          `(kindle-wifi: ${hasKindleWifi}, whoami: ${hasWhoami}, wait: ${hasCaptiveWait})`
+      );
+    }
+    expect(usesSourceOfTruth || heredocHasAllMarkers).toBe(true);
+  });
 });
