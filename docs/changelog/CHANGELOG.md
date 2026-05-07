@@ -1,3 +1,9 @@
+# [3.295.0](https://github.com/Tallec7/neopro/compare/v3.294.0...v3.295.0) (2026-05-07)
+
+### Features
+
+- **security:** Template Studio uploads hardening (audit Phase C) ([#887](https://github.com/Tallec7/neopro/issues/887)) ([2c8cbd3](https://github.com/Tallec7/neopro/commit/2c8cbd3e5098f9c5d3d61c3cd1da0bcd85aa468e)), closes [#8](https://github.com/Tallec7/neopro/issues/8) [#7](https://github.com/Tallec7/neopro/issues/7) [#7](https://github.com/Tallec7/neopro/issues/7) [#2](https://github.com/Tallec7/neopro/issues/2) [#7](https://github.com/Tallec7/neopro/issues/7) [#2](https://github.com/Tallec7/neopro/issues/2) [#7](https://github.com/Tallec7/neopro/issues/7)
+
 # [3.294.0](https://github.com/Tallec7/neopro/compare/v3.293.0...v3.294.0) (2026-05-07)
 
 ### Features
