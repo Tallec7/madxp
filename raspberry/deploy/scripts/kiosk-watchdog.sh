@@ -37,15 +37,16 @@ log() {
 # GPU Video Decode Mode (Pi 5 uniquement)
 # "hardware" = V4L2 stateless decode (économise ~20% CPU, réduit le coil whine)
 # "software" = decode software (stable, Pi 5 par défaut)
-# Le fichier de fallback est persistant (hors /tmp) pour survivre aux reboots.
-GPU_DECODE_FALLBACK_FILE="/home/pi/neopro/.gpu-decode-fallback"
+# Le fichier /tmp/gpu-decode-fallback est conservé pour backward-compat mais n'est
+# plus utilisé sur Pi 5 (V4L2 hardware désactivé par défaut — SharedImage bug Mesa/V3D).
+GPU_DECODE_FALLBACK_FILE="/tmp/gpu-decode-fallback"
 GPU_DECODE_CRASH_THRESHOLD=2  # Conservé pour backward-compat, non utilisé sur Pi 5
 GPU_DECODE_MODE="hardware"    # Valeur par défaut, mise à jour par detect_gpu_decode_mode()
 
 # Détecte le mode de décodage GPU à utiliser.
 # Pi 5 : software par défaut — le décodeur V4L2 stateless hardware provoque des
-# échecs d'allocation SharedImage (Mesa V3D ne peut tenir qu'un slot 1920×1080
-# Y_UV à la fois), ce qui génère des frames noires à chaque transition vidéo.
+# échecs d'allocation SharedImage (Mesa V3D ne peut tenir qu'un slot Y_UV à la fois),
+# ce qui génère des frames noires et des crashs Chromium en boucle (issue #822).
 # Pi 4 : hardware natif (stable, pas affecté par ce bug).
 detect_gpu_decode_mode() {
     if [[ "$PI_MODEL" != "pi5" ]]; then
@@ -106,6 +107,21 @@ FAILOVER_GRACE_PERIOD=15
 # Flag pour éviter le spam de logs quand setup_secondary_xrandr échoue en boucle
 # (Pi avec un seul port HDMI actif mais deux ports DRM)
 XRANDR_DUAL_WARNED=false
+
+# Park headless : si AUCUN HDMI connecté pendant NO_HDMI_GRACE_S secondes,
+# on stoppe Chromium pour laisser le rôle TV à un éventuel receiver LAN
+# (Fire Stick, smart TV browser ouvrant http://<pi-lan-ip>/tv). Sans ce
+# park, le Chromium kiosk local tournerait en headless inutilement et
+# se déclarerait `slave (tv)` sur le socket-server, créant un conflit
+# multi-slave avec le receiver LAN (resyncs constants, flash noir).
+# Voir docs/proposals/PROP-012-video-delivery-modes.md § "Mode 8 (gap)
+# Pi-LAN-display".
+#
+# Reversible : dès qu'un HDMI est rebranché, le watchdog redémarre
+# Chromium normalement (HDMI hotplug udev → flag + relance).
+NO_HDMI_GRACE_S=30
+NO_HDMI_DETECTED_AT=0
+KIOSK_HEADLESS_PARKED=false
 
 # Détecter si HDMI 0 (écran principal) est connecté
 detect_hdmi0_status() {
@@ -1633,6 +1649,48 @@ main() {
                 break
             fi
         done
+
+        # Vérification 0 (Pi-LAN-display) : aucun HDMI branché ?
+        # → laisser le rôle TV à un receiver LAN éventuel (Fire Stick,
+        # smart TV) en stoppant le Chromium kiosk local. Reversible : on
+        # redémarre Chromium dès qu'un HDMI est rebranché. Skipper en
+        # mode failover (état contrôlé séparément) et pendant le grace
+        # period boot (EDID/DRM pas encore stabilisé).
+        local now_epoch
+        now_epoch=$(date +%s)
+        local boot_age=$((now_epoch - BOOT_CHROMIUM_AT))
+        if [[ "$HDMI_FAILOVER_ACTIVE" != "true" ]] && (( boot_age > FAILOVER_GRACE_PERIOD )); then
+            if ! detect_hdmi0_status && ! detect_hdmi1_status; then
+                if (( NO_HDMI_DETECTED_AT == 0 )); then
+                    NO_HDMI_DETECTED_AT=$now_epoch
+                    log "🖥️ Aucun HDMI détecté — démarrage du grace period (${NO_HDMI_GRACE_S}s)"
+                fi
+                local no_hdmi_age=$((now_epoch - NO_HDMI_DETECTED_AT))
+                if [[ "$KIOSK_HEADLESS_PARKED" != "true" ]] && (( no_hdmi_age >= NO_HDMI_GRACE_S )); then
+                    log "🅿️ HEADLESS PARK : aucun HDMI depuis ${no_hdmi_age}s — stop Chromium pour laisser le rôle TV à un receiver LAN éventuel"
+                    write_kiosk_status "parked" "no HDMI for ${no_hdmi_age}s"
+                    cleanup_chromium
+                    stop_chromium_secondary 2>/dev/null || true
+                    KIOSK_HEADLESS_PARKED=true
+                fi
+                # Skip les checks chromium tant qu'on est parked
+                if [[ "$KIOSK_HEADLESS_PARKED" == "true" ]]; then
+                    continue
+                fi
+            else
+                # Au moins un HDMI branché → reset du compteur, et unpark si nécessaire
+                if (( NO_HDMI_DETECTED_AT != 0 )); then
+                    log "🖥️ HDMI rebranché — annulation du headless park"
+                    NO_HDMI_DETECTED_AT=0
+                fi
+                if [[ "$KIOSK_HEADLESS_PARKED" == "true" ]]; then
+                    log "▶️ HEADLESS UNPARK : redémarrage Chromium suite à HDMI rebranché"
+                    KIOSK_HEADLESS_PARKED=false
+                    start_chromium
+                    BOOT_CHROMIUM_AT=$(date +%s)
+                fi
+            fi
+        fi
 
         local need_restart=false
         local reason=""

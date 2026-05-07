@@ -27,6 +27,10 @@ class LocalSocketService {
 
     this.socket.on('connect', () => {
       logger.info('LocalSocket: connected to local server', { id: this.socket.id });
+      // Pull receivers immediately on (re)connect. If the cloud listener is already
+      // set up (handleAuthenticated already fired), it relays the response. If not,
+      // handleAuthenticated() emits its own request-state-sync after attaching.
+      this.socket.emit('request-state-sync');
     });
 
     this.socket.on('disconnect', (reason) => {

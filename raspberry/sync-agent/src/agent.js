@@ -214,6 +214,9 @@ class NeoproSyncAgent {
           this.socket.emit('state-sync', data);
         }
       });
+      // Pull current state immediately — the listener above misses events emitted
+      // before handleAuthenticated() fires (race: local connects before cloud auth).
+      rawSocket.emit('request-state-sync');
     }
 
     // =========================================================================
