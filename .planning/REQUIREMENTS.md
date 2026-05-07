@@ -33,7 +33,7 @@
 - [x] **CLOUD-01** : `GET /api/sites/:id/connected-receivers` retourne les MACs détectées par le Pi (auto-discovery liste, ordonnée par `last_seen_at`)
 - [x] **CLOUD-02** : Assignation MAC↔display via PATCH du `DisplayConfig` (route PROP-002 existante étendue, validation Joi)
 - [x] **CLOUD-03** : Sync-agent whitelist nouvel event `receiver-detected` (et `receiver-disconnected`)
-- [ ] **CLOUD-04** : DB cloud = source de vérité ; Pi reçoit assignments via socket et met à jour cache local automatiquement
+- [x] **CLOUD-04** : DB cloud = source de vérité ; Pi reçoit assignments via socket et met à jour cache local automatiquement
 
 ### DASHBOARD — UX admin assignation
 
@@ -86,7 +86,7 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 | CLOUD-01     | Phase 7 (CLOUD)     | TBD           |
 | CLOUD-02     | Phase 7 (CLOUD)     | TBD           |
 | CLOUD-03     | Phase 7 (CLOUD)     | TBD           |
-| CLOUD-04     | Phase 7 (CLOUD)     | TBD           |
+| CLOUD-04     | Phase 7 (CLOUD)     | 07-cloud-03   |
 | DASHBOARD-01 | Phase 8 (DASHBOARD) | TBD           |
 | DASHBOARD-02 | Phase 8 (DASHBOARD) | TBD           |
 | DASHBOARD-03 | Phase 8 (DASHBOARD) | TBD           |

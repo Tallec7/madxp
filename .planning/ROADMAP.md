@@ -21,7 +21,7 @@
 - [x] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository ✅ 2026-05-06
 - [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
 - [x] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display (completed 2026-05-07)
-- [ ] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected`
+- [x] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected` (completed 2026-05-07, 3/3 plans)
 - [ ] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
 - [ ] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery`
 
@@ -94,9 +94,9 @@
 
 **Plans**: 3 plans
 
-- [ ] 07-cloud-01-connected-receivers-map-PLAN.md — SocketService Map + GET /api/sites/:id/connected-receivers (CLOUD-01)
-- [ ] 07-cloud-02-patch-displays-emit-command-PLAN.md — updateSiteDisplays emit receiver_assignment_updated + sync-agent whitelist (CLOUD-02, CLOUD-03)
-- [ ] 07-cloud-03-pi-command-dispatch-handler-PLAN.md — Pi command-dispatch handler → receiversService.assignDisplay (CLOUD-04)
+- [x] 07-cloud-01-connected-receivers-map-PLAN.md — SocketService Map + GET /api/sites/:id/connected-receivers (CLOUD-01)
+- [x] 07-cloud-02-patch-displays-emit-command-PLAN.md — updateSiteDisplays emit receiver_assignment_updated + sync-agent whitelist (CLOUD-02, CLOUD-03)
+- [x] 07-cloud-03-pi-command-dispatch-handler-PLAN.md — Pi command-dispatch handler → receiversService.assignDisplay (CLOUD-04)
 
 ### Phase 8: DASHBOARD — UX admin assignation
 

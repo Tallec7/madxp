@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
 status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
-stopped_at: Completed 07-cloud-02-PLAN.md (PATCH displays emit + sync-agent whitelist + tests)
-last_updated: '2026-05-07T15:05:17.022Z'
+stopped_at: Completed 07-cloud-03-PLAN.md (Pi command-dispatch handler receiver_assignment_updated + 3 tests Jest)
+last_updated: '2026-05-07T15:25:00.000Z'
 last_activity: '2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)'
 progress:
   total_phases: 6
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 6 — CAPTIVE — Fire Stick → page Neopro (gap closure complete, Plan 04 Task 2 pending validation)
-Plan: 01 complete, 02 complete, 03 complete, 04 (Angular bootstrap router — Task 1 committed 58bcecf, Task 2 pending Pi RACC), 05 complete (gap closure install.sh wire neopro-base.conf — d4928210), 06 complete (OTA propagation + smoke guard — 63dede57+3f6f1033)
-Status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
-Last activity: 2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)
-Next: Reprendre Plan 06-captive-04 Task 2 (Pi RACC manual validation Fire Stick) ou phase 07 cloud-side selon priorité Daisy
+Phase: 7 — CLOUD — API sync-agent (Plans 01-03 complets)
+Plan: 07-cloud-01 complete (connected-receivers Map cloud), 07-cloud-02 complete (PATCH displays emit command), 07-cloud-03 complete (Pi handler receiver_assignment_updated — 3e9aa6b6, 3c124f23)
+Status: Phase 7 CLOUD — Plans 01-03 complets, CLOUD-04 fermé (assignation MAC cloud → cache Pi sans reboot)
+Last activity: 2026-05-07 — Plan 07-cloud-03 : handler receiver_assignment_updated dans sync-agent + 3 tests Jest verts
+Next: Plan 07-cloud-04 (dashboard Angular affiche receivers + MACs) ou récupération Phase 6 Task 2 selon priorité Daisy
 
 ## Accumulated Context
 
@@ -48,6 +48,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 05-detect-03: io.emit wrapper dans server.js (vs event listener) — Socket.IO server n'expose pas `.on('emit')`, le wrap est le pattern standard pour intercepter des emits ciblés sans coupler ReceiversService au state.service
 - 05-detect-03: setReceivers résilient (warn + ignore) plutôt que throw — un payload corrompu ne doit pas crasher le state.service partagé par tout le serveur Pi
 - 05-detect-03: sync-agent whitelist seul cette phase (pas de handler agent.js) — pré-requis Phase 7 pattern ADR-074
+- 07-cloud-03: command-dispatch.js à src/ (pas services/) — testabilité require('../command-dispatch') depuis **tests**/ + séparation du registry existant
+- 07-cloud-03: résolution polymorphe receiversService — typeof === 'function' + prototype.assignDisplay → classe (prod) ; sinon objet mock Jest
+- 07-cloud-03: pas de Socket.IO local ni HTTP cloud — handler purement cache local (.receivers-cache.json) via assignDisplay Phase 5
 - 06-captive-01: reverse-lookup via Map<ip, mac> dédiée populée par \_scanLeases/\_scanArp existants — O(1), zéro nouvel appel système (vs reverse-iterate \_state ou shell exec `ip neigh`)
 - 06-captive-01: normalisation IPv4-mapped IPv6 (`::ffff:` → IPv4) au lookup, pas à l'insertion — single edge case côté Express boundary, évite de toucher chaque parse de lease dnsmasq
 - 06-captive-01: ARP_LINE_REGEX étendue pour capturer IP (group 1) + MAC (group 2) en une passe — backward-compatible avec \_scanArp existant
