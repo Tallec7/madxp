@@ -132,7 +132,16 @@ function isSlotVisible(
 // crash silencieux. Ces URLs ont été archivées (status=archived sur 7
 // templates) mais on garde le guard pour éviter qu'un réimport legacy ne
 // recrée le pattern.
-const BROKEN_URL_PATTERNS = [/up\.railway\.app\/remotion-preview\/public\//i];
+//
+// Récidive 2026-05-07 (jour même) : un autre lot de rows pointait vers
+// `neopro-central-production.up.railway.app/BUT_simple_{A,B,C}.webm` (à la
+// racine du domaine, pas sous /remotion-preview/public/) — même symptôme.
+// Le 2e pattern attrape TOUTE URL .webm/.mp4 servie depuis un domaine Railway :
+// Railway héberge l'API JSON, jamais les assets vidéo (FTP Hostinger only).
+const BROKEN_URL_PATTERNS = [
+  /up\.railway\.app\/remotion-preview\/public\//i,
+  /up\.railway\.app\/[^?#]+\.(webm|mp4)(?:[?#]|$)/i,
+];
 
 const isValidSrc = (url: string): boolean => {
   if (!/^(https?:|blob:|data:)/.test(url)) return false;
