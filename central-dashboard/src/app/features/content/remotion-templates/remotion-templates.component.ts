@@ -11,6 +11,7 @@ import { TemplatePropsFormComponent } from './template-props-form.component';
 import { TemplatePreviewComponent } from './template-preview.component';
 import { TemplateSchemaEditorComponent } from './template-schema-editor.component';
 import { TemplateVersionsComponent } from './template-versions.component';
+import { TemplateVersionsDrawerComponent } from './template-versions-drawer.component';
 import { StudioV2EditorComponent } from './studio-v2/studio-v2-editor.component';
 import { AdminStudioPanelComponent } from './studio-v2/admin/admin-studio-panel.component';
 import { CreateTemplateWizardComponent } from './studio-v2/admin/create-template-wizard.component';
@@ -45,6 +46,7 @@ import { ERROR_MESSAGES } from './studio-v3/vocabulary.constants';
     TemplatePreviewComponent,
     TemplateSchemaEditorComponent,
     TemplateVersionsComponent,
+    TemplateVersionsDrawerComponent,
     StudioV2EditorComponent,
     AdminStudioPanelComponent,
     CreateTemplateWizardComponent,
@@ -639,6 +641,39 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
         }
       },
     });
+  }
+
+  // ── Quick task 260507-les — Versions drawer (audit P0 #4) ──────────────────
+  /**
+   * Template currently shown in the version-history drawer (null = closed).
+   * The drawer fetches its own data via getVersions() — no parent prefetch.
+   */
+  versionsOpenForTemplate: RemotionTemplate | null = null;
+
+  /** Card "Historique" → ouvre le drawer pour ce template. */
+  onOpenVersions(tpl: RemotionTemplate): void {
+    if (!this.isAdmin) return;
+    this.versionsOpenForTemplate = tpl;
+  }
+
+  /** Drawer close (esc, backdrop, button, post-rollback). */
+  onCloseVersions(): void {
+    this.versionsOpenForTemplate = null;
+  }
+
+  /**
+   * Drawer rollback completed → refresh the templates list (props_schema /
+   * default_props can change) and close the drawer. Surface a notification.
+   */
+  onRollbackDone(): void {
+    this.notifications.success('Version restaurée');
+    this.loadTemplates();
+    if (this.selectedTemplate) {
+      // Re-fetch current selection to re-render preview if needed.
+      const current = this.selectedTemplate;
+      this.selectTemplate(current);
+    }
+    this.onCloseVersions();
   }
 
   onDuplicateFromCard(tpl: RemotionTemplate): void {

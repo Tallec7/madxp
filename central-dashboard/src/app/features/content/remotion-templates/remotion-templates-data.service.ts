@@ -374,11 +374,35 @@ export class RemotionTemplatesDataService {
     return this.api.get<TemplateVersion[]>(`/remotion-templates/${id}/versions`);
   }
 
+  /**
+   * Quick task 260507-les — alias sémantique du listVersions ADR-055 utilisé
+   * par le drawer historique côté card (TemplateVersionsDrawerComponent).
+   * Garde le binding `getVersions(...)` que le smoke test attend.
+   */
+  getVersions(id: string): Observable<TemplateVersion[]> {
+    return this.listVersions(id);
+  }
+
   restoreVersion(templateId: string, versionId: string): Observable<RemotionTemplate> {
     return this.api.post<RemotionTemplate>(
       `/remotion-templates/${templateId}/versions/${versionId}/restore`,
       {},
     );
+  }
+
+  /**
+   * Quick task 260507-les — wrapper sémantique du restoreVersion ADR-055.
+   * Le drawer rollback parle de "version par défaut" côté UX, mais la sémantique
+   * réelle côté API est "restaurer ce snapshot dans la live config" (cf.
+   * ADR-055 + AUDIT-NOTES.md). On garde le nom `setDefaultVersion` pour que
+   * le binding smoke test ADR-108 de `templateVersionsRepository` soit rempli
+   * sans avoir à wirer un nouvel endpoint.
+   */
+  setDefaultVersion(
+    templateId: string,
+    versionId: string,
+  ): Observable<RemotionTemplate> {
+    return this.restoreVersion(templateId, versionId);
   }
 
   // ── ADR-075 Template Studio v2 ─────────────────────────────────────────────

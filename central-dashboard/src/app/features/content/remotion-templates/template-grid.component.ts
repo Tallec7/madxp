@@ -28,6 +28,7 @@ import type { RemotionTemplate } from './remotion-templates.types';
         (duplicateRequested)="duplicateRequested.emit($event)"
         (unpublishRequested)="unpublishRequested.emit($event)"
         (deleteRequested)="deleteRequested.emit($event)"
+        (openVersions)="openVersions.emit($event)"
       ></app-template-card>
     </div>
 
@@ -64,6 +65,8 @@ export class TemplateGridComponent {
   @Output() unpublishRequested = new EventEmitter<RemotionTemplate>();
   /** Quick task 260507-gxd — re-emit deleteRequested from card to parent. */
   @Output() deleteRequested = new EventEmitter<RemotionTemplate>();
+  /** Quick task 260507-les — re-emit openVersions (history drawer) from card. */
+  @Output() openVersions = new EventEmitter<RemotionTemplate>();
 
   trackById(_index: number, tpl: RemotionTemplate): string {
     return tpl.id;
