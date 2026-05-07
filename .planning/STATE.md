@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: in_progress
-stopped_at: Completed 09-observe-02-smoke-receivers-discovery-PLAN.md
-last_updated: '2026-05-07T16:52:00.000Z'
+status: completed
+stopped_at: Completed 09-observe-01-PLAN.md
+last_updated: '2026-05-07T16:54:04.032Z'
 last_activity: '2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9'
 progress:
-  total_phases: 7
-  completed_phases: 5
+  total_phases: 6
+  completed_phases: 6
   total_plans: 20
   completed_plans: 20
 ---
@@ -91,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T16:52:00.000Z
-Stopped at: Completed 09-observe-02-smoke-receivers-discovery-PLAN.md
+Last session: 2026-05-07T16:54:04.023Z
+Stopped at: Completed 09-observe-01-PLAN.md
 Resume file: None

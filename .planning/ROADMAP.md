@@ -23,7 +23,7 @@
 - [x] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display (completed 2026-05-07)
 - [x] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected` (completed 2026-05-07, 3/3 plans)
 - [x] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli) (completed 2026-05-07)
-- [ ] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery`
+- [x] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery` (completed 2026-05-07)
 
 ## Phase Details
 
@@ -133,17 +133,17 @@
 
 ## Progress
 
-| Phase               | Milestone | Plans Complete | Status      | Completed  |
-| ------------------- | --------- | -------------- | ----------- | ---------- |
-| 1. Fondations       | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | v3.0      | 4/4            | Complete    | 2026-05-05 |
-| 3. Gate publication | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 4. DATA             | v4.0      | 2/2            | Complete    | 2026-05-06 |
-| 5. DETECT           | v4.0      | 3/3            | Complete    | 2026-05-06 |
-| 6. CAPTIVE          | v4.0      | 4/4            | Complete    | 2026-05-07 |
-| 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
-| 8. DASHBOARD        | 2/4       | Complete       | 2026-05-07  | -          |
-| 9. OBSERVE          | v4.0      | 0/2            | Not started | -          |
+| Phase               | Milestone | Plans Complete | Status     | Completed  |
+| ------------------- | --------- | -------------- | ---------- | ---------- |
+| 1. Fondations       | v3.0      | 5/5            | Complete   | 2026-05-05 |
+| 2. UX interactive   | v3.0      | 4/4            | Complete   | 2026-05-05 |
+| 3. Gate publication | v3.0      | 5/5            | Complete   | 2026-05-05 |
+| 4. DATA             | v4.0      | 2/2            | Complete   | 2026-05-06 |
+| 5. DETECT           | v4.0      | 3/3            | Complete   | 2026-05-06 |
+| 6. CAPTIVE          | v4.0      | 4/4            | Complete   | 2026-05-07 |
+| 7. CLOUD            | v4.0      | 3/3            | Complete   | 2026-05-07 |
+| 8. DASHBOARD        | 2/4       | Complete       | 2026-05-07 | -          |
+| 9. OBSERVE          | 2/2       | Complete       | 2026-05-07 | -          |
 
 ---
 

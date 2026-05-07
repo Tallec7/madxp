@@ -43,7 +43,7 @@
 
 ### OBSERVE — Métriques + smoke
 
-- [ ] **OBSERVE-01** : Métrique Prometheus `neopro_receivers_total{site_id, status}` (status: `detected` / `assigned` / `disconnected`)
+- [x] **OBSERVE-01** : Métrique Prometheus `neopro_receivers_total{site_id, status}` (status: `detected` / `assigned` / `disconnected`)
 - [x] **OBSERVE-02** : Suite smoke `smoke-receivers-discovery` fige les contrats (event whitelist sync-agent, repo extension, route API, dashboard column, captive nginx route)
 
 ---
