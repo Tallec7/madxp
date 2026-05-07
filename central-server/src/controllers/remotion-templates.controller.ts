@@ -295,6 +295,135 @@ export const unpublishTemplate = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Quick task 260507-gxd — DELETE /api/remotion-templates/:id (P0 #1 + #2)
+ *
+ * Cascade DELETE end-to-end : 409 guard (published / in-use unless force) →
+ * BEGIN/COMMIT cascade côté repository → cleanup FTP best-effort des orphan
+ * assets (URLs unique à ce template) → métrique Prometheus + Winston audit.
+ *
+ * super_admin only (gardé au niveau route + double-check côté guard +
+ * `requireSuperAdmin()` dans la chain Express).
+ */
+export const deleteTemplate = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const force = req.query.force === 'true';
+  const userId = req.user?.id ?? null;
+  logger.info('Template delete requested', { template_id: id, force, user_id: userId });
+
+  try {
+    const tpl = await remotionTemplatesRepository.findById(id);
+    if (!tpl) {
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+
+    const usedByCount = await templateStudioRepository.getTemplateUsedByCount(id);
+    const isPublished = tpl.published === true;
+    if (!force && (isPublished || usedByCount > 0)) {
+      logger.info('Template delete refused — in use or published', {
+        template_id: id,
+        published: isPublished,
+        used_by_count: usedByCount,
+      });
+      res.status(409).json({
+        error: 'Template is in use or published. Use ?force=true to override.',
+        code: 'TEMPLATE_IN_USE',
+        published: isPublished,
+        usedByCount,
+      });
+      return;
+    }
+
+    let cascadeStatus: 'success' | 'partial' | 'failed' = 'success';
+    let ftpFailures = 0;
+    const reason: 'user' | 'admin_force' = force ? 'admin_force' : 'user';
+
+    try {
+      const result = await templateStudioRepository.deleteTemplate(id);
+
+      // FTP orphan cleanup (best-effort — DB cascade déjà committée).
+      // Le storage layer est URL-addressed : on extrait le chemin relatif
+      // depuis l'URL FTP (cf. config/ftp-storage.getFtpPublicUrl).
+      for (const url of result.orphanAssetUrls) {
+        try {
+          // Déduit le storage_path depuis l'URL publique FTP. Si l'URL ne
+          // matche pas le préfixe FTP attendu, on saute (asset externe).
+          const storagePath = extractFtpStoragePath(url);
+          if (!storagePath) {
+            logger.warn('Skipped FTP cleanup — URL not FTP-hosted', {
+              template_id: id,
+              url,
+            });
+            continue;
+          }
+          const ok = await deleteFileFromFtp(storagePath);
+          if (!ok) {
+            ftpFailures++;
+            logger.warn('FTP orphan cleanup returned false', {
+              template_id: id,
+              storage_path: storagePath,
+            });
+          }
+        } catch (e) {
+          ftpFailures++;
+          logger.error('FTP orphan cleanup failed', {
+            template_id: id,
+            url,
+            error: (e as Error).message,
+          });
+        }
+      }
+
+      if (ftpFailures > 0) cascadeStatus = 'partial';
+
+      metricsService.recordTemplateDeleted(cascadeStatus, reason);
+      logger.info('template.deleted', {
+        action: 'template.deleted',
+        template_id: id,
+        actor_id: userId,
+        cascade_status: cascadeStatus,
+        reason,
+        orphan_count: result.orphanAssetUrls.length,
+        ftp_failures: ftpFailures,
+        cascade_row_counts: result.cascadeRowCounts,
+        timestamp: new Date().toISOString(),
+      });
+      res.status(200).json({
+        deleted: true,
+        orphanAssetsRemoved: result.orphanAssetUrls.length - ftpFailures,
+        ftpFailures,
+      });
+    } catch (err) {
+      metricsService.recordTemplateDeleted('failed', reason);
+      logger.error('Template delete failed', {
+        template_id: id,
+        error: (err as Error).message,
+      });
+      res.status(500).json({ error: 'Template deletion failed' });
+    }
+  } catch (err) {
+    logger.error('deleteTemplate outer error', {
+      template_id: id,
+      error: (err as Error).message,
+    });
+    res.status(500).json({ error: 'internal_error' });
+  }
+};
+
+/**
+ * Extrait le chemin de stockage relatif depuis une URL FTP publique.
+ * Retourne null si l'URL n'est pas FTP-hostée (asset externe / storage
+ * non géré). Le préfixe public FTP vit dans config/ftp-storage.ts.
+ */
+function extractFtpStoragePath(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  // Préfixe attendu : https://kalonpartners.bzh/neopro-... — on garde le path
+  // après le hostname pour passer à deleteFileFromFtp().
+  const match = url.match(/^https?:\/\/[^/]+\/(.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
  * PATCH /api/remotion-templates/:id/schema-version
  * Bascule un template entre v1 (legacy props_schema) et v2 (data-driven
  * variants/layers/text_fields/image_slots). super_admin uniquement.

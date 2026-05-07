@@ -2,6 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
+status: Phase 6 CAPTIVE — Plan 04 Task 1 (Angular bootstrap router) committed 58bcecf, Task 2 (Pi RACC manual validation) PENDING checkpoint:human-verify
+stopped_at: Plan 06-captive-04 — checkpoint:human-verify Task 2 awaiting Pi RACC validation
+last_updated: '2026-05-06T14:10:00Z'
+last_activity: '2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf — AppComponent bootstrap router whoami fetch + location.replace + anti-flash #000 + 4 Karma specs). Awaiting Pi RACC manual validation on real Fire Stick (Test 1-4).'
 status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
 stopped_at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
 last_updated: '2026-05-07T09:31:04.426Z'
@@ -24,6 +28,12 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
+Phase: 6 — CAPTIVE — Fire Stick → page Neopro (en cours)
+Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 complete (configs + wait page + build + smoke), 04 (Angular bootstrap router)
+Status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme Socket.IO + polling 5s)
+Last activity: 2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf), checkpoint:human-verify pending Pi RACC
+Last quick task: 2026-05-07 — Quick 260507-gxd: DELETE template end-to-end shipped (4 commits, last 27774520) — closes audit P0 #1 + #2
+Next: Resume Plan 06-captive-04 Task 2 — manual validation on Pi RACC (Test 1-4 / Fire Stick réel)
 Phase: 6 — CAPTIVE — Fire Stick → page Neopro (gap closure complete, Plan 04 Task 2 pending validation)
 Plan: 01 complete, 02 complete, 03 complete, 04 (Angular bootstrap router — Task 1 committed 58bcecf, Task 2 pending Pi RACC), 05 complete (gap closure install.sh wire neopro-base.conf — d4928210), 06 complete (OTA propagation + smoke guard — 63dede57+3f6f1033)
 Status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
@@ -85,6 +95,12 @@ None yet.
 
 - Configs POC `firestick-captive` (`/etc/dnsmasq.d/` + `/etc/nginx/sites-available/`) sont déjà déployées sur Pi RACC `neopro.local` — vérifier qu'elles ne fuitent pas en prod NLF avant le rollout généralisé
 - Edge case PSK rotation : MAC inchangée mais bénévole doit re-saisir PSK sur chaque Fire Stick — préconisation PSK custom stable per-club (cf. mémoire `feedback_psk_format.md`)
+
+### Quick Tasks Completed
+
+| #          | Description                                                | Date       | Commit   | Directory                                                                      |
+| ---------- | ---------------------------------------------------------- | ---------- | -------- | ------------------------------------------------------------------------------ |
+| 260507-gxd | DELETE template end-to-end (cascade DB + FTP + UI confirm) | 2026-05-07 | 27774520 | [260507-gxd-...](./quick/260507-gxd-delete-template-end-to-end-endpoint-api-/) |
 
 ## Session Continuity
 

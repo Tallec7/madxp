@@ -29,6 +29,29 @@ import type {
 export type TemplateVariantCreate = Omit<TemplateVariant, 'id' | 'templateId'>;
 export type TemplateVariantUpdate = Partial<TemplateVariantCreate>;
 
+/**
+ * Quick task 260507-gxd — Réponse 200 OK de DELETE /api/remotion-templates/:id.
+ * `orphanAssetsRemoved` = nombre d'assets FTP supprimés (URLs uniques à ce
+ * template) ; `ftpFailures` = nombre de cleanups FTP qui ont échoué (DB
+ * cascade déjà committée, status=partial dans la métrique).
+ */
+export interface DeleteTemplateResponse {
+  deleted: boolean;
+  orphanAssetsRemoved: number;
+  ftpFailures: number;
+}
+
+/**
+ * Quick task 260507-gxd — Body 409 Conflict de DELETE /api/remotion-templates/:id.
+ * Surface au composant pour proposer "Forcer la suppression" (admin escape hatch).
+ */
+export interface DeleteTemplateConflictBody {
+  error: string;
+  code: 'TEMPLATE_IN_USE';
+  published: boolean;
+  usedByCount: number;
+}
+
 export type TemplateLayerCreate = Omit<TemplateLayer, 'id' | 'templateId'>;
 export type TemplateLayerUpdate = Partial<TemplateLayerCreate>;
 
@@ -327,6 +350,24 @@ export class RemotionTemplatesDataService {
 
   duplicateTemplate(id: string, name?: string): Observable<RemotionTemplate> {
     return this.api.post<RemotionTemplate>(`/remotion-templates/${id}/duplicate`, name ? { name } : {});
+  }
+
+  /**
+   * Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+   * Cascade DELETE côté serveur (templates + variants + layers + text_fields
+   * + image_slots + options + packshot_refs + versions) + cleanup FTP des
+   * orphan assets. `force=true` bypass le 409 guard (template publié /
+   * in-use), audité via la métrique `neopro_template_deleted_total{reason}`.
+   *
+   * Erreurs renvoyées :
+   *   - 404 : template introuvable
+   *   - 409 : `{ code: 'TEMPLATE_IN_USE', published, usedByCount }` — UI
+   *           propose à l'admin de cocher "Forcer" pour re-tenter avec force.
+   *   - 200 : `{ deleted: true, orphanAssetsRemoved, ftpFailures }`
+   */
+  deleteTemplate(id: string, force = false): Observable<DeleteTemplateResponse> {
+    const path = `/remotion-templates/${id}${force ? '?force=true' : ''}`;
+    return this.api.delete<DeleteTemplateResponse>(path);
   }
 
   listVersions(id: string): Observable<TemplateVersion[]> {

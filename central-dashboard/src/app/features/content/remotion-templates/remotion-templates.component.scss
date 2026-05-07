@@ -362,3 +362,97 @@
     }
   }
 }
+
+// ── Quick task 260507-gxd — DELETE template typed-name confirmation modal ────
+.rt-delete-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+}
+.rt-delete-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-bg, #fff);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  min-width: 420px;
+  max-width: 560px;
+
+  h3 {
+    margin-top: 0;
+    color: var(--text-primary, #111827);
+  }
+
+  code {
+    background: var(--code-bg, #f3f4f6);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+  }
+
+  .rt-delete-modal__warning {
+    background: var(--warning-bg, #fef3c7);
+    color: var(--warning-color, #92400e);
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .rt-delete-modal__input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    box-sizing: border-box;
+  }
+
+  .rt-delete-modal__force {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    color: var(--danger-color, #b91c1c);
+    font-weight: 500;
+  }
+
+  .rt-delete-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .rt-delete-modal__cancel {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #d1d5db);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .rt-delete-modal__confirm {
+    padding: 0.5rem 1rem;
+    background: var(--danger-bg, #b91c1c);
+    color: var(--card-bg, #fff);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--danger-hover, #991b1b);
+    }
+  }
+}

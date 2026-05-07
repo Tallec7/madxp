@@ -112,6 +112,17 @@ const alertsDedupSkippedTotal = new Counter({
   registers: [register],
 });
 
+// Quick task 260507-gxd — DELETE template end-to-end (audit P0 #1 + #2).
+// `cascade_status` ∈ ['success','partial','failed'] surface les FTP failures
+// (cleanup best-effort après commit DB). `reason` ∈ ['user','admin_force']
+// distingue suppression normale vs bypass force=true sur template publié.
+const templateDeletedTotal = new Counter({
+  name: 'neopro_template_deleted_total',
+  help: 'Templates deleted via DELETE /api/remotion-templates/:id (P0 #1 + #2)',
+  labelNames: ['cascade_status', 'reason'],
+  registers: [register],
+});
+
 const activeAlertsGauge = new Gauge({
   name: 'neopro_active_alerts',
   help: 'Number of currently active alerts',
@@ -1139,6 +1150,21 @@ class MetricsService {
   /** ADR-093: session match auto-fermée par le CRON (reason: idle|absolute) */
   recordMatchSessionAutoclosed(reason: 'idle' | 'absolute', count = 1): void {
     if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
+  }
+
+  /**
+   * Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+   * `cascade_status='success'` toutes les FTP cleanup OK ; `partial` au moins
+   * 1 FTP delete a failed (DB cascade déjà committée) ; `failed` exception
+   * dans la transaction (ROLLBACK).
+   * `reason='user'` template draft non publié non utilisé ; `admin_force`
+   * bypass via `?force=true` sur template publié ou in-use.
+   */
+  recordTemplateDeleted(
+    cascade_status: 'success' | 'partial' | 'failed',
+    reason: 'user' | 'admin_force',
+  ): void {
+    templateDeletedTotal.inc({ cascade_status, reason });
   }
 
   /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */

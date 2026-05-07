@@ -1348,3 +1348,25 @@ export const querySchemas = {
     token: Joi.string().min(1).max(500).required(),
   }),
 };
+
+// ============================================================================
+// Quick task 260507-gxd — DELETE /api/remotion-templates/:id (P0 #1 + #2)
+// ============================================================================
+
+/**
+ * Joi schema for DELETE /api/remotion-templates/:id params validation.
+ * Aliased to `paramSchemas.id` for clarity at the route declaration site
+ * (the smoke test greps for `remotionTemplateIdParam` to enforce wiring).
+ */
+export const remotionTemplateIdParam = Joi.object({
+  id: Joi.string().uuid().required(),
+});
+
+/**
+ * Joi schema for DELETE /api/remotion-templates/:id query validation.
+ * `force=true` bypasses the 409 guard for published / in-use templates
+ * (super_admin escape hatch — audited via metric `reason='admin_force'`).
+ */
+export const remotionTemplateDeleteQuery = Joi.object({
+  force: Joi.string().valid('true', 'false').optional(),
+});

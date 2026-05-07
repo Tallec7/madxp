@@ -81,6 +81,22 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
         >
           {{ duplicating ? 'Duplication…' : '⎘ Dupliquer' }}
         </button>
+        <!--
+          Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+          Visible only to super_admin (the parent component gates the click via
+          isSuperAdmin). The actual typed-name confirmation modal lives in the
+          parent (RemotionTemplatesComponent) — this button just emits the intent.
+        -->
+        <button
+          *ngIf="currentUserRole === 'super_admin'"
+          type="button"
+          class="btn-delete"
+          [attr.aria-label]="'Supprimer ' + template.name"
+          [attr.data-testid]="'template-delete-btn-' + template.id"
+          (click)="onDelete($event)"
+        >
+          🗑 Supprimer
+        </button>
       </div>
     </div>
   `,
@@ -142,6 +158,17 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
     }
     .btn-duplicate:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-duplicate:hover:not(:disabled) { background: #f3f4f6; }
+    .btn-delete {
+      font-size: 12px;
+      padding: 4px 12px;
+      margin-left: 6px;
+      border: 1px solid var(--danger-border, #fca5a5);
+      border-radius: 6px;
+      background: var(--danger-bg, #fee2e2);
+      color: var(--danger-color, #b91c1c);
+      cursor: pointer;
+    }
+    .btn-delete:hover { background: var(--danger-hover, #fecaca); }
   `],
 })
 export class TemplateCardComponent {
@@ -160,6 +187,8 @@ export class TemplateCardComponent {
   @Output() publishToggle = new EventEmitter<RemotionTemplate>();
   @Output() duplicateRequested = new EventEmitter<RemotionTemplate>();
   @Output() unpublishRequested = new EventEmitter<RemotionTemplate>();
+  /** Quick task 260507-gxd — emits when super_admin clicks "Supprimer" on the card. */
+  @Output() deleteRequested = new EventEmitter<RemotionTemplate>();
 
   private confirmDialog = inject(ConfirmDialogService);
   protected readonly MODAL_MESSAGES = MODAL_MESSAGES;
@@ -195,5 +224,14 @@ export class TemplateCardComponent {
   onDuplicate(event: Event): void {
     event.stopPropagation();
     this.duplicateRequested.emit(this.template);
+  }
+
+  /**
+   * Quick task 260507-gxd — emit delete intent. The parent shows the
+   * typed-name confirmation modal (GitHub repo-delete pattern).
+   */
+  onDelete(event: Event): void {
+    event.stopPropagation();
+    this.deleteRequested.emit(this.template);
   }
 }
