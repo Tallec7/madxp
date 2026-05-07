@@ -3646,6 +3646,17 @@ describe('Phase 10 — CAPTIVE-AUTO Silk auto-launch', () => {
     expect(block).toMatch(/return\s+302\s+http:\/\/192\.168\.4\.1\//);
   });
 
+  it('CAPTIVE-05: generate_204 returns 302 in firestick-captive config (real Fire OS probe)', () => {
+    // Le Fire Stick sonde generate_204 (pas wifistub.html) — cf. logs nginx-firestick-access.log
+    // 204 = "internet OK" → pas de portail. 302 = portail détecté → CaptivePortalLauncher.
+    const captiveConf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/nginx/firestick-captive.conf'),
+      'utf8'
+    );
+    expect(captiveConf).not.toMatch(/location\s*=\s*\/generate_204[\s\S]*?return\s+204/);
+    expect(captiveConf).toMatch(/location\s*=\s*\/generate_204[\s\S]*?return\s+302/);
+  });
+
   it('CAPTIVE-07 regression: /captive/wait still serves firestick-wait.html (Phase 6 preserved)', () => {
     const conf = fs.readFileSync(confPath, 'utf8');
     expect(conf).toContain('/captive/wait');
