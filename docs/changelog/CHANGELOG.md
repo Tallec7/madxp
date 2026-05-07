@@ -1,3 +1,9 @@
+# [3.296.0](https://github.com/Tallec7/neopro/compare/v3.295.0...v3.296.0) (2026-05-07)
+
+### Features
+
+- **v4.0:** Multi-écrans Fire Stick — Phases 7-9 (CLOUD + DASHBOARD + OBSERVE) ([#888](https://github.com/Tallec7/neopro/issues/888)) ([d5d7875](https://github.com/Tallec7/neopro/commit/d5d78754c25a6ee41488a0ff2089675aa1e7baa7))
+
 # [3.295.0](https://github.com/Tallec7/neopro/compare/v3.294.0...v3.295.0) (2026-05-07)
 
 ### Features
