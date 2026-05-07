@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 7 CLOUD — Plan 01 complete (GET /api/sites/:id/connected-receivers — in-memory Map receivers + Jest tests 3/3 verts), Plan 02+03 pending
-stopped_at: Completed 07-cloud-01-PLAN.md (connected receivers Map + REST route + Jest tests)
-last_updated: '2026-05-07T15:04:23.684Z'
-last_activity: '2026-05-07 — Plan 07-cloud-01 : ReceiverInfo Map in SocketService + GET /:id/connected-receivers route + 3 Jest tests (TDD, 3/3 green)'
+status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
+stopped_at: Completed 07-cloud-02-PLAN.md (PATCH displays emit + sync-agent whitelist + tests)
+last_updated: '2026-05-07T15:05:17.022Z'
+last_activity: '2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)'
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -88,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T15:04:23.681Z
-Stopped at: Completed 07-cloud-01-PLAN.md (connected receivers Map + REST route + Jest tests)
+Last session: 2026-05-07T15:05:17.018Z
+Stopped at: Completed 07-cloud-02-PLAN.md (PATCH displays emit + sync-agent whitelist + tests)
 Resume file: None
