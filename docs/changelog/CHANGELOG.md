@@ -1,3 +1,14 @@
+# [3.297.0](https://github.com/Tallec7/neopro/compare/v3.296.5...v3.297.0) (2026-05-07)
+
+### Bug Fixes
+
+- **captive:** redirect Fire Stick vers /display/N au lieu de /?display=N ([f8b0805](https://github.com/Tallec7/neopro/commit/f8b08052da14433ab0ce2efcc7f2ad13f3065133))
+
+### Features
+
+- **fleet:** DNS hijack Fire Stick dans fix-fleet-pi.sh (step 12b) ([0b53a12](https://github.com/Tallec7/neopro/commit/0b53a12fffba37870dfbf5722f748e6fdeb1e72e))
+- **ota:** deploy nginx configs via OTA (firestick-captive + neopro-base) ([b5bb83f](https://github.com/Tallec7/neopro/commit/b5bb83f601279e5d451a758220767a89779d78b3))
+
 ## [3.296.5](https://github.com/Tallec7/neopro/compare/v3.296.4...v3.296.5) (2026-05-07)
 
 ### Bug Fixes
