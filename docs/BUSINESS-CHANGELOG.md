@@ -8,7 +8,26 @@
 
 ---
 
-## Semaine 19 — 5-11 Mai 2026
+## Semaine 19 — 5-11 Mai 2026 (suite — v4.0 Fire Stick livré 2026-05-07)
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Multi-écrans Fire Stick : un admin assigne un écran depuis le dashboard sans aucune saisie aveugle** (Phase 8 DASHBOARD, 4 plans GSD — 2026-05-07) — dans `Sites > <club> > Écrans`, chaque ligne affiche désormais une colonne « Récepteur » avec un badge 3 états (🖥️ Pi HDMI natif, 📺 MAC tronquée = Fire Stick assigné, + Assigner = libre). Le bouton [Assigner ▾] ouvre un dropdown pré-rempli avec les MACs auto-détectées par le Pi (auto-discovery réseau LAN, pas de saisie). Le bouton [— Désassigner] libère un écran sans toucher la config des autres. Un super_admin peut équiper une salle multi-écrans en moins de 5 min, depuis un navigateur, sans aide technique.
+- **Chaque transition Fire Stick visible en Grafana** (Phase 9 OBSERVE, 2 plans GSD — 2026-05-07) — nouvelle métrique Prometheus `neopro_receivers_total{site_id, status}` incrémentée à chaque détection, assignation et déconnexion Fire Stick. Panel ajouté au dashboard Grafana "NeoPro Overview Cloud". Premier signal mesurable de l'adoption Fire Stick par site.
+
+### 🛡️ Pour la robustesse
+
+- **API Fire Stick sécurisée** (Phase 7 CLOUD — déjà en prod depuis 2026-05-07) — `GET /api/sites/:id/connected-receivers` expose uniquement les MACs vues par le Pi (auto-discovery, pas de saisie libre). Offline Pi = liste vide, aucune erreur côté dashboard.
+- **Suite smoke-receivers-discovery : 12 contrats Fire Stick figés** (Phase 9 OBSERVE — 2026-05-07) — la suite smoke `smoke-receivers-discovery.test.ts` casse la CI si l'un des 12 points de wiring Fire Stick est retiré : whitelist sync-agent, route API, exports TypeScript, méthode SitesService, fichier nginx captive, domaines dnsmasq, Map receivers socket, fichier receivers.service Pi. Un refactor futur ne peut pas casser silencieusement le wiring Fire Stick.
+
+### 🧹 Pour l'équipe
+
+- **Milestone v4.0 Multi-écrans Fire Stick livré intégralement** (6 phases, 20 plans, 2026-05-06 → 2026-05-07) — Phases 4 DATA (modèle DisplayConfig étendu) → 5 DETECT (receivers.service Pi + cache local) → 6 CAPTIVE (DNS hijack + nginx + page d'attente responsive) → 7 CLOUD (API connected-receivers + socket whitelist + commande dispatch Pi) → 8 DASHBOARD (badge 3 états + dropdown position:fixed + Karma 596/596 tests) → 9 OBSERVE (Prometheus + smoke 12 assertions). Architecture end-to-end sans internet club : Pi hotspot → Fire Stick → page Neopro → dashboard admin cloud.
+- **Pattern position:fixed dropdown réutilisable** — même pattern que `video-search-select.component.ts` (`.vss__dropdown`) utilisé dans `displays-editor` pour le sélecteur de receivers. Échappe à `overflow: hidden` des conteneurs parents, compatible `ChangeDetectionStrategy.OnPush`.
+
+---
+
+## Semaine 19 — 5-11 Mai 2026 (initial)
 
 ### 🎯 Pour le club (NLF, prospects)
 

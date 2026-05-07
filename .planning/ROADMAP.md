@@ -128,23 +128,23 @@
 
 **Plans**: 2 plans
 
-- [ ] 09-observe-01-prometheus-receivers-metric-PLAN.md — Counter neopro_receivers_total{site_id, status} + Grafana panel (OBSERVE-01)
-- [ ] 09-observe-02-smoke-receivers-discovery-PLAN.md — Suite smoke-receivers-discovery (wiring whitelist + API + dashboard + install.sh) (OBSERVE-02)
+- [x] 09-observe-01-prometheus-receivers-metric-PLAN.md — Counter neopro_receivers_total{site_id, status} + Grafana panel (OBSERVE-01) ✅ 2026-05-07
+- [x] 09-observe-02-smoke-receivers-discovery-PLAN.md — Suite smoke-receivers-discovery (wiring whitelist + API + dashboard + install.sh) (OBSERVE-02) ✅ 2026-05-07
 
 ## Progress
 
-| Phase               | Milestone | Plans Complete | Status     | Completed  |
-| ------------------- | --------- | -------------- | ---------- | ---------- |
-| 1. Fondations       | v3.0      | 5/5            | Complete   | 2026-05-05 |
-| 2. UX interactive   | v3.0      | 4/4            | Complete   | 2026-05-05 |
-| 3. Gate publication | v3.0      | 5/5            | Complete   | 2026-05-05 |
-| 4. DATA             | v4.0      | 2/2            | Complete   | 2026-05-06 |
-| 5. DETECT           | v4.0      | 3/3            | Complete   | 2026-05-06 |
-| 6. CAPTIVE          | v4.0      | 4/4            | Complete   | 2026-05-07 |
-| 7. CLOUD            | v4.0      | 3/3            | Complete   | 2026-05-07 |
-| 8. DASHBOARD        | 2/4       | Complete       | 2026-05-07 | -          |
-| 9. OBSERVE          | 2/2       | Complete       | 2026-05-07 | -          |
+| Phase               | Milestone | Plans Complete | Status   | Completed  |
+| ------------------- | --------- | -------------- | -------- | ---------- |
+| 1. Fondations       | v3.0      | 5/5            | Complete | 2026-05-05 |
+| 2. UX interactive   | v3.0      | 4/4            | Complete | 2026-05-05 |
+| 3. Gate publication | v3.0      | 5/5            | Complete | 2026-05-05 |
+| 4. DATA             | v4.0      | 2/2            | Complete | 2026-05-06 |
+| 5. DETECT           | v4.0      | 3/3            | Complete | 2026-05-06 |
+| 6. CAPTIVE          | v4.0      | 4/4            | Complete | 2026-05-07 |
+| 7. CLOUD            | v4.0      | 3/3            | Complete | 2026-05-07 |
+| 8. DASHBOARD        | v4.0      | 4/4            | Complete | 2026-05-07 |
+| 9. OBSERVE          | v4.0      | 2/2            | Complete | 2026-05-07 |
 
 ---
 
-_Next: `/gsd:execute-phase 08-dashboard-ux-admin-assignation` — exécuter les 4 plans en séquence (wave 1→4)_
+🎉 **Milestone v4.0 — Multi-écrans Fire Stick DELIVERED** — 6 phases, 20 plans, 2026-05-07
