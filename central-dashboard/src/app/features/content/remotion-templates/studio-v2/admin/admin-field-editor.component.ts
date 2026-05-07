@@ -284,10 +284,10 @@ const FONT_FAMILIES = [
   styles: [`
     .afe { display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; }
     .afe__header { display: flex; align-items: center; gap: 8px; }
-    .afe__kind { padding: 2px 8px; font-size: 11px; border-radius: 3px; background: #ede9fe; color: #6d28d9; flex-shrink: 0; }
+    .afe__kind { padding: 2px 8px; font-size: 11px; border-radius: 3px; background: var(--studio-accent-100); color: var(--studio-accent-600); flex-shrink: 0; }
     .afe__label { flex: 1 1 auto; min-width: 0; padding: 4px 8px; font-size: 13px; font-weight: 600; color: #111827; border: 1px solid transparent; border-radius: 4px; background: transparent; }
     .afe__label:hover { border-color: #d1d5db; background: #f9fafb; }
-    .afe__label:focus { outline: none; border-color: #6d28d9; background: #fff; box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.15); }
+    .afe__label:focus { outline: none; border-color: var(--studio-accent-600); background: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--studio-accent-600) 15%, transparent); }
     .afe__key { font-size: 10px; color: #9ca3af; font-family: monospace; flex-shrink: 0; cursor: help; }
     .afe__hint { flex-basis: 100%; margin: 4px 0 0; font-size: 11px; color: #6b7280; font-style: italic; }
     .afe__section { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -297,7 +297,7 @@ const FONT_FAMILIES = [
     .afe__checkbox { flex-direction: row !important; align-items: center; gap: 6px !important; cursor: pointer; }
     .afe__checkbox input[type="checkbox"] { width: 14px; height: 14px; padding: 0; cursor: pointer; }
     .afe__footer { display: flex; justify-content: flex-end; }
-    .afe__delete { padding: 4px 10px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .afe__delete { padding: 4px 10px; background: var(--studio-danger-bg); color: var(--studio-danger-fg); border: 1px solid var(--studio-danger-border); border-radius: 4px; cursor: pointer; font-size: 12px; }
     .afe__delete:hover { background: #fee2e2; }
   `],
 })

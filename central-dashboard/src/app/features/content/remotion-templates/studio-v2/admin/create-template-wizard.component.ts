@@ -136,7 +136,7 @@ type WizardStep = 1 | 2 | 3 | 4;
     .ctw__header h3 { margin: 0; font-size: 16px; }
     .ctw__close { margin-left: auto; background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
     .ctw__progress { height: 3px; background: #f3f4f6; }
-    .ctw__progress-bar { height: 100%; background: #7c3aed; transition: width 0.2s ease; }
+    .ctw__progress-bar { height: 100%; background: var(--studio-accent-500); transition: width 0.2s ease; }
     .ctw__body { padding: 20px; }
     .ctw__step { display: flex; flex-direction: column; gap: 12px; }
     .ctw__step h4 { margin: 0 0 8px; font-size: 14px; }
@@ -151,7 +151,7 @@ type WizardStep = 1 | 2 | 3 | 4;
     .ctw__footer { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid #e5e7eb; }
     .ctw__btn { padding: 6px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; cursor: pointer; }
     .ctw__btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .ctw__btn--primary { margin-left: auto; background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .ctw__btn--primary { margin-left: auto; background: var(--studio-accent-500); color: #fff; border-color: var(--studio-accent-500); }
     .ctw__btn--primary:disabled { background: #a78bfa; border-color: #a78bfa; }
   `],
 })

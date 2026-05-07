@@ -216,7 +216,7 @@ interface DragState {
     .aco__head h4 { margin: 0; font-size: 14px; }
     .aco__variant-picker { display: flex; gap: 4px; flex-wrap: wrap; }
     .aco__variant-btn { padding: 2px 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; background: #f9fafb; cursor: pointer; }
-    .aco__variant-btn--active { background: #ede9fe; border-color: #6d28d9; color: #5b21b6; font-weight: 600; }
+    .aco__variant-btn--active { background: var(--studio-accent-100); border-color: var(--studio-accent-600); color: var(--studio-accent-700); font-weight: 600; }
     .aco__layer-picker { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 6px 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; }
     .aco__layer-label { font-size: 11px; color: #6b7280; font-weight: 600; margin-right: 4px; }
     .aco__layer-btn { padding: 3px 10px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; cursor: pointer; color: #374151; }
@@ -235,11 +235,11 @@ interface DragState {
     .aco__handle:active { cursor: grabbing; }
     .aco__handle--text { padding: 2px 4px; background: rgba(109, 40, 217, 0.15); line-height: 1.1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .aco__handle--image { background: rgba(59, 130, 246, 0.15); border-color: rgba(37, 99, 235, 0.9); }
-    .aco__tag { position: absolute; top: -18px; left: 0; padding: 1px 5px; font-size: 10px; background: #6d28d9; color: #fff; border-radius: 3px; pointer-events: none; white-space: nowrap; }
+    .aco__tag { position: absolute; top: -18px; left: 0; padding: 1px 5px; font-size: 10px; background: var(--studio-accent-600); color: #fff; border-radius: 3px; pointer-events: none; white-space: nowrap; }
     .aco__handle--image .aco__tag { background: #2563eb; }
     .aco__preview { display: inline-block; pointer-events: none; }
     .aco__resize { position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; background: #2563eb; border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; }
-    .aco__resize--text { background: #6d28d9; }
+    .aco__resize--text { background: var(--studio-accent-600); }
     .aco__safe-zone { position: absolute; transform: translate(-50%, -50%); border: 2px solid rgba(220, 38, 38, 0.9); background: rgba(220, 38, 38, 0.08); cursor: grab; box-sizing: border-box; pointer-events: auto; }
     .aco__safe-zone:active { cursor: grabbing; }
     .aco__tag--safe { background: #dc2626 !important; }
