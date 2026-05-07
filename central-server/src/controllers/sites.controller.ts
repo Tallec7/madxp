@@ -455,6 +455,14 @@ export const updateSiteDisplays = async (req: AuthRequest, res: Response) => {
       updatedBy: req.user?.email,
     });
 
+    try {
+      await commandQueueService.sendOrQueue(id, 'receiver_assignment_updated', { displays });
+      logger.info('receiver_assignment_updated queued', { siteId: id, count: Array.isArray(displays) ? displays.length : 0 });
+    } catch (cmdErr) {
+      // Ne pas bloquer la réponse HTTP si l'émission échoue : la DB est déjà à jour, le Pi rattrapera au prochain reconnect.
+      logger.warn('Failed to queue receiver_assignment_updated', { siteId: id, err: cmdErr });
+    }
+
     const updatedDisplays = await siteRepository.getDisplays(id);
     res.json({ displays: updatedDisplays });
   } catch (error) {
