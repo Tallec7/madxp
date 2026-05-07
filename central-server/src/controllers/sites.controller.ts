@@ -6,6 +6,7 @@ import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
+import socketService from '../services/socket.service';
 import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname';
 import {
   siteRepository,
@@ -491,6 +492,21 @@ export const getSiteDisplays = async (req: AuthRequest, res: Response) => {
       siteId: req.params.id,
     });
     res.status(500).json({ error: 'Erreur serveur interne' });
+  }
+};
+
+// ============================================================================
+// CLOUD-01 — Connected receivers (Fire Sticks auto-detected by Pi)
+// ============================================================================
+
+export const getConnectedReceivers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const siteId = req.params.id;
+    const receivers = socketService.getConnectedReceivers(siteId);
+    res.json({ receivers });
+  } catch (err) {
+    logger.error('getConnectedReceivers failed', { err, siteId: req.params.id });
+    res.status(500).json({ error: 'Failed to fetch connected receivers' });
   }
 };
 
