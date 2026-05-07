@@ -2,19 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 6 CAPTIVE — Plan 04 Task 1 (Angular bootstrap router) committed 58bcecf, Task 2 (Pi RACC manual validation) PENDING checkpoint:human-verify
-stopped_at: Plan 06-captive-04 — checkpoint:human-verify Task 2 awaiting Pi RACC validation
-last_updated: '2026-05-06T14:10:00Z'
-last_activity: '2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf — AppComponent bootstrap router whoami fetch + location.replace + anti-flash #000 + 4 Karma specs). Awaiting Pi RACC manual validation on real Fire Stick (Test 1-4).'
-status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
-stopped_at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
-last_updated: '2026-05-07T09:31:04.426Z'
-last_activity: '2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)'
+status: completed
+stopped_at: Completed 09-observe-01-PLAN.md
+last_updated: '2026-05-07T16:54:04.032Z'
+last_activity: '2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9'
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  completed_phases: 6
+  total_plans: 20
+  completed_plans: 20
 ---
 
 # Project State
@@ -28,17 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 6 — CAPTIVE — Fire Stick → page Neopro (en cours)
-Plan: 01 complete (resolveMacByIp), 02 complete (captive route + server wiring), 03 complete (configs + wait page + build + smoke), 04 (Angular bootstrap router)
-Status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (DNS hijack 2 Fire OS domains, 3 nginx location blocks, vanilla firestick-wait.html dual mécanisme Socket.IO + polling 5s)
-Last activity: 2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf), checkpoint:human-verify pending Pi RACC
-Last quick task: 2026-05-07 — Quick 260507-gxd: DELETE template end-to-end shipped (4 commits, last 27774520) — closes audit P0 #1 + #2
-Next: Resume Plan 06-captive-04 Task 2 — manual validation on Pi RACC (Test 1-4 / Fire Stick réel)
-Phase: 6 — CAPTIVE — Fire Stick → page Neopro (gap closure complete, Plan 04 Task 2 pending validation)
-Plan: 01 complete, 02 complete, 03 complete, 04 (Angular bootstrap router — Task 1 committed 58bcecf, Task 2 pending Pi RACC), 05 complete (gap closure install.sh wire neopro-base.conf — d4928210), 06 complete (OTA propagation + smoke guard — 63dede57+3f6f1033)
-Status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
-Last activity: 2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)
-Next: Reprendre Plan 06-captive-04 Task 2 (Pi RACC manual validation Fire Stick) ou phase 07 cloud-side selon priorité Daisy
+Phase: 9 — OBSERVE Métriques & Smoke (COMPLETE — Plans 01-02)
+Plan: 09-observe-02 complete (smoke-receivers-discovery — 12 tests verts — 620d8aa9)
+Status: Phase 9 OBSERVE — Plans 01-02 complets (Phase 9 COMPLETE — milestone v4.0 DELIVERED)
+Last activity: 2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9
+Next: Milestone v4.0 complete — all 6 phases delivered
 
 ## Accumulated Context
 
@@ -58,6 +48,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 05-detect-03: io.emit wrapper dans server.js (vs event listener) — Socket.IO server n'expose pas `.on('emit')`, le wrap est le pattern standard pour intercepter des emits ciblés sans coupler ReceiversService au state.service
 - 05-detect-03: setReceivers résilient (warn + ignore) plutôt que throw — un payload corrompu ne doit pas crasher le state.service partagé par tout le serveur Pi
 - 05-detect-03: sync-agent whitelist seul cette phase (pas de handler agent.js) — pré-requis Phase 7 pattern ADR-074
+- 07-cloud-03: command-dispatch.js à src/ (pas services/) — testabilité require('../command-dispatch') depuis **tests**/ + séparation du registry existant
+- 07-cloud-03: résolution polymorphe receiversService — typeof === 'function' + prototype.assignDisplay → classe (prod) ; sinon objet mock Jest
+- 07-cloud-03: pas de Socket.IO local ni HTTP cloud — handler purement cache local (.receivers-cache.json) via assignDisplay Phase 5
 - 06-captive-01: reverse-lookup via Map<ip, mac> dédiée populée par \_scanLeases/\_scanArp existants — O(1), zéro nouvel appel système (vs reverse-iterate \_state ou shell exec `ip neigh`)
 - 06-captive-01: normalisation IPv4-mapped IPv6 (`::ffff:` → IPv4) au lookup, pas à l'insertion — single edge case côté Express boundary, évite de toucher chaque parse de lease dnsmasq
 - 06-captive-01: ARP_LINE_REGEX étendue pour capturer IP (group 1) + MAC (group 2) en une passe — backward-compatible avec \_scanArp existant
@@ -104,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T09:26:08.288Z
-Stopped at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
+Last session: 2026-05-07T16:54:04.023Z
+Stopped at: Completed 09-observe-01-PLAN.md
 Resume file: None

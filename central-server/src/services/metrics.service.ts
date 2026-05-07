@@ -145,6 +145,15 @@ const commandLatency = new Histogram({
   registers: [register],
 });
 
+// ============= Métriques Receivers (Fire Stick — Phase 9 OBSERVE) =============
+
+const receiversTotal = new Counter({
+  name: 'neopro_receivers_total',
+  help: 'Total number of receiver state transitions (Fire Stick detection, assignment, disconnection)',
+  labelNames: ['site_id', 'status'],
+  registers: [register],
+});
+
 // ============= Métriques Database =============
 
 const dbQueryDuration = new Histogram({
@@ -1546,6 +1555,11 @@ class MetricsService {
 
   recordHotspotPskDecryptError(): void {
     hotspotPskDecryptErrorsTotal.inc();
+  }
+
+  /** Phase 9 OBSERVE-01 — transitions receiver Fire Stick (detected/assigned/disconnected) */
+  recordReceiver(siteId: string, status: 'detected' | 'assigned' | 'disconnected'): void {
+    receiversTotal.inc({ site_id: siteId, status });
   }
 
   /**

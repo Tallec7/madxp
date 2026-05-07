@@ -343,6 +343,16 @@ router.delete(
   sitesController.clearPendingCommands
 );
 
+// CLOUD-01 — Connected receivers (Fire Sticks auto-detected by Pi, in-memory)
+router.get(
+  '/:id/connected-receivers',
+  authenticate,
+  requireRole('admin', 'operator'),
+  adminRateLimit,
+  validateParams(paramSchemas.id),
+  sitesController.getConnectedReceivers
+);
+
 // N-Display management (Phase 5H)
 router.get(
   '/:id/displays',

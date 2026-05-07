@@ -45,6 +45,8 @@ const {
 } = require('./wifi-client');
 const { updateHostname } = require('./hostname');
 const { syncFromCloud: hotspotSyncFromCloud } = require('../services/hotspot-sync');
+// v4.0 Phase 7 — CLOUD-04 : handler receiver_assignment_updated
+const { dispatchCommand: dispatchReceiverAssignment } = require('../command-dispatch');
 
 // === Dépendances ===
 const { exec } = require('child_process');
@@ -109,6 +111,19 @@ const commands = {
 
   // === Hostname (module: hostname.js) ===
   update_hostname: updateHostname,
+
+  // === v4.0 Phase 7 — Receiver assignment (CLOUD-04) ===
+  /**
+   * Triggered by the cloud after an admin assigns a MAC to a display (PATCH displays).
+   * Delegates to command-dispatch.js which calls receiversService.assignDisplay for
+   * each display carrying a receiver.mac, updating the local cache.
+   */
+  async receiver_assignment_updated(data) {
+    return dispatchReceiverAssignment({
+      command: 'receiver_assignment_updated',
+      payload: data,
+    });
+  },
 
   // === Hotspot PSK cloud-canonical (ADR-074) ===
   /**

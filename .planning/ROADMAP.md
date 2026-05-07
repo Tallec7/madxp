@@ -21,9 +21,9 @@
 - [x] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository ✅ 2026-05-06
 - [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
 - [x] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display (completed 2026-05-07)
-- [ ] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected`
-- [ ] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
-- [ ] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery`
+- [x] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected` (completed 2026-05-07, 3/3 plans)
+- [x] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli) (completed 2026-05-07)
+- [x] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery` (completed 2026-05-07)
 
 ## Phase Details
 
@@ -92,12 +92,11 @@
 3. Un event `receiver-detected` ou `receiver-disconnected` envoyé par le Pi est accepté par le sync-agent (whitelist) et traité côté cloud.
 4. Quand un admin assigne une MAC à un display côté cloud, le Pi reçoit l'assignation via socket et met à jour son cache local sans reboot.
 
-**Plans**: 4 plans
+**Plans**: 3 plans
 
-- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
-- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
+- [x] 07-cloud-01-connected-receivers-map-PLAN.md — SocketService Map + GET /api/sites/:id/connected-receivers (CLOUD-01)
+- [x] 07-cloud-02-patch-displays-emit-command-PLAN.md — updateSiteDisplays emit receiver_assignment_updated + sync-agent whitelist (CLOUD-02, CLOUD-03)
+- [x] 07-cloud-03-pi-command-dispatch-handler-PLAN.md — Pi command-dispatch handler → receiversService.assignDisplay (CLOUD-04)
 
 ### Phase 8: DASHBOARD — UX admin assignation
 
@@ -112,10 +111,10 @@
 
 **Plans**: 4 plans
 
-- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
-- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
+- [ ] 08-dashboard-01-models-receiver-config-PLAN.md — ReceiverConfig + ReceiverInfo interfaces + DisplayConfig.receiver extension (DASHBOARD-01, DASHBOARD-02, DASHBOARD-03)
+- [ ] 08-dashboard-02-sites-service-receiver-load-PLAN.md — SitesService.getConnectedReceivers + ngOnInit load + template binding (DASHBOARD-01, DASHBOARD-03)
+- [ ] 08-dashboard-03-displays-editor-receiver-ux-PLAN.md — 3-state badge + position:fixed dropdown + assign/unassign emit (DASHBOARD-01, DASHBOARD-02, DASHBOARD-03)
+- [ ] 08-dashboard-04-karma-tests-PLAN.md — Karma tests: badge states + assign + unassign + empty state + ngOnInit load (DASHBOARD-01, DASHBOARD-02, DASHBOARD-03)
 
 ### Phase 9: OBSERVE — Métriques + smoke
 
@@ -127,27 +126,25 @@
 1. La métrique `neopro_receivers_total{site_id, status}` est exposée sur `/metrics` et incrémentée par les transitions detected/assigned/disconnected.
 2. La suite `smoke-receivers-discovery` échoue si l'event `receiver-detected` est retiré de la whitelist sync-agent, si la route API disparaît, si la colonne dashboard est retirée, ou si les configs nginx/dnsmasq ne sont plus posées par `install.sh`.
 
-**Plans**: 4 plans
+**Plans**: 2 plans
 
-- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
-- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
+- [x] 09-observe-01-prometheus-receivers-metric-PLAN.md — Counter neopro_receivers_total{site_id, status} + Grafana panel (OBSERVE-01) ✅ 2026-05-07
+- [x] 09-observe-02-smoke-receivers-discovery-PLAN.md — Suite smoke-receivers-discovery (wiring whitelist + API + dashboard + install.sh) (OBSERVE-02) ✅ 2026-05-07
 
 ## Progress
 
-| Phase               | Milestone | Plans Complete | Status      | Completed  |
-| ------------------- | --------- | -------------- | ----------- | ---------- |
-| 1. Fondations       | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 2. UX interactive   | v3.0      | 4/4            | Complete    | 2026-05-05 |
-| 3. Gate publication | v3.0      | 5/5            | Complete    | 2026-05-05 |
-| 4. DATA             | v4.0      | 1/2            | In Progress | -          |
-| 5. DETECT           | 3/3       | Complete       | 2026-05-06  | -          |
-| 6. CAPTIVE          | 6/6       | Complete       | 2026-05-07  | -          |
-| 7. CLOUD            | v4.0      | 0/0            | Not started | -          |
-| 8. DASHBOARD        | v4.0      | 0/0            | Not started | -          |
-| 9. OBSERVE          | v4.0      | 0/0            | Not started | -          |
+| Phase               | Milestone | Plans Complete | Status   | Completed  |
+| ------------------- | --------- | -------------- | -------- | ---------- |
+| 1. Fondations       | v3.0      | 5/5            | Complete | 2026-05-05 |
+| 2. UX interactive   | v3.0      | 4/4            | Complete | 2026-05-05 |
+| 3. Gate publication | v3.0      | 5/5            | Complete | 2026-05-05 |
+| 4. DATA             | v4.0      | 2/2            | Complete | 2026-05-06 |
+| 5. DETECT           | v4.0      | 3/3            | Complete | 2026-05-06 |
+| 6. CAPTIVE          | v4.0      | 4/4            | Complete | 2026-05-07 |
+| 7. CLOUD            | v4.0      | 3/3            | Complete | 2026-05-07 |
+| 8. DASHBOARD        | v4.0      | 4/4            | Complete | 2026-05-07 |
+| 9. OBSERVE          | v4.0      | 2/2            | Complete | 2026-05-07 |
 
 ---
 
-_Next: `/gsd:plan-phase 4` — démarrer la planification DATA (DisplayConfig JSONB extension + repository)_
+🎉 **Milestone v4.0 — Multi-écrans Fire Stick DELIVERED** — 6 phases, 20 plans, 2026-05-07

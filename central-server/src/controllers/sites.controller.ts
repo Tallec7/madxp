@@ -6,6 +6,8 @@ import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
+import metricsService from '../services/metrics.service';
+import socketService from '../services/socket.service';
 import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname';
 import {
   siteRepository,
@@ -455,6 +457,24 @@ export const updateSiteDisplays = async (req: AuthRequest, res: Response) => {
       updatedBy: req.user?.email,
     });
 
+    // OBSERVE-01 — compter les displays qui ont un receiver.mac assigné
+    const assignedCount = Array.isArray(displays)
+      ? displays.filter((d: Record<string, unknown>) =>
+          d.receiver && typeof (d.receiver as Record<string, unknown>).mac === 'string'
+        ).length
+      : 0;
+    if (assignedCount > 0) {
+      metricsService.recordReceiver(id, 'assigned');
+    }
+
+    try {
+      await commandQueueService.sendOrQueue(id, 'receiver_assignment_updated', { displays });
+      logger.info('receiver_assignment_updated queued', { siteId: id, count: Array.isArray(displays) ? displays.length : 0 });
+    } catch (cmdErr) {
+      // Ne pas bloquer la réponse HTTP si l'émission échoue : la DB est déjà à jour, le Pi rattrapera au prochain reconnect.
+      logger.warn('Failed to queue receiver_assignment_updated', { siteId: id, err: cmdErr });
+    }
+
     const updatedDisplays = await siteRepository.getDisplays(id);
     res.json({ displays: updatedDisplays });
   } catch (error) {
@@ -483,6 +503,21 @@ export const getSiteDisplays = async (req: AuthRequest, res: Response) => {
       siteId: req.params.id,
     });
     res.status(500).json({ error: 'Erreur serveur interne' });
+  }
+};
+
+// ============================================================================
+// CLOUD-01 — Connected receivers (Fire Sticks auto-detected by Pi)
+// ============================================================================
+
+export const getConnectedReceivers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const siteId = req.params.id;
+    const receivers = socketService.getConnectedReceivers(siteId);
+    res.json({ receivers });
+  } catch (err) {
+    logger.error('getConnectedReceivers failed', { err, siteId: req.params.id });
+    res.status(500).json({ error: 'Failed to fetch connected receivers' });
   }
 };
 
