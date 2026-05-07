@@ -1,3 +1,9 @@
+## [3.296.4](https://github.com/Tallec7/neopro/compare/v3.296.3...v3.296.4) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** widen broken-url deny-list — récidive 2026-05-07 bis ([#896](https://github.com/Tallec7/neopro/issues/896)) ([9710cb8](https://github.com/Tallec7/neopro/commit/9710cb8b2a4296efefc1f2ac56410ada866dd211))
+
 ## [3.296.3](https://github.com/Tallec7/neopro/compare/v3.296.2...v3.296.3) (2026-05-07)
 
 ### Bug Fixes
