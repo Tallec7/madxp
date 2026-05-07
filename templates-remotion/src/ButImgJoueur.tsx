@@ -122,7 +122,7 @@ export const ButImgJoueur: React.FC<Props> = ({
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé A (FFmpeg native decode) ────────────────── */}
-      <OffthreadVideo src={resolveAsset(videoSrcA, "BUT_img_joueur_A.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveAsset(videoSrcA, "BUT_img_joueur_A.mov")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ─────────────────────────────────────────────── */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -140,7 +140,7 @@ export const ButImgJoueur: React.FC<Props> = ({
 
       {/* ── COUCHE 3 : Vidéo C (now OffthreadVideo — FFmpeg native decode) ── */}
       <OffthreadVideo
-        src={resolveAsset(videoSrcC, "BUT_img_joueur_C.webm")}
+        src={resolveAsset(videoSrcC, "BUT_img_joueur_C.mov")}
         style={layerStyle}
       />
 
@@ -165,7 +165,7 @@ export const ButImgJoueur: React.FC<Props> = ({
 
       {/* ── COUCHE 5 : Vidéo E (now OffthreadVideo — FFmpeg native decode) ── */}
       <OffthreadVideo
-        src={resolveAsset(videoSrcE, "BUT_img_joueur_E.webm")}
+        src={resolveAsset(videoSrcE, "BUT_img_joueur_E.mov")}
         style={layerStyle}
       />
 
@@ -227,8 +227,8 @@ export const ButImgJoueur: React.FC<Props> = ({
       )}
 
       {/* ── COUCHES 7 & 8 : Wipes B et D (FFmpeg native decode) ─────────────── */}
-      <OffthreadVideo src={resolveAsset(videoSrcB, "BUT_img_joueur_B.webm")} style={layerStyle} />
-      <OffthreadVideo src={resolveAsset(videoSrcD, "BUT_img_joueur_D.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveAsset(videoSrcB, "BUT_img_joueur_B.mov")} style={layerStyle} />
+      <OffthreadVideo src={resolveAsset(videoSrcD, "BUT_img_joueur_D.mov")} style={layerStyle} />
 
     </AbsoluteFill>
   );
