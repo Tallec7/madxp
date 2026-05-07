@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: completed
-stopped_at: Completed 08-dashboard-04-karma-tests-PLAN.md
-last_updated: '2026-05-07T16:16:35.448Z'
-last_activity: '2026-05-07 — Plan 08-dashboard-04 : 10 Karma tests Phase 8 receiver UX (7 displays-editor + 3 site-settings-tab) — 596/596 verts'
+status: in_progress
+stopped_at: Completed 09-observe-02-smoke-receivers-discovery-PLAN.md
+last_updated: '2026-05-07T16:52:00.000Z'
+last_activity: '2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9'
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 20
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 8 — DASHBOARD UX Admin Assignation (COMPLETE — Plans 01-04)
-Plan: 08-dashboard-04 complete (10 Karma tests Phase 8 receiver UX — 8590779e)
-Status: Phase 8 DASHBOARD — Plans 01-04 complets (Phase 8 COMPLETE)
-Last activity: 2026-05-07 — Plan 08-dashboard-04 : 10 Karma tests Phase 8 receiver UX (7 displays-editor + 3 site-settings-tab) — 596/596 verts
-Next: Phase 8 complete — milestone v4.0 MVP Fire Stick delivered
+Phase: 9 — OBSERVE Métriques & Smoke (COMPLETE — Plans 01-02)
+Plan: 09-observe-02 complete (smoke-receivers-discovery — 12 tests verts — 620d8aa9)
+Status: Phase 9 OBSERVE — Plans 01-02 complets (Phase 9 COMPLETE — milestone v4.0 DELIVERED)
+Last activity: 2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9
+Next: Milestone v4.0 complete — all 6 phases delivered
 
 ## Accumulated Context
 
@@ -91,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T16:25:00.000Z
-Stopped at: Completed 08-dashboard-04-karma-tests-PLAN.md
+Last session: 2026-05-07T16:52:00.000Z
+Stopped at: Completed 09-observe-02-smoke-receivers-discovery-PLAN.md
 Resume file: None
