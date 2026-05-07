@@ -16,6 +16,7 @@ import {
   siteRepository,
 } from '../repositories';
 import { templateStudioRepository } from '../repositories/template-studio.repository';
+import { templateSpecBuilderService } from '../services/template-spec-builder.service';
 import { metricsService } from '../services/metrics.service';
 import { runValidation } from '../services/template-validation';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
@@ -1237,5 +1238,51 @@ export const createTestRender = async (req: AuthRequest, res: Response) => {
       templateId: id,
     });
     return res.status(500).json({ error: 'internal_error' });
+  }
+};
+
+// ============================================================================
+// Quick task 260507-ong — Audit P1 #5 / Reverse symmetry CLI ↔ UI
+// ============================================================================
+
+/**
+ * GET /api/remotion-templates/:id/spec → text/markdown
+ *
+ * Rebuilds a SPEC.md (frontmatter YAML + body) from the current DB state of
+ * the template. Output is round-trip safe with `npm run template:import`
+ * (`scripts/import-template-spec.ts`). Closes the inverse path of ADR-086 :
+ * import = SPEC → DB ; export = DB → SPEC.
+ *
+ * super_admin only — the SPEC export exposes the template internals (slots,
+ * fonts, FTP URLs) which is admin-only territory. Joi UUID validation is
+ * enforced upstream by `validateParams(remotionTemplateIdParam)` in the
+ * router.
+ *
+ * Markdown formatting is fully delegated to `templateSpecBuilderService` —
+ * the controller only handles HTTP concerns (headers, status codes).
+ */
+export const exportTemplateSpec = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { id } = req.params;
+  try {
+    logger.info('Export template SPEC', {
+      template_id: id,
+      user_id: req.user?.id ?? null,
+    });
+    const { filename, content } = await templateSpecBuilderService.buildSpecMarkdown(id);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(content);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith('Template not found')) {
+      logger.warn('Export template SPEC: not found', { template_id: id });
+      res.status(404).json({ error: 'Template not found' });
+      return;
+    }
+    logger.error('Export template SPEC failed', { template_id: id, error: msg });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

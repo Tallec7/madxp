@@ -59,6 +59,17 @@ router.get(
   ctrl.listTemplates,
 );
 
+// Quick task 260507-ong — Export SPEC.md from current DB state (audit P1 #5).
+// super_admin only, declared BEFORE /:id so the more specific path matches.
+router.get(
+  '/:id/spec',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(remotionTemplateIdParam),
+  adminRateLimit,
+  ctrl.exportTemplateSpec,
+);
+
 router.get(
   '/:id',
   authenticate,
