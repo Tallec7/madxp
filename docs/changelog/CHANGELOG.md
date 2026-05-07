@@ -1,3 +1,9 @@
+## [3.296.1](https://github.com/Tallec7/neopro/compare/v3.296.0...v3.296.1) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** guard runtime against broken asset URLs (incident 2026-05-07) ([#889](https://github.com/Tallec7/neopro/issues/889)) ([fe3d097](https://github.com/Tallec7/neopro/commit/fe3d097f43e90adde5bf1bb040855e5b14de2a9a))
+
 # [3.296.0](https://github.com/Tallec7/neopro/compare/v3.295.0...v3.296.0) (2026-05-07)
 
 ### Features
