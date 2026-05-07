@@ -186,7 +186,7 @@ import type { RemotionTemplate, TemplatePropDef } from './remotion-templates.typ
     }
     .validation-hint {
       font-size: 12px; color: #b91c1c; margin: 0;
-      padding: 6px 10px; background: #fef2f2; border-radius: 6px;
+      padding: 6px 10px; background: var(--studio-danger-bg); border-radius: 6px;
     }
   `],
 })

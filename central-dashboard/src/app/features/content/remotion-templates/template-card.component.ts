@@ -165,7 +165,7 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
     .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
     .badge-published { background: #d1fae5; color: #065f46; }
     .badge-draft { background: #fef3c7; color: #92400e; }
-    .badge-club { background: #ede9fe; color: #5b21b6; }
+    .badge-club { background: var(--studio-accent-100); color: var(--studio-accent-700); }
     .tpl-admin-actions { padding: 8px 12px; border-top: 1px solid #f3f4f6; }
     .btn-publish {
       font-size: 12px;

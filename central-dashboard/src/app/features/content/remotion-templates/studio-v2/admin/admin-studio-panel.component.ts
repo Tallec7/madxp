@@ -214,10 +214,10 @@ type HistoryEntry =
     .asp__format-options { display: flex; flex-wrap: wrap; gap: 8px; }
     .asp__format-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 14px; min-width: 110px; border: 1px solid #d1d5db; border-radius: 6px; background: #f9fafb; cursor: pointer; color: #111827; }
     .asp__format-btn:hover { background: #f3f4f6; }
-    .asp__format-btn--active { border-color: #6d28d9; background: #ede9fe; color: #5b21b6; font-weight: 600; }
+    .asp__format-btn--active { border-color: var(--studio-accent-600); background: var(--studio-accent-100); color: var(--studio-accent-700); font-weight: 600; }
     .asp__format-label { font-size: 13px; }
     .asp__format-dim { font-size: 11px; color: #6b7280; }
-    .asp__format-btn--active .asp__format-dim { color: #6d28d9; }
+    .asp__format-btn--active .asp__format-dim { color: var(--studio-accent-600); }
     .asp__format-hint { margin: 0; font-size: 11px; color: #6b7280; }
     .asp__toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .asp__history { display: inline-flex; gap: 4px; }
@@ -228,7 +228,7 @@ type HistoryEntry =
     .asp__mode-btn { padding: 6px 14px; font-size: 12px; background: #fff; border: none; cursor: pointer; color: #374151; }
     .asp__mode-btn + .asp__mode-btn { border-left: 1px solid #d1d5db; }
     .asp__mode-btn:hover { background: #f3f4f6; }
-    .asp__mode-btn--active { background: #6d28d9; color: #fff; font-weight: 600; }
+    .asp__mode-btn--active { background: var(--studio-accent-600); color: #fff; font-weight: 600; }
   `],
 })
 export class AdminStudioPanelComponent {

@@ -76,7 +76,7 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .avp__add { margin-left: auto; padding: 4px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; cursor: pointer; }
     .avp__form { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: #f9fafb; border-radius: 6px; }
     .avp__form input { flex: 1 1 160px; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; }
-    .avp__save { padding: 4px 10px; background: #7c3aed; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .avp__save { padding: 4px 10px; background: var(--studio-accent-500); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
     .avp__save:disabled { opacity: 0.5; cursor: not-allowed; }
     .avp__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
     .avp__item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; }
@@ -85,7 +85,7 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .avp__url { flex: 1; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .avp__btn { padding: 2px 6px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; cursor: pointer; font-size: 11px; }
     .avp__btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .avp__delete { padding: 2px 6px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 3px; cursor: pointer; font-size: 11px; }
+    .avp__delete { padding: 2px 6px; background: var(--studio-danger-bg); color: var(--studio-danger-fg); border: 1px solid var(--studio-danger-border); border-radius: 3px; cursor: pointer; font-size: 11px; }
     .avp__empty { font-size: 12px; color: #6b7280; font-style: italic; }
   `],
 })

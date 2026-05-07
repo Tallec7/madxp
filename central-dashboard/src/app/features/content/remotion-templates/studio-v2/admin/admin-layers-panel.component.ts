@@ -90,7 +90,7 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .alp__add { margin-left: auto; padding: 4px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; cursor: pointer; }
     .alp__form { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; background: #f9fafb; border-radius: 6px; }
     .alp__form input { flex: 1 1 120px; padding: 4px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; }
-    .alp__save { padding: 4px 10px; background: #7c3aed; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .alp__save { padding: 4px 10px; background: var(--studio-accent-500); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
     .alp__save:disabled { opacity: 0.5; cursor: not-allowed; }
     .alp__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
     .alp__item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; }
@@ -98,10 +98,10 @@ import { UrlUploadInputComponent } from './url-upload-input.component';
     .alp__name { flex: 0 0 120px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__url { flex: 1; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; }
     .alp__mask { font-size: 10px; color: #6b7280; font-family: monospace; }
-    .alp__reorder { width: 28px; height: 28px; padding: 0; border: 1px solid #c4b5fd; border-radius: 4px; background: #f5f3ff; cursor: pointer; font-size: 15px; font-weight: 700; color: #6d28d9; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
-    .alp__reorder:hover:not(:disabled) { background: #ede9fe; border-color: #7c3aed; }
-    .alp__reorder:disabled { opacity: 0.3; cursor: not-allowed; background: #f3f4f6; border-color: #e5e7eb; color: #9ca3af; }
-    .alp__delete { padding: 2px 6px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 3px; cursor: pointer; font-size: 11px; }
+    .alp__reorder { width: 40px; height: 40px; min-width: 40px; padding: 0; border: 1px solid var(--studio-accent-200); border-radius: 4px; background: var(--studio-accent-50); cursor: pointer; font-size: 15px; font-weight: 700; color: var(--studio-accent-600); line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .alp__reorder:hover:not(:disabled) { background: var(--studio-accent-100); border-color: var(--studio-accent-500); }
+    .alp__reorder:disabled { opacity: 0.3; cursor: not-allowed; background: var(--studio-disabled-bg); border-color: var(--studio-disabled-border); color: var(--studio-disabled-fg); }
+    .alp__delete { padding: 2px 6px; background: var(--studio-danger-bg); color: var(--studio-danger-fg); border: 1px solid var(--studio-danger-border); border-radius: 3px; cursor: pointer; font-size: 11px; }
     .alp__empty { font-size: 12px; color: #6b7280; font-style: italic; }
   `],
 })

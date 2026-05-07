@@ -121,7 +121,7 @@ import type { RemotionTemplate, TemplatePropDef } from './remotion-templates.typ
       border: 1px solid #d1d5db; border-radius: 6px; padding: 10px;
       resize: vertical; box-sizing: border-box;
     }
-    textarea.error { border-color: #dc2626; background: #fef2f2; }
+    textarea.error { border-color: #dc2626; background: var(--studio-danger-bg); }
     .error-hint { color: #dc2626; font-size: 12px; margin-top: 4px; }
     .info-hint { color: #6b7280; font-size: 12px; margin-top: 4px; }
     .modal-footer {
