@@ -54,6 +54,7 @@ class NeoproSyncAgent {
     this.analyticsInterval = null;
     this.connectionHealthCheckInterval = null;
     this.connected = false;
+    this._pendingStateSync = null;
     this.configWatcher = null;
     this.videoWatcher = null;
     this.lastSuccessfulHeartbeat = null;
@@ -212,12 +213,21 @@ class NeoproSyncAgent {
       rawSocket.on('state-sync', (data) => {
         if (this.socket && this.socket.connected) {
           this.socket.emit('state-sync', data);
+        } else {
+          // Cloud not yet connected — buffer and flush once we're authenticated.
+          // This covers the race where authenticated fires before socket.connected=true.
+          this._pendingStateSync = data;
         }
       });
       // Pull current state immediately — the listener above misses events emitted
       // before handleAuthenticated() fires (race: local connects before cloud auth).
       rawSocket.emit('request-state-sync');
     }
+
+    // The pending flush + fresh request must happen AFTER cloud auth, not here.
+    // (setImmediate fires too early — cloud hasn't authenticated yet, so
+    //  _pendingStateSync is null and this.socket.connected is false.)
+    // See handleAuthenticated() for the actual flush.
 
     // =========================================================================
     // CLOUD MONITORING — Screenshot request-response
@@ -426,6 +436,19 @@ class NeoproSyncAgent {
     this.authRetries = 0;
     this.connected = true;
     connectionStatus.recordSync(true);
+
+    // Flush any state-sync that arrived before cloud auth (race: local responds
+    // before cloud socket reaches connected=true). Also request fresh state so
+    // receivers detected before this reconnect are propagated to cloud.
+    setImmediate(() => {
+      if (this._pendingStateSync && this.socket && this.socket.connected) {
+        this.socket.emit('state-sync', this._pendingStateSync);
+        this._pendingStateSync = null;
+      }
+      if (localSocket.isConnected()) {
+        localSocket.emit('request-state-sync');
+      }
+    });
 
     // Enregistrer la connexion dans l'historique
     syncHistory.recordConnection(true, { siteId: config.site.id });
