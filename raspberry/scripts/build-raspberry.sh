@@ -385,6 +385,18 @@ if [ -f "raspberry/webapp-captive/firestick-wait.html" ]; then
     print_success "firestick-wait.html copiée → webapp/"
 fi
 
+# Phase 6 — gap closure : propager neopro-base.conf via OTA
+# Source de vérité nginx (utilisée par install.sh::configure_nginx). Sur un Pi existant,
+# l'application = re-run `bash install.sh` (idempotent, Plan 05) — pas d'auto-reload sync-agent.
+if [ -f "raspberry/config/nginx/neopro-base.conf" ]; then
+    mkdir -p ${DEPLOY_DIR}/config/nginx
+    cp raspberry/config/nginx/neopro-base.conf ${DEPLOY_DIR}/config/nginx/neopro-base.conf
+    print_success "neopro-base.conf copiée → config/nginx/ (OTA-ready)"
+else
+    print_error "raspberry/config/nginx/neopro-base.conf introuvable — abort"
+    exit 1
+fi
+
 # Modifier l'environnement dans le build pour pointer vers la config raspberry
 # (L'application utilisera automatiquement environment.raspberry.ts)
 
