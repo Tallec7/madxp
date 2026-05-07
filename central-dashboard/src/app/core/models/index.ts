@@ -172,12 +172,27 @@ export interface Site {
   suspension_note?: string | null;
 }
 
+/** Receiver assigned to a display slot (Phase 8 — Fire Stick assignation) */
+export interface ReceiverConfig {
+  kind: 'pi_native' | 'firestick' | 'browser';
+  mac?: string; // MAC address when kind is firestick or browser
+  last_seen_at?: string; // ISO8601 — last time receiver was seen by Pi
+}
+
 /** N-display configuration entry (PROP-002 Phase 5H) */
 export interface DisplayConfig {
   index: number;
   name: string;
   type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
   resolution?: string; // e.g. '1920x1080', '1920x384'
+  receiver?: ReceiverConfig | null; // Phase 8: Fire Stick / Pi native assignment
+}
+
+/** Receiver detected by the Pi sync-agent — returned by GET /api/sites/:id/connected-receivers */
+export interface ReceiverInfo {
+  mac: string; // 'AA:BB:CC:DD:EE:FF'
+  kind: 'pi_native' | 'firestick' | 'browser';
+  lastSeenAt: string; // ISO8601
 }
 
 /**
