@@ -30,7 +30,7 @@
 
 ### CLOUD — API + sync-agent
 
-- [ ] **CLOUD-01** : `GET /api/sites/:id/connected-receivers` retourne les MACs détectées par le Pi (auto-discovery liste, ordonnée par `last_seen_at`)
+- [x] **CLOUD-01** : `GET /api/sites/:id/connected-receivers` retourne les MACs détectées par le Pi (auto-discovery liste, ordonnée par `last_seen_at`)
 - [ ] **CLOUD-02** : Assignation MAC↔display via PATCH du `DisplayConfig` (route PROP-002 existante étendue, validation Joi)
 - [ ] **CLOUD-03** : Sync-agent whitelist nouvel event `receiver-detected` (et `receiver-disconnected`)
 - [ ] **CLOUD-04** : DB cloud = source de vérité ; Pi reçoit assignments via socket et met à jour cache local automatiquement
@@ -71,26 +71,26 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 
 ## Traceability
 
-| REQ-ID       | Phase           | Plan |
-| ------------ | --------------- | ---- |
-| DATA-01      | Phase 4 (DATA)      | TBD  |
-| DATA-02      | Phase 4 (DATA)      | TBD  |
-| DATA-03      | Phase 4 (DATA)      | TBD  |
-| DETECT-01    | Phase 5 (DETECT)    | TBD  |
-| DETECT-02    | Phase 5 (DETECT)    | TBD  |
-| DETECT-03    | Phase 5 (DETECT)    | TBD  |
-| CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD  |
-| CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD  |
+| REQ-ID       | Phase               | Plan          |
+| ------------ | ------------------- | ------------- |
+| DATA-01      | Phase 4 (DATA)      | TBD           |
+| DATA-02      | Phase 4 (DATA)      | TBD           |
+| DATA-03      | Phase 4 (DATA)      | TBD           |
+| DETECT-01    | Phase 5 (DETECT)    | TBD           |
+| DETECT-02    | Phase 5 (DETECT)    | TBD           |
+| DETECT-03    | Phase 5 (DETECT)    | TBD           |
+| CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD           |
+| CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD           |
 | CAPTIVE-03   | Phase 6 (CAPTIVE)   | 06-captive-03 |
 | CAPTIVE-04   | Phase 6 (CAPTIVE)   | 06-captive-03 |
-| CLOUD-01     | Phase 7 (CLOUD)     | TBD  |
-| CLOUD-02     | Phase 7 (CLOUD)     | TBD  |
-| CLOUD-03     | Phase 7 (CLOUD)     | TBD  |
-| CLOUD-04     | Phase 7 (CLOUD)     | TBD  |
-| DASHBOARD-01 | Phase 8 (DASHBOARD) | TBD  |
-| DASHBOARD-02 | Phase 8 (DASHBOARD) | TBD  |
-| DASHBOARD-03 | Phase 8 (DASHBOARD) | TBD  |
-| OBSERVE-01   | Phase 9 (OBSERVE)   | TBD  |
-| OBSERVE-02   | Phase 9 (OBSERVE)   | TBD  |
+| CLOUD-01     | Phase 7 (CLOUD)     | TBD           |
+| CLOUD-02     | Phase 7 (CLOUD)     | TBD           |
+| CLOUD-03     | Phase 7 (CLOUD)     | TBD           |
+| CLOUD-04     | Phase 7 (CLOUD)     | TBD           |
+| DASHBOARD-01 | Phase 8 (DASHBOARD) | TBD           |
+| DASHBOARD-02 | Phase 8 (DASHBOARD) | TBD           |
+| DASHBOARD-03 | Phase 8 (DASHBOARD) | TBD           |
+| OBSERVE-01   | Phase 9 (OBSERVE)   | TBD           |
+| OBSERVE-02   | Phase 9 (OBSERVE)   | TBD           |
 
 **18 requirements** | **6 catégories** | **Coverage: 18/18** ✓ | Research skipped (POC + pattern PROP-002 known)

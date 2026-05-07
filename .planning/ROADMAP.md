@@ -92,12 +92,11 @@
 3. Un event `receiver-detected` ou `receiver-disconnected` envoyé par le Pi est accepté par le sync-agent (whitelist) et traité côté cloud.
 4. Quand un admin assigne une MAC à un display côté cloud, le Pi reçoit l'assignation via socket et met à jour son cache local sans reboot.
 
-**Plans**: 4 plans
+**Plans**: 3 plans
 
-- [x] 06-captive-01-receivers-resolve-mac-by-ip-PLAN.md — receivers.service.resolveMacByIp + tests (CAPTIVE-02) ✅ 2026-05-06
-- [ ] 06-captive-02-captive-route-server-wire-PLAN.md — /api/captive/whoami route + server.js wire (CAPTIVE-02, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-03-configs-wait-page-install-PLAN.md — dnsmasq+nginx configs + firestick-wait.html + smoke (CAPTIVE-01, CAPTIVE-03, CAPTIVE-04)
-- [ ] 06-captive-04-angular-bootstrap-router-PLAN.md — AppComponent bootstrap router + Karma + Pi RACC validation (CAPTIVE-02, CAPTIVE-04)
+- [ ] 07-cloud-01-connected-receivers-map-PLAN.md — SocketService Map + GET /api/sites/:id/connected-receivers (CLOUD-01)
+- [ ] 07-cloud-02-patch-displays-emit-command-PLAN.md — updateSiteDisplays emit receiver_assignment_updated + sync-agent whitelist (CLOUD-02, CLOUD-03)
+- [ ] 07-cloud-03-pi-command-dispatch-handler-PLAN.md — Pi command-dispatch handler → receiversService.assignDisplay (CLOUD-04)
 
 ### Phase 8: DASHBOARD — UX admin assignation
 
@@ -144,7 +143,7 @@
 | 4. DATA             | v4.0      | 1/2            | In Progress | -          |
 | 5. DETECT           | 3/3       | Complete       | 2026-05-06  | -          |
 | 6. CAPTIVE          | 6/6       | Complete       | 2026-05-07  | -          |
-| 7. CLOUD            | v4.0      | 0/0            | Not started | -          |
+| 7. CLOUD            | 1/3       | In Progress    |             | -          |
 | 8. DASHBOARD        | v4.0      | 0/0            | Not started | -          |
 | 9. OBSERVE          | v4.0      | 0/0            | Not started | -          |
 
