@@ -172,7 +172,9 @@
 2. Sélectionner une MAC dans [Réassigner ▾] effectue l'opération en un seul clic — l'ancienne assignation est détachée et la nouvelle est appliquée atomiquement, sans état intermédiaire visible.
 3. L'ancien Fire Stick désassigné bascule automatiquement en page d'attente via `receiver_assignment_updated` → Pi → captive route, sans reboot ni manipulation terrain.
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+- [ ] 11-01-displays-editor-reassign-ux-PLAN.md — Helpers `isReceiverStale` / `getReassignableReceivers` / `getCrossDisplayHint` + mutation atomique 2-displays dans `assignReceiver` + bouton [Réassigner ▾] séparé du badge MAC + 6 tests Karma (ASSIGN-01, ASSIGN-02, ASSIGN-03)
 
 ### Phase 12: ALLOWLIST — MAC allowlist hostapd
 
@@ -215,7 +217,7 @@
 | 8. DASHBOARD        | v4.0      | 4/4            | Complete    | 2026-05-07 |
 | 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
 | 10. CAPTIVE-AUTO    | 1/1       | Complete       | 2026-05-07  | -          |
-| 11. REASSIGN        | v4.1      | 0/?            | Not started | -          |
+| 11. REASSIGN        | v4.1      | 0/1            | Planned     | -          |
 | 12. ALLOWLIST       | v4.1      | 0/?            | Not started | -          |
 | 13. ALERT           | v4.1      | 0/?            | Not started | -          |
 
