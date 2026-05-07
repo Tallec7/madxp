@@ -208,3 +208,150 @@ describe('DisplaysEditorComponent — Phase 8 Receiver UX', () => {
     expect(emptyMsg!.textContent).toContain('Aucun récepteur détecté');
   });
 });
+
+describe('DisplaysEditorComponent — Phase 11 Reassign UX', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+
+  const mockReceivers: ReceiverInfo[] = [
+    { mac: 'AA:BB:CC:DD:EE:FF', kind: 'firestick', lastSeenAt: new Date().toISOString() },
+    { mac: '11:22:33:44:55:66', kind: 'firestick', lastSeenAt: new Date(Date.now() - 120000).toISOString() },
+  ];
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+  });
+
+  // Test H — ASSIGN-01 : display assigné → badge MAC séparé + bouton [Réassigner ▾]
+  it('H — assigned display shows separate MAC badge + [Réassigner ▾] button (not MAC in button)', () => {
+    component.displays = [{
+      index: 1, name: 'Écran principal', type: 'tv',
+      receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF', last_seen_at: new Date().toISOString() },
+    }];
+    component.connectedReceivers = mockReceivers;
+    fixture.detectChanges();
+
+    const reassignBtn = fixture.nativeElement.querySelector('.receiver-badge--reassign') as HTMLElement;
+    expect(reassignBtn).toBeTruthy();
+    expect(reassignBtn.textContent?.trim()).toContain('Réassigner');
+
+    const macBadge = fixture.nativeElement.querySelector('.receiver-badge--mac') as HTMLElement;
+    expect(macBadge).toBeTruthy();
+    expect(macBadge.textContent).toContain('AA:BB');
+  });
+
+  // Test I — ASSIGN-01 : dropdown exclut la MAC courante du display assigné
+  it('I — dropdown excludes the current MAC of the assigned display', () => {
+    component.displays = [{
+      index: 1, name: 'TV', type: 'tv',
+      receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF', last_seen_at: new Date().toISOString() },
+    }];
+    component.connectedReceivers = mockReceivers;
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector('.receiver-badge--reassign') as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+
+    const dropdown = fixture.nativeElement.querySelector('.receiver-dropdown');
+    expect(dropdown.textContent).not.toContain('AA:BB:CC:DD:EE:FF');
+    expect(dropdown.textContent).toContain('11:22:33:44:55:66');
+  });
+
+  // Test J — ASSIGN-01 : sous-texte 'actuellement sur [name]' pour MAC cross-display
+  it("J — dropdown shows 'actuellement sur [name]' hint for cross-display MAC", () => {
+    component.displays = [
+      { index: 1, name: 'Écran principal', type: 'tv', receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF', last_seen_at: new Date().toISOString() } },
+      { index: 2, name: 'TV Buvette', type: 'tv' },
+    ];
+    component.connectedReceivers = mockReceivers;
+    fixture.detectChanges();
+
+    // Ouvre dropdown sur display 2 (non assigné)
+    const btn = fixture.nativeElement.querySelector('.receiver-badge--unassigned') as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+
+    const dropdown = fixture.nativeElement.querySelector('.receiver-dropdown');
+    expect(dropdown.textContent).toContain('actuellement sur Écran principal');
+  });
+
+  // Test K — ASSIGN-02 + ASSIGN-03 : mutation atomique 2 displays dans 1 seul emit
+  it('K — selecting cross-display MAC emits 2 mutations atomically (single emit)', () => {
+    component.displays = [
+      { index: 1, name: 'Écran principal', type: 'tv', receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF', last_seen_at: new Date().toISOString() } },
+      { index: 2, name: 'TV Buvette', type: 'tv' },
+    ];
+    component.connectedReceivers = mockReceivers;
+    fixture.detectChanges();
+
+    let emitCount = 0;
+    let emitted: DisplayConfig[] | undefined;
+    component.displaysChange.subscribe((val: DisplayConfig[]) => { emitCount++; emitted = val; });
+
+    // Ouvre dropdown sur display 2 (non assigné)
+    const btn = fixture.nativeElement.querySelector('.receiver-badge--unassigned') as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+
+    // Sélectionne la MAC déjà assignée au display 1
+    const options = fixture.nativeElement.querySelectorAll('.receiver-dropdown .template-option');
+    const targetOption = Array.from(options).find(
+      (o) => (o as HTMLElement).textContent?.includes('AA:BB:CC:DD:EE:FF')
+    ) as HTMLButtonElement;
+    expect(targetOption).toBeTruthy();
+    targetOption.click();
+    fixture.detectChanges();
+
+    expect(emitCount).toBe(1);
+    expect(emitted).toBeDefined();
+    const source = emitted!.find((d) => d.index === 1);
+    const target = emitted!.find((d) => d.index === 2);
+    expect(source?.receiver).toBeNull();
+    expect(target?.receiver?.mac).toBe('AA:BB:CC:DD:EE:FF');
+    expect(target?.receiver?.kind).toBe('firestick');
+  });
+
+  // Test L — Zone C : MAC absente de connectedReceivers → badge stale + tooltip
+  it('L — display with MAC absent from connectedReceivers shows stale badge + tooltip', () => {
+    component.displays = [{
+      index: 1, name: 'TV', type: 'tv',
+      receiver: { kind: 'firestick', mac: 'ZZ:ZZ:ZZ:ZZ:ZZ:ZZ', last_seen_at: new Date().toISOString() },
+    }];
+    component.connectedReceivers = mockReceivers; // ne contient pas ZZ:...
+    fixture.detectChanges();
+
+    const macBadge = fixture.nativeElement.querySelector('.receiver-badge--mac') as HTMLElement;
+    expect(macBadge).toBeTruthy();
+    expect(macBadge.classList.contains('receiver-badge--stale')).toBe(true);
+    expect(macBadge.getAttribute('title')).toBe('Récepteur hors-ligne');
+  });
+
+  // Test M — Zone C : filtrage vide (seule la MAC courante) → bouton actif + placeholder + Désassigner
+  it('M — empty filtered receivers (only current MAC) keeps button active + shows placeholder + Désassigner', () => {
+    component.displays = [{
+      index: 1, name: 'TV', type: 'tv',
+      receiver: { kind: 'firestick', mac: 'AA:BB:CC:DD:EE:FF', last_seen_at: new Date().toISOString() },
+    }];
+    component.connectedReceivers = [
+      { mac: 'AA:BB:CC:DD:EE:FF', kind: 'firestick', lastSeenAt: new Date().toISOString() },
+    ];
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector('.receiver-badge--reassign') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.hasAttribute('disabled')).toBe(false);
+    btn.click();
+    fixture.detectChanges();
+
+    const empty = fixture.nativeElement.querySelector('.receiver-empty');
+    expect(empty).toBeTruthy();
+    expect(empty.textContent).toContain('Aucun récepteur détecté');
+
+    const unassign = fixture.nativeElement.querySelector('.receiver-unassign');
+    expect(unassign).toBeTruthy();
+    expect(unassign.textContent).toContain('Désassigner');
+  });
+});
