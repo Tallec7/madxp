@@ -60,6 +60,12 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Ajouter un upsert implicite (`ON CONFLICT DO UPDATE`)** tant que v2 n'est pas écrit : v1 refuse volontairement un slug existant pour éviter les écrasements accidentels.
 - **Lire les WebM en local dans le script** : les `file:` des layers doivent rester des URLs absolues en v1 (upload FTP = v2).
 
+### Wizard v3 — boucle infinie effect (incident 2026-05-07 — smoke test enforced)
+
+- **Réintroduire `previewState` dans le type `WizardState`** (`central-dashboard/.../studio-v3/wizard-state.types.ts`). Stocker le snapshot Player dans le même signal que les inputs lus par le recompute effect crée une boucle : `buildRuntimePlayerState` réalloue toujours un nouvel objet, donc le guard `next !== s.previewState` est toujours vrai → `state.update` → effect re-trigger → freeze tab Chrome (cause : sélection 1er fond animé dans le wizard `+ Ajouter un fond animé`).
+- **Faire un `state.update(... previewState ...)` dans `studio-v3-wizard.component.ts`**. Le snapshot Player vit dans son propre signal `previewStateSignal: WritableSignal<RuntimePlayerState | null>` ; l'effect lit `state()` et écrit ailleurs, ce qui casse le feedback.
+- Référence : smoke `smoke-template-studio-v3-preview.test.ts` cas F + F2.
+
 ### Sécu uploads / proxy (audit 2026-05-07 phase C — smoke test enforced)
 
 - **Retirer `requestTimeout(300_000)` (ou `requestTimeout(UPLOAD_TIMEOUT_MS)`) sur les routes `POST /:id/assets`, `POST /:id/user-uploads`, `POST /library/upload`** dans `central-server/src/routes/remotion-templates.routes.ts` — sans ce timeout, multer accepte des uploads 200 Mo qui peuvent hanger indéfiniment et exhauster les slots HTTP Railway (audit P1 #8).

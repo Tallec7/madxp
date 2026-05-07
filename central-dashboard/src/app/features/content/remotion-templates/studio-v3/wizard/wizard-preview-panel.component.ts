@@ -19,7 +19,10 @@ import {
   Output,
 } from '@angular/core';
 
-import { TemplateStudioPlayerComponent } from '../../studio-player/template-studio-player.component';
+import {
+  TemplateStudioPlayerComponent,
+  type RuntimePlayerState,
+} from '../../studio-player/template-studio-player.component';
 import type { PreviewMode } from '../../remotion-preview.service';
 import type { WizardState, WizardStep } from '../wizard-state.types';
 
@@ -33,6 +36,12 @@ import type { WizardState, WizardStep } from '../wizard-state.types';
 })
 export class WizardPreviewPanelComponent {
   @Input({ required: true }) state!: WizardState;
+  /**
+   * Live Player props snapshot. Owned by the shell in a separate signal
+   * (not in `state`) so its recompute effect cannot loop. Null until step 1
+   * is done AND at least one layer exists.
+   */
+  @Input() previewState: RuntimePlayerState | null = null;
   /**
    * Plan 02-04 / UX-03 — Set by the shell when the admin clicks the inline
    * « ✓ N zones reliées » counter in Step 4. Triggers a yellow border + banner
@@ -53,7 +62,7 @@ export class WizardPreviewPanelComponent {
   @Output() goToStep = new EventEmitter<WizardStep>();
 
   get hasLayer(): boolean {
-    return this.state.layers.length > 0 && !!this.state.previewState;
+    return this.state.layers.length > 0 && !!this.previewState;
   }
 
   onGoToBackgrounds(): void {
