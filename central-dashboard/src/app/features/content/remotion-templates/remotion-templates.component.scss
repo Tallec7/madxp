@@ -264,7 +264,7 @@
     }
 
     &--active {
-      background: var(--neo-hand-dark, #7c3aed);
+      background: var(--neo-hand-dark, var(--studio-accent-500));
       color: #fff;
       cursor: default;
     }
@@ -293,12 +293,12 @@
 
   &:hover {
     background: var(--bg-hover, #f3f4f6);
-    border-color: var(--neo-hand-dark, #7c3aed);
+    border-color: var(--neo-hand-dark, var(--studio-accent-500));
   }
 
   &--active {
-    background: var(--neo-hand-dark, #7c3aed);
-    border-color: var(--neo-hand-dark, #7c3aed);
+    background: var(--neo-hand-dark, var(--studio-accent-500));
+    border-color: var(--neo-hand-dark, var(--studio-accent-500));
     color: #fff;
   }
 }
@@ -356,7 +356,7 @@
 
     &.active {
       background: var(--card-bg, #fff);
-      color: var(--primary-color, #7c3aed);
+      color: var(--primary-color, var(--studio-accent-500));
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
       font-weight: 600;
     }
