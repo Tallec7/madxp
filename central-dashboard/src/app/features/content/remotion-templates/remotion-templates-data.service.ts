@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService } from '../../../core/services/api.service';
 import type {
   Anchor,
@@ -28,6 +29,29 @@ import type {
 /** Payload create variant — id + templateId sont injectés par le serveur. */
 export type TemplateVariantCreate = Omit<TemplateVariant, 'id' | 'templateId'>;
 export type TemplateVariantUpdate = Partial<TemplateVariantCreate>;
+
+/**
+ * Quick task 260507-gxd — Réponse 200 OK de DELETE /api/remotion-templates/:id.
+ * `orphanAssetsRemoved` = nombre d'assets FTP supprimés (URLs uniques à ce
+ * template) ; `ftpFailures` = nombre de cleanups FTP qui ont échoué (DB
+ * cascade déjà committée, status=partial dans la métrique).
+ */
+export interface DeleteTemplateResponse {
+  deleted: boolean;
+  orphanAssetsRemoved: number;
+  ftpFailures: number;
+}
+
+/**
+ * Quick task 260507-gxd — Body 409 Conflict de DELETE /api/remotion-templates/:id.
+ * Surface au composant pour proposer "Forcer la suppression" (admin escape hatch).
+ */
+export interface DeleteTemplateConflictBody {
+  error: string;
+  code: 'TEMPLATE_IN_USE';
+  published: boolean;
+  usedByCount: number;
+}
 
 export type TemplateLayerCreate = Omit<TemplateLayer, 'id' | 'templateId'>;
 export type TemplateLayerUpdate = Partial<TemplateLayerCreate>;
@@ -162,6 +186,28 @@ export interface TemplateImageSlotUpdate {
 export class RemotionTemplatesDataService {
   private api = inject(ApiService);
 
+  /**
+   * Audit P1 #8 — Map HTTP 408 (Request Timeout) into a French, user-grade
+   * message before bubbling the error up to the component. The server-side
+   * middleware `request-timeout.ts` returns 408 when an upload exceeds 5min ;
+   * without this mapping the dashboard surfaces a generic "Erreur HTTP" toast.
+   */
+  private mapUploadTimeout<T>(): (source: Observable<T>) => Observable<T> {
+    return (source: Observable<T>): Observable<T> =>
+      source.pipe(
+        catchError((err: unknown) => {
+          if (err instanceof HttpErrorResponse && err.status === 408) {
+            const friendly = new Error(
+              'Upload trop long, vérifie ta connexion (Request Timeout)',
+            );
+            (friendly as { status?: number }).status = 408;
+            return throwError(() => friendly);
+          }
+          return throwError(() => err);
+        }),
+      );
+  }
+
   list(): Observable<RemotionTemplate[]> {
     return this.api.get<RemotionTemplate[]>('/remotion-templates');
   }
@@ -221,7 +267,9 @@ export class RemotionTemplatesDataService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('prop_key', propKey);
-    return this.api.upload<AssetUploadResult>(`/remotion-templates/${templateId}/assets`, formData);
+    return this.api
+      .upload<AssetUploadResult>(`/remotion-templates/${templateId}/assets`, formData)
+      .pipe(this.mapUploadTimeout());
   }
 
   // ── ADR-110 / Plan 02 — Library Asset Manager (super_admin) ───────────────
@@ -239,7 +287,9 @@ export class RemotionTemplatesDataService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('respect_alpha', String(opts.respectAlpha ?? false));
-    return this.api.upload<WebmAssetMetadata>('/remotion-templates/library/upload', formData);
+    return this.api
+      .upload<WebmAssetMetadata>('/remotion-templates/library/upload', formData)
+      .pipe(this.mapUploadTimeout());
   }
 
   deleteLibraryAsset(assetId: string): Observable<void> {
@@ -255,10 +305,9 @@ export class RemotionTemplatesDataService {
   uploadStudioAsset(templateId: string, file: File): Observable<{ url: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.api.upload<{ url: string }>(
-      `/remotion-templates/${templateId}/assets`,
-      formData,
-    );
+    return this.api
+      .upload<{ url: string }>(`/remotion-templates/${templateId}/assets`, formData)
+      .pipe(this.mapUploadTimeout());
   }
 
   /**
@@ -274,10 +323,12 @@ export class RemotionTemplatesDataService {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('slot_key', slotKey);
-    return this.api.upload<{ url: string; slot_key: string }>(
-      `/remotion-templates/${templateId}/user-uploads`,
-      formData,
-    );
+    return this.api
+      .upload<{ url: string; slot_key: string }>(
+        `/remotion-templates/${templateId}/user-uploads`,
+        formData,
+      )
+      .pipe(this.mapUploadTimeout());
   }
 
   /**
@@ -327,6 +378,24 @@ export class RemotionTemplatesDataService {
 
   duplicateTemplate(id: string, name?: string): Observable<RemotionTemplate> {
     return this.api.post<RemotionTemplate>(`/remotion-templates/${id}/duplicate`, name ? { name } : {});
+  }
+
+  /**
+   * Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+   * Cascade DELETE côté serveur (templates + variants + layers + text_fields
+   * + image_slots + options + packshot_refs + versions) + cleanup FTP des
+   * orphan assets. `force=true` bypass le 409 guard (template publié /
+   * in-use), audité via la métrique `neopro_template_deleted_total{reason}`.
+   *
+   * Erreurs renvoyées :
+   *   - 404 : template introuvable
+   *   - 409 : `{ code: 'TEMPLATE_IN_USE', published, usedByCount }` — UI
+   *           propose à l'admin de cocher "Forcer" pour re-tenter avec force.
+   *   - 200 : `{ deleted: true, orphanAssetsRemoved, ftpFailures }`
+   */
+  deleteTemplate(id: string, force = false): Observable<DeleteTemplateResponse> {
+    const path = `/remotion-templates/${id}${force ? '?force=true' : ''}`;
+    return this.api.delete<DeleteTemplateResponse>(path);
   }
 
   listVersions(id: string): Observable<TemplateVersion[]> {

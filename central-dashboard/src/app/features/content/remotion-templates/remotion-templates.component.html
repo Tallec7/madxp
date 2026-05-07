@@ -79,7 +79,81 @@
     (publishToggle)="togglePublish($event)"
     (duplicateRequested)="onDuplicateFromCard($event)"
     (unpublishRequested)="onUnpublishRequested($event)"
+    (deleteRequested)="openDeleteModal($event)"
   ></app-template-grid>
+
+  <!--
+    Quick task 260507-gxd — DELETE template typed-name confirmation modal.
+    Pattern GitHub repo-delete : l'admin doit retaper exactement le nom du
+    template pour activer le bouton de confirmation. Si le serveur
+    retourne 409 (template publié ou in-use), un checkbox "Forcer" apparaît.
+  -->
+  <div *ngIf="deleteModal.tpl" class="rt-delete-modal-backdrop" (click)="closeDeleteModal()"></div>
+  <div
+    *ngIf="deleteModal.tpl as dt"
+    class="rt-delete-modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'Supprimer ' + dt.name"
+    data-testid="template-delete-modal"
+    (click)="$event.stopPropagation()"
+  >
+    <h3>Supprimer « {{ dt.name }} » ?</h3>
+    <p
+      *ngIf="deleteModal.publishedFlag || deleteModal.usedByCount > 0"
+      class="rt-delete-modal__warning"
+    >
+      ⚠️ Ce template est
+      <ng-container *ngIf="deleteModal.publishedFlag">publié</ng-container>
+      <ng-container *ngIf="deleteModal.publishedFlag && deleteModal.usedByCount > 0">
+        et
+      </ng-container>
+      <ng-container *ngIf="deleteModal.usedByCount > 0">
+        utilisé par {{ deleteModal.usedByCount }} référence(s)
+      </ng-container>
+      .
+    </p>
+    <p>
+      Pour confirmer, tape exactement
+      <code>{{ dt.name }}</code> :
+    </p>
+    <input
+      type="text"
+      class="rt-delete-modal__input"
+      data-testid="template-delete-confirm-input"
+      [(ngModel)]="deleteModal.typed"
+      [placeholder]="dt.name"
+      autocomplete="off"
+    />
+    <label *ngIf="deleteModal.requiresForce" class="rt-delete-modal__force">
+      <input
+        type="checkbox"
+        [(ngModel)]="deleteModal.force"
+        data-testid="template-delete-force-checkbox"
+      />
+      Forcer la suppression (admin)
+    </label>
+    <div class="rt-delete-modal__actions">
+      <button type="button" class="rt-delete-modal__cancel" (click)="closeDeleteModal()">
+        {{ DELETE_MODAL_LABELS.cancel }}
+      </button>
+      <button
+        type="button"
+        class="rt-delete-modal__confirm"
+        data-testid="template-delete-confirm-btn"
+        [disabled]="
+          deleteModal.deleting ||
+          deleteModal.typed !== dt.name ||
+          (deleteModal.requiresForce && !deleteModal.force)
+        "
+        (click)="confirmDelete()"
+      >
+        {{
+          deleteModal.deleting ? DELETE_MODAL_LABELS.confirmBusy : DELETE_MODAL_LABELS.confirmIdle
+        }}
+      </button>
+    </div>
+  </div>
 
   <div class="render-panel" *ngIf="selectedTemplate">
     <div class="render-panel-header">

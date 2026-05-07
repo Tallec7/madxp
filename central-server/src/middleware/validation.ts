@@ -1348,3 +1348,44 @@ export const querySchemas = {
     token: Joi.string().min(1).max(500).required(),
   }),
 };
+
+// ============================================================================
+// Quick task 260507-gxd — DELETE /api/remotion-templates/:id (P0 #1 + #2)
+// ============================================================================
+
+/**
+ * Joi schema for DELETE /api/remotion-templates/:id params validation.
+ * Aliased to `paramSchemas.id` for clarity at the route declaration site
+ * (the smoke test greps for `remotionTemplateIdParam` to enforce wiring).
+ */
+export const remotionTemplateIdParam = Joi.object({
+  id: Joi.string().uuid().required(),
+});
+
+/**
+ * Joi schema for DELETE /api/remotion-templates/:id query validation.
+ * `force=true` bypasses the 409 guard for published / in-use templates
+ * (super_admin escape hatch — audited via metric `reason='admin_force'`).
+ */
+export const remotionTemplateDeleteQuery = Joi.object({
+  force: Joi.string().valid('true', 'false').optional(),
+});
+
+// ============================================================================
+// Audit P1 #7 — HMAC-signed proxy URLs (ADR-113-bis migration)
+// ============================================================================
+
+/**
+ * Joi schema for `GET /api/remotion-templates/asset-proxy?url=…&sig=…&exp=…`.
+ *
+ * `sig` and `exp` are optional during the 24h migration grace period — a
+ * missing signature soft-fails with a Winston `warn` + Prometheus
+ * `recordTemplateProxySignatureValidation('missing')`. Once `status="missing"`
+ * holds at zero in production, a follow-up PR will tighten the schema to
+ * `required()`.
+ */
+export const proxyAssetQuerySchema = Joi.object({
+  url: Joi.string().uri().required(),
+  sig: Joi.string().hex().length(64).optional(),
+  exp: Joi.number().integer().min(0).optional(),
+});

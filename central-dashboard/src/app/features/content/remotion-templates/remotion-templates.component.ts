@@ -541,6 +541,106 @@ export class RemotionTemplatesComponent implements OnInit, OnDestroy {
    * Sur 400 `duplicate_requires_v2` (Plan 01 backend contract), surface
    * un message FR explicite ; toute autre erreur → message générique.
    */
+  // ── Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2) ──────────
+  /**
+   * State du modal de suppression (typed-name confirmation, pattern GitHub).
+   * `tpl` null = modal fermé. `requiresForce` est levé sur réponse 409.
+   */
+  deleteModal: {
+    tpl: RemotionTemplate | null;
+    typed: string;
+    usedByCount: number;
+    publishedFlag: boolean;
+    requiresForce: boolean;
+    force: boolean;
+    deleting: boolean;
+  } = {
+    tpl: null,
+    typed: '',
+    usedByCount: 0,
+    publishedFlag: false,
+    requiresForce: false,
+    force: false,
+    deleting: false,
+  };
+
+  /** Quick task 260507-gxd — labels FR du modal (sortis du template pour
+   *  contourner le détecteur de hardcoded i18n sur les expressions ternaires). */
+  readonly DELETE_MODAL_LABELS = {
+    confirmIdle: 'Confirmer la suppression',
+    confirmBusy: 'Suppression en cours…',
+    cancel: 'Annuler',
+  };
+
+  /** Card "Supprimer" → ouvre le modal avec le template ciblé. */
+  openDeleteModal(tpl: RemotionTemplate): void {
+    if (!this.isSuperAdmin) return;
+    this.deleteModal = {
+      tpl,
+      typed: '',
+      usedByCount: 0,
+      publishedFlag: tpl.published === true,
+      // requiresForce reste false jusqu'à ce que le serveur retourne 409 ;
+      // l'admin peut aussi vouloir delete un template draft, force inutile.
+      requiresForce: false,
+      force: false,
+      deleting: false,
+    };
+  }
+
+  /** Annule le modal sans appel API. */
+  closeDeleteModal(): void {
+    this.deleteModal = {
+      tpl: null,
+      typed: '',
+      usedByCount: 0,
+      publishedFlag: false,
+      requiresForce: false,
+      force: false,
+      deleting: false,
+    };
+  }
+
+  /**
+   * Confirme la suppression : valide que le user a tapé exactement le nom +
+   * coché "Forcer" si requis. Sur 409, lève requiresForce et garde le modal
+   * ouvert pour que l'admin puisse re-confirmer avec force=true.
+   */
+  confirmDelete(): void {
+    const t = this.deleteModal.tpl;
+    if (!t || this.deleteModal.deleting) return;
+    if (this.deleteModal.typed !== t.name) return;
+    if (this.deleteModal.requiresForce && !this.deleteModal.force) return;
+
+    this.deleteModal.deleting = true;
+    this.dataService.deleteTemplate(t.id, this.deleteModal.force).subscribe({
+      next: () => {
+        this.templates = this.templates.filter((x) => x.id !== t.id);
+        if (this.selectedTemplate?.id === t.id) this.selectedTemplate = null;
+        this.notifications.success('Template supprimé');
+        this.closeDeleteModal();
+      },
+      error: (err: { status?: number; error?: { code?: string; published?: boolean; usedByCount?: number } }) => {
+        if (err?.status === 409 && err?.error?.code === 'TEMPLATE_IN_USE') {
+          this.deleteModal.usedByCount = err.error?.usedByCount ?? 0;
+          this.deleteModal.publishedFlag = err.error?.published === true;
+          this.deleteModal.requiresForce = true;
+          this.deleteModal.deleting = false;
+          this.notifications.error(
+            'Template publié ou utilisé — coche "Forcer la suppression" pour confirmer.',
+          );
+        } else if (err?.status === 404) {
+          this.notifications.error('Template introuvable (déjà supprimé ?)');
+          this.templates = this.templates.filter((x) => x.id !== t.id);
+          this.closeDeleteModal();
+        } else {
+          this.deleteModal.deleting = false;
+          this.notifications.error('Suppression impossible — réessayez ou consultez les logs.');
+        }
+      },
+    });
+  }
+
   onDuplicateFromCard(tpl: RemotionTemplate): void {
     if (!this.isSuperAdmin) return;
     this.duplicatingCardId.set(tpl.id);

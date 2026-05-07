@@ -126,6 +126,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-110](ADR-110-template-studio-v3-task-oriented-admin-ux.md)                 | Template Studio v3 — UX admin orientée tâche (wizard + asset manager + vocabulaire métier)   | Proposé                           | Mai 2026 |
 | [ADR-111](ADR-111-alert-repository-dedup.md)                                    | Dédup au niveau alertRepository (upsert + occurrences) — neutralise les emitters en boucle   | Accepté                           | Mai 2026 |
 | [ADR-112](ADR-112-bodet-led-panel-usb-integration.md)                           | Intégration panneaux LED Bodet P10 V2 USB2 (mode mass storage emulation)                     | Investigation                     | Mai 2026 |
+| [ADR-113](ADR-113-ftp-creds-rotation-procedure.md)                              | Procédure de rotation manuelle des credentials FTP Hostinger (cadence 90j, audit P0 #2)      | Accepté                           | Mai 2026 |
 
 ### Supersédés
 

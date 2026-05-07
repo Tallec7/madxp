@@ -5,9 +5,25 @@ import {
   sensitiveRateLimit,
   templateUserUploadRateLimit,
 } from '../middleware/user-rate-limit';
-import { validate, validateParams, paramSchemas, schemas, testRenderSchemas } from '../middleware/validation';
+import {
+  validate,
+  validateParams,
+  validateQuery,
+  paramSchemas,
+  schemas,
+  testRenderSchemas,
+  remotionTemplateIdParam,
+  remotionTemplateDeleteQuery,
+} from '../middleware/validation';
 import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
+import { requestTimeout } from '../middleware/request-timeout';
 import * as ctrl from '../controllers/remotion-templates.controller';
+
+// Audit P1 #8 — 5 min cap on Template Studio uploads. Multer accepts up to
+// 200 MB per file ; behind a flaky uplink the FTP relay can stall indefinitely
+// and exhaust Railway HTTP slots. requestTimeout(300_000) converts the hang
+// into a clean 408 the dashboard can surface as "upload trop long".
+const UPLOAD_TIMEOUT_MS = 300_000;
 
 const router = Router();
 
@@ -27,6 +43,7 @@ router.get(
 );
 router.post(
   '/library/upload',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('super_admin'),
   sensitiveRateLimit,
@@ -48,6 +65,17 @@ router.get(
   requireRole('admin', 'super_admin', 'operator', 'club'),
   adminRateLimit,
   ctrl.listTemplates,
+);
+
+// Quick task 260507-ong — Export SPEC.md from current DB state (audit P1 #5).
+// super_admin only, declared BEFORE /:id so the more specific path matches.
+router.get(
+  '/:id/spec',
+  authenticate,
+  requireRole('super_admin'),
+  validateParams(remotionTemplateIdParam),
+  adminRateLimit,
+  ctrl.exportTemplateSpec,
 );
 
 router.get(
@@ -136,6 +164,19 @@ router.post(
   ctrl.unpublishTemplate,
 );
 
+// Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+// super_admin only, sensitiveRateLimit (30/min), ?force=true bypasses 409
+// guard for published / in-use templates (audited via metric reason label).
+router.delete(
+  '/:id',
+  authenticate,
+  requireRole('super_admin'),
+  sensitiveRateLimit,
+  validateParams(remotionTemplateIdParam),
+  validateQuery(remotionTemplateDeleteQuery),
+  ctrl.deleteTemplate,
+);
+
 // ADR-075 — toggle schema_version 1 ↔ 2 (super_admin uniquement)
 // Remplace le flip manuel SQL documenté dans ADR-075 par un toggle UI.
 // Guard repo-side : v2 exige shadow data présentes (variants/text_fields/image_slots).
@@ -152,6 +193,7 @@ router.patch(
 // Upload asset vidéo (WebM) — admin uniquement
 router.post(
   '/:id/assets',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('admin', 'super_admin'),
   validateParams(paramSchemas.id),
@@ -166,6 +208,7 @@ router.post(
 // render (`imageUploads[slotKey]`), pas persistée dans default_props.
 router.post(
   '/:id/user-uploads',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('admin', 'super_admin', 'operator', 'club'),
   validateParams(paramSchemas.id),

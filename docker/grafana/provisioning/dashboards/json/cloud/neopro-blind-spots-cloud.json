@@ -13,9 +13,7 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "neopro"
-      ],
+      "tags": ["neopro"],
       "targetBlank": false,
       "title": "Neopro Dashboards",
       "type": "dashboards"
@@ -118,9 +116,7 @@
         "graphMode": "area",
         "justifyMode": "center",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -243,9 +239,7 @@
         "graphMode": "area",
         "justifyMode": "center",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -295,9 +289,7 @@
         "colorMode": "background",
         "graphMode": "area",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -419,9 +411,7 @@
         "graphMode": "area",
         "justifyMode": "center",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -468,9 +458,7 @@
         "colorMode": "background",
         "graphMode": "area",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -735,9 +723,7 @@
         "colorMode": "value",
         "graphMode": "area",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -823,9 +809,7 @@
         "colorMode": "value",
         "graphMode": "area",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -910,9 +894,7 @@
         "colorMode": "background",
         "graphMode": "none",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -963,9 +945,7 @@
         "colorMode": "background",
         "graphMode": "area",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -1260,15 +1240,57 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 101
+      },
+      "id": 808,
+      "title": "Templates deleted (quick task 260507-gxd / P0 #1+#2)",
+      "description": "DELETE /api/remotion-templates/:id \u2014 cascade_status=success/partial/failed (partial = FTP cleanup partiel apres commit DB). reason=user (template draft) vs admin_force (?force=true sur template publi\u00e9 ou in-use).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_template_deleted_total{scrape_job=\"NEOPRO\"}[1h])) by (cascade_status, reason)",
+          "legendFormat": "{{cascade_status}} / {{reason}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 108
+      },
+      "id": 809,
+      "title": "Template proxy signature validation (audit P1 #7 / ADR-113-bis)",
+      "description": "HMAC verify outcomes for /api/remotion-templates/asset-proxy. status=valid/invalid/missing/expired. 'missing' = phase migration 24h ; objectif = retombe a 0 avant la PR cleanup qui drop le fallback. 'invalid' > 0 = potentiel signal d'attaque (a investiguer).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_template_proxy_signature_validation_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": [
-    "neopro",
-    "blind-spots",
-    "audit"
-  ],
+  "tags": ["neopro", "blind-spots", "audit"],
   "templating": {
     "list": []
   },

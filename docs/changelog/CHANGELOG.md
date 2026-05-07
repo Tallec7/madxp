@@ -1,3 +1,21 @@
+# [3.295.0](https://github.com/Tallec7/neopro/compare/v3.294.0...v3.295.0) (2026-05-07)
+
+### Features
+
+- **security:** Template Studio uploads hardening (audit Phase C) ([#887](https://github.com/Tallec7/neopro/issues/887)) ([2c8cbd3](https://github.com/Tallec7/neopro/commit/2c8cbd3e5098f9c5d3d61c3cd1da0bcd85aa468e)), closes [#8](https://github.com/Tallec7/neopro/issues/8) [#7](https://github.com/Tallec7/neopro/issues/7) [#7](https://github.com/Tallec7/neopro/issues/7) [#2](https://github.com/Tallec7/neopro/issues/2) [#7](https://github.com/Tallec7/neopro/issues/7) [#2](https://github.com/Tallec7/neopro/issues/2) [#7](https://github.com/Tallec7/neopro/issues/7)
+
+# [3.294.0](https://github.com/Tallec7/neopro/compare/v3.293.0...v3.294.0) (2026-05-07)
+
+### Features
+
+- **templates:** GET /:id/spec round-trip-safe SPEC.md export ([#886](https://github.com/Tallec7/neopro/issues/886)) ([19325dd](https://github.com/Tallec7/neopro/commit/19325ddbbe3691f5d619fc70fee278b24928fbc0)), closes [#5](https://github.com/Tallec7/neopro/issues/5) [#5](https://github.com/Tallec7/neopro/issues/5)
+
+# [3.293.0](https://github.com/Tallec7/neopro/compare/v3.292.17...v3.293.0) (2026-05-07)
+
+### Features
+
+- **templates:** DELETE template end-to-end + cascade FTP cleanup ([#882](https://github.com/Tallec7/neopro/issues/882)) ([a073d4f](https://github.com/Tallec7/neopro/commit/a073d4f510a2233eca93edc67849b5b50557ddc0)), closes [#2](https://github.com/Tallec7/neopro/issues/2) [#613](https://github.com/Tallec7/neopro/issues/613) [#1](https://github.com/Tallec7/neopro/issues/1) [#2](https://github.com/Tallec7/neopro/issues/2)
+
 ## [3.292.17](https://github.com/Tallec7/neopro/compare/v3.292.16...v3.292.17) (2026-05-07)
 
 ### Bug Fixes

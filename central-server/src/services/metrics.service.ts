@@ -112,6 +112,17 @@ const alertsDedupSkippedTotal = new Counter({
   registers: [register],
 });
 
+// Quick task 260507-gxd — DELETE template end-to-end (audit P0 #1 + #2).
+// `cascade_status` ∈ ['success','partial','failed'] surface les FTP failures
+// (cleanup best-effort après commit DB). `reason` ∈ ['user','admin_force']
+// distingue suppression normale vs bypass force=true sur template publié.
+const templateDeletedTotal = new Counter({
+  name: 'neopro_template_deleted_total',
+  help: 'Templates deleted via DELETE /api/remotion-templates/:id (P0 #1 + #2)',
+  labelNames: ['cascade_status', 'reason'],
+  registers: [register],
+});
+
 const activeAlertsGauge = new Gauge({
   name: 'neopro_active_alerts',
   help: 'Number of currently active alerts',
@@ -614,6 +625,17 @@ const templateAssetProxyUpstreamTotal = new Counter({
   name: 'neopro_template_asset_proxy_upstream_total',
   help: 'Upstream FTP status class for /api/remotion-templates/asset-proxy (catches 404 HTML cascades + 5xx)',
   labelNames: ['status_class'], // 2xx | 3xx | 4xx | 5xx | error
+  registers: [register],
+});
+
+// ============= Métriques Template Proxy Signature (audit P1 #7, ADR-113-bis) =============
+// Suit l'état de la migration HMAC sur les URLs proxy /asset-proxy.
+// 'missing' = phase migration 24h (ancien call-site non encore signé).
+// 'invalid' = potentiel signal d'attaque (à investiguer si > 0).
+const templateProxySignatureValidationTotal = new Counter({
+  name: 'neopro_template_proxy_signature_validation_total',
+  help: 'Template proxy URL HMAC signature validation outcomes (audit P1 #7)',
+  labelNames: ['status'], // valid | invalid | missing | expired
   registers: [register],
 });
 
@@ -1150,6 +1172,21 @@ class MetricsService {
     if (count > 0) matchSessionsAutoclosedTotal.inc({ reason }, count);
   }
 
+  /**
+   * Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+   * `cascade_status='success'` toutes les FTP cleanup OK ; `partial` au moins
+   * 1 FTP delete a failed (DB cascade déjà committée) ; `failed` exception
+   * dans la transaction (ROLLBACK).
+   * `reason='user'` template draft non publié non utilisé ; `admin_force`
+   * bypass via `?force=true` sur template publié ou in-use.
+   */
+  recordTemplateDeleted(
+    cascade_status: 'success' | 'partial' | 'failed',
+    reason: 'user' | 'admin_force',
+  ): void {
+    templateDeletedTotal.inc({ cascade_status, reason });
+  }
+
   /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */
   recordVideoFtpAudit(payload: {
     scanned: number;
@@ -1374,6 +1411,12 @@ class MetricsService {
     statusClass: '2xx' | '3xx' | '4xx' | '5xx' | 'error'
   ): void {
     templateAssetProxyUpstreamTotal.inc({ status_class: statusClass });
+  }
+
+  recordTemplateProxySignatureValidation(
+    status: 'valid' | 'invalid' | 'missing' | 'expired'
+  ): void {
+    templateProxySignatureValidationTotal.inc({ status });
   }
 
   recordVideoPathResolution(result: 'exact' | 'fuzzy' | 'miss'): void {

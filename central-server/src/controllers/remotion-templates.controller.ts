@@ -16,8 +16,10 @@ import {
   siteRepository,
 } from '../repositories';
 import { templateStudioRepository } from '../repositories/template-studio.repository';
+import { templateSpecBuilderService } from '../services/template-spec-builder.service';
 import { metricsService } from '../services/metrics.service';
 import { runValidation } from '../services/template-validation';
+import { templateProxySigningService } from '../services/template-proxy-signing.service';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 import { clubTemplateQuotaService } from '../services/club-template-quota.service';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
@@ -160,6 +162,41 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
     return;
   }
 
+  // Audit P1 #7 — HMAC signature check (ADR-113-bis 24h migration window).
+  // Phase 1 : missing signature is logged + accepted (backward-compat).
+  // Phase 2 : a follow-up PR will tighten verifyUrl `missing` to 401.
+  const sigParam = req.query['sig'];
+  const expParam = req.query['exp'];
+  const sig = typeof sigParam === 'string' ? sigParam : undefined;
+  const exp =
+    typeof expParam === 'string' && /^\d+$/.test(expParam)
+      ? Number(expParam)
+      : undefined;
+  const decodedUrl = decodeURIComponent(rawUrl);
+  const verdict = templateProxySigningService.verifyUrl(decodedUrl, sig, exp);
+  if (verdict.valid) {
+    metricsService.recordTemplateProxySignatureValidation('valid');
+  } else if (verdict.reason === 'missing') {
+    metricsService.recordTemplateProxySignatureValidation('missing');
+    logger.warn('Proxy URL non signée (phase migration ADR-113-bis)', {
+      url: rawUrl,
+      userId: (req as { user?: { id?: string } }).user?.id ?? null,
+    });
+    // soft-fail : on continue, backward-compat 24h
+  } else if (verdict.reason === 'expired') {
+    metricsService.recordTemplateProxySignatureValidation('expired');
+    logger.error('Proxy URL signature expired', { url: rawUrl });
+    setCorsProxyHeaders(res);
+    res.status(401).json({ error: 'Proxy URL expired' });
+    return;
+  } else {
+    metricsService.recordTemplateProxySignatureValidation('invalid');
+    logger.error('Proxy URL signature invalid', { url: rawUrl });
+    setCorsProxyHeaders(res);
+    res.status(403).json({ error: 'Proxy URL signature invalid' });
+    return;
+  }
+
   // Transmettre les Range headers pour le support seek (Remotion player en a besoin)
   const upstreamHeaders: Record<string, string> = {};
   if (req.headers['range']) {
@@ -293,6 +330,135 @@ export const unpublishTemplate = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'internal_error' });
   }
 };
+
+/**
+ * Quick task 260507-gxd — DELETE /api/remotion-templates/:id (P0 #1 + #2)
+ *
+ * Cascade DELETE end-to-end : 409 guard (published / in-use unless force) →
+ * BEGIN/COMMIT cascade côté repository → cleanup FTP best-effort des orphan
+ * assets (URLs unique à ce template) → métrique Prometheus + Winston audit.
+ *
+ * super_admin only (gardé au niveau route + double-check côté guard +
+ * `requireSuperAdmin()` dans la chain Express).
+ */
+export const deleteTemplate = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const force = req.query.force === 'true';
+  const userId = req.user?.id ?? null;
+  logger.info('Template delete requested', { template_id: id, force, user_id: userId });
+
+  try {
+    const tpl = await remotionTemplatesRepository.findById(id);
+    if (!tpl) {
+      res.status(404).json({ error: 'Template non trouvé' });
+      return;
+    }
+
+    const usedByCount = await templateStudioRepository.getTemplateUsedByCount(id);
+    const isPublished = tpl.published === true;
+    if (!force && (isPublished || usedByCount > 0)) {
+      logger.info('Template delete refused — in use or published', {
+        template_id: id,
+        published: isPublished,
+        used_by_count: usedByCount,
+      });
+      res.status(409).json({
+        error: 'Template is in use or published. Use ?force=true to override.',
+        code: 'TEMPLATE_IN_USE',
+        published: isPublished,
+        usedByCount,
+      });
+      return;
+    }
+
+    let cascadeStatus: 'success' | 'partial' | 'failed' = 'success';
+    let ftpFailures = 0;
+    const reason: 'user' | 'admin_force' = force ? 'admin_force' : 'user';
+
+    try {
+      const result = await templateStudioRepository.deleteTemplate(id);
+
+      // FTP orphan cleanup (best-effort — DB cascade déjà committée).
+      // Le storage layer est URL-addressed : on extrait le chemin relatif
+      // depuis l'URL FTP (cf. config/ftp-storage.getFtpPublicUrl).
+      for (const url of result.orphanAssetUrls) {
+        try {
+          // Déduit le storage_path depuis l'URL publique FTP. Si l'URL ne
+          // matche pas le préfixe FTP attendu, on saute (asset externe).
+          const storagePath = extractFtpStoragePath(url);
+          if (!storagePath) {
+            logger.warn('Skipped FTP cleanup — URL not FTP-hosted', {
+              template_id: id,
+              url,
+            });
+            continue;
+          }
+          const ok = await deleteFileFromFtp(storagePath);
+          if (!ok) {
+            ftpFailures++;
+            logger.warn('FTP orphan cleanup returned false', {
+              template_id: id,
+              storage_path: storagePath,
+            });
+          }
+        } catch (e) {
+          ftpFailures++;
+          logger.error('FTP orphan cleanup failed', {
+            template_id: id,
+            url,
+            error: (e as Error).message,
+          });
+        }
+      }
+
+      if (ftpFailures > 0) cascadeStatus = 'partial';
+
+      metricsService.recordTemplateDeleted(cascadeStatus, reason);
+      logger.info('template.deleted', {
+        action: 'template.deleted',
+        template_id: id,
+        actor_id: userId,
+        cascade_status: cascadeStatus,
+        reason,
+        orphan_count: result.orphanAssetUrls.length,
+        ftp_failures: ftpFailures,
+        cascade_row_counts: result.cascadeRowCounts,
+        timestamp: new Date().toISOString(),
+      });
+      res.status(200).json({
+        deleted: true,
+        orphanAssetsRemoved: result.orphanAssetUrls.length - ftpFailures,
+        ftpFailures,
+      });
+    } catch (err) {
+      metricsService.recordTemplateDeleted('failed', reason);
+      logger.error('Template delete failed', {
+        template_id: id,
+        error: (err as Error).message,
+      });
+      res.status(500).json({ error: 'Template deletion failed' });
+    }
+  } catch (err) {
+    logger.error('deleteTemplate outer error', {
+      template_id: id,
+      error: (err as Error).message,
+    });
+    res.status(500).json({ error: 'internal_error' });
+  }
+};
+
+/**
+ * Extrait le chemin de stockage relatif depuis une URL FTP publique.
+ * Retourne null si l'URL n'est pas FTP-hostée (asset externe / storage
+ * non géré). Le préfixe public FTP vit dans config/ftp-storage.ts.
+ */
+function extractFtpStoragePath(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  // Préfixe attendu : https://kalonpartners.bzh/neopro-... — on garde le path
+  // après le hostname pour passer à deleteFileFromFtp().
+  const match = url.match(/^https?:\/\/[^/]+\/(.+)$/);
+  return match ? match[1] : null;
+}
 
 /**
  * PATCH /api/remotion-templates/:id/schema-version
@@ -1108,5 +1274,51 @@ export const createTestRender = async (req: AuthRequest, res: Response) => {
       templateId: id,
     });
     return res.status(500).json({ error: 'internal_error' });
+  }
+};
+
+// ============================================================================
+// Quick task 260507-ong — Audit P1 #5 / Reverse symmetry CLI ↔ UI
+// ============================================================================
+
+/**
+ * GET /api/remotion-templates/:id/spec → text/markdown
+ *
+ * Rebuilds a SPEC.md (frontmatter YAML + body) from the current DB state of
+ * the template. Output is round-trip safe with `npm run template:import`
+ * (`scripts/import-template-spec.ts`). Closes the inverse path of ADR-086 :
+ * import = SPEC → DB ; export = DB → SPEC.
+ *
+ * super_admin only — the SPEC export exposes the template internals (slots,
+ * fonts, FTP URLs) which is admin-only territory. Joi UUID validation is
+ * enforced upstream by `validateParams(remotionTemplateIdParam)` in the
+ * router.
+ *
+ * Markdown formatting is fully delegated to `templateSpecBuilderService` —
+ * the controller only handles HTTP concerns (headers, status codes).
+ */
+export const exportTemplateSpec = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { id } = req.params;
+  try {
+    logger.info('Export template SPEC', {
+      template_id: id,
+      user_id: req.user?.id ?? null,
+    });
+    const { filename, content } = await templateSpecBuilderService.buildSpecMarkdown(id);
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send(content);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith('Template not found')) {
+      logger.warn('Export template SPEC: not found', { template_id: id });
+      res.status(404).json({ error: 'Template not found' });
+      return;
+    }
+    logger.error('Export template SPEC failed', { template_id: id, error: msg });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

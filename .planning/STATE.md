@@ -89,6 +89,12 @@ None yet.
 - Configs POC `firestick-captive` (`/etc/dnsmasq.d/` + `/etc/nginx/sites-available/`) sont déjà déployées sur Pi RACC `neopro.local` — vérifier qu'elles ne fuitent pas en prod NLF avant le rollout généralisé
 - Edge case PSK rotation : MAC inchangée mais bénévole doit re-saisir PSK sur chaque Fire Stick — préconisation PSK custom stable per-club (cf. mémoire `feedback_psk_format.md`)
 
+### Quick Tasks Completed
+
+| #          | Description                                                | Date       | Commit   | Directory                                                                      |
+| ---------- | ---------------------------------------------------------- | ---------- | -------- | ------------------------------------------------------------------------------ |
+| 260507-gxd | DELETE template end-to-end (cascade DB + FTP + UI confirm) | 2026-05-07 | 27774520 | [260507-gxd-...](./quick/260507-gxd-delete-template-end-to-end-endpoint-api-/) |
+
 ## Session Continuity
 
 Last session: 2026-05-07T16:54:04.023Z
