@@ -1,3 +1,9 @@
+## [3.292.16](https://github.com/Tallec7/neopro/compare/v3.292.15...v3.292.16) (2026-05-07)
+
+### Bug Fixes
+
+- **captive:** firestick-wait.html responsive sur Silk Browser Fire Stick ([#878](https://github.com/Tallec7/neopro/issues/878)) ([eee9eda](https://github.com/Tallec7/neopro/commit/eee9eda95e6d6d7d6d23477e7fc7f3996d197092)), closes [#875](https://github.com/Tallec7/neopro/issues/875) [#875](https://github.com/Tallec7/neopro/issues/875) [#877](https://github.com/Tallec7/neopro/issues/877)
+
 ## [3.292.15](https://github.com/Tallec7/neopro/compare/v3.292.14...v3.292.15) (2026-05-06)
 
 ### Bug Fixes
