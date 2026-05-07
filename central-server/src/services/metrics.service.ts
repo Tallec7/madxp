@@ -123,6 +123,19 @@ const templateDeletedTotal = new Counter({
   registers: [register],
 });
 
+// Quick task 260507-les — Template rollback UI (audit P0 #4).
+// `success='true'|'false'` distingue restore réussi vs échec (snapshot
+// introuvable, write conflict, exception). Source d'observabilité pour le
+// drawer historique super_admin (sans cette métrique, un futur bug du
+// rollback UI resterait invisible — la trace Winston reste mais ne se
+// graphe pas dans Grafana).
+const templateRollbackTotal = new Counter({
+  name: 'neopro_template_rollback_total',
+  help: 'Template version restores via POST /api/remotion-templates/:id/versions/:versionId/restore (audit P0 #4)',
+  labelNames: ['success'],
+  registers: [register],
+});
+
 const activeAlertsGauge = new Gauge({
   name: 'neopro_active_alerts',
   help: 'Number of currently active alerts',
@@ -1165,6 +1178,16 @@ class MetricsService {
     reason: 'user' | 'admin_force',
   ): void {
     templateDeletedTotal.inc({ cascade_status, reason });
+  }
+
+  /**
+   * Quick task 260507-les — Template rollback UI (audit P0 #4).
+   * Incrémenté à chaque appel à `restoreTemplateVersion`. `success='true'`
+   * lorsque la restore termine OK, `'false'` si le snapshot est introuvable
+   * (404), si le template n'existe pas, ou si une exception remonte.
+   */
+  recordTemplateRollback(success: boolean): void {
+    templateRollbackTotal.inc({ success: String(success) });
   }
 
   /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */

@@ -872,10 +872,14 @@ export const restoreTemplateVersion = async (req: AuthRequest, res: Response) =>
     const { id, versionId } = req.params;
 
     const template = await remotionTemplatesRepository.findById(id);
-    if (!template) return res.status(404).json({ error: 'Template non trouvé' });
+    if (!template) {
+      metricsService.recordTemplateRollback(false);
+      return res.status(404).json({ error: 'Template non trouvé' });
+    }
 
     const version = await remotionTemplateVersionsRepository.findById(versionId);
     if (!version || version.template_id !== id) {
+      metricsService.recordTemplateRollback(false);
       return res.status(404).json({ error: 'Version non trouvée' });
     }
 
@@ -884,6 +888,7 @@ export const restoreTemplateVersion = async (req: AuthRequest, res: Response) =>
       default_props: version.default_props,
     });
 
+    metricsService.recordTemplateRollback(true);
     logger.info('Template version restored', {
       templateId: id,
       versionId,
@@ -892,6 +897,7 @@ export const restoreTemplateVersion = async (req: AuthRequest, res: Response) =>
 
     res.json(updated);
   } catch (error) {
+    metricsService.recordTemplateRollback(false);
     logger.error('restoreTemplateVersion error', {
       error,
       id: req.params.id,

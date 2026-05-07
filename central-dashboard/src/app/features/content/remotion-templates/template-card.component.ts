@@ -40,6 +40,20 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
           <span class="badge badge-published" *ngIf="template.published">Publié</span>
           <span class="badge badge-draft" *ngIf="!template.published && isAdmin">Brouillon</span>
           <span class="badge badge-club" *ngIf="template.site_id" title="Template perso (club)">Club</span>
+          <!--
+            Quick task 260507-les — Template versioning UI (audit P0 #4).
+            Marker discret signalant qu'un historique est disponible (le compte
+            réel des snapshots ADR-055 est chargé à l'ouverture du drawer pour
+            éviter un round-trip par card). Visible uniquement aux admins parce
+            que le drawer + restore sont gated admin/super_admin côté API.
+          -->
+          <span
+            class="badge badge-version"
+            *ngIf="template.published && isAdmin"
+            data-testid="template-version-badge"
+            title="Historique des versions disponible"
+            >📜 versions</span
+          >
         </div>
       </div>
 
@@ -96,6 +110,21 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
           (click)="onDelete($event)"
         >
           🗑 Supprimer
+        </button>
+        <!--
+          Quick task 260507-les — bouton ouvrant le drawer historique versions.
+          Visible aux admins (l'API restore est gated admin / super_admin). La
+          modale de confirmation typed-name vit dans le drawer parent.
+        -->
+        <button
+          type="button"
+          class="btn-history"
+          [attr.aria-label]="historyButtonLabel(template.name)"
+          [attr.data-testid]="'template-versions-button-' + template.id"
+          (click)="onOpenVersions($event)"
+          title="Historique des versions"
+        >
+          📜 Historique
         </button>
       </div>
     </div>
@@ -169,6 +198,27 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
       cursor: pointer;
     }
     .btn-delete:hover { background: var(--danger-hover, #fecaca); }
+    /* Quick task 260507-les — badge + button "Historique versions". */
+    .badge-version {
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      color: var(--primary-color);
+    }
+    .btn-history {
+      font-size: 12px;
+      padding: 4px 12px;
+      margin-left: 6px;
+      min-width: 40px;
+      min-height: 32px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text-color, inherit);
+      cursor: pointer;
+    }
+    .btn-history:hover {
+      background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+      border-color: var(--primary-color);
+    }
   `],
 })
 export class TemplateCardComponent {
@@ -189,6 +239,8 @@ export class TemplateCardComponent {
   @Output() unpublishRequested = new EventEmitter<RemotionTemplate>();
   /** Quick task 260507-gxd — emits when super_admin clicks "Supprimer" on the card. */
   @Output() deleteRequested = new EventEmitter<RemotionTemplate>();
+  /** Quick task 260507-les — emits when admin clicks "Historique" on the card. */
+  @Output() openVersions = new EventEmitter<RemotionTemplate>();
 
   private confirmDialog = inject(ConfirmDialogService);
   protected readonly MODAL_MESSAGES = MODAL_MESSAGES;
@@ -233,5 +285,19 @@ export class TemplateCardComponent {
   onDelete(event: Event): void {
     event.stopPropagation();
     this.deleteRequested.emit(this.template);
+  }
+
+  /**
+   * Quick task 260507-les — emit "open history drawer" intent. The parent
+   * mounts <app-template-versions-drawer> when its state is non-null.
+   */
+  onOpenVersions(event: Event): void {
+    event.stopPropagation();
+    this.openVersions.emit(this.template);
+  }
+
+  /** Sortie en méthode pour éviter les double-quotes / backslashes inline. */
+  historyButtonLabel(name: string): string {
+    return `Voir l'historique des versions de ${name}`;
   }
 }

@@ -80,7 +80,21 @@
     (duplicateRequested)="onDuplicateFromCard($event)"
     (unpublishRequested)="onUnpublishRequested($event)"
     (deleteRequested)="openDeleteModal($event)"
+    (openVersions)="onOpenVersions($event)"
   ></app-template-grid>
+
+  <!--
+    Quick task 260507-les — Drawer historique versions (audit P0 #4).
+    Ouvert depuis n'importe quelle card via le bouton "Historique". Le drawer
+    fetch sa propre liste (getVersions ADR-055) et déclenche un rollback via
+    setDefaultVersion (alias restoreVersion) avec confirmation typed-name.
+  -->
+  <app-template-versions-drawer
+    *ngIf="versionsOpenForTemplate"
+    [template]="versionsOpenForTemplate"
+    (closed)="onCloseVersions()"
+    (rollbackDone)="onRollbackDone()"
+  ></app-template-versions-drawer>
 
   <!--
     Quick task 260507-gxd — DELETE template typed-name confirmation modal.
