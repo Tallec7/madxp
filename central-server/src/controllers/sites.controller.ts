@@ -6,6 +6,7 @@ import logger from '../config/logger';
 import { auditService } from '../services/audit.service';
 import { formatPaginatedResponse } from '../middleware/pagination';
 import { commandQueueService } from '../services/command-queue.service';
+import metricsService from '../services/metrics.service';
 import socketService from '../services/socket.service';
 import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname';
 import {
@@ -455,6 +456,16 @@ export const updateSiteDisplays = async (req: AuthRequest, res: Response) => {
       displayCount: displays.length,
       updatedBy: req.user?.email,
     });
+
+    // OBSERVE-01 — compter les displays qui ont un receiver.mac assigné
+    const assignedCount = Array.isArray(displays)
+      ? displays.filter((d: Record<string, unknown>) =>
+          d.receiver && typeof (d.receiver as Record<string, unknown>).mac === 'string'
+        ).length
+      : 0;
+    if (assignedCount > 0) {
+      metricsService.recordReceiver(id, 'assigned');
+    }
 
     try {
       await commandQueueService.sendOrQueue(id, 'receiver_assignment_updated', { displays });

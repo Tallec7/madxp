@@ -575,6 +575,10 @@ class SocketService {
         if (isFirstSeen) {
           logger.info('Receivers Map updated', { siteId, count: receivers.length });
         }
+        // OBSERVE-01 — métrique Prometheus pour les transitions receiver
+        if (receivers.length > 0) {
+          metricsService.recordReceiver(siteId, 'detected');
+        }
       }
       if (this.io) {
         this.io.to(siteId).emit('state-sync', data);
@@ -758,6 +762,8 @@ class SocketService {
         });
 
         logger.info('Agent disconnected', { siteId, reason });
+        // OBSERVE-01 — métrique Prometheus déconnexion receiver
+        metricsService.recordReceiver(siteId, 'disconnected');
       }
     }
 
