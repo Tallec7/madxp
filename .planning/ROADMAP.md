@@ -22,7 +22,7 @@
 - [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
 - [x] **Phase 6: CAPTIVE — Fire Stick → page Neopro** — Industrialiser configs POC (`install.sh` / `prepare-image.sh`) + routage dynamique MAC→display (completed 2026-05-07)
 - [x] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected` (completed 2026-05-07, 3/3 plans)
-- [ ] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
+- [x] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli) (completed 2026-05-07)
 - [ ] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery`
 
 ## Phase Details
@@ -142,7 +142,7 @@
 | 5. DETECT           | v4.0      | 3/3            | Complete    | 2026-05-06 |
 | 6. CAPTIVE          | v4.0      | 4/4            | Complete    | 2026-05-07 |
 | 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
-| 8. DASHBOARD        | 2/4       | In Progress    |             | -          |
+| 8. DASHBOARD        | 2/4       | Complete       | 2026-05-07  | -          |
 | 9. OBSERVE          | v4.0      | 0/2            | Not started | -          |
 
 ---

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 8 DASHBOARD — Plans 01-04 complets (Phase 8 COMPLETE)
+status: completed
 stopped_at: Completed 08-dashboard-04-karma-tests-PLAN.md
-last_updated: '2026-05-07T16:25:00.000Z'
+last_updated: '2026-05-07T16:16:35.448Z'
 last_activity: '2026-05-07 — Plan 08-dashboard-04 : 10 Karma tests Phase 8 receiver UX (7 displays-editor + 3 site-settings-tab) — 596/596 verts'
 progress:
   total_phases: 6
