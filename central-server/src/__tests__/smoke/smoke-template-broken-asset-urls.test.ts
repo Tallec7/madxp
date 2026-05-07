@@ -60,4 +60,31 @@ describe('smoke: template broken asset URL deny-list (incident 2026-05-07)', () 
       });
     });
   }
+
+  // Defense-in-depth : le repository qui alimente la bibliothèque d'assets
+  // doit exclure les layers de templates archivés. Sans ce filtre, les URLs
+  // cassées d'un template archive remontent dans la modale du Studio →
+  // user clique → cascade 404. Cf. incident 2026-05-07.
+  describe('listDistinctLayerAssets repository filter', () => {
+    const repoPath = path.join(
+      REPO_ROOT,
+      'central-server/src/repositories/template-studio.repository.ts'
+    );
+    let source: string;
+
+    beforeAll(() => {
+      expect(fs.existsSync(repoPath)).toBe(true);
+      source = fs.readFileSync(repoPath, 'utf8');
+    });
+
+    it('JOINs neopro_templates to access status', () => {
+      const segment = source.split('listDistinctLayerAssets')[1] ?? '';
+      expect(segment).toMatch(/JOIN\s+neopro_templates/);
+    });
+
+    it('excludes archived templates from the asset library', () => {
+      const segment = source.split('listDistinctLayerAssets')[1] ?? '';
+      expect(segment).toMatch(/status\s+IS\s+DISTINCT\s+FROM\s+'archived'/);
+    });
+  });
 });

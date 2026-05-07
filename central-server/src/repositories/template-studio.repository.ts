@@ -578,14 +578,23 @@ class TemplateStudioRepository {
   async listDistinctLayerAssets(): Promise<
     Array<{ url: string; uploadedAt: string; usedByCount: number }>
   > {
+    // Incident 2026-05-07 : sans filtrage par status, les URLs cassées des
+    // templates archivés (cf. ADR du même jour) restaient visibles dans la
+    // bibliothèque → user clique → cascade 404 → tab Chrome plante.
+    // Le JOIN exclut maintenant les layers de templates archivés (et est
+    // résilient si plus tard `status` est NULL pour les rows pré-ADR-055 :
+    // `IS DISTINCT FROM` traite NULL comme valeur réelle).
     const r = await query<{ url: string; uploaded_at: Date; used_by_count: string }>(
-      `SELECT video_url AS url,
-              MIN(created_at) AS uploaded_at,
+      `SELECT tl.video_url AS url,
+              MIN(tl.created_at) AS uploaded_at,
               COUNT(*)::text AS used_by_count
-         FROM template_layers
-        WHERE video_url IS NOT NULL AND video_url <> ''
-        GROUP BY video_url
-        ORDER BY MIN(created_at) DESC`
+         FROM template_layers tl
+         JOIN neopro_templates t ON t.id = tl.template_id
+        WHERE tl.video_url IS NOT NULL
+          AND tl.video_url <> ''
+          AND t.status IS DISTINCT FROM 'archived'
+        GROUP BY tl.video_url
+        ORDER BY MIN(tl.created_at) DESC`
     );
     return r.rows.map((row) => ({
       url: row.url,
