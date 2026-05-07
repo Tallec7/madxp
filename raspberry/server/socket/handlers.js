@@ -46,9 +46,15 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
     if (state.timer.isRunning || state.timer.currentTime > 0) {
       socket.emit('timer-update', { action: 'sync', ...state.timer });
     }
-    // Push current receivers to newly connected clients (e.g. sync-agent reconnects
-    // after neopro-app restart — receivers may already be populated at this point).
-    socket.emit('state-sync', { receivers: state.receivers || [], serverTs: Date.now() });
+
+    /**
+     * Pull current receivers state on-demand (used by sync-agent after cloud auth).
+     * @event request-state-sync
+     */
+    socket.on('request-state-sync', () => {
+      const s = stateService.getFullState();
+      socket.emit('state-sync', { receivers: s.receivers || [], serverTs: Date.now() });
+    });
 
     /**
      * Generic command relay — forwards any action to all clients.
