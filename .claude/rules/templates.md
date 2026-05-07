@@ -33,6 +33,11 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Exposer une route d'upload WebM sans guard `super_admin` + Joi.** La route `POST /api/remotion-templates/upload` est réservée (templates = asset partagé de la flotte).
 - **Importer depuis les controllers `../config/database` directement.** Repository pattern obligatoire (`templateStudioRepository`).
 
+### Runtime — URLs cassées (incident 2026-05-07, smoke test enforced)
+
+- **Retirer la deny-list `BROKEN_URL_PATTERNS` ou la regex `up\.railway\.app/remotion-preview/public` de `template-runtime.tsx` (dashboard) ni de `TemplateRuntime.tsx` (worker render).** Cette deny-list rejette les URLs legacy de tests Remotion (assets `BUT_simple_*.webm`, `JOUEUR_but_*.webm`, `BUT_img_joueur_*.webm`) qui pointaient vers Railway preview au lieu du FTP Hostinger. 23 rows DB (template_layers + template_variants) ont fait planter le tab Chrome via cascade 404 → OffthreadVideo retry → unresponsive. 7 templates ont été archivés (status='archived') le 2026-05-07. Le guard reste en place pour bloquer un réimport legacy.
+- **Retirer le `console.warn('[TemplateRuntime] rejected broken asset URL', ...)`** : c'est la seule observabilité côté navigateur quand un futur réimport tape le pattern. Sans le warn, le bug retombe en silence.
+
 ### Admin UX (ADR-095 — smoke test enforced)
 
 - **Retirer `historyRecord` de `admin-canvas-overlay.component.ts`** (Output émis en fin de drag, alimente les stacks undo/redo du panel parent — sans lui les raccourcis Ctrl+Z sont muets).
