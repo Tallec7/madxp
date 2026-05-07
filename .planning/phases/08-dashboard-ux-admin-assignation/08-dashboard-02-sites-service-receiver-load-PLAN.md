@@ -194,6 +194,7 @@ Add `[connectedReceivers]="connectedReceivers"` input:
 - `grep -n "connectedReceivers" central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.ts` → field + ngOnInit call found
 - `grep -n "connectedReceivers" central-dashboard/src/app/features/sites/components/site-settings-tab/site-settings-tab.component.html` → template binding found
 - `npx tsc --project central-dashboard/tsconfig.json --noEmit` exits 0
+  ⚠️ NOTE: If TSC reports a missing `connectedReceivers` property on `DisplaysEditorComponent`, this is expected — the `@Input()` is added in Plan 03. Skip this TSC check and let Plan 03 executor run it after completing Plan 03 Task 1.
 
 ## Success Criteria
 
