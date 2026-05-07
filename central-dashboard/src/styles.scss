@@ -53,6 +53,21 @@
   --neo-font-body:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
+  /* Studio accent (purple) — Template Studio scope, distinct du --primary-color hockey blue */
+  /* SEE: audit P0 design 2026-05-07 (docs/audits/templates-remotion-audit-2026-05-07.md) */
+  --studio-accent-50:  #f5f3ff;
+  --studio-accent-100: #ede9fe;
+  --studio-accent-200: #c4b5fd;
+  --studio-accent-500: #7c3aed;
+  --studio-accent-600: #6d28d9;
+  --studio-accent-700: #5b21b6;
+  --studio-danger-bg:     #fef2f2;
+  --studio-danger-fg:     #b91c1c;
+  --studio-danger-border: #fecaca;
+  --studio-disabled-bg:     #f3f4f6;
+  --studio-disabled-border: #e5e7eb;
+  --studio-disabled-fg:     #9ca3af;
+
   /* Semantic Colors (mapped to NEOPRO palette) */
   --primary-color: #2022e9; /* Hockey Dark */
   --primary-light: #a3effd; /* Hockey Light */
