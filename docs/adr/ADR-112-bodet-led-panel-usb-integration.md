@@ -141,13 +141,13 @@ Proposer au prospect une **TV Neopro standard à côté** du panneau Bodet :
 
 - Deal Lanester déblocable en ~1 mois (industrialisation gadget mode + intégration sync-agent + tests)
 - **Levier fleet-wide** : Bodet est très installé en France, surtout en Bretagne → cette intégration devient un **différenciateur commercial** pour tous les prospects équipés Bodet (à mentionner explicitement dans le pricing : R&D mutualisé, on amortit sur les futurs deals)
-- Nouveau pattern dans `sync-agent` : *"sortie LED via USB gadget"* en plus de *"sortie HDMI standard"*. À encadrer côté code (feature flag, mode dégradé documenté).
+- Nouveau pattern dans `sync-agent` : _"sortie LED via USB gadget"_ en plus de _"sortie HDMI standard"_. À encadrer côté code (feature flag, mode dégradé documenté).
 - ADR final à rédiger lundi 2026-05-11 (statut Accepté, plan d'industrialisation chiffré)
 
 **Si POC samedi ❌** :
 
 - Plan B (TV à côté) → deal Lanester reste closable mais moins ambitieux côté valeur perçue
-- ADR-112 à statuer "Rejeté" + ouvrir ADR-113 *"Stratégie multi-écran pour clubs équipés panneau LED tiers"*
+- ADR-112 à statuer "Rejeté" + ouvrir ADR-113 _"Stratégie multi-écran pour clubs équipés panneau LED tiers"_
 
 **Risque résiduel commercial** :
 
@@ -173,7 +173,7 @@ Aucun changement de code committé tant que le POC n'est pas validé. Si POC ✅
 
 ## Références
 
-- Conversation prospect Lanester (mail 2026-05-07) : *"L'écran 1.1 est le maître, ... aucune autre connectique exceptée la prise RJ45 ... clé USB FAT32 ... vieux logiciel"*
+- Conversation prospect Lanester (mail 2026-05-07) : _"L'écran 1.1 est le maître, ... aucune autre connectique exceptée la prise RJ45 ... clé USB FAT32 ... vieux logiciel"_
 - ADR-029 : Dual HDMI TV + LED (panneau LED HDMI-driven, scénario incompatible avec Bodet USB)
 - Linux USB Gadget Mass Storage : https://www.kernel.org/doc/html/latest/usb/mass-storage.html
 - `g_mass_storage` module Raspberry Pi : disponible nativement sur Pi 4/5 via port USB-C en mode device

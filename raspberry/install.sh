@@ -660,142 +660,35 @@ install_app() {
 ################################################################################
 
 configure_nginx() {
-    print_step "Configuration du serveur web Nginx..."
+    print_step "Configuration du serveur web Nginx (depuis neopro-base.conf)..."
 
-    cat > /etc/nginx/sites-available/neopro << 'EOF'
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    # Vérifier la présence de la source de vérité (copiée par install_application())
+    if [ ! -f "${INSTALL_DIR}/config/nginx/neopro-base.conf" ]; then
+        print_error "Source nginx introuvable : ${INSTALL_DIR}/config/nginx/neopro-base.conf"
+        exit 1
+    fi
 
-    server_name neopro.local 192.168.4.1;
+    # Backup défensif de l'ancienne config (toujours dans sites-available/, jamais sites-enabled/)
+    if [ -f /etc/nginx/sites-available/neopro ] && [ ! -L /etc/nginx/sites-available/neopro ]; then
+        cp /etc/nginx/sites-available/neopro /etc/nginx/sites-available/neopro.pre-phase6.bak
+        print_step "Backup ancienne config → /etc/nginx/sites-available/neopro.pre-phase6.bak"
+    fi
 
-    root /home/pi/neopro/webapp;
-    index index.html;
+    # Copier la source de vérité (chemin littéral inline pour grep/smoke detection)
+    cp "${INSTALL_DIR}/config/nginx/neopro-base.conf" /etc/nginx/sites-available/neopro
+    chmod 644 /etc/nginx/sites-available/neopro
 
-    # Logs
-    access_log /home/pi/neopro/logs/nginx-access.log;
-    error_log /home/pi/neopro/logs/nginx-error.log;
-
-    # ========================================================================
-    # CAPTIVE PORTAL - Endpoints de détection de connectivité
-    # ========================================================================
-
-    # Android (Google) - Principal check
-    location /generate_204 {
-        return 204;
-    }
-
-    # Android (ancienne version)
-    location /gen_204 {
-        return 204;
-    }
-
-    # Chrome Captive Portal detection
-    location /connecttest.txt {
-        return 200 "Microsoft Connect Test";
-        add_header Content-Type text/plain;
-    }
-
-    # Windows Captive Portal
-    location /ncsi.txt {
-        return 200 "Microsoft NCSI";
-        add_header Content-Type text/plain;
-    }
-
-    # Apple iOS Captive Portal — servir la page brandée si disponible (ADR-079)
-    # Fallback vers "Success" minimal si captive-portal.html absent
-    location = /hotspot-detect.html {
-        try_files /captive-portal.html @captive_fallback;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-    location = /library/test/success.html {
-        try_files /captive-portal.html @captive_fallback;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-    location @captive_fallback {
-        default_type text/html;
-        return 200 "<!DOCTYPE html><html><head><title>Success</title></head><body>Success</body></html>";
-    }
-    location = /captive-portal.html {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-
-    # ========================================================================
-    # APPLICATION PRINCIPALE
-    # ========================================================================
-
-    # index.html — jamais mis en cache (garantit le chargement du dernier build Angular)
-    # Les JS/CSS ont des content-hash dans leurs noms, donc immutables par design.
-    location = /index.html {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        add_header Pragma "no-cache";
-        add_header Expires 0;
-    }
-
-    # Fichiers statiques Angular (JS/CSS/fonts/images) — cache longue durée
-    # Les content-hash dans les noms de fichiers garantissent l'invalidation automatique
-    location ~* \.(js|mjs|css|woff2?|ttf|eot|ico|png|jpg|jpeg|gif|svg|webp|map)$ {
-        try_files $uri =404;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Application Angular (fallback SPA)
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Fichiers vidéos (proxy vers admin-server pour normalisation Unicode)
-    # Cache-Control immutable : permet aux receivers LAN (Fire Stick, smart TV)
-    # de jouer en cache local sans refetch HTTP/WiFi.
-    location /videos/ {
-        proxy_pass http://127.0.0.1:8080/videos/;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        add_header Cache-Control "public, max-age=2592000, immutable" always;
-    }
-
-    # Vidéos secondaires (variantes dual-display)
-    location /videos-secondary/ {
-        proxy_pass http://127.0.0.1:8080/videos-secondary/;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-
-    # Thumbnails (proxy vers admin-server pour normalisation Unicode)
-    location /thumbnails/ {
-        proxy_pass http://127.0.0.1:8080/thumbnails/;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-
-    # Proxy Socket.IO
-    location /socket.io/ {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-
-    # Proxy Admin interface (port 8080)
-    location /admin/ {
-        proxy_pass http://localhost:8080/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
-
-    # Activation
-    ln -sf /etc/nginx/sites-available/neopro /etc/nginx/sites-enabled/neopro
+    # Nettoyer sites-enabled/ — empirique Pi NLF
+    # Si fichier régulier (pas symlink), supprimer pour que ln -sf puisse créer le symlink
+    if [ -e /etc/nginx/sites-enabled/neopro ] && [ ! -L /etc/nginx/sites-enabled/neopro ]; then
+        rm -f /etc/nginx/sites-enabled/neopro
+    fi
+    # Nettoyer .bak résiduels (causent "duplicate default_server" car nginx charge tout sites-enabled/)
+    rm -f /etc/nginx/sites-enabled/*.bak
     rm -f /etc/nginx/sites-enabled/default
+
+    # Créer le symlink
+    ln -sf /etc/nginx/sites-available/neopro /etc/nginx/sites-enabled/neopro
 
     # Fix permissions pour nginx (www-data doit pouvoir accéder à /home/pi)
     print_step "Configuration des permissions pour nginx..."
@@ -804,12 +697,12 @@ EOF
     chmod -R 755 "${INSTALL_DIR}/webapp"
     chown -R pi:www-data "${INSTALL_DIR}/webapp"
 
-    # Test et redémarrage
-    nginx -t
-    systemctl restart nginx
-    systemctl enable nginx
+    # Test + restart (restart, pas reload — empirique Pi NLF, stat caching du symlink)
+    sudo nginx -t
+    sudo systemctl restart nginx
+    sudo systemctl enable nginx
 
-    print_success "Nginx configuré avec les bonnes permissions"
+    print_success "Nginx configuré depuis neopro-base.conf (source de vérité)"
 }
 
 ################################################################################
