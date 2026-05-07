@@ -1,3 +1,9 @@
+# [3.298.0](https://github.com/Tallec7/neopro/compare/v3.297.0...v3.298.0) (2026-05-07)
+
+### Features
+
+- **displays-editor:** réassignation Fire Stick 1-clic — Phase 11 ([#898](https://github.com/Tallec7/neopro/issues/898)) ([d776e85](https://github.com/Tallec7/neopro/commit/d776e8575d170f0b7ca8af4ddc86ed9170af06e1)), closes [#noReceivers](https://github.com/Tallec7/neopro/issues/noReceivers)
+
 # [3.297.0](https://github.com/Tallec7/neopro/compare/v3.296.5...v3.297.0) (2026-05-07)
 
 ### Bug Fixes
