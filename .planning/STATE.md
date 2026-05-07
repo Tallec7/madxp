@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 8 DASHBOARD — Plan 01 complet, Plans 02-04 à démarrer
-stopped_at: Completed 08-dashboard-02-sites-service-receiver-load-PLAN.md
-last_updated: '2026-05-07T16:03:47.726Z'
-last_activity: '2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo exportées core/models/index.ts, DisplayConfig backward-compat'
+status: Phase 8 DASHBOARD — Plans 01-04 complets (Phase 8 COMPLETE)
+stopped_at: Completed 08-dashboard-04-karma-tests-PLAN.md
+last_updated: '2026-05-07T16:25:00.000Z'
+last_activity: '2026-05-07 — Plan 08-dashboard-04 : 10 Karma tests Phase 8 receiver UX (7 displays-editor + 3 site-settings-tab) — 596/596 verts'
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 18
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 8 — DASHBOARD UX Admin Assignation (Plan 01 complet)
-Plan: 08-dashboard-01 complete (ReceiverConfig + ReceiverInfo interfaces, DisplayConfig.receiver — 0d16dcc1)
-Status: Phase 8 DASHBOARD — Plan 01 complet, Plans 02-04 à démarrer
-Last activity: 2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo exportées core/models/index.ts, DisplayConfig backward-compat
-Next: Plan 08-dashboard-02 (service ConnectedReceiversService + API binding)
+Phase: 8 — DASHBOARD UX Admin Assignation (COMPLETE — Plans 01-04)
+Plan: 08-dashboard-04 complete (10 Karma tests Phase 8 receiver UX — 8590779e)
+Status: Phase 8 DASHBOARD — Plans 01-04 complets (Phase 8 COMPLETE)
+Last activity: 2026-05-07 — Plan 08-dashboard-04 : 10 Karma tests Phase 8 receiver UX (7 displays-editor + 3 site-settings-tab) — 596/596 verts
+Next: Phase 8 complete — milestone v4.0 MVP Fire Stick delivered
 
 ## Accumulated Context
 
@@ -91,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T16:03:47.724Z
-Stopped at: Completed 08-dashboard-02-sites-service-receiver-load-PLAN.md
+Last session: 2026-05-07T16:25:00.000Z
+Stopped at: Completed 08-dashboard-04-karma-tests-PLAN.md
 Resume file: None
