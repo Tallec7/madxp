@@ -47,14 +47,20 @@ export const listTemplates = async (req: AuthRequest, res: Response) => {
     // ADR-075 V2 — scope par site :
     //   - super_admin/admin voient tout (globaux + tous les club-scoped)
     //   - operator/club voient : globaux publiés + ceux de leur site
-    let templates;
-    if (isAdmin) {
-      templates = await remotionTemplatesRepository.findAll(false);
-    } else if (siteId) {
-      templates = await remotionTemplatesRepository.findVisibleForSite(siteId, true);
-    } else {
-      templates = await remotionTemplatesRepository.findAll(true);
-    }
+    //
+    // Quick task 260507-obe (audit P1 #10) — chaque row est enrichie d'un
+    // `usedByCount` (camelCase API, snake_case DB) calculé en une seule query
+    // agrégée par les méthodes *WithUsage du repo (pas de N+1).
+    const rows = isAdmin
+      ? await remotionTemplatesRepository.findAllWithUsage(false)
+      : siteId
+        ? await remotionTemplatesRepository.findVisibleForSiteWithUsage(siteId, true)
+        : await remotionTemplatesRepository.findAllWithUsage(true);
+
+    const templates = rows.map(({ used_by_count, ...rest }) => ({
+      ...rest,
+      usedByCount: used_by_count ?? 0,
+    }));
     res.json(templates);
   } catch (error) {
     logger.error('listTemplates error', { error });
