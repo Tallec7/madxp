@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
+status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
 stopped_at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
-last_updated: '2026-05-07T09:30:00.000Z'
-last_activity: 2026-05-07 — Plan 06-captive-06 committed 63dede57+3f6f1033 (build-raspberry.sh ship neopro-base.conf via OTA + smoke guard install.sh contre régression heredoc)
+last_updated: '2026-05-07T09:31:04.426Z'
+last_activity: '2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)'
 progress:
   total_phases: 6
   completed_phases: 3
