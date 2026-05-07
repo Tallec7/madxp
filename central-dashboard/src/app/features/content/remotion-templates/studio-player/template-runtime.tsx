@@ -120,7 +120,26 @@ function isSlotVisible(visibleIf: string | null | undefined, opts: Record<string
   return actual !== undefined && actual === value;
 }
 
-const isValidSrc = (url: string): boolean => /^(https?:|blob:|data:)/.test(url);
+// Deny-list pour les URLs cassées connues qui ont fui en prod (cf. incident
+// 2026-05-07 : 23 layers/variants pointaient vers `neopro-central-production
+// .up.railway.app/remotion-preview/public/*.webm` — assets jamais uploadés sur
+// FTP, 404 systématique. OffthreadVideo retry en boucle → cascade Chrome →
+// tab unresponsive. Ces URLs ont été archivées (status=archived sur 7
+// templates) mais on garde le guard pour éviter qu'un réimport legacy ne
+// recrée le pattern.
+const BROKEN_URL_PATTERNS = [/up\.railway\.app\/remotion-preview\/public\//i];
+
+const isValidSrc = (url: string): boolean => {
+  if (!/^(https?:|blob:|data:)/.test(url)) return false;
+  for (const re of BROKEN_URL_PATTERNS) {
+    if (re.test(url)) {
+      // eslint-disable-next-line no-console
+      console.warn('[TemplateRuntime] rejected broken asset URL', { url });
+      return false;
+    }
+  }
+  return true;
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
