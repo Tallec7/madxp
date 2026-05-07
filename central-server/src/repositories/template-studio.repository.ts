@@ -5,6 +5,7 @@
 
 import type { QueryResultRow } from 'pg';
 import { query, getClient } from '../config/database';
+import logger from '../config/logger';
 import type {
   TemplateV2,
   TemplateVariant,
@@ -1393,4 +1394,217 @@ class TemplateStudioRepository {
   }
 }
 
-export const templateStudioRepository = new TemplateStudioRepository();
+export const templateStudioRepository = new TemplateStudioRepository() as TemplateStudioRepository & {
+  deleteTemplate: (id: string) => Promise<DeleteTemplateResult>;
+  getTemplateUsedByCount: (id: string) => Promise<number>;
+};
+
+// ============================================================================
+// Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2)
+// ============================================================================
+
+export interface DeleteTemplateResult {
+  deleted: boolean;
+  orphanAssetUrls: string[];
+  cascadeRowCounts: {
+    variants: number;
+    layers: number;
+    textFields: number;
+    imageSlots: number;
+    options: number;
+    packshotRefs: number;
+    versions: number;
+  };
+}
+
+const ZERO_COUNTS: DeleteTemplateResult['cascadeRowCounts'] = {
+  variants: 0,
+  layers: 0,
+  textFields: 0,
+  imageSlots: 0,
+  options: 0,
+  packshotRefs: 0,
+  versions: 0,
+};
+
+/**
+ * Quick task 260507-gxd / Task 1 — Cascade DELETE pour un template v2.
+ *
+ * Audit P0 #1 (UX gap) + P0 #2 (FTP orphan accumulation) — pattern repris
+ * de PR #613 (video cleanup cascade).
+ *
+ * Le schéma déclare déjà ON DELETE CASCADE sur tous les enfants, mais on
+ * exécute des DELETE explicites dans la transaction pour :
+ *   - Garder un rowCount par table (audit + log)
+ *   - Capturer les URLs d'assets référencées AVANT suppression (sinon les FK
+ *     cascade cleanent les rows et on ne peut plus collecter les URLs)
+ *   - Détecter les orphelins assets (URLs qui n'apparaissent plus dans aucun
+ *     autre `template_layers.video_url` / `template_variants.background_video_url`)
+ *
+ * Le contrôleur upstream gère :
+ *   - 409 si `published === true` ou `usedByCount > 0` (sauf `?force=true`)
+ *   - cleanup FTP best-effort des `orphanAssetUrls` (DB cascade déjà committée)
+ *   - métrique `neopro_template_deleted_total{cascade_status, reason}`
+ *
+ * @returns { deleted: false } si template introuvable (idempotent côté API → 404).
+ * @throws si la transaction échoue (le contrôleur capture et logge).
+ */
+export async function deleteTemplate(
+  id: string,
+): Promise<DeleteTemplateResult> {
+  const client = await getClient();
+  let started = false;
+  try {
+    await client.query('BEGIN');
+    started = true;
+
+    // 1. Vérifier l'existence du template (404 idempotent)
+    const tplCheck: { rows: Array<{ id: string }> } = await client.query(
+      'SELECT id FROM neopro_templates WHERE id = $1',
+      [id],
+    );
+    if (tplCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { deleted: false, orphanAssetUrls: [], cascadeRowCounts: { ...ZERO_COUNTS } };
+    }
+
+    // 2. Collecter toutes les URLs d'assets référencées par CE template
+    //    (avant la cascade — les FK auraient nettoyé les rows enfants)
+    const layerAssets: { rows: Array<{ video_url: string | null }> } = await client.query(
+      `SELECT video_url FROM template_layers WHERE template_id = $1 AND video_url IS NOT NULL`,
+      [id],
+    );
+    const variantAssets: { rows: Array<{ background_video_url: string | null }> } = await client.query(
+      `SELECT background_video_url FROM template_variants WHERE template_id = $1 AND background_video_url IS NOT NULL`,
+      [id],
+    );
+    // template_image_slots n'a pas de colonne URL en propre (positions/animations
+    // uniquement) — les images user sont attachées dynamiquement au render. On
+    // saute donc cette table pour la collecte d'URLs (pas de fuite FTP côté admin).
+    await client.query(
+      `SELECT id FROM template_image_slots WHERE template_id = $1`,
+      [id],
+    );
+
+    const collectedUrls = new Set<string>();
+    for (const r of layerAssets.rows) {
+      if (r.video_url && r.video_url.trim().length > 0) collectedUrls.add(r.video_url);
+    }
+    for (const r of variantAssets.rows) {
+      if (r.background_video_url && r.background_video_url.trim().length > 0) {
+        collectedUrls.add(r.background_video_url);
+      }
+    }
+
+    // 3. DELETE en cascade (ordre dépendances FK pour clarté + rowCounts).
+    //    Toutes les FK sont ON DELETE CASCADE mais on délète explicitement pour
+    //    le tracking et la lisibilité.
+    const delTextFields = await client.query(
+      `DELETE FROM template_text_fields WHERE template_id = $1`,
+      [id],
+    );
+    const delImageSlots = await client.query(
+      `DELETE FROM template_image_slots WHERE template_id = $1`,
+      [id],
+    );
+    const delLayers = await client.query(
+      `DELETE FROM template_layers WHERE template_id = $1`,
+      [id],
+    );
+    const delVariants = await client.query(
+      `DELETE FROM template_variants WHERE template_id = $1`,
+      [id],
+    );
+    const delOptions = await client.query(
+      `DELETE FROM template_options WHERE template_id = $1`,
+      [id],
+    );
+    const delPackshotRefs = await client.query(
+      `DELETE FROM template_packshot_refs WHERE template_id = $1`,
+      [id],
+    );
+    // neopro_template_versions = audit trail (ADR-055)
+    const delVersions = await client.query(
+      `DELETE FROM neopro_template_versions WHERE template_id = $1`,
+      [id],
+    );
+    // Root delete — neopro_templates
+    await client.query(`DELETE FROM neopro_templates WHERE id = $1`, [id]);
+
+    // 4. Détection des orphelins : pour chaque URL collectée, vérifier qu'elle
+    //    n'est plus référencée ailleurs après la cascade.
+    const urls = Array.from(collectedUrls);
+    let orphanAssetUrls: string[] = [];
+    if (urls.length > 0) {
+      const stillReferenced: { rows: Array<{ url: string }> } = await client.query(
+        `SELECT video_url AS url FROM template_layers WHERE video_url = ANY($1::text[])
+         UNION
+         SELECT background_video_url AS url FROM template_variants WHERE background_video_url = ANY($1::text[])`,
+        [urls],
+      );
+      const used = new Set(stillReferenced.rows.map((r) => r.url));
+      orphanAssetUrls = urls.filter((u) => !used.has(u));
+    }
+
+    await client.query('COMMIT');
+
+    return {
+      deleted: true,
+      orphanAssetUrls,
+      cascadeRowCounts: {
+        variants: delVariants.rowCount ?? 0,
+        layers: delLayers.rowCount ?? 0,
+        textFields: delTextFields.rowCount ?? 0,
+        imageSlots: delImageSlots.rowCount ?? 0,
+        options: delOptions.rowCount ?? 0,
+        packshotRefs: delPackshotRefs.rowCount ?? 0,
+        versions: delVersions.rowCount ?? 0,
+      },
+    };
+  } catch (err) {
+    if (started) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        logger.error('templateStudioRepository.deleteTemplate ROLLBACK failed', {
+          template_id: id,
+          error: (rollbackErr as Error).message,
+        });
+      }
+    }
+    logger.error('templateStudioRepository.deleteTemplate failed', {
+      template_id: id,
+      error: (err as Error).message,
+    });
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Quick task 260507-gxd / Task 2 — read helper utilisé par le contrôleur DELETE
+ * pour le 409 guard. Compte les références "in use" du template.
+ *
+ * Sources comptées :
+ *   - `template_packshot_refs.packshot_template_id` : un autre template
+ *     l'utilise comme packshot (ON DELETE RESTRICT, doit être bypassé via force)
+ *   - `remotion_render_jobs` actifs : un job pending/running référence ce template
+ */
+export async function getTemplateUsedByCount(templateId: string): Promise<number> {
+  const result = await query<{ total: string }>(
+    `SELECT
+       (SELECT COUNT(*) FROM template_packshot_refs WHERE packshot_template_id = $1)
+       +
+       (SELECT COUNT(*) FROM remotion_render_jobs WHERE template_id = $1 AND status IN ('pending','running'))
+       AS total`,
+    [templateId],
+  );
+  const raw = result.rows[0]?.total ?? '0';
+  return parseInt(raw, 10) || 0;
+}
+
+// Bind les helpers au singleton (les controllers passent par
+// `templateStudioRepository.deleteTemplate` / `.getTemplateUsedByCount`).
+templateStudioRepository.deleteTemplate = deleteTemplate;
+templateStudioRepository.getTemplateUsedByCount = getTemplateUsedByCount;
