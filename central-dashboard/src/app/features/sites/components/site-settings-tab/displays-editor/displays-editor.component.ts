@@ -1,7 +1,16 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+  ElementRef,
+  ChangeDetectorRef,
+  HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DisplayConfig } from '../../../../../core/models';
+import { DisplayConfig, ReceiverConfig, ReceiverInfo } from '../../../../../core/models';
 
 interface DisplayTemplate {
   icon: string;
@@ -36,6 +45,70 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
         />
         <span class="display-type-label">{{ display.type }}</span>
         <span class="display-resolution" *ngIf="display.resolution">{{ display.resolution }}</span>
+
+        <!-- Receiver badge — Phase 8 -->
+        <!-- State 1: Pi native (index 0 or kind=pi_native) -->
+        <span
+          class="receiver-badge receiver-badge--native"
+          *ngIf="display.index === 0 || display.receiver?.kind === 'pi_native'"
+          title="Ecran principal — connecté directement au Pi"
+          >🖥️ Pi HDMI</span
+        >
+
+        <!-- State 2: Fire Stick assigned -->
+        <ng-container
+          *ngIf="display.index !== 0 && display.receiver?.kind === 'firestick' && display.receiver?.mac"
+        >
+          <button
+            class="receiver-badge receiver-badge--assigned"
+            (click)="openReceiverDropdown($event, display.index)"
+            [attr.data-display-index]="display.index"
+            title="{{ display.receiver?.mac }}"
+          >
+            📺 {{ formatMac(display.receiver!.mac!) }} ▾
+          </button>
+        </ng-container>
+
+        <!-- State 3: Unassigned (index > 0, no receiver or receiver is null) -->
+        <button
+          class="receiver-badge receiver-badge--unassigned"
+          *ngIf="display.index !== 0 && !display.receiver?.mac"
+          (click)="openReceiverDropdown($event, display.index)"
+          [attr.data-display-index]="display.index"
+        >
+          + Assigner
+        </button>
+
+        <!-- Receiver dropdown (position:fixed, portaled via ngIf) -->
+        <div
+          class="receiver-dropdown template-menu"
+          *ngIf="activeDropdownIndex === display.index"
+          [style.top.px]="dropdownTop"
+          [style.left.px]="dropdownLeft"
+        >
+          <ng-container *ngIf="connectedReceivers.length > 0; else noReceivers">
+            <button
+              class="template-option"
+              *ngFor="let r of connectedReceivers"
+              (click)="assignReceiver(display.index, r)"
+            >
+              <span class="receiver-mac">{{ r.mac }}</span>
+              <span class="receiver-lastseen"> — {{ formatLastSeen(r.lastSeenAt) }}</span>
+            </button>
+            <hr *ngIf="display.receiver?.mac" class="receiver-dropdown-sep" />
+            <button
+              class="template-option receiver-unassign"
+              *ngIf="display.receiver?.mac"
+              (click)="unassignReceiver(display.index)"
+            >
+              — Désassigner
+            </button>
+          </ng-container>
+          <ng-template #noReceivers>
+            <span class="receiver-empty">Aucun récepteur détecté (Pi hors-ligne ?)</span>
+          </ng-template>
+        </div>
+
         <button
           class="btn-remove"
           *ngIf="display.index !== 0"
@@ -263,11 +336,98 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       .custom-form-row { flex-direction: column; }
       .custom-form-row .form-input { min-width: unset; }
     }
+
+    /* Receiver badges (Phase 8) */
+    .receiver-badge {
+      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      cursor: default;
+      border: none;
+      font-weight: 500;
+    }
+
+    .receiver-badge--native {
+      background: #e2e8f0;
+      color: #64748b;
+    }
+
+    .receiver-badge--assigned {
+      background: #dcfce7;
+      color: #166534;
+      cursor: pointer;
+      border: 1px solid #86efac;
+    }
+
+    .receiver-badge--assigned:hover {
+      background: #bbf7d0;
+    }
+
+    .receiver-badge--unassigned {
+      background: transparent;
+      color: #3b82f6;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0.125rem 0.25rem;
+    }
+
+    .receiver-badge--unassigned:hover {
+      color: #2563eb;
+    }
+
+    /* Receiver dropdown */
+    .receiver-dropdown {
+      position: fixed;
+      z-index: 9999;
+      min-width: 260px;
+      max-width: 360px;
+      margin-top: 0;
+    }
+
+    .receiver-mac {
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+
+    .receiver-lastseen {
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+
+    .receiver-empty {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      color: #94a3b8;
+      font-size: 0.8125rem;
+      font-style: italic;
+    }
+
+    .receiver-dropdown-sep {
+      border: none;
+      border-top: 1px solid #e2e8f0;
+      margin: 0.25rem 0;
+    }
+
+    .receiver-unassign {
+      color: #dc2626 !important;
+    }
+
+    .receiver-unassign:hover {
+      background: #fef2f2 !important;
+    }
   `]
 })
 export class DisplaysEditorComponent {
   @Input() displays: DisplayConfig[] = [];
   @Output() displaysChange = new EventEmitter<DisplayConfig[]>();
+
+  @Input() connectedReceivers: ReceiverInfo[] = [];
+
+  // Receiver dropdown state
+  activeDropdownIndex: number | null = null;
+  dropdownTop = 0;
+  dropdownLeft = 0;
 
   readonly templates = DISPLAY_TEMPLATES;
   showTemplateMenu = false;
@@ -275,6 +435,11 @@ export class DisplaysEditorComponent {
   customName = '';
   customType = '';
   customResolution = '';
+
+  constructor(
+    private elementRef: ElementRef,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   trackByIndex(_: number, display: DisplayConfig): number {
     return display.index;
@@ -322,6 +487,75 @@ export class DisplaysEditorComponent {
 
   onDisplayChanged(): void {
     this.displaysChange.emit(this.displays);
+  }
+
+  // --- Receiver UX (Phase 8) ---
+
+  formatMac(mac: string): string {
+    // 'AA:BB:CC:DD:EE:FF' → 'AA:BB:C…FF'
+    if (!mac || mac.length < 8) return mac;
+    return mac.substring(0, 6) + '…' + mac.substring(mac.length - 2);
+  }
+
+  formatLastSeen(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'à l\'instant';
+    if (mins < 60) return `il y a ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `il y a ${hrs}h`;
+    return `il y a ${Math.floor(hrs / 24)}j`;
+  }
+
+  openReceiverDropdown(event: Event, displayIndex: number): void {
+    event.stopPropagation();
+    if (this.activeDropdownIndex === displayIndex) {
+      this.activeDropdownIndex = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    const btn = event.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    this.dropdownTop = rect.bottom + 4;
+    this.dropdownLeft = rect.left;
+    this.activeDropdownIndex = displayIndex;
+    this.cdr.markForCheck();
+  }
+
+  assignReceiver(displayIndex: number, receiver: ReceiverInfo): void {
+    this.displays = this.displays.map(d => {
+      if (d.index !== displayIndex) return d;
+      return {
+        ...d,
+        receiver: {
+          kind: receiver.kind,
+          mac: receiver.mac,
+          last_seen_at: receiver.lastSeenAt,
+        } as ReceiverConfig,
+      };
+    });
+    this.activeDropdownIndex = null;
+    this.displaysChange.emit([...this.displays]);
+    this.cdr.markForCheck();
+  }
+
+  unassignReceiver(displayIndex: number): void {
+    this.displays = this.displays.map(d => {
+      if (d.index !== displayIndex) return d;
+      return { ...d, receiver: null };
+    });
+    this.activeDropdownIndex = null;
+    this.displaysChange.emit([...this.displays]);
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    if (this.activeDropdownIndex === null) return;
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.activeDropdownIndex = null;
+      this.cdr.markForCheck();
+    }
   }
 
   private getNextIndex(): number {
