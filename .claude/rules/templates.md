@@ -35,7 +35,9 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 
 ### Runtime — URLs cassées (incident 2026-05-07, smoke test enforced)
 
-- **Retirer la deny-list `BROKEN_URL_PATTERNS` ou la regex `up\.railway\.app/remotion-preview/public` de `template-runtime.tsx` (dashboard) ni de `TemplateRuntime.tsx` (worker render).** Cette deny-list rejette les URLs legacy de tests Remotion (assets `BUT_simple_*.webm`, `JOUEUR_but_*.webm`, `BUT_img_joueur_*.webm`) qui pointaient vers Railway preview au lieu du FTP Hostinger. 23 rows DB (template_layers + template_variants) ont fait planter le tab Chrome via cascade 404 → OffthreadVideo retry → unresponsive. 7 templates ont été archivés (status='archived') le 2026-05-07. Le guard reste en place pour bloquer un réimport legacy.
+- **Retirer la deny-list `BROKEN_URL_PATTERNS` ou les regex `up\.railway\.app/remotion-preview/public` ET `up\.railway\.app/[^?#]+\.(webm|mp4)` de `template-runtime.tsx` (dashboard) ni de `TemplateRuntime.tsx` (worker render).** Cette deny-list rejette deux familles d'URLs legacy de tests Remotion :
+  - **1er pattern (incident 2026-05-07 matin)** : `up.railway.app/remotion-preview/public/*.webm` — 23 rows DB (assets `BUT_simple_*.webm`, `JOUEUR_but_*.webm`, `BUT_img_joueur_*.webm`) qui pointaient vers Railway preview au lieu du FTP Hostinger. 7 templates archivés.
+  - **2e pattern (récidive 2026-05-07 soir)** : `up.railway.app/<file>.webm` à la racine du domaine (ex: `neopro-central-production.up.railway.app/BUT_simple_{A,B,C}.webm`). Le 1er pattern ne matchait pas → cascade Chrome répétée. Templates impactés archivés via `central-server/src/scripts/cleanup-broken-railway-asset-urls-2026-05-07-bis.sql`. Le 2e pattern attrape TOUTE URL .webm/.mp4 servie depuis un domaine Railway — Railway héberge l'API JSON, jamais les assets vidéo (FTP Hostinger only).
 - **Retirer le `console.warn('[TemplateRuntime] rejected broken asset URL', ...)`** : c'est la seule observabilité côté navigateur quand un futur réimport tape le pattern. Sans le warn, le bug retombe en silence.
 
 ### Admin UX (ADR-095 — smoke test enforced)
@@ -59,6 +61,12 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Retirer `ensureSlugAvailable()` ou `ensureFontsExist()`** : sans ces garde-fous le CLI crée des doublons silencieux ou laisse passer des références de fonts inconnues.
 - **Ajouter un upsert implicite (`ON CONFLICT DO UPDATE`)** tant que v2 n'est pas écrit : v1 refuse volontairement un slug existant pour éviter les écrasements accidentels.
 - **Lire les WebM en local dans le script** : les `file:` des layers doivent rester des URLs absolues en v1 (upload FTP = v2).
+
+### Wizard v3 — boucle infinie effect (incident 2026-05-07 — smoke test enforced)
+
+- **Réintroduire `previewState` dans le type `WizardState`** (`central-dashboard/.../studio-v3/wizard-state.types.ts`). Stocker le snapshot Player dans le même signal que les inputs lus par le recompute effect crée une boucle : `buildRuntimePlayerState` réalloue toujours un nouvel objet, donc le guard `next !== s.previewState` est toujours vrai → `state.update` → effect re-trigger → freeze tab Chrome (cause : sélection 1er fond animé dans le wizard `+ Ajouter un fond animé`).
+- **Faire un `state.update(... previewState ...)` dans `studio-v3-wizard.component.ts`**. Le snapshot Player vit dans son propre signal `previewStateSignal: WritableSignal<RuntimePlayerState | null>` ; l'effect lit `state()` et écrit ailleurs, ce qui casse le feedback.
+- Référence : smoke `smoke-template-studio-v3-preview.test.ts` cas F + F2.
 
 ### Sécu uploads / proxy (audit 2026-05-07 phase C — smoke test enforced)
 

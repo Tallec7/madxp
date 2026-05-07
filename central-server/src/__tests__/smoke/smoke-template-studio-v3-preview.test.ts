@@ -81,4 +81,34 @@ describe('Template Studio v3 — preview integration (PREV-01/02/03)', () => {
     expect(src).toMatch(/debounceTime\s*\(\s*300\s*\)/);
     expect(src).toMatch(/\(blur\)=/);
   });
+
+  /**
+   * Regression guard — bug 2026-05-07 : la 1re sélection d'un fond animé
+   * faisait planter Chrome (boucle infinie d'effect Angular).
+   *
+   * Cause : l'effect du shell lisait `state()` ET écrivait `state.previewState`
+   * avec un guard `next !== s.previewState` jamais satisfait
+   * (`buildRuntimePlayerState` réalloue toujours un nouvel objet) → recursion.
+   *
+   * Fix : `previewState` extrait du `WizardState` vers un signal séparé
+   * `previewStateSignal`. L'effect lit `state()` mais écrit ailleurs, donc
+   * pas de feedback. Toute régression qui réintroduirait `previewState` dans
+   * le signal `state` ramènerait le freeze.
+   */
+  it('F: WizardState type does NOT carry previewState (effect feedback loop guard)', () => {
+    const types = fs.readFileSync(
+      path.join(wizardDir, '..', 'wizard-state.types.ts'),
+      'utf8',
+    );
+    expect(types).not.toMatch(/previewState\??:\s*RuntimePlayerState/);
+  });
+
+  it('F2: wizard shell never writes previewState into state.update (effect feedback loop guard)', () => {
+    const shell = fs.readFileSync(
+      path.join(wizardDir, 'studio-v3-wizard.component.ts'),
+      'utf8',
+    );
+    expect(shell).not.toMatch(/state\.update\([^)]*previewState/);
+    expect(shell).toMatch(/previewStateSignal\s*=\s*signal</);
+  });
 });
