@@ -84,7 +84,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       `}</style>
 
       {/* ── COUCHE 1 : Fond animé ──────────────────────────────────────────── */}
-      <OffthreadVideo src={resolveVideo(videoSrcA, "BUT_simple_A.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveVideo(videoSrcA, "BUT_simple_A.mov")} style={layerStyle} />
 
       {/* ── COUCHE 2 : Logo club ──────────────────────────────────────────── */}
       <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -102,7 +102,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
 
       {/* ── COUCHE 3 : Packshot C (now OffthreadVideo — FFmpeg native decode) */}
       <OffthreadVideo
-        src={resolveVideo(videoSrcC, "BUT_simple_C.webm")}
+        src={resolveVideo(videoSrcC, "BUT_simple_C.mov")}
         style={layerStyle}
       />
 
@@ -164,7 +164,7 @@ export const ButSimple: React.FC<Props> = ({ prenom = '', nom = '', club = '', l
       )}
 
       {/* ── COUCHE 5 : Wipe B ─────────────────────────────────────────────── */}
-      <OffthreadVideo src={resolveVideo(videoSrcB, "BUT_simple_B.webm")} style={layerStyle} />
+      <OffthreadVideo src={resolveVideo(videoSrcB, undefined)} style={layerStyle} />
 
     </AbsoluteFill>
   );
