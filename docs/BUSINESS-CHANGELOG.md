@@ -8,10 +8,11 @@
 
 ---
 
-## Semaine 19 — 5-11 Mai 2026 (suite — v4.0 Fire Stick livré 2026-05-07)
+## Semaine 19 — 5-11 Mai 2026 (suite — v4.1 Fire Stick auto-launch validé 2026-05-07)
 
 ### 🎯 Pour le club (NLF, prospects)
 
+- **Fire Stick plug-and-play : branche le Fire Stick, Neopro démarre seul** (Phase 10 CAPTIVE-AUTO — 2026-05-07) — le Fire Stick branché sur le Wi-Fi du Pi détecte automatiquement le portail captif et ouvre Silk sans aucune action. Si l'écran est déjà assigné dans la config, Silk redirige directement sur le player vidéo Neopro. Testé physiquement sur Pi RACC : `generate_204 → 302 → Silk → /display/0 → TV Neopro`. Le bénévole branche le câble, c'est tout. (Limitation connue : Silk s'ouvre dans une fenêtre avec barre URL — fullscreen nécessite une APK dédiée, prévu v4.2.)
 - **Multi-écrans Fire Stick : un admin assigne un écran depuis le dashboard sans aucune saisie aveugle** (Phase 8 DASHBOARD, 4 plans GSD — 2026-05-07) — dans `Sites > <club> > Écrans`, chaque ligne affiche désormais une colonne « Récepteur » avec un badge 3 états (🖥️ Pi HDMI natif, 📺 MAC tronquée = Fire Stick assigné, + Assigner = libre). Le bouton [Assigner ▾] ouvre un dropdown pré-rempli avec les MACs auto-détectées par le Pi (auto-discovery réseau LAN, pas de saisie). Le bouton [— Désassigner] libère un écran sans toucher la config des autres. Un super_admin peut équiper une salle multi-écrans en moins de 5 min, depuis un navigateur, sans aide technique.
 - **Chaque transition Fire Stick visible en Grafana** (Phase 9 OBSERVE, 2 plans GSD — 2026-05-07) — nouvelle métrique Prometheus `neopro_receivers_total{site_id, status}` incrémentée à chaque détection, assignation et déconnexion Fire Stick. Panel ajouté au dashboard Grafana "NeoPro Overview Cloud". Premier signal mesurable de l'adoption Fire Stick par site.
 
