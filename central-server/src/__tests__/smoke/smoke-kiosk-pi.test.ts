@@ -214,8 +214,13 @@ describe('Nginx cache-control conventions', () => {
     });
   }
 
-  it('install.sh nginx config must have Cache-Control no-store on index.html', () => {
-    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/install.sh'), 'utf8');
+  it('neopro-base.conf must have Cache-Control no-store on index.html (source of truth post Phase 6 plan 05)', () => {
+    // Post Plan 05: install.sh::configure_nginx no longer inlines nginx config —
+    // it `cp`s raspberry/config/nginx/neopro-base.conf as the single source of truth.
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf'),
+      'utf8'
+    );
     expect({
       hasIndexHtmlNoCache: /location\s*=\s*\/index\.html\s*\{[^}]*no-cache,\s*no-store/s.test(content),
     }).toEqual({
@@ -1713,8 +1718,10 @@ describe('Nginx captive-portal proxy blocks (config drift prevention)', () => {
     path.join(repoRoot, 'raspberry/config/nginx-captive-portal.conf'),
     'utf8'
   );
-  const installSh = fs.readFileSync(
-    path.join(repoRoot, 'raspberry/install.sh'),
+  // Post Phase 6 Plan 05: install.sh `cp`s neopro-base.conf instead of inlining.
+  // Drift prevention now compares the two real config files (base mode + hotspot mode).
+  const baseConf = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf'),
     'utf8'
   );
 
@@ -1756,19 +1763,19 @@ describe('Nginx captive-portal proxy blocks (config drift prevention)', () => {
     });
   });
 
-  it('install.sh must also have /admin/ proxy — both sources must stay in sync', () => {
+  it('neopro-base.conf must also have /admin/ proxy — both sources must stay in sync', () => {
     expect({
-      installHasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(installSh),
+      baseHasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(baseConf),
     }).toEqual({
-      installHasAdminProxy: true,
+      baseHasAdminProxy: true,
     });
   });
 
-  it('install.sh must also have /socket.io/ proxy — both sources must stay in sync', () => {
+  it('neopro-base.conf must also have /socket.io/ proxy — both sources must stay in sync', () => {
     expect({
-      installHasSocketIo: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(installSh),
+      baseHasSocketIo: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(baseConf),
     }).toEqual({
-      installHasSocketIo: true,
+      baseHasSocketIo: true,
     });
   });
 });
