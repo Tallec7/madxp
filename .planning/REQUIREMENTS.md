@@ -37,9 +37,9 @@
 
 ### DASHBOARD — UX admin assignation
 
-- [ ] **DASHBOARD-01** : `displays-editor` affiche colonne « Récepteur » par display (🟢 Pi natif HDMI / 🟢 Fire Stick MAC tronquée / ⚪ Aucun)
+- [x] **DASHBOARD-01** : `displays-editor` affiche colonne « Récepteur » par display (🟢 Pi natif HDMI / 🟢 Fire Stick MAC tronquée / ⚪ Aucun)
 - [ ] **DASHBOARD-02** : Dropdown [Assigner ▾] pré-rempli avec les MACs auto-détectées par le Pi (pas de saisie aveugle, pas de pré-config)
-- [ ] **DASHBOARD-03** : Bouton [Désassigner] détache une MAC d'un display sans casser le display
+- [x] **DASHBOARD-03** : Bouton [Désassigner] détache une MAC d'un display sans casser le display
 
 ### OBSERVE — Métriques + smoke
 

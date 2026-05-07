@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 8 DASHBOARD — Plan 01 complet (ReceiverConfig + ReceiverInfo interfaces + DisplayConfig.receiver)
-stopped_at: Completed 08-dashboard-01-models-receiver-config-PLAN.md
-last_updated: '2026-05-07T00:00:00.000Z'
-last_activity: '2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo interfaces ajoutées dans core/models/index.ts, DisplayConfig étendu backward-compat'
+status: Phase 8 DASHBOARD — Plan 01 complet, Plans 02-04 à démarrer
+stopped_at: Completed 08-dashboard-02-sites-service-receiver-load-PLAN.md
+last_updated: '2026-05-07T16:03:47.726Z'
+last_activity: '2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo exportées core/models/index.ts, DisplayConfig backward-compat'
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 18
+  completed_plans: 16
 ---
 
 # Project State
@@ -91,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T15:05:17.018Z
-Stopped at: Completed 07-cloud-02-PLAN.md (PATCH displays emit + sync-agent whitelist + tests)
+Last session: 2026-05-07T16:03:47.724Z
+Stopped at: Completed 08-dashboard-02-sites-service-receiver-load-PLAN.md
 Resume file: None
