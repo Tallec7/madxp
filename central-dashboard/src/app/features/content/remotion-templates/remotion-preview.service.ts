@@ -71,11 +71,20 @@ export class RemotionPreviewService {
     return result;
   }
 
-  /** Proxifie une URL FTP externe via same-origin pour éviter CORB dans le player React. */
+  /** Proxifie une URL FTP externe via same-origin pour éviter CORB dans le player React.
+   *  Retourne '' pour les URLs Railway cassées (même patterns que BROKEN_URL_PATTERNS
+   *  dans TemplateRuntime.tsx) — Remotion ne précharge pas les chaînes vides. */
   proxyUrl(url: string): string;
   proxyUrl(url: string | null | undefined): string | null | undefined;
   proxyUrl(url: string | null | undefined): string | null | undefined {
-    if (!url || !url.includes('kalonpartners.bzh')) return url;
+    if (!url) return url;
+    if (
+      /up\.railway\.app\/remotion-preview\/public\//i.test(url) ||
+      /up\.railway\.app\/[^?#]+\.(webm|mp4)(?:[?#]|$)/i.test(url)
+    ) {
+      return '';
+    }
+    if (!url.includes('kalonpartners.bzh')) return url;
     return `${this.serverBase}/api/remotion-templates/asset-proxy?url=${encodeURIComponent(url)}`;
   }
 
