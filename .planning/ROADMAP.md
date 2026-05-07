@@ -3,7 +3,8 @@
 ## Milestones
 
 - ✅ **v3.0 — Template Studio v3 : UX admin orientée tâche** — Phases 1-3 (shipped 2026-05-05) — [archive](.planning/milestones/v3.0-ROADMAP.md)
-- 🚧 **v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)** — Phases 4-9 (started 2026-05-06)
+- ✅ **v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)** — Phases 4-9 (shipped 2026-05-07)
+- 🚧 **v4.1 — Fire Stick polish** — Phases 10-13 (started 2026-05-07)
 
 ## Phases
 
@@ -16,7 +17,8 @@
 
 </details>
 
-### v4.0 — Multi-écrans Fire Stick
+<details>
+<summary>✅ v4.0 — Multi-écrans Fire Stick (Phases 4-9) — SHIPPED 2026-05-07</summary>
 
 - [x] **Phase 4: DATA — Modèle DisplayConfig étendu** — Étendre le JSONB `sites.displays` avec un objet `receiver` + accès repository ✅ 2026-05-06
 - [x] **Phase 5: DETECT — Pi détecte les receivers** — `receivers.service.js` (pattern HDMI mirror) watch dnsmasq.leases + ARP, push socket, cache local (completed 2026-05-06)
@@ -24,6 +26,15 @@
 - [x] **Phase 7: CLOUD — API + sync-agent** — Route `/api/sites/:id/connected-receivers` + whitelist event `receiver-detected` (completed 2026-05-07, 3/3 plans)
 - [x] **Phase 8: DASHBOARD — UX admin assignation** — `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli) (completed 2026-05-07)
 - [x] **Phase 9: OBSERVE — Métriques + smoke** — Métrique Prometheus `neopro_receivers_total` + suite `smoke-receivers-discovery` (completed 2026-05-07)
+
+</details>
+
+### v4.1 — Fire Stick polish
+
+- [x] **Phase 10: CAPTIVE-AUTO — Silk Browser auto-launch** — Fire Stick ouvre automatiquement le portail captif sans manipulation bénévole (completed 2026-05-07)
+- [ ] **Phase 11: REASSIGN — Réassigner UX dashboard** — Bouton Réassigner direct en 1 clic (remplace Désassigner + Assigner en 2 temps)
+- [ ] **Phase 12: ALLOWLIST — MAC allowlist hostapd** — Seules les MACs whitelistées obtiennent une IP DHCP, gérée depuis le dashboard
+- [ ] **Phase 13: ALERT — Alertes déconnexion Fire Stick** — Alerte automatique si un Fire Stick assigné disparaît pendant un créneau actif
 
 ## Phase Details
 
@@ -131,20 +142,85 @@
 - [x] 09-observe-01-prometheus-receivers-metric-PLAN.md — Counter neopro_receivers_total{site_id, status} + Grafana panel (OBSERVE-01) ✅ 2026-05-07
 - [x] 09-observe-02-smoke-receivers-discovery-PLAN.md — Suite smoke-receivers-discovery (wiring whitelist + API + dashboard + install.sh) (OBSERVE-02) ✅ 2026-05-07
 
+---
+
+## v4.1 — Fire Stick polish
+
+### Phase 10: CAPTIVE-AUTO — Silk Browser auto-launch
+
+**Goal**: Un Fire Stick branché sur le hotspot Pi ouvre automatiquement le portail captif sans aucune manipulation de la télécommande par le bénévole.
+**Depends on**: Phase 6 (captive portal nginx + page d'attente opérationnels)
+**Requirements**: CAPTIVE-05, CAPTIVE-06, CAPTIVE-07
+**Success Criteria** (what must be TRUE):
+
+1. Un Fire Stick fraîchement connecté au hotspot affiche la page captive Pi dans Silk Browser sans que le bénévole n'appuie sur aucun bouton de télécommande.
+2. Au reboot du Fire Stick (premier démarrage après connexion hotspot), Silk s'ouvre sur le portail captif sans étape manuelle de l'utilisateur.
+3. Si l'auto-launch ne se déclenche pas (Fire Stick hors portée, timeout réseau), la page d'attente reste accessible manuellement — le comportement v4.0 est préservé sans régression.
+
+**Plans**: 1 plan
+
+- [x] 10-01-nginx-wifistub-302-PLAN.md — nginx wifistub 302 + wifiredirect endpoint + smoke guards Phase 10 + doc OTA Pi (CAPTIVE-05, CAPTIVE-06, CAPTIVE-07) (completed 2026-05-07)
+
+### Phase 11: REASSIGN — Réassigner UX dashboard
+
+**Goal**: Un super_admin réassigne un Fire Stick d'un display à un autre en 1 clic depuis le dashboard, sans passer par Désassigner puis Assigner en deux temps.
+**Depends on**: Phase 8 (displays-editor existant) + Phase 7 (cloud API + sync-agent)
+**Requirements**: ASSIGN-01, ASSIGN-02, ASSIGN-03
+**Success Criteria** (what must be TRUE):
+
+1. Dans `Sites > <club> > Écrans`, le dropdown d'un display déjà assigné propose [Réassigner ▾] avec les MACs détectées (MAC courante exclue).
+2. Sélectionner une MAC dans [Réassigner ▾] effectue l'opération en un seul clic — l'ancienne assignation est détachée et la nouvelle est appliquée atomiquement, sans état intermédiaire visible.
+3. L'ancien Fire Stick désassigné bascule automatiquement en page d'attente via `receiver_assignment_updated` → Pi → captive route, sans reboot ni manipulation terrain.
+
+**Plans**: TBD
+
+### Phase 12: ALLOWLIST — MAC allowlist hostapd
+
+**Goal**: Le hotspot Pi peut opérer en mode sécurisé où seules les MACs d'une whitelist obtiennent une IP DHCP, et l'admin gère cette liste depuis le dashboard sans SSH.
+**Depends on**: Phase 7 (cloud API site config) + Phase 9 (smoke receivers-discovery comme référence contrat wiring)
+**Requirements**: ALLOWLIST-01, ALLOWLIST-02, ALLOWLIST-03, ALLOWLIST-04
+**Success Criteria** (what must be TRUE):
+
+1. Quand le mode allowlist est activé pour un site, un Fire Stick dont la MAC n'est pas dans la liste ne reçoit pas d'adresse IP (refus DHCP niveau hostapd).
+2. L'admin ajoute ou retire une MAC de l'allowlist depuis le dashboard sans connexion SSH au Pi — la mise à jour est propagée au Pi via sync-agent et appliquée à chaud.
+3. Une tentative de connexion refusée génère une métrique `neopro_hotspot_rejected_total` incrémentée et un log côté Pi (observable en prod).
+4. Pour les sites n'ayant pas activé le mode allowlist, le comportement est identique à v4.0 (hotspot ouvert) — opt-in strict, pas de breaking change.
+
+**Plans**: TBD
+
+### Phase 13: ALERT — Alertes déconnexion Fire Stick
+
+**Goal**: Le super_admin est notifié automatiquement si un Fire Stick assigné disparaît du hotspot pendant un créneau actif, et l'alerte se résout seule à la reconnexion.
+**Depends on**: Phase 9 (smoke receivers-discovery + métrique receivers) + alertRepository.create() ADR-111 (déjà disponible)
+**Requirements**: ALERT-01, ALERT-02, ALERT-03, ALERT-04
+**Success Criteria** (what must be TRUE):
+
+1. Si un Fire Stick assigné n'est plus détecté sur le hotspot pendant plus de 5 minutes (configurable), une alerte `receiver_offline` apparaît dans le dashboard admin avec le site, le display, la MAC et l'heure de dernière détection.
+2. Quand le Fire Stick se reconnecte au hotspot, l'alerte `receiver_offline` est marquée résolue automatiquement — sans intervention admin.
+3. La métrique `neopro_receiver_offline_total{site_id, mac}` est incrémentée à chaque déconnexion détectée (observable en Grafana).
+
+**Plans**: TBD
+
 ## Progress
 
-| Phase               | Milestone | Plans Complete | Status   | Completed  |
-| ------------------- | --------- | -------------- | -------- | ---------- |
-| 1. Fondations       | v3.0      | 5/5            | Complete | 2026-05-05 |
-| 2. UX interactive   | v3.0      | 4/4            | Complete | 2026-05-05 |
-| 3. Gate publication | v3.0      | 5/5            | Complete | 2026-05-05 |
-| 4. DATA             | v4.0      | 2/2            | Complete | 2026-05-06 |
-| 5. DETECT           | v4.0      | 3/3            | Complete | 2026-05-06 |
-| 6. CAPTIVE          | v4.0      | 4/4            | Complete | 2026-05-07 |
-| 7. CLOUD            | v4.0      | 3/3            | Complete | 2026-05-07 |
-| 8. DASHBOARD        | v4.0      | 4/4            | Complete | 2026-05-07 |
-| 9. OBSERVE          | v4.0      | 2/2            | Complete | 2026-05-07 |
+| Phase               | Milestone | Plans Complete | Status      | Completed  |
+| ------------------- | --------- | -------------- | ----------- | ---------- |
+| 1. Fondations       | v3.0      | 5/5            | Complete    | 2026-05-05 |
+| 2. UX interactive   | v3.0      | 4/4            | Complete    | 2026-05-05 |
+| 3. Gate publication | v3.0      | 5/5            | Complete    | 2026-05-05 |
+| 4. DATA             | v4.0      | 2/2            | Complete    | 2026-05-06 |
+| 5. DETECT           | v4.0      | 3/3            | Complete    | 2026-05-06 |
+| 6. CAPTIVE          | v4.0      | 4/4            | Complete    | 2026-05-07 |
+| 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
+| 8. DASHBOARD        | v4.0      | 4/4            | Complete    | 2026-05-07 |
+| 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
+| 10. CAPTIVE-AUTO    | 1/1       | Complete       | 2026-05-07  | -          |
+| 11. REASSIGN        | v4.1      | 0/?            | Not started | -          |
+| 12. ALLOWLIST       | v4.1      | 0/?            | Not started | -          |
+| 13. ALERT           | v4.1      | 0/?            | Not started | -          |
 
 ---
 
 🎉 **Milestone v4.0 — Multi-écrans Fire Stick DELIVERED** — 6 phases, 20 plans, 2026-05-07
+
+🚧 **Milestone v4.1 — Fire Stick polish IN PROGRESS** — 4 phases, plans TBD, started 2026-05-07

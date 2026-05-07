@@ -3531,13 +3531,12 @@ describe('Phase 6 — Fire Stick Captive Portal', () => {
     expect(conf).toContain('address=/spectrum.s3.amazonaws.com/192.168.4.1');
   });
 
-  it('nginx serves Fire OS kindle-wifi probe (CAPTIVE-01)', () => {
+  it('nginx kindle-wifi probe block exists (CAPTIVE-01 / CAPTIVE-05 base)', () => {
     const conf = fs.readFileSync(
       path.join(REPO_ROOT, 'raspberry/config/nginx/neopro-base.conf'),
       'utf8'
     );
     expect(conf).toMatch(/location\s*=\s*\/kindle-wifi\/wifistub\.html/);
-    expect(conf).toContain('Success');
   });
 
   it('nginx proxies /api/captive/whoami with X-Real-IP forwarded (CAPTIVE-02)', () => {
@@ -3607,5 +3606,57 @@ describe('Phase 6 — Fire Stick Captive Portal', () => {
       );
     }
     expect(usesSourceOfTruth || heredocHasAllMarkers).toBe(true);
+  });
+});
+
+function extractNginxBlock(conf: string, locationPath: string): string {
+  const re = new RegExp(
+    `location\\s*=\\s*${locationPath.replace(/\//g, '\\/').replace(/\./g, '\\.')}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`,
+    'm'
+  );
+  const match = conf.match(re);
+  return match ? match[1] : '';
+}
+
+describe('Phase 10 — CAPTIVE-AUTO Silk auto-launch', () => {
+  const REPO_ROOT = path.resolve(__dirname, '../../../..');
+  const confPath = path.join(REPO_ROOT, 'raspberry/config/nginx/neopro-base.conf');
+
+  it('CAPTIVE-05: wifistub.html does NOT return 200 Success (would suppress CaptivePortalLauncher)', () => {
+    const conf = fs.readFileSync(confPath, 'utf8');
+    const block = extractNginxBlock(conf, '/kindle-wifi/wifistub.html');
+    expect(block).not.toMatch(/return\s+200/);
+    expect(block).not.toContain('Success');
+  });
+
+  it('CAPTIVE-05: wifistub.html returns 302 redirect to wifiredirect.html', () => {
+    const conf = fs.readFileSync(confPath, 'utf8');
+    const block = extractNginxBlock(conf, '/kindle-wifi/wifistub.html');
+    expect(block).toMatch(/return\s+302\s+http:\/\/\$host\/kindle-wifi\/wifiredirect\.html/);
+  });
+
+  it('CAPTIVE-05/06: wifiredirect.html location block exists', () => {
+    const conf = fs.readFileSync(confPath, 'utf8');
+    expect(conf).toMatch(/location\s*=\s*\/kindle-wifi\/wifiredirect\.html/);
+  });
+
+  it('CAPTIVE-05/06: wifiredirect.html redirects to Pi root (Angular bootstrap)', () => {
+    const conf = fs.readFileSync(confPath, 'utf8');
+    const block = extractNginxBlock(conf, '/kindle-wifi/wifiredirect.html');
+    expect(block).toMatch(/return\s+302\s+http:\/\/192\.168\.4\.1\//);
+  });
+
+  it('CAPTIVE-07 regression: /captive/wait still serves firestick-wait.html (Phase 6 preserved)', () => {
+    const conf = fs.readFileSync(confPath, 'utf8');
+    expect(conf).toContain('/captive/wait');
+    expect(conf).toContain('firestick-wait.html');
+  });
+
+  it('CAPTIVE-07 regression ADR-079: no DNAT 443 introduced by Phase 10', () => {
+    const iptables = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/scripts/setup-captive-portal-iptables.sh'),
+      'utf8'
+    );
+    expect(iptables).not.toMatch(/iptables[^\n]*-[AC][^\n]+--dport\s+443[^\n]*-j\s+DNAT/);
   });
 });

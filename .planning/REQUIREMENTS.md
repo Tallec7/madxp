@@ -48,16 +48,41 @@
 
 ---
 
-## Future Requirements (v4.1+)
+## v4.1 Requirements — Fire Stick polish
 
-Déclencheurs explicites — features ajoutées au prochain milestone uniquement si le trigger est observé en prod :
+### CAPTIVE — Auto-launch Silk Browser
 
-- [ ] **APK TWA fullscreen Fire Stick** — trigger : 1er retour terrain "URL bar Silk fait pas pro"
-- [ ] **Scénario SaaS Fire Stick** (token URL/cookie, pas de Pi) — trigger : 1er client SaaS qui demande
-- [ ] **MAC allowlist hostapd avancée** — trigger : rotation PSK bloquante en prod
-- [ ] **Captive auto-launch boot Silk** — trigger : friction "lancer Silk manuellement" documentée
-- [ ] **Bouton « Réassigner » côté Fire Stick** (déplacement TV) — trigger : 1er retour terrain
-- [ ] **Alertes Alertmanager Fire Stick offline > 24h** — trigger : 2ᵉ déploiement client
+- [x] **CAPTIVE-05** : Quand un Fire Stick se connecte au hotspot Pi, le Silk Browser s'ouvre automatiquement sur la page captive sans que le bénévole n'ait à ouvrir manuellement un navigateur
+- [x] **CAPTIVE-06** : L'auto-launch fonctionne au boot du Fire Stick (premier démarrage après connexion hotspot) sans manipulation de la télécommande
+- [x] **CAPTIVE-07** : Si l'auto-launch échoue (Fire Stick hors hotspot, timeout), la page d'attente reste accessible manuellement — aucune régression comportement v4.0
+
+### ASSIGN — Réassigner UX dashboard
+
+- [ ] **ASSIGN-01** : Dans `Sites > <club> > Écrans`, le dropdown d'un display déjà assigné propose [Réassigner ▾] pré-rempli avec les MACs détectées (sauf MAC courante)
+- [ ] **ASSIGN-02** : Sélectionner une MAC dans [Réassigner ▾] effectue l'assignation en 1 clic (désassigne l'ancienne + assigne la nouvelle atomiquement)
+- [ ] **ASSIGN-03** : L'ancien Fire Stick désassigné repasse en page d'attente automatiquement via `receiver_assignment_updated` → Pi → captive route sans reboot
+
+### ALLOWLIST — MAC allowlist hostapd
+
+- [ ] **ALLOWLIST-01** : Le Pi supporte un mode allowlist hostapd : seules les MACs dans une liste configurée obtiennent une IP DHCP
+- [ ] **ALLOWLIST-02** : L'admin gère l'allowlist depuis le dashboard (ajout/retrait MAC) sans SSH au Pi
+- [ ] **ALLOWLIST-03** : Une MAC non whitelistée est refusée au niveau DHCP + log Winston + métrique `neopro_hotspot_rejected_total`
+- [ ] **ALLOWLIST-04** : Le mode allowlist est opt-in par site (désactivé par défaut — hotspot ouvert comme v4.0)
+
+### ALERT — Alertes déconnexion Fire Stick
+
+- [ ] **ALERT-01** : Si un Fire Stick assigné disparaît du hotspot pendant > N min (défaut 5 min, configurable), une alerte `receiver_offline` est créée
+- [ ] **ALERT-02** : L'alerte `receiver_offline` est visible dans le dashboard admin avec : site, display, MAC, heure dernière détection
+- [ ] **ALERT-03** : Quand le Fire Stick se reconnecte, l'alerte `receiver_offline` est résolue automatiquement
+- [ ] **ALERT-04** : Métrique Prometheus `neopro_receiver_offline_total{site_id, mac}` incrémentée à chaque déconnexion détectée
+
+---
+
+## Future Requirements (v4.2+)
+
+- [ ] **APK TWA fullscreen Fire Stick** — trigger : URL bar Silk toujours visible après v4.1
+- [ ] **Scénario SaaS Fire Stick** (token URL/cookie, pas de Pi) — trigger : 1er client SaaS multi-écrans
+- [ ] **Bouton Réassigner côté Fire Stick** — trigger : bénévole seul sans accès dashboard
 
 ---
 
@@ -71,26 +96,42 @@ Déclencheurs explicites — features ajoutées au prochain milestone uniquement
 
 ## Traceability
 
-| REQ-ID       | Phase               | Plan          |
-| ------------ | ------------------- | ------------- |
-| DATA-01      | Phase 4 (DATA)      | TBD           |
-| DATA-02      | Phase 4 (DATA)      | TBD           |
-| DATA-03      | Phase 4 (DATA)      | TBD           |
-| DETECT-01    | Phase 5 (DETECT)    | TBD           |
-| DETECT-02    | Phase 5 (DETECT)    | TBD           |
-| DETECT-03    | Phase 5 (DETECT)    | TBD           |
-| CAPTIVE-01   | Phase 6 (CAPTIVE)   | TBD           |
-| CAPTIVE-02   | Phase 6 (CAPTIVE)   | TBD           |
-| CAPTIVE-03   | Phase 6 (CAPTIVE)   | 06-captive-03 |
-| CAPTIVE-04   | Phase 6 (CAPTIVE)   | 06-captive-03 |
-| CLOUD-01     | Phase 7 (CLOUD)     | TBD           |
-| CLOUD-02     | Phase 7 (CLOUD)     | TBD           |
-| CLOUD-03     | Phase 7 (CLOUD)     | TBD           |
-| CLOUD-04     | Phase 7 (CLOUD)     | 07-cloud-03   |
-| DASHBOARD-01 | Phase 8 (DASHBOARD) | TBD           |
-| DASHBOARD-02 | Phase 8 (DASHBOARD) | TBD           |
-| DASHBOARD-03 | Phase 8 (DASHBOARD) | TBD           |
-| OBSERVE-01   | Phase 9 (OBSERVE)   | TBD           |
-| OBSERVE-02   | Phase 9 (OBSERVE)   | TBD           |
+| REQ-ID       | Phase                   | Plan          |
+| ------------ | ----------------------- | ------------- |
+| DATA-01      | Phase 4 (DATA)          | TBD           |
+| DATA-02      | Phase 4 (DATA)          | TBD           |
+| DATA-03      | Phase 4 (DATA)          | TBD           |
+| DETECT-01    | Phase 5 (DETECT)        | TBD           |
+| DETECT-02    | Phase 5 (DETECT)        | TBD           |
+| DETECT-03    | Phase 5 (DETECT)        | TBD           |
+| CAPTIVE-01   | Phase 6 (CAPTIVE)       | TBD           |
+| CAPTIVE-02   | Phase 6 (CAPTIVE)       | TBD           |
+| CAPTIVE-03   | Phase 6 (CAPTIVE)       | 06-captive-03 |
+| CAPTIVE-04   | Phase 6 (CAPTIVE)       | 06-captive-03 |
+| CLOUD-01     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-02     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-03     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-04     | Phase 7 (CLOUD)         | 07-cloud-03   |
+| DASHBOARD-01 | Phase 8 (DASHBOARD)     | TBD           |
+| DASHBOARD-02 | Phase 8 (DASHBOARD)     | TBD           |
+| DASHBOARD-03 | Phase 8 (DASHBOARD)     | TBD           |
+| OBSERVE-01   | Phase 9 (OBSERVE)       | TBD           |
+| OBSERVE-02   | Phase 9 (OBSERVE)       | TBD           |
+| CAPTIVE-05   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
+| CAPTIVE-06   | Phase 10 (CAPTIVE-AUTO) | 46bd801a      |
+| CAPTIVE-07   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
+| ASSIGN-01    | Phase 11 (REASSIGN)     | TBD           |
+| ASSIGN-02    | Phase 11 (REASSIGN)     | TBD           |
+| ASSIGN-03    | Phase 11 (REASSIGN)     | TBD           |
+| ALLOWLIST-01 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-02 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-03 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-04 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALERT-01     | Phase 13 (ALERT)        | TBD           |
+| ALERT-02     | Phase 13 (ALERT)        | TBD           |
+| ALERT-03     | Phase 13 (ALERT)        | TBD           |
+| ALERT-04     | Phase 13 (ALERT)        | TBD           |
 
-**18 requirements** | **6 catégories** | **Coverage: 18/18** ✓ | Research skipped (POC + pattern PROP-002 known)
+**v4.0: 18 requirements** | **6 catégories** | **Coverage: 18/18** ✓
+
+**v4.1: 14 requirements** | **4 catégories** | **Coverage: 14/14** ✓ (CAPTIVE-05/06/07 → Phase 10, ASSIGN-01/02/03 → Phase 11, ALLOWLIST-01/02/03/04 → Phase 12, ALERT-01/02/03/04 → Phase 13)

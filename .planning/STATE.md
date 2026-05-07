@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: completed
-stopped_at: Completed 09-observe-01-PLAN.md
-last_updated: '2026-05-07T16:54:04.032Z'
-last_activity: '2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9'
+milestone: v4.1
+milestone_name: — Fire Stick polish
+status: 'Phase 10-01 COMPLETE — wifistub 302 validated Pi RACC; ready for Phase 11 REASSIGN'
+stopped_at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
+last_updated: '2026-05-07T20:30:00.000Z'
+last_activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 validated on Pi RACC (curl → HTTP 302), firestick-captive.conf POC patched
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 20
-  completed_plans: 20
+  total_phases: 10
+  completed_phases: 7
+  total_plans: 21
+  completed_plans: 21
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-06)
+See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade). Roadmap prête, planification phase 4 à démarrer.
+**Current focus:** Milestone v4.1 — Fire Stick polish. Roadmap prête (phases 10-13), planification phase 10 à démarrer.
 
 ## Current Position
 
-Phase: 9 — OBSERVE Métriques & Smoke (COMPLETE — Plans 01-02)
-Plan: 09-observe-02 complete (smoke-receivers-discovery — 12 tests verts — 620d8aa9)
-Status: Phase 9 OBSERVE — Plans 01-02 complets (Phase 9 COMPLETE — milestone v4.0 DELIVERED)
-Last activity: 2026-05-07 — Plan 09-observe-02 : smoke-receivers-discovery suite — 12 tests verts, 11 contrats Fire Stick figés — 620d8aa9
-Next: Milestone v4.0 complete — all 6 phases delivered
+Phase: Phase 10 — CAPTIVE-AUTO (plan 01 complete, phase complete)
+Plan: 10-01-nginx-wifistub-302 (COMPLETE — all 3 tasks done, Pi RACC validated)
+Status: Phase 10 complete — wifistub 302 confirmed on Pi RACC; ready for Phase 11 (REASSIGN)
+Last activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 + firestick-captive.conf patched + Pi RACC validated
+Next: Phase 11 (REASSIGN) — UX 1-clic réassigner Fire Stick depuis dashboard
 
 ## Accumulated Context
 
@@ -73,12 +73,24 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
 - 04-data-02: méthodes JSONB receiver composent getDisplays + updateDisplays existants — zéro nouveau query() direct, repository pattern strict (CLAUDE.md)
 - v4.0 = MVP terrain bénévole-grade (1 Pi + N Fire Sticks ~30€ par TV) — pivot infra multi-écrans
-- v4.1 (futur) = polish (TWA APK fullscreen, SaaS Fire Stick, MAC allowlist, captive auto-launch, Réassigner UX, alertes)
+- v4.1 = polish (captive auto-launch, réassigner UX 1 clic, MAC allowlist hostapd, alertes déconnexion)
 - Research skippé — POC technique validé 2026-05-05 sur Pi RACC, vision détaillée dans `.planning/firestick-poc/VISION.md`
 - Pattern à reproduire : `hdmi.service.js` (EDID/CEC) → `receivers.service.js` (dnsmasq.leases + ARP)
 - Source de vérité = DB cloud ; le Pi cache localement pour résilience offline
 - Modèle de données = extension `DisplayConfig` JSONB (PROP-002 réutilisé), pas de nouvelle table
-- Roadmap 6 phases : DATA → DETECT → CAPTIVE → CLOUD → DASHBOARD → OBSERVE (dépendances data-first, cloud après Pi-side, observe en dernier)
+- Roadmap 6 phases v4.0 : DATA → DETECT → CAPTIVE → CLOUD → DASHBOARD → OBSERVE (dépendances data-first, cloud après Pi-side, observe en dernier)
+
+### Decisions (v4.1)
+
+- Phase 10 avant Phase 11 : l'auto-launch améliore le captive portal existant (Phase 6), sans dépendance sur Réassigner
+- Phase 11 avant Phase 12 : Réassigner UX est une modification pure dashboard (displays-editor), indépendant de la sécurité réseau
+- Phase 12 avant Phase 13 : l'allowlist introduit `neopro_hotspot_rejected_total` ; la Phase 13 (alertes) réutilise alertRepository.create() ADR-111 déjà disponible
+- ALERT-04 (`neopro_receiver_offline_total`) ajouté au smoke-receivers-discovery existant (extension, pas nouvelle suite)
+- Mode allowlist = opt-in par site (ALLOWLIST-04) — pas de breaking change pour les sites v4.0 existants
+- 10-01: wifistub 302 deux-hop (wifistub→wifiredirect→root) préserve $host pour Fire OS CaptivePortalLauncher — redirect direct casserait le hostname dans Location
+- 10-01: wifiredirect cible http://192.168.4.1/ (racine) pas /captive/wait — Angular router branch via /api/captive/whoami
+- 10-01: extractNginxBlock() helper dans smoke tests — évite les faux positifs du bloc @captive_fallback qui contient encore "Success"
+- 10-01: firestick-captive.conf POC (Pi RACC sites-enabled) interceptait spectrum.s3.amazonaws.com avant neopro-base.conf et retournait 200 — patché pour 302 chain; la flotte OTA utilise neopro-base.conf via install.sh (pas affectée)
 
 ### Pending Todos
 
@@ -88,6 +100,7 @@ None yet.
 
 - Configs POC `firestick-captive` (`/etc/dnsmasq.d/` + `/etc/nginx/sites-available/`) sont déjà déployées sur Pi RACC `neopro.local` — vérifier qu'elles ne fuitent pas en prod NLF avant le rollout généralisé
 - Edge case PSK rotation : MAC inchangée mais bénévole doit re-saisir PSK sur chaque Fire Stick — préconisation PSK custom stable per-club (cf. mémoire `feedback_psk_format.md`)
+- Phase 12 (ALLOWLIST) : `macaddr_acl=1` + `accept_mac_file` dans hostapd.conf requiert redémarrage hostapd — à orchestrer via sync-agent commande dédiée (à ajouter à `DEFAULT_ALLOWED_COMMANDS`)
 
 ### Quick Tasks Completed
 
@@ -97,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T16:54:04.023Z
-Stopped at: Completed 09-observe-01-PLAN.md
+Last session: 2026-05-07T20:30:00.000Z
+Stopped at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
 Resume file: None
