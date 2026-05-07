@@ -10,8 +10,8 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ## Current State
 
-**In progress:** v4.0 — Multi-écrans Fire Stick (started 2026-05-06)
-**Shipped:** v3.0 — Template Studio v3 (2026-05-06)
+**In progress:** v4.1 — Fire Stick polish (started 2026-05-07)
+**Shipped:** v4.0 — Multi-écrans Fire Stick MVP (2026-05-07) · v3.0 — Template Studio v3 (2026-05-06)
 
 - Wizard 5 étapes (Identité → Fonds → Zones → Options → Publication) opérationnel
 - Asset Manager WebM standalone avec ffprobe alpha gate
@@ -41,29 +41,37 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 - ✓ Test render avec données factices avant publication — v3.0
 - ✓ Smoke tests : vocabulaire figé, duplication, validation, asset manager, preview, options — v3.0
 
+### Validated (v4.0 — livré 2026-05-07)
+
+- ✓ `receivers.service.js` Pi-side — détection passive MACs hotspot (dnsmasq.leases + ARP, diff + emit)
+- ✓ Cache local `.receivers-cache.json` — résilient reboot, restore offline-first
+- ✓ Captive portal DNS hijack (`firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com`) + nginx + page d'attente responsive
+- ✓ `DisplayConfig.receiver` JSONB + migration safe + repository `getReceiverForDisplay/setReceiver`
+- ✓ API `GET /api/sites/:id/connected-receivers` + sync-agent whitelist `receiver_assignment_updated`
+- ✓ Pi `command-dispatch.js` handler → `receiversService.assignDisplay` cache local
+- ✓ Dashboard `displays-editor` : badge 3 états + dropdown `position:fixed` pré-rempli + assign/unassign
+- ✓ `neopro_receivers_total{site_id, status}` Prometheus + Grafana panel
+- ✓ `smoke-receivers-discovery` — 12 assertions pinning 11 contrats wiring Fire Stick
+- ✓ POC validé live 2026-05-07 sur Pi RACC (`neopro.local`) avec Fire Stick réel MAC `0C:43:F9:36:04:77`
+
 ### Active
 
-**Current Milestone: v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)**
+**Current Milestone: v4.1 — Fire Stick polish**
 
-**Goal :** Un bénévole branche un Fire Stick sur une TV du club, l'admin assigne la MAC à distance depuis le dashboard, la TV affiche Neopro plein écran. Zéro déplacement technique.
+**Goal :** Éliminer les frictions terrain identifiées lors du déploiement v4.0 : le Fire Stick démarre sans manipulation, un admin réassigne une TV en 1 clic, le réseau hotspot est sécurisé, et une alerte prévient si un écran tombe pendant un match.
 
 **Target features :**
 
-- Détection passive Pi-side des MACs connectées au hotspot (`receivers.service.js` — pattern HDMI mirror)
-- Captive portal Fire Stick (DNS hijack + nginx) → page Neopro assignée OU page d'attente avec MAC
-- Modèle `DisplayConfig.receiver` JSONB + migration safe (PROP-002 réutilisé)
-- API `/api/sites/:id/connected-receivers` + sync-agent event whitelist
-- Dashboard `displays-editor` étendu (colonne Récepteur + dropdown auto-rempli)
-- Métriques `neopro_receivers_total` + smoke `smoke-receivers-discovery`
+- **Captive auto-launch fiable** — Silk Browser s'ouvre automatiquement à la connexion hotspot (sans URL bar visible, sans étape manuelle)
+- **Réassigner UX** — bouton Réassigner direct dans le dashboard (remplace Désassigner + Assigner en 2 temps)
+- **MAC allowlist hostapd** — seules les MACs connues/whitelistées peuvent se connecter au hotspot Pi
+- **Alertes déconnexion** — Alertmanager notifie super_admin si un Fire Stick assigné disparaît pendant un créneau actif
 
-**Future (déclencheurs explicites — v4.1+) :**
+**Future (déclencheurs explicites — v4.2+) :**
 
-- [ ] APK TWA fullscreen Fire Stick (trigger : retour terrain "URL bar Silk")
-- [ ] Scénario SaaS Fire Stick (token URL/cookie) (trigger : 1er client SaaS)
-- [ ] MAC allowlist hostapd (trigger : rotation PSK bloquante)
-- [ ] Captive auto-launch boot Silk (trigger : friction documentée)
-- [ ] Bouton "Réassigner" côté Fire Stick (trigger : déplacement TV)
-- [ ] Alertes Alertmanager Fire Stick offline (trigger : 2ᵉ client déployé)
+- [ ] APK TWA fullscreen Fire Stick (trigger : retour terrain "URL bar Silk persistante après v4.1")
+- [ ] Scénario SaaS Fire Stick (token URL/cookie) (trigger : 1er client SaaS multi-écrans)
+- [ ] Bouton "Réassigner" côté Fire Stick lui-même (trigger : bénévole seul sans accès dashboard)
 
 **Backlog Template Studio (futurs milestones) :**
 
@@ -105,4 +113,4 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ---
 
-_Last updated: 2026-05-06 — démarrage milestone v4.0 (Multi-écrans Fire Stick) — POC validé 2026-05-05_
+_Last updated: 2026-05-07 — démarrage milestone v4.1 (Fire Stick polish) — v4.0 POC validé live sur Pi RACC_
