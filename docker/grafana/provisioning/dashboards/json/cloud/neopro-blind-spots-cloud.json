@@ -1263,6 +1263,29 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 108
+      },
+      "id": 809,
+      "title": "Templates rollback (quick task 260507-les / audit P0 #4)",
+      "description": "POST /api/remotion-templates/:id/versions/:versionId/restore \u2014 success=true (restore appliqu\u00e9) vs success=false (404 template/version, ou exception). Spike success=false signale un drawer historique cass\u00e9 ou une dette de snapshots ADR-055 (versionId UI desync\u00e9 des rows DB).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_template_rollback_total{scrape_job=\"NEOPRO\"}[1h])) by (success)",
+          "legendFormat": "success={{success}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",
