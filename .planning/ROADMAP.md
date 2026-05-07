@@ -126,7 +126,7 @@
 1. La métrique `neopro_receivers_total{site_id, status}` est exposée sur `/metrics` et incrémentée par les transitions detected/assigned/disconnected.
 2. La suite `smoke-receivers-discovery` échoue si l'event `receiver-detected` est retiré de la whitelist sync-agent, si la route API disparaît, si la colonne dashboard est retirée, ou si les configs nginx/dnsmasq ne sont plus posées par `install.sh`.
 
-**Plans**: 2 plans (à planifier)
+**Plans**: 2 plans
 
 - [ ] 09-observe-01-prometheus-receivers-metric-PLAN.md — Counter neopro_receivers_total{site_id, status} + Grafana panel (OBSERVE-01)
 - [ ] 09-observe-02-smoke-receivers-discovery-PLAN.md — Suite smoke-receivers-discovery (wiring whitelist + API + dashboard + install.sh) (OBSERVE-02)
