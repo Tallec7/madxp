@@ -54,6 +54,25 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
             title="Historique des versions disponible"
             >📜 versions</span
           >
+          <!--
+            Quick task 260507-obe — Audit P1 #10 / usedByCount badge.
+            Affiche, pour chaque template listé, combien de références actives
+            le pointent (template_packshot_refs + render_jobs pending/running),
+            calculé côté API en une seule query agrégée. Aide le super_admin
+            à décider publier/dépublier/supprimer sans aller à l'aveugle.
+            "Inutilisé" (gris/--text-muted) vs "Utilisé par N référence(s)"
+            (accent --studio-accent-*).
+          -->
+          <span
+            class="badge tc__used-by"
+            [class.tc__used-by--zero]="(template.usedByCount ?? 0) === 0"
+            [attr.data-testid]="'template-used-by-count-' + template.id"
+            [title]="(template.usedByCount ?? 0) === 0
+              ? 'Aucune référence active'
+              : (template.usedByCount + ' référence(s) active(s) (packshots + rendus en cours)')"
+          >
+            {{ (template.usedByCount ?? 0) === 0 ? 'Inutilisé' : 'Utilisé par ' + template.usedByCount + ' référence(s)' }}
+          </span>
         </div>
       </div>
 
@@ -218,6 +237,16 @@ import { MODAL_MESSAGES } from './studio-v3/vocabulary.constants';
     .btn-history:hover {
       background: color-mix(in srgb, var(--primary-color) 8%, transparent);
       border-color: var(--primary-color);
+    }
+    /* Quick task 260507-obe — usedByCount badge (design tokens, post PR #884). */
+    .tc__used-by {
+      background: var(--studio-accent-100);
+      color: var(--studio-accent-700);
+    }
+    .tc__used-by--zero {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
     }
   `],
 })

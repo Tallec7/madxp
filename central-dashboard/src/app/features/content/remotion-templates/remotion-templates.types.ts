@@ -31,6 +31,14 @@ export interface RemotionTemplate {
   schema_version?: number;
   /** ADR-075 V2 — null = template global, UUID = scopé à un club (white-glove). */
   site_id?: string | null;
+  /**
+   * Quick task 260507-obe (audit P1 #10) — nombre de références actives
+   * (template_packshot_refs + render_jobs pending/running). Renvoyé par
+   * GET /api/remotion-templates en une query JOIN agrégée (pas N+1).
+   * Optional pour rétro-compat des callers qui construisent un RemotionTemplate
+   * en local (modale delete par exemple).
+   */
+  usedByCount?: number;
 }
 
 // ── ADR-075 Template Studio v2 — types data-driven ─────────────────────────
