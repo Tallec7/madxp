@@ -48,6 +48,8 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'update_hostname',
   // ADR-074 — cloud-canonical hotspot PSK
   'rotate_psk',
+  // v4.0 Phase 7 — cloud push receiver assignment vers Pi
+  'receiver_assignment_updated',
   // v4.0 Phase 5 — Fire Stick auto-discovery (DETECT-02)
   // Pré-requis Phase 7 : ces events Pi → cloud doivent être whitelistés pour ne pas être rejetés.
   // Aucun handler dans agent.js cette phase — la phase 7 ajoutera le handler cloud.
