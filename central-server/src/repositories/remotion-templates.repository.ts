@@ -107,8 +107,8 @@ class RemotionTemplatesRepository {
 
   async create(input: CreateTemplateInput): Promise<NeoProTemplate> {
     const result = await query<NeoProTemplate>(
-      `INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, created_by, site_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, created_by, site_id, schema_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 2)
        RETURNING *`,
       [
         input.name,
