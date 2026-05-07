@@ -157,7 +157,9 @@
 2. Au reboot du Fire Stick (premier démarrage après connexion hotspot), Silk s'ouvre sur le portail captif sans étape manuelle de l'utilisateur.
 3. Si l'auto-launch ne se déclenche pas (Fire Stick hors portée, timeout réseau), la page d'attente reste accessible manuellement — le comportement v4.0 est préservé sans régression.
 
-**Plans**: TBD
+**Plans**: 1 plan
+
+- [ ] 10-01-nginx-wifistub-302-PLAN.md — nginx wifistub 302 + wifiredirect endpoint + smoke guards Phase 10 + doc OTA Pi (CAPTIVE-05, CAPTIVE-06, CAPTIVE-07)
 
 ### Phase 11: REASSIGN — Réassigner UX dashboard
 
@@ -212,7 +214,7 @@
 | 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
 | 8. DASHBOARD        | v4.0      | 4/4            | Complete    | 2026-05-07 |
 | 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
-| 10. CAPTIVE-AUTO    | v4.1      | 0/?            | Not started | -          |
+| 10. CAPTIVE-AUTO    | v4.1      | 0/1            | Not started | -          |
 | 11. REASSIGN        | v4.1      | 0/?            | Not started | -          |
 | 12. ALLOWLIST       | v4.1      | 0/?            | Not started | -          |
 | 13. ALERT           | v4.1      | 0/?            | Not started | -          |
