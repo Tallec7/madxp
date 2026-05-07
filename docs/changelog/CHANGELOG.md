@@ -1,3 +1,9 @@
+## [3.292.17](https://github.com/Tallec7/neopro/compare/v3.292.16...v3.292.17) (2026-05-07)
+
+### Bug Fixes
+
+- **captive:** close phase 6 deployment gap (criterion [#5](https://github.com/Tallec7/neopro/issues/5)) ([#881](https://github.com/Tallec7/neopro/issues/881)) ([ba0b52a](https://github.com/Tallec7/neopro/commit/ba0b52a7795c10b34e4c3bf90e54ba47d515796b))
+
 ## [3.292.16](https://github.com/Tallec7/neopro/compare/v3.292.15...v3.292.16) (2026-05-07)
 
 ### Bug Fixes

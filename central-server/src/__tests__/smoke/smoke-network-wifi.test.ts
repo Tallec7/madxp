@@ -1288,9 +1288,11 @@ describe('ADR-079 Phase 1 — captive portal HTTPS (443) regression guards', () 
     expect({ installs443: installLines.length }).toEqual({ installs443: 0 });
   });
 
-  it('nginx must serve branded captive-portal.html for /hotspot-detect.html (install.sh + nginx-captive-portal.conf)', () => {
-    const installSh = fs.readFileSync(
-      path.join(repoRoot, 'raspberry/install.sh'),
+  it('nginx must serve branded captive-portal.html for /hotspot-detect.html (neopro-base.conf + nginx-captive-portal.conf)', () => {
+    // Post Phase 6 Plan 05: install.sh `cp`s neopro-base.conf instead of inlining the heredoc.
+    // Both deployed nginx configs (base mode + hotspot mode) must serve the branded captive page.
+    const baseConf = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf'),
       'utf8'
     );
     const nginxConf = fs.readFileSync(
@@ -1298,9 +1300,9 @@ describe('ADR-079 Phase 1 — captive portal HTTPS (443) regression guards', () 
       'utf8'
     );
     expect({
-      installShTryFiles: /hotspot-detect\.html[\s\S]{0,200}try_files\s+\/captive-portal\.html/.test(installSh),
+      baseConfTryFiles: /hotspot-detect\.html[\s\S]{0,200}try_files\s+\/captive-portal\.html/.test(baseConf),
       nginxConfTryFiles: /hotspot-detect\.html[\s\S]{0,200}try_files\s+\/captive-portal\.html/.test(nginxConf),
-    }).toEqual({ installShTryFiles: true, nginxConfTryFiles: true });
+    }).toEqual({ baseConfTryFiles: true, nginxConfTryFiles: true });
   });
 
   it('build-raspberry.sh must copy captive-portal.html into webapp deploy dir', () => {

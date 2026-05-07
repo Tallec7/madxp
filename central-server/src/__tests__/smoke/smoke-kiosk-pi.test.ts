@@ -214,8 +214,13 @@ describe('Nginx cache-control conventions', () => {
     });
   }
 
-  it('install.sh nginx config must have Cache-Control no-store on index.html', () => {
-    const content = fs.readFileSync(path.join(repoRoot, 'raspberry/install.sh'), 'utf8');
+  it('neopro-base.conf must have Cache-Control no-store on index.html (source of truth post Phase 6 plan 05)', () => {
+    // Post Plan 05: install.sh::configure_nginx no longer inlines nginx config —
+    // it `cp`s raspberry/config/nginx/neopro-base.conf as the single source of truth.
+    const content = fs.readFileSync(
+      path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf'),
+      'utf8'
+    );
     expect({
       hasIndexHtmlNoCache: /location\s*=\s*\/index\.html\s*\{[^}]*no-cache,\s*no-store/s.test(content),
     }).toEqual({
@@ -1713,8 +1718,10 @@ describe('Nginx captive-portal proxy blocks (config drift prevention)', () => {
     path.join(repoRoot, 'raspberry/config/nginx-captive-portal.conf'),
     'utf8'
   );
-  const installSh = fs.readFileSync(
-    path.join(repoRoot, 'raspberry/install.sh'),
+  // Post Phase 6 Plan 05: install.sh `cp`s neopro-base.conf instead of inlining.
+  // Drift prevention now compares the two real config files (base mode + hotspot mode).
+  const baseConf = fs.readFileSync(
+    path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf'),
     'utf8'
   );
 
@@ -1756,19 +1763,19 @@ describe('Nginx captive-portal proxy blocks (config drift prevention)', () => {
     });
   });
 
-  it('install.sh must also have /admin/ proxy — both sources must stay in sync', () => {
+  it('neopro-base.conf must also have /admin/ proxy — both sources must stay in sync', () => {
     expect({
-      installHasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(installSh),
+      baseHasAdminProxy: /location\s+\/admin\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:8080/s.test(baseConf),
     }).toEqual({
-      installHasAdminProxy: true,
+      baseHasAdminProxy: true,
     });
   });
 
-  it('install.sh must also have /socket.io/ proxy — both sources must stay in sync', () => {
+  it('neopro-base.conf must also have /socket.io/ proxy — both sources must stay in sync', () => {
     expect({
-      installHasSocketIo: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(installSh),
+      baseHasSocketIo: /location\s+\/socket\.io\/\s*\{[^}]*proxy_pass\s+http:\/\/localhost:3000/s.test(baseConf),
     }).toEqual({
-      installHasSocketIo: true,
+      baseHasSocketIo: true,
     });
   });
 });
@@ -3574,5 +3581,31 @@ describe('Phase 6 — Fire Stick Captive Portal', () => {
     expect(iptables).not.toMatch(/iptables[^\n]*-[AC][^\n]+--dport\s+443[^\n]*-j\s+DNAT/);
     expect(iptables).not.toMatch(/nft\s+add\s+rule[^\n]+dport\s+443[^\n]+dnat/);
     expect(iptables).not.toMatch(/--to-destination\s+\S+:443/);
+  });
+
+  it('install.sh wires neopro-base.conf OR contains the 3 captive markers (Phase 6 gap closure)', () => {
+    const installSh = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/install.sh'),
+      'utf8'
+    );
+
+    // Préférence : cp depuis neopro-base.conf (source de vérité, post-Phase 6 plan-05)
+    const usesSourceOfTruth =
+      /cp\s+["']?\$\{?INSTALL_DIR\}?[^"']*config\/nginx\/neopro-base\.conf/.test(installSh) ||
+      /cp\s+[^\n]*config\/nginx\/neopro-base\.conf/.test(installSh);
+
+    // Fallback acceptable : heredoc inline mais qui contient les 3 routes captives
+    const hasKindleWifi = installSh.includes('kindle-wifi/wifistub.html');
+    const hasWhoami = installSh.includes('/api/captive/whoami');
+    const hasCaptiveWait = installSh.includes('/captive/wait');
+    const heredocHasAllMarkers = hasKindleWifi && hasWhoami && hasCaptiveWait;
+
+    if (!(usesSourceOfTruth || heredocHasAllMarkers)) {
+      throw new Error(
+        `install.sh missing both neopro-base.conf cp AND captive markers ` +
+          `(kindle-wifi: ${hasKindleWifi}, whoami: ${hasWhoami}, wait: ${hasCaptiveWait})`
+      );
+    }
+    expect(usesSourceOfTruth || heredocHasAllMarkers).toBe(true);
   });
 });

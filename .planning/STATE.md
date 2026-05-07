@@ -6,11 +6,15 @@ status: Phase 6 CAPTIVE — Plan 04 Task 1 (Angular bootstrap router) committed 
 stopped_at: Plan 06-captive-04 — checkpoint:human-verify Task 2 awaiting Pi RACC validation
 last_updated: '2026-05-06T14:10:00Z'
 last_activity: '2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf — AppComponent bootstrap router whoami fetch + location.replace + anti-flash #000 + 4 Karma specs). Awaiting Pi RACC manual validation on real Fire Stick (Test 1-4).'
+status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
+stopped_at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
+last_updated: '2026-05-07T09:31:04.426Z'
+last_activity: '2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)'
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 3
+  total_plans: 11
+  completed_plans: 11
 ---
 
 # Project State
@@ -30,6 +34,11 @@ Status: Phase 6 CAPTIVE — Plan 03 configs + wait page + install shipped (DNS h
 Last activity: 2026-05-06 — Plan 06-captive-04 Task 1 committed (58bcecf), checkpoint:human-verify pending Pi RACC
 Last quick task: 2026-05-07 — Quick 260507-gxd: DELETE template end-to-end shipped (4 commits, last 27774520) — closes audit P0 #1 + #2
 Next: Resume Plan 06-captive-04 Task 2 — manual validation on Pi RACC (Test 1-4 / Fire Stick réel)
+Phase: 6 — CAPTIVE — Fire Stick → page Neopro (gap closure complete, Plan 04 Task 2 pending validation)
+Plan: 01 complete, 02 complete, 03 complete, 04 (Angular bootstrap router — Task 1 committed 58bcecf, Task 2 pending Pi RACC), 05 complete (gap closure install.sh wire neopro-base.conf — d4928210), 06 complete (OTA propagation + smoke guard — 63dede57+3f6f1033)
+Status: Phase 6 CAPTIVE — Plans 05+06 gap closure shipped (success_criterion_5 fully addressed combiné), Plan 04 Task 2 toujours pending (Pi RACC manual validation Fire Stick réel)
+Last activity: 2026-05-07 — Plan 06-captive-06 : build-raspberry.sh ship neopro-base.conf à /home/pi/neopro/config/nginx/ via OTA + smoke guard install.sh OR-fallback (cp neopro-base.conf OU 3 markers captive)
+Next: Reprendre Plan 06-captive-04 Task 2 (Pi RACC manual validation Fire Stick) ou phase 07 cloud-side selon priorité Daisy
 
 ## Accumulated Context
 
@@ -61,6 +70,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 06-captive-03: DNS hijack restreint à 2 domaines Fire OS (pas de wildcard, pas clients3.google.com) — wildcards casseraient Android/iOS (rule .claude/rules/raspberry.md)
 - 06-captive-03: X-Real-IP forward obligatoire dans nginx proxy /api/captive/whoami — sans ça Express voit 127.0.0.1, MAC lookup échoue
 - 06-captive-03: window.location.replace (pas href=) pour éviter pollution historique sur télécommande Fire Stick
+- 06-captive-05: cp littéral inline (pas variable NGINX_SRC) pour grep/smoke detection — leçon checker iteration 1
+- 06-captive-05: backup nginx → sites-available/neopro.pre-phase6.bak (JAMAIS sites-enabled/, nginx charge tout = duplicate default_server)
+- 06-captive-05: systemctl restart nginx (pas reload) — empirique Pi NLF, stat caching du symlink fait échouer reload
+- 06-captive-06: OTA propagation rescopée à tarball ship + re-run install.sh idempotent (pas d'auto-reload sync-agent — sudoers nginx hors scope)
+- 06-captive-06: smoke guard install.sh avec OR-fallback (cp neopro-base.conf OU 3 markers captive) — bloque la régression sans figer la stratégie
 - 04-data-01: receiver field optional + nullable in DisplayConfig (rétro-compat with all existing rows, no breaking change)
 - 04-data-01: HDMI #0 default kind=pi_native (legacy invariant preservation)
 - 04-data-02: setReceiver throws on unknown displayIndex (no phantom display creation, création reste responsabilité d'updateDisplays)
@@ -90,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T14:01:15.154Z
-Stopped at: Completed 06-captive-03-PLAN.md
+Last session: 2026-05-07T09:26:08.288Z
+Stopped at: Completed 06-captive-06-PLAN.md (OTA propagation + smoke guard)
 Resume file: None

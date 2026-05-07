@@ -2568,12 +2568,13 @@ describe('E-41 secondary videos serving guard', () => {
     });
   });
 
-  describe('install.sh must include /videos-secondary location', () => {
-    const installPath = path.join(repoRoot, 'raspberry/install.sh');
+  describe('neopro-base.conf must include /videos-secondary location', () => {
+    // Post Phase 6 Plan 05: install.sh `cp`s neopro-base.conf as the single source of truth.
+    const baseConfPath = path.join(repoRoot, 'raspberry/config/nginx/neopro-base.conf');
     let content: string;
-    beforeAll(() => { content = fs.readFileSync(installPath, 'utf8'); });
+    beforeAll(() => { content = fs.readFileSync(baseConfPath, 'utf8'); });
 
-    it('install.sh must generate Nginx location for /videos-secondary/', () => {
+    it('neopro-base.conf must generate Nginx location for /videos-secondary/', () => {
       expect({
         hasLocation: /location\s+\/videos-secondary\//.test(content),
         proxiesToAdmin: /proxy_pass\s+http:\/\/127\.0\.0\.1:8080\/videos-secondary\//.test(content),
