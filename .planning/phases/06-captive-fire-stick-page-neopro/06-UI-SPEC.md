@@ -66,18 +66,19 @@ Exceptions:
 
 ## Typography
 
-System sans-serif, three sizes, **two weights**. Sizes are declared with `min(<px>, <vw>, <vh>)` so the page hits the UI-SPEC target at 1920×1080 but scales down gracefully on Silk Browser viewports that report a smaller logical resolution (Fire Stick OS 7-9 has been observed to expose 1280×720 or 1366×768 instead of 1920×1080 depending on TV EDID + overscan crop).
+System sans-serif, three sizes, **two weights**. **All sizes are viewport-relative (`vw` / `vh`)**. The HTML viewport meta is `width=device-width, initial-scale=1` — a previous attempt to lock the rendering viewport to `width=1920` was reverted because Silk Browser then renders 1920 CSS px and downscales, which combined with TV overscan caused content to be cropped at the edges with no responsive fallback (the `vw` units always resolved to the locked 1920 width).
 
-| Role          | Target @ 1920×1080 | Weight | Line Height | Usage                              |
-| ------------- | ------------------ | ------ | ----------- | ---------------------------------- |
-| Body          | 24px               | 400    | 1.5         | Sub-heading + footer instruction   |
-| Heading       | 48px               | 700    | 1.2         | "En attente d'assignation"         |
-| Display (MAC) | 128px              | 700    | 1.0         | The MAC itself — readable from 3 m |
+| Role          | Target @ 1920×1080 | Viewport-relative rule | Weight | Line Height | Usage                              |
+| ------------- | ------------------ | ---------------------- | ------ | ----------- | ---------------------------------- |
+| Body          | 24px               | `min(2.2vw, 3.5vh)`    | 400    | 1.4         | Sub-heading + footer instruction   |
+| Heading       | 48px               | `min(4.4vw, 7.5vh)`    | 700    | 1.2         | "En attente d'assignation"         |
+| Display (MAC) | 128px              | `min(6.5vw, 11vh)`     | 700    | 1.0         | The MAC itself — readable from 3 m |
 
 **Constraints:**
 
-- MAC display targets **128px (8rem)** at 1920×1080 — `font-size: min(128px, 6.5vw, 13vh)`. On a true 1920×1080 viewport the px value wins and dictation legibility from 3 m is preserved. On a smaller viewport the `vw` / `vh` floor wins, keeping the MAC inside the safe area instead of overflowing horizontally.
-- Body is wrapped in `padding: 5vh 5vw` (TV overscan safe zone) and `overflow: hidden` — content that ever exceeds the viewport is clipped rather than scrolled (Fire Stick remote has no scroll affordance).
+- MAC display targets **128px (≈ 6.7vw / 11.8vh)** at 1920×1080. On a Silk viewport reporting 1280×720, the rule resolves to ~83px (still readable at 3 m on a 32"-55" TV given the smaller TV pixel density). The 128px figure is documented in CSS comments for traceability with the UI-SPEC target.
+- Body padding `4vh 4vw` constitutes the TV overscan safe zone (most Fire OS / Silk renderings reproduce ~3-5% crop on each edge, never seen above 4%).
+- `overflow: hidden` on `html` and `body` — content that ever exceeds the viewport is clipped rather than scrolled (Fire Stick remote has no scroll affordance).
 - **Two weights only**: `400` for body, `700` for heading **and** MAC display. Hierarchy comes from **size** (24 → 48 → 128), not from intermediate weights. No `300`/`500`/`600`/`800` — kept minimal to match system font availability across Fire OS firmwares and to satisfy the 2-weights-max design constraint.
 - No italic, no underline, no text-transform. The MAC must display in **uppercase** (visual convention for hex MACs in dictée context — `0C:43:F9:36:04:77` not `0c:43:f9:36:04:77`).
 

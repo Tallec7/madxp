@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=1920, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Neopro — En attente</title>
     <style>
       :root {
@@ -28,49 +28,52 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        padding: 5vh 5vw;
+        padding: 4vh 4vw;
         text-align: center;
       }
-      /* Sizes use min(target, vw, vh) so the page never overflows on Silk Browser
-       viewports smaller than 1920x1080 or under TV overscan crop. The first
-       value of each min() is the UI-SPEC target hit at 1920x1080. */
+      /* Toutes les tailles sont en unités viewport (vw/vh) — Silk Browser sur
+         Fire Stick rapporte un viewport variable selon le modèle TV (parfois
+         1280×720, parfois 1366×768) et l'overscan crop ~5% les bords. Avec
+         viewport meta = device-width, vw/vh suivent le viewport réel et tout
+         s'adapte. UI-SPEC target : MAC = 128px @ 1920×1080 (≈ 11.85vh). */
       h1 {
-        font-size: min(48px, 4.2vw, 8.5vh);
+        font-size: min(4.4vw, 7.5vh);
         font-weight: 700;
         line-height: 1.2;
-        margin: 0 0 min(24px, 2.5vh) 0;
+        margin: 0 0 2.2vh 0;
       }
       .subhead {
-        font-size: min(24px, 2.2vw, 4.2vh);
+        font-size: min(2.2vw, 3.7vh);
         font-weight: 400;
-        line-height: 1.5;
+        line-height: 1.4;
         opacity: 0.7;
-        margin: 0 0 min(24px, 2.5vh) 0;
+        margin: 0 0 2.2vh 0;
       }
       .mac {
-        /* UI-SPEC target 128px at 1920x1080 — scales down on narrower / shorter Silk viewports */
-        font-size: min(128px, 6.5vw, 13vh);
+        /* Target UI-SPEC : 128px @ 1920×1080 (≈ 6.7vw / 11.8vh) — viewport-relatif
+           pour scaler aux résolutions Silk réelles sans déborder. */
+        font-size: min(6.5vw, 11vh);
         font-weight: 700;
         line-height: 1;
-        letter-spacing: min(0.5rem, 0.4vw);
-        margin: 0 0 min(32px, 3vh) 0;
+        letter-spacing: 0.4vw;
+        margin: 0 0 3vh 0;
         text-transform: uppercase;
         max-width: 100%;
         white-space: nowrap;
       }
       .spin {
-        width: min(80px, 7vh);
-        height: min(80px, 7vh);
-        border: min(16px, 1.5vh) solid #333333;
+        width: 7vh;
+        height: 7vh;
+        border: 1.4vh solid #333333;
         border-top-color: #2022e9;
         border-radius: 50%;
         animation: spin 2s linear infinite;
-        margin: 0 0 min(32px, 3vh) 0;
+        margin: 0 0 3vh 0;
       }
       .footer {
-        font-size: min(24px, 2.2vw, 4.2vh);
+        font-size: min(2.2vw, 3.5vh);
         font-weight: 400;
-        line-height: 1.5;
+        line-height: 1.4;
         margin: 0;
         max-width: 90vw;
       }
