@@ -1263,6 +1263,29 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 108
+      },
+      "id": 809,
+      "title": "Template proxy signature validation (audit P1 #7 / ADR-113-bis)",
+      "description": "HMAC verify outcomes for /api/remotion-templates/asset-proxy. status=valid/invalid/missing/expired. 'missing' = phase migration 24h ; objectif = retombe a 0 avant la PR cleanup qui drop le fallback. 'invalid' > 0 = potentiel signal d'attaque (a investiguer).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_template_proxy_signature_validation_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",
