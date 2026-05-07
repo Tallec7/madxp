@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, BehaviorSubject, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { CacheService } from './cache.service';
-import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, DisplayConfig } from '../models';
+import { Site, SiteStats, Metrics, ConfigHistory, SiteConfiguration, ConfigDiff, SiteConnectionStatus, AllSitesConnectionStatus, LocalVideo, LocalStorage, CloudVideo, FleetHealthData, MatchHistoryData, ConfigProfile, CreateProfilePayload, UpdateProfilePayload, ProfilesListResponse, DeployProfileResponse, SyncProfilesResponse, DisplayConfig, ReceiverInfo } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -75,6 +75,11 @@ export class SitesService {
 
   updateDisplays(siteId: string, displays: DisplayConfig[]): Observable<{ displays: DisplayConfig[] }> {
     return this.api.patch(`/sites/${siteId}/displays`, { displays });
+  }
+
+  // Phase 8: Fire Stick receiver assignation
+  getConnectedReceivers(siteId: string): Observable<{ receivers: ReceiverInfo[] }> {
+    return this.api.get<{ receivers: ReceiverInfo[] }>(`/sites/${siteId}/connected-receivers`);
   }
 
   // Historique des configurations

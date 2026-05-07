@@ -7,7 +7,8 @@ import { LoggerService } from '../../../../core/services/logger.service';
 import { WatermarkConfig, WatermarkFileInfo, OverlayPosition as WmOverlayPosition, WatermarkAnimation, WatermarkScheduleRule } from '../../../../core/services/asset.service';
 import { GeneratedReport } from '../../../../core/services/reports.service';
 import { ErrorExtractor } from '../../../../core/utils/error-extractor';
-import { Site, OverlayTheme, ScoreOverlayPosition, DisplayConfig } from '../../../../core/models';
+import { Site, OverlayTheme, ScoreOverlayPosition, DisplayConfig, ReceiverInfo } from '../../../../core/models';
+import { SitesService } from '../../../../core/services/sites.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { FeatureKey } from '../../../../core/services/feature-gate.service';
 import { QrCodeGeneratorComponent } from '../../../../shared/components/qr-code-generator/qr-code-generator.component';
@@ -125,6 +126,8 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
   // Displays N-display (PROP-002 Phase 5H)
   siteDisplays: DisplayConfig[] = [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
   savingDisplays = false;
+  // Phase 8: Fire Stick receiver assignation
+  connectedReceivers: ReceiverInfo[] = [];
 
   // Feature overrides (super_admin only)
   featureOverrides: Record<string, boolean> = {};
@@ -147,7 +150,8 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
     private dataService: SiteSettingsDataService,
     private notificationService: NotificationService,
     private logger: LoggerService,
-    private authService: AuthService
+    private authService: AuthService,
+    private sitesService: SitesService
   ) {}
 
   get isSuperAdmin(): boolean {
@@ -216,6 +220,16 @@ export class SiteSettingsTabComponent implements OnInit, OnChanges {
         ? [...this.site.displays]
         : [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
     }
+
+    // Load connected receivers for Fire Stick assignment dropdown
+    this.sitesService.getConnectedReceivers(this.siteId).subscribe({
+      next: (response) => {
+        this.connectedReceivers = response.receivers;
+      },
+      error: () => {
+        this.connectedReceivers = []; // Pi offline — dropdown will show empty state
+      },
+    });
   }
 
   private loadRemotePinStatus(): void {
