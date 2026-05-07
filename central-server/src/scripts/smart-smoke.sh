@@ -39,6 +39,7 @@ saas|club-portal|club-dashboard|site_type=smoke-saas
 profile|safe-parser|safe-portfolio|score-overlay|ADR-03[5]|ADR-04[123]|PROP-002=smoke-adr-refactoring
 remotion|template-schema|template-versions|render-job|ADR-05[45]=smoke-remotion
 PROP-003|SPEC-PROP-003|sim-bodet-scorepad|sim-stramatel|scoreboard=smoke-prop003-scoreboard
+receivers\.service|ReceiverInfo|connected-receivers|receiver_assignment|dnsmasq\.conf=smoke-receivers-discovery
 "
 
 # ── Match ─────────────────────────────────────────────────────────
