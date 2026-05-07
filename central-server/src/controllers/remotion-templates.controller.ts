@@ -19,6 +19,7 @@ import { templateStudioRepository } from '../repositories/template-studio.reposi
 import { templateSpecBuilderService } from '../services/template-spec-builder.service';
 import { metricsService } from '../services/metrics.service';
 import { runValidation } from '../services/template-validation';
+import { templateProxySigningService } from '../services/template-proxy-signing.service';
 import { hasFeatureOverride, resolveTierLevel, TIER_LEVEL } from '../middleware/require-site-tier';
 import { clubTemplateQuotaService } from '../services/club-template-quota.service';
 export { prewarmRemotionBundle } from '../services/remotion-render-worker.service';
@@ -158,6 +159,41 @@ export const proxyTemplateAsset = (req: Request, res: Response): void => {
   if (parsed.hostname !== ALLOWED_PROXY_HOST) {
     setCorsProxyHeaders(res);
     res.status(403).json({ error: 'Domaine non autorisé' });
+    return;
+  }
+
+  // Audit P1 #7 — HMAC signature check (ADR-113-bis 24h migration window).
+  // Phase 1 : missing signature is logged + accepted (backward-compat).
+  // Phase 2 : a follow-up PR will tighten verifyUrl `missing` to 401.
+  const sigParam = req.query['sig'];
+  const expParam = req.query['exp'];
+  const sig = typeof sigParam === 'string' ? sigParam : undefined;
+  const exp =
+    typeof expParam === 'string' && /^\d+$/.test(expParam)
+      ? Number(expParam)
+      : undefined;
+  const decodedUrl = decodeURIComponent(rawUrl);
+  const verdict = templateProxySigningService.verifyUrl(decodedUrl, sig, exp);
+  if (verdict.valid) {
+    metricsService.recordTemplateProxySignatureValidation('valid');
+  } else if (verdict.reason === 'missing') {
+    metricsService.recordTemplateProxySignatureValidation('missing');
+    logger.warn('Proxy URL non signée (phase migration ADR-113-bis)', {
+      url: rawUrl,
+      userId: (req as { user?: { id?: string } }).user?.id ?? null,
+    });
+    // soft-fail : on continue, backward-compat 24h
+  } else if (verdict.reason === 'expired') {
+    metricsService.recordTemplateProxySignatureValidation('expired');
+    logger.error('Proxy URL signature expired', { url: rawUrl });
+    setCorsProxyHeaders(res);
+    res.status(401).json({ error: 'Proxy URL expired' });
+    return;
+  } else {
+    metricsService.recordTemplateProxySignatureValidation('invalid');
+    logger.error('Proxy URL signature invalid', { url: rawUrl });
+    setCorsProxyHeaders(res);
+    res.status(403).json({ error: 'Proxy URL signature invalid' });
     return;
   }
 

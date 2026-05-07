@@ -17,6 +17,7 @@
     "backfill:asset-posters": "ts-node src/scripts/backfill-asset-posters.ts",
     "audit:orphan-sponsors": "ts-node src/scripts/audit-orphan-site-sponsors.ts",
     "template:import": "ts-node src/scripts/import-template-spec.ts",
+    "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
     "template:test-bbox": "ts-node src/scripts/test-png-bbox.ts",
     "template:preview-bbox": "ts-node src/scripts/preview-bbox-server.ts",
     "test": "jest",

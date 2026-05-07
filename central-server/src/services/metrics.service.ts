@@ -619,6 +619,17 @@ const templateAssetProxyUpstreamTotal = new Counter({
   registers: [register],
 });
 
+// ============= Métriques Template Proxy Signature (audit P1 #7, ADR-113-bis) =============
+// Suit l'état de la migration HMAC sur les URLs proxy /asset-proxy.
+// 'missing' = phase migration 24h (ancien call-site non encore signé).
+// 'invalid' = potentiel signal d'attaque (à investiguer si > 0).
+const templateProxySignatureValidationTotal = new Counter({
+  name: 'neopro_template_proxy_signature_validation_total',
+  help: 'Template proxy URL HMAC signature validation outcomes (audit P1 #7)',
+  labelNames: ['status'], // valid | invalid | missing | expired
+  registers: [register],
+});
+
 // ============= Métriques Video Path Resolution (ADR-083) =============
 
 const videoPathResolutionTotal = new Counter({
@@ -1391,6 +1402,12 @@ class MetricsService {
     statusClass: '2xx' | '3xx' | '4xx' | '5xx' | 'error'
   ): void {
     templateAssetProxyUpstreamTotal.inc({ status_class: statusClass });
+  }
+
+  recordTemplateProxySignatureValidation(
+    status: 'valid' | 'invalid' | 'missing' | 'expired'
+  ): void {
+    templateProxySignatureValidationTotal.inc({ status });
   }
 
   recordVideoPathResolution(result: 'exact' | 'fuzzy' | 'miss'): void {

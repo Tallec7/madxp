@@ -16,7 +16,14 @@ import {
   remotionTemplateDeleteQuery,
 } from '../middleware/validation';
 import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
+import { requestTimeout } from '../middleware/request-timeout';
 import * as ctrl from '../controllers/remotion-templates.controller';
+
+// Audit P1 #8 — 5 min cap on Template Studio uploads. Multer accepts up to
+// 200 MB per file ; behind a flaky uplink the FTP relay can stall indefinitely
+// and exhaust Railway HTTP slots. requestTimeout(300_000) converts the hang
+// into a clean 408 the dashboard can surface as "upload trop long".
+const UPLOAD_TIMEOUT_MS = 300_000;
 
 const router = Router();
 
@@ -36,6 +43,7 @@ router.get(
 );
 router.post(
   '/library/upload',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('super_admin'),
   sensitiveRateLimit,
@@ -185,6 +193,7 @@ router.patch(
 // Upload asset vidéo (WebM) — admin uniquement
 router.post(
   '/:id/assets',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('admin', 'super_admin'),
   validateParams(paramSchemas.id),
@@ -199,6 +208,7 @@ router.post(
 // render (`imageUploads[slotKey]`), pas persistée dans default_props.
 router.post(
   '/:id/user-uploads',
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   authenticate,
   requireRole('admin', 'super_admin', 'operator', 'club'),
   validateParams(paramSchemas.id),
