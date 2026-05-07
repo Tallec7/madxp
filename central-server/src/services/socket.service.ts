@@ -126,6 +126,18 @@ const verifyJwtToken = (token: string): { id: string; email: string; role: strin
 };
 
 // ============================================================================
+// Receivers Map — Phase 7 CLOUD-01
+// ============================================================================
+
+export interface ReceiverInfo {
+  mac: string;
+  kind: 'firestick' | 'browser' | 'pi_native';
+  lastSeenAt: number;
+  displayIndex?: number | null;
+  ip?: string | null;
+}
+
+// ============================================================================
 // SocketService — Orchestrator
 // ============================================================================
 
@@ -137,6 +149,7 @@ class SocketService {
   private recordingStates: Map<string, { isRecording: boolean; isManualOverride: boolean; updatedAt: number }> = new Map();
   private playerStates: Map<string, import('../handlers/socket-context').PlayerState> = new Map();
   private lastMetricsInsertAt: Map<string, number> = new Map();
+  private receiversBySite: Map<string, ReceiverInfo[]> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
@@ -554,6 +567,15 @@ class SocketService {
     socket.on('state-sync', (data: unknown) => {
       metricsService.recordWebsocketMessage('inbound', 'state-sync');
       metricsService.recordStateSyncRelay();
+      // CLOUD-01 — extract receivers from state-sync payload into in-memory Map
+      if (data && Array.isArray((data as Record<string, unknown>).receivers)) {
+        const receivers = (data as Record<string, unknown>).receivers as ReceiverInfo[];
+        const isFirstSeen = !this.receiversBySite.has(siteId);
+        this.receiversBySite.set(siteId, receivers);
+        if (isFirstSeen) {
+          logger.info('Receivers Map updated', { siteId, count: receivers.length });
+        }
+      }
       if (this.io) {
         this.io.to(siteId).emit('state-sync', data);
       }
@@ -846,6 +868,24 @@ class SocketService {
    */
   getSaasConnectedDisplays(siteId: string): Array<{ index: number; type: string }> {
     return saasGetConnectedDisplays(this.io, siteId);
+  }
+
+  /**
+   * CLOUD-01 — Returns Fire Stick / receiver list for a site, sorted by lastSeenAt desc.
+   * Volatile in-memory state — populated by `state-sync` events from the Pi.
+   * Returns [] if site is not connected or has never sent a state-sync with receivers.
+   */
+  public getConnectedReceivers(siteId: string): ReceiverInfo[] {
+    const list = this.receiversBySite.get(siteId) || [];
+    return [...list].sort((a, b) => (b.lastSeenAt || 0) - (a.lastSeenAt || 0));
+  }
+
+  /**
+   * Test-only helper — inject receivers for a siteId without requiring a Pi connection.
+   * Prefix __ indicates this is not part of the public production API.
+   */
+  public __setReceiversForTest(siteId: string, list: ReceiverInfo[]): void {
+    this.receiversBySite.set(siteId, list);
   }
 
   /**
