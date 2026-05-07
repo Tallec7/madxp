@@ -29,13 +29,13 @@ Out of scope: the Neopro TV loop UI itself (already shipped, query param `?displ
 
 ## Design System
 
-| Property          | Value                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------- |
-| Tool              | none (MVP terrain bénévole-grade — pas de shadcn, pas de framework CSS)                     |
-| Preset            | not applicable                                                                              |
-| Component library | none — vanilla HTML + inline `<style>` in `firestick-wait.html`                             |
-| Icon library      | none — pure CSS spinner (border + keyframes) to avoid any asset load                        |
-| Font              | system fallback stack `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`   |
+| Property          | Value                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| Tool              | none (MVP terrain bénévole-grade — pas de shadcn, pas de framework CSS)                   |
+| Preset            | not applicable                                                                            |
+| Component library | none — vanilla HTML + inline `<style>` in `firestick-wait.html`                           |
+| Icon library      | none — pure CSS spinner (border + keyframes) to avoid any asset load                      |
+| Font              | system fallback stack `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` |
 
 **Rationale (Claude's discretion):**
 
@@ -49,14 +49,14 @@ Out of scope: the Neopro TV loop UI itself (already shipped, query param `?displ
 
 Multiples of 4, aligned with `--neo-space-*` tokens from `_neopro-theme.scss`:
 
-| Token | Value | Usage on `firestick-wait.html`                                                |
-| ----- | ----- | ----------------------------------------------------------------------------- |
-| sm    | 8px   | (unused on this page — too dense for TV viewing)                              |
-| md    | 16px  | Spinner stroke width                                                          |
-| lg    | 24px  | Vertical gap between sub-heading and MAC                                      |
-| xl    | 32px  | Vertical gap between MAC and spinner / spinner and footer                     |
-| 2xl   | 48px  | Vertical padding around the heading block                                     |
-| 3xl   | 64px  | (page is centered via flex, no use of 64px directly)                          |
+| Token | Value | Usage on `firestick-wait.html`                            |
+| ----- | ----- | --------------------------------------------------------- |
+| sm    | 8px   | (unused on this page — too dense for TV viewing)          |
+| md    | 16px  | Spinner stroke width                                      |
+| lg    | 24px  | Vertical gap between sub-heading and MAC                  |
+| xl    | 32px  | Vertical gap between MAC and spinner / spinner and footer |
+| 2xl   | 48px  | Vertical padding around the heading block                 |
+| 3xl   | 64px  | (page is centered via flex, no use of 64px directly)      |
 
 Exceptions:
 
@@ -66,17 +66,18 @@ Exceptions:
 
 ## Typography
 
-System sans-serif, three sizes, **two weights**. All values are **declared in pixels** in the page source for predictability across Fire OS Silk versions (rem inheritance has been observed to drift on older Silk).
+System sans-serif, three sizes, **two weights**. Sizes are declared with `min(<px>, <vw>, <vh>)` so the page hits the UI-SPEC target at 1920×1080 but scales down gracefully on Silk Browser viewports that report a smaller logical resolution (Fire Stick OS 7-9 has been observed to expose 1280×720 or 1366×768 instead of 1920×1080 depending on TV EDID + overscan crop).
 
-| Role                     | Size  | Weight | Line Height | Usage                                              |
-| ------------------------ | ----- | ------ | ----------- | -------------------------------------------------- |
-| Body                     | 24px  | 400    | 1.5         | Sub-heading + footer instruction                   |
-| Heading                  | 48px  | 700    | 1.2         | "En attente d'assignation"                         |
-| Display (MAC)            | 128px | 700    | 1.0         | The MAC itself — readable from 3 m                 |
+| Role          | Target @ 1920×1080 | Weight | Line Height | Usage                              |
+| ------------- | ------------------ | ------ | ----------- | ---------------------------------- |
+| Body          | 24px               | 400    | 1.5         | Sub-heading + footer instruction   |
+| Heading       | 48px               | 700    | 1.2         | "En attente d'assignation"         |
+| Display (MAC) | 128px              | 700    | 1.0         | The MAC itself — readable from 3 m |
 
 **Constraints:**
 
-- MAC display must hit **128px (8rem) minimum** at 1920×1080 to stay legible at 3 m on a 32"-55" TV (verified rule of thumb: 1px viewing-pixel per 1 mm of viewing distance ≈ 100 px height for 3 m).
+- MAC display targets **128px (8rem)** at 1920×1080 — `font-size: min(128px, 6.5vw, 13vh)`. On a true 1920×1080 viewport the px value wins and dictation legibility from 3 m is preserved. On a smaller viewport the `vw` / `vh` floor wins, keeping the MAC inside the safe area instead of overflowing horizontally.
+- Body is wrapped in `padding: 5vh 5vw` (TV overscan safe zone) and `overflow: hidden` — content that ever exceeds the viewport is clipped rather than scrolled (Fire Stick remote has no scroll affordance).
 - **Two weights only**: `400` for body, `700` for heading **and** MAC display. Hierarchy comes from **size** (24 → 48 → 128), not from intermediate weights. No `300`/`500`/`600`/`800` — kept minimal to match system font availability across Fire OS firmwares and to satisfy the 2-weights-max design constraint.
 - No italic, no underline, no text-transform. The MAC must display in **uppercase** (visual convention for hex MACs in dictée context — `0C:43:F9:36:04:77` not `0c:43:f9:36:04:77`).
 
@@ -86,12 +87,12 @@ System sans-serif, three sizes, **two weights**. All values are **declared in pi
 
 60/30/10 split, dark theme (TV viewing context — bright white backgrounds at 3 m are uncomfortable):
 
-| Role            | Value                  | Usage                                                                |
-| --------------- | ---------------------- | -------------------------------------------------------------------- |
-| Dominant (60%)  | `#000000` (neo-black)  | Page background — full bleed                                         |
-| Secondary (30%) | `#FFFFFF` (neo-white)  | Heading, MAC, body text, spinner top-stroke                          |
-| Accent (10%)    | `#2022E9` (neo-primary, Hockey Dark) | Spinner accent stroke ONLY                              |
-| Destructive     | not used               | No destructive action on this page (read-only waiting state)         |
+| Role            | Value                                | Usage                                                        |
+| --------------- | ------------------------------------ | ------------------------------------------------------------ |
+| Dominant (60%)  | `#000000` (neo-black)                | Page background — full bleed                                 |
+| Secondary (30%) | `#FFFFFF` (neo-white)                | Heading, MAC, body text, spinner top-stroke                  |
+| Accent (10%)    | `#2022E9` (neo-primary, Hockey Dark) | Spinner accent stroke ONLY                                   |
+| Destructive     | not used                             | No destructive action on this page (read-only waiting state) |
 
 **Accent reserved for:** the rotating top-stroke of the loading spinner. No other element uses the accent. No hover states, no focus states (Fire Stick remote does not surface CSS hover).
 
@@ -103,18 +104,18 @@ System sans-serif, three sizes, **two weights**. All values are **declared in pi
 
 Locale: **French** (Neopro target market, NLF + RACC are FR clubs). All copy is final — designer must ship these strings verbatim.
 
-| Element                              | Copy                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------- |
-| Page `<title>`                       | `Neopro — En attente`                                                           |
-| Heading (h1)                         | `En attente d'assignation`                                                      |
-| Sub-heading (above MAC)              | `Code de cet écran`                                                             |
-| MAC display (placeholder before JS)  | `--:--:--:--:--:--`                                                             |
-| Footer instruction (below spinner)   | `Communiquez ce code à votre administrateur. La page basculera automatiquement.` |
-| Primary CTA                          | not applicable — the page has no CTA (passive waiting state)                    |
-| Empty state                          | not applicable — the page IS the empty state of the Fire Stick lifecycle        |
-| Error state heading (no MAC in URL)  | `Code écran indisponible`                                                       |
-| Error state body                     | `Redémarrez le Fire Stick et reconnectez-vous au réseau du club.`               |
-| Destructive confirmation             | not applicable — no destructive action                                          |
+| Element                             | Copy                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| Page `<title>`                      | `Neopro — En attente`                                                            |
+| Heading (h1)                        | `En attente d'assignation`                                                       |
+| Sub-heading (above MAC)             | `Code de cet écran`                                                              |
+| MAC display (placeholder before JS) | `--:--:--:--:--:--`                                                              |
+| Footer instruction (below spinner)  | `Communiquez ce code à votre administrateur. La page basculera automatiquement.` |
+| Primary CTA                         | not applicable — the page has no CTA (passive waiting state)                     |
+| Empty state                         | not applicable — the page IS the empty state of the Fire Stick lifecycle         |
+| Error state heading (no MAC in URL) | `Code écran indisponible`                                                        |
+| Error state body                    | `Redémarrez le Fire Stick et reconnectez-vous au réseau du club.`                |
+| Destructive confirmation            | not applicable — no destructive action                                           |
 
 **Copy rules:**
 
@@ -130,19 +131,19 @@ The page has **three observable states** and **two transition mechanisms**.
 
 ### States
 
-| State    | Trigger                                            | Visual                                                          |
-| -------- | -------------------------------------------------- | --------------------------------------------------------------- |
-| `loading` | Page just loaded, no MAC yet from URL params      | MAC shows `--:--:--:--:--:--`, spinner rotating                 |
-| `waiting` | MAC parsed from URL `?mac=...`                    | MAC shown in 128px white, spinner rotating, footer visible      |
+| State       | Trigger                                                                                   | Visual                                                                                              |
+| ----------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `loading`   | Page just loaded, no MAC yet from URL params                                              | MAC shows `--:--:--:--:--:--`, spinner rotating                                                     |
+| `waiting`   | MAC parsed from URL `?mac=...`                                                            | MAC shown in 128px white, spinner rotating, footer visible                                          |
 | `assigning` | Socket.IO event `connected-receivers-changed` matches our MAC and `displayIndex !== null` | Page calls `window.location.replace('/?display=N')` — no visual transition step (browser navigates) |
-| `error`  | URL has no `?mac=` query param                    | Heading replaced with `Code écran indisponible`, no spinner, error body shown |
+| `error`     | URL has no `?mac=` query param                                                            | Heading replaced with `Code écran indisponible`, no spinner, error body shown                       |
 
 ### Transition mechanisms (dual)
 
-| Mechanism            | Latency  | Role                                                                |
-| -------------------- | -------- | ------------------------------------------------------------------- |
-| Socket.IO push       | <200 ms  | Primary — admin assigns from dashboard, page redirects instantly    |
-| Polling `/api/captive/whoami` | 5 s    | Safety net — if Socket.IO disconnects (Fire Stick far from Pi)      |
+| Mechanism                     | Latency | Role                                                             |
+| ----------------------------- | ------- | ---------------------------------------------------------------- |
+| Socket.IO push                | <200 ms | Primary — admin assigns from dashboard, page redirects instantly |
+| Polling `/api/captive/whoami` | 5 s     | Safety net — if Socket.IO disconnects (Fire Stick far from Pi)   |
 
 Polling interval: **5000 ms** (Claude's discretion). Lower = unnecessary load, higher = bad demo UX after admin assigns. 5 s matches the human tolerance for "instant enough" in a hand-off scenario.
 
@@ -199,10 +200,10 @@ The Angular `app.component.ts` bootstrap router is the second surface. Contract:
 
 ## Registry Safety
 
-| Registry         | Blocks Used | Safety Gate    |
-| ---------------- | ----------- | -------------- |
-| shadcn official  | none        | not applicable |
-| third-party      | none        | not applicable |
+| Registry        | Blocks Used | Safety Gate    |
+| --------------- | ----------- | -------------- |
+| shadcn official | none        | not applicable |
+| third-party     | none        | not applicable |
 
 No external component libraries, no third-party CSS, no font CDN, no icon CDN. The page is fully self-contained in `raspberry/webapp-captive/firestick-wait.html`.
 

@@ -1,127 +1,165 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=1920, initial-scale=1">
-  <title>Neopro — En attente</title>
-  <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      background: #000000;
-      color: #FFFFFF;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-weight: 400;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      max-width: 90vw;
-      margin: 0 auto;
-      text-align: center;
-    }
-    h1 {
-      font-size: 48px;
-      font-weight: 700;
-      line-height: 1.2;
-      margin: 0 0 24px 0;
-    }
-    .subhead {
-      font-size: 24px;
-      font-weight: 400;
-      line-height: 1.5;
-      opacity: 0.7;
-      margin: 0 0 24px 0;
-    }
-    .mac {
-      font-size: 128px;
-      font-weight: 700;
-      line-height: 1.0;
-      letter-spacing: 0.5rem;
-      margin: 0 0 32px 0;
-      text-transform: uppercase;
-    }
-    .spin {
-      width: 80px;
-      height: 80px;
-      border: 16px solid #333333;
-      border-top-color: #2022E9;
-      border-radius: 50%;
-      animation: spin 2s linear infinite;
-      margin: 0 0 32px 0;
-    }
-    .footer {
-      font-size: 24px;
-      font-weight: 400;
-      line-height: 1.5;
-      margin: 0;
-    }
-    .error { display: none; }
-    body.error-state .normal { display: none; }
-    body.error-state .error { display: block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
-  </style>
-</head>
-<body>
-  <div class="normal">
-    <h1>En attente d'assignation</h1>
-    <p class="subhead">Code de cet écran</p>
-    <div class="mac" id="mac" data-mac="">--:--:--:--:--:--</div>
-    <div class="spin" aria-hidden="true"></div>
-    <p class="footer">Communiquez ce code à votre administrateur. La page basculera automatiquement.</p>
-  </div>
-  <div class="error">
-    <h1>Code écran indisponible</h1>
-    <p class="footer">Redémarrez le Fire Stick et reconnectez-vous au réseau du club.</p>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    (function () {
-      var params = new URLSearchParams(location.search);
-      var myMac = (params.get('mac') || '').toLowerCase();
-
-      if (!myMac) {
-        document.body.classList.add('error-state');
-        return;
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920, initial-scale=1" />
+    <title>Neopro — En attente</title>
+    <style>
+      :root {
+        color-scheme: dark;
       }
-
-      var macEl = document.getElementById('mac');
-      macEl.textContent = myMac.toUpperCase();
-      macEl.setAttribute('data-mac', myMac);
-
-      function gotoDisplay(displayIndex) {
-        window.location.replace('/?display=' + displayIndex);
+      * {
+        box-sizing: border-box;
       }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        background: #000000;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 400;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 5vh 5vw;
+        text-align: center;
+      }
+      /* Sizes use min(target, vw, vh) so the page never overflows on Silk Browser
+       viewports smaller than 1920x1080 or under TV overscan crop. The first
+       value of each min() is the UI-SPEC target hit at 1920x1080. */
+      h1 {
+        font-size: min(48px, 4.2vw, 8.5vh);
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0 0 min(24px, 2.5vh) 0;
+      }
+      .subhead {
+        font-size: min(24px, 2.2vw, 4.2vh);
+        font-weight: 400;
+        line-height: 1.5;
+        opacity: 0.7;
+        margin: 0 0 min(24px, 2.5vh) 0;
+      }
+      .mac {
+        /* UI-SPEC target 128px at 1920x1080 — scales down on narrower / shorter Silk viewports */
+        font-size: min(128px, 6.5vw, 13vh);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: min(0.5rem, 0.4vw);
+        margin: 0 0 min(32px, 3vh) 0;
+        text-transform: uppercase;
+        max-width: 100%;
+        white-space: nowrap;
+      }
+      .spin {
+        width: min(80px, 7vh);
+        height: min(80px, 7vh);
+        border: min(16px, 1.5vh) solid #333333;
+        border-top-color: #2022e9;
+        border-radius: 50%;
+        animation: spin 2s linear infinite;
+        margin: 0 0 min(32px, 3vh) 0;
+      }
+      .footer {
+        font-size: min(24px, 2.2vw, 4.2vh);
+        font-weight: 400;
+        line-height: 1.5;
+        margin: 0;
+        max-width: 90vw;
+      }
+      .error {
+        display: none;
+      }
+      body.error-state .normal {
+        display: none;
+      }
+      body.error-state .error {
+        display: block;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .spin {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="normal">
+      <h1>En attente d'assignation</h1>
+      <p class="subhead">Code de cet écran</p>
+      <div class="mac" id="mac" data-mac="">--:--:--:--:--:--</div>
+      <div class="spin" aria-hidden="true"></div>
+      <p class="footer">
+        Communiquez ce code à votre administrateur. La page basculera automatiquement.
+      </p>
+    </div>
+    <div class="error">
+      <h1>Code écran indisponible</h1>
+      <p class="footer">Redémarrez le Fire Stick et reconnectez-vous au réseau du club.</p>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var myMac = (params.get('mac') || '').toLowerCase();
 
-      // Primary: Socket.IO push (latence < 200ms)
-      try {
-        var socket = io({ transports: ['websocket', 'polling'] });
-        socket.on('connected-receivers-changed', function (payload) {
-          if (!payload || !Array.isArray(payload.receivers)) return;
-          var me = payload.receivers.find(function (r) {
-            return r && typeof r.mac === 'string' && r.mac.toLowerCase() === myMac;
-          });
-          if (me && me.displayIndex !== null && me.displayIndex !== undefined) {
-            gotoDisplay(me.displayIndex);
-          }
-        });
-      } catch (e) { /* socket.io non chargé — polling prend le relais */ }
+        if (!myMac) {
+          document.body.classList.add('error-state');
+          return;
+        }
 
-      // Safety net: polling 5s
-      setInterval(function () {
-        fetch('/api/captive/whoami', { cache: 'no-store' })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) {
-            if (d && d.displayIndex !== null && d.displayIndex !== undefined) {
-              gotoDisplay(d.displayIndex);
+        var macEl = document.getElementById('mac');
+        macEl.textContent = myMac.toUpperCase();
+        macEl.setAttribute('data-mac', myMac);
+
+        function gotoDisplay(displayIndex) {
+          window.location.replace('/?display=' + displayIndex);
+        }
+
+        // Primary: Socket.IO push (latence < 200ms)
+        try {
+          var socket = io({ transports: ['websocket', 'polling'] });
+          socket.on('connected-receivers-changed', function (payload) {
+            if (!payload || !Array.isArray(payload.receivers)) return;
+            var me = payload.receivers.find(function (r) {
+              return r && typeof r.mac === 'string' && r.mac.toLowerCase() === myMac;
+            });
+            if (me && me.displayIndex !== null && me.displayIndex !== undefined) {
+              gotoDisplay(me.displayIndex);
             }
-          })
-          .catch(function () { /* offline transitoire */ });
-      }, 5000);
-    })();
-  </script>
-</body>
+          });
+        } catch (e) {
+          /* socket.io non chargé — polling prend le relais */
+        }
+
+        // Safety net: polling 5s
+        setInterval(function () {
+          fetch('/api/captive/whoami', { cache: 'no-store' })
+            .then(function (r) {
+              return r.ok ? r.json() : null;
+            })
+            .then(function (d) {
+              if (d && d.displayIndex !== null && d.displayIndex !== undefined) {
+                gotoDisplay(d.displayIndex);
+              }
+            })
+            .catch(function () {
+              /* offline transitoire */
+            });
+        }, 5000);
+      })();
+    </script>
+  </body>
 </html>
