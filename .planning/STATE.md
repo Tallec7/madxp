@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: — Multi-écrans Fire Stick (MVP terrain bénévole-grade)
-status: Phase 7 CLOUD — Plans 01-03 complets, CLOUD-04 fermé (assignation MAC cloud → cache Pi sans reboot)
-stopped_at: Completed 07-cloud-02-PLAN.md (PATCH displays emit + sync-agent whitelist + tests)
-last_updated: '2026-05-07T15:18:05.896Z'
-last_activity: '2026-05-07 — Plan 07-cloud-03 : handler receiver_assignment_updated dans sync-agent + 3 tests Jest verts'
+status: Phase 8 DASHBOARD — Plan 01 complet (ReceiverConfig + ReceiverInfo interfaces + DisplayConfig.receiver)
+stopped_at: Completed 08-dashboard-01-models-receiver-config-PLAN.md
+last_updated: '2026-05-07T00:00:00.000Z'
+last_activity: '2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo interfaces ajoutées dans core/models/index.ts, DisplayConfig étendu backward-compat'
 progress:
   total_phases: 6
   completed_phases: 4
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 7 — CLOUD — API sync-agent (Plans 01-03 complets)
-Plan: 07-cloud-01 complete (connected-receivers Map cloud), 07-cloud-02 complete (PATCH displays emit command), 07-cloud-03 complete (Pi handler receiver_assignment_updated — 3e9aa6b6, 3c124f23)
-Status: Phase 7 CLOUD — Plans 01-03 complets, CLOUD-04 fermé (assignation MAC cloud → cache Pi sans reboot)
-Last activity: 2026-05-07 — Plan 07-cloud-03 : handler receiver_assignment_updated dans sync-agent + 3 tests Jest verts
-Next: Plan 07-cloud-04 (dashboard Angular affiche receivers + MACs) ou récupération Phase 6 Task 2 selon priorité Daisy
+Phase: 8 — DASHBOARD UX Admin Assignation (Plan 01 complet)
+Plan: 08-dashboard-01 complete (ReceiverConfig + ReceiverInfo interfaces, DisplayConfig.receiver — 0d16dcc1)
+Status: Phase 8 DASHBOARD — Plan 01 complet, Plans 02-04 à démarrer
+Last activity: 2026-05-07 — Plan 08-dashboard-01 : ReceiverConfig + ReceiverInfo exportées core/models/index.ts, DisplayConfig backward-compat
+Next: Plan 08-dashboard-02 (service ConnectedReceiversService + API binding)
 
 ## Accumulated Context
 
