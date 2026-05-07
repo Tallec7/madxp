@@ -1,3 +1,9 @@
+## [3.296.5](https://github.com/Tallec7/neopro/compare/v3.296.4...v3.296.5) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** createTemplate inserts schema_version=2 explicitement ([#897](https://github.com/Tallec7/neopro/issues/897)) ([0f0257e](https://github.com/Tallec7/neopro/commit/0f0257e9fc45a3fcfb98a3de1439d69067422576))
+
 ## [3.296.4](https://github.com/Tallec7/neopro/compare/v3.296.3...v3.296.4) (2026-05-07)
 
 ### Bug Fixes
