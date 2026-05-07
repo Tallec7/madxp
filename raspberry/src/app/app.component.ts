@@ -16,14 +16,16 @@ export class AppComponent implements OnInit {
     // Si l'URL contient déjà ?display=N, on est sur le path Pi natif ou Fire Stick déjà résolu → bypass.
     // Sinon, on interroge /api/captive/whoami pour décider entre /?display=N (assigné) ou /captive/wait?mac=... (en attente).
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('display')) {
+    const pathname = window.location.pathname;
+    const alreadyOnDisplay = pathname.startsWith('/display/') || pathname.startsWith('/captive/');
+    if (!alreadyOnDisplay && !params.has('display')) {
       try {
         const response = await fetch('/api/captive/whoami', { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           if (data && typeof data.displayIndex === 'number') {
-            // Fire Stick assigné → redirect plein écran (location.replace : pas d'historique pollué)
-            window.location.replace('/?display=' + data.displayIndex);
+            // Fire Stick assigné → redirect vers TvComponent (location.replace : pas d'historique pollué)
+            window.location.replace('/display/' + data.displayIndex);
             return;
           }
           if (data && typeof data.mac === 'string') {
