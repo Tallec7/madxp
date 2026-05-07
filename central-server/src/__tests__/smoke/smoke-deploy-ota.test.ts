@@ -974,6 +974,18 @@ describe('OTA deployment observability guards', () => {
     // Must be called in the periodic loop
     expect({ calledPeriodically: /checkAggregationStaleness\(\)/.test(alertingCombined) })
       .toEqual({ calledPeriodically: true });
+    // Regression guard (incident 2026-05-07) : ne PAS comparer
+    // MAX(calculated_at) des tables agrégées — un club inactif >36h
+    // déclenche un faux positif. La source de vérité doit être
+    // recurring_schedules.last_run_at.
+    expect({
+      readsScheduleLastRun: _checks.includes('recurring_schedules')
+        && _checks.includes('last_run_at')
+        && _checks.includes("task_type = 'aggregation'"),
+    }).toEqual({ readsScheduleLastRun: true });
+    expect({
+      doesNotReadMaxCalculatedAt: !/MAX\s*\(\s*calculated_at\s*\)/i.test(_checks),
+    }).toEqual({ doesNotReadMaxCalculatedAt: true });
   });
 
   it('checkEmptySaasProfiles must detect SaaS sites with empty default profile config', () => {

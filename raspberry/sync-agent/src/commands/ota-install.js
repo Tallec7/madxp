@@ -602,6 +602,32 @@ async function extractAndInstall(packagePath, version, stepTracker) {
       }
     }
 
+    // Deploy nginx site configs (config/nginx/*.conf → sites-available + symlink sites-enabled)
+    const nginxDir = path.join(rootDir, 'config', 'nginx');
+    if (await fs.pathExists(nginxDir)) {
+      try {
+        const confFiles = (await fs.readdir(nginxDir)).filter(f => f.endsWith('.conf'));
+        let nginxChanged = false;
+        for (const conf of confFiles) {
+          const src = path.join(nginxDir, conf);
+          const siteName = conf.replace(/\.conf$/, '');
+          const dest = `/etc/nginx/sites-available/${siteName}`;
+          const link = `/etc/nginx/sites-enabled/${siteName}`;
+          await execAsync(`sudo cp ${src} ${dest}`);
+          await execAsync(`sudo ln -sf ${dest} ${link}`);
+          logger.info(`Nginx site deployed: ${siteName}`);
+          nginxChanged = true;
+        }
+        if (nginxChanged) {
+          await execAsync('sudo nginx -t');
+          await execAsync('sudo systemctl reload nginx');
+          logger.info('Nginx reloaded after config update');
+        }
+      } catch (e) {
+        logger.warn('Failed to deploy nginx configs (non-blocking)', { error: e.message });
+      }
+    }
+
     // Appliquer noatime
     try {
       const { stdout: fstab } = await execAsync('cat /etc/fstab');

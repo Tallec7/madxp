@@ -1,3 +1,34 @@
+# [3.297.0](https://github.com/Tallec7/neopro/compare/v3.296.5...v3.297.0) (2026-05-07)
+
+### Bug Fixes
+
+- **captive:** redirect Fire Stick vers /display/N au lieu de /?display=N ([f8b0805](https://github.com/Tallec7/neopro/commit/f8b08052da14433ab0ce2efcc7f2ad13f3065133))
+
+### Features
+
+- **fleet:** DNS hijack Fire Stick dans fix-fleet-pi.sh (step 12b) ([0b53a12](https://github.com/Tallec7/neopro/commit/0b53a12fffba37870dfbf5722f748e6fdeb1e72e))
+- **ota:** deploy nginx configs via OTA (firestick-captive + neopro-base) ([b5bb83f](https://github.com/Tallec7/neopro/commit/b5bb83f601279e5d451a758220767a89779d78b3))
+
+## [3.296.5](https://github.com/Tallec7/neopro/compare/v3.296.4...v3.296.5) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** createTemplate inserts schema_version=2 explicitement ([#897](https://github.com/Tallec7/neopro/issues/897)) ([0f0257e](https://github.com/Tallec7/neopro/commit/0f0257e9fc45a3fcfb98a3de1439d69067422576))
+
+## [3.296.4](https://github.com/Tallec7/neopro/compare/v3.296.3...v3.296.4) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** widen broken-url deny-list — récidive 2026-05-07 bis ([#896](https://github.com/Tallec7/neopro/issues/896)) ([9710cb8](https://github.com/Tallec7/neopro/commit/9710cb8b2a4296efefc1f2ac56410ada866dd211))
+
+## [3.296.3](https://github.com/Tallec7/neopro/compare/v3.296.2...v3.296.3) (2026-05-07)
+
+### Bug Fixes
+
+- **alerting:** aggregation_stale ne lit plus MAX(calculated_at) + audit orphans ([#894](https://github.com/Tallec7/neopro/issues/894)) ([a08fc8f](https://github.com/Tallec7/neopro/commit/a08fc8f0ffaebd4697a1a12079e3993f86b484d5)), closes [#891](https://github.com/Tallec7/neopro/issues/891) [#892](https://github.com/Tallec7/neopro/issues/892) [#893](https://github.com/Tallec7/neopro/issues/893)
+- **alerting:** aggregation_stale ne lit plus MAX(calculated_at) + audit orphans ([#894](https://github.com/Tallec7/neopro/issues/894)) ([372acff](https://github.com/Tallec7/neopro/commit/372acffd199b67e685bf7a7414f9e1da35d2e289)), closes [#891](https://github.com/Tallec7/neopro/issues/891) [#892](https://github.com/Tallec7/neopro/issues/892) [#893](https://github.com/Tallec7/neopro/issues/893)
+- **studio-v3:** break wizard effect feedback loop on first layer add ([#895](https://github.com/Tallec7/neopro/issues/895)) ([3cc012b](https://github.com/Tallec7/neopro/commit/3cc012b74d1fcdacc9b39eeccce74ce5463957b0))
+
 ## [3.296.2](https://github.com/Tallec7/neopro/compare/v3.296.1...v3.296.2) (2026-05-07)
 
 ### Bug Fixes

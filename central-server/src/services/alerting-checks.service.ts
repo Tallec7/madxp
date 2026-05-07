@@ -432,38 +432,99 @@ export class AlertingChecks {
   }
 
   /**
-   * Détecte si les agrégations CRON n'ont pas tourné depuis >36h.
+   * Détecte si les CRON d'agrégation n'ont pas tourné depuis >36h, ou si leur
+   * dernier run a échoué.
+   *
+   * Source de vérité = `recurring_schedules.last_run_at` (mis à jour à chaque
+   * exécution, même quand 0 row est insérée). On NE regarde PAS l'heure du
+   * dernier `calculated_at` des tables `club_daily_stats` / `site_sponsor_daily_stats` :
+   * elles ne s'updatent que les jours d'activité, donc un club inactif >36h
+   * déclenche un faux positif (incident 2026-05-07 : NLF gymnase, 0 video_plays
+   * 03/05+05/05+06/05 → fausse alerte critique).
    */
   async checkAggregationStaleness(): Promise<void> {
     try {
-      const staleResult = await query<{ table_name: string; last_calculated: string; hours_ago: number }>(
-        `SELECT table_name, last_calculated::text, hours_ago FROM (
-           SELECT 'club_daily_stats' AS table_name,
-             MAX(calculated_at) AS last_calculated,
-             EXTRACT(EPOCH FROM (NOW() - MAX(calculated_at))) / 3600 AS hours_ago
-           FROM club_daily_stats
-           UNION ALL
-           SELECT 'site_sponsor_daily_stats',
-             MAX(calculated_at),
-             EXTRACT(EPOCH FROM (NOW() - MAX(calculated_at))) / 3600
-           FROM site_sponsor_daily_stats
+      const staleResult = await query<{
+        name: string;
+        table_name: string;
+        last_run_at: string | null;
+        last_run_status: string | null;
+        hours_ago: number;
+        reason: 'never_run' | 'stale' | 'failed';
+      }>(
+        `SELECT * FROM (
+           SELECT name,
+             COALESCE(task_config->>'aggregation_type', name) AS table_name,
+             last_run_at::text,
+             last_run_status,
+             EXTRACT(EPOCH FROM (NOW() - last_run_at)) / 3600 AS hours_ago,
+             CASE
+               WHEN last_run_at IS NULL THEN 'never_run'
+               WHEN last_run_status = 'failed' THEN 'failed'
+               ELSE 'stale'
+             END AS reason
+           FROM recurring_schedules
+           WHERE task_type = 'aggregation' AND is_active = true
          ) sub
-         WHERE hours_ago > 36 OR last_calculated IS NULL`,
+         WHERE last_run_at IS NULL
+            OR last_run_status = 'failed'
+            OR hours_ago > 36`,
         []
       );
+
+      // Sentinel: ensure both expected aggregation types are still wired.
+      // If the operator deletes/disables both schedules covering club_daily_stats
+      // OR site_sponsor_daily_stats, surface it as a separate alert.
+      const expectedTables = ['club_daily_stats', 'site_sponsor_daily_stats'];
+      const activeTables = await query<{ table_name: string }>(
+        `SELECT DISTINCT COALESCE(task_config->>'aggregation_type', name) AS table_name
+         FROM recurring_schedules
+         WHERE task_type = 'aggregation' AND is_active = true`,
+        []
+      );
+      const activeSet = new Set(activeTables.rows.map(r => r.table_name));
+      for (const expected of expectedTables) {
+        if (!activeSet.has(expected)) {
+          logger.error('Aggregation CRON stale — schedule missing or disabled', {
+            table: expected,
+          });
+          await this.alertCreator.createAlert({
+            type: 'aggregation_stale',
+            severity: 'critical',
+            message: `Aucun schedule actif pour ${expected}. Risque de perte de données après cleanup video_plays.`,
+            metadata: { table: expected, reason: 'no_active_schedule' },
+          });
+        }
+      }
 
       for (const row of staleResult.rows) {
         const hoursAgo = Math.round(row.hours_ago || 999);
         logger.error('Aggregation CRON stale — data loss risk', {
+          schedule: row.name,
           table: row.table_name,
-          lastCalculated: row.last_calculated,
+          lastRunAt: row.last_run_at,
+          lastRunStatus: row.last_run_status,
           hoursAgo,
+          reason: row.reason,
         });
+        const message =
+          row.reason === 'failed'
+            ? `Dernier run du CRON "${row.name}" en échec. Risque de perte de données après cleanup video_plays.`
+            : row.reason === 'never_run'
+            ? `CRON "${row.name}" jamais exécuté. Risque de perte de données après cleanup video_plays.`
+            : `CRON "${row.name}" en retard (${hoursAgo}h). Risque de perte de données après cleanup video_plays.`;
         await this.alertCreator.createAlert({
           type: 'aggregation_stale',
           severity: 'critical',
-          message: `Agrégation ${row.table_name} en retard (${hoursAgo}h). Risque de perte de données après cleanup video_plays.`,
-          metadata: { table: row.table_name, hoursAgo, lastCalculated: row.last_calculated },
+          message,
+          metadata: {
+            schedule: row.name,
+            table: row.table_name,
+            hoursAgo,
+            lastRunAt: row.last_run_at,
+            lastRunStatus: row.last_run_status,
+            reason: row.reason,
+          },
         });
       }
     } catch (error) {

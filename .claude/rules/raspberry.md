@@ -180,6 +180,13 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Supprimer `captive-portal.html` de la copie webapp dans `build-raspberry.sh` ou retirer le bloc `try_files /captive-portal.html` des configs nginx (`install.sh`, `nginx-captive-portal.conf`) → iOS retomberait sur `Success` brut, UX cassée
 - Ajouter `address=/clients3.google.com/192.168.4.1` ou `address=/play.googleapis.com/192.168.4.1` dans `dnsmasq.conf` — Android utilise ces domaines pour des appels API réels (Play Store, Google Services) ; les rediriger vers le Pi casse la détection internet Android → le réseau est marqué "sans internet" par Android (smoke test enforced : guard négatif dans `smoke-kiosk-pi.test.ts`)
 
+### Captive Portal — Bootstrap Angular (Phase 10 CAPTIVE-AUTO)
+
+- **Rediriger vers `/?display=N` (query param) au lieu de `/display/N` (path segment)** dans `app.component.ts` — `/?display=0` charge `HomeComponent` (page choix remote/écran), pas `TvComponent`. Le router Angular utilise des path segments : `{ path: 'display/:n', component: TvComponent }`. Toujours utiliser `window.location.replace('/display/' + displayIndex)`.
+- **Omettre le guard `pathname.startsWith('/display/')` dans `app.component.ts`** — sans ce check, AppComponent rappelle `/api/captive/whoami` à chaque reload sur `/display/0`, obtient `displayIndex: 0`, redirige vers `/display/0`... boucle infinie. Toujours vérifier `window.location.pathname` avant d'appeler whoami.
+- **Changer `generate_204` pour retourner `204` dans `firestick-captive.conf`** — Fire OS interprète 204 comme "internet OK" → pas de portail. La réponse doit être `302` vers `http://192.168.4.1/` pour déclencher CaptivePortalLauncher et ouvrir Silk automatiquement (smoke test enforced).
+- **Attendre le plein écran de Silk en mode captive portal** — Silk s'ouvre en fenêtre système bridée (barre URL visible) par design Fire OS. Le seul moyen d'avoir le vrai fullscreen est une APK TWA. Ne pas promettre le fullscreen sans APK.
+
 ### Hardware
 
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (ventilateur non contrôlé, surchauffe silencieuse)

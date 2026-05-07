@@ -95,6 +95,14 @@ export class StudioV3WizardComponent implements OnInit {
   );
   optionsSignal = signal<TemplateOption[]>(DEFAULT_WIZARD_STATE.options);
   zonesSignal = computed(() => this.state().zones);
+  /**
+   * PREV-01 — Live Player state. Stored in its OWN signal (not inside
+   * `state`) so the recompute effect can write to it without re-triggering
+   * itself (the effect reads `state()` only). `buildRuntimePlayerState`
+   * always allocates a new object, so a `!==` guard inside `state` would
+   * loop infinitely.
+   */
+  previewStateSignal = signal<RuntimePlayerState | null>(null);
 
   /**
    * Plan 02-04 / UX-03 — When set, the preview panel paints a highlight
@@ -125,23 +133,17 @@ export class StudioV3WizardComponent implements OnInit {
      * PREV-01 — Recompute previewState whenever the wizard inputs change
      * (identity / layers / zones). The Player is mounted ONCE in the shell
      * (Pitfall P3) and re-renders only via @Input changes — never destroyed.
+     *
+     * Writes to `previewStateSignal` (separate from `state`) so the effect
+     * never re-triggers itself.
      */
     effect(() => {
       const s = this.state();
-      // Don't compute until step 1 is done — no Player visible yet.
       if (!s.templateId || s.layers.length === 0) {
-        if (s.previewState !== null) {
-          // Reset when layers go to zero (e.g. user deletes the last layer).
-          this.state.update((cur) => ({ ...cur, previewState: null }));
-        }
+        this.previewStateSignal.set(null);
         return;
       }
-      const next = this.computePreviewState(s);
-      // Replace only when the reference would actually change to avoid
-      // an effect feedback loop on the same data.
-      if (next !== s.previewState) {
-        this.state.update((cur) => ({ ...cur, previewState: next }));
-      }
+      this.previewStateSignal.set(this.computePreviewState(s));
     });
 
     /**
@@ -537,8 +539,7 @@ export class StudioV3WizardComponent implements OnInit {
   onPreviewPropsChange(): void {
     const s = this.state();
     if (!s.templateId || s.layers.length === 0) return;
-    const next = this.computePreviewState(s);
-    this.state.update((cur) => ({ ...cur, previewState: next }));
+    this.previewStateSignal.set(this.computePreviewState(s));
   }
 
   private slugify(s: string): string {

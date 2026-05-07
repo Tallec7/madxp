@@ -45,6 +45,14 @@ describe('smoke: template broken asset URL deny-list (incident 2026-05-07)', () 
         expect(source).toMatch(/up\\\.railway\\\.app\\\/remotion-preview\\\/public/);
       });
 
+      // Récidive 2026-05-07 : URLs `up.railway.app/<file>.webm` à la racine
+      // (cf. neopro-central-production.up.railway.app/BUT_simple_{A,B,C}.webm).
+      // Le pattern doit attraper toute URL .webm/.mp4 servie depuis un domaine
+      // Railway — Railway ne sert jamais d'assets vidéo (FTP Hostinger only).
+      it('rejects any .webm/.mp4 served directly from a railway domain', () => {
+        expect(source).toMatch(/up\\\.railway\\\.app\\\/\[\^\?#\]\+\\\.\(webm\|mp4\)/);
+      });
+
       it('isValidSrc loops over BROKEN_URL_PATTERNS', () => {
         expect(source).toMatch(/for\s*\(\s*const\s+\w+\s+of\s+BROKEN_URL_PATTERNS/);
       });

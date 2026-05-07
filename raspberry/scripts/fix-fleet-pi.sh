@@ -919,6 +919,45 @@ else
 fi
 
 # =============================================================================
+# 12b — DNS hijack Fire Stick (dnsmasq — Phase 10 CAPTIVE-AUTO)
+# =============================================================================
+# Fire OS sonde firetvcaptiveportal.com/generate_204 toutes les 5 min.
+# Sans ces entrées dnsmasq, le Pi ne répond jamais à la sonde → Silk ne s'ouvre pas.
+# Guard négatif : clients3.google.com et play.googleapis.com NE SONT PAS redirigés
+# (casserait la détection internet Android — smoke test enforced ADR-079).
+
+log_step "12b — DNS hijack Fire Stick (dnsmasq)"
+
+DNSMASQ_CONF="/etc/dnsmasq.conf"
+FIRESTICK_ENTRIES_ADDED=false
+
+if [ -f "$DNSMASQ_CONF" ]; then
+    if ! grep -q "firetvcaptiveportal.com" "$DNSMASQ_CONF"; then
+        echo "address=/firetvcaptiveportal.com/192.168.4.1" >> "$DNSMASQ_CONF"
+        FIRESTICK_ENTRIES_ADDED=true
+        log_ok "Entrée dnsmasq ajoutée : firetvcaptiveportal.com → 192.168.4.1"
+    else
+        log_ok "Entrée dnsmasq déjà présente : firetvcaptiveportal.com"
+    fi
+
+    if ! grep -q "spectrum.s3.amazonaws.com" "$DNSMASQ_CONF"; then
+        echo "address=/spectrum.s3.amazonaws.com/192.168.4.1" >> "$DNSMASQ_CONF"
+        FIRESTICK_ENTRIES_ADDED=true
+        log_ok "Entrée dnsmasq ajoutée : spectrum.s3.amazonaws.com → 192.168.4.1"
+    else
+        log_ok "Entrée dnsmasq déjà présente : spectrum.s3.amazonaws.com"
+    fi
+
+    if [ "$FIRESTICK_ENTRIES_ADDED" = true ]; then
+        systemctl restart dnsmasq 2>/dev/null || true
+        CHANGES=$((CHANGES + 1))
+        log_ok "dnsmasq redémarré (entrées Fire Stick appliquées)"
+    fi
+else
+    log_err "dnsmasq.conf introuvable ($DNSMASQ_CONF)"
+fi
+
+# =============================================================================
 # 13/13 — Pi 5 Active Cooler: activer dtparam=cooling_fan dans config.txt
 # =============================================================================
 # Sans dtparam=cooling_fan, le device-tree marque le noeud cooling_fan comme

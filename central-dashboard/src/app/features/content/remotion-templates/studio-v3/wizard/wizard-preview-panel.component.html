@@ -33,7 +33,7 @@
     <!-- Live Player — hidden when test-render mode is active. -->
     <app-template-studio-player
       [hidden]="previewMode === 'test-render' && !!testRenderUrl"
-      [state]="state.previewState!"
+      [state]="previewState!"
     />
     <!-- Rendered MP4 — visible only when test render is loaded + mode active. -->
     <video

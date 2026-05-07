@@ -122,6 +122,7 @@
         class="v3w__preview"
         [hidden]="currentStep() < 3"
         [state]="state()"
+        [previewState]="previewStateSignal()"
         [currentStep]="currentStep()"
         [highlightedOptionKey]="highlightedOptionKey()"
         [previewMode]="previewService.mode()"
