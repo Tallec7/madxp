@@ -1,3 +1,9 @@
+# [3.294.0](https://github.com/Tallec7/neopro/compare/v3.293.0...v3.294.0) (2026-05-07)
+
+### Features
+
+- **templates:** GET /:id/spec round-trip-safe SPEC.md export ([#886](https://github.com/Tallec7/neopro/issues/886)) ([19325dd](https://github.com/Tallec7/neopro/commit/19325ddbbe3691f5d619fc70fee278b24928fbc0)), closes [#5](https://github.com/Tallec7/neopro/issues/5) [#5](https://github.com/Tallec7/neopro/issues/5)
+
 # [3.293.0](https://github.com/Tallec7/neopro/compare/v3.292.17...v3.293.0) (2026-05-07)
 
 ### Features
