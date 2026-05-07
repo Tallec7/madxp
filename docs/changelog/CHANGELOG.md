@@ -1,3 +1,9 @@
+## [3.296.2](https://github.com/Tallec7/neopro/compare/v3.296.1...v3.296.2) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** exclude archived templates from asset library list ([#890](https://github.com/Tallec7/neopro/issues/890)) ([67f97b1](https://github.com/Tallec7/neopro/commit/67f97b1a716b069300a1996bac18fd7359358b6e))
+
 ## [3.296.1](https://github.com/Tallec7/neopro/compare/v3.296.0...v3.296.1) (2026-05-07)
 
 ### Bug Fixes
