@@ -8,11 +8,25 @@
 
 ---
 
-## Semaine 19 — 5-11 Mai 2026 (suite — v4.1 Fire Stick auto-launch validé 2026-05-07)
+## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#896](https://github.com/Tallec7/neopro/pull/896) + v4.1 auto-launch 2026-05-07)
 
 ### 🎯 Pour le club (NLF, prospects)
 
 - **Fire Stick plug-and-play : branche le Fire Stick, Neopro démarre seul** (Phase 10 CAPTIVE-AUTO — 2026-05-07) — le Fire Stick branché sur le Wi-Fi du Pi détecte automatiquement le portail captif et ouvre Silk sans aucune action. Si l'écran est déjà assigné dans la config, Silk redirige directement sur le player vidéo Neopro. Testé physiquement sur Pi RACC : `generate_204 → 302 → Silk → /display/0 → TV Neopro`. Le bénévole branche le câble, c'est tout. (Limitation connue : Silk s'ouvre dans une fenêtre avec barre URL — fullscreen nécessite une APK dédiée, prévu v4.2.)
+- **Template Studio : supprimer un template supprime aussi ses fichiers vidéo sur le serveur** ([#882](https://github.com/Tallec7/neopro/pull/882)) — avant ce fix, supprimer un template laissait les WebM orphelins sur le FTP Hostinger (espace perdu silencieusement). Désormais la suppression est une opération propre end-to-end : DB + FTP en cascade.
+- **Template Studio : export SPEC.md d'un template existant** ([#886](https://github.com/Tallec7/neopro/pull/886)) — un designer peut récupérer le fichier SPEC.md d'un template déjà en prod via `GET /:id/spec`, re-éditer localement et réimporter. Boucle edit → import → export complète.
+- **Multi-écrans Fire Stick v4.0 : cloud + dashboard + supervision** ([#888](https://github.com/Tallec7/neopro/pull/888)) — Phases 7-9 : API `connected-receivers`, badge 3 états dashboard (Pi HDMI / Fire Stick assigné / libre), dropdown assignation, métriques Prometheus `neopro_receivers_total`.
+
+### 🛡️ Pour la robustesse
+
+- **Template Studio : URLs cassées vers Railway Preview bloquées au runtime** ([#889](https://github.com/Tallec7/neopro/pull/889), [#896](https://github.com/Tallec7/neopro/pull/896)) — incident 2026-05-07 : 23 rows DB pointaient vers des URLs Remotion legacy (Railway preview au lieu du FTP Hostinger) → tab Chrome en cascade 404 → unresponsive. Deny-list ajoutée dans le moteur render, 7 templates archivés.
+- **Template Studio : sécurisation des uploads** ([#887](https://github.com/Tallec7/neopro/pull/887)) — timeout 300s sur les routes upload (bloque les WebM 200 Mo qui hangaient indéfiniment), vérification HMAC sur le proxy d'assets, secret fail-fast au boot.
+- **Alerting : fix faux-positif `aggregation_stale`** ([#894](https://github.com/Tallec7/neopro/pull/894)) — l'alerte se déclenchait à tort quand la table `sponsor_stats_daily` était légitimement vide (nouveau site sans stats). Désormais la sonde lit `recurring_schedules.last_run_at` (signal direct du CRON) au lieu de `MAX(calculated_at)` (proxy fragile). Fix PR #894 Daisy.
+
+### 🧹 Pour l'équipe
+
+- **Template Studio : templates archivés exclus de la bibliothèque d'assets** ([#890](https://github.com/Tallec7/neopro/pull/890)) — les templates `status='archived'` n'apparaissaient plus dans le picker asset mais restaient dans la liste principale. Filtre ajouté.
+- **Template Studio wizard v3 : feedback visuel corrigé sur le premier ajout de layer** ([#895](https://github.com/Tallec7/neopro/pull/895)) — boucle d'effet Angular qui déclenchait un re-render parasite à chaque ajout de layer dans le wizard. Fix sans régression. (Phase 10 CAPTIVE-AUTO — 2026-05-07) — le Fire Stick branché sur le Wi-Fi du Pi détecte automatiquement le portail captif et ouvre Silk sans aucune action. Si l'écran est déjà assigné dans la config, Silk redirige directement sur le player vidéo Neopro. Testé physiquement sur Pi RACC : `generate_204 → 302 → Silk → /display/0 → TV Neopro`. Le bénévole branche le câble, c'est tout. (Limitation connue : Silk s'ouvre dans une fenêtre avec barre URL — fullscreen nécessite une APK dédiée, prévu v4.2.)
 - **Multi-écrans Fire Stick : un admin assigne un écran depuis le dashboard sans aucune saisie aveugle** (Phase 8 DASHBOARD, 4 plans GSD — 2026-05-07) — dans `Sites > <club> > Écrans`, chaque ligne affiche désormais une colonne « Récepteur » avec un badge 3 états (🖥️ Pi HDMI natif, 📺 MAC tronquée = Fire Stick assigné, + Assigner = libre). Le bouton [Assigner ▾] ouvre un dropdown pré-rempli avec les MACs auto-détectées par le Pi (auto-discovery réseau LAN, pas de saisie). Le bouton [— Désassigner] libère un écran sans toucher la config des autres. Un super_admin peut équiper une salle multi-écrans en moins de 5 min, depuis un navigateur, sans aide technique.
 - **Chaque transition Fire Stick visible en Grafana** (Phase 9 OBSERVE, 2 plans GSD — 2026-05-07) — nouvelle métrique Prometheus `neopro_receivers_total{site_id, status}` incrémentée à chaque détection, assignation et déconnexion Fire Stick. Panel ajouté au dashboard Grafana "NeoPro Overview Cloud". Premier signal mesurable de l'adoption Fire Stick par site.
 
