@@ -1,3 +1,9 @@
+# [3.293.0](https://github.com/Tallec7/neopro/compare/v3.292.17...v3.293.0) (2026-05-07)
+
+### Features
+
+- **templates:** DELETE template end-to-end + cascade FTP cleanup ([#882](https://github.com/Tallec7/neopro/issues/882)) ([a073d4f](https://github.com/Tallec7/neopro/commit/a073d4f510a2233eca93edc67849b5b50557ddc0)), closes [#2](https://github.com/Tallec7/neopro/issues/2) [#613](https://github.com/Tallec7/neopro/issues/613) [#1](https://github.com/Tallec7/neopro/issues/1) [#2](https://github.com/Tallec7/neopro/issues/2)
+
 ## [3.292.17](https://github.com/Tallec7/neopro/compare/v3.292.16...v3.292.17) (2026-05-07)
 
 ### Bug Fixes
