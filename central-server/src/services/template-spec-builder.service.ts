@@ -18,7 +18,6 @@ import type {
   TemplateLayer,
   TemplateTextField,
   TemplateImageSlot,
-  TemplateVariant,
 } from '../types/template-studio.types';
 import { stringify as stringifyYaml } from 'yaml';
 
