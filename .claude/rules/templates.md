@@ -55,6 +55,16 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Ajouter un upsert implicite (`ON CONFLICT DO UPDATE`)** tant que v2 n'est pas écrit : v1 refuse volontairement un slug existant pour éviter les écrasements accidentels.
 - **Lire les WebM en local dans le script** : les `file:` des layers doivent rester des URLs absolues en v1 (upload FTP = v2).
 
+### Sécu uploads / proxy (audit 2026-05-07 phase C — smoke test enforced)
+
+- **Retirer `requestTimeout(300_000)` (ou `requestTimeout(UPLOAD_TIMEOUT_MS)`) sur les routes `POST /:id/assets`, `POST /:id/user-uploads`, `POST /library/upload`** dans `central-server/src/routes/remotion-templates.routes.ts` — sans ce timeout, multer accepte des uploads 200 Mo qui peuvent hanger indéfiniment et exhauster les slots HTTP Railway (audit P1 #8).
+- **Retirer `verifyUrl(` ou `recordTemplateProxySignatureValidation` de `proxyTemplateAsset`** dans `central-server/src/controllers/remotion-templates.controller.ts` — sans le check HMAC + supervision Prometheus, la migration ADR-113-bis ne peut pas être suivie (audit P1 #7).
+- **Retirer le fail-fast `TEMPLATE_PROXY_HMAC_SECRET` du service** `central-server/src/services/template-proxy-signing.service.ts` — sans ce throw au boot, un déploiement sans la variable d'env servirait des URLs proxy non vérifiées silencieusement.
+- **Retirer `timingSafeEqual`** de `template-proxy-signing.service.ts` — la comparaison HMAC doit rester constant-time (anti timing-attack).
+- **Supprimer `npm run rotate:ftp-creds`** dans `central-server/package.json` ou le script `central-server/src/scripts/rotate-ftp-creds.ts` — contrat outillage documenté dans ADR-113.
+- **Retirer le Counter `neopro_template_proxy_signature_validation_total`** de `central-server/src/services/metrics.service.ts` — sans cette métrique, la migration HMAC est invisible et la PR cleanup (drop fallback `missing`) ne peut pas être planifiée.
+- Référence : [ADR-113](../../docs/adr/ADR-113-ftp-creds-rotation-procedure.md), audit `docs/audits/templates-remotion-audit-2026-05-07.md`.
+
 ### Backward-compat
 
 - **Modifier la migration `add-template-studio-v2.sql` déjà en production.** Toute évolution passe par une nouvelle migration `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` (voir `add-template-studio-v2-layer-parent-safe-zone.sql` pour le pattern ADR-086).
