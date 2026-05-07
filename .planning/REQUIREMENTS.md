@@ -117,9 +117,9 @@
 | DASHBOARD-03 | Phase 8 (DASHBOARD)     | TBD           |
 | OBSERVE-01   | Phase 9 (OBSERVE)       | TBD           |
 | OBSERVE-02   | Phase 9 (OBSERVE)       | TBD           |
-| CAPTIVE-05   | Phase 10 (CAPTIVE-AUTO) | TBD           |
-| CAPTIVE-06   | Phase 10 (CAPTIVE-AUTO) | TBD           |
-| CAPTIVE-07   | Phase 10 (CAPTIVE-AUTO) | TBD           |
+| CAPTIVE-05   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
+| CAPTIVE-06   | Phase 10 (CAPTIVE-AUTO) | 46bd801a      |
+| CAPTIVE-07   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
 | ASSIGN-01    | Phase 11 (REASSIGN)     | TBD           |
 | ASSIGN-02    | Phase 11 (REASSIGN)     | TBD           |
 | ASSIGN-03    | Phase 11 (REASSIGN)     | TBD           |
