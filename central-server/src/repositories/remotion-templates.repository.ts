@@ -76,6 +76,74 @@ class RemotionTemplatesRepository {
     return result.rows;
   }
 
+  /**
+   * Quick task 260507-obe (audit P1 #10) — list templates with `used_by_count`
+   * computed in a single aggregated LEFT JOIN (no N+1).
+   *
+   * The two source tables are the same as `templateStudioRepository.getTemplateUsedByCount`
+   * (PR #882 — DRY logic, otherwise the 409 delete-guard and the UI badge would
+   * drift) :
+   *   - `template_packshot_refs.packshot_template_id`
+   *   - `remotion_render_jobs.template_id` WHERE status IN ('pending','running')
+   */
+  async findAllWithUsage(
+    publishedOnly = false,
+  ): Promise<(NeoProTemplate & { used_by_count: number })[]> {
+    const where = publishedOnly ? 'WHERE t.published = true' : '';
+    const result = await query<NeoProTemplate & { used_by_count: number }>(
+      `SELECT t.id, t.name, t.composition_id, t.description, t.props_schema, t.default_props,
+              t.thumbnail_url, t.published, t.site_id, t.created_at,
+              COALESCE(u.total, 0)::int AS used_by_count
+       FROM neopro_templates t
+       LEFT JOIN (
+         SELECT template_id, SUM(c) AS total FROM (
+           SELECT packshot_template_id AS template_id, COUNT(*)::int AS c
+             FROM template_packshot_refs GROUP BY packshot_template_id
+           UNION ALL
+           SELECT template_id, COUNT(*)::int AS c
+             FROM remotion_render_jobs
+             WHERE status IN ('pending','running')
+             GROUP BY template_id
+         ) s GROUP BY template_id
+       ) u ON u.template_id = t.id
+       ${where}
+       ORDER BY t.created_at DESC`,
+    );
+    return result.rows;
+  }
+
+  /**
+   * Quick task 260507-obe — same as `findAllWithUsage` but scoped to a site
+   * (globaux + ceux du site), aligné sur `findVisibleForSite`.
+   */
+  async findVisibleForSiteWithUsage(
+    siteId: string,
+    publishedOnly = false,
+  ): Promise<(NeoProTemplate & { used_by_count: number })[]> {
+    const publishedClause = publishedOnly ? 'AND t.published = true' : '';
+    const result = await query<NeoProTemplate & { used_by_count: number }>(
+      `SELECT t.id, t.name, t.composition_id, t.description, t.props_schema, t.default_props,
+              t.thumbnail_url, t.published, t.site_id, t.created_at,
+              COALESCE(u.total, 0)::int AS used_by_count
+       FROM neopro_templates t
+       LEFT JOIN (
+         SELECT template_id, SUM(c) AS total FROM (
+           SELECT packshot_template_id AS template_id, COUNT(*)::int AS c
+             FROM template_packshot_refs GROUP BY packshot_template_id
+           UNION ALL
+           SELECT template_id, COUNT(*)::int AS c
+             FROM remotion_render_jobs
+             WHERE status IN ('pending','running')
+             GROUP BY template_id
+         ) s GROUP BY template_id
+       ) u ON u.template_id = t.id
+       WHERE (t.site_id IS NULL OR t.site_id = $1) ${publishedClause}
+       ORDER BY t.site_id NULLS LAST, t.created_at DESC`,
+      [siteId],
+    );
+    return result.rows;
+  }
+
   async findById(id: string): Promise<NeoProTemplate | null> {
     const result = await query<NeoProTemplate>(
       'SELECT * FROM neopro_templates WHERE id = $1',
