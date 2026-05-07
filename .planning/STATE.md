@@ -3,24 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
 status: completed
-stopped_at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
-last_updated: '2026-05-07T18:55:43.341Z'
-last_activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 + firestick-captive.conf patched + Pi RACC validated
+stopped_at: Phase 11 UAT in progress (test 3/6 pending)
+last_updated: '2026-05-07T19:35:00.000Z'
+last_activity: 2026-05-07 — Phase 11 plan 01 complete — 13/13 tests verts — UAT 2/6 pass
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 21
   completed_plans: 21
-status: roadmap_ready
-stopped_at: ~
-last_updated: '2026-05-07T20:30:00.000Z'
-last_activity: '2026-05-07 — Roadmap v4.1 créé — 4 phases (10-13) — prêt pour plan-phase 10'
-progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
->>>>>>> 6094a60f (docs(planning): start milestone v4.1 Fire Stick polish (4 phases, 14 requirements))
 ---
 
 # Project State
@@ -30,21 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.1 — Fire Stick polish. Roadmap prête (phases 10-13), planification phase 10 à démarrer.
+**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 11 (REASSIGN) plan 01 complete, UAT in progress.
 
 ## Current Position
 
-Phase: Phase 10 — CAPTIVE-AUTO (plan 01 complete, phase complete)
-Plan: 10-01-nginx-wifistub-302 (COMPLETE — all 3 tasks done, Pi RACC validated)
-Status: Phase 10 complete — wifistub 302 confirmed on Pi RACC; ready for Phase 11 (REASSIGN)
-Last activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 + firestick-captive.conf patched + Pi RACC validated
-Next: Phase 11 (REASSIGN) — UX 1-clic réassigner Fire Stick depuis dashboard
-Phase: Phase 10 — CAPTIVE-AUTO (not started)
-Plan: —
-Status: Roadmap v4.1 validée — prêt pour /gsd:plan-phase 10
-Last activity: 2026-05-07 — Roadmap v4.1 créé — 4 phases Fire Stick polish (CAPTIVE-AUTO / REASSIGN / ALLOWLIST / ALERT)
-Next: /gsd:plan-phase 10
->>>>>>> 6094a60f (docs(planning): start milestone v4.1 Fire Stick polish (4 phases, 14 requirements))
+Phase: Phase 11 — REASSIGN (plan 01 complete, UAT 2/6 pass)
+Plan: 11-01-displays-editor-reassign-ux (COMPLETE — 13/13 tests verts, commits 16e0f680 + 1ed3c5d2)
+Status: UAT in progress — test 3/6 (Sous-texte cross-display) pending user response
+Last activity: 2026-05-07 — 11-01 COMPLETE — badge MAC séparé + [Réassigner ▾] + mutation atomique + 13/13 Karma verts
+Next: Resume UAT at test 3/6 — then push merge commit to update PR #898
 
 ## Accumulated Context
 
@@ -107,7 +91,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 10-01: wifiredirect cible http://192.168.4.1/ (racine) pas /captive/wait — Angular router branch via /api/captive/whoami
 - 10-01: extractNginxBlock() helper dans smoke tests — évite les faux positifs du bloc @captive_fallback qui contient encore "Success"
 - 10-01: firestick-captive.conf POC (Pi RACC sites-enabled) interceptait spectrum.s3.amazonaws.com avant neopro-base.conf et retournait 200 — patché pour 302 chain; la flotte OTA utilise neopro-base.conf via install.sh (pas affectée)
->>>>>>> 6094a60f (docs(planning): start milestone v4.1 Fire Stick polish (4 phases, 14 requirements))
+- 11-01: badge MAC = classe double `receiver-badge--assigned receiver-badge--mac` pour backward-compat Phase 8 tests B et F (Tests B et F font un querySelector sur `.receiver-badge--assigned`)
+- 11-01: mutation atomique via single `.map()` pass — sourceDisplay détecté avant la passe, clears source ET sets target dans un seul `displaysChange.emit`
+- 11-01: `#noReceivers` ng-template inclut `— Désassigner` gardé par `*ngIf="display.receiver?.mac"` — visible quand filteredReceivers vide mais MAC courante existe
 
 ### Pending Todos
 
@@ -127,8 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T20:30:00.000Z
-Stopped at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
-Stopped at: Roadmap v4.1 créé (phases 10-13)
->>>>>>> 6094a60f (docs(planning): start milestone v4.1 Fire Stick polish (4 phases, 14 requirements))
-Resume file: None
+Last session: 2026-05-07T19:35:00.000Z
+Stopped at: Phase 11 UAT 2/6 pass — merge conflict resolution in progress
+Resume file: .planning/phases/11-reassign-ux-dashboard/11-UAT.md

@@ -55,17 +55,25 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           >🖥️ Pi HDMI</span
         >
 
-        <!-- State 2: Fire Stick assigned -->
+        <!-- State 2: Fire Stick assigned — Phase 11: badge MAC séparé + bouton [Réassigner ▾] -->
         <ng-container
           *ngIf="display.index !== 0 && display.receiver?.kind === 'firestick' && display.receiver?.mac"
         >
           <button
-            class="receiver-badge receiver-badge--assigned"
+            class="receiver-badge receiver-badge--assigned receiver-badge--mac"
+            [class.receiver-badge--stale]="isReceiverStale(display)"
+            [title]="isReceiverStale(display) ? 'Récepteur hors-ligne' : display.receiver!.mac!"
             (click)="openReceiverDropdown($event, display.index)"
             [attr.data-display-index]="display.index"
-            title="{{ display.receiver?.mac }}"
           >
-            📺 {{ formatMac(display.receiver!.mac!) }} ▾
+            📺 {{ formatMac(display.receiver!.mac!) }}
+          </button>
+          <button
+            class="receiver-badge receiver-badge--reassign"
+            (click)="openReceiverDropdown($event, display.index)"
+            [attr.data-display-index]="display.index"
+          >
+            Réassigner ▾
           </button>
         </ng-container>
 
@@ -86,14 +94,15 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           [style.top.px]="dropdownTop"
           [style.left.px]="dropdownLeft"
         >
-          <ng-container *ngIf="connectedReceivers.length > 0; else noReceivers">
+          <ng-container *ngIf="getReassignableReceivers(display).length > 0; else noReceivers">
             <button
               class="template-option"
-              *ngFor="let r of connectedReceivers"
+              *ngFor="let r of getReassignableReceivers(display)"
               (click)="assignReceiver(display.index, r)"
             >
               <span class="receiver-mac">{{ r.mac }}</span>
-              <span class="receiver-lastseen"> — {{ formatLastSeen(r.lastSeenAt) }}</span>
+              <span class="receiver-lastseen" *ngIf="getCrossDisplayHint(r, display.index) as hint"> — {{ hint }}</span>
+              <span class="receiver-lastseen" *ngIf="!getCrossDisplayHint(r, display.index)"> — {{ formatLastSeen(r.lastSeenAt) }}</span>
             </button>
             <hr *ngIf="display.receiver?.mac" class="receiver-dropdown-sep" />
             <button
@@ -106,6 +115,14 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           </ng-container>
           <ng-template #noReceivers>
             <span class="receiver-empty">Aucun récepteur détecté (Pi hors-ligne ?)</span>
+            <hr *ngIf="display.receiver?.mac" class="receiver-dropdown-sep" />
+            <button
+              class="template-option receiver-unassign"
+              *ngIf="display.receiver?.mac"
+              (click)="unassignReceiver(display.index)"
+            >
+              — Désassigner
+            </button>
           </ng-template>
         </div>
 
@@ -376,6 +393,34 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       color: #2563eb;
     }
 
+    /* Receiver badge variants — Phase 11 */
+    .receiver-badge--mac {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+      cursor: pointer;
+    }
+
+    .receiver-badge--stale {
+      opacity: 0.55;
+      background: #f1f5f9;
+      color: #94a3b8;
+      border-color: #cbd5e1;
+    }
+
+    .receiver-badge--reassign {
+      background: transparent;
+      color: #3b82f6;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0.125rem 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .receiver-badge--reassign:hover {
+      color: #2563eb;
+    }
+
     /* Receiver dropdown */
     .receiver-dropdown {
       position: fixed;
@@ -522,17 +567,46 @@ export class DisplaysEditorComponent {
     this.cdr.markForCheck();
   }
 
+  isReceiverStale(display: DisplayConfig): boolean {
+    const mac = display.receiver?.mac;
+    if (!mac) return false;
+    return !this.connectedReceivers.find(r => r.mac === mac);
+  }
+
+  getReassignableReceivers(display: DisplayConfig): ReceiverInfo[] {
+    const currentMac = display.receiver?.mac;
+    return currentMac
+      ? this.connectedReceivers.filter(r => r.mac !== currentMac)
+      : this.connectedReceivers;
+  }
+
+  getCrossDisplayHint(receiver: ReceiverInfo, currentDisplayIndex: number): string | null {
+    const other = this.displays.find(
+      d => d.receiver?.mac === receiver.mac && d.index !== currentDisplayIndex
+    );
+    return other ? `actuellement sur ${other.name}` : null;
+  }
+
   assignReceiver(displayIndex: number, receiver: ReceiverInfo): void {
+    const sourceDisplay = this.displays.find(
+      d => d.receiver?.mac === receiver.mac && d.index !== displayIndex
+    );
+
     this.displays = this.displays.map(d => {
-      if (d.index !== displayIndex) return d;
-      return {
-        ...d,
-        receiver: {
-          kind: receiver.kind,
-          mac: receiver.mac,
-          last_seen_at: receiver.lastSeenAt,
-        } as ReceiverConfig,
-      };
+      if (d.index === displayIndex) {
+        return {
+          ...d,
+          receiver: {
+            kind: receiver.kind,
+            mac: receiver.mac,
+            last_seen_at: receiver.lastSeenAt,
+          } as ReceiverConfig,
+        };
+      }
+      if (sourceDisplay && d.index === sourceDisplay.index) {
+        return { ...d, receiver: null };
+      }
+      return d;
     });
     this.activeDropdownIndex = null;
     this.displaysChange.emit([...this.displays]);
