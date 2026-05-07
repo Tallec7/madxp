@@ -1370,3 +1370,22 @@ export const remotionTemplateIdParam = Joi.object({
 export const remotionTemplateDeleteQuery = Joi.object({
   force: Joi.string().valid('true', 'false').optional(),
 });
+
+// ============================================================================
+// Audit P1 #7 — HMAC-signed proxy URLs (ADR-113-bis migration)
+// ============================================================================
+
+/**
+ * Joi schema for `GET /api/remotion-templates/asset-proxy?url=…&sig=…&exp=…`.
+ *
+ * `sig` and `exp` are optional during the 24h migration grace period — a
+ * missing signature soft-fails with a Winston `warn` + Prometheus
+ * `recordTemplateProxySignatureValidation('missing')`. Once `status="missing"`
+ * holds at zero in production, a follow-up PR will tighten the schema to
+ * `required()`.
+ */
+export const proxyAssetQuerySchema = Joi.object({
+  url: Joi.string().uri().required(),
+  sig: Joi.string().hex().length(64).optional(),
+  exp: Joi.number().integer().min(0).optional(),
+});
