@@ -155,6 +155,10 @@ const ioForReceivers = {
   emit: (event, data) => {
     if (event === 'connected-receivers-changed' && data && Array.isArray(data.receivers)) {
       stateService.setReceivers(data.receivers);
+      // Trigger state-sync immediately so sync-agent relays receivers to cloud.
+      // Without this, receiversBySite in socket.service.ts stays empty until
+      // the next score/phase mutation (which may never happen).
+      io.emit('state-sync', { receivers: data.receivers, serverTs: Date.now() });
     }
     io.emit(event, data);
   },

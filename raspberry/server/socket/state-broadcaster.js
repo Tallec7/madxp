@@ -22,6 +22,7 @@ module.exports = function createStateBroadcaster(io, stateService) {
         phase: state.phase,
         timer: state.timer,
         options: state.options,
+        receivers: state.receivers,
         serverTs: Date.now(),
       });
     },
