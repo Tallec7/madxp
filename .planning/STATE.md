@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: 'Roadmap v4.1 validée — prêt pour /gsd:plan-phase 10'
-stopped_at: Checkpoint 10-01-PLAN.md Task 3 — human-verify Pi RACC + Fire Stick AFTSS pending
-last_updated: '2026-05-07T18:20:56.551Z'
-last_activity: 2026-05-07 — Roadmap v4.1 créé — 4 phases Fire Stick polish (CAPTIVE-AUTO / REASSIGN / ALLOWLIST / ALERT)
+status: 'Phase 10-01 COMPLETE — wifistub 302 validated Pi RACC; ready for Phase 11 REASSIGN'
+stopped_at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
+last_updated: '2026-05-07T20:30:00.000Z'
+last_activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 validated on Pi RACC (curl → HTTP 302), firestick-captive.conf POC patched
 progress:
   total_phases: 10
   completed_phases: 7
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Current Position
 
-Phase: Phase 10 — CAPTIVE-AUTO (in progress)
-Plan: 10-01-nginx-wifistub-302 (Tasks 1+2 done, Task 3 = checkpoint:human-verify pending)
-Status: nginx wifistub 302 shipped — awaiting Pi RACC manual validation (Fire Stick AFTSS 0c:43:f9:36:04:77)
-Last activity: 2026-05-07 — 10-01 Tasks 1-3 executed (RED + GREEN + doc) — checkpoint Task 3 awaiting manual test
-Next: Manual validation Pi RACC → deploy to NLF fleet → Phase 11 (REASSIGN)
+Phase: Phase 10 — CAPTIVE-AUTO (plan 01 complete, phase complete)
+Plan: 10-01-nginx-wifistub-302 (COMPLETE — all 3 tasks done, Pi RACC validated)
+Status: Phase 10 complete — wifistub 302 confirmed on Pi RACC; ready for Phase 11 (REASSIGN)
+Last activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 + firestick-captive.conf patched + Pi RACC validated
+Next: Phase 11 (REASSIGN) — UX 1-clic réassigner Fire Stick depuis dashboard
 
 ## Accumulated Context
 
@@ -90,6 +90,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 10-01: wifistub 302 deux-hop (wifistub→wifiredirect→root) préserve $host pour Fire OS CaptivePortalLauncher — redirect direct casserait le hostname dans Location
 - 10-01: wifiredirect cible http://192.168.4.1/ (racine) pas /captive/wait — Angular router branch via /api/captive/whoami
 - 10-01: extractNginxBlock() helper dans smoke tests — évite les faux positifs du bloc @captive_fallback qui contient encore "Success"
+- 10-01: firestick-captive.conf POC (Pi RACC sites-enabled) interceptait spectrum.s3.amazonaws.com avant neopro-base.conf et retournait 200 — patché pour 302 chain; la flotte OTA utilise neopro-base.conf via install.sh (pas affectée)
 
 ### Pending Todos
 
@@ -109,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T18:20:56.546Z
-Stopped at: Checkpoint 10-01-PLAN.md Task 3 — human-verify Pi RACC + Fire Stick AFTSS pending
+Last session: 2026-05-07T20:30:00.000Z
+Stopped at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
 Resume file: None

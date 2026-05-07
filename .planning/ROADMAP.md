@@ -159,7 +159,7 @@
 
 **Plans**: 1 plan
 
-- [ ] 10-01-nginx-wifistub-302-PLAN.md — nginx wifistub 302 + wifiredirect endpoint + smoke guards Phase 10 + doc OTA Pi (CAPTIVE-05, CAPTIVE-06, CAPTIVE-07)
+- [x] 10-01-nginx-wifistub-302-PLAN.md — nginx wifistub 302 + wifiredirect endpoint + smoke guards Phase 10 + doc OTA Pi (CAPTIVE-05, CAPTIVE-06, CAPTIVE-07) (completed 2026-05-07)
 
 ### Phase 11: REASSIGN — Réassigner UX dashboard
 
