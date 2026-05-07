@@ -5,7 +5,16 @@ import {
   sensitiveRateLimit,
   templateUserUploadRateLimit,
 } from '../middleware/user-rate-limit';
-import { validate, validateParams, paramSchemas, schemas, testRenderSchemas } from '../middleware/validation';
+import {
+  validate,
+  validateParams,
+  validateQuery,
+  paramSchemas,
+  schemas,
+  testRenderSchemas,
+  remotionTemplateIdParam,
+  remotionTemplateDeleteQuery,
+} from '../middleware/validation';
 import { uploadTemplateAsset, uploadUserTemplateImage } from '../middleware/upload';
 import * as ctrl from '../controllers/remotion-templates.controller';
 
@@ -134,6 +143,19 @@ router.post(
   validateParams(paramSchemas.id),
   sensitiveRateLimit,
   ctrl.unpublishTemplate,
+);
+
+// Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
+// super_admin only, sensitiveRateLimit (30/min), ?force=true bypasses 409
+// guard for published / in-use templates (audited via metric reason label).
+router.delete(
+  '/:id',
+  authenticate,
+  requireRole('super_admin'),
+  sensitiveRateLimit,
+  validateParams(remotionTemplateIdParam),
+  validateQuery(remotionTemplateDeleteQuery),
+  ctrl.deleteTemplate,
 );
 
 // ADR-075 — toggle schema_version 1 ↔ 2 (super_admin uniquement)
