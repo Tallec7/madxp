@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: 'Phase 10-01 COMPLETE — wifistub 302 validated Pi RACC; ready for Phase 11 REASSIGN'
+status: completed
 stopped_at: Completed 10-01-PLAN.md — Phase 10 CAPTIVE-AUTO plan 01 complete
-last_updated: '2026-05-07T20:30:00.000Z'
-last_activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 validated on Pi RACC (curl → HTTP 302), firestick-captive.conf POC patched
+last_updated: '2026-05-07T18:55:43.341Z'
+last_activity: 2026-05-07 — 10-01 COMPLETE — nginx wifistub 302 + firestick-captive.conf patched + Pi RACC validated
 progress:
   total_phases: 10
   completed_phases: 7
