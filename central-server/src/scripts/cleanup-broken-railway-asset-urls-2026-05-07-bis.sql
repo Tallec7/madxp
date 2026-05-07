@@ -1,5 +1,17 @@
 -- Cleanup — Récidive incident URLs Railway cassées (2026-05-07 bis)
 --
+-- Résultat du run initial (2026-05-07) : 0 row dans template_layers /
+-- template_variants. Les seules occurrences restantes sont dans
+-- `template_versions.{layers,variants}_snapshot` (5 rows / 3 templates),
+-- mais ces 3 templates sont DÉJÀ en status='archived' depuis l'incident
+-- matin (BUT Img Joueur, Joueur détaillé, BUT Simple). Les snapshots
+-- versioning sont volontairement conservés (historique rollback). Le
+-- runtime guard étendu (cette PR) intercepte les URLs au moment où le
+-- dashboard ouvre un template archivé en preview.
+--
+-- → Garde ce script pour un futur run au cas où le pattern réapparaîtrait
+--   dans des rows actives.
+--
 -- Symptôme :
 --   Console Studio + render worker spammée par 404 sur
 --   `neopro-central-production.up.railway.app/BUT_simple_{A,B,C}.webm`.
@@ -36,7 +48,7 @@ BEGIN;
 \echo '── Audit : layers cassés ──'
 SELECT
   t.id AS template_id,
-  t.slug,
+  t.name,
   t.status,
   l.id AS layer_id,
   l.name AS layer_name,
@@ -44,13 +56,13 @@ SELECT
 FROM neopro_templates t
 JOIN template_layers l ON l.template_id = t.id
 WHERE l.video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
-ORDER BY t.slug, l.z_index;
+ORDER BY t.name, l.z_index;
 
 \echo ''
 \echo '── Audit : variants cassés ──'
 SELECT
   t.id AS template_id,
-  t.slug,
+  t.name,
   t.status,
   v.id AS variant_id,
   v.name AS variant_name,
@@ -58,11 +70,11 @@ SELECT
 FROM neopro_templates t
 JOIN template_variants v ON v.template_id = t.id
 WHERE v.background_video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
-ORDER BY t.slug, v.sort_order;
+ORDER BY t.name, v.sort_order;
 
 \echo ''
 \echo '── Audit : templates impactés (à archiver) ──'
-SELECT DISTINCT t.id, t.slug, t.status, t.created_at
+SELECT DISTINCT t.id, t.name, t.status, t.created_at
 FROM neopro_templates t
 WHERE EXISTS (
   SELECT 1 FROM template_layers l
@@ -74,7 +86,7 @@ WHERE EXISTS (
   WHERE v.template_id = t.id
     AND v.background_video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
 )
-ORDER BY t.slug;
+ORDER BY t.name;
 
 -- ── Action : archive ──────────────────────────────────────────────────────
 
@@ -95,7 +107,7 @@ WHERE status IS DISTINCT FROM 'archived'
         AND v.background_video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
     )
   )
-RETURNING id, slug, status;
+RETURNING id, name, status;
 
 -- ── Décision finale ───────────────────────────────────────────────────────
 -- Par défaut : ROLLBACK pour valider l'audit avant de committer.
