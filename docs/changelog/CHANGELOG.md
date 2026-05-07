@@ -1,3 +1,10 @@
+## [3.298.1](https://github.com/Tallec7/neopro/compare/v3.298.0...v3.298.1) (2026-05-07)
+
+### Bug Fixes
+
+- **receivers:** propager receivers dans state-sync vers le cloud ([f62a00f](https://github.com/Tallec7/neopro/commit/f62a00f466c8f18b3deafffaaa425cc5a801a794))
+- **templates:** intercept broken Railway URLs in proxyUrl() + SQL cleanup script ([#899](https://github.com/Tallec7/neopro/issues/899)) ([8130518](https://github.com/Tallec7/neopro/commit/81305186a1962e3c0373e737baa71dbfcab4f4f6))
+
 # [3.298.0](https://github.com/Tallec7/neopro/compare/v3.297.0...v3.298.0) (2026-05-07)
 
 ### Features
