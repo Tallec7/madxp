@@ -1,3 +1,15 @@
+## [3.298.3](https://github.com/Tallec7/neopro/compare/v3.298.2...v3.298.3) (2026-05-07)
+
+### Bug Fixes
+
+- **templates:** fallback V1 compositions .webm → .mov (404 Railway) ([#900](https://github.com/Tallec7/neopro/issues/900)) ([c5d5278](https://github.com/Tallec7/neopro/commit/c5d527803ad28906d15cefb90a490cf6d4976da1))
+
+## [3.298.2](https://github.com/Tallec7/neopro/compare/v3.298.1...v3.298.2) (2026-05-07)
+
+### Bug Fixes
+
+- **receivers:** émettre state-sync au connect pour couvrir le race boot ([9270294](https://github.com/Tallec7/neopro/commit/92702943a0e3253b320c6d4ada5bbc6d10404950))
+
 ## [3.298.1](https://github.com/Tallec7/neopro/compare/v3.298.0...v3.298.1) (2026-05-07)
 
 ### Bug Fixes
