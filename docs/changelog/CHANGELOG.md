@@ -1,3 +1,9 @@
+# [3.300.0](https://github.com/Tallec7/neopro/compare/v3.299.5...v3.300.0) (2026-05-08)
+
+### Features
+
+- **analytics:** hourly sponsor stats aggregation for today ([#919](https://github.com/Tallec7/neopro/issues/919)) ([bc05f59](https://github.com/Tallec7/neopro/commit/bc05f59fb2222e23e2c456bd680c37c365e524fd))
+
 ## [3.299.5](https://github.com/Tallec7/neopro/compare/v3.299.4...v3.299.5) (2026-05-08)
 
 ### Bug Fixes
