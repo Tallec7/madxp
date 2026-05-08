@@ -1,3 +1,9 @@
+## [3.299.5](https://github.com/Tallec7/neopro/compare/v3.299.4...v3.299.5) (2026-05-08)
+
+### Bug Fixes
+
+- **display:** N-display displayType depuis configuration.displays[i].type + migration led→led-banner (issue [#917](https://github.com/Tallec7/neopro/issues/917) — PR 2/3) ([#918](https://github.com/Tallec7/neopro/issues/918)) ([cb511f8](https://github.com/Tallec7/neopro/commit/cb511f800824b981e35b04a490ef774eb6c79844))
+
 ## [3.299.4](https://github.com/Tallec7/neopro/compare/v3.299.3...v3.299.4) (2026-05-08)
 
 ### Bug Fixes
