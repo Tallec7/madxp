@@ -40,6 +40,12 @@ export interface PiConfigVideoEntry {
     thumbnailUrl?: string;
     /** Variantes vidéo (écrites par deploy-video.js dans configuration.json) */
     variants?: {
+        [displayType: string]: {
+            path: string;
+            filename?: string;
+            width?: number | null;
+            height?: number | null;
+        } | undefined;
         secondary?: {
             path: string;
             filename?: string;

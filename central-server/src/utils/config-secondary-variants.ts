@@ -32,10 +32,15 @@ export async function resolveDisplayTypesForSite(siteId: string): Promise<string
 /**
  * Enrichit la configuration avec les variants pour les display types donnés.
  * Modifie la configuration en place et retourne le nombre de variants injectées.
+ *
+ * `displayTypes` vide (défaut) → fetch ALL variants quel que soit leur type
+ * (`'secondary'`, `'led-banner'`, `'led-wall'`, `'totem'`, `display-N`, ...).
+ * Bug historique : le default était `['secondary']`, ce qui ignorait silencieusement
+ * tout nouveau type ajouté en DB après PR #918 (bandeaux LED, totems, etc.).
  */
 export async function enrichConfigWithDisplayVariants(
   config: SiteConfiguration,
-  displayTypes: string[] = ['secondary']
+  displayTypes: string[] = []
 ): Promise<{ config: SiteConfiguration; enrichedCount: number }> {
   // 1. Extract all unique filenames from the config
   const filenameToEntries = new Map<string, Array<{ path: string; setVariants: (v: VideoVariants) => void }>>();

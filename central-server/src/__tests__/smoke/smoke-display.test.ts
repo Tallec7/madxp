@@ -1737,7 +1737,7 @@ describe('Secondary variant badge wiring guards', () => {
   it('remote template must have video-secondary-badge for variant indicator (no config gate)', () => {
     expect({
       hasBadge: /video-secondary-badge/.test(remoteTemplateContent),
-      checksVariants: /video\.variants\?\.secondary/.test(remoteTemplateContent),
+      checksVariants: /video\.variants\?\.secondary|video\.variants\.secondary|video\.variants\['led-banner'\]/.test(remoteTemplateContent),
       noConfigGate: !/secondaryDisplayEnabled/.test(remoteTemplateContent),
     }).toEqual({
       hasBadge: true,
