@@ -1605,7 +1605,8 @@ describe('Deployment secondary variant persistence guard', () => {
     expect({
       noSiteQuery: !/query\(.*secondary_display_enabled/.test(serviceContent),
       noSiteFlag: !/siteSecondaryEnabled/.test(serviceContent),
-      alwaysLooksUp: /findByVideoAndDisplay\(videoId,\s*'secondary'\)/.test(serviceContent),
+      // PR2: généralisé → findByVideoId fetch tous les variants (plus seulement 'secondary')
+      alwaysLooksUp: /findByVideoId\(videoId\)/.test(serviceContent),
     }).toEqual({
       noSiteQuery: true,
       noSiteFlag: true,
