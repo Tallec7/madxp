@@ -12,9 +12,22 @@ KEYSTORE_FILE="${KEYSTORE_DIR}/neopro-firestick-release.keystore"
 ALIAS="firestick-release"
 VALIDITY_DAYS=10950   # ~30 years (Android best practice)
 
-# Prereq: JDK 17 keytool
+# Prereq: JDK 17 keytool (fail-fast — macOS stub /usr/bin/java prompts to install
+# JDK at runtime, which is confusing. Check version up-front.)
 if ! command -v keytool >/dev/null 2>&1; then
-  echo "ERROR: keytool not found. Install JDK 17 (brew install openjdk@17)." >&2
+  echo "ERROR: keytool not found. Install JDK 17 first: brew install openjdk@17" >&2
+  echo "       Then: export JAVA_HOME=\$(/usr/libexec/java_home -v 17)" >&2
+  exit 1
+fi
+if ! command -v java >/dev/null 2>&1; then
+  echo "ERROR: java not found. Install JDK 17 first: brew install openjdk@17" >&2
+  exit 1
+fi
+JAVA_VERSION=$(java -version 2>&1 | head -1 | grep -oE '"[0-9]+\.' | head -1 | tr -d '"' | tr -d '.')
+if [ "${JAVA_VERSION:-0}" -lt 17 ]; then
+  echo "ERROR: JDK 17 required (found: $(java -version 2>&1 | head -1))." >&2
+  echo "       Install with: brew install openjdk@17" >&2
+  echo "       Then: export JAVA_HOME=\$(/usr/libexec/java_home -v 17)" >&2
   exit 1
 fi
 
