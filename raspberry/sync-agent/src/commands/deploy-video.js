@@ -222,17 +222,32 @@ class VideoDeployHandler {
 
       await this.updateConfiguration(finalVideoData);
 
-      // === Secondary variant deployment (non-blocking) ===
-      let secondaryResult = null;
-      const secondaryVariant = data.secondaryVariant || data.ledVariant; // Rétrocompat: accepte aussi ledVariant
-      if (secondaryVariant && secondaryVariant.videoUrl) {
+      // === Variant deployment (N-display, non-blocking) ===
+      // Build variants map: prefer data.variants (new format), fallback to legacy fields
+      const variantsMap = {};
+      if (data.variants && typeof data.variants === 'object') {
+        Object.assign(variantsMap, data.variants);
+      }
+      // Backward compat: data.secondaryVariant → 'secondary'
+      if (data.secondaryVariant && data.secondaryVariant.videoUrl && !variantsMap['secondary']) {
+        variantsMap['secondary'] = data.secondaryVariant;
+      }
+      // Very old compat: data.ledVariant → 'led'
+      if (data.ledVariant && data.ledVariant.videoUrl && !variantsMap['led']) {
+        variantsMap['led'] = data.ledVariant;
+      }
+
+      const variantResults = {};
+      for (const [displayType, variantData] of Object.entries(variantsMap)) {
+        if (!variantData || !variantData.videoUrl) continue;
         try {
-          secondaryResult = await this.deploySecondaryVariant(secondaryVariant, finalVideoData, progressCallback);
-          logger.info('Secondary variant deployed', { secondaryResult });
-        } catch (secondaryError) {
-          // Non-bloquant: erreur écran secondaire ne fait pas échouer le déploiement principal
-          logger.warn('Secondary variant deployment failed (non-blocking)', {
-            error: secondaryError.message,
+          variantResults[displayType] = await this.deployVariant(displayType, variantData, finalVideoData, progressCallback);
+          logger.info('Variant deployed', { displayType, result: variantResults[displayType] });
+        } catch (variantError) {
+          // Non-bloquant: erreur d'un variant ne fait pas échouer le déploiement principal
+          logger.warn('Variant deployment failed (non-blocking)', {
+            displayType,
+            error: variantError.message,
             videoId: data.videoId,
           });
         }
@@ -240,7 +255,8 @@ class VideoDeployHandler {
 
       await this.notifyLocalApp();
 
-      logger.info('Video deployed successfully', { targetPath, hasSecondaryVariant: !!secondaryResult });
+      const deployedVariantTypes = Object.keys(variantResults);
+      logger.info('Video deployed successfully', { targetPath, deployedVariantTypes });
 
       const stat = await fs.stat(targetPath);
       return {
@@ -249,7 +265,9 @@ class VideoDeployHandler {
         size: stat.size,
         checksum, // Checksum vérifié
         filename: finalFilename,
-        secondaryVariant: secondaryResult,
+        variants: variantResults,
+        // backward compat
+        secondaryVariant: variantResults['secondary'] || null,
       };
     } catch (error) {
       logger.error('Video deployment failed', { error: error.message, stack: error.stack });
@@ -258,123 +276,91 @@ class VideoDeployHandler {
   }
 
   /**
-   * Déploie la variante pour l'écran secondaire d'une vidéo
-   * Télécharge dans videos-secondary/{category}/{subcategory}/ et met à jour la config
-   * Rétrocompat: migre automatiquement videos-led/ → videos-secondary/ si trouvé
-   * @param {object} secondaryVariant Données de la variante écran secondaire
+   * Déploie la variante pour un écran d'un display_type donné (led, secondary, totem, etc.)
+   * Télécharge dans videos-{displayType}/{category}/{subcategory}/ et met à jour la config.
+   * Généralisation de deploySecondaryVariant pour N-display (issue #914 PR2).
+   *
+   * @param {string} displayType Type d'écran (ex: 'secondary', 'led', 'led-banner', 'totem')
+   * @param {object} variantData Données de la variante
    * @param {object} tvVideoData Données de la vidéo TV déjà déployée
    * @param {function} progressCallback Callback pour le progrès
    */
-  async deploySecondaryVariant(secondaryVariant, tvVideoData, progressCallback) {
-    const { videoUrl, filename, checksum, width, height, duration } = secondaryVariant;
+  async deployVariant(displayType, variantData, tvVideoData, progressCallback) {
+    const { videoUrl, filename, checksum, width, height, duration } = variantData;
 
-    const secondaryBaseDir = config.paths.videos.replace(/\/videos\/?$/, '/videos-secondary');
-    const targetDir = path.join(secondaryBaseDir, tvVideoData.category, tvVideoData.subcategory || '');
+    const variantBaseDir = config.paths.videos.replace(/\/videos\/?$/, `/videos-${displayType}`);
+    const targetDir = path.join(variantBaseDir, tvVideoData.category, tvVideoData.subcategory || '');
     await fs.ensureDir(targetDir);
-
-    // Rétrocompat: migrer l'ancien répertoire videos-led/ s'il existe
-    const legacyBaseDir = config.paths.videos.replace(/\/videos\/?$/, '/videos-led');
-    try {
-      if (await fs.pathExists(legacyBaseDir)) {
-        logger.info('Migrating legacy videos-led/ to videos-secondary/', { legacyBaseDir, secondaryBaseDir });
-        await fs.move(legacyBaseDir, secondaryBaseDir, { overwrite: false });
-      }
-    } catch {
-      // Non-bloquant: si la migration échoue (ex: déjà fait), on continue
-    }
 
     const sanitizedFilename = sanitizeFilename(filename || tvVideoData.filename);
     const finalFilename = await ensureUniqueFilename(sanitizedFilename, targetDir);
     const targetPath = path.join(targetDir, finalFilename);
 
-    logger.info('Deploying secondary variant', { targetPath, checksum: !!checksum });
+    logger.info('Deploying display variant', { displayType, targetPath, checksum: !!checksum });
 
-    await this.downloadFile(videoUrl, targetPath, null); // No progress for secondary
+    await this.downloadFile(videoUrl, targetPath, null);
 
-    // Verify checksum if provided
     if (checksum) {
       const downloadedChecksum = await calculateFileChecksum(targetPath);
       if (downloadedChecksum !== checksum) {
         await fs.remove(targetPath);
-        throw new Error(`Secondary variant checksum mismatch: expected ${checksum}, got ${downloadedChecksum}`);
+        throw new Error(`Variant ${displayType} checksum mismatch: expected ${checksum}, got ${downloadedChecksum}`);
       }
     }
 
-    // Update configuration.json with secondary variant info on the video entry
     const configPath = config.paths.config;
     const configuration = await safeReadConfig(configPath);
 
     const relativePath = buildRelativePath(tvVideoData);
-    // Build secondary path using the ACTUAL downloaded filename (finalFilename),
-    // not the primary video's filename — they differ when the secondary variant
-    // was uploaded with its own original name (e.g. "Joueur_76_entree_1.mp4"
-    // vs primary "Joueur 94 entrée (3).mp4"). ADR-033 fix.
-    const secondaryDir = path.dirname(relativePath).replace(/^videos/, 'videos-secondary');
-    const secondaryRelativePath = secondaryDir + '/' + finalFilename;
+    // Build variant path using the ACTUAL downloaded filename (finalFilename),
+    // not the primary video's filename — they differ when the variant was uploaded
+    // with its own original name (e.g. "Joueur_76_entree_1.mp4"). ADR-033 fix.
+    const variantDir = path.dirname(relativePath).replace(/^videos/, `videos-${displayType}`);
+    const secondaryRelativePath = variantDir + '/' + finalFilename;
 
-    // Find the video entry in categories and add variants.secondary
+    const variantEntry = {
+      path: secondaryRelativePath,
+      filename: finalFilename,
+      width: width || null,
+      height: height || null,
+      duration: duration || null,
+    };
+
+    const applyVariant = (videoEntry) => {
+      if (videoEntry.path === relativePath) {
+        if (!videoEntry.variants) videoEntry.variants = {};
+        videoEntry.variants[displayType] = variantEntry;
+        return true;
+      }
+      return false;
+    };
+
+    // Update categories
     if (configuration.categories) {
       for (const cat of configuration.categories) {
-        const addSecondaryVariant = (videoEntry) => {
-          if (videoEntry.path === relativePath) {
-            if (!videoEntry.variants) videoEntry.variants = {};
-            // Écrire sous la nouvelle clé "secondary" et supprimer l'ancienne "led"
-            videoEntry.variants.secondary = {
-              path: secondaryRelativePath,
-              filename: finalFilename,
-              width: width || null,
-              height: height || null,
-              duration: duration || null,
-            };
-            delete videoEntry.variants.led; // Nettoyage rétrocompat
-            return true;
-          }
-          return false;
-        };
-
         for (const v of cat.videos || []) {
-          if (addSecondaryVariant(v)) break;
+          if (applyVariant(v)) break;
         }
         for (const sub of cat.subCategories || []) {
           for (const v of sub.videos || []) {
-            if (addSecondaryVariant(v)) break;
+            if (applyVariant(v)) break;
           }
         }
       }
     }
 
-    // Also update sponsors array if it's a sponsor video
+    // Update sponsors
     if (configuration.sponsors) {
       for (const sponsor of configuration.sponsors) {
-        if (sponsor.path === relativePath) {
-          if (!sponsor.variants) sponsor.variants = {};
-          sponsor.variants.secondary = {
-            path: secondaryRelativePath,
-            filename: finalFilename,
-            width: width || null,
-            height: height || null,
-          };
-          delete sponsor.variants.led; // Nettoyage rétrocompat
-          break;
-        }
+        if (applyVariant(sponsor)) break;
       }
     }
 
-    // Also update timeCategories[].loopVideos[] (phases de match)
+    // Update timeCategories[].loopVideos[] (phases de match)
     if (configuration.timeCategories) {
       for (const tc of configuration.timeCategories) {
         for (const loopVideo of tc.loopVideos || []) {
-          if (loopVideo.path === relativePath) {
-            if (!loopVideo.variants) loopVideo.variants = {};
-            loopVideo.variants.secondary = {
-              path: secondaryRelativePath,
-              filename: finalFilename,
-              width: width || null,
-              height: height || null,
-              duration: duration || null,
-            };
-            delete loopVideo.variants.led; // Nettoyage rétrocompat
-          }
+          applyVariant(loopVideo);
         }
       }
     }
@@ -388,6 +374,11 @@ class VideoDeployHandler {
       size: stat.size,
       filename: finalFilename,
     };
+  }
+
+  /** @deprecated Use deployVariant('secondary', ...) — kept for external callers during transition */
+  async deploySecondaryVariant(secondaryVariant, tvVideoData, progressCallback) {
+    return this.deployVariant('secondary', secondaryVariant, tvVideoData, progressCallback);
   }
 
   /**

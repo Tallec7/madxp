@@ -2300,6 +2300,59 @@ describe('E-41 deploySecondaryVariant timeCategories guard', () => {
   });
 });
 
+describe('N-display deploy-video generalization guard (issue #914 PR2)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const deployVideoPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/deploy-video.js');
+  const deploymentServicePath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
+  const piStrategyPath = path.join(repoRoot, 'central-server/src/services/delivery/pi-socket.strategy.ts');
+
+  let piContent: string;
+  let deploymentContent: string;
+  let strategyContent: string;
+  beforeAll(() => {
+    piContent = fs.readFileSync(deployVideoPath, 'utf8');
+    deploymentContent = fs.readFileSync(deploymentServicePath, 'utf8');
+    strategyContent = fs.readFileSync(piStrategyPath, 'utf8');
+  });
+
+  it('deploy-video must have deployVariant(displayType) generic method', () => {
+    expect(piContent).toMatch(/async deployVariant\s*\(\s*displayType/);
+  });
+
+  it('deploy-video must write to videos-{displayType}/ (not hardcoded videos-secondary)', () => {
+    // The path must use the displayType variable, not the literal 'secondary'
+    expect(piContent).toMatch(/videos-\$\{displayType\}/);
+  });
+
+  it('deploy-video must write variants[displayType] in config (not hardcoded variants.secondary)', () => {
+    expect(piContent).toMatch(/variants\[displayType\]/);
+  });
+
+  it('deploy-video must accept data.variants map (new format)', () => {
+    expect(piContent).toMatch(/data\.variants/);
+  });
+
+  it('deploy-video must keep backward compat with data.secondaryVariant', () => {
+    expect(piContent).toMatch(/data\.secondaryVariant/);
+  });
+
+  it('deployment.service must send variants map in deploy_video payload', () => {
+    expect(deploymentContent).toMatch(/variants:\s*(Object\.keys\(variants\)|{)/);
+  });
+
+  it('pi-socket.strategy must send variants map in deploy_video payload', () => {
+    expect(strategyContent).toMatch(/variants:\s*(Object\.keys\(variants\)|{)/);
+  });
+
+  it('dispatchVariantUpdateToSites must use display_type from variant param', () => {
+    expect(deploymentContent).toMatch(/variant\.display_type/);
+  });
+
+  it('deployment.service must call findByVideoId (not only findByVideoAndDisplay secondary)', () => {
+    expect(deploymentContent).toMatch(/findByVideoId\(/);
+  });
+});
+
 describe('E-41 config-merge restoreSecondaryVariants guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const configMergePath = path.join(repoRoot, 'raspberry/sync-agent/src/utils/config-merge.js');
