@@ -66,7 +66,7 @@
 
 - [x] 13-01-scaffold-firestick-apk-PLAN.md — Scaffold firestick-apk/ + Wave 0 smoke + manifest + .gitignore + README skeleton (TWA-01, TWA-02, TWA-04) ✅ 2026-05-08
 - [x] 13-02-cleartext-fullscreen-patch-PLAN.md — network_security_config.xml + idempotent patch-android-manifest.sh + README §Cleartext (TWA-01, TWA-02) ✅ 2026-05-08
-- [ ] 13-03-keystore-generation-PLAN.md — generate-keystore.sh wrapper + README §Keystore + §Rotation + Daisy human-action (TWA-04)
+- [x] 13-03-keystore-generation-PLAN.md — generate-keystore.sh wrapper + README §Keystore + §Rotation + Daisy human-action (TWA-04) ✅ 2026-05-08
 - [ ] 13-04-build-orchestrator-uat-PLAN.md — build.sh + verify-apk.sh + npm run build:firestick-apk + README §UAT + Fire Stick acceptance (TWA-01, TWA-02, TWA-03, TWA-04)
 
 ### Phase 14: DEPLOY — Sideload bénévole-grade
@@ -264,7 +264,7 @@
 | 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete    | 2026-05-07 |
 | 11. REASSIGN        | v4.1      | 1/1            | Complete    | 2026-05-08 |
 | 12. OBSERVE(pivoté) | v4.1      | 2/2            | Complete    | 2026-05-08 |
-| 13. APK TWA         | v4.2      | 2/4            | In Progress | -          |
+| 13. APK TWA         | v4.2      | 3/4            | In Progress | -          |
 
 ---
 

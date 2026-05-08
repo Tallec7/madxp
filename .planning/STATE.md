@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: — Fire Stick APK TWA
 status: In Progress
-stopped_at: Completed 13-02-cleartext-fullscreen-patch-PLAN.md
-last_updated: '2026-05-08T09:00:00.000Z'
-last_activity: 2026-05-08 — Phase 13 Plan 02 (cleartext + fullscreen patch) complete, smoke 6/6 green
+stopped_at: Completed 13-03-keystore-generation-PLAN.md
+last_updated: '2026-05-08T11:00:00.000Z'
+last_activity: 2026-05-08 — Phase 13 Plan 03 (keystore generation) SHIPPED — RSA 2048 keystore generated out-of-band, valid until 2056-04-30
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 ## Current Position
 
 Phase: 13 — TWA-BUILD APK TWA fullscreen
-Plan: 03 (keystore-generation) and 04 (build-orchestrator-uat) remaining
-Status: In Progress (2/4 plans done)
-Last activity: 2026-05-08 — 13-02 cleartext + fullscreen patch shipped (commits 48c10d9c/35eb1e1d), smoke 5/6 → 6/6 green
-Next: /gsd:execute-plan 13-04-build-orchestrator-uat (13-03 already shipped via parallel session, commit 33df7170)
+Plan: 04 (build-orchestrator-uat) remaining
+Status: In Progress (3/4 plans done)
+Last activity: 2026-05-08 — 13-03 keystore-generation SHIPPED — RSA 2048 keystore (alias `firestick-release`, valid 2056-04-30) generated out-of-band at $HOME/.android-keystores/, passwords saved in 1Password (commits 33df7170/6bcf09ec)
+Next: /gsd:execute-plan 13-04-build-orchestrator-uat
 
 ## Accumulated Context
 
@@ -112,6 +112,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 13-02: Idempotency via `grep -q networkSecurityConfig` guard before `sed` injection — re-runs safe after every `bubblewrap update`
 - 13-02: Paranoid pre-flight guard refuses to patch if twa-manifest.json `display` is not `fullscreen-sticky` — protects TWA-02 from silent regression
 - 13-02: macOS BSD sed compat via `sed -i.bak` + `rm -f *.bak` (no GNU sed dependency)
+- 13-03: Out-of-band storage v4.2 (1 test site NLF) — encryption-at-rest commit (git-crypt / SOPS) deferred to v4.3 once flotte > 5 sites
+- 13-03: No-overwrite guard `[ -f $KEYSTORE_FILE ] && exit 2` — refuses silent rotation, forces explicit `rm` before re-run (rotation = full Fire Stick reinstall flotte-wide)
+- 13-03: 1Password attachment of the .keystore file itself DEFERRED — Daisy accepted the risk for v4.2 (small fleet); revisit at Phase 14 follow-up when flotte > 5 Fire Sticks
+- 13-03: Validity 30 years (10950 days) — Android best practice, avoids future rotation cost
+- 13-03: Same password for keystore + key (BUBBLEWRAP_KEYSTORE_PASSWORD = BUBBLEWRAP_KEY_PASSWORD) for v4.2 simplicity
 
 ### Pending Todos
 
@@ -131,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T09:00:00.000Z
-Stopped at: Completed 13-02-cleartext-fullscreen-patch-PLAN.md
-Resume file: None
+Last session: 2026-05-08T11:00:00.000Z
+Stopped at: Completed 13-03-keystore-generation-PLAN.md
+Resume file: .planning/phases/13-twa-build-apk-twa-fullscreen/13-04-build-orchestrator-uat-PLAN.md
