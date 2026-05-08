@@ -203,22 +203,30 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     return result;
   }
 
-  /** Phase 5 — PROP-002: query variants for multiple display types at once */
+  /**
+   * Phase 5 — PROP-002: query variants for given display types.
+   * Empty `displayTypes` → returns ALL variants for the given filenames (any display_type).
+   * This fixes the bug where new display types ('led-banner', 'led-wall', etc.) were silently
+   * ignored because callers passed only ['secondary'] by default.
+   */
   async findVariantsByFilenamesAndTypes(
     filenames: string[],
-    displayTypes: string[]
+    displayTypes: string[] = []
   ): Promise<VariantByFilenameRow[]> {
-    if (filenames.length === 0 || displayTypes.length === 0) return [];
+    if (filenames.length === 0) return [];
     const fnPlaceholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
-    const dtPlaceholders = displayTypes.map((_, i) => `$${filenames.length + i + 1}`).join(', ');
-    const result = await query<VariantByFilenameRow>(
-      `SELECT vv.filename, vv.display_type, vv.storage_path, vv.width, vv.height, vv.duration,
-              v.filename AS source_filename
-       FROM video_variants vv
-       JOIN videos v ON v.id = vv.video_id
-       WHERE v.filename IN (${fnPlaceholders}) AND vv.display_type IN (${dtPlaceholders})`,
-      [...filenames, ...displayTypes]
-    );
+    let sql = `SELECT vv.filename, vv.display_type, vv.storage_path, vv.width, vv.height, vv.duration,
+                      v.filename AS source_filename
+               FROM video_variants vv
+               JOIN videos v ON v.id = vv.video_id
+               WHERE v.filename IN (${fnPlaceholders})`;
+    const params: string[] = [...filenames];
+    if (displayTypes.length > 0) {
+      const dtPlaceholders = displayTypes.map((_, i) => `$${filenames.length + i + 1}`).join(', ');
+      sql += ` AND vv.display_type IN (${dtPlaceholders})`;
+      params.push(...displayTypes);
+    }
+    const result = await query<VariantByFilenameRow>(sql, params);
     return result.rows;
   }
 }

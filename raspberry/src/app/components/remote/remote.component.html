@@ -629,7 +629,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
-                      @if (video.variants?.secondary) {
+                      @if (
+                        video.variants && (video.variants.secondary || video.variants['led-banner'])
+                      ) {
                         <span class="video-secondary-badge">📺 2nd</span>
                       }
                     </div>
@@ -936,7 +938,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
-                      @if (video.variants?.secondary) {
+                      @if (
+                        video.variants && (video.variants.secondary || video.variants['led-banner'])
+                      ) {
                         <span class="video-secondary-badge">📺 2nd</span>
                       }
                     </div>
@@ -1199,7 +1203,9 @@
                       <span class="video-category">{{
                         getVideoCategoryName(video) || 'Vidéo'
                       }}</span>
-                      @if (video.variants?.secondary) {
+                      @if (
+                        video.variants && (video.variants.secondary || video.variants['led-banner'])
+                      ) {
                         <span class="video-secondary-badge">📺 2nd</span>
                       }
                     </div>
