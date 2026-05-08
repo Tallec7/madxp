@@ -1,3 +1,9 @@
+## [3.298.7](https://github.com/Tallec7/neopro/compare/v3.298.6...v3.298.7) (2026-05-08)
+
+### Bug Fixes
+
+- **dashboard:** widen formatLastSeen signature to string | number ([#908](https://github.com/Tallec7/neopro/issues/908)) ([44f87e1](https://github.com/Tallec7/neopro/commit/44f87e1a0379e10894c788b066f1448b40fe4448)), closes [#905](https://github.com/Tallec7/neopro/issues/905) [#906](https://github.com/Tallec7/neopro/issues/906) [#903](https://github.com/Tallec7/neopro/issues/903)
+
 ## [3.298.6](https://github.com/Tallec7/neopro/compare/v3.298.5...v3.298.6) (2026-05-08)
 
 ### Bug Fixes
