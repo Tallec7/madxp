@@ -112,3 +112,95 @@ describe('Smoke — receivers discovery (Phase 9 OBSERVE-02)', () => {
   });
 
 });
+
+describe('Phase 12 OBSERVE — neopro_hotspot_unknown_firestick_total', () => {
+
+  const metricsSource = () => read('central-server/src/services/metrics.service.ts');
+  const socketSource = () => read('central-server/src/services/socket.service.ts');
+
+  // ── Task 1: Counter + recorder in metrics.service.ts ─────────────────────
+
+  it('metrics.service.ts — declare Counter neopro_hotspot_unknown_firestick_total avec label site_id', () => {
+    const src = metricsSource();
+    expect(src).toContain('neopro_hotspot_unknown_firestick_total');
+    // labelNames must contain site_id (within ~15 lines of the counter name)
+    const idx = src.indexOf('neopro_hotspot_unknown_firestick_total');
+    const window = src.slice(idx, idx + 500);
+    expect(window).toMatch(/labelNames.*site_id/s);
+  });
+
+  it('metrics.service.ts — expose recordHotspotUnknownFirestick(siteId: string)', () => {
+    const src = metricsSource();
+    expect(src).toMatch(/recordHotspotUnknownFirestick\s*\(siteId:\s*string\)/);
+  });
+
+  it('metrics.service.ts — recordHotspotUnknownFirestick increments the Counter', () => {
+    const src = metricsSource();
+    // Method body must call .inc({ site_id:
+    const idx = src.indexOf('recordHotspotUnknownFirestick');
+    const body = src.slice(idx, idx + 200);
+    expect(body).toMatch(/hotspotUnknownFirestickTotal\.inc\(\s*\{/);
+  });
+
+  it('metrics.service.ts — neopro_hotspot_unknown_firestick_total has NO mac label (high cardinality guard)', () => {
+    const src = metricsSource();
+    const idx = src.indexOf('neopro_hotspot_unknown_firestick_total');
+    const window = src.slice(idx, idx + 500);
+    // mac must NOT appear in the labelNames array for this counter
+    expect(window).not.toMatch(/'mac'/);
+  });
+
+  // ── Task 2: state-sync hook in socket.service.ts ──────────────────────────
+
+  it('socket.service.ts — state-sync handler calls recordHotspotUnknownFirestick(siteId)', () => {
+    const src = socketSource();
+    const stateSyncIdx = src.indexOf("socket.on('state-sync'");
+    expect(stateSyncIdx).toBeGreaterThan(0);
+    // Check within ~500 chars after the state-sync open
+    const nextHandlerIdx = src.indexOf("socket.on(", stateSyncIdx + 1);
+    const handlerBlock = src.slice(stateSyncIdx, nextHandlerIdx > stateSyncIdx ? nextHandlerIdx : stateSyncIdx + 800);
+    expect(handlerBlock).toContain('recordHotspotUnknownFirestick(siteId)');
+  });
+
+  it('socket.service.ts — declare unknownFirestickSeenBySite dedup Map', () => {
+    const src = socketSource();
+    expect(src).toMatch(/unknownFirestickSeenBySite\s*:\s*Map<string,\s*Set<string>>/);
+  });
+
+  it('socket.service.ts — state-sync detects firestick with displayIndex === null only', () => {
+    const src = socketSource();
+    const stateSyncIdx = src.indexOf("socket.on('state-sync'");
+    const nextHandlerIdx = src.indexOf("socket.on(", stateSyncIdx + 1);
+    const handlerBlock = src.slice(stateSyncIdx, nextHandlerIdx > stateSyncIdx ? nextHandlerIdx : stateSyncIdx + 1000);
+    expect(handlerBlock).toContain("r.kind === 'firestick'");
+    expect(handlerBlock).toContain('r.displayIndex === null');
+  });
+
+  it('socket.service.ts — emits a Winston warn for unknown firestick', () => {
+    const src = socketSource();
+    expect(src).toMatch(/logger\.warn\(.*unknown_firestick/s);
+  });
+
+  it('socket.service.ts — recordHotspotUnknownFirestick is NOT called outside socket.service.ts', () => {
+    // Enumerate all .ts files in central-server/src except test files, metrics.service.ts, socket.service.ts
+    const srcDir = path.join(path.resolve(__dirname, '../../../../'), 'central-server/src');
+    const walk = (dir: string): string[] => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      return entries.flatMap(e => {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) return walk(full);
+        return e.name.endsWith('.ts') ? [full] : [];
+      });
+    };
+    const files = walk(srcDir).filter(f =>
+      !f.includes('__tests__') &&
+      !f.endsWith('metrics.service.ts') &&
+      !f.endsWith('socket.service.ts')
+    );
+    const callers = files.filter(f =>
+      fs.readFileSync(f, 'utf8').includes('recordHotspotUnknownFirestick')
+    );
+    expect(callers).toHaveLength(0);
+  });
+
+});
