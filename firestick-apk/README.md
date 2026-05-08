@@ -48,6 +48,28 @@ cd firestick-apk && npm run build
 # Output: dist/neopro-firestick-v0.1.0.apk
 ```
 
+## Cleartext HTTP — why and how
+
+Android 9+ (API 28) blocks `http://` by default. The Pi captive page runs on `http://192.168.4.1/` (no TLS — hotspot is a closed network without internet egress). Without a network security config patch, the APK opens but the WebView fails with `ERR_CLEARTEXT_NOT_PERMITTED`.
+
+Solution (committed):
+
+- `manifest/network_security_config.xml` — restrictive allow-list scoped to 3 domains: `192.168.4.1`, `firetvcaptiveportal.com`, `spectrum.s3.amazonaws.com`. Aligned with `.claude/rules/raspberry.md` (DNS hijack is restricted, never wildcard).
+- `scripts/patch-android-manifest.sh` — idempotent post-`bubblewrap update` patch that:
+  1. Copies the XML into `app/src/main/res/xml/`.
+  2. Injects `android:networkSecurityConfig="@xml/network_security_config"` into the `<application>` element of the regenerated `AndroidManifest.xml`.
+  3. Verifies `display: "fullscreen-sticky"` is preserved (paranoid guard).
+
+Why post-`update`: Bubblewrap regenerates `AndroidManifest.xml` from `twa-manifest.json` on every `update`, wiping manual edits (Pitfall 5 in research).
+
+Run order (handled by `scripts/build.sh` in Plan 04):
+
+```
+bubblewrap update --skipVersionUpgrade
+bash scripts/patch-android-manifest.sh
+bubblewrap build --skipPwaValidation
+```
+
 ## References
 
 - `.planning/phases/13-twa-build-apk-twa-fullscreen/13-RESEARCH.md` — Bubblewrap workflow, pitfalls, sources
