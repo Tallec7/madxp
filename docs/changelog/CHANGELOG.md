@@ -1,3 +1,9 @@
+## [3.299.2](https://github.com/Tallec7/neopro/compare/v3.299.1...v3.299.2) (2026-05-08)
+
+### Bug Fixes
+
+- **auth:** preserve Pi auth block against empty cloud profile sync (ADR-115) ([#911](https://github.com/Tallec7/neopro/issues/911)) ([80e4ef6](https://github.com/Tallec7/neopro/commit/80e4ef678d0c3f2e25647de753436dce5f9ff073))
+
 ## [3.299.1](https://github.com/Tallec7/neopro/compare/v3.299.0...v3.299.1) (2026-05-08)
 
 ### Bug Fixes
