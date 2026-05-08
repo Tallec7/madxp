@@ -19,12 +19,16 @@ const LOCAL_ONLY_SETTINGS = [
   'settings',        // language, timezone - configurés localement
   'siteId',          // Identifiant unique du site
   'siteName',        // Nom du site (peut être personnalisé)
-  'clubName',        // Nom du club
+  'clubName',        // Nom du club (top-level legacy)
   'apiKey',          // Clé API du boîtier
   'hotspot',         // Configuration WiFi hotspot (SSID, etc.) - si jamais stocké ici
   'localNetwork',    // Configuration réseau locale
   'localSponsors',   // Sponsors créés localement par le bénévole (P3)
   'featureOverrides', // Feature flags écrits par feature-flags-sync.js (ADR-092)
+  'auth',            // Auth télécommande (clubName, password) — ADR-115
+                     // Préservé Pi-side contre les profils cloud à auth vide.
+                     // L'opt-out explicite se fait via neoProContent.remotePassword
+                     // / neoProContent.clubName (cf. boucle de restauration ci-dessous).
 ];
 
 /**
@@ -174,6 +178,18 @@ function mergeConfigurations(localConfig, neoProContent) {
   for (const [key, value] of Object.entries(preservedLocalSettings)) {
     // localSponsors est désormais fusionné via mergeSiteSponsors, ne pas écraser
     if (key === 'localSponsors' && neoProContent.siteSponsors !== undefined) {
+      continue;
+    }
+    // ADR-115 : auth est protégé par défaut (jamais écrasé par un profil cloud
+    // au champ vide), MAIS quand le dashboard envoie une mise à jour explicite
+    // via remotePassword/clubName, le bloc auth ci-dessus a déjà écrit la
+    // nouvelle valeur dans result.auth — on doit donc skip la restauration
+    // pour ne pas annuler la mise à jour légitime.
+    if (
+      key === 'auth' &&
+      (neoProContent.remotePassword !== undefined ||
+        neoProContent.clubName !== undefined)
+    ) {
       continue;
     }
     if (result[key] !== value) {

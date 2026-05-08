@@ -795,6 +795,72 @@ describe('Config Merge Module', () => {
     });
   });
 
+  describe('auth preservation (ADR-115)', () => {
+    it('preserves local auth when cloud profile carries auth: { password: "" }', () => {
+      // Regression guard : un profil cloud appliqué via sync-profiles.applyProfile
+      // contient toute la structure config_profiles.configuration, dont auth.
+      // Quand le dashboard "Déployer Authentification Club" mode Pi update le
+      // configuration.json local mais PAS le profil cloud, ce dernier reste à
+      // auth: { password: "" }. À chaque reboot, applyProfile re-merge ce
+      // profil ; sans la protection LOCAL_ONLY, le password local est perdu.
+      const localConfig = {
+        version: '1.0',
+        auth: {
+          clubName: 'Lanester Handball',
+          password: 'LANESTER26',
+          sessionDuration: 86400000,
+        },
+        sponsors: [],
+        categories: [],
+      };
+
+      const cloudProfile = {
+        version: '1.0',
+        auth: { clubName: '', password: '', sessionDuration: 86400000 },
+        sponsors: [],
+        categories: [],
+      };
+
+      const merged = mergeConfigurations(localConfig, cloudProfile);
+
+      expect(merged.auth.password).toBe('LANESTER26');
+      expect(merged.auth.clubName).toBe('Lanester Handball');
+    });
+
+    it('still applies an explicit dashboard update via remotePassword/clubName', () => {
+      // Le bouton "Déployer Authentification Club" envoie un update_config
+      // avec neoProContent.remotePassword et/ou neoProContent.clubName au
+      // top-level. Cette voie doit rester fonctionnelle malgré la protection.
+      const localConfig = {
+        auth: { clubName: 'Old Club', password: 'OLD_PWD', sessionDuration: 86400000 },
+      };
+
+      const dashboardPayload = {
+        remotePassword: 'NEW_PWD',
+        clubName: 'New Club',
+      };
+
+      const merged = mergeConfigurations(localConfig, dashboardPayload);
+
+      expect(merged.auth.password).toBe('NEW_PWD');
+      expect(merged.auth.clubName).toBe('New Club');
+      expect(merged.auth.sessionDuration).toBe(86400000);
+    });
+
+    it('preserves existing local password when dashboard updates only clubName', () => {
+      // Update partiel : le user change uniquement le nom du club, le mot
+      // de passe local doit survivre.
+      const localConfig = {
+        auth: { clubName: 'Old', password: 'KEEP_ME', sessionDuration: 86400000 },
+      };
+
+      const merged = mergeConfigurations(localConfig, { clubName: 'New' });
+
+      expect(merged.auth.clubName).toBe('New');
+      expect(merged.auth.password).toBe('KEEP_ME');
+    });
+  });
+
   describe('Edge Cases & Security', () => {
     it('should handle malformed categories gracefully', () => {
       const localCategories = [
