@@ -100,6 +100,11 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               *ngFor="let r of getReassignableReceivers(display)"
               (click)="assignReceiver(display.index, r)"
             >
+              <span
+                class="receiver-badge receiver-badge--unknown"
+                *ngIf="isUnknownFirestick(r)"
+                data-testid="receiver-badge-unknown"
+              >Non assigné</span>
               <span class="receiver-mac">{{ r.mac }}</span>
               <span class="receiver-lastseen" *ngIf="getCrossDisplayHint(r, display.index) as hint"> — {{ hint }}</span>
               <span class="receiver-lastseen" *ngIf="!getCrossDisplayHint(r, display.index)"> — {{ formatLastSeen(r.lastSeenAt) }}</span>
@@ -421,6 +426,19 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       color: #2563eb;
     }
 
+    /* Phase 12 OBSERVE — badge ambre Fire Stick non assigné */
+    .receiver-badge--unknown {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fbbf24;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.375rem;
+    }
+
     /* Receiver dropdown */
     .receiver-dropdown {
       position: fixed;
@@ -565,6 +583,15 @@ export class DisplaysEditorComponent {
     this.dropdownLeft = rect.left;
     this.activeDropdownIndex = displayIndex;
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Phase 12 OBSERVE — Vrai SSI le receiver est un Fire Stick détecté sur le hotspot
+   * mais pas encore assigné à un display (displayIndex === null).
+   * kind === 'browser' (téléphones bénévoles) → false par construction.
+   */
+  isUnknownFirestick(r: ReceiverInfo): boolean {
+    return r.kind === 'firestick' && r.displayIndex === null;
   }
 
   isReceiverStale(display: DisplayConfig): boolean {
