@@ -1,3 +1,10 @@
+## [3.298.4](https://github.com/Tallec7/neopro/compare/v3.298.3...v3.298.4) (2026-05-08)
+
+### Bug Fixes
+
+- **receivers:** race condition state-sync relay Pi→cloud ([#902](https://github.com/Tallec7/neopro/issues/902)) ([8f69faf](https://github.com/Tallec7/neopro/commit/8f69fafb12ee9b21f9eb7041cb7689592f9128f8))
+- **receivers:** request-state-sync pull + headless park sans HDMI ([#901](https://github.com/Tallec7/neopro/issues/901)) ([796c198](https://github.com/Tallec7/neopro/commit/796c198fec8ff31969f461557891580c0492d0d6))
+
 ## [3.298.3](https://github.com/Tallec7/neopro/compare/v3.298.2...v3.298.3) (2026-05-07)
 
 ### Bug Fixes
