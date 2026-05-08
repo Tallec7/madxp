@@ -38,6 +38,11 @@ cd central-server && npm run db:migrate
 # Template Studio v3 — backfill posters JPEG des assets WebM legacy (post-merge feature poster)
 cd central-server && npm run backfill:asset-posters
 
+# ADR-114 — re-emit receiver_assignment_updated pour resync configuration.json.displays sur la flotte Pi
+cd central-server && npm run backfill:displays-resync           # all sites avec ≥ 1 receiver assigné
+cd central-server && npm run backfill:displays-resync -- --dry-run
+cd central-server && npm run backfill:displays-resync -- --site-id <uuid>
+
 # Pitch deck / métriques de traction
 source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
 ```
