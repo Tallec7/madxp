@@ -1,3 +1,9 @@
+## [3.299.3](https://github.com/Tallec7/neopro/compare/v3.299.2...v3.299.3) (2026-05-08)
+
+### Bug Fixes
+
+- **analytics:** tolerant filename matching in sponsor enrichment ([#912](https://github.com/Tallec7/neopro/issues/912)) ([9a88893](https://github.com/Tallec7/neopro/commit/9a88893b82a3f1daf8876b5e04b530325682aaeb))
+
 ## [3.299.2](https://github.com/Tallec7/neopro/compare/v3.299.1...v3.299.2) (2026-05-08)
 
 ### Bug Fixes
