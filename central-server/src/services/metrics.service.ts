@@ -154,6 +154,17 @@ const receiversTotal = new Counter({
   registers: [register],
 });
 
+// Phase 12 OBSERVE — Fire Sticks branchés sur le hotspot mais non assignés à un display.
+// Incrémenté UNIQUEMENT à la première détection par (site_id, mac) — la dédup
+// vit dans socket.service.ts (Map<siteId, Set<mac>>) pour éviter le spam à chaque
+// tick state-sync (~10s). kind === 'browser' (téléphones bénévoles) jamais comptés.
+const hotspotUnknownFirestickTotal = new Counter({
+  name: 'neopro_hotspot_unknown_firestick_total',
+  help: 'Fire Sticks (kind=firestick) détectés sur le hotspot Pi sans assignation à un display (displayIndex=null), comptés une fois par (site_id, mac) (Phase 12 OBSERVE)',
+  labelNames: ['site_id'],
+  registers: [register],
+});
+
 // ============= Métriques Database =============
 
 const dbQueryDuration = new Histogram({
@@ -1560,6 +1571,15 @@ class MetricsService {
   /** Phase 9 OBSERVE-01 — transitions receiver Fire Stick (detected/assigned/disconnected) */
   recordReceiver(siteId: string, status: 'detected' | 'assigned' | 'disconnected'): void {
     receiversTotal.inc({ site_id: siteId, status });
+  }
+
+  /**
+   * Phase 12 OBSERVE — Incrémenter le Counter neopro_hotspot_unknown_firestick_total.
+   * Fire Stick non assigné détecté sur le hotspot. La dédup par (site_id, mac)
+   * est gérée par l'appelant (socket.service.ts state-sync handler).
+   */
+  recordHotspotUnknownFirestick(siteId: string): void {
+    hotspotUnknownFirestickTotal.inc({ site_id: siteId });
   }
 
   /**
