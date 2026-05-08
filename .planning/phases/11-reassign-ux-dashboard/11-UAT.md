@@ -3,7 +3,7 @@ status: complete
 phase: 11-reassign-ux-dashboard
 source: 11-01-SUMMARY.md
 started: 2026-05-07T19:35:00Z
-updated: 2026-05-07T20:00:00Z
+updated: 2026-05-07T23:42:00Z
 ---
 
 ## Tests
@@ -45,6 +45,16 @@ passed: 2
 issues: 0
 pending: 0
 skipped: 4 (tous couverts par Karma Tests J/K/L/M)
+
+## Bug fix post-UAT
+
+Receivers non propagés au cloud (dropdown affichait "Aucun récepteur détecté") :
+race condition dans `sync-agent/src/agent.js` — le `setImmediate` de flush se
+déclenchait dans `connect()` (trop tôt, avant auth cloud), jamais dans
+`handleAuthenticated()`. Fix : `_pendingStateSync` + flush dans `setImmediate()`
+déplacé dans `handleAuthenticated()`. Commit 9b1380e1, PR #901.
+
+Vérifié : `GET /api/sites/c994620c.../connected-receivers` → `[{mac: "0c:43:f9:36:04:77", ...}]`
 
 ## Gaps
 
