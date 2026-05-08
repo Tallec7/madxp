@@ -92,8 +92,9 @@ docs/specs/
 | [services/cron-scheduler](services/cron-scheduler.spec.md)                                       | ADR-097                                                                                           | Live     | 2026-04-25     |
 | [services/socket-service](services/socket-service.spec.md)                                       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096                                     | Live     | 2026-04-25     |
 | [services/sync-agent-displays-write-through](services/sync-agent-displays-write-through.spec.md) | ADR-114                                                                                           | Live     | 2026-05-08     |
+| [services/sync-agent-auth-preservation](services/sync-agent-auth-preservation.spec.md)           | ADR-115                                                                                           | Live     | 2026-05-08     |
 
-**Total : 11 SPECs actives** (target final ~15). Prochaines à écrire (SPECs #6-#15 du tableau cibles) : Déploiement & OTA, Observabilité & Alerting, Pi & Display, Remote, Réseau & Hotspot, Auth & Sécurité, Subscription & Billing, Sync & Config, Reporting & Exports, Dashboard Admin.
+**Total : 12 SPECs actives** (target final ~15). Prochaines à écrire (SPECs #6-#15 du tableau cibles) : Déploiement & OTA, Observabilité & Alerting, Pi & Display, Remote, Réseau & Hotspot, Auth & Sécurité, Subscription & Billing, Sync & Config, Reporting & Exports, Dashboard Admin.
 
 ## Cycle de vie d'une SPEC
 

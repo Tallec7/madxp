@@ -86,9 +86,20 @@ export class SiteSettingsDataService {
     if (clubName) neoProContent.clubName = clubName;
     if (remotePassword) neoProContent.remotePassword = remotePassword;
 
+    // ADR-115 : en mode Pi, on push au Pi (update_config merge) ET on persiste
+    // dans le profil cloud par défaut. Sans cette symétrie, le profil reste
+    // à auth: { password: "" } et écrase le Pi à chaque sync_profiles
+    // (notamment au reboot). En mode SaaS, seul le profil compte.
+    const profileAuth = { auth: { clubName, password: remotePassword, sessionDuration: 86400000 } };
     const deploy$ = isSaas
-      ? this.mergeDefaultProfileConfig(siteId, { auth: { clubName, password: remotePassword, sessionDuration: 86400000 } })
-      : this.deployClubAuth(siteId, neoProContent);
+      ? this.mergeDefaultProfileConfig(siteId, profileAuth)
+      : this.deployClubAuth(siteId, neoProContent).pipe(
+          switchMap((cmdResponse) =>
+            this.mergeDefaultProfileConfig(siteId, profileAuth).pipe(
+              map(() => cmdResponse)
+            )
+          )
+        );
 
     if (clubName) {
       return this.sitesService.updateSite(siteId, { club_name: clubName }).pipe(

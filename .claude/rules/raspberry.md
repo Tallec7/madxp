@@ -173,6 +173,7 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Définir `cleanupLegacyFiles()` dans agent.js sans l'appeler dans `start()` (méthode morte)
 - Utiliser `rsync -a` sans `--delete` pour sync-agent dans build-raspberry.sh (fichiers supprimés survivent sur les Pi après OTA)
 - Supprimer `version.ts` ou l'injection de `APP_VERSION` dans `build-raspberry.sh` / `release.yml`
+- Retirer `'auth'` de `LOCAL_ONLY_SETTINGS` dans `raspberry/sync-agent/src/utils/config-merge.js` ou retirer l'opt-out `key === 'auth' && (neoProContent.remotePassword !== undefined || neoProContent.clubName !== undefined)` de la boucle de restauration — sans cette protection, `applyProfile()` (sync-profiles.js) écrase le bloc auth Pi à chaque reboot avec un profil cloud à `auth: {}` (incident 2026-05-08, ADR-115, smoke test enforced)
 
 ### Captive Portal (ADR-079 Phase 1)
 
