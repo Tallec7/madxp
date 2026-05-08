@@ -28,7 +28,7 @@ import commandQueueService from '../services/command-queue.service';
 
 interface SiteRow {
   id: string;
-  name: string;
+  site_name: string;
   displays: Array<{ index?: number; receiver?: { mac?: string } | null }> | null;
   [key: string]: unknown;
 }
@@ -50,7 +50,7 @@ async function findSitesWithAssignedDisplays(siteIdFilter?: string): Promise<Sit
     params.push(siteIdFilter);
   }
   const result = await query<SiteRow>(
-    `SELECT id, name, displays FROM sites WHERE ${where} ORDER BY name ASC`,
+    `SELECT id, site_name, displays FROM sites WHERE ${where} ORDER BY site_name ASC`,
     params
   );
   return result.rows;
@@ -85,14 +85,14 @@ async function main(): Promise<void> {
   for (const site of sites) {
     if (!hasAssignedReceiver(site.displays)) {
       stats.skippedNoAssignment++;
-      logger.debug('Skip site without assigned receiver', { siteId: site.id, name: site.name });
+      logger.debug('Skip site without assigned receiver', { siteId: site.id, name: site.site_name });
       continue;
     }
 
     if (dryRun) {
       logger.info('Would emit receiver_assignment_updated', {
         siteId: site.id,
-        name: site.name,
+        name: site.site_name,
         displayCount: site.displays?.length ?? 0,
       });
       stats.emitted++;
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
       else if (result.queued) stats.queued++;
       logger.info('receiver_assignment_updated dispatched', {
         siteId: site.id,
-        name: site.name,
+        name: site.site_name,
         sent: result.sent,
         queued: result.queued,
         commandId: result.commandId,
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
       stats.failed++;
       logger.error('receiver_assignment_updated dispatch failed', {
         siteId: site.id,
-        name: site.name,
+        name: site.site_name,
         err: err instanceof Error ? err.message : String(err),
       });
     }
