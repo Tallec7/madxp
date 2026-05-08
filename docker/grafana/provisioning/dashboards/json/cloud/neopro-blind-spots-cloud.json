@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Métriques émises par le code mais absentes des autres dashboards. Vise à révéler les angles morts pour décider lesquelles promouvoir vers les dashboards principaux ou retirer du code.",
+  "description": "M\u00e9triques \u00e9mises par le code mais absentes des autres dashboards. Vise \u00e0 r\u00e9v\u00e9ler les angles morts pour d\u00e9cider lesquelles promouvoir vers les dashboards principaux ou retirer du code.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -30,7 +30,7 @@
         "y": 0
       },
       "id": 100,
-      "title": "ADR-074 — Hotspot PSK (rotation flotte)",
+      "title": "ADR-074 \u2014 Hotspot PSK (rotation flotte)",
       "type": "row"
     },
     {
@@ -137,7 +137,7 @@
         "y": 9
       },
       "id": 200,
-      "title": "ADR-093 — Match Sessions",
+      "title": "ADR-093 \u2014 Match Sessions",
       "type": "row"
     },
     {
@@ -193,7 +193,7 @@
         "y": 18
       },
       "id": 300,
-      "title": "Vidéos — Cascade DELETE & FTP audit (PR #613-#618)",
+      "title": "Vid\u00e9os \u2014 Cascade DELETE & FTP audit (PR #613-#618)",
       "type": "row"
     },
     {
@@ -379,8 +379,8 @@
         "y": 33
       },
       "id": 306,
-      "title": "ADR-099 connection_events — rows actuelles",
-      "description": "Volume de la table connection_events après chaque purge quotidienne (rétention 90j par défaut).",
+      "title": "ADR-099 connection_events \u2014 rows actuelles",
+      "description": "Volume de la table connection_events apr\u00e8s chaque purge quotidienne (r\u00e9tention 90j par d\u00e9faut).",
       "type": "stat",
       "fieldConfig": {
         "defaults": {
@@ -435,8 +435,8 @@
         "y": 33
       },
       "id": 307,
-      "title": "ADR-099 purge — rows supprimées (24h)",
-      "description": "Volume purgé sur les dernières 24h. Si 0 trois jours d'affilée et `rows_current` ne baisse pas, le CRON est probablement en panne.",
+      "title": "ADR-099 purge \u2014 rows supprim\u00e9es (24h)",
+      "description": "Volume purg\u00e9 sur les derni\u00e8res 24h. Si 0 trois jours d'affil\u00e9e et `rows_current` ne baisse pas, le CRON est probablement en panne.",
       "type": "stat",
       "fieldConfig": {
         "defaults": {
@@ -482,8 +482,8 @@
         "y": 33
       },
       "id": 308,
-      "title": "ADR-110 PUB-02 — Test renders cleaned (7j)",
-      "description": "Volume de test renders FTP supprimés par le CRON hebdo (Sunday 03:00, TTL 7d). Si 0 sur 14j d'affilée alors que des templates ont été test-rendered, le CRON est probablement en panne ou le bucket /test-renders/ vide.",
+      "title": "ADR-110 PUB-02 \u2014 Test renders cleaned (7j)",
+      "description": "Volume de test renders FTP supprim\u00e9s par le CRON hebdo (Sunday 03:00, TTL 7d). Si 0 sur 14j d'affil\u00e9e alors que des templates ont \u00e9t\u00e9 test-rendered, le CRON est probablement en panne ou le bucket /test-renders/ vide.",
       "type": "timeseries",
       "fieldConfig": {
         "defaults": {
@@ -759,7 +759,7 @@
         "y": 57
       },
       "id": 601,
-      "title": "MFA setup (par étape)",
+      "title": "MFA setup (par \u00e9tape)",
       "type": "timeseries",
       "targets": [
         {
@@ -830,7 +830,7 @@
         "y": 64
       },
       "id": 700,
-      "title": "Infra / Résilience",
+      "title": "Infra / R\u00e9silience",
       "type": "row"
     },
     {
@@ -1231,7 +1231,7 @@
       },
       "id": 807,
       "title": "Zombie socket recoveries (issue #824)",
-      "description": "Nombre de reconnexions forcées par le health check suite à un heartbeat ACK timeout (TCP zombie). Un pic indique une coupure réseau silencieuse détectée côté sync-agent.",
+      "description": "Nombre de reconnexions forc\u00e9es par le health check suite \u00e0 un heartbeat ACK timeout (TCP zombie). Un pic indique une coupure r\u00e9seau silencieuse d\u00e9tect\u00e9e c\u00f4t\u00e9 sync-agent.",
       "type": "timeseries",
       "targets": [
         {
@@ -1254,7 +1254,7 @@
       },
       "id": 808,
       "title": "Templates deleted (quick task 260507-gxd / P0 #1+#2)",
-      "description": "DELETE /api/remotion-templates/:id — cascade_status=success/partial/failed (partial = FTP cleanup partiel apres commit DB). reason=user (template draft) vs admin_force (?force=true sur template publié ou in-use).",
+      "description": "DELETE /api/remotion-templates/:id \u2014 cascade_status=success/partial/failed (partial = FTP cleanup partiel apres commit DB). reason=user (template draft) vs admin_force (?force=true sur template publi\u00e9 ou in-use).",
       "type": "timeseries",
       "targets": [
         {
@@ -1299,8 +1299,8 @@
         "y": 115
       },
       "id": 810,
-      "title": "Fire Stick inconnus détectés (Phase 12 OBSERVE)",
-      "description": "Fire Sticks non assignés détectés sur hotspot Pi (Counter neopro_hotspot_unknown_firestick_total par site_id). Pic = Fire Stick branché sans assignation dashboard. Badge ambre déclenché côté displays-editor.",
+      "title": "Fire Stick inconnus d\u00e9tect\u00e9s (Phase 12 OBSERVE)",
+      "description": "Fire Sticks non assign\u00e9s d\u00e9tect\u00e9s sur hotspot Pi (Counter neopro_hotspot_unknown_firestick_total par site_id). Pic = Fire Stick branch\u00e9 sans assignation dashboard. Badge ambre d\u00e9clench\u00e9 c\u00f4t\u00e9 displays-editor.",
       "type": "timeseries",
       "targets": [
         {
@@ -1323,12 +1323,35 @@
       },
       "id": 811,
       "title": "N-display variant dispatch by display_type (issue #914)",
-      "description": "deploy_video variants dispatched to Pi sites by display_type (secondary, led, totem, ...). Tracks N-display migration progress — toutes les sources confondues (deploy + variant_replace).",
+      "description": "deploy_video variants dispatched to Pi sites by display_type (secondary, led, totem, ...). Tracks N-display migration progress \u2014 toutes les sources confondues (deploy + variant_replace).",
       "type": "timeseries",
       "targets": [
         {
           "expr": "sum(increase(neopro_variant_dispatch_displaytype_total{scrape_job=\"NEOPRO\"}[1h])) by (display_type, source)",
           "legendFormat": "{{display_type}} / {{source}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 129
+      },
+      "id": 812,
+      "title": "Filename collisions during upload (issue #920 \u2014 drift cloud\u2194Pi)",
+      "description": "Quand un user re-uploade un fichier avec un original_name d\u00e9j\u00e0 pris (mais checksum diff\u00e9rent), generateUniqueFilename() ajoute un suffixe _1, _2... Le fichier est correctement d\u00e9ploy\u00e9 sur le Pi avec le suffixe, mais la config peut continuer \u00e0 r\u00e9f\u00e9rencer l'ancien filename \u2192 drift silencieux. Un spike (>5/h) signale qu'un admin re-uploade en boucle des versions de m\u00eames fichiers \u2014 signal pour prioriser le redesign UX 'replace existing version'. Investigation 2026-05-08 : workaround appliqu\u00e9 sur Pi NLF (16 fichiers renomm\u00e9s).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_filename_collisions_total{scrape_job=\"NEOPRO\"}[1h])) by (suffix_count)",
+          "legendFormat": "suffix _{{suffix_count}}",
           "refId": "A"
         }
       ]

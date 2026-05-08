@@ -66,7 +66,16 @@ export function sanitizeFilename(filename: string): string {
 
 /**
  * Génère un nom de fichier unique basé sur le nom original
- * Si le fichier existe déjà, ajoute un suffixe numérique (ex: video_1.mp4, video_2.mp4)
+ * Si le fichier existe déjà, ajoute un suffixe numérique (ex: video_1.mp4, video_2.mp4).
+ *
+ * **Observabilité (issue #920)** : chaque collision incrémente la métrique
+ * Prometheus `neopro_filename_collisions_total` + warn log. Un spike de cette
+ * métrique signale un admin qui re-uploade en boucle des versions du même
+ * fichier — situation qui crée du drift cloud↔Pi (les variants config peuvent
+ * pointer vers l'ancien filename pendant que le Pi disque a le nouveau).
+ *
+ * Le fix structurel (UX "replace existing version" + soft-delete) est tracké
+ * dans l'issue #920.
  */
 export async function generateUniqueFilename(originalName: string): Promise<string> {
   const sanitized = sanitizeFilename(originalName);
@@ -82,6 +91,14 @@ export async function generateUniqueFilename(originalName: string): Promise<stri
 
     if (!exists) {
       // Nom disponible
+      if (counter > 0) {
+        metricsService.recordFilenameCollision(counter);
+        logger.warn('Filename collision resolved with suffix — possible drift cloud↔Pi (issue #920)', {
+          originalName,
+          chosenFilename: filename,
+          collisionCount: counter,
+        });
+      }
       return filename;
     }
 
@@ -92,6 +109,7 @@ export async function generateUniqueFilename(originalName: string): Promise<stri
     // Sécurité: éviter boucle infinie
     if (counter > 1000) {
       // Fallback vers UUID si trop de collisions
+      metricsService.recordFilenameCollision(counter);
       logger.warn('Too many filename collisions, falling back to UUID', { originalName });
       return `${baseName}_${uuidv4().substring(0, 8)}${ext}`;
     }

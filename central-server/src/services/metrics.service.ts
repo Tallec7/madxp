@@ -98,6 +98,24 @@ const filenameEncodingCorrections = new Counter({
   registers: [register],
 });
 
+/**
+ * Issue #920 — observabilité du drift cloud↔Pi causé par les collisions de
+ * filename. Quand un user re-uploade un fichier avec un `original_name` déjà
+ * pris (mais checksum différent), `generateUniqueFilename` ajoute `_1`, `_2`...
+ * Le fichier est correctement déployé sur le Pi avec le suffixe, mais la config
+ * peut continuer à référencer l'ancien filename (variant stale) → drift silencieux.
+ *
+ * Cette métrique compte les collisions pour observer le taux. Un spike indique
+ * qu'un admin re-uploade en boucle des versions de mêmes fichiers — signal pour
+ * prioriser le redesign UX "replace existing version".
+ */
+const filenameCollisionsTotal = new Counter({
+  name: 'neopro_filename_collisions_total',
+  help: 'Number of filename collisions resolved by appending _N suffix (issue #920 — drift cloud↔Pi)',
+  labelNames: ['suffix_count'],  // labels: '1' (premier doublon), '2', '3'+, 'uuid_fallback'
+  registers: [register],
+});
+
 const alertsTotal = new Counter({
   name: 'neopro_alerts_total',
   help: 'Total number of alerts generated',
@@ -1070,6 +1088,16 @@ class MetricsService {
 
   recordFilenameEncodingCorrection(): void {
     filenameEncodingCorrections.inc();
+  }
+
+  /** Issue #920 : compte les collisions filename résolues par suffixe `_N`. */
+  recordFilenameCollision(counter: number): void {
+    let label: string;
+    if (counter === 1) label = '1';
+    else if (counter === 2) label = '2';
+    else if (counter >= 1001) label = 'uuid_fallback';
+    else label = '3+';
+    filenameCollisionsTotal.inc({ suffix_count: label });
   }
 
   recordAlert(severity: string, type: string): void {
