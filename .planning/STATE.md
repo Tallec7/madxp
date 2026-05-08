@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: — Fire Stick APK TWA
 status: In Progress
-stopped_at: Completed 13-03-keystore-generation-PLAN.md
-last_updated: '2026-05-08T11:00:00.000Z'
-last_activity: 2026-05-08 — Phase 13 Plan 03 (keystore generation) SHIPPED — RSA 2048 keystore generated out-of-band, valid until 2056-04-30
+stopped_at: Phase 13 PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix)
+last_updated: '2026-05-08T18:00:00.000Z'
+last_activity: 2026-05-08 — Phase 13 PARTIAL — APK shipped (851 KB, signed v2+v3, package id bzh.kalonpartners.neopro.firestick), fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix prérequis ; Fire OS impose le wrapper Silk WebView tant que le Wi-Fi est en captive state)
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 # Project State
@@ -25,9 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 ## Current Position
 
 Phase: 13 — TWA-BUILD APK TWA fullscreen
-Plan: 04 (build-orchestrator-uat) remaining
-Status: In Progress (3/4 plans done)
-Last activity: 2026-05-08 — 13-03 keystore-generation SHIPPED — RSA 2048 keystore (alias `firestick-release`, valid 2056-04-30) generated out-of-band at $HOME/.android-keystores/, passwords saved in 1Password (commits 33df7170/6bcf09ec)
+Plan: 04 (build-orchestrator-uat) — PARTIAL (4/4 plans, automated checks ✅, visual UAT deferred Phase 14)
+Status: PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14
+Last activity: 2026-05-08 — Phase 13 PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix). Build pipeline functional (4 live-debug fixes applied: sed→perl, minSdk 21, .gitignore, JDK 17 fail-fast). Sideload via Pi relay validated (commits b0c2a928, 8521db0d, 0bfc3fe8, ec46abf3, a0dd56f0, f437b8c4)
+Next: Phase 14 (DEPLOY) — Pi captive 204 fix (nginx) prérequis pour débloquer TWA-02 + TWA-03 visual UAT, sideload bénévole-grade documenté, ADB UX procedure
 Next: /gsd:execute-plan 13-04-build-orchestrator-uat
 
 ## Accumulated Context

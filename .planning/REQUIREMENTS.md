@@ -17,10 +17,10 @@
 
 ### TWA — APK Android Trusted Web Activity
 
-- [x] **TWA-01** : APK Android TWA wrapping la page captive Pi (URL configurable au build : défaut `http://192.168.4.1/` ou résolution captive `firetvcaptiveportal.com`)
-- [x] **TWA-02** : Mode fullscreen immersif (immersive sticky) — aucune barre URL, aucune barre de navigation, aucune barre de statut visible sur la TV
-- [ ] **TWA-03** : APK suit les redirects HTTP 302 du captive flow (wifistub → wifiredirect → `/?display=N`) sans afficher d'URL intermédiaire à l'utilisateur final
-- [x] **TWA-04** : APK signée avec une clé de release stable (`neopro-firestick-release.keystore`) committée chiffrée + procédure de rotation documentée — upgrades futurs sans désinstaller la flotte
+- [x] **TWA-01** : APK Android TWA wrapping la page captive Pi (URL configurable au build : défaut `http://192.168.4.1/` ou résolution captive `firetvcaptiveportal.com`) — manifest configurable, smoke automatisé, package id `bzh.kalonpartners.neopro.firestick` vérifié `aapt dump badging` (Phase 13-04 commit `f437b8c4`)
+- [~] **TWA-02** : Mode fullscreen immersif (immersive sticky) — `display: "fullscreen-sticky"` dans `twa-manifest.json` (smoke automatisé ✅) ; **UAT visuel reporté à Phase 14** : Fire OS impose le wrapper Silk WebView tant que le Wi-Fi est en état captive (fix Pi-side = 204 sur `/generate_204`, `/connecttest.txt`, `/hotspot-detect.html`)
+- [~] **TWA-03** : APK suit les redirects HTTP 302 — chaîne 302 suivie nativement par TWA validé via logcat (URL finale `/display/1` atteinte sans `ERR_CLEARTEXT_NOT_PERMITTED`) ; **check no-flash visuel reporté à Phase 14** (même blocker Fire OS captive wrapper)
+- [x] **TWA-04** : APK signée avec une clé de release stable (`firestick-release` alias, RSA 2048, validité 2056-04-30) — `apksigner verify --verbose` confirme v2=true + v3=true ; procédure de rotation documentée README §Keystore Rotation (Phase 13-03 commits `33df7170`/`6bcf09ec`)
 
 ### INSTALL — Sideload bénévole-grade
 
@@ -60,22 +60,22 @@
 
 ## Traceability
 
-| REQ-ID        | Phase                | Plan |
-| ------------- | -------------------- | ---- |
-| TWA-01        | Phase 13 (TWA-BUILD) | TBD  |
-| TWA-02        | Phase 13 (TWA-BUILD) | TBD  |
-| TWA-03        | Phase 13 (TWA-BUILD) | TBD  |
-| TWA-04        | Phase 13 (TWA-BUILD) | TBD  |
-| INSTALL-01    | Phase 14 (DEPLOY)    | TBD  |
-| INSTALL-02    | Phase 14 (DEPLOY)    | TBD  |
-| INSTALL-03    | Phase 14 (DEPLOY)    | TBD  |
-| AUTOLAUNCH-01 | Phase 15 (INTEGRATE) | TBD  |
-| AUTOLAUNCH-02 | Phase 15 (INTEGRATE) | TBD  |
-| OBSERVE-01    | Phase 15 (INTEGRATE) | TBD  |
-| OBSERVE-02    | Phase 15 (INTEGRATE) | TBD  |
+| REQ-ID        | Phase                | Plan                                                                                 |
+| ------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| TWA-01        | Phase 13 (TWA-BUILD) | 13-01, 13-04 ✅ (manifest + smoke + automated package-id check)                      |
+| TWA-02        | Phase 13 (TWA-BUILD) | 13-01 ✅ (manifest `fullscreen-sticky`) ; visual UAT → Phase 14 (Pi captive 204 fix) |
+| TWA-03        | Phase 13 (TWA-BUILD) | 13-04 ✅ (302 chain validated logcat) ; no-flash visual UAT → Phase 14               |
+| TWA-04        | Phase 13 (TWA-BUILD) | 13-03, 13-04 ✅ (keystore + apksigner v2+v3 verified)                                |
+| INSTALL-01    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| INSTALL-02    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| INSTALL-03    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| AUTOLAUNCH-01 | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| AUTOLAUNCH-02 | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| OBSERVE-01    | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| OBSERVE-02    | Phase 15 (INTEGRATE) | TBD                                                                                  |
 
 **v4.2: 11 requirements** | **4 catégories** | **Coverage: 11/11** ✓
 
 ---
 
-_Last updated: 2026-05-08 — milestone v4.2 (Fire Stick APK TWA) requirements defined_
+_Last updated: 2026-05-08 — Phase 13 PARTIAL : APK shipped (TWA-01 + TWA-04 ✅), TWA-02 + TWA-03 visual UAT reportés Phase 14 (Pi captive 204 fix prérequis)_
