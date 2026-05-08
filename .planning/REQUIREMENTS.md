@@ -62,12 +62,11 @@
 - [ ] **ASSIGN-02** : Sélectionner une MAC dans [Réassigner ▾] effectue l'assignation en 1 clic (désassigne l'ancienne + assigne la nouvelle atomiquement)
 - [ ] **ASSIGN-03** : L'ancien Fire Stick désassigné repasse en page d'attente automatiquement via `receiver_assignment_updated` → Pi → captive route sans reboot
 
-### ALLOWLIST — MAC allowlist hostapd
+### OBSERVE-RECEIVERS — Observabilité Fire Sticks inconnus
 
-- [ ] **ALLOWLIST-01** : Le Pi supporte un mode allowlist hostapd : seules les MACs dans une liste configurée obtiennent une IP DHCP
-- [ ] **ALLOWLIST-02** : L'admin gère l'allowlist depuis le dashboard (ajout/retrait MAC) sans SSH au Pi
-- [ ] **ALLOWLIST-03** : Une MAC non whitelistée est refusée au niveau DHCP + log Winston + métrique `neopro_hotspot_rejected_total`
-- [ ] **ALLOWLIST-04** : Le mode allowlist est opt-in par site (désactivé par défaut — hotspot ouvert comme v4.0)
+- [ ] **OBSERVE-01** : Quand un Fire Stick (`kind: 'firestick'`) est détecté sur le hotspot sans être assigné à un display (`displayIndex === null`), un log Winston est émis côté Pi
+- [ ] **OBSERVE-02** : La métrique `neopro_hotspot_unknown_firestick_total{site_id}` est incrémentée à chaque nouvelle détection d'un Fire Stick non assigné
+- [ ] **OBSERVE-03** : Dans la vue Écrans du dashboard, les receivers firestick détectés sans assignation apparaissent avec un badge ambre "Non assigné"
 
 ### ALERT — Alertes déconnexion Fire Stick
 
@@ -123,10 +122,9 @@
 | ASSIGN-01    | Phase 11 (REASSIGN)     | TBD           |
 | ASSIGN-02    | Phase 11 (REASSIGN)     | TBD           |
 | ASSIGN-03    | Phase 11 (REASSIGN)     | TBD           |
-| ALLOWLIST-01 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-02 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-03 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-04 | Phase 12 (ALLOWLIST)    | TBD           |
+| OBSERVE-01   | Phase 12 (OBSERVE)      | TBD           |
+| OBSERVE-02   | Phase 12 (OBSERVE)      | TBD           |
+| OBSERVE-03   | Phase 12 (OBSERVE)      | TBD           |
 | ALERT-01     | Phase 13 (ALERT)        | TBD           |
 | ALERT-02     | Phase 13 (ALERT)        | TBD           |
 | ALERT-03     | Phase 13 (ALERT)        | TBD           |
@@ -134,4 +132,4 @@
 
 **v4.0: 18 requirements** | **6 catégories** | **Coverage: 18/18** ✓
 
-**v4.1: 14 requirements** | **4 catégories** | **Coverage: 14/14** ✓ (CAPTIVE-05/06/07 → Phase 10, ASSIGN-01/02/03 → Phase 11, ALLOWLIST-01/02/03/04 → Phase 12, ALERT-01/02/03/04 → Phase 13)
+**v4.1: 13 requirements** | **4 catégories** | **Coverage: 13/13** ✓ (CAPTIVE-05/06/07 → Phase 10, ASSIGN-01/02/03 → Phase 11, OBSERVE-01/02/03 → Phase 12, ALERT-01/02/03/04 → Phase 13)

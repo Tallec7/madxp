@@ -1,128 +1,104 @@
 ---
 phase: 12
-slug: allowlist-mac-hostapd
+slug: observe-receivers
 status: ready_to_plan
 created: 2026-05-08
 ---
 
-# Phase 12 — ALLOWLIST : Contexte & Décisions
+# Phase 12 — OBSERVE : Contexte & Décisions
 
 ## Goal
 
-Le hotspot Pi opère en mode sécurisé opt-in : seules les MACs whitelistées obtiennent
-une IP DHCP. L'admin gère la liste depuis le dashboard sans SSH. Une MAC bloquée génère
-une métrique observable.
+Quand un Fire Stick se connecte au hotspot Pi sans être assigné à un display,
+l'admin le voit immédiatement dans la vue Écrans (badge ambre) et dispose d'une
+métrique Prometheus. Le hotspot reste ouvert — aucune modification hostapd.
+
+## Pourquoi pas de blocage MAC
+
+La télécommande des bénévoles utilise le même hotspot Pi. Bloquer au niveau
+hostapd (`macaddr_acl=1`) priverait d'IP les téléphones des bénévoles (MACs
+inconnues, changeantes). Option retenue : observabilité passive uniquement.
 
 ## Décisions lockées (phases précédentes)
 
-- **Pattern sync (ADR-074)** : sync-agent pull cloud → diff → rewrite fichier → restart
-  service. On étend ce pattern pour écrire `/etc/hostapd/hostapd.accept` en plus de
-  `hostapd.conf`.
-- **Source de vérité = DB cloud** : `sites` table. On ajoute `mac_allowlist TEXT[]` +
-  `allowlist_enabled BOOLEAN DEFAULT FALSE` (migration).
-- **Opt-in strict (ALLOWLIST-04)** : `allowlist_enabled = FALSE` par défaut → hotspot
-  ouvert comme v4.0. Zéro breaking change.
-- **Sudoers déjà configuré** pour `systemctl restart hostapd` et `sed -i hostapd.conf` →
-  les nouvelles commandes `tee /etc/hostapd/hostapd.accept` devront être ajoutées au
-  sudoers.
+- `receivers.service.js` (Phase 5) détecte déjà `kind: 'firestick'` vs `kind: 'browser'`
+  et expose `displayIndex` (null si non assigné). Le signal existe.
+- `state-sync` relay Pi→cloud (Phase 7 + fix Phase 11) propage `receivers[]` au cloud.
+- `GET /api/sites/:id/connected-receivers` expose déjà `{mac, kind, displayIndex, lastSeenAt}`.
+- `displays-editor.component` (Phase 8/11) affiche déjà les receivers avec badges.
 
 ## Décisions discutées
 
 ### A — Emplacement dashboard
 
-**Décision** : Section collapsible **"Sécurité hotspot"** intégrée dans la vue Écrans
-(`displays-editor.component`), visible uniquement si `site_type = 'pi'`.
+**Décision** : Badge ambre dans la section receivers existante de `displays-editor.component`.
 
-Pas de page dédiée. Le mental model est cohérent : l'admin gère les Fire Sticks assignés
-ET les MACs autorisées depuis le même endroit.
+Pas de nouvelle page. Les receivers détectés apparaissent déjà dans la vue Écrans.
+On ajoute une distinction visuelle :
 
-UI attendue :
-
-- Toggle "Activer l'allowlist" (booléen)
-- Liste des MACs autorisées (chip + bouton supprimer)
-- Input + bouton "Ajouter une MAC"
-- Badge de statut (actif / inactif)
+- `displayIndex !== null` → badge vert 📺 (existant Phase 8)
+- `displayIndex === null` + `kind === 'firestick'` → badge ambre ⚠️ "Non assigné"
+- `kind === 'browser'` → ignoré (téléphone bénévole, pas de badge)
 
 ### B — Auto-population à l'activation
 
-**Décision** : Au toggle ON, pré-remplir la liste avec les MACs des receivers ayant
-`displayIndex !== null` (déjà assignés à un display).
+**N/A** — Pas d'activation. L'observabilité est toujours active dès qu'un Fire Stick
+non assigné est détecté.
 
-Comportement exact :
+### C — Expérience Fire Stick non assigné
 
-1. Admin toggle ON → call `PATCH /api/sites/:id` avec `allowlist_enabled: true` +
-   `mac_allowlist: [MACs assignées]`
-2. Toast : "Allowlist activée — 3 MACs pré-ajoutées depuis vos displays assignés"
-3. L'admin peut ensuite retirer/ajouter des MACs
+**Décision** : Comportement Pi inchangé — le Fire Stick voit la page d'attente captive
+(Phase 6, déjà implémenté). Pas de régression, pas de nouveau comportement côté TV.
+Le seul changement visible = badge ambre dans le dashboard admin.
 
-Si aucune MAC assignée → liste vide + toast d'avertissement "Aucune MAC pré-ajoutée —
-pensez à ajouter vos Fire Sticks avant d'activer".
+### D — Source du signal + métrique
 
-### C — Expérience Fire Stick bloqué
-
-**Décision** : Silence acceptable — pas de page "non autorisé".
-
-`macaddr_acl=1` bloque à la couche 802.11 (avant DHCP). Le Fire Stick n'obtient pas
-d'IP → impossible de servir une page. Ce comportement est délibéré côté admin.
-Le signal pour l'admin = la métrique (section D).
-
-Pas de `macaddr_acl=2` ni de contournement DHCP-level pour afficher une page. La
-complexité ne vaut pas pour la v4.1.
-
-### D — Source du signal "rejected" pour la métrique
-
-**Décision** : Étendre `hostapdTelemetry.js` (déjà un process `hostapd_cli` ouvert).
-
+**Décision** : Signal déjà disponible dans `receivers.service.js` via `displayIndex`.
 Flow :
 
-1. `hostapd_cli` émet l'event `AP-STA-REJECTED` quand `macaddr_acl=1` bloque une MAC
-2. `hostapdTelemetry.js` parse cet event → `logger.warn('hostapd: MAC rejected', { mac })`
-3. Sync-agent reçoit le signal → émet event socket `hotspot_mac_rejected` vers cloud
-4. Cloud handler → incrémente `neopro_hotspot_rejected_total{site_id}` dans
-   `metrics.service.ts`
+1. `receivers.service.js` détecte un firestick avec `displayIndex === null`
+2. `_emitChange()` → `state-sync` → cloud (déjà câblé)
+3. Cloud handler `receivers` : si firestick non assigné détecté pour la première fois
+   → `logger.warn` + incrémente `neopro_hotspot_unknown_firestick_total{site_id}`
+4. Métrique visible dans Grafana
 
-Pas de tail de logs, pas de corrélation ARP/leases.
+Pas de modification Pi-side au-delà du log. Pas de `hostapdTelemetry.js`.
 
 ## Code context
 
-### Fichiers à créer
+### Fichiers à modifier
 
-| Fichier                                                           | Rôle                                                                               |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `central-server/src/scripts/migrations/add-hotspot-allowlist.sql` | Colonnes `mac_allowlist TEXT[]` + `allowlist_enabled BOOLEAN` dans `sites`         |
-| (extension) `hotspot-config.controller.ts`                        | Exposer `mac_allowlist` + `allowlist_enabled` dans GET/PATCH                       |
-| (extension) `hotspot-sync.js`                                     | Écrire `/etc/hostapd/hostapd.accept` + activer `macaddr_acl=1` dans `hostapd.conf` |
-| (extension) `hostapdTelemetry.js`                                 | Parser event `AP-STA-REJECTED` + emit socket                                       |
-| (extension) `displays-editor.component`                           | Section "Sécurité hotspot" (toggle + liste MACs)                                   |
-| (extension) `metrics.service.ts`                                  | Counter `neopro_hotspot_rejected_total`                                            |
+| Fichier                                                            | Changement                                               |
+| ------------------------------------------------------------------ | -------------------------------------------------------- |
+| `central-server/src/handlers/receivers.handler.ts` (ou équivalent) | Détecter firestick non assigné → log + métrique          |
+| `central-server/src/services/metrics.service.ts`                   | Ajouter Counter `neopro_hotspot_unknown_firestick_total` |
+| `central-dashboard/.../displays-editor.component`                  | Badge ambre pour firestick `displayIndex === null`       |
+| `central-dashboard/.../displays-editor.component.spec.ts`          | Test badge ambre                                         |
 
 ### Fichiers clés existants à lire
 
-| Fichier                                                        | Pourquoi                                 |
-| -------------------------------------------------------------- | ---------------------------------------- |
-| `raspberry/sync-agent/src/services/hotspot-sync.js`            | Pattern diff/rewrite/restart — à étendre |
-| `raspberry/sync-agent/src/services/hostapd-telemetry.js`       | Process hostapd_cli existant — à étendre |
-| `central-server/src/controllers/hotspot-config.controller.ts`  | API hotspot existante                    |
-| `central-server/src/repositories/hotspot-config.repository.ts` | Repository hotspot                       |
-| `raspberry/config/sudoers.d/neopro`                            | Commandes sudo autorisées — à compléter  |
+| Fichier                                                       | Pourquoi                             |
+| ------------------------------------------------------------- | ------------------------------------ |
+| `central-server/src/handlers/` (handler receivers/state-sync) | Où traiter le signal entrant         |
+| `central-server/src/services/metrics.service.ts`              | Pattern Counter existant             |
+| `central-dashboard/.../displays-editor.component.html`        | Markup badges existants (Phase 8/11) |
+| `central-server/src/routes/sites.routes.ts`                   | Route connected-receivers existante  |
 
 ### Patterns à réutiliser
 
-- `hotspot-sync.js` : pattern `diffAndApply` (compare state cloud vs local, rewrite si diff)
-- `hostapdTelemetry.js` : process `hostapd_cli -i wlan0 mon` déjà ouvert, parse line by line
-- `displays-editor.component` : section Bootstrap Phase 11 (section collapsible existante)
-- `metrics.service.ts` : Counter avec `{ labels: ['site_id'] }` (pattern ADR-111)
+- Badge vert Phase 11 : `.receiver-badge--assigned` → dupliquer en `.receiver-badge--unknown`
+- Counter Prometheus : pattern `neopro_alerts_dedup_skipped_total` (ADR-111, labels)
+- Handler state-sync : pattern relay receivers Phase 7
 
-## Contraintes techniques
+## Contraintes
 
-- `macaddr_acl=1` dans `hostapd.conf` + `accept_mac_file=/etc/hostapd/hostapd.accept`
-- Le fichier `.accept` doit être MAJ **avant** restart hostapd (sinon toutes les MACs bloquées)
-- Sudoers : ajouter `sudo /usr/bin/tee /etc/hostapd/hostapd.accept` (ou équivalent)
-- `AP-STA-REJECTED` : vérifier disponibilité sur Debian 12 Pi 5 (event hostapd 2.10+)
-- `mac_allowlist` en DB : stocker en lowercase normalisé (même format que `receivers.service.js`)
+- Ne PAS modifier `receivers.service.js` ni `hostapd.conf` — hotspot reste ouvert
+- `kind === 'browser'` (téléphones bénévoles) → jamais de badge ambre, jamais de métrique
+- La métrique ne s'incrémente qu'à la **première** détection d'un Fire Stick inconnu
+  par session (pas à chaque tick de 10s) — dédupliquer par `(site_id, mac)`
 
 ## Hors scope (Phase 12)
 
-- Page "non autorisé" visible par le Fire Stick bloqué → Phase 14 optionnelle
-- Alertes cloud quand une MAC inconnue tente de se connecter → Phase 13 (différent scope)
-- Rotation automatique de l'allowlist basée sur les receivers actifs → à planifier si besoin
+- Blocage DHCP ou réseau → jamais (régression télécommande)
+- Alerte push quand Fire Stick assigné disparaît → Phase 13
+- Gestion d'une whitelist manuelle → déferred, non prioritaire

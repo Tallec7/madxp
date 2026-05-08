@@ -33,7 +33,7 @@
 
 - [x] **Phase 10: CAPTIVE-AUTO — Silk Browser auto-launch** — Fire Stick ouvre automatiquement le portail captif sans manipulation bénévole (completed 2026-05-07)
 - [x] **Phase 11: REASSIGN — Réassigner UX dashboard** — Bouton Réassigner direct en 1 clic (remplace Désassigner + Assigner en 2 temps) (completed 2026-05-08)
-- [ ] **Phase 12: ALLOWLIST — MAC allowlist hostapd** — Seules les MACs whitelistées obtiennent une IP DHCP, gérée depuis le dashboard
+- [ ] **Phase 12: OBSERVE — Observabilité Fire Sticks inconnus** — Badge ambre + métrique quand un Fire Stick non assigné se connecte au hotspot
 - [ ] **Phase 13: ALERT — Alertes déconnexion Fire Stick** — Alerte automatique si un Fire Stick assigné disparaît pendant un créneau actif
 
 ## Phase Details
@@ -176,17 +176,16 @@
 
 - [x] 11-01-displays-editor-reassign-ux-PLAN.md — Helpers `isReceiverStale` / `getReassignableReceivers` / `getCrossDisplayHint` + mutation atomique 2-displays dans `assignReceiver` + bouton [Réassigner ▾] séparé du badge MAC + 6 tests Karma (ASSIGN-01, ASSIGN-02, ASSIGN-03) ✅ 2026-05-07
 
-### Phase 12: ALLOWLIST — MAC allowlist hostapd
+### Phase 12: OBSERVE — Observabilité Fire Sticks inconnus
 
-**Goal**: Le hotspot Pi peut opérer en mode sécurisé où seules les MACs d'une whitelist obtiennent une IP DHCP, et l'admin gère cette liste depuis le dashboard sans SSH.
-**Depends on**: Phase 7 (cloud API site config) + Phase 9 (smoke receivers-discovery comme référence contrat wiring)
-**Requirements**: ALLOWLIST-01, ALLOWLIST-02, ALLOWLIST-03, ALLOWLIST-04
+**Goal**: L'admin voit immédiatement dans la vue Écrans si un Fire Stick inconnu est connecté au hotspot sans être assigné à un display, et dispose d'une métrique Prometheus pour le suivi en prod.
+**Depends on**: Phase 5 (receivers.service.js — kind + displayIndex) + Phase 9 (smoke receivers-discovery)
+**Requirements**: OBSERVE-01, OBSERVE-02, OBSERVE-03
 **Success Criteria** (what must be TRUE):
 
-1. Quand le mode allowlist est activé pour un site, un Fire Stick dont la MAC n'est pas dans la liste ne reçoit pas d'adresse IP (refus DHCP niveau hostapd).
-2. L'admin ajoute ou retire une MAC de l'allowlist depuis le dashboard sans connexion SSH au Pi — la mise à jour est propagée au Pi via sync-agent et appliquée à chaud.
-3. Une tentative de connexion refusée génère une métrique `neopro_hotspot_rejected_total` incrémentée et un log côté Pi (observable en prod).
-4. Pour les sites n'ayant pas activé le mode allowlist, le comportement est identique à v4.0 (hotspot ouvert) — opt-in strict, pas de breaking change.
+1. Quand un Fire Stick (`kind: 'firestick'`) est détecté sur le hotspot sans `displayIndex`, un log Winston est émis côté Pi et la métrique `neopro_hotspot_unknown_firestick_total` est incrémentée côté cloud.
+2. Dans la vue Écrans du dashboard, les receivers firestick non assignés apparaissent avec un badge ambre "Non assigné" (distinct du badge vert des assignés).
+3. Le hotspot reste ouvert — aucune modification hostapd, aucun impact sur la télécommande des bénévoles.
 
 **Plans**: TBD
 
@@ -218,7 +217,7 @@
 | 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
 | 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete    | 2026-05-07 |
 | 11. REASSIGN        | v4.1      | 1/1            | In Progress | -          |
-| 12. ALLOWLIST       | v4.1      | 0/?            | Not started | -          |
+| 12. OBSERVE         | v4.1      | 0/?            | Not started | -          |
 | 13. ALERT           | v4.1      | 0/?            | Not started | -          |
 
 ---
