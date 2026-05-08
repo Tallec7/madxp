@@ -70,6 +70,65 @@ bash scripts/patch-android-manifest.sh
 bubblewrap build --skipPwaValidation
 ```
 
+## Keystore (TWA-04)
+
+The release keystore signs every APK with a stable identity so future versions install as upgrades, not fresh installs (Android refuses upgrades signed with a different key — `INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
+
+**Storage policy (v4.2):** out-of-band on Daisy's machine. Encryption-at-rest commit (git-crypt / SOPS) deferred to v4.3 once the flotte exceeds 5 sites.
+
+**One-shot generation:**
+
+```bash
+cd firestick-apk
+bash scripts/generate-keystore.sh
+# Prompts for keystore password + key password (use the SAME for v4.2 simplicity)
+# Output: $HOME/.android-keystores/neopro-firestick-release.keystore (chmod 600)
+```
+
+Under the hood:
+
+```bash
+keytool -genkey -v \
+  -keystore "$HOME/.android-keystores/neopro-firestick-release.keystore" \
+  -alias firestick-release \
+  -keyalg RSA -keysize 2048 \
+  -validity 10950 \
+  -dname "CN=Neopro Firestick, OU=Kalon Partners, O=Kalon Partners, L=Brest, ST=Bretagne, C=FR"
+```
+
+**Storage checklist (mandatory after first run):**
+
+1. 1Password entry "Neopro Firestick Keystore" with: keystore password, key password, file attachment of the `.keystore` itself.
+2. `chmod 600` on the keystore file (script does this automatically).
+3. Verify file is OUTSIDE the repo: `realpath $HOME/.android-keystores/*.keystore` must NOT contain `firestick-apk/`.
+
+**Build-time env vars (consumed by `scripts/build.sh` in Plan 04):**
+
+```bash
+export KEYSTORE_PATH="$HOME/.android-keystores/neopro-firestick-release.keystore"
+export BUBBLEWRAP_KEYSTORE_PASSWORD='...'   # from 1Password
+export BUBBLEWRAP_KEY_PASSWORD='...'        # from 1Password
+```
+
+The `twa-manifest.json` field `signingKey.path` uses the literal placeholder `${KEYSTORE_PATH}`. Plan 04's `build.sh` substitutes it at build time so the committed manifest has no machine-specific path.
+
+## Keystore Rotation (DANGER)
+
+Rotating the keystore = signing v0.2+ with a different key = every Fire Stick on v0.1 must be **uninstalled then reinstalled** (no upgrade path). v4.2 has 1 test site (NLF) so rotation is recoverable; v4.3 will commit the keystore encrypted to eliminate this risk.
+
+**Procedure (only if keystore is lost or compromised):**
+
+1. Manually delete the old keystore: `rm $HOME/.android-keystores/neopro-firestick-release.keystore`
+2. Re-run `bash scripts/generate-keystore.sh` (will prompt for fresh passwords).
+3. Update 1Password entry with new passwords.
+4. Coordinate with bénévoles to: `adb uninstall bzh.kalonpartners.neopro.firestick` then `adb install` the new APK.
+
+**Smoke verification (post-build, automated by Plan 04):**
+
+```bash
+apksigner verify --verbose firestick-apk/dist/neopro-firestick-v0.1.0.apk | grep -E 'v2.*true.*v3.*true'
+```
+
 ## References
 
 - `.planning/phases/13-twa-build-apk-twa-fullscreen/13-RESEARCH.md` — Bubblewrap workflow, pitfalls, sources
