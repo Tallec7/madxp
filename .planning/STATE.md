@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: completed
-stopped_at: Phase 11 UAT in progress (test 3/6 pending)
-last_updated: '2026-05-07T19:35:00.000Z'
-last_activity: 2026-05-07 — Phase 11 plan 01 complete — 13/13 tests verts — UAT 2/6 pass
+status: active
+stopped_at: null
+last_updated: '2026-05-08T00:00:00.000Z'
+last_activity: 2026-05-08 — Phase 11 COMPLETE — badge MAC + Réassigner 1 clic + 13/13 Karma + fix receivers race condition
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 21
   completed_plans: 21
 ---
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 11 (REASSIGN) plan 01 complete, UAT in progress.
+**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 11 COMPLETE. Next : Phase 12 (ALLOWLIST — MAC allowlist hostapd).
 
 ## Current Position
 
-Phase: Phase 11 — REASSIGN (plan 01 complete, UAT 2/6 pass)
-Plan: 11-01-displays-editor-reassign-ux (COMPLETE — 13/13 tests verts, commits 16e0f680 + 1ed3c5d2)
-Status: UAT in progress — test 3/6 (Sous-texte cross-display) pending user response
-Last activity: 2026-05-07 — 11-01 COMPLETE — badge MAC séparé + [Réassigner ▾] + mutation atomique + 13/13 Karma verts
-Next: Resume UAT at test 3/6 — then push merge commit to update PR #898
+Phase: Phase 12 — ALLOWLIST (not started)
+Plan: —
+Status: Ready to start
+Last activity: 2026-05-08 — Phase 11 CLOSED — UAT 2/6 pass + 4 skipped (Karma H-M) + fix receivers race (commit 9b1380e1)
+Next: /gsd:discuss-phase 12 ou /gsd:plan-phase 12
 
 ## Accumulated Context
 
@@ -113,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T19:35:00.000Z
-Stopped at: Phase 11 UAT 2/6 pass — merge conflict resolution in progress
-Resume file: .planning/phases/11-reassign-ux-dashboard/11-UAT.md
+Last session: 2026-05-08T00:00:00.000Z
+Stopped at: Phase 11 CLOSED — Phase 12 ready to start
+Resume file: .planning/ROADMAP.md
