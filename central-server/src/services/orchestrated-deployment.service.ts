@@ -13,7 +13,7 @@ import { draftService } from './draft.service';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import metricsService from './metrics.service';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
-import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import {
   OrchestratedDeployment,
   OrchestratedDeploymentStatus,
@@ -263,19 +263,20 @@ class OrchestratedDeploymentService {
       });
     }
 
-    // Enrichir avec les variants secondaires depuis la base de données
+    // Enrichir avec les variants display (secondary, led, etc.) selon les displays du site
     try {
-      const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig);
+      const displayTypes = await resolveDisplayTypesForSite(siteId);
+      const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
       if (enrichedCount > 0) {
-        logger.info('Secondary variants enriched in deployment config', {
-          siteId, orchestratedId, enrichedCount,
+        logger.info('Display variants enriched in deployment config', {
+          siteId, orchestratedId, enrichedCount, displayTypes,
         });
         metricsService.recordSecondaryVariantEnrichment('success', 'deployment', enrichedCount);
       } else {
         metricsService.recordSecondaryVariantEnrichment('empty', 'deployment');
       }
     } catch (variantError) {
-      logger.warn('Secondary variant enrichment failed (non-fatal)', {
+      logger.warn('Display variant enrichment failed (non-fatal)', {
         siteId, orchestratedId, error: (variantError as Error).message,
       });
       metricsService.recordSecondaryVariantEnrichment('failed', 'deployment');

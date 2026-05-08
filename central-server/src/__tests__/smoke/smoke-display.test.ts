@@ -2390,6 +2390,80 @@ describe('E-41 central secondary variant enrichment guard', () => {
   });
 });
 
+describe('N-display enrichment — resolveDisplayTypesForSite wiring guard (issue #914)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const utilPath = path.join(repoRoot, 'central-server/src/utils/config-secondary-variants.ts');
+  const orchPath = path.join(repoRoot, 'central-server/src/services/orchestrated-deployment.service.ts');
+  const syncPath = path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts');
+  const profileSyncPath = path.join(repoRoot, 'central-server/src/services/profile-sync.service.ts');
+  const saasPath = path.join(repoRoot, 'central-server/src/controllers/saas.controller.ts');
+  const configProfilesPath = path.join(repoRoot, 'central-server/src/controllers/config-profiles.controller.ts');
+
+  it('config-secondary-variants must export resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(utilPath, 'utf8');
+    expect(content).toMatch(/export async function resolveDisplayTypesForSite/);
+  });
+
+  it('resolveDisplayTypesForSite must import siteRepository (repository pattern)', () => {
+    const content = fs.readFileSync(utilPath, 'utf8');
+    expect(content).toMatch(/import\s*\{[^}]*siteRepository[^}]*\}/);
+  });
+
+  it('orchestrated-deployment must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(orchPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('config-sync handler must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(syncPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('profile-sync service must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(profileSyncPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('saas controller must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(saasPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('config-profiles controller must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(configProfilesPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('enrichConfigWithDisplayVariants callers must pass displayTypes param (not use default)', () => {
+    const files = [orchPath, syncPath, profileSyncPath, saasPath, configProfilesPath];
+    for (const f of files) {
+      const content = fs.readFileSync(f, 'utf8');
+      const calls = content.match(/enrichConfigWithDisplayVariants\([^)]+\)/g) || [];
+      for (const call of calls) {
+        expect({ file: f, hasDisplayTypesArg: call.split(',').length >= 2 }).toEqual({
+          file: f,
+          hasDisplayTypesArg: true,
+        });
+      }
+    }
+  });
+});
+
 describe('E-41 central analytics metadata enrichment guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const syncPath = path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts');

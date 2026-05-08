@@ -15,7 +15,7 @@ import { metricsService } from '../services/metrics.service';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { configHistoryRepository } from '../repositories/config-history.repository';
 import { siteRepository } from '../repositories/site.repository';
-import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
@@ -486,7 +486,8 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     } catch { /* non-fatal */ }
 
     try {
-      await enrichConfigWithDisplayVariants(enrichedConfig);
+      const displayTypes = await resolveDisplayTypesForSite(siteId);
+      await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
     } catch { /* non-fatal */ }
 
     try {
@@ -518,6 +519,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
     const allProfiles = await configProfileRepository.findBySite(siteId);
     if (allProfiles.length > 1) {
       const enrichedProfiles = [];
+      const allProfilesDisplayTypes = await resolveDisplayTypesForSite(siteId).catch(() => ['secondary']);
       for (const p of allProfiles) {
         let enrichedConfig = p.configuration as SiteConfiguration;
 
@@ -528,7 +530,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
         } catch { /* non-fatal */ }
 
         try {
-          await enrichConfigWithDisplayVariants(enrichedConfig);
+          await enrichConfigWithDisplayVariants(enrichedConfig, allProfilesDisplayTypes);
         } catch { /* non-fatal */ }
 
         try {
@@ -601,6 +603,7 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
 
     // Enrichir chaque profil avant envoi au Pi
     const syncPayload = [];
+    const syncProfilesDisplayTypes = await resolveDisplayTypesForSite(siteId).catch(() => ['secondary']);
     for (const p of profiles) {
       let enrichedConfig = p.configuration as SiteConfiguration;
 
@@ -620,16 +623,16 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
         });
       }
 
-      // Enrichir avec les variants secondaires
+      // Enrichir avec les variants display (secondary, led, etc.) selon les displays du site
       try {
-        const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig);
+        const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, syncProfilesDisplayTypes);
         if (enrichedCount > 0) {
-          logger.info('Secondary variants enriched in profile sync', {
-            siteId, profileId: p.id, enrichedCount,
+          logger.info('Display variants enriched in profile sync', {
+            siteId, profileId: p.id, enrichedCount, displayTypes: syncProfilesDisplayTypes,
           });
         }
       } catch (err) {
-        logger.warn('Secondary variant enrichment failed in profile sync (non-fatal)', {
+        logger.warn('Display variant enrichment failed in profile sync (non-fatal)', {
           siteId, profileId: p.id, error: (err as Error).message,
         });
       }

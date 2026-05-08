@@ -19,7 +19,7 @@ import { getVideoUrl } from '../services/storage.service';
 import { signVideoStreamToken } from '../services/video-token.service';
 import { metricsService } from '../services/metrics.service';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
-import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { buildFuzzyIndex as buildFuzzyFilenameIndex, resolveStoragePath } from '../utils/filename-resolver';
 import { SiteConfiguration } from '../types';
 import { injectWebContentCategoryEx, registerWebContentInTimeCategories } from '../utils/inject-web-content-category';
@@ -242,9 +242,10 @@ export async function getSaasConfig(req: Request, res: Response) {
       configuration = site.local_config_mirror as Record<string, unknown>;
     }
 
-    // Enrichir avec les variantes display (secondary, etc.) pour le dual-display
+    // Enrichir avec les variantes display (secondary, led, etc.) selon les displays du site
     try {
-      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration);
+      const displayTypes = await resolveDisplayTypesForSite(siteId);
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes);
     } catch (err) {
       logger.warn('SaaS config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, error: err });
     }
@@ -441,7 +442,8 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     const configuration = profile.configuration;
 
     try {
-      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration);
+      const displayTypes = await resolveDisplayTypesForSite(siteId);
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes);
     } catch (err) {
       logger.warn('SaaS profile config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, profileId, error: err });
     }
