@@ -1,3 +1,9 @@
+## [3.300.4](https://github.com/Tallec7/neopro/compare/v3.300.3...v3.300.4) (2026-05-08)
+
+### Bug Fixes
+
+- **saas:** write-through sites.displays → configuration.displays ([#924](https://github.com/Tallec7/neopro/issues/924)) ([cb33bd3](https://github.com/Tallec7/neopro/commit/cb33bd377a3c621b18de121ebfbc13a55dce9faf)), closes [#917](https://github.com/Tallec7/neopro/issues/917)
+
 ## [3.300.3](https://github.com/Tallec7/neopro/compare/v3.300.2...v3.300.3) (2026-05-08)
 
 ### Bug Fixes
