@@ -360,6 +360,10 @@ export async function getSaasConfig(req: Request, res: Response) {
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
       settings: configuration.settings || {},
+      // displays: pré-rempli par le write-through sites.displays plus haut.
+      // Sans ce champ dans resolvedConfig, le receiver TV tombe en fallback legacy
+      // idx→'secondary' et ne peut pas résoudre les variantes 'led-banner' / 'totem'.
+      displays: configuration.displays,
     };
 
     // Feature overrides (ADR-039 Phase 3) — exposés au navigateur SaaS pour le gating
@@ -554,6 +558,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
       scoreOverlay: configuration.scoreOverlay || null,
       watermark: configuration.watermark || null,
       settings: configuration.settings || {},
+      displays: configuration.displays,
     };
 
     const featureOverrides: Record<string, boolean> = site.feature_overrides
