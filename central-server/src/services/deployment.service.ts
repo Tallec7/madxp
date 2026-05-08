@@ -362,7 +362,7 @@ class DeploymentService {
     }
 
     // Chercher tous les variants (N-display) — le Pi applique ceux qui correspondent à ses écrans
-    let variants: Record<string, {
+    const variants: Record<string, {
       filename: string;
       storagePath: string;
       checksum: string | null;
