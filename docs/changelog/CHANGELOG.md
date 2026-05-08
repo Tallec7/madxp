@@ -1,3 +1,9 @@
+## [3.300.1](https://github.com/Tallec7/neopro/compare/v3.300.0...v3.300.1) (2026-05-08)
+
+### Bug Fixes
+
+- **variants:** enrich config with all display types (not just 'secondary') ([#921](https://github.com/Tallec7/neopro/issues/921)) ([9b594cb](https://github.com/Tallec7/neopro/commit/9b594cb6073c0ff4d44a5572eb1c8a2fe4b0b032)), closes [#918](https://github.com/Tallec7/neopro/issues/918)
+
 # [3.300.0](https://github.com/Tallec7/neopro/compare/v3.299.5...v3.300.0) (2026-05-08)
 
 ### Features
