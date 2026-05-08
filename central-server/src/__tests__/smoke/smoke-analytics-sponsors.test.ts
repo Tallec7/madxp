@@ -1274,6 +1274,26 @@ describe('Weighted sponsor rotation guards', () => {
     });
   });
 
+  it('config-analytics-metadata SQL must match by filename AND original_name (Bottière 2026-05-08 regression guard)', () => {
+    // Incident : 9 plays/h sur Bottière (Pi RACC) tombaient en `category='other'`
+    // au lieu de `'sponsor_local'` parce que la query ne matchait que sur
+    // `videos.filename` (sanitisé) alors que les paths config référencent
+    // l'`original_name` (non-sanitisé : apostrophes, espaces, '&').
+    // Sans le fallback `original_name`, le CRON `calculate_site_sponsor_daily_stats`
+    // filtre ces plays → rapport sponsor sous-compté de ~33 % pour ce site.
+    const utilPath = path.join(repoRoot, 'central-server/src/utils/config-analytics-metadata.ts');
+    const content = fs.readFileSync(utilPath, 'utf8');
+    expect({
+      matchesFilename: /v\.filename\s*=\s*ANY\(\$1\)/.test(content),
+      matchesOriginalName: /v\.original_name\s*=\s*ANY\(\$1\)/.test(content),
+      reason: 'enrichment query must accept both sanitized filename and original_name — incident Bottière 2026-05-08',
+    }).toEqual({
+      matchesFilename: true,
+      matchesOriginalName: true,
+      reason: 'enrichment query must accept both sanitized filename and original_name — incident Bottière 2026-05-08',
+    });
+  });
+
   it('LoopVideoConfig dashboard model must have weight field', () => {
     const modelPath = path.join(repoRoot, 'central-dashboard/src/app/core/models/site-config.model.ts');
     const content = fs.readFileSync(modelPath, 'utf8');
