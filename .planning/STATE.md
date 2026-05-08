@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.1
-milestone_name: — Fire Stick polish
-status: between_milestones
-stopped_at: v4.1 milestone archived — ready for v4.2 planning
-last_updated: '2026-05-08T07:40:26.319Z'
-last_activity: 2026-05-08 — v4.1 SHIPPED — Fire Stick auto-launch + Réassigner 1 clic + OBSERVE badge ambre (Phases 10/11/12)
+milestone: v4.2
+milestone_name: Fire Stick APK TWA
+status: defining_requirements
+stopped_at: v4.2 milestone started — defining requirements
+last_updated: '2026-05-08T10:00:00.000Z'
+last_activity: 2026-05-08 — v4.2 milestone initialized — Fire Stick APK TWA fullscreen
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 22
-  completed_plans: 24
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Between milestones — v4.1 shipped 2026-05-08. Planning v4.2 (ALLOWLIST + ALERT + APK TWA).
+**Current focus:** v4.2 — Fire Stick APK TWA fullscreen (remplace Silk URL bar, sideload ADB documenté).
 
 ## Current Position
 
-Phase: Phase 12 — OBSERVE (COMPLETE — 2/2 plans done)
-Plan: 12-02-dashboard-unknown-firestick-badge (COMPLETE — 17/17 Karma verts, commit 86e4d1a1)
-Status: Phase 12 verified — prêt pour phase suivante
-Last activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
-Next: /gsd:verify-work 12 ou /gsd:progress
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-08 — Milestone v4.2 started
+Next: /gsd:plan-phase [N] après validation roadmap
 
 ## Accumulated Context
 
@@ -120,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T09:00:00.000Z
-Stopped at: Phase 12 COMPLETE — both plans merged to main
+Last session: 2026-05-08T10:00:00.000Z
+Stopped at: v4.2 milestone initialized — requirements defined, roadmap pending
 Resume file: .planning/ROADMAP.md

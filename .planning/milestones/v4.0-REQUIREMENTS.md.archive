@@ -1,0 +1,137 @@
+# Requirements — Milestone v4.0 Multi-écrans Fire Stick
+
+**Goal :** Un bénévole branche un Fire Stick sur une TV du club, l'admin assigne la MAC à distance depuis le dashboard, la TV affiche Neopro plein écran. Zéro déplacement technique.
+
+**Source de vision :** `.planning/firestick-poc/VISION.md` (POC validé 2026-05-05)
+**Pattern de référence :** `hdmi.service.js` (PROP-002 phase 5) → `receivers.service.js`
+
+---
+
+## v4.0 Requirements
+
+### DETECT — Pi détecte les receivers
+
+- [x] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
+- [x] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
+- [x] **DETECT-03** : Le Pi cache localement le mapping MAC↔display pour résilience offline (Pi off → recovery au reboot)
+
+### CAPTIVE — Fire Stick → page Neopro
+
+- [x] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
+- [x] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
+- [x] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
+- [x] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
+
+### DATA — Modèle DisplayConfig étendu
+
+- [ ] **DATA-01** : `DisplayConfig` JSONB étendu avec `receiver?: { kind: 'pi_native'|'firestick'|'browser', mac?, last_seen_at? }`
+- [ ] **DATA-02** : Migration safe : `displays` existants restent valides (defaults `pi_native` pour HDMI #0)
+- [x] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
+
+### CLOUD — API + sync-agent
+
+- [x] **CLOUD-01** : `GET /api/sites/:id/connected-receivers` retourne les MACs détectées par le Pi (auto-discovery liste, ordonnée par `last_seen_at`)
+- [x] **CLOUD-02** : Assignation MAC↔display via PATCH du `DisplayConfig` (route PROP-002 existante étendue, validation Joi)
+- [x] **CLOUD-03** : Sync-agent whitelist nouvel event `receiver-detected` (et `receiver-disconnected`)
+- [x] **CLOUD-04** : DB cloud = source de vérité ; Pi reçoit assignments via socket et met à jour cache local automatiquement
+
+### DASHBOARD — UX admin assignation
+
+- [x] **DASHBOARD-01** : `displays-editor` affiche colonne « Récepteur » par display (🟢 Pi natif HDMI / 🟢 Fire Stick MAC tronquée / ⚪ Aucun)
+- [x] **DASHBOARD-02** : Dropdown [Assigner ▾] pré-rempli avec les MACs auto-détectées par le Pi (pas de saisie aveugle, pas de pré-config)
+- [x] **DASHBOARD-03** : Bouton [Désassigner] détache une MAC d'un display sans casser le display
+
+### OBSERVE — Métriques + smoke
+
+- [x] **OBSERVE-01** : Métrique Prometheus `neopro_receivers_total{site_id, status}` (status: `detected` / `assigned` / `disconnected`)
+- [x] **OBSERVE-02** : Suite smoke `smoke-receivers-discovery` fige les contrats (event whitelist sync-agent, repo extension, route API, dashboard column, captive nginx route)
+
+---
+
+## v4.1 Requirements — Fire Stick polish
+
+### CAPTIVE — Auto-launch Silk Browser
+
+- [x] **CAPTIVE-05** : Quand un Fire Stick se connecte au hotspot Pi, le Silk Browser s'ouvre automatiquement sur la page captive sans que le bénévole n'ait à ouvrir manuellement un navigateur
+- [x] **CAPTIVE-06** : L'auto-launch fonctionne au boot du Fire Stick (premier démarrage après connexion hotspot) sans manipulation de la télécommande
+- [x] **CAPTIVE-07** : Si l'auto-launch échoue (Fire Stick hors hotspot, timeout), la page d'attente reste accessible manuellement — aucune régression comportement v4.0
+
+### ASSIGN — Réassigner UX dashboard
+
+- [ ] **ASSIGN-01** : Dans `Sites > <club> > Écrans`, le dropdown d'un display déjà assigné propose [Réassigner ▾] pré-rempli avec les MACs détectées (sauf MAC courante)
+- [ ] **ASSIGN-02** : Sélectionner une MAC dans [Réassigner ▾] effectue l'assignation en 1 clic (désassigne l'ancienne + assigne la nouvelle atomiquement)
+- [ ] **ASSIGN-03** : L'ancien Fire Stick désassigné repasse en page d'attente automatiquement via `receiver_assignment_updated` → Pi → captive route sans reboot
+
+### ALLOWLIST — MAC allowlist hostapd
+
+- [ ] **ALLOWLIST-01** : Le Pi supporte un mode allowlist hostapd : seules les MACs dans une liste configurée obtiennent une IP DHCP
+- [ ] **ALLOWLIST-02** : L'admin gère l'allowlist depuis le dashboard (ajout/retrait MAC) sans SSH au Pi
+- [ ] **ALLOWLIST-03** : Une MAC non whitelistée est refusée au niveau DHCP + log Winston + métrique `neopro_hotspot_rejected_total`
+- [ ] **ALLOWLIST-04** : Le mode allowlist est opt-in par site (désactivé par défaut — hotspot ouvert comme v4.0)
+
+### ALERT — Alertes déconnexion Fire Stick
+
+- [ ] **ALERT-01** : Si un Fire Stick assigné disparaît du hotspot pendant > N min (défaut 5 min, configurable), une alerte `receiver_offline` est créée
+- [ ] **ALERT-02** : L'alerte `receiver_offline` est visible dans le dashboard admin avec : site, display, MAC, heure dernière détection
+- [ ] **ALERT-03** : Quand le Fire Stick se reconnecte, l'alerte `receiver_offline` est résolue automatiquement
+- [ ] **ALERT-04** : Métrique Prometheus `neopro_receiver_offline_total{site_id, mac}` incrémentée à chaque déconnexion détectée
+
+---
+
+## Future Requirements (v4.2+)
+
+- [ ] **APK TWA fullscreen Fire Stick** — trigger : URL bar Silk toujours visible après v4.1
+- [ ] **Scénario SaaS Fire Stick** (token URL/cookie, pas de Pi) — trigger : 1er client SaaS multi-écrans
+- [ ] **Bouton Réassigner côté Fire Stick** — trigger : bénévole seul sans accès dashboard
+
+---
+
+## Out of Scope (jamais — v4.x)
+
+- **Solution sans Pi** (refonte complète streaming) — la valeur Fire Stick = extension du Pi existant. Sans Pi → c'est un cas SaaS différent.
+- **Multi-VLAN club** (Fire Stick sur LAN club avec internet) — le scope est strictement hotspot Pi local, pas d'intégration LAN externe.
+- **Streaming inter-display synchronisé** (4 TVs montrent la même animation au même frame) — complexité élevée, aucun besoin produit identifié.
+
+---
+
+## Traceability
+
+| REQ-ID       | Phase                   | Plan          |
+| ------------ | ----------------------- | ------------- |
+| DATA-01      | Phase 4 (DATA)          | TBD           |
+| DATA-02      | Phase 4 (DATA)          | TBD           |
+| DATA-03      | Phase 4 (DATA)          | TBD           |
+| DETECT-01    | Phase 5 (DETECT)        | TBD           |
+| DETECT-02    | Phase 5 (DETECT)        | TBD           |
+| DETECT-03    | Phase 5 (DETECT)        | TBD           |
+| CAPTIVE-01   | Phase 6 (CAPTIVE)       | TBD           |
+| CAPTIVE-02   | Phase 6 (CAPTIVE)       | TBD           |
+| CAPTIVE-03   | Phase 6 (CAPTIVE)       | 06-captive-03 |
+| CAPTIVE-04   | Phase 6 (CAPTIVE)       | 06-captive-03 |
+| CLOUD-01     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-02     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-03     | Phase 7 (CLOUD)         | TBD           |
+| CLOUD-04     | Phase 7 (CLOUD)         | 07-cloud-03   |
+| DASHBOARD-01 | Phase 8 (DASHBOARD)     | TBD           |
+| DASHBOARD-02 | Phase 8 (DASHBOARD)     | TBD           |
+| DASHBOARD-03 | Phase 8 (DASHBOARD)     | TBD           |
+| OBSERVE-01   | Phase 9 (OBSERVE)       | TBD           |
+| OBSERVE-02   | Phase 9 (OBSERVE)       | TBD           |
+| CAPTIVE-05   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
+| CAPTIVE-06   | Phase 10 (CAPTIVE-AUTO) | 46bd801a      |
+| CAPTIVE-07   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
+| ASSIGN-01    | Phase 11 (REASSIGN)     | TBD           |
+| ASSIGN-02    | Phase 11 (REASSIGN)     | TBD           |
+| ASSIGN-03    | Phase 11 (REASSIGN)     | TBD           |
+| ALLOWLIST-01 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-02 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-03 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALLOWLIST-04 | Phase 12 (ALLOWLIST)    | TBD           |
+| ALERT-01     | Phase 13 (ALERT)        | TBD           |
+| ALERT-02     | Phase 13 (ALERT)        | TBD           |
+| ALERT-03     | Phase 13 (ALERT)        | TBD           |
+| ALERT-04     | Phase 13 (ALERT)        | TBD           |
+
+**v4.0: 18 requirements** | **6 catégories** | **Coverage: 18/18** ✓
+
+**v4.1: 14 requirements** | **4 catégories** | **Coverage: 14/14** ✓ (CAPTIVE-05/06/07 → Phase 10, ASSIGN-01/02/03 → Phase 11, ALLOWLIST-01/02/03/04 → Phase 12, ALERT-01/02/03/04 → Phase 13)

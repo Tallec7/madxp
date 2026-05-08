@@ -5,7 +5,7 @@
 - ✅ **v3.0 — Template Studio v3 : UX admin orientée tâche** — Phases 1-3 (shipped 2026-05-05) — [archive](milestones/v3.0-ROADMAP.md)
 - ✅ **v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)** — Phases 4-9 (shipped 2026-05-07)
 - ✅ **v4.1 — Fire Stick polish** — Phases 10-12 (shipped 2026-05-08) — [archive](milestones/v4.1-ROADMAP.md)
-- 📋 **v4.2 — Fire Stick APK TWA** — APK fullscreen (planned)
+- 📋 **v4.2 — Fire Stick APK TWA** — Phases 13-15 (planned)
 
 ## Phases
 
@@ -43,9 +43,53 @@
 
 ## Phase Details
 
-### Phase 13 and beyond — v4.2 (planned)
+### v4.2 — Fire Stick APK TWA (Phases 13-15, planned)
 
-- [ ] **Phase 13: APK TWA fullscreen** — Remplacer Silk Browser (barre URL persistante) par une APK Android TWA (Trusted Web Activity) pour obtenir un affichage fullscreen natif sur Fire Stick
+- [ ] **Phase 13: TWA-BUILD — APK TWA fullscreen** — Build APK Android TWA fullscreen wrappant la page captive Pi, signée release-grade
+- [ ] **Phase 14: DEPLOY — Sideload bénévole** — Procédure ADB sideload + script automatisé + APK servie depuis nginx Pi local
+- [ ] **Phase 15: INTEGRATE — Auto-launch + observabilité** — APK auto-launch à la connexion hotspot avec fallback Silk + métrique Prometheus + smoke
+
+---
+
+### Phase 13: TWA-BUILD — APK TWA fullscreen
+
+**Goal**: Une APK Android TWA fullscreen, signée avec une clé release stable, wrappant la page captive Pi sans afficher d'URL bar ni de chrome navigateur.
+**Depends on**: Nothing (greenfield Android packaging — Phase 10 v4.1 fournit l'URL captive cible)
+**Requirements**: TWA-01, TWA-02, TWA-03, TWA-04
+**Success Criteria** (what must be TRUE):
+
+1. L'APK installée sur un Fire Stick, lancée manuellement, charge la page captive Pi en plein écran sans aucune barre URL ni barre système visible.
+2. L'APK suit le redirect 302 wifistub → wifiredirect → `/?display=N` sans flash d'URL intermédiaire à l'écran.
+3. La même clé `neopro-firestick-release.keystore` peut signer un APK v0.2 qui s'installe en upgrade par-dessus v0.1 sans désinstaller la première (signature match).
+
+**Plans**: TBD (à définir en `/gsd:plan-phase 13`)
+
+### Phase 14: DEPLOY — Sideload bénévole-grade
+
+**Goal**: Un bénévole (zéro compétence Android) peut installer l'APK sur un Fire Stick neuf en moins de 10 minutes, en suivant un guide pas-à-pas, sans connexion internet club.
+**Depends on**: Phase 13 (consomme l'APK signée)
+**Requirements**: INSTALL-01, INSTALL-02, INSTALL-03
+**Success Criteria** (what must be TRUE):
+
+1. La procédure documentée permet à un bénévole avec un Mac/Windows/Linux d'installer l'APK sur un Fire Stick en moins de 10 min (mesuré sur un test réel).
+2. L'APK est servie par nginx du Pi (`http://192.168.4.1/firestick.apk`) — accessible quand le Pi tourne en hotspot, même sans internet club.
+3. Le script `firestick-install-apk.sh` détecte une APK déjà installée et propose upgrade vs réinstall propre.
+
+**Plans**: TBD (à définir en `/gsd:plan-phase 14`)
+
+### Phase 15: INTEGRATE — Auto-launch + observabilité
+
+**Goal**: L'APK se lance automatiquement quand un Fire Stick rejoint le hotspot Pi, le fallback Silk Browser v4.1 reste fonctionnel pour les Fire Sticks sans APK, et l'adoption APK vs Silk est observable côté Prometheus.
+**Depends on**: Phase 13 (APK existe), Phase 14 (APK déployable bénévole-grade)
+**Requirements**: AUTOLAUNCH-01, AUTOLAUNCH-02, OBSERVE-01, OBSERVE-02
+**Success Criteria** (what must be TRUE):
+
+1. Un Fire Stick avec APK installée affiche la page Neopro fullscreen en moins de 30s après connexion au hotspot, sans intervention bénévole.
+2. Un Fire Stick sans APK installée tombe sur le comportement v4.1 (Silk auto-launch) sans erreur ni régression.
+3. La métrique `neopro_firestick_apk_total{site_id, version}` permet de distinguer dans Grafana les Fire Sticks APK vs Silk pour suivre la migration de la flotte.
+4. La suite smoke fige les contrats clés (User-Agent custom, manifest fullscreen, target URL captive) — un changement régressif fait rouge le smoke.
+
+**Plans**: TBD (à définir en `/gsd:plan-phase 15`)
 
 ---
 
