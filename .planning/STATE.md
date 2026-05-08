@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: completed
-stopped_at: Phase 11 UAT in progress (test 3/6 pending)
-last_updated: '2026-05-07T19:35:00.000Z'
-last_activity: 2026-05-07 — Phase 11 plan 01 complete — 13/13 tests verts — UAT 2/6 pass
+status: executing
+stopped_at: Completed 12-01-server-unknown-firestick-metric-PLAN.md
+last_updated: '2026-05-08T06:59:56.823Z'
+last_activity: 2026-05-07 — 11-01 COMPLETE — badge MAC séparé + [Réassigner ▾] + mutation atomique + 13/13 Karma verts
 progress:
   total_phases: 10
-  completed_phases: 7
-  total_plans: 21
-  completed_plans: 21
+  completed_phases: 8
+  total_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 11 (REASSIGN) plan 01 complete, UAT in progress.
+**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 12 (ALLOWLIST) plan 01 complete.
 
 ## Current Position
 
-Phase: Phase 11 — REASSIGN (plan 01 complete, UAT 2/6 pass)
-Plan: 11-01-displays-editor-reassign-ux (COMPLETE — 13/13 tests verts, commits 16e0f680 + 1ed3c5d2)
-Status: UAT in progress — test 3/6 (Sous-texte cross-display) pending user response
-Last activity: 2026-05-07 — 11-01 COMPLETE — badge MAC séparé + [Réassigner ▾] + mutation atomique + 13/13 Karma verts
-Next: Resume UAT at test 3/6 — then push merge commit to update PR #898
+Phase: Phase 12 — ALLOWLIST (plan 01 complete)
+Plan: 12-01-server-unknown-firestick-metric (COMPLETE — 21/21 smoke verts, commits 17669b0b + 3a6fc7ee)
+Status: Ready for plan 02
+Last activity: 2026-05-08 — 12-01 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + dedup Map + Winston warn + 9 smoke verts
+Next: Phase 12 plan 02 (MAC allowlist hostapd sync-agent)
 
 ## Accumulated Context
 
@@ -80,6 +80,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Modèle de données = extension `DisplayConfig` JSONB (PROP-002 réutilisé), pas de nouvelle table
 - Roadmap 6 phases v4.0 : DATA → DETECT → CAPTIVE → CLOUD → DASHBOARD → OBSERVE (dépendances data-first, cloud après Pi-side, observe en dernier)
 
+### Decisions (Phase 12)
+
+- 12-01: label site_id uniquement sur neopro_hotspot_unknown_firestick_total — mac comme label = cardinalite elevee refusee; mac reste dans le log Winston uniquement
+- 12-01: dedup Map<siteId, Set<mac>> scope process dans socket.service.ts — reset au reboot Railway acceptable (granularite session process)
+- 12-01: kind='browser' (telephones benevoles) jamais compte — seuls kind='firestick' && displayIndex===null sont detectes
+- 12-01: TDD RED→GREEN — smoke assertions ecrites avant implementation pour figer les contrats de wiring observables
+
 ### Decisions (v4.1)
 
 - Phase 10 avant Phase 11 : l'auto-launch améliore le captive portal existant (Phase 6), sans dépendance sur Réassigner
@@ -113,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-07T19:35:00.000Z
-Stopped at: Phase 11 UAT 2/6 pass — merge conflict resolution in progress
-Resume file: .planning/phases/11-reassign-ux-dashboard/11-UAT.md
+Last session: 2026-05-08T06:59:56.814Z
+Stopped at: Completed 12-01-server-unknown-firestick-metric-PLAN.md
+Resume file: None
