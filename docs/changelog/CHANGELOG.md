@@ -1,3 +1,10 @@
+## [3.299.4](https://github.com/Tallec7/neopro/compare/v3.299.3...v3.299.4) (2026-05-08)
+
+### Bug Fixes
+
+- **build:** augmente le heap Node worker pour ng build central-dashboard ([#913](https://github.com/Tallec7/neopro/issues/913)) ([56af9c5](https://github.com/Tallec7/neopro/commit/56af9c5f22c86b557fe1a6fa57aa88c8dc5f3650))
+- **display:** enrichissement N-display ouvert à tous les display types du site (PR 1/3 — issue [#914](https://github.com/Tallec7/neopro/issues/914)) ([#915](https://github.com/Tallec7/neopro/issues/915)) ([40489dc](https://github.com/Tallec7/neopro/commit/40489dc6af4840bb2471bddf5c117b15d0bb7df6))
+
 ## [3.299.3](https://github.com/Tallec7/neopro/compare/v3.299.2...v3.299.3) (2026-05-08)
 
 ### Bug Fixes
