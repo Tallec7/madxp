@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: active
-stopped_at: null
-last_updated: '2026-05-08T00:00:00.000Z'
-last_activity: 2026-05-08 — Phase 11 COMPLETE — badge MAC + Réassigner 1 clic + 13/13 Karma + fix receivers race condition
+status: verifying
+stopped_at: Phase 12 COMPLETE — both plans merged to main
+last_updated: '2026-05-08T07:09:24.162Z'
+last_activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 22
+  completed_plans: 24
 ---
 
 # Project State
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 11 COMPLETE. Next : Phase 12 (ALLOWLIST — MAC allowlist hostapd).
+**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 12 COMPLETE — OBSERVE.
 
 ## Current Position
 
-Phase: Phase 12 — ALLOWLIST (not started)
-Plan: —
-Status: Ready to start
-Last activity: 2026-05-08 — Phase 11 CLOSED — UAT 2/6 pass + 4 skipped (Karma H-M) + fix receivers race (commit 9b1380e1)
-Next: /gsd:discuss-phase 12 ou /gsd:plan-phase 12
+Phase: Phase 12 — OBSERVE (COMPLETE — 2/2 plans done)
+Plan: 12-02-dashboard-unknown-firestick-badge (COMPLETE — 17/17 Karma verts, commit 86e4d1a1)
+Status: Phase 12 verified — prêt pour phase suivante
+Last activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
+Next: /gsd:verify-work 12 ou /gsd:progress
 
 ## Accumulated Context
 
@@ -80,6 +80,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Modèle de données = extension `DisplayConfig` JSONB (PROP-002 réutilisé), pas de nouvelle table
 - Roadmap 6 phases v4.0 : DATA → DETECT → CAPTIVE → CLOUD → DASHBOARD → OBSERVE (dépendances data-first, cloud après Pi-side, observe en dernier)
 
+### Decisions (Phase 12)
+
+- 12-01: label site_id uniquement sur neopro_hotspot_unknown_firestick_total — mac comme label = cardinalite elevee refusee; mac reste dans le log Winston uniquement
+- 12-01: dedup Map<siteId, Set<mac>> scope process dans socket.service.ts — reset au reboot Railway acceptable (granularite session process)
+- 12-01: kind='browser' (telephones benevoles) jamais compte — seuls kind='firestick' && displayIndex===null sont detectes
+- 12-01: TDD RED→GREEN — smoke assertions ecrites avant implementation pour figer les contrats de wiring observables
+
 ### Decisions (v4.1)
 
 - Phase 10 avant Phase 11 : l'auto-launch améliore le captive portal existant (Phase 6), sans dépendance sur Réassigner
@@ -113,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T00:00:00.000Z
-Stopped at: Phase 11 CLOSED — Phase 12 ready to start
+Last session: 2026-05-08T09:00:00.000Z
+Stopped at: Phase 12 COMPLETE — both plans merged to main
 Resume file: .planning/ROADMAP.md

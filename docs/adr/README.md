@@ -127,6 +127,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-111](ADR-111-alert-repository-dedup.md)                                    | Dédup au niveau alertRepository (upsert + occurrences) — neutralise les emitters en boucle   | Accepté                           | Mai 2026 |
 | [ADR-112](ADR-112-bodet-led-panel-usb-integration.md)                           | Intégration panneaux LED Bodet P10 V2 USB2 (mode mass storage emulation)                     | Investigation                     | Mai 2026 |
 | [ADR-113](ADR-113-ftp-creds-rotation-procedure.md)                              | Procédure de rotation manuelle des credentials FTP Hostinger (cadence 90j, audit P0 #2)      | Accepté                           | Mai 2026 |
+| [ADR-114](ADR-114-displays-write-through-configuration-json.md)                 | Write-through `configuration.json.displays` côté sync-agent (fix propagation MAC → captive)  | Accepté                           | Mai 2026 |
 
 ### Supersédés
 

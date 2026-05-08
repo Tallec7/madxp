@@ -187,6 +187,12 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - **Changer `generate_204` pour retourner `204` dans `firestick-captive.conf`** — Fire OS interprète 204 comme "internet OK" → pas de portail. La réponse doit être `302` vers `http://192.168.4.1/` pour déclencher CaptivePortalLauncher et ouvrir Silk automatiquement (smoke test enforced).
 - **Attendre le plein écran de Silk en mode captive portal** — Silk s'ouvre en fenêtre système bridée (barre URL visible) par design Fire OS. Le seul moyen d'avoir le vrai fullscreen est une APK TWA. Ne pas promettre le fullscreen sans APK.
 
+### Captive Portal — Propagation displays cloud → Pi (ADR-114)
+
+- **Retirer la write-through `configuration.json.displays = payload.displays` dans `command-dispatch.js`** (handler `receiver_assignment_updated`). Sans cette persistance, l'assignation MAC faite côté dashboard cloud n'arrive jamais à `captive.js` whoami : `assignDisplay()` n'écrit que dans `.receivers-cache.json` (ephemeral), tandis que `captive.js` lit `configuration.json.displays[].receiver.mac` comme source de vérité. Le Fire Stick atterrit alors sur la mauvaise route `/display/N` — incident 2026-05-08, ADR-114.
+- **Faire un merge sur `displays`** au lieu d'un replace dans la write-through : le cloud (DB `sites.displays`) est la SEULE source de vérité pour la composition des écrans d'un site. Un merge laisserait des entries fantômes après suppression d'un display.
+- **Throw au lieu de warn** quand l'écriture `configuration.json` échoue : la commande doit être idempotente et résiliente. `assignDisplay()` a déjà été appelé, le cache receivers est à jour ; un échec d'écriture est loggé en warn et la prochaine commande retry.
+
 ### Hardware
 
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (ventilateur non contrôlé, surchauffe silencieuse)

@@ -150,6 +150,12 @@ class SocketService {
   private playerStates: Map<string, import('../handlers/socket-context').PlayerState> = new Map();
   private lastMetricsInsertAt: Map<string, number> = new Map();
   private receiversBySite: Map<string, ReceiverInfo[]> = new Map();
+  /**
+   * Phase 12 OBSERVE — Dédup MAC déjà signalée par site, scope process.
+   * Évite l'incrément du Counter à chaque tick state-sync (~10s).
+   * Reset implicite au reboot Railway (acceptable — granularité par session process).
+   */
+  private unknownFirestickSeenBySite: Map<string, Set<string>> = new Map();
   private timeoutCheckInterval: NodeJS.Timeout | null = null;
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
@@ -578,6 +584,25 @@ class SocketService {
         // OBSERVE-01 — métrique Prometheus pour les transitions receiver
         if (receivers.length > 0) {
           metricsService.recordReceiver(siteId, 'detected');
+        }
+        // Phase 12 OBSERVE — Détecter les Fire Sticks non assignés (kind=firestick, displayIndex=null).
+        // kind === 'browser' (téléphones bénévoles) volontairement ignoré.
+        // Dédup par (siteId, mac) pour ne compter qu'à la première apparition de la session.
+        let seen = this.unknownFirestickSeenBySite.get(siteId);
+        if (!seen) {
+          seen = new Set<string>();
+          this.unknownFirestickSeenBySite.set(siteId, seen);
+        }
+        for (const r of receivers) {
+          if (r.kind === 'firestick' && r.displayIndex === null && r.mac && !seen.has(r.mac)) {
+            seen.add(r.mac);
+            logger.warn('unknown_firestick detected on hotspot — Fire Stick non assigné', {
+              siteId,
+              mac: r.mac,
+              lastSeenAt: r.lastSeenAt,
+            });
+            metricsService.recordHotspotUnknownFirestick(siteId);
+          }
         }
       }
       if (this.io) {

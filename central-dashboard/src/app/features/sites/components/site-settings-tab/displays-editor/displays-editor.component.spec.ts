@@ -355,3 +355,78 @@ describe('DisplaysEditorComponent — Phase 11 Reassign UX', () => {
     expect(unassign.textContent).toContain('Désassigner');
   });
 });
+
+describe('Phase 12 OBSERVE — badge ambre Non assigné', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('isUnknownFirestick returns true for firestick with displayIndex === null', () => {
+    expect(component.isUnknownFirestick({ kind: 'firestick', displayIndex: null, mac: 'aa:bb:cc:dd:ee:01', lastSeenAt: Date.now() } as any)).toBe(true);
+    expect(component.isUnknownFirestick({ kind: 'firestick', displayIndex: 0, mac: 'aa:bb:cc:dd:ee:02', lastSeenAt: Date.now() } as any)).toBe(false);
+    expect(component.isUnknownFirestick({ kind: 'browser', displayIndex: null, mac: 'aa:bb:cc:dd:ee:03', lastSeenAt: Date.now() } as any)).toBe(false);
+  });
+
+  it('renders amber "Non assigné" badge for firestick with displayIndex === null in dropdown', () => {
+    component.displays = [
+      { index: 0, name: 'TV principale', type: 'pi-native', resolution: '1920x1080', receiver: { kind: 'pi_native' } } as any,
+      { index: 1, name: 'TV buvette', type: 'firestick', resolution: '1920x1080' } as any,
+    ];
+    component.connectedReceivers = [
+      { mac: 'aa:bb:cc:dd:ee:ff', kind: 'firestick', displayIndex: null, lastSeenAt: Date.now() } as any,
+    ];
+    fixture.detectChanges();
+    // Click the "+ Assigner" button for display 1 to open dropdown
+    const assignBtn = fixture.nativeElement.querySelector('.receiver-badge--unassigned') as HTMLButtonElement;
+    assignBtn.click();
+    fixture.detectChanges();
+
+    const badges = fixture.nativeElement.querySelectorAll('[data-testid="receiver-badge-unknown"]');
+    expect(badges.length).toBe(1);
+    expect(badges[0].textContent.trim()).toBe('Non assigné');
+    expect(badges[0].classList.contains('receiver-badge--unknown')).toBe(true);
+  });
+
+  it('does NOT render badge for kind=browser (téléphone bénévole)', () => {
+    component.displays = [
+      { index: 0, name: 'TV', type: 'pi-native', resolution: '1920x1080', receiver: { kind: 'pi_native' } } as any,
+      { index: 1, name: 'TV2', type: 'firestick', resolution: '1920x1080' } as any,
+    ];
+    component.connectedReceivers = [
+      { mac: 'aa:bb:cc:dd:ee:bb', kind: 'browser', displayIndex: null, lastSeenAt: Date.now() } as any,
+    ];
+    fixture.detectChanges();
+    // Click the "+ Assigner" button for display 1 to open dropdown
+    const assignBtn = fixture.nativeElement.querySelector('.receiver-badge--unassigned') as HTMLButtonElement;
+    assignBtn.click();
+    fixture.detectChanges();
+
+    const badges = fixture.nativeElement.querySelectorAll('[data-testid="receiver-badge-unknown"]');
+    expect(badges.length).toBe(0);
+  });
+
+  it('does NOT render badge for firestick already assigned to another display', () => {
+    component.displays = [
+      { index: 0, name: 'TV', type: 'pi-native', resolution: '1920x1080', receiver: { kind: 'pi_native' } } as any,
+      { index: 1, name: 'TV2', type: 'firestick', resolution: '1920x1080', receiver: { kind: 'firestick', mac: 'aa:bb:cc:dd:ee:cc' } } as any,
+      { index: 2, name: 'TV3', type: 'firestick', resolution: '1920x1080' } as any,
+    ];
+    component.connectedReceivers = [
+      { mac: 'aa:bb:cc:dd:ee:cc', kind: 'firestick', displayIndex: 1, lastSeenAt: Date.now() } as any,
+    ];
+    fixture.detectChanges();
+    // Click the "+ Assigner" button for display 2 (the unassigned one) to open dropdown
+    const assignBtn = fixture.nativeElement.querySelector('.receiver-badge--unassigned') as HTMLButtonElement;
+    assignBtn.click();
+    fixture.detectChanges();
+
+    // The firestick is in the dropdown (different display), but has displayIndex: 1 (not null) so no badge
+    const badges = fixture.nativeElement.querySelectorAll('[data-testid="receiver-badge-unknown"]');
+    expect(badges.length).toBe(0);
+  });
+});

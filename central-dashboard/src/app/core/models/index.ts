@@ -192,7 +192,8 @@ export interface DisplayConfig {
 export interface ReceiverInfo {
   mac: string; // 'AA:BB:CC:DD:EE:FF'
   kind: 'pi_native' | 'firestick' | 'browser';
-  lastSeenAt: string; // ISO8601
+  lastSeenAt: string | number; // ISO8601 or epoch ms
+  displayIndex?: number | null; // Phase 12 OBSERVE — index du display assigné, null si non assigné
 }
 
 /**
