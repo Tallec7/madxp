@@ -61,12 +61,10 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ### Active
 
-**Next Milestone: v4.2 — Fire Stick hardening**
+**Next Milestone: v4.2 — Fire Stick APK**
 
 **Target features (déclencheurs confirmés) :**
 
-- [ ] **MAC allowlist hostapd** — seules les MACs whitelistées obtiennent IP DHCP, gérée depuis dashboard (ALLOWLIST-01/02/03/04 — déférées de v4.1)
-- [ ] **Alertes déconnexion Fire Stick** — alerte `receiver_offline` si Fire Stick assigné disparaît > 5 min + résolution auto (ALERT-01/02/03/04 — déférées de v4.1)
 - [ ] **APK TWA fullscreen** — Silk URL bar persistante après v4.1 (trigger : retour terrain confirmé)
 
 **Future (déclencheurs non encore observés) :**

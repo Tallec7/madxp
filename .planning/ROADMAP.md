@@ -5,7 +5,7 @@
 - ✅ **v3.0 — Template Studio v3 : UX admin orientée tâche** — Phases 1-3 (shipped 2026-05-05) — [archive](milestones/v3.0-ROADMAP.md)
 - ✅ **v4.0 — Multi-écrans Fire Stick (MVP terrain bénévole-grade)** — Phases 4-9 (shipped 2026-05-07)
 - ✅ **v4.1 — Fire Stick polish** — Phases 10-12 (shipped 2026-05-08) — [archive](milestones/v4.1-ROADMAP.md)
-- 📋 **v4.2 — Fire Stick hardening** — ALLOWLIST + ALERT + APK TWA (planned)
+- 📋 **v4.2 — Fire Stick APK TWA** — APK fullscreen (planned)
 
 ## Phases
 
@@ -37,7 +37,7 @@
 - [x] Phase 11: REASSIGN — Réassigner UX dashboard (1/1 plan) — completed 2026-05-08
 - [x] Phase 12: OBSERVE — Fire Stick inconnus + badge ambre (2/2 plans, pivoté de ALLOWLIST) — completed 2026-05-08
 
-**Known gaps deferred to v4.2:** ALLOWLIST-01/02/03/04, ALERT-01/02/03/04
+**Gaps intentionnellement abandonnés (décision produit 2026-05-08) :** ALLOWLIST-01/02/03/04, ALERT-01/02/03/04
 
 </details>
 
@@ -45,8 +45,7 @@
 
 ### Phase 13 and beyond — v4.2 (planned)
 
-- [ ] **Phase 13: ALLOWLIST — MAC allowlist hostapd** — seules les MACs whitelistées obtiennent IP DHCP ; gérée depuis le dashboard sans SSH (ALLOWLIST-01/02/03/04 — déférées de v4.1)
-- [ ] **Phase 14: ALERT — Alertes déconnexion Fire Stick** — alerte `receiver_offline` si Fire Stick assigné disparaît > 5 min + résolution auto (ALERT-01/02/03/04 — déférées de v4.1)
+- [ ] **Phase 13: APK TWA fullscreen** — Remplacer Silk Browser (barre URL persistante) par une APK Android TWA (Trusted Web Activity) pour obtenir un affichage fullscreen natif sur Fire Stick
 
 ---
 
@@ -188,30 +187,15 @@
 
 - [x] 11-01-displays-editor-reassign-ux-PLAN.md — Helpers `isReceiverStale` / `getReassignableReceivers` / `getCrossDisplayHint` + mutation atomique 2-displays dans `assignReceiver` + bouton [Réassigner ▾] séparé du badge MAC + 6 tests Karma (ASSIGN-01, ASSIGN-02, ASSIGN-03) ✅ 2026-05-07
 
-### Phase 12: ALLOWLIST — MAC allowlist hostapd
+### Phase 13: APK TWA fullscreen
 
-**Goal**: Le hotspot Pi peut opérer en mode sécurisé où seules les MACs d'une whitelist obtiennent une IP DHCP, et l'admin gère cette liste depuis le dashboard sans SSH.
-**Depends on**: Phase 7 (cloud API site config) + Phase 9 (smoke receivers-discovery comme référence contrat wiring)
-**Requirements**: ALLOWLIST-01, ALLOWLIST-02, ALLOWLIST-03, ALLOWLIST-04
+**Goal**: Le Fire Stick affiche Neopro en plein écran sans barre URL Silk Browser.
+**Depends on**: Phase 10 (captive auto-launch opérationnel)
+**Requirements**: APK-01 (à définir)
 **Success Criteria** (what must be TRUE):
 
-1. Quand le mode allowlist est activé pour un site, un Fire Stick dont la MAC n'est pas dans la liste ne reçoit pas d'adresse IP (refus DHCP niveau hostapd).
-2. L'admin ajoute ou retire une MAC de l'allowlist depuis le dashboard sans connexion SSH au Pi — la mise à jour est propagée au Pi via sync-agent et appliquée à chaud.
-3. Une tentative de connexion refusée génère une métrique `neopro_hotspot_rejected_total` incrémentée et un log côté Pi (observable en prod).
-4. Pour les sites n'ayant pas activé le mode allowlist, le comportement est identique à v4.0 (hotspot ouvert) — opt-in strict, pas de breaking change.
-
-**Plans**: TBD
-
-### Phase 13: ALERT — Alertes déconnexion Fire Stick
-
-**Goal**: Le super_admin est notifié automatiquement si un Fire Stick assigné disparaît du hotspot pendant un créneau actif, et l'alerte se résout seule à la reconnexion.
-**Depends on**: Phase 9 (smoke receivers-discovery + métrique receivers) + alertRepository.create() ADR-111 (déjà disponible)
-**Requirements**: ALERT-01, ALERT-02, ALERT-03, ALERT-04
-**Success Criteria** (what must be TRUE):
-
-1. Si un Fire Stick assigné n'est plus détecté sur le hotspot pendant plus de 5 minutes (configurable), une alerte `receiver_offline` apparaît dans le dashboard admin avec le site, le display, la MAC et l'heure de dernière détection.
-2. Quand le Fire Stick se reconnecte au hotspot, l'alerte `receiver_offline` est marquée résolue automatiquement — sans intervention admin.
-3. La métrique `neopro_receiver_offline_total{site_id, mac}` est incrémentée à chaque déconnexion détectée (observable en Grafana).
+1. L'APK TWA installée sur Fire Stick ouvre l'URL Neopro en fullscreen, sans barre URL visible.
+2. Le comportement captive portal (auto-launch Phase 10) reste fonctionnel avec l'APK.
 
 **Plans**: TBD
 
@@ -231,8 +215,7 @@
 | 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete | 2026-05-07 |
 | 11. REASSIGN        | v4.1      | 1/1            | Complete | 2026-05-08 |
 | 12. OBSERVE(pivoté) | v4.1      | 2/2            | Complete | 2026-05-08 |
-| 13. ALLOWLIST       | v4.2      | 0/?            | Planned  | -          |
-| 14. ALERT           | v4.2      | 0/?            | Planned  | -          |
+| 13. APK TWA         | v4.2      | 0/?            | Planned  | -          |
 
 ---
 
