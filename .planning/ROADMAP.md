@@ -187,7 +187,10 @@
 2. Dans la vue Écrans du dashboard, les receivers firestick non assignés apparaissent avec un badge ambre "Non assigné" (distinct du badge vert des assignés).
 3. Le hotspot reste ouvert — aucune modification hostapd, aucun impact sur la télécommande des bénévoles.
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+- [ ] 12-01-server-unknown-firestick-metric-PLAN.md — Counter `neopro_hotspot_unknown_firestick_total{site_id}` + state-sync hook + dédup (siteId,mac) + Winston warn + smoke (OBSERVE-01, OBSERVE-02)
+- [ ] 12-02-dashboard-unknown-firestick-badge-PLAN.md — Helper `isUnknownFirestick` + badge ambre `.receiver-badge--unknown` "Non assigné" dans dropdown receiver + 4 tests Karma (OBSERVE-03)
 
 ### Phase 13: ALERT — Alertes déconnexion Fire Stick
 
@@ -217,7 +220,7 @@
 | 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
 | 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete    | 2026-05-07 |
 | 11. REASSIGN        | v4.1      | 1/1            | In Progress | -          |
-| 12. OBSERVE         | v4.1      | 0/?            | Not started | -          |
+| 12. OBSERVE         | v4.1      | 0/2            | Planned     | -          |
 | 13. ALERT           | v4.1      | 0/?            | Not started | -          |
 
 ---
