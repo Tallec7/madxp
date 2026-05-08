@@ -38,10 +38,12 @@ echo "OK: copied network_security_config.xml -> app/src/main/res/xml/"
 if grep -q 'android:networkSecurityConfig="@xml/network_security_config"' "$ANDROID_MANIFEST"; then
   echo "OK: networkSecurityConfig already present (idempotent skip)"
 else
-  # sed: insert attribute right after <application opening tag
-  # macOS BSD sed and GNU sed compatible via -i.bak then rm
-  sed -i.bak 's|<application |<application android:networkSecurityConfig="@xml/network_security_config" |' "$ANDROID_MANIFEST"
-  rm -f "${ANDROID_MANIFEST}.bak"
+  # perl: insert attribute right after <application opening tag.
+  # Use perl (not sed) because Bubblewrap's AndroidManifest.xml puts the next
+  # attribute on a new line — `<application\n        android:foo=...` — and the
+  # naive sed `<application ` (trailing space) does not match the newline.
+  # `\s` matches space OR newline. macOS BSD sed has no portable way to do this.
+  perl -i -pe 's|<application(\s)|<application android:networkSecurityConfig="\@xml/network_security_config"\1|' "$ANDROID_MANIFEST"
   # verify injection
   if ! grep -q 'android:networkSecurityConfig="@xml/network_security_config"' "$ANDROID_MANIFEST"; then
     echo "ERROR: failed to inject networkSecurityConfig into AndroidManifest.xml" >&2

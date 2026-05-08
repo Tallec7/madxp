@@ -22,5 +22,10 @@ dist/
 # Bubblewrap backup
 twa-manifest.json.bak
 
+# Build artifacts (regenerated each build by Bubblewrap / Gradle)
+.twa-manifest.runtime.json
+gradle.properties
+app-release*.apk.idsig
+
 # Node
 node_modules/

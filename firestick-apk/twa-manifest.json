@@ -19,7 +19,7 @@
   "appVersionCode": 1,
   "appVersionName": "0.1.0",
   "fallbackType": "customtabs",
-  "minSdkVersion": 19,
+  "minSdkVersion": 21,
   "fingerprints": [],
   "generatorApp": "neopro-firestick-build"
 }
