@@ -263,8 +263,13 @@
           class="form-select"
         >
           <option value="">-- Choisir un site --</option>
-          <option *ngFor="let site of sites" [value]="site.id">
-            {{ site.club_name }} - {{ site.site_name }}
+          <option
+            *ngFor="let site of sites"
+            [value]="site.id"
+            [disabled]="site.site_type === 'saas'"
+          >
+            {{ site.club_name }} - {{ site.site_name
+            }}{{ site.site_type === 'saas' ? ' (SaaS — pas de déploiement)' : '' }}
           </option>
         </select>
 

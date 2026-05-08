@@ -713,9 +713,9 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
   /**
    * Recupere un site minimal (id, site_name) pour les verifications d'existence.
    */
-  async findBasicInfo(id: string): Promise<{ id: string; site_name: string; club_name?: string; status?: string } | null> {
-    const result = await query<{ id: string; site_name: string; club_name: string; status: string }>(
-      'SELECT id, site_name, club_name, status FROM sites WHERE id = $1',
+  async findBasicInfo(id: string): Promise<{ id: string; site_name: string; club_name?: string; status?: string; site_type?: string } | null> {
+    const result = await query<{ id: string; site_name: string; club_name: string; status: string; site_type: string }>(
+      'SELECT id, site_name, club_name, status, site_type FROM sites WHERE id = $1',
       [id]
     );
     return result.rows[0] || null;

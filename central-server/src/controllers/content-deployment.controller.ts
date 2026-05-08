@@ -51,6 +51,26 @@ export const createDeployment = async (req: AuthRequest, res: Response) => {
   try {
     const { video_id, target_type, target_id, scheduled_at } = req.body;
 
+    // Les sites SaaS n'ont pas de Pi : ils consomment leur config via API
+    // (cf. mergeDefaultProfileConfig + GET /api/saas/:id/config). Créer une
+    // ligne `content_deployments` pour eux est inutile (le SaasDirectStrategy
+    // la marque `completed` immédiatement) et expose le bulk deploy au rate
+    // limit `sensitiveRateLimit` 30/min — incident dashboard 2026-05-08.
+    if (target_type === 'site' && target_id) {
+      const targetSite = await siteRepository.findBasicInfo(target_id);
+      if (targetSite && targetSite.site_type === 'saas') {
+        logger.warn('Deployment refused: target site is SaaS', {
+          video_id,
+          target_id,
+          site_type: targetSite.site_type,
+        });
+        return res.status(400).json({
+          error: 'SaaS sites do not use video deployments',
+          message: 'Les sites SaaS n\'utilisent pas de déploiement. Mettez à jour leur configuration depuis la page du site.',
+        });
+      }
+    }
+
     // === GATE: Vérifier que la vidéo est prête pour le déploiement ===
     const videoReadiness = await uploadVerificationService.isVideoReadyForDeployment(video_id);
 

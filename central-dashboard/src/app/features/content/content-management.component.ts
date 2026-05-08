@@ -347,7 +347,7 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   canDeploy(): boolean { return this.deployService.canDeploy(); }
 
   async startDeployment(): Promise<void> {
-    const result = await this.deployService.startDeployment(this.allVideos, this.deployments);
+    const result = await this.deployService.startDeployment(this.allVideos, this.deployments, this.sites);
     if (result.switchToHistory) {
       this.activeTab = 'history';
     }

@@ -3087,6 +3087,68 @@ describe('ADR-082 Video Club Grants — routes, guards and Prometheus instrument
     expect(indexContent.includes('videoClubGrantRepository')).toBe(true);
   });
 
+  it('createDeployment rejects SaaS targets with 400 (no Pi to deploy to)', () => {
+    // Sans ce guard, le bulk deploy depuis /content vers un site SaaS poste
+    // N requêtes /deployments → cascade 429 (sensitiveRateLimit 30/min) +
+    // crée des content_deployments inutiles. Defense-in-depth côté serveur.
+    const filePath = path.join(
+      repoRoot,
+      'central-server',
+      'src',
+      'controllers',
+      'content-deployment.controller.ts',
+    );
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      checksTargetType: /target_type === 'site'/.test(content),
+      callsFindBasicInfo: /siteRepository\.findBasicInfo/.test(content),
+      rejectsSaasWith400: /site_type === 'saas'[\s\S]{0,500}status\(400\)/.test(content),
+    }).toEqual({
+      checksTargetType: true,
+      callsFindBasicInfo: true,
+      rejectsSaasWith400: true,
+    });
+  });
+
+  it('content-deployment.service skips SaaS targets in dashboard before POSTing /deployments', () => {
+    // Sans ce guard UI, l'utilisateur peut quand même se taper le 429 (le
+    // backend est bloquant mais consomme un quota par tentative). Le service
+    // doit retourner early avec une notification dédiée.
+    const filePath = path.join(
+      repoRoot,
+      'central-dashboard',
+      'src',
+      'app',
+      'features',
+      'content',
+      'content-deployment.service.ts',
+    );
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      receivesSitesParam: /startDeployment\([^)]*sites:\s*Site\[\]/.test(content),
+      checksSaasTarget: /site_type === 'saas'/.test(content),
+      shortCircuitsBeforeLoop: /site_type === 'saas'[\s\S]{0,400}return \{ successes: \[\], switchToHistory: false \}/.test(content),
+    }).toEqual({
+      receivesSitesParam: true,
+      checksSaasTarget: true,
+      shortCircuitsBeforeLoop: true,
+    });
+  });
+
+  it('content-management deploy dropdown disables SaaS site options', () => {
+    const filePath = path.join(
+      repoRoot,
+      'central-dashboard',
+      'src',
+      'app',
+      'features',
+      'content',
+      'content-management.component.html',
+    );
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect(/\[disabled\]="site\.site_type === 'saas'"/.test(content)).toBe(true);
+  });
+
   it('isLockedForConfig relaxes grant guard in video-library.component', () => {
     const filePath = path.join(
       repoRoot,
