@@ -1,3 +1,10 @@
+## [3.300.6](https://github.com/Tallec7/neopro/compare/v3.300.5...v3.300.6) (2026-05-08)
+
+### Bug Fixes
+
+- **saas:** force release — variant URL resolution for all display types ([#926](https://github.com/Tallec7/neopro/issues/926)) ([0debd67](https://github.com/Tallec7/neopro/commit/0debd6737dbacc6c36920b1e315bcd07982da49f))
+- **saas:** redeploy — variant URL resolution for all display types ([7610806](https://github.com/Tallec7/neopro/commit/7610806e9497c7c3fb1b6500a26bb3cb7fc51702))
+
 ## [3.300.5](https://github.com/Tallec7/neopro/compare/v3.300.4...v3.300.5) (2026-05-08)
 
 ### Bug Fixes
