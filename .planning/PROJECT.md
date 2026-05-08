@@ -10,18 +10,15 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ## Current State
 
-**In progress:** v4.1 — Fire Stick polish (started 2026-05-07)
-**Shipped:** v4.0 — Multi-écrans Fire Stick MVP (2026-05-07) · v3.0 — Template Studio v3 (2026-05-06)
+**Shipped:** v4.1 — Fire Stick polish (2026-05-08) · v4.0 — Multi-écrans Fire Stick MVP (2026-05-07) · v3.0 — Template Studio v3 (2026-05-05)
+**Next:** Planning v4.2 (APK TWA fullscreen Fire Stick + alertes déconnexion + allowlist hostapd)
 
-- Wizard 5 étapes (Identité → Fonds → Zones → Options → Publication) opérationnel
-- Asset Manager WebM standalone avec ffprobe alpha gate
-- Preview Remotion temps réel (debounce 300ms, [hidden] jamais \*ngIf)
-- Animation preset cards visuelles (4 presets nommés en FR)
-- Checklist 8 critères + test render avant publication
-- Publish/unpublish validation-gated avec audit Winston
-- 9 suites smoke v3 figent tous les contrats UI↔DB
-
-**UAT pending (non-bloquant):** 13 items visuels browser (session super_admin)
+- Fire Stick se connecte au hotspot Pi → Silk Browser s'ouvre automatiquement (auto-launch v4.1)
+- Super_admin réassigne un Fire Stick en 1 clic depuis le dashboard (Réassigner UX v4.1)
+- Fire Stick inconnu détecté → badge ambre dans dashboard + métrique Prometheus (OBSERVE v4.1)
+- N Fire Sticks → N TVs en Wi-Fi hotspot Pi sans internet club (~30€/TV)
+- Wizard Template Studio 5 étapes, data-driven, 9 suites smoke figées
+- 24 plans v4.1 mergés sur main — intégration E2E vérifiée 4/4 flows
 
 ## Requirements
 
@@ -54,22 +51,26 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 - ✓ `smoke-receivers-discovery` — 12 assertions pinning 11 contrats wiring Fire Stick
 - ✓ POC validé live 2026-05-07 sur Pi RACC (`neopro.local`) avec Fire Stick réel MAC `0C:43:F9:36:04:77`
 
+### Validated (v4.1 — livré 2026-05-08)
+
+- ✓ nginx wifistub 302-chain → Fire OS CaptivePortalLauncher auto-launch Silk Browser (CAPTIVE-05/06/07)
+- ✓ Réassigner UX 1 clic — mutation atomique 2-displays dans `assignReceiver()`, badge backward-compat (ASSIGN-01/02/03)
+- ✓ Counter `neopro_hotspot_unknown_firestick_total{site_id}` + dedup `Map<siteId,Set<mac>>` + Winston warn (OBSERVE-01/02 phase 12)
+- ✓ Badge ambre « Non assigné » dans dropdown displays-editor (kind=firestick && displayIndex===null)
+- ✓ `smoke-receivers-discovery` étendu — +9 assertions Phase 12 OBSERVE
+
 ### Active
 
-**Current Milestone: v4.1 — Fire Stick polish**
+**Next Milestone: v4.2 — Fire Stick hardening**
 
-**Goal :** Éliminer les frictions terrain identifiées lors du déploiement v4.0 : le Fire Stick démarre sans manipulation, un admin réassigne une TV en 1 clic, le réseau hotspot est sécurisé, et une alerte prévient si un écran tombe pendant un match.
+**Target features (déclencheurs confirmés) :**
 
-**Target features :**
+- [ ] **MAC allowlist hostapd** — seules les MACs whitelistées obtiennent IP DHCP, gérée depuis dashboard (ALLOWLIST-01/02/03/04 — déférées de v4.1)
+- [ ] **Alertes déconnexion Fire Stick** — alerte `receiver_offline` si Fire Stick assigné disparaît > 5 min + résolution auto (ALERT-01/02/03/04 — déférées de v4.1)
+- [ ] **APK TWA fullscreen** — Silk URL bar persistante après v4.1 (trigger : retour terrain confirmé)
 
-- **Captive auto-launch fiable** — Silk Browser s'ouvre automatiquement à la connexion hotspot (sans URL bar visible, sans étape manuelle)
-- **Réassigner UX** — bouton Réassigner direct dans le dashboard (remplace Désassigner + Assigner en 2 temps)
-- **MAC allowlist hostapd** — seules les MACs connues/whitelistées peuvent se connecter au hotspot Pi
-- **Alertes déconnexion** — Alertmanager notifie super_admin si un Fire Stick assigné disparaît pendant un créneau actif
+**Future (déclencheurs non encore observés) :**
 
-**Future (déclencheurs explicites — v4.2+) :**
-
-- [ ] APK TWA fullscreen Fire Stick (trigger : retour terrain "URL bar Silk persistante après v4.1")
 - [ ] Scénario SaaS Fire Stick (token URL/cookie) (trigger : 1er client SaaS multi-écrans)
 - [ ] Bouton "Réassigner" côté Fire Stick lui-même (trigger : bénévole seul sans accès dashboard)
 
@@ -99,18 +100,23 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ## Key Decisions
 
-| Decision                                                | Rationale                                                              | Outcome                                   |
-| ------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------- |
-| v3 = couche UI uniquement (pas refonte moteur)          | Moteur v2 15/20, gap purement UX — refonte casserait 4+ templates prod | ✓ Validé v3.0                             |
-| Wizard "Dupliquer puis adapter" comme chemin par défaut | Designer externe peut être autonome sans partir de zéro                | ✓ Validé v3.0                             |
-| Vocabulaire métier UI testé via smoke test figé         | Changement de clé = test rouge = régression détectée immédiatement     | ✓ Validé v3.0 — 9 suites                  |
-| Aperçu Remotion temps réel debounce 300ms               | Évite les renders trop fréquents pendant la saisie                     | ✓ Validé v3.0                             |
-| Phases A/B/C incrémentales (~1 sem chacune)             | Livraison de valeur incrémentale, évite big-bang 3 semaines bloquant   | ✓ Livré en 1j (vélocité x5 vs estimation) |
-| [hidden] jamais \*ngIf sur le Player Remotion           | Pitfall P3 — \*ngIf détruit le React root → fuite GPU SharedImage Pi5  | ✓ Smoke-enforced                          |
-| duplicateDeep() transactionnel 6 tables                 | Cohérence DB garantie même en cas de crash mi-clone                    | ✓ BEGIN/COMMIT + ROLLBACK                 |
-| Validation registry pattern (8 règles extensibles)      | Ajout règle 9 = 1 fichier + 1 ligne, zéro modification orchestrateur   | ✓ Validé v3.0                             |
-| Publish double-gate (UI + serveur re-validate)          | Race condition 2 onglets — serveur est l'autorité finale               | ✓ Validé v3.0                             |
+| Decision                                                                 | Rationale                                                                                                                             | Outcome                                   |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| v3 = couche UI uniquement (pas refonte moteur)                           | Moteur v2 15/20, gap purement UX — refonte casserait 4+ templates prod                                                                | ✓ Validé v3.0                             |
+| Wizard "Dupliquer puis adapter" comme chemin par défaut                  | Designer externe peut être autonome sans partir de zéro                                                                               | ✓ Validé v3.0                             |
+| Vocabulaire métier UI testé via smoke test figé                          | Changement de clé = test rouge = régression détectée immédiatement                                                                    | ✓ Validé v3.0 — 9 suites                  |
+| Aperçu Remotion temps réel debounce 300ms                                | Évite les renders trop fréquents pendant la saisie                                                                                    | ✓ Validé v3.0                             |
+| Phases A/B/C incrémentales (~1 sem chacune)                              | Livraison de valeur incrémentale, évite big-bang 3 semaines bloquant                                                                  | ✓ Livré en 1j (vélocité x5 vs estimation) |
+| [hidden] jamais \*ngIf sur le Player Remotion                            | Pitfall P3 — \*ngIf détruit le React root → fuite GPU SharedImage Pi5                                                                 | ✓ Smoke-enforced                          |
+| duplicateDeep() transactionnel 6 tables                                  | Cohérence DB garantie même en cas de crash mi-clone                                                                                   | ✓ BEGIN/COMMIT + ROLLBACK                 |
+| Validation registry pattern (8 règles extensibles)                       | Ajout règle 9 = 1 fichier + 1 ligne, zéro modification orchestrateur                                                                  | ✓ Validé v3.0                             |
+| Publish double-gate (UI + serveur re-validate)                           | Race condition 2 onglets — serveur est l'autorité finale                                                                              | ✓ Validé v3.0                             |
+| wifistub 302 deux-hop (pas de redirect direct)                           | Fire OS CaptivePortalLauncher exige `$host` préservé — redirect direct casse le hostname dans Location                                | ✓ Validé v4.1 Phase 10                    |
+| badge MAC = classe double `receiver-badge--assigned receiver-badge--mac` | Backward-compat Phase 8 tests B et F (querySelector sur `.receiver-badge--assigned`)                                                  | ✓ Validé v4.1 Phase 11                    |
+| mutation atomique assignReceiver() via single `.map()` pass              | sourceDisplay détecté avant la passe, clear source + set target en 1 seul `displaysChange.emit`                                       | ✓ Validé v4.1 Phase 11                    |
+| dedup Map<siteId, Set<mac>> scope process (reset au reboot Railway)      | Cardinalité mac comme label Prometheus refusée — mac reste dans log Winston uniquement                                                | ✓ Validé v4.1 Phase 12                    |
+| Phase 12 pivotée ALLOWLIST → OBSERVE                                     | ALLOWLIST requiert redémarrage hostapd via sync-agent — scope dépasse v4.1 ; OBSERVE (Counter + badge) plus actionnable immédiatement | ✓ Décision produit 2026-05-08             |
 
 ---
 
-_Last updated: 2026-05-07 — démarrage milestone v4.1 (Fire Stick polish) — v4.0 POC validé live sur Pi RACC_
+_Last updated: 2026-05-08 — milestone v4.1 Fire Stick polish livré_
