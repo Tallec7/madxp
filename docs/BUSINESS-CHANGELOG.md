@@ -8,7 +8,7 @@
 
 ---
 
-## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#896](https://github.com/Tallec7/neopro/pull/896) + v4.1 auto-launch 2026-05-07)
+## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#902](https://github.com/Tallec7/neopro/pull/902) + v4.1 Fire Stick polish livré 2026-05-08)
 
 ### 🎯 Pour le club (NLF, prospects)
 
@@ -16,6 +16,8 @@
 - **Template Studio : supprimer un template supprime aussi ses fichiers vidéo sur le serveur** ([#882](https://github.com/Tallec7/neopro/pull/882)) — avant ce fix, supprimer un template laissait les WebM orphelins sur le FTP Hostinger (espace perdu silencieusement). Désormais la suppression est une opération propre end-to-end : DB + FTP en cascade.
 - **Template Studio : export SPEC.md d'un template existant** ([#886](https://github.com/Tallec7/neopro/pull/886)) — un designer peut récupérer le fichier SPEC.md d'un template déjà en prod via `GET /:id/spec`, re-éditer localement et réimporter. Boucle edit → import → export complète.
 - **Multi-écrans Fire Stick v4.0 : cloud + dashboard + supervision** ([#888](https://github.com/Tallec7/neopro/pull/888)) — Phases 7-9 : API `connected-receivers`, badge 3 états dashboard (Pi HDMI / Fire Stick assigné / libre), dropdown assignation, métriques Prometheus `neopro_receivers_total`.
+- **Réassigner un écran Fire Stick en 1 clic** (Phase 11 REASSIGN — [#898](https://github.com/Tallec7/neopro/pull/898), 2026-05-08) — avant, réassigner un Fire Stick d'un écran à un autre nécessitait deux opérations manuelles (désassigner + réassigner). Désormais un seul clic dans le dropdown : l'ancien écran est libéré automatiquement en même temps que le nouveau est configuré (opération atomique, aucun état intermédiaire incohérent visible dans le dashboard). Utile quand un bénévole déplace un Fire Stick entre salles pendant la mi-temps.
+- **Fire Stick inconnu branché = badge ambre visible dans le dashboard** (Phase 12 OBSERVE — [#902](https://github.com/Tallec7/neopro/pull/902), 2026-05-08) — quand un Fire Stick non encore assigné se connecte au hotspot Pi, le dashboard affiche désormais un badge ambre "Non assigné" dans la liste des écrans. L'admin voit immédiatement qu'un nouveau matériel est présent et peut l'assigner depuis la même page. Métrique Prometheus associée (`neopro_hotspot_unknown_firestick_total{site_id}`) pour la supervision flotte.
 
 ### 🛡️ Pour la robustesse
 
@@ -40,6 +42,7 @@
 ### 🧹 Pour l'équipe
 
 - **Milestone v4.0 Multi-écrans Fire Stick livré intégralement** (6 phases, 20 plans, 2026-05-06 → 2026-05-07) — Phases 4 DATA (modèle DisplayConfig étendu) → 5 DETECT (receivers.service Pi + cache local) → 6 CAPTIVE (DNS hijack + nginx + page d'attente responsive) → 7 CLOUD (API connected-receivers + socket whitelist + commande dispatch Pi) → 8 DASHBOARD (badge 3 états + dropdown position:fixed + Karma 596/596 tests) → 9 OBSERVE (Prometheus + smoke 12 assertions). Architecture end-to-end sans internet club : Pi hotspot → Fire Stick → page Neopro → dashboard admin cloud.
+- **Milestone v4.1 Fire Stick polish livré — 3 phases, 4 plans** (2026-05-07 → 2026-05-08) — Phase 10 auto-launch Silk, Phase 11 réassignation 1 clic, Phase 12 observabilité Fire Stick inconnus. 2183/2183 smoke verts. 4/4 flows E2E intégration vérifiés (auto-launch, assignation, réassignation, observabilité). Tag git v4.1 créé. Gaps intentionnels reportés en v4.2 : ALLOWLIST MAC hostapd + alertes déconnexion Fire Stick.
 - **Pattern position:fixed dropdown réutilisable** — même pattern que `video-search-select.component.ts` (`.vss__dropdown`) utilisé dans `displays-editor` pour le sélecteur de receivers. Échappe à `overflow: hidden` des conteneurs parents, compatible `ChangeDetectionStrategy.OnPush`.
 
 ---
