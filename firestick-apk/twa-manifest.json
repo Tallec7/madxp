@@ -1,0 +1,25 @@
+{
+  "packageId": "bzh.kalonpartners.neopro.firestick",
+  "host": "192.168.4.1",
+  "name": "Neopro TV",
+  "launcherName": "Neopro TV",
+  "display": "fullscreen-sticky",
+  "orientation": "landscape",
+  "themeColor": "#000000",
+  "navigationColor": "#000000",
+  "backgroundColor": "#000000",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://192.168.4.1/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "${KEYSTORE_PATH}",
+    "alias": "firestick-release"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "0.1.0",
+  "fallbackType": "customtabs",
+  "minSdkVersion": 19,
+  "fingerprints": [],
+  "generatorApp": "neopro-firestick-build"
+}

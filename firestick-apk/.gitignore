@@ -1,0 +1,26 @@
+# Bubblewrap-generated Android Studio project (regenerated each build)
+build/
+app/
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+build.gradle
+settings.gradle
+local.properties
+
+# Keystores — NEVER commit
+*.keystore
+*.jks
+.keys/
+
+# APK output
+dist/
+*.apk
+*.aab
+
+# Bubblewrap backup
+twa-manifest.json.bak
+
+# Node
+node_modules/
