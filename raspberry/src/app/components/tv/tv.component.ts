@@ -175,7 +175,7 @@ export class TvComponent implements OnInit, OnDestroy {
       // Fallback: route data (rétrocompat accès direct sans param)
       this.displayIndex = this.route.snapshot.data['displayType'] === 'secondary' ? 1 : 0;
     }
-    this.displayType = this.displayIndex === 0 ? 'tv' : this.displayIndex === 1 ? 'secondary' : `display-${this.displayIndex}`;
+    this.displayType = this.resolveDisplayType(this.displayIndex);
     console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}, preview: ${this.isPreviewMode}`);
 
     // ADR-060 Phase 3 couche 2 — activation QR hotspot via query param (?fallback=hotspot)
@@ -1007,6 +1007,11 @@ export class TvComponent implements OnInit, OnDestroy {
     return videos;
   }
 
+  private resolveDisplayType(idx: number, cfg?: Configuration): string {
+    const fromConfig = cfg?.displays?.[idx]?.type;
+    return fromConfig ?? (idx === 0 ? 'tv' : idx === 1 ? 'secondary' : `display-${idx}`);
+  }
+
   private resolveDisplayVariant<T extends { path: string; variants?: Record<string, { path: string }> }>(video: T): T {
     if (this.displayType === 'tv') return video;
 
@@ -1111,6 +1116,7 @@ export class TvComponent implements OnInit, OnDestroy {
     }
 
     this.configuration = config;
+    this.displayType = this.resolveDisplayType(this.displayIndex, config);
     this.analyticsService.setConfiguration(config);
 
     this.activePhase = 'neutral';

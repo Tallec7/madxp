@@ -3262,3 +3262,42 @@ describe('ADR-034 v3.89.3 silent preload + instant reveal', () => {
     });
   });
 });
+
+describe('#917 N-display displayType resolved from configuration.displays[i].type', () => {
+  const repoRoot917 = path.resolve(__dirname, '..', '..', '..', '..');
+  const read917 = (rel: string) => fs.readFileSync(path.join(repoRoot917, rel), 'utf8');
+  const tvSrc = read917('raspberry/src/app/components/tv/tv.component.ts');
+  const ifaceSrc = read917('raspberry/src/app/interfaces/configuration.interface.ts');
+
+  it('Configuration interface must declare a displays field', () => {
+    expect(ifaceSrc).toMatch(/displays\??\s*:\s*DisplayConfig\[\]/);
+  });
+
+  it('DisplayConfig interface must declare a type field', () => {
+    expect(ifaceSrc).toMatch(/interface DisplayConfig/);
+    expect(ifaceSrc).toMatch(/type\s*:\s*string/);
+  });
+
+  it('tv.component.ts must have a resolveDisplayType private method reading cfg.displays', () => {
+    expect(tvSrc).toMatch(/resolveDisplayType\s*\(/);
+    expect(tvSrc).toMatch(/cfg\?\.displays\?\.\[/);
+  });
+
+  it('ngOnInit must call resolveDisplayType (not hardcode displayType)', () => {
+    // La ligne hardcodée ternaire ne doit plus apparaître dans ngOnInit
+    const ngOnInitBlock = tvSrc.slice(
+      tvSrc.indexOf('public ngOnInit()'),
+      tvSrc.indexOf('public ngOnInit()') + 900
+    );
+    expect(ngOnInitBlock).not.toMatch(/displayIndex === 0 \? 'tv'/);
+    expect(ngOnInitBlock).toMatch(/resolveDisplayType\(/);
+  });
+
+  it('reloadConfiguration must re-resolve displayType from config.displays', () => {
+    const reloadBlock = tvSrc.slice(
+      tvSrc.indexOf('private reloadConfiguration('),
+      tvSrc.indexOf('private reloadConfiguration(') + 400
+    );
+    expect(reloadBlock).toMatch(/resolveDisplayType\(/);
+  });
+});

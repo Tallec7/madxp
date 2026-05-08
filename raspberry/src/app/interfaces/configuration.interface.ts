@@ -123,6 +123,13 @@ export interface TimeCategory {
  * Configuration complète d'un site Neopro.
  * Structure principale stockée localement et synchronisée avec le central.
  */
+/** Entrée de configuration d'un écran physique (PROP-002 / ADR-114). */
+export interface DisplayConfig {
+  type: string;        // 'tv', 'led-banner', 'secondary', 'totem', etc.
+  resolution?: string;
+  receiver?: { kind?: string; mac?: string } | null;
+}
+
 export interface Configuration {
     remote: {
         title: string;
@@ -194,6 +201,8 @@ export interface Configuration {
      * Lus par RemoteHostComponent pour router V1/V2.
      */
     featureOverrides?: Record<string, boolean>;
+    /** Écrans physiques du site (source de vérité : DB cloud `sites.displays`, persisté par ADR-114). */
+    displays?: DisplayConfig[];
 }
 
 /**
