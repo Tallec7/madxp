@@ -2353,6 +2353,31 @@ describe('N-display deploy-video generalization guard (issue #914 PR2)', () => {
   });
 });
 
+describe('N-display migration monitoring guard — neopro_variant_dispatch_displaytype_total (issue #914 PR3)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const metricsPath = path.join(repoRoot, 'central-server/src/services/metrics.service.ts');
+  const deploymentPath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
+
+  let metricsContent: string;
+  let deploymentContent: string;
+  beforeAll(() => {
+    metricsContent = fs.readFileSync(metricsPath, 'utf8');
+    deploymentContent = fs.readFileSync(deploymentPath, 'utf8');
+  });
+
+  it('metrics.service must define neopro_variant_dispatch_displaytype_total counter', () => {
+    expect(metricsContent).toMatch(/neopro_variant_dispatch_displaytype_total/);
+  });
+
+  it('metrics.service must expose recordVariantDispatchByDisplayType method', () => {
+    expect(metricsContent).toMatch(/recordVariantDispatchByDisplayType/);
+  });
+
+  it('deployment.service must call recordVariantDispatchByDisplayType (migration tracking)', () => {
+    expect(deploymentContent).toMatch(/recordVariantDispatchByDisplayType/);
+  });
+});
+
 describe('E-41 config-merge restoreSecondaryVariants guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const configMergePath = path.join(repoRoot, 'raspberry/sync-agent/src/utils/config-merge.js');

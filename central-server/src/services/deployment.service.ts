@@ -443,6 +443,13 @@ class DeploymentService {
       message: result.message,
     });
 
+    // Métriques N-display : tracer les display_types dispatched (migration monitoring PR3)
+    if (result.sent || result.queued) {
+      for (const displayType of Object.keys(variants)) {
+        metricsService.recordVariantDispatchByDisplayType(displayType, 'deploy');
+      }
+    }
+
     // Persister le flag secondaryVariant si ce déploiement en inclut une
     if (secondaryVariant && (result.sent || result.queued)) {
       try {
@@ -851,7 +858,10 @@ class DeploymentService {
 
           const status = result.sent ? 'sent' : 'queued';
           metricsService.recordVariantReplaceDispatched(status);
-          logger.info('dispatchVariantUpdateToSites: command dispatched', { siteId, videoId, status, commandId: result.commandId });
+          if (result.sent || result.queued) {
+            metricsService.recordVariantDispatchByDisplayType(displayType, 'variant_replace');
+          }
+          logger.info('dispatchVariantUpdateToSites: command dispatched', { siteId, videoId, displayType, status, commandId: result.commandId });
         } catch (err) {
           metricsService.recordVariantReplaceDispatched('failed');
           logger.error('dispatchVariantUpdateToSites: failed for site', { siteId, videoId, error: err });

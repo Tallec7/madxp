@@ -899,6 +899,15 @@ const variantReplaceDispatchedTotal = new Counter({
   registers: [register],
 });
 
+// ============= N-display Variant Dispatch (issue #914 PR3) =============
+
+const variantDispatchDisplayTypeTotal = new Counter({
+  name: 'neopro_variant_dispatch_displaytype_total',
+  help: 'deploy_video variants dispatched to Pi sites by display_type — tracks N-display migration progress',
+  labelNames: ['display_type', 'source'],  // source: 'deploy' | 'variant_replace'
+  registers: [register],
+});
+
 // ============= Template Studio v2 (ADR-075) =============
 
 const templateStudioOperationsTotal = new Counter({
@@ -1494,6 +1503,10 @@ class MetricsService {
   }
 
   // ============= Méthodes Variant Replace Dispatch (issue #781) =============
+
+  recordVariantDispatchByDisplayType(displayType: string, source: 'deploy' | 'variant_replace'): void {
+    variantDispatchDisplayTypeTotal.inc({ display_type: displayType, source });
+  }
 
   recordVariantReplaceDispatched(status: 'sent' | 'queued' | 'failed'): void {
     variantReplaceDispatchedTotal.inc({ status });
