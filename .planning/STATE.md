@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Current Position
 
-Phase: Phase 12 — ALLOWLIST (not started)
-Plan: —
-Status: Ready to start
-Last activity: 2026-05-08 — Phase 11 CLOSED — UAT 2/6 pass + 4 skipped (Karma H-M) + fix receivers race (commit 9b1380e1)
+Phase: Phase 12 — ALLOWLIST (plan 02 COMPLETE)
+Plan: 12-02-dashboard-unknown-firestick-badge (COMPLETE — 17/17 Karma verts, commit 86e4d1a1)
+Status: Phase 12 complete — 2/2 plans done
+Last activity: 2026-05-08 — Phase 12 plan 02 COMPLETE — badge ambre Non assigné + 17/17 Karma verts
 Next: /gsd:discuss-phase 12 ou /gsd:plan-phase 12
 
 ## Accumulated Context
