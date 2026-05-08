@@ -1,3 +1,9 @@
+## [3.300.3](https://github.com/Tallec7/neopro/compare/v3.300.2...v3.300.3) (2026-05-08)
+
+### Bug Fixes
+
+- **content:** mitigate cloud↔Pi variant drift (issue [#920](https://github.com/Tallec7/neopro/issues/920)) ([#923](https://github.com/Tallec7/neopro/issues/923)) ([aeba47a](https://github.com/Tallec7/neopro/commit/aeba47a1627b272cf14c48c69444132a45a5041a))
+
 ## [3.300.2](https://github.com/Tallec7/neopro/compare/v3.300.1...v3.300.2) (2026-05-08)
 
 ### Bug Fixes
