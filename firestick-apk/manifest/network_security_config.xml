@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP allow-list for Neopro Fire Stick TWA.
+  Required because Android 9+ (API 28) blocks http:// by default.
+  Scope: hotspot Pi (192.168.4.1) + Fire OS captive portal hijack targets.
+  Aligned with .claude/rules/raspberry.md (DNS hijack restricted to 2 captive domains, NOT wildcard).
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true">
+    <trust-anchors>
+      <certificates src="system" />
+    </trust-anchors>
+  </base-config>
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">192.168.4.1</domain>
+    <domain includeSubdomains="false">firetvcaptiveportal.com</domain>
+    <domain includeSubdomains="false">spectrum.s3.amazonaws.com</domain>
+  </domain-config>
+</network-security-config>
