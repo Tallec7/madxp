@@ -361,8 +361,8 @@ class DeploymentService {
       // Non-bloquant : si la table n'existe pas encore, on continue sans
     }
 
-    // Chercher la variante secondaire (le Pi détecte le dual-display par hardware)
-    let secondaryVariant: {
+    // Chercher tous les variants (N-display) — le Pi applique ceux qui correspondent à ses écrans
+    const variants: Record<string, {
       filename: string;
       storagePath: string;
       checksum: string | null;
@@ -370,25 +370,26 @@ class DeploymentService {
       width: number | null;
       height: number | null;
       duration: number | null;
-    } | null = null;
+    }> = {};
+    let secondaryVariant: typeof variants[string] | null = null; // backward compat Pi < PR2
 
     try {
-      // Toujours chercher la variante secondaire — le Pi détecte le dual-display par hardware
-      const variant = await videoVariantRepository.findByVideoAndDisplay(videoId, 'secondary');
-      if (variant) {
-        secondaryVariant = {
-          filename: variant.filename,
-          storagePath: variant.storage_path,
-          checksum: variant.checksum,
-          videoUrl: getVideoUrl(variant.storage_path),
-          width: variant.width,
-          height: variant.height,
-          duration: variant.duration ? parseFloat(String(variant.duration)) : null,
+      const allVariants = await videoVariantRepository.findByVideoId(videoId);
+      for (const v of allVariants) {
+        const entry = {
+          filename: v.filename,
+          storagePath: v.storage_path,
+          checksum: v.checksum,
+          videoUrl: getVideoUrl(v.storage_path),
+          width: v.width,
+          height: v.height,
+          duration: v.duration ? parseFloat(String(v.duration)) : null,
         };
+        variants[v.display_type] = entry;
+        if (v.display_type === 'secondary') secondaryVariant = entry;
       }
-    } catch (secondaryError) {
-      // Non-bloquant : si la table n'existe pas encore, on continue sans variante secondaire
-      logger.debug('Secondary variant lookup failed (non-blocking)', { videoId, siteId, error: secondaryError });
+    } catch (variantError) {
+      logger.debug('Variant lookup failed (non-blocking)', { videoId, siteId, error: variantError });
     }
 
     const commandData = {
@@ -405,7 +406,9 @@ class DeploymentService {
       sponsorId: deployment.advertiser_id || null,
       analyticsCategory: deployment.analytics_category || null,
       siteSponsorId,
-      // Variante écran secondaire (null si pas activé ou pas de variante)
+      // N-display variants map (PR2) — Pi applique les types qu'il connaît
+      variants: Object.keys(variants).length > 0 ? variants : undefined,
+      // backward compat pour Pi agents < PR2
       secondaryVariant,
     };
 
@@ -439,6 +442,13 @@ class DeploymentService {
       commandId: result.commandId,
       message: result.message,
     });
+
+    // Métriques N-display : tracer les display_types dispatched (migration monitoring PR3)
+    if (result.sent || result.queued) {
+      for (const displayType of Object.keys(variants)) {
+        metricsService.recordVariantDispatchByDisplayType(displayType, 'deploy');
+      }
+    }
 
     // Persister le flag secondaryVariant si ce déploiement en inclut une
     if (secondaryVariant && (result.sent || result.queued)) {
@@ -776,7 +786,7 @@ class DeploymentService {
    */
   async dispatchVariantUpdateToSites(
     videoId: string,
-    variant: { filename: string; storage_path: string; checksum: string | null; width: number | null; height: number | null; duration: number | null }
+    variant: { filename: string; storage_path: string; checksum: string | null; width: number | null; height: number | null; duration: number | null; display_type: string }
   ): Promise<void> {
     const [piSiteIds, video] = await Promise.all([
       siteVideoRepository.findPiSitesByVideo(videoId),
@@ -788,7 +798,8 @@ class DeploymentService {
       return;
     }
 
-    const secondaryVariant = {
+    const displayType = variant.display_type;
+    const variantEntry = {
       filename: variant.filename,
       storagePath: variant.storage_path,
       checksum: variant.checksum,
@@ -800,6 +811,7 @@ class DeploymentService {
 
     logger.info('dispatchVariantUpdateToSites: dispatching deploy_video to Pi sites', {
       videoId,
+      displayType,
       variantFilename: variant.filename,
       piSiteCount: piSiteIds.length,
     });
@@ -827,7 +839,10 @@ class DeploymentService {
             sponsorId: null,
             analyticsCategory: null,
             siteSponsorId,
-            secondaryVariant,
+            // N-display: map avec le display_type exact de ce variant
+            variants: { [displayType]: variantEntry },
+            // backward compat Pi < PR2
+            secondaryVariant: displayType === 'secondary' ? variantEntry : null,
           };
 
           const result = await commandQueueService.sendOrQueue(
@@ -836,14 +851,17 @@ class DeploymentService {
             commandData,
             {
               priority: 3,
-              description: `Variant secondary replace: ${variant.filename}`,
+              description: `Variant ${displayType} replace: ${variant.filename}`,
               expiresIn: 7 * 24 * 60 * 60 * 1000,
             }
           );
 
           const status = result.sent ? 'sent' : 'queued';
           metricsService.recordVariantReplaceDispatched(status);
-          logger.info('dispatchVariantUpdateToSites: command dispatched', { siteId, videoId, status, commandId: result.commandId });
+          if (result.sent || result.queued) {
+            metricsService.recordVariantDispatchByDisplayType(displayType, 'variant_replace');
+          }
+          logger.info('dispatchVariantUpdateToSites: command dispatched', { siteId, videoId, displayType, status, commandId: result.commandId });
         } catch (err) {
           metricsService.recordVariantReplaceDispatched('failed');
           logger.error('dispatchVariantUpdateToSites: failed for site', { siteId, videoId, error: err });

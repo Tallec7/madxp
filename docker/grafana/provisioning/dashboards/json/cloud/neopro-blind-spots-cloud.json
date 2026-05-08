@@ -1309,6 +1309,29 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 122
+      },
+      "id": 811,
+      "title": "N-display variant dispatch by display_type (issue #914)",
+      "description": "deploy_video variants dispatched to Pi sites by display_type (secondary, led, totem, ...). Tracks N-display migration progress — toutes les sources confondues (deploy + variant_replace).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(increase(neopro_variant_dispatch_displaytype_total{scrape_job=\"NEOPRO\"}[1h])) by (display_type, source)",
+          "legendFormat": "{{display_type}} / {{source}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",

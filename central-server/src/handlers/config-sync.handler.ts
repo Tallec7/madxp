@@ -16,7 +16,7 @@ import { SocketContext } from './socket-context';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { deploymentRepository } from '../repositories/deployment.repository';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
-import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { enrichConfigWithCampaignVideos } from '../utils/config-campaign-videos';
 import type { SiteConfiguration } from '../types';
@@ -444,21 +444,23 @@ async function sendPendingConfigCommand(
     });
   }
 
-  // Enrichir avec les variants secondaires depuis la base de données
+  // Enrichir avec les variants display (secondary, led, etc.) selon les displays du site
   try {
+    const displayTypes = await resolveDisplayTypesForSite(siteId);
     const { enrichedCount } = await enrichConfigWithDisplayVariants(
-      enrichedConfiguration as SiteConfiguration
+      enrichedConfiguration as SiteConfiguration,
+      displayTypes
     );
     if (enrichedCount > 0) {
-      logger.info('Secondary variants enriched in pending config sync', {
-        siteId, enrichedCount,
+      logger.info('Display variants enriched in pending config sync', {
+        siteId, enrichedCount, displayTypes,
       });
       metricsService.recordSecondaryVariantEnrichment('success', 'config_sync', enrichedCount);
     } else {
       metricsService.recordSecondaryVariantEnrichment('empty', 'config_sync');
     }
   } catch (variantError) {
-    logger.warn('Secondary variant enrichment failed in pending config sync (non-fatal)', {
+    logger.warn('Display variant enrichment failed in pending config sync (non-fatal)', {
       siteId,
       error: (variantError as Error).message,
     });

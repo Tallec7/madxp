@@ -1605,7 +1605,8 @@ describe('Deployment secondary variant persistence guard', () => {
     expect({
       noSiteQuery: !/query\(.*secondary_display_enabled/.test(serviceContent),
       noSiteFlag: !/siteSecondaryEnabled/.test(serviceContent),
-      alwaysLooksUp: /findByVideoAndDisplay\(videoId,\s*'secondary'\)/.test(serviceContent),
+      // PR2: généralisé → findByVideoId fetch tous les variants (plus seulement 'secondary')
+      alwaysLooksUp: /findByVideoId\(videoId\)/.test(serviceContent),
     }).toEqual({
       noSiteQuery: true,
       noSiteFlag: true,
@@ -2300,6 +2301,84 @@ describe('E-41 deploySecondaryVariant timeCategories guard', () => {
   });
 });
 
+describe('N-display deploy-video generalization guard (issue #914 PR2)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const deployVideoPath = path.join(repoRoot, 'raspberry/sync-agent/src/commands/deploy-video.js');
+  const deploymentServicePath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
+  const piStrategyPath = path.join(repoRoot, 'central-server/src/services/delivery/pi-socket.strategy.ts');
+
+  let piContent: string;
+  let deploymentContent: string;
+  let strategyContent: string;
+  beforeAll(() => {
+    piContent = fs.readFileSync(deployVideoPath, 'utf8');
+    deploymentContent = fs.readFileSync(deploymentServicePath, 'utf8');
+    strategyContent = fs.readFileSync(piStrategyPath, 'utf8');
+  });
+
+  it('deploy-video must have deployVariant(displayType) generic method', () => {
+    expect(piContent).toMatch(/async deployVariant\s*\(\s*displayType/);
+  });
+
+  it('deploy-video must write to videos-{displayType}/ (not hardcoded videos-secondary)', () => {
+    // The path must use the displayType variable, not the literal 'secondary'
+    expect(piContent).toMatch(/videos-\$\{displayType\}/);
+  });
+
+  it('deploy-video must write variants[displayType] in config (not hardcoded variants.secondary)', () => {
+    expect(piContent).toMatch(/variants\[displayType\]/);
+  });
+
+  it('deploy-video must accept data.variants map (new format)', () => {
+    expect(piContent).toMatch(/data\.variants/);
+  });
+
+  it('deploy-video must keep backward compat with data.secondaryVariant', () => {
+    expect(piContent).toMatch(/data\.secondaryVariant/);
+  });
+
+  it('deployment.service must send variants map in deploy_video payload', () => {
+    expect(deploymentContent).toMatch(/variants:\s*(Object\.keys\(variants\)|{)/);
+  });
+
+  it('pi-socket.strategy must send variants map in deploy_video payload', () => {
+    expect(strategyContent).toMatch(/variants:\s*(Object\.keys\(variants\)|{)/);
+  });
+
+  it('dispatchVariantUpdateToSites must use display_type from variant param', () => {
+    expect(deploymentContent).toMatch(/variant\.display_type/);
+  });
+
+  it('deployment.service must call findByVideoId (not only findByVideoAndDisplay secondary)', () => {
+    expect(deploymentContent).toMatch(/findByVideoId\(/);
+  });
+});
+
+describe('N-display migration monitoring guard — neopro_variant_dispatch_displaytype_total (issue #914 PR3)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const metricsPath = path.join(repoRoot, 'central-server/src/services/metrics.service.ts');
+  const deploymentPath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
+
+  let metricsContent: string;
+  let deploymentContent: string;
+  beforeAll(() => {
+    metricsContent = fs.readFileSync(metricsPath, 'utf8');
+    deploymentContent = fs.readFileSync(deploymentPath, 'utf8');
+  });
+
+  it('metrics.service must define neopro_variant_dispatch_displaytype_total counter', () => {
+    expect(metricsContent).toMatch(/neopro_variant_dispatch_displaytype_total/);
+  });
+
+  it('metrics.service must expose recordVariantDispatchByDisplayType method', () => {
+    expect(metricsContent).toMatch(/recordVariantDispatchByDisplayType/);
+  });
+
+  it('deployment.service must call recordVariantDispatchByDisplayType (migration tracking)', () => {
+    expect(deploymentContent).toMatch(/recordVariantDispatchByDisplayType/);
+  });
+});
+
 describe('E-41 config-merge restoreSecondaryVariants guard', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const configMergePath = path.join(repoRoot, 'raspberry/sync-agent/src/utils/config-merge.js');
@@ -2387,6 +2466,80 @@ describe('E-41 central secondary variant enrichment guard', () => {
       imports: true,
       calls: true,
     });
+  });
+});
+
+describe('N-display enrichment — resolveDisplayTypesForSite wiring guard (issue #914)', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const utilPath = path.join(repoRoot, 'central-server/src/utils/config-secondary-variants.ts');
+  const orchPath = path.join(repoRoot, 'central-server/src/services/orchestrated-deployment.service.ts');
+  const syncPath = path.join(repoRoot, 'central-server/src/handlers/config-sync.handler.ts');
+  const profileSyncPath = path.join(repoRoot, 'central-server/src/services/profile-sync.service.ts');
+  const saasPath = path.join(repoRoot, 'central-server/src/controllers/saas.controller.ts');
+  const configProfilesPath = path.join(repoRoot, 'central-server/src/controllers/config-profiles.controller.ts');
+
+  it('config-secondary-variants must export resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(utilPath, 'utf8');
+    expect(content).toMatch(/export async function resolveDisplayTypesForSite/);
+  });
+
+  it('resolveDisplayTypesForSite must import siteRepository (repository pattern)', () => {
+    const content = fs.readFileSync(utilPath, 'utf8');
+    expect(content).toMatch(/import\s*\{[^}]*siteRepository[^}]*\}/);
+  });
+
+  it('orchestrated-deployment must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(orchPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('config-sync handler must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(syncPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('profile-sync service must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(profileSyncPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('saas controller must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(saasPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('config-profiles controller must import and call resolveDisplayTypesForSite', () => {
+    const content = fs.readFileSync(configProfilesPath, 'utf8');
+    expect({
+      imports: /import\s*\{[^}]*resolveDisplayTypesForSite[^}]*\}/.test(content),
+      calls: /resolveDisplayTypesForSite\(/.test(content),
+    }).toEqual({ imports: true, calls: true });
+  });
+
+  it('enrichConfigWithDisplayVariants callers must pass displayTypes param (not use default)', () => {
+    const files = [orchPath, syncPath, profileSyncPath, saasPath, configProfilesPath];
+    for (const f of files) {
+      const content = fs.readFileSync(f, 'utf8');
+      const calls = content.match(/enrichConfigWithDisplayVariants\([^)]+\)/g) || [];
+      for (const call of calls) {
+        expect({ file: f, hasDisplayTypesArg: call.split(',').length >= 2 }).toEqual({
+          file: f,
+          hasDisplayTypesArg: true,
+        });
+      }
+    }
   });
 });
 

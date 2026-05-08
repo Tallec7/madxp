@@ -49,7 +49,7 @@ class PiSocketStrategy implements DeliveryStrategy {
       // Non-bloquant
     }
 
-    let secondaryVariant: {
+    type VariantEntry = {
       filename: string;
       storagePath: string;
       checksum: string | null;
@@ -57,26 +57,27 @@ class PiSocketStrategy implements DeliveryStrategy {
       width: number | null;
       height: number | null;
       duration: number | null;
-    } | null = null;
+    };
+    let variants: Record<string, VariantEntry> = {};
+    let secondaryVariant: VariantEntry | null = null; // backward compat Pi < PR2
 
     try {
-      const variant = await videoVariantRepository.findByVideoAndDisplay(
-        deployment.video_id,
-        'secondary'
-      );
-      if (variant) {
-        secondaryVariant = {
-          filename: variant.filename,
-          storagePath: variant.storage_path,
-          checksum: variant.checksum,
-          videoUrl: getVideoUrl(variant.storage_path),
-          width: variant.width,
-          height: variant.height,
-          duration: variant.duration ? parseFloat(String(variant.duration)) : null,
+      const allVariants = await videoVariantRepository.findByVideoId(deployment.video_id);
+      for (const v of allVariants) {
+        const entry: VariantEntry = {
+          filename: v.filename,
+          storagePath: v.storage_path,
+          checksum: v.checksum,
+          videoUrl: getVideoUrl(v.storage_path),
+          width: v.width,
+          height: v.height,
+          duration: v.duration ? parseFloat(String(v.duration)) : null,
         };
+        variants[v.display_type] = entry;
+        if (v.display_type === 'secondary') secondaryVariant = entry;
       }
     } catch (secondaryError) {
-      logger.debug('Secondary variant lookup failed (non-blocking)', {
+      logger.debug('Variant lookup failed (non-blocking)', {
         videoId: deployment.video_id,
         siteId: site.siteId,
         error: secondaryError,
@@ -96,7 +97,8 @@ class PiSocketStrategy implements DeliveryStrategy {
       sponsorId: deployment.advertiser_id || null,
       analyticsCategory: deployment.analytics_category || null,
       siteSponsorId,
-      secondaryVariant,
+      variants: Object.keys(variants).length > 0 ? variants : undefined,
+      secondaryVariant, // backward compat Pi < PR2
     };
 
     const isConnected = socketService.isConnected(site.siteId);

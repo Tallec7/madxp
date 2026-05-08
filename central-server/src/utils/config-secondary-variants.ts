@@ -10,8 +10,24 @@
 
 import { SiteConfiguration, VideoVariants } from '../types';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
+import { siteRepository } from '../repositories/site.repository';
 import { extractFilenameFromPath } from './config-video-paths';
 import logger from '../config/logger';
+
+/**
+ * Résout les display types actifs pour un site en lisant sites.displays[].type.
+ * Exclut le display principal 'tv' (pas un variant).
+ * Fallback ['secondary'] pour les sites sans displays configurés (rétrocompat).
+ */
+export async function resolveDisplayTypesForSite(siteId: string): Promise<string[]> {
+  try {
+    const displays = await siteRepository.getDisplays(siteId);
+    const types = [...new Set(displays.map(d => d.type).filter(t => t !== 'tv'))];
+    return types.length > 0 ? types : ['secondary'];
+  } catch {
+    return ['secondary'];
+  }
+}
 
 /**
  * Enrichit la configuration avec les variants pour les display types donnés.

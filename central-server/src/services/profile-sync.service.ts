@@ -11,7 +11,7 @@ import logger from '../config/logger';
 import { SiteConfiguration, SiteSponsorDeployment } from '../types';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
-import { enrichConfigWithDisplayVariants } from '../utils/config-secondary-variants';
+import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
 
@@ -29,6 +29,7 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
   }
 
   const syncPayload = [];
+  const reconnectDisplayTypes = await resolveDisplayTypesForSite(siteId).catch(() => ['secondary']);
   for (const p of profiles) {
     let enrichedConfig = p.configuration as SiteConfiguration;
 
@@ -43,9 +44,9 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
     }
 
     try {
-      await enrichConfigWithDisplayVariants(enrichedConfig);
+      await enrichConfigWithDisplayVariants(enrichedConfig, reconnectDisplayTypes);
     } catch (err) {
-      logger.warn('Secondary variant enrichment failed in reconnect profile sync (non-fatal)', {
+      logger.warn('Display variant enrichment failed in reconnect profile sync (non-fatal)', {
         siteId, profileId: p.id, error: (err as Error).message,
       });
     }
@@ -154,7 +155,8 @@ export async function buildEnrichedNeoProContent(
   }
 
   try {
-    await enrichConfigWithDisplayVariants(enrichedConfig);
+    const displayTypes = await resolveDisplayTypesForSite(siteId);
+    await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
   } catch (err) {
     logger.warn('Display variant enrichment failed in buildEnrichedNeoProContent (non-fatal)', {
       siteId, error: (err as Error).message,
