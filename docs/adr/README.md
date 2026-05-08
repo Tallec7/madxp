@@ -128,6 +128,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-112](ADR-112-bodet-led-panel-usb-integration.md)                           | Intégration panneaux LED Bodet P10 V2 USB2 (mode mass storage emulation)                     | Investigation                     | Mai 2026 |
 | [ADR-113](ADR-113-ftp-creds-rotation-procedure.md)                              | Procédure de rotation manuelle des credentials FTP Hostinger (cadence 90j, audit P0 #2)      | Accepté                           | Mai 2026 |
 | [ADR-114](ADR-114-displays-write-through-configuration-json.md)                 | Write-through `configuration.json.displays` côté sync-agent (fix propagation MAC → captive)  | Accepté                           | Mai 2026 |
+| [ADR-115](ADR-115-auth-preserved-on-sync.md)                                    | Préservation du bloc `auth` du Pi contre les sync de profils cloud à `auth: {}`              | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
