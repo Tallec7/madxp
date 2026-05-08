@@ -1,5 +1,22 @@
 # Milestones
 
+## v4.1 Fire Stick polish (Shipped: 2026-05-08)
+
+**Phases completed:** 9 phases, 24 plans
+**Timeline:** 2026-05-07 → 2026-05-08 (2 jours) | **PRs:** #898, #902
+**Known gaps:** ALLOWLIST-01/02/03/04 (Phase 12 pivotée), ALERT-01/02/03/04 (Phase 13 skippée)
+**Archive:** [.planning/milestones/v4.1-ROADMAP.md](milestones/v4.1-ROADMAP.md)
+
+**Key accomplishments:**
+
+- **Silk auto-launch (Phase 10)** — nginx wifistub 302-chain → Fire OS CaptivePortalLauncher → Silk s'ouvre automatiquement ; smoke guard `smoke-kiosk-pi` + guide OTA `CAPTIVE-AUTO-OTA.md`
+- **Réassigner UX 1 clic (Phase 11)** — `assignReceiver()` atomic swap : source display → null + target display → nouvelle MAC en une seule passe `.map()` ; 13/13 tests Karma + UAT 100%
+- **OBSERVE Fire Stick inconnus (Phase 12)** — Counter `neopro_hotspot_unknown_firestick_total{site_id}` + dedup Map + Winston warn + badge ambre « Non assigné » dans displays-editor ; smoke étendu +9 assertions
+- **Race condition receivers fix** — `request-state-sync` pull + headless park sans HDMI corrigés (PRs #901/#902)
+- **E2E integration vérifié** — 4/4 flows pass (auto-launch, assignation, réassignation, observabilité)
+
+---
+
 ## v3.0 Template Studio v3 (Shipped: 2026-05-06)
 
 **Phases completed:** 3 phases, 14 plans

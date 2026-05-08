@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: verifying
-stopped_at: Phase 12 COMPLETE — both plans merged to main
-last_updated: '2026-05-08T07:09:24.162Z'
-last_activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
+status: between_milestones
+stopped_at: v4.1 milestone archived — ready for v4.2 planning
+last_updated: '2026-05-08T07:40:26.319Z'
+last_activity: 2026-05-08 — v4.1 SHIPPED — Fire Stick auto-launch + Réassigner 1 clic + OBSERVE badge ambre (Phases 10/11/12)
 progress:
   total_phases: 10
   completed_phases: 8
@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Milestone v4.1 — Fire Stick polish. Phase 12 COMPLETE — OBSERVE.
+**Current focus:** Between milestones — v4.1 shipped 2026-05-08. Planning v4.2 (ALLOWLIST + ALERT + APK TWA).
 
 ## Current Position
 

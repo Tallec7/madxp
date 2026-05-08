@@ -60,10 +60,61 @@ _Document vivant mis à jour après chaque milestone. Les leçons alimentent la 
 
 ---
 
+---
+
+## Milestone: v4.1 — Fire Stick polish
+
+**Shipped:** 2026-05-08
+**Phases:** 3 (10-12) | **Plans:** 4 | **Timeline:** 2 jours (2026-05-07 → 2026-05-08)
+
+### What Was Built
+
+- nginx wifistub 302-chain → Fire OS CaptivePortalLauncher : Silk Browser s'ouvre automatiquement à la connexion hotspot Pi (Phase 10)
+- Réassigner UX 1 clic : mutation atomique 2-displays en une seule passe `.map()` dans `assignReceiver()`, badge backward-compat Phase 8 (Phase 11)
+- Counter `neopro_hotspot_unknown_firestick_total{site_id}` + dedup `Map<siteId,Set<mac>>` scope process + Winston warn + badge ambre « Non assigné » dans displays-editor (Phase 12 — pivoté de ALLOWLIST vers OBSERVE)
+
+### What Worked
+
+- **Phase pivot explicite** : Phase 12 était planifiée pour ALLOWLIST, mais le scope réel du sprint était OBSERVE. Documenter le pivot dans STATE.md + VERIFICATION.md + l'audit a évité toute ambiguïté post-livraison.
+- **Worktree isolation** : les 2 plans Phase 12 ont tourné en parallèle sur des worktrees séparées — merge propre sans collatéral.
+- **Integration checker** : le gsd-integration-checker a détecté un faux gap (`displayIndex undefined vs null`) qui a été résolu en 1 ligne (`receivers.service.js:120 — ?? null`). Preuve d'utilité sur une base de code mature.
+- **Smoke first encore** : les 9 assertions Phase 12 OBSERVE ont été définies AVANT l'implémentation (TDD RED→GREEN). Contrat wiring figé dès le départ.
+
+### What Was Inefficient
+
+- **Phase 13 skippée sans plan de remplacement** : ALERT-01/02/03/04 déférées sans roadmap précis pour v4.2. Mieux vaut créer un backlog explicite dans PROJECT.md.Active que laisser des requirements flottants.
+- **REQUIREMENTS.md checkboxes jamais mis à jour** : DATA-01/02 et ASSIGN-01/02/03 restent [ ] dans le fichier archivé malgré livraison confirmée. Le problème récurrent des SUMMARY sans `req_completed` field en frontmatter.
+- **Phases 08/09/11 sans VERIFICATION.md** : la phase d'exécution n'a pas systématiquement lancé gsd-verifier. Résultat : 3 phases vérifiées par UAT/Karma mais pas par le workflow formel.
+- **2 worktrees → 1 conflit STATE.md** : le merge worktree 12-01 a nécessité une résolution manuelle de STATE.md (versions concurrent 12-01 vs 12-02). À éviter : STATE.md en shared mutable → préférer commits séquentiels ou STATE.md par plan.
+
+### Patterns Established
+
+- **Phase pivot documenté** : quand une phase change de scope en cours de sprint, documenter le pivot dans STATE.md decisions + PLAN.md objective + VERIFICATION.md goal_achieved_reason. Le pattern est maintenant établi pour v4.2.
+- **Audit milestone comme pré-requis complete-milestone** : `gsd:audit-milestone` → résultat `gaps_found` → Daisy choisit "proceed anyway" en connaissance des gaps intentionnels. Flow propre vs découverte tardive.
+- **Badge ambre pour Fire Stick non assigné** : pattern `kind === 'firestick' && displayIndex === null` + classe CSS `receiver-badge--unknown` réutilisable pour d'autres états d'alerte visuelle dans displays-editor.
+
+### Key Lessons
+
+1. **Un scope cut explicite vaut mieux qu'une livraison partielle silencieuse** : ALLOWLIST et ALERT skippés avec raison documentée (audit + STATE.md decisions) > implémentation à moitié finie. Les gaps sont maintenant dans v4.2.Active avec déclencheurs clairs.
+2. **Map<siteId,Set<mac>> scope process = dédup simple mais fragile** : reset au reboot Railway — acceptable pour granularité session, mais à monitorer si Railway redémarre souvent (< 1h entre redémarrages = faux positifs réouverts). ADR à envisager si problème produit.
+3. **gsd-verifier manqué sur 3 phases** : lancer `/gsd:verify-work` juste après execute-phase est un réflexe à renforcer — surtout quand les plans sont courts (1-2 fichiers). Le workflow est le filet, pas un bonus.
+
+### Cost Observations
+
+- Sessions: ~6 sessions Claude Code (2 jours)
+- Modèles: Sonnet 4.6 (exécution), Sonnet 4.6 (audit + intégration checker)
+- Notable: 4 plans en 2 jours = vélocité x2 vs v3.0 estimé, cohérent avec base existante (moins de boilerplate, patterns établis)
+
+---
+
 ## Cross-Milestone Trends
 
 | Milestone | Phases | Plans | Timeline | Velocity      | Smoke suites |
 | --------- | ------ | ----- | -------- | ------------- | ------------ |
 | v3.0      | 3      | 14    | 1 jour   | 14 plans/jour | 9 suites v3  |
+| v4.0      | 6      | 20    | 2 jours  | 10 plans/jour | +12 smoke    |
+| v4.1      | 3      | 4     | 2 jours  | 2 plans/jour  | +9 smoke     |
+
+_Vélocité v4.1 plus faible car plans plus complexes (intégration multi-couche Pi + cloud + dashboard) — pas une régression_
 
 _Mis à jour après chaque milestone_
