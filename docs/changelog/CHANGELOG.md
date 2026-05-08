@@ -1,3 +1,9 @@
+## [3.298.5](https://github.com/Tallec7/neopro/compare/v3.298.4...v3.298.5) (2026-05-08)
+
+### Bug Fixes
+
+- **sync-agent:** write-through configuration.json.displays (ADR-114) ([#903](https://github.com/Tallec7/neopro/issues/903)) ([9ecb92b](https://github.com/Tallec7/neopro/commit/9ecb92b94ac60ec2529a754b9bdf098683686784)), closes [fef3c7/#92400e](https://github.com/Tallec7/neopro/issues/92400e)
+
 ## [3.298.4](https://github.com/Tallec7/neopro/compare/v3.298.3...v3.298.4) (2026-05-08)
 
 ### Bug Fixes
