@@ -1,3 +1,9 @@
+## [3.298.6](https://github.com/Tallec7/neopro/compare/v3.298.5...v3.298.6) (2026-05-08)
+
+### Bug Fixes
+
+- **grafana:** add panel for neopro_hotspot_unknown_firestick_total (Phase 12) ([6bb754d](https://github.com/Tallec7/neopro/commit/6bb754d5a8a61bc7420d0ed383ac1dbff6f887d6))
+
 ## [3.298.5](https://github.com/Tallec7/neopro/compare/v3.298.4...v3.298.5) (2026-05-08)
 
 ### Bug Fixes
