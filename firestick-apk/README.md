@@ -129,6 +129,72 @@ Rotating the keystore = signing v0.2+ with a different key = every Fire Stick on
 apksigner verify --verbose firestick-apk/dist/neopro-firestick-v0.1.0.apk | grep -E 'v2.*true.*v3.*true'
 ```
 
+## Build pipeline
+
+Once the keystore is generated and env vars are exported (see §Keystore), build with:
+
+```bash
+npm run build:firestick-apk
+```
+
+Or directly:
+
+```bash
+cd firestick-apk && bash scripts/build.sh
+```
+
+The orchestrator runs:
+
+1. Prereqs check (JDK 17, Android SDK build-tools, Bubblewrap CLI, jq, envsubst, KEYSTORE_PATH).
+2. envsubst on `twa-manifest.json` to materialize `signingKey.path` from `${KEYSTORE_PATH}`.
+3. `bubblewrap update --skipVersionUpgrade` (regenerates Android Studio project).
+4. `scripts/patch-android-manifest.sh` (cleartext config injection — idempotent).
+5. `bubblewrap build --skipPwaValidation` (compiles + signs).
+6. Renames output to `dist/neopro-firestick-v{version}.apk`.
+7. `scripts/verify-apk.sh` (apksigner v2+v3 + aapt package id assertions).
+
+Output: `firestick-apk/dist/neopro-firestick-v0.1.0.apk` (signed, ready to sideload in Phase 14).
+
+## UAT — manual acceptance on Fire Stick AFTSS RACC
+
+Phase 13 deliverable = "TV plein écran sans aucun chrome navigateur" (CONTEXT.md). The build pipeline cannot prove this; only a human looking at a TV can. Run this checklist before declaring the phase done.
+
+**Prereqs:**
+
+- Fire Stick AFTSS (model: Fire TV Stick 4K — Android-based, NOT Vega OS)
+- Pi `neopro.local` (RACC sandbox) running hotspot
+- Mac/Linux machine with `adb` and the freshly built APK
+
+**Steps:**
+
+1. Enable Developer Options + ADB Debugging on the Fire Stick (Settings → My Fire TV → About → click 7 times on Build → back → Developer options → ADB Debugging ON).
+2. Get the Fire Stick IP (Settings → Network → connection details).
+3. From the Mac:
+   ```bash
+   adb connect <fire-stick-ip>:5555
+   adb install firestick-apk/dist/neopro-firestick-v0.1.0.apk
+   ```
+   Expect: `Success`. If `INSTALL_FAILED_*`: re-check model is NOT Vega OS.
+4. On the Fire Stick: connect to the Pi hotspot SSID (from `raspberry/config/hostapd/hostapd.conf`).
+5. From the Fire OS launcher, locate "Neopro TV" in Apps → Recent or Apps → Your Apps. Launch it.
+6. Observe the TV for 10 seconds and confirm ALL of the following:
+   - [ ] No Chrome URL bar visible at the top of the screen.
+   - [ ] No Android status bar (clock, network icons) visible at the top.
+   - [ ] No Android navigation bar (back / home / recent) visible at the bottom.
+   - [ ] The Neopro page is loaded (you see the captive portal or display content, not a blank page).
+   - [ ] No `ERR_CLEARTEXT_NOT_PERMITTED` or any error message visible.
+   - [ ] No flash of URL bar during the 302 redirect chain (wifistub → wifiredirect → root). Watch the first 500ms carefully.
+7. Document the result in the Story Card commit body of the phase merge:
+   ```
+   UAT 2026-05-XX on Fire TV Stick 4K (RACC): all 6 checks PASS / X failed.
+   ```
+
+**If a check fails:**
+
+- URL bar visible → check `display: "fullscreen-sticky"` in `twa-manifest.json`. The fallback `customtabs` mode should still hide it via Immersive Sticky; if not, the `assetlinks.json` workaround (Pitfall 2) becomes necessary.
+- Blank page → `adb logcat | grep -i cleartext` to confirm Pitfall 1; if found, re-run `patch-android-manifest.sh` and rebuild.
+- Status bar / nav bar visible → `display` was likely overwritten to `fullscreen` (not `fullscreen-sticky`) — check `twa-manifest.json`.
+
 ## References
 
 - `.planning/phases/13-twa-build-apk-twa-fullscreen/13-RESEARCH.md` — Bubblewrap workflow, pitfalls, sources
