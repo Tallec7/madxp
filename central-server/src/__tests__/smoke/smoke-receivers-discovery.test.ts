@@ -204,3 +204,73 @@ describe('Phase 12 OBSERVE — neopro_hotspot_unknown_firestick_total', () => {
   });
 
 });
+
+describe('ADR-114 — write-through configuration.json.displays côté sync-agent', () => {
+
+  const dispatchSource = () =>
+    read('raspberry/sync-agent/src/command-dispatch.js');
+
+  // ── Sync-agent : la write-through doit être présente ─────────────────────
+
+  it('command-dispatch.js — importe safeReadConfig et atomicWriteJson depuis safe-config-io', () => {
+    const src = dispatchSource();
+    expect(src).toMatch(/require\(['"]\.\/utils\/safe-config-io['"]\)/);
+    expect(src).toMatch(/safeReadConfig/);
+    expect(src).toMatch(/atomicWriteJson/);
+  });
+
+  it('command-dispatch.js — assigne `displays` à la config locale (replace, pas merge)', () => {
+    const src = dispatchSource();
+    // Le fix ADR-114 : localConfig.displays = displays (ou variantes equivalents).
+    // Bloque toute reformulation qui ne contiendrait plus l'assignation.
+    expect(src).toMatch(/\.displays\s*=\s*displays\b/);
+  });
+
+  it('command-dispatch.js — appelle atomicWriteJson après safeReadConfig au runtime (write-through)', () => {
+    const src = dispatchSource();
+    // lastIndexOf pour ignorer la ligne d'import (où atomicWriteJson peut apparaître AVANT
+    // safeReadConfig selon l'ordre de destructuring) et matcher l'appel runtime.
+    const readIdx = src.lastIndexOf('safeReadConfig(');
+    const writeIdx = src.lastIndexOf('atomicWriteJson(');
+    expect(readIdx).toBeGreaterThan(-1);
+    expect(writeIdx).toBeGreaterThan(-1);
+    expect(writeIdx).toBeGreaterThan(readIdx);
+  });
+
+  it('command-dispatch.js — la write-through reste fail-soft (warn pas throw) en cas d\'erreur', () => {
+    const src = dispatchSource();
+    // Bloque toute évolution qui ferait throw l'erreur d'écriture (la commande
+    // doit être idempotente : `assignDisplay` a déjà été appelé, retry au prochain push).
+    expect(src).toMatch(/failed to persist displays/);
+    // Le bloc try/catch autour de la write-through (anchored sur l'appel runtime,
+    // pas l'import) doit catcher localement et logger en warn.
+    const writeIdx = src.lastIndexOf('atomicWriteJson(');
+    const window = src.slice(writeIdx, writeIdx + 800);
+    expect(window).toMatch(/catch\s*\(/);
+    expect(window).toMatch(/console\.warn/);
+  });
+
+  // ── Captive whoami (consumer) : lit toujours configuration.json ──────────
+
+  it('captive.js — whoami lit configuration.json comme source de vérité (pas le receivers cache)', () => {
+    const captive = read('raspberry/server/routes/captive.js');
+    expect(captive).toMatch(/configuration\.json|configPath/);
+    // Bloque toute évolution qui irait lire .receivers-cache.json directement
+    // dans whoami (le cache est ephemeral et non source de vérité).
+    expect(captive).not.toMatch(/receivers-cache\.json/);
+  });
+
+  // ── Backfill script : npm run backfill:displays-resync existe ────────────
+
+  it('central-server package.json — expose npm run backfill:displays-resync', () => {
+    const pkg = JSON.parse(read('central-server/package.json'));
+    expect(pkg.scripts['backfill:displays-resync']).toMatch(/backfill-displays-resync/);
+  });
+
+  it('backfill-displays-resync.ts — emet receiver_assignment_updated via commandQueueService', () => {
+    const src = read('central-server/src/scripts/backfill-displays-resync.ts');
+    expect(src).toMatch(/commandQueueService/);
+    expect(src).toMatch(/receiver_assignment_updated/);
+  });
+
+});
