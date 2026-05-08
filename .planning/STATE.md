@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.1
 milestone_name: — Fire Stick polish
-status: active
-stopped_at: null
-last_updated: '2026-05-08T09:00:00.000Z'
-last_activity: 2026-05-08 — Phase 12 COMPLETE — Counter Prometheus + Winston warn + badge ambre Non assigné + 21+17 tests verts
+status: verifying
+stopped_at: Phase 12 COMPLETE — both plans merged to main
+last_updated: '2026-05-08T07:09:24.162Z'
+last_activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 23
-  completed_plans: 23
+  total_plans: 22
+  completed_plans: 24
 ---
 
 # Project State
