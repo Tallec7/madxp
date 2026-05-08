@@ -8,10 +8,21 @@ Neopro est un système de TV interactive pour clubs sportifs. Un Raspberry Pi da
 
 Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
 
+## Current Milestone: v4.2 Fire Stick APK TWA
+
+**Goal:** Remplacer Silk Browser (URL bar persistante, expérience non-pro) par une APK Android TWA fullscreen sur Fire Stick, sans régression vs v4.1.
+
+**Target features:**
+
+- APK Android TWA wrappant la page captive Pi, fullscreen immersif (pas d'URL bar)
+- Sideload ADB documenté pour bénévoles (Fire OS = pas de Play Store)
+- Auto-launch APK à la connexion hotspot, fallback Silk si APK absente (zéro régression v4.1)
+- Smoke + métrique Prometheus pour suivre l'adoption APK vs Silk
+
 ## Current State
 
 **Shipped:** v4.1 — Fire Stick polish (2026-05-08) · v4.0 — Multi-écrans Fire Stick MVP (2026-05-07) · v3.0 — Template Studio v3 (2026-05-05)
-**Next:** Planning v4.2 (APK TWA fullscreen Fire Stick + alertes déconnexion + allowlist hostapd)
+**Next:** v4.2 in planning — Fire Stick APK TWA fullscreen
 
 - Fire Stick se connecte au hotspot Pi → Silk Browser s'ouvre automatiquement (auto-launch v4.1)
 - Super_admin réassigne un Fire Stick en 1 clic depuis le dashboard (Réassigner UX v4.1)
@@ -117,4 +128,4 @@ Un super_admin peut créer un template opérationnel en < 15 min depuis le dashb
 
 ---
 
-_Last updated: 2026-05-08 — milestone v4.1 Fire Stick polish livré_
+_Last updated: 2026-05-08 — milestone v4.2 (Fire Stick APK TWA) initialized_

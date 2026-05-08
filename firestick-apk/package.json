@@ -1,0 +1,14 @@
+{
+  "name": "@neopro/firestick-apk",
+  "version": "0.1.0",
+  "description": "Neopro Fire Stick TWA APK (Trusted Web Activity wrapping http://192.168.4.1/)",
+  "private": true,
+  "scripts": {
+    "build": "bash scripts/build.sh",
+    "verify": "bash scripts/verify-apk.sh",
+    "keystore:generate": "bash scripts/generate-keystore.sh"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "1.24.1"
+  }
+}

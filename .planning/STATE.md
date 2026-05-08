@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.1
-milestone_name: — Fire Stick polish
-status: between_milestones
-stopped_at: v4.1 milestone archived — ready for v4.2 planning
-last_updated: '2026-05-08T07:40:26.319Z'
-last_activity: 2026-05-08 — v4.1 SHIPPED — Fire Stick auto-launch + Réassigner 1 clic + OBSERVE badge ambre (Phases 10/11/12)
+milestone: v4.2
+milestone_name: — Fire Stick APK TWA
+status: In Progress
+stopped_at: Phase 13 PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix)
+last_updated: '2026-05-08T18:00:00.000Z'
+last_activity: 2026-05-08 — Phase 13 PARTIAL — APK shipped (851 KB, signed v2+v3, package id bzh.kalonpartners.neopro.firestick), fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix prérequis ; Fire OS impose le wrapper Silk WebView tant que le Wi-Fi est en captive state)
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 8
-  total_plans: 22
-  completed_plans: 24
+  total_plans: 26
+  completed_plans: 26
 ---
 
 # Project State
@@ -20,15 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** Un super_admin peut créer un template opérationnel en < 15 min depuis le dashboard, sans aide technique, en utilisant uniquement du vocabulaire métier.
-**Current focus:** Between milestones — v4.1 shipped 2026-05-08. Planning v4.2 (ALLOWLIST + ALERT + APK TWA).
+**Current focus:** v4.2 — Fire Stick APK TWA fullscreen (remplace Silk URL bar, sideload ADB documenté).
 
 ## Current Position
 
-Phase: Phase 12 — OBSERVE (COMPLETE — 2/2 plans done)
-Plan: 12-02-dashboard-unknown-firestick-badge (COMPLETE — 17/17 Karma verts, commit 86e4d1a1)
-Status: Phase 12 verified — prêt pour phase suivante
-Last activity: 2026-05-08 — Phase 12 COMPLETE — Counter neopro_hotspot_unknown_firestick_total + Winston warn (12-01) + badge ambre Non assigné (12-02)
-Next: /gsd:verify-work 12 ou /gsd:progress
+Phase: 13 — TWA-BUILD APK TWA fullscreen
+Plan: 04 (build-orchestrator-uat) — PARTIAL (4/4 plans, automated checks ✅, visual UAT deferred Phase 14)
+Status: PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14
+Last activity: 2026-05-08 — Phase 13 PARTIAL — APK shipped, fullscreen visual UAT deferred to Phase 14 (Pi captive 204 fix). Build pipeline functional (4 live-debug fixes applied: sed→perl, minSdk 21, .gitignore, JDK 17 fail-fast). Sideload via Pi relay validated (commits b0c2a928, 8521db0d, 0bfc3fe8, ec46abf3, a0dd56f0, f437b8c4)
+Next: Phase 14 (DEPLOY) — Pi captive 204 fix (nginx) prérequis pour débloquer TWA-02 + TWA-03 visual UAT, sideload bénévole-grade documenté, ADB UX procedure
+Next: /gsd:execute-plan 13-04-build-orchestrator-uat
 
 ## Accumulated Context
 
@@ -102,6 +103,22 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 11-01: mutation atomique via single `.map()` pass — sourceDisplay détecté avant la passe, clears source ET sets target dans un seul `displaysChange.emit`
 - 11-01: `#noReceivers` ng-template inclut `— Désassigner` gardé par `*ngIf="display.receiver?.mac"` — visible quand filteredReceivers vide mais MAC courante existe
 
+### Decisions (v4.2 / Phase 13)
+
+- 13-01: packageId reverse-DNS `bzh.kalonpartners.neopro.firestick` (BZH org root, ASCII alphanumeric only)
+- 13-01: smoke-firestick-apk ships with cleartext XML test RED — intentional Wave-0 TDD carry-over to Plan 02
+- 13-01: independent semver `firestick-apk/package.json` v0.1.0 (decoupled from Neopro core milestones)
+- 13-01: `display: "fullscreen-sticky"` (Bubblewrap manifest key for Android Immersive Sticky)
+- 13-02: Restrictive 3-domain cleartext allow-list (192.168.4.1 + 2 captive hijack targets) — aligned with `.claude/rules/raspberry.md` (DNS hijack restricted, not wildcard)
+- 13-02: Idempotency via `grep -q networkSecurityConfig` guard before `sed` injection — re-runs safe after every `bubblewrap update`
+- 13-02: Paranoid pre-flight guard refuses to patch if twa-manifest.json `display` is not `fullscreen-sticky` — protects TWA-02 from silent regression
+- 13-02: macOS BSD sed compat via `sed -i.bak` + `rm -f *.bak` (no GNU sed dependency)
+- 13-03: Out-of-band storage v4.2 (1 test site NLF) — encryption-at-rest commit (git-crypt / SOPS) deferred to v4.3 once flotte > 5 sites
+- 13-03: No-overwrite guard `[ -f $KEYSTORE_FILE ] && exit 2` — refuses silent rotation, forces explicit `rm` before re-run (rotation = full Fire Stick reinstall flotte-wide)
+- 13-03: 1Password attachment of the .keystore file itself DEFERRED — Daisy accepted the risk for v4.2 (small fleet); revisit at Phase 14 follow-up when flotte > 5 Fire Sticks
+- 13-03: Validity 30 years (10950 days) — Android best practice, avoids future rotation cost
+- 13-03: Same password for keystore + key (BUBBLEWRAP_KEYSTORE_PASSWORD = BUBBLEWRAP_KEY_PASSWORD) for v4.2 simplicity
+
 ### Pending Todos
 
 None yet.
@@ -120,6 +137,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T09:00:00.000Z
-Stopped at: Phase 12 COMPLETE — both plans merged to main
-Resume file: .planning/ROADMAP.md
+Last session: 2026-05-08T11:00:00.000Z
+Stopped at: Completed 13-03-keystore-generation-PLAN.md
+Resume file: .planning/phases/13-twa-build-apk-twa-fullscreen/13-04-build-orchestrator-uat-PLAN.md

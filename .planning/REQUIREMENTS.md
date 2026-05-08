@@ -1,137 +1,81 @@
-# Requirements — Milestone v4.0 Multi-écrans Fire Stick
+# Requirements — Milestone v4.2 Fire Stick APK TWA
 
-**Goal :** Un bénévole branche un Fire Stick sur une TV du club, l'admin assigne la MAC à distance depuis le dashboard, la TV affiche Neopro plein écran. Zéro déplacement technique.
+**Goal :** Remplacer Silk Browser (URL bar persistante, expérience non-pro) par une APK Android TWA fullscreen sur Fire Stick. Bénévole sideload l'APK une fois ; l'expérience utilisateur final = TV plein écran sans aucun chrome navigateur.
 
-**Source de vision :** `.planning/firestick-poc/VISION.md` (POC validé 2026-05-05)
-**Pattern de référence :** `hdmi.service.js` (PROP-002 phase 5) → `receivers.service.js`
+**Trigger :** Retour terrain v4.1 — l'auto-launch Silk Browser fonctionne mais la barre URL reste visible en haut de l'écran TV (constat ergonomique non-acceptable pour clubs Premium).
+**Décision produit 2026-05-08 :** ALLOWLIST + ALERT (Phases 12-13 v4.1 prévues) abandonnés au profit de l'APK TWA — l'OBSERVE badge ambre v4.1 couvre déjà 80% du besoin de visibilité Fire Stick inconnus, et les alertes déconnexion peuvent être traitées par alertingService existant si besoin futur.
+
+**Source de référence :**
+
+- Phase 10 v4.1 (CAPTIVE-AUTO) — wifistub 302-chain qui tape sur la racine `/` du Pi (sera la cible de l'APK)
+- Pattern Android TWA : `androidx.browser.trusted.TrustedWebActivity` (standard, pas de WebView custom)
+- Clé de signature persistante (upgrades sans réinstall flotte)
 
 ---
 
-## v4.0 Requirements
+## v4.2 Requirements
 
-### DETECT — Pi détecte les receivers
+### TWA — APK Android Trusted Web Activity
 
-- [x] **DETECT-01** : Le Pi détecte automatiquement les MACs connectées à son hotspot (watch `dnsmasq.leases` + ARP)
-- [x] **DETECT-02** : Le Pi pousse les changements (`receiver-detected`, `receiver-disconnected`) vers le cloud via socket
-- [x] **DETECT-03** : Le Pi cache localement le mapping MAC↔display pour résilience offline (Pi off → recovery au reboot)
+- [x] **TWA-01** : APK Android TWA wrapping la page captive Pi (URL configurable au build : défaut `http://192.168.4.1/` ou résolution captive `firetvcaptiveportal.com`) — manifest configurable, smoke automatisé, package id `bzh.kalonpartners.neopro.firestick` vérifié `aapt dump badging` (Phase 13-04 commit `f437b8c4`)
+- [~] **TWA-02** : Mode fullscreen immersif (immersive sticky) — `display: "fullscreen-sticky"` dans `twa-manifest.json` (smoke automatisé ✅) ; **UAT visuel reporté à Phase 14** : Fire OS impose le wrapper Silk WebView tant que le Wi-Fi est en état captive (fix Pi-side = 204 sur `/generate_204`, `/connecttest.txt`, `/hotspot-detect.html`)
+- [~] **TWA-03** : APK suit les redirects HTTP 302 — chaîne 302 suivie nativement par TWA validé via logcat (URL finale `/display/1` atteinte sans `ERR_CLEARTEXT_NOT_PERMITTED`) ; **check no-flash visuel reporté à Phase 14** (même blocker Fire OS captive wrapper)
+- [x] **TWA-04** : APK signée avec une clé de release stable (`firestick-release` alias, RSA 2048, validité 2056-04-30) — `apksigner verify --verbose` confirme v2=true + v3=true ; procédure de rotation documentée README §Keystore Rotation (Phase 13-03 commits `33df7170`/`6bcf09ec`)
 
-### CAPTIVE — Fire Stick → page Neopro
+### INSTALL — Sideload bénévole-grade
 
-- [x] **CAPTIVE-01** : Connexion au hotspot → Silk atterrit sur la page servie par le Pi (DNS hijack `firetvcaptiveportal.com` + `spectrum.s3.amazonaws.com` + nginx — pattern POC)
-- [x] **CAPTIVE-02** : Si MAC assignée à un display → page Neopro plein écran pour ce display (302 vers `/` avec query `?display=N`)
-- [x] **CAPTIVE-03** : Si MAC non assignée → page d'attente avec MAC affichée en gros + auto-refresh (polling)
-- [x] **CAPTIVE-04** : Une fois MAC assignée à distance par l'admin → page Fire Stick bascule auto vers la page Neopro (sans intervention bénévole)
+- [ ] **INSTALL-01** : Procédure documentée pas-à-pas pour sideload ADB depuis ordinateur bénévole vers Fire Stick (Mac/Windows/Linux), incluant activation Developer Mode Fire OS et appairage ADB
+- [ ] **INSTALL-02** : Script `scripts/firestick-install-apk.sh` (ou équivalent) qui automatise `adb connect <fire-stick-ip>` + `adb install neopro-tv.apk` avec checks de version
+- [ ] **INSTALL-03** : APK distribuée depuis URL Pi local (`http://192.168.4.1/firestick.apk` servi par nginx) — bénévole pas besoin d'internet club
 
-### DATA — Modèle DisplayConfig étendu
+### AUTOLAUNCH — Lancement automatique APK
 
-- [ ] **DATA-01** : `DisplayConfig` JSONB étendu avec `receiver?: { kind: 'pi_native'|'firestick'|'browser', mac?, last_seen_at? }`
-- [ ] **DATA-02** : Migration safe : `displays` existants restent valides (defaults `pi_native` pour HDMI #0)
-- [x] **DATA-03** : Repository expose `getReceiverForDisplay(siteId, displayIndex)` + `setReceiver(siteId, displayIndex, receiver)`
-
-### CLOUD — API + sync-agent
-
-- [x] **CLOUD-01** : `GET /api/sites/:id/connected-receivers` retourne les MACs détectées par le Pi (auto-discovery liste, ordonnée par `last_seen_at`)
-- [x] **CLOUD-02** : Assignation MAC↔display via PATCH du `DisplayConfig` (route PROP-002 existante étendue, validation Joi)
-- [x] **CLOUD-03** : Sync-agent whitelist nouvel event `receiver-detected` (et `receiver-disconnected`)
-- [x] **CLOUD-04** : DB cloud = source de vérité ; Pi reçoit assignments via socket et met à jour cache local automatiquement
-
-### DASHBOARD — UX admin assignation
-
-- [x] **DASHBOARD-01** : `displays-editor` affiche colonne « Récepteur » par display (🟢 Pi natif HDMI / 🟢 Fire Stick MAC tronquée / ⚪ Aucun)
-- [x] **DASHBOARD-02** : Dropdown [Assigner ▾] pré-rempli avec les MACs auto-détectées par le Pi (pas de saisie aveugle, pas de pré-config)
-- [x] **DASHBOARD-03** : Bouton [Désassigner] détache une MAC d'un display sans casser le display
+- [ ] **AUTOLAUNCH-01** : Quand le Fire Stick rejoint le hotspot Pi, l'APK Neopro TV se lance automatiquement (intent filter sur connexion réseau ou re-use du flow CaptivePortalLauncher v4.1)
+- [ ] **AUTOLAUNCH-02** : Si l'APK n'est pas installée sur le Fire Stick, comportement v4.1 conservé (Silk Browser auto-launch via wifistub) — zéro régression du fallback
 
 ### OBSERVE — Métriques + smoke
 
-- [x] **OBSERVE-01** : Métrique Prometheus `neopro_receivers_total{site_id, status}` (status: `detected` / `assigned` / `disconnected`)
-- [x] **OBSERVE-02** : Suite smoke `smoke-receivers-discovery` fige les contrats (event whitelist sync-agent, repo extension, route API, dashboard column, captive nginx route)
+- [ ] **OBSERVE-01** : Métrique Prometheus `neopro_firestick_apk_total{site_id, version}` incrémentée à chaque connexion APK détectée (User-Agent custom `NeoproTV/<version>`)
+- [ ] **OBSERVE-02** : Suite smoke (existante `smoke-receivers-discovery` étendue OU nouvelle `smoke-firestick-apk`) fige les contrats : User-Agent string, manifest fullscreen flag, target URL captive, intent filter
 
 ---
 
-## v4.1 Requirements — Fire Stick polish
+## Future Requirements (v4.3+)
 
-### CAPTIVE — Auto-launch Silk Browser
-
-- [x] **CAPTIVE-05** : Quand un Fire Stick se connecte au hotspot Pi, le Silk Browser s'ouvre automatiquement sur la page captive sans que le bénévole n'ait à ouvrir manuellement un navigateur
-- [x] **CAPTIVE-06** : L'auto-launch fonctionne au boot du Fire Stick (premier démarrage après connexion hotspot) sans manipulation de la télécommande
-- [x] **CAPTIVE-07** : Si l'auto-launch échoue (Fire Stick hors hotspot, timeout), la page d'attente reste accessible manuellement — aucune régression comportement v4.0
-
-### ASSIGN — Réassigner UX dashboard
-
-- [ ] **ASSIGN-01** : Dans `Sites > <club> > Écrans`, le dropdown d'un display déjà assigné propose [Réassigner ▾] pré-rempli avec les MACs détectées (sauf MAC courante)
-- [ ] **ASSIGN-02** : Sélectionner une MAC dans [Réassigner ▾] effectue l'assignation en 1 clic (désassigne l'ancienne + assigne la nouvelle atomiquement)
-- [ ] **ASSIGN-03** : L'ancien Fire Stick désassigné repasse en page d'attente automatiquement via `receiver_assignment_updated` → Pi → captive route sans reboot
-
-### ALLOWLIST — MAC allowlist hostapd
-
-- [ ] **ALLOWLIST-01** : Le Pi supporte un mode allowlist hostapd : seules les MACs dans une liste configurée obtiennent une IP DHCP
-- [ ] **ALLOWLIST-02** : L'admin gère l'allowlist depuis le dashboard (ajout/retrait MAC) sans SSH au Pi
-- [ ] **ALLOWLIST-03** : Une MAC non whitelistée est refusée au niveau DHCP + log Winston + métrique `neopro_hotspot_rejected_total`
-- [ ] **ALLOWLIST-04** : Le mode allowlist est opt-in par site (désactivé par défaut — hotspot ouvert comme v4.0)
-
-### ALERT — Alertes déconnexion Fire Stick
-
-- [ ] **ALERT-01** : Si un Fire Stick assigné disparaît du hotspot pendant > N min (défaut 5 min, configurable), une alerte `receiver_offline` est créée
-- [ ] **ALERT-02** : L'alerte `receiver_offline` est visible dans le dashboard admin avec : site, display, MAC, heure dernière détection
-- [ ] **ALERT-03** : Quand le Fire Stick se reconnecte, l'alerte `receiver_offline` est résolue automatiquement
-- [ ] **ALERT-04** : Métrique Prometheus `neopro_receiver_offline_total{site_id, mac}` incrémentée à chaque déconnexion détectée
+- [ ] **Distribution APK via OTA Pi** — APK auto-déployée sur les Pi depuis le cloud (trigger : flotte > 10 sites Fire Stick)
+- [ ] **Auto-update APK in-place** — APK détecte version dispo et propose update sans intervention bénévole (trigger : 1ʳᵉ release post-MVP)
+- [ ] **Scénario SaaS Fire Stick (token URL/cookie, sans Pi)** — APK pointe sur cloud direct (trigger : 1er client SaaS multi-écrans)
+- [ ] **Bouton "Réassigner" côté Fire Stick (UI APK)** — bénévole seul sans accès dashboard (trigger : retour terrain confirmé)
 
 ---
 
-## Future Requirements (v4.2+)
+## Out of Scope
 
-- [ ] **APK TWA fullscreen Fire Stick** — trigger : URL bar Silk toujours visible après v4.1
-- [ ] **Scénario SaaS Fire Stick** (token URL/cookie, pas de Pi) — trigger : 1er client SaaS multi-écrans
-- [ ] **Bouton Réassigner côté Fire Stick** — trigger : bénévole seul sans accès dashboard
-
----
-
-## Out of Scope (jamais — v4.x)
-
-- **Solution sans Pi** (refonte complète streaming) — la valeur Fire Stick = extension du Pi existant. Sans Pi → c'est un cas SaaS différent.
-- **Multi-VLAN club** (Fire Stick sur LAN club avec internet) — le scope est strictement hotspot Pi local, pas d'intégration LAN externe.
-- **Streaming inter-display synchronisé** (4 TVs montrent la même animation au même frame) — complexité élevée, aucun besoin produit identifié.
+- **Distribution Play Store / Amazon Appstore** — pas pertinent pour distribution captive interne, ajoute friction signature commerciale
+- **APK iOS / autres plateformes** — Fire Stick = Android only, scope strictement Fire OS
+- **Custom WebView avec polices/extensions** — TWA standard suffit, pas de divergence du runtime web déjà testé
+- **Multi-VLAN club (APK qui se connecte au LAN club + Pi simultanément)** — scope strictement hotspot Pi local, pas d'intégration LAN externe (héritage v4.0)
 
 ---
 
 ## Traceability
 
-| REQ-ID       | Phase                   | Plan          |
-| ------------ | ----------------------- | ------------- |
-| DATA-01      | Phase 4 (DATA)          | TBD           |
-| DATA-02      | Phase 4 (DATA)          | TBD           |
-| DATA-03      | Phase 4 (DATA)          | TBD           |
-| DETECT-01    | Phase 5 (DETECT)        | TBD           |
-| DETECT-02    | Phase 5 (DETECT)        | TBD           |
-| DETECT-03    | Phase 5 (DETECT)        | TBD           |
-| CAPTIVE-01   | Phase 6 (CAPTIVE)       | TBD           |
-| CAPTIVE-02   | Phase 6 (CAPTIVE)       | TBD           |
-| CAPTIVE-03   | Phase 6 (CAPTIVE)       | 06-captive-03 |
-| CAPTIVE-04   | Phase 6 (CAPTIVE)       | 06-captive-03 |
-| CLOUD-01     | Phase 7 (CLOUD)         | TBD           |
-| CLOUD-02     | Phase 7 (CLOUD)         | TBD           |
-| CLOUD-03     | Phase 7 (CLOUD)         | TBD           |
-| CLOUD-04     | Phase 7 (CLOUD)         | 07-cloud-03   |
-| DASHBOARD-01 | Phase 8 (DASHBOARD)     | TBD           |
-| DASHBOARD-02 | Phase 8 (DASHBOARD)     | TBD           |
-| DASHBOARD-03 | Phase 8 (DASHBOARD)     | TBD           |
-| OBSERVE-01   | Phase 9 (OBSERVE)       | TBD           |
-| OBSERVE-02   | Phase 9 (OBSERVE)       | TBD           |
-| CAPTIVE-05   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
-| CAPTIVE-06   | Phase 10 (CAPTIVE-AUTO) | 46bd801a      |
-| CAPTIVE-07   | Phase 10 (CAPTIVE-AUTO) | ada82998      |
-| ASSIGN-01    | Phase 11 (REASSIGN)     | TBD           |
-| ASSIGN-02    | Phase 11 (REASSIGN)     | TBD           |
-| ASSIGN-03    | Phase 11 (REASSIGN)     | TBD           |
-| ALLOWLIST-01 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-02 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-03 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALLOWLIST-04 | Phase 12 (ALLOWLIST)    | TBD           |
-| ALERT-01     | Phase 13 (ALERT)        | TBD           |
-| ALERT-02     | Phase 13 (ALERT)        | TBD           |
-| ALERT-03     | Phase 13 (ALERT)        | TBD           |
-| ALERT-04     | Phase 13 (ALERT)        | TBD           |
+| REQ-ID        | Phase                | Plan                                                                                 |
+| ------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| TWA-01        | Phase 13 (TWA-BUILD) | 13-01, 13-04 ✅ (manifest + smoke + automated package-id check)                      |
+| TWA-02        | Phase 13 (TWA-BUILD) | 13-01 ✅ (manifest `fullscreen-sticky`) ; visual UAT → Phase 14 (Pi captive 204 fix) |
+| TWA-03        | Phase 13 (TWA-BUILD) | 13-04 ✅ (302 chain validated logcat) ; no-flash visual UAT → Phase 14               |
+| TWA-04        | Phase 13 (TWA-BUILD) | 13-03, 13-04 ✅ (keystore + apksigner v2+v3 verified)                                |
+| INSTALL-01    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| INSTALL-02    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| INSTALL-03    | Phase 14 (DEPLOY)    | TBD                                                                                  |
+| AUTOLAUNCH-01 | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| AUTOLAUNCH-02 | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| OBSERVE-01    | Phase 15 (INTEGRATE) | TBD                                                                                  |
+| OBSERVE-02    | Phase 15 (INTEGRATE) | TBD                                                                                  |
 
-**v4.0: 18 requirements** | **6 catégories** | **Coverage: 18/18** ✓
+**v4.2: 11 requirements** | **4 catégories** | **Coverage: 11/11** ✓
 
-**v4.1: 14 requirements** | **4 catégories** | **Coverage: 14/14** ✓ (CAPTIVE-05/06/07 → Phase 10, ASSIGN-01/02/03 → Phase 11, ALLOWLIST-01/02/03/04 → Phase 12, ALERT-01/02/03/04 → Phase 13)
+---
+
+_Last updated: 2026-05-08 — Phase 13 PARTIAL : APK shipped (TWA-01 + TWA-04 ✅), TWA-02 + TWA-03 visual UAT reportés Phase 14 (Pi captive 204 fix prérequis)_
