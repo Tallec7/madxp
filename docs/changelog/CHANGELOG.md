@@ -1,3 +1,9 @@
+## [3.300.2](https://github.com/Tallec7/neopro/compare/v3.300.1...v3.300.2) (2026-05-08)
+
+### Bug Fixes
+
+- **deploy:** block SaaS targets in /deployments to stop bulk deploy 429 storm ([#922](https://github.com/Tallec7/neopro/issues/922)) ([d57feb4](https://github.com/Tallec7/neopro/commit/d57feb4331ea72b84b5f41e29174d7336cc2bd69))
+
 ## [3.300.1](https://github.com/Tallec7/neopro/compare/v3.300.0...v3.300.1) (2026-05-08)
 
 ### Bug Fixes
