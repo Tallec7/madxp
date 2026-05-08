@@ -1,3 +1,9 @@
+## [3.299.1](https://github.com/Tallec7/neopro/compare/v3.299.0...v3.299.1) (2026-05-08)
+
+### Bug Fixes
+
+- **central-server:** backfill script utilise sites.site_name (pas name) ([#909](https://github.com/Tallec7/neopro/issues/909)) ([bd9d02c](https://github.com/Tallec7/neopro/commit/bd9d02cb37fc06fc067618a851aaf2256ac41fe4)), closes [#905](https://github.com/Tallec7/neopro/issues/905)
+
 # [3.299.0](https://github.com/Tallec7/neopro/compare/v3.298.7...v3.299.0) (2026-05-08)
 
 ### Features
