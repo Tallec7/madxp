@@ -1,3 +1,9 @@
+# [3.299.0](https://github.com/Tallec7/neopro/compare/v3.298.7...v3.299.0) (2026-05-08)
+
+### Features
+
+- **central-server:** backfill script displays-resync (ADR-114) ([#905](https://github.com/Tallec7/neopro/issues/905)) ([95a550e](https://github.com/Tallec7/neopro/commit/95a550e88e71a6040612c1603912ac5be1b851d1)), closes [fef3c7/#92400e](https://github.com/Tallec7/neopro/issues/92400e) [#903](https://github.com/Tallec7/neopro/issues/903)
+
 ## [3.298.7](https://github.com/Tallec7/neopro/compare/v3.298.6...v3.298.7) (2026-05-08)
 
 ### Bug Fixes
