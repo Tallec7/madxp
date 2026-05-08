@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.2
 milestone_name: — Fire Stick APK TWA
 status: In Progress
-stopped_at: Completed 13-01-scaffold-firestick-apk-PLAN.md
-last_updated: '2026-05-08T08:35:13.185Z'
-last_activity: 2026-05-08 — Phase 13 Plan 01 (scaffold firestick-apk) complete
+stopped_at: Completed 13-02-cleartext-fullscreen-patch-PLAN.md
+last_updated: '2026-05-08T09:00:00.000Z'
+last_activity: 2026-05-08 — Phase 13 Plan 02 (cleartext + fullscreen patch) complete, smoke 6/6 green
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 26
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 ## Current Position
 
 Phase: 13 — TWA-BUILD APK TWA fullscreen
-Plan: 02 (cleartext-fullscreen-patch) next
-Status: In Progress (1/4 plans done)
-Last activity: 2026-05-08 — 13-01 scaffold firestick-apk shipped (commits 36ca1841/e535f9b9/c50a74b9)
-Next: /gsd:execute-plan 13-02-cleartext-fullscreen-patch
+Plan: 03 (keystore-generation) and 04 (build-orchestrator-uat) remaining
+Status: In Progress (2/4 plans done)
+Last activity: 2026-05-08 — 13-02 cleartext + fullscreen patch shipped (commits 48c10d9c/35eb1e1d), smoke 5/6 → 6/6 green
+Next: /gsd:execute-plan 13-04-build-orchestrator-uat (13-03 already shipped via parallel session, commit 33df7170)
 
 ## Accumulated Context
 
@@ -108,6 +108,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 13-01: smoke-firestick-apk ships with cleartext XML test RED — intentional Wave-0 TDD carry-over to Plan 02
 - 13-01: independent semver `firestick-apk/package.json` v0.1.0 (decoupled from Neopro core milestones)
 - 13-01: `display: "fullscreen-sticky"` (Bubblewrap manifest key for Android Immersive Sticky)
+- 13-02: Restrictive 3-domain cleartext allow-list (192.168.4.1 + 2 captive hijack targets) — aligned with `.claude/rules/raspberry.md` (DNS hijack restricted, not wildcard)
+- 13-02: Idempotency via `grep -q networkSecurityConfig` guard before `sed` injection — re-runs safe after every `bubblewrap update`
+- 13-02: Paranoid pre-flight guard refuses to patch if twa-manifest.json `display` is not `fullscreen-sticky` — protects TWA-02 from silent regression
+- 13-02: macOS BSD sed compat via `sed -i.bak` + `rm -f *.bak` (no GNU sed dependency)
 
 ### Pending Todos
 
@@ -127,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T08:35:13.183Z
-Stopped at: Completed 13-01-scaffold-firestick-apk-PLAN.md
+Last session: 2026-05-08T09:00:00.000Z
+Stopped at: Completed 13-02-cleartext-fullscreen-patch-PLAN.md
 Resume file: None

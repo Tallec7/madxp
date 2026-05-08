@@ -64,8 +64,8 @@
 
 **Plans**: 4 plans
 
-- [ ] 13-01-scaffold-firestick-apk-PLAN.md — Scaffold firestick-apk/ + Wave 0 smoke + manifest + .gitignore + README skeleton (TWA-01, TWA-02, TWA-04)
-- [ ] 13-02-cleartext-fullscreen-patch-PLAN.md — network_security_config.xml + idempotent patch-android-manifest.sh + README §Cleartext (TWA-01, TWA-02)
+- [x] 13-01-scaffold-firestick-apk-PLAN.md — Scaffold firestick-apk/ + Wave 0 smoke + manifest + .gitignore + README skeleton (TWA-01, TWA-02, TWA-04) ✅ 2026-05-08
+- [x] 13-02-cleartext-fullscreen-patch-PLAN.md — network_security_config.xml + idempotent patch-android-manifest.sh + README §Cleartext (TWA-01, TWA-02) ✅ 2026-05-08
 - [ ] 13-03-keystore-generation-PLAN.md — generate-keystore.sh wrapper + README §Keystore + §Rotation + Daisy human-action (TWA-04)
 - [ ] 13-04-build-orchestrator-uat-PLAN.md — build.sh + verify-apk.sh + npm run build:firestick-apk + README §UAT + Fire Stick acceptance (TWA-01, TWA-02, TWA-03, TWA-04)
 
@@ -250,21 +250,21 @@
 
 ## Progress
 
-| Phase               | Milestone | Plans Complete | Status   | Completed  |
-| ------------------- | --------- | -------------- | -------- | ---------- |
-| 1. Fondations       | v3.0      | 5/5            | Complete | 2026-05-05 |
-| 2. UX interactive   | v3.0      | 4/4            | Complete | 2026-05-05 |
-| 3. Gate publication | v3.0      | 5/5            | Complete | 2026-05-05 |
-| 4. DATA             | v4.0      | 2/2            | Complete | 2026-05-06 |
-| 5. DETECT           | v4.0      | 3/3            | Complete | 2026-05-06 |
-| 6. CAPTIVE          | v4.0      | 6/6            | Complete | 2026-05-07 |
-| 7. CLOUD            | v4.0      | 3/3            | Complete | 2026-05-07 |
-| 8. DASHBOARD        | v4.0      | 4/4            | Complete | 2026-05-07 |
-| 9. OBSERVE          | v4.0      | 2/2            | Complete | 2026-05-07 |
-| 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete | 2026-05-07 |
-| 11. REASSIGN        | v4.1      | 1/1            | Complete | 2026-05-08 |
-| 12. OBSERVE(pivoté) | v4.1      | 2/2            | Complete | 2026-05-08 |
-| 13. APK TWA         | 1/4       | In Progress    |          | -          |
+| Phase               | Milestone | Plans Complete | Status      | Completed  |
+| ------------------- | --------- | -------------- | ----------- | ---------- |
+| 1. Fondations       | v3.0      | 5/5            | Complete    | 2026-05-05 |
+| 2. UX interactive   | v3.0      | 4/4            | Complete    | 2026-05-05 |
+| 3. Gate publication | v3.0      | 5/5            | Complete    | 2026-05-05 |
+| 4. DATA             | v4.0      | 2/2            | Complete    | 2026-05-06 |
+| 5. DETECT           | v4.0      | 3/3            | Complete    | 2026-05-06 |
+| 6. CAPTIVE          | v4.0      | 6/6            | Complete    | 2026-05-07 |
+| 7. CLOUD            | v4.0      | 3/3            | Complete    | 2026-05-07 |
+| 8. DASHBOARD        | v4.0      | 4/4            | Complete    | 2026-05-07 |
+| 9. OBSERVE          | v4.0      | 2/2            | Complete    | 2026-05-07 |
+| 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete    | 2026-05-07 |
+| 11. REASSIGN        | v4.1      | 1/1            | Complete    | 2026-05-08 |
+| 12. OBSERVE(pivoté) | v4.1      | 2/2            | Complete    | 2026-05-08 |
+| 13. APK TWA         | v4.2      | 2/4            | In Progress | -          |
 
 ---
 
