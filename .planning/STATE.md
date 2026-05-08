@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v4.2
-milestone_name: Fire Stick APK TWA
-status: defining_requirements
-stopped_at: v4.2 milestone started — defining requirements
-last_updated: '2026-05-08T10:00:00.000Z'
-last_activity: 2026-05-08 — v4.2 milestone initialized — Fire Stick APK TWA fullscreen
+milestone_name: — Fire Stick APK TWA
+status: In Progress
+stopped_at: Completed 13-01-scaffold-firestick-apk-PLAN.md
+last_updated: '2026-05-08T08:35:13.185Z'
+last_activity: 2026-05-08 — Phase 13 Plan 01 (scaffold firestick-apk) complete
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 11
+  completed_phases: 8
+  total_plans: 26
+  completed_plans: 23
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-05-07)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-08 — Milestone v4.2 started
-Next: /gsd:plan-phase [N] après validation roadmap
+Phase: 13 — TWA-BUILD APK TWA fullscreen
+Plan: 02 (cleartext-fullscreen-patch) next
+Status: In Progress (1/4 plans done)
+Last activity: 2026-05-08 — 13-01 scaffold firestick-apk shipped (commits 36ca1841/e535f9b9/c50a74b9)
+Next: /gsd:execute-plan 13-02-cleartext-fullscreen-patch
 
 ## Accumulated Context
 
@@ -102,6 +102,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - 11-01: mutation atomique via single `.map()` pass — sourceDisplay détecté avant la passe, clears source ET sets target dans un seul `displaysChange.emit`
 - 11-01: `#noReceivers` ng-template inclut `— Désassigner` gardé par `*ngIf="display.receiver?.mac"` — visible quand filteredReceivers vide mais MAC courante existe
 
+### Decisions (v4.2 / Phase 13)
+
+- 13-01: packageId reverse-DNS `bzh.kalonpartners.neopro.firestick` (BZH org root, ASCII alphanumeric only)
+- 13-01: smoke-firestick-apk ships with cleartext XML test RED — intentional Wave-0 TDD carry-over to Plan 02
+- 13-01: independent semver `firestick-apk/package.json` v0.1.0 (decoupled from Neopro core milestones)
+- 13-01: `display: "fullscreen-sticky"` (Bubblewrap manifest key for Android Immersive Sticky)
+
 ### Pending Todos
 
 None yet.
@@ -120,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-08T10:00:00.000Z
-Stopped at: v4.2 milestone initialized — requirements defined, roadmap pending
-Resume file: .planning/ROADMAP.md
+Last session: 2026-05-08T08:35:13.183Z
+Stopped at: Completed 13-01-scaffold-firestick-apk-PLAN.md
+Resume file: None

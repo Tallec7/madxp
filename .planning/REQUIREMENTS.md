@@ -17,10 +17,10 @@
 
 ### TWA — APK Android Trusted Web Activity
 
-- [ ] **TWA-01** : APK Android TWA wrapping la page captive Pi (URL configurable au build : défaut `http://192.168.4.1/` ou résolution captive `firetvcaptiveportal.com`)
-- [ ] **TWA-02** : Mode fullscreen immersif (immersive sticky) — aucune barre URL, aucune barre de navigation, aucune barre de statut visible sur la TV
+- [x] **TWA-01** : APK Android TWA wrapping la page captive Pi (URL configurable au build : défaut `http://192.168.4.1/` ou résolution captive `firetvcaptiveportal.com`)
+- [x] **TWA-02** : Mode fullscreen immersif (immersive sticky) — aucune barre URL, aucune barre de navigation, aucune barre de statut visible sur la TV
 - [ ] **TWA-03** : APK suit les redirects HTTP 302 du captive flow (wifistub → wifiredirect → `/?display=N`) sans afficher d'URL intermédiaire à l'utilisateur final
-- [ ] **TWA-04** : APK signée avec une clé de release stable (`neopro-firestick-release.keystore`) committée chiffrée + procédure de rotation documentée — upgrades futurs sans désinstaller la flotte
+- [x] **TWA-04** : APK signée avec une clé de release stable (`neopro-firestick-release.keystore`) committée chiffrée + procédure de rotation documentée — upgrades futurs sans désinstaller la flotte
 
 ### INSTALL — Sideload bénévole-grade
 

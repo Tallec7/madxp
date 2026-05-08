@@ -264,7 +264,7 @@
 | 10. CAPTIVE-AUTO    | v4.1      | 1/1            | Complete | 2026-05-07 |
 | 11. REASSIGN        | v4.1      | 1/1            | Complete | 2026-05-08 |
 | 12. OBSERVE(pivoté) | v4.1      | 2/2            | Complete | 2026-05-08 |
-| 13. APK TWA         | v4.2      | 0/?            | Planned  | -          |
+| 13. APK TWA         | 1/4       | In Progress    |          | -          |
 
 ---
 
