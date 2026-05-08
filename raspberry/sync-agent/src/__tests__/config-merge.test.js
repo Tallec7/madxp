@@ -8,6 +8,21 @@
  * @module config-merge.test
  */
 
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+// Mock config (require('../config') tire dotenv qui n'est pas en devDeps).
+// On ré-injecte tmpRoot dynamiquement dans le describe restoreSecondaryVariants.
+jest.mock('../config', () => ({
+  paths: {
+    root: '/tmp/neopro-test-stub',
+    videos: '/tmp/neopro-test-stub/videos',
+    config: '/tmp/neopro-test-stub/configuration.json',
+    backup: '/tmp/neopro-test-stub/backups',
+  },
+}));
+
 const {
   mergeConfigurations,
   mergeCategories,
@@ -16,6 +31,7 @@ const {
   hasLockedContent,
   createBackup,
   calculateConfigHash,
+  restoreSecondaryVariants,
 } = require('../utils/config-merge');
 
 // Mock du logger pour éviter les logs pendant les tests
@@ -1098,6 +1114,154 @@ describe('Config Merge Module', () => {
 
       expect(merged2.categories[0].videos).toHaveLength(1);
       expect(merged2.categories[0].videos[0].name).toBe('Valid');
+    });
+  });
+
+  describe('restoreSecondaryVariants — drift cloud↔Pi guard (issue #920)', () => {
+    let tmpRoot;
+
+    beforeAll(() => {
+      tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'neopro-config-merge-test-'));
+      fs.mkdirSync(path.join(tmpRoot, 'videos-secondary', 'default'), { recursive: true });
+      // Fichier qui existe → variant doit être restauré
+      fs.writeFileSync(
+        path.join(tmpRoot, 'videos-secondary', 'default', 'LED_OK.mp4'),
+        'fake mp4'
+      );
+
+      // Override config.paths.root pour pointer vers tmpRoot
+      const config = require('../config');
+      config.paths.root = tmpRoot;
+    });
+
+    afterAll(() => {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    });
+
+    it('restaure une variant pointant vers un fichier existant', () => {
+      const localConfig = {
+        sponsors: [
+          {
+            path: 'videos/default/TV_OK.mp4',
+            variants: { secondary: { path: 'videos-secondary/default/LED_OK.mp4' } },
+          },
+        ],
+      };
+      const mergedConfig = {
+        sponsors: [{ path: 'videos/default/TV_OK.mp4' }],
+      };
+
+      restoreSecondaryVariants(localConfig, mergedConfig);
+
+      expect(mergedConfig.sponsors[0].variants).toEqual({
+        secondary: { path: 'videos-secondary/default/LED_OK.mp4' },
+      });
+    });
+
+    it('skip une variant pointant vers un fichier absent (drift cloud↔Pi)', () => {
+      const localConfig = {
+        sponsors: [
+          {
+            path: 'videos/default/TV_STALE.mp4',
+            variants: { secondary: { path: 'videos-secondary/default/LED_STALE.mp4' } },
+          },
+        ],
+      };
+      const mergedConfig = {
+        sponsors: [{ path: 'videos/default/TV_STALE.mp4' }],
+      };
+
+      restoreSecondaryVariants(localConfig, mergedConfig);
+
+      expect(mergedConfig.sponsors[0].variants).toBeUndefined();
+    });
+
+    it('skip si une seule des variants multi-display est cassée', () => {
+      const localConfig = {
+        sponsors: [
+          {
+            path: 'videos/default/TV_PARTIAL.mp4',
+            variants: {
+              secondary: { path: 'videos-secondary/default/LED_OK.mp4' }, // existe
+              'led-banner': { path: 'videos-secondary/default/LED_BROKEN.mp4' }, // absent
+            },
+          },
+        ],
+      };
+      const mergedConfig = {
+        sponsors: [{ path: 'videos/default/TV_PARTIAL.mp4' }],
+      };
+
+      restoreSecondaryVariants(localConfig, mergedConfig);
+
+      // Tout-ou-rien : si l'un des variants est cassé, on skip l'objet entier
+      expect(mergedConfig.sponsors[0].variants).toBeUndefined();
+    });
+
+    it('reste no-op si la config locale n\'a pas de variants', () => {
+      const localConfig = { sponsors: [{ path: 'videos/default/TV_NO_VARIANT.mp4' }] };
+      const mergedConfig = { sponsors: [{ path: 'videos/default/TV_NO_VARIANT.mp4' }] };
+
+      expect(() => restoreSecondaryVariants(localConfig, mergedConfig)).not.toThrow();
+      expect(mergedConfig.sponsors[0].variants).toBeUndefined();
+    });
+
+    it('parcourt sponsors + categories.videos + subCategories.videos + timeCategories.loopVideos', () => {
+      const localConfig = {
+        sponsors: [
+          {
+            path: 'a',
+            variants: { secondary: { path: 'videos-secondary/default/LED_OK.mp4' } },
+          },
+        ],
+        categories: [
+          {
+            videos: [
+              {
+                path: 'b',
+                variants: { secondary: { path: 'videos-secondary/default/LED_OK.mp4' } },
+              },
+            ],
+            subCategories: [
+              {
+                videos: [
+                  {
+                    path: 'c',
+                    variants: { secondary: { path: 'videos-secondary/default/LED_OK.mp4' } },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        timeCategories: [
+          {
+            loopVideos: [
+              {
+                path: 'd',
+                variants: { secondary: { path: 'videos-secondary/default/LED_OK.mp4' } },
+              },
+            ],
+          },
+        ],
+      };
+      const mergedConfig = {
+        sponsors: [{ path: 'a' }],
+        categories: [
+          {
+            videos: [{ path: 'b' }],
+            subCategories: [{ videos: [{ path: 'c' }] }],
+          },
+        ],
+        timeCategories: [{ loopVideos: [{ path: 'd' }] }],
+      };
+
+      restoreSecondaryVariants(localConfig, mergedConfig);
+
+      expect(mergedConfig.sponsors[0].variants).toBeDefined();
+      expect(mergedConfig.categories[0].videos[0].variants).toBeDefined();
+      expect(mergedConfig.categories[0].subCategories[0].videos[0].variants).toBeDefined();
+      expect(mergedConfig.timeCategories[0].loopVideos[0].variants).toBeDefined();
     });
   });
 });

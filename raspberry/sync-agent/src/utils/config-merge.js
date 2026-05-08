@@ -9,7 +9,10 @@
  * - Les vidéos NEOPRO expirées sont automatiquement supprimées
  */
 
+const fs = require('fs');
+const path = require('path');
 const logger = require('../logger');
+const config = require('../config');
 
 /**
  * Liste des paramètres locaux qui ne doivent JAMAIS être écrasés par le central.
@@ -543,43 +546,75 @@ function mergeVideoFilenames(localFilenames, centralFilenames) {
 }
 
 /**
+ * Vérifie qu'un objet variants entier pointe vers des fichiers existants sur disque.
+ * Si une seule variante (peu importe le displayType) est cassée, l'objet entier
+ * est jeté pour éviter d'injecter une variant stale dans la config Pi (incident
+ * 2026-05-08, issue #920 — drift cloud↔Pi car les fichiers ont été renommés).
+ *
+ * @param {object} variants - { secondary: { path }, [displayType]: { path } }
+ * @returns {boolean} true si toutes les variants pointent vers un fichier existant
+ */
+function variantsAllExist(variants) {
+  if (!variants || typeof variants !== 'object') return false;
+  for (const v of Object.values(variants)) {
+    const relPath = v?.path;
+    if (!relPath || typeof relPath !== 'string') return false;
+    const fullPath = path.join(config.paths.root, relPath);
+    try {
+      if (!fs.existsSync(fullPath)) return false;
+    } catch (_err) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Ré-injecte les variants.secondary depuis la config locale vers la config fusionnée.
  * Le central n'envoie pas les variants (elles sont ajoutées localement par deploySecondaryVariant).
  * Après un merge qui remplace sponsors/categories/timeCategories, les variants sont perdues.
  * Cette fonction les restaure en matchant par chemin vidéo (path).
  *
+ * Garde-fou (issue #920) : on skip les variants pointant vers des fichiers absents
+ * du disque. Ça empêche le drift cloud↔Pi de se masquer silencieusement quand
+ * un re-upload côté cloud renomme un fichier (collision `_2`).
+ *
  * @param {object} localConfig - Configuration locale avant merge
  * @param {object} mergedConfig - Configuration après merge (modifiée en place)
  */
 function restoreSecondaryVariants(localConfig, mergedConfig) {
-  // 1. Build path → variants map from local config
+  // 1. Build path → variants map from local config (skip stale variants)
   const variantsMap = new Map();
+  let skippedStale = 0;
 
-  for (const s of localConfig.sponsors || []) {
-    if (s.path && s.variants?.secondary) {
-      variantsMap.set(s.path, s.variants);
+  const tryAdd = (entry) => {
+    if (!entry?.path || !entry.variants?.secondary) return;
+    if (variantsAllExist(entry.variants)) {
+      variantsMap.set(entry.path, entry.variants);
+    } else {
+      skippedStale++;
+      logger.warn('[config-merge] Variant stale skipped (file missing on disk)', {
+        path: entry.path,
+        variants: Object.fromEntries(
+          Object.entries(entry.variants).map(([k, v]) => [k, v?.path])
+        ),
+      });
     }
-  }
+  };
+
+  for (const s of localConfig.sponsors || []) tryAdd(s);
   for (const cat of localConfig.categories || []) {
-    for (const v of cat.videos || []) {
-      if (v.path && v.variants?.secondary) {
-        variantsMap.set(v.path, v.variants);
-      }
-    }
+    for (const v of cat.videos || []) tryAdd(v);
     for (const sub of cat.subCategories || []) {
-      for (const v of sub.videos || []) {
-        if (v.path && v.variants?.secondary) {
-          variantsMap.set(v.path, v.variants);
-        }
-      }
+      for (const v of sub.videos || []) tryAdd(v);
     }
   }
   for (const tc of localConfig.timeCategories || []) {
-    for (const v of tc.loopVideos || []) {
-      if (v.path && v.variants?.secondary) {
-        variantsMap.set(v.path, v.variants);
-      }
-    }
+    for (const v of tc.loopVideos || []) tryAdd(v);
+  }
+
+  if (skippedStale > 0) {
+    logger.warn(`[config-merge] ${skippedStale} variants stale skipped — issue #920 drift cloud↔Pi`);
   }
 
   if (variantsMap.size === 0) return;
