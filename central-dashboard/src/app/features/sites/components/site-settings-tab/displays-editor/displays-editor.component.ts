@@ -560,7 +560,7 @@ export class DisplaysEditorComponent {
     return mac.substring(0, 6) + '…' + mac.substring(mac.length - 2);
   }
 
-  formatLastSeen(iso: string): string {
+  formatLastSeen(iso: string | number): string {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'à l\'instant';
