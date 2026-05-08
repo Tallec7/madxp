@@ -1,3 +1,9 @@
+## [3.300.5](https://github.com/Tallec7/neopro/compare/v3.300.4...v3.300.5) (2026-05-08)
+
+### Bug Fixes
+
+- **saas:** include displays in resolvedConfig payload ([#925](https://github.com/Tallec7/neopro/issues/925)) ([322db75](https://github.com/Tallec7/neopro/commit/322db7551eea77fb68b33aba849ffcf7647ea8c3)), closes [#924](https://github.com/Tallec7/neopro/issues/924)
+
 ## [3.300.4](https://github.com/Tallec7/neopro/compare/v3.300.3...v3.300.4) (2026-05-08)
 
 ### Bug Fixes
