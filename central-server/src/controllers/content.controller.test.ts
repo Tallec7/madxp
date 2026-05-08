@@ -25,6 +25,8 @@ jest.mock('../repositories', () => ({
   siteRepository: {
     exists: jest.fn(),
     findById: jest.fn(),
+    // Default : la cible est un site Pi (pas de guard SaaS déclenché)
+    findBasicInfo: jest.fn().mockResolvedValue({ id: 'site-456', site_name: 'Test', site_type: 'pi', status: 'online' }),
     // PR2.1 — cascade JSONB : default = aucun mirror Pi référence la vidéo.
     findSitesReferencingVideoInLocalMirror: jest.fn().mockResolvedValue([]),
     updateLocalConfigMirror: jest.fn().mockResolvedValue(undefined),
@@ -642,6 +644,26 @@ describe('Content Controller', () => {
         await createDeployment(req, res);
 
         expect(res.status).toHaveBeenCalledWith(500);
+      });
+
+      it('should reject SaaS targets with 400 (no Pi to deploy to)', async () => {
+        const req = createAuthRequest({
+          body: { video_id: 'video-123', target_type: 'site', target_id: 'saas-site' },
+        });
+        const res = createMockResponse();
+
+        mockSiteRepo.findBasicInfo.mockResolvedValueOnce({
+          id: 'saas-site',
+          site_name: 'Demo SaaS',
+          site_type: 'saas',
+          status: 'online',
+        });
+
+        await createDeployment(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(mockDeploymentRepo.createFull).not.toHaveBeenCalled();
+        expect(deploymentService.startDeployment).not.toHaveBeenCalled();
       });
     });
 

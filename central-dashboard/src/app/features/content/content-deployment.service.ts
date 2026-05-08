@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { NotificationService } from '../../core/services/notification.service';
+import { Site } from '../../core/models';
 import {
   ContentManagementDataService,
   Deployment,
@@ -53,14 +54,30 @@ export class ContentDeploymentService {
 
   async startDeployment(
     allVideos: VideoName[],
-    deployments: Deployment[]
+    deployments: Deployment[],
+    sites: Site[] = []
   ): Promise<{ successes: string[]; switchToHistory: boolean }> {
     if (!this.canDeploy() || this.isDeploying) {
       return { successes: [], switchToHistory: false };
     }
 
-    this.isDeploying = true;
     const { videoIds, targetId, targetType } = this.deployForm;
+
+    // Les sites SaaS n'utilisent pas de déploiement vidéo (la config se met
+    // à jour côté profil par défaut, cf. ADR-037). Sans ce guard, le bulk
+    // deploy poste N requêtes /deployments → cascade 429 (sensitiveRateLimit
+    // = 30/min). Defense-in-depth : le serveur rejette aussi en 400.
+    if (targetType === 'site' && targetId) {
+      const target = sites.find(s => s.id === targetId);
+      if (target?.site_type === 'saas') {
+        this.notificationService.warning(
+          'Les sites SaaS n\'utilisent pas de déploiement vidéo. Mettez à jour leur configuration depuis la page du site.'
+        );
+        return { successes: [], switchToHistory: false };
+      }
+    }
+
+    this.isDeploying = true;
     const successes: string[] = [];
     const failures: Array<{ title: string; error: string }> = [];
 
