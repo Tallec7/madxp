@@ -62,7 +62,12 @@
 2. L'APK suit le redirect 302 wifistub → wifiredirect → `/?display=N` sans flash d'URL intermédiaire à l'écran.
 3. La même clé `neopro-firestick-release.keystore` peut signer un APK v0.2 qui s'installe en upgrade par-dessus v0.1 sans désinstaller la première (signature match).
 
-**Plans**: TBD (à définir en `/gsd:plan-phase 13`)
+**Plans**: 4 plans
+
+- [ ] 13-01-scaffold-firestick-apk-PLAN.md — Scaffold firestick-apk/ + Wave 0 smoke + manifest + .gitignore + README skeleton (TWA-01, TWA-02, TWA-04)
+- [ ] 13-02-cleartext-fullscreen-patch-PLAN.md — network_security_config.xml + idempotent patch-android-manifest.sh + README §Cleartext (TWA-01, TWA-02)
+- [ ] 13-03-keystore-generation-PLAN.md — generate-keystore.sh wrapper + README §Keystore + §Rotation + Daisy human-action (TWA-04)
+- [ ] 13-04-build-orchestrator-uat-PLAN.md — build.sh + verify-apk.sh + npm run build:firestick-apk + README §UAT + Fire Stick acceptance (TWA-01, TWA-02, TWA-03, TWA-04)
 
 ### Phase 14: DEPLOY — Sideload bénévole-grade
 
