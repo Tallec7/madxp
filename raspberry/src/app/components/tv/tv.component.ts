@@ -175,7 +175,7 @@ export class TvComponent implements OnInit, OnDestroy {
       // Fallback: route data (rétrocompat accès direct sans param)
       this.displayIndex = this.route.snapshot.data['displayType'] === 'secondary' ? 1 : 0;
     }
-    this.displayType = this.resolveDisplayType(this.displayIndex);
+    this.displayType = this.resolveDisplayType(this.displayIndex, this.configuration);
     console.log(`[TV] Display type: ${this.displayType}, index: ${this.displayIndex}, preview: ${this.isPreviewMode}`);
 
     // ADR-060 Phase 3 couche 2 — activation QR hotspot via query param (?fallback=hotspot)

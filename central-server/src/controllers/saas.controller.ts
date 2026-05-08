@@ -242,6 +242,20 @@ export async function getSaasConfig(req: Request, res: Response) {
       configuration = site.local_config_mirror as Record<string, unknown>;
     }
 
+    // Write-through sites.displays → configuration.displays (symétrique ADR-114 Pi).
+    // Le receiver SaaS lit configuration.displays[idx].type pour résoudre le displayType
+    // (cf. tv.component.ts:resolveDisplayType). Sans cette synchronisation, modifier
+    // sites.displays côté dashboard reste invisible du receiver tant que le profil
+    // n'est pas réécrit manuellement → variants jamais résolues.
+    try {
+      const siteDisplays = await siteRepository.getDisplays(siteId);
+      if (siteDisplays.length > 0) {
+        (configuration as Record<string, unknown>).displays = siteDisplays;
+      }
+    } catch (err) {
+      logger.warn('SaaS config: sites.displays write-through failed (non-fatal)', { siteId, error: err });
+    }
+
     // Enrichir avec les variantes display (secondary, led, etc.) selon les displays du site
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);
@@ -440,6 +454,16 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
     }
 
     const configuration = profile.configuration;
+
+    // Write-through sites.displays → configuration.displays (cf. getSaasConfig).
+    try {
+      const siteDisplays = await siteRepository.getDisplays(siteId);
+      if (siteDisplays.length > 0) {
+        (configuration as Record<string, unknown>).displays = siteDisplays;
+      }
+    } catch (err) {
+      logger.warn('SaaS profile config: sites.displays write-through failed (non-fatal)', { siteId, profileId, error: err });
+    }
 
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);

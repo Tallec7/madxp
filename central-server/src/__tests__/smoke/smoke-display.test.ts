@@ -3301,3 +3301,28 @@ describe('#917 N-display displayType resolved from configuration.displays[i].typ
     expect(reloadBlock).toMatch(/resolveDisplayType\(/);
   });
 });
+
+describe('SaaS controller write-through sites.displays → configuration.displays', () => {
+  // Symétrique ADR-114 (Pi command-dispatch.js) : le receiver SaaS lit
+  // configuration.displays[idx].type pour résoudre le displayType. La source de
+  // vérité étant sites.displays (DB), le controller doit la pousser dans le
+  // payload servi par /api/saas/:id/config et /api/saas/:id/profiles/:pid/config.
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const saasCtrlSrc = fs.readFileSync(
+    path.join(repoRoot, 'central-server/src/controllers/saas.controller.ts'),
+    'utf8'
+  );
+
+  it('saas.controller.ts must call siteRepository.getDisplays for both config endpoints', () => {
+    const matches = saasCtrlSrc.match(/siteRepository\.getDisplays\(siteId\)/g) ?? [];
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('write-through must assign result to configuration.displays', () => {
+    expect(saasCtrlSrc).toMatch(/configuration[^;]*\.displays\s*=\s*siteDisplays/);
+  });
+
+  it('write-through must guard against empty array (siteDisplays.length > 0)', () => {
+    expect(saasCtrlSrc).toMatch(/siteDisplays\.length\s*>\s*0/);
+  });
+});
