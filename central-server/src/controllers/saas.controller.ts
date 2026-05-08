@@ -30,13 +30,22 @@ import {
 } from '../utils/strip-synthetic-web-content';
 import logger from '../config/logger';
 
+interface VideoVariant {
+  path: string;
+  filename?: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+}
+
 interface VideoLike {
   path?: string;
   name?: string;
   type?: string;
   weight?: number;
   pinned?: boolean;
-  variants?: { secondary?: { path: string } };
+  // Index signature pour accepter tous display types : 'secondary', 'led-banner', 'totem', etc.
+  variants?: Record<string, VideoVariant>;
   [key: string]: unknown;
 }
 
@@ -115,12 +124,22 @@ function resolveVideoUrls(videos: VideoLike[], storagePathMap: Map<string, strin
       path: resolveVideoUrl(v.path, storagePathMap, fuzzyIndex, siteId),
     };
     // Resolve variant paths: storage_path is already set by enrichConfigWithDisplayVariants,
-    // so pass it directly to buildPublicVideoUrl instead of looking up in storagePathMap
-    if (v.variants?.secondary?.path) {
-      resolved.variants = {
-        ...v.variants,
-        secondary: { ...v.variants.secondary, path: buildPublicVideoUrl(v.variants.secondary.path, siteId) },
-      };
+    // so pass it directly to buildPublicVideoUrl instead of looking up in storagePathMap.
+    // Itère sur tous les display types (secondary, led-banner, totem, …) — pas seulement
+    // 'secondary' (régression PR #921 N-display côté URL resolution).
+    if (v.variants) {
+      const resolvedVariants: Record<string, VideoVariant> = {};
+      for (const [displayType, variant] of Object.entries(v.variants)) {
+        if (variant?.path) {
+          resolvedVariants[displayType] = {
+            ...variant,
+            path: buildPublicVideoUrl(variant.path, siteId),
+          };
+        } else {
+          resolvedVariants[displayType] = variant;
+        }
+      }
+      resolved.variants = resolvedVariants;
     }
     return resolved;
   });
