@@ -206,6 +206,45 @@ describe('enrichConfigWithAnalyticsMetadata', () => {
     expect(queryFilenames).toEqual(['shared.mp4']);
   });
 
+  it('matches by original_name when path uses non-sanitized filename (apostrophe/space/&)', async () => {
+    // Regression guard — incident Bottière 2026-05-08 :
+    // les paths config peuvent référencer le nom original (`L'AGENCE ET VOUS.mp4`)
+    // alors que `videos.filename` est sanitisé (`LAGENCE_ET_VOUS.mp4`).
+    // La query DB doit matcher sur les DEUX colonnes pour ne pas perdre l'enrichissement.
+    const config = cfg({
+      sponsors: [
+        { name: 'Agence', path: "videos/SPONSORS/L'AGENCE ET VOUS.mp4", site_sponsor_id: 'ss-1' },
+        { name: 'Burger', path: 'videos/SPONSORS/BURGER KING.mp4', site_sponsor_id: 'ss-2' },
+      ],
+    });
+
+    // La query merge filename + original_name → ici les rows simulent un match
+    // par original_name (la clé `filename` retournée vaut donc le nom original).
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { video_id: 'vid-a', filename: "L'AGENCE ET VOUS.mp4", advertiser_id: null, analytics_category: null },
+        { video_id: 'vid-b', filename: 'BURGER KING.mp4', advertiser_id: null, analytics_category: null },
+      ],
+    });
+
+    const result = await enrichConfigWithAnalyticsMetadata(config);
+    expect(result.enrichedCount).toBe(2);
+
+    // Sans le fix, video_id resterait undefined et analytics_category aussi
+    // → côté Pi le fallback detectCategory() classifierait en 'other'
+    // → le CRON `calculate_site_sponsor_daily_stats` filtrerait ces plays
+    expect(config.sponsors[0].video_id).toBe('vid-a');
+    expect(config.sponsors[0].analytics_category).toBe('sponsor_local');
+    expect(config.sponsors[1].video_id).toBe('vid-b');
+    expect(config.sponsors[1].analytics_category).toBe('sponsor_local');
+
+    // Sanity : un seul appel DB, paramètre = liste de filenames extraits du path
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(sql).toMatch(/v\.filename\s*=\s*ANY\(\$1\)/);
+    expect(sql).toMatch(/v\.original_name\s*=\s*ANY\(\$1\)/);
+  });
+
   it('handles null advertiser_id gracefully (non-sponsor video)', async () => {
     const config = cfg({
       sponsors: [

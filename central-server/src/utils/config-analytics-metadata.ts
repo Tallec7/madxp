@@ -100,17 +100,43 @@ export async function enrichConfigWithAnalyticsMetadata(
   }
 
   // 2. Requête bulk : filename → (video_id, advertiser_id, analytics_category)
+  // Match tolérant : on cherche par v.filename (sanitisé) ET v.original_name
+  // pour couvrir les configs dont les paths référencent l'original_name
+  // non-sanitisé (apostrophes, espaces, '&'). Incident Bottière 2026-05-08 :
+  // 9 plays/h tombaient en category='other' au lieu de 'sponsor_local' parce
+  // que le filename DB sanitisé (LAGENCE_ET_VOUS) ne matchait pas le path
+  // config (L'AGENCE ET VOUS).
+  // DISTINCT ON priorise le match canonical (prio=1) sur le fallback (prio=2)
+  // si une vidéo match les deux côtés.
   const filenames = [...filenameToEntries.keys()];
   const result = await query(
-    `SELECT v.id as video_id, v.filename,
-            av.advertiser_id,
-            COALESCE(
-              v.metadata->>'analytics_category',
-              CASE WHEN av.advertiser_id IS NOT NULL THEN 'sponsor_neopro' ELSE NULL END
-            ) as analytics_category
-     FROM videos v
-     LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true
-     WHERE v.filename = ANY($1)`,
+    `SELECT DISTINCT ON (filename) filename, video_id, advertiser_id, analytics_category
+     FROM (
+       SELECT v.filename,
+              v.id AS video_id,
+              av.advertiser_id,
+              COALESCE(
+                v.metadata->>'analytics_category',
+                CASE WHEN av.advertiser_id IS NOT NULL THEN 'sponsor_neopro' ELSE NULL END
+              ) AS analytics_category,
+              1 AS prio
+       FROM videos v
+       LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true
+       WHERE v.filename = ANY($1)
+       UNION ALL
+       SELECT v.original_name AS filename,
+              v.id AS video_id,
+              av.advertiser_id,
+              COALESCE(
+                v.metadata->>'analytics_category',
+                CASE WHEN av.advertiser_id IS NOT NULL THEN 'sponsor_neopro' ELSE NULL END
+              ) AS analytics_category,
+              2 AS prio
+       FROM videos v
+       LEFT JOIN advertiser_videos av ON av.video_id = v.id AND av.is_primary = true
+       WHERE v.original_name = ANY($1) AND v.original_name <> v.filename
+     ) merged
+     ORDER BY filename, prio`,
     [filenames]
   );
 
