@@ -1,3 +1,9 @@
+## [3.300.7](https://github.com/Tallec7/neopro/compare/v3.300.6...v3.300.7) (2026-05-09)
+
+### Bug Fixes
+
+- **content:** pass availableVideos to variant panel in config-editor modal ([#929](https://github.com/Tallec7/neopro/issues/929)) ([4ffd0f7](https://github.com/Tallec7/neopro/commit/4ffd0f76c6582d529572fdc1718d00c05424da91))
+
 ## [3.300.6](https://github.com/Tallec7/neopro/compare/v3.300.5...v3.300.6) (2026-05-08)
 
 ### Bug Fixes
