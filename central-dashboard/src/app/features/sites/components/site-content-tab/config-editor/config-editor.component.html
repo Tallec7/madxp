@@ -97,8 +97,8 @@
   </span>
 </div>
 
-<!-- Orphaned Videos Warning -->
-<div class="orphaned-warning-banner" *ngIf="orphanedVideoCount > 0">
+<!-- Orphaned Videos Warning (path-based, hidden on SaaS — saas.controller resolves filename via .pop()) -->
+<div class="orphaned-warning-banner" *ngIf="siteType !== 'saas' && orphanedVideoCount > 0">
   <span class="orphaned-warning-icon">&#9888;</span>
   <div class="orphaned-warning-content">
     <strong>{{ orphanedVideoCount }} vidéo(s) introuvable(s)</strong> — Des boutons pointent vers

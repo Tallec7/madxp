@@ -8,6 +8,12 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#934](https://github.com/Tallec7/neopro/pull/934))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Plus de fausse alerte "65 vidéos introuvables" sur les sites SaaS** ([#934](https://github.com/Tallec7/neopro/pull/934)) — la grosse bannière rouge "Ces boutons ne feront rien quand on appuie dessus" qui s'affichait sur l'onglet Contenu d'un site SaaS était à 63 % du faux positif : les vidéos marchaient parfaitement (le serveur SaaS résout les chemins par filename, peu importe leur format dans la config). Cette bannière a été pensée pour les sites Pi (où le chemin = fichier réel sur disque) et n'avait aucun sens en SaaS. Elle est désormais masquée pour les sites SaaS. Les vraies vidéos absentes du serveur restent signalées par l'autre bannière (probe FTP réelle, en haut du tab) qui, elle, est fiable.
+
 ## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#930](https://github.com/Tallec7/neopro/pull/930))
 
 ### 🎯 Pour le club (NLF, prospects)
