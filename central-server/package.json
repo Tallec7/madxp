@@ -17,6 +17,7 @@
     "backfill:asset-posters": "ts-node src/scripts/backfill-asset-posters.ts",
     "backfill:displays-resync": "ts-node src/scripts/backfill-displays-resync.ts",
     "audit:orphan-sponsors": "ts-node src/scripts/audit-orphan-site-sponsors.ts",
+    "audit:ftp-legacy": "ts-node src/scripts/audit-ftp-legacy-videos.ts",
     "template:import": "ts-node src/scripts/import-template-spec.ts",
     "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
     "template:test-bbox": "ts-node src/scripts/test-png-bbox.ts",
