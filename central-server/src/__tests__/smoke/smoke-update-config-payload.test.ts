@@ -63,8 +63,8 @@ describe('update_config payload contract (smoke)', () => {
     };
     normalizeConfigVideoPaths(config);
     expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE.mp4');
-    expect(config.categories[0].videos[0].path).toBe('videos/but/TV_BUT_01.mp4');
-    expect(config.categories[0].subCategories[0].videos[0].path).toBe('videos/but/sub1/TV_SUB.mp4');
+    expect(config.categories[0].videos[0].path).toBe('videos/default/TV_BUT_01.mp4');
+    expect(config.categories[0].subCategories[0].videos[0].path).toBe('videos/default/TV_SUB.mp4');
     expect(config.timeCategories[0].loopVideos[0].path).toBe('videos/default/TV_LOOP.mp4');
   });
 

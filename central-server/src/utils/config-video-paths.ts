@@ -99,18 +99,16 @@ export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
 
   if (config.categories) {
     for (const category of config.categories) {
-      const catPrefix = `videos/${category.id}`;
       if (category.videos) {
         for (const video of category.videos) {
-          if (video.path) video.path = fix(video.path, catPrefix);
+          if (video.path) video.path = fix(video.path, 'videos/default');
         }
       }
       if (category.subCategories) {
         for (const subCat of category.subCategories) {
-          const subPrefix = `${catPrefix}/${subCat.id}`;
           if (subCat.videos) {
             for (const video of subCat.videos) {
-              if (video.path) video.path = fix(video.path, subPrefix);
+              if (video.path) video.path = fix(video.path, 'videos/default');
             }
           }
         }
