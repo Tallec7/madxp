@@ -31,6 +31,7 @@ import { executeMatchAutoCloseTask } from '../cron-tasks/match-autoclose.task';
 import { executeVideoFtpAuditTask } from '../cron-tasks/video-ftp-audit.task';
 import { executeConnectionEventsPurgeTask } from '../cron-tasks/connection-events-purge.task';
 import { executeTestRenderCleanupTask } from '../cron-tasks/test-render-cleanup.task';
+import { executePendingCommandsDrainTask } from '../cron-tasks/pending-commands-drain.task';
 
 // Re-export pour préserver la compatibilité des imports externes
 export { RecurringSchedule, ExecutionResult, CronTaskType } from '../cron-tasks/types';
@@ -51,6 +52,7 @@ const TASK_EXECUTORS: Record<CronTaskType, (s: RecurringSchedule) => Promise<Exe
   video_ftp_audit: executeVideoFtpAuditTask,
   connection_events_purge: executeConnectionEventsPurgeTask,
   test_render_cleanup: executeTestRenderCleanupTask,
+  pending_commands_drain: executePendingCommandsDrainTask,
 };
 
 async function dispatchTask(schedule: RecurringSchedule): Promise<ExecutionResult> {
