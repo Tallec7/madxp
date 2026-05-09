@@ -1,3 +1,9 @@
+## [3.300.12](https://github.com/Tallec7/neopro/compare/v3.300.11...v3.300.12) (2026-05-09)
+
+### Bug Fixes
+
+- **saas:** hide path-based orphan banner on SaaS sites (false positives) ([#934](https://github.com/Tallec7/neopro/issues/934)) ([dd3f96f](https://github.com/Tallec7/neopro/commit/dd3f96f813c60a0a45cfa13460b5b7ca6c0dae8f))
+
 ## [3.300.11](https://github.com/Tallec7/neopro/compare/v3.300.10...v3.300.11) (2026-05-09)
 
 ### Bug Fixes
