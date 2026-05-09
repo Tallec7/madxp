@@ -1,3 +1,9 @@
+## [3.300.16](https://github.com/Tallec7/neopro/compare/v3.300.15...v3.300.16) (2026-05-09)
+
+### Bug Fixes
+
+- **captive:** browser/tablet devices passthrough to /remote without MAC registration ([#941](https://github.com/Tallec7/neopro/issues/941)) ([28bf529](https://github.com/Tallec7/neopro/commit/28bf5291a4c817935665d4a10060f5f35d5ab4e1))
+
 ## [3.300.15](https://github.com/Tallec7/neopro/compare/v3.300.14...v3.300.15) (2026-05-09)
 
 ### Bug Fixes
