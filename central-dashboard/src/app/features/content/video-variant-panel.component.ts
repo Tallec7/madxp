@@ -55,12 +55,20 @@ export class VideoVariantPanelComponent implements OnInit {
   uploadProgress = 0;
   deletingType: string | null = null;
   linkingType: string | null = null;
-  showAddForm = false;
-  newDisplayType = '';
+
+  // F2 fallback: sites without displays[] configured get a virtual 'secondary' option
+  get effectiveSiteDisplays(): DisplayConfig[] {
+    if (this.siteDisplays && this.siteDisplays.length > 0) return this.siteDisplays;
+    return [{ index: 0, type: 'secondary', name: '2e écran (défaut)' }];
+  }
 
   get missingDisplays(): DisplayConfig[] {
     const existingTypes = new Set(this.variants.map(v => v.display_type));
-    return this.siteDisplays.filter(d => d.type !== 'tv' && !existingTypes.has(d.type));
+    return this.effectiveSiteDisplays.filter(d => d.type !== 'tv' && !existingTypes.has(d.type));
+  }
+
+  isOrphanVariant(type: string): boolean {
+    return !this.effectiveSiteDisplays.some(d => d.type === type);
   }
 
   ngOnInit(): void {
@@ -103,10 +111,6 @@ export class VideoVariantPanelComponent implements OnInit {
     return labels[type] || type;
   }
 
-  sanitizeType(raw: string): string {
-    return raw.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
-  }
-
   loadVariants(): void {
     this.loading = true;
     this.http.get<{ variants: VideoVariant[] }>(
@@ -146,8 +150,6 @@ export class VideoVariantPanelComponent implements OnInit {
         } else {
           this.variants = [...this.variants, variant];
         }
-        this.showAddForm = false;
-        this.newDisplayType = '';
         this.emitChange();
         this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} associee`);
         select.value = '';
@@ -191,8 +193,6 @@ export class VideoVariantPanelComponent implements OnInit {
           } else {
             this.variants = [...this.variants, variant];
           }
-          this.showAddForm = false;
-          this.newDisplayType = '';
           this.emitChange();
           this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} uploadee`);
         }
