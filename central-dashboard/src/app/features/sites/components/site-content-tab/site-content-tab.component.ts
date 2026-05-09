@@ -22,7 +22,8 @@ import {
   LocalStorage,
   SiteSponsor,
   ConfigProfile,
-  ContentOwner
+  ContentOwner,
+  DisplayConfig
 } from '../../../../core/models';
 import { VideoDeployState, VideoItem, AddToTarget } from '../video-library/video-library.component';
 import { UploadedVideo } from '../../../../shared/components/video-upload-zone/video-upload-zone.component';
@@ -56,6 +57,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
   @Input() siteId!: string;
   @Input() siteName = '';
   @Input() siteType = '';
+  @Input() siteDisplays: DisplayConfig[] = [];
   @Input() subscriptionPlan: string | null = null;
   @Input() featureOverrides: Record<string, boolean> | null = null;
   @Input() isConnected = false;
