@@ -1,3 +1,9 @@
+## [3.300.8](https://github.com/Tallec7/neopro/compare/v3.300.7...v3.300.8) (2026-05-09)
+
+### Bug Fixes
+
+- **saas:** close variants drift root cause — constrained dropdown + server validation ([#930](https://github.com/Tallec7/neopro/issues/930)) ([bdef6ab](https://github.com/Tallec7/neopro/commit/bdef6abda4cea4f5f527c6d1b6e12174eaac1861))
+
 ## [3.300.7](https://github.com/Tallec7/neopro/compare/v3.300.6...v3.300.7) (2026-05-09)
 
 ### Bug Fixes
