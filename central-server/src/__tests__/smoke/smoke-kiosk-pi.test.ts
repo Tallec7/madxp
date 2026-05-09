@@ -3646,15 +3646,32 @@ describe('Phase 10 — CAPTIVE-AUTO Silk auto-launch', () => {
     expect(block).toMatch(/return\s+302\s+http:\/\/192\.168\.4\.1\//);
   });
 
-  it('CAPTIVE-05: generate_204 returns 302 in firestick-captive config (real Fire OS probe)', () => {
-    // Le Fire Stick sonde generate_204 (pas wifistub.html) — cf. logs nginx-firestick-access.log
-    // 204 = "internet OK" → pas de portail. 302 = portail détecté → CaptivePortalLauncher.
+  it('CAPTIVE-14: generate_204 returns 204 in firestick-captive config (offline Pi support)', () => {
+    // Phase 14 (incident 2026-05-09) — 204 = "internet OK" pour que Fire OS
+    // accepte le WiFi sans afficher "Connecté sans Internet" et sans bloquer
+    // l'écran setup. Trade-off : le CaptivePortalLauncher ne s'auto-lance plus,
+    // l'utilisateur ouvre Silk → neopro.local manuellement (mitigé Phase 13 APK).
     const captiveConf = fs.readFileSync(
       path.join(REPO_ROOT, 'raspberry/config/nginx/firestick-captive.conf'),
       'utf8'
     );
-    expect(captiveConf).not.toMatch(/location\s*=\s*\/generate_204[\s\S]*?return\s+204/);
-    expect(captiveConf).toMatch(/location\s*=\s*\/generate_204[\s\S]*?return\s+302/);
+    // Restriction au bloc `{ ... }` (pas de `}` au milieu) — sinon le regex
+    // matcherait un `return 302` d'un location ultérieur.
+    expect(captiveConf).toMatch(/location\s*=\s*\/generate_204\s*\{[^}]*?return\s+204/);
+    // Garde-fou anti-régression : ne JAMAIS retourner à 302 (casse la connexion
+    // WiFi sur Fire OS récent). Cf. /etc/nginx/sites-available/firestick-captive.
+    expect(captiveConf).not.toMatch(/location\s*=\s*\/generate_204\s*\{[^}]*?return\s+302/);
+  });
+
+  it('CAPTIVE-14: dnsmasq.conf has wildcard hijack for offline Pi (no DNS timeouts)', () => {
+    // Phase 14 — Sans uplink, les queries DNS non hijackées timeout sur 8.8.8.8.
+    // Le wildcard `/#/` répond 192.168.4.1 pour tout domaine inconnu, ce qui
+    // évite le timeout et fait croire à Fire OS / Android que le réseau a internet.
+    const conf = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/config/systemd/dnsmasq.conf'),
+      'utf8'
+    );
+    expect(conf).toContain('address=/#/192.168.4.1');
   });
 
   it('CAPTIVE-07 regression: /captive/wait still serves firestick-wait.html (Phase 6 preserved)', () => {
