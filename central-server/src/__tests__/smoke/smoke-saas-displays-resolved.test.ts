@@ -174,3 +174,72 @@ describe('led → led-banner DB normalization (PR #918 — RACC incident)', () =
     expect(sql).toMatch(/WHERE\s+display_type\s*=\s*'led'/i);
   });
 });
+
+// ============================================================================
+// PR A + PR B: constrained dropdown + server-side validation (2026-05-09)
+// ============================================================================
+
+const variantCtrlPath = path.join(repoRoot, 'central-server/src/controllers/content-variant.controller.ts');
+const variantPanelPath = path.join(repoRoot, 'central-dashboard/src/app/features/content/video-variant-panel.component.ts');
+
+describe('content-variant.controller — server-side display_type validation (PR B)', () => {
+  let ctrlSrc: string;
+
+  beforeAll(() => {
+    ctrlSrc = fs.readFileSync(variantCtrlPath, 'utf8');
+  });
+
+  it('getAllowedDisplayTypes helper must exist and call siteRepository.getDisplays', () => {
+    // Sans ce helper, la validation server-side manque → drift reprend
+    expect(ctrlSrc).toMatch(/async function getAllowedDisplayTypes/);
+    expect(ctrlSrc).toMatch(/siteRepository\.getDisplays/);
+  });
+
+  it('createVideoVariant must reject display_type="tv"', () => {
+    // tv est réservé à la vidéo principale — ne doit jamais être une variante
+    expect(ctrlSrc).toMatch(/displayType\s*===\s*['"]tv['"]/);
+  });
+
+  it('createVideoVariant must call getAllowedDisplayTypes with uploaded_for_site_id', () => {
+    // Validation doit dépendre du contexte site (pas juste format slug)
+    expect(ctrlSrc).toMatch(/getAllowedDisplayTypes\s*\(/);
+    expect(ctrlSrc).toMatch(/uploaded_for_site_id/);
+  });
+
+  it('free-text input sanitizeType must NOT exist (removed in PR A)', () => {
+    // sanitizeType() était le compagnon du free-text input — sa présence
+    // signalerait une régression vers le champ libre
+    expect(ctrlSrc).not.toMatch(/function sanitizeType/);
+  });
+});
+
+describe('video-variant-panel.component — constrained dropdown (PR A)', () => {
+  let panelSrc: string;
+
+  beforeAll(() => {
+    panelSrc = fs.existsSync(variantPanelPath)
+      ? fs.readFileSync(variantPanelPath, 'utf8')
+      : '';
+  });
+
+  it('effectiveSiteDisplays getter must exist with F2 fallback to secondary', () => {
+    // F2 : sites sans displays[] reçoivent virtual [{type:'secondary'}]
+    expect(panelSrc).toMatch(/get effectiveSiteDisplays/);
+    expect(panelSrc).toMatch(/secondary/);
+  });
+
+  it('isOrphanVariant method must exist', () => {
+    // Détecte les variantes dont le type n'est pas déclaré dans les écrans du site
+    expect(panelSrc).toMatch(/isOrphanVariant/);
+  });
+
+  it('showAddForm and newDisplayType must NOT exist (free-text removed)', () => {
+    // La présence de ces props signifierait une régression vers le champ libre
+    expect(panelSrc).not.toMatch(/showAddForm/);
+    expect(panelSrc).not.toMatch(/newDisplayType/);
+  });
+
+  it('sanitizeType must NOT exist (companion of free-text input)', () => {
+    expect(panelSrc).not.toMatch(/sanitizeType/);
+  });
+});
