@@ -4,6 +4,7 @@
  */
 
 import { SiteConfiguration } from '../types';
+import { sanitizeFilename } from './sanitize-filename';
 
 /**
  * Extrait tous les chemins de vidéos référencés dans une SiteConfiguration.
@@ -88,12 +89,22 @@ export function extractFilenameFromPath(videoPath: string): string {
  * Mute la config en place (même pattern que enrichConfigWithDisplayVariants).
  */
 export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
-  const fix = (path: string, prefix: string): string =>
-    path.includes('/') ? path : `${prefix}/${path}`;
+  // Sanitize le filename + ajoute le préfixe `videos/default/` si manquant.
+  // Si un path est déjà préfixé (`videos/foo/bar.mp4`), on conserve le directory
+  // mais on sanitize quand même le filename — incident NLF 2026-05-09 où des
+  // entries avaient été éditées manuellement avec des apostrophes / espaces / &
+  // dans le filename, qui ne matchaient plus le fichier réel sur disque.
+  const fix = (rawPath: string): string => {
+    const lastSlash = rawPath.lastIndexOf('/');
+    const dir = lastSlash >= 0 ? rawPath.slice(0, lastSlash) : 'videos/default';
+    const filename = lastSlash >= 0 ? rawPath.slice(lastSlash + 1) : rawPath;
+    if (!filename) return rawPath;
+    return `${dir}/${sanitizeFilename(filename)}`;
+  };
 
   if (config.sponsors) {
     for (const video of config.sponsors) {
-      if (video.path) video.path = fix(video.path, 'videos/default');
+      if (video.path) video.path = fix(video.path);
     }
   }
 
@@ -101,14 +112,14 @@ export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
     for (const category of config.categories) {
       if (category.videos) {
         for (const video of category.videos) {
-          if (video.path) video.path = fix(video.path, 'videos/default');
+          if (video.path) video.path = fix(video.path);
         }
       }
       if (category.subCategories) {
         for (const subCat of category.subCategories) {
           if (subCat.videos) {
             for (const video of subCat.videos) {
-              if (video.path) video.path = fix(video.path, 'videos/default');
+              if (video.path) video.path = fix(video.path);
             }
           }
         }
@@ -120,7 +131,7 @@ export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
     for (const tc of config.timeCategories) {
       if (tc.loopVideos) {
         for (const video of tc.loopVideos) {
-          if (video.path) video.path = fix(video.path, 'videos/default');
+          if (video.path) video.path = fix(video.path);
         }
       }
     }

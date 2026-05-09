@@ -68,7 +68,7 @@ describe('update_config payload contract (smoke)', () => {
     expect(config.timeCategories[0].loopVideos[0].path).toBe('videos/default/TV_LOOP.mp4');
   });
 
-  it('normalizeConfigVideoPaths: already-prefixed paths are left unchanged', () => {
+  it('normalizeConfigVideoPaths: already-prefixed paths keep their directory but filename is sanitized', () => {
     const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
     const config = {
       sponsors: [{ name: 'S1', path: 'videos/default/TV_PART01_LAGENCE.mp4' }],
@@ -78,6 +78,26 @@ describe('update_config payload contract (smoke)', () => {
     normalizeConfigVideoPaths(config);
     expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE.mp4');
     expect(config.categories[0].videos[0].path).toBe('videos/but/TV_BUT_01.mp4');
+  });
+
+  it('normalizeConfigVideoPaths: sanitizes filename (spaces, apostrophes, ampersands)', () => {
+    // Régression guard incident NLF 2026-05-09 : 17 entries avec
+    // `TV_PART01_L'AGENCE ET VOUS.mp4` en config alors que le fichier
+    // sur disque est `TV_PART01_LAGENCE_ET_VOUS.mp4` (sanitizé à l'upload).
+    const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
+    const config = {
+      sponsors: [
+        { name: 'S1', path: "TV_PART01_L'AGENCE ET VOUS.mp4" },
+        { name: 'S2', path: 'TV_PART03_SPORT&WELNESS.mp4' },
+        { name: 'S3', path: 'videos/default/TV_PART06_BURGER KING.mp4' },
+      ],
+      categories: [],
+      timeCategories: [],
+    };
+    normalizeConfigVideoPaths(config);
+    expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE_ET_VOUS.mp4');
+    expect(config.sponsors[1].path).toBe('videos/default/TV_PART03_SPORTWELNESS.mp4');
+    expect(config.sponsors[2].path).toBe('videos/default/TV_PART06_BURGER_KING.mp4');
   });
 
   it('content.controller.ts cascade-delete emit includes neoProContent', () => {
@@ -116,6 +136,30 @@ describe('update_config payload contract (smoke)', () => {
     expect(window).toMatch(/sendOrQueue\([^)]*'update_config'/);
     expect(window).toMatch(/neoProContent\s*:/);
     expect(window).toMatch(/buildEnrichedNeoProContent\s*\(/);
+  });
+
+  it('config-profiles.controller.ts: createProfile normalizes paths before write', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'controllers/config-profiles.controller.ts'), 'utf8');
+    const idx = src.indexOf('export const createProfile');
+    expect(idx).toBeGreaterThan(-1);
+    const body = src.slice(idx, idx + 2000);
+    expect(body).toMatch(/normalizeConfigVideoPaths\s*\(/);
+  });
+
+  it('config-profiles.controller.ts: updateProfile normalizes paths before write', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'controllers/config-profiles.controller.ts'), 'utf8');
+    const idx = src.indexOf('export const updateProfile = ');
+    expect(idx).toBeGreaterThan(-1);
+    const body = src.slice(idx, idx + 1500);
+    expect(body).toMatch(/normalizeConfigVideoPaths\s*\(/);
+  });
+
+  it('config-profiles.controller.ts: updateProfileConfiguration normalizes paths before write', () => {
+    const src = fs.readFileSync(path.join(ROOT, 'controllers/config-profiles.controller.ts'), 'utf8');
+    const idx = src.indexOf('export const updateProfileConfiguration');
+    expect(idx).toBeGreaterThan(-1);
+    const body = src.slice(idx, idx + 2500);
+    expect(body).toMatch(/normalizeConfigVideoPaths\s*\(/);
   });
 
   it('Pi handler still requires neoProContent (contract anchor)', () => {

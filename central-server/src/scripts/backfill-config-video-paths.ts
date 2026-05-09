@@ -69,6 +69,7 @@ interface ProfileRow {
   name: string;
   is_default: boolean;
   configuration: SiteConfiguration;
+  [key: string]: unknown;
 }
 
 function fixPath(p: string): string {
