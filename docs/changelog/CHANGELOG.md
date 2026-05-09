@@ -1,3 +1,10 @@
+## [3.300.14](https://github.com/Tallec7/neopro/compare/v3.300.13...v3.300.14) (2026-05-09)
+
+### Bug Fixes
+
+- **captive:** offline Pi — generate_204→204 + wildcard DNS hijack (Phase 14) ([#937](https://github.com/Tallec7/neopro/issues/937)) ([a2f3b79](https://github.com/Tallec7/neopro/commit/a2f3b799595e2052771b8b462ad2f6977b15eb41)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+- **sync:** correct TV slave lag vs kiosk Pi on LAN receivers (Fire Stick) ([#936](https://github.com/Tallec7/neopro/issues/936)) ([d56409f](https://github.com/Tallec7/neopro/commit/d56409ff0f485ef0b62b2f95f1f0fafe9bd2181c)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
 ## [3.300.13](https://github.com/Tallec7/neopro/compare/v3.300.12...v3.300.13) (2026-05-09)
 
 ### Bug Fixes
