@@ -26,7 +26,7 @@
 import logger from '../config/logger';
 import { metricsService } from '../services/metrics.service';
 import socketService from '../services/socket.service';
-import { getCommandQueueService } from '../services/command-queue.service';
+import { commandQueueService } from '../services/command-queue.service';
 import { ExecutionResult, RecurringSchedule } from './types';
 
 export async function executePendingCommandsDrainTask(
@@ -42,8 +42,6 @@ export async function executePendingCommandsDrainTask(
     };
   }
 
-  const queueService = await getCommandQueueService();
-
   let totalProcessed = 0;
   let totalFailed = 0;
   let sitesWithQueue = 0;
@@ -51,7 +49,7 @@ export async function executePendingCommandsDrainTask(
 
   for (const siteId of siteIds) {
     try {
-      const result = await queueService.processPendingCommands(siteId);
+      const result = await commandQueueService.processPendingCommands(siteId);
       if (result.processed > 0 || result.failed > 0) {
         sitesWithQueue += 1;
         totalProcessed += result.processed;
