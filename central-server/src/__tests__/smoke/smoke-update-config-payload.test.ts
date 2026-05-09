@@ -68,7 +68,7 @@ describe('update_config payload contract (smoke)', () => {
     expect(config.timeCategories[0].loopVideos[0].path).toBe('videos/default/TV_LOOP.mp4');
   });
 
-  it('normalizeConfigVideoPaths: already-prefixed paths keep their directory but filename is sanitized', () => {
+  it('normalizeConfigVideoPaths: already-prefixed paths are left unchanged', () => {
     const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
     const config = {
       sponsors: [{ name: 'S1', path: 'videos/default/TV_PART01_LAGENCE.mp4' }],
@@ -80,24 +80,24 @@ describe('update_config payload contract (smoke)', () => {
     expect(config.categories[0].videos[0].path).toBe('videos/but/TV_BUT_01.mp4');
   });
 
-  it('normalizeConfigVideoPaths: sanitizes filename (spaces, apostrophes, ampersands)', () => {
-    // Régression guard incident NLF 2026-05-09 : 17 entries avec
-    // `TV_PART01_L'AGENCE ET VOUS.mp4` en config alors que le fichier
-    // sur disque est `TV_PART01_LAGENCE_ET_VOUS.mp4` (sanitizé à l'upload).
+  it('normalizeConfigVideoPaths: filename with special chars is NOT sanitized (issue #938)', () => {
+    // Volontairement non-sanitizé : on prefixe juste les paths plats.
+    // La sanitization au write casserait les sites en prod dont les fichiers
+    // disque ont les caractères spéciaux que la config référence.
     const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
     const config = {
       sponsors: [
         { name: 'S1', path: "TV_PART01_L'AGENCE ET VOUS.mp4" },
-        { name: 'S2', path: 'TV_PART03_SPORT&WELNESS.mp4' },
-        { name: 'S3', path: 'videos/default/TV_PART06_BURGER KING.mp4' },
+        { name: 'S2', path: 'videos/default/TV_PART06_BURGER KING.mp4' },
       ],
       categories: [],
       timeCategories: [],
     };
     normalizeConfigVideoPaths(config);
-    expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE_ET_VOUS.mp4');
-    expect(config.sponsors[1].path).toBe('videos/default/TV_PART03_SPORTWELNESS.mp4');
-    expect(config.sponsors[2].path).toBe('videos/default/TV_PART06_BURGER_KING.mp4');
+    // Plat → préfixé avec videos/default/, filename intact (apostrophe + espaces gardés)
+    expect(config.sponsors[0].path).toBe("videos/default/TV_PART01_L'AGENCE ET VOUS.mp4");
+    // Préfixé → laissé tel quel
+    expect(config.sponsors[1].path).toBe('videos/default/TV_PART06_BURGER KING.mp4');
   });
 
   it('content.controller.ts cascade-delete emit includes neoProContent', () => {
