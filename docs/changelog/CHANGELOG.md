@@ -1,3 +1,9 @@
+## [3.300.11](https://github.com/Tallec7/neopro/compare/v3.300.10...v3.300.11) (2026-05-09)
+
+### Bug Fixes
+
+- **ci:** bypass CF Pages API rejection of emoji in git commit messages ([#933](https://github.com/Tallec7/neopro/issues/933)) ([09e059e](https://github.com/Tallec7/neopro/commit/09e059ecd03bf450004bed8d1e89d5c4589229f7)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
 ## [3.300.10](https://github.com/Tallec7/neopro/compare/v3.300.9...v3.300.10) (2026-05-09)
 
 ### Bug Fixes
