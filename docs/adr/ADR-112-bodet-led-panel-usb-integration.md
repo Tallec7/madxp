@@ -130,7 +130,7 @@ Proposer au prospect une **TV Neopro standard à côté** du panneau Bodet :
 
 - **Adaptateur USB-A → HDMI passif** : n'existe pas dans le bon sens. Les adaptateurs commerciaux convertissent USB (source PC) → HDMI (sink écran), pas l'inverse.
 - **Capture HDMI → USB streaming** : les capture sticks (type Elgato) émettent un flux UVC vers un PC hôte ; le Bodet n'est pas un PC, il attend un système de fichiers, pas un flux UVC.
-- **Reverse engineering du protocole RJ45 Bodet** (pour driver les esclaves directement) : effort démesuré (RE de protocole proprio sur lien physique), aucun ROI vs piste USB qui devrait suffire.
+- **Reverse engineering du protocole RJ45 Bodet** (pour driver les esclaves directement) : **éliminé définitivement le 2026-05-09 sur capture terrain** — voir section "Test terrain — résultats partiels". Bodet utilise la couche physique 1000BASE-T standard (auto-neg OK, link OK) mais pousse un **flux propriétaire non-802.3** que le NIC du Pi rejette en bloc (23,5 M errors / 25,2 M dropped en quelques minutes, kernel macb spam `not whole frame pointed by descriptor`). Aucun matériel grand public ne peut capturer ce flux — il faudrait un sniffer PHY-level (FPGA, Total Phase Komodo, oscilloscope avec décodeur Ethernet) à 1500–5000 €. ROI nul vs piste USB.
 - **Reverse engineering du logiciel Bodet sous Windows** : envisageable en plan C si toutes les autres pistes échouent. Effort estimé semaines, pas jours.
 - **Demander un SDK officiel à Bodet** : option ouverte (acteur français, partenariat possible), mais délai commercial incompatible avec un prospect ++ à closer rapidement. À garder pour un éventuel deal multi-clubs Bodet.
 - **Remplacer le panneau Bodet par une TV** : le prospect a investi ~10 k€ dans le panneau, hors discussion sans signal très fort de leur part.
@@ -165,11 +165,61 @@ Aucun changement de code committé tant que le POC n'est pas validé. Si POC ✅
 - `.claude/rules/bodet-integration.md` — invariants smoke-enforced
 - Smoke test `central-server/src/__tests__/smoke/smoke-bodet-integration.test.ts`
 
+## Test terrain — résultats partiels (2026-05-09)
+
+Test terrain effectué chez le prospect Lanester sur le panneau réel.
+
+### Module maître 1.1 — connectique observée
+
+Photo confirme :
+
+- 1 port **USB-A** (cache caoutchouc, marqué "USB" au feutre par l'installateur) — usage standard pour upload contenu
+- 1 port **RJ45 etherCON industriel** (Neutrik) — marqué **X au feutre** par l'installateur = "ne pas brancher ici"
+- 1 connecteur **PowerCON bleu** (alim secteur)
+- ❌ **Aucune entrée HDMI** confirmée — élimination définitive de la voie HDMI directe
+
+### Workflow upload réel (clarifié)
+
+Le prospect confirme :
+
+- Plug clé USB FAT32 préparée par leur "vieux logiciel" Bodet sur module maître
+- **Auto-play sans intervention** (pas de bouton, pas de télécommande, pas de menu OSD)
+- Le contenu est ingéré **en mémoire interne** du panneau (la clé peut probablement être débranchée après)
+- Les 7 modules esclaves reçoivent l'image par chaînage RJ45 propriétaire depuis le maître
+
+### Voie Ethernet — éliminée définitivement (capture forensique)
+
+Tentative de capture du protocole maître → slave avec un Pi branché à la place du slave 1.2.
+
+**Résultats** (60 s de tcpdump sur eth0 du Pi, lien 1000BASE-T full duplex négocié OK) :
+
+- `ip -s link show eth0` → **0 packets / 0 bytes RX corrects**, **23 504 800 errors**, **25 245 205 dropped**
+- `ethtool -S eth0` → 11,9 M frames vues, **toutes classifiées broadcast**, **aucune** ne tombe dans les buckets de taille Ethernet valides (`rx_64_byte_frames=0`, `rx_65_127_byte_frames=0`, ..., `rx_1518_byte_frames=0`)
+- `dmesg` → spam continu `macb 1f00100000.ethernet eth0: not whole frame pointed by descriptor` du driver Cadence MAC
+- `tcpdump -w bodet-master-capture.pcap` → 60 s de capture = **0 paquets capturés** (fichier 24 octets, juste le header pcap)
+- Auto-négociation PHY OK (link partner advertise 10/100/1000), `Speed: 1000Mb/s Duplex: Full`, `Link detected: yes`
+
+**Interprétation** : Bodet utilise **la couche physique 1000BASE-T standard** (4 paires twisted, niveaux électriques, auto-neg) mais y pousse un **flux propriétaire non-802.3** (probablement un bitstream continu sans préambule/SFD/IFG/CRC Ethernet, possiblement inspiré HDBaseT ou AV-over-Cat5 custom). Un NIC standard ne peut **pas du tout** parser ce flux comme des frames Ethernet → drop intégral.
+
+**Implication** : aucune intégration via Ethernet possible avec du matériel Neopro standard. Toute exploration de cette voie nécessiterait :
+
+- Sniffer PHY-level (FPGA, Total Phase Komodo, oscilloscope avec décodeur) — 1500–5000 €
+- OU partenariat formel avec Bodet (SDK / doc constructeur)
+- + plusieurs semaines de R&D
+
+→ **Voie Ethernet officiellement abandonnée pour Neopro** sauf cas d'un deal multi-clubs Bodet justifiant une démarche commerciale Bodet.
+
+### Voie USB — verdict en cours
+
+Test phase 2 (clé NEOPRO_TEST FAT32 + 2 MP4 lambda sur port USB du maître) à finaliser dans une session parallèle. Verdict attendu d'ici fin de matinée.
+
 ## Suivi
 
-- 2026-05-09 (samedi) : test terrain Lanester
-- 2026-05-11 (lundi) : mise à jour de cet ADR avec verdict + plan d'industrialisation chiffré, ou ouverture ADR-113 plan B
+- ✅ 2026-05-09 matin : test terrain Lanester (Ethernet éliminé, USB en cours)
+- ⏳ 2026-05-09 après-midi : verdict USB + reco commerciale Lanester (pitch ambitieux ou plan B TV à côté)
+- ⏳ 2026-05-11 (lundi) : finalisation de cet ADR avec verdict USB + plan d'industrialisation chiffré, OU ouverture ADR-113 plan B
 - À surveiller : retours d'autres prospects équipés Bodet (NLF connaît la marque, demander en réunion suivante)
+- À explorer si pipeline ≥ 3 prospects Bodet : démarche commerciale Bodet pour SDK / partenariat (la voie Ethernet redevient envisageable avec leur doc)
 
 ## Références
 
