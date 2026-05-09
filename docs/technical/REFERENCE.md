@@ -1497,9 +1497,17 @@ DELETE /content/deployments/:id         - Supprimer un déploiement
 
 ```
 GET    /videos/:id/variants            - Liste des variantes d'une vidéo
-POST   /videos/:id/variants            - Upload variante (multipart, display_type: slug ^[a-z0-9-]+$)
+POST   /videos/:id/variants            - Upload variante (multipart, display_type validé contre sites.displays[])
+POST   /videos/:id/variants/from-video - Variante par référence à une vidéo existante
 DELETE /videos/:id/variants/:type      - Supprimer la variante par type d'écran
 ```
+
+**Validation `display_type` (PR #930 — 2026-05-09) :**
+
+- `tv` toujours rejeté (réservé à la vidéo principale)
+- Site avec `displays[]` configuré → seuls les types non-tv déclarés sont acceptés
+- Site sans `displays[]` (fallback) → seul `secondary` est accepté
+- Vidéo globale (sans `uploaded_for_site_id`) → aucune restriction (contexte admin)
 
 ### Variantes Vidéo et Écran Secondaire
 

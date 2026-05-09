@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, videoVariantRepository } from '../repositories';
+import { videoRepository, videoVariantRepository, siteRepository } from '../repositories';
 import type { DisplayType } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
@@ -11,6 +11,19 @@ import deploymentService from '../services/deployment.service';
 // ============================================================================
 // Video Variants (E-22: LED dual output)
 // ============================================================================
+
+/**
+ * Returns the allowed display_type slugs for a site.
+ * - Global video (no siteId) → null = no restriction
+ * - Site with displays[] configured → non-tv types from displays
+ * - Site without displays[] (DEFAULT_DISPLAYS = [tv]) → F2 fallback ['secondary']
+ */
+async function getAllowedDisplayTypes(siteId: string | null): Promise<string[] | null> {
+  if (!siteId) return null;
+  const displays = await siteRepository.getDisplays(siteId);
+  const secondaryTypes = displays.filter(d => d.type !== 'tv').map(d => d.type);
+  return secondaryTypes.length > 0 ? secondaryTypes : ['secondary'];
+}
 
 /**
  * GET /content/videos/:id/variants
@@ -58,13 +71,25 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
     const displayType = req.body.display_type as DisplayType;
 
     if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
-      return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets, ex: tv, secondary, led-banner)' });
+      return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets, ex: secondary, led-banner)' });
+    }
+
+    if (displayType === 'tv') {
+      return res.status(400).json({ error: 'display_type tv est réservé — la vidéo principale est la variante tv' });
     }
 
     // Vérifier que la vidéo parente existe
     const video = await videoRepository.findVideoById(id);
     if (!video) {
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    // Valider display_type contre les écrans déclarés du site (F2 fallback: secondary si aucun écran configuré)
+    const allowedTypes = await getAllowedDisplayTypes(video.uploaded_for_site_id ?? null);
+    if (allowedTypes && !allowedTypes.includes(displayType)) {
+      return res.status(400).json({
+        error: `display_type '${displayType}' non déclaré pour ce site. Types autorisés : ${allowedTypes.join(', ')}`,
+      });
     }
 
     const correctedOriginalname = fixMulterEncoding(file.originalname);
@@ -161,6 +186,10 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       return res.status(400).json({ error: 'display_type requis (slug alphanumérique avec tirets)' });
     }
 
+    if (displayType === 'tv') {
+      return res.status(400).json({ error: 'display_type tv est réservé — la vidéo principale est la variante tv' });
+    }
+
     if (!sourceVideoId) {
       return res.status(400).json({ error: 'source_video_id requis' });
     }
@@ -169,6 +198,14 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
     const parentVideo = await videoRepository.findVideoById(id);
     if (!parentVideo) {
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    // Valider display_type contre les écrans déclarés du site
+    const allowedTypes = await getAllowedDisplayTypes(parentVideo.uploaded_for_site_id ?? null);
+    if (allowedTypes && !allowedTypes.includes(displayType)) {
+      return res.status(400).json({
+        error: `display_type '${displayType}' non déclaré pour ce site. Types autorisés : ${allowedTypes.join(', ')}`,
+      });
     }
 
     // Verify source video exists

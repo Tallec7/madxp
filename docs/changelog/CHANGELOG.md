@@ -1,3 +1,52 @@
+## [3.300.14](https://github.com/Tallec7/neopro/compare/v3.300.13...v3.300.14) (2026-05-09)
+
+### Bug Fixes
+
+- **captive:** offline Pi — generate_204→204 + wildcard DNS hijack (Phase 14) ([#937](https://github.com/Tallec7/neopro/issues/937)) ([a2f3b79](https://github.com/Tallec7/neopro/commit/a2f3b799595e2052771b8b462ad2f6977b15eb41)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+- **sync:** correct TV slave lag vs kiosk Pi on LAN receivers (Fire Stick) ([#936](https://github.com/Tallec7/neopro/issues/936)) ([d56409f](https://github.com/Tallec7/neopro/commit/d56409ff0f485ef0b62b2f95f1f0fafe9bd2181c)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
+## [3.300.13](https://github.com/Tallec7/neopro/compare/v3.300.12...v3.300.13) (2026-05-09)
+
+### Bug Fixes
+
+- **config:** normalise video paths avant envoi update_config au Pi ([#935](https://github.com/Tallec7/neopro/issues/935)) ([6e55512](https://github.com/Tallec7/neopro/commit/6e555123c02bc737e1c25075ddf4dc09f0b9f8ab)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
+## [3.300.12](https://github.com/Tallec7/neopro/compare/v3.300.11...v3.300.12) (2026-05-09)
+
+### Bug Fixes
+
+- **saas:** hide path-based orphan banner on SaaS sites (false positives) ([#934](https://github.com/Tallec7/neopro/issues/934)) ([dd3f96f](https://github.com/Tallec7/neopro/commit/dd3f96f813c60a0a45cfa13460b5b7ca6c0dae8f))
+
+## [3.300.11](https://github.com/Tallec7/neopro/compare/v3.300.10...v3.300.11) (2026-05-09)
+
+### Bug Fixes
+
+- **ci:** bypass CF Pages API rejection of emoji in git commit messages ([#933](https://github.com/Tallec7/neopro/issues/933)) ([09e059e](https://github.com/Tallec7/neopro/commit/09e059ecd03bf450004bed8d1e89d5c4589229f7)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
+## [3.300.10](https://github.com/Tallec7/neopro/compare/v3.300.9...v3.300.10) (2026-05-09)
+
+### Bug Fixes
+
+- **variants:** propager siteDisplays jusqu'à video-variant-panel ([#932](https://github.com/Tallec7/neopro/issues/932)) ([ae496e6](https://github.com/Tallec7/neopro/commit/ae496e68fba739a6b983b77343c1becf1dac2a3a))
+
+## [3.300.9](https://github.com/Tallec7/neopro/compare/v3.300.8...v3.300.9) (2026-05-09)
+
+### Bug Fixes
+
+- **variants:** badge 2nd visible pour tous les types de variante non-TV ([#931](https://github.com/Tallec7/neopro/issues/931)) ([1627854](https://github.com/Tallec7/neopro/commit/1627854050ded0fa18ae1f7609b0f731719d8335))
+
+## [3.300.8](https://github.com/Tallec7/neopro/compare/v3.300.7...v3.300.8) (2026-05-09)
+
+### Bug Fixes
+
+- **saas:** close variants drift root cause — constrained dropdown + server validation ([#930](https://github.com/Tallec7/neopro/issues/930)) ([bdef6ab](https://github.com/Tallec7/neopro/commit/bdef6abda4cea4f5f527c6d1b6e12174eaac1861))
+
+## [3.300.7](https://github.com/Tallec7/neopro/compare/v3.300.6...v3.300.7) (2026-05-09)
+
+### Bug Fixes
+
+- **content:** pass availableVideos to variant panel in config-editor modal ([#929](https://github.com/Tallec7/neopro/issues/929)) ([4ffd0f7](https://github.com/Tallec7/neopro/commit/4ffd0f76c6582d529572fdc1718d00c05424da91))
+
 ## [3.300.6](https://github.com/Tallec7/neopro/compare/v3.300.5...v3.300.6) (2026-05-08)
 
 ### Bug Fixes

@@ -8,10 +8,34 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#934](https://github.com/Tallec7/neopro/pull/934))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Plus de fausse alerte "65 vidéos introuvables" sur les sites SaaS** ([#934](https://github.com/Tallec7/neopro/pull/934)) — la grosse bannière rouge "Ces boutons ne feront rien quand on appuie dessus" qui s'affichait sur l'onglet Contenu d'un site SaaS était à 63 % du faux positif : les vidéos marchaient parfaitement (le serveur SaaS résout les chemins par filename, peu importe leur format dans la config). Cette bannière a été pensée pour les sites Pi (où le chemin = fichier réel sur disque) et n'avait aucun sens en SaaS. Elle est désormais masquée pour les sites SaaS. Les vraies vidéos absentes du serveur restent signalées par l'autre bannière (probe FTP réelle, en haut du tab) qui, elle, est fiable.
+
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#930](https://github.com/Tallec7/neopro/pull/930))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Variantes multi-écrans : impossible de taper un type d'écran invalide** ([#930](https://github.com/Tallec7/neopro/pull/930)) — avant, le dialog "Variante écran secondaire" proposait un champ texte libre. Un opérateur pouvait taper `led`, `led-banner2`, `totem` ou n'importe quoi : la variante était créée mais jamais affichée sur le bon écran (slug inconnu = silencieusement ignoré). Désormais le dialog propose uniquement les types d'écrans déclarés dans la configuration du site — et si le site n'en déclare pas encore, il propose automatiquement "2e écran (défaut)". Variantes orphelines déjà en DB : un badge rouge ⚠️ les signale dans le dialog avec un bouton Supprimer.
+
+### 🛡️ Pour la robustesse
+
+- **API : tentative de créer une variante avec un type hors config = refusée avec message clair** ([#930](https://github.com/Tallec7/neopro/pull/930)) — même si quelqu'un contourne le dashboard (appel API direct), le serveur vérifie maintenant que le `display_type` fait partie des écrans déclarés du site. Message retourné : `"display_type 'led' non déclaré pour ce site. Types autorisés : led-banner"`. Double verrou UI + API qui ferme définitivement la cause racine de l'incident du 2026-05-08 (54 variantes orphelines `led` → #918 → 7 releases firefight).
+
+### 🧹 Pour l'équipe
+
+- **Script d'audit `npm run audit:variants-drift`** ([#930](https://github.com/Tallec7/neopro/pull/930)) — lit la DB (read-only) et produit un rapport en 4 sections : distribution des slugs en `video_variants`, distribution des types en `sites.displays[]`, drift bidirectionnel, et focus par site (`--site <uuid>`). Utile avant tout chantier sur les variantes pour vérifier l'état réel de cohérence en prod.
+- **22 smoke tests verrouillent les invariants du fix** ([#930](https://github.com/Tallec7/neopro/pull/930)) — guards sur la suppression de `showAddForm`/`newDisplayType`/`sanitizeType` (input libre), la présence de `effectiveSiteDisplays`/`isOrphanVariant`, la fonction `getAllowedDisplayTypes` côté API, et le rejet de `display_type='tv'`.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#902](https://github.com/Tallec7/neopro/pull/902) + v4.1 Fire Stick polish livré 2026-05-08)
 
 ### 🎯 Pour le club (NLF, prospects)
 
+- **Fire Stick : la connexion au Wi-Fi Pi marche même sur les Pi sans Internet** (Phase 14 — 2026-05-09) — incident terrain Mangin-Beaulieu : sur Fire OS récents, le Fire Stick refusait de se connecter au hotspot Pi (« Connecté sans Internet ») et l'utilisateur était bloqué à l'écran setup Wi-Fi. Cause : (1) la sonde NCSI Fire OS recevait `302` du Pi (design Phase 10 prévu pour auto-lancer Silk) — Fire OS récent considère cela comme « captive bloqué » et coupe la connexion ; (2) les requêtes DNS non hijackées partaient sur 8.8.8.8 → timeout silencieux quand le Pi n'a pas d'Internet, renforçant le verdict « no internet ». Fix : `generate_204 → 204` (Fire OS valide le réseau) + wildcard DNS hijack `address=/#/192.168.4.1` (zéro timeout, toute URL inconnue tombe sur la page Neopro). Trade-off : le CaptivePortalLauncher Fire OS ne s'auto-lance plus, l'utilisateur ouvre Silk et tape `neopro.local` à la main — le path fullscreen propre reste l'APK TWA Phase 13. Smoke garde-fou pinné `CAPTIVE-14`. Validé physiquement sur Pi Mangin-Beaulieu : Fire Stick connexion immédiate sans warning, page Neopro chargée via Silk + redirect `/display/1` (Bandeau LED).
 - **Fire Stick plug-and-play : branche le Fire Stick, Neopro démarre seul** (Phase 10 CAPTIVE-AUTO — 2026-05-07) — le Fire Stick branché sur le Wi-Fi du Pi détecte automatiquement le portail captif et ouvre Silk sans aucune action. Si l'écran est déjà assigné dans la config, Silk redirige directement sur le player vidéo Neopro. Testé physiquement sur Pi RACC : `generate_204 → 302 → Silk → /display/0 → TV Neopro`. Le bénévole branche le câble, c'est tout. (Limitation connue : Silk s'ouvre dans une fenêtre avec barre URL — fullscreen nécessite une APK dédiée, prévu v4.2.)
 - **Template Studio : supprimer un template supprime aussi ses fichiers vidéo sur le serveur** ([#882](https://github.com/Tallec7/neopro/pull/882)) — avant ce fix, supprimer un template laissait les WebM orphelins sur le FTP Hostinger (espace perdu silencieusement). Désormais la suppression est une opération propre end-to-end : DB + FTP en cascade.
 - **Template Studio : export SPEC.md d'un template existant** ([#886](https://github.com/Tallec7/neopro/pull/886)) — un designer peut récupérer le fichier SPEC.md d'un template déjà en prod via `GET /:id/spec`, re-éditer localement et réimporter. Boucle edit → import → export complète.

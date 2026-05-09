@@ -147,6 +147,7 @@
     [siteId]="siteId"
     [siteName]="siteName"
     [siteType]="siteType"
+    [siteDisplays]="siteDisplays"
     [localVideos]="localVideos"
     [cloudVideos]="cloudVideos"
     [localStorage]="localStorage"
@@ -202,6 +203,8 @@
         <p class="variant-modal-filename">"{{ configVariantTarget.displayName }}"</p>
         <app-video-variant-panel
           [videoId]="configVariantTarget.cloudId"
+          [siteDisplays]="siteDisplays"
+          [availableVideos]="cloudVideos"
           [autoOpen]="true"
         ></app-video-variant-panel>
       </div>
