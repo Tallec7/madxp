@@ -8,6 +8,23 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#930](https://github.com/Tallec7/neopro/pull/930))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Variantes multi-écrans : impossible de taper un type d'écran invalide** ([#930](https://github.com/Tallec7/neopro/pull/930)) — avant, le dialog "Variante écran secondaire" proposait un champ texte libre. Un opérateur pouvait taper `led`, `led-banner2`, `totem` ou n'importe quoi : la variante était créée mais jamais affichée sur le bon écran (slug inconnu = silencieusement ignoré). Désormais le dialog propose uniquement les types d'écrans déclarés dans la configuration du site — et si le site n'en déclare pas encore, il propose automatiquement "2e écran (défaut)". Variantes orphelines déjà en DB : un badge rouge ⚠️ les signale dans le dialog avec un bouton Supprimer.
+
+### 🛡️ Pour la robustesse
+
+- **API : tentative de créer une variante avec un type hors config = refusée avec message clair** ([#930](https://github.com/Tallec7/neopro/pull/930)) — même si quelqu'un contourne le dashboard (appel API direct), le serveur vérifie maintenant que le `display_type` fait partie des écrans déclarés du site. Message retourné : `"display_type 'led' non déclaré pour ce site. Types autorisés : led-banner"`. Double verrou UI + API qui ferme définitivement la cause racine de l'incident du 2026-05-08 (54 variantes orphelines `led` → #918 → 7 releases firefight).
+
+### 🧹 Pour l'équipe
+
+- **Script d'audit `npm run audit:variants-drift`** ([#930](https://github.com/Tallec7/neopro/pull/930)) — lit la DB (read-only) et produit un rapport en 4 sections : distribution des slugs en `video_variants`, distribution des types en `sites.displays[]`, drift bidirectionnel, et focus par site (`--site <uuid>`). Utile avant tout chantier sur les variantes pour vérifier l'état réel de cohérence en prod.
+- **22 smoke tests verrouillent les invariants du fix** ([#930](https://github.com/Tallec7/neopro/pull/930)) — guards sur la suppression de `showAddForm`/`newDisplayType`/`sanitizeType` (input libre), la présence de `effectiveSiteDisplays`/`isOrphanVariant`, la fonction `getAllowedDisplayTypes` côté API, et le rejet de `display_type='tv'`.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#902](https://github.com/Tallec7/neopro/pull/902) + v4.1 Fire Stick polish livré 2026-05-08)
 
 ### 🎯 Pour le club (NLF, prospects)

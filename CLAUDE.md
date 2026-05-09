@@ -43,6 +43,10 @@ cd central-server && npm run backfill:displays-resync           # all sites avec
 cd central-server && npm run backfill:displays-resync -- --dry-run
 cd central-server && npm run backfill:displays-resync -- --site-id <uuid>
 
+# Audit drift video_variants.display_type ↔ sites.displays[].type (read-only, 4 sections)
+cd central-server && npm run audit:variants-drift
+cd central-server && npm run audit:variants-drift -- --site <uuid>
+
 # Pitch deck / métriques de traction
 source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/pitch-deck-metrics.sql
 ```
