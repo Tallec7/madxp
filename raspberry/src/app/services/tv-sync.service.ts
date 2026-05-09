@@ -197,6 +197,10 @@ export class TvSyncService {
 
         if (this._isSlaveMode) {
           console.log('[TV] Running as SLAVE - analytics disabled, waiting for master state');
+          // Stop emitting heartbeat ticks: only the master should broadcast them.
+          // Without this, a slave in a multi-slave setup would emit ticks received
+          // by other slaves as false "master" ground-truth (drift confusion).
+          this.stopPreviewHeartbeat();
           if (this.playbackService.isLoopMode) {
             this.doubleBufferService.captureAndShowFreezeFrame();
             this.doubleBufferService.pauseLoopPlayers();
@@ -236,6 +240,40 @@ export class TvSyncService {
         this.callbacks?.onFailoverDemotion(data.reason);
       });
     });
+
+    // Continuous drift correction for TV slaves (ADR-106 extension).
+    // Preview slaves get this in tv.component.ts; TV slaves (Fire Stick / LAN
+    // receivers) subscribe here. Same 200ms threshold — corrects the residual
+    // drift that accumulates after initial seek, without re-triggering a full
+    // sync (which would freeze-frame on every tick).
+    this.socketService.on<{ videoIndex: number; currentTimeMs: number; emittedAt: number }>(
+      'tv-preview-tick',
+      (tick) => {
+        if (!this._isSlaveMode) return;
+        this.ngZone.run(() => this.applyTvSlaveDriftCorrection(tick));
+      },
+    );
+  }
+
+  private applyTvSlaveDriftCorrection(tick: { videoIndex: number; currentTimeMs: number; emittedAt: number }): void {
+    const loopVideos = this.playbackService.currentLoopVideos;
+    if (!loopVideos.length) return;
+    const expectedIndex = tick.videoIndex % loopVideos.length;
+    const expectedVideo = this.callbacks!.resolveDisplayVariant(loopVideos[expectedIndex]);
+    const player = this.doubleBufferService.getActivePlayer();
+    if (!player || !expectedVideo?.path) return;
+    if (!player.src.includes(expectedVideo.path)) return; // wrong video; tv-loop-state will fix
+    if (player.readyState < 3 || !player.duration) return;
+    const networkLatencyMs = Math.max(0, Date.now() - tick.emittedAt);
+    const masterCurrentSec = (tick.currentTimeMs + networkLatencyMs) / 1000;
+    if (masterCurrentSec >= player.duration) return;
+    const drift = player.currentTime - masterCurrentSec;
+    if (Math.abs(drift) > 0.2) {
+      console.log(
+        `[TV] Slave: drift correction local=${player.currentTime.toFixed(2)}s master=${masterCurrentSec.toFixed(2)}s drift=${drift.toFixed(2)}s lat=${networkLatencyMs}ms`,
+      );
+      player.currentTime = masterCurrentSec;
+    }
   }
 
   private handleMasterLoopState(state: LoopState): void {
@@ -421,18 +459,20 @@ export class TvSyncService {
       this.doubleBufferService.playOnActivePlayer(localVideo.path, syncIndex);
     }
 
-    // Seek approximatif au temps du master
+    // Seek approximatif au temps du master.
+    // elapsed est recalculé DANS le callback (pas avant) pour cibler la position
+    // réelle au moment du seek, pas celle au moment de la réception de l'event
+    // (sinon décalage fixe = durée du timeout, cf. preview slave ADR-106).
     if (state.videoStartedAt) {
-      const elapsed = (Date.now() - state.videoStartedAt) / 1000;
-      if (elapsed > 1) {
-        setTimeout(() => {
-          const player = this.doubleBufferService.getActivePlayer();
-          if (player && player.duration && elapsed < player.duration) {
-            player.currentTime = elapsed;
-            console.log(`[TV] Slave: seeked to ${elapsed.toFixed(1)}s`);
-          }
-        }, 500);
-      }
+      const videoStartedAt = state.videoStartedAt;
+      setTimeout(() => {
+        const elapsed = (Date.now() - videoStartedAt) / 1000;
+        const player = this.doubleBufferService.getActivePlayer();
+        if (player && player.duration && elapsed > 0 && elapsed < player.duration) {
+          player.currentTime = elapsed;
+          console.log(`[TV] Slave: seeked to ${elapsed.toFixed(1)}s`);
+        }
+      }, 500);
     }
   }
 
