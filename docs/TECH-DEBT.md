@@ -152,6 +152,13 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 
 ---
 
+### Badge "📺 2nd" manquant sur la remote SaaS (Path B non généralisé)
+
+- **Pourquoi** : `findSecondaryVariantsForVideos()` dans `video-variant.repository.ts` est hardcodé `WHERE display_type = 'secondary'` — pre-PROP-002, jamais mis à jour. Les vidéos avec variants `led-banner`/`totem`/`display-N` ne reçoivent pas de badge sur la cloud remote. Parallèlement, `remote.controller.ts` Path B lit `local_config_mirror` (vide pour les sites SaaS) → pipeline badge muet pour SaaS.
+- **Coût aujourd'hui** : les badges "2nd" fonctionnent côté Pi (Path A), pas côté SaaS (Path B). Découvert incident 2026-05-08.
+- **Effort** : généraliser `findSecondaryVariantsForVideos(displayTypes: string[])` + adapter `remote.controller.ts` pour lire `sites.displays[]` au lieu de `local_config_mirror` = ~0.5j.
+- **Bloquant pour** : clients SaaS avec multi-écran (NLF, prospects avec TV + LED sans Pi).
+
 ## P3 — Confort, à traiter quand le reste est clean
 
 ### `validation.ts` (middleware Joi) à 1198 lignes
