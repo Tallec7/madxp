@@ -247,7 +247,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: dist/central-dashboard
           wranglerVersion: '3.101.0'
-          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main
+          command: pages deploy browser --project-name=neopro-frontend-prod --branch=main --commit-dirty=true --commit-message="chore(release):v${{ needs.release.outputs.new_release_version }}"
 
       - name: Verify deployment
         run: |
