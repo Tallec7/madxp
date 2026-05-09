@@ -13,6 +13,7 @@ import { configProfileRepository } from '../repositories/config-profile.reposito
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
+import { normalizeConfigVideoPaths } from '../utils/config-video-paths';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
 
 /**
@@ -170,6 +171,11 @@ export async function buildEnrichedNeoProContent(
       siteId, error: (err as Error).message,
     });
   }
+
+  // Normalise les chemins plats (sans "/") en chemins complets videos/<cat>/<file>.
+  // Les config_profiles en DB stockent parfois des noms de fichiers sans préfixe ;
+  // le Pi nécessite le chemin complet pour que nginx route vers admin-server:8080.
+  normalizeConfigVideoPaths(enrichedConfig);
 
   const sponsorRows = await siteSponsorRepository.getSponsorsForDeployment(siteId);
   const siteSponsors: SiteSponsorDeployment[] = sponsorRows.map(row => ({
