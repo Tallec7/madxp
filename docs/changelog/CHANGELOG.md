@@ -1,3 +1,9 @@
+## [3.300.9](https://github.com/Tallec7/neopro/compare/v3.300.8...v3.300.9) (2026-05-09)
+
+### Bug Fixes
+
+- **variants:** badge 2nd visible pour tous les types de variante non-TV ([#931](https://github.com/Tallec7/neopro/issues/931)) ([1627854](https://github.com/Tallec7/neopro/commit/1627854050ded0fa18ae1f7609b0f731719d8335))
+
 ## [3.300.8](https://github.com/Tallec7/neopro/compare/v3.300.7...v3.300.8) (2026-05-09)
 
 ### Bug Fixes
