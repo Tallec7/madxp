@@ -1,3 +1,10 @@
+## [3.300.15](https://github.com/Tallec7/neopro/compare/v3.300.14...v3.300.15) (2026-05-09)
+
+### Bug Fixes
+
+- **config:** catégories en videos/default + préfixage au write (suite [#935](https://github.com/Tallec7/neopro/issues/935) + incident NLF) ([#939](https://github.com/Tallec7/neopro/issues/939)) ([9bc9705](https://github.com/Tallec7/neopro/commit/9bc970580192968ab8c1f1ea83cfe02729ba1b60)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+- **sync:** drain pending command queue every 30s for connected sites (Phase 14) ([#940](https://github.com/Tallec7/neopro/issues/940)) ([785cb70](https://github.com/Tallec7/neopro/commit/785cb704821f1ed4573186ef88dd186959561423))
+
 ## [3.300.14](https://github.com/Tallec7/neopro/compare/v3.300.13...v3.300.14) (2026-05-09)
 
 ### Bug Fixes
