@@ -155,7 +155,7 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     const placeholders = videoIds.map((_, i) => `$${i + 1}`).join(', ');
     const result = await query<VideoVariantRow>(
       `SELECT * FROM video_variants
-       WHERE video_id IN (${placeholders}) AND display_type = 'secondary'`,
+       WHERE video_id IN (${placeholders}) AND display_type != 'tv'`,
       videoIds
     );
     return result.rows;
