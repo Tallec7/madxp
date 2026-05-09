@@ -1700,6 +1700,33 @@ describe('SaaS child component guards (Pi-specific UI hidden for SaaS)', () => {
     });
   });
 
+  // --- site-content-tab/config-editor orphan banner is path-based (in-memory diff
+  // between config paths and unifiedVideoOptions.path) and produces ~63% false
+  // positives on SaaS sites: saas.controller.ts:resolveVideoUrl does
+  // `path.split('/').pop()` to extract filename, so bare filenames vs
+  // `videos/default/<filename>` synthetic paths both resolve correctly. The
+  // banner panics admins with "ces boutons ne feront rien" — a lie on SaaS. ---
+  it('site-content-tab/config-editor orphan banner must be hidden on SaaS sites', () => {
+    const htmlPath = path.join(
+      dashboardRoot,
+      'components',
+      'site-content-tab',
+      'config-editor',
+      'config-editor.component.html'
+    );
+    const htmlContent = fs.readFileSync(htmlPath, 'utf8');
+    const orphanBannerLine = htmlContent
+      .split('\n')
+      .find(line => line.includes('orphaned-warning-banner') && line.includes('*ngIf'));
+    expect({
+      bannerExists: !!orphanBannerLine,
+      bannerHasSaasGuard: !!orphanBannerLine && orphanBannerLine.includes("siteType !== 'saas'"),
+    }).toEqual({
+      bannerExists: true,
+      bannerHasSaasGuard: true,
+    });
+  });
+
   // --- site-settings-tab must use SaaS-appropriate notification messages ---
   it('site-settings-tab must use "enregistrée" notifications for SaaS instead of "déployée"', () => {
     const tsPath = path.join(dashboardRoot, 'components', 'site-settings-tab', 'site-settings-tab.component.ts');
