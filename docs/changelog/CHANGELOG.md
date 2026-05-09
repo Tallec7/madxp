@@ -1,3 +1,9 @@
+## [3.300.13](https://github.com/Tallec7/neopro/compare/v3.300.12...v3.300.13) (2026-05-09)
+
+### Bug Fixes
+
+- **config:** normalise video paths avant envoi update_config au Pi ([#935](https://github.com/Tallec7/neopro/issues/935)) ([6e55512](https://github.com/Tallec7/neopro/commit/6e555123c02bc737e1c25075ddf4dc09f0b9f8ab)), closes [#932](https://github.com/Tallec7/neopro/issues/932)
+
 ## [3.300.12](https://github.com/Tallec7/neopro/compare/v3.300.11...v3.300.12) (2026-05-09)
 
 ### Bug Fixes
