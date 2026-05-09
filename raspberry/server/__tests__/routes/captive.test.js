@@ -50,7 +50,10 @@ describe('GET /api/captive/whoami', () => {
   });
 
   test('returns displayIndex + displayName when MAC is assigned to a display', async () => {
-    const receiversService = { resolveMacByIp: jest.fn(() => '0c:43:f9:36:04:77') };
+    const receiversService = {
+      resolveMacByIp: jest.fn(() => '0c:43:f9:36:04:77'),
+      getReceivers: jest.fn(() => [{ mac: '0c:43:f9:36:04:77', kind: 'firestick' }]),
+    };
     fs.readFileSync.mockReturnValue(JSON.stringify(SAMPLE_CONFIG));
     const app = buildApp(receiversService);
 
@@ -62,21 +65,34 @@ describe('GET /api/captive/whoami', () => {
     expect(res.body.displayName).toBe('Buvette');
   });
 
-  test('returns displayIndex=null when MAC is known but not assigned to any display', async () => {
-    const receiversService = { resolveMacByIp: jest.fn(() => 'aa:bb:cc:dd:ee:ff') };
-    fs.readFileSync.mockReturnValue(JSON.stringify(SAMPLE_CONFIG));
+  test('returns 404 for browser (non-firestick) device — passthrough to /remote', async () => {
+    const receiversService = {
+      resolveMacByIp: jest.fn(() => 'aa:bb:cc:dd:ee:ff'),
+      getReceivers: jest.fn(() => [{ mac: 'aa:bb:cc:dd:ee:ff', kind: 'browser' }]),
+    };
     const app = buildApp(receiversService);
 
     const res = await request(app).get('/api/captive/whoami');
 
-    expect(res.status).toBe(200);
-    expect(res.body.mac).toBe('aa:bb:cc:dd:ee:ff');
-    expect(res.body.displayIndex).toBeNull();
-    expect(res.body.displayName).toBeNull();
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('mac_not_found');
+  });
+
+  test('returns 404 when MAC is known but kind is not firestick (unknown device)', async () => {
+    const receiversService = {
+      resolveMacByIp: jest.fn(() => 'aa:bb:cc:dd:ee:ff'),
+      getReceivers: jest.fn(() => []),
+    };
+    const app = buildApp(receiversService);
+
+    const res = await request(app).get('/api/captive/whoami');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('mac_not_found');
   });
 
   test('uses X-Real-IP header over socket.remoteAddress', async () => {
-    const receiversService = { resolveMacByIp: jest.fn(() => null) };
+    const receiversService = { resolveMacByIp: jest.fn(() => null), getReceivers: jest.fn(() => []) };
     const app = buildApp(receiversService);
 
     await request(app).get('/api/captive/whoami').set('X-Real-IP', '192.168.4.42');
@@ -85,7 +101,10 @@ describe('GET /api/captive/whoami', () => {
   });
 
   test('returns mac with displayIndex=null when configPath is unreadable', async () => {
-    const receiversService = { resolveMacByIp: jest.fn(() => '0c:43:f9:36:04:77') };
+    const receiversService = {
+      resolveMacByIp: jest.fn(() => '0c:43:f9:36:04:77'),
+      getReceivers: jest.fn(() => [{ mac: '0c:43:f9:36:04:77', kind: 'firestick' }]),
+    };
     fs.readFileSync.mockImplementation(() => {
       const err = new Error('ENOENT: no such file or directory');
       err.code = 'ENOENT';
@@ -102,7 +121,10 @@ describe('GET /api/captive/whoami', () => {
   });
 
   test('case-insensitive MAC match between resolved value and config entry', async () => {
-    const receiversService = { resolveMacByIp: jest.fn(() => '0C:43:F9:36:04:77') };
+    const receiversService = {
+      resolveMacByIp: jest.fn(() => '0C:43:F9:36:04:77'),
+      getReceivers: jest.fn(() => [{ mac: '0c:43:f9:36:04:77', kind: 'firestick' }]),
+    };
     fs.readFileSync.mockReturnValue(JSON.stringify(SAMPLE_CONFIG));
     const app = buildApp(receiversService);
 
@@ -120,6 +142,8 @@ describe('createCaptiveRouter()', () => {
   });
 
   test('throws when configPath is missing', () => {
-    expect(() => createCaptiveRouter({ receiversService: { resolveMacByIp: () => null } })).toThrow(/configPath/);
+    expect(() =>
+      createCaptiveRouter({ receiversService: { resolveMacByIp: () => null, getReceivers: () => [] } })
+    ).toThrow(/configPath/);
   });
 });
