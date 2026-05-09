@@ -1,3 +1,9 @@
+## [3.300.10](https://github.com/Tallec7/neopro/compare/v3.300.9...v3.300.10) (2026-05-09)
+
+### Bug Fixes
+
+- **variants:** propager siteDisplays jusqu'à video-variant-panel ([#932](https://github.com/Tallec7/neopro/issues/932)) ([ae496e6](https://github.com/Tallec7/neopro/commit/ae496e68fba739a6b983b77343c1becf1dac2a3a))
+
 ## [3.300.9](https://github.com/Tallec7/neopro/compare/v3.300.8...v3.300.9) (2026-05-09)
 
 ### Bug Fixes
