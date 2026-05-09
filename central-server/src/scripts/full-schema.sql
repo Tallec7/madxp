@@ -2162,7 +2162,7 @@ CREATE TABLE public.recurring_schedules (
     CONSTRAINT check_frequency CHECK (((frequency IS NULL) OR ((frequency)::text = ANY (ARRAY[('daily'::character varying)::text, ('weekly'::character varying)::text, ('monthly'::character varying)::text])))),
     CONSTRAINT check_hour CHECK (((hour >= 0) AND (hour <= 23))),
     CONSTRAINT check_minute CHECK (((minute >= 0) AND (minute <= 59))),
-    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY (ARRAY[('report'::character varying)::text, ('cleanup'::character varying)::text, ('aggregation'::character varying)::text, ('backup'::character varying)::text, ('objective_check'::character varying)::text, ('pdf_report'::character varying)::text, ('match_session_autoclose'::character varying)::text, ('video_ftp_audit'::character varying)::text, ('connection_events_purge'::character varying)::text, ('test_render_cleanup'::character varying)::text])))
+    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY (ARRAY[('report'::character varying)::text, ('cleanup'::character varying)::text, ('aggregation'::character varying)::text, ('backup'::character varying)::text, ('objective_check'::character varying)::text, ('pdf_report'::character varying)::text, ('match_session_autoclose'::character varying)::text, ('video_ftp_audit'::character varying)::text, ('connection_events_purge'::character varying)::text, ('test_render_cleanup'::character varying)::text, ('pending_commands_drain'::character varying)::text])))
 );
 
 ALTER TABLE ONLY public.recurring_schedules FORCE ROW LEVEL SECURITY;

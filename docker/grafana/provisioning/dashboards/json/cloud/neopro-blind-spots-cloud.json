@@ -1355,6 +1355,29 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 130
+      },
+      "id": 810,
+      "title": "Pending commands drained (Phase 14, CRON 30s)",
+      "description": "CRON pending_commands_drain — toutes les 30s, drain les commandes en queue vers les sites connectes. Spike outcome=processed = backfill ou admin tool a queue des commandes (ex: receiver_assignment_updated). Spike outcome=failed = socket connection zombie ou erreur Pi-side.",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_pending_commands_drain_total{scrape_job=\"NEOPRO\"}[5m])) by (outcome)",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",

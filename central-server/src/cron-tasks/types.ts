@@ -16,7 +16,8 @@ export type CronTaskType =
   | 'match_session_autoclose'
   | 'video_ftp_audit'
   | 'connection_events_purge'
-  | 'test_render_cleanup';
+  | 'test_render_cleanup'
+  | 'pending_commands_drain';
 
 export interface RecurringSchedule {
   [key: string]: unknown; // Index signature for QueryResultRow compatibility

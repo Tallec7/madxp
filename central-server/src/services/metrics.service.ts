@@ -398,6 +398,20 @@ const connectionEventsCurrentRowsGauge = new Gauge({
   registers: [register],
 });
 
+// ============= CRON pending_commands_drain (Phase 14) =============
+// Compte les commandes drainées (envoyées) ou échouées par le CRON 30s qui
+// itère les sites connectés et appelle processPendingCommands(). Sans cette
+// métrique, un bug silencieux du drainer (queue stagnante) reste invisible
+// jusqu'au moment où un opérateur remarque "le Fire Stick assigné est resté
+// sur la wait page". Cf. incident Mangin-Beaulieu 2026-05-09.
+
+const pendingCommandsDrainTotal = new Counter({
+  name: 'neopro_pending_commands_drain_total',
+  help: 'Pending commands drained by CRON pending_commands_drain (labels: site_id, outcome)',
+  labelNames: ['site_id', 'outcome'] as const,
+  registers: [register],
+});
+
 // ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
 
 const remoteClientVersionTotal = new Counter({
@@ -1261,6 +1275,30 @@ class MetricsService {
   recordConnectionEventsPurge(payload: { deleted: number; remaining: number }): void {
     if (payload.deleted > 0) connectionEventsPurgedTotal.inc(payload.deleted);
     connectionEventsCurrentRowsGauge.set(payload.remaining);
+  }
+
+  /**
+   * Phase 14 — résultat d'une exécution du CRON pending_commands_drain pour
+   * UN site (n'est appelé que pour les sites avec au moins 1 commande drainée
+   * ou échouée, pour éviter le bruit Prometheus sur les sites au repos).
+   */
+  recordPendingCommandsDrain(payload: {
+    siteId: string;
+    processed: number;
+    failed: number;
+  }): void {
+    if (payload.processed > 0) {
+      pendingCommandsDrainTotal.inc(
+        { site_id: payload.siteId, outcome: 'processed' },
+        payload.processed
+      );
+    }
+    if (payload.failed > 0) {
+      pendingCommandsDrainTotal.inc(
+        { site_id: payload.siteId, outcome: 'failed' },
+        payload.failed
+      );
+    }
   }
 
   /** ADR-061: accès télécommande tracé avec client_version pour pilotage sunset */

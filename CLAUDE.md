@@ -35,6 +35,9 @@ docker compose up prometheus alertmanager grafana  # Grafana (3000) + Prometheus
 # Base de données
 cd central-server && npm run db:migrate
 
+# Phase 14 — CRON drain pending_commands toutes les 30s pour sites connectés (fix sync 2026-05-09)
+source central-server/.env && psql "$DATABASE_URL" -f central-server/src/scripts/migrations/add-pending-commands-drain-cron.sql
+
 # Template Studio v3 — backfill posters JPEG des assets WebM legacy (post-merge feature poster)
 cd central-server && npm run backfill:asset-posters
 
