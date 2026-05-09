@@ -38,6 +38,46 @@ describe('update_config payload contract (smoke)', () => {
     expect(body).toMatch(/enrichConfigWithDisplayVariants\s*\(/);
     expect(body).toMatch(/enrichConfigWithAnalyticsMetadata\s*\(/);
     expect(body).toMatch(/findDefaultForSite\s*\(/);
+    // Incident 2026-05-09 : chemins plats dans config_profiles → 404 Pi.
+    // normalizeConfigVideoPaths doit être appelée AVANT le return.
+    expect(body).toMatch(/normalizeConfigVideoPaths\s*\(/);
+  });
+
+  it('normalizeConfigVideoPaths: flat sponsor path gets videos/default prefix', () => {
+    // Régression guard : si un chemin sponsor n'a pas de "/" il manque le préfixe
+    // nginx (http://neopro.local/fichier.mp4 → 404, /videos/default/fichier.mp4 → OK).
+    const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
+    const config = {
+      sponsors: [{ name: 'S1', path: 'TV_PART01_LAGENCE.mp4' }],
+      categories: [
+        {
+          id: 'but',
+          name: 'But',
+          videos: [{ name: 'V1', path: 'TV_BUT_01.mp4' }],
+          subCategories: [
+            { id: 'sub1', name: 'Sub1', videos: [{ name: 'V2', path: 'TV_SUB.mp4' }] },
+          ],
+        },
+      ],
+      timeCategories: [{ id: 'during', name: 'Pendant', loopVideos: [{ name: 'L1', path: 'TV_LOOP.mp4' }] }],
+    };
+    normalizeConfigVideoPaths(config);
+    expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE.mp4');
+    expect(config.categories[0].videos[0].path).toBe('videos/but/TV_BUT_01.mp4');
+    expect(config.categories[0].subCategories[0].videos[0].path).toBe('videos/but/sub1/TV_SUB.mp4');
+    expect(config.timeCategories[0].loopVideos[0].path).toBe('videos/default/TV_LOOP.mp4');
+  });
+
+  it('normalizeConfigVideoPaths: already-prefixed paths are left unchanged', () => {
+    const { normalizeConfigVideoPaths } = require('../../utils/config-video-paths');
+    const config = {
+      sponsors: [{ name: 'S1', path: 'videos/default/TV_PART01_LAGENCE.mp4' }],
+      categories: [{ id: 'but', name: 'But', videos: [{ name: 'V1', path: 'videos/but/TV_BUT_01.mp4' }] }],
+      timeCategories: [],
+    };
+    normalizeConfigVideoPaths(config);
+    expect(config.sponsors[0].path).toBe('videos/default/TV_PART01_LAGENCE.mp4');
+    expect(config.categories[0].videos[0].path).toBe('videos/but/TV_BUT_01.mp4');
   });
 
   it('content.controller.ts cascade-delete emit includes neoProContent', () => {
