@@ -19,6 +19,7 @@ import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
+import { normalizeConfigVideoPaths } from '../utils/config-video-paths';
 
 // --------------------------------------------------------------------------
 // Validation schemas
@@ -230,6 +231,13 @@ export const createProfile = async (req: AuthRequest, res: Response) => {
     // The dashboard must collect this from the user before save.
     if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
 
+    // Defense-in-depth (incident NLF 2026-05-09) : tout path video écrit dans
+    // un profil DOIT être préfixé `videos/...` ET son filename sanitizé pour
+    // matcher le filename réel sur disque (cf. content.helpers.ts:sanitizeFilename
+    // appliqué à l'upload). Sans ça, des entries éditées manuellement avec
+    // apostrophes / espaces / & cassent silencieusement la lecture sur le Pi.
+    normalizeConfigVideoPaths(value.configuration as SiteConfiguration);
+
     const site = await configHistoryRepository.findSiteBasic(siteId);
     if (!site) {
       return res.status(404).json({ error: 'Site non trouve' });
@@ -289,6 +297,11 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     // ADR-103 Phase 2 — synthetic paths now resolved server-side at read time.
     // ADR-103 Phase 3 — refuse loop entries without durationSeconds (web/live).
     if (value.configuration && rejectIfWebLoopMissingDuration(res, value.configuration)) return;
+
+    // Defense-in-depth — voir createProfile (incident NLF 2026-05-09).
+    if (value.configuration) {
+      normalizeConfigVideoPaths(value.configuration as SiteConfiguration);
+    }
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {
@@ -372,6 +385,9 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
     // contentType web_page/livestream that lack a positive durationSeconds.
     // The dashboard must collect this from the user before save.
     if (rejectIfWebLoopMissingDuration(res, value.configuration)) return;
+
+    // Defense-in-depth — voir createProfile (incident NLF 2026-05-09).
+    normalizeConfigVideoPaths(value.configuration as SiteConfiguration);
 
     const existing = await configProfileRepository.findById(profileId);
     if (!existing || existing.site_id !== siteId) {

@@ -88,6 +88,11 @@ export function extractFilenameFromPath(videoPath: string): string {
  * Mute la config en place (même pattern que enrichConfigWithDisplayVariants).
  */
 export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
+  // Préfixe `videos/default/` si le path n'a pas de "/". Ne touche PAS au
+  // filename (sanitization volontairement omise — issue #938 — pour ne pas
+  // casser les sites en prod dont les fichiers disque ont les caractères
+  // spéciaux que la config référence). NLF 2026-05-09 = cas exceptionnel
+  // de drift DB ↔ disque, hot-fixé directement en DB + SSH Pi.
   const fix = (path: string, prefix: string): string =>
     path.includes('/') ? path : `${prefix}/${path}`;
 
@@ -99,18 +104,16 @@ export function normalizeConfigVideoPaths(config: SiteConfiguration): void {
 
   if (config.categories) {
     for (const category of config.categories) {
-      const catPrefix = `videos/${category.id}`;
       if (category.videos) {
         for (const video of category.videos) {
-          if (video.path) video.path = fix(video.path, catPrefix);
+          if (video.path) video.path = fix(video.path, 'videos/default');
         }
       }
       if (category.subCategories) {
         for (const subCat of category.subCategories) {
-          const subPrefix = `${catPrefix}/${subCat.id}`;
           if (subCat.videos) {
             for (const video of subCat.videos) {
-              if (video.path) video.path = fix(video.path, subPrefix);
+              if (video.path) video.path = fix(video.path, 'videos/default');
             }
           }
         }
