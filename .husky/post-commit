@@ -1,0 +1,47 @@
+#!/bin/sh
+# Post-commit : smoke check ciblé selon le scope du commit
+# Mappe fix/feat(<scope>) → suite smoke correspondante (2-5s)
+# Warn-only — le commit est déjà fait, on ne le révoque pas.
+
+last_msg=$(git log --format='%s' -1)
+
+# Ne tourne que sur fix/feat
+if ! echo "$last_msg" | grep -qE '^(fix|feat)'; then
+  exit 0
+fi
+
+# Extraire le scope
+scope=$(echo "$last_msg" | grep -oE '\([a-z0-9_-]+\)' | head -1 | tr -d '()')
+
+# Mapper scope → suite smoke
+case "$scope" in
+  saas|config|displays)          suite="smoke-saas" ;;
+  sync|sync-agent)               suite="smoke-wiring" ;;
+  content|video|storage)         suite="smoke-wiring" ;;
+  socket|realtime)               suite="smoke-socket-realtime" ;;
+  sponsor|advertiser|analytics)  suite="smoke-analytics-sponsors" ;;
+  match|score|scoreboard)        suite="smoke-prop003-scoreboard" ;;
+  deploy|ota)                    suite="smoke-deploy-ota" ;;
+  hotspot|wifi|psk)              suite="smoke-network-wifi" ;;
+  alert|alerting)                suite="smoke-socket-realtime" ;;
+  *)                             suite="" ;;
+esac
+
+if [ -z "$suite" ]; then
+  exit 0
+fi
+
+echo ""
+echo "⚡ post-commit smoke [${suite}]..."
+cd central-server && npx jest --testPathPattern="smoke/${suite}" --no-coverage --forceExit --silent 2>&1
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "⚠️  SMOKE FAILED : ${suite} — régression potentielle."
+  echo "   Résous avant de pusher (le CI bloquera de toute façon)."
+else
+  echo "   ✅ ${suite} — OK"
+fi
+
+exit 0

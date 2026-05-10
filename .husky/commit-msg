@@ -106,4 +106,23 @@ if echo "$first_line" | grep -qE "\.$"; then
   # This is a warning, not an error - don't exit
 fi
 
+# Hook 2 : bloquer fix/feat sur scopes sensibles sans diff SPEC
+# Scopes : saas, config, sync, content, displays
+sensitive_pattern="^(fix|feat)\((saas|config|sync|content|displays)\)(!)?:"
+if echo "$first_line" | grep -qE "$sensitive_pattern"; then
+  scope=$(echo "$first_line" | grep -oE "\((saas|config|sync|content|displays)\)" | tr -d '()')
+  spec_changes=$(git diff --cached --name-only 2>/dev/null | grep -E '^(docs/specs/|docs/clients/NLF\.md)' || true)
+  if [ -z "$spec_changes" ]; then
+    echo ""
+    echo "❌ BLOCK: fix/feat($scope) sans mise à jour SPEC"
+    echo ""
+    echo "   Ce scope est sensible (historique cascades). Avant de committer :"
+    echo "   1. Lis la SPEC du domaine : cf. CLAUDE.md → Routing SPECs"
+    echo "   2. Si le comportement métier change → mets à jour docs/specs/"
+    echo "   3. Si refactor pur sans changement métier → git commit --no-verify"
+    echo ""
+    exit 1
+  fi
+fi
+
 exit 0

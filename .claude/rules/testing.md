@@ -58,3 +58,17 @@ pour pouvoir durcir le seuil `coverageThreshold.functions` (41 → 50 → 60).
 | Modif raspberry/server    | `cd raspberry/server && npm test`                   |
 | Modif raspberry/admin     | `cd raspberry/admin && npm test`                    |
 | Avant commit final        | `npm run test:smoke` (all)                          |
+
+## Convention nommage — tests régression incident
+
+Tout incident P0/P1 fixé en prod doit avoir un smoke test dédié :
+
+```
+central-server/src/__tests__/smoke/smoke-<domaine>-incident-<YYYY-MM-DD>.test.ts
+```
+
+- `<domaine>` = suite smoke existante la plus proche (saas, sync, display, network-wifi…)
+- `<YYYY-MM-DD>` = date de l'incident (pas du fix)
+- Le test doit **échouer** si le bug revenait — ce n'est pas un test de feature, c'est un garde-fou
+- Citer le test dans le message du commit fix : `fix(saas): ... — guard: smoke-saas-incident-2026-05-08`
+- Entrée dans `docs/runbooks/INCIDENT-LOG.md` (colonne "Test régression")

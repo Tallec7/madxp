@@ -1,5 +1,26 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/churn-detector.js"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/spec-autoload.js"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
@@ -26,7 +47,19 @@
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__github__pull_request_read",
+      "Bash(npm run test:smoke:smart)",
+      "Bash(npm run test:smoke)",
+      "Bash(npm run test:server)",
+      "Bash(npm run test:central)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:seed)",
+      "Bash(npm run audit:variants-drift)",
+      "Bash(git push:*)",
+      "Bash(git worktree:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge-base:*)"
     ]
   }
 }
