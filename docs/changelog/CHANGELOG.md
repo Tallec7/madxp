@@ -1,3 +1,9 @@
+## [3.301.6](https://github.com/Tallec7/neopro/compare/v3.301.5...v3.301.6) (2026-05-10)
+
+### Bug Fixes
+
+- increase healthcheckTimeout from 100s to 300s in railway.staging.json ([#955](https://github.com/Tallec7/neopro/issues/955)) ([51e52f0](https://github.com/Tallec7/neopro/commit/51e52f05f222208c9dbee00866ac53089378012d))
+
 ## [3.301.5](https://github.com/Tallec7/neopro/compare/v3.301.4...v3.301.5) (2026-05-10)
 
 ### Bug Fixes
