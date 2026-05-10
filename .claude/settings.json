@@ -26,6 +26,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node .claude/hooks/end-session.js"
+          },
+          {
+            "type": "command",
             "command": "node .claude/hooks/adr-reminder.js"
           }
         ]
