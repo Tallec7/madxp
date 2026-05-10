@@ -103,14 +103,16 @@ export class SitesService {
     return this.api.get(`/sites/${id}/config-history-compare`, { version1, version2 });
   }
 
-  previewConfigDiff(id: string, newConfiguration: SiteConfiguration): Observable<{
+  previewConfigDiff(id: string, newConfiguration: SiteConfiguration, profileId?: string): Observable<{
     hasChanges: boolean;
     changesCount: number;
     diff: ConfigDiff[];
     currentConfiguration: SiteConfiguration | null;
     newConfiguration: SiteConfiguration;
   }> {
-    return this.api.post(`/sites/${id}/config-preview-diff`, { newConfiguration });
+    const body: Record<string, unknown> = { newConfiguration };
+    if (profileId) body['profileId'] = profileId;
+    return this.api.post(`/sites/${id}/config-preview-diff`, body);
   }
 
   getLocalContent(id: string): Observable<{

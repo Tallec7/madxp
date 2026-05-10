@@ -416,8 +416,8 @@ export class ConfigEditorDataService {
   /**
    * Preview the diff between the current site config and the proposed config.
    */
-  previewDiff(siteId: string, config: SiteConfiguration): Observable<ConfigDiff[]> {
-    return this.sitesService.previewConfigDiff(siteId, config).pipe(
+  previewDiff(siteId: string, config: SiteConfiguration, profileId?: string): Observable<ConfigDiff[]> {
+    return this.sitesService.previewConfigDiff(siteId, config, profileId).pipe(
       map(response => response.diff),
     );
   }

@@ -583,6 +583,7 @@ export const schemas = {
 
   previewConfigRestore: Joi.object({
     newConfiguration: Joi.object().required(),
+    profileId: Joi.string().uuid().optional(),
   }),
 
   saveConfigDirect: Joi.object({
