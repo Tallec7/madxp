@@ -105,6 +105,10 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
+### nginx — Location matching (config `neopro-base.conf`)
+
+- **Ajouter une `location /path/` prefix qui proxy vers admin-server sans le modifier `^~`** quand le path peut correspondre à la regex `~* \.(js|mjs|css|woff2?|ttf|eot|ico|png|jpg|jpeg|gif|svg|webp|map)$` présente dans la config. Sans `^~`, nginx évalue TOUJOURS les regex après un match prefix (précédence nginx : `=` > `^~` > regex > prefix). Exemple incident 2026-05-10 : `location /thumbnails/` laissait la regex `~* \.jpg$` gagner → `try_files $uri =404` sur `webapp/` root → 404 systématique sur tous les thumbnails. Fix : `location ^~ /thumbnails/`. Règle : toute location proxy vers admin-server qui sert des extensions couvertes par cette regex **doit** avoir `^~`.
+
 ### Admin Server (:8080) & Socket.IO proxy
 
 - Charger `socket.io.js` via une URL cross-origin (`window.location.hostname + ':3000'`) — violation CSP garantie sur `neopro.local` / IP LAN. Utiliser le chemin relatif `/socket.io/socket.io.js` (proxyfié par admin-server).

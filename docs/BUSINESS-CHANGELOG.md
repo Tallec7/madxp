@@ -8,6 +8,27 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-10, PR [#948](https://github.com/Tallec7/neopro/pull/948))
+
+### 🛡️ Pour la robustesse
+
+- **Thumbnails joueurs réparés sur la Remote Pi** ([#948](https://github.com/Tallec7/neopro/pull/948)) — les vignettes photo des joueurs (BUT, ENTRÉE) s'affichaient en image cassée sur la page Télécommande du Pi. Cause : un réglage nginx faisait chercher les `.jpg` au mauvais endroit (dossier webapp au lieu du dossier thumbnails). Fix : une ligne de config nginx + correction déployée en avance de phase directement sur Pi RACC, propagée au reste de la flotte via le prochain OTA.
+
+---
+
+## Semaine 19 — 5-11 Mai 2026 (rattrapage [#935](https://github.com/Tallec7/neopro/pull/935)→[#941](https://github.com/Tallec7/neopro/pull/941))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Les chemins de vidéos mal formés n'arrivent plus sur le Pi** ([#935](https://github.com/Tallec7/neopro/pull/935), [#939](https://github.com/Tallec7/neopro/pull/939)) — incident NLF : certaines vidéos référencées dans la config arrivaient avec un chemin `videos/default/nom.mp4` au lieu de `nom.mp4`, causant des "vidéo introuvable" sur le Pi alors que le fichier existait bien. Le serveur cloud normalise désormais tous les chemins avant envoi + les catégories sont correctement préfixées à l'écriture. Rétrocompatible avec les Pi déjà déployés.
+- **Navigateurs et tablettes des bénévoles accèdent à la télécommande sans être bloqués** ([#941](https://github.com/Tallec7/neopro/pull/941)) — le portail captif du Pi redirigeait automatiquement tous les appareils inconnus vers la page d'attente Fire Stick. Les téléphones, tablettes et PC des bénévoles ne pouvaient donc plus atteindre `/remote` sans MAC enregistrée. Désormais les navigateurs (User-Agent non-Fire Stick) passent directement sur la télécommande.
+
+### 🛡️ Pour la robustesse
+
+- **Lag de sync entre kiosk Pi et Fire Stick LAN supprimé** ([#936](https://github.com/Tallec7/neopro/pull/936)) — quand le Pi jouait une vidéo et qu'un Fire Stick sur le même réseau local servait d'écran secondaire, les deux pouvaient décaler de quelques frames à chaque transition. Fix de la synchronisation maître/esclave côté socket.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#934](https://github.com/Tallec7/neopro/pull/934))
 
 ### 🎯 Pour le club (NLF, prospects)

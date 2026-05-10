@@ -50,6 +50,7 @@
 46. [MediaPlaybackError Zone.js dans la console (v3.216+)](#mediaplaybackerror-zonejs-dans-la-console-v3216)
 47. [Preview Remotion v2 noir — 1 486 requêtes CORB bloquées (v3.216+)](#preview-remotion-v2-noir--1-486-requêtes-corb-bloquées-v3216)
 48. [429 burst sur /api/groups et /api/logs/frontend au chargement du dashboard (v3.217.3+)](#429-burst-sur-apigroups-et-apilogsfrontend-au-chargement-du-dashboard-v32173)
+49. [Thumbnails 404 sur la Remote Pi (v3.301.0+)](#thumbnails-404-sur-la-remote-pi-v33010)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -7017,3 +7018,28 @@ sudo systemctl restart dnsmasq
 
 - Rediriger `www.apple.com`, `play.googleapis.com` ou `clients3.google.com` dans dnsmasq → iOS/Android coupent le routage (smoke test enforced dans `smoke-kiosk-pi`)
 - Laisser `fix-hotspot.sh --auto-fix` redémarrer hostapd si déjà UP → éjecte les clients
+
+---
+
+## Thumbnails 404 sur la Remote Pi (v3.301.0+)
+
+**Symptôme** : la page `/remote` affiche des images cassées pour les vignettes joueur. La console Chrome affiche `GET http://neopro.local/thumbnails/default/TV_BUT_*.jpg 404 (Not Found)`.
+
+**Cause A — nginx location precedence (bug corrigé en v3.301.0)** : la config nginx contient une location regex `~* \.(jpg|jpeg|...)` avec `try_files $uri =404` qui cherche les assets dans `webapp/`. Sans le modificateur `^~`, cette regex prenait la priorité sur `location /thumbnails/` et cherchait les `.jpg` dans le mauvais répertoire (`webapp/`) au lieu de proxier vers admin-server `:8080`.
+
+**Vérification** :
+
+```bash
+grep "thumbnails" /etc/nginx/sites-available/neopro
+# Doit afficher : location ^~ /thumbnails/ {
+# Si affiché : location /thumbnails/ {  → le ^~ est manquant
+```
+
+**Fix live** (si OTA pas encore arrivée) :
+
+```bash
+sudo sed -i 's/    location \/thumbnails\/ {/    location ^~ \/thumbnails\/ {/' /etc/nginx/sites-available/neopro
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Cause B — vidéos non déployées** : les fichiers `.jpg` dans `thumbnails/` sont générés par `generate-all-thumbnails.sh` uniquement à partir des vidéos présentes dans `videos/`. Si une vidéo n'est pas encore déployée sur ce Pi, son thumbnail sera 404 quelle que soit la config nginx. Vérification : `ls /home/pi/neopro/thumbnails/default/<nom>.jpg`. Fix : déployer les vidéos manquantes depuis le dashboard cloud.
