@@ -1,6 +1,8 @@
 # Client : NLF (Nantes Loire Féminin Handball)
 
 > ⚠️ **CLIENT CRITIQUE** - Plus gros client, environnement mesh WiFi complexe
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 
 ## Informations générales
 

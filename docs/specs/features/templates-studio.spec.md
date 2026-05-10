@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-25
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal** :
 > - `templates-remotion/src/runtime/TemplateRuntime.tsx` (moteur générique unique)
 > - `central-server/src/scripts/import-template-spec.ts` (CLI `template:import` v1)

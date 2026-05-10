@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-05-08
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal** :
 >
 > - `raspberry/sync-agent/src/utils/config-merge.js` (`LOCAL_ONLY_SETTINGS` + opt-out remotePassword/clubName)

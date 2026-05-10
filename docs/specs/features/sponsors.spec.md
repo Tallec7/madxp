@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **ADR liés** : ADR-035 (modèle dual Annonceur vs Sponsor local), ADR-093 (match sessions — breakdown event_type), ADR-097 (extraction CRON tasks)
 > **Smoke tests** : `smoke-analytics-sponsors.test.ts`
 > **`.claude/rules/` lié** : `sponsors.md`

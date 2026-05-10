@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **ADR liés** : ADR-005 (RLS multi-tenant), ADR-037 (archi SaaS), ADR-038 (temps réel + observabilité), ADR-039 (tiers), ADR-040 (dashboard insights + tendances), ADR-059 (state-sync SaaS), ADR-069 (delivery strategy), ADR-088 (scoreboard SaaS-first), ADR-096 (extraction SaaS relay), ADR-102 (persistance DB des préférences UX télécommande par site/profil — amend ADR-062), ADR-105 (preview TV via iframe local-first, mode `?preview=1`)
 > **Smoke tests** : `smoke-saas.test.ts`, `smoke-socket-realtime.test.ts`, `smoke-scoreboard-saas.test.ts`, `smoke-remote-preferences-db.test.ts`
 > **`.claude/rules/` lié** : `saas.md` (73 règles ADR-037)
