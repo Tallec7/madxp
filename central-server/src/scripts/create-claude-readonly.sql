@@ -28,5 +28,9 @@ GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO claude_readonly;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT SELECT ON SEQUENCES TO claude_readonly;
 
+-- 7. BYPASSRLS pour voir toutes les rows malgré le Row Level Security
+--    (nécessaire car tables comme `sites` ont RLS activé)
+ALTER USER claude_readonly BYPASSRLS;
+
 -- Vérification post-exec
-SELECT usename, usecreatedb, usesuper FROM pg_user WHERE usename = 'claude_readonly';
+SELECT usename, usecreatedb, usesuper, usebypassrls FROM pg_user WHERE usename = 'claude_readonly';
