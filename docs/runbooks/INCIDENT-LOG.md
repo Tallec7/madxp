@@ -14,9 +14,11 @@
 ### Convention test régression
 
 Tout incident P0/P1 → créer un smoke test nommé :
+
 ```
 central-server/src/__tests__/smoke/smoke-<domaine>-incident-<YYYY-MM-DD>.test.ts
 ```
+
 Exemples : `smoke-saas-incident-2026-05-08.test.ts`, `smoke-sync-incident-2026-04-15.test.ts`
 
 Le test doit échouer si le bug revenait. Citer le test dans le commit du fix.
@@ -34,6 +36,7 @@ Le test doit échouer si le bug revenait. Citer le test dans le commit du fix.
 
 ## Historique
 
-| Date       | Sév | Durée | Scope        | Cause racine                                      | Fix PR   | Test régression |
-| ---------- | --- | ----- | ------------ | ------------------------------------------------- | -------- | --------------- |
-| 2026-05-08 | P1  | 1h36  | NLF (1 site) | PR #935 casse resolvedConfig SaaS variants/displays | PR #939 | ⚠️ à créer      |
+| Date       | Sév | Durée | Scope                        | Cause racine                                                                                                                                                                                                                                                                                                                        | Fix PR  | Test régression                            |
+| ---------- | --- | ----- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------ |
+| 2026-05-08 | P1  | 1h36  | NLF (1 site)                 | PR #935 casse resolvedConfig SaaS variants/displays                                                                                                                                                                                                                                                                                 | PR #939 | ⚠️ à créer                                 |
+| 2026-05-10 | P1  | 30min | RACC (1 site, risque flotte) | OTA déploie nouveaux symlinks nginx (`neopro-base`, `neopro-hls`, `firestick-captive`) sans supprimer le legacy `/etc/nginx/sites-enabled/neopro` créé par install.sh historique → `duplicate default_server` → nginx down → TV + portail captif HS. Cache `/var/cache/nginx/neopro_videos` requis par neopro-hls.conf jamais créé. | PR #956 | smoke-pi-nginx-cleanup-incident-2026-05-10 |
