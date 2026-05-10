@@ -596,21 +596,26 @@ export class DeploymentStatusComponent implements OnDestroy {
           return;
         }
 
-        this.sitesService.syncProfiles(this.siteId).subscribe({
+        // Audit profils 2026-05-10 (Phase A1) — on appelle deployProfile au
+        // lieu de syncProfiles : deployProfile cree une version dans
+        // config_history, met a jour pending_config_sync_until, et envoie
+        // update_config + sync_profiles au Pi. C'est le seul chemin qui
+        // garantit la trace d'historique pour debugger une MAJ perdue.
+        this.sitesService.deployProfile(this.siteId, this.selectedProfileId).subscribe({
           next: () => {
             this.deploying = false;
             this.deployStatus = 'success';
             this.showDiffModal = false;
-            this.notificationService.success('Configuration sauvegardee et profils synchronises !');
+            this.notificationService.success('Configuration sauvegardee et deployee sur le Pi !');
             this.deployed.emit();
             this.cdr.markForCheck();
           },
-          error: (syncError) => {
+          error: (deployError) => {
             this.deploying = false;
             this.deployStatus = 'error';
-            const message = ErrorExtractor.getMessage(syncError);
+            const message = ErrorExtractor.getMessage(deployError);
             this.deployError = message;
-            this.notificationService.warning('Configuration sauvegardee, mais la synchronisation vers le Pi a echoue.');
+            this.notificationService.warning('Configuration sauvegardee, mais le deploiement vers le Pi a echoue.');
             this.deployed.emit();
             this.cdr.markForCheck();
           }
