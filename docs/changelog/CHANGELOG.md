@@ -1,3 +1,13 @@
+# [3.301.0](https://github.com/Tallec7/neopro/compare/v3.300.16...v3.301.0) (2026-05-10)
+
+### Bug Fixes
+
+- **ci:** bypass pre-push hook on main for semantic-release ([#946](https://github.com/Tallec7/neopro/issues/946)) ([3d524ee](https://github.com/Tallec7/neopro/commit/3d524ee68ae989d12f3599125c8475819e663ffe))
+
+### Features
+
+- **claude:** couches 3 + 4 enforcement (5 hooks + Bash allowlist + INCIDENT-LOG) ([#944](https://github.com/Tallec7/neopro/issues/944)) ([0ce78cd](https://github.com/Tallec7/neopro/commit/0ce78cd65fbc6df8ab77ee2eda1c6ce20af97152)), closes [#935](https://github.com/Tallec7/neopro/issues/935) [#939](https://github.com/Tallec7/neopro/issues/939)
+
 ## [3.300.16](https://github.com/Tallec7/neopro/compare/v3.300.15...v3.300.16) (2026-05-09)
 
 ### Bug Fixes
