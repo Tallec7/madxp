@@ -20,6 +20,7 @@
     "audit:orphan-sponsors": "ts-node src/scripts/audit-orphan-site-sponsors.ts",
     "audit:variants-drift": "ts-node src/scripts/audit-variants-drift.ts",
     "audit:ftp-legacy": "ts-node src/scripts/audit-ftp-legacy-videos.ts",
+    "audit:profile-filename-orphans": "ts-node src/scripts/audit-config-profile-filename-orphans.ts",
     "template:import": "ts-node src/scripts/import-template-spec.ts",
     "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
     "template:test-bbox": "ts-node src/scripts/test-png-bbox.ts",
