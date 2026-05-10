@@ -98,21 +98,41 @@ Option B — Manuellement dans `~/.claude/settings.json` (fichier global hors pr
 
 ---
 
-## Accès futurs planifiés
+## Accès futurs — à faire par Daisy (couche 3 bloqués infra)
 
-### MCP SSH (Pi) — J+6-10
+### SSH NLF read-only — priorité haute
 
-Permettrait à Claude de diagnostiquer un Pi directement :
-- lire les logs journald
-- vérifier l'état du sync-agent
-- voir le contenu de `configuration.json`
+Permettrait à Claude de lire les logs Pi NLF sans demander à Daisy.
 
-Setup : `claude mcp add ssh-pi ssh -- pi@<IP_PI>` (nécessite clé SSH configurée)
+```bash
+# 1. Créer un wrapper npm dans package.json racine
+# "pi:logs:nlf": "ssh pi@<IP_NLF> 'journalctl -u sync-agent -n 100 --no-pager'"
 
-### MCP Prometheus — Backlog
+# 2. Ajouter à l'allowlist .claude/settings.json :
+# "Bash(npm run pi:logs:nlf)"
+
+# 3. Prérequis : clé SSH de la machine dev autorisée sur le Pi NLF
+ssh-copy-id pi@<IP_NLF>
+```
+
+### MCP Railway logs — priorité moyenne
+
+Permettrait à Claude de lire les logs Railway en temps réel.
+
+```bash
+# Option A — alias bash autorisé
+# Ajouter dans package.json : "railway:logs": "railway logs --tail"
+# Puis allowlist : "Bash(npm run railway:logs)"
+
+# Option B — MCP Railway (si disponible)
+# claude mcp add railway-logs npx -- -y @railway/mcp
+```
+
+### MCP Prometheus — backlog
 
 Permettrait à Claude de requêter les métriques Grafana pour diagnostiquer
-un incident avant de coder un fix.
+un incident avant de coder un fix. Non prioritaire tant que SSH + Railway logs
+ne sont pas en place.
 
 ---
 
