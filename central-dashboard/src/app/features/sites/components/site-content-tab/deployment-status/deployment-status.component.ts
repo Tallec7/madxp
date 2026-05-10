@@ -537,7 +537,7 @@ export class DeploymentStatusComponent implements OnDestroy {
     this.expandedDiffItems = {};
     this.cdr.markForCheck();
 
-    this.sitesService.previewConfigDiff(this.siteId, this.config).subscribe({
+    this.sitesService.previewConfigDiff(this.siteId, this.config, this.selectedProfileId || undefined).subscribe({
       next: (response) => {
         this.rawDiffItems = response.diff || [];
         this.diffLoading = false;

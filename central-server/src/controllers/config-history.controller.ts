@@ -322,7 +322,7 @@ function normalizeForComparison(obj: unknown): unknown {
 export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { newConfiguration } = req.body;
+    const { newConfiguration, profileId } = req.body;
 
     if (!newConfiguration) {
       return res.status(400).json({ error: 'Nouvelle configuration requise' });
@@ -337,8 +337,20 @@ export const previewConfigDiff = async (req: AuthRequest, res: Response) => {
 
     const localConfigMirror = siteRow.local_config_mirror;
 
-    // Si pas de config locale, fallback sur config_profiles (SaaS) puis config_history
-    let currentConfig: Record<string, unknown> | null = localConfigMirror;
+    // Si un profileId est fourni, utiliser la config du profil comme baseline (issue #962).
+    // Cela évite de comparer contre le profil actif sur le Pi quand on édite un profil différent.
+    let currentConfig: Record<string, unknown> | null = null;
+    if (profileId) {
+      const profile = await configProfileRepository.findById(profileId);
+      if (profile && profile.site_id === id) {
+        currentConfig = profile.configuration as Record<string, unknown>;
+      }
+    }
+
+    // Sinon fallback : mirror Pi → config_profiles (SaaS) → config_history
+    if (!currentConfig) {
+      currentConfig = localConfigMirror;
+    }
     if (!currentConfig) {
       const site = await siteRepository.findById(id);
       if (site?.site_type === 'saas') {

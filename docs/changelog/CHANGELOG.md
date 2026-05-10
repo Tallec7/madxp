@@ -1,3 +1,9 @@
+## [3.301.8](https://github.com/Tallec7/neopro/compare/v3.301.7...v3.301.8) (2026-05-10)
+
+### Bug Fixes
+
+- **config-history:** previewConfigDiff baseline = profil édité, pas mirror Pi ([#961](https://github.com/Tallec7/neopro/issues/961)+[#962](https://github.com/Tallec7/neopro/issues/962)) ([#963](https://github.com/Tallec7/neopro/issues/963)) ([f1d8e27](https://github.com/Tallec7/neopro/commit/f1d8e2778bbc2eb912e1b10255e29d738cd4da9a)), closes [#960](https://github.com/Tallec7/neopro/issues/960) [935/#939](https://github.com/Tallec7/neopro/issues/939) [936/#940](https://github.com/Tallec7/neopro/issues/940) [937/#941](https://github.com/Tallec7/neopro/issues/941) [955/#956](https://github.com/Tallec7/neopro/issues/956) [954/#960](https://github.com/Tallec7/neopro/issues/960) [947/#952](https://github.com/Tallec7/neopro/issues/952)
+
 ## [3.301.7](https://github.com/Tallec7/neopro/compare/v3.301.6...v3.301.7) (2026-05-10)
 
 ### Bug Fixes
