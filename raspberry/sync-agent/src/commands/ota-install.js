@@ -243,6 +243,9 @@ async function extractAndInstall(packagePath, version, stepTracker) {
 
     // Copier server
     if (await fs.pathExists(path.join(sourcePath, 'server'))) {
+      // Fix ownership avant cp : un déploiement manuel depuis macOS laisse les fichiers
+      // en uid 501/staff, rendant le répertoire non-writable par pi → Permission denied.
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/server`).catch(() => {});
       await execAsync(`cp -r ${path.join(sourcePath, 'server')}/* ${rootDir}/server/`);
       logger.info('Server updated');
     }
@@ -281,6 +284,7 @@ async function extractAndInstall(packagePath, version, stepTracker) {
 
       // Copier les nouveaux fichiers
       await fs.ensureDir(path.join(rootDir, 'sync-agent'));
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/sync-agent`).catch(() => {});
       await execAsync(`cp -r ${path.join(sourcePath, 'sync-agent')}/* ${rootDir}/sync-agent/`);
       logger.info('Sync-agent updated');
 
@@ -300,6 +304,7 @@ async function extractAndInstall(packagePath, version, stepTracker) {
     // Copier admin si présent
     if (await fs.pathExists(path.join(sourcePath, 'admin'))) {
       await fs.ensureDir(path.join(rootDir, 'admin'));
+      await execAsync(`sudo chown -R pi:pi ${rootDir}/admin`).catch(() => {});
       await execAsync(`cp -r ${path.join(sourcePath, 'admin')}/* ${rootDir}/admin/`);
       logger.info('Admin panel updated');
     }
