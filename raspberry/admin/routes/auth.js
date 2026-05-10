@@ -14,6 +14,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const { NEOPRO_DIR } = require('../helpers');
+const { atomicWriteJson } = require('../atomic-write');
 
 // ADR-073 S4 — scrypt password hashing with auto-migration from clear text.
 // Format stocké : `scrypt:<salt-hex>:<key-hex>` (64 bytes derived key).
@@ -56,7 +57,9 @@ async function persistHashedPassword(hashedPassword) {
   // auth.adminPassword = champ exclusif du panel admin (scrypt)
   // auth.password = champ de la remote Angular (plain text depuis central) — ne pas toucher
   config.auth.adminPassword = hashedPassword;
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+  // Ecriture atomique tmp+rename (ADR-028) — evite la corruption JSON si un
+  // sync-agent applyProfile s'execute en parallele.
+  await atomicWriteJson(configPath, config);
 }
 
 const router = express.Router();

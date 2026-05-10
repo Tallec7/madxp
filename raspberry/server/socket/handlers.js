@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const createStateBroadcaster = require('./state-broadcaster');
+const { atomicWriteJsonSync, atomicWriteTextSync } = require('../atomic-write');
 
 /**
  * Register all Socket.IO event handlers.
@@ -369,8 +370,8 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
           return;
         }
 
-        // Mettre a jour le marqueur de profil actif
-        fs.writeFileSync(activeProfilePath, profileId, 'utf8');
+        // Mettre a jour le marqueur de profil actif (ecriture atomique tmp+rename)
+        atomicWriteTextSync(activeProfilePath, profileId);
 
         // Lire le profil
         const profileData = fs.readFileSync(profilePath, 'utf8');
@@ -397,8 +398,10 @@ module.exports = function registerSocketHandlers({ io, stateService, configPath,
           }
         }
 
-        // Persister dans configuration.json pour cohérence avec config_updated
-        fs.writeFileSync(configPath, JSON.stringify(mergedConfig, null, 2), 'utf8');
+        // Persister dans configuration.json pour cohérence avec config_updated.
+        // Ecriture atomique tmp+rename (ADR-028) pour eviter la corruption JSON
+        // sur power-loss ou concurrent writer (sync-agent applyProfile).
+        atomicWriteJsonSync(configPath, mergedConfig);
 
         // Monitoring: incrémenter les métriques de profile-switch
         stateService.updateTransitionMetrics({
