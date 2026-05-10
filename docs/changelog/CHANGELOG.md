@@ -1,3 +1,9 @@
+## [3.301.7](https://github.com/Tallec7/neopro/compare/v3.301.6...v3.301.7) (2026-05-10)
+
+### Bug Fixes
+
+- **ota:** cleanup legacy nginx symlink + ensure cache dir (incident RACC 2026-05-10) ([#956](https://github.com/Tallec7/neopro/issues/956)) ([8e541e9](https://github.com/Tallec7/neopro/commit/8e541e90b41a77f372ca47e2fb445019244a9323)), closes [#955](https://github.com/Tallec7/neopro/issues/955)
+
 ## [3.301.6](https://github.com/Tallec7/neopro/compare/v3.301.5...v3.301.6) (2026-05-10)
 
 ### Bug Fixes
