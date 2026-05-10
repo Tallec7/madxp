@@ -26,7 +26,8 @@
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__github__pull_request_read"
     ]
   }
 }
