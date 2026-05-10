@@ -1,3 +1,9 @@
+## [3.301.5](https://github.com/Tallec7/neopro/compare/v3.301.4...v3.301.5) (2026-05-10)
+
+### Bug Fixes
+
+- **dashboard:** use deployProfile for profile saves (audit Phase A1) ([#954](https://github.com/Tallec7/neopro/issues/954)) ([97758ca](https://github.com/Tallec7/neopro/commit/97758ca2ac6e79c33fb3dd13b9f45593bf6221bb)), closes [#953](https://github.com/Tallec7/neopro/issues/953)
+
 ## [3.301.4](https://github.com/Tallec7/neopro/compare/v3.301.3...v3.301.4) (2026-05-10)
 
 ### Bug Fixes
