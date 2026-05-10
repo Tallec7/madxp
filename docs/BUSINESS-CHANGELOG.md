@@ -8,6 +8,35 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (rattrapage [#935→#960](https://github.com/Tallec7/neopro/pull/960) + fix diff profil #961+#962)
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Aperçu des changements affiche enfin les vraies modifs** ([#935→#960](https://github.com/Tallec7/neopro/pull/960)) — sur NLF (2 profils : NLF Handball + Lanester), la modal "Aperçu des changements" comparait le profil édité contre le profil actif sur le Pi. Retirer 1 vidéo dans Lanester = 25 changements affichés au lieu de 1. Fix : la baseline du diff est maintenant la config du profil édité (depuis la DB), pas le miroir du Pi. La modal montre enfin uniquement les modifications réelles de l'utilisateur. (ADR-116, PR #961+#962 session actuelle)
+- **Switch de profil Pi : plus d'accumulation de catégories entre profils** — à chaque switch profil A → profil B sur le Pi, les catégories de A s'accumulaient avec celles de B (4+3=7 catégories au lieu de 3). Fix livré via OTA : `sync-profiles.js` repart d'une ardoise propre au lieu de fusionner avec l'ancien profil.
+- **Photos / vignettes sur la télécommande Pi : plus de 404** ([#948](https://github.com/Tallec7/neopro/pull/948)) — les thumbnails des vidéos n'apparaissaient pas sur la télécommande Pi (page `/remote`) à cause d'un conflit de règles nginx. Nginx servait les images depuis le mauvais dossier.
+- **Vidéos plus jamais cachées en 404 par le navigateur** ([#951](https://github.com/Tallec7/neopro/pull/951)) — si une vidéo était demandée par le kiosk avant que le sync-agent ne l'ait téléchargée (race FTP → config), le navigateur Chromium mettait la réponse 404 en cache 30 jours (directive `immutable`). La vidéo restait invisible même après correction. Directive retirée sur le bloc `/videos/`.
+- **Fire Stick : image TV plus en retard sur le scoring live** ([#936](https://github.com/Tallec7/neopro/pull/936)) — sur les sites avec un Pi kiosk + un Fire Stick en receiver LAN, l'affichage du score sur le Fire Stick accusait un retard (slave lag). Synchronisation corrigée.
+- **Portail captif offline** ([#937](https://github.com/Tallec7/neopro/pull/937) / [#941](https://github.com/Tallec7/neopro/pull/941)) — deux correctifs sur le mode captive portal (Fire Stick sans internet club) : réponse `204` correcte pour Android + passthrough browsers/tablettes vers `/remote` sans forcer l'enregistrement MAC (opérateurs et staff n'ont plus à s'enregistrer comme un écran TV).
+- **Chemins vidéos normalisés lors de l'envoi de config** ([#935](https://github.com/Tallec7/neopro/pull/935) / [#939](https://github.com/Tallec7/neopro/pull/939)) — certaines vidéos référencées avec un chemin relatif dans la config n'étaient pas trouvées par le Pi après un `update_config`. Les chemins sont maintenant préfixés et normalisés côté cloud avant envoi. Correctif suite à incident NLF.
+
+### 🛡️ Pour la robustesse
+
+- **Commandes en attente vidées toutes les 30s** ([#940](https://github.com/Tallec7/neopro/pull/940)) — si un Pi se reconnectait alors que plusieurs commandes étaient en file d'attente, elles pouvaient rester bloquées. Nouveau drain automatique toutes les 30s.
+- **OTA Pi : fichiers appartenant à root corrigés avant copie** ([#950](https://github.com/Tallec7/neopro/pull/950)) — après certaines OTA, des fichiers (`server/`, `sync-agent/`, `admin/`) appartenaient à `root:root` au lieu de `pi:pi`, ce qui bloquait la prochaine OTA silencieusement. Correction de propriété automatique ajoutée.
+- **OTA Pi : lien nginx obsolète nettoyé + dossier cache créé** ([#956](https://github.com/Tallec7/neopro/pull/956)) — incident RACC 2026-05-10 : un lien symbolique nginx legacy + un dossier cache manquant bloquaient le démarrage nginx post-OTA.
+- **Timeout Railway staging augmenté à 300s** ([#955](https://github.com/Tallec7/neopro/pull/955)) — le healthcheck Railway staging échouait à 100s sur les boots à froid (chargement des migrations + pool DB). Plus de faux déploiements en échec.
+- **Écriture atomique de `configuration.json` sur le Pi** ([#953](https://github.com/Tallec7/neopro/pull/953)) — en cas de crash mid-write, le fichier pouvait être corrompu (JSON partiel). Les écritures passent maintenant par un fichier temporaire + rename atomique (pattern ADR-028 étendu au sync-profiles).
+- **Déploiement profil Pi corrigé (audit Phase A1)** ([#954](https://github.com/Tallec7/neopro/pull/954)) — le bouton "Sauvegarder" dans l'éditeur de profil utilisait `updateConfig` au lieu de `deployProfile`. Le Pi ne recevait pas le bon contenu.
+
+### 🧹 Pour l'équipe
+
+- **Outillage Claude renforcé** ([#942→#952](https://github.com/Tallec7/neopro/pull/952)) — 6 PRs d'amélioration continue : archive GSD + trim CLAUDE.md (#942), backfill `last_verified` sur 11 SPECs critiques (#943), 5 hooks git + Bash allowlist + INCIDENT-LOG (#944), MCP postgres-readonly opérationnel (#945), bypass pre-push sur semantic-release (#946), hook end-session (#952). Les sessions Claude sont plus encadrées et le dérapage doc impossible à rater.
+- **Audit script orphelins `_N` dans `config_profiles`** ([#947](https://github.com/Tallec7/neopro/pull/947)) — script read-only qui détecte les noms de fichiers `video_N.mp4` orphelins accumulés par les re-uploads répétés (cause racine de plusieurs incidents NLF). Audit à relancer avant tout chantier de cleanup vidéo.
+- **Audit Pi profils : 4ème chemin cloud couvert** ([#960](https://github.com/Tallec7/neopro/pull/960)) — `saveConfigVersion` identifié comme 4ème source d'écriture de `config_profiles` sans zeroing des catégories. Ajouté à l'audit pour bloquer la récidive post-OTA.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#934](https://github.com/Tallec7/neopro/pull/934))
 
 ### 🎯 Pour le club (NLF, prospects)
