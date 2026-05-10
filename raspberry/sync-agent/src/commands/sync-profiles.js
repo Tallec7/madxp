@@ -155,9 +155,19 @@ async function applyProfile(profileId) {
   const profileContent = await fs.readFile(profilePath, 'utf8');
   const profileConfig = JSON.parse(profileContent);
 
-  // Merge : le profil remplace les champs manages, les settings locaux sont preserves
+  // Lors d'un switch de profil, les categories/sponsors/timeCategories doivent venir
+  // entierement du nouveau profil (pas de fusion avec l'ancien profil).
+  // On zeroise ces champs avant de passer localConfig a mergeConfigurations pour
+  // eviter que mergeCategories step-2 preserve les categories de l'ancien profil
+  // (bug: 4 cats profil A + 3 cats profil B = 7 cats accumules — issue #961).
+  // Les LOCAL_ONLY_SETTINGS (settings, siteId, auth, etc.) sont preserves normalement.
+  const localConfigForSwitch = { ...localConfig };
+  delete localConfigForSwitch.categories;
+  delete localConfigForSwitch.sponsors;
+  delete localConfigForSwitch.timeCategories;
+
   const hashBefore = calculateConfigHash(localConfig);
-  const finalConfig = mergeConfigurations(localConfig, profileConfig);
+  const finalConfig = mergeConfigurations(localConfigForSwitch, profileConfig);
   const hashAfter = calculateConfigHash(finalConfig);
 
   // Ecrire la configuration fusionnee (atomique : tmp + rename, ADR-028)

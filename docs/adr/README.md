@@ -129,6 +129,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-113](ADR-113-ftp-creds-rotation-procedure.md)                              | Procédure de rotation manuelle des credentials FTP Hostinger (cadence 90j, audit P0 #2)      | Accepté                           | Mai 2026 |
 | [ADR-114](ADR-114-displays-write-through-configuration-json.md)                 | Write-through `configuration.json.displays` côté sync-agent (fix propagation MAC → captive)  | Accepté                           | Mai 2026 |
 | [ADR-115](ADR-115-auth-preserved-on-sync.md)                                    | Préservation du bloc `auth` du Pi contre les sync de profils cloud à `auth: {}`              | Accepté                           | Mai 2026 |
+| [ADR-116](ADR-116-preview-diff-profile-baseline.md)                             | Baseline du diff `previewConfigDiff` = profil édité (pas mirror Pi) + fix accumulation cats  | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
