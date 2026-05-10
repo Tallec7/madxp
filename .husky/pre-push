@@ -9,6 +9,16 @@ url="$2"
 while read local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
 
+  # Hook 1 : bloquer push direct sur main/master
+  if [ "$remote_ref" = "refs/heads/main" ] || [ "$remote_ref" = "refs/heads/master" ]; then
+    echo ""
+    echo "❌ BLOCK: push direct sur main interdit (branche protégée)."
+    echo "   Ouvre une PR depuis ta branche feature."
+    echo "   Urgence absolue uniquement : git push --no-verify"
+    echo ""
+    exit 1
+  fi
+
   if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
     range_base=$(git merge-base "$local_sha" origin/main 2>/dev/null || echo "")
     [ -z "$range_base" ] && continue
