@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`)
 > **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression

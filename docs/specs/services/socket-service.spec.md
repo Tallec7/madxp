@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-25
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal** :
 > - `central-server/src/services/socket.service.ts` (orchestrateur 991 lignes)
 > - `central-server/src/handlers/*.handler.ts` (10 handlers extraits)

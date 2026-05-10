@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-05-08
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal** :
 >
 > - `raspberry/sync-agent/src/command-dispatch.js` (handler `receiver_assignment_updated` + write-through)

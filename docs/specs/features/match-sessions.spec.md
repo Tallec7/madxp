@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **ADR liés** : ADR-088 (scoreboard SaaS-first), ADR-093 (persistance sessions + historique), ADR-097 (extraction CRON tasks)
 > **Smoke tests** : `smoke-prop003-scoreboard.test.ts`, `smoke-scoreboard-saas.test.ts`
 > **`.claude/rules/` lié** : `match.md`

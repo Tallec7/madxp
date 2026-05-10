@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Proposed (ADR-110, à implémenter)
 > **Dernière revue** : 2026-05-05
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal (futur)** :
 > - `central-dashboard/src/app/features/content/remotion-templates/studio-v3/` — module Angular wizard + asset manager + validation
 > - `central-server/src/controllers/template-studio.controller.ts` — endpoints duplicate/validate/test-render

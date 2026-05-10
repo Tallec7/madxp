@@ -3,6 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live (phases 1-5a déployées 2026-04-19) — Phase 5b programmée 2026-06-15 (suppression `club-config.json` conditionnée à 100% flotte bootstrappée)
 > **Dernière revue** : 2026-04-27
+> **last_verified** : 2026-05-10
+> **verified_against_commit** : 1890d43
 > **Code principal** :
 >
 > **Cloud (central-server)** — source unique de vérité :

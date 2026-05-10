@@ -45,6 +45,9 @@ cookies.txt
 *.cookies
 .git-backup/
 
+# Claude Code local settings (peut contenir des connection strings MCP)
+.claude/settings.local.json
+
 # Excel lock/temp files
 ~$*.xlsx
 .~lock.*#
