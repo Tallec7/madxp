@@ -1,3 +1,9 @@
+## [3.301.3](https://github.com/Tallec7/neopro/compare/v3.301.2...v3.301.3) (2026-05-10)
+
+### Bug Fixes
+
+- **nginx:** remove immutable from /videos/ Cache-Control to prevent 404 caching ([#951](https://github.com/Tallec7/neopro/issues/951)) ([faf72fa](https://github.com/Tallec7/neopro/commit/faf72fa732c3a1340edf144286ef291649127260))
+
 ## [3.301.2](https://github.com/Tallec7/neopro/compare/v3.301.1...v3.301.2) (2026-05-10)
 
 ### Bug Fixes
