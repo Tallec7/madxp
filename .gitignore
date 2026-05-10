@@ -73,3 +73,7 @@ _incoming/
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/plugins/dataview/
+
+# Local working directories (GSD, worktrees)
+.planning/
+neopro-bc-*/
