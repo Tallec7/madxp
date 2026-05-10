@@ -1,3 +1,9 @@
+## [3.301.2](https://github.com/Tallec7/neopro/compare/v3.301.1...v3.301.2) (2026-05-10)
+
+### Bug Fixes
+
+- **ota:** chown pi:pi before cp on server/, sync-agent/, admin/ ([#950](https://github.com/Tallec7/neopro/issues/950)) ([91295ab](https://github.com/Tallec7/neopro/commit/91295ab4b19c4a5e466a6e98baa2e480daf12bde))
+
 ## [3.301.1](https://github.com/Tallec7/neopro/compare/v3.301.0...v3.301.1) (2026-05-10)
 
 ### Bug Fixes
