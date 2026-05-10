@@ -50,6 +50,7 @@
 46. [MediaPlaybackError Zone.js dans la console (v3.216+)](#mediaplaybackerror-zonejs-dans-la-console-v3216)
 47. [Preview Remotion v2 noir — 1 486 requêtes CORB bloquées (v3.216+)](#preview-remotion-v2-noir--1-486-requêtes-corb-bloquées-v3216)
 48. [429 burst sur /api/groups et /api/logs/frontend au chargement du dashboard (v3.217.3+)](#429-burst-sur-apigroups-et-apilogsfrontend-au-chargement-du-dashboard-v32173)
+49. [Vidéo bloquée sur 404 pendant 30 jours dans le navigateur (Cache-Control immutable)](#vidéo-bloquée-sur-404-pendant-30-jours-dans-le-navigateur-cache-control-immutable--v3301)
 
 > **WiFi USB** : Pour un guide complet sur la clé WiFi USB (installation, diagnostic, pannes, recovery), voir [WIFI_USB_GUIDE.md](WIFI_USB_GUIDE.md).
 >
@@ -7017,3 +7018,65 @@ sudo systemctl restart dnsmasq
 
 - Rediriger `www.apple.com`, `play.googleapis.com` ou `clients3.google.com` dans dnsmasq → iOS/Android coupent le routage (smoke test enforced dans `smoke-kiosk-pi`)
 - Laisser `fix-hotspot.sh --auto-fix` redémarrer hostapd si déjà UP → éjecte les clients
+
+---
+
+## Vidéo bloquée sur 404 pendant 30 jours dans le navigateur (Cache-Control immutable) — v3.301+
+
+### Symptôme
+
+Un navigateur PC/Mac (Chrome, Arc, Firefox) affiche `Cannot GET /videos/default/VIDEO.mp4` ou une vidéo gelée sur fond noir alors que :
+
+- Le fichier existe bien sur le Pi (`ls /home/pi/neopro/videos/default/`)
+- `curl http://neopro.local/videos/default/VIDEO.mp4` retourne 200
+- Le kiosk Chromium du Pi lui-même joue la vidéo sans problème
+
+### Cause racine
+
+Avant v3.301.2 (PR #951), nginx sur le Pi renvoyait :
+
+```
+Cache-Control: public, max-age=2592000, immutable
+```
+
+sur les réponses `/videos/`. La directive `immutable` signifie au navigateur : _"ce fichier ne changera jamais, inutile de re-vérifier, même sur F5"_. C'est conçu pour les assets à content-hash (JS/CSS Angular comme `main-2HJWD6AD.js`).
+
+**Le piège** : nginx avait aussi `always` sur ce header, ce qui propageait `Cache-Control: immutable` **même sur les réponses 404**. Or les fichiers `.mp4` ont des noms fixes (pas de content-hash). Si un navigateur demande le fichier pendant une OTA en cours (sync-agent n'a pas encore téléchargé le fichier), il reçoit un 404 — et ce 404 est mis en cache pour 30 jours. Les rechargements suivants servent le 404 depuis le cache local sans contacter le Pi.
+
+Le kiosk Pi n'était pas affecté car Chromium en mode kiosk a un profil de cache différent (et les vidéos viennent directement de `/home/pi/neopro/videos/` via admin-server, jamais d'un 404).
+
+### Solution (v3.301.2+)
+
+Depuis PR #951, nginx utilise :
+
+```
+Cache-Control: public, max-age=86400
+```
+
+Sans `immutable` (les 404 expirent en 24h max) et sans `always` (les erreurs n'héritent plus du header).
+
+### Remédiation immédiate si affecté
+
+```bash
+# Sur le navigateur PC/Mac affecté
+# Chrome / Arc : ouvrir DevTools → Network → cocher "Disable cache"
+# puis recharger neopro.local — ou :
+# chrome://settings/clearBrowserData → Images et fichiers en cache
+
+# Firefox : Ctrl+Shift+Delete → Cache
+```
+
+Alternativement, sur le Pi : forcer un rechargement (le 404 n'est caché que côté navigateur, pas côté Pi) :
+
+```bash
+# Vérifier que le fichier existe bien
+ls -la /home/pi/neopro/videos/default/VIDEO.mp4
+
+# Vérifier qu'admin-server sert bien le fichier
+curl -I http://127.0.0.1:8080/videos/default/VIDEO.mp4
+# Doit retourner HTTP/1.1 200 OK
+```
+
+### Piège connexe : `immutable` sur les assets Angular
+
+Les fichiers JS/CSS Angular (`*.js`, `*.css`) GARDENT `immutable` — c'est correct car leurs noms contiennent un content-hash (`main-2HJWD6AD.js`). Un même nom → même contenu, garanti. **Ne pas retirer `immutable` des blocs `~* \.(js|mjs|css|...)$`** dans la config nginx Pi.

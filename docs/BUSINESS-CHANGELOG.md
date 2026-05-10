@@ -8,6 +8,36 @@
 
 ---
 
+## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-10, PR [#951](https://github.com/Tallec7/neopro/pull/951))
+
+### 🛡️ Pour la robustesse
+
+- **Vidéo bloquée sur 404 pendant 30 jours dans un navigateur — corrigée** ([#951](https://github.com/Tallec7/neopro/pull/951)) — sur Chrome/Arc/Firefox connecté à `neopro.local`, une vidéo demandée pendant une OTA en cours (fichier pas encore téléchargé) recevait un 404 qui était mis en cache 30 jours (directive `immutable` mal positionnée sur les `.mp4`). Toutes les tentatives suivantes servaient le 404 depuis le cache local — même après que l'OTA était terminée et le fichier disponible. Seul le kiosk Pi était épargné. Fix : retrait de `immutable` et du flag `always` sur le bloc `/videos/` nginx (24h de cache sans blocage permanent sur erreur). Les assets Angular JS/CSS gardent `immutable` — leurs noms contiennent un content-hash, la garantie est donc valide.
+
+---
+
+## Semaine 19 — 5-11 Mai 2026 (rattrapage [#935→#950](https://github.com/Tallec7/neopro/pull/950))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Fire Stick sur Pi hors-internet : connexion Wi-Fi immédiate sans message "réseau limité"** ([#937](https://github.com/Tallec7/neopro/pull/937)) — incident terrain Mangin-Beaulieu : Fire OS récents refusaient de se connecter au hotspot Pi quand le Pi n'avait pas d'accès internet. Fix double : la sonde réseau Fire OS reçoit désormais une vraie réponse 204 (réseau valide), et tous les DNS inconnus sont redirigés vers le Pi (zéro timeout inutile).
+- **Fire Stick : sync écran → contenu ultra-rapide** ([#936](https://github.com/Tallec7/neopro/pull/936)) — lag résiduel entre le kiosk Pi et les receivers Fire Stick LAN corrigé. Les deux écrans progressent en même temps dans la playlist.
+- **Tablettes et navigateurs PC : accès direct à la télécommande sans enregistrement MAC** ([#941](https://github.com/Tallec7/neopro/pull/941)) — les appareils non-Fire Stick (iPad, PC) tombaient dans le flow captif Fire Stick et ne pouvaient pas accéder à `/remote`. Désormais les navigateurs de bureau/tablette sont détectés et redirigés directement vers la télécommande.
+- **Vidéos dans le dossier `videos/default/` : noms de fichiers corrigés avant envoi au Pi** ([#935](https://github.com/Tallec7/neopro/pull/935), [#939](https://github.com/Tallec7/neopro/pull/939)) — incident NLF : les chemins de vidéos envoyés par le dashboard au Pi contenaient parfois des préfixes doubles ou manquants, causant des "vidéos introuvables" côté TV. Fix en deux volets : normalisation des chemins avant envoi, puis préfixage correct pour les catégories `videos/default/`.
+
+### 🛡️ Pour la robustesse
+
+- **Assignation Fire Stick → écran propagée en ≤ 30 s même si le Pi était déconnecté** ([#940](https://github.com/Tallec7/neopro/pull/940)) — les commandes en file d'attente n'étaient drainées qu'à la reconnexion socket du Pi. Nouveau CRON 30s qui vide la queue pour tous les sites connectés en continu.
+- **Thumbnails Pi : plus de 404 sur la page Remote** ([#948](https://github.com/Tallec7/neopro/pull/948)) — les vignettes de vidéos s'affichaient en erreur 404 sur la page Remote (`/remote`) du Pi car la regex nginx `.jpg` prenait la priorité sur le bloc `/thumbnails/`. Fix : ajout de `^~` sur la location `/thumbnails/` pour stopper l'évaluation des regex.
+- **Script d'audit `_N` orphelins dans les profils de config** ([#947](https://github.com/Tallec7/neopro/pull/947)) — chaque re-upload d'une vidéo suffixait le nom du fichier (`VIDEO_1.mp4`, `VIDEO_2.mp4`, etc.) sans retirer les références aux versions précédentes dans les profils. Un script d'audit détecte maintenant ces orphelins en DB.
+
+### 🧹 Pour l'équipe
+
+- **SPECs métier vérifiées et datées** ([#943](https://github.com/Tallec7/neopro/pull/943)) — 11 SPECs critiques ont reçu un backfill `last_verified` pour suivre leur fraîcheur. Permet de détecter une SPEC qui dérive sans que personne ne s'en rende compte.
+- **Hooks Claude Code + allowlist Bash** ([#942](https://github.com/Tallec7/neopro/pull/942), [#944](https://github.com/Tallec7/neopro/pull/944)) — 5 hooks end-session et une allowlist des commandes Bash autorisées pour Claude. Réduit les faux mouvements dans les sessions automatisées.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (suite — 2026-05-09, PR [#934](https://github.com/Tallec7/neopro/pull/934))
 
 ### 🎯 Pour le club (NLF, prospects)
