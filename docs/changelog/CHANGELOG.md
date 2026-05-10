@@ -1,3 +1,9 @@
+## [3.301.4](https://github.com/Tallec7/neopro/compare/v3.301.3...v3.301.4) (2026-05-10)
+
+### Bug Fixes
+
+- **pi:** atomic writes on configuration.json (audit profils 2026-05-10) ([#953](https://github.com/Tallec7/neopro/issues/953)) ([31de9f6](https://github.com/Tallec7/neopro/commit/31de9f60cb90761cc45e14cea2d70518c9aed9bc))
+
 ## [3.301.3](https://github.com/Tallec7/neopro/compare/v3.301.2...v3.301.3) (2026-05-10)
 
 ### Bug Fixes
