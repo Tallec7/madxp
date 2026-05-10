@@ -613,6 +613,41 @@ async function extractAndInstall(packagePath, version, stepTracker) {
       try {
         const confFiles = (await fs.readdir(nginxDir)).filter(f => f.endsWith('.conf'));
         let nginxChanged = false;
+
+        // Incident RACC 2026-05-10 : install.sh::configure_nginx (chemin historique)
+        // crée /etc/nginx/sites-enabled/neopro (symlink legacy singulier). L'OTA
+        // déploie les nouveaux fichiers (neopro-base, neopro-hls, firestick-captive)
+        // mais ne supprimait pas le legacy → 2 servers `default_server` en parallèle
+        // → nginx refuse de start au prochain reload, TV et portail captif HS.
+        // Cleanup défensif AVANT le déploiement : si on s'apprête à installer
+        // neopro-base.conf, on retire le legacy `neopro` (le contenu équivalent
+        // sera servi par neopro-base à partir de cet OTA).
+        const deploysNeoproBase = confFiles.includes('neopro-base.conf');
+        if (deploysNeoproBase) {
+          try {
+            await execAsync('sudo rm -f /etc/nginx/sites-enabled/neopro');
+            logger.info('Legacy nginx symlink /etc/nginx/sites-enabled/neopro removed (incident RACC 2026-05-10)');
+          } catch (e) {
+            logger.warn('Failed to remove legacy nginx symlink (non-blocking)', { error: e.message });
+          }
+        }
+
+        // Incident RACC 2026-05-10 : neopro-hls.conf déclare un proxy_cache_path
+        // sur /var/cache/nginx/neopro_videos qui n'existe pas par défaut sur les
+        // Pi installés avant l'arrivée de neopro-hls. nginx refuse de start tant
+        // que le dossier n'est pas créé. Idempotent : mkdir -p ne casse rien si
+        // déjà présent.
+        const deploysNeoproHls = confFiles.includes('neopro-hls.conf');
+        if (deploysNeoproHls) {
+          try {
+            await execAsync('sudo mkdir -p /var/cache/nginx/neopro_videos');
+            await execAsync('sudo chown www-data:www-data /var/cache/nginx/neopro_videos');
+            logger.info('Nginx cache dir /var/cache/nginx/neopro_videos ensured (incident RACC 2026-05-10)');
+          } catch (e) {
+            logger.warn('Failed to ensure nginx cache dir (non-blocking)', { error: e.message });
+          }
+        }
+
         for (const conf of confFiles) {
           const src = path.join(nginxDir, conf);
           const siteName = conf.replace(/\.conf$/, '');
