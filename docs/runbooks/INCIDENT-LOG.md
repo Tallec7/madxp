@@ -1,27 +1,39 @@
 # Incident Log
 
-> Tracking des incidents prod (cf. [OPS-04](OPS-04-pi-offline-massif.md), [OPS-01](OPS-01-rollback-prod.md)).
-> Format : 1 ligne par incident, lien vers postmortem si disponible.
+> Tracking des incidents prod. 1 ligne par incident, complété après chaque fix.
+> Cf. template session : `docs/internal/prompts/incident.md`
 
 ## Format
 
 ```
-| Date       | Sévérité | Durée | % flotte | Cause              | Postmortem |
-| ---------- | -------- | ----- | -------- | ------------------ | ---------- |
-| YYYY-MM-DD | P1       | 25min | 30%      | OTA cassé v3.X.Y   | [link]     |
+| Date       | Sév | Durée  | Scope       | Cause racine                    | Fix PR  | Test régression                              |
+| ---------- | --- | ------ | ----------- | ------------------------------- | ------- | -------------------------------------------- |
+| YYYY-MM-DD | P1  | 1h36   | NLF (1 site)| PR #XXX casse SaaS displays     | PR #YYY | smoke-saas-incident-YYYY-MM-DD.test.ts       |
 ```
+
+### Convention test régression
+
+Tout incident P0/P1 → créer un smoke test nommé :
+```
+central-server/src/__tests__/smoke/smoke-<domaine>-incident-<YYYY-MM-DD>.test.ts
+```
+Exemples : `smoke-saas-incident-2026-05-08.test.ts`, `smoke-sync-incident-2026-04-15.test.ts`
+
+Le test doit échouer si le bug revenait. Citer le test dans le commit du fix.
+
+---
+
+## Sévérités
+
+- **P0** : prod totalement down, > 50% flotte — fix autorisé après 21h
+- **P1** : prod dégradée ou client critique (NLF) impacté, < 50% flotte
+- **P2** : feature spécifique cassée, < 10% flotte
+- **P3** : bug visible mais sans impact bloquant
 
 ---
 
 ## Historique
 
-| Date                        | Sévérité | Durée | % flotte | Cause | Postmortem |
-| --------------------------- | -------- | ----- | -------- | ----- | ---------- |
-| (aucun incident enregistré) |          |       |          |       |            |
-
-## Sévérités
-
-- **P0** : prod totalement down, > 50% flotte
-- **P1** : prod dégradée, 10-50% flotte impactée
-- **P2** : feature spécifique cassée, < 10% flotte
-- **P3** : bug visible mais sans impact bloquant
+| Date       | Sév | Durée | Scope        | Cause racine                                      | Fix PR   | Test régression |
+| ---------- | --- | ----- | ------------ | ------------------------------------------------- | -------- | --------------- |
+| 2026-05-08 | P1  | 1h36  | NLF (1 site) | PR #935 casse resolvedConfig SaaS variants/displays | PR #939 | ⚠️ à créer      |
