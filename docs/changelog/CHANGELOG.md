@@ -1,3 +1,9 @@
+## [3.301.1](https://github.com/Tallec7/neopro/compare/v3.301.0...v3.301.1) (2026-05-10)
+
+### Bug Fixes
+
+- **nginx:** add ^~ to /thumbnails/ location to fix 404s on Pi remote page ([#948](https://github.com/Tallec7/neopro/issues/948)) ([77c6829](https://github.com/Tallec7/neopro/commit/77c6829b598466c5a6d8f0c74703ce682acbd569))
+
 # [3.301.0](https://github.com/Tallec7/neopro/compare/v3.300.16...v3.301.0) (2026-05-10)
 
 ### Bug Fixes
