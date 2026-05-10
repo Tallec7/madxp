@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const logger = require('../logger');
 const { config } = require('../config');
 const { mergeConfigurations, calculateConfigHash } = require('../utils/config-merge');
+const { atomicWriteJson } = require('../utils/safe-config-io');
 
 const PROFILES_DIR = config.paths.root + '/webapp/profiles';
 const CLUBS_JSON_PATH = PROFILES_DIR + '/clubs.json';
@@ -32,7 +33,7 @@ async function syncProfiles(data) {
   // 2. Ecrire chaque profil
   for (const profile of profiles) {
     const profilePath = `${PROFILES_DIR}/${profile.id}.json`;
-    await fs.writeFile(profilePath, JSON.stringify(profile.configuration, null, 2));
+    await atomicWriteJson(profilePath, profile.configuration);
     logger.info('Profile written', { id: profile.id, name: profile.name });
 
     // ADR-058 — metadata PIN (bcrypt hash) pour validation offline cote Pi.
@@ -61,7 +62,7 @@ async function syncProfiles(data) {
     city: p.city || '',
     sport: p.sport || '',
   }));
-  await fs.writeFile(CLUBS_JSON_PATH, JSON.stringify(clubs, null, 2));
+  await atomicWriteJson(CLUBS_JSON_PATH, clubs);
   logger.info('clubs.json generated', { count: clubs.length });
 
   // 4. Nettoyer les profils qui n'existent plus (et leurs metadata PIN associees)
@@ -148,7 +149,7 @@ async function applyProfile(profileId) {
   }
 
   // Backup
-  await fs.writeFile(BACKUP_PATH, JSON.stringify(localConfig, null, 2));
+  await atomicWriteJson(BACKUP_PATH, localConfig);
 
   // Lire le profil
   const profileContent = await fs.readFile(profilePath, 'utf8');
@@ -159,8 +160,8 @@ async function applyProfile(profileId) {
   const finalConfig = mergeConfigurations(localConfig, profileConfig);
   const hashAfter = calculateConfigHash(finalConfig);
 
-  // Ecrire la configuration fusionnee
-  await fs.writeFile(CONFIG_PATH, JSON.stringify(finalConfig, null, 2));
+  // Ecrire la configuration fusionnee (atomique : tmp + rename, ADR-028)
+  await atomicWriteJson(CONFIG_PATH, finalConfig);
 
   logger.info('Profile applied to configuration.json', {
     profileId,

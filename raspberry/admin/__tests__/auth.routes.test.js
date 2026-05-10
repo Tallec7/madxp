@@ -14,6 +14,10 @@ jest.mock('fs', () => {
       readFile: jest.fn(),
       writeFile: jest.fn().mockResolvedValue(undefined),
       mkdir: jest.fn().mockResolvedValue(undefined),
+      // ADR-028 — atomicWriteJson écrit dans un .tmp puis rename vers la cible.
+      // Le test mocke les deux pour préserver le comportement no-op du fs.
+      rename: jest.fn().mockResolvedValue(undefined),
+      unlink: jest.fn().mockResolvedValue(undefined),
     },
   };
 });
@@ -765,10 +769,17 @@ describe('POST /api/auth/change-password', () => {
     await handler(req, res);
 
     expect(res._json.success).toBe(true);
-    // ADR-073 S4 : le mot de passe est hashé (scrypt) avant écriture — on ne
-    // doit PAS retrouver le plaintext dans le fichier, mais bien un hash scrypt.
+    // ADR-073 S4 + ADR-028 : le mot de passe est hashé (scrypt) avant écriture —
+    // on ne doit PAS retrouver le plaintext, mais bien un hash scrypt.
+    // Depuis ADR-028, l'écriture passe par atomicWriteJson : writeFile cible
+    // un fichier .tmp puis rename vers CONFIG_PATH. On asserte donc :
+    //   - rename a bien CONFIG_PATH comme destination
+    //   - le writeFile correspondant (tmp dans le même dossier) contient le hash
+    const renameCall = fs.rename.mock.calls.find((c) => c[1] === CONFIG_PATH);
+    expect(renameCall).toBeDefined();
+    const tmpPath = renameCall[0];
     const configWrite = fs.writeFile.mock.calls.find(
-      (c) => c[0] === CONFIG_PATH && typeof c[1] === 'string' && c[1].includes('"password"')
+      (c) => c[0] === tmpPath && typeof c[1] === 'string' && c[1].includes('"password"')
     );
     expect(configWrite).toBeDefined();
     // ADR-073 S4 : le hash scrypt va dans adminPassword, PAS dans password (remote Angular)

@@ -516,8 +516,15 @@ describe('Pi-side profile-switch handler regression guard', () => {
       /socket\.on\('profile-switch'[\s\S]*?(?=socket\.on\(|$)/
     );
     expect(switchBlock).not.toBeNull();
+    // ADR-028 — l'écriture peut passer par atomicWriteJsonSync(configPath, …)
+    // (tmp + rename) ou directement fs.writeFileSync(configPath, …). Le
+    // contrat observable est "le handler persiste la config dans configPath",
+    // peu importe l'API. Garde-fou couplé : smoke-pi-config-atomic-writes
+    // exige spécifiquement atomicWriteJsonSync depuis l'audit 2026-05-10.
     expect({
-      writesConfigFile: switchBlock![0].includes('writeFileSync(configPath'),
+      writesConfigFile:
+        switchBlock![0].includes('writeFileSync(configPath') ||
+        switchBlock![0].includes('atomicWriteJsonSync(configPath'),
       preservesLocalSettings: switchBlock![0].includes('LOCAL_ONLY_SETTINGS'),
       mergesConfig: switchBlock![0].includes('mergedConfig'),
     }).toEqual({
