@@ -242,6 +242,7 @@ DECLARE
     v_avg_memory DECIMAL(5,2);
     v_avg_temperature DECIMAL(5,2);
     v_max_temperature DECIMAL(5,2);
+    v_online_minutes INTEGER;
     v_uptime_percent DECIMAL(5,2);
     v_incidents_count INTEGER;
 BEGIN
@@ -285,13 +286,28 @@ BEGIN
       AND recorded_at >= p_date
       AND recorded_at < p_date + INTERVAL '1 day';
 
-    SELECT
-        LEAST(100, (COUNT(*)::float / 2880.0 * 100))
-    INTO v_uptime_percent
-    FROM metrics
-    WHERE site_id = p_site_id
-      AND recorded_at >= p_date
-      AND recorded_at < p_date + INTERVAL '1 day';
+    -- Availability: somme des intervalles entre samples consécutifs, cap à 5min (= metricsInterval).
+    -- Diviseur 1440 min/jour — non couplé à la cadence de sampling (fix issue #644 / ADR-099).
+    WITH intervals AS (
+        SELECT
+            recorded_at,
+            LEAD(recorded_at) OVER (ORDER BY recorded_at) AS next_recorded
+        FROM metrics
+        WHERE site_id = p_site_id
+          AND recorded_at >= p_date
+          AND recorded_at < p_date + INTERVAL '1 day'
+    )
+    SELECT COALESCE(SUM(
+        LEAST(
+            EXTRACT(EPOCH FROM (next_recorded - recorded_at)) / 60,
+            5
+        )
+    ), 0)::INTEGER
+    INTO v_online_minutes
+    FROM intervals
+    WHERE next_recorded IS NOT NULL;
+
+    v_uptime_percent := LEAST(v_online_minutes * 100.0 / GREATEST(1440, 1), 100);
 
     SELECT COUNT(*)
     INTO v_incidents_count
