@@ -109,6 +109,23 @@ describe('ADR-099 — connection_events tracking (smoke)', () => {
     });
   });
 
+  describe('site-fleet.controller.ts — connection-status endpoint (issue #967 regression guard)', () => {
+    const fleetCtrlSrc = fs.readFileSync(
+      path.join(ROOT, 'controllers/site-fleet.controller.ts'),
+      'utf8'
+    );
+
+    it('does not divide heartbeat count by 2880 in getSiteConnectionStatus', () => {
+      // Régression issue #644 sur cet endpoint : uptime24h = COUNT(metrics) / 2880 * 100
+      // → ~10% permanent pour tout site sain. Fix : utiliser connectionEventsRepository.getUptimeStats.
+      expect(fleetCtrlSrc).not.toMatch(/\/\s*2880/);
+    });
+
+    it('uses connectionEventsRepository.getUptimeStats for uptime24h', () => {
+      expect(fleetCtrlSrc).toMatch(/connectionEventsRepository\.getUptimeStats/);
+    });
+  });
+
   // ---------------------------------------------------------------------
   // Issue #655 — garde-fou étendu aux fichiers analytics (régression #644)
   // Le diviseur 2880 était aussi présent dans analytics.controller.ts,
