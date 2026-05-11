@@ -2967,6 +2967,24 @@ describe('ADR-068 — signed URL video stream proxy', () => {
       signsWithSiteId: true,
     });
   });
+
+  // PR#849 egress guard — VIDEO_STREAM_PROXY_ENABLED=false (default) must return a direct
+  // FTP URL. The OFF-path must not contain /api/videos/stream (which would route via Railway
+  // and cost ~$5.50/month in egress). The early return must precede the stream URL builder.
+  it('buildPublicVideoUrl OFF-path must not contain /api/videos/stream (PR#849 egress guard)', () => {
+    const filePath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'saas.controller.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    const offPathReturnIdx = content.indexOf('return getVideoUrl(storagePath)');
+    const streamUrlIdx = content.indexOf('/api/videos/stream');
+    expect({
+      // OFF-path early return must exist and appear before the stream URL builder
+      offPathReturnFound: offPathReturnIdx !== -1,
+      streamUrlAfterOffPathReturn: offPathReturnIdx !== -1 && streamUrlIdx > offPathReturnIdx,
+    }).toEqual({
+      offPathReturnFound: true,
+      streamUrlAfterOffPathReturn: true,
+    });
+  });
 });
 
 // ============================================================
