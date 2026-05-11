@@ -1,3 +1,9 @@
+## [3.302.1](https://github.com/Tallec7/neopro/compare/v3.302.0...v3.302.1) (2026-05-11)
+
+### Bug Fixes
+
+- **monitoring:** migrer getSiteConnectionStatus vers connection_events (ADR-099) ([#970](https://github.com/Tallec7/neopro/issues/970)) ([af320d4](https://github.com/Tallec7/neopro/commit/af320d4f458b51b622adfd9b969d1576c806364b)), closes [#644](https://github.com/Tallec7/neopro/issues/644) [#967](https://github.com/Tallec7/neopro/issues/967) [#644](https://github.com/Tallec7/neopro/issues/644)
+
 # [3.302.0](https://github.com/Tallec7/neopro/compare/v3.301.8...v3.302.0) (2026-05-11)
 
 ### Features
