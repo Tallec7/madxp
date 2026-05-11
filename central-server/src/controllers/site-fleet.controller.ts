@@ -303,8 +303,9 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
     const stats = await metricsRepository.get24hStatsForSite(id);
     const heartbeatCount24h = parseInt(stats?.heartbeat_count || '0', 10);
 
-    // ADR-099 — uptime réel basé sur connection_events, pas sur COUNT(metrics)/2880.
-    // COUNT(metrics)/2880 assumait 1 sample/30s alors que le throttle est 5min → ~10% permanent.
+    // ADR-099 — uptime réel basé sur connection_events (issue #967).
+    // L'ancienne formule divisait COUNT(metrics) par 2880 (1 sample/30s supposé)
+    // alors que le throttle metrics est 5min → résultat ~10% permanent pour la flotte.
     const uptimeStats = await connectionEventsRepository.getUptimeStats(id, 24);
 
     // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent
