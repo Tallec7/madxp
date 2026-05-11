@@ -24,6 +24,8 @@ export interface ConfigProfile {
   updated_at: string;
   /** ADR-058 — vrai si un PIN profil est requis pour la remote cloud */
   remote_pin_required?: boolean;
+  /** ADR-117 — nombre de déploiements vidéos déclenchés automatiquement lors de la sauvegarde */
+  pendingDeployments?: number;
 }
 
 /**
@@ -69,6 +71,8 @@ export interface DeployProfileResponse {
   version_id: string;
   profile_id: string;
   profile_name: string;
+  /** ADR-117 — nombre de déploiements vidéos déclenchés automatiquement */
+  pendingDeployments?: number;
 }
 
 /**

@@ -8,7 +8,10 @@ import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import { siteVideoRepository } from '../repositories/site-video.repository';
 import { videoRepository } from '../repositories';
+import { deploymentRepository } from '../repositories/deployment.repository'; // ADR-117
 import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
+import { extractVideoPaths } from '../utils/config-video-paths'; // ADR-117
+import { SiteConfiguration } from '../types'; // ADR-117
 import { deliveryStrategyRegistry } from './delivery/strategy-registry';
 import { DeliveryContext, DeliveryDeployment } from './delivery/delivery-strategy.interface';
 
@@ -868,6 +871,108 @@ class DeploymentService {
         }
       })
     );
+  }
+
+  // ADR-117 — couplage automatique déploiement vidéos ↔ sauvegarde config profil
+  async triggerMissingVideoDeployments(
+    siteId: string,
+    site: { site_type: string },
+    newConfig: SiteConfiguration,
+    oldConfig: SiteConfiguration | null,
+    triggeredBy?: string
+  ): Promise<number> {
+    if (site.site_type !== 'pi') return 0;
+
+    const newPaths = extractVideoPaths(newConfig);
+    const oldPaths = oldConfig ? new Set(extractVideoPaths(oldConfig)) : new Set<string>();
+    const candidates = newPaths.filter(
+      (p) =>
+        !oldPaths.has(p) &&
+        !p.includes('web_page:') &&
+        !p.includes('livestream:') &&
+        !p.includes('/web-content/')
+    );
+
+    if (candidates.length === 0) return 0;
+
+    const MAX_AUTO_DEPLOY = 10;
+    const limited = candidates.slice(0, MAX_AUTO_DEPLOY);
+    if (candidates.length > MAX_AUTO_DEPLOY) {
+      logger.warn('triggerMissingVideoDeployments: throttle applied', { siteId, total: candidates.length, limit: MAX_AUTO_DEPLOY });
+    }
+
+    // Parallel FTP HEAD check — pre-filter paths before any DB writes
+    const FTP_CHECK_TIMEOUT_MS = 5_000;
+    const ftpResults = await Promise.allSettled(
+      limited.map(async (storagePath) => {
+        const url = getVideoUrl(storagePath);
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), FTP_CHECK_TIMEOUT_MS);
+        try {
+          const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+          return { storagePath, ok: res.ok, status: res.status };
+        } finally {
+          clearTimeout(tid);
+        }
+      })
+    );
+
+    const accessible = new Set<string>();
+    for (const result of ftpResults) {
+      if (result.status === 'fulfilled' && result.value.ok) {
+        accessible.add(result.value.storagePath);
+      } else if (result.status === 'fulfilled') {
+        logger.warn('triggerMissingVideoDeployments: FTP file not accessible, skipping', {
+          siteId,
+          storagePath: result.value.storagePath,
+          httpStatus: result.value.status,
+        });
+      } else {
+        logger.warn('triggerMissingVideoDeployments: FTP HEAD check failed', { siteId, error: result.reason });
+      }
+    }
+
+    if (accessible.size === 0) return 0;
+
+    let triggered = 0;
+    for (const storagePath of accessible) {
+      try {
+        const videoResult = await query<{ id: string; upload_status: string }>(
+          `SELECT id, upload_status FROM videos WHERE storage_path = $1 LIMIT 1`,
+          [storagePath]
+        );
+        if (videoResult.rows.length === 0) {
+          logger.warn('triggerMissingVideoDeployments: video not found in DB', { siteId, storagePath });
+          continue;
+        }
+        const video = videoResult.rows[0];
+        if (video.upload_status !== 'ready') {
+          logger.warn('triggerMissingVideoDeployments: video not ready', { siteId, storagePath, upload_status: video.upload_status });
+          continue;
+        }
+        const alreadyDeployed = await deploymentRepository.hasActiveDeploymentByPath(siteId, storagePath);
+        if (alreadyDeployed) continue;
+
+        const deploymentResult = await query<{ id: string }>(
+          `INSERT INTO content_deployments (video_id, target_type, target_id, status, progress, deployed_by)
+           VALUES ($1, 'site', $2, 'pending', 0, NULL) RETURNING id`,
+          [video.id, siteId]
+        );
+        const deploymentId = deploymentResult.rows[0]?.id;
+        if (!deploymentId) continue;
+
+        this.startDeployment(deploymentId).catch((err) => {
+          logger.error('triggerMissingVideoDeployments: startDeployment failed', { siteId, deploymentId, storagePath, error: err });
+        });
+
+        logger.info('triggerMissingVideoDeployments: deployment triggered', { siteId, deploymentId, storagePath, triggeredBy });
+        triggered++;
+      } catch (err) {
+        logger.error('triggerMissingVideoDeployments: error processing path', { siteId, storagePath, error: err });
+      }
+    }
+
+    return triggered;
   }
 }
 

@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 1000);
 
+    // Charger les profils multi-clubs (affiche l'onglet si >1 profil)
+    loadProfiles();
+
     // Charger la configuration pour peupler les selects
     await loadConfiguration();
 

@@ -38,23 +38,23 @@ Aucun chevauchement, chaque doc a un rôle clair.
 
 Issu de l'audit complet du 2026-04-27 (services backend + composants UI + ADR Acceptés + suites smoke).
 
-| #   | Domaine                   | Statut  | Couvre                                                                                                                 |
-| --- | ------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 1   | Match                     | ✅ Live | match-sessions + events + templates + history-view + auto-close + scoreboard PROP-003 + scoreboard-saas                |
-| 2   | Templates Studio          | ✅ Live | runtime + admin studio + designer workflow                                                                             |
-| 3   | SaaS & Club Portal        | ✅ Live | saas-mode + club-portal-dashboard + diagnostic + sponsors-loop + onboarding (ADR-040)                                  |
-| 4   | Sponsors & Pubs           | ✅ Live | sponsors-rotation + sponsor-reports + advertiser-portal + agency + sponsor-portal + analytics-sponsors + asset-service |
-| 5   | Vidéo (cycle complet)     | ✅ Live | content-management + upload-pipeline + categories + ftp-storage + upload-verification + cascade DELETE + ADR-100       |
-| 6   | Déploiement & OTA         | À créer | deployment + canary + update + orchestrated + canary-monitor + updates UI + staging                                    |
-| 7   | Observabilité & Alerting  | À créer | metrics + health + realtime-stats + connection-events + alerting (4 services) + network-alerts                         |
-| 8   | Pi & Display (edge)       | À créer | tv-player + status-screens + club-selector + kiosk-pi + display + watchdog + admin panel Pi                            |
-| 9   | Remote (télécommande)     | À créer | remote-v2 + remote legacy + API publique + feature flag                                                                |
-| 10  | Réseau & Hotspot          | À créer | hotspot-psk + network-wifi + network-resilience                                                                        |
-| 11  | Auth & Sécurité           | À créer | mfa + JWT + RLS multi-tenant + rate-limiter + audit-log + api-key-rotation                                             |
-| 12  | Subscription & Billing    | À créer | subscription-licensing + subscriptions UI + grace periods                                                              |
-| 13  | Sync & Config (Pi↔Cloud)  | À créer | sync-agent + command-queue + cron-scheduler + socket-service + draft-config                                            |
-| 14  | Reporting & Exports       | À créer | excel-export + monthly-reports + email + audit traçabilité                                                             |
-| 15  | Dashboard Admin (chassis) | À créer | layout-navigation + sites-list + users + groups + dashboard-guards                                                     |
+| #   | Domaine                   | Statut            | Couvre                                                                                                                 |
+| --- | ------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1   | Match                     | ✅ Live           | match-sessions + events + templates + history-view + auto-close + scoreboard PROP-003 + scoreboard-saas                |
+| 2   | Templates Studio          | ✅ Live           | runtime + admin studio + designer workflow                                                                             |
+| 3   | SaaS & Club Portal        | ✅ Live           | saas-mode + club-portal-dashboard + diagnostic + sponsors-loop + onboarding (ADR-040)                                  |
+| 4   | Sponsors & Pubs           | ✅ Live           | sponsors-rotation + sponsor-reports + advertiser-portal + agency + sponsor-portal + analytics-sponsors + asset-service |
+| 5   | Vidéo (cycle complet)     | ✅ Live           | content-management + upload-pipeline + categories + ftp-storage + upload-verification + cascade DELETE + ADR-100       |
+| 6   | Déploiement & OTA         | À créer           | deployment + canary + update + orchestrated + canary-monitor + updates UI + staging                                    |
+| 7   | Observabilité & Alerting  | À créer           | metrics + health + realtime-stats + connection-events + alerting (4 services) + network-alerts                         |
+| 8   | Pi & Display (edge)       | ✅ Live (partiel) | tv-player + status-screens + club-selector + kiosk-pi + display + watchdog + admin panel Pi (admin-pi-local.spec.md)   |
+| 9   | Remote (télécommande)     | À créer           | remote-v2 + remote legacy + API publique + feature flag                                                                |
+| 10  | Réseau & Hotspot          | À créer           | hotspot-psk + network-wifi + network-resilience                                                                        |
+| 11  | Auth & Sécurité           | À créer           | mfa + JWT + RLS multi-tenant + rate-limiter + audit-log + api-key-rotation                                             |
+| 12  | Subscription & Billing    | À créer           | subscription-licensing + subscriptions UI + grace periods                                                              |
+| 13  | Sync & Config (Pi↔Cloud)  | À créer           | sync-agent + command-queue + cron-scheduler + socket-service + draft-config                                            |
+| 14  | Reporting & Exports       | À créer           | excel-export + monthly-reports + email + audit traçabilité                                                             |
+| 15  | Dashboard Admin (chassis) | À créer           | layout-navigation + sites-list + users + groups + dashboard-guards                                                     |
 
 > Les SPECs services existantes (`cron-scheduler`, `socket-service`) seront absorbées dans les SPECs domaine pertinentes (#13 Sync & Config) ou conservées comme SPECs services transverses — arbitrage au cas par cas pendant l'écriture.
 
@@ -70,7 +70,8 @@ docs/specs/
 │   ├── sponsors.spec.md             # ✅ Live (fusion sponsors-rotation + sponsor-reports)
 │   ├── templates-studio.spec.md     # ✅ Live (pré-pivot, section Périmètre à formaliser)
 │   ├── video-cycle.spec.md          # ✅ Live (ADR-100)
-│   └── web-live-content.spec.md     # ✅ Live (ADR-089/103)
+│   ├── web-live-content.spec.md     # ✅ Live (ADR-089/103)
+│   └── admin-pi-local.spec.md      # ✅ Live (ADR-001/074/115 — switch profil offline)
 └── services/
     ├── cron-scheduler.spec.md       # ✅ Live (pré-pivot, section Périmètre à formaliser)
     └── socket-service.spec.md       # ✅ Live (pré-pivot, section Périmètre à formaliser)
@@ -87,6 +88,7 @@ docs/specs/
 | [features/sponsors](features/sponsors.spec.md)                                                   | ADR-035, ADR-093, ADR-097                                                                         | Live     | 2026-04-29     |
 | [features/web-live-content](features/web-live-content.spec.md)                                   | ADR-089, ADR-103                                                                                  | Live     | 2026-04-29     |
 | [features/hotspot-psk](features/hotspot-psk.spec.md)                                             | ADR-073, ADR-074, ADR-076                                                                         | Live     | 2026-04-27     |
+| [features/admin-pi-local](features/admin-pi-local.spec.md)                                       | ADR-001, ADR-074, ADR-115                                                                         | Live     | 2026-05-11     |
 | [features/templates-studio](features/templates-studio.spec.md)                                   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095                                              | Live     | 2026-04-25     |
 | [features/template-studio-v3](features/template-studio-v3.spec.md)                               | ADR-110                                                                                           | Proposed | 2026-05-05     |
 | [services/cron-scheduler](services/cron-scheduler.spec.md)                                       | ADR-097                                                                                           | Live     | 2026-04-25     |

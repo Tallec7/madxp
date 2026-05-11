@@ -20,6 +20,7 @@ import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-met
 import { autoResolveSponsorIds } from '../services/sponsor-auto-resolution.service';
 import { isSyntheticWebContentPath } from '../utils/strip-synthetic-web-content';
 import { normalizeConfigVideoPaths } from '../utils/config-video-paths';
+import deploymentService from '../services/deployment.service'; // ADR-117
 
 // --------------------------------------------------------------------------
 // Validation schemas
@@ -429,7 +430,16 @@ export const updateProfileConfiguration = async (req: AuthRequest, res: Response
       socketService.emitSaasConfigUpdated(siteId, { updatedBy: req.user?.email });
     }
 
-    res.json(updated);
+    // ADR-117 — déclenche les déploiements vidéos manquants pour les sites Pi
+    const pendingDeployments = await deploymentService.triggerMissingVideoDeployments(
+      siteId,
+      site ?? { site_type: 'unknown' },
+      value.configuration as SiteConfiguration,
+      (existing.configuration ?? null) as SiteConfiguration | null,
+      req.user?.email
+    );
+
+    res.json({ ...updated, pendingDeployments });
   } catch (error) {
     logger.error('Update profile configuration error:', error);
     res.status(500).json({ error: 'Erreur lors de la mise a jour de la configuration du profil' });
@@ -586,11 +596,21 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
       profilesSynced: allProfiles.length > 1,
     });
 
+    // ADR-117 — déploiement explicite : vérifier toute la config (oldConfig = null)
+    const pendingDeployments = await deploymentService.triggerMissingVideoDeployments(
+      siteId,
+      { site_type: 'pi' },
+      profile.configuration as SiteConfiguration,
+      null,
+      req.user?.email
+    );
+
     res.json({
       success: true,
       version_id: versionId,
       profile_id: profileId,
       profile_name: profile.name,
+      pendingDeployments,
     });
   } catch (error) {
     logger.error('Deploy profile error:', error);
