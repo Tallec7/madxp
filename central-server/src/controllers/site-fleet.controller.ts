@@ -10,6 +10,7 @@ import {
   deploymentRepository,
   videoVariantRepository,
   configProfileRepository,
+  connectionEventsRepository,
 } from '../repositories';
 
 // Seuils de connexion (en secondes) — identiques à sites.controller.ts
@@ -300,10 +301,12 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
 
     // Récupérer les statistiques de connexion récentes (24h)
     const stats = await metricsRepository.get24hStatsForSite(id);
-
     const heartbeatCount24h = parseInt(stats?.heartbeat_count || '0', 10);
-    // Uptime estimé: heartbeat toutes les 30s = 2880 max par 24h
-    const uptime24h = Math.min(100, (heartbeatCount24h / 2880) * 100);
+
+    // ADR-099 — uptime réel basé sur connection_events (issue #967).
+    // L'ancienne formule divisait COUNT(metrics) par 2880 (1 sample/30s supposé)
+    // alors que le throttle metrics est 5min → résultat ~10% permanent pour la flotte.
+    const uptimeStats = await connectionEventsRepository.getUptimeStats(id, 24);
 
     // Un site est considéré "connecté" si Socket.IO actif OU heartbeat récent
     const isEffectivelyConnected = isConnectedNow || (secondsSinceLastSeen !== null && secondsSinceLastSeen < ONLINE_THRESHOLD_SECONDS);
@@ -327,7 +330,7 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
       },
       statistics: {
         heartbeats24h: heartbeatCount24h,
-        uptime24h: Math.round(uptime24h * 100) / 100,
+        uptime24h: uptimeStats.uptimePercent,
         firstHeartbeat24h: stats?.first_heartbeat,
         lastHeartbeat24h: stats?.last_heartbeat,
       },

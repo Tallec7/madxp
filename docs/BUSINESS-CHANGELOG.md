@@ -17,6 +17,11 @@
 ### 🛡️ Pour la robustesse
 
 - **Vérification FTP avant déploiement** ([#972](https://github.com/Tallec7/neopro/pull/972)) — le serveur vérifie en parallèle (5s timeout) que chaque nouvelle vidéo est bien présente sur le FTP Hostinger avant de créer un ordre de déploiement. Une vidéo absente du FTP est signalée en log sans bloquer les autres. Évite les déploiements zombies.
+## Semaine 19 — 5-11 Mai 2026 (suite)
+
+### 🛡️ Pour la robustesse
+
+- **Fire Stick : aucune configuration manuelle requise pour s'afficher sur la bonne TV** — avant, un admin devait rentrer l'adresse MAC de chaque Fire Stick dans le dashboard pour qu'il sache sur quel écran s'afficher. En pratique, personne ne connaît les MACs à l'avance. Maintenant, tout Fire Stick qui se connecte au hotspot Pi reçoit automatiquement un index d'écran. Le technicien n'a plus rien à faire.
 
 ---
 

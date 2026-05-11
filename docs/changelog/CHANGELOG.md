@@ -1,3 +1,9 @@
+# [3.302.0](https://github.com/Tallec7/neopro/compare/v3.301.8...v3.302.0) (2026-05-11)
+
+### Features
+
+- **captive:** auto-assign displayIndex Fire Stick sans intervention humaine ([#969](https://github.com/Tallec7/neopro/issues/969)) ([dda2fb6](https://github.com/Tallec7/neopro/commit/dda2fb687574f3c60c066d3215dbacff829270c1))
+
 ## [3.301.8](https://github.com/Tallec7/neopro/compare/v3.301.7...v3.301.8) (2026-05-10)
 
 ### Bug Fixes
