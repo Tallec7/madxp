@@ -1,3 +1,9 @@
+## [3.304.1](https://github.com/Tallec7/neopro/compare/v3.304.0...v3.304.1) (2026-05-11)
+
+### Bug Fixes
+
+- **receiver:** supprimer les flashs Fire Stick sur reconnexion Socket.IO ([#976](https://github.com/Tallec7/neopro/issues/976)) ([677c45d](https://github.com/Tallec7/neopro/commit/677c45dc2d84b62c0fabb52c0edc964b71e9590d))
+
 # [3.304.0](https://github.com/Tallec7/neopro/compare/v3.303.0...v3.304.0) (2026-05-11)
 
 ### Features
