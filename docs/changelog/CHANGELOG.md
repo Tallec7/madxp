@@ -1,3 +1,9 @@
+# [3.304.0](https://github.com/Tallec7/neopro/compare/v3.303.0...v3.304.0) (2026-05-11)
+
+### Features
+
+- **content:** Phase C — auto-deploy videos on profile config save (ADR-117) ([#972](https://github.com/Tallec7/neopro/issues/972)) ([c7534b0](https://github.com/Tallec7/neopro/commit/c7534b01dea35050038b89808fc4b2c1559e86a8)), closes [#647](https://github.com/Tallec7/neopro/issues/647) [#647](https://github.com/Tallec7/neopro/issues/647)
+
 # [3.303.0](https://github.com/Tallec7/neopro/compare/v3.302.1...v3.303.0) (2026-05-11)
 
 ### Features
