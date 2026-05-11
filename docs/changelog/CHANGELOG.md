@@ -1,3 +1,9 @@
+# [3.303.0](https://github.com/Tallec7/neopro/compare/v3.302.1...v3.303.0) (2026-05-11)
+
+### Features
+
+- **admin-pi:** switch profil multi-clubs offline sur :8080 (ADR-116) ([#975](https://github.com/Tallec7/neopro/issues/975)) ([e327617](https://github.com/Tallec7/neopro/commit/e3276176e1ce485f560fdedac4e96a995dd1be46)), closes [#8](https://github.com/Tallec7/neopro/issues/8)
+
 ## [3.302.1](https://github.com/Tallec7/neopro/compare/v3.302.0...v3.302.1) (2026-05-11)
 
 ### Bug Fixes
