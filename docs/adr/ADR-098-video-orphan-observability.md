@@ -32,6 +32,12 @@ On adopte un **double rideau** d'observabilité :
      `neopro_video_ftp_audit_duration_seconds`. Détection systémique même sans
      lecture utilisateur (ex : vidéo orpheline sur un Pi qui ne tourne pas
      actuellement).
+   - **Note sur `resolved`** : ce label est un compteur de transitions Prometheus
+     uniquement (le CRON détecte qu'un fichier FTP est revenu → DELETE de la row
+     `video_ftp_audit_warnings`). Il n'existe PAS de statut `'resolved'` persisté
+     en DB — la résolution = suppression de la row (que ce soit par le CRON ou par
+     `POST /api/content/videos/:id/replace`). Le replace (PR #647) ne bumpe pas
+     ce compteur Prometheus (angle mort observabilité — voir PR #647).
 
 Les 2 métriques sont alertables via Grafana/Alertmanager. Le compteur
 temps réel donne le **MTTR** (mean time to repair), l'audit CRON garantit
