@@ -8,6 +8,18 @@
 
 ---
 
+## Semaine 20 — 11-17 Mai 2026 (Phase C déploiement auto vidéos Pi — PR [#972](https://github.com/Tallec7/neopro/pull/972))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Ajouter une vidéo à un profil Pi déclenche automatiquement son déploiement** ([#972](https://github.com/Tallec7/neopro/pull/972)) — avant, sauvegarder un profil Pi avec une nouvelle vidéo envoyait la config au Pi sans transférer le fichier physique : le kiosk affichait une vidéo vide (404 silencieux). Maintenant, à chaque sauvegarde de profil Pi, le serveur compare les vidéos de l'ancienne et de la nouvelle config et déclenche automatiquement le transfert des nouvelles vidéos vers le Pi. Garde-fous : vérification FTP préalable, dédup, throttle 10 vidéos max par sauvegarde. (ADR-117)
+
+### 🛡️ Pour la robustesse
+
+- **Vérification FTP avant déploiement** ([#972](https://github.com/Tallec7/neopro/pull/972)) — le serveur vérifie en parallèle (5s timeout) que chaque nouvelle vidéo est bien présente sur le FTP Hostinger avant de créer un ordre de déploiement. Une vidéo absente du FTP est signalée en log sans bloquer les autres. Évite les déploiements zombies.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (rattrapage [#935→#960](https://github.com/Tallec7/neopro/pull/960) + fix diff profil #961+#962)
 
 ### 🎯 Pour le club (NLF, prospects)
