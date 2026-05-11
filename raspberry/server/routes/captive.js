@@ -23,7 +23,7 @@ const fs = require('fs');
  *      ils accèdent directement à la télécommande (/remote, protégé par mdp).
  *   4. Résolution du displayIndex (priorité décroissante) :
  *      a. Assignation cloud via ADR-114 write-through (configuration.json displays[].receiver.mac)
- *      b. Assignation locale en cache (.receivers-cache.json via receiversService)
+ *      b. Assignation locale en cache (receiversService — persiste entre reboots)
  *      c. Auto-assign : premier slot libre → persiste via receiversService.assignDisplay()
  *
  * Aucune intervention humaine requise : tout Fire Stick se voit attribuer un
@@ -85,7 +85,7 @@ function createCaptiveRouter({ receiversService, configPath } = {}) {
       return res.json({ mac, displayIndex: cloudAssigned.index, displayName: cloudAssigned.name || null });
     }
 
-    // Priorité 2 : assignation locale déjà en cache (.receivers-cache.json)
+    // Priorité 2 : assignation locale déjà en cache (via receiversService)
     if (receiver.displayIndex != null) {
       return res.json({ mac, displayIndex: receiver.displayIndex, displayName: null });
     }
