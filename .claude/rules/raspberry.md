@@ -194,6 +194,12 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - **Faire un merge sur `displays`** au lieu d'un replace dans la write-through : le cloud (DB `sites.displays`) est la SEULE source de vérité pour la composition des écrans d'un site. Un merge laisserait des entries fantômes après suppression d'un display.
 - **Throw au lieu de warn** quand l'écriture `configuration.json` échoue : la commande doit être idempotente et résiliente. `assignDisplay()` a déjà été appelé, le cache receivers est à jour ; un échec d'écriture est loggé en warn et la prochaine commande retry.
 
+### Captive Portal — Auto-assign displayIndex (2026-05-11)
+
+- **Retourner `displayIndex: null` pour un Fire Stick connu sans assignation cloud** dans `captive.js` `whoami` — la page d'attente `/captive/wait` ne doit plus jamais s'afficher faute d'assignation manuelle. Le flow correct : (1) chercher dans `configuration.json` (cloud ADR-114), (2) chercher dans le cache `receiversService`, (3) auto-assigner au premier slot libre via `receiversService.assignDisplay()`. Zéro intervention humaine requise.
+- **Supprimer l'appel `receiversService.assignDisplay()` du path auto-assign** dans `captive.js` : sans persistance, le même Fire Stick changerait de displayIndex à chaque reconnect (instable multi-Fire Sticks).
+- **Exiger `assignDisplay` dans la validation de `createCaptiveRouter`** : si le service injecté n'a pas cette méthode, le router throw au boot plutôt que de silencieusement tomber en erreur runtime.
+
 ### Hardware
 
 - Omettre `dtparam=cooling_fan` dans `/boot/firmware/config.txt` sur Pi 5 avec Active Cooler (ventilateur non contrôlé, surchauffe silencieuse)
