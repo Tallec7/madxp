@@ -98,6 +98,17 @@
         <button class="nav-btn" data-tab="network" aria-pressed="false" aria-controls="tab-network">
           <span aria-hidden="true">📡</span> Réseau
         </button>
+        <!-- Profils : affiché par JS si >1 profil disponible sur ce Pi -->
+        <button
+          class="nav-btn"
+          data-tab="profiles"
+          aria-pressed="false"
+          aria-controls="tab-profiles"
+          id="nav-profiles-btn"
+          style="display: none"
+        >
+          <span aria-hidden="true">🏟️</span> Profils
+        </button>
         <button
           class="nav-btn tech-only"
           data-tab="logs"
@@ -1324,6 +1335,47 @@
           <video id="preview-video" controls aria-label="Lecteur vidéo de prévisualisation">
             Votre navigateur ne supporte pas la lecture vidéo.
           </video>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Profils (multi-clubs) -->
+    <div
+      id="tab-profiles"
+      class="tab-content"
+      role="tabpanel"
+      aria-labelledby="nav-profiles-btn"
+      style="display: none"
+    >
+      <h2>Profils</h2>
+
+      <!-- Widget profil actif -->
+      <div class="card" id="profiles-active-card">
+        <div class="card-header">
+          <h3>🏟️ Profil actif</h3>
+        </div>
+        <div class="card-body" id="profiles-active-body">
+          <div class="skeleton skeleton-text" style="width: 200px"></div>
+        </div>
+      </div>
+
+      <!-- Liste des profils disponibles -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🗂️ Profils disponibles</h3>
+          <small style="opacity: 0.6">Synchés depuis le cloud au dernier démarrage</small>
+        </div>
+        <div class="card-body" id="profiles-list-body">
+          <div class="skeleton skeleton-text"></div>
+        </div>
+      </div>
+
+      <!-- Info offline -->
+      <div class="card" style="border-left: 3px solid var(--neo-accent, #3b82f6)">
+        <div class="card-body" style="font-size: 13px; opacity: 0.8">
+          <strong>Mode hors connexion :</strong>
+          Le switch de profil est 100% local. Il utilise les fichiers synchés au dernier démarrage.
+          Au retour d'internet, le cloud reste source de vérité — le profil actif sera maintenu.
         </div>
       </div>
     </div>

@@ -354,6 +354,23 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     return result.rows.map((r) => r.video_id);
   }
 
+  // ADR-117 — vérifie si une vidéo (par storage_path) a déjà un déploiement actif sur un site
+  async hasActiveDeploymentByPath(siteId: string, storagePath: string): Promise<boolean> {
+    const result = await query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM content_deployments cd
+         JOIN videos v ON v.id = cd.video_id
+         WHERE (cd.target_id = $1 OR cd.target_id IN (
+                 SELECT group_id FROM site_groups WHERE site_id = $1
+               ))
+           AND v.storage_path = $2
+           AND cd.status IN ('pending', 'in_progress', 'completed')
+       ) AS exists`,
+      [siteId, storagePath]
+    );
+    return result.rows[0]?.exists ?? false;
+  }
+
   async getDeployedPathsForSite(siteId: string): Promise<Array<{ video_id: string; deployed_path: string; deployed_filename: string }>> {
     const result = await query<{ video_id: string; deployed_path: string; deployed_filename: string }>(
       `SELECT DISTINCT ON (video_id) video_id, deployed_path, deployed_filename
