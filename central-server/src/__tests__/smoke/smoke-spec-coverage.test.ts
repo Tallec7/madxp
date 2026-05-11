@@ -37,7 +37,7 @@ const SERVICES_DIR = path.resolve(__dirname, '../../services');
 // ─────────────────────────────────────────────────────────────────────────────
 
 const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
-  'ADR-001', 'ADR-004', 'ADR-006', 'ADR-008', 'ADR-010', 'ADR-011',
+  'ADR-004', 'ADR-006', 'ADR-008', 'ADR-010', 'ADR-011',
   'ADR-012', 'ADR-013', 'ADR-014', 'ADR-015', 'ADR-021', 'ADR-024',
   'ADR-026', 'ADR-027', 'ADR-030', 'ADR-031', 'ADR-032', 'ADR-036',
   // ADR-033 / ADR-042 / ADR-057 now covered by docs/specs/features/manual-video-transitions.spec.md
