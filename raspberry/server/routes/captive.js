@@ -6,8 +6,7 @@ const fs = require('fs');
  *
  * Phase 6 Plan 02 (CAPTIVE-02/03/04). Le bootstrap Angular du Fire Stick
  * appelle `GET /api/captive/whoami` au premier paint pour décider :
- *   - { mac, displayIndex: N, displayName } → redirect `/?display=N`
- *   - { mac, displayIndex: null }           → afficher `/captive/wait?mac=...`
+ *   - { mac, displayIndex: N, displayName } → redirect `/display/N`
  *   - 404 mac_not_found                     → device non-Fire Stick (phone, ordi,
  *                                             tablette) ou Fire Stick pas encore vu
  *                                             par dnsmasq.leases / arp.
@@ -22,22 +21,27 @@ const fs = require('fs');
  *      (dnsmasq /#/) renvoie tous les devices vers le Pi. Les phones/tablettes/ordis
  *      ne doivent pas être interceptés par le flow d'assignation Fire Stick —
  *      ils accèdent directement à la télécommande (/remote, protégé par mdp).
- *   4. Lookup le `displayIndex` dans `configuration.json` local
- *      (`displays[].receiver.mac` — source de vérité Phase 4 ADR).
+ *   4. Résolution du displayIndex (priorité décroissante) :
+ *      a. Assignation cloud via ADR-114 write-through (configuration.json displays[].receiver.mac)
+ *      b. Assignation locale en cache (receiversService — persiste entre reboots)
+ *      c. Auto-assign : premier slot libre → persiste via receiversService.assignDisplay()
  *
- * Résilience: si `configuration.json` est illisible (ENOENT, JSON corrompu)
- * mais que la MAC est connue, retourne `displayIndex: null` plutôt qu'une
- * 5xx — le bootstrap traitera comme "non assigné" et affichera la page
- * d'attente, le bénévole pourra assigner depuis le dashboard.
+ * Aucune intervention humaine requise : tout Fire Stick se voit attribuer un
+ * displayIndex automatiquement au premier connect. L'admin panel Pi (:8080)
+ * permet un override manuel si besoin (cas rare multi-écrans contenu différent).
  *
  * @param {object} deps
- * @param {{ resolveMacByIp: (ip: string) => string | null, getReceivers: () => Array }} deps.receiversService
+ * @param {{ resolveMacByIp: (ip: string) => string | null, getReceivers: () => Array, assignDisplay: (mac: string, index: number) => void }} deps.receiversService
  * @param {string} deps.configPath - chemin absolu vers `configuration.json`
  * @returns {import('express').Router}
  */
 function createCaptiveRouter({ receiversService, configPath } = {}) {
-  if (!receiversService || typeof receiversService.resolveMacByIp !== 'function') {
-    throw new Error('createCaptiveRouter: receiversService with resolveMacByIp() required');
+  if (
+    !receiversService ||
+    typeof receiversService.resolveMacByIp !== 'function' ||
+    typeof receiversService.assignDisplay !== 'function'
+  ) {
+    throw new Error('createCaptiveRouter: receiversService with resolveMacByIp() and assignDisplay() required');
   }
   if (!configPath || typeof configPath !== 'string') {
     throw new Error('createCaptiveRouter: configPath (string) required');
@@ -69,24 +73,37 @@ function createCaptiveRouter({ receiversService, configPath } = {}) {
       const config = JSON.parse(raw);
       displays = Array.isArray(config?.displays) ? config.displays : [];
     } catch (err) {
-      // Best-effort fallback: MAC connue mais config illisible → traiter comme non assigné.
       console.warn('[Captive] Failed to read configuration.json:', err.message);
-      return res.json({ mac, displayIndex: null, displayName: null });
+      // Config illisible — on continue avec displays=[] pour tenter l'auto-assign via cache.
     }
 
-    const display = displays.find(
-      (d) =>
-        d &&
-        d.receiver &&
-        typeof d.receiver.mac === 'string' &&
-        d.receiver.mac.toLowerCase() === macLower
+    // Priorité 1 : assignation cloud (ADR-114 write-through dans configuration.json)
+    const cloudAssigned = displays.find(
+      (d) => d?.receiver?.mac && d.receiver.mac.toLowerCase() === macLower
     );
+    if (cloudAssigned) {
+      return res.json({ mac, displayIndex: cloudAssigned.index, displayName: cloudAssigned.name || null });
+    }
 
-    return res.json({
-      mac,
-      displayIndex: display && typeof display.index === 'number' ? display.index : null,
-      displayName: display ? display.name || null : null,
-    });
+    // Priorité 2 : assignation locale déjà en cache (via receiversService)
+    if (receiver.displayIndex != null) {
+      return res.json({ mac, displayIndex: receiver.displayIndex, displayName: null });
+    }
+
+    // Priorité 3 : auto-assign au premier slot libre
+    const takenIndices = new Set(
+      receiversService
+        .getReceivers()
+        .filter((r) => r.mac?.toLowerCase() !== macLower && r.displayIndex != null)
+        .map((r) => r.displayIndex)
+    );
+    const candidateIndices = displays.length > 0 ? displays.map((d) => d.index) : [0];
+    const freeIndex = candidateIndices.find((i) => !takenIndices.has(i)) ?? 0;
+
+    receiversService.assignDisplay(mac, freeIndex);
+    console.info(`[Captive] auto-assigned mac=${macLower} displayIndex=${freeIndex}`);
+
+    return res.json({ mac, displayIndex: freeIndex, displayName: null });
   });
 
   return router;
