@@ -185,6 +185,7 @@ export class TvSyncService {
     this.socketService.on<{ role: 'master' | 'slave' }>('tv-role-assigned', (data) => {
       this.ngZone.run(() => {
         const wasMaster = this._tvRole === 'master';
+        const wasAlreadySlave = this._isSlaveMode;
         this._tvRole = data.role;
         this._isSlaveMode = data.role === 'slave';
         console.log(`[TV] Role assigned: ${data.role}, displayType: ${displayType}`);
@@ -201,7 +202,9 @@ export class TvSyncService {
           // Without this, a slave in a multi-slave setup would emit ticks received
           // by other slaves as false "master" ground-truth (drift confusion).
           this.stopPreviewHeartbeat();
-          if (this.playbackService.isLoopMode) {
+          // Skip freeze+pause if already slave (Socket.IO reconnect) — the player
+          // kept running during the gap, tv-loop-state will re-sync if needed.
+          if (this.playbackService.isLoopMode && !wasAlreadySlave) {
             this.doubleBufferService.captureAndShowFreezeFrame();
             this.doubleBufferService.pauseLoopPlayers();
             console.log('[TV] Slave: paused independent loop, waiting for master sync');
@@ -452,6 +455,20 @@ export class TvSyncService {
     const localVideo = loopVideos[syncIndex];
 
     console.log(`[TV] Slave: syncing to index ${syncIndex} (master: ${state.videoPath}, local: ${localVideo?.path})`);
+
+    // Reconnect guard: if already playing the correct video (Socket.IO drop/rejoin),
+    // skip the freeze+restart — drift correction ticks will handle timing.
+    const activePlayer = this.doubleBufferService.getActivePlayer();
+    const resolvedLocal = localVideo ? this.callbacks!.resolveDisplayVariant(localVideo) : null;
+    if (
+      activePlayer &&
+      resolvedLocal?.path &&
+      !activePlayer.paused &&
+      activePlayer.src.includes(resolvedLocal.path)
+    ) {
+      console.log('[TV] Slave: reconnect guard — already on correct video, skipping re-sync');
+      return;
+    }
 
     this.doubleBufferService.captureAndShowFreezeFrame();
 
