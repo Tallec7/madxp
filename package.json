@@ -43,6 +43,7 @@
     "i18n:hardcoded:staged": "node scripts/check-hardcoded-i18n.js --staged",
     "dev:seed": "bash scripts/setup-dev-seed.sh",
     "dev:seed:clean": "bash scripts/setup-dev-seed.sh --clean",
+    "guard:egress": "node --env-file=central-server/.env scripts/weekly-egress-guard.mjs",
     "server": "node raspberry/server/server.js",
     "prepare": "husky"
   },
