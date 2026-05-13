@@ -156,6 +156,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
+        // Templates Studio V1 — Brand Kit (cf STUDIO_V1.md S3, parallèle au legacy ci-dessus)
+        path: 'templates-studio/brand-kit',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () =>
+          import('./features/templates-studio/brand-kit/brand-kit.component').then(
+            (m) => m.BrandKitComponent,
+          ),
+      },
+      {
         // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
         path: 'content/templates-remotion/assets',
         canActivate: [roleGuard],

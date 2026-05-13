@@ -1,0 +1,132 @@
+<div class="bk">
+  <header class="bk__header">
+    <h1>Brand Kit</h1>
+    <p class="bk__subtitle">
+      Identité visuelle du club utilisée par le Studio Templates V1 : couleurs, logo et fonts
+      injectés dans chaque rendu.
+    </p>
+  </header>
+
+  @if (loading()) {
+    <div class="bk__loading">Chargement…</div>
+  } @else if (errorMsg() && !siteId()) {
+    <div class="bk__error">{{ errorMsg() }}</div>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" class="bk__form">
+      <section class="bk__section">
+        <h2>Identité</h2>
+        <label class="bk__field">
+          <span>Nom affiché du club</span>
+          <input
+            type="text"
+            formControlName="club_name"
+            placeholder="Ex. NLF, Lanester Handball…"
+            maxlength="120"
+          />
+        </label>
+      </section>
+
+      <section class="bk__section" formGroupName="colors">
+        <h2>Couleurs</h2>
+        <p class="bk__hint">Format hex (#RRGGBB)</p>
+        <div class="bk__color-row">
+          <label class="bk__field bk__field--color">
+            <span>Primaire</span>
+            <div class="bk__color-input">
+              <input
+                type="color"
+                formControlName="primary"
+                [value]="form.get('colors.primary')?.value || '#000000'"
+              />
+              <input type="text" formControlName="primary" placeholder="#0066ff" />
+            </div>
+          </label>
+          <label class="bk__field bk__field--color">
+            <span>Secondaire</span>
+            <div class="bk__color-input">
+              <input
+                type="color"
+                formControlName="secondary"
+                [value]="form.get('colors.secondary')?.value || '#000000'"
+              />
+              <input type="text" formControlName="secondary" placeholder="#ffffff" />
+            </div>
+          </label>
+          <label class="bk__field bk__field--color">
+            <span>Accent</span>
+            <div class="bk__color-input">
+              <input
+                type="color"
+                formControlName="accent"
+                [value]="form.get('colors.accent')?.value || '#000000'"
+              />
+              <input type="text" formControlName="accent" placeholder="#ffd400" />
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section class="bk__section" formGroupName="logos">
+        <h2>Logo</h2>
+        <label class="bk__field">
+          <span>URL logo principal</span>
+          <input
+            type="url"
+            formControlName="primary"
+            placeholder="https://kalonpartners.bzh/neopro-video/logos/..."
+          />
+          <small class="bk__hint">
+            Upload direct viendra en S3.1 — pour l'instant collez une URL FTP existante.
+          </small>
+        </label>
+        @if (form.get('logos.primary')?.value) {
+          <div class="bk__logo-preview">
+            <img
+              [src]="form.get('logos.primary')?.value"
+              alt="Logo club"
+              (error)="$any($event.target).style.display = 'none'"
+            />
+          </div>
+        }
+      </section>
+
+      <section class="bk__section" formGroupName="fonts">
+        <h2>Polices</h2>
+        <p class="bk__hint">
+          Nom de la police comme déclaré dans <code>studio-render-server/public/</code>.
+        </p>
+        <label class="bk__field">
+          <span>Display (titres)</span>
+          <input
+            type="text"
+            formControlName="display"
+            placeholder="GeneralSans-Bold"
+            maxlength="80"
+          />
+        </label>
+        <label class="bk__field">
+          <span>Body (textes courants)</span>
+          <input
+            type="text"
+            formControlName="body"
+            placeholder="GeneralSans-Semibold"
+            maxlength="80"
+          />
+        </label>
+      </section>
+
+      @if (errorMsg()) {
+        <div class="bk__error">{{ errorMsg() }}</div>
+      }
+      @if (successMsg()) {
+        <div class="bk__success">{{ successMsg() }}</div>
+      }
+
+      <div class="bk__actions">
+        <button type="submit" class="bk__save" [disabled]="saving() || form.invalid">
+          {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+  }
+</div>
