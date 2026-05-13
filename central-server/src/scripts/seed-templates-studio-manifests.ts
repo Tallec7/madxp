@@ -3,12 +3,13 @@
  *
  * Spec : studio-template/templates-remotion/spec/STUDIO_V1.md §5
  *
- * Scanne `src/scripts/templates-studio-manifests/*.json`, valide la forme
- * minimale, puis upsert dans `template_definitions` via le repository.
+ * Scanne `studio-render-server/src/templates/<slug>/manifest.json` (monorepo
+ * lite, PR #983), valide la forme minimale, puis upsert dans
+ * `template_definitions` via le repository.
  *
- * Pas idempotent par version : le `ON CONFLICT (slug)` du repo écrase la row
- * existante (bump version + manifest). C'est volontaire — le designer modifie
- * le fichier source, on resync à chaque boot, pas de drift silencieux.
+ * Source unique : le designer édite directement les manifests dans
+ * `studio-render-server/src/templates/`, le seed les pull au boot. Plus de
+ * vendoring manuel (le dossier `templates-studio-manifests/` a été supprimé).
  *
  * Désactivation des slugs disparus : si un manifest est supprimé du dossier,
  * la row correspondante en DB est passée en `is_active = false` (les FK
@@ -24,7 +25,17 @@ import {
   type TemplateKind,
 } from '../repositories';
 
-const MANIFESTS_DIR = path.join(__dirname, 'templates-studio-manifests');
+// Source de vérité monorepo lite (PR #983). Depuis central-server/src/scripts/,
+// 3 levels up = racine repo neopro : scripts → src → central-server → <root>.
+const MANIFESTS_DIR = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'studio-render-server',
+  'src',
+  'templates',
+);
 
 interface ManifestFile {
   id: string;
@@ -61,15 +72,23 @@ export async function seedTemplatesStudioManifests(): Promise<{
     return { seeded: 0, deactivated: 0 };
   }
 
-  const files = fs
-    .readdirSync(MANIFESTS_DIR)
-    .filter((f) => f.endsWith('.json'));
+  // Scan les sous-dossiers <slug>/manifest.json (arbo monorepo lite). Les
+  // dossiers sans manifest.json sont skippés silencieusement (cas du dir
+  // d'asset/script ajouté plus tard).
+  const slugs = fs
+    .readdirSync(MANIFESTS_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
 
   const seededSlugs = new Set<string>();
   let seeded = 0;
 
-  for (const filename of files) {
-    const filepath = path.join(MANIFESTS_DIR, filename);
+  for (const slug of slugs) {
+    const filename = `${slug}/manifest.json`;
+    const filepath = path.join(MANIFESTS_DIR, slug, 'manifest.json');
+    if (!fs.existsSync(filepath)) {
+      continue;
+    }
     let parsed: unknown;
     try {
       parsed = JSON.parse(fs.readFileSync(filepath, 'utf8'));
