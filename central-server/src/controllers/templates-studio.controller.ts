@@ -19,7 +19,13 @@ import logger from '../config/logger';
 import {
   templateDefinitionRepository,
   renderRequestRepository,
+  siteBrandKitRepository,
+  type SiteBrandKitRow,
 } from '../repositories';
+import {
+  resolveBindings,
+  type ManifestBindings,
+} from '../services/templates-studio.service';
 
 const INTERNAL_ROLES = ['super_admin', 'admin', 'operator'] as const;
 type InternalRole = (typeof INTERNAL_ROLES)[number];
@@ -96,10 +102,22 @@ export const createRenderRequest = async (
       return;
     }
 
+    // Résolveur cascade : input + brand kit → payload résolu stocké en DB.
+    // Le worker enverra ce payload tel quel au render server, pas le raw input.
+    // Audit trail : la row contient exactement ce qui a été rendu.
+    const brandKit = await siteBrandKitRepository.findBySite(siteId);
+    const resolvedProps = resolveBindings({
+      manifest: template.manifest_json as unknown as ManifestBindings,
+      inputProps: props,
+      brandKit,
+      // playersById omitted — S4 deferred (worker rembg pas livré).
+      // Les bindings player.* renverront null avec un warn structuré.
+    });
+
     const row = await renderRequestRepository.create({
       site_id: siteId,
       template_id,
-      props_json: props,
+      props_json: resolvedProps,
       created_by: req.user.id,
     });
 
@@ -126,6 +144,88 @@ export const createRenderRequest = async (
       site_id: siteId,
       template_id,
     });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET /api/templates-studio/sites/:siteId/brand-kit
+// Lecture brand kit. Pas d'auto-création : si aucune row, retourne un kit vide
+// avec defaults (l'UI affiche les color pickers vides).
+// ────────────────────────────────────────────────────────────────────────────
+
+function brandKitResponse(siteId: string, row: SiteBrandKitRow | null): {
+  site_id: string;
+  club_name: string | null;
+  colors: Record<string, unknown>;
+  logos: Record<string, unknown>;
+  fonts: Record<string, unknown>;
+  updated_at: Date | null;
+} {
+  if (!row) {
+    return {
+      site_id: siteId,
+      club_name: null,
+      colors: {},
+      logos: {},
+      fonts: {},
+      updated_at: null,
+    };
+  }
+  return {
+    site_id: row.site_id,
+    club_name: row.club_name,
+    colors: row.colors_json,
+    logos: row.logos_json,
+    fonts: row.fonts_json,
+    updated_at: row.updated_at,
+  };
+}
+
+export const getBrandKit = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId } = req.params;
+  try {
+    const row = await siteBrandKitRepository.findBySite(siteId);
+    res.json({ success: true, data: brandKitResponse(siteId, row) });
+  } catch (error) {
+    logger.error('templates-studio: get brand kit failed', { error, site_id: siteId });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const upsertBrandKit = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId } = req.params;
+  const { club_name, colors, logos, fonts } = req.body as {
+    club_name?: string | null;
+    colors?: Record<string, unknown>;
+    logos?: Record<string, unknown>;
+    fonts?: Record<string, unknown>;
+  };
+
+  try {
+    const row = await siteBrandKitRepository.upsert({
+      site_id: siteId,
+      club_name,
+      colors_json: colors,
+      logos_json: logos,
+      fonts_json: fonts,
+    });
+    logger.info('templates-studio: brand kit upserted', {
+      site_id: siteId,
+      user_id: req.user.id,
+      keys_updated: Object.keys(req.body),
+    });
+    res.json({ success: true, data: brandKitResponse(siteId, row) });
+  } catch (error) {
+    logger.error('templates-studio: upsert brand kit failed', { error, site_id: siteId });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });
   }
 };

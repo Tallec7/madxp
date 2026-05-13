@@ -1180,6 +1180,28 @@ export const templatesStudioSchemas = {
     template_id: Joi.string().uuid().required(),
     props: Joi.object().unknown(true).required(),
   }),
+
+  // PUT /sites/:siteId/brand-kit body. Tous les champs sont optionnels — l'upsert
+  // côté repo coalesce avec la valeur existante, donc un PUT partiel ne wipe pas
+  // les autres sections. Les hex colors sont validés par regex pour éviter de
+  // stocker des chaînes random qui casseraient les compositions Remotion.
+  upsertBrandKit: Joi.object({
+    club_name: Joi.string().max(120).allow(null, '').optional(),
+    colors: Joi.object({
+      primary: Joi.string().pattern(/^#[0-9a-fA-F]{6}$/).optional(),
+      secondary: Joi.string().pattern(/^#[0-9a-fA-F]{6}$/).optional(),
+      accent: Joi.string().pattern(/^#[0-9a-fA-F]{6}$/).optional(),
+    }).optional(),
+    logos: Joi.object({
+      primary: Joi.string().uri().optional(),
+      mono_light: Joi.string().uri().optional(),
+      mono_dark: Joi.string().uri().optional(),
+    }).optional(),
+    fonts: Joi.object({
+      display: Joi.string().max(80).optional(),
+      body: Joi.string().max(80).optional(),
+    }).optional(),
+  }).min(1),
 };
 
 // ============================================================================

@@ -31,6 +31,7 @@ const SERVER_FILE = path.join(SRC, 'server.ts');
 const SEED_SCRIPT = path.join(SRC, 'scripts', 'seed-templates-studio-manifests.ts');
 const MANIFESTS_DIR = path.join(SRC, 'scripts', 'templates-studio-manifests');
 const WORKER_FILE = path.join(SRC, 'services', 'studio-render-worker.service.ts');
+const RESOLVER_FILE = path.join(SRC, 'services', 'templates-studio.service.ts');
 
 describe('Templates Studio V1 — files exist', () => {
   it.each([
@@ -286,5 +287,43 @@ describe('Templates Studio V1 — render worker (J4, STUB)', () => {
     const content = fs.readFileSync(SERVER_FILE, 'utf8');
     expect(content).toMatch(/studio-render-worker\.service/);
     expect(content).toMatch(/startStudioRenderWorker/);
+  });
+});
+
+describe('Templates Studio V1 — S2 Brand Kit + résolveur', () => {
+  it('resolver service file exists', () => {
+    expect(fs.existsSync(RESOLVER_FILE)).toBe(true);
+  });
+
+  it('resolver exports resolveBindings', () => {
+    const content = fs.readFileSync(RESOLVER_FILE, 'utf8');
+    expect(content).toMatch(/export\s+function\s+resolveBindings/);
+  });
+
+  it('createRenderRequest controller wires the resolver before storing props', () => {
+    // Garde-fou : si quelqu'un retire le call, render_requests.props_json
+    // contiendrait le raw input (pas de cascade brand kit) → le worker enverrait
+    // des couleurs vides au render server. Bug subtil sans ça.
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/resolveBindings\(/);
+    expect(controller).toMatch(/props_json:\s*resolvedProps/);
+  });
+
+  it('controller uses siteBrandKitRepository.findBySite', () => {
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/siteBrandKitRepository\.findBySite/);
+  });
+
+  it('routes mount GET + PUT /sites/:siteId/brand-kit with tenant guard + Joi', () => {
+    const routes = fs.readFileSync(ROUTES_FILE, 'utf8');
+    // GET
+    expect(routes).toMatch(/router\.get\([\s\S]*?'\/sites\/:siteId\/brand-kit'[\s\S]*?\)/);
+    // PUT
+    expect(routes).toMatch(/router\.put\([\s\S]*?'\/sites\/:siteId\/brand-kit'[\s\S]*?\)/);
+    // requireClubScope présent (impossible que les 2 routes l'aient sans qu'il
+    // apparaisse au moins 1 fois — sinon un club user peut lire/écrire d'autres clubs).
+    expect(routes).toMatch(/requireClubScope\(/);
+    // Joi sur PUT
+    expect(routes).toMatch(/validate\(templatesStudioSchemas\.upsertBrandKit\)/);
   });
 });
