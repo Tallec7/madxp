@@ -1,3 +1,9 @@
+# [3.308.0](https://github.com/Tallec7/neopro/compare/v3.307.0...v3.308.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** S3 — UI Angular Brand Kit (page /templates-studio/brand-kit) ([#986](https://github.com/Tallec7/neopro/issues/986)) ([a7b3e67](https://github.com/Tallec7/neopro/commit/a7b3e67eb4ca64d0250a90acd9fd2d6326eda1ba)), closes [#984](https://github.com/Tallec7/neopro/issues/984)
+
 # [3.307.0](https://github.com/Tallec7/neopro/compare/v3.306.0...v3.307.0) (2026-05-13)
 
 ### Features
