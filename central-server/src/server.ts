@@ -641,6 +641,18 @@ const startServer = async () => {
     // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
     startRenderWorker();
 
+    // Templates Studio V1 — seed des manifests vendored au boot (cf STUDIO_V1.md §5).
+    // Tolère l'absence de migration (table template_definitions pas encore créée
+    // en dev) : on log + skip plutôt que crasher le boot.
+    try {
+      const { seedTemplatesStudioManifests } = await import(
+        './scripts/seed-templates-studio-manifests'
+      );
+      await seedTemplatesStudioManifests();
+    } catch (err) {
+      logger.warn('templates-studio: manifest seed skipped at boot', { err });
+    }
+
     // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j
     // + refresh gauge Prometheus. Tolère l'absence de table (pré-migration).
     const { profileDeviceTokenRepository } = await import(

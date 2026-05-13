@@ -28,6 +28,8 @@ const CONTROLLER_FILE = path.join(
 );
 const ROUTES_FILE = path.join(SRC, 'routes', 'templates-studio.routes.ts');
 const SERVER_FILE = path.join(SRC, 'server.ts');
+const SEED_SCRIPT = path.join(SRC, 'scripts', 'seed-templates-studio-manifests.ts');
+const MANIFESTS_DIR = path.join(SRC, 'scripts', 'templates-studio-manifests');
 
 describe('Templates Studio V1 — files exist', () => {
   it.each([
@@ -205,5 +207,47 @@ describe('Templates Studio V1 — wired in server.ts under /api/templates-studio
     expect(content).toMatch(
       /app\.use\(['"]\/api\/templates-studio['"],\s*templatesStudioV1Routes\)/,
     );
+  });
+});
+
+describe('Templates Studio V1 — manifest seed (J3, cf STUDIO_V1.md §5)', () => {
+  it('seed script exists and exports seedTemplatesStudioManifests', () => {
+    expect(fs.existsSync(SEED_SCRIPT)).toBe(true);
+    const content = fs.readFileSync(SEED_SCRIPT, 'utf8');
+    expect(content).toMatch(/export\s+async\s+function\s+seedTemplatesStudioManifests/);
+  });
+
+  it('vendored manifests dir exists with at least 1 .json', () => {
+    expect(fs.existsSync(MANIFESTS_DIR)).toBe(true);
+    const jsons = fs
+      .readdirSync(MANIFESTS_DIR)
+      .filter((f) => f.endsWith('.json'));
+    expect(jsons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('each vendored manifest has required V1 fields (id, version, label, kind, compositionId)', () => {
+    const jsons = fs
+      .readdirSync(MANIFESTS_DIR)
+      .filter((f) => f.endsWith('.json'));
+    for (const filename of jsons) {
+      const filepath = path.join(MANIFESTS_DIR, filename);
+      const parsed = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+      expect(typeof parsed.id).toBe('string');
+      expect(typeof parsed.version).toBe('string');
+      expect(typeof parsed.label).toBe('string');
+      expect(['video', 'still']).toContain(parsed.kind);
+      expect(typeof parsed.compositionId).toBe('string');
+    }
+  });
+
+  it('seed is wired in server.ts boot after startRenderWorker', () => {
+    const content = fs.readFileSync(SERVER_FILE, 'utf8');
+    expect(content).toMatch(/seed-templates-studio-manifests/);
+    // Check ordre : startRenderWorker() doit apparaître AVANT le seed (le worker
+    // démarre indépendamment des manifests V1 — il poll sa propre table).
+    const idxWorker = content.indexOf('startRenderWorker()');
+    const idxSeed = content.indexOf('seed-templates-studio-manifests');
+    expect(idxWorker).toBeGreaterThan(-1);
+    expect(idxSeed).toBeGreaterThan(idxWorker);
   });
 });
