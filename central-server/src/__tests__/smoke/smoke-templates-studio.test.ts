@@ -13,29 +13,30 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const REPO_FILE = path.join(
-  __dirname,
-  '..',
-  '..',
-  'repositories',
-  'templates-studio.repository.ts',
-);
+const SRC = path.join(__dirname, '..', '..');
+const REPO_FILE = path.join(SRC, 'repositories', 'templates-studio.repository.ts');
 const MIGRATION_FILE = path.join(
-  __dirname,
-  '..',
-  '..',
+  SRC,
   'scripts',
   'migrations',
   'add-templates-studio-v1.sql',
 );
+const CONTROLLER_FILE = path.join(
+  SRC,
+  'controllers',
+  'templates-studio.controller.ts',
+);
+const ROUTES_FILE = path.join(SRC, 'routes', 'templates-studio.routes.ts');
+const SERVER_FILE = path.join(SRC, 'server.ts');
 
 describe('Templates Studio V1 — files exist', () => {
-  it('repository file exists', () => {
-    expect(fs.existsSync(REPO_FILE)).toBe(true);
-  });
-
-  it('migration file exists', () => {
-    expect(fs.existsSync(MIGRATION_FILE)).toBe(true);
+  it.each([
+    ['repository', REPO_FILE],
+    ['migration', MIGRATION_FILE],
+    ['controller', CONTROLLER_FILE],
+    ['routes', ROUTES_FILE],
+  ])('%s file exists', (_label, file) => {
+    expect(fs.existsSync(file)).toBe(true);
   });
 });
 
@@ -128,5 +129,81 @@ describe('Templates Studio V1 — repository exposes 4 named singletons', () => 
   it('renderRequestRepository.claimNextQueued uses FOR UPDATE SKIP LOCKED', () => {
     // Sans ça, plusieurs workers en parallèle se marcheraient dessus.
     expect(content).toMatch(/FOR\s+UPDATE\s+SKIP\s+LOCKED/i);
+  });
+});
+
+describe('Templates Studio V1 — controller stays HTTP-only (no renderer import)', () => {
+  // Invariant repris du rule `services.md` pour le legacy ADR-054 — étendu V1 :
+  // le controller ne doit JAMAIS importer @remotion/renderer ou @remotion/bundler.
+  // Le rendu vit dans le worker (livrable J4). Sans cette séparation on retombe
+  // dans les 502 Railway timeout (un render bloque l'event loop HTTP).
+  const raw = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+  // Strip comments — les refs en JSDoc / commentaires sont volontaires.
+  const code = raw
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+
+  it.each([
+    /@remotion\/renderer/,
+    /@remotion\/bundler/,
+    /from\s+['"][^'"]*config\/database['"]/,
+  ])('controller code must NOT import %s', (pattern) => {
+    expect(code).not.toMatch(pattern);
+  });
+
+  it('controller imports repositories barrel (repo pattern)', () => {
+    expect(code).toMatch(/from\s+['"]\.\.\/repositories['"]/);
+  });
+});
+
+describe('Templates Studio V1 — multi-tenant guards (risque #7 du spec)', () => {
+  const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+
+  it('createRenderRequest takes site_id from req.user, never from body', () => {
+    // Le body NE doit PAS contenir site_id — pattern aligné sur uploaded_for_site_id.
+    expect(controller).toMatch(/site_id:\s*siteId/);
+    // Garde-fou : pas de `site_id` extrait du body destructuring.
+    expect(controller).not.toMatch(/const\s*\{[^}]*site_id[^}]*\}\s*=\s*req\.body/);
+  });
+
+  it('getRenderRequest enforces tenant guard for non-internal roles', () => {
+    expect(controller).toMatch(/row\.site_id\s*!==\s*req\.user\.site_id/);
+  });
+});
+
+describe('Templates Studio V1 — routes mount validation middleware', () => {
+  const content = fs.readFileSync(ROUTES_FILE, 'utf8');
+
+  it('POST /render-requests uses validate(templatesStudioSchemas.createRenderRequest)', () => {
+    expect(content).toMatch(/validate\(templatesStudioSchemas\.createRenderRequest\)/);
+  });
+
+  it('GET /render-requests/:id uses validateParams(paramSchemas.id)', () => {
+    expect(content).toMatch(/validateParams\(paramSchemas\.id\)/);
+  });
+
+  it('all routes go through authenticate', () => {
+    // Match `router.METHOD(..., authenticate, ...)` on each route declaration.
+    const routeDecls = content.match(/router\.(get|post|put|delete|patch)\([^)]+\)/g) ?? [];
+    expect(routeDecls.length).toBeGreaterThan(0);
+    for (const decl of routeDecls) {
+      expect(decl).toMatch(/authenticate/);
+    }
+  });
+});
+
+describe('Templates Studio V1 — wired in server.ts under /api/templates-studio', () => {
+  const content = fs.readFileSync(SERVER_FILE, 'utf8');
+
+  it('imports templatesStudioV1Routes', () => {
+    expect(content).toMatch(
+      /import\s+templatesStudioV1Routes\s+from\s+['"]\.\/routes\/templates-studio\.routes['"]/,
+    );
+  });
+
+  it('mounts the routes under /api/templates-studio', () => {
+    expect(content).toMatch(
+      /app\.use\(['"]\/api\/templates-studio['"],\s*templatesStudioV1Routes\)/,
+    );
   });
 });

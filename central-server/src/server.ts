@@ -69,6 +69,8 @@ import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import { proxyTemplateAsset } from './controllers/remotion-templates.controller';
 import templateStudioRoutes from './routes/template-studio.routes';
+// Templates Studio V1 (code-driven, parallèle au legacy ci-dessus — cf STUDIO_V1.md).
+import templatesStudioV1Routes from './routes/templates-studio.routes';
 import templateBackgroundsRoutes from './routes/template-backgrounds.routes';
 import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
@@ -549,6 +551,8 @@ app.use('/api/remotion-templates', templateStudioRoutes);
 app.use('/api/remotion-templates', remotionTemplatesRoutes);
 // ADR-075 V3 Phase B — Club self-service templates
 app.use('/api/club/remotion-templates', clubTemplatesRoutes);
+// Templates Studio V1 — système code-driven parallèle (cf STUDIO_V1.md).
+app.use('/api/templates-studio', templatesStudioV1Routes);
 // ADR-109 — Template Backgrounds (catalogue + grants user_id)
 app.use('/api/templates/backgrounds', templateBackgroundsRoutes);
 

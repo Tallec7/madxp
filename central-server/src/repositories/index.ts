@@ -387,3 +387,22 @@ export {
   videoFtpAuditRepository,
   type VideoFtpAuditWarning,
 } from './video-ftp-audit.repository';
+
+// Templates Studio V1 (système code-driven parallèle)
+export {
+  templateDefinitionRepository,
+  renderRequestRepository,
+  siteBrandKitRepository,
+  playerRepository,
+  type TemplateDefinitionRow,
+  type RenderRequestRow,
+  type SiteBrandKitRow,
+  type PlayerRow,
+  type TemplateKind,
+  type RenderStatus,
+  type CutoutStatus,
+  type CreateRenderRequestInput,
+  type UpsertTemplateDefinitionInput,
+  type UpsertSiteBrandKitInput,
+  type CreatePlayerInput,
+} from './templates-studio.repository';
