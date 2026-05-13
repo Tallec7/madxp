@@ -1,3 +1,9 @@
+# [3.310.0](https://github.com/Tallec7/neopro/compare/v3.309.0...v3.310.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** S4-D — UI roster joueurs + PlayerPicker câblé dans le studio ([#989](https://github.com/Tallec7/neopro/issues/989)) ([bd77b12](https://github.com/Tallec7/neopro/commit/bd77b12809b7c6bd57820b72fcb83ff384dbe7b0)), closes [#988](https://github.com/Tallec7/neopro/issues/988) [#987](https://github.com/Tallec7/neopro/issues/987)
+
 # [3.309.0](https://github.com/Tallec7/neopro/compare/v3.308.0...v3.309.0) (2026-05-13)
 
 ### Features
