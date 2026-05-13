@@ -16,7 +16,6 @@ jest.mock('./socket.service', () => ({
   __esModule: true,
   default: {
     getConnectionCount: jest.fn().mockReturnValue(5),
-    isRedisConnected: jest.fn().mockReturnValue(false),
   },
 }));
 
@@ -117,28 +116,16 @@ describe('HealthService', () => {
       expect(health.summary.healthyChecks).toBeGreaterThanOrEqual(0);
     });
 
-    it('should not include Redis check when not configured', async () => {
+    // Redis check retiré 2026-05-13 — cf. cleanup post-incident NLF
+    // (adapter Socket.IO Redis supprimé, inutile en 1 replica Railway).
+    it('should not include redis field in checks (Redis removed)', async () => {
       mockQuery.mockResolvedValueOnce({
         rows: [{ health: 1, server_time: new Date() }],
       });
 
-      (socketService.isRedisConnected as jest.Mock).mockReturnValue(false);
-
       const health = await healthService.getHealth();
 
-      expect(health.checks.redis).toBeUndefined();
-    });
-
-    it('should include Redis check when configured', async () => {
-      mockQuery.mockResolvedValueOnce({
-        rows: [{ health: 1, server_time: new Date() }],
-      });
-
-      (socketService.isRedisConnected as jest.Mock).mockReturnValue(true);
-
-      const health = await healthService.getHealth();
-
-      expect(health.checks.redis).toBeDefined();
+      expect((health.checks as { redis?: unknown }).redis).toBeUndefined();
     });
   });
 

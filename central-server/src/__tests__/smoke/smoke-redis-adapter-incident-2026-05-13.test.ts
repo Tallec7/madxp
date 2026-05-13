@@ -1,72 +1,105 @@
 /**
- * Smoke tests — Socket.IO Redis adapter hardening (incident NLF 2026-05-13)
+ * Smoke tests — Socket.IO Redis adapter SUPPRIMÉ (cleanup post-incident NLF 2026-05-13)
  *
- * Garde-fou contre la régression de l'incident 2026-05-13 :
- * - Quota Upstash Redis épuisé (500 000 req/mois) → pub/sub Socket.IO en
- *   boucle d'erreurs → events applicatifs (authenticate, heartbeat) droppés
- *   → toute la flotte apparaît `Hors ligne` côté dashboard alors que les
- *   Pi heartbeat normalement.
- * - Aggravé par un fallback bogué : après `Failed to setup Redis adapter`,
- *   les clients gardaient leurs handlers `error` attachés et continuaient à
- *   logger en boucle.
+ * Contexte de l'incident :
+ * Le quota Upstash Redis a été épuisé (500 000 req/mois) le 2026-05-12 ~20:34 UTC.
+ * Le central-server bouclait sur `ERR max requests limit exceeded` côté pub/sub
+ * Socket.IO — les events applicatifs `authenticate` et `heartbeat` étaient
+ * droppés silencieusement → toute la flotte apparaissait `Hors ligne` côté
+ * dashboard alors que les Pi heartbeataient normalement (TCP + Socket.IO
+ * low-level + HTTP analytics OK).
  *
- * Le fix introduit :
- *   1. Un kill-switch explicite `REDIS_ENABLED=false` qui prend le pas sur
- *      `REDIS_URL` (utile quand on ne peut pas supprimer la variable d'env).
- *   2. Le cleanup correct des listeners `error` (`removeAllListeners('error')`)
- *      dans le catch du setup Redis.
+ * Décision de cleanup (cf. docs/runbooks/OPS-06 étape 4 — choix A) :
+ * Le Redis adapter n'avait d'utilité que pour le scale horizontal (>1 replica
+ * Railway). En 1 replica (cas actuel), il était purement décoratif et son
+ * crash bloquait le pub/sub local. Supprimé définitivement le 2026-05-13.
+ *
+ * Ce smoke test bloque toute réintroduction silencieuse de Redis. Si un jour
+ * on a besoin de scaler, retrouver le code dans l'historique git (avant
+ * commit cleanup) plutôt que de le re-coder vite fait.
+ *
+ * Note : ce test a remplacé une version intermédiaire (PR #979) qui validait
+ * un kill-switch `REDIS_ENABLED=false`. Le kill-switch est devenu obsolète
+ * dès lors que tout le code Redis a été supprimé.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
-const SERVICE = path.resolve(__dirname, '../..', 'services/socket.service.ts');
+const SRC_ROOT = path.resolve(__dirname, '../..');
+const SOCKET_SERVICE = path.join(SRC_ROOT, 'services/socket.service.ts');
+const HEALTH_SERVICE = path.join(SRC_ROOT, 'services/health.service.ts');
+const ADMIN_CONTROLLER = path.join(SRC_ROOT, 'controllers/admin.controller.ts');
+const SERVER_ENTRY = path.join(SRC_ROOT, 'server.ts');
+const PACKAGE_JSON = path.resolve(SRC_ROOT, '../package.json');
 
-describe('Socket.IO Redis adapter — hardening NLF 2026-05-13 (smoke)', () => {
-  const src = fs.readFileSync(SERVICE, 'utf8');
+describe('Redis adapter cleanup — incident NLF 2026-05-13 (smoke)', () => {
+  describe('central-server/package.json — deps retirées', () => {
+    const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON, 'utf8'));
+    const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 
-  it('expose le kill-switch REDIS_ENABLED', () => {
-    expect(src).toMatch(/process\.env\.REDIS_ENABLED/);
+    it('@socket.io/redis-adapter n\'est plus une dépendance', () => {
+      expect(allDeps).not.toHaveProperty('@socket.io/redis-adapter');
+    });
+
+    it('le client `redis` n\'est plus une dépendance', () => {
+      expect(allDeps).not.toHaveProperty('redis');
+    });
   });
 
-  it('REDIS_ENABLED=false court-circuite avant REDIS_URL', () => {
-    const enabledIdx = src.indexOf('process.env.REDIS_ENABLED');
-    const urlIdx = src.indexOf('process.env.REDIS_URL');
-    expect(enabledIdx).toBeGreaterThan(-1);
-    expect(urlIdx).toBeGreaterThan(-1);
-    // Le test du kill-switch doit lire REDIS_ENABLED AVANT REDIS_URL et avant
-    // toute tentative de createClient.
-    const createIdx = src.indexOf('createClient(');
-    expect(enabledIdx).toBeLessThan(createIdx);
+  describe('socket.service.ts — pas de Redis', () => {
+    const src = fs.readFileSync(SOCKET_SERVICE, 'utf8');
+
+    it('n\'importe pas createAdapter ni createClient', () => {
+      expect(src).not.toMatch(/from\s+['"]@socket\.io\/redis-adapter['"]/);
+      expect(src).not.toMatch(/from\s+['"]redis['"]/);
+    });
+
+    it('ne déclare pas de propriétés redisClient / redisSub', () => {
+      expect(src).not.toMatch(/private\s+redisClient/);
+      expect(src).not.toMatch(/private\s+redisSub/);
+    });
+
+    it('ne contient plus la méthode setupRedisAdapter', () => {
+      expect(src).not.toMatch(/setupRedisAdapter\s*\(/);
+    });
+
+    it('n\'expose plus isRedisConnected()', () => {
+      expect(src).not.toMatch(/isRedisConnected\s*\(/);
+    });
+
+    it('ne lit pas REDIS_URL ou REDIS_ENABLED', () => {
+      expect(src).not.toMatch(/process\.env\.REDIS_URL/);
+      expect(src).not.toMatch(/process\.env\.REDIS_ENABLED/);
+    });
   });
 
-  it('le default REDIS_ENABLED est true (pas de breaking change si var absente)', () => {
-    // Pattern attendu : (process.env.REDIS_ENABLED ?? 'true')
-    expect(src).toMatch(/REDIS_ENABLED\s*\?\?\s*['"]true['"]/);
+  describe('consumers — pas de référence isRedisConnected', () => {
+    it('health.service.ts : pas de checkRedis ni isRedisConnected', () => {
+      const src = fs.readFileSync(HEALTH_SERVICE, 'utf8');
+      expect(src).not.toMatch(/checkRedis\s*\(/);
+      expect(src).not.toMatch(/isRedisConnected\s*\(/);
+    });
+
+    it('admin.controller.ts : pas de isRedisConnected dans la réponse socketState', () => {
+      const src = fs.readFileSync(ADMIN_CONTROLLER, 'utf8');
+      expect(src).not.toMatch(/isRedisConnected/);
+    });
+
+    it('server.ts : pas de log redisEnabled ni isRedisConnected', () => {
+      const src = fs.readFileSync(SERVER_ENTRY, 'utf8');
+      expect(src).not.toMatch(/redisEnabled/);
+      expect(src).not.toMatch(/isRedisConnected/);
+    });
   });
 
-  it('le catch nettoie les listeners error des clients Redis', () => {
-    // Sans removeAllListeners, les clients quit()-és continuent à logger
-    // l'erreur de connexion en boucle pendant que single-instance prend le relais.
-    const pubMatches = src.match(/this\.redisClient\.removeAllListeners\(['"]error['"]\)/);
-    const subMatches = src.match(/this\.redisSub\.removeAllListeners\(['"]error['"]\)/);
-    expect(pubMatches).not.toBeNull();
-    expect(subMatches).not.toBeNull();
-  });
+  describe('HealthCheckResult type — plus de champ redis', () => {
+    const src = fs.readFileSync(HEALTH_SERVICE, 'utf8');
 
-  it('le removeAllListeners est APPELÉ AVANT le quit() dans le catch', () => {
-    // Inverser l'ordre re-introduirait la boucle de logs : Redis client
-    // émet 'error' juste avant que quit() résolve.
-    const catchStart = src.indexOf('Failed to setup Redis adapter');
-    expect(catchStart).toBeGreaterThan(-1);
-    const tail = src.slice(catchStart, catchStart + 1500);
-    const pubRemoveIdx = tail.indexOf("this.redisClient.removeAllListeners('error')");
-    const pubQuitIdx = tail.indexOf('this.redisClient.quit()');
-    const subRemoveIdx = tail.indexOf("this.redisSub.removeAllListeners('error')");
-    const subQuitIdx = tail.indexOf('this.redisSub.quit()');
-    expect(pubRemoveIdx).toBeGreaterThan(-1);
-    expect(pubQuitIdx).toBeGreaterThan(pubRemoveIdx);
-    expect(subRemoveIdx).toBeGreaterThan(-1);
-    expect(subQuitIdx).toBeGreaterThan(subRemoveIdx);
+    it('l\'interface HealthCheckResult ne déclare plus `redis?`', () => {
+      const interfaceMatch = src.match(/interface\s+HealthCheckResult\s*\{[\s\S]*?\n\}/);
+      expect(interfaceMatch).not.toBeNull();
+      expect(interfaceMatch![0]).not.toMatch(/redis\?\s*:/);
+    });
   });
 });

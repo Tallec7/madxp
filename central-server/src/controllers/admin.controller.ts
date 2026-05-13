@@ -106,7 +106,6 @@ export const getSocketDebugInfo = async (_req: AuthRequest, res: Response) => {
         connectedCount: socketInfo.connectedSites.length,
         pendingCommandsCount: socketInfo.pendingCommandsCount,
         lastPongReceived: socketInfo.lastPongReceived,
-        isRedisConnected: socketService.isRedisConnected(),
       },
       databaseState: {
         onlineSites: dbOnlineSites,

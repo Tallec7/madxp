@@ -14,8 +14,6 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { createHash } from 'crypto';
 import jwt, { Secret } from 'jsonwebtoken';
-import { createAdapter } from '@socket.io/redis-adapter';
-import { createClient, RedisClientType } from 'redis';
 import { query } from '../config/database';
 import { SocketData, CommandMessage, CommandResult, HeartbeatMessage } from '../types';
 import logger from '../config/logger';
@@ -160,8 +158,6 @@ class SocketService {
   private connectionHealthCheckInterval: NodeJS.Timeout | null = null;
   private dbSyncInterval: NodeJS.Timeout | null = null;
   private saasStatesGcInterval: NodeJS.Timeout | null = null;
-  private redisClient: RedisClientType | null = null;
-  private redisSub: RedisClientType | null = null;
 
   /** Shared context passed to all handler functions */
   private get ctx(): SocketContext {
@@ -221,7 +217,9 @@ class SocketService {
       corsMode: hasAllowedOrigins ? 'whitelist' : isProduction ? 'reject-all' : 'allow-all',
     });
 
-    await this.setupRedisAdapter();
+    // Socket.IO Redis adapter retiré 2026-05-13 post-incident NLF (quota
+    // Upstash épuisé + 1 replica Railway → adapter inutile et risqué).
+    // Cf. docs/runbooks/OPS-06-redis-quota-exhausted.md.
 
     this.io.on('connection', this.handleConnection.bind(this));
 
@@ -246,75 +244,6 @@ class SocketService {
     }, 5 * 60 * 1000);
 
     logger.info('Socket.IO service initialized');
-  }
-
-  private async setupRedisAdapter(): Promise<void> {
-    // Incident 2026-05-13 : quota Upstash Redis épuisé (500k req/mois) →
-    // pub/sub Socket.IO en boucle d'erreurs → events applicatifs (authenticate,
-    // heartbeat) droppés → toute la flotte apparaît offline.
-    //
-    // Le Redis adapter n'est utile QUE pour le scale horizontal (>1 replica
-    // Railway). Sur 1 replica, il ne sert à rien et son crash bloque le
-    // pub/sub local. On expose maintenant un kill-switch explicite
-    // REDIS_ENABLED=false qui prend le pas sur REDIS_URL — utile quand on ne
-    // peut pas supprimer la variable d'env (linking Railway, secrets gérés
-    // hors UI, etc.).
-    const redisEnabled = (process.env.REDIS_ENABLED ?? 'true').toLowerCase() !== 'false';
-    const redisUrl = process.env.REDIS_URL;
-
-    if (!redisEnabled) {
-      logger.info('Redis adapter explicitly disabled via REDIS_ENABLED=false - Socket.IO running in single-instance mode');
-      return;
-    }
-
-    if (!redisUrl) {
-      logger.warn('REDIS_URL not configured - Socket.IO running in single-instance mode');
-      logger.warn('For horizontal scaling, set REDIS_URL environment variable');
-      return;
-    }
-
-    try {
-      this.redisClient = createClient({ url: redisUrl });
-      this.redisSub = this.redisClient.duplicate();
-
-      this.redisClient.on('error', (err: Error) => {
-        logger.error('Redis pub client error:', err);
-      });
-      this.redisSub.on('error', (err: Error) => {
-        logger.error('Redis sub client error:', err);
-      });
-
-      await Promise.all([
-        this.redisClient.connect(),
-        this.redisSub.connect(),
-      ]);
-
-      if (this.io) {
-        this.io.adapter(createAdapter(this.redisClient, this.redisSub));
-      }
-
-      logger.info('Socket.IO Redis adapter configured for horizontal scaling', {
-        redisUrl: redisUrl.replace(/\/\/.*@/, '//***@'),
-      });
-    } catch (error) {
-      logger.error('Failed to setup Redis adapter:', error);
-      logger.warn('Falling back to single-instance mode');
-
-      // Incident 2026-05-13 : sans ces `removeAllListeners`, les clients gardent
-      // leurs handlers `error` attachés et continuent à logger en boucle même
-      // après `quit()` → fuite de logs + faux signal d'erreur Redis pendant que
-      // Socket.IO tourne déjà en single-instance mode.
-      if (this.redisClient) {
-        this.redisClient.removeAllListeners('error');
-        try { await this.redisClient.quit(); } catch { /* ignore */ }
-        this.redisClient = null;
-      }
-      if (this.redisSub) {
-        this.redisSub.removeAllListeners('error');
-        try { await this.redisSub.quit(); } catch { /* ignore */ }
-        this.redisSub = null;
-      }
-    }
   }
 
   // ==========================================================================
@@ -1090,28 +1019,7 @@ class SocketService {
     this.playerStates.clear();
     this.lastMetricsInsertAt.clear();
 
-    if (this.redisClient) {
-      try {
-        await this.redisClient.quit();
-        this.redisClient = null;
-      } catch (error) {
-        logger.error('Error closing Redis pub client:', error);
-      }
-    }
-    if (this.redisSub) {
-      try {
-        await this.redisSub.quit();
-        this.redisSub = null;
-      } catch (error) {
-        logger.error('Error closing Redis sub client:', error);
-      }
-    }
-
     logger.info('Socket service cleaned up');
-  }
-
-  isRedisConnected(): boolean {
-    return this.redisClient !== null && this.redisClient.isOpen;
   }
 }
 
