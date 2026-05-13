@@ -103,7 +103,7 @@
               </span>
             </div>
             <div class="pl__info">
-              @if (p.numero != null) {
+              @if (p.numero !== null && p.numero !== undefined) {
                 <span class="pl__numero">#{{ p.numero }}</span>
               }
               <strong>{{ p.prenom }} {{ p.nom }}</strong>
