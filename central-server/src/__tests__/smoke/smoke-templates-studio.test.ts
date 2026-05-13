@@ -30,6 +30,7 @@ const ROUTES_FILE = path.join(SRC, 'routes', 'templates-studio.routes.ts');
 const SERVER_FILE = path.join(SRC, 'server.ts');
 const SEED_SCRIPT = path.join(SRC, 'scripts', 'seed-templates-studio-manifests.ts');
 const MANIFESTS_DIR = path.join(SRC, 'scripts', 'templates-studio-manifests');
+const WORKER_FILE = path.join(SRC, 'services', 'studio-render-worker.service.ts');
 
 describe('Templates Studio V1 — files exist', () => {
   it.each([
@@ -249,5 +250,41 @@ describe('Templates Studio V1 — manifest seed (J3, cf STUDIO_V1.md §5)', () =
     const idxSeed = content.indexOf('seed-templates-studio-manifests');
     expect(idxWorker).toBeGreaterThan(-1);
     expect(idxSeed).toBeGreaterThan(idxWorker);
+  });
+});
+
+describe('Templates Studio V1 — render worker (J4, STUB)', () => {
+  it('worker file exists', () => {
+    expect(fs.existsSync(WORKER_FILE)).toBe(true);
+  });
+
+  it('worker exposes start/stop singleton + named exports', () => {
+    const content = fs.readFileSync(WORKER_FILE, 'utf8');
+    expect(content).toMatch(/export\s+async\s+function\s+startStudioRenderWorker/);
+    expect(content).toMatch(/export\s+function\s+stopStudioRenderWorker/);
+  });
+
+  it('worker code does NOT import @remotion/renderer yet (J4 = STUB)', () => {
+    // Le branchement réel viendra dans un commit ultérieur — séparation propre
+    // évite que le commit J4 importe @remotion/renderer accidentellement.
+    const content = fs.readFileSync(WORKER_FILE, 'utf8');
+    const code = content
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    expect(code).not.toMatch(/@remotion\/renderer/);
+    expect(code).not.toMatch(/@remotion\/bundler/);
+  });
+
+  it('worker calls failStaleRunning(10) at boot before polling', () => {
+    // Anti-orphan : un row claimé par un process mort doit pouvoir être retry.
+    // Pattern aligné sur le legacy ADR-054 (smoke services.md enforced).
+    const content = fs.readFileSync(WORKER_FILE, 'utf8');
+    expect(content).toMatch(/failStaleRunning\(\s*(?:STALE_RUNNING_MAX_AGE_MIN|10)\s*\)/);
+  });
+
+  it('worker is wired in server.ts boot', () => {
+    const content = fs.readFileSync(SERVER_FILE, 'utf8');
+    expect(content).toMatch(/studio-render-worker\.service/);
+    expect(content).toMatch(/startStudioRenderWorker/);
   });
 });

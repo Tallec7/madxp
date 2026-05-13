@@ -653,6 +653,18 @@ const startServer = async () => {
       logger.warn('templates-studio: manifest seed skipped at boot', { err });
     }
 
+    // Templates Studio V1 — worker stub (J4). Poll render_requests toutes les 2s.
+    // STUB : performRender() simule un rendu — branchement bundle()+renderMedia()
+    // viendra dans un commit ultérieur (déjà dérisqué dans le POC studio-template/).
+    try {
+      const { startStudioRenderWorker } = await import(
+        './services/studio-render-worker.service'
+      );
+      await startStudioRenderWorker();
+    } catch (err) {
+      logger.warn('templates-studio: render worker skipped at boot', { err });
+    }
+
     // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j
     // + refresh gauge Prometheus. Tolère l'absence de table (pré-migration).
     const { profileDeviceTokenRepository } = await import(

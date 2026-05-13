@@ -197,6 +197,25 @@ class RenderRequestRepositoryImpl extends BaseRepository<RenderRequestRow> {
       [errorMsg, id],
     );
   }
+
+  /**
+   * Garde-fou boot : remet en `queued` toute row `rendering` claimée par un
+   * process mort (Railway redeploy, crash, etc). Sans ça, un user ne peut
+   * jamais retry — la row reste bloquée ad vitam.
+   *
+   * Pattern repris du worker legacy ADR-054 (cf `.claude/rules/services.md`,
+   * invariant `failStaleRunningJobs` smoke enforced).
+   */
+  async failStaleRunning(maxAgeMinutes: number): Promise<number> {
+    const result = await query(
+      `UPDATE render_requests
+       SET status = 'queued', updated_at = NOW()
+       WHERE status = 'rendering'
+         AND updated_at < NOW() - ($1 || ' minutes')::interval`,
+      [String(maxAgeMinutes)],
+    );
+    return result.rowCount ?? 0;
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
