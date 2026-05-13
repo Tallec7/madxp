@@ -1,40 +1,96 @@
 /**
- * Templates Studio V1 — worker de rendu async (J4 walking skeleton).
+ * Templates Studio V1 — worker de rendu async (J5 walking skeleton).
  *
  * Spec : studio-template/templates-remotion/spec/STUDIO_V1.md §7
  *
  * Poll PG (`render_requests WHERE status='queued'`) toutes les 2s, claim atomic
- * via `FOR UPDATE SKIP LOCKED`, simule un rendu (STUB J4), met à jour la row.
+ * via `FOR UPDATE SKIP LOCKED`, délègue le render à un service HTTP séparé.
  *
- * **STUB ÉTAT J4** : la fonction `performRender()` simule un rendu de 2s et
- * retourne une URL FTP placeholder. Le branchement réel sur
- * `bundle() + renderMedia()` (déjà dérisqué dans le POC `studio-template/`)
- * viendra dans un commit ultérieur. Le commit J4 garantit uniquement
- * l'intégration spine : poll → claim → state machine → markReady/markFailed.
+ * **Architecture (cf STUDIO_V1.md §3 "container Railway Remotion séparé")** :
+ * Le central est orchestrateur (tenant + queue + state). Le rendu réel
+ * (`bundle() + renderMedia()`) vit dans un service spécialiste (le POC
+ * `studio-template/studio-poc/server.mjs` pour l'instant — déploiement Railway
+ * dédié à instaurer en prod).
+ *
+ * **Fallback STUB** si `STUDIO_RENDER_SERVER_URL` env est absente : la prod
+ * peut booter avant que le render server soit déployé séparément. Le STUB
+ * écrit une URL placeholder, suffisant pour démontrer la state machine.
  *
  * Invariants protégés par le smoke `smoke-templates-studio` :
- * - Aucun import `@remotion/renderer` ici en J4 (vient plus tard, contrôlé)
+ * - Pas d'import `@remotion/renderer` côté central (le rendu est délégué HTTP)
  * - `failStaleRunning(10)` appelé au boot avant le premier poll
  * - Pattern singleton (cf `.claude/rules/services.md`)
  */
 
 import logger from '../config/logger';
-import { renderRequestRepository } from '../repositories';
+import {
+  renderRequestRepository,
+  templateDefinitionRepository,
+} from '../repositories';
 
 const POLL_INTERVAL_MS = 2_000;
 const STALE_RUNNING_MAX_AGE_MIN = 10;
+// HTTP timeout par render. Aligné sur le POC : compo lourde (5 layers VP9 +
+// masques PNG) prend 60-180s à demi-résolution. 5min de marge pour le premier
+// render qui inclut le bundle warmup côté render server.
+const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
+// Lu à chaque tick (pas à l'import) — facilite les tests + permet à un opérateur
+// de toggle le mode HTTP/STUB sans redéployer.
+function getRenderServerUrl(): string | null {
+  return process.env.STUDIO_RENDER_SERVER_URL ?? null;
+}
 
 let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
 
+interface RenderServerResponse {
+  url: string;
+  cached: boolean;
+  durationMs: number;
+}
+
 /**
- * Simule un rendu. Sera remplacé par un appel à `bundle() + renderMedia()`
- * (déjà dérisqué dans le POC `studio-template/templates-remotion/studio-poc/server.mjs`).
+ * Délègue le render au service HTTP séparé (POC `studio-poc/server.mjs`).
+ * Retourne l'URL absolue où le MP4/PNG est accessible.
  */
-async function performRender(requestId: string): Promise<string> {
+async function performRenderHttp(
+  serverUrl: string,
+  compositionId: string,
+  kind: 'video' | 'still',
+  props: Record<string, unknown>,
+): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${serverUrl}/api/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ compositionId, kind, props }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`render server ${res.status}: ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as RenderServerResponse;
+    // Le service retourne un path relatif (`/renders/...`). On le préfixe avec
+    // l'URL du serveur pour que le central stocke une URL absolue exploitable
+    // par le frontend. En prod, le render service uploadera lui-même sur FTP
+    // et retournera l'URL kalonpartners.bzh directement (cf TODO §3 du spec).
+    return data.url.startsWith('http')
+      ? data.url
+      : `${serverUrl.replace(/\/$/, '')}${data.url}`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * STUB fallback — utilisé si STUDIO_RENDER_SERVER_URL n'est pas configurée.
+ * Garde la state machine fonctionnelle pour démos/dev sans render server up.
+ */
+async function performRenderStub(requestId: string): Promise<string> {
   await new Promise((r) => setTimeout(r, 2_000));
-  // Placeholder URL — pattern aligné sur la convention §9 du spec :
-  // `renders/{YYYY-MM}/{uuid}.mp4` servi via `https://kalonpartners.bzh/neopro-video/...`
   const yyyymm = new Date().toISOString().slice(0, 7);
   return `https://kalonpartners.bzh/neopro-video/renders/${yyyymm}/${requestId}.mp4`;
 }
@@ -49,12 +105,35 @@ async function processOne(): Promise<boolean> {
     template_id: request.template_id,
   });
 
+  const serverUrl = getRenderServerUrl();
   try {
-    const outputUrl = await performRender(request.id);
+    let outputUrl: string;
+    if (serverUrl) {
+      // Charge le template pour récupérer le compositionId Remotion + kind.
+      const template = await templateDefinitionRepository.findById(
+        request.template_id,
+      );
+      if (!template) {
+        throw new Error(`template ${request.template_id} not found in DB`);
+      }
+      outputUrl = await performRenderHttp(
+        serverUrl,
+        template.remotion_composition_id,
+        template.kind,
+        request.props_json,
+      );
+    } else {
+      logger.warn(
+        'studio-render-worker: STUDIO_RENDER_SERVER_URL not set — using STUB',
+        { request_id: request.id },
+      );
+      outputUrl = await performRenderStub(request.id);
+    }
     await renderRequestRepository.markReady(request.id, outputUrl);
     logger.info('studio-render-worker: render ready', {
       request_id: request.id,
       output_url: outputUrl,
+      mode: serverUrl ? 'http' : 'stub',
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
