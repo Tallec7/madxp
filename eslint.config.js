@@ -6,8 +6,10 @@ const angular = require("angular-eslint");
 
 module.exports = defineConfig([
   {
-    // Ignore central-server which has its own ESLint config
-    ignores: ["central-server/**", "node_modules/**"],
+    // Ignore central-server which has its own ESLint config.
+    // studio-render-server : projet Node/Remotion autonome (Vite + ESM/CJS mix
+    // pour la config Vite), pas concerné par les règles Angular du dashboard.
+    ignores: ["central-server/**", "studio-render-server/**", "node_modules/**"],
   },
   {
     files: ["**/*.ts"],

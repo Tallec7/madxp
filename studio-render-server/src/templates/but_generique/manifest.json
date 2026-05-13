@@ -1,0 +1,29 @@
+{
+  "id": "but_generique",
+  "version": "1.0.0",
+  "label": "BUT — Générique",
+  "kind": "video",
+  "description": "Animation but : photo joueur détourée, nom, numéro, minute.",
+  "inputSchema": {
+    "type": "object",
+    "required": ["scorerPlayerId", "minute"],
+    "properties": {
+      "scorerPlayerId": { "type": "string", "ref": "Player", "label": "Buteur" },
+      "assistPlayerId": { "type": "string", "ref": "Player", "label": "Passeur (optionnel)" },
+      "minute": { "type": "integer", "minimum": 1, "maximum": 130, "label": "Minute du but" }
+    }
+  },
+  "bindings": {
+    "scorerName": { "source": "input.scorerPlayerId", "transform": "player.fullName" },
+    "scorerNumber": { "source": "input.scorerPlayerId", "transform": "player.number" },
+    "scorerPhoto": { "source": "input.scorerPlayerId", "transform": "player.cutoutUrl" },
+    "assistName": { "source": "input.assistPlayerId", "transform": "player.fullName" },
+    "minute": { "source": "input.minute" },
+    "clubName": { "source": "brandKit.clubName" },
+    "clubLogo": { "source": "brandKit.logos.primary" },
+    "primaryColor": { "source": "brandKit.colors.primary" },
+    "secondaryColor": { "source": "brandKit.colors.secondary" }
+  },
+  "format": { "width": 1080, "height": 1920, "fps": 30, "durationInFrames": 180 },
+  "compositionId": "ButGeneriqueStory"
+}
