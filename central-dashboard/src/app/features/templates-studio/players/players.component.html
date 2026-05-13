@@ -1,0 +1,129 @@
+<div class="pl">
+  <header class="pl__header">
+    <div>
+      <h1>Joueurs</h1>
+      <p class="pl__subtitle">
+        Roster du club utilisé par les templates BUT, ENTRÉE et autres qui intègrent une photo
+        détourée.
+      </p>
+    </div>
+    <button type="button" class="pl__add-btn" (click)="toggleAdd()" [disabled]="!siteId()">
+      {{ addButtonLabel() }}
+    </button>
+  </header>
+
+  @if (loading()) {
+    <div class="pl__loading">Chargement…</div>
+  } @else if (errorMsg() && !siteId()) {
+    <div class="pl__error">{{ errorMsg() }}</div>
+  } @else {
+    @if (showAddForm()) {
+      <form [formGroup]="addForm" (ngSubmit)="submitAdd()" class="pl__form">
+        <div class="pl__row">
+          <label class="pl__field">
+            <span>Prénom *</span>
+            <input type="text" formControlName="prenom" maxlength="80" />
+          </label>
+          <label class="pl__field">
+            <span>Nom *</span>
+            <input type="text" formControlName="nom" maxlength="80" />
+          </label>
+          <label class="pl__field pl__field--narrow">
+            <span>N°</span>
+            <input type="number" formControlName="numero" min="0" max="999" />
+          </label>
+        </div>
+        <div class="pl__row">
+          <label class="pl__field">
+            <span>Poste</span>
+            <input
+              type="text"
+              formControlName="poste"
+              placeholder="Attaquant, Milieu…"
+              maxlength="60"
+            />
+          </label>
+          <label class="pl__field pl__field--wide">
+            <span>URL photo brute (optionnel — upload S4-B)</span>
+            <input
+              type="url"
+              formControlName="photo_raw_url"
+              placeholder="https://kalonpartners.bzh/neopro-video/players/..."
+            />
+          </label>
+        </div>
+        <div class="pl__actions">
+          <button type="submit" class="pl__save" [disabled]="addForm.invalid || saving()">
+            {{ saving() ? 'Création…' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    @if (errorMsg()) {
+      <div class="pl__error">{{ errorMsg() }}</div>
+    }
+    @if (successMsg()) {
+      <div class="pl__success">{{ successMsg() }}</div>
+    }
+
+    @if (players().length === 0) {
+      <div class="pl__empty">Aucun joueur. Ajoute le premier via le bouton ci-dessus.</div>
+    } @else {
+      <div class="pl__grid">
+        @for (p of players(); track p.id) {
+          <article class="pl__card">
+            <div class="pl__photo">
+              @if (p.photo_cutout_url) {
+                <img [src]="p.photo_cutout_url" alt="{{ p.prenom }} {{ p.nom }}" />
+              } @else if (p.photo_raw_url) {
+                <img
+                  [src]="p.photo_raw_url"
+                  alt="{{ p.prenom }} {{ p.nom }}"
+                  class="pl__photo--raw"
+                />
+              } @else {
+                <div class="pl__photo--empty">📷</div>
+              }
+              <span class="pl__cutout-badge pl__cutout-badge--{{ p.cutout_status }}">
+                @switch (p.cutout_status) {
+                  @case ('ready') {
+                    ✅ détouré
+                  }
+                  @case ('processing') {
+                    ⏳ en cours
+                  }
+                  @case ('pending') {
+                    🟡 en attente
+                  }
+                  @case ('failed') {
+                    ❌ échec
+                  }
+                }
+              </span>
+            </div>
+            <div class="pl__info">
+              @if (p.numero != null) {
+                <span class="pl__numero">#{{ p.numero }}</span>
+              }
+              <strong>{{ p.prenom }} {{ p.nom }}</strong>
+              @if (p.poste) {
+                <small>{{ p.poste }}</small>
+              }
+            </div>
+            <div class="pl__card-actions">
+              <button
+                type="button"
+                class="pl__delete"
+                (click)="deletePlayer(p)"
+                aria-label="Supprimer"
+              >
+                🗑
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>

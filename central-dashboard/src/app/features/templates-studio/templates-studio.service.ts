@@ -5,9 +5,12 @@ import { ApiService } from '../../core/services/api.service';
 import type {
   BrandKit,
   BrandKitUpsertInput,
+  CreatePlayerInput,
+  Player,
   RenderRequestCreated,
   RenderRequestSnapshot,
   TemplateSummary,
+  UpdatePlayerInput,
 } from './templates-studio.types';
 
 interface BrandKitResponse {
@@ -31,6 +34,16 @@ interface RenderRequestCreatedResponse {
 interface RenderRequestSnapshotResponse {
   success: boolean;
   data: RenderRequestSnapshot;
+}
+
+interface PlayersListResponse {
+  success: boolean;
+  data: { players: Player[]; total: number };
+}
+
+interface PlayerResponse {
+  success: boolean;
+  data: Player;
 }
 
 /**
@@ -77,5 +90,37 @@ export class TemplatesStudioService {
     return this.api
       .get<RenderRequestSnapshotResponse>(`/templates-studio/render-requests/${id}`)
       .pipe(map((res) => res.data));
+  }
+
+  // Roster joueurs (S4-A backend, S4-D UI).
+  listPlayers(siteId: string): Observable<Player[]> {
+    return this.api
+      .get<PlayersListResponse>(`/templates-studio/sites/${siteId}/players`)
+      .pipe(map((res) => res.data.players));
+  }
+
+  createPlayer(siteId: string, input: CreatePlayerInput): Observable<Player> {
+    return this.api
+      .post<PlayerResponse>(`/templates-studio/sites/${siteId}/players`, input)
+      .pipe(map((res) => res.data));
+  }
+
+  updatePlayer(
+    siteId: string,
+    playerId: string,
+    input: UpdatePlayerInput,
+  ): Observable<Player> {
+    return this.api
+      .put<PlayerResponse>(
+        `/templates-studio/sites/${siteId}/players/${playerId}`,
+        input,
+      )
+      .pipe(map((res) => res.data));
+  }
+
+  deletePlayer(siteId: string, playerId: string): Observable<void> {
+    return this.api
+      .delete<void>(`/templates-studio/sites/${siteId}/players/${playerId}`)
+      .pipe(map(() => undefined));
   }
 }

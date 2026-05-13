@@ -176,6 +176,16 @@ export const routes: Routes = [
           ),
       },
       {
+        // Templates Studio V1 — Roster joueurs (S4-D, alimente le PlayerPicker du studio)
+        path: 'templates-studio/players',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () =>
+          import('./features/templates-studio/players/players.component').then(
+            (m) => m.PlayersComponent,
+          ),
+      },
+      {
         // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
         path: 'content/templates-remotion/assets',
         canActivate: [roleGuard],

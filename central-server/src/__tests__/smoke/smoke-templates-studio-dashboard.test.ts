@@ -139,16 +139,15 @@ describe('Templates Studio V1 — page studio principale (S3.2)', () => {
     expect(html).toMatch(/kind\s*===\s*['"]still['"]/);
   });
 
-  it('studio component disables player ref inputs until S4 (roster joueurs)', () => {
-    // Tant que S4 n'est pas livré, les bindings player.* ne peuvent pas être
-    // remplis. On désactive l'input + message explicatif au lieu de laisser
-    // l'user saisir un UUID au hasard qui retournera null côté résolveur.
+  it('studio component dispatches player ref bindings to <app-player-picker> (S4-D wired)', () => {
+    // Avant S4-D : input disabled avec placeholder "S4 à venir".
+    // Après S4-D : <app-player-picker> branché via ControlValueAccessor.
     const html = fs.readFileSync(
       path.join(DASHBOARD_FEATURE, 'studio/studio.component.html'),
       'utf8',
     );
     expect(html).toMatch(/isPlayerRef\(entry\.prop\)/);
-    expect(html).toMatch(/S4/);
+    expect(html).toMatch(/<app-player-picker/);
   });
 
   it('app.routes.ts wires /templates-studio (catalogue page) with roleGuard', () => {
@@ -157,6 +156,92 @@ describe('Templates Studio V1 — page studio principale (S3.2)', () => {
     expect(content).toMatch(/path:\s*['"]templates-studio['"]\s*,/);
     expect(content).toMatch(
       /loadComponent[\s\S]*templates-studio\/studio\/studio\.component/,
+    );
+  });
+});
+
+describe('Templates Studio V1 — S4-D roster UI + PlayerPicker', () => {
+  const PLAYERS_COMPONENT = path.join(
+    DASHBOARD_FEATURE,
+    'players',
+    'players.component.ts',
+  );
+  const PLAYER_PICKER = path.join(
+    DASHBOARD_FEATURE,
+    'shared',
+    'player-picker.component.ts',
+  );
+  const STUDIO_HTML = path.join(
+    DASHBOARD_FEATURE,
+    'studio',
+    'studio.component.html',
+  );
+
+  it.each([
+    'players/players.component.ts',
+    'players/players.component.html',
+    'players/players.component.scss',
+    'shared/player-picker.component.ts',
+  ])('contains %s', (rel) => {
+    expect(fs.existsSync(path.join(DASHBOARD_FEATURE, rel))).toBe(true);
+  });
+
+  it('PlayerPicker implements ControlValueAccessor (Reactive Forms compatible)', () => {
+    // Sans CVA, le composant ne se branche pas dans `[formControlName]` du
+    // studio → pas d'integration possible avec le form auto-gen.
+    const content = fs.readFileSync(PLAYER_PICKER, 'utf8');
+    expect(content).toMatch(/ControlValueAccessor/);
+    expect(content).toMatch(/NG_VALUE_ACCESSOR/);
+    expect(content).toMatch(/writeValue/);
+    expect(content).toMatch(/registerOnChange/);
+  });
+
+  it('PlayerPicker filters by cutout_status when onlyWithCutout=true', () => {
+    // Garde-fou : un template BUT a besoin d'une photo détourée. Le PlayerPicker
+    // doit pouvoir restreindre aux joueurs prêts pour ne pas exposer un choix
+    // qui retournerait null côté résolveur (cutoutUrl).
+    const content = fs.readFileSync(PLAYER_PICKER, 'utf8');
+    expect(content).toMatch(/onlyWithCutout/);
+    expect(content).toMatch(/cutout_status\s*===\s*['"]ready['"]/);
+  });
+
+  it('studio.component HTML uses <app-player-picker> for player ref bindings', () => {
+    // Vérifie le wire-up : le placeholder "S4 à venir" est remplacé par le
+    // vrai composant. Sans ça, les bindings player.* restent inutilisables UI.
+    const html = fs.readFileSync(STUDIO_HTML, 'utf8');
+    expect(html).toMatch(/<app-player-picker/);
+    expect(html).toMatch(/\[siteId\]="siteId\(\)"/);
+    // Le placeholder texte doit avoir disparu (anti-régression).
+    expect(html).not.toMatch(/UUID du joueur \(S4/);
+  });
+
+  it('players component takes site_id from auth.currentUser$ (tenant guard)', () => {
+    // Aligné backend : site_id du JWT, jamais saisi par l'user. Sans ce check,
+    // un user pourrait potentiellement viser un autre site dans l'URL (mais le
+    // backend bloquerait via requireClubScope quand même).
+    const content = fs.readFileSync(PLAYERS_COMPONENT, 'utf8');
+    expect(content).toMatch(/auth\.currentUser\$/);
+    expect(content).toMatch(/user\?\.site_id/);
+  });
+
+  it('service exposes player CRUD methods (listPlayers/createPlayer/updatePlayer/deletePlayer)', () => {
+    const content = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'templates-studio.service.ts'),
+      'utf8',
+    );
+    expect(content).toMatch(/listPlayers\(/);
+    expect(content).toMatch(/createPlayer\(/);
+    expect(content).toMatch(/updatePlayer\(/);
+    expect(content).toMatch(/deletePlayer\(/);
+    // Et tape les bons endpoints
+    expect(content).toMatch(/\/templates-studio\/sites\/\$\{siteId\}\/players/);
+  });
+
+  it('app.routes.ts wires /templates-studio/players with roleGuard + lazy', () => {
+    const content = fs.readFileSync(APP_ROUTES, 'utf8');
+    expect(content).toMatch(/path:\s*['"]templates-studio\/players['"]/);
+    expect(content).toMatch(
+      /loadComponent[\s\S]*templates-studio\/players\/players\.component/,
     );
   });
 });

@@ -78,3 +78,31 @@ export interface RenderRequestSnapshot {
   created_at: string;
   updated_at: string;
 }
+
+export type CutoutStatus = 'pending' | 'processing' | 'ready' | 'failed';
+
+export interface Player {
+  id: string;
+  site_id: string;
+  prenom: string;
+  nom: string;
+  numero: number | null;
+  poste: string | null;
+  photo_raw_url: string | null;
+  photo_cutout_url: string | null;
+  cutout_status: CutoutStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePlayerInput {
+  prenom: string;
+  nom: string;
+  numero?: number | null;
+  poste?: string | null;
+  photo_raw_url?: string | null;
+}
+
+export type UpdatePlayerInput = Partial<CreatePlayerInput> & {
+  photo_cutout_url?: string | null;
+};

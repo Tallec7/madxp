@@ -57,15 +57,11 @@
                   </span>
 
                   @if (isPlayerRef(entry.prop)) {
-                    <input
-                      type="text"
+                    <app-player-picker
+                      [siteId]="siteId()"
+                      [onlyWithCutout]="false"
                       [formControlName]="entry.key"
-                      placeholder="UUID du joueur (S4 — PlayerPicker à venir)"
                     />
-                    <small class="hint">
-                      Sélecteur joueur livré en S4 (roster + worker rembg). Pour tester : insère
-                      manuellement un UUID via DB ou attends S4.
-                    </small>
                   } @else if (hasEnum(entry.prop)) {
                     <select [formControlName]="entry.key">
                       <option value="">— Choisir —</option>
