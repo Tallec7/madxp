@@ -5,6 +5,8 @@ import { ApiService } from '../../core/services/api.service';
 import type {
   BrandKit,
   BrandKitUpsertInput,
+  RenderRequestCreated,
+  RenderRequestSnapshot,
   TemplateSummary,
 } from './templates-studio.types';
 
@@ -19,6 +21,16 @@ interface TemplatesListResponse {
     templates: TemplateSummary[];
     total: number;
   };
+}
+
+interface RenderRequestCreatedResponse {
+  success: boolean;
+  data: RenderRequestCreated;
+}
+
+interface RenderRequestSnapshotResponse {
+  success: boolean;
+  data: RenderRequestSnapshot;
 }
 
 /**
@@ -47,5 +59,23 @@ export class TemplatesStudioService {
     return this.api
       .get<TemplatesListResponse>('/templates-studio/templates')
       .pipe(map((res) => res.data.templates));
+  }
+
+  createRenderRequest(
+    templateId: string,
+    props: Record<string, unknown>,
+  ): Observable<RenderRequestCreated> {
+    return this.api
+      .post<RenderRequestCreatedResponse>('/templates-studio/render-requests', {
+        template_id: templateId,
+        props,
+      })
+      .pipe(map((res) => res.data));
+  }
+
+  getRenderRequest(id: string): Observable<RenderRequestSnapshot> {
+    return this.api
+      .get<RenderRequestSnapshotResponse>(`/templates-studio/render-requests/${id}`)
+      .pipe(map((res) => res.data));
   }
 }

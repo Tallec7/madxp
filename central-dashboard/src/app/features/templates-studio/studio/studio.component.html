@@ -1,0 +1,171 @@
+<div class="studio">
+  <header class="studio__header">
+    <h1>Templates Studio</h1>
+    <p class="studio__subtitle">
+      Choisis un template, remplis le formulaire, et lance un rendu. Les couleurs et le logo
+      viennent du
+      <a routerLink="/templates-studio/brand-kit">Brand Kit</a> du club.
+    </p>
+  </header>
+
+  @if (loadingTemplates()) {
+    <div class="studio__loading">Chargement du catalogue…</div>
+  } @else if (loadingError()) {
+    <div class="studio__error">{{ loadingError() }}</div>
+  } @else if (templates().length === 0) {
+    <div class="studio__empty">
+      Aucun template actif. Vérifie le seed manifests au boot du central.
+    </div>
+  } @else {
+    <main class="studio__layout">
+      <aside class="studio__list">
+        <h2>Templates ({{ templates().length }})</h2>
+        <ul>
+          @for (t of templates(); track t.id) {
+            <li>
+              <button
+                type="button"
+                [class.active]="selectedId() === t.id"
+                (click)="selectTemplate(t)"
+              >
+                <strong>{{ t.label }}</strong>
+                <span class="kind kind--{{ t.kind }}">{{ t.kind }}</span>
+                @if (t.description) {
+                  <small>{{ t.description }}</small>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+      </aside>
+
+      <section class="studio__form-col">
+        @if (selectedTemplate(); as template) {
+          <h2>{{ template.label }}</h2>
+
+          @if (inputProperties().length === 0) {
+            <p class="muted">Ce template n'a aucun champ d'entrée.</p>
+          } @else {
+            <form [formGroup]="form" (ngSubmit)="launchRender()" class="studio__form">
+              @for (entry of inputProperties(); track entry.key) {
+                <label class="studio__field">
+                  <span>
+                    {{ entry.prop.label ?? entry.key }}
+                    @if (entry.required) {
+                      <span class="req">*</span>
+                    }
+                  </span>
+
+                  @if (isPlayerRef(entry.prop)) {
+                    <input
+                      type="text"
+                      [formControlName]="entry.key"
+                      placeholder="UUID du joueur (S4 — PlayerPicker à venir)"
+                    />
+                    <small class="hint">
+                      Sélecteur joueur livré en S4 (roster + worker rembg). Pour tester : insère
+                      manuellement un UUID via DB ou attends S4.
+                    </small>
+                  } @else if (hasEnum(entry.prop)) {
+                    <select [formControlName]="entry.key">
+                      <option value="">— Choisir —</option>
+                      @for (opt of entry.prop.enum; track opt) {
+                        <option [value]="opt">{{ opt }}</option>
+                      }
+                    </select>
+                  } @else if (isNumber(entry.prop)) {
+                    <input
+                      type="number"
+                      [formControlName]="entry.key"
+                      [min]="entry.prop.minimum ?? null"
+                      [max]="entry.prop.maximum ?? null"
+                    />
+                  } @else {
+                    <input type="text" [formControlName]="entry.key" />
+                  }
+                </label>
+              }
+
+              <button
+                type="submit"
+                class="studio__launch"
+                [disabled]="
+                  submitting() ||
+                  form.invalid ||
+                  jobStatus()?.status === 'queued' ||
+                  jobStatus()?.status === 'rendering'
+                "
+              >
+                @if (submitting()) {
+                  Lancement…
+                } @else if (jobStatus()?.status === 'queued') {
+                  En file…
+                } @else if (jobStatus()?.status === 'rendering') {
+                  Rendu en cours…
+                } @else {
+                  Lancer le rendu
+                }
+              </button>
+            </form>
+          }
+        }
+      </section>
+
+      <section class="studio__preview-col">
+        <h2>Rendu</h2>
+        @if (jobError()) {
+          <div class="studio__error">{{ jobError() }}</div>
+        }
+        @if (!jobStatus() && !jobError()) {
+          <div class="studio__placeholder">
+            <p class="muted">Le rendu apparaîtra ici quand tu lanceras le formulaire.</p>
+          </div>
+        }
+        @if (jobStatus(); as snap) {
+          <div class="studio__job">
+            <div class="studio__job-row">
+              <span class="studio__job-status studio__job-status--{{ snap.status }}">
+                @switch (snap.status) {
+                  @case ('queued') {
+                    🟡 En file
+                  }
+                  @case ('rendering') {
+                    🔵 Rendu en cours…
+                  }
+                  @case ('ready') {
+                    ✅ Prêt
+                  }
+                  @case ('failed') {
+                    ❌ Échec
+                  }
+                }
+              </span>
+              <code class="studio__job-id">{{ snap.id }}</code>
+            </div>
+
+            @if (snap.status === 'ready' && snap.output_url) {
+              @if (selectedTemplate()?.kind === 'still') {
+                <img [src]="snap.output_url" alt="Aperçu rendu" class="studio__output" />
+              } @else {
+                <video
+                  [src]="snap.output_url"
+                  controls
+                  autoplay
+                  loop
+                  playsinline
+                  class="studio__output"
+                ></video>
+              }
+              <a [href]="snap.output_url" target="_blank" rel="noopener" class="studio__download">
+                Ouvrir dans un nouvel onglet
+              </a>
+            }
+            @if (snap.status === 'failed' && snap.error_msg) {
+              <div class="studio__error">{{ snap.error_msg }}</div>
+            }
+          </div>
+        }
+      </section>
+    </main>
+  }
+</div>
