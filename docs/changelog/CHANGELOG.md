@@ -1,3 +1,10 @@
+# [3.309.0](https://github.com/Tallec7/neopro/compare/v3.308.0...v3.309.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** S3.2 — page studio principale (catalogue + form auto-gen + render) ([#987](https://github.com/Tallec7/neopro/issues/987)) ([c131fe7](https://github.com/Tallec7/neopro/commit/c131fe76b870390b6d3d3e88f5aaf639d74c2954))
+- **templates-studio:** S4-A — roster CRUD players + résolveur câblé ([#988](https://github.com/Tallec7/neopro/issues/988)) ([498fb62](https://github.com/Tallec7/neopro/commit/498fb620d03da6d5dc25ac495130a239fc25a147))
+
 # [3.308.0](https://github.com/Tallec7/neopro/compare/v3.307.0...v3.308.0) (2026-05-13)
 
 ### Features
