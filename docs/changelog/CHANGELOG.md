@@ -1,3 +1,9 @@
+## [3.304.4](https://github.com/Tallec7/neopro/compare/v3.304.3...v3.304.4) (2026-05-13)
+
+### Bug Fixes
+
+- **socket:** REDIS_ENABLED kill-switch + listener cleanup (incident NLF 2026-05-13) ([#979](https://github.com/Tallec7/neopro/issues/979)) ([a2f7b6c](https://github.com/Tallec7/neopro/commit/a2f7b6cbc3b0b826632c259558a49583d303aca4)), closes [#978](https://github.com/Tallec7/neopro/issues/978)
+
 ## [3.304.3](https://github.com/Tallec7/neopro/compare/v3.304.2...v3.304.3) (2026-05-13)
 
 ### Bug Fixes
