@@ -1226,6 +1226,29 @@
       "gridPos": {
         "h": 7,
         "w": 12,
+        "x": 0,
+        "y": 101
+      },
+      "id": 810,
+      "title": "Auto-deploy throttled (ADR-117 hardening incident 2026-05-13)",
+      "description": "Auto-deploys refuses par le throttle in-flight-per-site. Reason=in_flight_cap (refuse au debut du batch) ou in_flight_cap_midloop (break mid-batch quand la cap est atteinte). Un site qui apparait souvent = profil charge + storm potentiel sur ce site (cf. incident NLF 2026-05-13).",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_auto_deploy_throttled_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id, reason)",
+          "legendFormat": "{{site_id}} / {{reason}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
         "x": 12,
         "y": 94
       },
