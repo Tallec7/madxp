@@ -1,3 +1,9 @@
+## [3.304.2](https://github.com/Tallec7/neopro/compare/v3.304.1...v3.304.2) (2026-05-13)
+
+### Bug Fixes
+
+- **content:** ADR-117 cap in-flight per-site + serialize auto-deploys (incident NLF 2026-05-13) ([#977](https://github.com/Tallec7/neopro/issues/977)) ([c82f296](https://github.com/Tallec7/neopro/commit/c82f296e7a52aef2044197910f95280b9d15d8bf))
+
 ## [3.304.1](https://github.com/Tallec7/neopro/compare/v3.304.0...v3.304.1) (2026-05-11)
 
 ### Bug Fixes
