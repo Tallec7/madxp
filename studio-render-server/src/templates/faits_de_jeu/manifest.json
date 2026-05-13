@@ -1,0 +1,23 @@
+{
+  "id": "faits_de_jeu",
+  "version": "1.0.0",
+  "label": "FAITS DE JEU",
+  "kind": "video",
+  "description": "Bandeau plein écran (2MIN, PÉNALTY, CARTON, etc).",
+  "inputSchema": {
+    "type": "object",
+    "required": ["label"],
+    "properties": {
+      "label": {
+        "type": "string",
+        "label": "Type",
+        "enum": ["2MIN", "PÉNALTY", "CARTON JAUNE", "CARTON ROUGE", "CHANGEMENT"]
+      }
+    }
+  },
+  "bindings": {
+    "label": { "source": "input.label" }
+  },
+  "format": { "width": 1920, "height": 1080, "fps": 25, "durationInFrames": 250 },
+  "compositionId": "FaitsDeJeuStory"
+}
