@@ -895,10 +895,39 @@ class DeploymentService {
 
     if (candidates.length === 0) return 0;
 
-    const MAX_AUTO_DEPLOY = 10;
-    const limited = candidates.slice(0, MAX_AUTO_DEPLOY);
-    if (candidates.length > MAX_AUTO_DEPLOY) {
-      logger.warn('triggerMissingVideoDeployments: throttle applied', { siteId, total: candidates.length, limit: MAX_AUTO_DEPLOY });
+    // ADR-117 — Hardening incident NLF 2026-05-13 :
+    // Le throttle initial (MAX_AUTO_DEPLOY=10 par appel) ne couvrait pas le cumul :
+    //   - Un appel deployProfile + N appels updateProfileConfiguration en rafale UI
+    //   - Chaque path master peut créer un secondary variant (LED 1024x288) = ×2 deploys
+    // Résultat : 35 deploys en 7min ont fait crasher `neopro-app` côté NLF Pi.
+    // Cap global "in-flight per site" : si N actifs >= MAX_IN_FLIGHT, on refuse tout.
+    const MAX_AUTO_DEPLOY = 5;          // était 10, réduit pour limiter l'amplification ×2
+    const MAX_IN_FLIGHT_PER_SITE = 8;   // master+secondary inclus, marge sous le seuil de crash observé
+    const INTER_DEPLOY_DELAY_MS = 1500; // sérialise pour laisser respirer le Pi (CPU < 9%)
+
+    const activeNow = await deploymentRepository.countActivePerSite(siteId);
+    if (activeNow >= MAX_IN_FLIGHT_PER_SITE) {
+      logger.warn('triggerMissingVideoDeployments: site over in-flight cap, skipping', {
+        siteId,
+        activeNow,
+        cap: MAX_IN_FLIGHT_PER_SITE,
+        skipped: candidates.length,
+      });
+      metricsService.recordAutoDeployThrottled(siteId, 'in_flight_cap');
+      return 0;
+    }
+
+    const remainingBudget = Math.max(0, MAX_IN_FLIGHT_PER_SITE - activeNow);
+    const effectiveLimit = Math.min(MAX_AUTO_DEPLOY, remainingBudget);
+    const limited = candidates.slice(0, effectiveLimit);
+    if (candidates.length > effectiveLimit) {
+      logger.warn('triggerMissingVideoDeployments: throttle applied', {
+        siteId,
+        total: candidates.length,
+        limit: effectiveLimit,
+        activeNow,
+        cap: MAX_IN_FLIGHT_PER_SITE,
+      });
     }
 
     // Parallel FTP HEAD check — pre-filter paths before any DB writes
@@ -937,6 +966,22 @@ class DeploymentService {
     let triggered = 0;
     for (const storagePath of accessible) {
       try {
+        // Re-check in-flight per-site avant chaque deploy (incident NLF 2026-05-13).
+        // Le startDeployment d'une vidéo master peut générer un secondary variant
+        // (LED 1024x288) → 2 rows content_deployments. Sans re-check, on dépasse la cap.
+        const currentActive = await deploymentRepository.countActivePerSite(siteId);
+        if (currentActive >= MAX_IN_FLIGHT_PER_SITE) {
+          logger.warn('triggerMissingVideoDeployments: in-flight cap reached mid-loop, stopping', {
+            siteId,
+            currentActive,
+            cap: MAX_IN_FLIGHT_PER_SITE,
+            triggeredSoFar: triggered,
+            remaining: accessible.size - triggered,
+          });
+          metricsService.recordAutoDeployThrottled(siteId, 'in_flight_cap_midloop');
+          break;
+        }
+
         const videoResult = await query<{ id: string; upload_status: string }>(
           `SELECT id, upload_status FROM videos WHERE storage_path = $1 LIMIT 1`,
           [storagePath]
@@ -967,6 +1012,10 @@ class DeploymentService {
 
         logger.info('triggerMissingVideoDeployments: deployment triggered', { siteId, deploymentId, storagePath, triggeredBy });
         triggered++;
+
+        // Pause inter-deploy : laisse retomber la charge Pi (incident NLF 2026-05-13
+        // : CPU avait grimpé ×10 au moment du crash sous une cadence 1-3s/deploy).
+        await new Promise((r) => setTimeout(r, INTER_DEPLOY_DELAY_MS));
       } catch (err) {
         logger.error('triggerMissingVideoDeployments: error processing path', { siteId, storagePath, error: err });
       }

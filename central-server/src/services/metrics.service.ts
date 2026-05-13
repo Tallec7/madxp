@@ -130,6 +130,17 @@ const alertsDedupSkippedTotal = new Counter({
   registers: [register],
 });
 
+// ADR-117 — Hardening incident NLF 2026-05-13 :
+// Compte les auto-deploys refusés par le throttle in-flight-per-site.
+// reason ∈ ['in_flight_cap','in_flight_cap_midloop'] distingue le refus initial
+// du break mid-loop quand la cap est atteinte en cours de batch.
+const autoDeployThrottledTotal = new Counter({
+  name: 'neopro_auto_deploy_throttled_total',
+  help: 'Auto-deploys (ADR-117) refused by in-flight-per-site cap (NLF 2026-05-13 hardening)',
+  labelNames: ['site_id', 'reason'],
+  registers: [register],
+});
+
 // Quick task 260507-gxd — DELETE template end-to-end (audit P0 #1 + #2).
 // `cascade_status` ∈ ['success','partial','failed'] surface les FTP failures
 // (cleanup best-effort après commit DB). `reason` ∈ ['user','admin_force']
@@ -1120,6 +1131,11 @@ class MetricsService {
 
   recordAlertDedupSkipped(type: string): void {
     alertsDedupSkippedTotal.inc({ type });
+  }
+
+  // ADR-117 — incident NLF 2026-05-13 (auto-deploy storm a fait crasher neopro-app)
+  recordAutoDeployThrottled(siteId: string, reason: 'in_flight_cap' | 'in_flight_cap_midloop'): void {
+    autoDeployThrottledTotal.inc({ site_id: siteId, reason });
   }
 
   recordActiveAlerts(severity: string, count: number): void {

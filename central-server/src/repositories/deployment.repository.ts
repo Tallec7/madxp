@@ -371,6 +371,21 @@ class DeploymentRepositoryImpl extends BaseRepository<ContentDeployment> {
     return result.rows[0]?.exists ?? false;
   }
 
+  // ADR-117 — incident NLF 2026-05-13 : compte les déploiements pending/in_progress
+  // d'un site pour appliquer un cap global "in-flight per site" et éviter qu'un storm
+  // d'auto-deploys (cascade master+secondary variants × N profils) écrase le Pi.
+  async countActivePerSite(siteId: string): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM content_deployments cd
+       WHERE (cd.target_id = $1 OR cd.target_id IN (
+               SELECT group_id FROM site_groups WHERE site_id = $1
+             ))
+         AND cd.status IN ('pending', 'in_progress')`,
+      [siteId]
+    );
+    return parseInt(result.rows[0]?.count ?? '0', 10);
+  }
+
   async getDeployedPathsForSite(siteId: string): Promise<Array<{ video_id: string; deployed_path: string; deployed_filename: string }>> {
     const result = await query<{ video_id: string; deployed_path: string; deployed_filename: string }>(
       `SELECT DISTINCT ON (video_id) video_id, deployed_path, deployed_filename
