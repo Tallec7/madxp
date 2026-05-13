@@ -1,9 +1,13 @@
 /**
- * Tests for studio-render-worker.service (J4 walking skeleton — STUB).
+ * Tests for studio-render-worker.service (J5 walking skeleton).
  *
- * Couvre la boucle minimale : claim → markReady. Le rendu réel est mocké
- * (la fonction `performRender` est interne, mais on mocke le repo pour
- * vérifier les transitions d'état).
+ * Couvre les 2 paths :
+ * - STUB (env STUDIO_RENDER_SERVER_URL absente) : produit URL placeholder
+ * - HTTP (env présente) : POST au render server, output_url absolue
+ *
+ * Le worker lit l'env à chaque tick (pas à l'import), donc on peut toggle
+ * STUB ↔ HTTP via `process.env.STUDIO_RENDER_SERVER_URL` dans beforeEach
+ * sans avoir à recharger le module.
  */
 
 jest.mock('../config/logger', () => ({
@@ -23,6 +27,9 @@ jest.mock('../repositories', () => ({
     markFailed: jest.fn(),
     failStaleRunning: jest.fn(),
   },
+  templateDefinitionRepository: {
+    findById: jest.fn(),
+  },
 }));
 
 import { renderRequestRepository } from '../repositories';
@@ -40,7 +47,7 @@ const mocked = renderRequestRepository as unknown as {
   failStaleRunning: Mock;
 };
 
-describe('studio-render-worker.service', () => {
+describe('studio-render-worker.service — STUB path (env not set)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
@@ -114,5 +121,111 @@ describe('studio-render-worker.service', () => {
     await jest.advanceTimersByTimeAsync(2_000);
 
     expect(mocked.markFailed).toHaveBeenCalledWith('req-fail', 'boom');
+  });
+});
+
+describe('studio-render-worker.service — HTTP path (env set)', () => {
+  const originalEnv = process.env.STUDIO_RENDER_SERVER_URL;
+  const originalFetch = globalThis.fetch;
+  const templateRepo = (
+    require('../repositories') as {
+      templateDefinitionRepository: { findById: Mock };
+    }
+  ).templateDefinitionRepository;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Real timers : on attend que le setInterval réel se déclenche, puisque
+    // fake timers + fetch mockée ne se reconcilient pas proprement.
+    process.env.STUDIO_RENDER_SERVER_URL = 'http://render-server:5175';
+    mocked.failStaleRunning.mockResolvedValue(0);
+    mocked.markReady.mockResolvedValue(undefined);
+    mocked.markFailed.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    stopStudioRenderWorker();
+    if (originalEnv === undefined) delete process.env.STUDIO_RENDER_SERVER_URL;
+    else process.env.STUDIO_RENDER_SERVER_URL = originalEnv;
+    globalThis.fetch = originalFetch;
+  });
+
+  it('POSTs to the render server with composition + kind + props, marks ready with absolute URL', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        url: '/renders/FaitsDeJeu_abc.mp4',
+        cached: false,
+        durationMs: 7500,
+      }),
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    templateRepo.findById.mockResolvedValueOnce({
+      id: 'tpl-1',
+      remotion_composition_id: 'FaitsDeJeu2Min',
+      kind: 'video',
+    });
+    mocked.claimNextQueued
+      .mockResolvedValueOnce({
+        id: 'req-http',
+        site_id: 's-1',
+        template_id: 'tpl-1',
+        props_json: { label: '2MIN' },
+        status: 'rendering',
+      })
+      .mockResolvedValue(null);
+
+    await startStudioRenderWorker();
+    // Real timer wait — laisse le setInterval (2s) déclencher le 1er tick.
+    await new Promise((r) => setTimeout(r, 2_500));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('http://render-server:5175/api/render');
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body).toEqual({
+      compositionId: 'FaitsDeJeu2Min',
+      kind: 'video',
+      props: { label: '2MIN' },
+    });
+    expect(mocked.markReady).toHaveBeenCalledWith(
+      'req-http',
+      'http://render-server:5175/renders/FaitsDeJeu_abc.mp4',
+    );
+  });
+
+  it('marks failed if the render server returns non-2xx', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: async () => 'upstream error',
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    templateRepo.findById.mockResolvedValueOnce({
+      id: 'tpl-1',
+      remotion_composition_id: 'FaitsDeJeu2Min',
+      kind: 'video',
+    });
+    mocked.claimNextQueued
+      .mockResolvedValueOnce({
+        id: 'req-fail',
+        site_id: 's',
+        template_id: 'tpl-1',
+        props_json: {},
+        status: 'rendering',
+      })
+      .mockResolvedValue(null);
+
+    await startStudioRenderWorker();
+    await new Promise((r) => setTimeout(r, 2_500));
+
+    expect(mocked.markFailed).toHaveBeenCalledWith(
+      'req-fail',
+      expect.stringContaining('render server 502'),
+    );
+    expect(mocked.markReady).not.toHaveBeenCalled();
   });
 });
