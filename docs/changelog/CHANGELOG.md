@@ -1,3 +1,9 @@
+## [3.304.3](https://github.com/Tallec7/neopro/compare/v3.304.2...v3.304.3) (2026-05-13)
+
+### Bug Fixes
+
+- **pi:** watch neopro-app in sync-guardian — incident NLF 2026-05-13 ([#978](https://github.com/Tallec7/neopro/issues/978)) ([784f5c9](https://github.com/Tallec7/neopro/commit/784f5c9366516d9ac2b6c3738764fc9a63929b2a)), closes [#977](https://github.com/Tallec7/neopro/issues/977)
+
 ## [3.304.2](https://github.com/Tallec7/neopro/compare/v3.304.1...v3.304.2) (2026-05-13)
 
 ### Bug Fixes
