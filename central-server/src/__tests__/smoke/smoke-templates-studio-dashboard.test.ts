@@ -95,3 +95,68 @@ describe('Templates Studio V1 — dashboard feature scaffold (S3)', () => {
     );
   });
 });
+
+describe('Templates Studio V1 — page studio principale (S3.2)', () => {
+  const STUDIO_COMPONENT = path.join(
+    DASHBOARD_FEATURE,
+    'studio',
+    'studio.component.ts',
+  );
+
+  it.each([
+    'studio/studio.component.ts',
+    'studio/studio.component.html',
+    'studio/studio.component.scss',
+  ])('contains %s', (rel) => {
+    expect(fs.existsSync(path.join(DASHBOARD_FEATURE, rel))).toBe(true);
+  });
+
+  it('studio component builds reactive form from manifest.inputSchema', () => {
+    const content = fs.readFileSync(STUDIO_COMPONENT, 'utf8');
+    expect(content).toMatch(/inputSchema/);
+    expect(content).toMatch(/FormBuilder/);
+  });
+
+  it('studio component polls render status every 2s and stops on ready/failed', () => {
+    const content = fs.readFileSync(STUDIO_COMPONENT, 'utf8');
+    // Sans le poll : UI bloquée sur "rendering". Sans clearInterval : fuite
+    // de timer quand l'user change de template.
+    expect(content).toMatch(/setInterval\([\s\S]*?2_?000\)/);
+    expect(content).toMatch(/snapshot\.status\s*===\s*['"]ready['"]/);
+    expect(content).toMatch(/snapshot\.status\s*===\s*['"]failed['"]/);
+    expect(content).toMatch(/clearInterval/);
+  });
+
+  it('studio component supports both video (<video>) and still (<img>) outputs', () => {
+    // L'output viewer dispatch sur le `kind` du template. Sans ce check, un
+    // still rendrait un <video> qui tente de jouer un PNG → erreur Chrome.
+    const html = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'studio/studio.component.html'),
+      'utf8',
+    );
+    expect(html).toMatch(/<video/);
+    expect(html).toMatch(/<img/);
+    expect(html).toMatch(/kind\s*===\s*['"]still['"]/);
+  });
+
+  it('studio component disables player ref inputs until S4 (roster joueurs)', () => {
+    // Tant que S4 n'est pas livré, les bindings player.* ne peuvent pas être
+    // remplis. On désactive l'input + message explicatif au lieu de laisser
+    // l'user saisir un UUID au hasard qui retournera null côté résolveur.
+    const html = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'studio/studio.component.html'),
+      'utf8',
+    );
+    expect(html).toMatch(/isPlayerRef\(entry\.prop\)/);
+    expect(html).toMatch(/S4/);
+  });
+
+  it('app.routes.ts wires /templates-studio (catalogue page) with roleGuard', () => {
+    const content = fs.readFileSync(APP_ROUTES, 'utf8');
+    // Match `path: 'templates-studio'` strict (sans /brand-kit derrière).
+    expect(content).toMatch(/path:\s*['"]templates-studio['"]\s*,/);
+    expect(content).toMatch(
+      /loadComponent[\s\S]*templates-studio\/studio\/studio\.component/,
+    );
+  });
+});

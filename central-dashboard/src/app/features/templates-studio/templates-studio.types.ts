@@ -44,3 +44,37 @@ export interface TemplateSummary {
   manifest: Record<string, unknown>;
   composition_id: string;
 }
+
+// Sous-set du manifest utile pour l'UI : inputSchema sert au form auto-gen.
+export interface ManifestInputProperty {
+  type: 'string' | 'integer' | 'number';
+  ref?: 'Player';
+  label?: string;
+  enum?: string[];
+  minimum?: number;
+  maximum?: number;
+}
+
+export interface ManifestInputSchema {
+  type: 'object';
+  required: string[];
+  properties: Record<string, ManifestInputProperty>;
+}
+
+export type RenderStatus = 'queued' | 'rendering' | 'ready' | 'failed';
+
+export interface RenderRequestCreated {
+  id: string;
+  status: RenderStatus;
+  template: { id: string; slug: string; kind: 'video' | 'still' };
+  created_at: string;
+}
+
+export interface RenderRequestSnapshot {
+  id: string;
+  status: RenderStatus;
+  output_url: string | null;
+  error_msg: string | null;
+  created_at: string;
+  updated_at: string;
+}

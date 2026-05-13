@@ -156,6 +156,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
       },
       {
+        // Templates Studio V1 — Page principale (catalogue + form + render)
+        path: 'templates-studio',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'club'] },
+        loadComponent: () =>
+          import('./features/templates-studio/studio/studio.component').then(
+            (m) => m.StudioComponent,
+          ),
+      },
+      {
         // Templates Studio V1 — Brand Kit (cf STUDIO_V1.md S3, parallèle au legacy ci-dessus)
         path: 'templates-studio/brand-kit',
         canActivate: [roleGuard],
