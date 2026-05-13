@@ -29,7 +29,18 @@ const CONTROLLER_FILE = path.join(
 const ROUTES_FILE = path.join(SRC, 'routes', 'templates-studio.routes.ts');
 const SERVER_FILE = path.join(SRC, 'server.ts');
 const SEED_SCRIPT = path.join(SRC, 'scripts', 'seed-templates-studio-manifests.ts');
-const MANIFESTS_DIR = path.join(SRC, 'scripts', 'templates-studio-manifests');
+// Source de vérité monorepo lite (PR #983) — depuis central-server/src/__tests__/smoke/,
+// 4 levels up = racine repo neopro, puis descendre dans studio-render-server.
+const MANIFESTS_DIR = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  'studio-render-server',
+  'src',
+  'templates',
+);
 const WORKER_FILE = path.join(SRC, 'services', 'studio-render-worker.service.ts');
 const RESOLVER_FILE = path.join(SRC, 'services', 'templates-studio.service.ts');
 
@@ -219,20 +230,23 @@ describe('Templates Studio V1 — manifest seed (J3, cf STUDIO_V1.md §5)', () =
     expect(content).toMatch(/export\s+async\s+function\s+seedTemplatesStudioManifests/);
   });
 
-  it('vendored manifests dir exists with at least 1 .json', () => {
+  it('manifests dir exists with at least 1 slug subdir containing manifest.json', () => {
     expect(fs.existsSync(MANIFESTS_DIR)).toBe(true);
-    const jsons = fs
-      .readdirSync(MANIFESTS_DIR)
-      .filter((f) => f.endsWith('.json'));
-    expect(jsons.length).toBeGreaterThanOrEqual(1);
+    const slugs = fs
+      .readdirSync(MANIFESTS_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && fs.existsSync(path.join(MANIFESTS_DIR, d.name, 'manifest.json')))
+      .map((d) => d.name);
+    expect(slugs.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('each vendored manifest has required V1 fields (id, version, label, kind, compositionId)', () => {
-    const jsons = fs
-      .readdirSync(MANIFESTS_DIR)
-      .filter((f) => f.endsWith('.json'));
-    for (const filename of jsons) {
-      const filepath = path.join(MANIFESTS_DIR, filename);
+  it('each manifest has required V1 fields (id, version, label, kind, compositionId)', () => {
+    const slugs = fs
+      .readdirSync(MANIFESTS_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+    for (const slug of slugs) {
+      const filepath = path.join(MANIFESTS_DIR, slug, 'manifest.json');
+      if (!fs.existsSync(filepath)) continue;
       const parsed = JSON.parse(fs.readFileSync(filepath, 'utf8'));
       expect(typeof parsed.id).toBe('string');
       expect(typeof parsed.version).toBe('string');
