@@ -17,6 +17,7 @@
 ### 🛡️ Pour la robustesse
 
 - **Vérification FTP avant déploiement** ([#972](https://github.com/Tallec7/neopro/pull/972)) — le serveur vérifie en parallèle (5s timeout) que chaque nouvelle vidéo est bien présente sur le FTP Hostinger avant de créer un ordre de déploiement. Une vidéo absente du FTP est signalée en log sans bloquer les autres. Évite les déploiements zombies.
+
 ## Semaine 19 — 5-11 Mai 2026 (suite)
 
 ### 🛡️ Pour la robustesse
@@ -74,6 +75,14 @@
 
 - **Script d'audit `npm run audit:variants-drift`** ([#930](https://github.com/Tallec7/neopro/pull/930)) — lit la DB (read-only) et produit un rapport en 4 sections : distribution des slugs en `video_variants`, distribution des types en `sites.displays[]`, drift bidirectionnel, et focus par site (`--site <uuid>`). Utile avant tout chantier sur les variantes pour vérifier l'état réel de cohérence en prod.
 - **22 smoke tests verrouillent les invariants du fix** ([#930](https://github.com/Tallec7/neopro/pull/930)) — guards sur la suppression de `showAddForm`/`newDisplayType`/`sanitizeType` (input libre), la présence de `effectiveSiteDisplays`/`isOrphanVariant`, la fonction `getAllowedDisplayTypes` côté API, et le rejet de `display_type='tv'`.
+
+---
+
+## Semaine 20 — 12-18 Mai 2026
+
+### 🛡️ Pour la robustesse / production
+
+- **Guardian Pi étend sa surveillance à `neopro-app`** ([cette PR](https://github.com/Tallec7/neopro)) — incident NLF 2026-05-13 ([#977](https://github.com/Tallec7/neopro/pull/977) ADR-117) : storm de 34 auto-deploys en 2h → `neopro-app` crashé à 06:45 UTC sur le Pi NLF. Le `neopro-sync-guardian` watchdog systemd surveillait uniquement `neopro-sync-agent` (qu'il a bien gardé en vie 2h après le crash) — `neopro-app` mort silencieusement, Pi resté offline jusqu'à intervention physique au gymnase. Fix : le guardian surveille désormais aussi `neopro-app` (grâce 60s puis `systemctl restart`), avec backoff exponentiel (10s → 600s) et plafond 5 restart/heure pour éviter d'amplifier un crash-loop. Logs JSON structurés (`neopro_app_down`, `neopro_app_restart_attempt`, `neopro_app_restart_cap_reached`, `neopro_app_recovered`) → observabilité Loki/journald. Smoke test garde-fou + règle "NE JAMAIS" enforced dans `.claude/rules/raspberry.md`. Déploiement via OTA standard (script bundlé dans `build-raspberry.sh`).
 
 ---
 

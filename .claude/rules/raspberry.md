@@ -119,6 +119,15 @@ Fichier : `raspberry/scripts/kiosk-watchdog.sh`
 - Ajouter `ExecStop=pkill -9` dans `neopro-kiosk.service` (bypasse le trap handler du watchdog, corrompt l'état GPU V3D sur Pi 5)
 - Utiliser `systemctl is-enabled` seul pour détecter les services systemd à nettoyer (toujours ajouter `|| systemctl is-active` comme fallback)
 
+### Sync-Guardian — watchdog neopro-app (incident 2026-05-13, smoke test enforced)
+
+- **Retirer `watch_neopro_app()` ou son appel dans `main_loop`** de `raspberry/scripts/sync-agent-guardian.sh` — incident NLF 2026-05-13 : storm auto-deploys (34 en 2h) → `neopro-app` crashé à 06:45 UTC, guardian gardait `neopro-sync-agent` en vie mais pas l'app → Pi offline jusqu'à intervention physique au gymnase. Le guardian DOIT surveiller les deux services indépendamment.
+- **Retirer le plafond `NEOPRO_APP_RESTART_CAP=5` ou la fenêtre `NEOPRO_APP_RESTART_WINDOW=3600`** — sans plafond, un service en crash-loop fait pomper systemd indéfiniment (peut épuiser inodes /tmp et slots journald).
+- **Retirer le backoff (`NEOPRO_APP_BACKOFF_FILE` / `NEOPRO_APP_NEXT_TRY_FILE`)** — sans backoff exponentiel, le guardian retape `systemctl restart` toutes les 30s même quand le service ne reboot pas, ré-attache un cgroup sale et accélère la corruption.
+- **Retirer la grâce `NEOPRO_APP_DOWN_GRACE=60`** — sans ces 60s, le guardian lutte contre `Restart=on-failure` natif de systemd au lieu de le laisser faire son boulot.
+- **Retirer les événements structurés JSON `neopro_app_*` (`down`, `restart_attempt`, `restart_issued`, `restart_cap_reached`, `recovered`)** — c'est la seule observabilité Loki / journald. Sans eux, un Pi qui re-rentre en crash-loop reste invisible jusqu'au prochain check manuel.
+- Référence : smoke `central-server/src/__tests__/smoke/smoke-pi-sync-guardian-watches-neopro-app.test.ts`. Déploiement : OTA via `build-raspberry.sh` (script + unit bundlés). ⚠️ La nouvelle logique requiert `systemctl restart neopro-sync-guardian` post-OTA, sinon prise en compte au prochain reboot Pi seulement.
+
 ### Kiosk Watchdog & Chromium
 
 - Dupliquer `--disable-features` dans kiosk-watchdog.sh (Chromium n'accepte qu'un seul flag, le dernier écrase)
