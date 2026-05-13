@@ -10,6 +10,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../../../core/services/auth.service';
+import { PlayerPickerComponent } from '../shared/player-picker.component';
 import { TemplatesStudioService } from '../templates-studio.service';
 import type {
   ManifestInputProperty,
@@ -31,13 +33,17 @@ import type {
 @Component({
   selector: 'app-templates-studio-studio',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, PlayerPickerComponent],
   templateUrl: './studio.component.html',
   styleUrls: ['./studio.component.scss'],
 })
 export class StudioComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
   private studio = inject(TemplatesStudioService);
+
+  // Site_id du JWT — passé au PlayerPicker pour qu'il liste les joueurs du club.
+  siteId = signal<string | null>(null);
 
   templates = signal<TemplateSummary[]>([]);
   selectedId = signal<string | null>(null);
@@ -62,6 +68,9 @@ export class StudioComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.auth.currentUser$.subscribe((user) => {
+      this.siteId.set(user?.site_id ?? null);
+    });
     this.studio.listTemplates().subscribe({
       next: (templates) => {
         this.templates.set(templates);
@@ -115,16 +124,9 @@ export class StudioComponent implements OnInit, OnDestroy {
 
     this.form = this.fb.group(controls);
     this.inputProperties.set(entries);
-
-    // Disable les player refs au niveau FormControl (Reactive Forms way) tant
-    // que S4 (roster joueurs) n'est pas livré. Disable HTML-only avec
-    // `[disabled]` sur formControlName triggers un warning Angular + casse
-    // la build prod (TS2322 sur strict templates).
-    for (const entry of entries) {
-      if (entry.prop.ref === 'Player') {
-        this.form.get(entry.key)?.disable({ emitEvent: false });
-      }
-    }
+    // S4-D : les player refs sont maintenant gérés par <app-player-picker>
+    // (Reactive Forms compatible via ControlValueAccessor). Le control reste
+    // actif, le composant pèse les choix de l'utilisateur.
   }
 
   isPlayerRef(prop: ManifestInputProperty): boolean {

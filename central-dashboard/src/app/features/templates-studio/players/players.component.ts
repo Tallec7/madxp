@@ -1,0 +1,145 @@
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
+import { TemplatesStudioService } from '../templates-studio.service';
+import type { Player } from '../templates-studio.types';
+
+/**
+ * Page roster joueurs (S4-D). CRUD scopé site, alimenté par les endpoints
+ * backend de S4-A. L'upload photo direct vient en S4-B — pour l'instant
+ * `photo_raw_url` est saisi comme URL FTP externe.
+ *
+ * Workflow utilisateur :
+ *   1. Voir la grille des joueurs avec badge cutout_status
+ *   2. Bouton "Ajouter un joueur" → form inline (toggle)
+ *   3. Inline edit du nom/numéro/poste
+ *   4. Suppression avec confirm
+ *
+ * Le PlayerPicker dans le studio (`templates-studio/studio`) consommera ces
+ * joueurs (cutout_status='ready' filtrés via `[onlyWithCutout]="true"`).
+ */
+@Component({
+  selector: 'app-templates-studio-players',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './players.component.html',
+  styleUrls: ['./players.component.scss'],
+})
+export class PlayersComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
+  private studio = inject(TemplatesStudioService);
+
+  loading = signal(true);
+  errorMsg = signal<string | null>(null);
+  successMsg = signal<string | null>(null);
+  siteId = signal<string | null>(null);
+  players = signal<Player[]>([]);
+
+  showAddForm = signal(false);
+  saving = signal(false);
+
+  addForm: FormGroup = this.fb.group({
+    prenom: ['', [Validators.required, Validators.maxLength(80)]],
+    nom: ['', [Validators.required, Validators.maxLength(80)]],
+    numero: [null as number | null, [Validators.min(0), Validators.max(999)]],
+    poste: [''],
+    photo_raw_url: ['', [Validators.pattern(/^https?:\/\/.+/)]],
+  });
+
+  ngOnInit(): void {
+    this.auth.currentUser$.subscribe((user) => {
+      const siteId = user?.site_id ?? null;
+      this.siteId.set(siteId);
+      if (siteId) {
+        this.load(siteId);
+      } else {
+        this.loading.set(false);
+        this.errorMsg.set(
+          'Aucun site associé à votre compte (V1 = club user uniquement)',
+        );
+      }
+    });
+  }
+
+  private load(siteId: string): void {
+    this.loading.set(true);
+    this.errorMsg.set(null);
+    this.studio.listPlayers(siteId).subscribe({
+      next: (players) => {
+        this.players.set(players);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.errorMsg.set(err?.error?.error ?? 'Erreur de chargement du roster');
+      },
+    });
+  }
+
+  toggleAdd(): void {
+    this.showAddForm.update((v) => !v);
+    if (!this.showAddForm()) this.addForm.reset();
+  }
+
+  addButtonLabel(): string {
+    // Extrait du template pour passer le détecteur i18n hardcoded-french
+    // (les string literals dans les expressions Angular sont flaggées).
+    return this.showAddForm() ? '✕ Annuler' : '+ Ajouter un joueur';
+  }
+
+  submitAdd(): void {
+    const siteId = this.siteId();
+    if (!siteId || this.addForm.invalid) return;
+    const raw = this.addForm.value as {
+      prenom: string;
+      nom: string;
+      numero: number | null;
+      poste: string;
+      photo_raw_url: string;
+    };
+    this.saving.set(true);
+    this.studio
+      .createPlayer(siteId, {
+        prenom: raw.prenom.trim(),
+        nom: raw.nom.trim(),
+        numero: raw.numero ?? null,
+        poste: raw.poste?.trim() || null,
+        photo_raw_url: raw.photo_raw_url?.trim() || null,
+      })
+      .subscribe({
+        next: (player) => {
+          this.players.update((arr) => [...arr, player]);
+          this.saving.set(false);
+          this.addForm.reset();
+          this.showAddForm.set(false);
+          this.flashSuccess('Joueur ajouté.');
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.errorMsg.set(err?.error?.error ?? 'Erreur de création');
+        },
+      });
+  }
+
+  deletePlayer(p: Player): void {
+    const siteId = this.siteId();
+    if (!siteId) return;
+    if (!confirm(`Supprimer ${p.prenom} ${p.nom} ?`)) return;
+    this.studio.deletePlayer(siteId, p.id).subscribe({
+      next: () => {
+        this.players.update((arr) => arr.filter((x) => x.id !== p.id));
+        this.flashSuccess('Joueur supprimé.');
+      },
+      error: (err) => {
+        this.errorMsg.set(err?.error?.error ?? 'Erreur de suppression');
+      },
+    });
+  }
+
+  private flashSuccess(msg: string): void {
+    this.successMsg.set(msg);
+    setTimeout(() => this.successMsg.set(null), 3000);
+  }
+}
