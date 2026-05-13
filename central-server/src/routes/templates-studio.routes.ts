@@ -23,6 +23,10 @@ import {
   getRenderRequest,
   getBrandKit,
   upsertBrandKit,
+  listPlayers,
+  createPlayer,
+  updatePlayer,
+  deletePlayer,
 } from '../controllers/templates-studio.controller';
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
@@ -69,6 +73,42 @@ router.put(
   requireClubScope(siteIdFromParams),
   validate(templatesStudioSchemas.upsertBrandKit),
   upsertBrandKit,
+);
+
+// Roster joueurs (S4-A) — CRUD scopé site, photo upload viendra en S4-B.
+router.get(
+  '/sites/:siteId/players',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
+  listPlayers,
+);
+router.post(
+  '/sites/:siteId/players',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
+  validate(templatesStudioSchemas.createPlayer),
+  createPlayer,
+);
+router.put(
+  '/sites/:siteId/players/:playerId',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteIdAndPlayerId),
+  requireClubScope(siteIdFromParams),
+  validate(templatesStudioSchemas.updatePlayer),
+  updatePlayer,
+);
+router.delete(
+  '/sites/:siteId/players/:playerId',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteIdAndPlayerId),
+  requireClubScope(siteIdFromParams),
+  deletePlayer,
 );
 
 export default router;

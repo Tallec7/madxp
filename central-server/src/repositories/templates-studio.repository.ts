@@ -302,6 +302,15 @@ export interface CreatePlayerInput {
   photo_raw_url: string | null;
 }
 
+export interface UpdatePlayerInput {
+  prenom?: string;
+  nom?: string;
+  numero?: number | null;
+  poste?: string | null;
+  photo_raw_url?: string | null;
+  photo_cutout_url?: string | null;
+}
+
 class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
   constructor() {
     super('players');
@@ -369,6 +378,66 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
        WHERE id = $1`,
       [id],
     );
+  }
+
+  /**
+   * Update partiel — coalesce les champs absents avec les valeurs existantes.
+   * Si `photo_raw_url` change, on remet `cutout_status = 'pending'` pour que
+   * le worker rembg (S4-C) re-traite l'image. `photo_cutout_url` peut être
+   * set manuellement (S4-A : tant que worker pas livré, l'opérateur peut
+   * coller une URL FTP de cutout pré-fait).
+   */
+  async update(
+    id: string,
+    siteId: string,
+    input: UpdatePlayerInput,
+  ): Promise<PlayerRow | null> {
+    // Si photo_raw_url change vers non-null → status='pending' pour re-trigger
+    // le worker. Si photo_cutout_url set explicitement → status='ready'.
+    const cutoutStatusOverride: CutoutStatus | null =
+      input.photo_cutout_url !== undefined && input.photo_cutout_url !== null
+        ? 'ready'
+        : input.photo_raw_url !== undefined && input.photo_raw_url !== null
+          ? 'pending'
+          : null;
+
+    const result = await query<PlayerRow>(
+      `UPDATE players SET
+         prenom = COALESCE($1, prenom),
+         nom = COALESCE($2, nom),
+         numero = CASE WHEN $3::boolean THEN $4::int ELSE numero END,
+         poste = CASE WHEN $5::boolean THEN $6::text ELSE poste END,
+         photo_raw_url = CASE WHEN $7::boolean THEN $8::text ELSE photo_raw_url END,
+         photo_cutout_url = CASE WHEN $9::boolean THEN $10::text ELSE photo_cutout_url END,
+         cutout_status = COALESCE($11, cutout_status),
+         updated_at = NOW()
+       WHERE id = $12 AND site_id = $13
+       RETURNING *`,
+      [
+        input.prenom ?? null,
+        input.nom ?? null,
+        input.numero !== undefined,
+        input.numero ?? null,
+        input.poste !== undefined,
+        input.poste ?? null,
+        input.photo_raw_url !== undefined,
+        input.photo_raw_url ?? null,
+        input.photo_cutout_url !== undefined,
+        input.photo_cutout_url ?? null,
+        cutoutStatusOverride,
+        id,
+        siteId,
+      ],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async deleteForSite(id: string, siteId: string): Promise<boolean> {
+    const result = await query(
+      `DELETE FROM players WHERE id = $1 AND site_id = $2`,
+      [id, siteId],
+    );
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

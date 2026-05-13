@@ -1202,6 +1202,28 @@ export const templatesStudioSchemas = {
       body: Joi.string().max(80).optional(),
     }).optional(),
   }).min(1),
+
+  // POST /sites/:siteId/players body. site_id NE doit pas être dans le body
+  // (injecté serveur-side depuis req.params, après tenant guard).
+  // S4-A : photo URL externe acceptée (upload multipart via storage.service viendra
+  // en S4-B). Le worker rembg Python (S4-C) consommera `photo_raw_url` en pending.
+  createPlayer: Joi.object({
+    prenom: Joi.string().min(1).max(80).required(),
+    nom: Joi.string().min(1).max(80).required(),
+    numero: Joi.number().integer().min(0).max(999).optional().allow(null),
+    poste: Joi.string().max(60).optional().allow(null, ''),
+    photo_raw_url: Joi.string().uri().optional().allow(null, ''),
+  }),
+
+  // PUT /sites/:siteId/players/:playerId body — tous champs optionnels.
+  updatePlayer: Joi.object({
+    prenom: Joi.string().min(1).max(80).optional(),
+    nom: Joi.string().min(1).max(80).optional(),
+    numero: Joi.number().integer().min(0).max(999).optional().allow(null),
+    poste: Joi.string().max(60).optional().allow(null, ''),
+    photo_raw_url: Joi.string().uri().optional().allow(null, ''),
+    photo_cutout_url: Joi.string().uri().optional().allow(null, ''),
+  }).min(1),
 };
 
 // ============================================================================
@@ -1215,6 +1237,10 @@ export const paramSchemas = {
   idAndSiteId: Joi.object({
     id: Joi.string().uuid().required(),
     siteId: Joi.string().uuid().required(),
+  }),
+  siteIdAndPlayerId: Joi.object({
+    siteId: Joi.string().uuid().required(),
+    playerId: Joi.string().uuid().required(),
   }),
   idAndVideoId: Joi.object({
     id: Joi.string().uuid().required(),
