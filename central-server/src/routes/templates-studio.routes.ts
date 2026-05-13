@@ -9,7 +9,7 @@
  */
 
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireClubScope } from '../middleware/auth';
 import {
   validate,
   validateParams,
@@ -21,7 +21,13 @@ import {
   listTemplates,
   createRenderRequest,
   getRenderRequest,
+  getBrandKit,
+  upsertBrandKit,
 } from '../controllers/templates-studio.controller';
+
+// Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
+// (admin, operator, super_admin) bypassent ; club users voient `siteId === user.site_id`.
+const siteIdFromParams = (req: { params: { siteId?: string } }) => req.params.siteId;
 
 const router = Router();
 
@@ -44,6 +50,25 @@ router.get(
   apiRateLimit,
   validateParams(paramSchemas.id),
   getRenderRequest,
+);
+
+// Brand kit — lecture / upsert. Tenant guard sur :siteId (club ne voit que son site).
+router.get(
+  '/sites/:siteId/brand-kit',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
+  getBrandKit,
+);
+router.put(
+  '/sites/:siteId/brand-kit',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
+  validate(templatesStudioSchemas.upsertBrandKit),
+  upsertBrandKit,
 );
 
 export default router;
