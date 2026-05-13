@@ -115,7 +115,7 @@ Trois choix :
 | **B. Garder Redis + upgrade plan Upstash**               | On prévoit de scale > 1 replica Railway                           | ~$5-10/mois Upstash |
 | **C. Garder le kill-switch, Redis désactivé par défaut** | Compromis : on peut le réactiver en 1 set var quand on scale      | Gratuit             |
 
-Recommandation 2026-05-13 : **A** ou **C** tant qu'on est en 1 replica. La PR #978 ajoute déjà le kill-switch (choix C).
+Recommandation 2026-05-13 : **A** ou **C** tant qu'on est en 1 replica. La PR #979 ajoute déjà le kill-switch (choix C).
 
 ---
 
@@ -125,7 +125,7 @@ Recommandation 2026-05-13 : **A** ou **C** tant qu'on est en 1 replica. La PR #9
 - **Faille de design** :
   - Le Redis adapter est branché alors qu'il n'a pas d'utilité en 1 replica (over-engineering)
   - Pas d'alerte préventive sur le quota Upstash (pas de monitoring)
-  - Le fallback `catch` ne nettoyait pas `removeAllListeners('error')` avant `quit()` → spam de logs en boucle après crash (PR #978 fix)
+  - Le fallback `catch` ne nettoyait pas `removeAllListeners('error')` avant `quit()` → spam de logs en boucle après crash (PR #979 fix)
 - **Symptôme côté DB** :
   - `sites.last_seen_at` figé depuis 2026-05-13 06:45 UTC pour NLF
   - `connection_events` muet depuis 2026-05-12 20:34 UTC (toute flotte)
@@ -135,7 +135,7 @@ Recommandation 2026-05-13 : **A** ou **C** tant qu'on est en 1 replica. La PR #9
   - Apparente apiKey mismatch (hash/raw) → swap propre, mais inutile, le pub/sub Redis bloquait l'auth handler en amont
   - Apparente cascade ADR-117 storm (l'origine timeline du crash) → cause secondaire mais réelle, le throttle hardening PR #977 reste valide
 
-## Fix appliqué (PR #978)
+## Fix appliqué (PR #979)
 
 | Composant                             | Changement                                                                                                                      |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
