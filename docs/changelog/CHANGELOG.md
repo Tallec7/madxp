@@ -1,3 +1,9 @@
+# [3.307.0](https://github.com/Tallec7/neopro/compare/v3.306.0...v3.307.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** S2 — brand kit endpoints + résolveur cascade ([#984](https://github.com/Tallec7/neopro/issues/984)) ([63d3207](https://github.com/Tallec7/neopro/commit/63d3207dac7dff989f5b9530d2f56abd67a37f3b)), closes [#RRGGBB](https://github.com/Tallec7/neopro/issues/RRGGBB)
+
 # [3.306.0](https://github.com/Tallec7/neopro/compare/v3.305.0...v3.306.0) (2026-05-13)
 
 ### Features
