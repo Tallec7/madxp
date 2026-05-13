@@ -1,6 +1,12 @@
-# Runbook OPS-06 — Redis Upstash quota exhausted (Socket.IO adapter)
+# Runbook OPS-06 — Redis Upstash quota exhausted (Socket.IO adapter) — 📦 ARCHIVÉ
 
-> **Objectif** : remettre en ligne la flotte quand le quota Upstash Redis est épuisé et que le central-server boucle sur `ERR max requests limit exceeded`. Référence : incident NLF 2026-05-13 (P0 — flotte entière).
+> **🚨 Note post-cleanup 2026-05-13** : ce scénario **ne peut plus se reproduire en l'état**. Suite à l'incident, le Redis adapter Socket.IO a été **supprimé définitivement du central-server** (choix A étape 4). `redis` et `@socket.io/redis-adapter` sont retirés de `central-server/package.json`. Le smoke test `smoke-redis-adapter-incident-2026-05-13.test.ts` (11 assertions) bloque toute réintroduction silencieuse.
+>
+> Ce runbook reste comme **document historique** + **playbook au cas où** quelqu'un (toi, Claude, futur dev) re-introduit Redis un jour pour scaler horizontalement. **Si tu le ré-introduis** : remets AUSSI un quota check + alerting Prometheus AVANT de toucher à la prod.
+
+---
+
+> **Objectif (historique)** : remettre en ligne la flotte quand le quota Upstash Redis est épuisé et que le central-server boucle sur `ERR max requests limit exceeded`. Référence : incident NLF 2026-05-13 (P0 — flotte entière).
 > **Pré-requis** : CLI Railway authentifiée (`railway whoami`), accès au dashboard Upstash (optionnel pour vérifier le quota).
 > **Niveau de risque** : 🔴 critique — toute la flotte apparaît `Hors ligne` côté dashboard alors que les Pi heartbeatent normalement. Symptôme silencieux, pas d'alerte directe.
 

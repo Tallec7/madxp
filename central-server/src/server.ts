@@ -579,9 +579,10 @@ const startServer = async () => {
     await pool.query('SELECT NOW()');
     logger.info('Database connection established');
 
-    // Initialiser Socket.IO (avec Redis si configuré)
+    // Initialiser Socket.IO (single-instance — Redis adapter retiré 2026-05-13
+    // post-incident NLF, cf. docs/runbooks/OPS-06-redis-quota-exhausted.md).
     await socketService.initialize(httpServer);
-    logger.info('Socket.IO initialized', { redisEnabled: socketService.isRedisConnected() });
+    logger.info('Socket.IO initialized');
 
     // Demarrer le scheduler pour les deploiements planifies
     schedulerService.start();

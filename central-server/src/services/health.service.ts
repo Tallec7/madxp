@@ -26,7 +26,6 @@ export interface HealthCheckResult {
   environment: string;
   checks: {
     database: DependencyCheck;
-    redis?: DependencyCheck;
     websocket: DependencyCheck;
     storage?: DependencyCheck;
     memory: DependencyCheck;
@@ -61,17 +60,15 @@ class HealthService {
    * Health check complet avec toutes les dépendances
    */
   async getHealth(): Promise<HealthCheckResult> {
-    const checks = await Promise.all([
+    // Redis adapter Socket.IO supprimé 2026-05-13 (cf. ADR cleanup post-incident
+    // NLF — Upstash quota épuisé, 1 replica Railway donc adapter inutile).
+    const [database, websocket, memory] = await Promise.all([
       this.checkDatabase(),
-      this.checkRedis(),
       this.checkWebSocket(),
       this.checkMemory(),
     ]);
 
-    const [database, redis, websocket, memory] = checks;
-
     const allChecks = [database, websocket, memory];
-    if (redis) allChecks.push(redis);
 
     const summary = this.summarizeChecks(allChecks);
     const overallStatus = this.determineOverallStatus(allChecks);
@@ -84,7 +81,6 @@ class HealthService {
       environment: process.env.NODE_ENV || 'development',
       checks: {
         database,
-        redis: redis || undefined,
         websocket,
         memory,
       },
@@ -185,37 +181,6 @@ class HealthService {
   }
 
   /**
-   * Vérifie la connexion Redis (si configurée)
-   */
-  private async checkRedis(): Promise<DependencyCheck | null> {
-    if (!socketService.isRedisConnected()) {
-      return null; // Redis non configuré
-    }
-
-    const start = Date.now();
-
-    try {
-      // Vérifier via le service socket
-      const isConnected = socketService.isRedisConnected();
-      const latency = Date.now() - start;
-
-      return {
-        name: 'Redis',
-        status: isConnected ? 'healthy' : 'unhealthy',
-        latencyMs: latency,
-        message: isConnected ? undefined : 'Not connected',
-      };
-    } catch (error) {
-      return {
-        name: 'Redis',
-        status: 'unhealthy',
-        latencyMs: Date.now() - start,
-        message: error instanceof Error ? error.message : 'Check failed',
-      };
-    }
-  }
-
-  /**
    * Vérifie le service WebSocket
    */
   private async checkWebSocket(): Promise<DependencyCheck> {
@@ -231,7 +196,6 @@ class HealthService {
         latencyMs: latency,
         details: {
           connectedSites: connectionCount,
-          redisAdapter: socketService.isRedisConnected(),
         },
       };
     } catch (error) {
