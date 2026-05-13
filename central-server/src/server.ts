@@ -69,6 +69,8 @@ import clientErrorsRoutes from './routes/client-errors.routes';
 import remotionTemplatesRoutes from './routes/remotion-templates.routes';
 import { proxyTemplateAsset } from './controllers/remotion-templates.controller';
 import templateStudioRoutes from './routes/template-studio.routes';
+// Templates Studio V1 (code-driven, parallèle au legacy ci-dessus — cf STUDIO_V1.md).
+import templatesStudioV1Routes from './routes/templates-studio.routes';
 import templateBackgroundsRoutes from './routes/template-backgrounds.routes';
 import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
@@ -549,6 +551,8 @@ app.use('/api/remotion-templates', templateStudioRoutes);
 app.use('/api/remotion-templates', remotionTemplatesRoutes);
 // ADR-075 V3 Phase B — Club self-service templates
 app.use('/api/club/remotion-templates', clubTemplatesRoutes);
+// Templates Studio V1 — système code-driven parallèle (cf STUDIO_V1.md).
+app.use('/api/templates-studio', templatesStudioV1Routes);
 // ADR-109 — Template Backgrounds (catalogue + grants user_id)
 app.use('/api/templates/backgrounds', templateBackgroundsRoutes);
 
@@ -636,6 +640,30 @@ const startServer = async () => {
     // prewarmRemotionBundle();  // disabled — see comment above
     // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
     startRenderWorker();
+
+    // Templates Studio V1 — seed des manifests vendored au boot (cf STUDIO_V1.md §5).
+    // Tolère l'absence de migration (table template_definitions pas encore créée
+    // en dev) : on log + skip plutôt que crasher le boot.
+    try {
+      const { seedTemplatesStudioManifests } = await import(
+        './scripts/seed-templates-studio-manifests'
+      );
+      await seedTemplatesStudioManifests();
+    } catch (err) {
+      logger.warn('templates-studio: manifest seed skipped at boot', { err });
+    }
+
+    // Templates Studio V1 — worker stub (J4). Poll render_requests toutes les 2s.
+    // STUB : performRender() simule un rendu — branchement bundle()+renderMedia()
+    // viendra dans un commit ultérieur (déjà dérisqué dans le POC studio-template/).
+    try {
+      const { startStudioRenderWorker } = await import(
+        './services/studio-render-worker.service'
+      );
+      await startStudioRenderWorker();
+    } catch (err) {
+      logger.warn('templates-studio: render worker skipped at boot', { err });
+    }
 
     // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j
     // + refresh gauge Prometheus. Tolère l'absence de table (pré-migration).

@@ -1167,6 +1167,22 @@ export const testRenderSchemas = {
 };
 
 // ============================================================================
+// Templates Studio V1 — POST /render-requests body schema
+// ============================================================================
+// Système code-driven parallèle (cf STUDIO_V1.md). `site_id` est injecté
+// serveur-side depuis req.user.site_id — JAMAIS dans le body (pattern aligné
+// sur `uploaded_for_site_id` côté upload vidéo, cf .claude/rules/security.md).
+// `props` est passé tel quel au moteur — sa validation fine se fait via le
+// `inputSchema` du manifest côté worker.
+
+export const templatesStudioSchemas = {
+  createRenderRequest: Joi.object({
+    template_id: Joi.string().uuid().required(),
+    props: Joi.object().unknown(true).required(),
+  }),
+};
+
+// ============================================================================
 // Reusable param schemas
 // ============================================================================
 
