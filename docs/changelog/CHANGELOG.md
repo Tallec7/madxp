@@ -1,3 +1,9 @@
+# [3.305.0](https://github.com/Tallec7/neopro/compare/v3.304.4...v3.305.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** V1 walking skeleton — migration + endpoints + worker stub ([#981](https://github.com/Tallec7/neopro/issues/981)) ([510517a](https://github.com/Tallec7/neopro/commit/510517aab027697ca99a12a3e22adef35a667a5e)), closes [#1](https://github.com/Tallec7/neopro/issues/1)
+
 ## [3.304.4](https://github.com/Tallec7/neopro/compare/v3.304.3...v3.304.4) (2026-05-13)
 
 ### Bug Fixes
