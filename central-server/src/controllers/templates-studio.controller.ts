@@ -20,7 +20,9 @@ import {
   templateDefinitionRepository,
   renderRequestRepository,
   siteBrandKitRepository,
+  playerRepository,
   type SiteBrandKitRow,
+  type PlayerRow,
 } from '../repositories';
 import {
   resolveBindings,
@@ -102,16 +104,25 @@ export const createRenderRequest = async (
       return;
     }
 
-    // Résolveur cascade : input + brand kit → payload résolu stocké en DB.
+    // Résolveur cascade : input + brand kit + players → payload résolu stocké en DB.
     // Le worker enverra ce payload tel quel au render server, pas le raw input.
     // Audit trail : la row contient exactement ce qui a été rendu.
-    const brandKit = await siteBrandKitRepository.findBySite(siteId);
+    // S4-A : on charge tous les players du site et on les passe au résolveur via
+    // une Map<id, PlayerRow>. Le résolveur active ses transforms `player.*`
+    // (fullName, number, cutoutUrl, poste). Tant que le worker rembg (S4-C)
+    // n'est pas livré, `photo_cutout_url` peut être null → cutoutUrl retourne null.
+    const [brandKit, players] = await Promise.all([
+      siteBrandKitRepository.findBySite(siteId),
+      playerRepository.findBySite(siteId),
+    ]);
+    const playersById = new Map<string, PlayerRow>(
+      players.map((p) => [p.id, p]),
+    );
     const resolvedProps = resolveBindings({
       manifest: template.manifest_json as unknown as ManifestBindings,
       inputProps: props,
       brandKit,
-      // playersById omitted — S4 deferred (worker rembg pas livré).
-      // Les bindings player.* renverront null avec un warn structuré.
+      playersById,
     });
 
     const row = await renderRequestRepository.create({
@@ -273,6 +284,148 @@ export const getRenderRequest = async (
     });
   } catch (error) {
     logger.error('templates-studio: get render request failed', { error, id });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// /api/templates-studio/sites/:siteId/players — roster CRUD (S4-A)
+//
+// Tenant guard appliqué côté routes (`requireClubScope`). Le controller fait
+// confiance que `req.params.siteId` est autorisé. Les opérations de mutation
+// double-vérifient via `WHERE site_id = $X` au repo level (defense-in-depth).
+// ────────────────────────────────────────────────────────────────────────────
+
+function playerResponse(row: PlayerRow): {
+  id: string;
+  site_id: string;
+  prenom: string;
+  nom: string;
+  numero: number | null;
+  poste: string | null;
+  photo_raw_url: string | null;
+  photo_cutout_url: string | null;
+  cutout_status: string;
+  created_at: Date;
+  updated_at: Date;
+} {
+  return {
+    id: row.id,
+    site_id: row.site_id,
+    prenom: row.prenom,
+    nom: row.nom,
+    numero: row.numero,
+    poste: row.poste,
+    photo_raw_url: row.photo_raw_url,
+    photo_cutout_url: row.photo_cutout_url,
+    cutout_status: row.cutout_status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export const listPlayers = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId } = req.params;
+  try {
+    const players = await playerRepository.findBySite(siteId);
+    res.json({
+      success: true,
+      data: { players: players.map(playerResponse), total: players.length },
+    });
+  } catch (error) {
+    logger.error('templates-studio: list players failed', { error, site_id: siteId });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const createPlayer = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId } = req.params;
+  const { prenom, nom, numero, poste, photo_raw_url } = req.body as {
+    prenom: string;
+    nom: string;
+    numero?: number | null;
+    poste?: string | null;
+    photo_raw_url?: string | null;
+  };
+
+  try {
+    const row = await playerRepository.create({
+      site_id: siteId,
+      prenom,
+      nom,
+      numero: numero ?? null,
+      poste: poste ?? null,
+      photo_raw_url: photo_raw_url ?? null,
+    });
+    logger.info('templates-studio: player created', {
+      player_id: row.id,
+      site_id: siteId,
+      user_id: req.user.id,
+      cutout_status: row.cutout_status,
+    });
+    res.status(201).json({ success: true, data: playerResponse(row) });
+  } catch (error) {
+    logger.error('templates-studio: create player failed', { error, site_id: siteId });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const updatePlayer = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId, playerId } = req.params;
+  try {
+    // Update scoped au site_id côté repo (defense-in-depth + tenant guard côté routes).
+    const row = await playerRepository.update(playerId, siteId, req.body);
+    if (!row) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    res.json({ success: true, data: playerResponse(row) });
+  } catch (error) {
+    logger.error('templates-studio: update player failed', {
+      error,
+      site_id: siteId,
+      player_id: playerId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const deletePlayer = async (req: AuthRequest, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId, playerId } = req.params;
+  try {
+    const deleted = await playerRepository.deleteForSite(playerId, siteId);
+    if (!deleted) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    logger.info('templates-studio: player deleted', {
+      player_id: playerId,
+      site_id: siteId,
+      user_id: req.user.id,
+    });
+    res.status(204).send();
+  } catch (error) {
+    logger.error('templates-studio: delete player failed', {
+      error,
+      site_id: siteId,
+      player_id: playerId,
+    });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });
   }
 };

@@ -405,4 +405,5 @@ export {
   type UpsertTemplateDefinitionInput,
   type UpsertSiteBrandKitInput,
   type CreatePlayerInput,
+  type UpdatePlayerInput,
 } from './templates-studio.repository';

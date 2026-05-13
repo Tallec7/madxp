@@ -341,3 +341,67 @@ describe('Templates Studio V1 — S2 Brand Kit + résolveur', () => {
     expect(routes).toMatch(/validate\(templatesStudioSchemas\.upsertBrandKit\)/);
   });
 });
+
+describe('Templates Studio V1 — S4-A roster CRUD + résolveur câblé', () => {
+  it('repository exposes update + deleteForSite for player CRUD', () => {
+    const content = fs.readFileSync(REPO_FILE, 'utf8');
+    expect(content).toMatch(/async\s+update\(/);
+    expect(content).toMatch(/async\s+deleteForSite\(/);
+  });
+
+  it('repository.update scopes via WHERE site_id (defense-in-depth tenant guard)', () => {
+    // Sans cette clause, un user club pourrait éditer un joueur d'un autre site
+    // si l'attaquant connaît l'UUID. Tenant guard côté routes + repo = belt-and-suspenders.
+    const content = fs.readFileSync(REPO_FILE, 'utf8');
+    expect(content).toMatch(/WHERE\s+id\s*=\s*\$\d+\s+AND\s+site_id\s*=\s*\$\d+/i);
+  });
+
+  it('repository.update bumps cutout_status to pending when photo_raw_url changes', () => {
+    // Sans ça, modifier la photo brute ne re-trigger pas le worker rembg
+    // → l'ancien cutout reste affecté à la nouvelle raw → mismatch visuel.
+    const content = fs.readFileSync(REPO_FILE, 'utf8');
+    expect(content).toMatch(/cutoutStatusOverride/);
+    expect(content).toMatch(/['"]pending['"]/);
+  });
+
+  it('controller exports listPlayers / createPlayer / updatePlayer / deletePlayer', () => {
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/export\s+const\s+listPlayers\s*=/);
+    expect(content).toMatch(/export\s+const\s+createPlayer\s*=/);
+    expect(content).toMatch(/export\s+const\s+updatePlayer\s*=/);
+    expect(content).toMatch(/export\s+const\s+deletePlayer\s*=/);
+  });
+
+  it('createRenderRequest passes playersById to the resolver (S4-A unblocked)', () => {
+    // Avant S4-A, le résolveur recevait playersById omitted → bindings player.*
+    // retournaient null avec warn fail-soft. Maintenant on les charge.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/playerRepository\.findBySite/);
+    expect(content).toMatch(/new\s+Map<string,\s*PlayerRow>/);
+    expect(content).toMatch(/playersById,?\s*}\)/);
+  });
+
+  it('routes mount the 4 player endpoints with tenant guard + Joi', () => {
+    const routes = fs.readFileSync(ROUTES_FILE, 'utf8');
+    // Les 4 verbes
+    expect(routes).toMatch(/router\.get\([\s\S]*?'\/sites\/:siteId\/players'/);
+    expect(routes).toMatch(/router\.post\([\s\S]*?'\/sites\/:siteId\/players'/);
+    expect(routes).toMatch(/router\.put\([\s\S]*?'\/sites\/:siteId\/players\/:playerId'/);
+    expect(routes).toMatch(/router\.delete\([\s\S]*?'\/sites\/:siteId\/players\/:playerId'/);
+    // Joi sur les routes mutations
+    expect(routes).toMatch(/validate\(templatesStudioSchemas\.createPlayer\)/);
+    expect(routes).toMatch(/validate\(templatesStudioSchemas\.updatePlayer\)/);
+    // paramSchemas dédié pour les routes :siteId/:playerId
+    expect(routes).toMatch(/validateParams\(paramSchemas\.siteIdAndPlayerId\)/);
+  });
+
+  it('routes require photo_raw_url to be a valid URI in createPlayer (no random strings)', () => {
+    // Garde-fou côté Joi : les photos doivent être des URLs FTP, pas n'importe
+    // quel string. Sans ce check, le worker rembg recevrait du garbage.
+    const content = fs.readFileSync(
+      path.join(SRC, 'middleware', 'validation.ts'),
+      'utf8',
+    );
+    expect(content).toMatch(/createPlayer:\s*Joi\.object\([\s\S]*?photo_raw_url:\s*Joi\.string\(\)\.uri\(\)/);
+  });
+});
