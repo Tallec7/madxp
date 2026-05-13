@@ -1,3 +1,9 @@
+# [3.306.0](https://github.com/Tallec7/neopro/compare/v3.305.0...v3.306.0) (2026-05-13)
+
+### Features
+
+- **templates-studio:** V1 J5 — branche render via HTTP delegation au render server ([#982](https://github.com/Tallec7/neopro/issues/982)) ([a84de6b](https://github.com/Tallec7/neopro/commit/a84de6b3669ed812e56f1ae12a760a1d7ffe795b))
+
 # [3.305.0](https://github.com/Tallec7/neopro/compare/v3.304.4...v3.305.0) (2026-05-13)
 
 ### Features
