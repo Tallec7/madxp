@@ -16,12 +16,26 @@ set -e
 
 # === Configuration ===
 SYNC_AGENT_SERVICE="neopro-sync-agent"
+NEOPRO_APP_SERVICE="neopro-app"
 CHECK_INTERVAL=30
 CRASH_THRESHOLD=3
 CRASH_WINDOW=300  # 5 minutes en secondes
 LOG_FILE="/var/log/neopro-sync-guardian.log"
 CRASH_COUNT_FILE="/tmp/sync-agent-crash-count"
 LAST_CRASH_FILE="/tmp/sync-agent-last-crash"
+
+# neopro-app watchdog (incident 2026-05-13 — storm auto-deploys NLF)
+# Le guardian surveille aussi neopro-app pour éviter qu'un crash laisse le Pi
+# offline jusqu'à intervention physique. Backoff exponentiel, plafond 5/h.
+NEOPRO_APP_DOWN_GRACE=60          # tolérer 60s avant de tenter un restart
+NEOPRO_APP_RESTART_WINDOW=3600    # fenêtre du plafond restart (1h)
+NEOPRO_APP_RESTART_CAP=5          # max 5 restart/heure
+NEOPRO_APP_DOWN_SINCE_FILE="/tmp/neopro-app-down-since"
+NEOPRO_APP_RESTART_LOG="/tmp/neopro-app-restart-log"   # 1 timestamp epoch / ligne
+NEOPRO_APP_BACKOFF_FILE="/tmp/neopro-app-backoff"      # prochain délai (s)
+NEOPRO_APP_NEXT_TRY_FILE="/tmp/neopro-app-next-try"    # epoch min pour retry
+NEOPRO_APP_BACKOFF_MIN=10
+NEOPRO_APP_BACKOFF_MAX=600
 
 # Chemins
 NEOPRO_ROOT="/home/pi/neopro"
@@ -207,6 +221,111 @@ cleanup_old_backups() {
     fi
 }
 
+# === neopro-app watchdog (incident 2026-05-13) ===
+
+# Émet une ligne JSON structurée sur l'événement (parsable par journald + Loki)
+emit_event() {
+    local event="$1"
+    local extra="$2"
+    local ts=$(date -Iseconds)
+    echo "{\"ts\":\"$ts\",\"guardian_event\":\"$event\"${extra:+,$extra}}"
+}
+
+# Compte les restart neopro-app dans la dernière heure
+neopro_app_recent_restart_count() {
+    if [ ! -f "$NEOPRO_APP_RESTART_LOG" ]; then
+        echo 0
+        return
+    fi
+    local now=$(date +%s)
+    local cutoff=$((now - NEOPRO_APP_RESTART_WINDOW))
+    local kept
+    kept=$(awk -v c="$cutoff" '$1 >= c' "$NEOPRO_APP_RESTART_LOG" 2>/dev/null || true)
+    # Réécrit le log purgé pour qu'il ne grossisse pas
+    if [ -n "$kept" ]; then
+        echo "$kept" > "$NEOPRO_APP_RESTART_LOG"
+    else
+        : > "$NEOPRO_APP_RESTART_LOG"
+    fi
+    wc -l < "$NEOPRO_APP_RESTART_LOG" | tr -d ' '
+}
+
+# Tente un restart neopro-app avec backoff exponentiel + plafond
+watch_neopro_app() {
+    if systemctl is-active --quiet "$NEOPRO_APP_SERVICE"; then
+        # Service up — reset l'état down + backoff
+        if [ -f "$NEOPRO_APP_DOWN_SINCE_FILE" ]; then
+            log_info "$(emit_event neopro_app_recovered)"
+            rm -f "$NEOPRO_APP_DOWN_SINCE_FILE" "$NEOPRO_APP_BACKOFF_FILE" "$NEOPRO_APP_NEXT_TRY_FILE"
+        fi
+        return 0
+    fi
+
+    local now
+    now=$(date +%s)
+
+    # Marquer le moment où le service est tombé
+    if [ ! -f "$NEOPRO_APP_DOWN_SINCE_FILE" ]; then
+        echo "$now" > "$NEOPRO_APP_DOWN_SINCE_FILE"
+        log_warn "$(emit_event neopro_app_down)"
+        return 0
+    fi
+
+    local down_since
+    down_since=$(cat "$NEOPRO_APP_DOWN_SINCE_FILE" 2>/dev/null || echo "$now")
+    local down_for=$((now - down_since))
+
+    # Tolérance : laisser le temps à systemd Restart= de faire son boulot
+    if [ "$down_for" -lt "$NEOPRO_APP_DOWN_GRACE" ]; then
+        return 0
+    fi
+
+    # Respect du backoff (ne pas taper en boucle)
+    if [ -f "$NEOPRO_APP_NEXT_TRY_FILE" ]; then
+        local next_try
+        next_try=$(cat "$NEOPRO_APP_NEXT_TRY_FILE" 2>/dev/null || echo 0)
+        if [ "$now" -lt "$next_try" ]; then
+            return 0
+        fi
+    fi
+
+    # Plafond 5 restart/h
+    local recent
+    recent=$(neopro_app_recent_restart_count)
+    if [ "$recent" -ge "$NEOPRO_APP_RESTART_CAP" ]; then
+        log_error "$(emit_event neopro_app_restart_cap_reached "\"recent_restarts\":$recent,\"window_s\":$NEOPRO_APP_RESTART_WINDOW")"
+        # Attendre la prochaine fenêtre pour retenter
+        echo $((now + 600)) > "$NEOPRO_APP_NEXT_TRY_FILE"
+        return 1
+    fi
+
+    # Backoff exponentiel
+    local backoff
+    backoff=$(cat "$NEOPRO_APP_BACKOFF_FILE" 2>/dev/null || echo "$NEOPRO_APP_BACKOFF_MIN")
+    if [ "$backoff" -lt "$NEOPRO_APP_BACKOFF_MIN" ]; then
+        backoff="$NEOPRO_APP_BACKOFF_MIN"
+    fi
+
+    log_warn "$(emit_event neopro_app_restart_attempt "\"down_for_s\":$down_for,\"recent_restarts\":$recent,\"backoff_s\":$backoff")"
+
+    # Log le restart AVANT la commande (pour ne pas perdre la trace si systemctl hang)
+    echo "$now" >> "$NEOPRO_APP_RESTART_LOG"
+
+    if sudo systemctl restart "$NEOPRO_APP_SERVICE" 2>/dev/null; then
+        log_info "$(emit_event neopro_app_restart_issued)"
+    else
+        log_error "$(emit_event neopro_app_restart_failed)"
+    fi
+
+    # Préparer le prochain essai : backoff doublé, capé
+    local next_backoff=$((backoff * 2))
+    if [ "$next_backoff" -gt "$NEOPRO_APP_BACKOFF_MAX" ]; then
+        next_backoff="$NEOPRO_APP_BACKOFF_MAX"
+    fi
+    echo "$next_backoff" > "$NEOPRO_APP_BACKOFF_FILE"
+    echo $((now + backoff)) > "$NEOPRO_APP_NEXT_TRY_FILE"
+}
+
 # Rotation des logs (garde 1MB max)
 rotate_log() {
     if [ -f "$LOG_FILE" ]; then
@@ -281,6 +400,9 @@ main_loop() {
             fi
         fi
 
+        # Surveille neopro-app indépendamment du sync-agent (incident 2026-05-13)
+        watch_neopro_app || true
+
         cleanup_old_backups
         sleep "$CHECK_INTERVAL"
     done
@@ -307,6 +429,12 @@ case "${1:-}" in
             echo "Sync-agent: DOWN ✗"
         fi
         echo "Crash count: $(get_recent_crash_count) / $CRASH_THRESHOLD"
+        if systemctl is-active --quiet "$NEOPRO_APP_SERVICE"; then
+            echo "Neopro-app: RUNNING ✓"
+        else
+            echo "Neopro-app: DOWN ✗"
+        fi
+        echo "Neopro-app restarts (last hour): $(neopro_app_recent_restart_count) / $NEOPRO_APP_RESTART_CAP"
         echo ""
         if [ -d "$GOLDEN_DIR" ]; then
             echo "Golden version: EXISTS ✓"

@@ -1,5 +1,5 @@
 [Unit]
-Description=Neopro Sync-Agent Guardian (Watchdog)
+Description=Neopro Guardian (Watchdog sync-agent + neopro-app)
 Documentation=https://github.com/Tallec7/neopro
 After=network-online.target neopro-sync-agent.service
 Wants=network-online.target
