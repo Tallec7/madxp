@@ -9,6 +9,14 @@
 
 import * as worker from './studio-render-worker.service';
 
+/**
+ * Note : on N'APPELLE PAS `prewarmStudioBundle()` ici — la fonction tente
+ * `await import('@remotion/bundler')` qui charge Webpack côté Node, ce qui
+ * pollue le contexte module pour les autres test suites (TypeError
+ * "RawModule is not a constructor" dans canary.routes / command-queue
+ * quand jest run plusieurs files dans le même worker). Le smoke service
+ * coverage exige juste 1 test qui importe le module — ce qui est le cas.
+ */
 describe('studio-render-worker.service (smoke)', () => {
   it('exports the start/stop functions + singleton + prewarm', () => {
     expect(typeof worker.startStudioRenderWorker).toBe('function');
@@ -19,12 +27,8 @@ describe('studio-render-worker.service (smoke)', () => {
     expect(typeof worker.studioRenderWorker.stop).toBe('function');
   });
 
-  it('prewarmStudioBundle is no-op when TEMPLATES_STUDIO_DIR is absent', () => {
-    // Le prewarm doit être tolérant au "TEMPLATES_STUDIO_DIR n'existe pas"
-    // (cas du CI sans templates-studio/ deployé en runtime). Pas de throw.
-    const prevDir = process.env.TEMPLATES_STUDIO_DIR;
-    process.env.TEMPLATES_STUDIO_DIR = '/nonexistent-templates-studio-dir';
-    expect(() => worker.prewarmStudioBundle()).not.toThrow();
-    process.env.TEMPLATES_STUDIO_DIR = prevDir;
+  it('stopStudioRenderWorker is idempotent (no-op si jamais démarré)', () => {
+    expect(() => worker.stopStudioRenderWorker()).not.toThrow();
+    expect(() => worker.stopStudioRenderWorker()).not.toThrow();
   });
 });
