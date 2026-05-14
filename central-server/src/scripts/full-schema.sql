@@ -7229,6 +7229,112 @@ CREATE EVENT TRIGGER ensure_rls ON ddl_command_end
 
 
 --
+-- Templates Studio V1 — système code-driven (cf migration add-templates-studio-v1.sql)
+-- Snapshot ajouté ici pour que le CI migration-check.yml puisse poser les
+-- migrations subséquentes (ex: add-studio-player-global-grants.sql) sur une
+-- DB éphémère. `IF NOT EXISTS` partout pour rester compatible avec un replay
+-- de la migration originale.
+--
+
+CREATE TABLE IF NOT EXISTS public.template_definitions (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    slug text NOT NULL,
+    version text NOT NULL,
+    label text NOT NULL,
+    description text,
+    kind text NOT NULL,
+    manifest_json jsonb NOT NULL,
+    remotion_composition_id text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT template_definitions_kind_check CHECK ((kind = ANY (ARRAY['video'::text, 'still'::text]))),
+    CONSTRAINT template_definitions_pkey PRIMARY KEY (id),
+    CONSTRAINT template_definitions_slug_key UNIQUE (slug)
+);
+
+CREATE TABLE IF NOT EXISTS public.render_requests (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    site_id uuid NOT NULL,
+    template_id uuid NOT NULL,
+    props_json jsonb NOT NULL,
+    status text NOT NULL,
+    output_url text,
+    error_msg text,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT render_requests_pkey PRIMARY KEY (id),
+    CONSTRAINT render_requests_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'rendering'::text, 'ready'::text, 'failed'::text]))),
+    CONSTRAINT render_requests_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id),
+    CONSTRAINT render_requests_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.template_definitions(id)
+);
+
+CREATE INDEX IF NOT EXISTS render_requests_status_idx
+  ON public.render_requests(status, created_at)
+  WHERE status IN ('queued', 'rendering');
+
+CREATE INDEX IF NOT EXISTS render_requests_site_idx
+  ON public.render_requests(site_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.site_brand_kits (
+    site_id uuid NOT NULL,
+    club_name text,
+    colors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    logos_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    fonts_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    sponsors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT site_brand_kits_pkey PRIMARY KEY (site_id),
+    CONSTRAINT site_brand_kits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id)
+);
+
+CREATE TABLE IF NOT EXISTS public.players (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    -- site_id : NULL = joueur global (ADR-082 pattern, cf migration
+    -- add-studio-player-global-grants.sql), UUID = joueur exclusif au site.
+    site_id uuid,
+    prenom text NOT NULL,
+    nom text NOT NULL,
+    numero integer,
+    poste text,
+    photo_raw_url text,
+    photo_cutout_url text,
+    cutout_status text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT players_pkey PRIMARY KEY (id),
+    CONSTRAINT players_cutout_status_check CHECK ((cutout_status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text]))),
+    CONSTRAINT players_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id)
+);
+
+CREATE INDEX IF NOT EXISTS players_site_idx ON public.players(site_id);
+
+CREATE INDEX IF NOT EXISTS players_cutout_pending_idx
+  ON public.players(cutout_status, created_at)
+  WHERE cutout_status IN ('pending', 'processing');
+
+-- Grants joueurs globaux → sites (ADR-082 pattern). Cf migration
+-- add-studio-player-global-grants.sql.
+CREATE TABLE IF NOT EXISTS public.studio_player_site_grants (
+    player_id uuid NOT NULL,
+    site_id uuid NOT NULL,
+    granted_by uuid,
+    granted_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT studio_player_site_grants_pkey PRIMARY KEY (player_id, site_id),
+    CONSTRAINT studio_player_site_grants_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id) ON DELETE CASCADE,
+    CONSTRAINT studio_player_site_grants_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE,
+    CONSTRAINT studio_player_site_grants_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_studio_player_grants_site
+  ON public.studio_player_site_grants(site_id);
+
+CREATE INDEX IF NOT EXISTS idx_studio_player_grants_player
+  ON public.studio_player_site_grants(player_id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
