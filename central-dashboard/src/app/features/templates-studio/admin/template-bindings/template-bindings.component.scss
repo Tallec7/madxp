@@ -211,10 +211,19 @@
     border-radius: 6px;
     overflow: hidden;
     background: #1f2937;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     img, video {
       width: 100%;
       height: 100%;
       object-fit: contain;
+    }
+    // ADR-127 — icône Aa pour les assets font.
+    .font-icon {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.6rem;
+      color: #f9fafb;
     }
   }
   .bound-info {
@@ -320,10 +329,19 @@
       aspect-ratio: 16 / 10;
       background: #1f2937;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       img, video {
         width: 100%;
         height: 100%;
         object-fit: contain;
+      }
+      // ADR-127 — icône Aa pour les assets font dans le sélecteur library.
+      .font-icon {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 2rem;
+        color: #f9fafb;
       }
     }
     .info {

@@ -173,8 +173,15 @@ export class TemplateBindingsComponent implements OnInit {
     // Pré-filtre par mime du slot s'il est connu.
     const filters: { mime?: string } = {};
     if (slot.mime) {
-      // 'image/png' ou 'video/mp4' → on peut prefilter sur le mime exact.
-      filters.mime = slot.mime;
+      // ADR-127 : pour les slots font, élargir le filtre à `font/*` (l'admin
+      // peut avoir uploadé du woff/ttf alors que le slot demande woff2 — on
+      // accepte tous les types font et c'est le browser qui choisira).
+      if (this.isFontSlot(slot)) {
+        filters.mime = 'font/';
+      } else {
+        // 'image/png' ou 'video/mp4' → on peut prefilter sur le mime exact.
+        filters.mime = slot.mime;
+      }
     }
     this.studio.listStudioAssets({ ...filters, limit: 200 }).subscribe({
       next: (res) => {
@@ -274,6 +281,28 @@ export class TemplateBindingsComponent implements OnInit {
   }
   isVideo(asset: StudioAsset): boolean {
     return asset.mime_type.startsWith('video/');
+  }
+  /**
+   * ADR-127 — détecte les assets font (woff2/woff/ttf, font/* ou
+   * application/[x-]font-*). Pour ces assets, on n'affiche pas de preview
+   * visuelle (pas de thumbnail) mais une icône Aa.
+   */
+  isFont(asset: StudioAsset): boolean {
+    const m = asset.mime_type;
+    return (
+      m.startsWith('font/') ||
+      m.startsWith('application/font-') ||
+      m.startsWith('application/x-font-')
+    );
+  }
+  /** True si le slot du manifest cible une font (mime font/* ou application/font-*). */
+  isFontSlot(slot: RequiredAsset | null): boolean {
+    if (!slot?.mime) return false;
+    return (
+      slot.mime.startsWith('font/') ||
+      slot.mime.startsWith('application/font-') ||
+      slot.mime.startsWith('application/x-font-')
+    );
   }
 
   formatBytes(bytes: number | null | undefined): string {

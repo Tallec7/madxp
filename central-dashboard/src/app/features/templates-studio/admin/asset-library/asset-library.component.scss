@@ -184,6 +184,16 @@
       font-weight: 600;
       letter-spacing: 0.1em;
     }
+    // ADR-127 — icône Aa pour les assets font (pas de preview thumbnail).
+    .font-icon {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 2.4rem;
+      letter-spacing: 0;
+      color: #f9fafb;
+    }
+    .font-icon--lg {
+      font-size: 6rem;
+    }
   }
 
   .info {

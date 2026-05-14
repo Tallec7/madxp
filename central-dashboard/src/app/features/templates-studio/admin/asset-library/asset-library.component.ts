@@ -94,7 +94,9 @@ export class AssetLibraryComponent implements OnInit {
     const filters: { tag?: string; mime?: string; search?: string } = {};
     if (this.selectedTag()) filters.tag = this.selectedTag();
     if (this.selectedType() !== 'all') {
-      // 'image' → 'image/*', 'video' → 'video/*'.
+      // 'image' → 'image/*', 'video' → 'video/*', 'font' → 'font/*'.
+      // ADR-127 : les fonts ont aussi des MIME `application/[x-]font-*`,
+      // mais le préfixe `font/` couvre les uploads modernes (woff2 par défaut).
       filters.mime = `${this.selectedType()}/`;
     }
     if (this.searchTerm()) filters.search = this.searchTerm();
@@ -245,6 +247,19 @@ export class AssetLibraryComponent implements OnInit {
   }
   isVideo(asset: StudioAsset): boolean {
     return asset.mime_type.startsWith('video/');
+  }
+  /**
+   * ADR-127 — couvre `font/woff2`, `font/woff`, `font/ttf` et les MIME
+   * legacy `application/font-*` / `application/x-font-*` (les fonts n'ont
+   * pas de preview thumbnail, on affiche une icône à la place).
+   */
+  isFont(asset: StudioAsset): boolean {
+    const m = asset.mime_type;
+    return (
+      m.startsWith('font/') ||
+      m.startsWith('application/font-') ||
+      m.startsWith('application/x-font-')
+    );
   }
 
   formatBytes(bytes: number | null | undefined): string {

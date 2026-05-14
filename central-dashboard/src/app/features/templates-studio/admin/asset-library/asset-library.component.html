@@ -56,10 +56,15 @@
         Glisse un fichier ici ou
         <label class="dz-link">
           parcours
-          <input type="file" (change)="onFileSelected($event)" hidden />
+          <input
+            type="file"
+            (change)="onFileSelected($event)"
+            accept="image/*,video/*,font/*,.woff2,.woff,.ttf"
+            hidden
+          />
         </label>
       </p>
-      <p class="dz-meta">Images / Vidéos / Fonts — 50 MB max</p>
+      <p class="dz-meta">Images / Vidéos / Fonts (woff2, woff, ttf) — 50 MB max</p>
     </ng-container>
     <ng-template #pendingPreview>
       <div class="pending-row">
@@ -99,7 +104,8 @@
       <div class="thumb">
         <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" loading="lazy" />
         <video *ngIf="isVideo(asset)" [src]="asset.url" muted preload="metadata"></video>
-        <div *ngIf="!isImage(asset) && !isVideo(asset)" class="thumb-icon">FILE</div>
+        <div *ngIf="isFont(asset)" class="thumb-icon font-icon" aria-label="Font">Aa</div>
+        <div *ngIf="!isImage(asset) && !isVideo(asset) && !isFont(asset)" class="thumb-icon">FILE</div>
       </div>
       <div class="info">
         <div class="filename" [title]="asset.filename">{{ asset.filename }}</div>
@@ -130,6 +136,7 @@
       <div class="preview">
         <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" />
         <video *ngIf="isVideo(asset)" [src]="asset.url" controls muted></video>
+        <div *ngIf="isFont(asset)" class="thumb-icon font-icon font-icon--lg" aria-label="Font">Aa</div>
       </div>
       <dl class="modal-meta">
         <dt>Taille</dt><dd>{{ formatBytes(asset.file_size) }}</dd>
