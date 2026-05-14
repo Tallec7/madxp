@@ -5,20 +5,26 @@
  *
  * Poll PG (`players WHERE cutout_status='pending'`) toutes les 5s, claim
  * atomic via `FOR UPDATE SKIP LOCKED`, télécharge `photo_raw_url`,
- * applique `removeBackground` via `@imgly/background-removal-node` (ONNX
- * Runtime + modèle BiRefNet ~84MB), upload PNG cutout sur FTP sous
- * `players/{site_id}/{player_id}-cutout.png`, met à jour la row.
+ * applique `removeBackground` (lib npm chargée à la demande), upload PNG
+ * cutout sur FTP sous `players/{site_id}/{player_id}-cutout.png`, met à
+ * jour la row.
  *
  * **Architecture (ADR-124)** : remplace l'ancien `python-rembg-worker`
  * (container Python séparé). Le central a déjà tout ce qu'il faut côté
  * Node, pas besoin de tooling ML séparé pour le volume V1 (5-50 photos/jour).
  *
+ * **NOTE ADR-124 Phase 1** : la lib npm `@imgly/background-removal-node`
+ * (ONNX + BiRefNet) n'est PAS dans `package.json` actuellement — elle
+ * apporte des deps transitives (tar 7.x + webpack shims) qui polluent
+ * d'autres test suites jest avec `RawModule is not a constructor`. Le
+ * worker tourne en mode "skip" : il claime la row mais marque `failed`
+ * direct. À débloquer en Phase 2 (options : install proprement avec
+ * mock global, switch vers API SaaS remove.bg, ou child_process exec
+ * d'une CLI Python isolée).
+ *
  * Invariants :
  * - `failStaleProcessingCutouts(10)` au boot (anti-orphan)
  * - Pattern singleton (un seul timer par process)
- * - removeBackground tourne dans le main thread Node (peut bloquer
- *   l'event loop 2-5s par photo). Si volume monte (>100 photos/h),
- *   migrer vers `worker_threads` ou API SaaS (remove.bg / Replicate).
  */
 
 import logger from '../config/logger';
@@ -33,24 +39,27 @@ const DOWNLOAD_TIMEOUT_MS = 60_000;
 let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
 
-// ── @imgly/background-removal-node lazy import ──────────────────────────────
-// Le module est lourd (modèle ONNX + WASM) — chargement paresseux pour ne pas
-// pénaliser le boot du central si aucun cutout n'est jamais demandé.
-//
-// Note typage : on évite `typeof import(...)` au top-level pour ne pas
-// déclencher le résolver TS au chargement du fichier (le module a un
-// initializer side-effect qui plante en environnement de test sans server).
-// Le typage local de `removeBackground` est réinjecté à l'usage via la signature
-// minimale dont on a besoin (Blob → Promise<Blob>).
+// ── Lazy load de la lib rembg ───────────────────────────────────────────────
+// Phase 1 ADR-124 : la lib `@imgly/background-removal-node` n'est PAS installée
+// (deps transitives cassent les tests jest, cf. note de tête). Le require est
+// dynamique pour ne pas exploser à l'import du fichier ; si la lib est absente,
+// `getRemoveBg()` retourne null → le worker marque le player `failed` proprement.
 type RemoveBackgroundFn = (input: Blob) => Promise<Blob>;
-let removeBgFn: RemoveBackgroundFn | null = null;
+let removeBgFn: RemoveBackgroundFn | null | undefined;
 
-async function getRemoveBg(): Promise<RemoveBackgroundFn> {
-  if (!removeBgFn) {
-    const mod = (await import('@imgly/background-removal-node')) as unknown as {
+async function getRemoveBg(): Promise<RemoveBackgroundFn | null> {
+  if (removeBgFn !== undefined) return removeBgFn;
+  try {
+    // require dynamique pour éviter la résolution statique TS qui forcerait
+    // l'install de la dep côté typage. La lib n'est pas dans package.json
+    // pour l'instant (cf. note de tête du fichier).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('@imgly/background-removal-node') as {
       removeBackground: RemoveBackgroundFn;
     };
     removeBgFn = mod.removeBackground;
+  } catch {
+    removeBgFn = null;
   }
   return removeBgFn;
 }
@@ -70,9 +79,13 @@ async function downloadBuffer(url: string): Promise<Buffer> {
   }
 }
 
-async function performCutout(rawBuffer: Buffer): Promise<Buffer> {
+async function performCutout(rawBuffer: Buffer): Promise<Buffer | null> {
   const removeBackground = await getRemoveBg();
-  // Default config = modèle medium (BiRefNet portrait), output PNG transparent.
+  if (!removeBackground) {
+    // Lib non installée — on retourne null pour que le worker marque
+    // le player `failed` proprement (vs throw qui casserait le drain).
+    return null;
+  }
   const blob = new Blob([rawBuffer]);
   const outBlob = await removeBackground(blob);
   const arrayBuffer = await outBlob.arrayBuffer();
@@ -105,6 +118,14 @@ async function processOne(): Promise<boolean> {
     });
 
     const cutoutBuffer = await performCutout(rawBuffer);
+    if (!cutoutBuffer) {
+      // Lib rembg absente — mark failed et continue (graceful degradation).
+      logger.warn('photo-cutout: skipped — rembg lib not installed', {
+        player_id: player.id,
+      });
+      await playerRepository.markCutoutFailed(player.id);
+      return true;
+    }
     logger.info('photo-cutout: cutout produced', {
       player_id: player.id,
       bytes_in: rawBuffer.length,
