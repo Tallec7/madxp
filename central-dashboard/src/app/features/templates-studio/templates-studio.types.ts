@@ -83,7 +83,12 @@ export type CutoutStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
 export interface Player {
   id: string;
-  site_id: string;
+  // NULL = joueur global (catalogue admin), UUID = joueur exclusif au site.
+  // Cf migration add-studio-player-global-grants.sql + ADR-082 pattern.
+  site_id: string | null;
+  // Convenience flag exposé par l'API pour éviter aux composants de tester
+  // `site_id === null` partout. `true` ⇔ `site_id === null`.
+  is_global: boolean;
   prenom: string;
   nom: string;
   numero: number | null;
@@ -101,11 +106,23 @@ export interface CreatePlayerInput {
   numero?: number | null;
   poste?: string | null;
   photo_raw_url?: string | null;
+  // Internal roles : si true, le joueur est créé en global (site_id NULL)
+  // + auto-granté au site courant. Ignoré côté backend pour les users `club`.
+  is_global?: boolean;
 }
 
 export type UpdatePlayerInput = Partial<CreatePlayerInput> & {
   photo_cutout_url?: string | null;
 };
+
+/** Grant d'un joueur global vers un site (ADR-082 pattern). */
+export interface PlayerGrant {
+  site_id: string;
+  site_name: string;
+  club_name: string | null;
+  granted_by: string | null;
+  granted_at: string;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Distribution multi-sites des renders (POST /render-requests/:id/distribute)

@@ -406,4 +406,6 @@ export {
   type UpsertSiteBrandKitInput,
   type CreatePlayerInput,
   type UpdatePlayerInput,
+  type PlayerSiteGrantRow,
+  type PlayerSiteGrantWithSiteRow,
 } from './templates-studio.repository';

@@ -1213,6 +1213,9 @@ export const templatesStudioSchemas = {
     numero: Joi.number().integer().min(0).max(999).optional().allow(null),
     poste: Joi.string().max(60).optional().allow(null, ''),
     photo_raw_url: Joi.string().uri().optional().allow(null, ''),
+    // ADR-082 pattern : si true ET role interne, joueur créé en global (site_id NULL)
+    // + auto-grant vers le site courant. Ignoré pour les users club (toujours site-local).
+    is_global: Joi.boolean().optional(),
   }),
 
   // PUT /sites/:siteId/players/:playerId body — tous champs optionnels.
@@ -1224,6 +1227,22 @@ export const templatesStudioSchemas = {
     photo_raw_url: Joi.string().uri().optional().allow(null, ''),
     photo_cutout_url: Joi.string().uri().optional().allow(null, ''),
   }).min(1),
+
+  // POST /api/templates-studio/players/global — création d'un joueur global
+  // (réservé super_admin/operator). Pas de site_id : par définition NULL.
+  createGlobalPlayer: Joi.object({
+    prenom: Joi.string().min(1).max(80).required(),
+    nom: Joi.string().min(1).max(80).required(),
+    numero: Joi.number().integer().min(0).max(999).optional().allow(null),
+    poste: Joi.string().max(60).optional().allow(null, ''),
+    photo_raw_url: Joi.string().uri().optional().allow(null, ''),
+  }),
+
+  // POST /api/templates-studio/players/:playerId/grants — octroi d'un joueur
+  // global vers un site spécifique (ADR-082 pattern, super_admin/operator).
+  addPlayerGrant: Joi.object({
+    site_id: Joi.string().uuid().required(),
+  }),
 
   // POST /render-requests/:id/distribute body.
   // Distribution multi-sites des renders : `mode='push'` crée une row `videos`
@@ -1328,6 +1347,12 @@ export const paramSchemas = {
   idAndPackshotRefId: Joi.object({
     id: Joi.string().uuid().required(),
     packshotRefId: Joi.string().uuid().required(),
+  }),
+  // Templates Studio V1 — players globaux + grants (ADR-082 pattern)
+  playerId: Joi.object({ playerId: Joi.string().uuid().required() }),
+  playerIdAndSiteId: Joi.object({
+    playerId: Joi.string().uuid().required(),
+    siteId: Joi.string().uuid().required(),
   }),
 };
 

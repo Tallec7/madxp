@@ -10,7 +10,7 @@
 
 import { Router } from 'express';
 import multer from 'multer';
-import { authenticate, requireClubScope } from '../middleware/auth';
+import { authenticate, requireClubScope, requireRole } from '../middleware/auth';
 import {
   validate,
   validateParams,
@@ -30,6 +30,11 @@ import {
   deletePlayer,
   uploadPlayerPhoto,
   distributeRender,
+  listGlobalPlayers,
+  createGlobalPlayer,
+  addPlayerGrant,
+  removePlayerGrant,
+  listPlayerGrants,
 } from '../controllers/templates-studio.controller';
 
 // Multer en mémoire pour photos brutes — 8 MB max (les photos high-res de
@@ -159,6 +164,55 @@ router.post(
   requireClubScope(siteIdFromParams),
   uploadPlayerPhotoMiddleware.single('photo'),
   uploadPlayerPhoto,
+);
+
+// ──────────────────────────────────────────────────────────────────────────
+// Joueurs globaux + grants multi-sites (ADR-082 pattern, super_admin/operator)
+//
+// Route order : /players/global et /players/:playerId/grants doivent être
+// mountées AVANT toute route /players/:playerId pour éviter qu'Express ne
+// confonde 'global' avec un UUID. Ici elles sont déjà uniques (segment
+// `/players/...` à la racine, vs `/sites/:siteId/players/...` plus haut).
+// ──────────────────────────────────────────────────────────────────────────
+router.get(
+  '/players/global',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  listGlobalPlayers,
+);
+router.post(
+  '/players/global',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validate(templatesStudioSchemas.createGlobalPlayer),
+  createGlobalPlayer,
+);
+router.get(
+  '/players/:playerId/grants',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.playerId),
+  listPlayerGrants,
+);
+router.post(
+  '/players/:playerId/grants',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.playerId),
+  validate(templatesStudioSchemas.addPlayerGrant),
+  addPlayerGrant,
+);
+router.delete(
+  '/players/:playerId/grants/:siteId',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.playerIdAndSiteId),
+  removePlayerGrant,
 );
 
 export default router;
