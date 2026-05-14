@@ -1,3 +1,9 @@
+# [3.316.0](https://github.com/Tallec7/neopro/compare/v3.315.1...v3.316.0) (2026-05-14)
+
+### Features
+
+- **templates-studio:** S3.1 — upload direct logo brand kit (multipart FTP) ([#1006](https://github.com/Tallec7/neopro/issues/1006)) ([59ea801](https://github.com/Tallec7/neopro/commit/59ea801883f46623b2aa4cd333dea86b593aae0b))
+
 ## [3.315.1](https://github.com/Tallec7/neopro/compare/v3.315.0...v3.315.1) (2026-05-14)
 
 ### Bug Fixes
