@@ -1,3 +1,9 @@
+# [3.315.0](https://github.com/Tallec7/neopro/compare/v3.314.0...v3.315.0) (2026-05-14)
+
+### Features
+
+- **studio:** players globaux + grants multi-sites (ADR-082 pattern) ([#1002](https://github.com/Tallec7/neopro/issues/1002)) ([83d4f72](https://github.com/Tallec7/neopro/commit/83d4f72936ac8c406acd94153825bfe9d27f5208))
+
 # [3.314.0](https://github.com/Tallec7/neopro/compare/v3.313.1...v3.314.0) (2026-05-14)
 
 ### Features
