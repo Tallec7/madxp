@@ -289,6 +289,18 @@ describe('Templates Studio V1 — render worker (J4, STUB)', () => {
     expect(content).not.toMatch(/performRenderHttp|performRenderStub/);
   });
 
+  it('worker skips prewarmStudioBundle in NODE_ENV=test (issue #1008)', () => {
+    // @remotion/bundler lance webpack avec un cache filesystem partagé
+    // (`node_modules/.cache/webpack/`). Sans le guard, plusieurs workers jest
+    // qui importent `server.ts` corrompent le cache en parallèle et font
+    // cascader `TypeError: RawModule is not a constructor` sur des tests
+    // sans rapport (canary, command-queue). Cf. ADR-124 + issue #1008.
+    const content = fs.readFileSync(WORKER_FILE, 'utf8');
+    expect(content).toMatch(
+      /if\s*\(\s*process\.env\.NODE_ENV\s*!==\s*['"]test['"]\s*\)\s*\{[\s\S]*?prewarmStudioBundle\s*\(\s*\)/,
+    );
+  });
+
   it('worker calls failStaleRunning(10) at boot before polling', () => {
     // Anti-orphan : un row claimé par un process mort doit pouvoir être retry.
     // Pattern aligné sur le legacy ADR-054 (smoke services.md enforced).

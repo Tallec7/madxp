@@ -78,6 +78,11 @@ Le Template Studio v2 est **data-driven** : tout template se décrit par des row
 - **Retirer le Counter `neopro_template_proxy_signature_validation_total`** de `central-server/src/services/metrics.service.ts` — sans cette métrique, la migration HMAC est invisible et la PR cleanup (drop fallback `missing`) ne peut pas être planifiée.
 - Référence : [ADR-113](../../docs/adr/ADR-113-ftp-creds-rotation-procedure.md), audit `docs/audits/templates-remotion-audit-2026-05-07.md`.
 
+### Studio render worker — boot side-effects (incident 2026-05-14 — smoke test enforced)
+
+- **Lancer `prewarmStudioBundle()` (ou tout code qui appelle `@remotion/bundler` / déclenche un build webpack) au boot du worker sans guard `NODE_ENV !== 'test'`.** `@remotion/bundler` lance webpack avec un cache filesystem (`node_modules/.cache/webpack/`). En CI, les workers jest qui importent transitivement `server.ts` (admin.routes, sites-connected-receivers, etc.) instancient chacun un bundle en parallèle → corruption du cache partagé → cascade `TypeError: RawModule is not a constructor` sur des tests sans rapport (canary, command-queue). Le guard vit dans `startStudioRenderWorker()` de `central-server/src/services/studio-render-worker.service.ts`.
+- Référence : issue #1008, PR #1010, smoke `smoke-templates-studio.test.ts` cas "worker skips prewarm in NODE_ENV=test".
+
 ### Backward-compat
 
 - **Modifier la migration `add-template-studio-v2.sql` déjà en production.** Toute évolution passe par une nouvelle migration `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` (voir `add-template-studio-v2-layer-parent-safe-zone.sql` pour le pattern ADR-086).

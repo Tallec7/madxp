@@ -24,6 +24,7 @@ Pendant le testing en condition réelle, plusieurs facteurs ont rendu cette sép
 6. **La spec STUDIO_V1.md §6 disait depuis le départ** : « Worker in-process centrale + container rembg séparé » — j'ai dévié sans justification suffisante et créé 3 services au lieu de 2.
 
 Conséquences néfastes constatées :
+
 - 6 clics UI Railway requis pour démarrer (Connect Repo + Root Directory + Watch Paths × 2 services)
 - 1 hop HTTP supplémentaire entre central et render-server (latence + 1 surface d'erreur — incident `404 Application not found` le 2026-05-14)
 - ~15-23€/mois marginal Railway estimé (vs 0€ in-process)
@@ -63,6 +64,7 @@ Conséquences néfastes constatées :
 - `removeBackground` ONNX tourne dans le main thread Node → bloque l'event loop 2-5s par photo. Mitigation : `worker_threads` si volume monte (>100 photos/h)
 - Le bundle Remotion + Chromium restent en mémoire dans le central-server (~100-200 MB extra steady-state). Mitigation : prewarm au boot pour amortir, monitoring mémoire
 - Si une régression du worker plante le central-server, toute l'API tombe (au lieu de juste le rendu Studio). Mitigation : try/catch autour des startWorker au boot (déjà en place), tests smoke réguliers
+- **Le prewarm `@remotion/bundler` au boot écrit un cache webpack filesystem (`node_modules/.cache/webpack/`) partagé entre processus.** En CI, les workers jest qui importent `server.ts` (admin.routes, sites-connected-receivers…) déclenchaient chacun le bundle en parallèle, corrompaient le cache et faisaient cascader `TypeError: RawModule is not a constructor` sur des tests sans rapport. Mitigation : guard `NODE_ENV !== 'test'` autour de `prewarmStudioBundle()` (cf. issue #1008, PR #1010).
 
 ## Fichiers impactés
 
