@@ -74,12 +74,23 @@ export class TemplatesStudioService {
       .pipe(map((res) => res.data.templates));
   }
 
+  /**
+   * Crée une demande de rendu.
+   *
+   * - Si `siteId` est fourni → POST /sites/:siteId/render-requests (route internal
+   *   role : super_admin/admin/operator peut cibler n'importe quel site)
+   * - Sinon → POST /render-requests (route club user, site_id pris du JWT serveur)
+   */
   createRenderRequest(
     templateId: string,
     props: Record<string, unknown>,
+    siteId: string | null = null,
   ): Observable<RenderRequestCreated> {
+    const url = siteId
+      ? `/templates-studio/sites/${siteId}/render-requests`
+      : '/templates-studio/render-requests';
     return this.api
-      .post<RenderRequestCreatedResponse>('/templates-studio/render-requests', {
+      .post<RenderRequestCreatedResponse>(url, {
         template_id: templateId,
         props,
       })

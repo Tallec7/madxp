@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
+import { TemplatesStudioContextService } from '../templates-studio-context.service';
 import { TemplatesStudioService } from '../templates-studio.service';
+import { SitePickerComponent } from '../shared/site-picker.component';
 import type { Player } from '../templates-studio.types';
 
 /**
@@ -22,19 +23,20 @@ import type { Player } from '../templates-studio.types';
 @Component({
   selector: 'app-templates-studio-players',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SitePickerComponent],
   templateUrl: './players.component.html',
   styleUrls: ['./players.component.scss'],
 })
 export class PlayersComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
+  ctx = inject(TemplatesStudioContextService);
   private studio = inject(TemplatesStudioService);
 
   loading = signal(true);
   errorMsg = signal<string | null>(null);
   successMsg = signal<string | null>(null);
-  siteId = signal<string | null>(null);
+  // Site actif vient du context (picker pour internal roles, JWT pour club).
+  siteId = this.ctx.activeSiteId;
   players = signal<Player[]>([]);
 
   showAddForm = signal(false);
@@ -48,19 +50,26 @@ export class PlayersComponent implements OnInit {
     photo_raw_url: ['', [Validators.pattern(/^https?:\/\/.+/)]],
   });
 
+  // Effect : reload du roster dès que le site actif change (picker UI ou
+  // restauration localStorage). Couvre 1) club user (siteId du JWT, set 1x),
+  // 2) internal role 1er load (set après chargement liste sites), 3) internal
+  // role change de site dans le picker.
+  private siteEffect = effect(() => {
+    const siteId = this.siteId();
+    if (siteId) {
+      this.load(siteId);
+    } else if (!this.ctx.loading()) {
+      this.loading.set(false);
+      this.errorMsg.set(
+        this.ctx.isInternalRole()
+          ? "Aucun site disponible — créez d'abord un site dans /sites."
+          : 'Aucun site associé à votre compte.',
+      );
+    }
+  });
+
   ngOnInit(): void {
-    this.auth.currentUser$.subscribe((user) => {
-      const siteId = user?.site_id ?? null;
-      this.siteId.set(siteId);
-      if (siteId) {
-        this.load(siteId);
-      } else {
-        this.loading.set(false);
-        this.errorMsg.set(
-          'Aucun site associé à votre compte (V1 = club user uniquement)',
-        );
-      }
-    });
+    this.ctx.init();
   }
 
   private load(siteId: string): void {
