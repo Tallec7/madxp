@@ -72,14 +72,18 @@ describe('Templates Studio V1 — dashboard feature scaffold (S3)', () => {
     expect(content).toMatch(/\^#\[0-9a-fA-F\]\{6\}\$/);
   });
 
-  it('brand-kit component takes site_id from auth.currentUser$ (never from body/URL)', () => {
+  it('brand-kit component takes site_id from TemplatesStudioContextService (never from body/URL)', () => {
     const content = fs.readFileSync(
       path.join(DASHBOARD_FEATURE, 'brand-kit/brand-kit.component.ts'),
       'utf8',
     );
-    // Aligné sur la sécurité backend : site_id du JWT, jamais saisi par l'user.
-    expect(content).toMatch(/auth\.currentUser\$/);
-    expect(content).toMatch(/user\?\.site_id/);
+    // Aligné sur la sécurité backend : site_id vient du context partagé qui le
+    // dérive du JWT (club user) ou du picker UI (internal role). Jamais saisi
+    // dans le formulaire — le backend `requireClubScope` valide en defense-in-depth.
+    expect(content).toMatch(/TemplatesStudioContextService/);
+    expect(content).toMatch(/ctx\.activeSiteId/);
+    // Anti-régression : pas de string `user?.site_id` brut dans le component.
+    expect(content).not.toMatch(/user\?\.site_id/);
   });
 
   it('app.routes.ts wires /templates-studio/brand-kit with roleGuard', () => {
@@ -215,13 +219,15 @@ describe('Templates Studio V1 — S4-D roster UI + PlayerPicker', () => {
     expect(html).not.toMatch(/UUID du joueur \(S4/);
   });
 
-  it('players component takes site_id from auth.currentUser$ (tenant guard)', () => {
-    // Aligné backend : site_id du JWT, jamais saisi par l'user. Sans ce check,
-    // un user pourrait potentiellement viser un autre site dans l'URL (mais le
-    // backend bloquerait via requireClubScope quand même).
+  it('players component takes site_id from TemplatesStudioContextService (tenant guard)', () => {
+    // Aligné backend : site_id vient du context partagé (JWT pour club user,
+    // picker UI pour internal role). Le backend `requireClubScope` valide en
+    // defense-in-depth — un user ne peut jamais cibler un autre site.
     const content = fs.readFileSync(PLAYERS_COMPONENT, 'utf8');
-    expect(content).toMatch(/auth\.currentUser\$/);
-    expect(content).toMatch(/user\?\.site_id/);
+    expect(content).toMatch(/TemplatesStudioContextService/);
+    expect(content).toMatch(/ctx\.activeSiteId/);
+    // Anti-régression : pas de string `user?.site_id` brut dans le component.
+    expect(content).not.toMatch(/user\?\.site_id/);
   });
 
   it('service exposes player CRUD methods (listPlayers/createPlayer/updatePlayer/deletePlayer)', () => {

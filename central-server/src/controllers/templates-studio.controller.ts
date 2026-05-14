@@ -69,8 +69,16 @@ export const listTemplates = async (req: AuthRequest, res: Response): Promise<vo
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// POST /api/templates-studio/render-requests
-// Crée une demande de rendu. site_id pris du JWT. Worker (J4) picke ensuite.
+// POST /api/templates-studio/render-requests             — club user (site_id JWT)
+// POST /api/templates-studio/sites/:siteId/render-requests — internal role (any site)
+//
+// Crée une demande de rendu. Le worker picke ensuite via SELECT FOR UPDATE
+// SKIP LOCKED.
+//
+// Tenant guard :
+// - club user → site_id pris du JWT (jamais du body), `req.params.siteId` ignoré
+// - internal role (super_admin/admin/operator) → site_id pris de `req.params.siteId`
+//   (route variante avec `requireClubScope` qui bypasse les internal roles)
 // ────────────────────────────────────────────────────────────────────────────
 
 export const createRenderRequest = async (
@@ -82,14 +90,16 @@ export const createRenderRequest = async (
     return;
   }
 
-  const siteId = req.user.site_id;
+  // Internal roles passent par /sites/:siteId/render-requests → site_id en URL.
+  // Club users passent par /render-requests → site_id du JWT.
+  const isInternal = isInternalRole(req.user.role);
+  const siteId = isInternal ? req.params.siteId : req.user.site_id;
   if (!siteId) {
-    // Seuls les clubs ont un site_id sur leur JWT. Les internal roles (admin,
-    // operator) devront passer par une variante /api/sites/:siteId/render-requests
-    // en V2 — pour V1 on bloque proprement plutôt que d'accepter un site_id du body.
     res.status(400).json({
       success: false,
-      error: 'site_id non disponible sur ce compte (V1 = club user uniquement)',
+      error: isInternal
+        ? "siteId requis dans l'URL pour les internal roles"
+        : 'site_id non disponible sur ce compte',
     });
     return;
   }

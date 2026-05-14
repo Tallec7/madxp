@@ -12,6 +12,8 @@
     </button>
   </header>
 
+  <app-templates-studio-site-picker />
+
   @if (loading()) {
     <div class="pl__loading">Chargement…</div>
   } @else if (errorMsg() && !siteId()) {

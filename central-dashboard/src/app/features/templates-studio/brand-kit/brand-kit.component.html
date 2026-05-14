@@ -7,6 +7,8 @@
     </p>
   </header>
 
+  <app-templates-studio-site-picker />
+
   @if (loading()) {
     <div class="bk__loading">Chargement…</div>
   } @else if (errorMsg() && !siteId()) {

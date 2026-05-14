@@ -10,8 +10,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AuthService } from '../../../core/services/auth.service';
 import { PlayerPickerComponent } from '../shared/player-picker.component';
+import { SitePickerComponent } from '../shared/site-picker.component';
+import { TemplatesStudioContextService } from '../templates-studio-context.service';
 import { TemplatesStudioService } from '../templates-studio.service';
 import type {
   ManifestInputProperty,
@@ -33,17 +34,24 @@ import type {
 @Component({
   selector: 'app-templates-studio-studio',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, PlayerPickerComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    PlayerPickerComponent,
+    SitePickerComponent,
+  ],
   templateUrl: './studio.component.html',
   styleUrls: ['./studio.component.scss'],
 })
 export class StudioComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
+  ctx = inject(TemplatesStudioContextService);
   private studio = inject(TemplatesStudioService);
 
-  // Site_id du JWT — passé au PlayerPicker pour qu'il liste les joueurs du club.
-  siteId = signal<string | null>(null);
+  // Site actif vient du context partagé : picker pour internal roles, JWT pour
+  // club. Passé au PlayerPicker pour qu'il liste les joueurs du club ciblé.
+  siteId = this.ctx.activeSiteId;
 
   templates = signal<TemplateSummary[]>([]);
   selectedId = signal<string | null>(null);
@@ -68,9 +76,7 @@ export class StudioComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.auth.currentUser$.subscribe((user) => {
-      this.siteId.set(user?.site_id ?? null);
-    });
+    this.ctx.init();
     this.studio.listTemplates().subscribe({
       next: (templates) => {
         this.templates.set(templates);
@@ -156,7 +162,10 @@ export class StudioComponent implements OnInit, OnDestroy {
     this.jobError.set(null);
     this.jobStatus.set(null);
 
-    this.studio.createRenderRequest(template.id, props).subscribe({
+    // Internal roles passent le siteId actif (picker) → route /sites/:siteId/render-requests.
+    // Club user passe null → route /render-requests (siteId pris du JWT serveur).
+    const targetSiteId = this.ctx.isInternalRole() ? this.siteId() : null;
+    this.studio.createRenderRequest(template.id, props, targetSiteId).subscribe({
       next: (created) => {
         this.submitting.set(false);
         this.jobId.set(created.id);

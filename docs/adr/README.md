@@ -134,6 +134,8 @@ Un ADR documente une décision technique importante avec :
 | [ADR-118](ADR-118-studio-render-server-deployment.md)                           | Architecture déploiement du studio-render-server V1 (3 options à départager)                 | Proposé                           | Mai 2026 |
 | [ADR-119](ADR-119-rembg-python-worker.md)                                       | Worker rembg en container Python séparé (BiRefNet, polling PG SKIP LOCKED)                   | Proposé                           | Mai 2026 |
 | [ADR-122](ADR-122-pi-connectivity-reminders.md)                                 | Rappels reconnexion Pi — in-app télécommande + email club (Options α + β + garde-fou cloud)  | Proposé                           | Mai 2026 |
+| [ADR-120](ADR-120-pi-saas-ownership-model.md)                                   | Modèle d'ownership Pi vs SaaS — `:8080` à parité, sync bidirectionnel 3-way merge            | Proposé                           | Mai 2026 |
+| [ADR-121](ADR-121-video-variants-drift-fix.md)                                  | Fix drift pipeline `video_variants` (stub, pré-requis advertiser cross-site avec variants)   | Proposé                           | Mai 2026 |
 
 ### Supersédés
 

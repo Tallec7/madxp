@@ -48,11 +48,27 @@ const router = Router();
 // Catalogue : lecture seule, authenticated suffit (pas de tenant scope).
 router.get('/templates', authenticate, apiRateLimit, listTemplates);
 
-// Render requests — création (site_id pris du JWT, jamais du body).
+// Render requests — création.
+//
+// Deux variantes :
+// - `/render-requests`               : club user (site_id pris du JWT)
+// - `/sites/:siteId/render-requests` : internal role (site_id en URL via
+//   `requireClubScope` qui bypasse super_admin/admin/operator)
+//
+// Le controller `createRenderRequest` discrimine via `isInternalRole(role)`.
 router.post(
   '/render-requests',
   authenticate,
   apiRateLimit,
+  validate(templatesStudioSchemas.createRenderRequest),
+  createRenderRequest,
+);
+router.post(
+  '/sites/:siteId/render-requests',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
   validate(templatesStudioSchemas.createRenderRequest),
   createRenderRequest,
 );
