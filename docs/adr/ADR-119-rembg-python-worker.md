@@ -1,8 +1,12 @@
 # ADR-119: Worker rembg en container Python séparé
 
-**Date** : 2026-05-14
-**Statut** : Proposé
+**Date** : 2026-05-14 (proposé) / 2026-05-14 (déprécié — révision le même jour)
+**Statut** : ⚠️ **Déprécié — voir [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)**
 **Format** : Léger
+
+---
+
+> **Note de dépréciation (2026-05-14)** : cette décision (worker rembg Python séparé) a été révisée. `@imgly/background-removal-node` (npm) fait tourner BiRefNet via ONNX Runtime en Node, suffisant pour le volume V1 (5-50 cutouts/jour). Le worker `photo-cutout.service.ts` vit désormais in-process dans `central-server`. Voir [ADR-124](ADR-124-templates-studio-consolidation-in-central.md).
 
 ---
 

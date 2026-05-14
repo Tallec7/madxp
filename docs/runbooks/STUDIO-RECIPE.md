@@ -1,7 +1,7 @@
-# Recette Templates Studio V1
+# Recette Templates Studio
 
 > Recette E2E pour valider la **Definition of Done §11** du spec `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, hors du repo neopro/).
-> À exécuter par l'opérateur Neopro **avant** d'annoncer V1 disponible en interne.
+> À exécuter par l'opérateur Neopro **avant** d'annoncer Templates Studio disponible en interne.
 
 ---
 
@@ -9,30 +9,26 @@
 
 ### 0.1 — Services up
 
-| Service                | URL                                                | Vérif                                            |
-| ---------------------- | -------------------------------------------------- | ------------------------------------------------ |
-| `central-server`       | https://api.neopro.fr (ou local `:3001`)           | `curl <url>/api/health` → `{ ok: true }`         |
-| `studio-render-server` | https://studio-render.neopro.fr (ou local `:5175`) | `curl <url>/api/health` → `{ ok: true }`         |
-| `python-rembg-worker`  | container Railway (pas d'HTTP, poll DB)            | `SELECT MAX(updated_at) FROM rembg_jobs` < 5 min |
-| `central-dashboard`    | https://app.neopro.fr (ou local `:4300`)           | Page `/templates-studio` charge sans 404         |
+Depuis ADR-124, **tout est in-process dans `neopro-central`**. Plus de
+services satellites Railway (le studio-render-server et python-rembg-worker
+ont été consolidés dans le central via `studio-render-worker.service.ts` et
+`photo-cutout.service.ts`).
+
+| Service             | URL                                       | Vérif                                            |
+| ------------------- | ----------------------------------------- | ------------------------------------------------ |
+| `central-server`    | https://api.neopro.fr (ou local `:3001`)  | `curl <url>/api/health` → `{ ok: true }`         |
+| `central-dashboard` | https://app.neopro.fr (ou local `:4300`)  | Page `/templates-studio` charge sans 404         |
 
 ### 0.2 — Env vars critiques
 
 ```bash
-# central-server
-STUDIO_RENDER_SERVER_URL=https://studio-render.neopro.fr
+# central-server (TOUT y vit depuis ADR-124)
 DATABASE_URL=postgresql://...                      # même DB que la flotte
-
-# studio-render-server (Railway)
-PORT=8080
-HOST=0.0.0.0
-FTP_HOST=...                                       # Hostinger
+FTP_HOST=...                                       # Hostinger video bucket
 FTP_USER=...
-FTP_PASS=...                                       # secret Railway
-
-# python-rembg-worker (Railway)
-DATABASE_URL=postgresql://...                      # même DB
-POLL_INTERVAL_S=5
+FTP_PASSWORD=...                                   # secret Railway
+TEMPLATES_STUDIO_DIR=/app/templates-studio         # défaut Docker, sinon path local
+BROWSER_EXECUTABLE_PATH=/usr/bin/chromium          # déjà présent legacy v2
 ```
 
 ### 0.3 — Migration DB appliquée
@@ -51,9 +47,9 @@ psql $DATABASE_URL -c "\d studio_render_requests"
 ```bash
 psql $DATABASE_URL -c "SELECT slug, version FROM studio_templates ORDER BY slug"
 # Attendu :
-#  but-generique-v1     | 1
-#  entree-generique-v1  | 1
-#  faits-de-jeu-v1      | 1
+#  but_generique      | 1.0.0
+#  entree_joueur      | 1.0.0
+#  faits_de_jeu       | 1.0.0
 ```
 
 Si vide → boot le central-server une fois (le seed `seed-templates-studio-manifests.ts` est appelé au démarrage).
@@ -62,7 +58,7 @@ Si vide → boot le central-server une fois (le seed `seed-templates-studio-mani
 
 ```sql
 INSERT INTO sites (id, site_name, site_type, api_key)
-VALUES (gen_random_uuid(), 'Club Test V1', 'saas', encode(gen_random_bytes(32), 'hex'))
+VALUES (gen_random_uuid(), 'Club Test Studio', 'saas', encode(gen_random_bytes(32), 'hex'))
 RETURNING id;
 -- Note l'UUID, c'est notre <SITE_ID> pour la suite
 ```
@@ -165,7 +161,7 @@ npx jest --testPathPattern='smoke-templates-studio' --no-coverage --forceExit
 
 **Steps** :
 
-1. Brand Kit Club Test V1 saved (couleurs, logo)
+1. Brand Kit Club Test Studio saved (couleurs, logo)
 2. 5 joueurs créés avec photo cutout OK :
    ```sql
    SELECT COUNT(*) FROM studio_players
@@ -250,11 +246,18 @@ WHERE alert_type = 'studio_render_failed' AND site_id = '<SITE_ID>'
 ORDER BY last_seen_at DESC LIMIT 1;
 ```
 
-### ✅ DoD-NF-4 — Coût Railway < 30 €/mois
+### ✅ DoD-NF-4 — Coût Railway marginal négligeable
 
-**Mesure J+7 prod interne** : Railway dashboard → Usage → 3 services (`central-server` delta, `studio-render-server`, `python-rembg-worker`).
+Depuis ADR-124, **0 service Railway additionnel** pour Templates Studio (tout
+in-process dans `neopro-central`). Le delta vs avant Studio = la mémoire
+extra consommée par le bundle Remotion caché + les pics CPU lors des renders.
 
-**Cible cumulée studio (delta vs avant V1) < 30 €/mois**.
+**Mesure J+7 prod interne** : Railway dashboard → service `neopro-central`
+→ Usage. Comparer la baseline mémoire (avant feature flag) vs après.
+
+**Cible** : pas de pression mémoire (< 100 MB extra steady-state) et pas de
+saturation CPU (< 80% pendant un render). Si hors cible → revisiter le
+worker thread (cf ADR-124 conséquences).
 
 ### ✅ DoD-NF-5 — Benchmark render
 
@@ -271,7 +274,7 @@ WHERE status = 'completed' AND completed_at > NOW() - INTERVAL '7 days'
 GROUP BY template_slug;
 ```
 
-**Documenter dans le BUSINESS-CHANGELOG** : `feat(studio): V1 livré, p50=Xs, p95=Ys`.
+**Documenter dans le BUSINESS-CHANGELOG** : `feat(studio): Templates Studio livré, p50=Xs, p95=Ys`.
 
 ### ✅ DoD-NF-6 — Taux de fail définitif < 1%
 
@@ -319,26 +322,25 @@ lftp -e "rm -rf studio/v1/<SITE_ID>; bye" -u $FTP_USER,$FTP_PASS $FTP_HOST
 ### A. Render reste `status='running'` > 10 min
 
 1. Vérifier que le worker tourne : logs `central-server` → `[studio-render-worker] claimed request <id>`
-2. Vérifier delegation HTTP : si `STUDIO_RENDER_SERVER_URL` set mais render-server down → le worker retombe en STUB et crée un MP4 vide. Tester `curl $STUDIO_RENDER_SERVER_URL/api/health`.
+2. Vérifier que le bundle Remotion s'est créé : logs → `[studio-render-worker] bundle cached`. Si jamais → vérifier que `central-server/templates-studio/index.ts` est présent dans l'image Docker.
 3. Anti-orphan : reboot central-server → `failStaleRunning(10)` doit fail les renders > 10 min `running`.
 
 ### B. Photo cutout reste vide
 
-1. `python-rembg-worker` logs → `Polling rembg_jobs...`
-2. `SELECT * FROM rembg_jobs WHERE status='pending' ORDER BY created_at DESC LIMIT 5;` → si N rows accumulées, worker down ou DB unreachable
-3. `SELECT * FROM rembg_jobs WHERE status='failed' ORDER BY updated_at DESC LIMIT 5;` → lire `error_message`
+1. Logs `central-server` → `[photo-cutout] claimed player ...` (le worker tourne in-process, plus de container Python séparé).
+2. `SELECT id, cutout_status, updated_at FROM studio_players WHERE cutout_status='pending' ORDER BY created_at DESC LIMIT 5;` → si N rows accumulées et > 10 min, le worker est planté → reboot central-server (le `failStaleProcessing(10)` au boot recover).
+3. `SELECT id, cutout_status FROM studio_players WHERE cutout_status='failed' ORDER BY updated_at DESC LIMIT 5;` → si fail, lire les logs Winston pour le `error_message`.
 
 ### C. URL FTP renvoie 404
 
-1. Vérifier que `studio-render-server` a bien les creds FTP (`docker logs <container>` au boot devrait montrer `lftp mirror` lignes)
-2. Vérifier le path : `output_url` = `https://<ftp-host>/studio/v1/<site_id>/<file>.mp4`
-3. `lftp -e "ls /studio/v1/<site_id>; bye" -u $FTP_USER,$FTP_PASS $FTP_HOST`
+1. Vérifier les creds FTP côté `central-server` (`echo $FTP_HOST $FTP_USER` dans la session Railway shell).
+2. Vérifier le path : `output_url` = `https://kalonpartners.bzh/neopro-video/studio-renders/{YYYYMM}/{requestId}.mp4` ou `players/{site_id}/{player_id}-cutout.png`.
+3. `lftp -e "ls /studio-renders; bye" -u $FTP_USER,$FTP_PASSWORD $FTP_HOST`.
 
 ---
 
 ## Référence
 
 - `STUDIO_V1.md §11` — Definition of Done source (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, pas linké car hors du repo neopro/)
-- [ADR-118](../adr/ADR-118-studio-render-server-deployment.md) — Container Railway dédié
-- [ADR-119](../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé
+- [ADR-124](../adr/ADR-124-templates-studio-consolidation-in-central.md) — Consolidation in-process (déprécie ADR-118 + ADR-119)
 - [ADR-111](../adr/ADR-111-alert-repository-dedup.md) — Pattern alerting dedup

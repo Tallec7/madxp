@@ -1,14 +1,14 @@
-# Templates Studio V1 — Guide de portage
+# Templates Studio — Guide de portage
 
 > **Audience** : développeur (toi ou futur teammate) qui ajoute un template au système V1 code-driven.
-> **Pré-requis** : avoir lu `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/`) et compris la philosophie V1 vs v2 data-driven (voir `docs/specs/features/templates-studio.spec.md`).
+> **Pré-requis** : avoir lu `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/`) et compris la philosophie code-driven vs legacy v2 data-driven (voir `docs/specs/features/templates-studio.spec.md`).
 > **Cible** : ajouter un nouveau template en **<2h** une fois le `.tsx` Remotion fonctionnel en local.
 
 ---
 
 ## Concept en 30 secondes
 
-Un template V1 = **3 artefacts co-localisés** dans `studio-render-server/src/templates/<slug>/` :
+Un template = **3 artefacts co-localisés** dans `central-server/templates-studio/templates/<slug>/` :
 
 | Fichier            | Rôle                                                                           |
 | ------------------ | ------------------------------------------------------------------------------ |
@@ -25,7 +25,7 @@ Le central-server lit le `manifest.json` au boot via `seed-templates-studio-mani
 ### 1. Créer le dossier
 
 ```bash
-mkdir -p studio-render-server/src/templates/<slug>/
+mkdir -p central-server/templates-studio/templates/<slug>/
 ```
 
 Convention : `<slug>` en `snake_case`, court, descriptif. Ex : `but_generique`, `entree_joueur`, `faits_de_jeu`.
@@ -150,7 +150,7 @@ import { MyTemplate } from './templates/<slug>/Composition';
 
 ```bash
 # 1. Preview Remotion Studio (visuel, hot reload)
-cd studio-render-server
+cd central-server/templates-studio
 npm run studio
 # → ouvre http://localhost:3000 — sélectionner ton template dans la sidebar
 
@@ -172,7 +172,7 @@ cd central-server && npm run test:smoke:smart
 ```
 
 ```bash
-git add studio-render-server/src/templates/<slug>/ studio-render-server/src/Root.tsx
+git add central-server/templates-studio/templates/<slug>/ studio-render-server/src/Root.tsx
 git commit -m "feat(studio): add template <slug> (V1)"
 ```
 
@@ -211,6 +211,6 @@ git commit -m "feat(studio): add template <slug> (V1)"
 - Recette E2E : [STUDIO-V1-RECIPE.md](../runbooks/STUDIO-V1-RECIPE.md)
 - Provisionnement Railway : [STUDIO-V1-RAILWAY-PROVISION.md](../runbooks/STUDIO-V1-RAILWAY-PROVISION.md)
 - Templates V1 existants (référence à recopier) :
-  - `studio-render-server/src/templates/but_generique/`
-  - `studio-render-server/src/templates/entree_joueur/`
-  - `studio-render-server/src/templates/faits_de_jeu/`
+  - `central-server/templates-studio/templates/but_generique/`
+  - `central-server/templates-studio/templates/entree_joueur/`
+  - `central-server/templates-studio/templates/faits_de_jeu/`
