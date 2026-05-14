@@ -562,3 +562,55 @@ describe('Templates Studio V1 — S4-B upload photo multipart', () => {
     expect(routes).toMatch(/requireClubScope\(siteIdFromParams\)/);
   });
 });
+
+describe('Templates Studio V1 — S3.1 brand-kit logo upload (multipart)', () => {
+  it('controller exports uploadBrandKitLogo handler', () => {
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/export\s+const\s+uploadBrandKitLogo\s*=/);
+  });
+
+  it('uploadBrandKitLogo verifies file mime + size before FTP upload', () => {
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    // Mime allowlist — sans ça un user pourrait poster un .exe ou .html sur le FTP public.
+    expect(controller).toMatch(/ALLOWED_LOGO_MIMES/);
+    expect(controller).toMatch(/image\/svg\+xml/);
+    // Guard file.size === 0 + mime check avant l'upload FTP.
+    expect(controller).toMatch(/file\.size === 0/);
+    expect(controller).toMatch(/ALLOWED_LOGO_MIMES\.includes\(file\.mimetype\)/);
+  });
+
+  it('uploadBrandKitLogo validates slot against allowlist', () => {
+    // Sans guard, un attaquant pourrait passer `slot=../etc/passwd` ou
+    // écrire dans n'importe quel key de logos_json.
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/ALLOWED_LOGO_SLOTS/);
+    expect(controller).toMatch(/'primary',\s*'secondary',\s*'monochrome'/);
+  });
+
+  it('uploadBrandKitLogo storage path is content-addressable (sha1 hash)', () => {
+    // Évite les collisions FTP si le même logo est ré-uploadé. Versionning
+    // implicite (cleanup futur). Pattern repris de S4-B player photo.
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/createHash\('sha1'\)[\s\S]*?\.update\(file\.buffer\)/);
+    expect(controller).toMatch(/logos\/\$\{siteId\}\/\$\{slot\}-\$\{hash\}\.\$\{ext\}/);
+  });
+
+  it('uploadBrandKitLogo merges into logos_json (preserves other slots)', () => {
+    // Garde-fou : sans le merge avec `existing.logos_json`, uploader le slot
+    // `secondary` écraserait `primary` (le repo upsert COALESCE le param entier,
+    // pas par clé JSON).
+    const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(controller).toMatch(/siteBrandKitRepository\.findBySite\(siteId\)/);
+    expect(controller).toMatch(/\.\.\.\(existing\?\.logos_json\s*\?\?\s*\{\}\)/);
+  });
+
+  it('routes mount POST /sites/:siteId/brand-kit/logo with multer + tenant guard', () => {
+    const routes = fs.readFileSync(ROUTES_FILE, 'utf8');
+    expect(routes).toMatch(
+      /router\.post\([\s\S]*?'\/sites\/:siteId\/brand-kit\/logo'[\s\S]*?\)/,
+    );
+    expect(routes).toMatch(/uploadBrandKitLogoMiddleware\.single\(['"]logo['"]\)/);
+    expect(routes).toMatch(/fileSize:\s*2\s*\*\s*1024\s*\*\s*1024/);
+    expect(routes).toMatch(/requireClubScope\(siteIdFromParams\)/);
+  });
+});

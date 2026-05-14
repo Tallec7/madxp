@@ -76,6 +76,27 @@ export class TemplatesStudioService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * Upload multipart d'un logo (S3.1). Le serveur stocke sur FTP Hostinger
+   * puis met à jour `logos_json.<slot>` via merge JSONB (préserve les autres
+   * slots). `slot` accepte 'primary' | 'secondary' | 'monochrome' (défaut 'primary').
+   */
+  uploadBrandKitLogo(
+    siteId: string,
+    file: File,
+    slot: 'primary' | 'secondary' | 'monochrome' = 'primary',
+  ): Observable<BrandKit> {
+    const form = new FormData();
+    form.append('logo', file);
+    form.append('slot', slot);
+    return this.api
+      .upload<BrandKitResponse>(
+        `/templates-studio/sites/${siteId}/brand-kit/logo`,
+        form,
+      )
+      .pipe(map((res) => res.data));
+  }
+
   listTemplates(): Observable<TemplateSummary[]> {
     return this.api
       .get<TemplatesListResponse>('/templates-studio/templates')

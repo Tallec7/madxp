@@ -258,6 +258,109 @@ export const upsertBrandKit = async (req: AuthRequest, res: Response): Promise<v
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// POST /api/templates-studio/sites/:siteId/brand-kit/logo (S3.1)
+//
+// Upload multipart d'un logo club. Stocke sur FTP Hostinger puis met à jour
+// `site_brand_kits.logos_json.<slot>` (slot par défaut : 'primary'). Symétrique
+// à S4-B `uploadPlayerPhoto` : mêmes guards mime/size, même pattern hash
+// content-addressable, même tenant guard via `requireClubScope` côté routes.
+// ────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_LOGO_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const LOGO_EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/svg+xml': 'svg',
+};
+const ALLOWED_LOGO_SLOTS = ['primary', 'secondary', 'monochrome'] as const;
+type LogoSlot = (typeof ALLOWED_LOGO_SLOTS)[number];
+
+export const uploadBrandKitLogo = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId } = req.params;
+  const file = req.file;
+  const rawSlot = (req.body?.slot as string | undefined) ?? 'primary';
+
+  if (!file || file.size === 0) {
+    res.status(400).json({ success: false, error: 'Aucun fichier fourni' });
+    return;
+  }
+  if (!ALLOWED_LOGO_MIMES.includes(file.mimetype)) {
+    res.status(400).json({
+      success: false,
+      error: `Format non supporté (${file.mimetype}). Accepté : JPEG, PNG, WebP, SVG.`,
+    });
+    return;
+  }
+  if (!(ALLOWED_LOGO_SLOTS as readonly string[]).includes(rawSlot)) {
+    res.status(400).json({
+      success: false,
+      error: `Slot invalide (${rawSlot}). Accepté : ${ALLOWED_LOGO_SLOTS.join(', ')}.`,
+    });
+    return;
+  }
+  const slot = rawSlot as LogoSlot;
+
+  try {
+    const hash = createHash('sha1')
+      .update(file.buffer)
+      .digest('hex')
+      .slice(0, 12);
+    const ext = LOGO_EXT_BY_MIME[file.mimetype];
+    const storagePath = `logos/${siteId}/${slot}-${hash}.${ext}`;
+
+    const result = await uploadFileToFtp(file.buffer, storagePath, file.mimetype);
+    if (!result) {
+      res.status(502).json({
+        success: false,
+        error: 'Upload FTP échoué — réessayez',
+      });
+      return;
+    }
+    const publicUrl = getFtpPublicUrl(storagePath);
+
+    // Lit l'existant pour préserver les autres slots logos (merge côté JSONB).
+    const existing = await siteBrandKitRepository.findBySite(siteId);
+    const nextLogos = {
+      ...(existing?.logos_json ?? {}),
+      [slot]: publicUrl,
+    };
+    const row = await siteBrandKitRepository.upsert({
+      site_id: siteId,
+      logos_json: nextLogos,
+    });
+
+    logger.info('templates-studio: brand kit logo uploaded', {
+      site_id: siteId,
+      user_id: req.user.id,
+      slot,
+      mime: file.mimetype,
+      size: file.size,
+      storage_path: storagePath,
+    });
+
+    res.json({
+      success: true,
+      data: brandKitResponse(siteId, row),
+    });
+  } catch (error) {
+    logger.error('templates-studio: upload brand kit logo failed', {
+      error,
+      site_id: siteId,
+      slot,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // GET /api/templates-studio/render-requests/:id
 // Suivi statut. Multi-tenant : club user ne voit que ses propres renders.
 // ────────────────────────────────────────────────────────────────────────────

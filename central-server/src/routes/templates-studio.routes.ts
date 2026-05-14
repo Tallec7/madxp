@@ -29,6 +29,7 @@ import {
   updatePlayer,
   deletePlayer,
   uploadPlayerPhoto,
+  uploadBrandKitLogo,
   distributeRender,
   listGlobalPlayers,
   createGlobalPlayer,
@@ -43,6 +44,12 @@ import {
 const uploadPlayerPhotoMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+});
+
+// Logos club — limite plus basse (2 MB suffit pour PNG/SVG club typiques).
+const uploadBrandKitLogoMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
 });
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
@@ -116,6 +123,19 @@ router.put(
   requireClubScope(siteIdFromParams),
   validate(templatesStudioSchemas.upsertBrandKit),
   upsertBrandKit,
+);
+
+// Upload logo multipart (S3.1). FormData avec field `logo` + slot optionnel
+// (primary | secondary | monochrome, défaut 'primary'). Met à jour
+// logos_json.<slot> via merge JSONB côté controller.
+router.post(
+  '/sites/:siteId/brand-kit/logo',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteId),
+  requireClubScope(siteIdFromParams),
+  uploadBrandKitLogoMiddleware.single('logo'),
+  uploadBrandKitLogo,
 );
 
 // Roster joueurs (S4-A) — CRUD scopé site, photo upload viendra en S4-B.

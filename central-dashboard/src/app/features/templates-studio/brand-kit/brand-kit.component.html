@@ -70,16 +70,31 @@
 
       <section class="bk__section" formGroupName="logos">
         <h2>Logo</h2>
+        <div class="bk__logo-upload">
+          <label class="bk__upload-btn" [class.bk__upload-btn--busy]="uploadingLogo()">
+            @if (uploadingLogo()) {
+              <span>Upload en cours…</span>
+            } @else {
+              <span>Choisir un fichier</span>
+            }
+            <input
+              type="file"
+              [accept]="logoAcceptAttr"
+              (change)="onLogoFileSelected($event)"
+              [disabled]="uploadingLogo()"
+              hidden
+              data-testid="brand-kit-logo-upload"
+            />
+          </label>
+          <small class="bk__hint">PNG, JPEG, WebP ou SVG — max 2 MB.</small>
+        </div>
         <label class="bk__field">
-          <span>URL logo principal</span>
+          <span>URL logo principal (alternative manuelle)</span>
           <input
             type="url"
             formControlName="primary"
             placeholder="https://kalonpartners.bzh/neopro-video/logos/..."
           />
-          <small class="bk__hint">
-            Upload direct viendra en S3.1 — pour l'instant collez une URL FTP existante.
-          </small>
         </label>
         @if (form.get('logos.primary')?.value) {
           <div class="bk__logo-preview">

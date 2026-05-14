@@ -105,6 +105,43 @@
     }
   }
 
+  &__logo-upload {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+
+    .bk__hint {
+      margin: 0;
+    }
+  }
+
+  &__upload-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f6feb;
+    color: white;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9em;
+    user-select: none;
+    transition: background 0.15s;
+
+    &:hover:not(.bk__upload-btn--busy) {
+      background: #388bfd;
+    }
+
+    &--busy {
+      background: #30363d;
+      cursor: wait;
+      opacity: 0.8;
+    }
+  }
+
   &__logo-preview {
     margin-top: 12px;
     img {
