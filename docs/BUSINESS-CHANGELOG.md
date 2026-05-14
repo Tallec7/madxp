@@ -8,6 +8,16 @@
 
 ---
 
+## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, analytics sponsors Pi PR [#1018](https://github.com/Tallec7/neopro/pull/1018))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Les sponsors locaux sont enfin comptés dans le dashboard sur les Pi** ([#1018](https://github.com/Tallec7/neopro/pull/1018)) — un club avec un Pi (pas SaaS) voyait ses sponsors locaux tourner sur la TV mais les stats restaient à zéro côté dashboard. Cause : un guard interne ne s'activait qu'en mode SaaS, donc la boucle automatique des sponsors n'était jamais trackée. Le fix active le tracking par défaut sur tous les TV, sans condition. Dès le merge + OTA, les analytics sponsors deviennent fidèles à la réalité de diffusion pour toute la flotte Pi (NLF, KBC, RACC, etc.).
+
+### 🛡️ Pour la robustesse
+
+- **Garde-fou contre la régression** ([#1018](https://github.com/Tallec7/neopro/pull/1018)) — un nouveau smoke test verrouille les 3 invariants du fix (recording ON par défaut, pas de toggle silencieux dans manual-video, broadcast idempotent). Toute PR future qui retoucherait ces 3 points en cassant le contrat échouera en CI. Règle "NE JAMAIS FAIRE" ajoutée dans `.claude/rules/raspberry-tv.md` pour servir de mémoire de la cause racine.
+
 ## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, incident NLF DNS hijack PR [#1013](https://github.com/Tallec7/neopro/pull/1013))
 
 ### 🎯 Pour le club (NLF, prospects)
