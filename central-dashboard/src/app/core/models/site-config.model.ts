@@ -32,8 +32,8 @@ export interface SyncConfig {
  */
 export interface LoopVideoConfig {
   name: string;
-  type: string;        // ex: "video/mp4"
-  path: string;        // ex: "videos/BOUCLE/video.mp4"
+  type: string;        // ex: "video/mp4" — "text/html" pour web_page, "application/vnd.apple.mpegurl" pour livestream
+  path: string;        // ex: "videos/BOUCLE/video.mp4" — URL externe pour web_page / livestream
   owner?: ContentOwner; // 'neopro' ou 'club'
   locked?: boolean;    // true = non modifiable par le club
   video_id?: string;   // UUID de la vidéo dans la table videos (pour tracking analytics)
@@ -44,6 +44,12 @@ export interface LoopVideoConfig {
   weight?: number;
   /** Épinglée à sa position dans la boucle (ne participe pas au scheduling Bresenham) */
   pinned?: boolean;
+  // ADR-103 — Idem VideoConfig : permet au Pi de jouer une page web / un
+  // livestream dans la boucle au lieu d'une vidéo.
+  contentType?: 'video' | 'web_page' | 'livestream';
+  externalUrl?: string | null;
+  durationSeconds?: number | null;
+  thumbnailUrl?: string | null;
 }
 
 /**

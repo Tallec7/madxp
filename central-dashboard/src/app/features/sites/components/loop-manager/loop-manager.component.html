@@ -90,7 +90,7 @@
           <app-video-search-select
             [groups]="videoOptionGroups"
             [selectedPath]="video.path"
-            (pathChange)="video.path = $event; onChanged()"
+            (pathChange)="applyVideoSelection(video, $event)"
             [invalid]="!video.path"
             [disabled]="isClubUser && isNeoproVideo(video)"
             [showPiStatus]="siteType !== 'saas'"

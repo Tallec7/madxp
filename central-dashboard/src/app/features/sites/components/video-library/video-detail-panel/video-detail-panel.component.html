@@ -19,8 +19,8 @@
       <div class="fob-content">
         <strong>Cette vidéo est introuvable sur le serveur</strong>
         <span class="fob-hint">
-          Détectée par l'audit FTP nocturne. Va planter en lecture côté TV.
-          Re-uploade le fichier pour la remettre en service, ou retire-la du site.
+          Détectée par l'audit FTP nocturne. Va planter en lecture côté TV. Re-uploade le fichier
+          pour la remettre en service, ou retire-la du site.
         </span>
       </div>
       <button
@@ -35,19 +35,54 @@
 
     <!-- Video preview -->
     <div class="detail-preview">
-      <video
-        *ngIf="video.source === 'cloud' && video.path && !isOrphanedOnFtp()"
-        [src]="video.path"
-        controls
-        class="detail-video"
-      ></video>
-      <div *ngIf="isOrphanedOnFtp()" class="detail-thumb-placeholder ftp-orphan-placeholder">
-        <span>❌ Fichier introuvable sur le serveur</span>
+      <!-- ADR-103 — Entrées web_page / livestream : pas de <video src=FTP>,
+           on tape un placeholder explicite (l'asset n'existe pas sur le FTP,
+           c'est une URL externe servie au runtime au Pi/SaaS). -->
+      <div
+        *ngIf="video.contentType === 'web_page'"
+        class="detail-thumb-placeholder webcontent-placeholder"
+        data-testid="video-detail-web-page-placeholder"
+      >
+        <span>🌐 Page web</span>
+        <a
+          *ngIf="video.externalUrl"
+          [href]="video.externalUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ video.externalUrl }}
+        </a>
       </div>
-      <div *ngIf="video.source !== 'cloud' || !video.path" class="detail-thumb-placeholder">
-        <img *ngIf="video.thumbnailUrl" [src]="video.thumbnailUrl" [alt]="video.displayName" />
-        <span *ngIf="!video.thumbnailUrl">🎞️</span>
+      <div
+        *ngIf="video.contentType === 'livestream'"
+        class="detail-thumb-placeholder webcontent-placeholder"
+        data-testid="video-detail-livestream-placeholder"
+      >
+        <span>🔴 Livestream</span>
+        <a
+          *ngIf="video.externalUrl"
+          [href]="video.externalUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ video.externalUrl }}
+        </a>
       </div>
+      <ng-container *ngIf="!video.contentType || video.contentType === 'video'">
+        <video
+          *ngIf="video.source === 'cloud' && video.path && !isOrphanedOnFtp()"
+          [src]="video.path"
+          controls
+          class="detail-video"
+        ></video>
+        <div *ngIf="isOrphanedOnFtp()" class="detail-thumb-placeholder ftp-orphan-placeholder">
+          <span>❌ Fichier introuvable sur le serveur</span>
+        </div>
+        <div *ngIf="video.source !== 'cloud' || !video.path" class="detail-thumb-placeholder">
+          <img *ngIf="video.thumbnailUrl" [src]="video.thumbnailUrl" [alt]="video.displayName" />
+          <span *ngIf="!video.thumbnailUrl">🎞️</span>
+        </div>
+      </ng-container>
     </div>
 
     <!-- Status & badges -->
@@ -190,7 +225,10 @@
 
     <!-- Actions -->
     <div class="detail-section detail-actions-section">
-      <div class="add-to-wrapper" *ngIf="configTargets.length > 0 && !isLockedForConfig && !isOrphanedOnFtp()">
+      <div
+        class="add-to-wrapper"
+        *ngIf="configTargets.length > 0 && !isLockedForConfig && !isOrphanedOnFtp()"
+      >
         <button
           class="btn btn-primary btn-sm detail-action-btn"
           (click)="onToggleAddTo(video, $event)"
@@ -210,7 +248,13 @@
       </div>
       <button
         class="btn btn-sm btn-primary detail-action-btn"
-        *ngIf="siteType !== 'saas' && !video.isOnPi && video.source === 'cloud' && !isDeploying && !isOrphanedOnFtp()"
+        *ngIf="
+          siteType !== 'saas' &&
+          !video.isOnPi &&
+          video.source === 'cloud' &&
+          !isDeploying &&
+          !isOrphanedOnFtp()
+        "
         (click)="onDeploy(video, $event)"
       >
         🚀 Déployer sur le Pi

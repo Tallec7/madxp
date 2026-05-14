@@ -11,14 +11,36 @@
       <button class="preview-close" (click)="onClose()" title="Fermer">✕</button>
     </div>
     <div class="preview-content">
-      <video *ngIf="video.path" [src]="video.path" controls autoplay class="preview-video">
-        Votre navigateur ne supporte pas la lecture vidéo.
-      </video>
-      <div *ngIf="!video.path" class="preview-unavailable">
-        <span class="unavailable-icon">🚫</span>
-        <p>Prévisualisation non disponible</p>
-        <span class="unavailable-hint">L'URL de la vidéo n'est pas configurée</span>
+      <!-- ADR-103 — Pour web_page / livestream, on prévisualise l'URL externe
+           dans un iframe sandbox au lieu de tenter une URL FTP qui n'existe pas. -->
+      <iframe
+        *ngIf="video.contentType === 'web_page' && video.externalUrl"
+        [src]="video.externalUrl"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        class="preview-iframe"
+        data-testid="video-preview-web-page-iframe"
+      ></iframe>
+      <div
+        *ngIf="video.contentType === 'livestream' && video.externalUrl"
+        class="preview-unavailable webcontent-placeholder"
+        data-testid="video-preview-livestream-placeholder"
+      >
+        <span class="unavailable-icon">🔴</span>
+        <p>Livestream</p>
+        <a [href]="video.externalUrl" target="_blank" rel="noopener noreferrer">
+          {{ video.externalUrl }}
+        </a>
       </div>
+      <ng-container *ngIf="!video.contentType || video.contentType === 'video'">
+        <video *ngIf="video.path" [src]="video.path" controls autoplay class="preview-video">
+          Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+        <div *ngIf="!video.path" class="preview-unavailable">
+          <span class="unavailable-icon">🚫</span>
+          <p>Prévisualisation non disponible</p>
+          <span class="unavailable-hint">L'URL de la vidéo n'est pas configurée</span>
+        </div>
+      </ng-container>
     </div>
     <div class="preview-footer">
       <span class="preview-info">{{ formatBytes(video.size) }}</span>
