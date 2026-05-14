@@ -48,7 +48,9 @@ export class LoopManagerComponent implements OnInit, OnChanges {
   // ADR-103 — On accepte la forme riche `VideoOptionGroupEntry[]` (héritée
   // de site-content-tab) au lieu d'un sous-ensemble narrowé, pour pouvoir
   // lire `contentType` / `externalUrl` sur les entrées web_page / livestream
-  // dans `applyVideoSelection`.
+  // dans `applyVideoSelection`. Les options portent `isOnPi` + `displayName`
+  // + `path` (cf. `UnifiedVideoOption`) — utilisés par le template pour
+  // gater `siteType !== 'saas'` sur les badges « Sera déployée ».
   @Input() videoOptionGroups: VideoOptionGroupEntry[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();
   @Input() allKnownVideoPaths: Set<string> = new Set();
