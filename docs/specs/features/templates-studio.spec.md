@@ -14,17 +14,23 @@
 > - [ADR-119](../../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé pour le détourage photo joueur (BiRefNet via rembg)
 > - Spec V1 : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo)
 > - Recette E2E : [`docs/runbooks/STUDIO-V1-RECIPE.md`](../../runbooks/STUDIO-V1-RECIPE.md)
->   **Code principal** :
+
+> **Code principal (legacy v2 data-driven)** :
+>
 > - `templates-remotion/src/runtime/TemplateRuntime.tsx` (moteur générique unique)
 > - `central-server/src/scripts/import-template-spec.ts` (CLI `template:import` v1)
 > - `central-dashboard/src/app/features/templates/admin-*` (UI admin Studio v2)
 > - `central-server/src/repositories/template-studio.repository.ts` (DB layer)
 > - Tables DB : `remotion_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_fonts`
->   **ADR liés** : ADR-075 (Template Studio évolutions V2/V3 — 9 sprints livrés), ADR-077 (CLI import), ADR-084 (data-driven), ADR-086 (n-layers + safe-zones), ADR-087 (asset proxy avec rate limit), ADR-095 (Admin UX v2 — drag/snap/undo)
->   **Smoke tests** :
+
+> **ADR liés (legacy v2)** : ADR-075 (Template Studio évolutions V2/V3 — 9 sprints livrés), ADR-077 (CLI import), ADR-084 (data-driven), ADR-086 (n-layers + safe-zones), ADR-087 (asset proxy avec rate limit), ADR-095 (Admin UX v2 — drag/snap/undo)
+
+> **Smoke tests** :
+>
 > - `central-server/src/__tests__/smoke/smoke-remotion.test.ts` (async render + versions)
 > - Smoke tests sur règles `templates.md` (admin UX, CLI import, fonts, upload)
->   **`.claude/rules/` lié** : `templates.md`
+
+> **`.claude/rules/` lié** : `templates.md`
 
 ## En une phrase
 
