@@ -1,8 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
+import { TemplatesStudioContextService } from '../templates-studio-context.service';
 import { TemplatesStudioService } from '../templates-studio.service';
+import { SitePickerComponent } from '../shared/site-picker.component';
 import type { BrandKit, BrandKitUpsertInput } from '../templates-studio.types';
 
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
@@ -10,13 +11,13 @@ const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 @Component({
   selector: 'app-templates-studio-brand-kit',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SitePickerComponent],
   templateUrl: './brand-kit.component.html',
   styleUrls: ['./brand-kit.component.scss'],
 })
 export class BrandKitComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private auth = inject(AuthService);
+  ctx = inject(TemplatesStudioContextService);
   private studio = inject(TemplatesStudioService);
 
   // État UI signals — Angular 20 style.
@@ -24,7 +25,8 @@ export class BrandKitComponent implements OnInit {
   saving = signal(false);
   errorMsg = signal<string | null>(null);
   successMsg = signal<string | null>(null);
-  siteId = signal<string | null>(null);
+  // Site actif vient du context partagé : picker pour internal roles, JWT pour club.
+  siteId = this.ctx.activeSiteId;
 
   form: FormGroup = this.fb.group({
     club_name: [''],
@@ -42,17 +44,26 @@ export class BrandKitComponent implements OnInit {
     }),
   });
 
+  // Effect : reload du brand kit dès que le site actif change (picker UI ou
+  // restauration localStorage). Couvre 1) club user (siteId du JWT, set 1x),
+  // 2) internal role 1er load (set après chargement liste sites), 3) internal
+  // role change de site dans le picker.
+  private siteEffect = effect(() => {
+    const siteId = this.siteId();
+    if (siteId) {
+      this.load(siteId);
+    } else if (!this.ctx.loading()) {
+      this.loading.set(false);
+      this.errorMsg.set(
+        this.ctx.isInternalRole()
+          ? "Aucun site disponible — créez d'abord un site dans /sites."
+          : 'Aucun site associé à votre compte.',
+      );
+    }
+  });
+
   ngOnInit(): void {
-    this.auth.currentUser$.subscribe((user) => {
-      const siteId = user?.site_id ?? null;
-      this.siteId.set(siteId);
-      if (siteId) {
-        this.load(siteId);
-      } else {
-        this.loading.set(false);
-        this.errorMsg.set('Aucun site associé à votre compte (V1 = club user uniquement)');
-      }
-    });
+    this.ctx.init();
   }
 
   private load(siteId: string): void {
