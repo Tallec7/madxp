@@ -29,6 +29,7 @@ import {
   updatePlayer,
   deletePlayer,
   uploadPlayerPhoto,
+  distributeRender,
 } from '../controllers/templates-studio.controller';
 
 // Multer en mémoire pour photos brutes — 8 MB max (les photos high-res de
@@ -80,6 +81,17 @@ router.get(
   apiRateLimit,
   validateParams(paramSchemas.id),
   getRenderRequest,
+);
+
+// Distribution multi-sites des renders (push direct vers libs vidéo OU grants
+// ADR-082). Tenant guard dans le controller (club user limité à son render).
+router.post(
+  '/render-requests/:id/distribute',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.id),
+  validate(templatesStudioSchemas.distributeRender),
+  distributeRender,
 );
 
 // Brand kit — lecture / upsert. Tenant guard sur :siteId (club ne voit que son site).

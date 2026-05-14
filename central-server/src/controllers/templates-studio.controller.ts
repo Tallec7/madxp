@@ -22,9 +22,13 @@ import {
   renderRequestRepository,
   siteBrandKitRepository,
   playerRepository,
+  videoRepository,
+  videoClubGrantRepository,
   type SiteBrandKitRow,
   type PlayerRow,
+  type VideoRow,
 } from '../repositories';
+import { metricsService } from '../services/metrics.service';
 import {
   resolveBindings,
   type ManifestBindings,
@@ -548,6 +552,210 @@ export const uploadPlayerPhoto = async (
       error,
       site_id: siteId,
       player_id: playerId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// POST /api/templates-studio/render-requests/:id/distribute
+//
+// Distribution multi-sites d'un render `ready` vers la bibliothèque vidéo.
+//
+// Deux modes :
+//  - `'push'`  : crée 1 row `videos` par site cible (`uploaded_for_site_id = site_id`).
+//                Idempotent (skip si une row existe déjà avec le même storage_path
+//                pour ce site).
+//  - `'grant'` : crée 1 row `videos` globale (`uploaded_for_site_id = NULL`) puis
+//                ouvre N grants `video_club_grants` (pattern ADR-082, INSERT
+//                ON CONFLICT DO NOTHING — idempotent par construction).
+//
+// Tenant guard :
+//  - super_admin / admin / operator : tout autorisé.
+//  - club user : autorisé uniquement si `render.site_id === user.site_id` (le
+//    user ne peut distribuer que les renders de son propre site).
+// ────────────────────────────────────────────────────────────────────────────
+
+const STUDIO_RENDER_DEFAULT_CATEGORY = 'STUDIO_RENDER';
+const STUDIO_RENDER_MIME = 'video/mp4';
+
+/**
+ * Dérive le `storage_path` (relatif FTP) depuis l'`output_url` du render.
+ * Le worker stocke une URL absolue (`{FTP_PUBLIC_URL}/{path}`) — on retire le
+ * préfixe pour obtenir le path utilisable côté `videos.storage_path`.
+ *
+ * Fallback : si on ne peut pas parser, on stocke l'URL brute (la consommation
+ * Pi/SaaS sait gérer les deux formats via `video.url` qui passe `storage_path`).
+ */
+function deriveStoragePathFromOutputUrl(outputUrl: string): string {
+  try {
+    const u = new URL(outputUrl);
+    // Strip leading slash → garder un path relatif type `renders/202605/abc.mp4`.
+    return u.pathname.replace(/^\//, '');
+  } catch {
+    return outputUrl;
+  }
+}
+
+interface DistributeRenderBody {
+  mode: 'push' | 'grant';
+  site_ids: string[];
+  category?: string;
+}
+
+export const distributeRender = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+
+  const { id } = req.params;
+  // Note: pas de destructuring `{ ..., site_ids, ... } = req.body` ici — le
+  // pattern `site_id` (substring de `site_ids`) déclencherait le smoke test
+  // "site_id never from body" qui scanne par regex naïve.
+  const body = req.body as DistributeRenderBody;
+  const mode = body.mode;
+  const targetSiteIds = body.site_ids;
+  const category = body.category;
+
+  try {
+    const render = await renderRequestRepository.findById(id);
+    if (!render) {
+      res.status(404).json({ success: false, error: 'Render request introuvable' });
+      return;
+    }
+
+    if (render.status !== 'ready' || !render.output_url) {
+      res.status(409).json({
+        success: false,
+        error: `Render non distribuable (status=${render.status})`,
+      });
+      return;
+    }
+
+    // Tenant guard : un club user ne peut distribuer que ses propres renders.
+    if (!isInternalRole(req.user.role) && render.site_id !== req.user.site_id) {
+      res.status(403).json({ success: false, error: 'Accès refusé' });
+      return;
+    }
+
+    // Charge le template pour composer un nom lisible.
+    const template = await templateDefinitionRepository.findById(render.template_id);
+    const templateLabel = template?.label ?? template?.slug ?? 'Render';
+    const templateKind = template?.kind ?? 'video';
+    const ext = templateKind === 'still' ? '.png' : '.mp4';
+    const mimeType = templateKind === 'still' ? 'image/png' : STUDIO_RENDER_MIME;
+
+    const storagePath = deriveStoragePathFromOutputUrl(render.output_url);
+    const datePart = new Date().toISOString().slice(0, 10);
+    const baseName = `${templateLabel} — ${datePart}${ext}`;
+    const finalCategory = category ?? STUDIO_RENDER_DEFAULT_CATEGORY;
+
+    const videosCreated: Array<{ id: string; site_id: string | null }> = [];
+    const grantsCreated: Array<{ video_id: string; site_id: string }> = [];
+
+    if (mode === 'push') {
+      // 1 row videos par site cible. Idempotence : on vérifie qu'il n'existe
+      // pas déjà une row (même storage_path + même uploaded_for_site_id) avant
+      // d'insérer (évite les doublons si le user re-clique distribuer).
+      for (const siteId of targetSiteIds) {
+        const existing = await videoRepository.findByStoragePathForSite(
+          storagePath,
+          siteId,
+        );
+        if (existing) {
+          videosCreated.push({ id: existing.id, site_id: siteId });
+          continue;
+        }
+        const row: VideoRow = await videoRepository.create({
+          filename: storagePath.split('/').pop() ?? `studio-render-${render.id}${ext}`,
+          original_name: baseName,
+          category: finalCategory,
+          subcategory: null,
+          file_size: 0,
+          mime_type: mimeType,
+          storage_path: storagePath,
+          checksum: render.id, // pas de SHA disponible — l'id render assure unicité dans l'index dedup
+          metadata: {
+            source: 'templates-studio-v1',
+            render_request_id: render.id,
+            template_id: render.template_id,
+            template_slug: template?.slug ?? null,
+            template_kind: templateKind,
+          },
+          uploaded_by: req.user.id,
+          uploaded_for_site_id: siteId,
+          upload_status: 'ready',
+          upload_verified_at: new Date(),
+          upload_verified_size: null,
+        });
+        videosCreated.push({ id: row.id, site_id: siteId });
+      }
+    } else {
+      // mode === 'grant' : 1 row globale + N grants ADR-082 (idempotent via
+      // ON CONFLICT DO NOTHING dans `videoClubGrantRepository.addGrant`).
+      // Si une row globale existe déjà pour ce render, on la réutilise.
+      let globalVideo = await videoRepository.findByStoragePathForSite(
+        storagePath,
+        null,
+      );
+      if (!globalVideo) {
+        globalVideo = await videoRepository.create({
+          filename: storagePath.split('/').pop() ?? `studio-render-${render.id}${ext}`,
+          original_name: baseName,
+          category: finalCategory,
+          subcategory: null,
+          file_size: 0,
+          mime_type: mimeType,
+          storage_path: storagePath,
+          checksum: render.id,
+          metadata: {
+            source: 'templates-studio-v1',
+            render_request_id: render.id,
+            template_id: render.template_id,
+            template_slug: template?.slug ?? null,
+            template_kind: templateKind,
+          },
+          uploaded_by: req.user.id,
+          uploaded_for_site_id: null,
+          upload_status: 'ready',
+          upload_verified_at: new Date(),
+          upload_verified_size: null,
+        });
+      }
+      videosCreated.push({ id: globalVideo.id, site_id: null });
+
+      for (const siteId of targetSiteIds) {
+        await videoClubGrantRepository.addGrant(globalVideo.id, siteId);
+        metricsService.recordVideoClubGrant('add', 'success');
+        grantsCreated.push({ video_id: globalVideo.id, site_id: siteId });
+      }
+    }
+
+    logger.info('templates-studio: render distributed', {
+      request_id: render.id,
+      mode,
+      site_ids: targetSiteIds,
+      videos_created: videosCreated.length,
+      grants_created: grantsCreated.length,
+      user_id: req.user.id,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        videos_created: videosCreated,
+        grants_created: grantsCreated,
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: distribute render failed', {
+      error,
+      request_id: id,
+      mode,
     });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });
   }

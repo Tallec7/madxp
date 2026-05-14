@@ -106,3 +106,20 @@ export interface CreatePlayerInput {
 export type UpdatePlayerInput = Partial<CreatePlayerInput> & {
   photo_cutout_url?: string | null;
 };
+
+// ────────────────────────────────────────────────────────────────────────────
+// Distribution multi-sites des renders (POST /render-requests/:id/distribute)
+// ────────────────────────────────────────────────────────────────────────────
+
+export type RenderDistributionMode = 'push' | 'grant';
+
+export interface RenderDistributionInput {
+  mode: RenderDistributionMode;
+  site_ids: string[];
+  category?: string;
+}
+
+export interface RenderDistributionResult {
+  videos_created: Array<{ id: string; site_id: string | null }>;
+  grants_created: Array<{ video_id: string; site_id: string }>;
+}
