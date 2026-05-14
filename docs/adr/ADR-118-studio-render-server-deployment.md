@@ -1,8 +1,12 @@
 # ADR-118: Architecture de déploiement du studio-render-server
 
-**Date** : 2026-05-13 (proposé) / 2026-05-14 (accepté)
-**Statut** : Accepté
+**Date** : 2026-05-13 (proposé) / 2026-05-14 (accepté) / 2026-05-14 (déprécié)
+**Statut** : ⚠️ **Déprécié — voir [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)**
 **Format** : Léger
+
+---
+
+> **Note de dépréciation (2026-05-14)** : cette décision (container Railway dédié pour `studio-render-server`) a été révisée le jour même après testing en condition réelle. Le central-server a déjà Chromium installé (legacy v2 ADR-054) et `@remotion/renderer` importé. Le pattern in-process est plus simple et coûte 0€ marginal Railway. L'audit a démontré que la séparation était théorique. Le code Remotion vit désormais dans `central-server/templates-studio/` (sous-package), bundlé in-process par `studio-render-worker.service.ts`. Voir [ADR-124](ADR-124-templates-studio-consolidation-in-central.md) pour le raisonnement complet.
 
 ---
 

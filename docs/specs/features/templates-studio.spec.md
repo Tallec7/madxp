@@ -6,17 +6,15 @@
 > **last_verified** : 2026-05-10
 > **verified_against_commit** : 1890d43
 
-> ⚠️ **Coexistence avec Templates Studio V1 (code-driven)** :
-> Cette SPEC couvre **uniquement** le système data-driven legacy (rows DB + moteur générique unique). Un second système **Templates Studio V1 code-driven** (1 `.tsx` + 1 `manifest.json` par template, déployé via `studio-render-server` containerisé) vit en parallèle pour les nouveaux templates. Les deux systèmes coexistent volontairement (cible 10 templates en 12 mois sous V1, les 3 templates v2 actifs restent en prod inchangés).
-> **ADR Templates Studio V1** :
+> ⚠️ **Coexistence avec Templates Studio (code-driven)** :
+> Cette SPEC couvre **uniquement** le système data-driven legacy (rows DB + moteur générique unique). Un second système **Templates Studio code-driven** (1 `.tsx` + 1 `manifest.json` par template, in-process dans `central-server`) vit en parallèle pour les nouveaux templates. Le legacy data-driven est planifié pour mort (ses 3 templates actifs seront portés vers le code-driven).
+> **ADR Templates Studio (code-driven)** :
 >
-> - [ADR-118](../../adr/ADR-118-studio-render-server-deployment.md) — Container Railway dédié `studio-render-server` (pattern HTTP delegation depuis central-server)
-> - [ADR-119](../../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé pour le détourage photo joueur (BiRefNet via rembg)
 > - [ADR-123](../../adr/ADR-123-templates-studio-v1-sharing-distribution.md) — Players globaux + grants multi-sites + distribution renders (réutilise pattern ADR-082)
-> - Spec V1 : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo)
-> - Recette E2E : [`docs/runbooks/STUDIO-V1-RECIPE.md`](../../runbooks/STUDIO-V1-RECIPE.md)
-> - Provisionnement Railway : [`docs/runbooks/STUDIO-V1-RAILWAY-PROVISION.md`](../../runbooks/STUDIO-V1-RAILWAY-PROVISION.md)
-> - Guide portage template V1 : [`docs/templates/STUDIO-V1-PORTING-GUIDE.md`](../../templates/STUDIO-V1-PORTING-GUIDE.md)
+> - [ADR-124](../../adr/ADR-124-templates-studio-consolidation-in-central.md) — Consolidation in-process dans central-server (déprécie ADR-118 + ADR-119)
+> - Spec source : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo, naming "V1" historique)
+> - Recette E2E : [`docs/runbooks/STUDIO-RECIPE.md`](../../runbooks/STUDIO-RECIPE.md)
+> - Guide portage template : [`docs/templates/STUDIO-PORTING-GUIDE.md`](../../templates/STUDIO-PORTING-GUIDE.md)
 
 > **Code principal (legacy v2 data-driven)** :
 >

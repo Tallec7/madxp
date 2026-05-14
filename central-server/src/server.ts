@@ -653,9 +653,10 @@ const startServer = async () => {
       logger.warn('templates-studio: manifest seed skipped at boot', { err });
     }
 
-    // Templates Studio V1 — worker stub (J4). Poll render_requests toutes les 2s.
-    // STUB : performRender() simule un rendu — branchement bundle()+renderMedia()
-    // viendra dans un commit ultérieur (déjà dérisqué dans le POC studio-template/).
+    // Templates Studio — worker render in-process (ADR-124).
+    // Poll studio_render_requests toutes les 2s, bundle Remotion + renderMedia
+    // direct, upload FTP, mark ready. Fini la HTTP delegation vers un service
+    // Railway séparé : Chromium + @remotion/* tournent dans ce process.
     try {
       const { startStudioRenderWorker } = await import(
         './services/studio-render-worker.service'
@@ -663,6 +664,19 @@ const startServer = async () => {
       await startStudioRenderWorker();
     } catch (err) {
       logger.warn('templates-studio: render worker skipped at boot', { err });
+    }
+
+    // Templates Studio — worker photo cutout in-process (ADR-124).
+    // Poll players WHERE cutout_status='pending' toutes les 5s, applique
+    // BiRefNet via @imgly/background-removal-node (ONNX), upload FTP, mark
+    // ready. Remplace l'ex-python-rembg-worker container Railway.
+    try {
+      const { startPhotoCutoutWorker } = await import(
+        './services/photo-cutout.service'
+      );
+      await startPhotoCutoutWorker();
+    } catch (err) {
+      logger.warn('templates-studio: photo cutout worker skipped at boot', { err });
     }
 
     // ADR-058: purge quotidienne des profile_device_tokens expirés/révoqués > 30j

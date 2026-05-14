@@ -131,12 +131,13 @@ Un ADR documente une décision technique importante avec :
 | [ADR-115](ADR-115-auth-preserved-on-sync.md)                                    | Préservation du bloc `auth` du Pi contre les sync de profils cloud à `auth: {}`              | Accepté                           | Mai 2026 |
 | [ADR-116](ADR-116-preview-diff-profile-baseline.md)                             | Baseline du diff `previewConfigDiff` = profil édité (pas mirror Pi) + fix accumulation cats  | Accepté                           | Mai 2026 |
 | [ADR-117](ADR-117-auto-deploy-videos-on-profile-config-save.md)                 | Couplage automatique déploiement vidéos ↔ sauvegarde config profil Pi (Phase C #959)         | Accepté                           | Mai 2026 |
-| [ADR-118](ADR-118-studio-render-server-deployment.md)                           | Architecture déploiement du studio-render-server V1 (3 options à départager)                 | Proposé                           | Mai 2026 |
-| [ADR-119](ADR-119-rembg-python-worker.md)                                       | Worker rembg en container Python séparé (BiRefNet, polling PG SKIP LOCKED)                   | Proposé                           | Mai 2026 |
+| [ADR-118](ADR-118-studio-render-server-deployment.md)                           | Architecture déploiement du studio-render-server V1                                          | ⚠️ Déprécié par ADR-124           | Mai 2026 |
+| [ADR-119](ADR-119-rembg-python-worker.md)                                       | Worker rembg en container Python séparé                                                      | ⚠️ Déprécié par ADR-124           | Mai 2026 |
 | [ADR-122](ADR-122-pi-connectivity-reminders.md)                                 | Rappels reconnexion Pi — in-app télécommande + email club (Options α + β + garde-fou cloud)  | Proposé                           | Mai 2026 |
 | [ADR-120](ADR-120-pi-saas-ownership-model.md)                                   | Modèle d'ownership Pi vs SaaS — `:8080` à parité, sync bidirectionnel 3-way merge            | Proposé                           | Mai 2026 |
 | [ADR-121](ADR-121-video-variants-drift-fix.md)                                  | Fix drift pipeline `video_variants` (stub, pré-requis advertiser cross-site avec variants)   | Proposé                           | Mai 2026 |
 | [ADR-123](ADR-123-templates-studio-v1-sharing-distribution.md)                  | Templates Studio V1 — players globaux + grants + distribution renders multi-sites (ADR-082)  | Accepté                           | Mai 2026 |
+| [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)                 | Templates Studio — consolidation in-process dans central-server (drop services satellites)   | Accepté                           | Mai 2026 |
 
 ### Supersédés
 

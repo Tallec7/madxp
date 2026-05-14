@@ -444,6 +444,24 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
   }
 
   /**
+   * Anti-orphan rembg : remet en 'pending' les rows 'processing' claimées par
+   * un process mort depuis plus de `maxMinutes`. Pattern aligné sur
+   * `renderRequestRepository.failStaleRunning()` côté worker render.
+   * Retourne le nombre de rows recovered.
+   */
+  async failStaleProcessingCutouts(maxMinutes: number): Promise<number> {
+    const result = await query<{ id: string }>(
+      `UPDATE players
+       SET cutout_status = 'pending', updated_at = NOW()
+       WHERE cutout_status = 'processing'
+         AND updated_at < NOW() - ($1 || ' minutes')::interval
+       RETURNING id`,
+      [String(maxMinutes)],
+    );
+    return result.rows.length;
+  }
+
+  /**
    * Update partiel — coalesce les champs absents avec les valeurs existantes.
    * Si `photo_raw_url` change, on remet `cutout_status = 'pending'` pour que
    * le worker rembg (S4-C) re-traite l'image. `photo_cutout_url` peut être

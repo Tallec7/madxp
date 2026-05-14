@@ -25,17 +25,13 @@ import {
   type TemplateKind,
 } from '../repositories';
 
-// Source de vérité monorepo lite (PR #983). Depuis central-server/src/scripts/,
-// 3 levels up = racine repo neopro : scripts → src → central-server → <root>.
-const MANIFESTS_DIR = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'studio-render-server',
-  'src',
-  'templates',
-);
+// Source de vérité (ADR-124) : sous-package central-server/templates-studio/.
+// Au runtime Docker, le path absolu est `/app/templates-studio/templates`
+// (cf. ENV TEMPLATES_STUDIO_DIR + Dockerfile). En local, fallback sur le
+// path relatif depuis central-server/src/scripts/ → templates-studio/templates.
+const MANIFESTS_DIR = process.env.TEMPLATES_STUDIO_DIR
+  ? path.join(process.env.TEMPLATES_STUDIO_DIR, 'templates')
+  : path.resolve(__dirname, '..', '..', 'templates-studio', 'templates');
 
 interface ManifestFile {
   id: string;
