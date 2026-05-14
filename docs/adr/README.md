@@ -138,6 +138,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-121](ADR-121-video-variants-drift-fix.md)                                  | Fix drift pipeline `video_variants` (stub, pré-requis advertiser cross-site avec variants)   | Proposé                           | Mai 2026 |
 | [ADR-123](ADR-123-templates-studio-v1-sharing-distribution.md)                  | Templates Studio V1 — players globaux + grants + distribution renders multi-sites (ADR-082)  | Accepté                           | Mai 2026 |
 | [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)                 | Templates Studio — consolidation in-process dans central-server (drop services satellites)   | Accepté                           | Mai 2026 |
+| [ADR-125](ADR-125-templates-studio-asset-library.md)                            | Templates Studio — asset library globale + bindings par template (Phase 1.5)                 | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
