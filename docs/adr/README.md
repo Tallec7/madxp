@@ -132,6 +132,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-116](ADR-116-preview-diff-profile-baseline.md)                             | Baseline du diff `previewConfigDiff` = profil édité (pas mirror Pi) + fix accumulation cats  | Accepté                           | Mai 2026 |
 | [ADR-117](ADR-117-auto-deploy-videos-on-profile-config-save.md)                 | Couplage automatique déploiement vidéos ↔ sauvegarde config profil Pi (Phase C #959)         | Accepté                           | Mai 2026 |
 | [ADR-118](ADR-118-studio-render-server-deployment.md)                           | Architecture déploiement du studio-render-server V1 (3 options à départager)                 | Proposé                           | Mai 2026 |
+| [ADR-119](ADR-119-rembg-python-worker.md)                                       | Worker rembg en container Python séparé (BiRefNet, polling PG SKIP LOCKED)                   | Proposé                           | Mai 2026 |
 
 ### Supersédés
 
