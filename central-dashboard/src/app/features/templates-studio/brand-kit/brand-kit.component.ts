@@ -23,8 +23,14 @@ export class BrandKitComponent implements OnInit {
   // État UI signals — Angular 20 style.
   loading = signal(true);
   saving = signal(false);
+  uploadingLogo = signal(false);
   errorMsg = signal<string | null>(null);
   successMsg = signal<string | null>(null);
+
+  // Limites mirroir backend (S3.1 multer config).
+  readonly maxLogoSizeBytes = 2 * 1024 * 1024;
+  readonly allowedLogoMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+  readonly logoAcceptAttr = '.jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml';
   // Site actif vient du context partagé : picker pour internal roles, JWT pour club.
   siteId = this.ctx.activeSiteId;
 
@@ -148,5 +154,47 @@ export class BrandKitComponent implements OnInit {
       if (v && v.trim().length > 0) out[k] = v.trim();
     }
     return out;
+  }
+
+  // Upload direct logo (S3.1). FormData → backend FTP → bump logos.primary.
+  // Le serveur retourne le brand kit complet, on patch le form pour refléter
+  // la nouvelle URL FTP (l'<img> preview se met à jour automatiquement).
+  onLogoFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploadLogo(file);
+    input.value = '';
+  }
+
+  private uploadLogo(file: File): void {
+    const siteId = this.siteId();
+    if (!siteId) {
+      this.errorMsg.set('Aucun site actif — sélectionnez un site avant d\'uploader.');
+      return;
+    }
+    if (!this.allowedLogoMimes.includes(file.type)) {
+      this.errorMsg.set(`Format non supporté (${file.type || 'inconnu'}). Accepté : JPEG, PNG, WebP, SVG.`);
+      return;
+    }
+    if (file.size > this.maxLogoSizeBytes) {
+      this.errorMsg.set('Fichier trop volumineux (max 2 MB).');
+      return;
+    }
+    this.uploadingLogo.set(true);
+    this.errorMsg.set(null);
+    this.successMsg.set(null);
+    this.studio.uploadBrandKitLogo(siteId, file, 'primary').subscribe({
+      next: (kit) => {
+        this.patchForm(kit);
+        this.uploadingLogo.set(false);
+        this.successMsg.set('Logo uploadé.');
+        setTimeout(() => this.successMsg.set(null), 3000);
+      },
+      error: (err) => {
+        this.uploadingLogo.set(false);
+        this.errorMsg.set(err?.error?.error ?? 'Upload du logo échoué');
+      },
+    });
   }
 }
