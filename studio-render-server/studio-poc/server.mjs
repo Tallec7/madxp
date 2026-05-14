@@ -156,7 +156,10 @@ app.post('/api/render', async (req, res) => {
   }
 });
 
-const PORT = 5175;
-app.listen(PORT, () => {
-  console.log(`[ready] Studio POC render server on http://127.0.0.1:${PORT}`);
+// Railway injecte `PORT` à runtime ; en dev local on garde 5175.
+const PORT = parseInt(process.env.PORT ?? '5175', 10);
+// Bind sur 0.0.0.0 en prod (Railway / Docker), 127.0.0.1 sinon.
+const HOST = process.env.HOST ?? (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+app.listen(PORT, HOST, () => {
+  console.log(`[ready] Studio render server on http://${HOST}:${PORT}`);
 });
