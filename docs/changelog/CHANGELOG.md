@@ -1,3 +1,9 @@
+# [3.317.0](https://github.com/Tallec7/neopro/compare/v3.316.1...v3.317.0) (2026-05-14)
+
+### Features
+
+- **studio:** asset library + bindings par template (ADR-125) ([#1011](https://github.com/Tallec7/neopro/issues/1011)) ([bd387de](https://github.com/Tallec7/neopro/commit/bd387de2b840c8764e468fb803d80d5b10008bb1))
+
 ## [3.316.1](https://github.com/Tallec7/neopro/compare/v3.316.0...v3.316.1) (2026-05-14)
 
 ### Bug Fixes
