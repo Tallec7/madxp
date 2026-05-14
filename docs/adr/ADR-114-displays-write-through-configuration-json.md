@@ -1,8 +1,10 @@
 # ADR-114 : Write-through `configuration.json.displays` côté sync-agent
 
 **Date** : 2026-05-08
-**Statut** : Accepté
+**Statut** : Accepté (amendée partiellement par [ADR-120](ADR-120-pi-saas-ownership-model.md) pour `site_type = 'pi'`)
 **Format** : Léger
+
+> **Amendement ADR-120 (Phase 3-4)** : pour les sites `site_type = 'pi'`, la matrice d'ownership s'inverse — le Pi devient source de vérité pour `displays` (l'opérateur sur place via `:8080` assigne), le cloud reflète au push-back. Cette ADR-114 reste inchangée pour `site_type = 'saas'`. Détails : [sync-agent-displays-write-through.spec.md](../specs/services/sync-agent-displays-write-through.spec.md) section "Amendement ADR-120".
 
 ---
 

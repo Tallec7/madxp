@@ -1,8 +1,10 @@
 # ADR-116: Baseline du diff `previewConfigDiff` = profil édité, pas mirror Pi
 
 **Date** : 2026-05-10
-**Statut** : Accepté
+**Statut** : Accepté (cloud-wins implicite au resync suspendu pour `site_type = 'pi'` par [ADR-120](ADR-120-pi-saas-ownership-model.md) Phase 5)
 **Format** : Léger
+
+> **Amendement ADR-120 (Phase 5)** : le zeroing `mergeCategories` avant switch profil reste valable (c'est un fix d'accumulation interne). MAIS le **cloud-wins implicite au resync** (cloud pousse `sync_profiles` et écrase la config Pi) est **suspendu pour `site_type = 'pi'`** une fois le moteur 3-way merge livré (Phase 4-5). Pour `site_type = 'saas'` : inchangé. Détails : [ADR-120](ADR-120-pi-saas-ownership-model.md) §3-4.
 
 ---
 

@@ -130,6 +130,8 @@ Implication pour l'opérateur :
 
 ## Endpoints API
 
+### Profils (existant)
+
 ```
 GET  /api/profiles
      → [{ id, name, city, sport, isActive }]
@@ -144,10 +146,50 @@ POST /api/profiles/:id/switch
      → 400 si profileId invalide (path traversal guard)
 ```
 
+### Inventaire `:8080` complet — routes existantes (au 2026-05-14)
+
+13 fichiers de routes (`raspberry/admin/routes/`), 67 endpoints :
+
+| Fichier | Routes principales | Statut |
+|---|---|---|
+| `auth.js` | `/login`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/status`, `/api/auth/change-password` | ✅ |
+| `backup.js` | `/api/backups`, `/api/backups/create`, `/api/backups/download/:filename`, `/api/backups/:filename`, `/api/backups/auto-status`, `/api/backups/auto-toggle` | ✅ |
+| `cache.js` | `/api/cache/stats`, `/api/cache/clear`, `/api/cache/info` | ✅ |
+| `config.js` | `/api/config`, `/api/configuration`, `/api/configuration/settings`, `/api/configuration/categories` (CRUD), `/api/configuration/phase-recap`, `/api/configuration/time-categories` (CRUD) | ✅ |
+| `email.js` | `/api/email/config`, `/api/email/test`, `/api/email/send` | ✅ |
+| `hotspot-dashboard.js` | `/api/hotspot/clients`, `/api/hotspot/events`, `/api/hotspot/rotate-psk`, `/api/hotspot/events/archive` | ✅ |
+| `network.js` | `/api/network`, `/api/wifi/scan`, `/api/wifi/connect`, `/api/wifi/current`, `/api/wifi/bssid-lock`, `/api/hotspot/fix` | ✅ |
+| `profiles.js` | `/api/profiles`, `/api/profiles/active`, `/api/profiles/:id/switch` | ⚠️ Read-only + switch uniquement |
+| `sponsors.js` | `/api/sponsors/stats`, `/api/sponsors` (CRUD), `/api/sponsors/:localId` | ✅ |
+| `sync-status.js` | `/api/sync-status` | ✅ |
+| `system.js` | `/api/system`, `/api/version`, `/api/logs/:service`, `/api/services/:service/restart`, `/api/system/reboot`, `/api/system/shutdown`, `/api/system/apply-services`, `/api/system/fix-ownership`, `/api/system/validate` | ✅ |
+| `update.js` | `/api/update` (file upload OTA local) | ✅ |
+| `videos.js` | `/api/videos` (CRUD filesystem), `/api/videos/upload`, `/api/videos/upload-multiple`, `/api/thumbnails/regenerate`, `/api/videos/processing`, `/api/videos/orphans`, `/api/videos/add-to-config`, `/api/videos/reorder`, `/api/videos/move` | ✅ |
+
+### Routes manquantes — gap de parité (à livrer Phases 2-5 d'ADR-120)
+
+| Domaine | Route à créer | Phase ADR-120 | Pourquoi manquant aujourd'hui |
+|---|---|---|---|
+| Profils — création | `POST /api/profiles` | Phase 2 | Création profil = central uniquement |
+| Profils — édition | `PUT /api/profiles/:id` | Phase 2 | Édition profil = central uniquement |
+| Profils — suppression | `DELETE /api/profiles/:id` | Phase 2 | Suppression profil = central uniquement (garde-fou : refuser si actif) |
+| Displays / receivers — assignation | `POST /api/displays/:idx/assign` | Phase 3 | ADR-114 write-through cloud→Pi uniquement |
+| Displays / receivers — révocation | `DELETE /api/displays/:idx/assign` | Phase 3 | Idem |
+| Conflits config | `GET /api/conflicts` | Phase 5 | Pas encore de notion de conflit (3-way merge) |
+
+### Push-back état Pi → cloud (Phase 4 d'ADR-120)
+
+Pas une route `:8080` mais une **commande sync-agent** qui POSTe l'état local vers le cloud au reconnect :
+
+- `POST /api/sites/:id/pi-config-sync` (côté central-server) — payload structuré par profil avec hash + last_local_edit_at
+- Authentifié via `api_key` du site
+- Cloud merge selon matrice ownership ADR-120 §1 (3-way merge baseline / Pi / cloud)
+- Conflits stockés dans `config_conflicts`, résolvables via UI dashboard inline onglet Content
+
 ## Open Questions
 
 1. **Notification kiosk** : idéalement, le switch de profil devrait notifier l'app Angular TV (`config_updated` via Socket.IO). Actuellement l'admin server n'a pas de socket.io-client. À implémenter si besoin : route HTTP `POST /api/reload-config` sur le socket-server `:3000`.
-2. **Modifications offline persistantes** : pour les clients qui font régulièrement des ajustements locaux (catégories custom offline), une stratégie "merge offline changes" sur resync pourrait être envisagée en ADR futur.
+2. **Modifications offline persistantes** : ~~stratégie "merge offline changes" en ADR futur~~ → **résolu par ADR-120** (Modèle C 3-way merge, Phase 4-5).
 
 ## Success Metrics
 

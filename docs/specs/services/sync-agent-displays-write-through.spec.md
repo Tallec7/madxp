@@ -14,7 +14,7 @@
 > - `central-server/src/services/command-queue.service.ts` (`sendOrQueue('receiver_assignment_updated')`)
 > - `central-server/src/scripts/backfill-displays-resync.ts` (CLI rejoue la commande sur la flotte)
 >
-> **ADR liés** : ADR-114 (write-through configuration.json.displays)
+> **ADR liés** : ADR-114 (write-through configuration.json.displays), ADR-120 (amendement Phase 3 — `displays` deviendra Pi-owned pour `site_type = 'pi'`, sens inversé)
 > **Smoke tests** :
 >
 > - `central-server/src/__tests__/smoke/smoke-receivers-discovery.test.ts` (describe "ADR-114 — write-through configuration.json.displays côté sync-agent")
@@ -70,9 +70,31 @@ Quand un super_admin assigne la MAC d'un Fire Stick à un display côté dashboa
 - **Format MAC** : DB cloud peut stocker `0c:43:F9:36:04:77` (uppercase). Lecture côté Pi fait `toLowerCase()` (cf. `captive.js:62`). Si un futur path skip ce normalize, lookup échoue silencieusement.
 - **Pi POC dev (`neopro.local`)** : sans `siteId`, jamais de commande reçue. Edition manuelle de `configuration.json` possible mais perdue au prochain reflash.
 
+## Amendement ADR-120 — sens Pi → cloud (à livrer Phase 3-4)
+
+Pour les sites `site_type = 'pi'`, ADR-120 inverse la matrice d'ownership pour le champ `displays` :
+
+- **Avant ADR-120** : cloud = source de vérité, Pi reçoit via `receiver_assignment_updated` (write-through)
+- **Après ADR-120 Phase 3-4** : Pi = source de vérité (l'opérateur sur place via `:8080` assigne le receiver à un display), cloud reflète au push-back
+
+Ce que ça change :
+
+| Aspect | État actuel (ADR-114) | Cible ADR-120 Phase 3-4 (`site_type = 'pi'`) |
+|---|---|---|
+| Édition `displays[].receiver` | Dashboard central uniquement | `:8080` ET dashboard (avec résolution conflit 3-way) |
+| Direction sync au PUT dashboard | Cloud → Pi (write-through cloud → `configuration.json`) | Cloud → Pi via `pending_command`, mergé Pi-side au reconnect |
+| Direction sync au POST `:8080` `/api/displays/:idx/assign` | n/a (route absente) | Pi écrit `configuration.json.displays` localement (atomique) ; push-back au reconnect |
+| Source de vérité `configuration.json.displays` | DB cloud `sites.displays` | Pi `configuration.json.displays` |
+| Conflit cloud edit + Pi edit pendant offline | Pi-wins silencieux (cloud écrasé au reconnect) | Détecté par moteur 3-way merge ADR-120 §3, conflit visible bannière onglet Content |
+
+**Pour `site_type = 'saas'`** : ADR-114 reste inchangé (cloud-wins, write-through cloud → mirror DB).
+
+**Compatibilité descendante** : tant que Phase 3-4 n'est pas livrée, le comportement ADR-114 actuel reste en vigueur. La PR Phase 3 ajoutera le guard `site_type === 'pi'` autour de l'inversion.
+
 ## Référence
 
 - [ADR-114](../../adr/ADR-114-displays-write-through-configuration-json.md)
+- [ADR-120](../../adr/ADR-120-pi-saas-ownership-model.md) — amendement ownership Pi vs SaaS
 - PR #903 — write-through sync-agent
 - PR #905 — script backfill
 - Incident terrain : site `c994620c-2016-40f3-9399-2d0345f69274` (Fire Stick `0c:43:f9:36:04:77` atterrit sur `/display/0` au lieu de `/display/1`)
