@@ -49,7 +49,8 @@ const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
   'ADR-078', 'ADR-082', 'ADR-083', 'ADR-085',
   // ADR-089 is now covered by docs/specs/features/web-live-content.spec.md (ADR-103 Phase 1)
   // ADR-098 now covered by docs/specs/features/video-cycle.spec.md (FTP audit angle mort)
-  'ADR-091', 'ADR-094', 'ADR-099',
+  // ADR-099 now covered by docs/specs/services/command-queue.spec.md (cas d'edge socket zombie)
+  'ADR-091', 'ADR-094',
 ]);
 
 const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
