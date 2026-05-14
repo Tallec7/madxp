@@ -1,3 +1,9 @@
+# [3.313.0](https://github.com/Tallec7/neopro/compare/v3.312.0...v3.313.0) (2026-05-14)
+
+### Features
+
+- **studio-render-server:** Dockerfile + boot scripts (ADR-118 implementation) ([#993](https://github.com/Tallec7/neopro/issues/993)) ([20a58c5](https://github.com/Tallec7/neopro/commit/20a58c5ac96ebeb8fee91b8f27cb638fa77defa3)), closes [#992](https://github.com/Tallec7/neopro/issues/992)
+
 # [3.312.0](https://github.com/Tallec7/neopro/compare/v3.311.0...v3.312.0) (2026-05-14)
 
 ### Features
