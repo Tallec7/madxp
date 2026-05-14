@@ -132,20 +132,45 @@ Composant standalone extrait de `TvComponent` — gère tout l'affichage overlay
 - `raspberry/src/app/components/score-overlay/score-overlay.component.html` — template (216 lignes)
 - `raspberry/src/app/components/score-overlay/score-overlay.component.scss` — styles (723 lignes)
 
-## RecordingStateService (v3.8.0+)
+## RecordingStateService (v3.8.0+, révision incident 2026-05-14)
 
 Contrôle hybride (auto + manuel) de l'enregistrement analytics.
 
-- **Au boot : OFF** — aucune donnée analytics enregistrée
-- **Auto ON** quand la Remote change de phase (`neutral` → `before`/`during`/`after`)
-- **Auto OFF** quand retour en `neutral` + timeout 15 min
-- **Override manuel** : bouton REC sur la télécommande
-- **Guards** : `AnalyticsService` et `SponsorAnalyticsService` vérifient `recordingState.isRecording` avant de tracker
-- **Propagation** : BroadcastChannel (onglets locaux) + Socket.IO (serveur local + cloud)
+- **Au boot : ON par défaut** pour tout TV non-slave non-preview (PR #1018,
+  incident Mangin-Beaulieu 2026-05-14). Avant : ON uniquement en mode SaaS,
+  ce qui rendait silencieuse la boucle Bresenham sponsors locaux sur les Pi
+  non-SaaS (`analytics.service.ts` bail sur `!isRecording`).
+- **Reste ON** tant que la Remote envoie au moins un signal toutes les 15 min
+  (timer d'inactivité). Si silence >15 min → warning 3 min → auto-OFF.
+- **Override manuel** : bouton REC sur la télécommande (`isManualOverride=true`
+  désactive le timer d'inactivité).
+- **Guards** : `AnalyticsService` et `SponsorAnalyticsService` vérifient
+  `recordingState.isRecording` avant de tracker.
+- **Propagation** : BroadcastChannel (onglets locaux) + Socket.IO (serveur
+  local + cloud). `broadcast()` est idempotent depuis 2026-05-14 (skip si
+  state identique au précédent émis).
 
 **Fichier** : `raspberry/src/app/services/recording-state.service.ts`
 
 ## NE JAMAIS FAIRE (smoke test enforced)
+
+### Recording-state & analytics (incident 2026-05-14, PR #1018)
+
+- **Re-conditionner le `startRecording(false)` au boot de `tv.component.ts` sur
+  `(environment as ...).saasMode`** — la boucle Bresenham sponsors locaux des
+  sites Pi non-SaaS ne déclenche aucune commande socket → si recording reste
+  OFF en permanence, `analytics.service.ts:285` bail et 0 event ne remonte.
+  Garder le guard uniquement sur `!isSlaveMode && displayType==='tv' && !isPreviewMode`.
+- **Réintroduire `recordingState.startRecording(false)` / `stopRecording(false)`
+  dans `manual-video.service.ts`** (autour de chaque vidéo manuelle). Avant le
+  fix : 28 cycles ON/OFF par 4h dans journalctl `[Recording] State update`,
+  flap visible + masquait le bug en ouvrant des fenêtres furtives ~30s. Le
+  state est désormais ON par défaut au boot — `manual-video.service.ts` ne
+  doit plus piloter recording.
+- **Retirer le guard d'idempotence `_lastBroadcastState` de `broadcast()`** dans
+  `recording-state.service.ts` — sans lui, tout futur appel à
+  `startRecording`/`stopRecording` avec un state inchangé créera un cycle log
+  serveur invisible. Smoke test : `smoke-analytics-sponsors-recording-flap-incident-2026-05-14`.
 
 ### Preview-Slave Sync (ADR-106)
 
