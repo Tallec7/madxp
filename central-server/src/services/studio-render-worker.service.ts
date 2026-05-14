@@ -246,7 +246,14 @@ export async function startStudioRenderWorker(): Promise<void> {
   }
 
   // Pré-warm le bundle au boot (non-bloquant). Évite la latence du 1er render.
-  prewarmStudioBundle();
+  // Skip en NODE_ENV=test : `@remotion/bundler` lance webpack avec cache
+  // filesystem (`node_modules/.cache/webpack/`). En parallèle des workers jest,
+  // plusieurs processus écrivent le même cache et corrompent ses serializers
+  // → `TypeError: RawModule is not a constructor` sur des tests sans rapport
+  // qui chargent transitivement webpack. Issue #1008.
+  if (process.env.NODE_ENV !== 'test') {
+    prewarmStudioBundle();
+  }
 
   stopping = false;
   timerHandle = setInterval(() => {

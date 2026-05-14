@@ -24,9 +24,9 @@ module.exports = {
     // Phase 2: 25/45/45/45 → Phase 4: 40/60/60/60 → Phase 7: 60/75/75/75
     global: {
       branches: 25,    // WebSocket/health services have many edge case branches
-      functions: 39,   // Lowered TEMPORAIREMENT (PR #1007) après xdescribe de command-queue + canary tests cassés par pollution Webpack — re-bump à 40 dès résolution issue #1008. Initialement lowered après chantier JOUEUR (PR #766).
-      lines: 43,       // Lowered TEMPORAIREMENT (PR #1007) — re-bump à 44 dès résolution issue #1008.
-      statements: 43,  // Idem lines.
+      functions: 40,   // Lowered après chantier JOUEUR (PR #766).
+      lines: 44,
+      statements: 44,
     },
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
