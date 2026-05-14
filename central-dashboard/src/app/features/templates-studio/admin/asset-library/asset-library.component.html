@@ -1,0 +1,165 @@
+<div class="asset-library">
+  <header class="library-header">
+    <div>
+      <h1>Library d'assets Studio</h1>
+      <p class="subtitle">
+        Pool partagé sur toute la flotte (textures, watermarks, vidéos overlay, fonts).
+        Une fois uploadé, lie l'asset à un slot de template depuis la
+        <a routerLink="../templates">page des bindings</a>.
+      </p>
+    </div>
+    <div class="counter">{{ total() }} asset(s)</div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>Type</label>
+      <div class="filter-chips">
+        <button
+          *ngFor="let t of typeChips"
+          [class.active]="selectedType() === t.id"
+          (click)="onTypeChange(t.id)"
+          type="button"
+        >
+          {{ t.label }}
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label for="tag-filter">Tag</label>
+      <select
+        id="tag-filter"
+        [ngModel]="selectedTag()"
+        (ngModelChange)="onTagChange($event)"
+      >
+        <option value="">— tous les tags —</option>
+        <option *ngFor="let tag of availableTags()" [value]="tag">{{ tag }}</option>
+      </select>
+    </div>
+
+    <div class="filter-group grow">
+      <label for="search">Rechercher (filename)</label>
+      <input
+        id="search"
+        type="text"
+        placeholder="metal_texture, watermark…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="onSearchChange($event)"
+      />
+    </div>
+  </div>
+
+  <div class="upload-zone" [class.dragging]="isDraggingOver()" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+    <ng-container *ngIf="!pendingFile(); else pendingPreview">
+      <p class="dz-hint">
+        Glisse un fichier ici ou
+        <label class="dz-link">
+          parcours
+          <input type="file" (change)="onFileSelected($event)" hidden />
+        </label>
+      </p>
+      <p class="dz-meta">Images / Vidéos / Fonts — 50 MB max</p>
+    </ng-container>
+    <ng-template #pendingPreview>
+      <div class="pending-row">
+        <strong>{{ pendingFile()!.name }}</strong>
+        <span class="pending-meta">{{ formatBytes(pendingFile()!.size) }} · {{ pendingFile()!.type }}</span>
+        <input
+          type="text"
+          [ngModel]="pendingTags()"
+          (ngModelChange)="pendingTags.set($event)"
+          placeholder="Tags (séparés par virgules) — texture, overlay…"
+        />
+        <div class="pending-actions">
+          <button type="button" class="btn-secondary" (click)="cancelUpload()" [disabled]="uploading()">Annuler</button>
+          <button type="button" class="btn-primary" (click)="submitUpload()" [disabled]="uploading()">
+            {{ uploading() ? 'Upload en cours…' : 'Uploader' }}
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="messages" *ngIf="errorMsg() || successMsg()">
+    <div *ngIf="errorMsg()" class="msg-error" (click)="dismissMessages()">{{ errorMsg() }}</div>
+    <div *ngIf="successMsg()" class="msg-success" (click)="dismissMessages()">{{ successMsg() }}</div>
+  </div>
+
+  <div class="grid" *ngIf="!loading(); else loadingTpl">
+    <div *ngIf="assets().length === 0" class="empty">
+      Aucun asset trouvé. Upload ton premier fichier ci-dessus.
+    </div>
+
+    <div
+      *ngFor="let asset of assets(); trackBy: trackById"
+      class="asset-card"
+      (click)="openDetail(asset)"
+    >
+      <div class="thumb">
+        <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" loading="lazy" />
+        <video *ngIf="isVideo(asset)" [src]="asset.url" muted preload="metadata"></video>
+        <div *ngIf="!isImage(asset) && !isVideo(asset)" class="thumb-icon">FILE</div>
+      </div>
+      <div class="info">
+        <div class="filename" [title]="asset.filename">{{ asset.filename }}</div>
+        <div class="meta">
+          <span>{{ formatBytes(asset.file_size) }}</span>
+          <span class="dot">·</span>
+          <span>{{ asset.mime_type }}</span>
+        </div>
+        <div class="tags" *ngIf="asset.tags?.length">
+          <span class="tag" *ngFor="let tag of asset.tags">{{ tag }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="loading">Chargement…</div>
+  </ng-template>
+</div>
+
+<div *ngIf="selectedAsset() as asset" class="modal-backdrop" (click)="closeDetail()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <h2>{{ asset.filename }}</h2>
+      <button type="button" class="close" (click)="closeDetail()" aria-label="Fermer">×</button>
+    </header>
+    <div class="modal-body">
+      <div class="preview">
+        <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" />
+        <video *ngIf="isVideo(asset)" [src]="asset.url" controls muted></video>
+      </div>
+      <dl class="modal-meta">
+        <dt>Taille</dt><dd>{{ formatBytes(asset.file_size) }}</dd>
+        <dt>Type</dt><dd>{{ asset.mime_type }}</dd>
+        <dt>Checksum</dt><dd class="mono">{{ asset.checksum_sha256.slice(0, 16) }}…</dd>
+        <dt>FTP path</dt><dd class="mono">{{ asset.ftp_path }}</dd>
+        <dt>Uploadé</dt><dd>{{ asset.uploaded_at | date:'short' }}</dd>
+        <dt>Tags</dt><dd>
+          <span *ngIf="!asset.tags?.length">—</span>
+          <span class="tag" *ngFor="let t of asset.tags">{{ t }}</span>
+        </dd>
+      </dl>
+      <div class="usage">
+        <h3>Utilisé par</h3>
+        <p *ngIf="detailLoading()">Chargement…</p>
+        <p *ngIf="!detailLoading() && asset.usage?.length === 0" class="empty">
+          Aucun template ne référence encore cet asset.
+        </p>
+        <ul *ngIf="asset.usage?.length">
+          <li *ngFor="let u of asset.usage">
+            <code>{{ u.template_slug }}</code> · slot <code>{{ u.asset_key }}</code>
+            <span class="meta">depuis {{ u.bound_at | date:'short' }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <footer>
+      <button type="button" class="btn-danger" (click)="deleteSelected()">Supprimer</button>
+      <a class="btn-secondary" [href]="asset.url" target="_blank" rel="noopener">Ouvrir l'asset</a>
+      <button type="button" class="btn-secondary" (click)="closeDetail()">Fermer</button>
+    </footer>
+  </div>
+</div>

@@ -186,6 +186,36 @@ export const routes: Routes = [
           ),
       },
       {
+        // ADR-125 — Library globale d'assets Studio (super_admin/admin/operator)
+        path: 'templates-studio/admin/assets/library',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () =>
+          import(
+            './features/templates-studio/admin/asset-library/asset-library.component'
+          ).then((m) => m.AssetLibraryComponent),
+      },
+      {
+        // ADR-125 — Vue catalogue des templates et leurs bindings
+        path: 'templates-studio/admin/assets',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () =>
+          import(
+            './features/templates-studio/admin/template-bindings/template-bindings.component'
+          ).then((m) => m.TemplateBindingsComponent),
+      },
+      {
+        // ADR-125 — Bindings d'un template précis
+        path: 'templates-studio/admin/assets/:slug',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin', 'admin', 'operator'] },
+        loadComponent: () =>
+          import(
+            './features/templates-studio/admin/template-bindings/template-bindings.component'
+          ).then((m) => m.TemplateBindingsComponent),
+      },
+      {
         // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
         path: 'content/templates-remotion/assets',
         canActivate: [roleGuard],

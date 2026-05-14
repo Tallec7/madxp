@@ -12,6 +12,13 @@ import type {
   RenderDistributionResult,
   RenderRequestCreated,
   RenderRequestSnapshot,
+  StudioAsset,
+  StudioAssetListFilters,
+  StudioAssetListResult,
+  StudioAssetUploadResult,
+  StudioAssetWithUsage,
+  TemplateAssetBinding,
+  TemplateAssetBindingsResult,
   TemplateSummary,
   UpdatePlayerInput,
 } from './templates-studio.types';
@@ -239,6 +246,123 @@ export class TemplatesStudioService {
   removePlayerGrant(playerId: string, siteId: string): Observable<void> {
     return this.api
       .delete<void>(`/templates-studio/players/${playerId}/grants/${siteId}`)
+      .pipe(map(() => undefined));
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ADR-125 — Asset library + bindings (Phase 1.5, super_admin/admin/operator)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  listStudioAssets(
+    filters: StudioAssetListFilters = {},
+  ): Observable<StudioAssetListResult> {
+    const params = new URLSearchParams();
+    if (filters.tag) params.set('tag', filters.tag);
+    if (filters.mime) params.set('mime', filters.mime);
+    if (filters.search) params.set('search', filters.search);
+    if (filters.limit !== undefined) params.set('limit', String(filters.limit));
+    if (filters.offset !== undefined) params.set('offset', String(filters.offset));
+    const qs = params.toString();
+    interface Response {
+      success: boolean;
+      data: StudioAssetListResult;
+    }
+    return this.api
+      .get<Response>(`/templates-studio/assets${qs ? `?${qs}` : ''}`)
+      .pipe(map((res) => res.data));
+  }
+
+  getStudioAsset(assetId: string): Observable<StudioAssetWithUsage> {
+    interface Response {
+      success: boolean;
+      data: StudioAssetWithUsage;
+    }
+    return this.api
+      .get<Response>(`/templates-studio/assets/${assetId}`)
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Upload multipart d'un asset. Le serveur déduplique par checksum SHA256 :
+   * si le contenu a déjà été uploadé, retourne la row existante avec
+   * `deduplicated: true` (zéro doublon FTP, l'appelant peut binder pareil).
+   */
+  uploadStudioAsset(
+    file: File,
+    options: { tags?: string[]; filename?: string } = {},
+  ): Observable<StudioAssetUploadResult> {
+    const form = new FormData();
+    form.append('asset', file);
+    if (options.tags && options.tags.length > 0) {
+      // JSON encoded — le backend support array OR JSON string OR CSV.
+      form.append('tags', JSON.stringify(options.tags));
+    }
+    if (options.filename) {
+      form.append('filename', options.filename);
+    }
+    interface Response {
+      success: boolean;
+      data: StudioAssetUploadResult;
+    }
+    return this.api
+      .upload<Response>('/templates-studio/assets', form)
+      .pipe(map((res) => res.data));
+  }
+
+  updateStudioAssetMetadata(
+    assetId: string,
+    input: { filename?: string; tags?: string[] },
+  ): Observable<StudioAsset> {
+    interface Response {
+      success: boolean;
+      data: StudioAsset;
+    }
+    return this.api
+      .patch<Response>(`/templates-studio/assets/${assetId}`, input)
+      .pipe(map((res) => res.data));
+  }
+
+  deleteStudioAsset(assetId: string): Observable<void> {
+    return this.api
+      .delete<void>(`/templates-studio/assets/${assetId}`)
+      .pipe(map(() => undefined));
+  }
+
+  getTemplateAssetBindings(slug: string): Observable<TemplateAssetBindingsResult> {
+    interface Response {
+      success: boolean;
+      data: TemplateAssetBindingsResult;
+    }
+    return this.api
+      .get<Response>(`/templates-studio/templates/${slug}/asset-bindings`)
+      .pipe(map((res) => res.data));
+  }
+
+  bindTemplateAsset(
+    slug: string,
+    assetKey: string,
+    assetId: string,
+  ): Observable<TemplateAssetBinding> {
+    interface Response {
+      success: boolean;
+      data: TemplateAssetBinding;
+    }
+    return this.api
+      .put<Response>(
+        `/templates-studio/templates/${slug}/asset-bindings/${assetKey}`,
+        { asset_id: assetId },
+      )
+      .pipe(map((res) => res.data));
+  }
+
+  deleteTemplateAssetBinding(
+    slug: string,
+    assetKey: string,
+  ): Observable<void> {
+    return this.api
+      .delete<void>(
+        `/templates-studio/templates/${slug}/asset-bindings/${assetKey}`,
+      )
       .pipe(map(() => undefined));
   }
 }
