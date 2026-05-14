@@ -1,0 +1,216 @@
+# Templates Studio V1 — Guide de portage
+
+> **Audience** : développeur (toi ou futur teammate) qui ajoute un template au système V1 code-driven.
+> **Pré-requis** : avoir lu `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/`) et compris la philosophie V1 vs v2 data-driven (voir `docs/specs/features/templates-studio.spec.md`).
+> **Cible** : ajouter un nouveau template en **<2h** une fois le `.tsx` Remotion fonctionnel en local.
+
+---
+
+## Concept en 30 secondes
+
+Un template V1 = **3 artefacts co-localisés** dans `studio-render-server/src/templates/<slug>/` :
+
+| Fichier            | Rôle                                                                           |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `manifest.json`    | Contrat déclaratif : inputs UI, bindings vers brand kit/joueurs, format vidéo  |
+| `Composition.tsx`  | Le composant Remotion (props typées, animations, assets)                       |
+| `Root.tsx` (entry) | Enregistrement de la `<Composition>` (modifié à chaque ajout, fichier partagé) |
+
+Le central-server lit le `manifest.json` au boot via `seed-templates-studio-manifests.ts`, qui upsert dans `studio_templates` (DB). Le dashboard dérive le formulaire UI à partir de `inputSchema`. Au moment du render, le worker délègue à `studio-render-server` qui résout les bindings (cascade `input < brandKit < manifest defaults`) et appelle `renderMedia()`/`renderStill()`.
+
+---
+
+## Étapes pas-à-pas
+
+### 1. Créer le dossier
+
+```bash
+mkdir -p studio-render-server/src/templates/<slug>/
+```
+
+Convention : `<slug>` en `snake_case`, court, descriptif. Ex : `but_generique`, `entree_joueur`, `faits_de_jeu`.
+
+### 2. Écrire `manifest.json`
+
+Modèle minimal :
+
+```json
+{
+  "id": "<slug>",
+  "version": "1.0.0",
+  "label": "Nom affiché dans l'UI",
+  "kind": "video",
+  "description": "1 phrase décrivant le rendu produit",
+
+  "inputSchema": {
+    "type": "object",
+    "required": ["minute"],
+    "properties": {
+      "minute": { "type": "integer", "minimum": 1, "maximum": 130, "label": "Minute" },
+      "scorerPlayerId": { "type": "string", "ref": "Player", "label": "Buteur" }
+    }
+  },
+
+  "bindings": {
+    "minute": { "source": "input.minute" },
+    "scorerName": { "source": "input.scorerPlayerId", "transform": "player.fullName" },
+    "scorerPhoto": { "source": "input.scorerPlayerId", "transform": "player.cutoutUrl" },
+    "clubName": { "source": "brandKit.clubName" },
+    "clubLogo": { "source": "brandKit.logos.primary" },
+    "primaryColor": { "source": "brandKit.colors.primary" }
+  },
+
+  "format": { "width": 1080, "height": 1920, "fps": 30, "durationInFrames": 180 },
+  "compositionId": "<NomCompositionPascalCase>"
+}
+```
+
+**Règles** :
+
+- `id` doit être identique au nom du dossier
+- `compositionId` doit matcher EXACTEMENT le `id` passé à `<Composition id="...">` dans `Root.tsx`
+- `inputSchema` est un sous-ensemble JSON Schema (les types supportés par le form generator dashboard : `string`, `integer`, `number`, `boolean`, `enum`)
+- `ref: "Player"` sur un `string` indique que le champ doit être pické via le PlayerPicker
+- `bindings` listent les **3 sources** possibles :
+  - `input.<key>` (avec ou sans `transform`)
+  - `brandKit.<path>` (chemin pointé dans la brand kit du club)
+  - `literal: <value>` (valeur fixe, défaut au manifest)
+
+### 3. Écrire `Composition.tsx`
+
+Le composant reçoit les **bindings résolus** via `props`. Pas de fetch dans le composant — tout vient des props.
+
+```tsx
+import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
+
+export interface MyTemplateProps {
+  scorerName: string;
+  scorerPhoto: string; // URL résolue par le binding player.cutoutUrl
+  minute: number;
+  clubName: string;
+  clubLogo: string;
+  primaryColor: string;
+}
+
+export const MyTemplate: React.FC<MyTemplateProps> = ({
+  scorerName,
+  scorerPhoto,
+  minute,
+  clubName,
+  clubLogo,
+  primaryColor,
+}) => {
+  const frame = useCurrentFrame();
+  const opacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: primaryColor, opacity }}>
+      <img src={scorerPhoto} alt={scorerName} />
+      <h1>{scorerName}</h1>
+      <p>{minute}'</p>
+    </AbsoluteFill>
+  );
+};
+```
+
+**Règles** :
+
+- Tester en local d'abord avec Remotion Studio (`npm run studio` dans `studio-render-server/`)
+- Pas d'import depuis `central-server/` ou `central-dashboard/` (smoke "no legacy import" enforced — cf. `.claude/rules/templates.md`)
+- Pas d'appel `fetch`/`axios` dans le composant — tout vient des props
+- Assets statiques (logos génériques, masks, fonts) → `studio-render-server/public/` (servi par express.static + déployé via `lftp mirror` au boot Railway)
+- Assets dynamiques (logo club, photo joueur) → URLs FTP absolues dans les props (résolues via brand kit / studio_players)
+
+### 4. Enregistrer dans `Root.tsx`
+
+```tsx
+// studio-render-server/src/Root.tsx
+import { MyTemplate } from './templates/<slug>/Composition';
+
+<Composition
+  id="<NomCompositionPascalCase>" // doit matcher manifest.compositionId
+  component={MyTemplate}
+  durationInFrames={180}
+  fps={30}
+  width={1080}
+  height={1920}
+  defaultProps={{
+    // valeurs par défaut pour Remotion Studio (preview locale)
+    scorerName: 'PRÉNOM NOM',
+    scorerPhoto: staticFile('players/placeholder.png'),
+    minute: 42,
+    clubName: 'NOM DU CLUB',
+    clubLogo: staticFile('logo_club.png'),
+    primaryColor: '#FF0000',
+  }}
+/>;
+```
+
+### 5. Tester en local
+
+```bash
+# 1. Preview Remotion Studio (visuel, hot reload)
+cd studio-render-server
+npm run studio
+# → ouvre http://localhost:3000 — sélectionner ton template dans la sidebar
+
+# 2. Bundle + render headless (proche de la prod)
+cd ..
+npm run dev:seed                              # seed central + DB locale
+cd central-server && npm run dev              # démarre central :3001
+cd ../studio-render-server && npm run studio:server  # render-server :5175
+# → Dans le dashboard local, /templates-studio doit lister ton template
+# → Lancer un render → attendu MP4 dans studio-render-server/renders/
+```
+
+### 6. Smoke + commit
+
+```bash
+cd central-server && npm run test:smoke:smart
+# → smoke-templates-studio-* doivent passer
+# → smoke-spec-coverage doit passer (si tu as ajouté un ADR, le référencer en SPEC)
+```
+
+```bash
+git add studio-render-server/src/templates/<slug>/ studio-render-server/src/Root.tsx
+git commit -m "feat(studio): add template <slug> (V1)"
+```
+
+### 7. Deploy
+
+- Merge → push `main` → Railway rebuild auto `studio-render-server` (path filter `studio-render-server/**`)
+- Au boot du nouveau central-server, le seed `seed-templates-studio-manifests.ts` upsert ton manifest dans `studio_templates`
+- Le template apparaît dans `/templates-studio` côté dashboard sans déploiement frontend (le form est généré dynamiquement à partir de `inputSchema`)
+
+---
+
+## Pièges fréquents
+
+| Symptôme                                            | Cause probable                                                                     | Fix                                                                                               |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Template absent du dropdown UI                      | manifest pas seedé (boot oublié) ou `id` ≠ nom du dossier                          | Reboot central-server local ou vérifier l'`id`                                                    |
+| Render échoue "Unknown composition"                 | `compositionId` du manifest ne match pas l'`id` du `<Composition>` dans `Root.tsx` | Aligner les deux strings                                                                          |
+| Photo joueur s'affiche brute (non détourée)         | binding pointe `photo_url` au lieu de `cutoutUrl`, ou rembg pas encore traité      | Utiliser `transform: "player.cutoutUrl"`, attendre cutout ready (~30s)                            |
+| Asset 404 en prod mais OK en local                  | Asset manquant sur FTP Hostinger                                                   | `lftp` upload manuel + relancer `studio-render-server` (re-mirror au boot)                        |
+| Render lent (>3min)                                 | Composition trop longue (durationInFrames élevé) ou assets HD non optimisés        | Réduire la durée, transcoder les assets (cf. `lens_flare` historique)                             |
+| Hot reload Remotion Studio ne prend pas le manifest | Studio ne lit que `Root.tsx`, pas le manifest                                      | Le manifest n'impacte que la prod — `defaultProps` du `<Composition>` est ce que tu vois en local |
+
+---
+
+## Ce qui n'est PAS dans le scope V1
+
+- Édition visuelle WYSIWYG du template (drag-drop des éléments) — c'est l'admin UX du legacy v2 data-driven, pas V1
+- Variantes auto multi-format (1 template = 1 format en V1)
+- Upload d'assets statiques via UI (pour l'instant : commit dans `studio-render-server/public/` ou push manuel FTP)
+
+---
+
+## Référence
+
+- Spec source : `studio-template/templates-remotion/spec/STUDIO_V1.md` §5 (manifest contract)
+- Recette E2E : [STUDIO-V1-RECIPE.md](../runbooks/STUDIO-V1-RECIPE.md)
+- Provisionnement Railway : [STUDIO-V1-RAILWAY-PROVISION.md](../runbooks/STUDIO-V1-RAILWAY-PROVISION.md)
+- Templates V1 existants (référence à recopier) :
+  - `studio-render-server/src/templates/but_generique/`
+  - `studio-render-server/src/templates/entree_joueur/`
+  - `studio-render-server/src/templates/faits_de_jeu/`
