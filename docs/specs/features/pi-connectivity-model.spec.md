@@ -141,6 +141,16 @@ Les gaps ci-dessus sont adressés par **[ADR-122](../../adr/ADR-122-pi-connectiv
 
 Statut implémentation : **validé par le fondateur (2026-05-14)**, à implémenter dans une PR dédiée.
 
+## Cas d'edge
+
+- **Pi flip-flop rapide (3-16s)** : Railway peut couper la connexion Socket.IO en moins de 16s sur du load balancing. L'alerte `siteOffline` utilise `OFFLINE_GRACE_PERIOD_MS = 60s` pour ne pas générer de faux positifs. Conséquence : un Pi qui flip-flop en boucle (jamais stable > 60s) reste perçu comme "offline" sans alerte intermittente.
+- **Pi neuf jamais bootstrappé** : sans `network_profile` détecté en DB, le check 24h-mesh ne s'applique pas. Pas non plus d'alerte générique aujourd'hui. Le Pi est invisible jusqu'à ce qu'un humain remarque dans le dashboard.
+- **Pi reconnecte 1 seconde puis re-disconnect** : un tick CRON drain peut le manquer (latence 30s). Au prochain tick, le Pi est de nouveau offline. Les commandes pending restent. C'est OK pour la queue, mais l'alerte `siteOffline` peut être créée et la résolution manuelle n'a jamais lieu.
+- **`last_seen_at` figé mais Pi en réalité online** : si un bug dans `socket.service.ts` empêche la maj `last_seen_at` (régression heartbeat ou config-sync), le Pi paraîtra offline indéfiniment côté dashboard alors qu'il fonctionne. À diagnostiquer via logs heartbeat côté Pi.
+- **Horloge Pi désynchronisée NTP** : si le Pi ne sait pas l'heure, le `last_local_edit_at` envoyé au cloud peut être dans le passé (Pi neuf sans NTP au boot) ou dans le futur (RTC dérive). Impact sur 3-way merge (ADR-120 Phase 4) : à mitiger côté cloud en clampant les timestamps à `[NOW() - 1 an, NOW()]`.
+- **Notification télécommande "Dernière sync il y a X jours" affiche 0** alors que le Pi est offline : si `last-cloud-sync.json` (Option α ADR-122) est manquant ou corrompu sur le filesystem Pi, l'endpoint `/api/connectivity-status` peut renvoyer un état faux. Fallback : afficher "Sync inconnue" plutôt que "0 j".
+- **Email rappel envoyé après que le club a déjà reconnecté** : race CRON quotidien vs reconnexion Pi. Mitigation Phase 3 ADR-122 : vérifier `last_seen_at` au moment de l'envoi email (et pas seulement au moment du SELECT batch initial).
+
 ## Ce qui n'est PAS dans cette SPEC
 
 - **Garde-fou côté Pi qui force la reconnexion** : le Pi tente de se reconnecter quand internet est disponible, mais ne demande pas activement de la connectivité. Pas dans le scope de cette spec (et probablement pas faisable techniquement sans matériel additionnel type 4G dongle).

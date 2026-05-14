@@ -117,6 +117,15 @@ Le statut "queued" est rendu dans le dashboard via :
 - **REALTIME_ONLY** : la liste est en dur dans le code. Toute nouvelle commande synchrone doit y être ajoutée explicitement, sinon elle sera queuée silencieusement (= échec UX silencieux pour les commandes qui attendent une réponse live).
 - **Pas de TTL par défaut** : `expires_at` à NULL signifie qu'une commande peut traîner indéfiniment dans la queue si elle échoue à `max_attempts` mais que le Pi n'est jamais reconnecté. (En pratique : DELETE après `max_attempts`, donc pas un vrai souci.)
 
+## Cas d'edge
+
+- **Pi reconnecte pendant un drain en cours** : le tick CRON 30s est en train d'itérer sur `getConnectedSites()`. Si un Pi reconnecte juste après l'itération mais avant la fin du tick, ses commandes seront drainées au tick suivant (latence max 30s supplémentaires).
+- **Commande émise pendant que le Pi se connecte mais avant `register`** : race subscribe → register Socket.IO. La commande peut être émise dans une room vide. Mitigé par le retry CRON (la commande reste dans `pending_commands` jusqu'à ack OK), mais latence visible côté utilisateur.
+- **`max_attempts` atteint** : la commande est DELETE de la queue + log warn. **Aucun retry au-delà**, aucune alerte automatique. Si la commande était critique (ex: rotation PSK), il faut la ré-émettre manuellement.
+- **`expires_at` dépassé mais commande encore queueée** : `cleanup_expired_pending_commands()` n'est pas câblée à un CRON aujourd'hui. La commande reste en DB jusqu'à intervention humaine. Pas critique en pratique car les commandes échouent à `max_attempts` avant.
+- **Pi connecté mais socket zombie** (room non-membre, cf. ADR-099) : `socketService.getConnectedSites()` peut inclure un siteId dont le socket est mort. Le drain emit dans le vide, ack timeout, `attempts++`. Au bout de `max_attempts`, la commande tombe sans que le vrai Pi (qui reconnecte plus tard) ne la voie jamais. Mitigation : vérification room membership avant emit (cf. `.claude/rules/services.md` anti-pattern #2).
+- **Plusieurs commandes du même type queueées pour le même site** : la queue ne déduplique pas. Si le dashboard envoie 5× `sync_profiles` à un Pi offline, 5 rows sont créées et délivrées en séquence au reconnect. Pour idempotence applicative, c'est OK (chaque sync_profiles est idempotent), mais bruyant.
+
 ## Ce qui n'est PAS dans cette SPEC
 
 - **Direction Pi → cloud** : analytics batch, heartbeat, push-back config (ADR-120 Phase 4) passent par REST, pas la queue. Hors scope.
