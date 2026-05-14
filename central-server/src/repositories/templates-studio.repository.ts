@@ -250,15 +250,25 @@ class SiteBrandKitRepositoryImpl {
   }
 
   async upsert(input: UpsertSiteBrandKitInput): Promise<SiteBrandKitRow> {
+    // PUT partiel : un payload peut n'envoyer que `colors` (sans logos/fonts).
+    // INSERT path → on coalesce vers `{}` pour respecter NOT NULL.
+    // UPDATE path → on coalesce vers la valeur existante via `$N::jsonb` direct
+    // (pas EXCLUDED, qui aurait déjà été coalesced à `{}` côté VALUES → écraserait).
     const result = await query<SiteBrandKitRow>(
       `INSERT INTO site_brand_kits
          (site_id, club_name, colors_json, logos_json, fonts_json)
-       VALUES ($1, $2, $3, $4, $5)
+       VALUES (
+         $1,
+         $2,
+         COALESCE($3::jsonb, '{}'::jsonb),
+         COALESCE($4::jsonb, '{}'::jsonb),
+         COALESCE($5::jsonb, '{}'::jsonb)
+       )
        ON CONFLICT (site_id) DO UPDATE SET
          club_name = COALESCE(EXCLUDED.club_name, site_brand_kits.club_name),
-         colors_json = COALESCE(EXCLUDED.colors_json, site_brand_kits.colors_json),
-         logos_json = COALESCE(EXCLUDED.logos_json, site_brand_kits.logos_json),
-         fonts_json = COALESCE(EXCLUDED.fonts_json, site_brand_kits.fonts_json),
+         colors_json = COALESCE($3::jsonb, site_brand_kits.colors_json),
+         logos_json = COALESCE($4::jsonb, site_brand_kits.logos_json),
+         fonts_json = COALESCE($5::jsonb, site_brand_kits.fonts_json),
          updated_at = NOW()
        RETURNING *`,
       [
