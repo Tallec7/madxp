@@ -7,6 +7,8 @@ import type {
   BrandKitUpsertInput,
   CreatePlayerInput,
   Player,
+  RenderDistributionInput,
+  RenderDistributionResult,
   RenderRequestCreated,
   RenderRequestSnapshot,
   TemplateSummary,
@@ -44,6 +46,11 @@ interface PlayersListResponse {
 interface PlayerResponse {
   success: boolean;
   data: Player;
+}
+
+interface RenderDistributionResponse {
+  success: boolean;
+  data: RenderDistributionResult;
 }
 
 /**
@@ -147,6 +154,28 @@ export class TemplatesStudioService {
       .upload<PlayerResponse>(
         `/templates-studio/sites/${siteId}/players/${playerId}/photo`,
         form,
+      )
+      .pipe(map((res) => res.data));
+  }
+
+  /**
+   * Distribue un render `ready` vers la bibliothèque vidéo de N sites.
+   *
+   * Deux modes :
+   *  - `'push'`  : crée 1 row `videos` par site cible (`uploaded_for_site_id = site_id`).
+   *  - `'grant'` : crée 1 row globale + N grants ADR-082 (asset partagé sans dup).
+   *
+   * Idempotent côté backend : re-cliquer "Distribuer" avec les mêmes site_ids
+   * ne crée pas de doublons.
+   */
+  distributeRender(
+    renderId: string,
+    payload: RenderDistributionInput,
+  ): Observable<RenderDistributionResult> {
+    return this.api
+      .post<RenderDistributionResponse>(
+        `/templates-studio/render-requests/${renderId}/distribute`,
+        payload,
       )
       .pipe(map((res) => res.data));
   }

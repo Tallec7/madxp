@@ -1224,6 +1224,17 @@ export const templatesStudioSchemas = {
     photo_raw_url: Joi.string().uri().optional().allow(null, ''),
     photo_cutout_url: Joi.string().uri().optional().allow(null, ''),
   }).min(1),
+
+  // POST /render-requests/:id/distribute body.
+  // Distribution multi-sites des renders : `mode='push'` crée une row `videos`
+  // par site cible (1 row par site, `uploaded_for_site_id = site_id`) ; `mode='grant'`
+  // crée 1 row globale (`uploaded_for_site_id = NULL`) + N grants ADR-082.
+  // `category` est optionnelle (défaut côté controller : 'STUDIO_RENDER').
+  distributeRender: Joi.object({
+    mode: Joi.string().valid('push', 'grant').required(),
+    site_ids: Joi.array().items(Joi.string().uuid()).min(1).max(200).required(),
+    category: Joi.string().max(80).optional(),
+  }),
 };
 
 // ============================================================================

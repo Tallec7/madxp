@@ -263,6 +263,32 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
   }
 
   /**
+   * Cherche une row `videos` par `storage_path` + `uploaded_for_site_id`.
+   * Utilisé pour l'idempotence des distributions Studio V1 :
+   * - `siteId = null` : recherche d'une row globale pour ce path.
+   * - `siteId = '<uuid>'` : recherche d'une row taguée pour ce site précis.
+   *
+   * Le `IS NOT DISTINCT FROM` matche aussi NULL = NULL côté Postgres.
+   */
+  async findByStoragePathForSite(
+    storagePath: string,
+    siteId: string | null
+  ): Promise<VideoRow | null> {
+    const result = await query<VideoRow>(
+      `SELECT id, filename, original_name, category, subcategory,
+              file_size, duration, storage_path as url,
+              thumbnail_url, metadata, checksum, uploaded_for_site_id,
+              created_at, updated_at
+       FROM videos
+       WHERE storage_path = $1
+         AND uploaded_for_site_id IS NOT DISTINCT FROM $2
+       LIMIT 1`,
+      [storagePath, siteId]
+    );
+    return result.rows[0] || null;
+  }
+
+  /**
    * Cree une video avec toutes les colonnes (upload standard).
    */
   async create(input: CreateVideoInput): Promise<VideoRow> {

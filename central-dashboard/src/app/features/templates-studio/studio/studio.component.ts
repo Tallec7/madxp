@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { DistributeRenderModalComponent } from '../shared/distribute-render-modal.component';
 import { PlayerPickerComponent } from '../shared/player-picker.component';
 import { SitePickerComponent } from '../shared/site-picker.component';
 import { TemplatesStudioContextService } from '../templates-studio-context.service';
@@ -17,6 +18,7 @@ import { TemplatesStudioService } from '../templates-studio.service';
 import type {
   ManifestInputProperty,
   ManifestInputSchema,
+  RenderDistributionResult,
   RenderRequestSnapshot,
   TemplateSummary,
 } from '../templates-studio.types';
@@ -38,6 +40,7 @@ import type {
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
+    DistributeRenderModalComponent,
     PlayerPickerComponent,
     SitePickerComponent,
   ],
@@ -69,6 +72,10 @@ export class StudioComponent implements OnInit, OnDestroy {
   submitting = signal(false);
   private pollHandle: ReturnType<typeof setInterval> | null = null;
   private pollSub: Subscription | null = null;
+
+  // Distribution modal
+  showDistributeModal = signal(false);
+  distributionFlash = signal<string | null>(null);
 
   selectedTemplate = computed(() => {
     const id = this.selectedId();
@@ -220,5 +227,30 @@ export class StudioComponent implements OnInit, OnDestroy {
     this.jobStatus.set(null);
     this.jobError.set(null);
     this.submitting.set(false);
+    this.showDistributeModal.set(false);
+    this.distributionFlash.set(null);
+  }
+
+  openDistributeModal(): void {
+    if (this.jobStatus()?.status !== 'ready') return;
+    this.distributionFlash.set(null);
+    this.showDistributeModal.set(true);
+  }
+
+  closeDistributeModal(): void {
+    this.showDistributeModal.set(false);
+  }
+
+  onDistributed(result: RenderDistributionResult): void {
+    this.showDistributeModal.set(false);
+    const videos = result.videos_created.length;
+    const grants = result.grants_created.length;
+    const parts: string[] = [];
+    if (videos > 0) parts.push(`${videos} vidéo(s) créée(s)`);
+    if (grants > 0) parts.push(`${grants} grant(s) ouvert(s)`);
+    this.distributionFlash.set(
+      `Distribution réussie — ${parts.join(', ') || 'aucune action requise'}.`,
+    );
+    setTimeout(() => this.distributionFlash.set(null), 5_000);
   }
 }
