@@ -9,6 +9,7 @@
  */
 
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticate, requireClubScope } from '../middleware/auth';
 import {
   validate,
@@ -27,7 +28,16 @@ import {
   createPlayer,
   updatePlayer,
   deletePlayer,
+  uploadPlayerPhoto,
 } from '../controllers/templates-studio.controller';
+
+// Multer en mémoire pour photos brutes — 8 MB max (les photos high-res de
+// shooting peuvent dépasser 5 MB). MimeType filter côté controller pour
+// retourner un message FR clair (multer rejette en silence sinon).
+const uploadPlayerPhotoMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+});
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
 // (admin, operator, super_admin) bypassent ; club users voient `siteId === user.site_id`.
@@ -109,6 +119,18 @@ router.delete(
   validateParams(paramSchemas.siteIdAndPlayerId),
   requireClubScope(siteIdFromParams),
   deletePlayer,
+);
+
+// Upload photo brute multipart (S4-B). FormData avec field `photo`.
+// Met à jour photo_raw_url + cutout_status='pending' (réveille worker rembg S4-C).
+router.post(
+  '/sites/:siteId/players/:playerId/photo',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteIdAndPlayerId),
+  requireClubScope(siteIdFromParams),
+  uploadPlayerPhotoMiddleware.single('photo'),
+  uploadPlayerPhoto,
 );
 
 export default router;

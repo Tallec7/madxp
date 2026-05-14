@@ -13,6 +13,7 @@
  * créer des renders pour le compte d'un autre site.
  */
 
+import { createHash } from 'crypto';
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
@@ -28,6 +29,7 @@ import {
   resolveBindings,
   type ManifestBindings,
 } from '../services/templates-studio.service';
+import { uploadFileToFtp, getFtpPublicUrl } from '../config/ftp-storage';
 
 const INTERNAL_ROLES = ['super_admin', 'admin', 'operator'] as const;
 type InternalRole = (typeof INTERNAL_ROLES)[number];
@@ -422,6 +424,117 @@ export const deletePlayer = async (req: AuthRequest, res: Response): Promise<voi
     res.status(204).send();
   } catch (error) {
     logger.error('templates-studio: delete player failed', {
+      error,
+      site_id: siteId,
+      player_id: playerId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// POST /api/templates-studio/sites/:siteId/players/:playerId/photo (S4-B)
+// Upload multipart photo brute. Met à jour photo_raw_url + cutout_status='pending'
+// → réveille le worker rembg (S4-C, fallback : opérateur peut copier
+// photo_raw_url en photo_cutout_url manuellement via PUT updatePlayer).
+// ────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const PHOTO_EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+// AuthRequest étend express.Request qui inclut déjà `file?: Express.Multer.File`
+// via declaration merging du package @types/multer (transitif). Pas besoin
+// d'interface custom — typer juste comme AuthRequest et lire `req.file`.
+export const uploadPlayerPhoto = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId, playerId } = req.params;
+  const file = req.file;
+
+  if (!file || file.size === 0) {
+    res.status(400).json({ success: false, error: 'Aucun fichier fourni' });
+    return;
+  }
+  if (!ALLOWED_PHOTO_MIMES.includes(file.mimetype)) {
+    res.status(400).json({
+      success: false,
+      error: `Format non supporté (${file.mimetype}). Accepté : JPEG, PNG, WebP.`,
+    });
+    return;
+  }
+
+  try {
+    // Verify player belongs to site (defense-in-depth tenant guard).
+    const existing = await playerRepository.findById(playerId);
+    if (!existing || existing.site_id !== siteId) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+
+    // Hash content-addressable pour éviter les collisions FTP si le même
+    // joueur est ré-uploadé. Garde versionning implicite (cleanup futur).
+    const hash = createHash('sha1')
+      .update(file.buffer)
+      .digest('hex')
+      .slice(0, 12);
+    const ext = PHOTO_EXT_BY_MIME[file.mimetype];
+    const storagePath = `players/${siteId}/${playerId}-raw-${hash}.${ext}`;
+
+    const result = await uploadFileToFtp(file.buffer, storagePath, file.mimetype);
+    if (!result) {
+      res.status(502).json({
+        success: false,
+        error: 'Upload FTP échoué — réessayez',
+      });
+      return;
+    }
+    const publicUrl = getFtpPublicUrl(storagePath);
+
+    // Update : photo_raw_url + cutout_status='pending' (re-trigger worker rembg).
+    const updated = await playerRepository.update(playerId, siteId, {
+      photo_raw_url: publicUrl,
+    });
+    if (!updated) {
+      res.status(404).json({ success: false, error: 'Joueur supprimé entre-temps' });
+      return;
+    }
+
+    logger.info('templates-studio: player photo uploaded', {
+      site_id: siteId,
+      player_id: playerId,
+      user_id: req.user.id,
+      mime: file.mimetype,
+      size: file.size,
+      storage_path: storagePath,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: updated.id,
+        site_id: updated.site_id,
+        prenom: updated.prenom,
+        nom: updated.nom,
+        numero: updated.numero,
+        poste: updated.poste,
+        photo_raw_url: updated.photo_raw_url,
+        photo_cutout_url: updated.photo_cutout_url,
+        cutout_status: updated.cutout_status,
+        created_at: updated.created_at,
+        updated_at: updated.updated_at,
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: upload player photo failed', {
       error,
       site_id: siteId,
       player_id: playerId,
