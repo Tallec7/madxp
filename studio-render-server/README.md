@@ -64,15 +64,67 @@ GET  /renders/<filename>
   → MP4/PNG produit (servi par express.static)
 ```
 
-## TODO archi prod
+## Déploiement Railway (cf [ADR-118](../docs/adr/ADR-118-studio-render-server-deployment.md) Accepté)
 
-Le déploiement Railway de ce service n'est pas tranché. Trois options :
+Container Railway dédié — Dockerfile fourni dans ce dossier.
 
-1. **Container Railway dédié** (`Dockerfile` + `node studio-poc/server.mjs` + assets fetched depuis FTP au boot)
-2. **Process colocalisé** avec central-server via `child_process` (mémoire partagée mais surcharge)
-3. **Lambda render à la demande** (cold start vs cache de bundle)
+### Setup initial (1 fois)
 
-À documenter dans un ADR léger avant de pousser un premier déploiement.
+1. **Upload assets sur FTP** — copier le contenu de `studio-template/templates-remotion/public/` vers `/neopro-video/studio-render-server-assets/` sur Hostinger. ~5 GB. À faire une fois manuellement, puis re-sync à chaque ajout d'asset.
+2. **Créer service Railway** :
+   - Source : ce dossier `studio-render-server/`
+   - Builder : Dockerfile (auto-détecté)
+   - Plan : Hobby $5/mois suffit (1-10 renders/jour V1)
+3. **Variables d'env Railway** :
+   - `FTP_HOST` = `72.60.93.193`
+   - `FTP_USER` = `u406531085.videos`
+   - `FTP_PASS` = (secret Railway)
+   - Optionnel : `FTP_ASSETS_PATH` (défaut `/neopro-video/studio-render-server-assets`), `ASSETS_FETCH_TIMEOUT` (défaut 300s)
+4. **Variable d'env central-server** (sur l'autre service Railway) :
+   - `STUDIO_RENDER_SERVER_URL` = `https://<this-service>.up.railway.app`
+   - Sans ça, le worker central tombe en fallback STUB (URL placeholder, pas de vrai MP4).
+
+### Boot lifecycle
+
+```
+docker run
+  ├── tini (zombie reaper, propage SIGTERM proprement)
+  └── bash scripts/start.sh
+       ├── bash scripts/fetch-assets.sh  ← lftp mirror FTP → public/ (~30s cold start)
+       └── exec node studio-poc/server.mjs  ← Express :PORT (Railway-injected)
+```
+
+### Logs au démarrage attendus
+
+```
+[fetch-assets] Mirroring /neopro-video/studio-render-server-assets → /app/public…
+[fetch-assets] ✅ 124 assets ready in /app/public
+[start] Starting studio render server on port 8080…
+[boot] bundling Remotion entry…
+[ready] Studio render server on http://0.0.0.0:8080
+[boot] bundle ready: ...
+```
+
+### Smoke E2E manuel post-déploiement
+
+```bash
+# Healthcheck
+curl https://<service>.up.railway.app/api/health
+# → {"ok": true}
+
+# Render direct (FaitsDeJeu, le plus simple)
+curl -X POST https://<service>.up.railway.app/api/render \
+  -H "Content-Type: application/json" \
+  -d '{"compositionId":"FaitsDeJeu2Min","kind":"video","props":{"label":"2MIN"}}'
+# → {"url":"/renders/...mp4","cached":false,"durationMs":XXXXX}
+```
+
+### Limite : 1 service Railway = sequential
+
+Un seul container traite les renders un par un. Acceptable pour V1
+(1-10 renders/jour). Scale = bump replicas dans Railway settings + le
+worker `studio-render-worker.service.ts` côté central gère le multi-claim
+via `FOR UPDATE SKIP LOCKED` sur `render_requests`.
 
 ## Risque #1 du spec — no legacy import
 
