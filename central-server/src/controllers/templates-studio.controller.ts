@@ -22,10 +22,14 @@ import {
   renderRequestRepository,
   siteBrandKitRepository,
   playerRepository,
+  studioAssetRepository,
+  templateAssetBindingRepository,
   videoRepository,
   videoClubGrantRepository,
   type SiteBrandKitRow,
   type PlayerRow,
+  type StudioAssetRow,
+  type TemplateAssetBindingRow,
   type VideoRow,
 } from '../repositories';
 import { metricsService } from '../services/metrics.service';
@@ -1053,6 +1057,527 @@ export const distributeRender = async (
       error,
       request_id: id,
       mode,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADR-125 — Asset library + bindings (Phase 1.5)
+//
+// Pool global d'assets uploadés sur FTP, dédupliqué par checksum_sha256.
+// Bindings 1-pour-1 entre `manifest.requiredAssets[].key` et un asset.
+// Toutes les routes sont restreintes aux rôles internes (super_admin / admin /
+// operator) côté routes — cf templates-studio.routes.ts.
+// ────────────────────────────────────────────────────────────────────────────
+
+const ASSET_ALLOWED_MIMES_PREFIX = ['image/', 'video/', 'application/font-', 'font/'];
+const ASSET_ALLOWED_EXTRA_MIMES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/svg+xml',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+];
+
+function isAllowedAssetMime(mime: string): boolean {
+  if (ASSET_ALLOWED_EXTRA_MIMES.includes(mime)) return true;
+  return ASSET_ALLOWED_MIMES_PREFIX.some((prefix) => mime.startsWith(prefix));
+}
+
+function extForMime(mime: string, fallback = 'bin'): string {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/svg+xml': 'svg',
+    'image/gif': 'gif',
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/quicktime': 'mov',
+  };
+  if (map[mime]) return map[mime];
+  // Fallback : extraire le sous-type (image/foo → foo).
+  const match = mime.match(/\/([a-z0-9-]+)$/i);
+  return match ? match[1].toLowerCase() : fallback;
+}
+
+function parseTags(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((t) => (typeof t === 'string' ? t.trim() : ''))
+      .filter((t) => t.length > 0)
+      .slice(0, 20);
+  }
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    const trimmed = raw.trim();
+    // Tente JSON d'abord (FormData append d'un array stringifié), sinon CSV.
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parseTags(parsed);
+      } catch {
+        // fallthrough to CSV
+      }
+    }
+    return trimmed
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      .slice(0, 20);
+  }
+  return [];
+}
+
+function assetResponse(row: StudioAssetRow): {
+  id: string;
+  filename: string;
+  ftp_path: string;
+  url: string;
+  mime_type: string;
+  file_size: number;
+  checksum_sha256: string;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  tags: string[];
+  uploaded_by: string | null;
+  uploaded_at: Date;
+} {
+  return {
+    id: row.id,
+    filename: row.filename,
+    ftp_path: row.ftp_path,
+    url: getFtpPublicUrl(row.ftp_path),
+    mime_type: row.mime_type,
+    file_size: Number(row.file_size),
+    checksum_sha256: row.checksum_sha256,
+    width: row.width,
+    height: row.height,
+    duration_ms: row.duration_ms,
+    tags: row.tags ?? [],
+    uploaded_by: row.uploaded_by,
+    uploaded_at: row.uploaded_at,
+  };
+}
+
+// GET /api/templates-studio/assets
+export const listStudioAssets = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  try {
+    const tag = req.query.tag as string | undefined;
+    const mime = req.query.mime as string | undefined;
+    const search = req.query.search as string | undefined;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const offset = req.query.offset ? Number(req.query.offset) : 0;
+
+    // Support `mime=image/*` syntax → strip wildcard for prefix match.
+    const mimePrefix = mime ? mime.replace(/\*+$/, '').replace(/\/$/, '/') : undefined;
+
+    const { rows, total } = await studioAssetRepository.findFiltered({
+      tags: tag ? [tag] : undefined,
+      mimePrefix,
+      search,
+      limit,
+      offset,
+    });
+    res.json({
+      success: true,
+      data: {
+        assets: rows.map(assetResponse),
+        total,
+        limit,
+        offset,
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: list assets failed', { error });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// GET /api/templates-studio/assets/:assetId
+export const getStudioAsset = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { assetId } = req.params;
+  try {
+    const row = await studioAssetRepository.findById(assetId);
+    if (!row) {
+      res.status(404).json({ success: false, error: 'Asset introuvable' });
+      return;
+    }
+    const usage = await studioAssetRepository.findUsageById(assetId);
+    res.json({
+      success: true,
+      data: {
+        ...assetResponse(row),
+        usage: usage.map((u) => ({
+          template_slug: u.template_slug,
+          asset_key: u.asset_key,
+          bound_at: u.bound_at,
+        })),
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: get asset failed', { error, asset_id: assetId });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// POST /api/templates-studio/assets — multipart, file dans `asset`.
+export const uploadStudioAsset = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const file = req.file;
+  if (!file || file.size === 0) {
+    res.status(400).json({ success: false, error: 'Aucun fichier fourni' });
+    return;
+  }
+  if (!isAllowedAssetMime(file.mimetype)) {
+    res.status(400).json({
+      success: false,
+      error: `Format non supporté (${file.mimetype}). Accepté : image/* | video/* | font/*.`,
+    });
+    return;
+  }
+
+  try {
+    const checksum = createHash('sha256').update(file.buffer).digest('hex');
+    const tags = parseTags(req.body?.tags);
+    const requestedFilename =
+      typeof req.body?.filename === 'string' && req.body.filename.trim().length > 0
+        ? req.body.filename.trim().slice(0, 160)
+        : file.originalname || `asset.${extForMime(file.mimetype)}`;
+
+    // Dédup pré-upload : si le même contenu (checksum) existe déjà, on
+    // retourne la row existante sans re-upload FTP.
+    const existing = await studioAssetRepository.findByChecksum(checksum);
+    if (existing) {
+      logger.info('templates-studio: asset upload deduplicated', {
+        user_id: req.user.id,
+        checksum_sha256: checksum,
+        asset_id: existing.id,
+      });
+      res.status(200).json({
+        success: true,
+        data: { ...assetResponse(existing), deduplicated: true },
+      });
+      return;
+    }
+
+    // Path content-addressable : préfixe `studio-assets/<short-hash>-` puis
+    // filename sanitisé. Évite les collisions FTP même si 2 fichiers ont le
+    // même nom logique.
+    const ext = extForMime(file.mimetype);
+    const hashShort = checksum.slice(0, 12);
+    const ftpPath = `studio-assets/${hashShort}-${requestedFilename}`
+      // sanitize filename in path : alphanumériques, point, tiret, underscore.
+      .replace(/[^A-Za-z0-9._\-/]/g, '_');
+
+    const result = await uploadFileToFtp(file.buffer, ftpPath, file.mimetype);
+    if (!result) {
+      res.status(502).json({
+        success: false,
+        error: 'Upload FTP échoué — réessayez',
+      });
+      return;
+    }
+
+    const created = await studioAssetRepository.create({
+      filename: requestedFilename,
+      ftp_path: ftpPath,
+      mime_type: file.mimetype,
+      file_size: file.size,
+      checksum_sha256: checksum,
+      width: null,
+      height: null,
+      duration_ms: null,
+      tags,
+      uploaded_by: req.user.id,
+      // dimensions / duration : extraction lazy (Phase 1.6 si besoin) — pour
+      // l'instant restent NULL et l'UI affiche '—'.
+    });
+
+    logger.info('templates-studio: asset uploaded', {
+      user_id: req.user.id,
+      asset_id: created.id,
+      mime: file.mimetype,
+      size: file.size,
+      ftp_path: ftpPath,
+      ext, // tracé pour debug, pas exposé dans la réponse
+    });
+
+    res.status(201).json({
+      success: true,
+      data: assetResponse(created),
+    });
+  } catch (error) {
+    logger.error('templates-studio: upload asset failed', { error });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// PATCH /api/templates-studio/assets/:assetId — metadata (filename, tags).
+export const updateStudioAssetMetadata = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { assetId } = req.params;
+  const { filename, tags } = req.body as {
+    filename?: string;
+    tags?: string[];
+  };
+  try {
+    const row = await studioAssetRepository.updateMetadata(assetId, {
+      filename,
+      tags,
+    });
+    if (!row) {
+      res.status(404).json({ success: false, error: 'Asset introuvable' });
+      return;
+    }
+    logger.info('templates-studio: asset metadata updated', {
+      user_id: req.user.id,
+      asset_id: assetId,
+    });
+    res.json({ success: true, data: assetResponse(row) });
+  } catch (error) {
+    logger.error('templates-studio: update asset metadata failed', {
+      error,
+      asset_id: assetId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// DELETE /api/templates-studio/assets/:assetId — refus 409 si utilisé.
+export const deleteStudioAsset = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { assetId } = req.params;
+  try {
+    const usage = await studioAssetRepository.findUsageById(assetId);
+    if (usage.length > 0) {
+      res.status(409).json({
+        success: false,
+        error: `Asset utilisé par ${usage.length} binding(s) — retire les bindings avant de supprimer.`,
+        usage: usage.map((u) => ({
+          template_slug: u.template_slug,
+          asset_key: u.asset_key,
+        })),
+      });
+      return;
+    }
+    const deleted = await studioAssetRepository.deleteById(assetId);
+    if (!deleted) {
+      res.status(404).json({ success: false, error: 'Asset introuvable' });
+      return;
+    }
+    logger.info('templates-studio: asset deleted', {
+      user_id: req.user.id,
+      asset_id: assetId,
+    });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('templates-studio: delete asset failed', { error, asset_id: assetId });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// GET /api/templates-studio/templates/:slug/asset-bindings
+export const getTemplateAssetBindings = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { slug } = req.params;
+  try {
+    const template = await templateDefinitionRepository.findBySlug(slug);
+    if (!template) {
+      res.status(404).json({ success: false, error: 'Template introuvable' });
+      return;
+    }
+    const manifest = template.manifest_json as {
+      requiredAssets?: Array<{ key: string; filename?: string; mime?: string }>;
+    };
+    const required = manifest.requiredAssets ?? [];
+    const bindings: TemplateAssetBindingRow[] =
+      await templateAssetBindingRepository.findByTemplate(slug);
+
+    // Hydrate les bindings avec les rows d'assets (1 query par binding —
+    // jamais plus de 5-10 slots par template, OK).
+    const hydrated = await Promise.all(
+      bindings.map(async (b) => {
+        const asset = await studioAssetRepository.findById(b.asset_id);
+        return {
+          template_slug: b.template_slug,
+          asset_key: b.asset_key,
+          asset_id: b.asset_id,
+          bound_by: b.bound_by,
+          bound_at: b.bound_at,
+          asset: asset ? assetResponse(asset) : null,
+        };
+      }),
+    );
+
+    const boundKeys = new Set(bindings.map((b) => b.asset_key));
+    const missing = required
+      .filter((r) => !boundKeys.has(r.key))
+      .map((r) => ({ key: r.key, filename: r.filename ?? null, mime: r.mime ?? null }));
+
+    res.json({
+      success: true,
+      data: {
+        template_slug: slug,
+        required: required.map((r) => ({
+          key: r.key,
+          filename: r.filename ?? null,
+          mime: r.mime ?? null,
+        })),
+        bindings: hydrated,
+        missing,
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: get template asset bindings failed', {
+      error,
+      slug,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// PUT /api/templates-studio/templates/:slug/asset-bindings/:assetKey
+export const upsertTemplateAssetBinding = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { slug, assetKey } = req.params;
+  const { asset_id } = req.body as { asset_id: string };
+
+  try {
+    const template = await templateDefinitionRepository.findBySlug(slug);
+    if (!template) {
+      res.status(404).json({ success: false, error: 'Template introuvable' });
+      return;
+    }
+    // Vérifie que la `key` fait bien partie du manifest (anti drift : un user
+    // ne peut binder qu'un slot déclaré, sinon le worker render n'utilisera
+    // jamais l'URL).
+    const manifest = template.manifest_json as {
+      requiredAssets?: Array<{ key: string }>;
+    };
+    const required = manifest.requiredAssets ?? [];
+    if (!required.some((r) => r.key === assetKey)) {
+      res.status(400).json({
+        success: false,
+        error: `La clé '${assetKey}' n'est pas déclarée dans manifest.requiredAssets de ${slug}`,
+      });
+      return;
+    }
+
+    const asset = await studioAssetRepository.findById(asset_id);
+    if (!asset) {
+      res.status(404).json({ success: false, error: 'Asset introuvable' });
+      return;
+    }
+
+    const binding = await templateAssetBindingRepository.upsertBinding({
+      template_slug: slug,
+      asset_key: assetKey,
+      asset_id,
+      bound_by: req.user.id,
+    });
+    logger.info('templates-studio: asset bound to template slot', {
+      user_id: req.user.id,
+      template_slug: slug,
+      asset_key: assetKey,
+      asset_id,
+    });
+    res.json({
+      success: true,
+      data: {
+        template_slug: binding.template_slug,
+        asset_key: binding.asset_key,
+        asset_id: binding.asset_id,
+        bound_by: binding.bound_by,
+        bound_at: binding.bound_at,
+        asset: assetResponse(asset),
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: upsert template asset binding failed', {
+      error,
+      slug,
+      assetKey,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// DELETE /api/templates-studio/templates/:slug/asset-bindings/:assetKey
+export const deleteTemplateAssetBinding = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { slug, assetKey } = req.params;
+  try {
+    const deleted = await templateAssetBindingRepository.deleteBinding(slug, assetKey);
+    if (!deleted) {
+      res.status(404).json({ success: false, error: 'Binding introuvable' });
+      return;
+    }
+    logger.info('templates-studio: asset binding removed', {
+      user_id: req.user.id,
+      template_slug: slug,
+      asset_key: assetKey,
+    });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('templates-studio: delete template asset binding failed', {
+      error,
+      slug,
+      assetKey,
     });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });
   }

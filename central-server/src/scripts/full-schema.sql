@@ -7333,6 +7333,55 @@ CREATE INDEX IF NOT EXISTS idx_studio_player_grants_site
 CREATE INDEX IF NOT EXISTS idx_studio_player_grants_player
   ON public.studio_player_site_grants(player_id);
 
+-- ────────────────────────────────────────────────────────────────────────────
+-- Templates Studio — Asset library (ADR-125, migration add-studio-assets.sql)
+-- Pool global d'assets uploadés (textures, watermarks, vidéos lensflare, …)
+-- + bindings par template. Pas de notion de site_id (asset = catalogue admin
+-- partagé sur la flotte).
+-- ────────────────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.studio_assets (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    filename text NOT NULL,
+    ftp_path text NOT NULL,
+    mime_type text NOT NULL,
+    file_size bigint NOT NULL,
+    checksum_sha256 text NOT NULL,
+    width integer,
+    height integer,
+    duration_ms integer,
+    tags text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    uploaded_by uuid,
+    uploaded_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT studio_assets_pkey PRIMARY KEY (id),
+    CONSTRAINT studio_assets_ftp_path_key UNIQUE (ftp_path),
+    CONSTRAINT studio_assets_checksum_sha256_key UNIQUE (checksum_sha256),
+    CONSTRAINT studio_assets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_studio_assets_checksum
+  ON public.studio_assets(checksum_sha256);
+
+CREATE INDEX IF NOT EXISTS idx_studio_assets_tags
+  ON public.studio_assets USING GIN(tags);
+
+CREATE INDEX IF NOT EXISTS idx_studio_assets_mime
+  ON public.studio_assets(mime_type);
+
+CREATE TABLE IF NOT EXISTS public.studio_template_asset_bindings (
+    template_slug text NOT NULL,
+    asset_key text NOT NULL,
+    asset_id uuid NOT NULL,
+    bound_by uuid,
+    bound_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT studio_template_asset_bindings_pkey PRIMARY KEY (template_slug, asset_key),
+    CONSTRAINT studio_template_asset_bindings_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES public.studio_assets(id) ON DELETE RESTRICT,
+    CONSTRAINT studio_template_asset_bindings_bound_by_fkey FOREIGN KEY (bound_by) REFERENCES public.users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_studio_bindings_asset
+  ON public.studio_template_asset_bindings(asset_id);
+
 
 --
 -- PostgreSQL database dump complete

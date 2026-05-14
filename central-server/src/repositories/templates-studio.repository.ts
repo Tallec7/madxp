@@ -663,6 +663,264 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// studio_assets — pool global d'assets uploadés (ADR-125, Phase 1.5)
+// + studio_template_asset_bindings — liaison template_slug/asset_key → asset_id
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface StudioAssetRow extends QueryResultRow {
+  id: string;
+  filename: string;
+  ftp_path: string;
+  mime_type: string;
+  file_size: number;
+  checksum_sha256: string;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  tags: string[];
+  uploaded_by: string | null;
+  uploaded_at: Date;
+}
+
+export interface CreateStudioAssetInput {
+  filename: string;
+  ftp_path: string;
+  mime_type: string;
+  file_size: number;
+  checksum_sha256: string;
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+  tags?: string[];
+  uploaded_by?: string | null;
+}
+
+export interface UpdateStudioAssetMetadataInput {
+  filename?: string;
+  tags?: string[];
+}
+
+export interface StudioAssetListFilters {
+  tags?: string[];
+  mimePrefix?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface StudioAssetUsageRow extends QueryResultRow {
+  template_slug: string;
+  asset_key: string;
+  bound_at: Date;
+}
+
+class StudioAssetRepositoryImpl extends BaseRepository<StudioAssetRow> {
+  constructor() {
+    super('studio_assets');
+  }
+
+  async findByChecksum(checksum: string): Promise<StudioAssetRow | null> {
+    const result = await query<StudioAssetRow>(
+      `SELECT * FROM studio_assets WHERE checksum_sha256 = $1`,
+      [checksum],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * Upsert content-addressable. INSERT … ON CONFLICT (checksum_sha256) DO
+   * NOTHING : si le même contenu est ré-uploadé, on retourne la row existante
+   * (zéro doublon, l'appelant ne peut pas le savoir et peut binder dessus).
+   */
+  async create(input: CreateStudioAssetInput): Promise<StudioAssetRow> {
+    const tagsArray = input.tags ?? [];
+    const insertResult = await query<StudioAssetRow>(
+      `INSERT INTO studio_assets
+         (filename, ftp_path, mime_type, file_size, checksum_sha256,
+          width, height, duration_ms, tags, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (checksum_sha256) DO NOTHING
+       RETURNING *`,
+      [
+        input.filename,
+        input.ftp_path,
+        input.mime_type,
+        input.file_size,
+        input.checksum_sha256,
+        input.width ?? null,
+        input.height ?? null,
+        input.duration_ms ?? null,
+        tagsArray,
+        input.uploaded_by ?? null,
+      ],
+    );
+    if (insertResult.rows[0]) {
+      return insertResult.rows[0];
+    }
+    // Conflict on checksum → fetch existing row.
+    const existing = await this.findByChecksum(input.checksum_sha256);
+    if (!existing) {
+      throw new Error(
+        `studio_assets: ON CONFLICT swallowed but no existing row found for checksum ${input.checksum_sha256}`,
+      );
+    }
+    return existing;
+  }
+
+  async findFiltered(filters: StudioAssetListFilters = {}): Promise<{
+    rows: StudioAssetRow[];
+    total: number;
+  }> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (filters.tags && filters.tags.length > 0) {
+      params.push(filters.tags);
+      conditions.push(`tags && $${params.length}::text[]`);
+    }
+    if (filters.mimePrefix) {
+      params.push(`${filters.mimePrefix}%`);
+      conditions.push(`mime_type LIKE $${params.length}`);
+    }
+    if (filters.search) {
+      params.push(`%${filters.search.toLowerCase()}%`);
+      conditions.push(`LOWER(filename) LIKE $${params.length}`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await query<{ total: string }>(
+      `SELECT COUNT(*)::text AS total FROM studio_assets ${where}`,
+      params,
+    );
+    const total = parseInt(countResult.rows[0]?.total ?? '0', 10);
+
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 500);
+    const offset = Math.max(filters.offset ?? 0, 0);
+    params.push(limit);
+    const limitParam = `$${params.length}`;
+    params.push(offset);
+    const offsetParam = `$${params.length}`;
+
+    const rowsResult = await query<StudioAssetRow>(
+      `SELECT * FROM studio_assets ${where}
+       ORDER BY uploaded_at DESC
+       LIMIT ${limitParam} OFFSET ${offsetParam}`,
+      params,
+    );
+    return { rows: rowsResult.rows, total };
+  }
+
+  async updateMetadata(
+    id: string,
+    input: UpdateStudioAssetMetadataInput,
+  ): Promise<StudioAssetRow | null> {
+    const result = await query<StudioAssetRow>(
+      `UPDATE studio_assets SET
+         filename = COALESCE($1, filename),
+         tags = COALESCE($2::text[], tags)
+       WHERE id = $3
+       RETURNING *`,
+      [
+        input.filename ?? null,
+        input.tags ?? null,
+        id,
+      ],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * Liste les bindings qui pointent vers cet asset. Utilisé par le controller
+   * DELETE pour rendre 409 + liste des templates concernés (UX claire vs
+   * "ON DELETE RESTRICT failed" cryptique).
+   */
+  async findUsageById(id: string): Promise<StudioAssetUsageRow[]> {
+    const result = await query<StudioAssetUsageRow>(
+      `SELECT template_slug, asset_key, bound_at
+       FROM studio_template_asset_bindings
+       WHERE asset_id = $1
+       ORDER BY template_slug, asset_key`,
+      [id],
+    );
+    return result.rows;
+  }
+
+  /**
+   * Suppression dure. Le controller doit avoir vérifié `findUsageById()` au
+   * préalable (sinon ON DELETE RESTRICT lèvera une erreur SQL).
+   */
+  async deleteById(id: string): Promise<boolean> {
+    const result = await query(
+      `DELETE FROM studio_assets WHERE id = $1`,
+      [id],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+}
+
+export interface TemplateAssetBindingRow extends QueryResultRow {
+  template_slug: string;
+  asset_key: string;
+  asset_id: string;
+  bound_by: string | null;
+  bound_at: Date;
+}
+
+export interface UpsertTemplateAssetBindingInput {
+  template_slug: string;
+  asset_key: string;
+  asset_id: string;
+  bound_by?: string | null;
+}
+
+class TemplateAssetBindingRepositoryImpl {
+  async findByTemplate(slug: string): Promise<TemplateAssetBindingRow[]> {
+    const result = await query<TemplateAssetBindingRow>(
+      `SELECT * FROM studio_template_asset_bindings
+       WHERE template_slug = $1
+       ORDER BY asset_key`,
+      [slug],
+    );
+    return result.rows;
+  }
+
+  async upsertBinding(
+    input: UpsertTemplateAssetBindingInput,
+  ): Promise<TemplateAssetBindingRow> {
+    const result = await query<TemplateAssetBindingRow>(
+      `INSERT INTO studio_template_asset_bindings
+         (template_slug, asset_key, asset_id, bound_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (template_slug, asset_key) DO UPDATE SET
+         asset_id = EXCLUDED.asset_id,
+         bound_by = EXCLUDED.bound_by,
+         bound_at = NOW()
+       RETURNING *`,
+      [
+        input.template_slug,
+        input.asset_key,
+        input.asset_id,
+        input.bound_by ?? null,
+      ],
+    );
+    return result.rows[0];
+  }
+
+  async deleteBinding(
+    templateSlug: string,
+    assetKey: string,
+  ): Promise<boolean> {
+    const result = await query(
+      `DELETE FROM studio_template_asset_bindings
+       WHERE template_slug = $1 AND asset_key = $2`,
+      [templateSlug, assetKey],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Singletons exportés
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -670,3 +928,5 @@ export const templateDefinitionRepository = new TemplateDefinitionRepositoryImpl
 export const renderRequestRepository = new RenderRequestRepositoryImpl();
 export const siteBrandKitRepository = new SiteBrandKitRepositoryImpl();
 export const playerRepository = new PlayerRepositoryImpl();
+export const studioAssetRepository = new StudioAssetRepositoryImpl();
+export const templateAssetBindingRepository = new TemplateAssetBindingRepositoryImpl();

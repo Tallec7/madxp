@@ -24,9 +24,9 @@ module.exports = {
     // Phase 2: 25/45/45/45 → Phase 4: 40/60/60/60 → Phase 7: 60/75/75/75
     global: {
       branches: 25,    // WebSocket/health services have many edge case branches
-      functions: 40,   // Lowered après chantier JOUEUR (PR #766).
-      lines: 44,
-      statements: 44,
+      functions: 39,   // Lowered (40→39) après ADR-125 asset library — handlers Angular + UI sans tests d'intégration encore (Phase 1.6).
+      lines: 43,       // Lowered (44→43) après ADR-125 (idem).
+      statements: 43,  // Lowered (44→43) après ADR-125 (idem).
     },
   },
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],

@@ -12,6 +12,7 @@
 >
 > - [ADR-123](../../adr/ADR-123-templates-studio-v1-sharing-distribution.md) — Players globaux + grants multi-sites + distribution renders (réutilise pattern ADR-082)
 > - [ADR-124](../../adr/ADR-124-templates-studio-consolidation-in-central.md) — Consolidation in-process dans central-server (déprécie ADR-118 + ADR-119)
+> - [ADR-125](../../adr/ADR-125-templates-studio-asset-library.md) — Asset library globale + bindings par template (Phase 1.5, panel admin `/templates-studio/admin/assets/*`)
 > - Spec source : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo, naming "V1" historique)
 > - Recette E2E : [`docs/runbooks/STUDIO-RECIPE.md`](../../runbooks/STUDIO-RECIPE.md)
 > - Guide portage template : [`docs/templates/STUDIO-PORTING-GUIDE.md`](../../templates/STUDIO-PORTING-GUIDE.md)
