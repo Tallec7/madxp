@@ -274,6 +274,23 @@ EOF
     fi
 }
 
+# ADR-126 — Pin /etc/resolv.conf.head pour neutraliser le DNS hijack si dhcpcd
+# vide /etc/resolv.conf (ex. outage wlan1, bail perdu). Sans ce filet,
+# glibc tombe sur 127.0.0.1 → dnsmasq local → wildcard `address=/#/192.168.4.1`
+# → toutes les requêtes du Pi vers Railway/FTP sont hijackées (incident NLF
+# 2026-05-14). Le hook `/lib/dhcpcd/dhcpcd-hooks/20-resolv.conf` lit ce fichier
+# à chaque renouvellement de bail et préfixe ses entrées AVANT le DNS de la box.
+ensure_resolv_conf_head() {
+    cat > /etc/resolv.conf.head << 'EOF'
+# Géré par install.sh / fix-resolv-conf-head.sh (ADR-126)
+# Filet de sécurité DNS : empêche le hijack dnsmasq local quand le bail
+# dhcpcd disparaît. NE PAS supprimer sans ADR de remplacement.
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
+    chmod 644 /etc/resolv.conf.head
+}
+
 check_prerequisites() {
     print_step "Vérification des prérequis..."
 
@@ -408,6 +425,7 @@ configure_hotspot() {
     systemctl stop dnsmasq || true
 
     ensure_dns_configuration
+    ensure_resolv_conf_head
 
     # Désactiver systemd-resolved si actif (conflit avec dnsmasq pour le port 53)
     if systemctl list-unit-files systemd-resolved.service >/dev/null 2>&1; then

@@ -24,7 +24,7 @@
 >
 > - `raspberry/admin/services/hostapd-reader.service.js` (parse `/etc/hostapd/hostapd.conf`, jamais d'écriture)
 >
-> **ADR liés** : ADR-073 (rotation legacy custom-PSK), ADR-074 (cloud-source-of-truth + AES-256-GCM), ADR-076 (split routes hotspot-config pour éviter collision avec `sites.routes`)
+> **ADR liés** : ADR-073 (rotation legacy custom-PSK), ADR-074 (cloud-source-of-truth + AES-256-GCM), ADR-076 (split routes hotspot-config pour éviter collision avec `sites.routes`), ADR-126 (filet DNS `resolv.conf.head` côté Pi — neutralise le hijack `address=/#/` du captive quand `/etc/resolv.conf` est vide)
 > **Smoke tests** : `central-server/src/__tests__/smoke/smoke-network-wifi.test.ts` (+ invariants enforcés cf. `.claude/rules/hotspot-psk.md`)
 > **`.claude/rules/` lié** : `hotspot-psk.md` (12 invariants smoke-testés, NE JAMAIS FAIRE)
 
