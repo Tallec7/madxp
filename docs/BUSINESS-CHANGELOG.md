@@ -8,6 +8,18 @@
 
 ---
 
+## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, contrat ownership Pi vs SaaS PRs [#996](https://github.com/Tallec7/neopro/pull/996) + [#997](https://github.com/Tallec7/neopro/pull/997))
+
+### 🧹 Pour l'équipe
+
+- **Contrat formel ownership Pi vs SaaS posé** ([#996](https://github.com/Tallec7/neopro/pull/996)) — l'offre Pi est vendue comme "sans internet en live", mais les ADRs récentes (114/116/117) ont câblé des features cloud-only sans contrepartie locale `:8080`. ADR-120 formalise la matrice ownership par champ (Pi-owned vs cloud-owned), la mise à parité `:8080` (profils CRUD + displays/receivers), et un sync bidirectionnel Modèle C 3-way merge (baseline + Pi + cloud) avec UI conflits inline dans l'onglet Content. Plan en 5 phases ~10j. ADR-121 stub crée pour tracker le drift `video_variants` (à instruire si un cas advertiser cross-site avec variants se présente).
+
+- **Phase 1 docs livrée + gap garde-fou Pi offline démasqué** ([#997](https://github.com/Tallec7/neopro/pull/997)) — formalise dans les docs auto-chargées (`context.md` + `CLAUDE.md`) le modèle 2 personae (super admin distant via central dashboard vs opérateur on-site via `:8080`). Audit code détaillé révèle que le garde-fou 24h Pi offline (`network-alerts.service.ts`) ne couvre QUE les sites mesh — la majorité de la flotte (sites simples/ethernet) n'a aucune détection Pi orphelin, et aucun mécanisme automatique ne rappelle au club de reconnecter le Pi. ADR-122 créé pour combler le gap : garde-fou cloud générique + rappel passif télécommande + email club (nécessite migration `sites.contact_email`). Plan ~4j sur 3 phases livrables indépendamment.
+
+### 🛡️ Pour la robustesse
+
+- **Specs `command-queue` et `pi-connectivity-model` formalisées** ([#997](https://github.com/Tallec7/neopro/pull/997)) — la file de commandes cloud → Pi (12 commandes temps réel + reste queueable, CRON drain 30s, schéma `pending_commands`) et le modèle de connectivité Pi (promesse 1 mois vs réalité technique, gaps explicites) étaient présents en code mais non documentés. Tout nouveau dev sait maintenant ce qui marche, ce qui ne marche pas, et où sont les pièges.
+
 ## Semaine 20 — 11-17 Mai 2026 (Phase C déploiement auto vidéos Pi — PR [#972](https://github.com/Tallec7/neopro/pull/972))
 
 ### 🎯 Pour le club (NLF, prospects)
