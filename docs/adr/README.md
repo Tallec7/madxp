@@ -139,6 +139,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-123](ADR-123-templates-studio-v1-sharing-distribution.md)                  | Templates Studio V1 — players globaux + grants + distribution renders multi-sites (ADR-082)  | Accepté                           | Mai 2026 |
 | [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)                 | Templates Studio — consolidation in-process dans central-server (drop services satellites)   | Accepté                           | Mai 2026 |
 | [ADR-125](ADR-125-templates-studio-asset-library.md)                            | Templates Studio — asset library globale + bindings par template (Phase 1.5)                 | Accepté                           | Mai 2026 |
+| [ADR-126](ADR-126-web-content-resolve-on-all-pi-bound-channels.md)              | Résolution web-content (ADR-103) sur TOUS les canaux Pi-bound (helper centralisé)            | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
