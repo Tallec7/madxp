@@ -8,6 +8,16 @@
 
 ---
 
+## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, incident NLF DNS hijack PR [#1013](https://github.com/Tallec7/neopro/pull/1013))
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **NLF remis en ligne après ~2h40 offline** ([#1012](https://github.com/Tallec7/neopro/issues/1012)) — le Pi NLF affichait "Hors ligne" alors qu'il avait Internet, uploads vidéo cassés. Fix appliqué sur place (DNS manuel + restart sync-agent). Le client n'a perdu que la fenêtre du jour, pas de match impacté.
+
+### 🛡️ Pour la robustesse
+
+- **Filet DNS anti-hijack côté Pi posé pour toute la flotte** ([#1013](https://github.com/Tallec7/neopro/pull/1013)) — l'incident NLF a révélé un piège invisible : quand la clé Wi-Fi USB d'un Pi a un hoquet, le système peut auto-saboter son DNS et taper son propre hotspot au lieu de Railway, en boucle, sans alerte. Tout Pi de la flotte était exposé. Le fix (ADR-126) pinne 2 DNS publics (Cloudflare/Google) dans une couche prioritaire qui survit aux outages réseau. Couvre l'install initiale + script idempotent pour rattraper les Pi déjà déployés. Smoke tests garde-fous pour éviter régression. Cause matérielle (clé Wi-Fi USB instable) à traiter séparément au prochain passage NLF.
+
 ## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, contrat ownership Pi vs SaaS PRs [#996](https://github.com/Tallec7/neopro/pull/996) + [#997](https://github.com/Tallec7/neopro/pull/997))
 
 ### 🧹 Pour l'équipe
