@@ -197,6 +197,74 @@ git commit -m "feat(studio): add template <slug> (V1)"
 
 ---
 
+## Fonts custom (ADR-127)
+
+Phase 1.6 a étendu l'asset library aux MIME `font/*`. Pour utiliser une font
+custom (ex: `Bulevar.woff2`) dans une composition :
+
+### 1. Déclarer le slot dans le manifest
+
+```json
+{
+  "requiredAssets": [
+    {
+      "key": "bulevarFont",
+      "filename": "Bulevar.woff2",
+      "mime": "font/woff2",
+      "fontFamily": "Bulevar"
+    }
+  ]
+}
+```
+
+- `mime` : `font/woff2`, `font/woff` ou `font/ttf` (legacy `application/font-*`
+  acceptés mais à éviter pour les nouveaux templates).
+- `fontFamily` : nom CSS sous lequel la font sera enregistrée — utilise
+  ce même nom dans tes `style={{ fontFamily: 'Bulevar' }}`.
+
+### 2. Charger la font dans la Composition avec `useCustomFont`
+
+```tsx
+import { useCustomFont } from '../../lib/useCustomFont';
+
+export const MyComposition: React.FC<MyProps & { __assets?: AssetMap }> = ({
+  __assets,
+  // ...
+}) => {
+  const assets = __assets ?? {};
+  // delayRender bloque le render Remotion jusqu'à ce que la font soit chargée.
+  // Si `assets.bulevarFont` est null/undefined (slot non bound), le hook
+  // continueRender + warn console — la composition rend avec le fallback CSS.
+  useCustomFont('Bulevar', assets.bulevarFont);
+
+  return (
+    <div style={{ fontFamily: 'Bulevar, sans-serif' }}>
+      {/* ... */}
+    </div>
+  );
+};
+```
+
+### 3. Workflow admin (côté designer)
+
+1. Upload la font via `/templates-studio/admin/assets/library` (drop-zone
+   accepte `.woff2`, `.woff`, `.ttf` directement).
+2. Va sur `/templates-studio/admin/assets/<slug>` et bind le slot `bulevarFont`
+   à la font fraîchement uploadée.
+3. Lance un test render — la 1ère frame doit utiliser la bonne police.
+
+### Pièges
+
+- **Sans `useCustomFont` mais avec `font-family` dans le style** : le render
+  utilise silencieusement le fallback CSS (sans-serif). Toujours invoquer
+  le hook avant les styles qui dépendent de la font.
+- **`fontFamily` du manifest doit matcher EXACTEMENT le `family` passé au
+  hook ET la valeur CSS** (case-sensitive). `Bulevar` ≠ `bulevar` ≠ `Bulevar Bold`.
+- **Slot bind manquant** : le worker render échoue avec `Asset manquant: 'bulevarFont'`
+  pointant vers le panel admin. Bind avant de tester.
+
+---
+
 ## Ce qui n'est PAS dans le scope V1
 
 - Édition visuelle WYSIWYG du template (drag-drop des éléments) — c'est l'admin UX du legacy v2 data-driven, pas V1

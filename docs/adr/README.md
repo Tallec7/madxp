@@ -140,6 +140,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-124](ADR-124-templates-studio-consolidation-in-central.md)                 | Templates Studio — consolidation in-process dans central-server (drop services satellites)   | Accepté                           | Mai 2026 |
 | [ADR-126](ADR-126-pi-resolv-conf-head-dns-fallback.md)                          | Pinner `/etc/resolv.conf.head` côté Pi (fallback DNS Cloudflare/Google) — neutralise hijack  | Accepté                           | Mai 2026 |
 | [ADR-125](ADR-125-templates-studio-asset-library.md)                            | Templates Studio — asset library globale + bindings par template (Phase 1.5)                 | Accepté                           | Mai 2026 |
+| [ADR-127](ADR-127-templates-studio-custom-fonts.md)                             | Templates Studio — fonts custom dans la library + hook useCustomFont (Phase 1.6)             | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
