@@ -340,6 +340,22 @@ describe('Templates Studio V1 — S2 Brand Kit + résolveur', () => {
     // Joi sur PUT
     expect(routes).toMatch(/validate\(templatesStudioSchemas\.upsertBrandKit\)/);
   });
+
+  it('upsert coalesces null JSON params to {} on INSERT path (incident 2026-05-14)', () => {
+    // Garde-fou : un PUT partiel (ex. payload `{ colors: {...} }` sans logos/fonts)
+    // doit tomber sur `'{}'::jsonb` côté INSERT pour respecter NOT NULL — pas
+    // sur NULL, qui écraserait le DEFAULT et casserait avec
+    // "null value in column logos_json ... violates not-null constraint".
+    // Sur UPDATE path, on doit référencer `$N::jsonb` directement (pas EXCLUDED,
+    // qui aurait été coalesced à `{}` côté VALUES → écraserait l'existant).
+    const repo = fs.readFileSync(REPO_FILE, 'utf8');
+    expect(repo).toMatch(/COALESCE\(\$3::jsonb,\s*'\{\}'::jsonb\)/);
+    expect(repo).toMatch(/COALESCE\(\$4::jsonb,\s*'\{\}'::jsonb\)/);
+    expect(repo).toMatch(/COALESCE\(\$5::jsonb,\s*'\{\}'::jsonb\)/);
+    expect(repo).toMatch(/colors_json\s*=\s*COALESCE\(\$3::jsonb,\s*site_brand_kits\.colors_json\)/);
+    expect(repo).toMatch(/logos_json\s*=\s*COALESCE\(\$4::jsonb,\s*site_brand_kits\.logos_json\)/);
+    expect(repo).toMatch(/fonts_json\s*=\s*COALESCE\(\$5::jsonb,\s*site_brand_kits\.fonts_json\)/);
+  });
 });
 
 describe('Templates Studio V1 — S4-A roster CRUD + résolveur câblé', () => {
