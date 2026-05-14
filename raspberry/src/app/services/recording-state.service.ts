@@ -39,6 +39,8 @@ export class RecordingStateService implements OnDestroy {
   private _inactivityTimer: ReturnType<typeof setTimeout> | null = null;
   private _warningCountdownTimer: ReturnType<typeof setInterval> | null = null;
   private _warningSecondsRemaining = 0;
+  /** Dernier état émis via broadcast() — sert au guard d'idempotence (incident 2026-05-14). */
+  private _lastBroadcastState: RecordingStateEvent | null = null;
   private subscriptions: Subscription[] = [];
 
   // Observable pour le binding UI du recording
@@ -190,12 +192,27 @@ export class RecordingStateService implements OnDestroy {
     }
   }
 
-  /** Broadcast l'état via BroadcastChannel ET Socket.IO */
+  /**
+   * Broadcast l'état via BroadcastChannel ET Socket.IO.
+   *
+   * Guard d'idempotence (incident 2026-05-14) : skip si l'état à émettre est
+   * strictement identique au dernier émis. Empêche tout ré-émetteur futur de
+   * créer un flap silencieux sur le serveur (chaque emit logge un
+   * `[Recording] State update` côté Pi).
+   */
   private broadcast(): void {
     const state: RecordingStateEvent = {
       isRecording: this._isRecording,
       isManualOverride: this._isManualOverride
     };
+    if (
+      this._lastBroadcastState
+      && this._lastBroadcastState.isRecording === state.isRecording
+      && this._lastBroadcastState.isManualOverride === state.isManualOverride
+    ) {
+      return;
+    }
+    this._lastBroadcastState = state;
     this.localBroadcast.emitRecordingState(state);
     this.socketService.emit('recording-state', state);
   }
