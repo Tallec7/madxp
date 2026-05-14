@@ -1,3 +1,9 @@
+# [3.314.0](https://github.com/Tallec7/neopro/compare/v3.313.1...v3.314.0) (2026-05-14)
+
+### Features
+
+- **studio:** distribution multi-sites des renders (push direct + grants ADR-082) ([#1003](https://github.com/Tallec7/neopro/issues/1003)) ([e061024](https://github.com/Tallec7/neopro/commit/e06102442fe70a5d9720302d003f62591f01692b))
+
 ## [3.313.1](https://github.com/Tallec7/neopro/compare/v3.313.0...v3.313.1) (2026-05-14)
 
 ### Bug Fixes
