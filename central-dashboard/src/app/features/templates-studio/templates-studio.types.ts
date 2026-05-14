@@ -140,3 +140,74 @@ export interface RenderDistributionResult {
   videos_created: Array<{ id: string; site_id: string | null }>;
   grants_created: Array<{ video_id: string; site_id: string }>;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADR-125 — Asset library + bindings (Phase 1.5)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface StudioAsset {
+  id: string;
+  filename: string;
+  ftp_path: string;
+  url: string;
+  mime_type: string;
+  file_size: number;
+  checksum_sha256: string;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  tags: string[];
+  uploaded_by: string | null;
+  uploaded_at: string;
+}
+
+export interface StudioAssetWithUsage extends StudioAsset {
+  usage: Array<{
+    template_slug: string;
+    asset_key: string;
+    bound_at: string;
+  }>;
+}
+
+export interface StudioAssetUploadResult extends StudioAsset {
+  /** True si le serveur a détecté un duplicata par checksum_sha256 et n'a pas re-uploadé. */
+  deduplicated?: boolean;
+}
+
+export interface StudioAssetListFilters {
+  tag?: string;
+  mime?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface StudioAssetListResult {
+  assets: StudioAsset[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** Slot déclaré dans `manifest.requiredAssets[]` côté template. */
+export interface RequiredAsset {
+  key: string;
+  filename: string | null;
+  mime: string | null;
+}
+
+export interface TemplateAssetBinding {
+  template_slug: string;
+  asset_key: string;
+  asset_id: string;
+  bound_by: string | null;
+  bound_at: string;
+  asset: StudioAsset | null;
+}
+
+export interface TemplateAssetBindingsResult {
+  template_slug: string;
+  required: RequiredAsset[];
+  bindings: TemplateAssetBinding[];
+  missing: RequiredAsset[];
+}

@@ -25,5 +25,6 @@
     "secondaryColor": { "source": "brandKit.colors.secondary" }
   },
   "format": { "width": 1080, "height": 1920, "fps": 30, "durationInFrames": 180 },
-  "compositionId": "ButGeneriqueStory"
+  "compositionId": "ButGeneriqueStory",
+  "requiredAssets": []
 }

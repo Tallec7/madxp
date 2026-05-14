@@ -22,5 +22,6 @@
     "secondaryColor": { "source": "brandKit.colors.secondary" }
   },
   "format": { "width": 1920, "height": 1080 },
-  "compositionId": "EntreeJoueurStory"
+  "compositionId": "EntreeJoueurStory",
+  "requiredAssets": []
 }
