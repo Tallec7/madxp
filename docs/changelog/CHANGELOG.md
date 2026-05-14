@@ -1,3 +1,9 @@
+# [3.318.0](https://github.com/Tallec7/neopro/compare/v3.317.2...v3.318.0) (2026-05-14)
+
+### Features
+
+- **studio:** support des fonts custom dans la library (Phase 1.6 / ADR-127) ([#1019](https://github.com/Tallec7/neopro/issues/1019)) ([e75d206](https://github.com/Tallec7/neopro/commit/e75d20622afbefa5e69bc492759e015af6cb24ae))
+
 ## [3.317.2](https://github.com/Tallec7/neopro/compare/v3.317.1...v3.317.2) (2026-05-14)
 
 ### Bug Fixes
