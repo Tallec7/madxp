@@ -191,7 +191,7 @@
                 <app-video-search-select
                   [groups]="videoOptionGroups"
                   [selectedPath]="video.path"
-                  (pathChange)="video.path = $event; emitConfigChanged()"
+                  (pathChange)="applyVideoSelection(video, $event)"
                   [placeholder]="'common.selectVideo' | translate"
                   [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
                   [emptyLabel]="'common.noVideoFound' | translate"
@@ -283,7 +283,7 @@
                     <app-video-search-select
                       [groups]="videoOptionGroups"
                       [selectedPath]="video.path"
-                      (pathChange)="video.path = $event; emitConfigChanged()"
+                      (pathChange)="applyVideoSelection(video, $event)"
                       [placeholder]="'common.selectVideo' | translate"
                       [searchPlaceholder]="'common.searchVideoPlaceholder' | translate"
                       [emptyLabel]="'common.noVideoFound' | translate"

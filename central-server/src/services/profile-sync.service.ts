@@ -11,10 +11,45 @@ import logger from '../config/logger';
 import { SiteConfiguration, SiteSponsorDeployment } from '../types';
 import { configProfileRepository } from '../repositories/config-profile.repository';
 import { siteSponsorRepository } from '../repositories/site-sponsor.repository';
+import { videoRepository } from '../repositories/video.repository';
 import { enrichConfigWithDisplayVariants, resolveDisplayTypesForSite } from '../utils/config-secondary-variants';
 import { enrichConfigWithAnalyticsMetadata } from '../utils/config-analytics-metadata';
 import { normalizeConfigVideoPaths } from '../utils/config-video-paths';
+import {
+  collectSyntheticWebContentFilenames,
+  resolveSyntheticWebContent,
+  stripSyntheticWebContent,
+} from '../utils/strip-synthetic-web-content';
 import { autoResolveSponsorIds } from './sponsor-auto-resolution.service';
+
+/**
+ * ADR-103 — Rewrite synthetic `web_page-<ts>` / `livestream-<ts>` entries to
+ * their proper runtime shape (path = external_url, contentType, type = text/html
+ * or application/vnd.apple.mpegurl) BEFORE the config reaches a Pi. Without
+ * this step the TV-side defensive filter drops the entries as unresolved
+ * placeholders and the page/stream never plays.
+ *
+ * Same pattern as saas.controller.ts:303-319 and remote.controller.ts:283-295.
+ * Centralised here so all Pi-bound config builders (`buildEnrichedNeoProContent`,
+ * `sendSyncProfilesToSite`) share the wiring.
+ */
+async function resolveAndStripWebContent(
+  config: Record<string, unknown>,
+  logContext: { siteId: string; profileId?: string },
+): Promise<void> {
+  const synthFilenames = collectSyntheticWebContentFilenames(config);
+  if (synthFilenames.length > 0) {
+    try {
+      const lookup = await videoRepository.findWebContentByFilenames(synthFilenames);
+      resolveSyntheticWebContent(config, lookup);
+    } catch (err) {
+      logger.warn('Web-content resolve failed in Pi config builder (non-fatal — strip will drop leftovers)', {
+        ...logContext, error: (err as Error).message,
+      });
+    }
+  }
+  stripSyntheticWebContent(config);
+}
 
 /**
  * Build enriched profiles payload and send sync_profiles command to a site.
@@ -59,6 +94,10 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
         siteId, profileId: p.id, error: (err as Error).message,
       });
     }
+
+    await resolveAndStripWebContent(enrichedConfig as unknown as Record<string, unknown>, {
+      siteId, profileId: p.id,
+    });
 
     // ADR-058 — propager l'etat PIN profil au Pi pour validation offline (bcrypt hash).
     let pinMeta: {
@@ -171,6 +210,16 @@ export async function buildEnrichedNeoProContent(
       siteId, error: (err as Error).message,
     });
   }
+
+  // ADR-103 — Résout les `web_page-<ts>` / `livestream-<ts>` AVANT
+  // `normalizeConfigVideoPaths` : ce dernier ajoute `videos/default/` à
+  // tout path sans `/`, ce qui ferait tomber un synthétique nu dans le
+  // pattern legacy et casserait à la fois la résolution Pi-side et le
+  // strip défensif TV.
+  await resolveAndStripWebContent(
+    enrichedConfig as unknown as Record<string, unknown>,
+    { siteId, profileId: profile.id },
+  );
 
   // Normalise les chemins plats (sans "/") en chemins complets videos/<cat>/<file>.
   // Les config_profiles en DB stockent parfois des noms de fichiers sans préfixe ;
