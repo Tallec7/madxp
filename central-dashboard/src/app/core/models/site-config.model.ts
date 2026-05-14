@@ -59,13 +59,19 @@ export type ContentOwner = 'neopro' | 'club';
 // Format compatible avec l'app :8080
 export interface VideoConfig {
   name: string;
-  type: string;  // ex: "video/mp4"
-  path: string;  // ex: "videos/CATEGORY/video.mp4"
+  type: string;  // ex: "video/mp4" — "text/html" pour web_page, "application/vnd.apple.mpegurl" pour livestream
+  path: string;  // ex: "videos/CATEGORY/video.mp4" — URL externe pour web_page / livestream
   owner?: ContentOwner; // 'neopro' = contenu central, 'club' = contenu local
   locked?: boolean;  // true = non modifiable par le club
   deployed_at?: string;  // ISO date - quand la vidéo a été déployée par NEOPRO
   expires_at?: string;  // ISO date - expiration automatique (annonces temporaires)
   site_sponsor_id?: string; // Auto-résolu depuis site_sponsor_videos au déploiement
+  // ADR-103 — Entrées non-vidéo (page web, livestream HLS). Permet au Pi
+  // de router vers WebContentService au lieu du player vidéo classique.
+  contentType?: 'video' | 'web_page' | 'livestream';
+  externalUrl?: string | null;
+  durationSeconds?: number | null;
+  thumbnailUrl?: string | null;
 }
 
 // Sous-catégorie de vidéos

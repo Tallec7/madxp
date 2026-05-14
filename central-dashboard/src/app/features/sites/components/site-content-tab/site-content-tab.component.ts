@@ -1036,6 +1036,7 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
     for (const cloud of this.cloudVideos) {
       const fnKey = cloud.filename.toLowerCase();
       const localKeys = filenameToKeys.get(fnKey) || [];
+      const isWebLive = cloud.contentType === 'web_page' || cloud.contentType === 'livestream';
 
       if (localKeys.length > 0) {
         for (const key of localKeys) {
@@ -1046,18 +1047,31 @@ export class SiteContentTabComponent implements OnInit, OnChanges, OnDestroy {
           existing.source = 'both';
           existing.displayName = cloud.title || cloud.originalName || cloud.filename;
           existing.hasSecondaryVariant = this.secondaryVariantVideoIds.has(cloud.id);
+          existing.contentType = cloud.contentType;
+          existing.externalUrl = cloud.externalUrl ?? null;
+          existing.durationSeconds = cloud.duration;
         }
       } else {
+        // ADR-103 — Pour les rows web_page / livestream, le path d'option
+        // est l'URL externe (clé stable côté config, résolue côté serveur
+        // via resolveSyntheticWebContent / lookup direct). Sinon on fabrique
+        // un faux path FTP `videos/default/web_page-<ts>` qui finit en 404
+        // sur Hostinger et que le strip Pi-side défensif drop comme synthetic.
         const deployed = this.deployedPathsMap.get(cloud.id);
-        const localPath = deployed?.deployedPath ?? `videos/${cloud.category || 'default'}/${cloud.filename}`;
-        if (!optionsMap.has(localPath)) {
-          optionsMap.set(localPath, {
-            path: localPath, filename: cloud.filename,
+        const optionPath = isWebLive
+          ? (cloud.externalUrl ?? cloud.filename)
+          : (deployed?.deployedPath ?? `videos/${cloud.category || 'default'}/${cloud.filename}`);
+        if (!optionsMap.has(optionPath)) {
+          optionsMap.set(optionPath, {
+            path: optionPath, filename: cloud.filename,
             displayName: cloud.title || cloud.originalName || cloud.filename,
             category: cloud.category, isOnPi: false,
             isForThisSite: cloud.uploadedForSiteId === this.siteId,
             isCloud: true, source: 'cloud', cloudId: cloud.id,
             hasSecondaryVariant: this.secondaryVariantVideoIds.has(cloud.id),
+            contentType: cloud.contentType,
+            externalUrl: cloud.externalUrl ?? null,
+            durationSeconds: cloud.duration,
           });
         }
       }
