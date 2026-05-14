@@ -9,6 +9,7 @@ import {
 } from 'remotion';
 import { z } from 'zod';
 import { ShieldPattern } from './ShieldPattern';
+import { useCustomFont } from '../../lib/useCustomFont';
 
 // Identité visuelle figée du template (palette du tournoi).
 // Le brand kit du club n'affecte PAS ce template en V1 (pas de binding).
@@ -52,6 +53,11 @@ export const FaitsDeJeuComposition: React.FC<FaitsDeJeuProps> = ({
   const lensFlareUrl = assets.lensFlare;
   const watermarkUrl = assets.watermarkNeopro;
 
+  // Charge la font Bulevar depuis l'asset library (ADR-127). delayRender
+  // garantit que renderMedia attend la font chargée avant la 1ère frame —
+  // sans ça, le fallback `sans-serif` aurait été baked dans la vidéo.
+  useCustomFont('Bulevar', assets.bulevarFont);
+
   return (
     <div style={{ ...fill, overflow: 'hidden', background: BG_NAVY }}>
       {metalTextureUrl ? (
@@ -77,8 +83,8 @@ export const FaitsDeJeuComposition: React.FC<FaitsDeJeuProps> = ({
       >
         <span
           style={{
-            // Bulevar : pas encore géré (Phase 1.6 fonts custom). Fallback
-            // sans-serif transparent en attendant — pas de crash.
+            // Bulevar chargée via useCustomFont (ADR-127). Si l'asset font
+            // n'est pas bound côté admin, fallback sans-serif transparent.
             fontFamily: 'Bulevar, sans-serif',
             fontSize: 720,
             color: '#FFFFFF',

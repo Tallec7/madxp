@@ -35,6 +35,12 @@
       "key": "watermarkNeopro",
       "filename": "watermark_neopro.png",
       "mime": "image/png"
+    },
+    {
+      "key": "bulevarFont",
+      "filename": "Bulevar.woff2",
+      "mime": "font/woff2",
+      "fontFamily": "Bulevar"
     }
   ]
 }
