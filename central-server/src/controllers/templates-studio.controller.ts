@@ -1071,7 +1071,16 @@ export const distributeRender = async (
 // operator) côté routes — cf templates-studio.routes.ts.
 // ────────────────────────────────────────────────────────────────────────────
 
-const ASSET_ALLOWED_MIMES_PREFIX = ['image/', 'video/', 'application/font-', 'font/'];
+// ADR-127 — fonts custom. On accepte deux familles de préfixes :
+// - `font/` (standard moderne RFC 8081 — font/woff2, font/woff, font/ttf)
+// - `application/font-` + `application/x-font-` (legacy browsers / uploaders)
+const ASSET_ALLOWED_MIMES_PREFIX = [
+  'image/',
+  'video/',
+  'application/font-',
+  'application/x-font-',
+  'font/',
+];
 const ASSET_ALLOWED_EXTRA_MIMES = [
   'image/jpeg',
   'image/png',
@@ -1081,6 +1090,15 @@ const ASSET_ALLOWED_EXTRA_MIMES = [
   'video/mp4',
   'video/webm',
   'video/quicktime',
+  // Fonts (ADR-127) — explicites en plus du préfixe pour les browsers qui
+  // envoient un mime sans charset.
+  'font/woff2',
+  'font/woff',
+  'font/ttf',
+  'application/font-woff2',
+  'application/font-woff',
+  'application/x-font-woff',
+  'application/x-font-ttf',
 ];
 
 function isAllowedAssetMime(mime: string): boolean {
@@ -1098,6 +1116,14 @@ function extForMime(mime: string, fallback = 'bin'): string {
     'video/mp4': 'mp4',
     'video/webm': 'webm',
     'video/quicktime': 'mov',
+    // Fonts ADR-127.
+    'font/woff2': 'woff2',
+    'font/woff': 'woff',
+    'font/ttf': 'ttf',
+    'application/font-woff2': 'woff2',
+    'application/font-woff': 'woff',
+    'application/x-font-woff': 'woff',
+    'application/x-font-ttf': 'ttf',
   };
   if (map[mime]) return map[mime];
   // Fallback : extraire le sous-type (image/foo → foo).
