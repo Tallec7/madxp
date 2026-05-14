@@ -137,6 +137,24 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">✨</span>
               <span>Templates Remotion</span>
             </a>
+
+            <!-- Templates Studio V1 (cf STUDIO_V1.md) — accessible super_admin/admin/club -->
+            <div class="nav-section" *ngIf="canUseTemplatesStudio()" role="group" aria-label="Templates Studio V1">
+              <div class="nav-section-title">Templates Studio</div>
+              <a routerLink="/templates-studio" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" aria-label="Templates Studio">
+                <span class="icon" aria-hidden="true">🎨</span>
+                <span>Studio</span>
+              </a>
+              <a routerLink="/templates-studio/brand-kit" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-label="Brand Kit">
+                <span class="icon" aria-hidden="true">🎨</span>
+                <span>Brand Kit</span>
+              </a>
+              <a routerLink="/templates-studio/players" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-label="Joueurs">
+                <span class="icon" aria-hidden="true">👥</span>
+                <span>Joueurs</span>
+              </a>
+            </div>
+
             <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
               <span class="icon" aria-hidden="true">🔄</span>
               <span>{{ 'nav.updates' | translate }}</span>
@@ -764,6 +782,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   isClub(): boolean {
     return this.currentUser?.role === 'club';
+  }
+
+  // Templates Studio V1 — visible pour les rôles ayant des routes /templates-studio*
+  // (cf app.routes.ts roleGuard data: ['super_admin', 'admin', 'club']).
+  canUseTemplatesStudio(): boolean {
+    return this.authService.hasRole('super_admin', 'admin', 'club');
   }
 
   getUserInitials(): string {
