@@ -8,9 +8,11 @@
 
 ---
 
-## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, contrat ownership Pi vs SaaS PRs [#996](https://github.com/Tallec7/neopro/pull/996) + [#997](https://github.com/Tallec7/neopro/pull/997))
+## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, contrat ownership Pi vs SaaS PRs [#996](https://github.com/Tallec7/neopro/pull/996) + [#997](https://github.com/Tallec7/neopro/pull/997) + fix CI [#1010](https://github.com/Tallec7/neopro/pull/1010))
 
 ### 🧹 Pour l'équipe
+
+- **Suite refactor Templates Studio : 52 tests jest réactivés** ([#1010](https://github.com/Tallec7/neopro/pull/1010)) — après le merge consolidation Templates Studio in-process (PR [#1007](https://github.com/Tallec7/neopro/pull/1007), ADR-124), 2 fichiers de tests (`command-queue` + `canary.routes`) étaient skippés (`xdescribe`) avec une cause "pollution Webpack inter-suites" non identifiée (issue #1008). Root cause trouvée : `prewarmStudioBundle()` au boot du worker lance `@remotion/bundler` → webpack écrit un cache filesystem partagé entre processus, corrompu par les workers jest parallèles. Fix : guard `NODE_ENV !== 'test'`. Bénéfice : 52 tests métier remis verts, seuils coverage re-bumpés (functions 39→40, lines/statements 43→44), smoke garde-fou ajouté + règle `NE JAMAIS FAIRE` dans `.claude/rules/templates.md` pour empêcher la régression.
 
 - **Contrat formel ownership Pi vs SaaS posé** ([#996](https://github.com/Tallec7/neopro/pull/996)) — l'offre Pi est vendue comme "sans internet en live", mais les ADRs récentes (114/116/117) ont câblé des features cloud-only sans contrepartie locale `:8080`. ADR-120 formalise la matrice ownership par champ (Pi-owned vs cloud-owned), la mise à parité `:8080` (profils CRUD + displays/receivers), et un sync bidirectionnel Modèle C 3-way merge (baseline + Pi + cloud) avec UI conflits inline dans l'onglet Content. Plan en 5 phases ~10j. ADR-121 stub crée pour tracker le drift `video_variants` (à instruire si un cas advertiser cross-site avec variants se présente).
 
