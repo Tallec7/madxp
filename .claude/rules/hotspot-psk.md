@@ -30,3 +30,10 @@ Le Pi **consomme**, jamais ne dicte.
 ### Phase 5b (planifiée 2026-06-15)
 
 Ne pas supprimer `configuration.service.js.getClubConfig()` ni la route `/api/config` tant que `npm run hotspot:status` ne reporte pas 100 % de la flotte bootstrappée.
+
+### Filet DNS resolv.conf.head (ADR-126 — smoke test enforced)
+
+- **Retirer la fonction `ensure_resolv_conf_head()` de `raspberry/install.sh` ou son appel dans `setup_hotspot()`.** Sans ce filet, quand `dhcpcd` vide `/etc/resolv.conf` (outage wlan1, bail perdu), glibc tombe sur `127.0.0.1` → `dnsmasq` local → wildcard `address=/#/192.168.4.1` (CAPTIVE-14) → **toutes** les requêtes du Pi vers Railway/FTP sont hijackées vers son propre hotspot (incident NLF 2026-05-14). Le hook `/lib/dhcpcd/dhcpcd-hooks/20-resolv.conf` lit `/etc/resolv.conf.head` à chaque renouvellement de bail et préfixe Cloudflare/Google avant le DNS de la box — c'est le seul mécanisme qui survit aux outages dhcpcd.
+- **Retirer ou renommer le script `raspberry/scripts/fix-resolv-conf-head.sh`** : contrat outillage documenté dans ADR-126 (appelé par l'OTA + admin SSH manuel pour rattraper la flotte pré-ADR-126).
+- **Supprimer le `address=/#/192.168.4.1` de `dnsmasq.conf`** sans préserver simultanément le pinning `resolv.conf.head` : le wildcard est nécessaire pour le captive Fire Stick (ADR-079 Phase 14), mais il devient un piège si glibc fallback localement. Les deux mesures sont couplées.
+- Référence : [ADR-126](../../docs/adr/ADR-126-pi-resolv-conf-head-dns-fallback.md), smoke `central-server/src/__tests__/smoke/smoke-kiosk-pi.test.ts` (cas `RESOLV-HEAD-01` + `RESOLV-HEAD-02`).

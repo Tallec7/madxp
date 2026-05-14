@@ -3687,4 +3687,34 @@ describe('Phase 10 — CAPTIVE-AUTO Silk auto-launch', () => {
     );
     expect(iptables).not.toMatch(/iptables[^\n]*-[AC][^\n]+--dport\s+443[^\n]*-j\s+DNAT/);
   });
+
+  it('RESOLV-HEAD-01 (ADR-126): install.sh pins /etc/resolv.conf.head with Cloudflare + Google DNS', () => {
+    // Incident NLF 2026-05-14 : quand dhcpcd vide /etc/resolv.conf (bail wlan1
+    // perdu), glibc tombe sur 127.0.0.1 → dnsmasq local → wildcard
+    // `address=/#/192.168.4.1` (CAPTIVE-14) → toutes les requêtes du Pi vers
+    // Railway/FTP sont hijackées. Le filet `resolv.conf.head` empêche ce piège.
+    const installSh = fs.readFileSync(
+      path.join(REPO_ROOT, 'raspberry/install.sh'),
+      'utf8'
+    );
+    expect(installSh).toMatch(/ensure_resolv_conf_head\s*\(\s*\)\s*\{/);
+    expect(installSh).toContain('/etc/resolv.conf.head');
+    expect(installSh).toMatch(/nameserver\s+1\.1\.1\.1/);
+    expect(installSh).toMatch(/nameserver\s+8\.8\.8\.8/);
+    expect(installSh).toMatch(/\n\s*ensure_resolv_conf_head\s*$/m);
+  });
+
+  it('RESOLV-HEAD-02 (ADR-126): script fix-resolv-conf-head.sh exists and is idempotent', () => {
+    // Script appelé par l'OTA + admin SSH manuel pour rattraper la flotte
+    // déjà installée (les Pi pré-ADR-126 n'ont pas /etc/resolv.conf.head).
+    const scriptPath = path.join(REPO_ROOT, 'raspberry/scripts/fix-resolv-conf-head.sh');
+    expect(fs.existsSync(scriptPath)).toBe(true);
+    const script = fs.readFileSync(scriptPath, 'utf8');
+    expect(script).toMatch(/already conforming/);
+    expect(script).toContain('1.1.1.1');
+    expect(script).toContain('8.8.8.8');
+    expect(script).toContain('/etc/resolv.conf.head');
+    expect(script).not.toMatch(/>\s*\/etc\/resolv\.conf\b[^.]/);
+    expect(script).toMatch(/dhcpcd\s+--rebind/);
+  });
 });
