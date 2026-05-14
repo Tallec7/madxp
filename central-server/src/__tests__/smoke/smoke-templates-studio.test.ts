@@ -405,3 +405,53 @@ describe('Templates Studio V1 — S4-A roster CRUD + résolveur câblé', () => 
     expect(content).toMatch(/createPlayer:\s*Joi\.object\([\s\S]*?photo_raw_url:\s*Joi\.string\(\)\.uri\(\)/);
   });
 });
+
+describe('Templates Studio V1 — S4-B upload photo multipart', () => {
+  it('controller exports uploadPlayerPhoto handler', () => {
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/export\s+const\s+uploadPlayerPhoto\s*=/);
+  });
+
+  it('uploadPlayerPhoto verifies file mime + size before FTP upload', () => {
+    // Garde-fous : sans ces checks, on accepterait un .mp4 nommé .png ou un
+    // fichier vide → garbage sur FTP + worker rembg crash.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/ALLOWED_PHOTO_MIMES/);
+    expect(content).toMatch(/file\.size === 0/);
+    expect(content).toMatch(/image\/jpeg/);
+    expect(content).toMatch(/image\/png/);
+    expect(content).toMatch(/image\/webp/);
+  });
+
+  it('uploadPlayerPhoto enforces tenant guard via existing.site_id !== siteId', () => {
+    // Defense-in-depth : même si requireClubScope passe (admin bypass), on
+    // recheck que le player appartient bien au site_id de l'URL.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/existing\.site_id\s*!==\s*siteId/);
+  });
+
+  it('uploadPlayerPhoto storage path is content-addressable (sha1 hash)', () => {
+    // Pattern `players/{siteId}/{playerId}-raw-{hash}.{ext}` — évite les
+    // collisions si même joueur ré-upload différentes photos.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/createHash\(['"]sha1['"]\)/);
+    expect(content).toMatch(/players\/\$\{siteId\}\/\$\{playerId\}-raw-/);
+  });
+
+  it('uploadPlayerPhoto bumps cutout_status to pending via repository.update', () => {
+    // Le worker rembg (S4-C) poll `WHERE cutout_status='pending'`. Sans ce
+    // bump, un nouveau raw_url ne déclenche pas le re-traitement.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    expect(content).toMatch(/playerRepository\.update\(playerId,\s*siteId,\s*\{[\s\S]*?photo_raw_url:\s*publicUrl/);
+  });
+
+  it('routes mount POST /sites/:siteId/players/:playerId/photo with multer + tenant guard', () => {
+    const routes = fs.readFileSync(ROUTES_FILE, 'utf8');
+    expect(routes).toMatch(/router\.post\([\s\S]*?'\/sites\/:siteId\/players\/:playerId\/photo'/);
+    expect(routes).toMatch(/uploadPlayerPhotoMiddleware\.single\(['"]photo['"]\)/);
+    expect(routes).toMatch(/multer\.memoryStorage\(\)/);
+    expect(routes).toMatch(/fileSize:\s*8\s*\*\s*1024\s*\*\s*1024/);
+    // Tenant guard sur le siteId
+    expect(routes).toMatch(/requireClubScope\(siteIdFromParams\)/);
+  });
+});

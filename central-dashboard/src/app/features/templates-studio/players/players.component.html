@@ -112,6 +112,23 @@
               }
             </div>
             <div class="pl__card-actions">
+              <label
+                class="pl__upload"
+                aria-label="Uploader photo"
+                [class.pl__upload--busy]="uploadingPhotoFor() === p.id"
+              >
+                @if (uploadingPhotoFor() === p.id) {
+                  ⏳
+                } @else {
+                  📤
+                }
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  (change)="onPhotoSelected(p, $event)"
+                  [disabled]="uploadingPhotoFor() === p.id"
+                />
+              </label>
               <button
                 type="button"
                 class="pl__delete"

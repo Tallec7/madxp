@@ -245,3 +245,40 @@ describe('Templates Studio V1 — S4-D roster UI + PlayerPicker', () => {
     );
   });
 });
+
+describe('Templates Studio V1 — S4-B upload photo UI', () => {
+  it('service exposes uploadPlayerPhoto via FormData (multipart)', () => {
+    const content = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'templates-studio.service.ts'),
+      'utf8',
+    );
+    expect(content).toMatch(/uploadPlayerPhoto\(/);
+    expect(content).toMatch(/new\s+FormData\(\)/);
+    expect(content).toMatch(/form\.append\(['"]photo['"]/);
+    // Le pattern endpoint matche le backend
+    expect(content).toMatch(/\/templates-studio\/sites\/\$\{siteId\}\/players\/\$\{playerId\}\/photo/);
+  });
+
+  it('players page uses ApiService.upload (not raw fetch — invariant dashboard)', () => {
+    const content = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'templates-studio.service.ts'),
+      'utf8',
+    );
+    // Strip comments
+    const code = content
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    // Verify upload() de l'ApiService est utilisé
+    expect(code).toMatch(/this\.api\s*\.\s*upload</);
+    expect(code).not.toMatch(/\bfetch\(/);
+  });
+
+  it('players component accepts only image/* mimes on the file input', () => {
+    const html = fs.readFileSync(
+      path.join(DASHBOARD_FEATURE, 'players/players.component.html'),
+      'utf8',
+    );
+    // Restreint à JPEG/PNG/WebP — aligné avec ALLOWED_PHOTO_MIMES backend
+    expect(html).toMatch(/accept="image\/jpeg,image\/png,image\/webp"/);
+  });
+});

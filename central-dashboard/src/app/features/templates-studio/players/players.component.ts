@@ -138,6 +138,34 @@ export class PlayersComponent implements OnInit {
     });
   }
 
+  // S4-B : upload multipart photo brute. Bump cutout_status='pending' côté
+  // backend → réveille worker rembg (S4-C).
+  uploadingPhotoFor = signal<string | null>(null);
+
+  onPhotoSelected(p: Player, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const siteId = this.siteId();
+    if (!siteId) return;
+    this.uploadingPhotoFor.set(p.id);
+    this.errorMsg.set(null);
+    this.studio.uploadPlayerPhoto(siteId, p.id, file).subscribe({
+      next: (updated) => {
+        this.uploadingPhotoFor.set(null);
+        this.players.update((arr) => arr.map((x) => (x.id === updated.id ? updated : x)));
+        this.flashSuccess('Photo uploadée — en attente de détourage.');
+        // Reset input pour permettre re-upload du même fichier après modif côté disque.
+        input.value = '';
+      },
+      error: (err) => {
+        this.uploadingPhotoFor.set(null);
+        this.errorMsg.set(err?.error?.error ?? 'Upload échoué');
+        input.value = '';
+      },
+    });
+  }
+
   private flashSuccess(msg: string): void {
     this.successMsg.set(msg);
     setTimeout(() => this.successMsg.set(null), 3000);

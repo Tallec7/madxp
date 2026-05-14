@@ -123,4 +123,20 @@ export class TemplatesStudioService {
       .delete<void>(`/templates-studio/sites/${siteId}/players/${playerId}`)
       .pipe(map(() => undefined));
   }
+
+  /**
+   * Upload multipart photo brute (S4-B). Met à jour `photo_raw_url` côté DB +
+   * bump `cutout_status='pending'` (réveille worker rembg S4-C).
+   * Le format multipart est porté par `FormData` côté client.
+   */
+  uploadPlayerPhoto(siteId: string, playerId: string, file: File): Observable<Player> {
+    const form = new FormData();
+    form.append('photo', file);
+    return this.api
+      .upload<PlayerResponse>(
+        `/templates-studio/sites/${siteId}/players/${playerId}/photo`,
+        form,
+      )
+      .pipe(map((res) => res.data));
+  }
 }

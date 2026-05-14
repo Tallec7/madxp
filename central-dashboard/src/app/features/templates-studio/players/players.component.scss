@@ -224,18 +224,47 @@
     position: absolute;
     top: 16px;
     right: 16px;
+    display: flex;
+    gap: 4px;
   }
-  &__delete {
+  &__delete,
+  &__upload {
     background: rgba(0, 0, 0, 0.5);
-    color: #f85149;
     border: none;
     border-radius: 4px;
     width: 28px;
     height: 28px;
     cursor: pointer;
     font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &__delete {
+    color: #f85149;
     &:hover {
       background: #f8514944;
+    }
+  }
+  &__upload {
+    color: #58a6ff;
+    position: relative;
+    overflow: hidden;
+    &:hover {
+      background: #1f6feb44;
+    }
+    input[type='file'] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      &:disabled {
+        cursor: wait;
+      }
+    }
+    &--busy {
+      cursor: wait;
+      opacity: 0.6;
     }
   }
 }
