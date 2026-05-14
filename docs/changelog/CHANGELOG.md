@@ -1,3 +1,9 @@
+## [3.315.1](https://github.com/Tallec7/neopro/compare/v3.315.0...v3.315.1) (2026-05-14)
+
+### Bug Fixes
+
+- **templates-studio:** coalesce null JSON to '{}' on brand-kit INSERT ([#1005](https://github.com/Tallec7/neopro/issues/1005)) ([c3c9172](https://github.com/Tallec7/neopro/commit/c3c9172bceebe99c71ff5828960212e2d418f070))
+
 # [3.315.0](https://github.com/Tallec7/neopro/compare/v3.314.0...v3.315.0) (2026-05-14)
 
 ### Features
