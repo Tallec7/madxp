@@ -19,5 +19,22 @@
     "label": { "source": "input.label" }
   },
   "format": { "width": 1920, "height": 1080, "fps": 25, "durationInFrames": 250 },
-  "compositionId": "FaitsDeJeuStory"
+  "compositionId": "FaitsDeJeuStory",
+  "requiredAssets": [
+    {
+      "key": "metalTexture",
+      "filename": "metal_texture.png",
+      "mime": "image/png"
+    },
+    {
+      "key": "lensFlare",
+      "filename": "lens_flare_web.mp4",
+      "mime": "video/mp4"
+    },
+    {
+      "key": "watermarkNeopro",
+      "filename": "watermark_neopro.png",
+      "mime": "image/png"
+    }
+  ]
 }

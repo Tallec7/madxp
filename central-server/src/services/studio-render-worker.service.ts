@@ -29,9 +29,13 @@ import * as fs from 'fs';
 import * as os from 'os';
 import logger from '../config/logger';
 import { uploadVideoFromDisk } from './storage.service';
+import { getFtpPublicUrl } from '../config/ftp-storage';
 import {
   renderRequestRepository,
   templateDefinitionRepository,
+  studioAssetRepository,
+  templateAssetBindingRepository,
+  type TemplateDefinitionRow,
 } from '../repositories';
 
 const POLL_INTERVAL_MS = 2_000;
@@ -102,12 +106,49 @@ export function prewarmStudioBundle(): void {
 
 // ── Render pipeline ─────────────────────────────────────────────────────────
 
+/**
+ * Résoud les `__assets` à partir des bindings DB pour un template donné
+ * (ADR-125, Phase 1.5). Lève une erreur explicite si un slot déclaré dans
+ * `manifest.requiredAssets` n'a pas de binding actif — le user doit aller
+ * binder dans le panel admin avant de pouvoir render.
+ */
+async function resolveTemplateAssets(
+  template: TemplateDefinitionRow,
+): Promise<Record<string, string>> {
+  const manifest = template.manifest_json as {
+    requiredAssets?: Array<{ key: string; filename?: string }>;
+  };
+  const required = manifest.requiredAssets ?? [];
+  if (required.length === 0) return {};
+
+  const bindings = await templateAssetBindingRepository.findByTemplate(template.slug);
+  const resolved: Record<string, string> = {};
+  for (const slot of required) {
+    const binding = bindings.find((b) => b.asset_key === slot.key);
+    if (!binding) {
+      throw new Error(
+        `Asset manquant: '${slot.key}'${slot.filename ? ` (${slot.filename})` : ''} — bind dans /templates-studio/admin/assets/${template.slug}`,
+      );
+    }
+    const asset = await studioAssetRepository.findById(binding.asset_id);
+    if (!asset) {
+      throw new Error(
+        `Asset binding invalide: asset ${binding.asset_id} introuvable (slot '${slot.key}')`,
+      );
+    }
+    resolved[slot.key] = getFtpPublicUrl(asset.ftp_path);
+  }
+  return resolved;
+}
+
 async function performRenderInProcess(
-  compositionId: string,
-  kind: 'video' | 'still',
+  template: TemplateDefinitionRow,
   inputProps: Record<string, unknown>,
   requestId: string,
 ): Promise<string> {
+  const compositionId = template.remotion_composition_id;
+  const kind = template.kind;
+
   const { renderMedia, renderStill, selectComposition } = (await import(
     '@remotion/renderer'
   )) as typeof import('@remotion/renderer');
@@ -116,10 +157,15 @@ async function performRenderInProcess(
 
   const bundled = await getOrCreateBundle();
 
+  // Résolution __assets depuis les bindings DB (ADR-125). Échec explicite
+  // ici = render fail avec message FR pointant vers le panel admin.
+  const __assets = await resolveTemplateAssets(template);
+  const propsWithAssets: Record<string, unknown> = { ...inputProps, __assets };
+
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
-    inputProps,
+    inputProps: propsWithAssets,
     chromiumOptions,
     browserExecutable,
     timeoutInMilliseconds: 90_000,
@@ -133,7 +179,7 @@ async function performRenderInProcess(
       composition,
       serveUrl: bundled,
       output: tmpPath,
-      inputProps,
+      inputProps: propsWithAssets,
       chromiumOptions,
       browserExecutable,
       imageFormat: 'png',
@@ -145,7 +191,7 @@ async function performRenderInProcess(
       serveUrl: bundled,
       codec: 'h264',
       outputLocation: tmpPath,
-      inputProps,
+      inputProps: propsWithAssets,
       chromiumOptions,
       browserExecutable,
       timeoutInMilliseconds: 90_000,
@@ -195,8 +241,7 @@ async function processOne(): Promise<boolean> {
     }
 
     const outputUrl = await performRenderInProcess(
-      template.remotion_composition_id,
-      template.kind,
+      template,
       request.props_json,
       request.id,
     );
