@@ -1,0 +1,21 @@
+{
+  "name": "neopro-templates-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compositions Remotion Templates Studio — bundlées par central-server/src/services/studio-render-worker.service.ts",
+  "scripts": {
+    "studio": "remotion studio index.ts",
+    "render:test": "remotion render index.ts FaitsDeJeuStory out/test.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -8,12 +8,7 @@
     "outDir": "dist",
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "zod": ["./node_modules/zod"]
-    }
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "spec/types.ts", "spec/templates/**/*.json"]
+  "include": ["index.ts", "Root.tsx", "templates/**/*"]
 }
