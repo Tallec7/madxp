@@ -36,13 +36,23 @@ let stopping = false;
 // ── @imgly/background-removal-node lazy import ──────────────────────────────
 // Le module est lourd (modèle ONNX + WASM) — chargement paresseux pour ne pas
 // pénaliser le boot du central si aucun cutout n'est jamais demandé.
-let removeBgModule: typeof import('@imgly/background-removal-node') | null = null;
+//
+// Note typage : on évite `typeof import(...)` au top-level pour ne pas
+// déclencher le résolver TS au chargement du fichier (le module a un
+// initializer side-effect qui plante en environnement de test sans server).
+// Le typage local de `removeBackground` est réinjecté à l'usage via la signature
+// minimale dont on a besoin (Blob → Promise<Blob>).
+type RemoveBackgroundFn = (input: Blob) => Promise<Blob>;
+let removeBgFn: RemoveBackgroundFn | null = null;
 
-async function getRemoveBg(): Promise<typeof import('@imgly/background-removal-node')> {
-  if (!removeBgModule) {
-    removeBgModule = await import('@imgly/background-removal-node');
+async function getRemoveBg(): Promise<RemoveBackgroundFn> {
+  if (!removeBgFn) {
+    const mod = (await import('@imgly/background-removal-node')) as unknown as {
+      removeBackground: RemoveBackgroundFn;
+    };
+    removeBgFn = mod.removeBackground;
   }
-  return removeBgModule;
+  return removeBgFn;
 }
 
 async function downloadBuffer(url: string): Promise<Buffer> {
@@ -61,9 +71,8 @@ async function downloadBuffer(url: string): Promise<Buffer> {
 }
 
 async function performCutout(rawBuffer: Buffer): Promise<Buffer> {
-  const { removeBackground } = await getRemoveBg();
+  const removeBackground = await getRemoveBg();
   // Default config = modèle medium (BiRefNet portrait), output PNG transparent.
-  // Pour passer à un autre modèle : `removeBackground(blob, { model: 'small' })`.
   const blob = new Blob([rawBuffer]);
   const outBlob = await removeBackground(blob);
   const arrayBuffer = await outBlob.arrayBuffer();
