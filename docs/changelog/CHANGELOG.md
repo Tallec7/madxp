@@ -1,3 +1,9 @@
+## [3.317.1](https://github.com/Tallec7/neopro/compare/v3.317.0...v3.317.1) (2026-05-14)
+
+### Bug Fixes
+
+- **pi:** pin /etc/resolv.conf.head pour neutraliser DNS hijack (ADR-126) ([#1013](https://github.com/Tallec7/neopro/issues/1013)) ([2ea32e2](https://github.com/Tallec7/neopro/commit/2ea32e260629785559f81c2f5f10efefe8d52522)), closes [#1012](https://github.com/Tallec7/neopro/issues/1012)
+
 # [3.317.0](https://github.com/Tallec7/neopro/compare/v3.316.1...v3.317.0) (2026-05-14)
 
 ### Features
