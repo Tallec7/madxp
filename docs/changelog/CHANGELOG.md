@@ -1,3 +1,9 @@
+## [3.313.1](https://github.com/Tallec7/neopro/compare/v3.313.0...v3.313.1) (2026-05-14)
+
+### Bug Fixes
+
+- **studio:** site picker pour internal roles (super_admin/admin/operator) ([#998](https://github.com/Tallec7/neopro/issues/998)) ([52a14af](https://github.com/Tallec7/neopro/commit/52a14afe85d1b8a3080ae3f778385294107125c5))
+
 # [3.313.0](https://github.com/Tallec7/neopro/compare/v3.312.0...v3.313.0) (2026-05-14)
 
 ### Features
