@@ -78,6 +78,9 @@ cd central-server && npm run db:migrate
 | `cron*` ou scheduler | `docs/specs/services/cron-scheduler.spec.md` |
 | `alerting*`, dedup ADR-111 | `docs/specs/services/alert-repository.spec.md` |
 | `sync-agent*`, write-through ADR-114 | `docs/specs/services/sync-agent-displays-write-through.spec.md` + `sync-agent-auth-preservation.spec.md` |
+| Config Pi (`:8080`, profils CRUD, ownership Pi vs cloud, conflits, push-back) | `docs/adr/ADR-120-pi-saas-ownership-model.md` + `docs/specs/features/admin-pi-local.spec.md` |
+| `command-queue*`, `sendOrQueue`, `pending_commands` | `docs/specs/services/command-queue.spec.md` |
+| Garde-fou Pi offline, alertes connectivité Pi | `docs/specs/features/pi-connectivity-model.spec.md` |
 | `socket*`, realtime | `docs/specs/services/socket-service.spec.md` |
 | Routing CF Pages SaaS | `docs/specs/services/cloudflare-pages-saas-routing.spec.md` |
 
