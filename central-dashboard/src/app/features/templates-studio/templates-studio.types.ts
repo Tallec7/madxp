@@ -123,3 +123,20 @@ export interface PlayerGrant {
   granted_by: string | null;
   granted_at: string;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Distribution multi-sites des renders (POST /render-requests/:id/distribute)
+// ────────────────────────────────────────────────────────────────────────────
+
+export type RenderDistributionMode = 'push' | 'grant';
+
+export interface RenderDistributionInput {
+  mode: RenderDistributionMode;
+  site_ids: string[];
+  category?: string;
+}
+
+export interface RenderDistributionResult {
+  videos_created: Array<{ id: string; site_id: string | null }>;
+  grants_created: Array<{ video_id: string; site_id: string }>;
+}

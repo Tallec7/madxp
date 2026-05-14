@@ -238,6 +238,36 @@
     }
   }
 
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__distribute {
+    background: #238636;
+    color: #fff;
+    border: 1px solid #2ea043;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.85em;
+    cursor: pointer;
+    &:hover {
+      background: #2ea043;
+    }
+  }
+
+  &__flash {
+    margin-top: 10px;
+    background: #238636;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85em;
+  }
+
   .muted {
     color: #8b949e;
   }

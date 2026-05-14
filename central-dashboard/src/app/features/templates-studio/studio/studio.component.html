@@ -154,9 +154,27 @@
                   class="studio__output"
                 ></video>
               }
-              <a [href]="snap.output_url" target="_blank" rel="noopener" class="studio__download">
-                Ouvrir dans un nouvel onglet
-              </a>
+              <div class="studio__actions">
+                <a
+                  [href]="snap.output_url"
+                  target="_blank"
+                  rel="noopener"
+                  class="studio__download"
+                >
+                  Ouvrir dans un nouvel onglet
+                </a>
+                <button
+                  type="button"
+                  class="studio__distribute"
+                  (click)="openDistributeModal()"
+                  data-testid="studio-distribute-button"
+                >
+                  Distribuer vers des sites…
+                </button>
+              </div>
+              @if (distributionFlash(); as flash) {
+                <div class="studio__flash" role="status">{{ flash }}</div>
+              }
             }
             @if (snap.status === 'failed' && snap.error_msg) {
               <div class="studio__error">{{ snap.error_msg }}</div>
@@ -165,5 +183,13 @@
         }
       </section>
     </main>
+  }
+
+  @if (showDistributeModal() && jobId(); as renderId) {
+    <app-distribute-render-modal
+      [renderId]="renderId"
+      (distributed)="onDistributed($event)"
+      (cancelled)="closeDistributeModal()"
+    />
   }
 </div>
