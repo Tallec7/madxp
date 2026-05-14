@@ -1254,6 +1254,42 @@ export const templatesStudioSchemas = {
     site_ids: Joi.array().items(Joi.string().uuid()).min(1).max(200).required(),
     category: Joi.string().max(80).optional(),
   }),
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ADR-125 — Asset library + bindings (Phase 1.5)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // POST /api/templates-studio/assets — multipart, file dans `asset`.
+  // `tags` accepté en body comme JSON-string OU array (FormData appendable).
+  uploadAsset: Joi.object({
+    tags: Joi.alternatives()
+      .try(
+        Joi.array().items(Joi.string().max(60)).max(20),
+        Joi.string().max(2000),
+      )
+      .optional(),
+    filename: Joi.string().max(160).optional(),
+  }).unknown(true), // multer parse multipart text fields outside .body
+
+  // GET /api/templates-studio/assets query.
+  listAssetsQuery: Joi.object({
+    tag: Joi.string().max(60).optional(),
+    mime: Joi.string().max(120).optional(),
+    search: Joi.string().max(160).optional(),
+    limit: Joi.number().integer().min(1).max(200).optional(),
+    offset: Joi.number().integer().min(0).optional(),
+  }),
+
+  // PATCH /api/templates-studio/assets/:assetId
+  updateAssetMetadata: Joi.object({
+    filename: Joi.string().min(1).max(160).optional(),
+    tags: Joi.array().items(Joi.string().max(60)).max(20).optional(),
+  }).min(1),
+
+  // PUT /api/templates-studio/templates/:slug/asset-bindings/:assetKey
+  bindAsset: Joi.object({
+    asset_id: Joi.string().uuid().required(),
+  }),
 };
 
 // ============================================================================
@@ -1353,6 +1389,13 @@ export const paramSchemas = {
   playerIdAndSiteId: Joi.object({
     playerId: Joi.string().uuid().required(),
     siteId: Joi.string().uuid().required(),
+  }),
+  // ADR-125 — Templates Studio asset library + bindings.
+  assetId: Joi.object({ assetId: Joi.string().uuid().required() }),
+  templateSlug: Joi.object({ slug: Joi.string().min(1).max(80).required() }),
+  templateSlugAndAssetKey: Joi.object({
+    slug: Joi.string().min(1).max(80).required(),
+    assetKey: Joi.string().min(1).max(80).required(),
   }),
 };
 

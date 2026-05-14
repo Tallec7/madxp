@@ -14,6 +14,7 @@ import { authenticate, requireClubScope, requireRole } from '../middleware/auth'
 import {
   validate,
   validateParams,
+  validateQuery,
   paramSchemas,
   templatesStudioSchemas,
 } from '../middleware/validation';
@@ -36,6 +37,14 @@ import {
   addPlayerGrant,
   removePlayerGrant,
   listPlayerGrants,
+  listStudioAssets,
+  getStudioAsset,
+  uploadStudioAsset,
+  updateStudioAssetMetadata,
+  deleteStudioAsset,
+  getTemplateAssetBindings,
+  upsertTemplateAssetBinding,
+  deleteTemplateAssetBinding,
 } from '../controllers/templates-studio.controller';
 
 // Multer en mémoire pour photos brutes — 8 MB max (les photos high-res de
@@ -50,6 +59,14 @@ const uploadPlayerPhotoMiddleware = multer({
 const uploadBrandKitLogoMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+});
+
+// Studio assets (ADR-125) — limite plus haute pour les vidéos lensflare /
+// textures (50 MB max). Les fichiers font/* sont petits, mais les .webm
+// peuvent monter à ~10-20 MB en 1080p courte durée.
+const uploadStudioAssetMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
 });
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
@@ -233,6 +250,89 @@ router.delete(
   requireRole('super_admin', 'admin', 'operator'),
   validateParams(paramSchemas.playerIdAndSiteId),
   removePlayerGrant,
+);
+
+// ──────────────────────────────────────────────────────────────────────────
+// ADR-125 — Asset library globale + bindings par template
+//
+// Toutes les routes restreintes aux rôles internes (super_admin / admin /
+// operator). Les users `club` n'ont pas accès — la library est un catalogue
+// admin technique partagé sur la flotte.
+// ──────────────────────────────────────────────────────────────────────────
+
+router.get(
+  '/assets',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateQuery(templatesStudioSchemas.listAssetsQuery),
+  listStudioAssets,
+);
+
+router.post(
+  '/assets',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  uploadStudioAssetMiddleware.single('asset'),
+  validate(templatesStudioSchemas.uploadAsset),
+  uploadStudioAsset,
+);
+
+router.get(
+  '/assets/:assetId',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.assetId),
+  getStudioAsset,
+);
+
+router.patch(
+  '/assets/:assetId',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.assetId),
+  validate(templatesStudioSchemas.updateAssetMetadata),
+  updateStudioAssetMetadata,
+);
+
+router.delete(
+  '/assets/:assetId',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.assetId),
+  deleteStudioAsset,
+);
+
+router.get(
+  '/templates/:slug/asset-bindings',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.templateSlug),
+  getTemplateAssetBindings,
+);
+
+router.put(
+  '/templates/:slug/asset-bindings/:assetKey',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.templateSlugAndAssetKey),
+  validate(templatesStudioSchemas.bindAsset),
+  upsertTemplateAssetBinding,
+);
+
+router.delete(
+  '/templates/:slug/asset-bindings/:assetKey',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  validateParams(paramSchemas.templateSlugAndAssetKey),
+  deleteTemplateAssetBinding,
 );
 
 export default router;
