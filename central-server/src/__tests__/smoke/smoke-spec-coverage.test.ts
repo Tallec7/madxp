@@ -55,7 +55,9 @@ const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
 const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
   'metrics.service.ts',
   'excel-export.service.ts',
-  'subscription.service.ts',
+  // subscription.service.ts retiree 2026-05-14 :
+  // mentionnee dans docs/specs/features/pi-connectivity-model.spec.md (Pattern 1 message_remote)
+  // et docs/specs/services/command-queue.spec.md (referentiel patterns existants).
   'canary-deployment.service.ts',
   // alerting.service.ts + alerting-checks.service.ts retirees 2026-05-05 :
   // couvertes par docs/specs/services/alert-repository.spec.md (ADR-111).
