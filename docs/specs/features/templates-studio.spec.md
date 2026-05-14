@@ -1,20 +1,35 @@
 # SPEC : Template Studio v2 (Remotion data-driven)
 
 > **Owner** : Daisy
-> **Statut** : Live
+> **Statut** : Live (en parallèle du système Templates Studio V1 code-driven — voir ci-dessous)
 > **Dernière revue** : 2026-04-25
 > **last_verified** : 2026-05-10
 > **verified_against_commit** : 1890d43
-> **Code principal** :
+
+> ⚠️ **Coexistence avec Templates Studio V1 (code-driven)** :
+> Cette SPEC couvre **uniquement** le système data-driven legacy (rows DB + moteur générique unique). Un second système **Templates Studio V1 code-driven** (1 `.tsx` + 1 `manifest.json` par template, déployé via `studio-render-server` containerisé) vit en parallèle pour les nouveaux templates. Les deux systèmes coexistent volontairement (cible 10 templates en 12 mois sous V1, les 3 templates v2 actifs restent en prod inchangés).
+> **ADR Templates Studio V1** :
+>
+> - [ADR-118](../../adr/ADR-118-studio-render-server-deployment.md) — Container Railway dédié `studio-render-server` (pattern HTTP delegation depuis central-server)
+> - [ADR-119](../../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé pour le détourage photo joueur (BiRefNet via rembg)
+> - Spec V1 : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo)
+> - Recette E2E : [`docs/runbooks/STUDIO-V1-RECIPE.md`](../../runbooks/STUDIO-V1-RECIPE.md)
+
+> **Code principal (legacy v2 data-driven)** :
+>
 > - `templates-remotion/src/runtime/TemplateRuntime.tsx` (moteur générique unique)
 > - `central-server/src/scripts/import-template-spec.ts` (CLI `template:import` v1)
 > - `central-dashboard/src/app/features/templates/admin-*` (UI admin Studio v2)
 > - `central-server/src/repositories/template-studio.repository.ts` (DB layer)
 > - Tables DB : `remotion_templates`, `template_layers`, `template_text_fields`, `template_image_slots`, `template_fonts`
-> **ADR liés** : ADR-075 (Template Studio évolutions V2/V3 — 9 sprints livrés), ADR-077 (CLI import), ADR-084 (data-driven), ADR-086 (n-layers + safe-zones), ADR-087 (asset proxy avec rate limit), ADR-095 (Admin UX v2 — drag/snap/undo)
+
+> **ADR liés (legacy v2)** : ADR-075 (Template Studio évolutions V2/V3 — 9 sprints livrés), ADR-077 (CLI import), ADR-084 (data-driven), ADR-086 (n-layers + safe-zones), ADR-087 (asset proxy avec rate limit), ADR-095 (Admin UX v2 — drag/snap/undo)
+
 > **Smoke tests** :
+>
 > - `central-server/src/__tests__/smoke/smoke-remotion.test.ts` (async render + versions)
 > - Smoke tests sur règles `templates.md` (admin UX, CLI import, fonts, upload)
+
 > **`.claude/rules/` lié** : `templates.md`
 
 ## En une phrase
@@ -24,6 +39,7 @@ Le Template Studio v2 permet aux super_admins (et clubs Premium en libre-service
 ## Règles métier (ce qui DOIT marcher)
 
 ### Architecture data-driven (cœur ADR-075/084/086)
+
 - **Tout template passe par le moteur générique unique** `templates-remotion/src/runtime/TemplateRuntime.tsx`. Si une capacité manque, on l'ajoute au moteur — **jamais** à un template spécifique en .tsx.
 - **Un template = des rows DB + des assets FTP**. Pas de code par template. Si le designer livre un nouveau template, il livre une SPEC.md (frontmatter YAML) que le CLI `template:import` parse et insère.
 - **Les layers sont la source de vérité de la durée** : `template_layers.duration_ms` détermine combien de temps un layer (et ses slots enfants) sont visibles. La colonne `template_text_fields.duration_ms` existe pour backward-compat mais le runtime l'ignore en v2.
@@ -32,25 +48,30 @@ Le Template Studio v2 permet aux super_admins (et clubs Premium en libre-service
 - **`template_text_fields.layer_id` est NOT NULL** depuis ADR-086. Un texte appartient toujours à un layer parent (source de vérité durée + alpha).
 
 ### Slots image
+
 - **`anchor` + `fit_mode` toujours définis** sur les slots image (NOT NULL avec défauts). Permet le cadrage déterministe (ex: `fill-width-anchor-top` pour photos détourées).
 - **Canal alpha WebM** : `respect_alpha` est appliqué côté runtime Remotion (client ou worker Chrome) uniquement, jamais côté serveur. Le serveur ne lit pas le binaire vidéo.
 
 ### Workflow designer (CLI `template:import`)
+
 - **Le designer livre une SPEC.md** au format `docs/templates/SPEC-TEMPLATE.md`. Sans frontmatter YAML parsable, le CLI refuse l'import.
 - **Le CLI passe par le repository** (`templateStudioRepository`), jamais `import('../config/database')`. Sondes `ensureSlugAvailable` + `ensureFontsExist` en lecture pure.
 - **Pas d'upsert silencieux** : v1 refuse un slug existant pour éviter les écrasements accidentels.
 - **WebM en URLs absolues** : pas de fichier local pendant l'import v1. Upload FTP = v2 (designer push manuellement les assets).
 
 ### Fonts
+
 - **Aucune police hardcodée dans `FONT_FAMILIES`** côté dashboard. Toutes passent par la table `template_fonts` + endpoint `GET /api/remotion-templates/fonts`.
 - **Validation Joi côté serveur** : refuse une référence à une police absente de `template_fonts`.
 
 ### Async render (ADR-054 + ADR-055)
+
 - Le rendering Remotion est **asynchrone** : controller HTTP retourne 202 avec un `jobId`, le worker `remotion-render-worker.service` traite la queue.
 - Au boot du worker, `failStaleRunningJobs(10)` libère les jobs claimed par un process mort (sinon stuck ad vitam).
 - Le controller `remotion-templates.controller.ts` ne doit **JAMAIS** importer `@remotion/renderer` (sinon retombe en 502 Railway timeout — anti-pattern documenté).
 
 ### Admin UX v2 (ADR-095 — 9 contraintes smoke-testées)
+
 - **Undo/Redo Ctrl+Z/Y** : `historyRecord` Output émis en fin de drag, alimentant les stacks `undoStack`/`redoStack` du panel parent.
 - **Click-to-select slot** : `selectedSlot` + `selectSlot()` + `onCanvasBackgroundClick()` actifs.
 - **Drag-to-position avec snap** : `applySnap()` + constante `SNAP_THRESHOLD = 0.015` (1.5% du canvas).
@@ -62,20 +83,21 @@ Le Template Studio v2 permet aux super_admins (et clubs Premium en libre-service
 - **Sections FR francisées** : "Police / Taille (px) / Couleur / Alignement / Calque parent / Zone sûre & cadrage" pour utilisateurs non-tech.
 
 ### Quotas club self-service (ADR-075 V3 Phase D)
+
 - **3 templates max par club** (Phase D PR #531) — quota soft, à reconsidérer si les clubs demandent plus.
 - **10 renders/24h max** par club — anti-abus serveur Remotion.
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Pas de .tsx par template | `find templates-remotion/src -name "*.tsx" \| wc -l` reste à 1 (juste TemplateRuntime) |
-| CLI refuse SPEC sans frontmatter | `npm run template:import bad-spec.md` → exit non-zero avec message clair |
-| Slot image avec anchor/fit_mode | `SELECT * FROM template_image_slots WHERE anchor IS NULL` retourne 0 rows |
-| Async render OK | Controller retourne 202 + jobId, worker traite en background, statut visible via GET |
-| Undo/Redo Admin Studio | Ctrl+Z après drag → position revient à l'état précédent (sans flash, sans reload) |
-| Drag snap-to-center | Slot relâché à <1.5% du centre canvas → s'aligne sur centre exact |
-| Quota club self-service | 4e template créé par un club Premium → API retourne 403 quota exceeded |
+| Règle                            | Comment on vérifie                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| Pas de .tsx par template         | `find templates-remotion/src -name "*.tsx" \| wc -l` reste à 1 (juste TemplateRuntime) |
+| CLI refuse SPEC sans frontmatter | `npm run template:import bad-spec.md` → exit non-zero avec message clair               |
+| Slot image avec anchor/fit_mode  | `SELECT * FROM template_image_slots WHERE anchor IS NULL` retourne 0 rows              |
+| Async render OK                  | Controller retourne 202 + jobId, worker traite en background, statut visible via GET   |
+| Undo/Redo Admin Studio           | Ctrl+Z après drag → position revient à l'état précédent (sans flash, sans reload)      |
+| Drag snap-to-center              | Slot relâché à <1.5% du centre canvas → s'aligne sur centre exact                      |
+| Quota club self-service          | 4e template créé par un club Premium → API retourne 403 quota exceeded                 |
 
 ## Cas d'edge connus
 
