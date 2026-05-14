@@ -1,3 +1,10 @@
+## [3.316.1](https://github.com/Tallec7/neopro/compare/v3.316.0...v3.316.1) (2026-05-14)
+
+### Bug Fixes
+
+- **studio:** FaitsDeJeu stub autonome (drop assets externes manquants) ([#1009](https://github.com/Tallec7/neopro/issues/1009)) ([26d2ecf](https://github.com/Tallec7/neopro/commit/26d2ecf421c71fb27e125baedd9962a6105633c3)), closes [#1007](https://github.com/Tallec7/neopro/issues/1007)
+- **studio:** skip prewarmStudioBundle en NODE_ENV=test (issue [#1008](https://github.com/Tallec7/neopro/issues/1008)) ([#1010](https://github.com/Tallec7/neopro/issues/1010)) ([aa84da9](https://github.com/Tallec7/neopro/commit/aa84da98cdeec1338e544a7bdf385306733906ae)), closes [#1007](https://github.com/Tallec7/neopro/issues/1007)
+
 # [3.316.0](https://github.com/Tallec7/neopro/compare/v3.315.1...v3.316.0) (2026-05-14)
 
 ### Features
