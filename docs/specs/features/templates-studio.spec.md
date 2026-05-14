@@ -12,8 +12,11 @@
 >
 > - [ADR-118](../../adr/ADR-118-studio-render-server-deployment.md) — Container Railway dédié `studio-render-server` (pattern HTTP delegation depuis central-server)
 > - [ADR-119](../../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé pour le détourage photo joueur (BiRefNet via rembg)
+> - [ADR-123](../../adr/ADR-123-templates-studio-v1-sharing-distribution.md) — Players globaux + grants multi-sites + distribution renders (réutilise pattern ADR-082)
 > - Spec V1 : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo)
 > - Recette E2E : [`docs/runbooks/STUDIO-V1-RECIPE.md`](../../runbooks/STUDIO-V1-RECIPE.md)
+> - Provisionnement Railway : [`docs/runbooks/STUDIO-V1-RAILWAY-PROVISION.md`](../../runbooks/STUDIO-V1-RAILWAY-PROVISION.md)
+> - Guide portage template V1 : [`docs/templates/STUDIO-V1-PORTING-GUIDE.md`](../../templates/STUDIO-V1-PORTING-GUIDE.md)
 
 > **Code principal (legacy v2 data-driven)** :
 >
