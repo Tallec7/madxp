@@ -1,3 +1,9 @@
+# [3.311.0](https://github.com/Tallec7/neopro/compare/v3.310.0...v3.311.0) (2026-05-14)
+
+### Features
+
+- **templates-studio:** S4-B — upload multipart photo brute (backend + UI) ([#990](https://github.com/Tallec7/neopro/issues/990)) ([37191f4](https://github.com/Tallec7/neopro/commit/37191f4869aea81a7ff35a5c808bd604387516dd))
+
 # [3.310.0](https://github.com/Tallec7/neopro/compare/v3.309.0...v3.310.0) (2026-05-13)
 
 ### Features
