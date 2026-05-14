@@ -1,6 +1,6 @@
 # Recette Templates Studio V1
 
-> Recette E2E pour valider la **Definition of Done §11** du spec [STUDIO_V1.md](../../../studio-template/templates-remotion/spec/STUDIO_V1.md).
+> Recette E2E pour valider la **Definition of Done §11** du spec `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, hors du repo neopro/).
 > À exécuter par l'opérateur Neopro **avant** d'annoncer V1 disponible en interne.
 
 ---
@@ -338,7 +338,7 @@ lftp -e "rm -rf studio/v1/<SITE_ID>; bye" -u $FTP_USER,$FTP_PASS $FTP_HOST
 
 ## Référence
 
-- [STUDIO_V1.md §11](../../../studio-template/templates-remotion/spec/STUDIO_V1.md) — Definition of Done source
+- `STUDIO_V1.md §11` — Definition of Done source (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, pas linké car hors du repo neopro/)
 - [ADR-118](../adr/ADR-118-studio-render-server-deployment.md) — Container Railway dédié
 - [ADR-119](../adr/ADR-119-rembg-python-worker.md) — Worker Python séparé
 - [ADR-111](../adr/ADR-111-alert-repository-dedup.md) — Pattern alerting dedup
