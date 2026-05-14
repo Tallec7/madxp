@@ -406,6 +406,113 @@ describe('Templates Studio V1 — S4-A roster CRUD + résolveur câblé', () => 
   });
 });
 
+describe('Templates Studio V1 — players globaux + grants (ADR-082 pattern)', () => {
+  const repo = fs.readFileSync(REPO_FILE, 'utf8');
+  const controller = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+  const routes = fs.readFileSync(ROUTES_FILE, 'utf8');
+  const validation = fs.readFileSync(
+    path.join(SRC, 'middleware', 'validation.ts'),
+    'utf8',
+  );
+  const migrationFile = path.join(
+    SRC,
+    'scripts',
+    'migrations',
+    'add-studio-player-global-grants.sql',
+  );
+
+  it('migration file exists with NULL site_id + grants table', () => {
+    expect(fs.existsSync(migrationFile)).toBe(true);
+    const sql = fs.readFileSync(migrationFile, 'utf8');
+    // players.site_id devient nullable (joueur global = NULL).
+    expect(sql).toMatch(/ALTER\s+TABLE\s+players\s+ALTER\s+COLUMN\s+site_id\s+DROP\s+NOT\s+NULL/i);
+    // table pivot des grants.
+    expect(sql).toMatch(
+      /CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?studio_player_site_grants\b/i,
+    );
+    // PK composite + index sur site_id pour les lookups.
+    expect(sql).toMatch(/PRIMARY\s+KEY\s*\(\s*player_id,\s*site_id\s*\)/i);
+    expect(sql).toMatch(
+      /CREATE\s+INDEX[\s\S]*?idx_studio_player_grants_site[\s\S]*?ON\s+studio_player_site_grants/i,
+    );
+  });
+
+  it('repository exposes findVisibleForSite / findGlobal / createGlobal', () => {
+    expect(repo).toMatch(/async\s+findVisibleForSite\(/);
+    expect(repo).toMatch(/async\s+findGlobal\(/);
+    expect(repo).toMatch(/async\s+createGlobal\(/);
+  });
+
+  it('repository exposes addGrant / removeGrant / listGrants', () => {
+    expect(repo).toMatch(/async\s+addGrant\(/);
+    expect(repo).toMatch(/async\s+removeGrant\(/);
+    expect(repo).toMatch(/async\s+listGrants\(/);
+  });
+
+  it('findVisibleForSite unions site-locaux ET globaux grantés', () => {
+    // Sans le UNION (site_id = $1 OR id IN grants), un club user ne verrait
+    // jamais les joueurs globaux qu'on lui a octroyés.
+    expect(repo).toMatch(/site_id\s*=\s*\$1/);
+    expect(repo).toMatch(/studio_player_site_grants/);
+  });
+
+  it('createGlobal inserts with site_id NULL', () => {
+    expect(repo).toMatch(/VALUES\s*\(NULL,/);
+  });
+
+  it('controller exports global handlers + grant handlers', () => {
+    expect(controller).toMatch(/export\s+const\s+listGlobalPlayers\s*=/);
+    expect(controller).toMatch(/export\s+const\s+createGlobalPlayer\s*=/);
+    expect(controller).toMatch(/export\s+const\s+addPlayerGrant\s*=/);
+    expect(controller).toMatch(/export\s+const\s+removePlayerGrant\s*=/);
+    expect(controller).toMatch(/export\s+const\s+listPlayerGrants\s*=/);
+  });
+
+  it('addPlayerGrant rejects non-global players (400)', () => {
+    // Un joueur site-local ne peut pas être octroyé (il appartient à un seul site).
+    expect(controller).toMatch(/player\.site_id\s*!==\s*null/);
+  });
+
+  it('routes mount /players/global with requireRole(super_admin/admin/operator)', () => {
+    expect(routes).toMatch(/router\.get\([\s\S]*?'\/players\/global'/);
+    expect(routes).toMatch(/router\.post\([\s\S]*?'\/players\/global'/);
+    // requireRole avec les 3 rôles internes.
+    expect(routes).toMatch(/requireRole\(['"]super_admin['"],\s*['"]admin['"],\s*['"]operator['"]\)/);
+  });
+
+  it('routes mount grant CRUD /players/:playerId/grants(/:siteId)', () => {
+    expect(routes).toMatch(/router\.get\([\s\S]*?'\/players\/:playerId\/grants'/);
+    expect(routes).toMatch(/router\.post\([\s\S]*?'\/players\/:playerId\/grants'/);
+    expect(routes).toMatch(
+      /router\.delete\([\s\S]*?'\/players\/:playerId\/grants\/:siteId'/,
+    );
+  });
+
+  it('routes use validateParams(paramSchemas.playerId/playerIdAndSiteId)', () => {
+    expect(routes).toMatch(/validateParams\(paramSchemas\.playerId\)/);
+    expect(routes).toMatch(/validateParams\(paramSchemas\.playerIdAndSiteId\)/);
+  });
+
+  it('validation schemas createGlobalPlayer + addPlayerGrant exist', () => {
+    expect(validation).toMatch(/createGlobalPlayer:\s*Joi\.object/);
+    expect(validation).toMatch(/addPlayerGrant:\s*Joi\.object/);
+    // addPlayerGrant valide site_id en uuid (anti-injection)
+    expect(validation).toMatch(
+      /addPlayerGrant:\s*Joi\.object\(\{[\s\S]*?site_id:\s*Joi\.string\(\)\.uuid\(\)\.required\(\)/,
+    );
+  });
+
+  it('createPlayer accepts is_global flag (super_admin/operator only côté controller)', () => {
+    // Le flag est dans le schéma Joi (optionnel, boolean).
+    expect(validation).toMatch(
+      /createPlayer:\s*Joi\.object\(\{[\s\S]*?is_global:\s*Joi\.boolean\(\)\.optional\(\)/,
+    );
+    // Côté controller : `wantsGlobal = is_global && isInternalRole(req.user.role)`
+    expect(controller).toMatch(/isInternalRole\(req\.user\.role\)/);
+    expect(controller).toMatch(/createGlobal\(/);
+  });
+});
+
 describe('Templates Studio V1 — S4-B upload photo multipart', () => {
   it('controller exports uploadPlayerPhoto handler', () => {
     const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');

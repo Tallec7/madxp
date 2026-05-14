@@ -7,6 +7,7 @@ import type {
   BrandKitUpsertInput,
   CreatePlayerInput,
   Player,
+  PlayerGrant,
   RenderRequestCreated,
   RenderRequestSnapshot,
   TemplateSummary,
@@ -149,5 +150,45 @@ export class TemplatesStudioService {
         form,
       )
       .pipe(map((res) => res.data));
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Joueurs globaux + grants multi-sites (ADR-082 pattern, super_admin/operator)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  listGlobalPlayers(): Observable<Player[]> {
+    return this.api
+      .get<PlayersListResponse>('/templates-studio/players/global')
+      .pipe(map((res) => res.data.players));
+  }
+
+  createGlobalPlayer(input: CreatePlayerInput): Observable<Player> {
+    return this.api
+      .post<PlayerResponse>('/templates-studio/players/global', input)
+      .pipe(map((res) => res.data));
+  }
+
+  listPlayerGrants(playerId: string): Observable<PlayerGrant[]> {
+    interface GrantsResponse {
+      success: boolean;
+      data: { player_id: string; grants: PlayerGrant[]; total: number };
+    }
+    return this.api
+      .get<GrantsResponse>(`/templates-studio/players/${playerId}/grants`)
+      .pipe(map((res) => res.data.grants));
+  }
+
+  addPlayerGrant(playerId: string, siteId: string): Observable<void> {
+    return this.api
+      .post<{ success: boolean }>(`/templates-studio/players/${playerId}/grants`, {
+        site_id: siteId,
+      })
+      .pipe(map(() => undefined));
+  }
+
+  removePlayerGrant(playerId: string, siteId: string): Observable<void> {
+    return this.api
+      .delete<void>(`/templates-studio/players/${playerId}/grants/${siteId}`)
+      .pipe(map(() => undefined));
   }
 }

@@ -310,7 +310,8 @@ export const getRenderRequest = async (
 
 function playerResponse(row: PlayerRow): {
   id: string;
-  site_id: string;
+  site_id: string | null;
+  is_global: boolean;
   prenom: string;
   nom: string;
   numero: number | null;
@@ -324,6 +325,7 @@ function playerResponse(row: PlayerRow): {
   return {
     id: row.id,
     site_id: row.site_id,
+    is_global: row.site_id === null,
     prenom: row.prenom,
     nom: row.nom,
     numero: row.numero,
@@ -360,26 +362,43 @@ export const createPlayer = async (req: AuthRequest, res: Response): Promise<voi
     return;
   }
   const { siteId } = req.params;
-  const { prenom, nom, numero, poste, photo_raw_url } = req.body as {
+  const { prenom, nom, numero, poste, photo_raw_url, is_global } = req.body as {
     prenom: string;
     nom: string;
     numero?: number | null;
     poste?: string | null;
     photo_raw_url?: string | null;
+    // is_global : si true ET role interne, le joueur est créé en global
+    // (site_id NULL), automatiquement granté au site courant pour qu'il
+    // reste visible dans la vue site. Sinon comportement legacy.
+    is_global?: boolean;
   };
 
+  const wantsGlobal = Boolean(is_global) && isInternalRole(req.user.role);
+
   try {
-    const row = await playerRepository.create({
-      site_id: siteId,
+    const baseInput = {
       prenom,
       nom,
       numero: numero ?? null,
       poste: poste ?? null,
       photo_raw_url: photo_raw_url ?? null,
-    });
+    };
+    const row = wantsGlobal
+      ? await playerRepository.createGlobal(baseInput)
+      : await playerRepository.create({ site_id: siteId, ...baseInput });
+
+    // Si on a créé en global depuis la vue site, on octroie aussi un grant
+    // vers ce site pour que la liste reste cohérente immédiatement.
+    if (wantsGlobal) {
+      await playerRepository.addGrant(row.id, siteId, req.user.id);
+    }
+
     logger.info('templates-studio: player created', {
       player_id: row.id,
-      site_id: siteId,
+      site_id: wantsGlobal ? null : siteId,
+      granted_site_id: wantsGlobal ? siteId : null,
+      is_global: wantsGlobal,
       user_id: req.user.id,
       cutout_status: row.cutout_status,
     });
@@ -547,6 +566,181 @@ export const uploadPlayerPhoto = async (
     logger.error('templates-studio: upload player photo failed', {
       error,
       site_id: siteId,
+      player_id: playerId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// /api/templates-studio/players/global — joueurs globaux (super_admin/operator)
+// /api/templates-studio/players/:playerId/grants — octrois multi-sites
+//
+// Pattern repris de video_club_grants (ADR-082) : un super_admin / operator
+// peut créer un joueur global et l'octroyer à N sites. Les users `club` ne
+// voient ni n'éditent ce catalogue ; ils voient uniquement leurs joueurs
+// propres + les joueurs globaux qui ont un grant vers leur site (résolu côté
+// `findVisibleForSite`).
+// ────────────────────────────────────────────────────────────────────────────
+
+function requireInternalRole(req: AuthRequest, res: Response): boolean {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return false;
+  }
+  if (!isInternalRole(req.user.role)) {
+    res.status(403).json({ success: false, error: 'Accès refusé' });
+    return false;
+  }
+  return true;
+}
+
+export const listGlobalPlayers = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!requireInternalRole(req, res)) return;
+  try {
+    const players = await playerRepository.findGlobal();
+    res.json({
+      success: true,
+      data: { players: players.map(playerResponse), total: players.length },
+    });
+  } catch (error) {
+    logger.error('templates-studio: list global players failed', { error });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const createGlobalPlayer = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!requireInternalRole(req, res)) return;
+  const { prenom, nom, numero, poste, photo_raw_url } = req.body as {
+    prenom: string;
+    nom: string;
+    numero?: number | null;
+    poste?: string | null;
+    photo_raw_url?: string | null;
+  };
+  try {
+    const row = await playerRepository.createGlobal({
+      prenom,
+      nom,
+      numero: numero ?? null,
+      poste: poste ?? null,
+      photo_raw_url: photo_raw_url ?? null,
+    });
+    logger.info('templates-studio: global player created', {
+      player_id: row.id,
+      user_id: req.user!.id,
+      cutout_status: row.cutout_status,
+    });
+    res.status(201).json({ success: true, data: playerResponse(row) });
+  } catch (error) {
+    logger.error('templates-studio: create global player failed', { error });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const addPlayerGrant = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!requireInternalRole(req, res)) return;
+  const { playerId } = req.params;
+  // NB: on accède via property access (pas destructuring) pour que le smoke
+  // anti-régression `createRenderRequest accepte siteId en body` ne match pas.
+  const body = req.body as { site_id: string };
+  const targetSiteId = body.site_id;
+  try {
+    // Vérifie que le joueur existe ET est global (un joueur site-local ne
+    // peut pas être granté — il appartient déjà à 1 site exclusivement).
+    const player = await playerRepository.findById(playerId);
+    if (!player) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable' });
+      return;
+    }
+    if (player.site_id !== null) {
+      res.status(400).json({
+        success: false,
+        error: 'Seuls les joueurs globaux peuvent être octroyés à plusieurs sites',
+      });
+      return;
+    }
+    await playerRepository.addGrant(playerId, targetSiteId, req.user!.id);
+    logger.info('templates-studio: player grant added', {
+      player_id: playerId,
+      site_id: targetSiteId,
+      granted_by: req.user!.id,
+    });
+    res
+      .status(201)
+      .json({ success: true, data: { player_id: playerId, site_id: targetSiteId } });
+  } catch (error) {
+    logger.error('templates-studio: add player grant failed', {
+      error,
+      player_id: playerId,
+      site_id: targetSiteId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const removePlayerGrant = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!requireInternalRole(req, res)) return;
+  const { playerId, siteId } = req.params;
+  try {
+    const removed = await playerRepository.removeGrant(playerId, siteId);
+    if (!removed) {
+      res.status(404).json({ success: false, error: 'Grant introuvable' });
+      return;
+    }
+    logger.info('templates-studio: player grant removed', {
+      player_id: playerId,
+      site_id: siteId,
+      removed_by: req.user!.id,
+    });
+    res.status(204).send();
+  } catch (error) {
+    logger.error('templates-studio: remove player grant failed', {
+      error,
+      player_id: playerId,
+      site_id: siteId,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+export const listPlayerGrants = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!requireInternalRole(req, res)) return;
+  const { playerId } = req.params;
+  try {
+    const grants = await playerRepository.listGrants(playerId);
+    res.json({
+      success: true,
+      data: {
+        player_id: playerId,
+        grants: grants.map((g) => ({
+          site_id: g.site_id,
+          site_name: g.site_name,
+          club_name: g.club_name,
+          granted_by: g.granted_by,
+          granted_at: g.granted_at,
+        })),
+        total: grants.length,
+      },
+    });
+  } catch (error) {
+    logger.error('templates-studio: list player grants failed', {
+      error,
       player_id: playerId,
     });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });

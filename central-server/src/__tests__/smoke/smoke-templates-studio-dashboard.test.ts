@@ -252,6 +252,48 @@ describe('Templates Studio V1 — S4-D roster UI + PlayerPicker', () => {
   });
 });
 
+describe('Templates Studio V1 — players globaux + grants UI (ADR-082 pattern)', () => {
+  const SERVICE = path.join(DASHBOARD_FEATURE, 'templates-studio.service.ts');
+  const TYPES = path.join(DASHBOARD_FEATURE, 'templates-studio.types.ts');
+  const PLAYERS_TS = path.join(DASHBOARD_FEATURE, 'players', 'players.component.ts');
+  const PLAYERS_HTML = path.join(DASHBOARD_FEATURE, 'players', 'players.component.html');
+
+  it('Player type exposes is_global flag + nullable site_id', () => {
+    const content = fs.readFileSync(TYPES, 'utf8');
+    expect(content).toMatch(/is_global:\s*boolean/);
+    expect(content).toMatch(/site_id:\s*string\s*\|\s*null/);
+  });
+
+  it('service exposes listGlobalPlayers / createGlobalPlayer / *Grant methods', () => {
+    const content = fs.readFileSync(SERVICE, 'utf8');
+    expect(content).toMatch(/listGlobalPlayers\(/);
+    expect(content).toMatch(/createGlobalPlayer\(/);
+    expect(content).toMatch(/listPlayerGrants\(/);
+    expect(content).toMatch(/addPlayerGrant\(/);
+    expect(content).toMatch(/removePlayerGrant\(/);
+    // Et tape les bons endpoints
+    expect(content).toMatch(/\/templates-studio\/players\/global/);
+    expect(content).toMatch(/\/templates-studio\/players\/\$\{playerId\}\/grants/);
+  });
+
+  it('players component shows is_global checkbox + grants modal for internal roles', () => {
+    const ts = fs.readFileSync(PLAYERS_TS, 'utf8');
+    const html = fs.readFileSync(PLAYERS_HTML, 'utf8');
+    // Form control is_global présent
+    expect(ts).toMatch(/is_global:\s*\[/);
+    // Gating UI sur le rôle interne (canManageGlobals computed)
+    expect(ts).toMatch(/canManageGlobals/);
+    expect(html).toMatch(/canManageGlobals\(\)/);
+    // Badge global visible sur la card
+    expect(html).toMatch(/p\.is_global/);
+    // Modal "Gérer les sites" câblée
+    expect(ts).toMatch(/openGrantsModal\(/);
+    expect(ts).toMatch(/addGrant\(/);
+    expect(ts).toMatch(/removeGrant\(/);
+    expect(html).toMatch(/grantsModalPlayer\(\)/);
+  });
+});
+
 describe('Templates Studio V1 — S4-B upload photo UI', () => {
   it('service exposes uploadPlayerPhoto via FormData (multipart)', () => {
     const content = fs.readFileSync(

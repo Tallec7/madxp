@@ -1,10 +1,10 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TemplatesStudioContextService } from '../templates-studio-context.service';
 import { TemplatesStudioService } from '../templates-studio.service';
 import { SitePickerComponent } from '../shared/site-picker.component';
-import type { Player } from '../templates-studio.types';
+import type { Player, PlayerGrant } from '../templates-studio.types';
 
 /**
  * Page roster joueurs (S4-D). CRUD scopé site, alimenté par les endpoints
@@ -48,7 +48,21 @@ export class PlayersComponent implements OnInit {
     numero: [null as number | null, [Validators.min(0), Validators.max(999)]],
     poste: [''],
     photo_raw_url: ['', [Validators.pattern(/^https?:\/\/.+/)]],
+    // ADR-082 pattern : checkbox visible uniquement pour les rôles internes.
+    // Si coché, le joueur est créé en global (site_id NULL) + auto-granté
+    // au site courant côté backend.
+    is_global: [false],
   });
+
+  /** Vrai si l'utilisateur peut créer/gérer des joueurs globaux. */
+  canManageGlobals = computed(() => this.ctx.isInternalRole());
+
+  // Modal "Gérer les sites" pour un joueur global donné.
+  grantsModalPlayer = signal<Player | null>(null);
+  grantsList = signal<PlayerGrant[]>([]);
+  grantsLoading = signal(false);
+  grantsError = signal<string | null>(null);
+  grantsSiteIdToAdd = signal<string>('');
 
   // Effect : reload du roster dès que le site actif change (picker UI ou
   // restauration localStorage). Couvre 1) club user (siteId du JWT, set 1x),
@@ -107,29 +121,107 @@ export class PlayersComponent implements OnInit {
       numero: number | null;
       poste: string;
       photo_raw_url: string;
+      is_global: boolean;
     };
     this.saving.set(true);
-    this.studio
-      .createPlayer(siteId, {
-        prenom: raw.prenom.trim(),
-        nom: raw.nom.trim(),
-        numero: raw.numero ?? null,
-        poste: raw.poste?.trim() || null,
-        photo_raw_url: raw.photo_raw_url?.trim() || null,
-      })
-      .subscribe({
-        next: (player) => {
-          this.players.update((arr) => [...arr, player]);
-          this.saving.set(false);
-          this.addForm.reset();
-          this.showAddForm.set(false);
-          this.flashSuccess('Joueur ajouté.');
-        },
-        error: (err) => {
-          this.saving.set(false);
-          this.errorMsg.set(err?.error?.error ?? 'Erreur de création');
-        },
-      });
+    // is_global = true autorisé uniquement pour les rôles internes (le backend
+    // refuse silencieusement le flag pour les users club, mais on garde la
+    // garde côté UI pour cohérence visuelle).
+    const wantsGlobal = Boolean(raw.is_global) && this.canManageGlobals();
+    const payload = {
+      prenom: raw.prenom.trim(),
+      nom: raw.nom.trim(),
+      numero: raw.numero ?? null,
+      poste: raw.poste?.trim() || null,
+      photo_raw_url: raw.photo_raw_url?.trim() || null,
+      is_global: wantsGlobal,
+    };
+    this.studio.createPlayer(siteId, payload).subscribe({
+      next: (player) => {
+        this.players.update((arr) => [...arr, player]);
+        this.saving.set(false);
+        this.addForm.reset({ is_global: false });
+        this.showAddForm.set(false);
+        this.flashSuccess(
+          wantsGlobal
+            ? 'Joueur global ajouté + octroyé à ce site.'
+            : 'Joueur ajouté.',
+        );
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.errorMsg.set(err?.error?.error ?? 'Erreur de création');
+      },
+    });
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Modal "Gérer les sites" — ADR-082 grants UI
+  // ────────────────────────────────────────────────────────────────────────
+
+  openGrantsModal(p: Player): void {
+    if (!p.is_global) return;
+    this.grantsModalPlayer.set(p);
+    this.grantsError.set(null);
+    this.grantsSiteIdToAdd.set('');
+    this.loadGrants(p.id);
+  }
+
+  closeGrantsModal(): void {
+    this.grantsModalPlayer.set(null);
+    this.grantsList.set([]);
+    this.grantsError.set(null);
+  }
+
+  private loadGrants(playerId: string): void {
+    this.grantsLoading.set(true);
+    this.studio.listPlayerGrants(playerId).subscribe({
+      next: (grants) => {
+        this.grantsList.set(grants);
+        this.grantsLoading.set(false);
+      },
+      error: (err) => {
+        this.grantsLoading.set(false);
+        this.grantsError.set(err?.error?.error ?? 'Erreur de chargement des sites');
+      },
+    });
+  }
+
+  /** Sites disponibles pour octroi (non déjà grantés). */
+  availableSitesForGrant = computed(() => {
+    const granted = new Set(this.grantsList().map((g) => g.site_id));
+    return this.ctx.availableSites().filter((s) => !granted.has(s.id));
+  });
+
+  addGrant(): void {
+    const player = this.grantsModalPlayer();
+    const siteId = this.grantsSiteIdToAdd();
+    if (!player || !siteId) return;
+    this.studio.addPlayerGrant(player.id, siteId).subscribe({
+      next: () => {
+        this.grantsSiteIdToAdd.set('');
+        this.loadGrants(player.id);
+      },
+      error: (err) => {
+        this.grantsError.set(err?.error?.error ?? "Erreur d'octroi");
+      },
+    });
+  }
+
+  removeGrant(siteId: string): void {
+    const player = this.grantsModalPlayer();
+    if (!player) return;
+    if (!confirm("Retirer l'accès à ce site ?")) return;
+    this.studio.removePlayerGrant(player.id, siteId).subscribe({
+      next: () => this.loadGrants(player.id),
+      error: (err) => {
+        this.grantsError.set(err?.error?.error ?? 'Erreur de révocation');
+      },
+    });
+  }
+
+  onGrantSiteChange(event: Event): void {
+    this.grantsSiteIdToAdd.set((event.target as HTMLSelectElement).value);
   }
 
   deletePlayer(p: Player): void {

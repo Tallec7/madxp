@@ -54,6 +54,14 @@
             />
           </label>
         </div>
+        @if (canManageGlobals()) {
+          <div class="pl__row">
+            <label class="pl__field pl__field--checkbox">
+              <input type="checkbox" formControlName="is_global" />
+              <span>Joueur global (réutilisable sur plusieurs sites)</span>
+            </label>
+          </div>
+        }
         <div class="pl__actions">
           <button type="submit" class="pl__save" [disabled]="addForm.invalid || saving()">
             {{ saving() ? 'Création…' : 'Créer' }}
@@ -112,8 +120,24 @@
               @if (p.poste) {
                 <small>{{ p.poste }}</small>
               }
+              @if (p.is_global) {
+                <span class="pl__global-badge" title="Joueur global (catalogue admin)">
+                  🌐 global
+                </span>
+              }
             </div>
             <div class="pl__card-actions">
+              @if (p.is_global && canManageGlobals()) {
+                <button
+                  type="button"
+                  class="pl__manage"
+                  (click)="openGrantsModal(p)"
+                  aria-label="Gérer les sites"
+                  title="Gérer les sites qui ont accès à ce joueur"
+                >
+                  🏟️
+                </button>
+              }
               <label
                 class="pl__upload"
                 aria-label="Uploader photo"
@@ -144,5 +168,77 @@
         }
       </div>
     }
+  }
+
+  @if (grantsModalPlayer(); as gp) {
+    <div class="pl__modal-backdrop" (click)="closeGrantsModal()">
+      <div class="pl__modal" (click)="$event.stopPropagation()">
+        <header class="pl__modal-header">
+          <h2>Sites avec accès à {{ gp.prenom }} {{ gp.nom }}</h2>
+          <button
+            type="button"
+            class="pl__modal-close"
+            (click)="closeGrantsModal()"
+            aria-label="Fermer"
+          >
+            ✕
+          </button>
+        </header>
+        @if (grantsError()) {
+          <div class="pl__error">{{ grantsError() }}</div>
+        }
+        @if (grantsLoading()) {
+          <div class="pl__loading">Chargement…</div>
+        } @else {
+          @if (grantsList().length === 0) {
+            <p class="pl__modal-empty">
+              Aucun site n'a encore accès à ce joueur global.
+            </p>
+          } @else {
+            <ul class="pl__grants-list">
+              @for (g of grantsList(); track g.site_id) {
+                <li class="pl__grant-row">
+                  <span>
+                    <strong>{{ g.site_name }}</strong>
+                    @if (g.club_name) {
+                      <small>— {{ g.club_name }}</small>
+                    }
+                  </span>
+                  <button
+                    type="button"
+                    class="pl__grant-remove"
+                    (click)="removeGrant(g.site_id)"
+                  >
+                    Retirer
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          <div class="pl__grant-add">
+            <label>
+              <span>Ajouter un site :</span>
+              <select
+                [value]="grantsSiteIdToAdd()"
+                (change)="onGrantSiteChange($event)"
+              >
+                <option value="">— Choisir un site —</option>
+                @for (s of availableSitesForGrant(); track s.id) {
+                  <option [value]="s.id">{{ s.label }}</option>
+                }
+              </select>
+            </label>
+            <button
+              type="button"
+              class="pl__grant-add-btn"
+              (click)="addGrant()"
+              [disabled]="!grantsSiteIdToAdd()"
+            >
+              Octroyer
+            </button>
+          </div>
+        }
+      </div>
+    </div>
   }
 </div>

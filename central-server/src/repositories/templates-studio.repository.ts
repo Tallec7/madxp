@@ -281,7 +281,9 @@ export type CutoutStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
 export interface PlayerRow extends QueryResultRow {
   id: string;
-  site_id: string;
+  // NULL = joueur global (catalogue admin), UUID = joueur exclusif à ce site.
+  // Cf migration add-studio-player-global-grants.sql.
+  site_id: string | null;
   prenom: string;
   nom: string;
   numero: number | null;
@@ -294,12 +296,29 @@ export interface PlayerRow extends QueryResultRow {
 }
 
 export interface CreatePlayerInput {
-  site_id: string;
+  // NULL = joueur global (réservé super_admin/operator). UUID = joueur club.
+  site_id: string | null;
   prenom: string;
   nom: string;
   numero: number | null;
   poste: string | null;
   photo_raw_url: string | null;
+}
+
+export interface PlayerSiteGrantRow extends QueryResultRow {
+  player_id: string;
+  site_id: string;
+  granted_by: string | null;
+  granted_at: Date;
+}
+
+export interface PlayerSiteGrantWithSiteRow extends QueryResultRow {
+  player_id: string;
+  site_id: string;
+  site_name: string;
+  club_name: string | null;
+  granted_by: string | null;
+  granted_at: Date;
 }
 
 export interface UpdatePlayerInput {
@@ -316,10 +335,44 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
     super('players');
   }
 
+  /**
+   * Joueurs strictement attachés à ce site (legacy : `players.site_id = $1`).
+   * Préservé pour backward-compat — utilisé par le résolveur de bindings dans
+   * `createRenderRequest`. Pour la vue UI / résolveur consolidé, préférer
+   * `findVisibleForSite` qui fusionne site-locaux + globaux grantés.
+   */
   async findBySite(siteId: string): Promise<PlayerRow[]> {
+    return this.findVisibleForSite(siteId);
+  }
+
+  /**
+   * Joueurs visibles pour un site = joueurs site-locaux (`site_id = $1`)
+   * ∪ joueurs globaux (`site_id IS NULL`) qui ont un grant vers ce site
+   * (`studio_player_site_grants`).
+   *
+   * C'est ce que l'UI club doit voir + ce que le résolveur de bindings doit
+   * pouvoir adresser via `playerRefs`.
+   */
+  async findVisibleForSite(siteId: string): Promise<PlayerRow[]> {
     const result = await query<PlayerRow>(
-      `SELECT * FROM players WHERE site_id = $1 ORDER BY numero NULLS LAST, nom`,
+      `SELECT * FROM players
+       WHERE site_id = $1
+          OR id IN (
+            SELECT player_id FROM studio_player_site_grants WHERE site_id = $1
+          )
+       ORDER BY numero NULLS LAST, nom`,
       [siteId],
+    );
+    return result.rows;
+  }
+
+  /**
+   * Joueurs globaux (catalogue admin) — `site_id IS NULL`.
+   * Vue super_admin/operator pour gérer le pool partagé.
+   */
+  async findGlobal(): Promise<PlayerRow[]> {
+    const result = await query<PlayerRow>(
+      `SELECT * FROM players WHERE site_id IS NULL ORDER BY numero NULLS LAST, nom`,
     );
     return result.rows;
   }
@@ -438,6 +491,146 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
       [id, siteId],
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Joueurs globaux (catalogue admin) + grants multi-sites — ADR-082 pattern
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Crée un joueur global (`site_id IS NULL`). Réservé super_admin/operator
+   * côté controller — repo n'enforce pas le rôle (defense-in-depth = guard
+   * routes + double check controller).
+   */
+  async createGlobal(
+    input: Omit<CreatePlayerInput, 'site_id'>,
+  ): Promise<PlayerRow> {
+    const initialStatus: CutoutStatus = input.photo_raw_url ? 'pending' : 'ready';
+    const result = await query<PlayerRow>(
+      `INSERT INTO players
+         (site_id, prenom, nom, numero, poste, photo_raw_url, cutout_status)
+       VALUES (NULL, $1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        input.prenom,
+        input.nom,
+        input.numero,
+        input.poste,
+        input.photo_raw_url,
+        initialStatus,
+      ],
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Update d'un joueur global (`site_id IS NULL`). Symétrique à `update()`
+   * mais sans le tenant guard `WHERE site_id = $X` — réservé super_admin /
+   * operator côté controller.
+   */
+  async updateGlobal(
+    id: string,
+    input: UpdatePlayerInput,
+  ): Promise<PlayerRow | null> {
+    const cutoutStatusOverride: CutoutStatus | null =
+      input.photo_cutout_url !== undefined && input.photo_cutout_url !== null
+        ? 'ready'
+        : input.photo_raw_url !== undefined && input.photo_raw_url !== null
+          ? 'pending'
+          : null;
+
+    const result = await query<PlayerRow>(
+      `UPDATE players SET
+         prenom = COALESCE($1, prenom),
+         nom = COALESCE($2, nom),
+         numero = CASE WHEN $3::boolean THEN $4::int ELSE numero END,
+         poste = CASE WHEN $5::boolean THEN $6::text ELSE poste END,
+         photo_raw_url = CASE WHEN $7::boolean THEN $8::text ELSE photo_raw_url END,
+         photo_cutout_url = CASE WHEN $9::boolean THEN $10::text ELSE photo_cutout_url END,
+         cutout_status = COALESCE($11, cutout_status),
+         updated_at = NOW()
+       WHERE id = $12 AND site_id IS NULL
+       RETURNING *`,
+      [
+        input.prenom ?? null,
+        input.nom ?? null,
+        input.numero !== undefined,
+        input.numero ?? null,
+        input.poste !== undefined,
+        input.poste ?? null,
+        input.photo_raw_url !== undefined,
+        input.photo_raw_url ?? null,
+        input.photo_cutout_url !== undefined,
+        input.photo_cutout_url ?? null,
+        cutoutStatusOverride,
+        id,
+      ],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /** Suppression d'un joueur global. Cascade DELETE sur les grants liés. */
+  async deleteGlobal(id: string): Promise<boolean> {
+    const result = await query(
+      `DELETE FROM players WHERE id = $1 AND site_id IS NULL`,
+      [id],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  /**
+   * Octroie un joueur global à un site. Idempotent (ON CONFLICT DO NOTHING).
+   * `granted_by` est l'UUID du user qui a fait l'octroi (audit trail).
+   */
+  async addGrant(
+    playerId: string,
+    siteId: string,
+    grantedBy: string | null,
+  ): Promise<void> {
+    await query(
+      `INSERT INTO studio_player_site_grants (player_id, site_id, granted_by)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (player_id, site_id) DO NOTHING`,
+      [playerId, siteId, grantedBy],
+    );
+  }
+
+  async removeGrant(playerId: string, siteId: string): Promise<boolean> {
+    const result = await query(
+      `DELETE FROM studio_player_site_grants
+       WHERE player_id = $1 AND site_id = $2`,
+      [playerId, siteId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  /**
+   * Liste des grants d'un joueur global (avec infos site pour l'UI).
+   * Utilisé par la modal "Gérer les sites" du dashboard.
+   */
+  async listGrants(playerId: string): Promise<PlayerSiteGrantWithSiteRow[]> {
+    const result = await query<PlayerSiteGrantWithSiteRow>(
+      `SELECT g.player_id, g.site_id, g.granted_by, g.granted_at,
+              s.site_name, s.club_name
+       FROM studio_player_site_grants g
+       JOIN sites s ON s.id = g.site_id
+       WHERE g.player_id = $1
+       ORDER BY g.granted_at ASC`,
+      [playerId],
+    );
+    return result.rows;
+  }
+
+  /** Vérifie qu'un grant existe (utilisé pour confirmer un octroi avant d'autoriser une opération). */
+  async hasGrant(playerId: string, siteId: string): Promise<boolean> {
+    const result = await query<{ exists: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM studio_player_site_grants
+         WHERE player_id = $1 AND site_id = $2
+       ) AS exists`,
+      [playerId, siteId],
+    );
+    return result.rows[0]?.exists ?? false;
   }
 }
 
