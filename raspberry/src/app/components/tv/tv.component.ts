@@ -218,14 +218,14 @@ export class TvComponent implements OnInit, OnDestroy {
     // Récupérer le site_id depuis l'API du serveur local (doit être avant startSession pour SaaS)
     this.loadSiteId();
 
-    // En mode SaaS, la boucle tourne en continu sans phase match — activer le recording et la session au démarrage.
-    // En mode preview (iframe Remote V2), on saute les analytics pour ne pas doubler les compteurs.
-    if (
-      (environment as { saasMode?: boolean }).saasMode
-      && !this.tvSyncService.isSlaveMode
-      && this.displayType === 'tv'
-      && !this.isPreviewMode
-    ) {
+    // Recording ON par défaut au boot du TV principal (incident 2026-05-14 : la
+    // boucle Bresenham sponsors locaux tourne en autonomie sans passer par les
+    // commandes socket, donc aucun event analytics ne remontait tant que
+    // recordingState restait OFF. Le mode match Remote-driven conserve son
+    // comportement : `inactivityExpired` (15 min) coupe le recording si la
+    // Remote n'envoie aucun event, et `_isManualOverride` reste false.
+    // Mode preview (iframe Remote V2) skip pour ne pas doubler les compteurs.
+    if (!this.tvSyncService.isSlaveMode && this.displayType === 'tv' && !this.isPreviewMode) {
       this.recordingState.startRecording(false);
       this.analyticsService.startSession();
     }

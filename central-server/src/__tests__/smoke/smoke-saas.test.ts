@@ -2173,16 +2173,23 @@ describe('SaaS config save flow', () => {
     });
   });
 
-  // Bug: SaaS TV never started recording → trackVideoStart returned early → 0 analytics
-  it('tv.component.ts must auto-start recording and session in SaaS mode at boot', () => {
+  // Bug initial: SaaS TV never started recording → trackVideoStart returned early → 0 analytics
+  // Évolution incident 2026-05-14 : étendu à TOUT TV non-slave non-preview (Pi inclus).
+  // La boucle Bresenham sponsors locaux était silencieuse côté analytics sur les Pi
+  // non-SaaS car `recordingState.isRecording` restait false en permanence.
+  // Garde-fou conservé pour cette suite SaaS : le boot TV doit toujours auto-démarrer
+  // recording + session — seule la condition `saasMode` a sauté.
+  it('tv.component.ts must auto-start recording and session at boot (TV non-slave non-preview)', () => {
     const filePath = path.join(repoRoot, 'raspberry', 'src', 'app', 'components', 'tv', 'tv.component.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      startsRecordingInSaas: content.includes('saasMode') && content.includes('startRecording'),
-      startsSessionInSaas: content.includes('saasMode') && content.includes('startSession'),
+      startsRecording: /this\.recordingState\.startRecording\(false\)/.test(content),
+      startsSession: /this\.analyticsService\.startSession\(\)/.test(content),
+      guardsSlaveAndPreview: /!this\.tvSyncService\.isSlaveMode[\s\S]{0,150}?!this\.isPreviewMode/.test(content),
     }).toEqual({
-      startsRecordingInSaas: true,
-      startsSessionInSaas: true,
+      startsRecording: true,
+      startsSession: true,
+      guardsSlaveAndPreview: true,
     });
   });
 

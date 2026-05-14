@@ -2,8 +2,8 @@
 
 > **Owner** : Daisy
 > **Statut** : ✅ Clôturé — toutes phases (0 / 0.5 / 0.6 / 1 / 2a / 2.5 / 2.6 / 2.7 / 2b / 1.5a / 1.5b / 3 / 3 v2 / 4) livrées
-> **Dernière revue** : 2026-04-29
-> **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases)
+> **Dernière revue** : 2026-05-14
+> **ADR liés** : ADR-089 (Phase 1+2 manuel), ADR-103 (full scope manuel + boucles, 5 phases), ADR-126 (résolution synthétique sur TOUS les canaux Pi-bound)
 > **Smoke tests** : `smoke-web-content-adr089.test.ts`, `smoke-web-content-adr103-phase05.test.ts`, `smoke-web-content-adr103-phase06.test.ts`, `smoke-web-content-adr103-phase1.test.ts`, `smoke-web-content-adr103-phase2.test.ts`, `smoke-web-content-adr103-phase25.test.ts`, `smoke-web-content-adr103-phase2b.test.ts`, `smoke-web-content-adr103-phase15a.test.ts`, `smoke-web-content-adr103-phase15b.test.ts`, `smoke-web-content-adr103-phase3.test.ts`
 > **`.claude/rules/` lié** : —
 
@@ -119,6 +119,28 @@ Stop manuel :
 - **Path synthétique en boucle / catégorie** : 400 `SYNTHETIC_WEB_CONTENT_PATH_FORBIDDEN` (Phase 0.5 — refusé tant que Phase 2 n'a pas relâché ce garde-fou).
 - **Web/live en boucle sans `durationSeconds`** : 400 `WEB_LOOP_DURATION_REQUIRED` (Phase 3). S'applique à `sponsors[]` et `timeCategories[].loopVideos[]`. **Pas** à `categories[].videos[]` — pour les catégories user (manual launch), `null/0` signifie "pas d'auto-close, la page reste affichée jusqu'à action user", ce qui est un choix valide.
 - Le dashboard surface ces messages via le notification system existant (`ErrorExtractor.getMessage` → toast d'erreur).
+
+### Résolution synthétique → forme runtime (couvre TOUS les canaux Pi-bound)
+
+Tout endpoint qui sert une config à un consommateur (TV Pi, navigateur SaaS, Remote V1/V2) DOIT exécuter, dans cet ordre :
+
+1. `collectSyntheticWebContentFilenames(config)` — liste les `web_page-<ts>` / `livestream-<ts>` présents
+2. `videoRepository.findWebContentByFilenames()` — lookup DB batch
+3. `resolveSyntheticWebContent(config, lookup)` — réécrit en place : `path = externalUrl`, `type = text/html` (ou `application/vnd.apple.mpegurl`), `contentType`, `externalUrl`, `durationSeconds`, `thumbnailUrl`
+4. `stripSyntheticWebContent(config)` — drop défensif des leftovers (row DB supprimée, race, etc.)
+
+**Câblage actuel** (source de vérité — toute régression bloque le commit) :
+
+| Canal                  | Fichier                                                       | Lignes                             |
+| ---------------------- | ------------------------------------------------------------- | ---------------------------------- |
+| SaaS (navigateur)      | `saas.controller.ts` `getSaasConfig` / `getSaasProfileConfig` | ~303-319 / ~509-522                |
+| Cloud Remote           | `remote.controller.ts` `getRemoteConfig`                      | ~283-295                           |
+| **Pi `update_config`** | `profile-sync.service.ts` `buildEnrichedNeoProContent`        | helper `resolveAndStripWebContent` |
+| **Pi `sync_profiles`** | `profile-sync.service.ts` `sendSyncProfilesToSite`            | helper `resolveAndStripWebContent` |
+
+**Ordre critique côté Pi** : `resolveAndStripWebContent` DOIT s'exécuter AVANT `normalizeConfigVideoPaths`. Cette dernière ajoute le préfixe `videos/default/` à tout path sans `/` — un synthetic nu tomberait dans le pattern legacy FTP et casserait à la fois la résolution Pi-side et le strip défensif TV.
+
+Avant cette mise à jour (PR `fix/web-content-config-entry-format`), les 2 canaux Pi ne passaient pas par `resolve+strip` : les entrées web_page arrivaient brutes au Pi, étaient droppées par le filtre TV-side Phase 0.5 comme placeholders, et la page/stream ne s'affichait jamais. Découvert sur Gymnase Mangin-Beaulieu (profil "Kalon Breizh Cup") 2026-05-14.
 
 ### Tolérance d'erreur
 

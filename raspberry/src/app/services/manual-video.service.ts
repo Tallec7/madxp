@@ -3,7 +3,6 @@ import { DoubleBufferVideoService } from './double-buffer-video.service';
 import { VideoPlaybackService } from './video-playback.service';
 import { VideoErrorRecoveryService } from './video-error-recovery.service';
 import { AnalyticsService } from './analytics.service';
-import { RecordingStateService } from './recording-state.service';
 import { PlayerStateService } from './player-state.service';
 import { PiConfigVideoEntry } from '../interfaces/video.interface';
 
@@ -29,7 +28,6 @@ export interface ManualVideoCallbacks {
 export class ManualVideoService {
   // État des players manuels
   private _isManualMode = false;
-  private _manualRecordingStarted = false;
   private _currentManualEndedHandler: (() => void) | null = null;
   private _savedLoopIndex = 0;
 
@@ -89,7 +87,6 @@ export class ManualVideoService {
     private readonly playbackService: VideoPlaybackService,
     private readonly errorRecoveryService: VideoErrorRecoveryService,
     private readonly analyticsService: AnalyticsService,
-    private readonly recordingState: RecordingStateService,
     private readonly playerStateService: PlayerStateService,
   ) {}
 
@@ -200,15 +197,12 @@ export class ManualVideoService {
           this.doubleBufferService.hideMaskingLayersAfterPaint(targetPlayer);
 
           // Tracker (desactive pour les slaves)
-          if (!this.callbacks?.getIsSlaveMode()) {
-            if (!this.recordingState.isRecording) {
-              console.log('[TV] Auto-start recording for manual video');
-              this.recordingState.startRecording(false);
-              this._manualRecordingStarted = true;
-            }
-            if (this.callbacks?.getDisplayType() === 'tv') {
-              this.analyticsService.trackVideoStart(video, 'manual');
-            }
+          // NE PAS toggler recordingState ici : depuis tv.component.ts:223 le
+          // recording est ON par défaut au boot du TV principal (incident
+          // 2026-05-14). Toggler à chaque vidéo manuelle créait un flap
+          // ON/OFF/ON/OFF qui masquait les analytics de la boucle Bresenham.
+          if (!this.callbacks?.getIsSlaveMode() && this.callbacks?.getDisplayType() === 'tv') {
+            this.analyticsService.trackVideoStart(video, 'manual');
           }
 
           this.callbacks?.emitPlayerState({
@@ -284,11 +278,6 @@ export class ManualVideoService {
 
       if (!this.callbacks?.getIsSlaveMode() && this.callbacks?.getDisplayType() === 'tv') {
         this.analyticsService.trackVideoEnd(true);
-        if (this._manualRecordingStarted) {
-          console.log('[TV] Auto-stop recording after manual video ended');
-          this.recordingState.stopRecording(false);
-          this._manualRecordingStarted = false;
-        }
       }
 
       targetPlayer.style.opacity = '0';

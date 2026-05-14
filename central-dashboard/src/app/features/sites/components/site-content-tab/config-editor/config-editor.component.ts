@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SiteConfiguration, CategoryConfig, LocalVideo, SiteSponsor } from '../../../../../core/models';
+import { SiteConfiguration, CategoryConfig, LocalVideo, SiteSponsor, VideoConfig, LoopVideoConfig } from '../../../../../core/models';
 import { UnifiedVideoOption, VideoOptionGroupEntry, OrphanedVideoDetail } from '../content-tab.models';
 import { TranslateModule } from '@ngx-translate/core';
 import { LoopManagerComponent } from '../../loop-manager/loop-manager.component';
@@ -167,6 +167,52 @@ export class ConfigEditorComponent {
 
   removeVideoFromSubcategory(catIndex: number, subIndex: number, vidIndex: number): void {
     this.config.categories?.[catIndex]?.subCategories?.[subIndex]?.videos?.splice(vidIndex, 1);
+    this.emitConfigChanged();
+  }
+
+  /**
+   * ADR-103 — Quand l'utilisateur choisit une vidéo dans le dropdown, la
+   * propager au bon format selon le `contentType` de l'option :
+   *   - `web_page` → `type = 'text/html'`, `path = externalUrl`, métadonnées propres
+   *   - `livestream` → `type = 'application/vnd.apple.mpegurl'`, idem
+   *   - `video` (ou option inconnue) → `type = 'video/mp4'`, on nettoie les
+   *     champs ADR-103 résiduels (au cas où l'utilisateur revient à une vidéo
+   *     classique depuis une web_page).
+   *
+   * Sans ce helper, le binding naïf `video.path = $event` laisse `type =
+   * 'video/mp4'` même pour une page web → le Pi tente de la jouer comme une
+   * vidéo, le filtre defensive Phase 0.5 drop l'entrée, et la page ne
+   * s'affiche jamais.
+   */
+  applyVideoSelection(video: VideoConfig | LoopVideoConfig, newPath: string): void {
+    video.path = newPath;
+    const opt = this.unifiedVideoOptions.find(o => o.path === newPath);
+    const contentType = opt?.contentType;
+
+    if (contentType === 'web_page') {
+      video.type = 'text/html';
+      video.contentType = 'web_page';
+      video.externalUrl = opt?.externalUrl ?? newPath;
+      video.durationSeconds = opt?.durationSeconds ?? null;
+      if (!video.name) video.name = opt?.displayName ?? '';
+    } else if (contentType === 'livestream') {
+      video.type = 'application/vnd.apple.mpegurl';
+      video.contentType = 'livestream';
+      video.externalUrl = opt?.externalUrl ?? newPath;
+      video.durationSeconds = opt?.durationSeconds ?? null;
+      if (!video.name) video.name = opt?.displayName ?? '';
+    } else {
+      // Vidéo classique (ou option introuvable — orphan). Reset des champs
+      // ADR-103 si l'entrée venait d'une web_page (évite des résidus qui
+      // tromperaient resolveSyntheticWebContent en aval).
+      if (video.type === 'text/html' || video.type === 'application/vnd.apple.mpegurl') {
+        video.type = 'video/mp4';
+      }
+      delete video.contentType;
+      delete video.externalUrl;
+      delete video.durationSeconds;
+      delete video.thumbnailUrl;
+    }
     this.emitConfigChanged();
   }
 

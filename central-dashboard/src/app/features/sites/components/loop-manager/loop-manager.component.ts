@@ -5,6 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SiteConfiguration, LoopVideoConfig, LocalVideo, SiteSponsor } from '../../../../core/models';
 import { FeatureGateService } from '../../../../core/services/feature-gate.service';
 import { VideoSearchSelectComponent, VideoOptionGroup } from '../../../../shared/components/video-search-select/video-search-select.component';
+import { VideoOptionGroupEntry } from '../site-content-tab/content-tab.models';
 
 interface LoopTab {
   id: string;
@@ -44,7 +45,13 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     });
   }
   @Input() config!: SiteConfiguration;
-  @Input() videoOptionGroups: { key: string; label: string; icon: string; videos: { path: string; displayName: string; isOnPi: boolean }[] }[] = [];
+  // ADR-103 — On accepte la forme riche `VideoOptionGroupEntry[]` (héritée
+  // de site-content-tab) au lieu d'un sous-ensemble narrowé, pour pouvoir
+  // lire `contentType` / `externalUrl` sur les entrées web_page / livestream
+  // dans `applyVideoSelection`. Les options portent `isOnPi` + `displayName`
+  // + `path` (cf. `UnifiedVideoOption`) — utilisés par le template pour
+  // gater `siteType !== 'saas'` sur les badges « Sera déployée ».
+  @Input() videoOptionGroups: VideoOptionGroupEntry[] = [];
   @Input() cloudVideoPaths: Set<string> = new Set();
   @Input() allKnownVideoPaths: Set<string> = new Set();
   @Input() localVideos: LocalVideo[] = [];
@@ -160,15 +167,60 @@ export class LoopManagerComponent implements OnInit, OnChanges {
     const tc = this.config.timeCategories?.find(t => t.id === this.activeTab);
     if (!tc?.loopVideos?.[index]) return;
     const video = tc.loopVideos[index];
-    if (field === 'name') video.name = value;
-    else if (field === 'path') video.path = value;
-
-    // Auto-remplir le nom si on change le path et que le nom est vide
-    if (field === 'path' && value && !tc.loopVideos[index].name) {
-      const video = this.localVideos.find(v => v.path === value);
-      tc.loopVideos[index].name = video?.filename || value.split('/').pop() || 'Vidéo';
+    if (field === 'name') {
+      video.name = value;
+    } else if (field === 'path') {
+      this.applyVideoSelection(video, value);
+      // Auto-remplir le nom si on change le path et que le nom est vide
+      // (applyVideoSelection le fait déjà pour web_page / livestream — ici
+      // on couvre le cas vidéo classique avec lookup local).
+      if (value && !video.name) {
+        const localVid = this.localVideos.find(v => v.path === value);
+        video.name = localVid?.filename || value.split('/').pop() || 'Vidéo';
+      }
+      return; // applyVideoSelection appelle déjà onChanged()
     }
 
+    this.onChanged();
+  }
+
+  /**
+   * ADR-103 — Quand l'utilisateur choisit une entrée dans le dropdown de
+   * boucle, propager la forme attendue par le Pi (type, contentType,
+   * externalUrl) si l'option pointe sur une web_page / livestream. Sans
+   * ça, l'entrée garde `type: video/mp4` et le filtre defensive TV-side
+   * la drop comme placeholder synthétique.
+   *
+   * Symétrique de `applyVideoSelection` dans `config-editor.component.ts`.
+   */
+  applyVideoSelection(video: LoopVideoConfig, newPath: string): void {
+    video.path = newPath;
+    const opt = this.videoOptionGroups
+      .flatMap(g => g.videos)
+      .find(o => o.path === newPath);
+    const contentType = opt?.contentType;
+
+    if (contentType === 'web_page') {
+      video.type = 'text/html';
+      video.contentType = 'web_page';
+      video.externalUrl = opt?.externalUrl ?? newPath;
+      video.durationSeconds = opt?.durationSeconds ?? null;
+      if (!video.name) video.name = opt?.displayName ?? '';
+    } else if (contentType === 'livestream') {
+      video.type = 'application/vnd.apple.mpegurl';
+      video.contentType = 'livestream';
+      video.externalUrl = opt?.externalUrl ?? newPath;
+      video.durationSeconds = opt?.durationSeconds ?? null;
+      if (!video.name) video.name = opt?.displayName ?? '';
+    } else {
+      if (video.type === 'text/html' || video.type === 'application/vnd.apple.mpegurl') {
+        video.type = 'video/mp4';
+      }
+      delete video.contentType;
+      delete video.externalUrl;
+      delete video.durationSeconds;
+      delete video.thumbnailUrl;
+    }
     this.onChanged();
   }
 

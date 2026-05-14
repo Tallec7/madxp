@@ -1,3 +1,10 @@
+## [3.317.2](https://github.com/Tallec7/neopro/compare/v3.317.1...v3.317.2) (2026-05-14)
+
+### Bug Fixes
+
+- **analytics:** recording ON par défaut au boot TV — analytics boucle Bresenham (incident 2026-05-14) ([#1018](https://github.com/Tallec7/neopro/issues/1018)) ([b186b38](https://github.com/Tallec7/neopro/commit/b186b389e15ac7217a55039101633961b29632f5))
+- **saas:** web_page entries — résolution sur TOUS les canaux Pi-bound + dashboard preview (ADR-103/126) ([#1017](https://github.com/Tallec7/neopro/issues/1017)) ([5f1a3c4](https://github.com/Tallec7/neopro/commit/5f1a3c4474c94a61af752aaa29ebf9ff68ca98e3))
+
 ## [3.317.1](https://github.com/Tallec7/neopro/compare/v3.317.0...v3.317.1) (2026-05-14)
 
 ### Bug Fixes
