@@ -1,3 +1,9 @@
+# [3.312.0](https://github.com/Tallec7/neopro/compare/v3.311.0...v3.312.0) (2026-05-14)
+
+### Features
+
+- **templates-studio:** S4-C — worker rembg Python (container Railway séparé) ([#991](https://github.com/Tallec7/neopro/issues/991)) ([e0d184f](https://github.com/Tallec7/neopro/commit/e0d184fc9f9a7d5fa8dbb698c8b8ccfefb9d0ee7))
+
 # [3.311.0](https://github.com/Tallec7/neopro/compare/v3.310.0...v3.311.0) (2026-05-14)
 
 ### Features
