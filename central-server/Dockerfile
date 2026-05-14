@@ -42,6 +42,25 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci --omit=dev && npm cache clean --force
 
 # ============================================
+# Stage 1b-bis: Templates Studio Remotion dependencies (ADR-124)
+# Sous-package central-server/templates-studio/ — compositions Remotion
+# code-driven bundlées in-process par studio-render-worker.service.ts.
+# Pattern miroir de remotion-deps (legacy v2).
+# ============================================
+FROM node:20-slim AS templates-studio-deps
+
+WORKDIR /app/templates-studio
+
+COPY central-server/templates-studio/package*.json ./
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# `npm install` (pas `npm ci`) car pas de package-lock.json fourni — le
+# sous-package est volontairement minimal (deps Remotion isolées). À
+# convertir en `npm ci` si on commit un lockfile dédié.
+RUN npm install --omit=dev && npm cache clean --force
+
+# ============================================
 # Stage 1c: Preview app builder (Vite + @remotion/player)
 # ============================================
 FROM node:20-slim AS preview-builder
@@ -112,7 +131,8 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 # Set environment
 ENV NODE_ENV=production \
     PORT=3001 \
-    REMOTION_DIR=/app/templates-remotion
+    REMOTION_DIR=/app/templates-remotion \
+    TEMPLATES_STUDIO_DIR=/app/templates-studio
 
 # Copy production dependencies
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -134,6 +154,11 @@ COPY templates-remotion/ ./templates-remotion/
 COPY --from=remotion-deps /app/templates-remotion/node_modules ./templates-remotion/node_modules
 # Copy preview app built by Vite (served at /remotion-preview/ by central-server)
 COPY --from=preview-builder /app/templates-remotion/preview/dist ./templates-remotion/preview/dist
+
+# Copy Templates Studio sous-package (ADR-124) — compositions Remotion code-driven
+# bundlées in-process par studio-render-worker.service.ts
+COPY central-server/templates-studio/ ./templates-studio/
+COPY --from=templates-studio-deps /app/templates-studio/node_modules ./templates-studio/node_modules
 
 # Pre-install Remotion's Chrome Headless Shell during build (safety net).
 # Primary path: renderMedia() uses BROWSER_EXECUTABLE_PATH=/usr/bin/chromium via browserExecutable.

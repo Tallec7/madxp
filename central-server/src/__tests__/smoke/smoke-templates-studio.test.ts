@@ -29,16 +29,14 @@ const CONTROLLER_FILE = path.join(
 const ROUTES_FILE = path.join(SRC, 'routes', 'templates-studio.routes.ts');
 const SERVER_FILE = path.join(SRC, 'server.ts');
 const SEED_SCRIPT = path.join(SRC, 'scripts', 'seed-templates-studio-manifests.ts');
-// Source de vérité monorepo lite (PR #983) — depuis central-server/src/__tests__/smoke/,
-// 4 levels up = racine repo neopro, puis descendre dans studio-render-server.
+// Source de vérité (ADR-124) : sous-package central-server/templates-studio/.
+// Depuis central-server/src/__tests__/smoke/, 3 levels up = central-server/.
 const MANIFESTS_DIR = path.resolve(
   __dirname,
   '..',
   '..',
   '..',
-  '..',
-  'studio-render-server',
-  'src',
+  'templates-studio',
   'templates',
 );
 const WORKER_FILE = path.join(SRC, 'services', 'studio-render-worker.service.ts');
@@ -279,15 +277,16 @@ describe('Templates Studio V1 — render worker (J4, STUB)', () => {
     expect(content).toMatch(/export\s+function\s+stopStudioRenderWorker/);
   });
 
-  it('worker code does NOT import @remotion/renderer yet (J4 = STUB)', () => {
-    // Le branchement réel viendra dans un commit ultérieur — séparation propre
-    // évite que le commit J4 importe @remotion/renderer accidentellement.
+  it('worker imports @remotion/bundler + @remotion/renderer in-process (ADR-124)', () => {
+    // ADR-124 : le worker bundle + render in-process (fini la HTTP delegation
+    // vers un service Railway séparé). Pattern aligné sur le legacy worker
+    // `remotion-render-worker.service.ts` qui fait pareil pour V2.
     const content = fs.readFileSync(WORKER_FILE, 'utf8');
-    const code = content
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
-    expect(code).not.toMatch(/@remotion\/renderer/);
-    expect(code).not.toMatch(/@remotion\/bundler/);
+    expect(content).toMatch(/@remotion\/renderer/);
+    expect(content).toMatch(/@remotion\/bundler/);
+    // Fini le HTTP delegation : plus de fetch vers un STUDIO_RENDER_SERVER_URL.
+    expect(content).not.toMatch(/STUDIO_RENDER_SERVER_URL/);
+    expect(content).not.toMatch(/performRenderHttp|performRenderStub/);
   });
 
   it('worker calls failStaleRunning(10) at boot before polling', () => {
