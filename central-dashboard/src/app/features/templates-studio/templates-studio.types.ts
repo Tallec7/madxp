@@ -194,6 +194,12 @@ export interface RequiredAsset {
   key: string;
   filename: string | null;
   mime: string | null;
+  /**
+   * ADR-127 — pour les slots de type font (`mime` font/woff2, font/ttf, etc.),
+   * désigne le nom CSS sous lequel la font sera enregistrée côté composition
+   * (`new FontFace(fontFamily, ...)`). Ignored pour les slots image/vidéo.
+   */
+  fontFamily?: string | null;
 }
 
 export interface TemplateAssetBinding {

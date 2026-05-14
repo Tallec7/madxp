@@ -71,6 +71,7 @@
             <div class="slot-meta">
               <span *ngIf="slot.filename"><strong>filename:</strong> {{ slot.filename }}</span>
               <span *ngIf="slot.mime"><strong>mime:</strong> {{ slot.mime }}</span>
+              <span *ngIf="isFontSlot(slot) && slot.fontFamily"><strong>font-family CSS:</strong> <code>{{ slot.fontFamily }}</code></span>
             </div>
           </div>
 
@@ -78,6 +79,7 @@
             <div class="bound-thumb">
               <img *ngIf="b.asset && isImage(b.asset)" [src]="b.asset.url" [alt]="b.asset.filename" />
               <video *ngIf="b.asset && isVideo(b.asset)" [src]="b.asset.url" muted preload="metadata"></video>
+              <div *ngIf="b.asset && isFont(b.asset)" class="thumb-icon font-icon" aria-label="Font">Aa</div>
             </div>
             <div class="bound-info">
               <div class="filename">{{ b.asset?.filename ?? '—' }}</div>
@@ -138,6 +140,7 @@
             <div class="thumb">
               <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" loading="lazy" />
               <video *ngIf="isVideo(asset)" [src]="asset.url" muted preload="metadata"></video>
+              <div *ngIf="isFont(asset)" class="thumb-icon font-icon" aria-label="Font">Aa</div>
             </div>
             <div class="info">
               <div class="filename">{{ asset.filename }}</div>
@@ -153,8 +156,13 @@
             Sélectionne un fichier
             <span *ngIf="slot.filename"> (idéalement nommé <code>{{ slot.filename }}</code>)</span>
             <span *ngIf="slot.mime"> · type attendu <code>{{ slot.mime }}</code></span>.
+            <span *ngIf="isFontSlot(slot)"> Cette font sera enregistrée sous <code>{{ slot.fontFamily ?? '?' }}</code> côté composition.</span>
           </p>
-          <input type="file" (change)="onPendingFile($event)" />
+          <input
+            type="file"
+            (change)="onPendingFile($event)"
+            [attr.accept]="isFontSlot(slot) ? 'font/*,.woff2,.woff,.ttf' : (slot.mime ?? null)"
+          />
           <div *ngIf="pendingFile() as f" class="pending">
             <strong>{{ f.name }}</strong>
             <span class="meta">{{ formatBytes(f.size) }} · {{ f.type }}</span>
