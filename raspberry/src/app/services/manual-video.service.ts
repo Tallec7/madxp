@@ -287,6 +287,15 @@ export class ManualVideoService {
 
       this._isManualMode = false;
 
+      // Option B: smooth path — preloaded loop video on inactive player.
+      // resumeWithPreloadedLoop() reveals it via switchPlayers; freeze hidden
+      // by that path.
+      if (this.playbackService.resumeWithPreloadedLoop()) {
+        console.log('tv player : returning to loop (smooth via preloaded)');
+        this._currentManualEndedHandler = null;
+        return;
+      }
+
       const activeLoopPlayer = this.doubleBufferService.getActivePlayer();
       if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.playbackService.isLoopMode) {
         const resumeAt = this._savedLoopIndex + 1;
@@ -408,6 +417,11 @@ export class ManualVideoService {
       this._isManualMode = false;
       this._preloadedManualVideo = null;
       this._preloadedManualPlayer = null;
+
+      if (this.playbackService.resumeWithPreloadedLoop()) {
+        console.log('[TV] Slave: returning to loop (smooth via preloaded)');
+        return;
+      }
 
       const activeLoopPlayer = this.doubleBufferService.getActivePlayer();
       if (!activeLoopPlayer || activeLoopPlayer.paused || activeLoopPlayer.ended || !this.playbackService.isLoopMode) {
