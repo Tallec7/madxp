@@ -155,7 +155,7 @@ describe('ADR-128 — Endpoint POST /assets/directory câblé', () => {
     expect(controller).toMatch(/createHash\(['"]sha256['"]\)/);
   });
 
-  it('controller upload via uploadFilesToFtpBatch (1 connexion réutilisée)', () => {
+  it('controller upload via uploadFilesToFtpBatch (pool FTP parallèle)', () => {
     expect(controller).toMatch(/uploadFilesToFtpBatch/);
   });
 
@@ -175,12 +175,21 @@ describe('ADR-128 — Endpoint POST /assets/directory câblé', () => {
 describe('ADR-128 — FTP batch helper', () => {
   const content = fs.readFileSync(FTP_STORAGE_FILE, 'utf8');
 
-  it('expose uploadFilesToFtpBatch (1 connexion FTP réutilisée pour N frames)', () => {
+  it('expose uploadFilesToFtpBatch avec param concurrency (pool FTP parallèle)', () => {
+    // Garde-fou : sans pool parallèle, 200+ frames PNG en série prennent
+    // >100s sur Hostinger FTP → timeout edge Railway → 502 Bad Gateway
+    // côté browser (incident 2026-05-15 packshot-img.zip).
     expect(content).toMatch(/export\s+const\s+uploadFilesToFtpBatch\s*=/);
+    expect(content).toMatch(/concurrency\s*=\s*\d/);
+    expect(content).toMatch(/Promise\.all\(\s*groups\.map/);
   });
 
-  it('mutualise ensureDir via Set (1 ensureDir par dir distinct)', () => {
-    expect(content).toMatch(/dirsCreated\s*=\s*new\s+Set/);
+  it('mutualise ensureDir via Set (1 ensureDir par dir distinct, AVANT le pool)', () => {
+    // Critique : ensureDir doit être séquentiel + serialisé sur 1 client AVANT
+    // le pool parallèle. Sinon N clients ensureDir le même path → race
+    // condition côté FTP server (Hostinger renvoie alors 550 sur les uploads).
+    expect(content).toMatch(/distinctDirs\s*=\s*new\s+Set/);
+    expect(content).toMatch(/dirClient\.ensureDir/);
   });
 });
 

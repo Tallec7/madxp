@@ -743,6 +743,7 @@ export const listFtpDirectory = async (
 export const uploadFilesToFtpBatch = async (
   files: Array<{ buffer: Buffer; ftpPath: string }>,
   contentType: string,
+  concurrency = 4,
 ): Promise<{ uploaded: string[]; totalBytes: number }> => {
   if (!isFtpConfigured()) {
     throw new Error('FTP not configured');
@@ -751,35 +752,83 @@ export const uploadFilesToFtpBatch = async (
     return { uploaded: [], totalBytes: 0 };
   }
 
-  const client = new ftp.Client();
-  client.ftp.verbose = process.env.NODE_ENV === 'development';
+  // ADR-128 : 200+ frames PNG en série prennent >100s sur Hostinger FTP, ce
+  // qui dépasse le timeout edge Railway (~100s) → 502 Bad Gateway côté browser
+  // (incident 2026-05-15). On split sur N clients FTP parallèles. Hostinger
+  // accepte ~10 connexions simultanées par compte, on prend 4 par défaut pour
+  // garder de la marge si plusieurs uploads concurrents (admin team).
+  const effectiveConcurrency = Math.max(1, Math.min(concurrency, files.length));
+  const uploadStart = Date.now();
+
+  // Step 1 : ouvrir 1 client pour mutualiser les ensureDir (race-condition
+  // FTP si N clients ensureDir le même path en parallèle). 1 par dir distinct.
+  const distinctDirs = new Set<string>();
+  for (const file of files) {
+    const dir = path.posix.dirname(file.ftpPath);
+    if (dir && dir !== '.') distinctDirs.add(dir);
+  }
+  if (distinctDirs.size > 0) {
+    const dirClient = new ftp.Client();
+    dirClient.ftp.verbose = process.env.NODE_ENV === 'development';
+    try {
+      await dirClient.access({
+        host: ftpConfig.host,
+        port: ftpConfig.port,
+        user: ftpConfig.user,
+        password: ftpConfig.password,
+        secure: ftpConfig.secure,
+      });
+      for (const dir of distinctDirs) {
+        await dirClient.ensureDir(dir);
+        await dirClient.cd('/');
+      }
+    } finally {
+      dirClient.close();
+    }
+  }
+
+  // Step 2 : split files en N groupes round-robin, 1 client FTP par groupe.
+  const groups: Array<typeof files> = Array.from(
+    { length: effectiveConcurrency },
+    () => [],
+  );
+  files.forEach((f, i) => groups[i % effectiveConcurrency].push(f));
+
   const uploaded: string[] = [];
   let totalBytes = 0;
 
   try {
-    await client.access({
-      host: ftpConfig.host,
-      port: ftpConfig.port,
-      user: ftpConfig.user,
-      password: ftpConfig.password,
-      secure: ftpConfig.secure,
-    });
+    const groupResults = await Promise.all(
+      groups.map(async (group) => {
+        if (group.length === 0) return { localUploaded: [], localBytes: 0 };
+        const client = new ftp.Client();
+        client.ftp.verbose = process.env.NODE_ENV === 'development';
+        try {
+          await client.access({
+            host: ftpConfig.host,
+            port: ftpConfig.port,
+            user: ftpConfig.user,
+            password: ftpConfig.password,
+            secure: ftpConfig.secure,
+          });
+          const localUploaded: string[] = [];
+          let localBytes = 0;
+          for (const file of group) {
+            const stream = Readable.from(file.buffer);
+            await client.uploadFrom(stream, file.ftpPath);
+            localUploaded.push(file.ftpPath);
+            localBytes += file.buffer.length;
+          }
+          return { localUploaded, localBytes };
+        } finally {
+          client.close();
+        }
+      }),
+    );
 
-    // Mutualise les ensureDir : 1 par dir distinct, pas 1 par fichier.
-    const dirsCreated = new Set<string>();
-    const uploadStart = Date.now();
-
-    for (const file of files) {
-      const dir = path.posix.dirname(file.ftpPath);
-      if (dir && dir !== '.' && !dirsCreated.has(dir)) {
-        await client.ensureDir(dir);
-        await client.cd('/');
-        dirsCreated.add(dir);
-      }
-      const stream = Readable.from(file.buffer);
-      await client.uploadFrom(stream, file.ftpPath);
-      uploaded.push(file.ftpPath);
-      totalBytes += file.buffer.length;
+    for (const r of groupResults) {
+      uploaded.push(...r.localUploaded);
+      totalBytes += r.localBytes;
     }
 
     const uploadDuration = (Date.now() - uploadStart) / 1000;
@@ -787,6 +836,7 @@ export const uploadFilesToFtpBatch = async (
       fileCount: files.length,
       totalBytes,
       durationSeconds: uploadDuration,
+      concurrency: effectiveConcurrency,
       contentType,
     });
     getMetricsService()?.recordFtpOperation(
@@ -802,11 +852,10 @@ export const uploadFilesToFtpBatch = async (
     logger.error('Error in FTP batch upload', {
       uploaded: uploaded.length,
       total: files.length,
+      concurrency: effectiveConcurrency,
       error: error instanceof Error ? error.message : String(error),
     });
     getMetricsService()?.recordFtpOperation('upload', 'failed', 'video');
     throw error;
-  } finally {
-    client.close();
   }
 };
