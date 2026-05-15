@@ -1271,6 +1271,22 @@ export const templatesStudioSchemas = {
     filename: Joi.string().max(160).optional(),
   }).unknown(true), // multer parse multipart text fields outside .body
 
+  // ADR-128 — POST /api/templates-studio/assets/directory — multipart ZIP
+  // dans `asset`. Le serveur décompresse en mémoire, push frame par frame
+  // sur FTP, INSERT 1 row `studio_assets` avec `asset_kind='directory'`.
+  // `frame_pattern` est optionnel : si absent, auto-détecté depuis le tri
+  // alpha des fichiers PNG.
+  uploadAssetDirectory: Joi.object({
+    tags: Joi.alternatives()
+      .try(
+        Joi.array().items(Joi.string().max(60)).max(20),
+        Joi.string().max(2000),
+      )
+      .optional(),
+    filename: Joi.string().max(160).optional(),
+    frame_pattern: Joi.string().max(160).optional(),
+  }).unknown(true),
+
   // GET /api/templates-studio/assets query.
   listAssetsQuery: Joi.object({
     tag: Joi.string().max(60).optional(),

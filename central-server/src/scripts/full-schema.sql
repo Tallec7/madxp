@@ -7353,9 +7353,13 @@ CREATE TABLE IF NOT EXISTS public.studio_assets (
     tags text[] DEFAULT ARRAY[]::text[] NOT NULL,
     uploaded_by uuid,
     uploaded_at timestamp with time zone DEFAULT now() NOT NULL,
+    asset_kind text DEFAULT 'file' NOT NULL,
+    frame_count integer,
+    frame_pattern text,
     CONSTRAINT studio_assets_pkey PRIMARY KEY (id),
     CONSTRAINT studio_assets_ftp_path_key UNIQUE (ftp_path),
     CONSTRAINT studio_assets_checksum_sha256_key UNIQUE (checksum_sha256),
+    CONSTRAINT studio_assets_asset_kind_check CHECK (asset_kind IN ('file', 'directory')),
     CONSTRAINT studio_assets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL
 );
 
