@@ -1,3 +1,9 @@
+# [3.319.0](https://github.com/Tallec7/neopro/compare/v3.318.2...v3.319.0) (2026-05-15)
+
+### Features
+
+- **studio:** asset_kind='directory' + portage designs originaux BUT/ENTRÉE (Phase 1.7, ADR-128) ([#1023](https://github.com/Tallec7/neopro/issues/1023)) ([d241422](https://github.com/Tallec7/neopro/commit/d2414223ec099d4240a7251561d292bc95f8a461))
+
 ## [3.318.2](https://github.com/Tallec7/neopro/compare/v3.318.1...v3.318.2) (2026-05-15)
 
 ### Bug Fixes
