@@ -237,6 +237,15 @@ async function performRenderInProcess(
       frame: stillFrame,
     });
   } else {
+    // ADR-128 — concurrency réduite à 1 par défaut. Avec un asset directory
+    // de 200+ frames PNG (masques alpha packshot), 2 workers Chromium en
+    // parallèle = OOM SIGKILL sur Railway (incident 2026-05-15). Tunable
+    // via `STUDIO_RENDER_CONCURRENCY` env si Railway upgrade RAM plus tard.
+    const concurrencyEnv = process.env.STUDIO_RENDER_CONCURRENCY;
+    const renderConcurrency =
+      concurrencyEnv !== undefined && Number.isFinite(Number(concurrencyEnv))
+        ? Math.max(1, Number(concurrencyEnv))
+        : 1;
     await renderMedia({
       composition,
       serveUrl: bundled,
@@ -249,7 +258,7 @@ async function performRenderInProcess(
       pixelFormat: 'yuv420p',
       imageFormat: 'jpeg',
       jpegQuality: 85,
-      concurrency: 2,
+      concurrency: renderConcurrency,
       crf: 18,
     });
   }
