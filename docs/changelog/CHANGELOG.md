@@ -1,3 +1,9 @@
+## [3.320.2](https://github.com/Tallec7/neopro/compare/v3.320.1...v3.320.2) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** renderMedia concurrency 2→1 (incident 2026-05-15 Compositor SIGKILL) ([c3930fd](https://github.com/Tallec7/neopro/commit/c3930fdb0c4034eaa3cdbe69f07093b1616a4ba5)), closes [#1024](https://github.com/Tallec7/neopro/issues/1024)
+
 ## [3.320.1](https://github.com/Tallec7/neopro/compare/v3.320.0...v3.320.1) (2026-05-15)
 
 ### Bug Fixes
