@@ -80,11 +80,15 @@ const uploadStudioAssetMiddleware = multer({
 });
 
 // ADR-128 — Studio asset directory (ZIP de séquences PNG frames).
-// Limite 50 MB : 175 PNG ~150 KB chacun = ~26 MB, ample marge sans saturer
-// la RAM (multer.memoryStorage stocke le ZIP le temps de la décompression).
+// Limite 200 MB : un ZIP packshot 1080p haute qualité avec 200+ frames PNG
+// peut largement dépasser 50 MB (incident 2026-05-15 : packshot-img.zip
+// rejected with 413 STORAGE_FILE_TOO_LARGE). Heap Node Railway = 560 MB,
+// donc 200 MB ZIP + décompression jszip (~même taille en mémoire) reste
+// dans le budget. Si OOM constaté en prod, basculer vers `diskStorage` +
+// `unzipper` streaming.
 const uploadStudioAssetDirectoryMiddleware = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 200 * 1024 * 1024, files: 1 },
 });
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles

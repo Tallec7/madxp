@@ -141,10 +141,12 @@ describe('ADR-128 — Endpoint POST /assets/directory câblé', () => {
     );
   });
 
-  it('multer ZIP : memoryStorage + fileSize 50 MB', () => {
+  it('multer ZIP : memoryStorage + fileSize 200 MB', () => {
+    // Garde-fou : un ZIP packshot 1080p 200+ frames PNG dépasse facilement
+    // 50 MB. Bumpé 50 → 200 MB après incident 2026-05-15 (413 sur
+    // packshot-img.zip côté Daisy). Heap Node Railway = 560 MB.
     expect(routes).toMatch(/uploadStudioAssetDirectoryMiddleware/);
-    // 50 MB = 50 * 1024 * 1024.
-    expect(routes).toMatch(/uploadStudioAssetDirectoryMiddleware[\s\S]*?fileSize:\s*50\s*\*\s*1024\s*\*\s*1024/);
+    expect(routes).toMatch(/uploadStudioAssetDirectoryMiddleware[\s\S]*?fileSize:\s*200\s*\*\s*1024\s*\*\s*1024/);
   });
 
   it('controller expose uploadStudioAssetDirectory + dédup checksum', () => {
