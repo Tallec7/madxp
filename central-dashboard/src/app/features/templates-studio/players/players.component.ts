@@ -47,12 +47,15 @@ export class PlayersComponent implements OnInit {
     nom: ['', [Validators.required, Validators.maxLength(80)]],
     numero: [null as number | null, [Validators.min(0), Validators.max(999)]],
     poste: [''],
-    photo_raw_url: ['', [Validators.pattern(/^https?:\/\/.+/)]],
     // ADR-082 pattern : checkbox visible uniquement pour les rôles internes.
     // Si coché, le joueur est créé en global (site_id NULL) + auto-granté
     // au site courant côté backend.
     is_global: [false],
   });
+
+  // S4-B : photo sélectionnée avant soumission (upload enchaîné après createPlayer).
+  pendingPhotoFile = signal<File | null>(null);
+  photoPreviewUrl = signal<string | null>(null);
 
   /** Vrai si l'utilisateur peut créer/gérer des joueurs globaux. */
   canManageGlobals = computed(() => this.ctx.isInternalRole());
@@ -103,7 +106,10 @@ export class PlayersComponent implements OnInit {
 
   toggleAdd(): void {
     this.showAddForm.update((v) => !v);
-    if (!this.showAddForm()) this.addForm.reset();
+    if (!this.showAddForm()) {
+      this.addForm.reset();
+      this.clearCreationPhoto();
+    }
   }
 
   addButtonLabel(): string {
@@ -120,39 +126,76 @@ export class PlayersComponent implements OnInit {
       nom: string;
       numero: number | null;
       poste: string;
-      photo_raw_url: string;
       is_global: boolean;
     };
     this.saving.set(true);
-    // is_global = true autorisé uniquement pour les rôles internes (le backend
-    // refuse silencieusement le flag pour les users club, mais on garde la
-    // garde côté UI pour cohérence visuelle).
     const wantsGlobal = Boolean(raw.is_global) && this.canManageGlobals();
     const payload = {
       prenom: raw.prenom.trim(),
       nom: raw.nom.trim(),
       numero: raw.numero ?? null,
       poste: raw.poste?.trim() || null,
-      photo_raw_url: raw.photo_raw_url?.trim() || null,
+      photo_raw_url: null,
       is_global: wantsGlobal,
     };
     this.studio.createPlayer(siteId, payload).subscribe({
       next: (player) => {
-        this.players.update((arr) => [...arr, player]);
-        this.saving.set(false);
-        this.addForm.reset({ is_global: false });
-        this.showAddForm.set(false);
-        this.flashSuccess(
-          wantsGlobal
-            ? 'Joueur global ajouté + octroyé à ce site.'
-            : 'Joueur ajouté.',
-        );
+        const file = this.pendingPhotoFile();
+        if (file) {
+          this.studio.uploadPlayerPhoto(siteId, player.id, file).subscribe({
+            next: (updated) => {
+              this.players.update((arr) => [...arr, updated]);
+              this.saving.set(false);
+              this.clearCreationPhoto();
+              this.addForm.reset({ is_global: false });
+              this.showAddForm.set(false);
+              this.flashSuccess(
+                wantsGlobal
+                  ? 'Joueur global ajouté + octroyé à ce site.'
+                  : 'Joueur ajouté avec photo.',
+              );
+            },
+            error: (err) => {
+              // Joueur créé mais upload raté — on l'ajoute quand même.
+              this.players.update((arr) => [...arr, player]);
+              this.saving.set(false);
+              this.clearCreationPhoto();
+              this.addForm.reset({ is_global: false });
+              this.showAddForm.set(false);
+              this.errorMsg.set(err?.error?.error ?? 'Joueur créé mais upload photo échoué');
+            },
+          });
+        } else {
+          this.players.update((arr) => [...arr, player]);
+          this.saving.set(false);
+          this.addForm.reset({ is_global: false });
+          this.showAddForm.set(false);
+          this.flashSuccess(
+            wantsGlobal
+              ? 'Joueur global ajouté + octroyé à ce site.'
+              : 'Joueur ajouté.',
+          );
+        }
       },
       error: (err) => {
         this.saving.set(false);
         this.errorMsg.set(err?.error?.error ?? 'Erreur de création');
       },
     });
+  }
+
+  onCreationPhotoSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+    this.clearCreationPhoto();
+    this.pendingPhotoFile.set(file);
+    this.photoPreviewUrl.set(file ? URL.createObjectURL(file) : null);
+  }
+
+  clearCreationPhoto(): void {
+    const url = this.photoPreviewUrl();
+    if (url) URL.revokeObjectURL(url);
+    this.pendingPhotoFile.set(null);
+    this.photoPreviewUrl.set(null);
   }
 
   // ────────────────────────────────────────────────────────────────────────

@@ -45,14 +45,27 @@
               maxlength="60"
             />
           </label>
-          <label class="pl__field pl__field--wide">
-            <span>URL photo brute (optionnel — upload S4-B)</span>
-            <input
-              type="url"
-              formControlName="photo_raw_url"
-              placeholder="https://kalonpartners.bzh/neopro-video/players/..."
-            />
-          </label>
+          <div class="pl__field pl__field--wide">
+            <span>Photo (optionnel)</span>
+            <label class="pl__photo-pick" [class.pl__photo-pick--has-file]="pendingPhotoFile()">
+              @if (photoPreviewUrl()) {
+                <img [src]="photoPreviewUrl()" class="pl__photo-preview" alt="Aperçu" />
+                <span class="pl__photo-change">Changer</span>
+              } @else {
+                <span class="pl__photo-placeholder">📷 Choisir une photo</span>
+              }
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                (change)="onCreationPhotoSelected($event)"
+              />
+            </label>
+            @if (pendingPhotoFile()) {
+              <button type="button" class="pl__photo-clear" (click)="clearCreationPhoto()">
+                ✕ Retirer
+              </button>
+            }
+          </div>
         </div>
         @if (canManageGlobals()) {
           <div class="pl__row">
@@ -64,7 +77,7 @@
         }
         <div class="pl__actions">
           <button type="submit" class="pl__save" [disabled]="addForm.invalid || saving()">
-            {{ saving() ? 'Création…' : 'Créer' }}
+            {{ saving() ? (pendingPhotoFile() ? 'Upload…' : 'Création…') : 'Créer' }}
           </button>
         </div>
       </form>
@@ -191,9 +204,7 @@
           <div class="pl__loading">Chargement…</div>
         } @else {
           @if (grantsList().length === 0) {
-            <p class="pl__modal-empty">
-              Aucun site n'a encore accès à ce joueur global.
-            </p>
+            <p class="pl__modal-empty">Aucun site n'a encore accès à ce joueur global.</p>
           } @else {
             <ul class="pl__grants-list">
               @for (g of grantsList(); track g.site_id) {
@@ -204,11 +215,7 @@
                       <small>— {{ g.club_name }}</small>
                     }
                   </span>
-                  <button
-                    type="button"
-                    class="pl__grant-remove"
-                    (click)="removeGrant(g.site_id)"
-                  >
+                  <button type="button" class="pl__grant-remove" (click)="removeGrant(g.site_id)">
                     Retirer
                   </button>
                 </li>
@@ -218,10 +225,7 @@
           <div class="pl__grant-add">
             <label>
               <span>Ajouter un site :</span>
-              <select
-                [value]="grantsSiteIdToAdd()"
-                (change)="onGrantSiteChange($event)"
-              >
+              <select [value]="grantsSiteIdToAdd()" (change)="onGrantSiteChange($event)">
                 <option value="">— Choisir un site —</option>
                 @for (s of availableSitesForGrant(); track s.id) {
                   <option [value]="s.id">{{ s.label }}</option>
