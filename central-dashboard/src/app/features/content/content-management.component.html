@@ -591,15 +591,25 @@
   <div class="modal" *ngIf="showImageModal" (click)="closeImageModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h2>Convertir une image en vidéo</h2>
+        <h2>Convertir des images en vidéo</h2>
         <button class="modal-close" (click)="closeImageModal()">×</button>
       </div>
       <div class="modal-body">
-        <div class="form-group" *ngIf="!imageForm.file">
-          <label>Image *</label>
+        <!-- Drop zone — toujours visible pour ajouter des images -->
+        <div class="form-group" *ngIf="!imageConversionResult">
+          <label>
+            Images *
+            <span class="label-hint" *ngIf="imageForm.files.length > 0"
+              >({{ imageForm.files.length }} sélectionnée{{
+                imageForm.files.length > 1 ? 's' : ''
+              }}
+              — cliquez pour en ajouter)</span
+            >
+          </label>
           <div
             class="drop-zone"
             [class.drag-over]="isImageDragOver"
+            [class.drop-zone--has-files]="imageForm.files.length > 0"
             (dragover)="onImageDragOver($event)"
             (dragleave)="onImageDragLeave($event)"
             (drop)="onImageDrop($event)"
@@ -607,49 +617,53 @@
           >
             <div class="drop-zone-content">
               <span class="drop-zone-icon">🖼️</span>
-              <p>Glissez-déposez une image ici</p>
+              <p *ngIf="imageForm.files.length === 0">Glissez-déposez vos images ici</p>
+              <p *ngIf="imageForm.files.length > 0">+ Ajouter d'autres images</p>
               <p class="drop-zone-hint">Formats acceptés : JPG, PNG, WEBP</p>
             </div>
             <input
               #imageFileInput
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              multiple
               (change)="onImageSelected($event)"
               style="display: none"
             />
           </div>
         </div>
 
-        <!-- Image Preview avec prévisualisation du rendu final -->
-        <div class="image-preview" *ngIf="imageForm.file">
-          <div class="image-preview-header">
-            <span class="file-name">🖼️ {{ imageForm.file.name }}</span>
-            <span class="file-size">{{ formatFileSize(imageForm.file.size) }}</span>
-            <button class="btn-icon btn-danger" (click)="clearImageFile()">✕</button>
+        <!-- Grille de thumbnails -->
+        <div
+          class="image-thumbnails-grid"
+          *ngIf="imageForm.files.length > 0 && !imageConversionResult"
+        >
+          <div class="image-thumbnail" *ngFor="let url of imagePreviewUrls; let i = index">
+            <div class="thumb-preview" [class.with-blur]="imageForm.blurBackground">
+              <img *ngIf="imageForm.blurBackground" [src]="url" alt="" class="thumb-blur-bg" />
+              <img [src]="url" alt="Preview" class="thumb-img" />
+            </div>
+            <div class="thumb-info">
+              <span class="thumb-name" [title]="imageForm.files[i].name">{{
+                imageForm.files[i].name
+              }}</span>
+              <span class="thumb-size">{{ formatFileSize(imageForm.files[i].size) }}</span>
+            </div>
+            <button
+              class="btn-icon btn-danger thumb-remove"
+              (click)="removeImageFile(i)"
+              title="Supprimer"
+            >
+              ✕
+            </button>
           </div>
-
-          <!-- Prévisualisation du rendu final (16:9) -->
-          <div class="preview-container-16-9" *ngIf="imagePreviewUrl">
-            <!-- Fond flou (visible uniquement si option activée) -->
-            <img
-              *ngIf="imageForm.blurBackground"
-              [src]="imagePreviewUrl"
-              alt="Background blur"
-              class="preview-blur-background"
-            />
-            <!-- Image principale centrée -->
-            <img
-              [src]="imagePreviewUrl"
-              alt="Preview"
-              class="preview-image-centered"
-              [class.with-blur-bg]="imageForm.blurBackground"
-            />
-          </div>
-          <p class="preview-hint">Aperçu du rendu TV (format 16:9)</p>
         </div>
 
-        <div class="form-group" *ngIf="imageForm.file">
-          <label>Durée d'affichage</label>
+        <!-- Options communes (durée + fond flou) -->
+        <div class="form-group" *ngIf="imageForm.files.length > 0 && !imageConversionResult">
+          <label
+            >Durée d'affichage
+            <span class="label-hint">(appliquée à toutes les images)</span></label
+          >
           <div class="duration-options">
             <label class="radio-option" *ngFor="let opt of durationOptions">
               <input
@@ -663,8 +677,10 @@
           </div>
         </div>
 
-        <!-- Option fond flou -->
-        <div class="form-group blur-option" *ngIf="imageForm.file">
+        <div
+          class="form-group blur-option"
+          *ngIf="imageForm.files.length > 0 && !imageConversionResult"
+        >
           <label class="checkbox-label">
             <input type="checkbox" [(ngModel)]="imageForm.blurBackground" />
             <span class="checkbox-text"> ✨ Fond flou automatique </span>
@@ -684,18 +700,30 @@
             ></div>
           </div>
           <div class="progress-label">
-            <span>Conversion en cours...</span>
+            <span
+              >Conversion en cours... ({{ currentConversionIndex + 1 }}/{{
+                imageForm.files.length
+              }})</span
+            >
             <span>{{ imageConversionProgress }}%</span>
           </div>
         </div>
 
-        <!-- Conversion Result -->
+        <!-- Résultats par image -->
         <div class="conversion-result" *ngIf="imageConversionResult">
-          <div class="result-success" *ngIf="imageConversionResult.success">
-            ✅ {{ imageConversionResult.message }}
+          <div
+            class="result-summary"
+            [class.result-success]="imageConversionResult.success"
+            [class.result-error]="!imageConversionResult.success"
+          >
+            {{ imageConversionResult.success ? '✅' : '❌' }} {{ imageConversionResult.message }}
           </div>
-          <div class="result-error" *ngIf="!imageConversionResult.success">
-            ❌ {{ imageConversionResult.message }}
+          <div class="conversion-details" *ngIf="imageConversionDetails.length > 1">
+            <div class="detail-row" *ngFor="let d of imageConversionDetails">
+              <span class="detail-icon">{{ d.success ? '✅' : '❌' }}</span>
+              <span class="detail-name">{{ d.name }}</span>
+              <span class="detail-msg" *ngIf="!d.success">{{ d.message }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -706,10 +734,11 @@
         <button
           class="btn btn-primary"
           (click)="convertImageToVideo()"
-          [disabled]="!imageForm.file || isConvertingImage"
+          [disabled]="imageForm.files.length === 0 || isConvertingImage"
           *ngIf="!imageConversionResult"
         >
-          🚀 Créer la vidéo
+          🚀 Créer
+          {{ imageForm.files.length > 1 ? imageForm.files.length + ' vidéos' : 'la vidéo' }}
         </button>
       </div>
     </div>

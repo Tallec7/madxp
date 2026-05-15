@@ -1039,8 +1039,8 @@ describe('VideoUploadService + ContentDeploymentService extraction guard', () =>
     expect(content).toContain('class VideoUploadService');
     expect(content).toContain('addFilesToSelection');
     expect(content).toContain('uploadVideos');
-    expect(content).toContain('setImageFile');
-    expect(content).toContain('convertImageToVideo');
+    expect(content).toContain('addImageFiles');
+    expect(content).toContain('convertImagesToVideo');
     expect(content).toContain('canUpload');
     expect(content).toContain('durationOptions');
   });
