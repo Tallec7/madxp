@@ -55,6 +55,7 @@ export class VideoPlaybackService {
   private _isStartingLoop = false;
   private _switchTriggered = false;
   private _switchGeneration = 0;
+  private _loopPreparedDuringManual = false;
   private lastTimeUpdateCheck = 0;
 
   // Disk cache warming
@@ -160,6 +161,7 @@ export class VideoPlaybackService {
     this._isLoopMode = true;
     this.doubleBuffer.setPendingSwitch(false);
     this._switchTriggered = false;
+    this._loopPreparedDuringManual = false;
 
     // Get videos for current phase
     const phase = this.callbacks?.getActivePhase() ?? 'neutral';
@@ -425,7 +427,10 @@ export class VideoPlaybackService {
    */
   onVideoEnded(fromPlayer: 'A' | 'B'): void {
     if (!this._isLoopMode || fromPlayer !== this.doubleBuffer.activePlayer) return;
-    if (this.callbacks?.getIsManualMode()) return;
+    if (this.callbacks?.getIsManualMode()) {
+      this.handleLoopEndedDuringManual();
+      return;
+    }
 
     // Slave mode: show freeze-frame and wait for master
     if (this.callbacks?.getIsSlaveMode()) {
@@ -545,6 +550,51 @@ export class VideoPlaybackService {
   // MANUAL VIDEO SUPPORT
   // ==========================================================================
 
+  get loopPreparedDuringManual(): boolean { return this._loopPreparedDuringManual; }
+
+  // Option B (manual→loop transition): when a loop video naturally ends in
+  // background during a manual video, advance the loop index and preload the
+  // next video on the inactive player WITHOUT playing it. The preloaded video
+  // is revealed via resumeWithPreloadedLoop() when the manual ends.
+  private handleLoopEndedDuringManual(): void {
+    if (this._loopPreparedDuringManual) return;
+    if (this._currentLoopVideos.length === 0) return;
+
+    const nextIndex = (this._currentLoopIndex + 1) % this._currentLoopVideos.length;
+    const nextVideo = this._currentLoopVideos[nextIndex];
+    if (!nextVideo?.path || this.isWebContentEntry(nextVideo)) return;
+
+    console.log(`[VideoPlayback] Loop ended during manual — preloading video ${nextIndex} silently`);
+    this._currentLoopIndex = nextIndex;
+    this.doubleBuffer.preloadOnInactivePlayer(nextVideo.path, nextIndex);
+    this._loopPreparedDuringManual = true;
+  }
+
+  // Called by ManualVideoService.onManualEnded. Returns true if a preloaded
+  // loop video was revealed (smooth path, no cold restart). Returns false if
+  // nothing was prepared OR the preload isn't ready — caller falls back to its
+  // existing path (loop-alive hide-freeze, or cold restart).
+  resumeWithPreloadedLoop(): boolean {
+    if (!this._loopPreparedDuringManual) return false;
+    const inactive = this.doubleBuffer.getInactivePlayer();
+    if (inactive.readyState < 2) {
+      console.warn('[VideoPlayback] Preloaded loop not ready (readyState<2), falling back to cold restart');
+      this._loopPreparedDuringManual = false;
+      return false;
+    }
+    if (this.doubleBuffer.pendingSwitch) return false;
+
+    this._loopPreparedDuringManual = false;
+    this.doubleBuffer.setPendingSwitch(true);
+    this.metrics.totalTransitions++;
+    console.log(`[VideoPlayback] Revealing preloaded loop video ${this._currentLoopIndex} after manual`);
+    this.ngZone.run(() => {
+      this.callbacks?.onLoopVideoEnded(true);
+      this.doubleBuffer.switchPlayers(this._currentLoopIndex);
+    });
+    return true;
+  }
+
   /**
    * Stop the manual video and prepare to return to loop.
    * Called by TvComponent when user switches phase during manual playback.
@@ -554,6 +604,8 @@ export class VideoPlaybackService {
     manualPlayerB: HTMLVideoElement
   ): void {
     console.log('[VideoPlayback] Stopping manual video to return to loop');
+
+    this._loopPreparedDuringManual = false;
 
     [manualPlayerA, manualPlayerB].forEach(player => {
       if (player) {
