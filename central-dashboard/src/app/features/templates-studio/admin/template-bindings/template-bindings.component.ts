@@ -178,6 +178,10 @@ export class TemplateBindingsComponent implements OnInit {
       // accepte tous les types font et c'est le browser qui choisira).
       if (this.isFontSlot(slot)) {
         filters.mime = 'font/';
+      } else if (this.isDirectorySlot(slot)) {
+        // ADR-128 : les directories sont stockés avec mime `application/x-png-frames`
+        // côté backend (voir studioAssetRepository.createDirectory()). Filtre exact.
+        filters.mime = 'application/x-png-frames';
       } else {
         // 'image/png' ou 'video/mp4' → on peut prefilter sur le mime exact.
         filters.mime = slot.mime;
@@ -243,7 +247,14 @@ export class TemplateBindingsComponent implements OnInit {
     // Tag automatique avec le slug + asset_key pour faciliter le retrouvage
     // ultérieur dans la library.
     const tags = [`template:${slug}`, `slot:${slot.key}`];
-    this.studio.uploadStudioAsset(file, { tags }).subscribe({
+    // ADR-128 — si le slot attend un asset directory (séquence PNG frames,
+    // ex: masques alpha animés), router vers l'endpoint `/assets/directory`
+    // qui décompresse le ZIP. Sinon endpoint standard `/assets`.
+    const isDirectorySlot = slot.mime === 'application/x-png-frames';
+    const upload$ = isDirectorySlot
+      ? this.studio.uploadStudioAssetDirectory(file, { tags })
+      : this.studio.uploadStudioAsset(file, { tags });
+    upload$.subscribe({
       next: (asset) => {
         // Après upload (ou dédup), on bind directement le slot.
         this.studio.bindTemplateAsset(slug, slot.key, asset.id).subscribe({
@@ -303,6 +314,11 @@ export class TemplateBindingsComponent implements OnInit {
       slot.mime.startsWith('application/font-') ||
       slot.mime.startsWith('application/x-font-')
     );
+  }
+
+  /** ADR-128 — True si le slot attend un asset directory (séquence PNG frames via ZIP). */
+  isDirectorySlot(slot: RequiredAsset | null): boolean {
+    return slot?.mime === 'application/x-png-frames';
   }
 
   formatBytes(bytes: number | null | undefined): string {

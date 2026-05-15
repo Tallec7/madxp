@@ -310,13 +310,16 @@ export class TemplatesStudioService {
   }
 
   /**
-   * ADR-128 — Upload d'un ZIP de PNG frames (séquence pour masque alpha).
-   * Le backend décompresse en mémoire, push frame par frame sur FTP, et
-   * INSERT 1 row `studio_assets` avec `asset_kind='directory'`.
+   * ADR-128 — Upload d'un asset directory (ZIP de séquences PNG frames).
    *
-   * `framePattern` peut être omis : auto-détection depuis le tri alpha
-   * des fichiers PNG (ex: `frame_001.png` → `frame_{i:03d}.png`).
-   * Dédup par checksum SHA256 du ZIP.
+   * Pour les slots `mime: 'application/x-png-frames'` (masques alpha
+   * animés). Le backend décompresse le ZIP, upload chaque PNG sur FTP,
+   * détecte le pattern de nommage (`frame_001.png` → `frame_{i:03d}.png`)
+   * et stocke 1 row `studio_assets` avec `asset_kind='directory'` +
+   * `frame_count` + `frame_pattern`.
+   *
+   * Dédup par checksum SHA256 du ZIP (re-upload = no-op, retourne row
+   * existante avec `deduplicated: true`).
    */
   uploadStudioAssetDirectory(
     zipFile: File,
