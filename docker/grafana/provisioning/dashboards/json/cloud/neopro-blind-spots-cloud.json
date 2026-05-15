@@ -1226,6 +1226,29 @@
       "gridPos": {
         "h": 7,
         "w": 12,
+        "x": 12,
+        "y": 94
+      },
+      "id": 807,
+      "title": "Analytics dedup skipped (P3 incident 2026-05-14)",
+      "description": "video_plays rows ecartees par ON CONFLICT (site_id, played_at, video_filename) DO NOTHING. Pic = Pi qui replay le meme played_at en boucle (flap recording, payload identique re-envoye). Avant cette metrique, le controller renvoyait `recorded = validPlays.length` au Pi, masquant le bruit.",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(neopro_analytics_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id)",
+          "legendFormat": "{{site_id}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-tallec7-prom"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
         "x": 0,
         "y": 101
       },

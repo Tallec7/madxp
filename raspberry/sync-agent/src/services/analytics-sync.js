@@ -26,7 +26,20 @@ async function sendAnalytics() {
     );
 
     if (result.sent > 0) {
-      logger.info('Analytics sent', { sent: result.sent, recorded: result.recorded });
+      logger.info('Analytics sent', {
+        sent: result.sent,
+        recorded: result.recorded,
+        deduplicated: result.deduplicated || 0,
+      });
+      // P3 incident 2026-05-14 — un Pi en flap recording peut replay le même
+      // played_at en boucle. Le cloud déduplique via ON CONFLICT, mais sans ce
+      // warn local on ne sait pas qu'on push du bruit.
+      if (result.deduplicated > 0) {
+        logger.warn('Analytics deduplicated by central (replayed played_at?)', {
+          sent: result.sent,
+          deduplicated: result.deduplicated,
+        });
+      }
     } else if (result.error) {
       logger.warn('Analytics send failed', { error: result.error });
     }

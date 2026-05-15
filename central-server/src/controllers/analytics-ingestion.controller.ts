@@ -198,8 +198,20 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
       if (campaignNulled > 0) metricsService.recordVideoPlaysFkFallback('campaign_id', campaignNulled);
     }
 
-    // Batch insert via repository (handles batching internally)
-    await analyticsRepository.recordVideoPlays(validPlays);
+    // Batch insert via repository (handles batching internally).
+    // Le repo retourne `inserted` (vrai rowCount Postgres) et `deduplicated`
+    // (rows ignorées par ON CONFLICT). Sans ça, on renvoyait `recorded = validPlays.length`
+    // au Pi → flap recording invisible (incident 2026-05-14).
+    const { inserted, deduplicated } = await analyticsRepository.recordVideoPlays(validPlays);
+    if (deduplicated > 0) {
+      metricsService.recordAnalyticsDedupSkipped(site_id, deduplicated);
+      logger.warn('Video plays deduplicated by ON CONFLICT', {
+        siteId: site_id,
+        deduplicated,
+        inserted,
+        batchSize: validPlays.length,
+      });
+    }
 
     // PR3 — exposer les erreurs de lecture player dans Prometheus. Compte les
     // plays avec interruption_reason='video_error' du batch et incrémente le
@@ -223,9 +235,9 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
       }
     }
 
-    logger.info('Video plays recorded', { siteId: site_id, count: validPlays.length, totalPlays: validPlays.length });
+    logger.info('Video plays recorded', { siteId: site_id, count: inserted, deduplicated, totalPlays: validPlays.length });
 
-    res.json({ success: true, recorded: validPlays.length });
+    res.json({ success: true, recorded: inserted, deduplicated });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
     logger.error('Record video plays error:', { error: errorMessage, siteId: req.body?.site_id, playsCount: req.body?.plays?.length });

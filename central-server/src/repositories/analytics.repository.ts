@@ -548,11 +548,19 @@ class AnalyticsRepositoryImpl {
 
   /**
    * Insert en batch des lectures video (jusqu'a 100 par appel).
+   *
+   * Retourne `{ inserted, deduplicated }` :
+   * - `inserted` = rows réellement insérées (Postgres `result.rowCount` après ON CONFLICT DO NOTHING)
+   * - `deduplicated` = rows ignorées car déjà présentes via `(site_id, played_at, video_filename)`
+   *
+   * Sans ce vrai compteur, le controller renvoyait `recorded = plays.length` au Pi,
+   * masquant les replays infinis d'un même `played_at` (P3 incident 2026-05-14).
    */
-  async recordVideoPlays(plays: VideoPlaysBatchItem[]): Promise<void> {
-    if (plays.length === 0) return;
+  async recordVideoPlays(plays: VideoPlaysBatchItem[]): Promise<{ inserted: number; deduplicated: number }> {
+    if (plays.length === 0) return { inserted: 0, deduplicated: 0 };
 
     const batchSize = 100;
+    let totalInserted = 0;
     for (let i = 0; i < plays.length; i += batchSize) {
       const batch = plays.slice(i, i + batchSize);
       const values: unknown[] = [];
@@ -572,13 +580,16 @@ class AnalyticsRepositoryImpl {
         );
       });
 
-      await query(
+      const result = await query(
         `INSERT INTO video_plays (site_id, session_id, video_filename, category, played_at, duration_played, video_duration, completed, trigger_type, video_id, sponsor_id, tv_status, event_type, period, audience_estimate, position_in_loop, site_sponsor_id, campaign_id, source, interruption_reason)
          VALUES ${placeholders.join(', ')}
          ON CONFLICT (site_id, played_at, video_filename) DO NOTHING`,
         values
       );
+      totalInserted += result.rowCount ?? 0;
     }
+
+    return { inserted: totalInserted, deduplicated: plays.length - totalInserted };
   }
 
   // ========================================================================

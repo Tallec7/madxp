@@ -190,6 +190,7 @@ class AnalyticsCollector {
     const url = `${baseUrl}/api/analytics/video-plays`;
     let totalSent = 0;
     let totalRecorded = 0;
+    let totalDeduplicated = 0;
     let lastError = null;
 
     // Diviser en batches
@@ -222,6 +223,7 @@ class AnalyticsCollector {
           const result = await this.sendBatch(url, siteId, batch);
           totalSent += batch.length;
           totalRecorded += result.recorded || 0;
+          totalDeduplicated += result.deduplicated || 0;
           batchSent = true;
 
           logger.debug('Batch sent successfully', {
@@ -229,6 +231,7 @@ class AnalyticsCollector {
             of: batches.length,
             sent: batch.length,
             recorded: result.recorded,
+            deduplicated: result.deduplicated || 0,
           });
 
           // Mettre à jour le buffer après chaque batch réussi
@@ -284,6 +287,7 @@ class AnalyticsCollector {
       logger.info('Analytics sent to server', {
         sent: totalSent,
         recorded: totalRecorded,
+        deduplicated: totalDeduplicated,
         remaining: this.buffer.length,
       });
     }
@@ -296,6 +300,7 @@ class AnalyticsCollector {
     return {
       sent: totalSent,
       recorded: totalRecorded,
+      deduplicated: totalDeduplicated,
       remaining: this.buffer.length,
       error: lastError,
     };
