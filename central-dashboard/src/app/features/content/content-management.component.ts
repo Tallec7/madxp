@@ -68,7 +68,9 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   get isConvertingImage() { return this.uploadService.isConvertingImage; }
   get imageConversionProgress() { return this.uploadService.imageConversionProgress; }
   get imageConversionResult() { return this.uploadService.imageConversionResult; }
-  get imagePreviewUrl() { return this.uploadService.imagePreviewUrl; }
+  get imageConversionDetails() { return this.uploadService.imageConversionDetails; }
+  get imagePreviewUrls() { return this.uploadService.imagePreviewUrls; }
+  get currentConversionIndex() { return this.uploadService.currentConversionIndex; }
   get durationOptions() { return this.uploadService.durationOptions; }
 
   // ── Delegate to deploy service ──
@@ -367,19 +369,20 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   onImageDrop(event: DragEvent): void {
     event.preventDefault(); event.stopPropagation(); this.isImageDragOver = false;
     const files = Array.from(event.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
-    if (files.length > 0) { this.uploadService.setImageFile(files[0]); }
+    if (files.length > 0) { this.uploadService.addImageFiles(files); }
   }
 
   onImageSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (file) { this.uploadService.setImageFile(file); }
+    const files = Array.from(target.files || []);
+    if (files.length > 0) { this.uploadService.addImageFiles(files); }
+    target.value = '';
   }
 
-  setImageFile(file: File): void { this.uploadService.setImageFile(file); }
-  clearImageFile(): void { this.uploadService.clearImageFile(); }
+  removeImageFile(index: number): void { this.uploadService.removeImageFile(index); }
+  clearImageFiles(): void { this.uploadService.clearImageFiles(); }
 
   convertImageToVideo(): void {
-    this.uploadService.convertImageToVideo(() => { this.loadVideos(); this.loadAllVideos(); });
+    this.uploadService.convertImagesToVideo(() => { this.loadVideos(); this.loadAllVideos(); });
   }
 }

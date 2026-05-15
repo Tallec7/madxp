@@ -25,17 +25,20 @@ export class VideoUploadService {
   uploadResults: UploadResult[] = [];
 
   // ── Image conversion state ──
-  imageForm = { file: null as File | null, duration: 10, blurBackground: false };
+  imageForm = { files: [] as File[], duration: 10, blurBackground: false };
   isConvertingImage = false;
   imageConversionProgress = 0;
   imageConversionResult: { success: boolean; message: string } | null = null;
-  imagePreviewUrl: string | null = null;
+  imagePreviewUrls: string[] = [];
+  imageConversionDetails: { name: string; success: boolean; message: string }[] = [];
+  currentConversionIndex = 0;
 
   readonly durationOptions = [
     { value: 5, label: '5 secondes' },
     { value: 10, label: '10 secondes' },
     { value: 15, label: '15 secondes' },
     { value: 30, label: '30 secondes' },
+    { value: 60, label: '1 minute' },
   ];
 
   // ── File selection ──
@@ -144,77 +147,86 @@ export class VideoUploadService {
 
   // ── Image conversion ──
 
-  setImageFile(file: File): boolean {
+  addImageFiles(files: File[]): void {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      this.notificationService.error('Format non supporte. Utilisez JPG, PNG ou WEBP.');
-      return false;
-    }
-
-    this.imageForm.file = file;
-
-    if (this.imagePreviewUrl) {
-      URL.revokeObjectURL(this.imagePreviewUrl);
-    }
-    this.imagePreviewUrl = URL.createObjectURL(file);
-    return true;
+    files.forEach(f => {
+      if (!allowedTypes.includes(f.type)) {
+        this.notificationService.error(`Format non supporté : ${f.name}. Utilisez JPG, PNG ou WEBP.`);
+        return;
+      }
+      this.imageForm.files.push(f);
+      this.imagePreviewUrls.push(URL.createObjectURL(f));
+    });
   }
 
-  clearImageFile(): void {
-    this.imageForm.file = null;
-    if (this.imagePreviewUrl) {
-      URL.revokeObjectURL(this.imagePreviewUrl);
-      this.imagePreviewUrl = null;
-    }
+  removeImageFile(index: number): void {
+    URL.revokeObjectURL(this.imagePreviewUrls[index]);
+    this.imageForm.files.splice(index, 1);
+    this.imagePreviewUrls.splice(index, 1);
+  }
+
+  clearImageFiles(): void {
+    this.imagePreviewUrls.forEach(u => URL.revokeObjectURL(u));
+    this.imageForm.files = [];
+    this.imagePreviewUrls = [];
   }
 
   resetImageForm(): void {
-    this.clearImageFile();
-    this.imageForm = { file: null, duration: 10, blurBackground: false };
+    this.clearImageFiles();
+    this.imageForm = { files: [], duration: 10, blurBackground: false };
     this.imageConversionProgress = 0;
     this.imageConversionResult = null;
+    this.imageConversionDetails = [];
+    this.currentConversionIndex = 0;
   }
 
-  convertImageToVideo(onSuccess: () => void): void {
-    if (!this.imageForm.file || this.isConvertingImage) return;
+  convertImagesToVideo(onSuccess: () => void): void {
+    const files = this.imageForm.files;
+    if (files.length === 0 || this.isConvertingImage) return;
 
     this.isConvertingImage = true;
-    this.imageConversionProgress = 10;
+    this.imageConversionProgress = 0;
     this.imageConversionResult = null;
+    this.imageConversionDetails = [];
+    this.currentConversionIndex = 0;
 
-    const formData = new FormData();
-    formData.append('image', this.imageForm.file);
-    formData.append('duration', this.imageForm.duration.toString());
-    formData.append('blurBackground', this.imageForm.blurBackground.toString());
-
-    const progressInterval = setInterval(() => {
-      if (this.imageConversionProgress < 90) {
-        this.imageConversionProgress += 10;
-      }
-    }, 500);
-
-    this.dataService.convertImageToVideo(formData).subscribe({
-      next: (response) => {
-        clearInterval(progressInterval);
+    const convertNext = (index: number): void => {
+      if (index >= files.length) {
+        this.isConvertingImage = false;
         this.imageConversionProgress = 100;
-        this.isConvertingImage = false;
+        const successCount = this.imageConversionDetails.filter(d => d.success).length;
         this.imageConversionResult = {
-          success: true,
-          message: response.message || 'Video creee avec succes !'
+          success: successCount > 0,
+          message: `${successCount}/${files.length} image(s) convertie(s) en vidéo.`
         };
-        this.notificationService.success(response.message || 'Image convertie en video !');
-        onSuccess();
-      },
-      error: (error: unknown) => {
-        clearInterval(progressInterval);
-        this.isConvertingImage = false;
-        this.imageConversionProgress = 0;
-        const message = this.dataService.getErrorMessage(error);
-        this.imageConversionResult = { success: false, message };
-        this.notificationService.error(`Erreur: ${message}`, {
-          correlationId: this.dataService.getCorrelationId(error)
-        });
+        if (successCount > 0) {
+          this.notificationService.success(`${successCount} image(s) convertie(s) avec succès !`);
+          onSuccess();
+        }
+        return;
       }
-    });
+
+      this.currentConversionIndex = index;
+      this.imageConversionProgress = Math.round((index / files.length) * 100);
+
+      const formData = new FormData();
+      formData.append('image', files[index]);
+      formData.append('duration', this.imageForm.duration.toString());
+      formData.append('blurBackground', this.imageForm.blurBackground.toString());
+
+      this.dataService.convertImageToVideo(formData).subscribe({
+        next: (response) => {
+          this.imageConversionDetails.push({ name: files[index].name, success: true, message: response.message || 'OK' });
+          convertNext(index + 1);
+        },
+        error: (error: unknown) => {
+          const message = this.dataService.getErrorMessage(error);
+          this.imageConversionDetails.push({ name: files[index].name, success: false, message });
+          convertNext(index + 1);
+        }
+      });
+    };
+
+    convertNext(0);
   }
 }
