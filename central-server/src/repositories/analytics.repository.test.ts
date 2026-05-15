@@ -290,7 +290,7 @@ describe('AnalyticsRepository', () => {
     it('should batch insert video plays', async () => {
       mockQuery.mockResolvedValue({ rowCount: 1 });
 
-      await analyticsRepository.recordVideoPlays([{
+      const result = await analyticsRepository.recordVideoPlays([{
         siteId: 's1', sessionId: 'sess-1', videoFilename: 'v.mp4', category: 'sport',
         playedAt: '2024-01-15T10:00:00Z', durationPlayed: 30, videoDuration: 60,
         completed: false, triggerType: 'auto', videoId: null, sponsorId: null, tvStatus: null,
@@ -301,12 +301,38 @@ describe('AnalyticsRepository', () => {
       const sql = mockQuery.mock.calls[0][0] as string;
       expect(sql).toContain('INSERT INTO video_plays');
       expect(mockQuery.mock.calls[0][1]).toHaveLength(20);
+      expect(result).toEqual({ inserted: 1, deduplicated: 0 });
+    });
+
+    it('should report deduplicated rows when ON CONFLICT skips inserts', async () => {
+      // 2 plays envoyés, Postgres en a inséré 1 (l'autre déjà présent via ON CONFLICT DO NOTHING)
+      mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+      const result = await analyticsRepository.recordVideoPlays([
+        {
+          siteId: 's1', sessionId: null, videoFilename: 'v.mp4', category: 'sport',
+          playedAt: '2024-01-15T10:00:00Z', durationPlayed: 30, videoDuration: 60,
+          completed: false, triggerType: 'auto', videoId: null, sponsorId: null, tvStatus: null,
+          eventType: null, period: null, audienceEstimate: null, positionInLoop: null, siteSponsorId: null,
+          campaignId: null, source: null, interruptionReason: null,
+        },
+        {
+          siteId: 's1', sessionId: null, videoFilename: 'v.mp4', category: 'sport',
+          playedAt: '2024-01-15T10:00:00Z', durationPlayed: 30, videoDuration: 60,
+          completed: false, triggerType: 'auto', videoId: null, sponsorId: null, tvStatus: null,
+          eventType: null, period: null, audienceEstimate: null, positionInLoop: null, siteSponsorId: null,
+          campaignId: null, source: null, interruptionReason: null,
+        },
+      ]);
+
+      expect(result).toEqual({ inserted: 1, deduplicated: 1 });
     });
 
     it('should do nothing for empty array', async () => {
-      await analyticsRepository.recordVideoPlays([]);
+      const result = await analyticsRepository.recordVideoPlays([]);
 
       expect(mockQuery).not.toHaveBeenCalled();
+      expect(result).toEqual({ inserted: 0, deduplicated: 0 });
     });
   });
 

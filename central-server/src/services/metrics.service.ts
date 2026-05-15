@@ -130,6 +130,16 @@ const alertsDedupSkippedTotal = new Counter({
   registers: [register],
 });
 
+// P3 incident 2026-05-14 — analytics ingestion ON CONFLICT (site_id, played_at, video_filename)
+// DO NOTHING peut silencer un Pi qui replay le même play_at en boucle. Ce compteur
+// expose le vrai nombre de rows écartées vs ingérées pour qu'un Pi en flap reste visible.
+const analyticsDedupSkippedTotal = new Counter({
+  name: 'neopro_analytics_dedup_skipped_total',
+  help: 'video_plays rows deduplicated by ON CONFLICT DO NOTHING (Pi replaying same played_at)',
+  labelNames: ['site_id'],
+  registers: [register],
+});
+
 // ADR-117 — Hardening incident NLF 2026-05-13 :
 // Compte les auto-deploys refusés par le throttle in-flight-per-site.
 // reason ∈ ['in_flight_cap','in_flight_cap_midloop'] distingue le refus initial
@@ -1131,6 +1141,10 @@ class MetricsService {
 
   recordAlertDedupSkipped(type: string): void {
     alertsDedupSkippedTotal.inc({ type });
+  }
+
+  recordAnalyticsDedupSkipped(siteId: string, count: number): void {
+    if (count > 0) analyticsDedupSkippedTotal.inc({ site_id: siteId }, count);
   }
 
   // ADR-117 — incident NLF 2026-05-13 (auto-deploy storm a fait crasher neopro-app)

@@ -362,7 +362,7 @@ describe('Analytics Controller', () => {
       const res = createMockResponse();
 
       mockedSite.exists.mockResolvedValueOnce(true);
-      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce({ inserted: 1, deduplicated: 0 });
 
       await recordVideoPlays(req, res);
 
@@ -385,7 +385,7 @@ describe('Analytics Controller', () => {
       const res = createMockResponse();
 
       mockedSite.exists.mockResolvedValueOnce(true);
-      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce({ inserted: 1, deduplicated: 0 });
 
       await recordVideoPlays(req, res);
 
@@ -414,7 +414,7 @@ describe('Analytics Controller', () => {
 
       mockedSite.exists.mockResolvedValueOnce(true);
       mockedAdvertiser.findExistingIds.mockResolvedValueOnce(new Set([validSponsorId]));
-      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce({ inserted: 1, deduplicated: 0 });
 
       await recordVideoPlays(req, res);
 
@@ -442,7 +442,7 @@ describe('Analytics Controller', () => {
 
       mockedSite.exists.mockResolvedValueOnce(true);
       mockedVideo.findExistingIds.mockResolvedValueOnce(new Set([validVideoId]));
-      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce({ inserted: 1, deduplicated: 0 });
 
       await recordVideoPlays(req, res);
 
@@ -470,7 +470,7 @@ describe('Analytics Controller', () => {
 
       mockedSite.exists.mockResolvedValueOnce(true);
       mockedAnalytics.findExistingSessionIds.mockResolvedValueOnce(new Set([validSessionId]));
-      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce(undefined);
+      mockedAnalytics.recordVideoPlays.mockResolvedValueOnce({ inserted: 1, deduplicated: 0 });
 
       await recordVideoPlays(req, res);
 
