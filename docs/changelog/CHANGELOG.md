@@ -1,3 +1,10 @@
+## [3.318.1](https://github.com/Tallec7/neopro/compare/v3.318.0...v3.318.1) (2026-05-15)
+
+### Bug Fixes
+
+- **analytics:** true recorded count after ON CONFLICT dedup ([#1020](https://github.com/Tallec7/neopro/issues/1020)) ([ac2faf8](https://github.com/Tallec7/neopro/commit/ac2faf82f76f61b8b583dff83fb26d9bb87eb123)), closes [#1018](https://github.com/Tallec7/neopro/issues/1018)
+- **studio:** restore ShieldPattern.tsx (cassé par [#1009](https://github.com/Tallec7/neopro/issues/1009) + non restauré par [#1011](https://github.com/Tallec7/neopro/issues/1011)) ([#1021](https://github.com/Tallec7/neopro/issues/1021)) ([bb68820](https://github.com/Tallec7/neopro/commit/bb688208de463555bc21c9cc777face22ce0a61f)), closes [#1007](https://github.com/Tallec7/neopro/issues/1007)
+
 # [3.318.0](https://github.com/Tallec7/neopro/compare/v3.317.2...v3.318.0) (2026-05-14)
 
 ### Features
