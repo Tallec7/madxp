@@ -260,6 +260,15 @@ async function performRenderInProcess(
       jpegQuality: 85,
       concurrency: renderConcurrency,
       crf: 18,
+      // ADR-128 — bornes RAM pour OffthreadVideo. Sans ces limites, Remotion
+      // alloue un cache "automatic" qui peut OOM Railway quand le template a
+      // plusieurs WebM en layers (5 dans BUT générique). Le cache offthread
+      // sert à mémoïser les frames extraites — 100 MB suffit largement.
+      // `offthreadVideoThreads: 1` empêche les extractions parallèles qui
+      // multiplient la RAM (incident 2026-05-15 SIGKILL #2 sur compositor
+      // OffthreadVideo).
+      offthreadVideoCacheSizeInBytes: 100 * 1024 * 1024,
+      offthreadVideoThreads: 1,
     });
   }
 
