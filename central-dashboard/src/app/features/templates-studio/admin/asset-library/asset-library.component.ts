@@ -50,18 +50,20 @@ export class AssetLibraryComponent implements OnInit {
 
   // Filtres locaux UI.
   searchTerm = signal('');
-  selectedType = signal<'all' | 'image' | 'video' | 'font'>('all');
+  selectedType = signal<'all' | 'image' | 'video' | 'font' | 'directory'>('all');
   selectedTag = signal<string>('');
 
   // Chips affichés en filtre type — typés strictement pour le template Angular.
+  // ADR-128 — ajout 'directory' pour filtrer les séquences PNG frames.
   readonly typeChips: ReadonlyArray<{
-    id: 'all' | 'image' | 'video' | 'font';
+    id: 'all' | 'image' | 'video' | 'font' | 'directory';
     label: string;
   }> = [
     { id: 'all', label: 'Tous' },
     { id: 'image', label: 'Images' },
     { id: 'video', label: 'Vidéos' },
     { id: 'font', label: 'Fonts' },
+    { id: 'directory', label: 'Directories' },
   ];
 
   // Modal détail.
@@ -73,7 +75,14 @@ export class AssetLibraryComponent implements OnInit {
   uploadProgress = signal<number>(0);
   pendingFile = signal<File | null>(null);
   pendingTags = signal<string>('');
+  pendingFramePattern = signal<string>('');
   isDraggingOver = signal(false);
+  /**
+   * ADR-128 — mode upload : 'file' (asset standard) | 'directory' (ZIP de
+   * PNG frames pour masque alpha). Toggle dans l'UI ; le `<input>` ouvre
+   * soit `accept=image/*,video/*,font/*` soit `accept=.zip` selon le mode.
+   */
+  uploadMode = signal<'file' | 'directory'>('file');
 
   // Tags uniques computés depuis la liste actuelle.
   availableTags = computed(() => {
@@ -94,10 +103,16 @@ export class AssetLibraryComponent implements OnInit {
     const filters: { tag?: string; mime?: string; search?: string } = {};
     if (this.selectedTag()) filters.tag = this.selectedTag();
     if (this.selectedType() !== 'all') {
-      // 'image' → 'image/*', 'video' → 'video/*', 'font' → 'font/*'.
-      // ADR-127 : les fonts ont aussi des MIME `application/[x-]font-*`,
-      // mais le préfixe `font/` couvre les uploads modernes (woff2 par défaut).
-      filters.mime = `${this.selectedType()}/`;
+      if (this.selectedType() === 'directory') {
+        // ADR-128 — les directories ont un MIME spécifique
+        // `application/x-png-frames` posé par le controller.
+        filters.mime = 'application/x-png-frames';
+      } else {
+        // 'image' → 'image/*', 'video' → 'video/*', 'font' → 'font/*'.
+        // ADR-127 : les fonts ont aussi des MIME `application/[x-]font-*`,
+        // mais le préfixe `font/` couvre les uploads modernes (woff2 par défaut).
+        filters.mime = `${this.selectedType()}/`;
+      }
     }
     if (this.searchTerm()) filters.search = this.searchTerm();
     this.studio.listStudioAssets(filters).subscribe({
@@ -118,9 +133,18 @@ export class AssetLibraryComponent implements OnInit {
     });
   }
 
-  onTypeChange(type: 'all' | 'image' | 'video' | 'font'): void {
+  onTypeChange(type: 'all' | 'image' | 'video' | 'font' | 'directory'): void {
     this.selectedType.set(type);
     this.load();
+  }
+
+  setUploadMode(mode: 'file' | 'directory'): void {
+    if (this.uploadMode() === mode) return;
+    this.uploadMode.set(mode);
+    // Reset le pending file pour éviter d'envoyer un fichier au mauvais endpoint.
+    this.pendingFile.set(null);
+    this.pendingTags.set('');
+    this.pendingFramePattern.set('');
   }
 
   onTagChange(tag: string): void {
@@ -163,6 +187,7 @@ export class AssetLibraryComponent implements OnInit {
   cancelUpload(): void {
     this.pendingFile.set(null);
     this.pendingTags.set('');
+    this.pendingFramePattern.set('');
   }
 
   submitUpload(): void {
@@ -175,30 +200,42 @@ export class AssetLibraryComponent implements OnInit {
       .split(',')
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
-    this.studio.uploadStudioAsset(file, { tags }).subscribe({
-      next: (asset) => {
-        this.uploading.set(false);
-        this.pendingFile.set(null);
-        this.pendingTags.set('');
-        this.successMsg.set(
-          asset.deduplicated
-            ? `Asset déjà existant — réutilisé (${asset.filename})`
-            : `Asset uploadé : ${asset.filename}`,
-        );
-        this.load();
-      },
-      error: (err) => {
-        this.uploading.set(false);
-        // Le backend renvoie soit { error: 'string' } soit { error: { code, message } }.
-        // On flatten pour éviter d'afficher [object Object].
-        const e = err?.error?.error;
-        const msg =
-          (typeof e === 'string' ? e : e?.message) ??
-          err?.message ??
-          'Échec upload';
-        this.errorMsg.set(msg);
-      },
-    });
+
+    const onSuccess = (asset: StudioAsset & { deduplicated?: boolean }) => {
+      this.uploading.set(false);
+      this.pendingFile.set(null);
+      this.pendingTags.set('');
+      this.pendingFramePattern.set('');
+      this.successMsg.set(
+        asset.deduplicated
+          ? `Asset déjà existant — réutilisé (${asset.filename})`
+          : `Asset uploadé : ${asset.filename}`,
+      );
+      this.load();
+    };
+    const onError = (err: { error?: { error?: unknown }; message?: string }) => {
+      this.uploading.set(false);
+      const e = err?.error?.error;
+      const msg =
+        (typeof e === 'string' ? e : (e as { message?: string } | undefined)?.message) ??
+        err?.message ??
+        'Échec upload';
+      this.errorMsg.set(msg);
+    };
+
+    if (this.uploadMode() === 'directory') {
+      const framePattern = this.pendingFramePattern().trim();
+      this.studio
+        .uploadStudioAssetDirectory(file, {
+          tags,
+          framePattern: framePattern.length > 0 ? framePattern : undefined,
+        })
+        .subscribe({ next: onSuccess, error: onError });
+    } else {
+      this.studio
+        .uploadStudioAsset(file, { tags })
+        .subscribe({ next: onSuccess, error: onError });
+    }
   }
 
   // ── Modal détail ──────────────────────────────────────────────────────────
@@ -253,10 +290,10 @@ export class AssetLibraryComponent implements OnInit {
   // ── Helpers UI ────────────────────────────────────────────────────────────
 
   isImage(asset: StudioAsset): boolean {
-    return asset.mime_type.startsWith('image/');
+    return asset.asset_kind === 'file' && asset.mime_type.startsWith('image/');
   }
   isVideo(asset: StudioAsset): boolean {
-    return asset.mime_type.startsWith('video/');
+    return asset.asset_kind === 'file' && asset.mime_type.startsWith('video/');
   }
   /**
    * ADR-127 — couvre `font/woff2`, `font/woff`, `font/ttf` et les MIME
@@ -264,11 +301,43 @@ export class AssetLibraryComponent implements OnInit {
    * pas de preview thumbnail, on affiche une icône à la place).
    */
   isFont(asset: StudioAsset): boolean {
+    if (asset.asset_kind === 'directory') return false;
     const m = asset.mime_type;
     return (
       m.startsWith('font/') ||
       m.startsWith('application/font-') ||
       m.startsWith('application/x-font-')
+    );
+  }
+  /** ADR-128 — séquence PNG frames (masque alpha animé). */
+  isDirectory(asset: StudioAsset): boolean {
+    return asset.asset_kind === 'directory';
+  }
+  /**
+   * ADR-128 — préview de la 1ʳᵉ frame d'un asset directory. Construit
+   * l'URL en interpolant `frame_pattern` avec l'index 1.
+   */
+  firstFrameUrl(asset: StudioAsset): string | null {
+    if (asset.asset_kind !== 'directory' || !asset.frame_pattern) return null;
+    const baseUrl = asset.url.endsWith('/') ? asset.url : `${asset.url}/`;
+    return baseUrl + this.interpolateFramePattern(asset.frame_pattern, 1);
+  }
+  /**
+   * ADR-128 — préview de la dernière frame d'un asset directory.
+   */
+  lastFrameUrl(asset: StudioAsset): string | null {
+    if (
+      asset.asset_kind !== 'directory' ||
+      !asset.frame_pattern ||
+      !asset.frame_count
+    )
+      return null;
+    const baseUrl = asset.url.endsWith('/') ? asset.url : `${asset.url}/`;
+    return baseUrl + this.interpolateFramePattern(asset.frame_pattern, asset.frame_count);
+  }
+  private interpolateFramePattern(pattern: string, frameIdx: number): string {
+    return pattern.replace(/\{i:0(\d+)d\}/, (_match, padding) =>
+      String(frameIdx).padStart(parseInt(padding, 10), '0'),
     );
   }
 

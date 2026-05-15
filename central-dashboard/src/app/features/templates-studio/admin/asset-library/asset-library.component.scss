@@ -368,3 +368,78 @@
   cursor: pointer;
   font-size: 0.9rem;
 }
+
+// ADR-128 — toggle file/directory mode et previews directory.
+.upload-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  button {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    &.active {
+      background: #4338ca;
+      color: white;
+      border-color: #4338ca;
+    }
+  }
+}
+
+.thumb-icon.dir-icon {
+  position: relative;
+  background: #ede9fe;
+  color: #5b21b6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+
+  .dir-glyph {
+    position: absolute;
+    top: 4px;
+    left: 6px;
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 2;
+  }
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0.85;
+  }
+}
+
+.dir-preview {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  figure {
+    margin: 0;
+    flex: 1 1 200px;
+    img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+    }
+    figcaption {
+      font-size: 0.8rem;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 4px;
+    }
+  }
+}

@@ -145,6 +145,8 @@ export interface RenderDistributionResult {
 // ADR-125 — Asset library + bindings (Phase 1.5)
 // ────────────────────────────────────────────────────────────────────────────
 
+export type StudioAssetKind = 'file' | 'directory';
+
 export interface StudioAsset {
   id: string;
   filename: string;
@@ -159,6 +161,12 @@ export interface StudioAsset {
   tags: string[];
   uploaded_by: string | null;
   uploaded_at: string;
+  /** ADR-128 — type d'asset. 'file' (legacy) | 'directory' (séquence PNG frames). */
+  asset_kind: StudioAssetKind;
+  /** ADR-128 — nombre de frames pour `asset_kind='directory'`. NULL pour 'file'. */
+  frame_count: number | null;
+  /** ADR-128 — pattern d'interpolation pour 'directory', ex: 'frame_{i:03d}.png'. */
+  frame_pattern: string | null;
 }
 
 export interface StudioAssetWithUsage extends StudioAsset {

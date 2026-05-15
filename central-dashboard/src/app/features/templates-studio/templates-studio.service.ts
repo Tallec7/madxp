@@ -309,6 +309,39 @@ export class TemplatesStudioService {
       .pipe(map((res) => res.data));
   }
 
+  /**
+   * ADR-128 — Upload d'un ZIP de PNG frames (séquence pour masque alpha).
+   * Le backend décompresse en mémoire, push frame par frame sur FTP, et
+   * INSERT 1 row `studio_assets` avec `asset_kind='directory'`.
+   *
+   * `framePattern` peut être omis : auto-détection depuis le tri alpha
+   * des fichiers PNG (ex: `frame_001.png` → `frame_{i:03d}.png`).
+   * Dédup par checksum SHA256 du ZIP.
+   */
+  uploadStudioAssetDirectory(
+    zipFile: File,
+    options: { tags?: string[]; filename?: string; framePattern?: string } = {},
+  ): Observable<StudioAssetUploadResult> {
+    const form = new FormData();
+    form.append('asset', zipFile);
+    if (options.tags && options.tags.length > 0) {
+      form.append('tags', JSON.stringify(options.tags));
+    }
+    if (options.filename) {
+      form.append('filename', options.filename);
+    }
+    if (options.framePattern) {
+      form.append('frame_pattern', options.framePattern);
+    }
+    interface Response {
+      success: boolean;
+      data: StudioAssetUploadResult;
+    }
+    return this.api
+      .upload<Response>('/templates-studio/assets/directory', form)
+      .pipe(map((res) => res.data));
+  }
+
   updateStudioAssetMetadata(
     assetId: string,
     input: { filename?: string; tags?: string[] },
