@@ -227,9 +227,12 @@ describe('ADR-125 — Routes câblées avec requireRole super_admin/admin/operat
     }
   });
 
-  it('POST /assets monte multer en memoryStorage avec limite 50 MB', () => {
+  it('POST /assets monte multer en memoryStorage avec limite 100 MB', () => {
+    // Bumpé de 50 → 100 MB (PR #1022) après échec upload PACKSHOT_GENERIC.webm
+    // 51.9 MB. Couvre les packshots .webm 1080p de plusieurs secondes sans
+    // saturer la RAM (multer.memoryStorage stocke le temps du upload+pipe FTP).
     expect(content).toMatch(/uploadStudioAssetMiddleware/);
-    expect(content).toMatch(/fileSize:\s*50\s*\*\s*1024\s*\*\s*1024/);
+    expect(content).toMatch(/fileSize:\s*100\s*\*\s*1024\s*\*\s*1024/);
   });
 
   it('PUT bindings utilise validate(templatesStudioSchemas.bindAsset)', () => {

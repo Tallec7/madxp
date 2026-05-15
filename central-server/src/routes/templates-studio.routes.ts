@@ -61,12 +61,13 @@ const uploadBrandKitLogoMiddleware = multer({
   limits: { fileSize: 2 * 1024 * 1024, files: 1 },
 });
 
-// Studio assets (ADR-125) — limite plus haute pour les vidéos lensflare /
-// textures (50 MB max). Les fichiers font/* sont petits, mais les .webm
-// peuvent monter à ~10-20 MB en 1080p courte durée.
+// Studio assets (ADR-125) — 100 MB max. Les fichiers font/* sont petits
+// (<500 KB), mais les .webm peuvent monter à 50-80 MB pour des packshots
+// 1080p de plusieurs secondes. Limite bumpée de 50→100 MB après échec
+// upload PACKSHOT_GENERIC.webm 51.9 MB (incident 2026-05-15).
 const uploadStudioAssetMiddleware = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 100 * 1024 * 1024, files: 1 },
 });
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles

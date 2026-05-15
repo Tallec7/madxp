@@ -107,9 +107,12 @@ export class AssetLibraryComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.errorMsg.set(
-          err?.error?.error ?? 'Erreur lors du chargement de la library',
-        );
+        const e = err?.error?.error;
+        const msg =
+          (typeof e === 'string' ? e : e?.message) ??
+          err?.message ??
+          'Erreur lors du chargement de la library';
+        this.errorMsg.set(msg);
         this.loading.set(false);
       },
     });
@@ -186,7 +189,14 @@ export class AssetLibraryComponent implements OnInit {
       },
       error: (err) => {
         this.uploading.set(false);
-        this.errorMsg.set(err?.error?.error ?? 'Échec upload');
+        // Le backend renvoie soit { error: 'string' } soit { error: { code, message } }.
+        // On flatten pour éviter d'afficher [object Object].
+        const e = err?.error?.error;
+        const msg =
+          (typeof e === 'string' ? e : e?.message) ??
+          err?.message ??
+          'Échec upload';
+        this.errorMsg.set(msg);
       },
     });
   }

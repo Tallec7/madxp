@@ -153,6 +153,15 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
                 <span class="icon" aria-hidden="true">👥</span>
                 <span>Joueurs</span>
               </a>
+              <!-- ADR-125 : panel admin asset library + bindings (super_admin/admin/operator only) -->
+              <a *ngIf="canAdminTemplatesStudio()" routerLink="/templates-studio/admin/assets/library" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" aria-label="Library d'assets Studio">
+                <span class="icon" aria-hidden="true">📦</span>
+                <span>Assets (library)</span>
+              </a>
+              <a *ngIf="canAdminTemplatesStudio()" routerLink="/templates-studio/admin/assets" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item" (click)="closeSidebar()" aria-label="Bindings templates">
+                <span class="icon" aria-hidden="true">🔗</span>
+                <span>Bindings templates</span>
+              </a>
             </div>
 
             <a routerLink="/updates" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="canManageContent()" [attr.aria-label]="'nav.updates' | translate">
@@ -788,6 +797,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
   // (cf app.routes.ts roleGuard data: ['super_admin', 'admin', 'club']).
   canUseTemplatesStudio(): boolean {
     return this.authService.hasRole('super_admin', 'admin', 'club');
+  }
+
+  // Templates Studio admin — pages /admin/assets/* gérent la library
+  // partagée + bindings techniques par template. Accès super_admin/admin/operator
+  // (cf app.routes.ts roleGuard data ADR-125, route lignes 188-217).
+  canAdminTemplatesStudio(): boolean {
+    return this.authService.hasRole('super_admin', 'admin', 'operator');
   }
 
   getUserInitials(): string {
