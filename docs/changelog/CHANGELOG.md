@@ -1,3 +1,9 @@
+# [3.321.0](https://github.com/Tallec7/neopro/compare/v3.320.2...v3.321.0) (2026-05-15)
+
+### Features
+
+- **content:** batch image-to-video conversion (multi-select + durée 1min) ([#1028](https://github.com/Tallec7/neopro/issues/1028)) ([4e64a28](https://github.com/Tallec7/neopro/commit/4e64a28331b4779b0589c6498623e36822ed3787))
+
 ## [3.320.2](https://github.com/Tallec7/neopro/compare/v3.320.1...v3.320.2) (2026-05-15)
 
 ### Bug Fixes
