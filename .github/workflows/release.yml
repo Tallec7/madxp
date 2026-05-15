@@ -119,6 +119,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # ref: main — sinon checkout = github.sha (commit qui a TRIGGER le workflow).
+          # Quand 2 PRs mergent en <60s, semantic-release publie une release qui
+          # inclut les 2 (il fait son propre fetch), mais ce job build au SHA du
+          # 1er → la 2nde PR n'arrive pas dans l'archive. Race observée 2026-05-15.
+          ref: main
           fetch-depth: 0
 
       - name: Fetch all tags
@@ -190,6 +195,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # ref: main — voir build-and-upload pour la justif. Sans ça, quand 2
+          # PRs mergent en <60s, le build CF Pages ne contient que les commits
+          # de la 1ère PR. Race observée 2026-05-15 (PR #1024 + #1025 → frontend
+          # de #1025 absent du bundle déployé v3.319.1).
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
