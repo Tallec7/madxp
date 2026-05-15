@@ -157,11 +157,16 @@
             <span *ngIf="slot.filename"> (idéalement nommé <code>{{ slot.filename }}</code>)</span>
             <span *ngIf="slot.mime"> · type attendu <code>{{ slot.mime }}</code></span>.
             <span *ngIf="isFontSlot(slot)"> Cette font sera enregistrée sous <code>{{ slot.fontFamily ?? '?' }}</code> côté composition.</span>
+            <span *ngIf="isDirectorySlot(slot)"> Upload un <strong>ZIP</strong> contenant les frames PNG (ex: <code>frame_001.png</code> à <code>frame_175.png</code>).</span>
           </p>
           <input
             type="file"
             (change)="onPendingFile($event)"
-            [attr.accept]="isFontSlot(slot) ? 'font/*,.woff2,.woff,.ttf' : (slot.mime ?? null)"
+            [attr.accept]="
+              isDirectorySlot(slot) ? '.zip,application/zip' :
+              isFontSlot(slot) ? 'font/*,.woff2,.woff,.ttf' :
+              (slot.mime ?? null)
+            "
           />
           <div *ngIf="pendingFile() as f" class="pending">
             <strong>{{ f.name }}</strong>
