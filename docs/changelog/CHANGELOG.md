@@ -1,3 +1,9 @@
+## [3.321.1](https://github.com/Tallec7/neopro/compare/v3.321.0...v3.321.1) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** bornes RAM OffthreadVideo (100 MB cache + 1 thread) — fix SIGKILL [#2](https://github.com/Tallec7/neopro/issues/2) ([dfc4051](https://github.com/Tallec7/neopro/commit/dfc4051e3707fd1c49a06858429b95cc4d748a9c))
+
 # [3.321.0](https://github.com/Tallec7/neopro/compare/v3.320.2...v3.321.0) (2026-05-15)
 
 ### Features
