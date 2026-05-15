@@ -1,3 +1,9 @@
+## [3.319.3](https://github.com/Tallec7/neopro/compare/v3.319.2...v3.319.3) (2026-05-15)
+
+### Bug Fixes
+
+- **raspberry:** manual→loop retour smooth via preload silencieux (Option B) ([#1026](https://github.com/Tallec7/neopro/issues/1026)) ([35d0269](https://github.com/Tallec7/neopro/commit/35d02691d73b7d784b3067649fb0c2cda0fbab8a))
+
 ## [3.319.2](https://github.com/Tallec7/neopro/compare/v3.319.1...v3.319.2) (2026-05-15)
 
 ### Bug Fixes
