@@ -1,3 +1,10 @@
+## [3.319.1](https://github.com/Tallec7/neopro/compare/v3.319.0...v3.319.1) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** requestTimeout(300_000) sur les 4 routes upload ([#1024](https://github.com/Tallec7/neopro/issues/1024)) ([13282be](https://github.com/Tallec7/neopro/commit/13282beab1d5d3935eb96c671635694e0d27b6e4))
+- **studio:** route uploads ZIP vers /assets/directory pour slots PNG frames ([#1025](https://github.com/Tallec7/neopro/issues/1025)) ([592ea69](https://github.com/Tallec7/neopro/commit/592ea69e6ce56d2cbda5d89045a3875e46fd3719)), closes [#1023](https://github.com/Tallec7/neopro/issues/1023)
+
 # [3.319.0](https://github.com/Tallec7/neopro/compare/v3.318.2...v3.319.0) (2026-05-15)
 
 ### Features
