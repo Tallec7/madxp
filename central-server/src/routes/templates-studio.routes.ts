@@ -19,6 +19,14 @@ import {
   templatesStudioSchemas,
 } from '../middleware/validation';
 import { apiRateLimit } from '../middleware/user-rate-limit';
+import { requestTimeout } from '../middleware/request-timeout';
+
+// Upload routes timeout (5 min). Sans cette extension, le proxy Railway
+// timeout par défaut (~100s) coupe les uploads volumineux : un .webm 80 MB
+// sur connexion 5-10 Mbps prend 60-130s → ERR_CONNECTION_RESET côté browser
+// (incident 2026-05-15). Pattern aligné sur remotion-templates.routes.ts
+// (legacy v2 ADR-054) qui utilise déjà le même UPLOAD_TIMEOUT_MS=300_000.
+const UPLOAD_TIMEOUT_MS = 300_000;
 import {
   listTemplates,
   createRenderRequest,
@@ -158,6 +166,7 @@ router.put(
 router.post(
   '/sites/:siteId/brand-kit/logo',
   authenticate,
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   apiRateLimit,
   validateParams(paramSchemas.siteId),
   requireClubScope(siteIdFromParams),
@@ -206,6 +215,7 @@ router.delete(
 router.post(
   '/sites/:siteId/players/:playerId/photo',
   authenticate,
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   apiRateLimit,
   validateParams(paramSchemas.siteIdAndPlayerId),
   requireClubScope(siteIdFromParams),
@@ -282,6 +292,7 @@ router.get(
 router.post(
   '/assets',
   authenticate,
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   apiRateLimit,
   requireRole('super_admin', 'admin', 'operator'),
   uploadStudioAssetMiddleware.single('asset'),
@@ -295,6 +306,7 @@ router.post(
 router.post(
   '/assets/directory',
   authenticate,
+  requestTimeout(UPLOAD_TIMEOUT_MS),
   apiRateLimit,
   requireRole('super_admin', 'admin', 'operator'),
   uploadStudioAssetDirectoryMiddleware.single('asset'),
