@@ -1,3 +1,9 @@
+## [3.319.2](https://github.com/Tallec7/neopro/compare/v3.319.1...v3.319.2) (2026-05-15)
+
+### Bug Fixes
+
+- **ci:** release deploy jobs use ref:main pour éviter race PRs concurrentes ([222641d](https://github.com/Tallec7/neopro/commit/222641d532b6e81e80ad717bcc427542120371d6)), closes [#1024](https://github.com/Tallec7/neopro/issues/1024) [#1025](https://github.com/Tallec7/neopro/issues/1025) [#1024](https://github.com/Tallec7/neopro/issues/1024) [#1025](https://github.com/Tallec7/neopro/issues/1025) [#1025](https://github.com/Tallec7/neopro/issues/1025)
+
 ## [3.319.1](https://github.com/Tallec7/neopro/compare/v3.319.0...v3.319.1) (2026-05-15)
 
 ### Bug Fixes
