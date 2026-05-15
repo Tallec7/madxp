@@ -1,3 +1,9 @@
+## [3.318.2](https://github.com/Tallec7/neopro/compare/v3.318.1...v3.318.2) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** bump asset upload 50→100MB + sidebar admin + display erreur ([#1022](https://github.com/Tallec7/neopro/issues/1022)) ([6e52d9a](https://github.com/Tallec7/neopro/commit/6e52d9a2193906a1bfc4693de3265448988a0e01)), closes [post-#1011](https://github.com/post-/issues/1011) [#1011](https://github.com/Tallec7/neopro/issues/1011)
+
 ## [3.318.1](https://github.com/Tallec7/neopro/compare/v3.318.0...v3.318.1) (2026-05-15)
 
 ### Bug Fixes
