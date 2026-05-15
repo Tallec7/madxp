@@ -50,21 +50,54 @@
     </div>
   </div>
 
+  <div class="upload-mode-toggle">
+    <button
+      type="button"
+      [class.active]="uploadMode() === 'file'"
+      (click)="setUploadMode('file')"
+    >Fichier unique</button>
+    <button
+      type="button"
+      [class.active]="uploadMode() === 'directory'"
+      (click)="setUploadMode('directory')"
+    >Directory ZIP (séquence PNG)</button>
+  </div>
+
   <div class="upload-zone" [class.dragging]="isDraggingOver()" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
     <ng-container *ngIf="!pendingFile(); else pendingPreview">
-      <p class="dz-hint">
-        Glisse un fichier ici ou
-        <label class="dz-link">
-          parcours
-          <input
-            type="file"
-            (change)="onFileSelected($event)"
-            accept="image/*,video/*,font/*,.woff2,.woff,.ttf"
-            hidden
-          />
-        </label>
-      </p>
-      <p class="dz-meta">Images / Vidéos / Fonts (woff2, woff, ttf) — 50 MB max</p>
+      <ng-container *ngIf="uploadMode() === 'file'">
+        <p class="dz-hint">
+          Glisse un fichier ici ou
+          <label class="dz-link">
+            parcours
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              accept="image/*,video/*,font/*,.woff2,.woff,.ttf"
+              hidden
+            />
+          </label>
+        </p>
+        <p class="dz-meta">Images / Vidéos / Fonts (woff2, woff, ttf) — 100 MB max</p>
+      </ng-container>
+      <ng-container *ngIf="uploadMode() === 'directory'">
+        <p class="dz-hint">
+          Glisse un ZIP de PNG frames ici ou
+          <label class="dz-link">
+            parcours
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              accept=".zip,application/zip"
+              hidden
+            />
+          </label>
+        </p>
+        <p class="dz-meta">
+          ZIP contenant N fichiers PNG nommés `frame_001.png`, `frame_002.png`, …
+          (auto-détection du pattern). 50 MB max.
+        </p>
+      </ng-container>
     </ng-container>
     <ng-template #pendingPreview>
       <div class="pending-row">
@@ -75,6 +108,13 @@
           [ngModel]="pendingTags()"
           (ngModelChange)="pendingTags.set($event)"
           placeholder="Tags (séparés par virgules) — texture, overlay…"
+        />
+        <input
+          *ngIf="uploadMode() === 'directory'"
+          type="text"
+          [ngModel]="pendingFramePattern()"
+          (ngModelChange)="pendingFramePattern.set($event)"
+          placeholder="frame_pattern (optionnel, ex: 'frame_{i:03d}.png')"
         />
         <div class="pending-actions">
           <button type="button" class="btn-secondary" (click)="cancelUpload()" [disabled]="uploading()">Annuler</button>
@@ -105,14 +145,24 @@
         <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" loading="lazy" />
         <video *ngIf="isVideo(asset)" [src]="asset.url" muted preload="metadata"></video>
         <div *ngIf="isFont(asset)" class="thumb-icon font-icon" aria-label="Font">Aa</div>
-        <div *ngIf="!isImage(asset) && !isVideo(asset) && !isFont(asset)" class="thumb-icon">FILE</div>
+        <div *ngIf="isDirectory(asset)" class="thumb-icon dir-icon" aria-label="Directory">
+          <span class="dir-glyph">{{ '{' + (asset.frame_count || 0) + '}' }}</span>
+          <img
+            *ngIf="firstFrameUrl(asset)"
+            [src]="firstFrameUrl(asset)"
+            [alt]="asset.filename + ' — frame 1'"
+            loading="lazy"
+          />
+        </div>
+        <div *ngIf="!isImage(asset) && !isVideo(asset) && !isFont(asset) && !isDirectory(asset)" class="thumb-icon">FILE</div>
       </div>
       <div class="info">
         <div class="filename" [title]="asset.filename">{{ asset.filename }}</div>
         <div class="meta">
-          <span>{{ formatBytes(asset.file_size) }}</span>
+          <span *ngIf="isDirectory(asset)">Directory · {{ asset.frame_count }} frames</span>
+          <span *ngIf="!isDirectory(asset)">{{ asset.mime_type }}</span>
           <span class="dot">·</span>
-          <span>{{ asset.mime_type }}</span>
+          <span>{{ formatBytes(asset.file_size) }}</span>
         </div>
         <div class="tags" *ngIf="asset.tags?.length">
           <span class="tag" *ngFor="let tag of asset.tags">{{ tag }}</span>
@@ -137,10 +187,23 @@
         <img *ngIf="isImage(asset)" [src]="asset.url" [alt]="asset.filename" />
         <video *ngIf="isVideo(asset)" [src]="asset.url" controls muted></video>
         <div *ngIf="isFont(asset)" class="thumb-icon font-icon font-icon--lg" aria-label="Font">Aa</div>
+        <div *ngIf="isDirectory(asset)" class="dir-preview">
+          <figure>
+            <img *ngIf="firstFrameUrl(asset)" [src]="firstFrameUrl(asset)" [alt]="asset.filename + ' — frame 1'" />
+            <figcaption>Frame 1</figcaption>
+          </figure>
+          <figure>
+            <img *ngIf="lastFrameUrl(asset)" [src]="lastFrameUrl(asset)" [alt]="asset.filename + ' — frame ' + asset.frame_count" />
+            <figcaption>Frame {{ asset.frame_count }}</figcaption>
+          </figure>
+        </div>
       </div>
       <dl class="modal-meta">
         <dt>Taille</dt><dd>{{ formatBytes(asset.file_size) }}</dd>
-        <dt>Type</dt><dd>{{ asset.mime_type }}</dd>
+        <dt>Type</dt><dd>{{ isDirectory(asset) ? 'Directory (' + asset.frame_count + ' frames)' : asset.mime_type }}</dd>
+        <ng-container *ngIf="isDirectory(asset)">
+          <dt>Frame pattern</dt><dd class="mono">{{ asset.frame_pattern }}</dd>
+        </ng-container>
         <dt>Checksum</dt><dd class="mono">{{ asset.checksum_sha256.slice(0, 16) }}…</dd>
         <dt>FTP path</dt><dd class="mono">{{ asset.ftp_path }}</dd>
         <dt>Uploadé</dt><dd>{{ asset.uploaded_at | date:'short' }}</dd>

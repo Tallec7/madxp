@@ -724,3 +724,89 @@ export const listFtpDirectory = async (
     client.close();
   }
 };
+
+/**
+ * ADR-128 — Upload de N fichiers vers FTP avec une seule connexion réutilisée.
+ *
+ * Optimisation pour les `studio_assets` de type `directory` qui peuvent
+ * contenir 100+ frames PNG. Sans cette helper, chaque `uploadFileToFtp` ouvre
+ * sa propre connexion FTP → 175 round-trips de handshake = 30s+ de overhead.
+ *
+ * Une seule `client.access()`, puis loop sur les fichiers avec ensureDir/cd
+ * mutualisés. Si une seule frame fail, l'ensemble est rollback-partiel : la
+ * fonction lève l'erreur (l'appelant doit DELETE les frames déjà uploadées
+ * + ne pas créer la row DB).
+ *
+ * Files = `{ buffer, ftpPath }[]` — `ftpPath` doit être complet relatif au
+ * bucket (ex: `studio-assets/directories/abc123/frame_001.png`).
+ */
+export const uploadFilesToFtpBatch = async (
+  files: Array<{ buffer: Buffer; ftpPath: string }>,
+  contentType: string,
+): Promise<{ uploaded: string[]; totalBytes: number }> => {
+  if (!isFtpConfigured()) {
+    throw new Error('FTP not configured');
+  }
+  if (files.length === 0) {
+    return { uploaded: [], totalBytes: 0 };
+  }
+
+  const client = new ftp.Client();
+  client.ftp.verbose = process.env.NODE_ENV === 'development';
+  const uploaded: string[] = [];
+  let totalBytes = 0;
+
+  try {
+    await client.access({
+      host: ftpConfig.host,
+      port: ftpConfig.port,
+      user: ftpConfig.user,
+      password: ftpConfig.password,
+      secure: ftpConfig.secure,
+    });
+
+    // Mutualise les ensureDir : 1 par dir distinct, pas 1 par fichier.
+    const dirsCreated = new Set<string>();
+    const uploadStart = Date.now();
+
+    for (const file of files) {
+      const dir = path.posix.dirname(file.ftpPath);
+      if (dir && dir !== '.' && !dirsCreated.has(dir)) {
+        await client.ensureDir(dir);
+        await client.cd('/');
+        dirsCreated.add(dir);
+      }
+      const stream = Readable.from(file.buffer);
+      await client.uploadFrom(stream, file.ftpPath);
+      uploaded.push(file.ftpPath);
+      totalBytes += file.buffer.length;
+    }
+
+    const uploadDuration = (Date.now() - uploadStart) / 1000;
+    logger.info('FTP batch upload successful', {
+      fileCount: files.length,
+      totalBytes,
+      durationSeconds: uploadDuration,
+      contentType,
+    });
+    getMetricsService()?.recordFtpOperation(
+      'upload',
+      'success',
+      'video',
+      uploadDuration,
+    );
+    getMetricsService()?.recordFtpUploadBytes('video', totalBytes);
+
+    return { uploaded, totalBytes };
+  } catch (error) {
+    logger.error('Error in FTP batch upload', {
+      uploaded: uploaded.length,
+      total: files.length,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    getMetricsService()?.recordFtpOperation('upload', 'failed', 'video');
+    throw error;
+  } finally {
+    client.close();
+  }
+};

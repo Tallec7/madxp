@@ -142,6 +142,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-125](ADR-125-templates-studio-asset-library.md)                            | Templates Studio — asset library globale + bindings par template (Phase 1.5)                 | Accepté                           | Mai 2026 |
 | [ADR-127](ADR-127-templates-studio-custom-fonts.md)                             | Templates Studio — fonts custom dans la library + hook useCustomFont (Phase 1.6)             | Accepté                           | Mai 2026 |
 | [ADR-126](ADR-126-web-content-resolve-on-all-pi-bound-channels.md)              | Résolution web-content (ADR-103) sur TOUS les canaux Pi-bound (helper centralisé)            | Accepté                           | Mai 2026 |
+| [ADR-128](ADR-128-templates-studio-asset-directory.md)                          | Templates Studio — type d'asset `directory` (séquences PNG frames pour masques alpha)        | Accepté                           | Mai 2026 |
 
 ### Supersédés
 

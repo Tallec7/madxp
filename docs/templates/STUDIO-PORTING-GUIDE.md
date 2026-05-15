@@ -265,6 +265,136 @@ export const MyComposition: React.FC<MyProps & { __assets?: AssetMap }> = ({
 
 ---
 
+## Assets directory — séquences PNG frames (ADR-128)
+
+Pour les masques alpha animés (révéler progressivement une zone) ou les
+sprite séquences, V1 supporte un type d'asset spécial : **directory**.
+Au lieu d'1 fichier sur FTP, l'asset est un **dossier** contenant N frames
+PNG numérotées.
+
+### Quand l'utiliser
+
+- **Masque alpha custom** : tu veux animer la zone visible d'un layer WebM
+  via une séquence de masques noir/blanc PNG (ex: `frame_001.png` à
+  `frame_175.png`).
+- **Sprite séquence** : tu veux jouer une animation frame-by-frame sans
+  encoder en vidéo (utile pour les animations très courtes ou très précises).
+
+Pour de l'image statique ou des vidéos standard, reste sur `asset_kind='file'`.
+
+### 1. Préparer le ZIP
+
+Convention de nommage : tous les PNG doivent partager un préfixe + un padding
+numérique cohérent + extension `.png`.
+
+```
+✅ frame_001.png, frame_002.png, …, frame_175.png    → pattern 'frame_{i:03d}.png'
+✅ 001.png, 002.png, …, 100.png                       → pattern '{i:03d}.png'
+✅ mask01.png, mask02.png, …, mask50.png              → pattern 'mask{i:02d}.png'
+❌ frame1.png, frame2.png, frame10.png                → padding incohérent → rejeté
+```
+
+ZIP les PNG (sans dossier intermédiaire idéalement) :
+
+```bash
+zip -r joueur-but-c-clean.zip frame_001.png frame_002.png ... frame_175.png
+```
+
+### 2. Déclarer le slot dans le manifest
+
+```json
+{
+  "requiredAssets": [
+    {
+      "key": "maskC",
+      "filename": "joueur-but-c-clean.zip",
+      "mime": "application/x-png-frames"
+    }
+  ]
+}
+```
+
+Le mime spécifique `application/x-png-frames` est le marqueur "directory".
+
+### 3. Uploader via le panel admin
+
+`/templates-studio/admin/assets/library` → toggle **Directory ZIP** →
+glisse le ZIP. Le serveur :
+- Décompresse en mémoire (jszip),
+- Auto-détecte le pattern depuis les filenames triés (`frame_{i:03d}.png`),
+- Push chaque PNG sur FTP via 1 connexion réutilisée (`uploadFilesToFtpBatch`),
+- Crée 1 row `studio_assets` avec `asset_kind='directory'`, `frame_count=175`,
+  `frame_pattern='frame_{i:03d}.png'`.
+
+Le `frame_pattern` peut être fourni explicitement si l'auto-détection rate.
+
+Bind ensuite vers le slot `maskC` du template depuis la page bindings.
+
+### 4. Consommer dans la Composition
+
+Le worker injecte dans `__assets[key]` un **objet** au lieu d'une string :
+
+```tsx
+import { useCurrentFrame } from 'remotion';
+
+interface DirectoryAssetRef {
+  kind: 'directory';
+  baseUrl: string;       // URL FTP du dossier, finit par '/'
+  framePattern: string;  // ex: 'frame_{i:03d}.png'
+  frameCount: number;
+}
+
+const maskAsset = __assets.maskC as DirectoryAssetRef;
+const frame = useCurrentFrame();
+const frameIdx = Math.min(frame + 1, maskAsset.frameCount); // 1-based
+const maskUrl = maskAsset.baseUrl + maskAsset.framePattern.replace(
+  /\{i:0(\d+)d\}/,
+  (_, padding) => String(frameIdx).padStart(parseInt(padding, 10), '0'),
+);
+// → ex: 'https://kalonpartners.bzh/neopro-video/studio-assets/directories/abc123-mask/frame_042.png'
+```
+
+Pour appliquer comme masque alpha sur un layer WebM, utiliser SVG `<mask>`
+(plus universel + performant en headless Chrome) :
+
+```tsx
+<svg viewBox="0 0 1920 1080">
+  <defs>
+    <mask id="m">
+      <image href={maskUrl} width="1920" height="1080" preserveAspectRatio="none" />
+    </mask>
+  </defs>
+  <foreignObject width="1920" height="1080" mask="url(#m)">
+    <OffthreadVideo src={layerVideoUrl} muted />
+  </foreignObject>
+</svg>
+```
+
+### 5. Pour les `kind='still'` qui doivent capturer une frame spécifique
+
+Si la composition utilise `useCurrentFrame()` (pour animer un masque), la
+frame 0 sera vide. Spécifier `manifest.stillFrame: number` pour capturer
+la frame du reveal final :
+
+```json
+{ "kind": "still", "stillFrame": 174, "format": { "width": 1920, "height": 1080 } }
+```
+
+Le worker passe `frame: stillFrame` à `renderStill()`.
+
+### Pièges
+
+- **PNG manquantes ou padding incohérent** : auto-détection échoue avec
+  `Pattern incohérent : 'frame10.png' ne match pas le préfixe/padding détecté`.
+  Rezipper en respectant la convention.
+- **Asset directory sans `frame_count`/`frame_pattern`** : impossible (dédup
+  garde-fou repository), mais si ça arrive le worker lève
+  `Asset directory invalide: 're-uploader le ZIP'`.
+- **`baseUrl` qui ne finit pas par `/`** : géré côté worker (auto-append),
+  mais côté composition assumer la présence du `/`.
+
+---
+
 ## Ce qui n'est PAS dans le scope V1
 
 - Édition visuelle WYSIWYG du template (drag-drop des éléments) — c'est l'admin UX du legacy v2 data-driven, pas V1

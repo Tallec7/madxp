@@ -1,8 +1,8 @@
 {
   "id": "entree_joueur",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "label": "ENTRÉE Joueur",
-  "description": "Présentation joueur (image fixe).",
+  "description": "Présentation joueur (image fixe). Utilise le packshot WebM + masque PNG frames pour révéler la photo détourée + nom/numéro/club. Capture la dernière frame.",
   "kind": "still",
   "inputSchema": {
     "type": "object",
@@ -23,5 +23,11 @@
   },
   "format": { "width": 1920, "height": 1080 },
   "compositionId": "EntreeJoueurStory",
-  "requiredAssets": []
+  "stillFrame": 174,
+  "requiredAssets": [
+    { "key": "packshot", "filename": "PACKSHOT_IMG.webm", "mime": "video/webm" },
+    { "key": "maskPackshot", "filename": "packshot-img.zip", "mime": "application/x-png-frames" },
+    { "key": "fontBulevar", "filename": "Bulevar-Regular.otf", "mime": "font/otf", "fontFamily": "Bulevar" },
+    { "key": "fontGeneralSans", "filename": "GeneralSans-Semibold.otf", "mime": "font/otf", "fontFamily": "General Sans" }
+  ]
 }

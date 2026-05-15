@@ -107,14 +107,37 @@ export function prewarmStudioBundle(): void {
 // ── Render pipeline ─────────────────────────────────────────────────────────
 
 /**
+ * ADR-128 — shape d'un asset directory injecté dans `__assets[key]`.
+ * Les compositions Remotion qui consomment un slot directory savent
+ * interpoler la frame courante via `useCurrentFrame()` + `framePattern`.
+ */
+export interface DirectoryAssetRef {
+  kind: 'directory';
+  /** URL FTP publique du dossier, garantie de se terminer par '/'. */
+  baseUrl: string;
+  /** Pattern d'interpolation, ex: 'frame_{i:03d}.png'. */
+  framePattern: string;
+  /** Nombre total de frames disponibles. */
+  frameCount: number;
+}
+
+/** Shape d'une valeur dans `__assets[key]` : string (file) | object (directory). */
+export type ResolvedAsset = string | DirectoryAssetRef;
+
+/**
  * Résoud les `__assets` à partir des bindings DB pour un template donné
  * (ADR-125, Phase 1.5). Lève une erreur explicite si un slot déclaré dans
  * `manifest.requiredAssets` n'a pas de binding actif — le user doit aller
  * binder dans le panel admin avant de pouvoir render.
+ *
+ * ADR-128 — chaque entrée du record peut être :
+ *  - `string` (URL FTP publique) pour `asset_kind='file'` (legacy)
+ *  - `DirectoryAssetRef` (`{ kind, baseUrl, framePattern, frameCount }`) pour
+ *    `asset_kind='directory'` (séquences PNG frames).
  */
 async function resolveTemplateAssets(
   template: TemplateDefinitionRow,
-): Promise<Record<string, string>> {
+): Promise<Record<string, ResolvedAsset>> {
   const manifest = template.manifest_json as {
     requiredAssets?: Array<{ key: string; filename?: string }>;
   };
@@ -122,7 +145,7 @@ async function resolveTemplateAssets(
   if (required.length === 0) return {};
 
   const bindings = await templateAssetBindingRepository.findByTemplate(template.slug);
-  const resolved: Record<string, string> = {};
+  const resolved: Record<string, ResolvedAsset> = {};
   for (const slot of required) {
     const binding = bindings.find((b) => b.asset_key === slot.key);
     if (!binding) {
@@ -136,7 +159,24 @@ async function resolveTemplateAssets(
         `Asset binding invalide: asset ${binding.asset_id} introuvable (slot '${slot.key}')`,
       );
     }
-    resolved[slot.key] = getFtpPublicUrl(asset.ftp_path);
+    if (asset.asset_kind === 'directory') {
+      // Garde-fou : un asset directory mal créé sans frame_count/frame_pattern
+      // serait inutilisable côté composition. Échec explicite > runtime cryptique.
+      if (!asset.frame_count || !asset.frame_pattern) {
+        throw new Error(
+          `Asset directory invalide: '${slot.key}' (id ${asset.id}) n'a pas de frame_count/frame_pattern — re-uploader le ZIP`,
+        );
+      }
+      const baseUrl = getFtpPublicUrl(asset.ftp_path);
+      resolved[slot.key] = {
+        kind: 'directory',
+        baseUrl: baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`,
+        framePattern: asset.frame_pattern,
+        frameCount: asset.frame_count,
+      };
+    } else {
+      resolved[slot.key] = getFtpPublicUrl(asset.ftp_path);
+    }
   }
   return resolved;
 }
@@ -159,6 +199,8 @@ async function performRenderInProcess(
 
   // Résolution __assets depuis les bindings DB (ADR-125). Échec explicite
   // ici = render fail avec message FR pointant vers le panel admin.
+  // ADR-128 — `__assets[key]` peut désormais être string OU
+  // `{ kind: 'directory', baseUrl, framePattern, frameCount }`.
   const __assets = await resolveTemplateAssets(template);
   const propsWithAssets: Record<string, unknown> = { ...inputProps, __assets };
 
@@ -175,6 +217,14 @@ async function performRenderInProcess(
   const tmpPath = path.join(os.tmpdir(), `studio-render-${requestId}${ext}`);
 
   if (kind === 'still') {
+    // ADR-128 — manifest peut spécifier `stillFrame: number` pour capturer
+    // une frame spécifique (par défaut frame 0). Utile quand la composition
+    // utilise `useCurrentFrame()` pour animer un masque ou révéler du contenu.
+    const manifest = template.manifest_json as { stillFrame?: number };
+    const stillFrame =
+      typeof manifest.stillFrame === 'number' && Number.isFinite(manifest.stillFrame)
+        ? Math.max(0, Math.floor(manifest.stillFrame))
+        : 0;
     await renderStill({
       composition,
       serveUrl: bundled,
@@ -184,6 +234,7 @@ async function performRenderInProcess(
       browserExecutable,
       imageFormat: 'png',
       timeoutInMilliseconds: 90_000,
+      frame: stillFrame,
     });
   } else {
     await renderMedia({

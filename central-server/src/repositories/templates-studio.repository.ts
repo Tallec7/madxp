@@ -667,6 +667,8 @@ class PlayerRepositoryImpl extends BaseRepository<PlayerRow> {
 // + studio_template_asset_bindings — liaison template_slug/asset_key → asset_id
 // ────────────────────────────────────────────────────────────────────────────
 
+export type StudioAssetKind = 'file' | 'directory';
+
 export interface StudioAssetRow extends QueryResultRow {
   id: string;
   filename: string;
@@ -680,6 +682,12 @@ export interface StudioAssetRow extends QueryResultRow {
   tags: string[];
   uploaded_by: string | null;
   uploaded_at: Date;
+  /** ADR-128 — type d'asset. 'file' (défaut, legacy) | 'directory' (séquence PNG frames). */
+  asset_kind: StudioAssetKind;
+  /** ADR-128 — nombre de frames pour `asset_kind='directory'`. NULL pour 'file'. */
+  frame_count: number | null;
+  /** ADR-128 — pattern d'interpolation pour `asset_kind='directory'`, ex: 'frame_{i:03d}.png'. */
+  frame_pattern: string | null;
 }
 
 export interface CreateStudioAssetInput {
@@ -691,6 +699,23 @@ export interface CreateStudioAssetInput {
   width?: number | null;
   height?: number | null;
   duration_ms?: number | null;
+  tags?: string[];
+  uploaded_by?: string | null;
+}
+
+/**
+ * ADR-128 — input pour créer un asset `directory` (séquence PNG frames).
+ * `ftp_path` doit se terminer par `/` (préfixe de dossier sur FTP).
+ * `file_size_total` = somme cumulée des PNGs (pour affichage UI).
+ */
+export interface CreateStudioAssetDirectoryInput {
+  filename: string;
+  ftp_path: string;
+  mime_type: string;
+  file_size_total: number;
+  checksum_sha256: string;
+  frame_count: number;
+  frame_pattern: string;
   tags?: string[];
   uploaded_by?: string | null;
 }
@@ -731,14 +756,17 @@ class StudioAssetRepositoryImpl extends BaseRepository<StudioAssetRow> {
    * Upsert content-addressable. INSERT … ON CONFLICT (checksum_sha256) DO
    * NOTHING : si le même contenu est ré-uploadé, on retourne la row existante
    * (zéro doublon, l'appelant ne peut pas le savoir et peut binder dessus).
+   *
+   * Crée toujours `asset_kind='file'` — pour les directories (ADR-128) utiliser
+   * `createDirectory()`.
    */
   async create(input: CreateStudioAssetInput): Promise<StudioAssetRow> {
     const tagsArray = input.tags ?? [];
     const insertResult = await query<StudioAssetRow>(
       `INSERT INTO studio_assets
          (filename, ftp_path, mime_type, file_size, checksum_sha256,
-          width, height, duration_ms, tags, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          width, height, duration_ms, tags, uploaded_by, asset_kind)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'file')
        ON CONFLICT (checksum_sha256) DO NOTHING
        RETURNING *`,
       [
@@ -762,6 +790,49 @@ class StudioAssetRepositoryImpl extends BaseRepository<StudioAssetRow> {
     if (!existing) {
       throw new Error(
         `studio_assets: ON CONFLICT swallowed but no existing row found for checksum ${input.checksum_sha256}`,
+      );
+    }
+    return existing;
+  }
+
+  /**
+   * ADR-128 — crée un asset de type `directory` (séquence PNG frames pour
+   * masque alpha). `ftp_path` doit se terminer par '/' (préfixe FTP).
+   *
+   * Même pattern de dédup content-addressable que `create()` (`ON CONFLICT
+   * (checksum_sha256) DO NOTHING`) — un re-upload du même ZIP retourne la row
+   * existante sans re-pousser les frames sur FTP.
+   */
+  async createDirectory(
+    input: CreateStudioAssetDirectoryInput,
+  ): Promise<StudioAssetRow> {
+    const tagsArray = input.tags ?? [];
+    const insertResult = await query<StudioAssetRow>(
+      `INSERT INTO studio_assets
+         (filename, ftp_path, mime_type, file_size, checksum_sha256,
+          tags, uploaded_by, asset_kind, frame_count, frame_pattern)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'directory', $8, $9)
+       ON CONFLICT (checksum_sha256) DO NOTHING
+       RETURNING *`,
+      [
+        input.filename,
+        input.ftp_path,
+        input.mime_type,
+        input.file_size_total,
+        input.checksum_sha256,
+        tagsArray,
+        input.uploaded_by ?? null,
+        input.frame_count,
+        input.frame_pattern,
+      ],
+    );
+    if (insertResult.rows[0]) {
+      return insertResult.rows[0];
+    }
+    const existing = await this.findByChecksum(input.checksum_sha256);
+    if (!existing) {
+      throw new Error(
+        `studio_assets: ON CONFLICT swallowed but no existing row found for directory checksum ${input.checksum_sha256}`,
       );
     }
     return existing;

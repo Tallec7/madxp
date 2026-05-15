@@ -37,7 +37,11 @@ import {
   resolveBindings,
   type ManifestBindings,
 } from '../services/templates-studio.service';
-import { uploadFileToFtp, getFtpPublicUrl } from '../config/ftp-storage';
+import {
+  uploadFileToFtp,
+  uploadFilesToFtpBatch,
+  getFtpPublicUrl,
+} from '../config/ftp-storage';
 
 const INTERNAL_ROLES = ['super_admin', 'admin', 'operator'] as const;
 type InternalRole = (typeof INTERNAL_ROLES)[number];
@@ -1172,6 +1176,9 @@ function assetResponse(row: StudioAssetRow): {
   tags: string[];
   uploaded_by: string | null;
   uploaded_at: Date;
+  asset_kind: 'file' | 'directory';
+  frame_count: number | null;
+  frame_pattern: string | null;
 } {
   return {
     id: row.id,
@@ -1187,6 +1194,9 @@ function assetResponse(row: StudioAssetRow): {
     tags: row.tags ?? [],
     uploaded_by: row.uploaded_by,
     uploaded_at: row.uploaded_at,
+    asset_kind: row.asset_kind,
+    frame_count: row.frame_count,
+    frame_pattern: row.frame_pattern,
   };
 }
 
@@ -1604,6 +1614,209 @@ export const deleteTemplateAssetBinding = async (
       error,
       slug,
       assetKey,
+    });
+    res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADR-128 — POST /api/templates-studio/assets/directory
+//
+// Upload multipart d'un ZIP contenant N fichiers PNG (séquence frames pour
+// masque alpha). Le serveur :
+//  1. Vérifie le mime ZIP + taille,
+//  2. Hash SHA256 du ZIP, dédup via `findByChecksum`,
+//  3. Décompresse en mémoire (jszip),
+//  4. Trie alpha les PNGs, auto-détecte le pattern de nommage,
+//  5. Upload chaque PNG sur FTP sous `studio-assets/directories/<hash>/...`,
+//  6. INSERT 1 row `studio_assets` avec `asset_kind='directory'`.
+//
+// Limite multer : 50 MB (175 PNG ~150KB chacun = ~26 MB). Réservé super_admin /
+// admin / operator côté routes.
+// ────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_DIRECTORY_MIMES = [
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/octet-stream', // certains browsers envoient ZIP en octet-stream
+];
+
+/**
+ * Détecte le pattern de nommage à partir d'une liste triée de filenames.
+ * Ex: ['frame_001.png', 'frame_002.png', ...] → 'frame_{i:03d}.png'
+ *     ['001.png', '002.png', ...] → '{i:03d}.png'
+ *     ['mask01.png', 'mask02.png', ...] → 'mask{i:02d}.png'
+ *
+ * Si aucun pattern numérique commun n'est détecté, lève une erreur
+ * (l'utilisateur peut alors fournir le pattern explicitement via le body).
+ */
+function detectFramePattern(filenames: string[]): string {
+  if (filenames.length === 0) {
+    throw new Error('Aucun fichier PNG trouvé dans le ZIP');
+  }
+  const first = filenames[0];
+  // Cherche la dernière séquence de digits dans le nom (avant l'extension).
+  const match = first.match(/^(.*?)(\d+)(\.[a-zA-Z]+)$/);
+  if (!match) {
+    throw new Error(
+      `Impossible d'auto-détecter le pattern depuis '${first}'. Fournis frame_pattern explicitement (ex: 'frame_{i:03d}.png').`,
+    );
+  }
+  const [, prefix, digits, ext] = match;
+  const padding = digits.length;
+  // Vérifie que tous les filenames matchent ce template.
+  const re = new RegExp(
+    `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\d{${padding}}${ext.replace(
+      /\./g,
+      '\\.',
+    )}$`,
+  );
+  for (const f of filenames) {
+    if (!re.test(f)) {
+      throw new Error(
+        `Pattern incohérent : '${f}' ne match pas le préfixe/padding détecté depuis '${first}'.`,
+      );
+    }
+  }
+  return `${prefix}{i:${String(padding).padStart(2, '0')}d}${ext}`;
+}
+
+export const uploadStudioAssetDirectory = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const file = req.file;
+  if (!file || file.size === 0) {
+    res.status(400).json({ success: false, error: 'Aucun fichier ZIP fourni' });
+    return;
+  }
+  // Le mime peut varier selon le browser — accepter octet-stream + check ext.
+  const lowerName = (file.originalname || '').toLowerCase();
+  const looksLikeZip =
+    ALLOWED_DIRECTORY_MIMES.includes(file.mimetype) || lowerName.endsWith('.zip');
+  if (!looksLikeZip) {
+    res.status(400).json({
+      success: false,
+      error: `Format non supporté (${file.mimetype}). Attendu : ZIP de PNG frames.`,
+    });
+    return;
+  }
+
+  try {
+    const checksum = createHash('sha256').update(file.buffer).digest('hex');
+
+    // Dédup : si même contenu (même ZIP) déjà uploadé → réutilise.
+    const existing = await studioAssetRepository.findByChecksum(checksum);
+    if (existing) {
+      logger.info('templates-studio: directory upload deduplicated', {
+        user_id: req.user.id,
+        checksum_sha256: checksum,
+        asset_id: existing.id,
+      });
+      res.status(200).json({
+        success: true,
+        data: { ...assetResponse(existing), deduplicated: true },
+      });
+      return;
+    }
+
+    // Décompresse le ZIP en mémoire via jszip.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const JSZip = require('jszip') as typeof import('jszip');
+    const zip = await JSZip.loadAsync(file.buffer);
+
+    // Liste les fichiers PNG (filtre les directories internes + non-PNG).
+    const entries: Array<{ name: string; data: import('jszip').JSZipObject }> = [];
+    zip.forEach((relativePath, zipEntry) => {
+      if (zipEntry.dir) return;
+      // Skip metadata files (__MACOSX/, .DS_Store, etc.)
+      const baseName = relativePath.split('/').pop() ?? '';
+      if (baseName.startsWith('.') || baseName.startsWith('_')) return;
+      if (!baseName.toLowerCase().endsWith('.png')) return;
+      entries.push({ name: baseName, data: zipEntry });
+    });
+    if (entries.length === 0) {
+      res
+        .status(400)
+        .json({ success: false, error: 'ZIP vide ou ne contient aucun PNG' });
+      return;
+    }
+    // Tri alpha → assure l'ordre des frames.
+    entries.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+    const filenamesSorted = entries.map((e) => e.name);
+
+    // Pattern : explicite si fourni, sinon auto-détecté.
+    const explicitPattern =
+      typeof req.body?.frame_pattern === 'string' &&
+      req.body.frame_pattern.trim().length > 0
+        ? req.body.frame_pattern.trim().slice(0, 160)
+        : null;
+    let framePattern: string;
+    try {
+      framePattern = explicitPattern ?? detectFramePattern(filenamesSorted);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(400).json({ success: false, error: msg });
+      return;
+    }
+
+    // Décompresse en parallèle, garde l'ordre.
+    const decompressed: Array<{ name: string; buffer: Buffer }> = await Promise.all(
+      entries.map(async (e) => ({
+        name: e.name,
+        buffer: await e.data.async('nodebuffer'),
+      })),
+    );
+
+    // Path FTP : prefix avec hash court pour content-addressable + nom sanitisé.
+    const requestedFilename =
+      typeof req.body?.filename === 'string' && req.body.filename.trim().length > 0
+        ? req.body.filename.trim().slice(0, 160)
+        : (file.originalname || 'directory').replace(/\.zip$/i, '');
+    const sanitizedFilename = requestedFilename.replace(/[^A-Za-z0-9._\-/]/g, '_');
+    const hashShort = checksum.slice(0, 12);
+    const dirPrefix = `studio-assets/directories/${hashShort}-${sanitizedFilename}/`;
+
+    // Upload batch (1 connexion FTP réutilisée).
+    const filesToUpload = decompressed.map((d) => ({
+      buffer: d.buffer,
+      ftpPath: `${dirPrefix}${d.name}`,
+    }));
+    const { totalBytes } = await uploadFilesToFtpBatch(filesToUpload, 'image/png');
+
+    const tags = parseTags(req.body?.tags);
+    const created = await studioAssetRepository.createDirectory({
+      filename: sanitizedFilename,
+      ftp_path: dirPrefix,
+      mime_type: 'application/x-png-frames',
+      file_size_total: totalBytes,
+      checksum_sha256: checksum,
+      frame_count: decompressed.length,
+      frame_pattern: framePattern,
+      tags,
+      uploaded_by: req.user.id,
+    });
+
+    logger.info('templates-studio: directory asset uploaded', {
+      user_id: req.user.id,
+      asset_id: created.id,
+      frame_count: decompressed.length,
+      frame_pattern: framePattern,
+      total_bytes: totalBytes,
+      ftp_path: dirPrefix,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: assetResponse(created),
+    });
+  } catch (error) {
+    logger.error('templates-studio: upload asset directory failed', {
+      error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ success: false, error: 'Erreur serveur interne' });
   }

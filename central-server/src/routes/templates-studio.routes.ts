@@ -40,6 +40,7 @@ import {
   listStudioAssets,
   getStudioAsset,
   uploadStudioAsset,
+  uploadStudioAssetDirectory,
   updateStudioAssetMetadata,
   deleteStudioAsset,
   getTemplateAssetBindings,
@@ -68,6 +69,14 @@ const uploadBrandKitLogoMiddleware = multer({
 const uploadStudioAssetMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024, files: 1 },
+});
+
+// ADR-128 — Studio asset directory (ZIP de séquences PNG frames).
+// Limite 50 MB : 175 PNG ~150 KB chacun = ~26 MB, ample marge sans saturer
+// la RAM (multer.memoryStorage stocke le ZIP le temps de la décompression).
+const uploadStudioAssetDirectoryMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
 });
 
 // Helper : extrait `siteId` des params pour `requireClubScope`. Internal roles
@@ -278,6 +287,19 @@ router.post(
   uploadStudioAssetMiddleware.single('asset'),
   validate(templatesStudioSchemas.uploadAsset),
   uploadStudioAsset,
+);
+
+// ADR-128 — POST /assets/directory : upload ZIP de PNG frames (masque alpha).
+// Mounted AVANT `/assets/:assetId` pour qu'Express ne capture pas 'directory'
+// comme un UUID.
+router.post(
+  '/assets/directory',
+  authenticate,
+  apiRateLimit,
+  requireRole('super_admin', 'admin', 'operator'),
+  uploadStudioAssetDirectoryMiddleware.single('asset'),
+  validate(templatesStudioSchemas.uploadAssetDirectory),
+  uploadStudioAssetDirectory,
 );
 
 router.get(
