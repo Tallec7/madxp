@@ -1,3 +1,13 @@
+# [3.320.0](https://github.com/Tallec7/neopro/compare/v3.319.3...v3.320.0) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** paralleliser uploadFilesToFtpBatch (pool 4 clients) — fix 502 sur ZIP 200+ frames ([fccce28](https://github.com/Tallec7/neopro/commit/fccce28e629d77f2b2180f23626560575d2ee95f)), closes [#1024](https://github.com/Tallec7/neopro/issues/1024)
+
+### Features
+
+- **players:** upload photo joueur dès la création (S4-B) ([#1027](https://github.com/Tallec7/neopro/issues/1027)) ([933a5d0](https://github.com/Tallec7/neopro/commit/933a5d00f7ed121f8332bb5fc0a4a1b3b2931e86))
+
 ## [3.319.3](https://github.com/Tallec7/neopro/compare/v3.319.2...v3.319.3) (2026-05-15)
 
 ### Bug Fixes
