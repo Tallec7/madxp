@@ -313,11 +313,35 @@ describe('ADR-125 — Manifests de templates déclarent requiredAssets', () => {
     );
   });
 
-  it('but_generique et entree_joueur déclarent requiredAssets: []', () => {
+  it('but_generique et entree_joueur déclarent les requiredAssets ADR-128 (ports legacy V2)', () => {
+    // ADR-128 — les designs legacy ont été portés depuis le V2. Chacun
+    // déclare désormais ses 5 layers WebM + masques PNG frames + fonts
+    // (BUT) ou son packshot WebM + masque + fonts (ENTRÉE).
     const but = JSON.parse(fs.readFileSync(BUT_MANIFEST, 'utf8'));
     const entree = JSON.parse(fs.readFileSync(ENTREE_MANIFEST, 'utf8'));
-    expect(but.requiredAssets).toEqual([]);
-    expect(entree.requiredAssets).toEqual([]);
+    const butKeys = but.requiredAssets.map((a: { key: string }) => a.key);
+    expect(butKeys).toEqual(
+      expect.arrayContaining([
+        'layerA',
+        'layerB',
+        'layerC',
+        'maskC',
+        'packshot',
+        'maskPackshot',
+        'layerD',
+        'fontBulevar',
+        'fontGeneralSans',
+      ]),
+    );
+    const entreeKeys = entree.requiredAssets.map((a: { key: string }) => a.key);
+    expect(entreeKeys).toEqual(
+      expect.arrayContaining([
+        'packshot',
+        'maskPackshot',
+        'fontBulevar',
+        'fontGeneralSans',
+      ]),
+    );
   });
 
   it('chaque entrée requiredAssets a key + filename + mime', () => {
