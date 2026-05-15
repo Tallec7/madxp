@@ -1,3 +1,9 @@
+## [3.320.1](https://github.com/Tallec7/neopro/compare/v3.320.0...v3.320.1) (2026-05-15)
+
+### Bug Fixes
+
+- **studio:** bump multer ZIP directory limit 50→200 MB (incident 2026-05-15 packshot-img.zip) ([36e3802](https://github.com/Tallec7/neopro/commit/36e3802f4c68fe48b6b42e086d37ad30945e3614)), closes [#1024](https://github.com/Tallec7/neopro/issues/1024)
+
 # [3.320.0](https://github.com/Tallec7/neopro/compare/v3.319.3...v3.320.0) (2026-05-15)
 
 ### Bug Fixes
