@@ -27,10 +27,10 @@ export const Root: React.FC = () => {
       <Composition
         id="ButGeneriqueStory"
         component={ButGeneriqueComposition}
-        durationInFrames={180}
-        fps={30}
-        width={1080}
-        height={1920}
+        durationInFrames={175}
+        fps={25}
+        width={1920}
+        height={1080}
         schema={butGeneriqueSchema}
         defaultProps={{
           scorerName: 'PRÉNOM NOM',
@@ -48,8 +48,8 @@ export const Root: React.FC = () => {
       <Composition
         id="EntreeJoueurStory"
         component={EntreeJoueurComposition}
-        durationInFrames={1}
-        fps={30}
+        durationInFrames={175}
+        fps={25}
         width={1920}
         height={1080}
         schema={entreeJoueurSchema}

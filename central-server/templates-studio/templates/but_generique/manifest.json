@@ -1,9 +1,9 @@
 {
   "id": "but_generique",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "label": "BUT — Générique",
   "kind": "video",
-  "description": "Animation but : photo joueur détourée, nom, numéro, minute.",
+  "description": "Animation but : 5 layers WebM superposés (intro, transition, titre BUT, packshot photo joueur, outro), masques alpha PNG frames, photo joueur révélée, nom + numéro + nom du club aux 4 coins.",
   "inputSchema": {
     "type": "object",
     "required": ["scorerPlayerId", "minute"],
@@ -24,7 +24,17 @@
     "primaryColor": { "source": "brandKit.colors.primary" },
     "secondaryColor": { "source": "brandKit.colors.secondary" }
   },
-  "format": { "width": 1080, "height": 1920, "fps": 30, "durationInFrames": 180 },
+  "format": { "width": 1920, "height": 1080, "fps": 25, "durationInFrames": 175 },
   "compositionId": "ButGeneriqueStory",
-  "requiredAssets": []
+  "requiredAssets": [
+    { "key": "layerA", "filename": "JOUEUR_but_A.webm", "mime": "video/webm" },
+    { "key": "layerB", "filename": "JOUEUR_but_B.webm", "mime": "video/webm" },
+    { "key": "layerC", "filename": "JOUEUR_but_C.webm", "mime": "video/webm" },
+    { "key": "maskC", "filename": "joueur-but-c-clean.zip", "mime": "application/x-png-frames" },
+    { "key": "packshot", "filename": "PACKSHOT_IMG.webm", "mime": "video/webm" },
+    { "key": "maskPackshot", "filename": "packshot-img.zip", "mime": "application/x-png-frames" },
+    { "key": "layerD", "filename": "JOUEUR_but_D.webm", "mime": "video/webm" },
+    { "key": "fontBulevar", "filename": "Bulevar-Regular.otf", "mime": "font/otf", "fontFamily": "Bulevar" },
+    { "key": "fontGeneralSans", "filename": "GeneralSans-Semibold.otf", "mime": "font/otf", "fontFamily": "General Sans" }
+  ]
 }
