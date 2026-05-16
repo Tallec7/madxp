@@ -939,4 +939,3 @@ export const replaceVideo = async (req: AuthRequest, res: Response) => {
 // Re-export all handlers for backward compatibility (routes import * as contentController)
 export { getDeployments, getDeployment, createDeployment, updateDeployment, deleteDeployment, getVideosForSite, convertImageToVideo } from './content-deployment.controller';
 export { getVideoVariants, createVideoVariant, createVideoVariantFromVideo, deleteVideoVariant, getVariantCounts } from './content-variant.controller';
-export { getAvailableTemplates, getTemplateAsset, renderTemplate } from './content-template.controller';

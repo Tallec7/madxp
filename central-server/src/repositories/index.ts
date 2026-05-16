@@ -301,51 +301,10 @@ export {
 } from './safe.repository';
 export { siteVideoRepository } from './site-video.repository';
 export { BaseRepository } from './base.repository';
-export {
-  remotionTemplatesRepository,
-  remotionTemplateVersionsRepository,
-  type NeoProTemplate,
-  type NeoProTemplateVersion,
-  type CreateTemplateInput,
-  type UpdateTemplateInput,
-} from './remotion-templates.repository';
-export {
-  templateStudioRepository,
-  type CreateVariantInput,
-  type UpdateVariantInput,
-  type CreateLayerInput,
-  type UpdateLayerInput,
-  type CreateTextFieldInput,
-  type UpdateTextFieldInput,
-  type CreateImageSlotInput,
-  type UpdateImageSlotInput,
-} from './template-studio.repository';
-export {
-  templateBackgroundsRepository,
-  type TemplateBackground,
-  type CreateBackgroundInput,
-} from './template-backgrounds.repository';
-export {
-  templateVersionsRepository,
-  type TemplateVersionSnapshot,
-  type TemplateStatus,
-  type ForkOptions,
-} from './template-versions.repository';
-export {
-  templateOptionsRepository,
-  type TemplateOption,
-  type TemplateOptionType,
-  type CreateOptionInput,
-  type TemplatePackshotRef,
-  type CreatePackshotRefInput,
-} from './template-options.repository';
-export {
-  remotionRenderJobRepository,
-  type RemotionRenderJob,
-  type RenderJobStatus,
-  type RenderJobPhase,
-  type CreateRenderJobInput,
-} from './remotion-render-job.repository';
+// Templates Studio V2 (data-driven legacy) repositories ont été supprimés —
+// remotion-templates / template-studio / template-backgrounds / template-versions /
+// template-options / remotion-render-job. Cf. ADR-129. Le système V1 code-driven
+// (templates-studio.repository) reste exporté plus bas dans ce fichier.
 export {
   remoteAuthEventsRepository,
   type RemoteAuthEvent,

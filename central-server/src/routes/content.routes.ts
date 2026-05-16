@@ -3,7 +3,7 @@ import * as contentController from '../controllers/content.controller';
 import * as webContentController from '../controllers/web-content.controller';
 import * as videoClubGrantsController from '../controllers/video-club-grants.controller';
 import { authenticate, requireRole } from '../middleware/auth';
-import { uploadVideo, uploadImage, uploadTemplate } from '../middleware/upload';
+import { uploadVideo, uploadImage } from '../middleware/upload';
 import { paginationMiddleware, createPaginationMiddleware } from '../middleware/pagination';
 import { adminRateLimit, sensitiveRateLimit, uploadRateLimit } from '../middleware/user-rate-limit';
 import { validate, validateParams, schemas, paramSchemas } from '../middleware/validation';
@@ -39,28 +39,6 @@ router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRol
 
 // Image to video conversion
 router.post('/image-to-video', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadImage.single('image'), contentController.convertImageToVideo);
-
-// Template rendering (overlay animation on existing MP4)
-router.post('/render-template', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadTemplate.fields([
-  { name: 'video', maxCount: 1 },
-  { name: 'image_photo', maxCount: 1 },
-  { name: 'image_logo', maxCount: 1 },
-]), contentController.renderTemplate);
-router.get('/templates/available', authenticate, adminRateLimit, contentController.getAvailableTemplates);
-// Template assets: no auth (static files), relaxed CSP for iframe embedding
-router.get(
-  '/template-assets/:template/:file',
-  adminRateLimit,
-  (_req, res, next) => {
-    res.removeHeader('X-Frame-Options');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; media-src 'self'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com https: data:;"
-    );
-    next();
-  },
-  contentController.getTemplateAsset,
-);
 
 // Deployment routes - GET use adminRateLimit, mutations use sensitiveRateLimit
 router.get('/deployments', authenticate, adminRateLimit, contentController.getDeployments);

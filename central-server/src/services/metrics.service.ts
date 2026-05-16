@@ -152,15 +152,7 @@ const autoDeployThrottledTotal = new Counter({
 });
 
 // Quick task 260507-gxd — DELETE template end-to-end (audit P0 #1 + #2).
-// `cascade_status` ∈ ['success','partial','failed'] surface les FTP failures
-// (cleanup best-effort après commit DB). `reason` ∈ ['user','admin_force']
-// distingue suppression normale vs bypass force=true sur template publié.
-const templateDeletedTotal = new Counter({
-  name: 'neopro_template_deleted_total',
-  help: 'Templates deleted via DELETE /api/remotion-templates/:id (P0 #1 + #2)',
-  labelNames: ['cascade_status', 'reason'],
-  registers: [register],
-});
+// templateDeletedTotal (V2 DELETE /api/remotion-templates/:id) supprimé — cf. ADR-129.
 
 const activeAlertsGauge = new Gauge({
   name: 'neopro_active_alerts',
@@ -683,25 +675,8 @@ const videoStreamRequestsTotal = new Counter({
   registers: [register],
 });
 
-// ============= Métriques Template Asset Proxy (ADR-087) =============
-
-const templateAssetProxyUpstreamTotal = new Counter({
-  name: 'neopro_template_asset_proxy_upstream_total',
-  help: 'Upstream FTP status class for /api/remotion-templates/asset-proxy (catches 404 HTML cascades + 5xx)',
-  labelNames: ['status_class'], // 2xx | 3xx | 4xx | 5xx | error
-  registers: [register],
-});
-
-// ============= Métriques Template Proxy Signature (audit P1 #7, ADR-113-bis) =============
-// Suit l'état de la migration HMAC sur les URLs proxy /asset-proxy.
-// 'missing' = phase migration 24h (ancien call-site non encore signé).
-// 'invalid' = potentiel signal d'attaque (à investiguer si > 0).
-const templateProxySignatureValidationTotal = new Counter({
-  name: 'neopro_template_proxy_signature_validation_total',
-  help: 'Template proxy URL HMAC signature validation outcomes (audit P1 #7)',
-  labelNames: ['status'], // valid | invalid | missing | expired
-  registers: [register],
-});
+// Templates Studio V2 asset-proxy metrics (ADR-087 + audit P1 #7 ADR-113-bis)
+// supprimées avec le kill du data-driven legacy — cf. ADR-129.
 
 // ============= Métriques Video Path Resolution (ADR-083) =============
 
@@ -961,14 +936,7 @@ const variantDispatchDisplayTypeTotal = new Counter({
   registers: [register],
 });
 
-// ============= Template Studio v2 (ADR-075) =============
-
-const templateStudioOperationsTotal = new Counter({
-  name: 'neopro_template_studio_operations_total',
-  help: 'Template Studio v2 CRUD operations (ADR-075)',
-  labelNames: ['resource', 'operation', 'status'],
-  registers: [register],
-});
+// Templates Studio V2 CRUD operations metric (ADR-075) supprimé — cf. ADR-129.
 
 // ============= Video Club Grants (ADR-082) =============
 
@@ -1266,19 +1234,6 @@ class MetricsService {
 
   /**
    * Quick task 260507-gxd — DELETE template end-to-end (P0 #1 + #2).
-   * `cascade_status='success'` toutes les FTP cleanup OK ; `partial` au moins
-   * 1 FTP delete a failed (DB cascade déjà committée) ; `failed` exception
-   * dans la transaction (ROLLBACK).
-   * `reason='user'` template draft non publié non utilisé ; `admin_force`
-   * bypass via `?force=true` sur template publié ou in-use.
-   */
-  recordTemplateDeleted(
-    cascade_status: 'success' | 'partial' | 'failed',
-    reason: 'user' | 'admin_force',
-  ): void {
-    templateDeletedTotal.inc({ cascade_status, reason });
-  }
-
   /** PR2.2: résultat d'une exécution du CRON video_ftp_audit. */
   recordVideoFtpAudit(payload: {
     scanned: number;
@@ -1523,18 +1478,6 @@ class MetricsService {
     videoStreamRequestsTotal.inc({ status });
   }
 
-  recordTemplateAssetProxyUpstream(
-    statusClass: '2xx' | '3xx' | '4xx' | '5xx' | 'error'
-  ): void {
-    templateAssetProxyUpstreamTotal.inc({ status_class: statusClass });
-  }
-
-  recordTemplateProxySignatureValidation(
-    status: 'valid' | 'invalid' | 'missing' | 'expired'
-  ): void {
-    templateProxySignatureValidationTotal.inc({ status });
-  }
-
   recordVideoPathResolution(result: 'exact' | 'fuzzy' | 'miss'): void {
     videoPathResolutionTotal.inc({ result });
   }
@@ -1632,16 +1575,6 @@ class MetricsService {
       sponsorHealthAlertsCreatedTotal.inc(alertsCreated);
     }
     sponsorHealthCheckDuration.observe(durationSeconds);
-  }
-
-  // ============= Template Studio v2 (ADR-075) =============
-
-  recordTemplateStudioOperation(
-    resource: 'variant' | 'layer' | 'text_field' | 'image_slot' | 'studio_view',
-    operation: 'create' | 'update' | 'delete' | 'list' | 'get',
-    status: 'success' | 'not_found' | 'conflict' | 'error'
-  ): void {
-    templateStudioOperationsTotal.inc({ resource, operation, status });
   }
 
   // ============= Video Club Grants (ADR-082) =============
