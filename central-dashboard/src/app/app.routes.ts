@@ -149,13 +149,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/content/lottie-templates.component').then(m => m.LottieTemplatesComponent)
       },
       {
-        // Atelier Remotion (admin) + accès club avec feature video_templates
-        path: 'content/templates-remotion',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin', 'club'] },
-        loadComponent: () => import('./features/content/remotion-templates/remotion-templates.component').then(m => m.RemotionTemplatesComponent)
-      },
-      {
         // Templates Studio V1 — Page principale (catalogue + form + render)
         path: 'templates-studio',
         canActivate: [roleGuard],
@@ -214,50 +207,6 @@ export const routes: Routes = [
           import(
             './features/templates-studio/admin/template-bindings/template-bindings.component'
           ).then((m) => m.TemplateBindingsComponent),
-      },
-      {
-        // ADR-110 / Plan 02 — Asset Manager v3 (super_admin) en mode page
-        path: 'content/templates-remotion/assets',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin'], context: 'page' },
-        loadComponent: () =>
-          import(
-            './features/content/remotion-templates/studio-v3/asset-manager/asset-manager-modal.component'
-          ).then((m) => m.AssetManagerModalComponent),
-      },
-      {
-        // ADR-110 / Plan 03 — Wizard de création v3, Étape 1 (Identité)
-        path: 'content/templates-remotion/new',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin'] },
-        loadComponent: () =>
-          import(
-            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
-          ).then((m) => m.StudioV3WizardComponent),
-      },
-      {
-        // ADR-110 / Plan 03 — Wizard de création v3, reprise par templateId
-        path: 'content/templates-remotion/new/:id',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin'] },
-        loadComponent: () =>
-          import(
-            './features/content/remotion-templates/studio-v3/wizard/studio-v3-wizard.component'
-          ).then((m) => m.StudioV3WizardComponent),
-      },
-      {
-        // ADR-075 V3 Phase B — Self-service club templates
-        path: 'content/my-templates',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin', 'admin', 'club'] },
-        loadComponent: () => import('./features/content/remotion-templates/my-templates.component').then(m => m.MyTemplatesComponent)
-      },
-      {
-        // ADR-108 / ADR-109 / SPEC JOUEUR — outils super_admin chantier templates JOUEUR
-        path: 'content/joueur-tools',
-        canActivate: [roleGuard],
-        data: { roles: ['super_admin'] },
-        loadComponent: () => import('./features/content/remotion-templates/joueur-tools/joueur-tools-page.component').then(m => m.JoueurToolsPageComponent)
       },
       {
         path: 'updates',
