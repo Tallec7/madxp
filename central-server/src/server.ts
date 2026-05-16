@@ -66,13 +66,10 @@ import saasRoutes from './routes/saas.routes';
 import scoreboardRoutes from './routes/scoreboard.routes';
 import videoStreamRoutes from './routes/video-stream.routes';
 import clientErrorsRoutes from './routes/client-errors.routes';
-import remotionTemplatesRoutes from './routes/remotion-templates.routes';
-import { proxyTemplateAsset } from './controllers/remotion-templates.controller';
-import templateStudioRoutes from './routes/template-studio.routes';
-// Templates Studio V1 (code-driven, parallèle au legacy ci-dessus — cf STUDIO_V1.md).
+// Templates Studio V1 (code-driven, in-process — cf STUDIO_V1.md).
+// Le système V2 data-driven legacy (remotion-templates / template-studio / club-templates /
+// template-backgrounds) a été supprimé — voir ADR-129 "Drop Templates Studio V2 legacy".
 import templatesStudioV1Routes from './routes/templates-studio.routes';
-import templateBackgroundsRoutes from './routes/template-backgrounds.routes';
-import clubTemplatesRoutes from './routes/club-templates.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
@@ -419,74 +416,6 @@ app.get('/ready', async (_req: Request, res: Response) => {
   res.status(httpStatus).json(readiness);
 });
 
-// ── Remotion Preview — assets statiques (ADR-052) ────────────────────────────
-// staticFile("foo.webm") dans Remotion retourne toujours "/foo.webm" (racine),
-// quel que soit le publicPath passé au Player. On sert donc les assets Remotion
-// à la RACINE "/" (index:false pour ne pas casser les autres routes).
-// On garde aussi /remotion-preview/public/ pour compatibilité future.
-const REMOTION_DIR = process.env.REMOTION_DIR
-  || path.resolve(__dirname, '../../../templates-remotion');
-
-// CSP sur-mesure pour la page preview Remotion — DOIT être posé avant les
-// middlewares express.static car helmet a déjà verrouillé les autres routes.
-// Le @remotion/player charge des vidéos via staticFile() (same-origin) ET via
-// des URLs FTP (kalonpartners.bzh/**) — on élargit media-src en conséquence.
-app.use('/remotion-preview', (_req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    [
-      "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
-      "media-src 'self' blob: data: https://kalonpartners.bzh https://*.kalonpartners.bzh",
-      "img-src 'self' blob: data: https:",
-      "font-src 'self' data: https:",
-      "connect-src 'self' ws: wss: blob: https://kalonpartners.bzh https://*.kalonpartners.bzh",
-      "frame-ancestors 'self' https://neopro-admin.kalonpartners.bzh",
-    ].join('; ')
-  );
-  next();
-});
-
-// Cache-Control long + immutable pour les assets Remotion (WebM, MOV, PNG, fonts).
-// Sans ça, Fastly (edge Railway) retape l'origin à chaque requête et retourne 502
-// pendant les cold starts du conteneur. Les assets ont des noms stables et sont
-// invalidés par rebuild Docker → cache agressif sans risque de staleness.
-const remotionAssetCache = (res: Response, filePath: string) => {
-  if (/\.(webm|mov|mp4|png|jpg|jpeg|otf|woff2?|ttf)$/i.test(filePath)) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  }
-};
-
-app.use(express.static(path.join(REMOTION_DIR, 'public'), { index: false, setHeaders: remotionAssetCache }));
-// CORS + CORP requis pour que le dashboard Angular (kalonpartners.bzh) puisse charger
-// les assets WebM directement via <video> dans @remotion/player (cross-origin Railway).
-app.use('/remotion-preview/public', (_req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(REMOTION_DIR, 'public'), { setHeaders: remotionAssetCache }));
-app.use('/remotion-preview', express.static(path.join(REMOTION_DIR, 'preview', 'dist'), { setHeaders: remotionAssetCache }));
-// SPA fallback : toute route /remotion-preview/* non trouvée → index.html
-app.get('/remotion-preview/*', (_req, res) => {
-  res.sendFile(path.join(REMOTION_DIR, 'preview', 'dist', 'index.html'));
-});
-
-// Asset proxy FTP Remotion — monté AVANT tout middleware préfixé `/api`
-// (incluant `setRLSContext` + les `app.use('/api', apiRateLimit, …)` plus bas).
-// Sinon `apiRateLimit` (100 req/min) étouffe les range requests de <video>
-// Remotion et le 429 cascade en `ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`
-// (le handler 429 générique ne pose pas CORP/CORS).
-// Route publique, stateless, CDN 24h. CORP + CORS headers forcés par le handler.
-app.get(
-  '/api/remotion-templates/asset-proxy',
-  (_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    next();
-  },
-  proxyTemplateAsset,
-);
-
 // Apply Row-Level Security context to all API routes
 // This middleware sets PostgreSQL session variables for multi-tenant isolation
 // It must run after authentication (which is handled in individual routes)
@@ -539,22 +468,8 @@ app.use('/api/saas', saasRoutes); // SaaS mode (ADR-037) — public, rate limits
 app.use('/api/scoreboard', scoreboardRoutes); // Scoreboard live push (ADR-088 / F-15.2) — rate limits per-route
 app.use('/api/sites', videoCategoriesRoutes); // Catégories vidéo par site — rate limits per-route
 app.use('/api/client-errors', clientErrorsRoutes); // Frontend error capture — public, rate-limited
-// Template Studio v2 (ADR-074) — super_admin CRUD sur variants/layers/slots.
-// Monté AVANT remotion-templates pour que les sous-ressources matchent ce router.
-// (Asset proxy FTP `/asset-proxy` est monté plus haut, AVANT tout `app.use('/api', …)`.)
-app.use('/api/remotion-templates', templateStudioRoutes);
-// Templates vidéo Remotion (ADR-052) — rate limits per-route dans remotion-templates.routes.ts.
-// Pas de `sensitiveRateLimit` au mount : (1) double-comptage avec les limiteurs per-route
-// (anti-pattern documenté) et (2) CORP/CORS ne survivent pas à un 429 renvoyé avant le handler,
-// ce qui fait planter le <video> Remotion avec ERR_BLOCKED_BY_RESPONSE.NotSameOrigin sur
-// `/asset-proxy` (endpoint stateless sans rate limit volontaire — cf. routes).
-app.use('/api/remotion-templates', remotionTemplatesRoutes);
-// ADR-075 V3 Phase B — Club self-service templates
-app.use('/api/club/remotion-templates', clubTemplatesRoutes);
-// Templates Studio V1 — système code-driven parallèle (cf STUDIO_V1.md).
+// Templates Studio V1 — système code-driven in-process (cf STUDIO_V1.md, ADR-124).
 app.use('/api/templates-studio', templatesStudioV1Routes);
-// ADR-109 — Template Backgrounds (catalogue + grants user_id)
-app.use('/api/templates/backgrounds', templateBackgroundsRoutes);
 
 // 404 handler - Must be AFTER all routes, BEFORE error handler
 // Uses standardized error format with correlation ID
@@ -630,16 +545,6 @@ const startServer = async () => {
     // Nettoyage périodique des fichiers temporaires d'upload abandonnés (toutes les 30 min)
     const tempCleanupInterval = setInterval(cleanupStaleTempFiles, 30 * 60 * 1000);
     tempCleanupInterval.unref(); // Ne pas empêcher le shutdown
-
-    // Pre-warm Remotion bundle en arrière-plan (fire-and-forget).
-    // Économise ~30-60s sur le premier render après un déploiement Railway.
-    // 2026-05-06 : prewarm désactivé temporairement pour valider l'hypothèse
-    // OOM transitoire (Chromium co-localisé) à l'origine des 502 intermittents
-    // observés sur neopro-admin.kalonpartners.bzh. Réactiver après diagnostic.
-    const { startRenderWorker } = await import('./services/remotion-render-worker.service');
-    // prewarmRemotionBundle();  // disabled — see comment above
-    // Démarre le worker async (ADR-054) qui poll remotion_render_jobs toutes les 5s.
-    startRenderWorker();
 
     // Templates Studio V1 — seed des manifests vendored au boot (cf STUDIO_V1.md §5).
     // Tolère l'absence de migration (table template_definitions pas encore créée
@@ -748,12 +653,12 @@ process.on('SIGTERM', async () => {
   alertingService.cleanup();
   adminOpsService.stopCleanup();
 
-  // Stop Remotion worker — running renders will be marked stale on next boot
+  // Stop Templates Studio V1 render worker — running renders will be reclaimed at next boot.
   try {
-    const { stopRenderWorker } = await import('./services/remotion-render-worker.service');
-    stopRenderWorker();
+    const { stopStudioRenderWorker } = await import('./services/studio-render-worker.service');
+    stopStudioRenderWorker();
   } catch (err) {
-    logger.warn('Failed to stop Remotion render worker', {
+    logger.warn('Failed to stop Templates Studio render worker', {
       error: err instanceof Error ? err.message : String(err),
     });
   }

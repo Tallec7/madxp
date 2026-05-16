@@ -107,84 +107,10 @@ export const uploadImage = multer({
   }
 });
 
-// Configuration multer pour le rendu de templates — vidéo (disk) + images overlay (memory)
-const templateFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const videoMimes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
-  const imageMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-
-  if (file.fieldname === 'video' && videoMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else if (file.fieldname.startsWith('image_') && imageMimes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new UploadTypeError(`Type de fichier non autorisé pour le champ "${file.fieldname}": ${file.mimetype}`));
-  }
-};
-
-export const uploadTemplate = multer({
-  storage: diskStorage,
-  fileFilter: templateFilter,
-  limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB max (vidéo dominante)
-  }
-});
-
-// Configuration multer pour les assets templates (WebM/MP4) — DISK STORAGE
-const templateAssetFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowed = ['video/webm', 'video/mp4'];
-  if (allowed.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new UploadTypeError(`Type non autorisé: ${file.mimetype}. Formats acceptés: WebM, MP4`));
-  }
-};
-
-export const uploadTemplateAsset = multer({
-  storage: diskStorage,
-  fileFilter: templateAssetFilter,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
-});
-
-// ADR-077 — Upload image user pour les image_slots (v2) / image props (v1).
-// Ouvert aux utilisateurs authentifiés (non super_admin). Images uniquement.
-const userImageFilter = (
-  _req: Express.Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback,
-) => {
-  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  if (allowed.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new UploadTypeError(`Type non autorisé: ${file.mimetype}. Formats acceptés: JPEG, PNG, WebP`));
-  }
-};
-
-export const uploadUserTemplateImage = multer({
-  storage: diskStorage,
-  fileFilter: userImageFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max (ADR-077)
-});
-
-// PNG uniquement — pour POC auto_crop SPEC JOUEUR (require_alpha sera vérifié
-// par png-bbox.service.hasAlphaChannel après upload). Memory storage : photos
-// joueur détourées sont petites (< 20 MB), pas de disque transitoire nécessaire.
-const pngOnlyFilter = (
-  _req: Express.Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
-) => {
-  if (file.mimetype === 'image/png') {
-    cb(null, true);
-  } else {
-    cb(new UploadTypeError(`Seuls les PNG sont acceptés (reçu: ${file.mimetype})`));
-  }
-};
-export const uploadPngBuffer = multer({
-  storage: memoryStorage,
-  fileFilter: pngOnlyFilter,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
-});
+// Templates Studio V2 upload middlewares (uploadTemplate / uploadTemplateAsset /
+// uploadUserTemplateImage / uploadPngBuffer) ont été supprimés avec le kill du
+// data-driven legacy — cf. ADR-129. Les uploads V1 code-driven passent par
+// `templates-studio.routes.ts` qui utilise son propre multer config in-route.
 
 // Configuration multer pour les paquets de mise à jour — DISK STORAGE (jusqu'à 1GB)
 export const uploadUpdatePackage = multer({

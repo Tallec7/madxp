@@ -254,15 +254,15 @@ describe('Templates Studio V1 — manifest seed (J3, cf STUDIO_V1.md §5)', () =
     }
   });
 
-  it('seed is wired in server.ts boot after startRenderWorker', () => {
+  it('seed is wired in server.ts boot before the studio render worker', () => {
     const content = fs.readFileSync(SERVER_FILE, 'utf8');
     expect(content).toMatch(/seed-templates-studio-manifests/);
-    // Check ordre : startRenderWorker() doit apparaître AVANT le seed (le worker
-    // démarre indépendamment des manifests V1 — il poll sa propre table).
-    const idxWorker = content.indexOf('startRenderWorker()');
+    // Check ordre : seed des manifests AVANT startStudioRenderWorker
+    // (le worker render attend que template_definitions soit peuplée).
     const idxSeed = content.indexOf('seed-templates-studio-manifests');
-    expect(idxWorker).toBeGreaterThan(-1);
-    expect(idxSeed).toBeGreaterThan(idxWorker);
+    const idxWorker = content.indexOf('startStudioRenderWorker()');
+    expect(idxSeed).toBeGreaterThan(-1);
+    expect(idxWorker).toBeGreaterThan(idxSeed);
   });
 });
 
