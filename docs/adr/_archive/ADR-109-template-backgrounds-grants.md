@@ -84,12 +84,12 @@ WHERE b.archived_at IS NULL
   );
 ```
 
-| `is_public` | Grants count | Qui voit ? |
-|-------------|--------------|------------|
-| `true` | 0 | Tous |
-| `true` | ≥ 1 | Tous (les grants sont ignorés, le flag public prime) |
-| `false` | 0 | Personne (= soft archived) |
-| `false` | ≥ 1 | Uniquement les users avec grant |
+| `is_public` | Grants count | Qui voit ?                                           |
+| ----------- | ------------ | ---------------------------------------------------- |
+| `true`      | 0            | Tous                                                 |
+| `true`      | ≥ 1          | Tous (les grants sont ignorés, le flag public prime) |
+| `false`     | 0            | Personne (= soft archived)                           |
+| `false`     | ≥ 1          | Uniquement les users avec grant                      |
 
 **Choix** : le flag `is_public` est **explicite** plutôt qu'implicite (ne pas dériver "public si aucun grant"). Raison : permettre à super_admin de pré-créer des backgrounds restreints sans grant initial (puis ajouter des grants progressivement) sans qu'ils soient temporairement publics.
 
@@ -103,16 +103,16 @@ WHERE b.archived_at IS NULL
 
 ### 2.4 API endpoints
 
-| Méthode | Endpoint | Auth | Description |
-|---------|----------|------|-------------|
-| `GET` | `/api/templates/backgrounds` | user | Liste filtrée par grants (cf. §2.2) |
-| `GET` | `/api/templates/backgrounds/:id` | user | Détail si visible |
-| `POST` | `/api/templates/backgrounds` | super_admin | Upload + create |
-| `PATCH` | `/api/templates/backgrounds/:id` | super_admin | name, is_public, archived_at |
-| `DELETE` | `/api/templates/backgrounds/:id` | super_admin | Hard delete (refusé si utilisé) |
-| `POST` | `/api/templates/backgrounds/:id/grants` | super_admin | Bulk grant `{ user_ids: [...] }` |
-| `GET` | `/api/templates/backgrounds/:id/grants` | super_admin | Liste des users avec grant |
-| `DELETE` | `/api/templates/backgrounds/:id/grants/:user_id` | super_admin | Revoke |
+| Méthode  | Endpoint                                         | Auth        | Description                         |
+| -------- | ------------------------------------------------ | ----------- | ----------------------------------- |
+| `GET`    | `/api/templates/backgrounds`                     | user        | Liste filtrée par grants (cf. §2.2) |
+| `GET`    | `/api/templates/backgrounds/:id`                 | user        | Détail si visible                   |
+| `POST`   | `/api/templates/backgrounds`                     | super_admin | Upload + create                     |
+| `PATCH`  | `/api/templates/backgrounds/:id`                 | super_admin | name, is_public, archived_at        |
+| `DELETE` | `/api/templates/backgrounds/:id`                 | super_admin | Hard delete (refusé si utilisé)     |
+| `POST`   | `/api/templates/backgrounds/:id/grants`          | super_admin | Bulk grant `{ user_ids: [...] }`    |
+| `GET`    | `/api/templates/backgrounds/:id/grants`          | super_admin | Liste des users avec grant          |
+| `DELETE` | `/api/templates/backgrounds/:id/grants/:user_id` | super_admin | Revoke                              |
 
 ## Alternatives Considérées
 
@@ -120,6 +120,7 @@ WHERE b.archived_at IS NULL
 
 **Avantages** : moins de rows, configuration globale.
 **Inconvénients** :
+
 - Granularité trop large : "les users du club Lanester" n'est pas un rôle, c'est un user_id list.
 - Daisy a explicitement dit "user", pas "rôle".
 
@@ -129,6 +130,7 @@ WHERE b.archived_at IS NULL
 
 **Avantages** : aligné avec la structure multi-tenant (1 site = 1 club).
 **Inconvénients** :
+
 - Un user agency peut gérer plusieurs sites mais a 1 seul user_id → grants par user permet de couvrir le cas multi-clubs naturellement.
 - ADR-082 a déjà tranché en faveur de user_id, cohérence > optimisation.
 
@@ -137,12 +139,14 @@ WHERE b.archived_at IS NULL
 ### 3. Grants par user_id (choisie) ✅
 
 **Avantages** :
+
 - Cohérent avec ADR-082 (Video Club Grants)
 - Granularité maximale
 - Réponse explicite Daisy
 - Pattern repo connu
 
 **Inconvénients** :
+
 - Plus de rows si beaucoup de grants (acceptable, ~100 users × 10 backgrounds restreints = 1000 rows)
 - Pas de "groupement" (mitigation : endpoint bulk grant qui prend une liste)
 
@@ -172,12 +176,12 @@ WHERE b.archived_at IS NULL
 
 ### Risques
 
-| Risque | Mitigation |
-|--------|------------|
-| Super_admin upload un WebM sans canal alpha | Validator côté API (`require_alpha` détecté via libwebp) |
-| Un background public devient sensible (ex. couleur d'un sponsor en exclu) | `PATCH is_public = false` puis ajout grants |
-| Suppression user → orphelins dans grants | `ON DELETE CASCADE` côté `user_id` |
-| Sync-agent Pi cache une vieille liste de backgrounds | Invalidation au push de nouveau background (event WS) |
+| Risque                                                                    | Mitigation                                               |
+| ------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Super_admin upload un WebM sans canal alpha                               | Validator côté API (`require_alpha` détecté via libwebp) |
+| Un background public devient sensible (ex. couleur d'un sponsor en exclu) | `PATCH is_public = false` puis ajout grants              |
+| Suppression user → orphelins dans grants                                  | `ON DELETE CASCADE` côté `user_id`                       |
+| Sync-agent Pi cache une vieille liste de backgrounds                      | Invalidation au push de nouveau background (event WS)    |
 
 ## Plan d'implémentation
 

@@ -64,25 +64,25 @@ cd central-server && npm run db:migrate
 
 ## Routing SPECs (à lire AVANT toute modif sur le domaine)
 
-| Si tu touches | Lis d'abord |
-|---|---|
-| Tout fix qui mentionne **NLF** ou client critique | `docs/clients/NLF.md` (CRITIQUE) |
-| `fix(saas)`, `displays`, `variants`, `resolvedConfig` | `docs/specs/features/saas-mode.spec.md` |
-| `fix(content)`, vidéos, FTP, upload, cycle | `docs/specs/features/video-cycle.spec.md` |
-| `sponsor*`, advertiser, agency | `docs/specs/features/sponsors.spec.md` |
-| `template*` (DB, runtime, studio) | `docs/specs/features/templates-studio.spec.md` + `template-studio-v3.spec.md` |
-| `match-session`, `score*`, scoreboard | `docs/specs/features/match-sessions.spec.md` |
-| `remote*` (télécommande) | `docs/specs/features/remote.spec.md` + `remote-v2-preview-sync.spec.md` |
-| `web-content`, ADR-103 | `docs/specs/features/web-live-content.spec.md` |
-| `hotspot`, PSK, ADR-074/076 | `docs/specs/features/hotspot-psk.spec.md` |
-| `cron*` ou scheduler | `docs/specs/services/cron-scheduler.spec.md` |
-| `alerting*`, dedup ADR-111 | `docs/specs/services/alert-repository.spec.md` |
-| `sync-agent*`, write-through ADR-114 | `docs/specs/services/sync-agent-displays-write-through.spec.md` + `sync-agent-auth-preservation.spec.md` |
-| Config Pi (`:8080`, profils CRUD, ownership Pi vs cloud, conflits, push-back) | `docs/adr/ADR-120-pi-saas-ownership-model.md` + `docs/specs/features/admin-pi-local.spec.md` |
-| `command-queue*`, `sendOrQueue`, `pending_commands` | `docs/specs/services/command-queue.spec.md` |
-| Garde-fou Pi offline, alertes connectivité Pi | `docs/specs/features/pi-connectivity-model.spec.md` |
-| `socket*`, realtime | `docs/specs/services/socket-service.spec.md` |
-| Routing CF Pages SaaS | `docs/specs/services/cloudflare-pages-saas-routing.spec.md` |
+| Si tu touches                                                                 | Lis d'abord                                                                                                                                                         |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tout fix qui mentionne **NLF** ou client critique                             | `docs/clients/NLF.md` (CRITIQUE)                                                                                                                                    |
+| `fix(saas)`, `displays`, `variants`, `resolvedConfig`                         | `docs/specs/features/saas-mode.spec.md`                                                                                                                             |
+| `fix(content)`, vidéos, FTP, upload, cycle                                    | `docs/specs/features/video-cycle.spec.md`                                                                                                                           |
+| `sponsor*`, advertiser, agency                                                | `docs/specs/features/sponsors.spec.md`                                                                                                                              |
+| `template*` (Templates Studio V1 code-driven)                                 | `central-server/templates-studio/` + `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo) + ADR-123/124/125/127/128. V2 legacy supprimé en ADR-129 |
+| `match-session`, `score*`, scoreboard                                         | `docs/specs/features/match-sessions.spec.md`                                                                                                                        |
+| `remote*` (télécommande)                                                      | `docs/specs/features/remote.spec.md` + `remote-v2-preview-sync.spec.md`                                                                                             |
+| `web-content`, ADR-103                                                        | `docs/specs/features/web-live-content.spec.md`                                                                                                                      |
+| `hotspot`, PSK, ADR-074/076                                                   | `docs/specs/features/hotspot-psk.spec.md`                                                                                                                           |
+| `cron*` ou scheduler                                                          | `docs/specs/services/cron-scheduler.spec.md`                                                                                                                        |
+| `alerting*`, dedup ADR-111                                                    | `docs/specs/services/alert-repository.spec.md`                                                                                                                      |
+| `sync-agent*`, write-through ADR-114                                          | `docs/specs/services/sync-agent-displays-write-through.spec.md` + `sync-agent-auth-preservation.spec.md`                                                            |
+| Config Pi (`:8080`, profils CRUD, ownership Pi vs cloud, conflits, push-back) | `docs/adr/ADR-120-pi-saas-ownership-model.md` + `docs/specs/features/admin-pi-local.spec.md`                                                                        |
+| `command-queue*`, `sendOrQueue`, `pending_commands`                           | `docs/specs/services/command-queue.spec.md`                                                                                                                         |
+| Garde-fou Pi offline, alertes connectivité Pi                                 | `docs/specs/features/pi-connectivity-model.spec.md`                                                                                                                 |
+| `socket*`, realtime                                                           | `docs/specs/services/socket-service.spec.md`                                                                                                                        |
+| Routing CF Pages SaaS                                                         | `docs/specs/services/cloudflare-pages-saas-routing.spec.md`                                                                                                         |
 
 Si la SPEC manque sur le domaine touché → l'écrire AVANT le code (cf. `docs/specs/README.md`).
 

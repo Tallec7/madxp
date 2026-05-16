@@ -36,6 +36,7 @@ sur le préfixe de dossier (avec trailing `/`).
 
 Le worker render (`studio-render-worker.service.ts`) résout les bindings
 DB et injecte dans `props.__assets[key]` :
+
 - une `string` (URL FTP) pour `asset_kind='file'` (legacy ADR-125 préservé) ;
 - un objet `{ kind: 'directory', baseUrl, framePattern, frameCount }` pour
   `asset_kind='directory'`.
@@ -80,20 +81,24 @@ Pour le rendu `kind='still'` qui doit capturer une frame spécifique du reveal
 ## Fichiers impactés
 
 ### DB / repo
+
 - `central-server/src/scripts/migrations/add-studio-assets-directory.sql` — nouvelle migration
 - `central-server/src/scripts/full-schema.sql` — mirror des nouvelles colonnes + CHECK
 - `central-server/src/repositories/templates-studio.repository.ts` — type `StudioAssetKind`, méthode `createDirectory()`
 
 ### API / controller
+
 - `central-server/src/middleware/validation.ts` — schéma Joi `uploadAssetDirectory`
 - `central-server/src/controllers/templates-studio.controller.ts` — endpoint `uploadStudioAssetDirectory` + helper `detectFramePattern`
 - `central-server/src/routes/templates-studio.routes.ts` — route `POST /assets/directory` + multer 50 MB
 - `central-server/src/config/ftp-storage.ts` — helper `uploadFilesToFtpBatch`
 
 ### Worker
+
 - `central-server/src/services/studio-render-worker.service.ts` — type `DirectoryAssetRef`, branche `asset_kind === 'directory'` dans `resolveTemplateAssets`, support `manifest.stillFrame`
 
 ### Templates
+
 - `central-server/templates-studio/templates/but_generique/manifest.json` — port V2 (1920×1080@25fps, 9 requiredAssets)
 - `central-server/templates-studio/templates/but_generique/Composition.tsx` — refactor avec MaskedLayer + ClubLabel
 - `central-server/templates-studio/templates/entree_joueur/manifest.json` — port V2 + `stillFrame: 174`
@@ -101,14 +106,17 @@ Pour le rendu `kind='still'` qui doit capturer une frame spécifique du reveal
 - `central-server/templates-studio/Root.tsx` — bump `<Composition>` BUT/ENTRÉE au format V2
 
 ### Frontend
+
 - `central-dashboard/src/app/features/templates-studio/templates-studio.types.ts` — type `StudioAssetKind` + champs directory
 - `central-dashboard/src/app/features/templates-studio/templates-studio.service.ts` — `uploadStudioAssetDirectory()`
 - `central-dashboard/src/app/features/templates-studio/admin/asset-library/*` — toggle file/directory mode + preview frames
 
 ### Smoke
+
 - `central-server/src/__tests__/smoke/smoke-templates-studio-asset-directory.test.ts` — nouveau (file-based)
 - `central-server/src/__tests__/smoke/smoke-templates-studio-assets.test.ts` — adapté (BUT/ENTRÉE manifests étendus)
 
 ### Doc
+
 - `docs/templates/STUDIO-PORTING-GUIDE.md` — section "Assets directory (PNG frames)"
-- `docs/specs/features/templates-studio.spec.md` — référence ADR-128
+- ~~`docs/specs/features/templates-studio.spec.md`~~ — SPEC V2 supprimée en ADR-129.

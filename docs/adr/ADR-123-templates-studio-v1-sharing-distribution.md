@@ -96,5 +96,5 @@ Aligner Templates Studio V1 sur le pattern **asset global + grants explicites mu
 - [ADR-082](ADR-082-video-club-grants.md) — Pattern source des grants admin → clubs
 - [ADR-118](ADR-118-studio-render-server-deployment.md) — Container Railway studio-render-server
 - [STUDIO_V1.md](../../studio-template/templates-remotion/spec/STUDIO_V1.md) — Spec V1 (sibling repo)
-- [templates-studio.spec.md](../specs/features/templates-studio.spec.md) — SPEC du domaine
+- ~~docs/specs/features/templates-studio.spec.md~~ — SPEC V2 supprimée en ADR-129 (V1 spec : `STUDIO_V1.md` sibling repo)
 - PRs : #998 (site picker), #1002 (players globaux + grants), #1003 (distribution renders)

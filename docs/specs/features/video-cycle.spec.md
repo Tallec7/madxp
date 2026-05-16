@@ -91,7 +91,7 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 ## Ce qui n'est PAS dans ce domaine
 
 - **Déploiement Pi (push config)** → SPEC Déploiement & OTA (à créer)
-- **Templates vidéo Remotion** → SPEC [Templates Studio](templates-studio.spec.md)
+- **Templates vidéo Remotion** → Templates Studio V1 code-driven (ADR-123/124/125/127/128). V2 legacy supprimé en ADR-129.
 - **Rotation pondérée des vidéos sponsors** → SPEC [Sponsors & Pubs](sponsors.spec.md)
 - **Compression / transcodage** → `video-compression.service.ts` (interne, pas de règle métier exposée)
 

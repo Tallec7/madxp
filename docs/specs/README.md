@@ -68,7 +68,6 @@ docs/specs/
 │   ├── match-sessions.spec.md       # ✅ Live (ADR-088/093/097)
 │   ├── saas-mode.spec.md            # ✅ Live (ADR-037+)
 │   ├── sponsors.spec.md             # ✅ Live (fusion sponsors-rotation + sponsor-reports)
-│   ├── templates-studio.spec.md     # ✅ Live (pré-pivot, section Périmètre à formaliser)
 │   ├── video-cycle.spec.md          # ✅ Live (ADR-100)
 │   ├── web-live-content.spec.md     # ✅ Live (ADR-089/103)
 │   └── admin-pi-local.spec.md      # ✅ Live (ADR-001/074/115 — switch profil offline)
@@ -79,24 +78,22 @@ docs/specs/
 
 ## Index des SPECs actives
 
-| SPEC                                                                                             | ADR liés                                                                                          | Statut   | Dernière revue |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | -------- | -------------- |
-| [features/manual-video-transitions](features/manual-video-transitions.spec.md)                   | ADR-033, ADR-034, ADR-042, ADR-057                                                                | Live     | 2026-04-30     |
-| [features/match-sessions](features/match-sessions.spec.md)                                       | ADR-088, ADR-093, ADR-097                                                                         | Live     | 2026-04-29     |
-| [features/saas-mode](features/saas-mode.spec.md)                                                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102, ADR-105 | Live     | 2026-04-29     |
-| [features/video-cycle](features/video-cycle.spec.md)                                             | ADR-022, ADR-100                                                                                  | Live     | 2026-04-29     |
-| [features/sponsors](features/sponsors.spec.md)                                                   | ADR-035, ADR-093, ADR-097                                                                         | Live     | 2026-04-29     |
-| [features/web-live-content](features/web-live-content.spec.md)                                   | ADR-089, ADR-103                                                                                  | Live     | 2026-04-29     |
-| [features/hotspot-psk](features/hotspot-psk.spec.md)                                             | ADR-073, ADR-074, ADR-076                                                                         | Live     | 2026-04-27     |
-| [features/admin-pi-local](features/admin-pi-local.spec.md)                                       | ADR-001, ADR-074, ADR-115                                                                         | Live     | 2026-05-11     |
-| [features/templates-studio](features/templates-studio.spec.md)                                   | ADR-075, ADR-077, ADR-084, ADR-086, ADR-087, ADR-095                                              | Live     | 2026-04-25     |
-| [features/template-studio-v3](features/template-studio-v3.spec.md)                               | ADR-110                                                                                           | Proposed | 2026-05-05     |
-| [services/cron-scheduler](services/cron-scheduler.spec.md)                                       | ADR-097                                                                                           | Live     | 2026-04-25     |
-| [services/socket-service](services/socket-service.spec.md)                                       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096                                     | Live     | 2026-04-25     |
-| [services/sync-agent-displays-write-through](services/sync-agent-displays-write-through.spec.md) | ADR-114                                                                                           | Live     | 2026-05-08     |
-| [services/sync-agent-auth-preservation](services/sync-agent-auth-preservation.spec.md)           | ADR-115                                                                                           | Live     | 2026-05-08     |
+| SPEC                                                                                             | ADR liés                                                                                          | Statut | Dernière revue |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------ | -------------- |
+| [features/manual-video-transitions](features/manual-video-transitions.spec.md)                   | ADR-033, ADR-034, ADR-042, ADR-057                                                                | Live   | 2026-04-30     |
+| [features/match-sessions](features/match-sessions.spec.md)                                       | ADR-088, ADR-093, ADR-097                                                                         | Live   | 2026-04-29     |
+| [features/saas-mode](features/saas-mode.spec.md)                                                 | ADR-005, ADR-037, ADR-038, ADR-039, ADR-040, ADR-059, ADR-069, ADR-088, ADR-096, ADR-102, ADR-105 | Live   | 2026-04-29     |
+| [features/video-cycle](features/video-cycle.spec.md)                                             | ADR-022, ADR-100                                                                                  | Live   | 2026-04-29     |
+| [features/sponsors](features/sponsors.spec.md)                                                   | ADR-035, ADR-093, ADR-097                                                                         | Live   | 2026-04-29     |
+| [features/web-live-content](features/web-live-content.spec.md)                                   | ADR-089, ADR-103                                                                                  | Live   | 2026-04-29     |
+| [features/hotspot-psk](features/hotspot-psk.spec.md)                                             | ADR-073, ADR-074, ADR-076                                                                         | Live   | 2026-04-27     |
+| [features/admin-pi-local](features/admin-pi-local.spec.md)                                       | ADR-001, ADR-074, ADR-115                                                                         | Live   | 2026-05-11     |
+| [services/cron-scheduler](services/cron-scheduler.spec.md)                                       | ADR-097                                                                                           | Live   | 2026-04-25     |
+| [services/socket-service](services/socket-service.spec.md)                                       | ADR-002, ADR-037, ADR-061, ADR-081, ADR-090, ADR-093, ADR-096                                     | Live   | 2026-04-25     |
+| [services/sync-agent-displays-write-through](services/sync-agent-displays-write-through.spec.md) | ADR-114                                                                                           | Live   | 2026-05-08     |
+| [services/sync-agent-auth-preservation](services/sync-agent-auth-preservation.spec.md)           | ADR-115                                                                                           | Live   | 2026-05-08     |
 
-**Total : 12 SPECs actives** (target final ~15). Prochaines à écrire (SPECs #6-#15 du tableau cibles) : Déploiement & OTA, Observabilité & Alerting, Pi & Display, Remote, Réseau & Hotspot, Auth & Sécurité, Subscription & Billing, Sync & Config, Reporting & Exports, Dashboard Admin.
+**Total : 10 SPECs actives** (target final ~15 ; 2 SPECs V2 supprimées avec ADR-129). Prochaines à écrire (SPECs #6-#15 du tableau cibles) : Déploiement & OTA, Observabilité & Alerting, Pi & Display, Remote, Réseau & Hotspot, Auth & Sécurité, Subscription & Billing, Sync & Config, Reporting & Exports, Dashboard Admin.
 
 ## Cycle de vie d'une SPEC
 
