@@ -9,6 +9,7 @@ import {
 } from 'remotion';
 import { z } from 'zod';
 import { useCustomFont } from '../../lib/useCustomFont';
+import { usePreloadFrameSequence } from '../../lib/usePreloadFrameSequence';
 
 /**
  * BUT — Générique (ADR-128, port du design legacy V2 `joueur_but_generique.v1`).
@@ -179,6 +180,13 @@ export const ButGeneriqueComposition: React.FC<ButGeneriqueProps> = ({
   // Fonts custom (ADR-127). Fallback sans-serif si l'asset n'est pas bound.
   useCustomFont('Bulevar', asString(assets.fontBulevar));
   useCustomFont('General Sans', asString(assets.fontGeneralSans));
+
+  // Précharge les masques PNG frames avant tout screenshot (delayRender). Sans
+  // ça, Chromium headless sur Railway Hobby capture des frames pendant que les
+  // <image href> SVG sont encore en cours de fetch FTP → masques vides → layers
+  // visibles plein écran. Inutile en local (réseau rapide) mais critique en prod.
+  usePreloadFrameSequence(maskC, 'butGenerique:maskC');
+  usePreloadFrameSequence(maskPackshot, 'butGenerique:maskPackshot');
 
   // Animations spring pour les texts qui apparaissent à frame 2.5s = 62.5 (~63).
   // Reproduit le `appearAt: 2.5, scale-only` du spec legacy.

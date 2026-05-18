@@ -9,6 +9,7 @@ import {
 } from 'remotion';
 import { z } from 'zod';
 import { useCustomFont } from '../../lib/useCustomFont';
+import { usePreloadFrameSequence } from '../../lib/usePreloadFrameSequence';
 
 /**
  * ENTRÉE Joueur (ADR-128, port du design legacy V2 `joueur_entree_generique.v1`).
@@ -102,6 +103,11 @@ export const EntreeJoueurComposition: React.FC<EntreeJoueurProps> = ({
 
   useCustomFont('Bulevar', asString(assets.fontBulevar));
   useCustomFont('General Sans', asString(assets.fontGeneralSans));
+
+  // Précharge les frames du masque packshot (delayRender) avant tout screenshot.
+  // Critique sur Railway Hobby où le réseau vers FTP Hostinger est lent : sans
+  // ce preload, le SVG <image href> est encore en fetch quand Chromium capture.
+  usePreloadFrameSequence(maskPackshot, 'entreeJoueur:maskPackshot');
 
   const textAppearFrame = Math.round(2.5 * fps);
   const textsVisible = frame >= textAppearFrame;
