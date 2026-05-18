@@ -33,9 +33,6 @@ exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
 - Player roster (`studio_players` + `studio_player_site_grants`) avec grants multi-sites — ADR-123.
 - Polices custom servies via `studio_assets` + hook `useCustomFont` — ADR-127.
 - Assets type `directory` (séquences PNG frames pour masques alpha) — ADR-128.
-- Cache filesystem local des assets FTP au boot du worker (mini HTTP localhost
-  qui élimine la latence cross-region Railway → Hostinger sur chaque render) —
-  ADR-130.
 - Brand-kit per-site (logos club, couleurs, fonts override) — `site_brand_kits`.
 - Worker render in-process : poll `studio_render_requests` toutes les 2s, bundle Remotion +
   renderMedia, upload FTP (ADR-124 — consolidation du studio-render-server satellite ADR-118
