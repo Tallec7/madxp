@@ -1,3 +1,9 @@
+## [3.322.2](https://github.com/Tallec7/neopro/compare/v3.322.1...v3.322.2) (2026-05-18)
+
+### Bug Fixes
+
+- **templates:** autoriser l'upload photo sur joueurs globaux (ADR-123) ([#1044](https://github.com/Tallec7/neopro/issues/1044)) ([22c1068](https://github.com/Tallec7/neopro/commit/22c10683575bf36f38bd493e4c396e05ab35ab6b)), closes [#666](https://github.com/Tallec7/neopro/issues/666)
+
 ## [3.322.1](https://github.com/Tallec7/neopro/compare/v3.322.0...v3.322.1) (2026-05-18)
 
 ### Bug Fixes
