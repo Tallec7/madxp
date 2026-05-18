@@ -29,6 +29,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import logger from '../config/logger';
 import { uploadVideoFromDisk } from './storage.service';
+import {
+  getCachedAssetUrl,
+  preloadStudioAssets,
+  startStudioCacheServer,
+} from './studio-assets-cache.service';
 import { getFtpPublicUrl } from '../config/ftp-storage';
 import {
   renderRequestRepository,
@@ -159,6 +164,9 @@ async function resolveTemplateAssets(
         `Asset binding invalide: asset ${binding.asset_id} introuvable (slot '${slot.key}')`,
       );
     }
+    // Cache hit = URL localhost (latence ~ms). Cache miss = URL FTP publique
+    // (comportement legacy, plusieurs minutes sur Hobby pour un mask 1.3 GB).
+    const cachedUrl = getCachedAssetUrl(asset);
     if (asset.asset_kind === 'directory') {
       // Garde-fou : un asset directory mal créé sans frame_count/frame_pattern
       // serait inutilisable côté composition. Échec explicite > runtime cryptique.
@@ -167,15 +175,15 @@ async function resolveTemplateAssets(
           `Asset directory invalide: '${slot.key}' (id ${asset.id}) n'a pas de frame_count/frame_pattern — re-uploader le ZIP`,
         );
       }
-      const baseUrl = getFtpPublicUrl(asset.ftp_path);
+      const baseUrlRaw = cachedUrl ?? getFtpPublicUrl(asset.ftp_path);
       resolved[slot.key] = {
         kind: 'directory',
-        baseUrl: baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`,
+        baseUrl: baseUrlRaw.endsWith('/') ? baseUrlRaw : `${baseUrlRaw}/`,
         framePattern: asset.frame_pattern,
         frameCount: asset.frame_count,
       };
     } else {
-      resolved[slot.key] = getFtpPublicUrl(asset.ftp_path);
+      resolved[slot.key] = cachedUrl ?? getFtpPublicUrl(asset.ftp_path);
     }
   }
   return resolved;
@@ -259,7 +267,11 @@ async function performRenderInProcess(
       imageFormat: 'jpeg',
       jpegQuality: 85,
       concurrency: renderConcurrency,
-      crf: 18,
+      // CRF 23 (au lieu de 18 quasi-lossless) : ~30% plus rapide à l'encodage
+      // h264 sur le worker CPU pur (Railway swangle). Différence visuelle
+      // imperceptible pour la diffusion TV club, et le delta size n'a pas
+      // d'impact (les MP4 finaux font ~5-15 MB upload FTP unique).
+      crf: 23,
       // ADR-128 — bornes RAM pour OffthreadVideo. Sans ces limites, Remotion
       // alloue un cache "automatic" qui peut OOM Railway quand le template a
       // plusieurs WebM en layers (5 dans BUT générique). Le cache offthread
@@ -367,6 +379,16 @@ export async function startStudioRenderWorker(): Promise<void> {
   // qui chargent transitivement webpack. Issue #1008.
   if (process.env.NODE_ENV !== 'test') {
     prewarmStudioBundle();
+    // Cache filesystem assets : démarre le serveur HTTP localhost (sync) puis
+    // précharge les assets en async. Si un render arrive avant que le preload
+    // soit fini, `getCachedAssetUrl()` retourne null → fallback FTP (= legacy).
+    startStudioCacheServer()
+      .then(() => preloadStudioAssets())
+      .catch((err) => {
+        logger.warn('studio-render-worker: assets cache init failed (non-fatal)', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
   }
 
   stopping = false;
