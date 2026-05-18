@@ -956,6 +956,14 @@ class TemplateAssetBindingRepositoryImpl {
     return result.rows;
   }
 
+  async findAll(): Promise<TemplateAssetBindingRow[]> {
+    const result = await query<TemplateAssetBindingRow>(
+      `SELECT * FROM studio_template_asset_bindings
+       ORDER BY template_slug, asset_key`,
+    );
+    return result.rows;
+  }
+
   async upsertBinding(
     input: UpsertTemplateAssetBindingInput,
   ): Promise<TemplateAssetBindingRow> {
