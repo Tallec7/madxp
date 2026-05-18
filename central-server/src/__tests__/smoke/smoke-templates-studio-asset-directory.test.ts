@@ -83,7 +83,7 @@ describe('ADR-128 — Migration directory columns', () => {
 
   it('full-schema.sql mirror les nouvelles colonnes + CHECK', () => {
     const sql = fs.readFileSync(FULL_SCHEMA_FILE, 'utf8');
-    expect(sql).toMatch(/asset_kind\s+text\s+DEFAULT\s+'file'\s+NOT\s+NULL/i);
+    expect(sql).toMatch(/asset_kind\s+text\s+DEFAULT\s+'file'(?:::text)?\s+NOT\s+NULL/i);
     expect(sql).toMatch(/frame_count\s+integer/i);
     expect(sql).toMatch(/frame_pattern\s+text/i);
     expect(sql).toMatch(/asset_kind_check[\s\S]*'file'[\s\S]*'directory'/i);

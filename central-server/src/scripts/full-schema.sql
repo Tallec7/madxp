@@ -14,6 +14,7 @@
 -- =============================================================================
 
 --
+--
 -- PostgreSQL database dump
 --
 
@@ -242,7 +243,6 @@ DECLARE
     v_avg_memory DECIMAL(5,2);
     v_avg_temperature DECIMAL(5,2);
     v_max_temperature DECIMAL(5,2);
-    v_online_minutes INTEGER;
     v_uptime_percent DECIMAL(5,2);
     v_incidents_count INTEGER;
 BEGIN
@@ -286,28 +286,13 @@ BEGIN
       AND recorded_at >= p_date
       AND recorded_at < p_date + INTERVAL '1 day';
 
-    -- Availability: somme des intervalles entre samples consécutifs, cap à 5min (= metricsInterval).
-    -- Diviseur 1440 min/jour — non couplé à la cadence de sampling (fix issue #644 / ADR-099).
-    WITH intervals AS (
-        SELECT
-            recorded_at,
-            LEAD(recorded_at) OVER (ORDER BY recorded_at) AS next_recorded
-        FROM metrics
-        WHERE site_id = p_site_id
-          AND recorded_at >= p_date
-          AND recorded_at < p_date + INTERVAL '1 day'
-    )
-    SELECT COALESCE(SUM(
-        LEAST(
-            EXTRACT(EPOCH FROM (next_recorded - recorded_at)) / 60,
-            5
-        )
-    ), 0)::INTEGER
-    INTO v_online_minutes
-    FROM intervals
-    WHERE next_recorded IS NOT NULL;
-
-    v_uptime_percent := LEAST(v_online_minutes * 100.0 / GREATEST(1440, 1), 100);
+    SELECT
+        LEAST(100, (COUNT(*)::float / 2880.0 * 100))
+    INTO v_uptime_percent
+    FROM metrics
+    WHERE site_id = p_site_id
+      AND recorded_at >= p_date
+      AND recorded_at < p_date + INTERVAL '1 day';
 
     SELECT COUNT(*)
     INTO v_incidents_count
@@ -733,51 +718,6 @@ $$;
 
 
 --
--- Name: neopro_templates_snapshot_version(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.neopro_templates_snapshot_version() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  IF (TG_OP = 'INSERT') THEN
-    INSERT INTO neopro_template_versions
-      (template_id, props_schema, default_props, snapshot_reason, created_by)
-    VALUES
-      (NEW.id, NEW.props_schema, NEW.default_props, 'initial', NEW.created_by);
-    RETURN NEW;
-  END IF;
-
-  IF (TG_OP = 'UPDATE')
-     AND (OLD.props_schema::text IS DISTINCT FROM NEW.props_schema::text
-          OR OLD.default_props::text IS DISTINCT FROM NEW.default_props::text)
-  THEN
-    INSERT INTO neopro_template_versions
-      (template_id, props_schema, default_props, snapshot_reason, created_by)
-    VALUES
-      (NEW.id, OLD.props_schema, OLD.default_props, 'pre-update', NULL);
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: remotion_render_jobs_set_updated_at(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.remotion_render_jobs_set_updated_at() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$;
-
-
---
 -- Name: reset_session_context(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1017,6 +957,13 @@ CREATE TABLE public.sites (
 
 
 --
+-- Name: COLUMN sites.displays; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sites.displays IS 'N-display config: [{index, name, type, resolution, receiver?: {kind: pi_native|firestick|browser, mac?, last_seen_at?}}]. NULL = legacy dual (tv + secondary). HDMI #0 défaulte à receiver.kind=pi_native (v4.0 DATA-02).';
+
+
+--
 -- Name: COLUMN sites.wifi_psk_encrypted; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -1035,13 +982,6 @@ COMMENT ON COLUMN public.sites.wifi_psk_iv IS 'ADR-074: 12-byte IV for AES-GCM d
 --
 
 COMMENT ON COLUMN public.sites.wifi_psk_auth_tag IS 'ADR-074: 16-byte GCM auth tag.';
-
-
---
--- Name: COLUMN sites.displays; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sites.displays IS 'N-display config: [{index, name, type, resolution, receiver?: {kind: pi_native|firestick|browser, mac?, last_seen_at?}}]. NULL = legacy dual (tv + secondary). HDMI #0 défaulte à receiver.kind=pi_native (v4.0 DATA-02).';
 
 
 --
@@ -1431,6 +1371,20 @@ CREATE TABLE public.alerts (
 
 
 --
+-- Name: COLUMN alerts.last_seen_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alerts.last_seen_at IS 'Dernière fois que cette alerte a été déclenchée (bumpée à chaque récurrence). ADR-111.';
+
+
+--
+-- Name: COLUMN alerts.occurrences; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.alerts.occurrences IS 'Nombre de fois que cette alerte a été déclenchée depuis sa création. ADR-111.';
+
+
+--
 -- Name: analytics_categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1710,6 +1664,55 @@ CREATE TABLE public.club_sessions (
 
 
 --
+-- Name: COLUMN club_sessions.home_team; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.home_team IS 'Home team name (split from legacy match_name). ADR-093.';
+
+
+--
+-- Name: COLUMN club_sessions.away_team; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.away_team IS 'Away team name (split from legacy match_name). ADR-093.';
+
+
+--
+-- Name: COLUMN club_sessions.home_score; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.home_score IS 'Final home score at session close (frozen by auto-close CRON or match-end event).';
+
+
+--
+-- Name: COLUMN club_sessions.away_score; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.away_score IS 'Final away score at session close.';
+
+
+--
+-- Name: COLUMN club_sessions.profile_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.profile_id IS 'config_profiles.id active during the match (ADR-058). NULL for pre-migration rows.';
+
+
+--
+-- Name: COLUMN club_sessions.event_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.event_type IS 'Event category: match, training, tournament, other. Default match.';
+
+
+--
+-- Name: COLUMN club_sessions.ended_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.club_sessions.ended_by IS 'How the session was closed: remote, timeout, manual. NULL while open.';
+
+
+--
 -- Name: config_drafts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1769,6 +1772,43 @@ CREATE TABLE public.config_profiles (
     remote_pin_hash character varying(255) DEFAULT NULL::character varying,
     remote_pin_updated_at timestamp with time zone
 );
+
+
+--
+-- Name: connection_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.connection_events (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    site_id uuid NOT NULL,
+    event_type character varying(20) NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    reason character varying(100),
+    socket_id character varying(64),
+    client_ip character varying(45),
+    CONSTRAINT connection_events_event_type_check CHECK (((event_type)::text = ANY ((ARRAY['connected'::character varying, 'disconnected'::character varying])::text[])))
+);
+
+
+--
+-- Name: TABLE connection_events; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.connection_events IS 'Événements de connexion/déconnexion socket. Source de vérité de l''uptime, distincte de la table metrics (samples système toutes les 5 min).';
+
+
+--
+-- Name: COLUMN connection_events.event_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.connection_events.event_type IS 'connected (socket authentifié) ou disconnected (socket fermé, hors stale-socket racing).';
+
+
+--
+-- Name: COLUMN connection_events.reason; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.connection_events.reason IS 'Raison de l''événement: pour disconnected, valeur Socket.IO (transport close, ping timeout, server namespace disconnect, etc.). NULL pour connected.';
 
 
 --
@@ -1875,96 +1915,6 @@ CREATE TABLE public.metrics (
 
 
 --
--- Name: connection_events; Type: TABLE; Schema: public; Owner: -
--- ADR-099: source de vérité de l'uptime, distincte de metrics (samples 5 min).
---
-
-CREATE TABLE public.connection_events (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    site_id uuid NOT NULL,
-    event_type character varying(20) NOT NULL,
-    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
-    reason character varying(100),
-    socket_id character varying(64),
-    client_ip character varying(45),
-    CONSTRAINT connection_events_event_type_check
-      CHECK (event_type IN ('connected', 'disconnected'))
-);
-
-
---
--- Name: neopro_template_versions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.neopro_template_versions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    props_schema jsonb NOT NULL,
-    default_props jsonb NOT NULL,
-    snapshot_reason text,
-    created_by uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: neopro_templates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.neopro_templates (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    name character varying(255) NOT NULL,
-    composition_id character varying(100) NOT NULL,
-    description text,
-    props_schema jsonb DEFAULT '{}'::jsonb NOT NULL,
-    default_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    thumbnail_url character varying(500),
-    published boolean DEFAULT false NOT NULL,
-    created_by uuid,
-    created_at timestamp without time zone DEFAULT now(),
-    updated_at timestamp without time zone DEFAULT now(),
-    schema_version integer DEFAULT 1 NOT NULL,
-    duration_seconds numeric(6,2) DEFAULT 5.0 NOT NULL,
-    fps integer DEFAULT 30 NOT NULL,
-    site_id uuid,
-    canvas_width integer DEFAULT 1920 NOT NULL,
-    canvas_height integer DEFAULT 1080 NOT NULL,
-    test_render_at timestamp without time zone,
-    test_render_status text,
-    test_render_url text,
-    CONSTRAINT neopro_templates_test_render_status_check CHECK ((test_render_status = ANY (ARRAY['queued'::text, 'rendering'::text, 'success'::text, 'failed'::text])))
-);
-
-
---
--- Name: COLUMN neopro_templates.schema_version; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.neopro_templates.schema_version IS 'ADR-075/086 : 1 = legacy (composition codée), 2 = data-driven (runtime générique). Joueur détaillé = premier template 100 % data-driven.';
-
-
---
--- Name: COLUMN neopro_templates.site_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.neopro_templates.site_id IS 'ADR-075 V2 : NULL = template global (catalogue Neopro), UUID = template club perso (white-glove). Feature gate template_studio_club_scoped (Premium).';
-
-
---
--- Name: COLUMN neopro_templates.canvas_width; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.neopro_templates.canvas_width IS 'ADR-075 : largeur canvas Remotion (px). Défaut 1920 (16:9 TV).';
-
-
---
--- Name: COLUMN neopro_templates.canvas_height; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.neopro_templates.canvas_height IS 'ADR-075 : hauteur canvas Remotion (px). Défaut 1080 (16:9 TV).';
-
-
---
 -- Name: network_profile_summary; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -2061,6 +2011,40 @@ CREATE VIEW public.pending_commands_summary WITH (security_invoker='true') AS
    FROM (public.sites s
      LEFT JOIN public.pending_commands pc ON ((pc.site_id = s.id)))
   GROUP BY s.id, s.club_name, s.status;
+
+
+--
+-- Name: players; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.players (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    site_id uuid,
+    prenom text NOT NULL,
+    nom text NOT NULL,
+    numero integer,
+    poste text,
+    photo_raw_url text,
+    photo_cutout_url text,
+    cutout_status text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT players_cutout_status_check CHECK ((cutout_status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text])))
+);
+
+
+--
+-- Name: TABLE players; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.players IS 'Roster joueurs Studio V1. Détourage via worker rembg séparé (container Python Railway). RGPD : photos servies via URL FTP publique (cf risque #8 spec).';
+
+
+--
+-- Name: COLUMN players.site_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.players.site_id IS 'NULL = joueur global (catalogue admin, octroyé via studio_player_site_grants). UUID = joueur exclusif à ce site (créé par user club ou attribution directe).';
 
 
 --
@@ -2178,7 +2162,7 @@ CREATE TABLE public.recurring_schedules (
     CONSTRAINT check_frequency CHECK (((frequency IS NULL) OR ((frequency)::text = ANY (ARRAY[('daily'::character varying)::text, ('weekly'::character varying)::text, ('monthly'::character varying)::text])))),
     CONSTRAINT check_hour CHECK (((hour >= 0) AND (hour <= 23))),
     CONSTRAINT check_minute CHECK (((minute >= 0) AND (minute <= 59))),
-    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY (ARRAY[('report'::character varying)::text, ('cleanup'::character varying)::text, ('aggregation'::character varying)::text, ('backup'::character varying)::text, ('objective_check'::character varying)::text, ('pdf_report'::character varying)::text, ('match_session_autoclose'::character varying)::text, ('video_ftp_audit'::character varying)::text, ('connection_events_purge'::character varying)::text, ('test_render_cleanup'::character varying)::text, ('pending_commands_drain'::character varying)::text])))
+    CONSTRAINT check_task_type CHECK (((task_type)::text = ANY ((ARRAY['report'::character varying, 'cleanup'::character varying, 'aggregation'::character varying, 'backup'::character varying, 'objective_check'::character varying, 'pdf_report'::character varying, 'match_session_autoclose'::character varying, 'video_ftp_audit'::character varying, 'connection_events_purge'::character varying, 'test_render_cleanup'::character varying, 'pending_commands_drain'::character varying])::text[])))
 );
 
 ALTER TABLE ONLY public.recurring_schedules FORCE ROW LEVEL SECURITY;
@@ -2277,32 +2261,63 @@ CREATE TABLE public.remote_commands (
 
 
 --
--- Name: remotion_render_jobs; Type: TABLE; Schema: public; Owner: -
+-- Name: remote_preferences; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.remotion_render_jobs (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    title text NOT NULL,
-    requested_by uuid,
-    requested_for_site_id uuid,
-    status text DEFAULT 'pending'::text NOT NULL,
-    progress smallint DEFAULT 0 NOT NULL,
-    phase text,
-    video_id uuid,
-    video_url text,
-    file_size bigint,
-    error_message text,
-    claimed_by text,
-    claimed_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT remotion_render_jobs_progress_check CHECK (((progress >= 0) AND (progress <= 100))),
-    CONSTRAINT remotion_render_jobs_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'completed'::text, 'failed'::text])))
+CREATE TABLE public.remote_preferences (
+    site_id uuid NOT NULL,
+    profile_id uuid NOT NULL,
+    prefs jsonb DEFAULT '{}'::jsonb NOT NULL,
+    widgets jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: TABLE remote_preferences; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.remote_preferences IS 'ADR-102 — Préférences UX télécommande par (site, profil). prefs={haptics,highContrast,lockRotation,fontSize,layoutMobile,layoutDesktop}. widgets={score,chrono,breaking}.';
+
+
+--
+-- Name: render_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.render_requests (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    site_id uuid NOT NULL,
+    template_id uuid NOT NULL,
+    props_json jsonb NOT NULL,
+    status text NOT NULL,
+    output_url text,
+    error_msg text,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT render_requests_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'rendering'::text, 'ready'::text, 'failed'::text])))
+);
+
+
+--
+-- Name: TABLE render_requests; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.render_requests IS 'Queue PG-pollée par studio-render-worker. Index partiel sur status actifs pour SKIP LOCKED rapide.';
+
+
+--
+-- Name: COLUMN render_requests.props_json; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.render_requests.props_json IS 'Payload résolu après cascade brand kit + bindings du manifest. C''est ce qui est passé en inputProps à renderMedia/renderStill.';
+
+
+--
+-- Name: COLUMN render_requests.output_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.render_requests.output_url IS 'URL publique FTP du MP4/PNG final, alimentée par le worker.';
 
 
 --
@@ -2484,6 +2499,35 @@ CREATE TABLE public.schema_migrations (
     name character varying(255) NOT NULL,
     applied_at timestamp without time zone DEFAULT now()
 );
+
+
+--
+-- Name: site_brand_kits; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.site_brand_kits (
+    site_id uuid NOT NULL,
+    club_name text,
+    colors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    logos_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    fonts_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    sponsors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: TABLE site_brand_kits; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.site_brand_kits IS 'Identité visuelle Studio V1 — 1 ligne par site. Consommée par le résolveur de bindings.';
+
+
+--
+-- Name: COLUMN site_brand_kits.sponsors_json; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.site_brand_kits.sponsors_json IS 'V1 : reste vide. V2 : alimenté en lecture depuis site_sponsors quand un template déclare un slot sponsor.';
 
 
 --
@@ -2679,6 +2723,118 @@ CREATE VIEW public.sponsor_impressions_bridge WITH (security_invoker='true') AS
 
 
 --
+-- Name: studio_assets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.studio_assets (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    filename text NOT NULL,
+    ftp_path text NOT NULL,
+    mime_type text NOT NULL,
+    file_size bigint NOT NULL,
+    checksum_sha256 text NOT NULL,
+    width integer,
+    height integer,
+    duration_ms integer,
+    tags text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    uploaded_by uuid,
+    uploaded_at timestamp with time zone DEFAULT now() NOT NULL,
+    asset_kind text DEFAULT 'file'::text NOT NULL,
+    frame_count integer,
+    frame_pattern text,
+    CONSTRAINT studio_assets_asset_kind_check CHECK ((asset_kind = ANY (ARRAY['file'::text, 'directory'::text])))
+);
+
+
+--
+-- Name: TABLE studio_assets; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.studio_assets IS 'Pool global d''assets Templates Studio (textures, watermarks, vidéos lensflare, etc.). Dédupliqué par checksum_sha256 — un re-upload du même contenu retourne la row existante.';
+
+
+--
+-- Name: COLUMN studio_assets.ftp_path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_assets.ftp_path IS 'Path relatif dans le bucket FTP Hostinger (ex: studio-assets/textures/metal-<hash>.png). URL publique = getFtpPublicUrl(ftp_path).';
+
+
+--
+-- Name: COLUMN studio_assets.checksum_sha256; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_assets.checksum_sha256 IS 'Hash content-addressable. UNIQUE = clé de dédup côté upsert.';
+
+
+--
+-- Name: COLUMN studio_assets.asset_kind; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_assets.asset_kind IS 'file = 1 fichier (image/video/font). directory = séquence de N frames PNG (masques alpha, ADR-128).';
+
+
+--
+-- Name: COLUMN studio_assets.frame_count; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_assets.frame_count IS 'Nombre de frames pour asset_kind=directory. NULL pour asset_kind=file.';
+
+
+--
+-- Name: COLUMN studio_assets.frame_pattern; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_assets.frame_pattern IS 'Pattern d''interpolation pour asset_kind=directory, ex: "frame_{i:03d}.png" → frame_001.png, frame_002.png... Indices 1-based.';
+
+
+--
+-- Name: studio_player_site_grants; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.studio_player_site_grants (
+    player_id uuid NOT NULL,
+    site_id uuid NOT NULL,
+    granted_by uuid,
+    granted_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: TABLE studio_player_site_grants; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.studio_player_site_grants IS 'ADR-082 pattern : grants explicites des joueurs globaux (players.site_id IS NULL) vers des sites spécifiques. Ne s''applique pas aux joueurs site-locaux (players.site_id = uuid).';
+
+
+--
+-- Name: studio_template_asset_bindings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.studio_template_asset_bindings (
+    template_slug text NOT NULL,
+    asset_key text NOT NULL,
+    asset_id uuid NOT NULL,
+    bound_by uuid,
+    bound_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: TABLE studio_template_asset_bindings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.studio_template_asset_bindings IS 'Liaison template_slug × manifest.requiredAssets[].key vers studio_assets. Lue par le worker render pour résoudre __assets dans les inputProps.';
+
+
+--
+-- Name: COLUMN studio_template_asset_bindings.asset_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.studio_template_asset_bindings.asset_id IS 'ON DELETE RESTRICT : la suppression d''un asset utilisé est refusée par la DB (le controller rend 409 avec la liste des bindings concernés).';
+
+
+--
 -- Name: subscription_history; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2767,179 +2923,44 @@ CREATE VIEW public.subscription_status_summary WITH (security_invoker='true') AS
 
 
 --
--- Name: template_image_slots; Type: TABLE; Schema: public; Owner: -
+-- Name: template_definitions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.template_image_slots (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    slot_key character varying(64) NOT NULL,
-    label character varying(200) NOT NULL,
-    position_x numeric(5,4) NOT NULL,
-    position_y numeric(5,4) NOT NULL,
-    width numeric(5,4) NOT NULL,
-    height numeric(5,4) NOT NULL,
-    appear_at numeric(5,2) NOT NULL,
-    appear_duration numeric(4,2) DEFAULT 0.4 NOT NULL,
-    animation character varying(20) DEFAULT 'fade'::character varying NOT NULL,
-    aspect_ratio character varying(16),
-    required boolean DEFAULT false NOT NULL,
-    sort_order integer DEFAULT 0 NOT NULL,
-    anchor character varying(16) DEFAULT 'center'::character varying NOT NULL,
-    fit_mode character varying(32) DEFAULT 'contain'::character varying NOT NULL,
-    safe_top_pct numeric(5,2),
-    safe_left_pct numeric(5,2),
-    safe_width_pct numeric(5,2),
-    safe_height_pct numeric(5,2),
-    overflow character varying(16) DEFAULT 'hidden'::character varying NOT NULL,
-    animation_direction character varying(4) DEFAULT 'in'::character varying NOT NULL,
-    layer_id uuid,
-    scale_from numeric(5,3),
-    scale_to numeric(5,3),
-    CONSTRAINT template_image_slots_anchor_check CHECK (((anchor)::text = ANY ((ARRAY['top-left'::character varying, 'top-center'::character varying, 'top-right'::character varying, 'center-left'::character varying, 'center'::character varying, 'center-right'::character varying, 'bottom-left'::character varying, 'bottom-center'::character varying, 'bottom-right'::character varying])::text[]))),
-    CONSTRAINT template_image_slots_animation_check CHECK (((animation)::text = ANY ((ARRAY['none'::character varying, 'fade'::character varying, 'slide-up'::character varying, 'slide-down'::character varying, 'scale-in'::character varying, 'blur-in'::character varying, 'zoom'::character varying, 'logo-pop'::character varying])::text[]))),
-    CONSTRAINT template_image_slots_animation_direction_check CHECK (((animation_direction)::text = ANY ((ARRAY['in'::character varying, 'out'::character varying])::text[]))),
-    CONSTRAINT template_image_slots_fit_mode_check CHECK (((fit_mode)::text = ANY ((ARRAY['contain'::character varying, 'cover'::character varying, 'fill-width-anchor-top'::character varying, 'fill-height-anchor-left'::character varying])::text[]))),
-    CONSTRAINT template_image_slots_height_check CHECK (((height >= (0)::numeric) AND (height <= (1)::numeric))),
-    CONSTRAINT template_image_slots_overflow_check CHECK (((overflow)::text = ANY ((ARRAY['hidden'::character varying, 'visible'::character varying, 'top'::character varying, 'bottom'::character varying, 'left'::character varying, 'right'::character varying])::text[]))),
-    CONSTRAINT template_image_slots_position_x_check CHECK (((position_x >= (0)::numeric) AND (position_x <= (1)::numeric))),
-    CONSTRAINT template_image_slots_position_y_check CHECK (((position_y >= (0)::numeric) AND (position_y <= (1)::numeric))),
-    CONSTRAINT template_image_slots_width_check CHECK (((width >= (0)::numeric) AND (width <= (1)::numeric)))
-);
-
-
---
--- Name: TABLE template_image_slots; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.template_image_slots IS 'ADR-075 : slots image éditables (position + dimensions + timing)';
-
-
---
--- Name: template_layers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.template_layers (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    name character varying(100) NOT NULL,
-    video_url text NOT NULL,
-    z_index integer NOT NULL,
-    mask_top numeric(4,3) DEFAULT 0 NOT NULL,
-    mask_bottom numeric(4,3) DEFAULT 0 NOT NULL,
-    mask_left numeric(4,3) DEFAULT 0 NOT NULL,
-    mask_right numeric(4,3) DEFAULT 0 NOT NULL,
+CREATE TABLE public.template_definitions (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    slug text NOT NULL,
+    version text NOT NULL,
+    label text NOT NULL,
+    description text,
+    kind text NOT NULL,
+    manifest_json jsonb NOT NULL,
+    remotion_composition_id text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    duration_ms integer DEFAULT 5000 NOT NULL,
-    CONSTRAINT template_layers_duration_ms_check CHECK (((duration_ms >= 0) AND (duration_ms <= 600000))),
-    CONSTRAINT template_layers_mask_bottom_check CHECK (((mask_bottom >= (0)::numeric) AND (mask_bottom <= (1)::numeric))),
-    CONSTRAINT template_layers_mask_left_check CHECK (((mask_left >= (0)::numeric) AND (mask_left <= (1)::numeric))),
-    CONSTRAINT template_layers_mask_right_check CHECK (((mask_right >= (0)::numeric) AND (mask_right <= (1)::numeric))),
-    CONSTRAINT template_layers_mask_top_check CHECK (((mask_top >= (0)::numeric) AND (mask_top <= (1)::numeric)))
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT template_definitions_kind_check CHECK ((kind = ANY (ARRAY['video'::text, 'still'::text])))
 );
 
 
 --
--- Name: TABLE template_layers; Type: COMMENT; Schema: public; Owner: -
+-- Name: TABLE template_definitions; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.template_layers IS 'ADR-075 : couches alpha empilées en Z (Gabin AE → MOV)';
-
-
---
--- Name: COLUMN template_layers.duration_ms; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.template_layers.duration_ms IS 'ADR-086 : durée du layer en ms. Source de vérité pour les slots enfants.';
+COMMENT ON TABLE public.template_definitions IS 'Templates Studio V1 — catalogue alimenté par scan des manifest.json au boot. Lecture seule depuis l''UI.';
 
 
 --
--- Name: template_text_fields; Type: TABLE; Schema: public; Owner: -
+-- Name: COLUMN template_definitions.kind; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE TABLE public.template_text_fields (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    slot_key character varying(64) NOT NULL,
-    label character varying(200) NOT NULL,
-    position_x numeric(5,4) NOT NULL,
-    position_y numeric(5,4) NOT NULL,
-    max_width numeric(5,4) DEFAULT 0.8 NOT NULL,
-    font_family character varying(80) DEFAULT 'Anton'::character varying NOT NULL,
-    font_size integer NOT NULL,
-    color character varying(16) DEFAULT '#FFFFFF'::character varying NOT NULL,
-    align character varying(10) DEFAULT 'center'::character varying NOT NULL,
-    appear_at numeric(5,2) NOT NULL,
-    appear_duration numeric(4,2) DEFAULT 0.4 NOT NULL,
-    animation character varying(20) DEFAULT 'fade'::character varying NOT NULL,
-    default_value text DEFAULT ''::text NOT NULL,
-    max_chars integer,
-    multiline boolean DEFAULT false NOT NULL,
-    required boolean DEFAULT true NOT NULL,
-    sort_order integer DEFAULT 0 NOT NULL,
-    always_visible boolean DEFAULT false NOT NULL,
-    scale_from numeric(4,2) DEFAULT 0.70 NOT NULL,
-    scale_to numeric(4,2) DEFAULT 1.00 NOT NULL,
-    layer_id uuid NOT NULL,
-    respect_alpha boolean DEFAULT false NOT NULL,
-    animation_direction character varying(4) DEFAULT 'in'::character varying NOT NULL,
-    CONSTRAINT template_text_fields_align_check CHECK (((align)::text = ANY ((ARRAY['left'::character varying, 'center'::character varying, 'right'::character varying])::text[]))),
-    CONSTRAINT template_text_fields_animation_check CHECK (((animation)::text = ANY ((ARRAY['none'::character varying, 'fade'::character varying, 'slide-up'::character varying, 'slide-down'::character varying, 'scale-in'::character varying, 'blur-in'::character varying, 'zoom'::character varying, 'logo-pop'::character varying])::text[]))),
-    CONSTRAINT template_text_fields_animation_direction_check CHECK (((animation_direction)::text = ANY ((ARRAY['in'::character varying, 'out'::character varying])::text[]))),
-    CONSTRAINT template_text_fields_max_width_check CHECK (((max_width >= (0)::numeric) AND (max_width <= (1)::numeric))),
-    CONSTRAINT template_text_fields_position_x_check CHECK (((position_x >= (0)::numeric) AND (position_x <= (1)::numeric))),
-    CONSTRAINT template_text_fields_position_y_check CHECK (((position_y >= (0)::numeric) AND (position_y <= (1)::numeric)))
-);
+COMMENT ON COLUMN public.template_definitions.kind IS 'video → renderMedia (MP4) ; still → renderStill (PNG, 1 frame).';
 
 
 --
--- Name: TABLE template_text_fields; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN template_definitions.manifest_json; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.template_text_fields IS 'ADR-075 : champs texte éditables par l''user (position + timing + animation)';
-
-
---
--- Name: COLUMN template_text_fields.always_visible; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.template_text_fields.always_visible IS 'Si TRUE, le texte est visible sur toute la durée sans timecode (ignore appear_at / appear_duration)';
-
-
---
--- Name: COLUMN template_text_fields.scale_from; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.template_text_fields.scale_from IS 'Valeur de départ de scale pour l''animation scale-in (défaut 0.70)';
-
-
---
--- Name: COLUMN template_text_fields.scale_to; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.template_text_fields.scale_to IS 'Valeur d''arrivée de scale pour l''animation scale-in (défaut 1.00)';
-
-
---
--- Name: template_variants; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.template_variants (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    template_id uuid NOT NULL,
-    name character varying(100) NOT NULL,
-    background_video_url text NOT NULL,
-    thumbnail_url text,
-    sort_order integer DEFAULT 0 NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: TABLE template_variants; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.template_variants IS 'ADR-075 : variantes couleur/ton d''un template (ex: rouge/bleu/vert)';
+COMMENT ON COLUMN public.template_definitions.manifest_json IS 'Le manifest complet ({inputSchema, bindings, format, ...}) pour rendre l''UI form-gen sans aller-retour disque.';
 
 
 --
@@ -3061,6 +3082,23 @@ CREATE TABLE public.video_club_grants (
     video_id uuid NOT NULL,
     site_id uuid NOT NULL,
     created_at timestamp without time zone DEFAULT now()
+);
+
+
+--
+-- Name: video_ftp_audit_warnings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.video_ftp_audit_warnings (
+    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
+    video_id uuid NOT NULL,
+    expected_path text NOT NULL,
+    status character varying(32) NOT NULL,
+    http_status integer,
+    first_detected_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_checked_at timestamp with time zone DEFAULT now() NOT NULL,
+    notified_at timestamp with time zone,
+    CONSTRAINT video_ftp_audit_warnings_status_check CHECK (((status)::text = ANY ((ARRAY['missing'::character varying, 'unreachable'::character varying])::text[])))
 );
 
 
@@ -3353,6 +3391,14 @@ ALTER TABLE ONLY public.config_profiles
 
 
 --
+-- Name: connection_events connection_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connection_events
+    ADD CONSTRAINT connection_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: content_deployments content_deployments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3393,30 +3439,6 @@ ALTER TABLE ONLY public.metrics
 
 
 --
--- Name: connection_events connection_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.connection_events
-    ADD CONSTRAINT connection_events_pkey PRIMARY KEY (id);
-
-
---
--- Name: neopro_template_versions neopro_template_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_template_versions
-    ADD CONSTRAINT neopro_template_versions_pkey PRIMARY KEY (id);
-
-
---
--- Name: neopro_templates neopro_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_templates
-    ADD CONSTRAINT neopro_templates_pkey PRIMARY KEY (id);
-
-
---
 -- Name: orchestrated_deployments orchestrated_deployments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3438,6 +3460,14 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 ALTER TABLE ONLY public.pending_commands
     ADD CONSTRAINT pending_commands_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: players players_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_pkey PRIMARY KEY (id);
 
 
 --
@@ -3505,11 +3535,19 @@ ALTER TABLE ONLY public.remote_commands
 
 
 --
--- Name: remotion_render_jobs remotion_render_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: remote_preferences remote_preferences_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.remotion_render_jobs
-    ADD CONSTRAINT remotion_render_jobs_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.remote_preferences
+    ADD CONSTRAINT remote_preferences_pkey PRIMARY KEY (site_id, profile_id);
+
+
+--
+-- Name: render_requests render_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.render_requests
+    ADD CONSTRAINT render_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -3590,6 +3628,14 @@ ALTER TABLE ONLY public.scheduled_reports
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (name);
+
+
+--
+-- Name: site_brand_kits site_brand_kits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site_brand_kits
+    ADD CONSTRAINT site_brand_kits_pkey PRIMARY KEY (site_id);
 
 
 --
@@ -3705,6 +3751,46 @@ ALTER TABLE ONLY public.advertisers
 
 
 --
+-- Name: studio_assets studio_assets_checksum_sha256_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_assets
+    ADD CONSTRAINT studio_assets_checksum_sha256_key UNIQUE (checksum_sha256);
+
+
+--
+-- Name: studio_assets studio_assets_ftp_path_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_assets
+    ADD CONSTRAINT studio_assets_ftp_path_key UNIQUE (ftp_path);
+
+
+--
+-- Name: studio_assets studio_assets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_assets
+    ADD CONSTRAINT studio_assets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: studio_player_site_grants studio_player_site_grants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_player_site_grants
+    ADD CONSTRAINT studio_player_site_grants_pkey PRIMARY KEY (player_id, site_id);
+
+
+--
+-- Name: studio_template_asset_bindings studio_template_asset_bindings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_template_asset_bindings
+    ADD CONSTRAINT studio_template_asset_bindings_pkey PRIMARY KEY (template_slug, asset_key);
+
+
+--
 -- Name: subscription_history subscription_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3721,51 +3807,19 @@ ALTER TABLE ONLY public.subscription_suspension_reasons
 
 
 --
--- Name: template_image_slots template_image_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: template_definitions template_definitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.template_image_slots
-    ADD CONSTRAINT template_image_slots_pkey PRIMARY KEY (id);
-
-
---
--- Name: template_image_slots template_image_slots_template_id_slot_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_image_slots
-    ADD CONSTRAINT template_image_slots_template_id_slot_key_key UNIQUE (template_id, slot_key);
+ALTER TABLE ONLY public.template_definitions
+    ADD CONSTRAINT template_definitions_pkey PRIMARY KEY (id);
 
 
 --
--- Name: template_layers template_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: template_definitions template_definitions_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.template_layers
-    ADD CONSTRAINT template_layers_pkey PRIMARY KEY (id);
-
-
---
--- Name: template_text_fields template_text_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_text_fields
-    ADD CONSTRAINT template_text_fields_pkey PRIMARY KEY (id);
-
-
---
--- Name: template_text_fields template_text_fields_template_id_slot_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_text_fields
-    ADD CONSTRAINT template_text_fields_template_id_slot_key_key UNIQUE (template_id, slot_key);
-
-
---
--- Name: template_variants template_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_variants
-    ADD CONSTRAINT template_variants_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.template_definitions
+    ADD CONSTRAINT template_definitions_slug_key UNIQUE (slug);
 
 
 --
@@ -3838,6 +3892,22 @@ ALTER TABLE ONLY public.video_categories
 
 ALTER TABLE ONLY public.video_club_grants
     ADD CONSTRAINT video_club_grants_pkey PRIMARY KEY (video_id, site_id);
+
+
+--
+-- Name: video_ftp_audit_warnings video_ftp_audit_warnings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_ftp_audit_warnings
+    ADD CONSTRAINT video_ftp_audit_warnings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: video_ftp_audit_warnings video_ftp_audit_warnings_video_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_ftp_audit_warnings
+    ADD CONSTRAINT video_ftp_audit_warnings_video_id_key UNIQUE (video_id);
 
 
 --
@@ -3938,6 +4008,13 @@ CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at);
 
 
 --
+-- Name: idx_alerts_dedup_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_dedup_active ON public.alerts USING btree (site_id, alert_type) WHERE ((status)::text = 'active'::text);
+
+
+--
 -- Name: idx_alerts_site; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3949,13 +4026,6 @@ CREATE INDEX idx_alerts_site ON public.alerts USING btree (site_id, created_at D
 --
 
 CREATE INDEX idx_alerts_status ON public.alerts USING btree (status, severity);
-
-
---
--- Name: idx_alerts_dedup_active; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_alerts_dedup_active ON public.alerts USING btree (site_id, alert_type) WHERE ((status)::text = 'active'::text);
 
 
 --
@@ -4071,6 +4141,20 @@ CREATE INDEX idx_club_sessions_date ON public.club_sessions USING btree (started
 
 
 --
+-- Name: idx_club_sessions_match_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_club_sessions_match_date ON public.club_sessions USING btree (site_id, match_date DESC NULLS LAST);
+
+
+--
+-- Name: idx_club_sessions_open; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_club_sessions_open ON public.club_sessions USING btree (started_at) WHERE (ended_at IS NULL);
+
+
+--
 -- Name: idx_club_sessions_site; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4134,6 +4218,20 @@ CREATE INDEX idx_config_profiles_site ON public.config_profiles USING btree (sit
 
 
 --
+-- Name: idx_connection_events_occurred_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_occurred_at ON public.connection_events USING btree (occurred_at);
+
+
+--
+-- Name: idx_connection_events_site_time; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_connection_events_site_time ON public.connection_events USING btree (site_id, occurred_at DESC);
+
+
+--
 -- Name: idx_content_deployments_orchestrated; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4176,27 +4274,6 @@ CREATE INDEX idx_hostapd_events_type ON public.hostapd_events USING btree (event
 
 
 --
--- Name: idx_image_slots_layer_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_image_slots_layer_id ON public.template_image_slots USING btree (layer_id);
-
-
---
--- Name: idx_image_template; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_image_template ON public.template_image_slots USING btree (template_id, sort_order);
-
-
---
--- Name: idx_layers_template; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_layers_template ON public.template_layers USING btree (template_id, z_index);
-
-
---
 -- Name: idx_metrics_recorded_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4208,13 +4285,6 @@ CREATE INDEX idx_metrics_recorded_at ON public.metrics USING btree (recorded_at)
 --
 
 CREATE INDEX idx_metrics_site_time ON public.metrics USING btree (site_id, recorded_at DESC);
-
-
---
--- Name: idx_neopro_templates_site_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_neopro_templates_site_id ON public.neopro_templates USING btree (site_id) WHERE (site_id IS NOT NULL);
 
 
 --
@@ -4400,24 +4470,10 @@ CREATE INDEX idx_remote_commands_created_at ON public.remote_commands USING btre
 
 
 --
--- Name: idx_render_jobs_cleanup; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_remote_preferences_updated_at; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_render_jobs_cleanup ON public.remotion_render_jobs USING btree (created_at) WHERE (status = ANY (ARRAY['completed'::text, 'failed'::text]));
-
-
---
--- Name: idx_render_jobs_pending; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_render_jobs_pending ON public.remotion_render_jobs USING btree (created_at) WHERE (status = 'pending'::text);
-
-
---
--- Name: idx_render_jobs_requester; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_render_jobs_requester ON public.remotion_render_jobs USING btree (requested_by, created_at DESC);
+CREATE INDEX idx_remote_preferences_updated_at ON public.remote_preferences USING btree (updated_at DESC);
 
 
 --
@@ -4708,6 +4764,48 @@ CREATE INDEX idx_ssdvs_sponsor ON public.site_sponsor_daily_video_stats USING bt
 
 
 --
+-- Name: idx_studio_assets_checksum; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_assets_checksum ON public.studio_assets USING btree (checksum_sha256);
+
+
+--
+-- Name: idx_studio_assets_mime; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_assets_mime ON public.studio_assets USING btree (mime_type);
+
+
+--
+-- Name: idx_studio_assets_tags; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_assets_tags ON public.studio_assets USING gin (tags);
+
+
+--
+-- Name: idx_studio_bindings_asset; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_bindings_asset ON public.studio_template_asset_bindings USING btree (asset_id);
+
+
+--
+-- Name: idx_studio_player_grants_player; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_player_grants_player ON public.studio_player_site_grants USING btree (player_id);
+
+
+--
+-- Name: idx_studio_player_grants_site; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_studio_player_grants_site ON public.studio_player_site_grants USING btree (site_id);
+
+
+--
 -- Name: idx_subscription_history_created; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4719,27 +4817,6 @@ CREATE INDEX idx_subscription_history_created ON public.subscription_history USI
 --
 
 CREATE INDEX idx_subscription_history_site ON public.subscription_history USING btree (site_id);
-
-
---
--- Name: idx_template_versions_template; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_template_versions_template ON public.neopro_template_versions USING btree (template_id, created_at DESC);
-
-
---
--- Name: idx_text_fields_layer_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_text_fields_layer_id ON public.template_text_fields USING btree (layer_id);
-
-
---
--- Name: idx_text_template; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_text_template ON public.template_text_fields USING btree (template_id, sort_order);
 
 
 --
@@ -4792,13 +4869,6 @@ CREATE INDEX idx_users_site_id ON public.users USING btree (site_id) WHERE (site
 
 
 --
--- Name: idx_variants_template; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_variants_template ON public.template_variants USING btree (template_id, sort_order);
-
-
---
 -- Name: idx_vcg_site_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4817,6 +4887,13 @@ CREATE INDEX idx_vcg_video_id ON public.video_club_grants USING btree (video_id)
 --
 
 CREATE INDEX idx_video_categories_site_id ON public.video_categories USING btree (site_id, sort_order);
+
+
+--
+-- Name: idx_video_ftp_audit_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_video_ftp_audit_status ON public.video_ftp_audit_warnings USING btree (status, last_checked_at DESC);
 
 
 --
@@ -4967,17 +5044,31 @@ CREATE INDEX idx_videos_uploaded_for_site ON public.videos USING btree (uploaded
 
 
 --
--- Name: neopro_templates trg_neopro_templates_snapshot; Type: TRIGGER; Schema: public; Owner: -
+-- Name: players_cutout_pending_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_neopro_templates_snapshot AFTER INSERT OR UPDATE ON public.neopro_templates FOR EACH ROW EXECUTE FUNCTION public.neopro_templates_snapshot_version();
+CREATE INDEX players_cutout_pending_idx ON public.players USING btree (cutout_status, created_at) WHERE (cutout_status = ANY (ARRAY['pending'::text, 'processing'::text]));
 
 
 --
--- Name: remotion_render_jobs trg_remotion_render_jobs_updated_at; Type: TRIGGER; Schema: public; Owner: -
+-- Name: players_site_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE TRIGGER trg_remotion_render_jobs_updated_at BEFORE UPDATE ON public.remotion_render_jobs FOR EACH ROW EXECUTE FUNCTION public.remotion_render_jobs_set_updated_at();
+CREATE INDEX players_site_idx ON public.players USING btree (site_id);
+
+
+--
+-- Name: render_requests_site_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX render_requests_site_idx ON public.render_requests USING btree (site_id, created_at DESC);
+
+
+--
+-- Name: render_requests_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX render_requests_status_idx ON public.render_requests USING btree (status, created_at) WHERE (status = ANY (ARRAY['queued'::text, 'rendering'::text]));
 
 
 --
@@ -5090,30 +5181,6 @@ ALTER TABLE ONLY public.alerts
 
 
 --
--- Name: connection_events connection_events_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.connection_events
-    ADD CONSTRAINT connection_events_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
-
-
---
--- Name: idx_connection_events_site_time; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_connection_events_site_time
-  ON public.connection_events USING btree (site_id, occurred_at DESC);
-
-
---
--- Name: idx_connection_events_occurred_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_connection_events_occurred_at
-  ON public.connection_events USING btree (occurred_at);
-
-
---
 -- Name: audit_logs audit_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5183,6 +5250,14 @@ ALTER TABLE ONLY public.club_permissions
 
 ALTER TABLE ONLY public.club_permissions
     ADD CONSTRAINT club_permissions_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: club_sessions club_sessions_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.club_sessions
+    ADD CONSTRAINT club_sessions_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.config_profiles(id) ON DELETE SET NULL;
 
 
 --
@@ -5274,6 +5349,14 @@ ALTER TABLE ONLY public.config_profiles
 
 
 --
+-- Name: connection_events connection_events_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connection_events
+    ADD CONSTRAINT connection_events_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
 -- Name: content_deployments content_deployments_deployed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5362,38 +5445,6 @@ ALTER TABLE ONLY public.metrics
 
 
 --
--- Name: neopro_template_versions neopro_template_versions_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_template_versions
-    ADD CONSTRAINT neopro_template_versions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: neopro_template_versions neopro_template_versions_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_template_versions
-    ADD CONSTRAINT neopro_template_versions_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
-
-
---
--- Name: neopro_templates neopro_templates_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_templates
-    ADD CONSTRAINT neopro_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: neopro_templates neopro_templates_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.neopro_templates
-    ADD CONSTRAINT neopro_templates_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
-
-
---
 -- Name: orchestrated_deployments orchestrated_deployments_draft_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5439,6 +5490,14 @@ ALTER TABLE ONLY public.pending_commands
 
 ALTER TABLE ONLY public.pending_commands
     ADD CONSTRAINT pending_commands_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: players players_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.players
+    ADD CONSTRAINT players_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id);
 
 
 --
@@ -5522,35 +5581,35 @@ ALTER TABLE ONLY public.remote_commands
 
 
 --
--- Name: remotion_render_jobs remotion_render_jobs_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: remote_preferences remote_preferences_profile_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.remotion_render_jobs
-    ADD CONSTRAINT remotion_render_jobs_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: remotion_render_jobs remotion_render_jobs_requested_for_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.remotion_render_jobs
-    ADD CONSTRAINT remotion_render_jobs_requested_for_site_id_fkey FOREIGN KEY (requested_for_site_id) REFERENCES public.sites(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.remote_preferences
+    ADD CONSTRAINT remote_preferences_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.config_profiles(id) ON DELETE CASCADE;
 
 
 --
--- Name: remotion_render_jobs remotion_render_jobs_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: remote_preferences remote_preferences_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.remotion_render_jobs
-    ADD CONSTRAINT remotion_render_jobs_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.remote_preferences
+    ADD CONSTRAINT remote_preferences_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
 
 
 --
--- Name: remotion_render_jobs remotion_render_jobs_video_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: render_requests render_requests_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.remotion_render_jobs
-    ADD CONSTRAINT remotion_render_jobs_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.render_requests
+    ADD CONSTRAINT render_requests_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id);
+
+
+--
+-- Name: render_requests render_requests_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.render_requests
+    ADD CONSTRAINT render_requests_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.template_definitions(id);
 
 
 --
@@ -5583,6 +5642,14 @@ ALTER TABLE ONLY public.scheduled_reports
 
 ALTER TABLE ONLY public.scheduled_reports
     ADD CONSTRAINT scheduled_reports_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.campaigns(id) ON DELETE SET NULL;
+
+
+--
+-- Name: site_brand_kits site_brand_kits_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site_brand_kits
+    ADD CONSTRAINT site_brand_kits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id);
 
 
 --
@@ -5730,6 +5797,54 @@ ALTER TABLE ONLY public.advertiser_videos
 
 
 --
+-- Name: studio_assets studio_assets_uploaded_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_assets
+    ADD CONSTRAINT studio_assets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: studio_player_site_grants studio_player_site_grants_granted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_player_site_grants
+    ADD CONSTRAINT studio_player_site_grants_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: studio_player_site_grants studio_player_site_grants_player_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_player_site_grants
+    ADD CONSTRAINT studio_player_site_grants_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id) ON DELETE CASCADE;
+
+
+--
+-- Name: studio_player_site_grants studio_player_site_grants_site_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_player_site_grants
+    ADD CONSTRAINT studio_player_site_grants_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
+
+
+--
+-- Name: studio_template_asset_bindings studio_template_asset_bindings_asset_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_template_asset_bindings
+    ADD CONSTRAINT studio_template_asset_bindings_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES public.studio_assets(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: studio_template_asset_bindings studio_template_asset_bindings_bound_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.studio_template_asset_bindings
+    ADD CONSTRAINT studio_template_asset_bindings_bound_by_fkey FOREIGN KEY (bound_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
 -- Name: subscription_history subscription_history_performed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5743,54 +5858,6 @@ ALTER TABLE ONLY public.subscription_history
 
 ALTER TABLE ONLY public.subscription_history
     ADD CONSTRAINT subscription_history_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE;
-
-
---
--- Name: template_image_slots template_image_slots_layer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_image_slots
-    ADD CONSTRAINT template_image_slots_layer_id_fkey FOREIGN KEY (layer_id) REFERENCES public.template_layers(id) ON DELETE CASCADE;
-
-
---
--- Name: template_image_slots template_image_slots_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_image_slots
-    ADD CONSTRAINT template_image_slots_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
-
-
---
--- Name: template_layers template_layers_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_layers
-    ADD CONSTRAINT template_layers_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
-
-
---
--- Name: template_text_fields template_text_fields_layer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_text_fields
-    ADD CONSTRAINT template_text_fields_layer_id_fkey FOREIGN KEY (layer_id) REFERENCES public.template_layers(id) ON DELETE CASCADE;
-
-
---
--- Name: template_text_fields template_text_fields_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_text_fields
-    ADD CONSTRAINT template_text_fields_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
-
-
---
--- Name: template_variants template_variants_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.template_variants
-    ADD CONSTRAINT template_variants_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.neopro_templates(id) ON DELETE CASCADE;
 
 
 --
@@ -5847,6 +5914,14 @@ ALTER TABLE ONLY public.video_club_grants
 
 ALTER TABLE ONLY public.video_club_grants
     ADD CONSTRAINT video_club_grants_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos(id) ON DELETE CASCADE;
+
+
+--
+-- Name: video_ftp_audit_warnings video_ftp_audit_warnings_video_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_ftp_audit_warnings
+    ADD CONSTRAINT video_ftp_audit_warnings_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos(id) ON DELETE CASCADE;
 
 
 --
@@ -6499,6 +6574,12 @@ ALTER TABLE public.config_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.config_profiles ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: connection_events; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.connection_events ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: content_deployments; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -6529,18 +6610,6 @@ ALTER TABLE public.hostapd_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.metrics ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: neopro_template_versions; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.neopro_template_versions ENABLE ROW LEVEL SECURITY;
-
---
--- Name: neopro_templates; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.neopro_templates ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: orchestrated_deployments; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -6557,6 +6626,12 @@ ALTER TABLE public.password_reset_tokens ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.pending_commands ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: players; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: profile_device_tokens; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6643,10 +6718,16 @@ ALTER TABLE public.remote_command_audit ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.remote_commands ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: remotion_render_jobs; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: remote_preferences; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-ALTER TABLE public.remotion_render_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.remote_preferences ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: render_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.render_requests ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: report_schedules; Type: ROW SECURITY; Schema: public; Owner: -
@@ -6689,6 +6770,12 @@ ALTER TABLE public.scheduled_reports ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.schema_migrations ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: site_brand_kits; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.site_brand_kits ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: config_drafts site_delete_own_config_drafts; Type: POLICY; Schema: public; Owner: -
@@ -7119,6 +7206,24 @@ ALTER TABLE public.software_updates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsor_access_tokens ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: studio_assets; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.studio_assets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: studio_player_site_grants; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.studio_player_site_grants ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: studio_template_asset_bindings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.studio_template_asset_bindings ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: subscription_history; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -7131,28 +7236,10 @@ ALTER TABLE public.subscription_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_suspension_reasons ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: template_image_slots; Type: ROW SECURITY; Schema: public; Owner: -
+-- Name: template_definitions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
-ALTER TABLE public.template_image_slots ENABLE ROW LEVEL SECURITY;
-
---
--- Name: template_layers; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.template_layers ENABLE ROW LEVEL SECURITY;
-
---
--- Name: template_text_fields; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.template_text_fields ENABLE ROW LEVEL SECURITY;
-
---
--- Name: template_variants; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.template_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.template_definitions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: update_deployments; Type: ROW SECURITY; Schema: public; Owner: -
@@ -7202,6 +7289,12 @@ ALTER TABLE public.video_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_club_grants ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: video_ftp_audit_warnings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.video_ftp_audit_warnings ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: video_plays; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -7226,165 +7319,6 @@ ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 CREATE EVENT TRIGGER ensure_rls ON ddl_command_end
          WHEN TAG IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
    EXECUTE FUNCTION public.rls_auto_enable();
-
-
---
--- Templates Studio V1 — système code-driven (cf migration add-templates-studio-v1.sql)
--- Snapshot ajouté ici pour que le CI migration-check.yml puisse poser les
--- migrations subséquentes (ex: add-studio-player-global-grants.sql) sur une
--- DB éphémère. `IF NOT EXISTS` partout pour rester compatible avec un replay
--- de la migration originale.
---
-
-CREATE TABLE IF NOT EXISTS public.template_definitions (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    slug text NOT NULL,
-    version text NOT NULL,
-    label text NOT NULL,
-    description text,
-    kind text NOT NULL,
-    manifest_json jsonb NOT NULL,
-    remotion_composition_id text NOT NULL,
-    is_active boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT template_definitions_kind_check CHECK ((kind = ANY (ARRAY['video'::text, 'still'::text]))),
-    CONSTRAINT template_definitions_pkey PRIMARY KEY (id),
-    CONSTRAINT template_definitions_slug_key UNIQUE (slug)
-);
-
-CREATE TABLE IF NOT EXISTS public.render_requests (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    site_id uuid NOT NULL,
-    template_id uuid NOT NULL,
-    props_json jsonb NOT NULL,
-    status text NOT NULL,
-    output_url text,
-    error_msg text,
-    created_by uuid NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT render_requests_pkey PRIMARY KEY (id),
-    CONSTRAINT render_requests_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'rendering'::text, 'ready'::text, 'failed'::text]))),
-    CONSTRAINT render_requests_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id),
-    CONSTRAINT render_requests_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.template_definitions(id)
-);
-
-CREATE INDEX IF NOT EXISTS render_requests_status_idx
-  ON public.render_requests(status, created_at)
-  WHERE status IN ('queued', 'rendering');
-
-CREATE INDEX IF NOT EXISTS render_requests_site_idx
-  ON public.render_requests(site_id, created_at DESC);
-
-CREATE TABLE IF NOT EXISTS public.site_brand_kits (
-    site_id uuid NOT NULL,
-    club_name text,
-    colors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
-    logos_json jsonb DEFAULT '{}'::jsonb NOT NULL,
-    fonts_json jsonb DEFAULT '{}'::jsonb NOT NULL,
-    sponsors_json jsonb DEFAULT '{}'::jsonb NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT site_brand_kits_pkey PRIMARY KEY (site_id),
-    CONSTRAINT site_brand_kits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id)
-);
-
-CREATE TABLE IF NOT EXISTS public.players (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    -- site_id : NULL = joueur global (ADR-082 pattern, cf migration
-    -- add-studio-player-global-grants.sql), UUID = joueur exclusif au site.
-    site_id uuid,
-    prenom text NOT NULL,
-    nom text NOT NULL,
-    numero integer,
-    poste text,
-    photo_raw_url text,
-    photo_cutout_url text,
-    cutout_status text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT players_pkey PRIMARY KEY (id),
-    CONSTRAINT players_cutout_status_check CHECK ((cutout_status = ANY (ARRAY['pending'::text, 'processing'::text, 'ready'::text, 'failed'::text]))),
-    CONSTRAINT players_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id)
-);
-
-CREATE INDEX IF NOT EXISTS players_site_idx ON public.players(site_id);
-
-CREATE INDEX IF NOT EXISTS players_cutout_pending_idx
-  ON public.players(cutout_status, created_at)
-  WHERE cutout_status IN ('pending', 'processing');
-
--- Grants joueurs globaux → sites (ADR-082 pattern). Cf migration
--- add-studio-player-global-grants.sql.
-CREATE TABLE IF NOT EXISTS public.studio_player_site_grants (
-    player_id uuid NOT NULL,
-    site_id uuid NOT NULL,
-    granted_by uuid,
-    granted_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT studio_player_site_grants_pkey PRIMARY KEY (player_id, site_id),
-    CONSTRAINT studio_player_site_grants_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id) ON DELETE CASCADE,
-    CONSTRAINT studio_player_site_grants_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.sites(id) ON DELETE CASCADE,
-    CONSTRAINT studio_player_site_grants_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.users(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_studio_player_grants_site
-  ON public.studio_player_site_grants(site_id);
-
-CREATE INDEX IF NOT EXISTS idx_studio_player_grants_player
-  ON public.studio_player_site_grants(player_id);
-
--- ────────────────────────────────────────────────────────────────────────────
--- Templates Studio — Asset library (ADR-125, migration add-studio-assets.sql)
--- Pool global d'assets uploadés (textures, watermarks, vidéos lensflare, …)
--- + bindings par template. Pas de notion de site_id (asset = catalogue admin
--- partagé sur la flotte).
--- ────────────────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.studio_assets (
-    id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    filename text NOT NULL,
-    ftp_path text NOT NULL,
-    mime_type text NOT NULL,
-    file_size bigint NOT NULL,
-    checksum_sha256 text NOT NULL,
-    width integer,
-    height integer,
-    duration_ms integer,
-    tags text[] DEFAULT ARRAY[]::text[] NOT NULL,
-    uploaded_by uuid,
-    uploaded_at timestamp with time zone DEFAULT now() NOT NULL,
-    asset_kind text DEFAULT 'file' NOT NULL,
-    frame_count integer,
-    frame_pattern text,
-    CONSTRAINT studio_assets_pkey PRIMARY KEY (id),
-    CONSTRAINT studio_assets_ftp_path_key UNIQUE (ftp_path),
-    CONSTRAINT studio_assets_checksum_sha256_key UNIQUE (checksum_sha256),
-    CONSTRAINT studio_assets_asset_kind_check CHECK (asset_kind IN ('file', 'directory')),
-    CONSTRAINT studio_assets_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_studio_assets_checksum
-  ON public.studio_assets(checksum_sha256);
-
-CREATE INDEX IF NOT EXISTS idx_studio_assets_tags
-  ON public.studio_assets USING GIN(tags);
-
-CREATE INDEX IF NOT EXISTS idx_studio_assets_mime
-  ON public.studio_assets(mime_type);
-
-CREATE TABLE IF NOT EXISTS public.studio_template_asset_bindings (
-    template_slug text NOT NULL,
-    asset_key text NOT NULL,
-    asset_id uuid NOT NULL,
-    bound_by uuid,
-    bound_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT studio_template_asset_bindings_pkey PRIMARY KEY (template_slug, asset_key),
-    CONSTRAINT studio_template_asset_bindings_asset_id_fkey FOREIGN KEY (asset_id) REFERENCES public.studio_assets(id) ON DELETE RESTRICT,
-    CONSTRAINT studio_template_asset_bindings_bound_by_fkey FOREIGN KEY (bound_by) REFERENCES public.users(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_studio_bindings_asset
-  ON public.studio_template_asset_bindings(asset_id);
 
 
 --
