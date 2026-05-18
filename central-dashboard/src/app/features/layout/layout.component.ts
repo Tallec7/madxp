@@ -133,11 +133,6 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">🎬</span>
               <span>Templates</span>
             </a>
-            <a routerLink="/content/templates-remotion" routerLinkActive="active" class="nav-item" (click)="closeSidebar()" *ngIf="isAdmin()" aria-label="Templates Remotion">
-              <span class="icon" aria-hidden="true">✨</span>
-              <span>Templates Remotion</span>
-            </a>
-
             <!-- Templates Studio V1 (cf STUDIO_V1.md) — accessible super_admin/admin/club -->
             <div class="nav-section" *ngIf="canUseTemplatesStudio()" role="group" aria-label="Templates Studio V1">
               <div class="nav-section-title">Templates Studio</div>
