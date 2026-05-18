@@ -1,3 +1,9 @@
+## [3.321.3](https://github.com/Tallec7/neopro/compare/v3.321.2...v3.321.3) (2026-05-18)
+
+### Bug Fixes
+
+- **templates:** photo joueur 8→20MB + message erreur lisible ([#1040](https://github.com/Tallec7/neopro/issues/1040)) ([34b7c6d](https://github.com/Tallec7/neopro/commit/34b7c6dd2e8164c6947cfbd40178c4fc14ebfd10))
+
 ## [3.321.2](https://github.com/Tallec7/neopro/compare/v3.321.1...v3.321.2) (2026-05-18)
 
 ### Bug Fixes
