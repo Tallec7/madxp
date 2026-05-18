@@ -8,6 +8,18 @@
 
 ---
 
+## Semaine 21 — 18-24 Mai 2026 (kill Templates Studio V2 legacy — PRs [#1029](https://github.com/Tallec7/neopro/pull/1029) → [#1032](https://github.com/Tallec7/neopro/pull/1032))
+
+### 🧹 Pour l'équipe
+
+- **Templates Studio V2 data-driven supprimé intégralement** (4 PRs : [#1029](https://github.com/Tallec7/neopro/pull/1029) backend, [#1030](https://github.com/Tallec7/neopro/pull/1030) frontend, [#1031](https://github.com/Tallec7/neopro/pull/1031) package + DB migration, [#1032](https://github.com/Tallec7/neopro/pull/1032) docs + ADR-129) — depuis avril 2026, le projet maintenait **deux** systèmes Templates Studio en parallèle : V2 "data-driven legacy" (rows DB + runtime générique unique) et V1 "code-driven" (1 `.tsx` + 1 `manifest.json` par template, ADR-123/124/125/127/128). Audit DB 2026-05-16 confirme V2 mort : 11 templates dont 9 archived + 2 zombies, 1 seul render historique du 2026-05-07 failed, plus aucun appel HTTP `/api/remotion-templates/*` détecté. V1 a rattrapé toutes les capacités (asset library, fonts custom, masques alpha PNG frames, distribution multi-sites grants). Drop dans l'ordre : 17 routes API, 8 controllers, 6 repositories, 8 services backend ; folder `central-dashboard/.../content/remotion-templates/` (63 fichiers) ; package `templates-remotion/` entier (runtime + Vite preview + assets WebM + PNG masks) + 3 stages Dockerfile + watchPattern Railway ; migration SQL `DROP TABLE CASCADE` × 12 + DROP FUNCTION × 2 (idempotente, appliquée par Railway au reboot). Côté docs : 12 ADRs V2 archivées dans `docs/adr/_archive/`, ADR-129 récap créé, SPEC `templates-studio.spec.md` réécrite V1, 8 docs designer V2 supprimées (`SPEC-TEMPLATE`, `DESIGNER_WORKFLOW`, `HOWTO-CONFIGURE-OPTIONS`, 5× `JOUEUR-*`), `.claude/rules/templates.md` (~250 lignes V2-only) archivée, 2 propositions V2 (`PROP-004`, `PROP-014`) supprimées. **Total : ~820 fichiers, -40 000 lignes, -12 tables DB.** Templates Studio devient désormais "1 `.tsx` + 1 manifest" sans alternative — fin de la cohabitation conceptuelle qui plombait toute PR sur le domaine depuis 6 semaines.
+
+### 🛡️ Pour la robustesse
+
+- **Build Docker plus rapide (~60-90s économisées par deploy Railway)** ([#1031](https://github.com/Tallec7/neopro/pull/1031)) — les 3 stages multi-build V2 (`remotion-deps`, `preview-builder`, COPY runtime + node_modules + preview/dist) sont retirés du `central-server/Dockerfile`. La variable env `REMOTION_DIR=/app/templates-remotion` et le `npx remotion browser ensure` sont recentrés sur le path V1 `templates-studio/`. Surface attaque réduite côté API : 4 mounts Express drop, dont le proxy FTP `/asset-proxy` qui était une cible de signature HMAC ADR-113-bis maintenant moot. Schéma DB plus lisible : -12 tables, -2 functions, ~27 indexes/contraintes purgées par CASCADE.
+
+---
+
 ## Semaine 20 — 11-17 Mai 2026 (suite — 2026-05-14, incident NLF DNS hijack PR [#1013](https://github.com/Tallec7/neopro/pull/1013))
 
 ### 🎯 Pour le club (NLF, prospects)
