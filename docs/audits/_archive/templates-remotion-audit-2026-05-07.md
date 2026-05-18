@@ -1,5 +1,15 @@
 # Audit Template Studio Remotion — 2026-05-07
 
+> ⚠️ **Doc historique figé au 2026-05-07** — Cet audit pré-mortem documentait
+> les douleurs du système Templates Studio V2 data-driven legacy. Le système
+> a été supprimé intégralement le 2026-05-18 (cf. [ADR-129](../../adr/ADR-129-kill-templates-studio-v2-legacy.md)).
+> Les liens vers `docs/templates/SPEC-TEMPLATE.md`, `DESIGNER_WORKFLOW.md`,
+> `.claude/rules/templates.md` et les ADRs V2 (075/077/084/086/095/108/110)
+> sont volontairement laissés tels quels — leur contenu vit désormais dans
+> `docs/adr/_archive/` ou a été supprimé. Lecture : contexte rétrospectif sur
+> pourquoi V2 a été tué (les 10 problèmes ici listés n'étant pas tous résolus
+> sur V2, l'option "drop intégral + reset sur V1 code-driven" l'a emporté).
+
 > Audit full-stack (UX/UI, Design, Cohérence flow, Backend, Sécu/Réseau) du périmètre Template Studio v2 : worker `templates-remotion/`, dashboard `/admin/templates`, API `central-server/src/routes/{remotion-templates,template-studio}*`.
 
 ## TL;DR métier
