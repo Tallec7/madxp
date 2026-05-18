@@ -1,3 +1,9 @@
+# [3.322.0](https://github.com/Tallec7/neopro/compare/v3.321.4...v3.322.0) (2026-05-18)
+
+### Features
+
+- **templates:** install @imgly/background-removal-node (ADR-124 Phase 2) ([#1042](https://github.com/Tallec7/neopro/issues/1042)) ([1380f17](https://github.com/Tallec7/neopro/commit/1380f177b676815183ec3adbcc18329bcee208bd))
+
 ## [3.321.4](https://github.com/Tallec7/neopro/compare/v3.321.3...v3.321.4) (2026-05-18)
 
 ### Bug Fixes
