@@ -228,7 +228,8 @@
     gap: 4px;
   }
   &__delete,
-  &__upload {
+  &__upload,
+  &__download {
     background: rgba(0, 0, 0, 0.5);
     border: none;
     border-radius: 4px;
@@ -244,6 +245,16 @@
     color: #f85149;
     &:hover {
       background: #f8514944;
+    }
+  }
+  &__download {
+    color: #3fb950;
+    &:hover {
+      background: #3fb95044;
+    }
+    &:disabled {
+      cursor: wait;
+      opacity: 0.6;
     }
   }
   &__upload {

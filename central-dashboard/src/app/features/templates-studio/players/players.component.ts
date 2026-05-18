@@ -310,6 +310,53 @@ export class PlayersComponent implements OnInit {
     });
   }
 
+  // Téléchargement de la photo détourée (PNG transparent) — utile pour
+  // réutiliser le cutout hors templates Remotion (présentations club, slides).
+  // Fetch + Blob + ObjectURL : l'attribut `download` HTML natif est ignoré
+  // cross-origin par les navigateurs ; passer par un Blob local le force.
+  downloadingCutoutFor = signal<string | null>(null);
+
+  downloadCutout(p: Player): void {
+    if (!p.photo_cutout_url) return;
+    this.downloadingCutoutFor.set(p.id);
+    fetch(p.photo_cutout_url, { mode: 'cors' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = this.cutoutFilename(p);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Délai recommandé avant revoke pour laisser le browser amorcer le download.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        this.downloadingCutoutFor.set(null);
+      })
+      .catch((err: unknown) => {
+        this.downloadingCutoutFor.set(null);
+        const msg = err instanceof Error ? err.message : String(err);
+        this.errorMsg.set(`Téléchargement échoué (${msg})`);
+      });
+  }
+
+  private cutoutFilename(p: Player): string {
+    const slug = (s: string | null | undefined): string =>
+      (s ?? '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '') // diacritiques
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    const parts = [slug(p.prenom), slug(p.nom)].filter(Boolean);
+    if (p.numero !== null && p.numero !== undefined) parts.push(String(p.numero));
+    parts.push('cutout');
+    return `${parts.join('-') || 'joueur-cutout'}.png`;
+  }
+
   private flashSuccess(msg: string): void {
     this.successMsg.set(msg);
     setTimeout(() => this.successMsg.set(null), 3000);

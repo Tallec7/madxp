@@ -168,6 +168,24 @@
                   [disabled]="uploadingPhotoFor() === p.id"
                 />
               </label>
+              @if (p.photo_cutout_url) {
+                <button
+                  type="button"
+                  class="pl__download"
+                  (click)="downloadCutout(p)"
+                  [disabled]="downloadingCutoutFor() === p.id"
+                  [attr.aria-label]="
+                    'Télécharger la photo détourée de ' + p.prenom + ' ' + p.nom
+                  "
+                  title="Télécharger la photo détourée (PNG transparent)"
+                >
+                  @if (downloadingCutoutFor() === p.id) {
+                    ⏳
+                  } @else {
+                    📥
+                  }
+                </button>
+              }
               <button
                 type="button"
                 class="pl__delete"
