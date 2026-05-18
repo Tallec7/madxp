@@ -42,4 +42,18 @@ describe('photo-cutout.service (smoke)', () => {
     expect(content).toMatch(/playerRepository\.markCutoutReady/);
     expect(content).toMatch(/playerRepository\.failStaleProcessingCutouts/);
   });
+
+  it('detects image mime via magic bytes + passes type to Blob (incident 2026-05-18)', () => {
+    // Sans `{ type: 'image/<...>' }`, le Blob a `type: ''` → @imgly crash avec
+    // "Unsupported format: " (vide). Fix : sniffer JPEG/PNG/WebP magic bytes
+    // et passer le mime au constructeur Blob. Indépendant des headers HTTP.
+    const content = fs.readFileSync(SERVICE_FILE, 'utf8');
+    expect(content).toMatch(/detectImageMime/);
+    // Magic bytes documentés : JPEG (FF D8 FF), PNG (89 50 4E 47), WebP (RIFF...WEBP)
+    expect(content).toMatch(/0xff[\s\S]*?0xd8/);
+    expect(content).toMatch(/0x89[\s\S]*?0x50[\s\S]*?0x4e[\s\S]*?0x47/);
+    expect(content).toMatch(/0x57[\s\S]*?0x45[\s\S]*?0x42[\s\S]*?0x50/);
+    // Blob construit avec le type détecté, pas vide.
+    expect(content).toMatch(/new\s+Blob\(\[rawBuffer\],\s*\{\s*type:\s*mime\s*\}\)/);
+  });
 });

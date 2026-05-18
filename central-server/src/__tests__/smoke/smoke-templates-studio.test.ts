@@ -387,6 +387,36 @@ describe('Templates Studio V1 — S4-A roster CRUD + résolveur câblé', () => 
     expect(content).toMatch(/export\s+const\s+deletePlayer\s*=/);
   });
 
+  it('updatePlayer routes globals through updateGlobal + hasGrant (ADR-123)', () => {
+    // Defense-in-depth : un joueur global granté doit être éditable depuis un
+    // site granté. Sans la branche `updateGlobal`, le SQL `WHERE site_id=$X`
+    // ne matche jamais NULL → 404 (incident 2026-05-18).
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    // Recadrer sur le bloc updatePlayer (pas le bloc uploadPlayerPhoto qui a déjà ce pattern).
+    const updateBlockMatch = content.match(
+      /export\s+const\s+updatePlayer\s*=[\s\S]*?\n\};\s*\n/,
+    );
+    expect(updateBlockMatch).not.toBeNull();
+    const updateBlock = updateBlockMatch![0];
+    expect(updateBlock).toMatch(/playerRepository\.hasGrant\(playerId,\s*siteId\)/);
+    expect(updateBlock).toMatch(/playerRepository\.updateGlobal\(playerId/);
+  });
+
+  it('deletePlayer revokes grant for globals instead of hard-delete (ADR-082 pattern)', () => {
+    // Un site granté qui DELETE un joueur global doit révoquer son grant
+    // (sinon impacterait les autres sites grantés). Pattern symétrique à
+    // video_club_grants : delete grant ≠ delete source.
+    const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
+    const deleteBlockMatch = content.match(
+      /export\s+const\s+deletePlayer\s*=[\s\S]*?\n\};\s*\n/,
+    );
+    expect(deleteBlockMatch).not.toBeNull();
+    const deleteBlock = deleteBlockMatch![0];
+    expect(deleteBlock).toMatch(/playerRepository\.findById\(playerId\)/);
+    expect(deleteBlock).toMatch(/playerRepository\.removeGrant\(playerId,\s*siteId\)/);
+    expect(deleteBlock).toMatch(/playerRepository\.deleteForSite\(playerId,\s*siteId\)/);
+  });
+
   it('createRenderRequest passes playersById to the resolver (S4-A unblocked)', () => {
     // Avant S4-A, le résolveur recevait playersById omitted → bindings player.*
     // retournaient null avec warn fail-soft. Maintenant on les charge.

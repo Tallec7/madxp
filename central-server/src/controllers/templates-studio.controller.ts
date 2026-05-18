@@ -531,8 +531,30 @@ export const updatePlayer = async (req: AuthRequest, res: Response): Promise<voi
   }
   const { siteId, playerId } = req.params;
   try {
-    // Update scoped au site_id côté repo (defense-in-depth + tenant guard côté routes).
-    const row = await playerRepository.update(playerId, siteId, req.body);
+    // Tenant guard ADR-123 (cf. uploadPlayerPhoto pour la rationale) :
+    // - joueur site-local → check `site_id === siteId` puis `update`
+    // - joueur global    → check `hasGrant` puis `updateGlobal` (sans tenant SQL)
+    const existing = await playerRepository.findById(playerId);
+    if (!existing) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    const isGlobal = existing.site_id === null;
+    if (!isGlobal && existing.site_id !== siteId) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    if (isGlobal) {
+      const granted = await playerRepository.hasGrant(playerId, siteId);
+      if (!granted) {
+        res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+        return;
+      }
+    }
+
+    const row = isGlobal
+      ? await playerRepository.updateGlobal(playerId, req.body)
+      : await playerRepository.update(playerId, siteId, req.body);
     if (!row) {
       res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
       return;
@@ -555,16 +577,45 @@ export const deletePlayer = async (req: AuthRequest, res: Response): Promise<voi
   }
   const { siteId, playerId } = req.params;
   try {
-    const deleted = await playerRepository.deleteForSite(playerId, siteId);
-    if (!deleted) {
+    // Tenant guard ADR-123 + sémantique grant :
+    // - joueur site-local → `deleteForSite` (suppression réelle)
+    // - joueur global granté → `removeGrant` (révocation du grant pour CE site,
+    //   le joueur reste pour les autres sites grantés et le catalogue admin).
+    //   Pattern symétrique à ADR-082 (delete grant ≠ delete source).
+    const existing = await playerRepository.findById(playerId);
+    if (!existing) {
       res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
       return;
     }
-    logger.info('templates-studio: player deleted', {
-      player_id: playerId,
-      site_id: siteId,
-      user_id: req.user.id,
-    });
+    const isGlobal = existing.site_id === null;
+    if (!isGlobal && existing.site_id !== siteId) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+
+    if (isGlobal) {
+      const removed = await playerRepository.removeGrant(playerId, siteId);
+      if (!removed) {
+        res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+        return;
+      }
+      logger.info('templates-studio: player grant revoked', {
+        player_id: playerId,
+        site_id: siteId,
+        user_id: req.user.id,
+      });
+    } else {
+      const deleted = await playerRepository.deleteForSite(playerId, siteId);
+      if (!deleted) {
+        res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+        return;
+      }
+      logger.info('templates-studio: player deleted', {
+        player_id: playerId,
+        site_id: siteId,
+        user_id: req.user.id,
+      });
+    }
     res.status(204).send();
   } catch (error) {
     logger.error('templates-studio: delete player failed', {
