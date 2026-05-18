@@ -73,11 +73,11 @@ CREATE INDEX idx_template_versions_template_version ON template_versions (templa
    └──nouvelle ver.────────┘
 ```
 
-| État | Mutable ? | Servi à la production ? |
-|------|-----------|------------------------|
-| `draft` | ✅ par super_admin | ❌ |
-| `published` | ❌ (immutable, locked) | ✅ |
-| `archived` | ❌ | ❌ (rollback uniquement) |
+| État        | Mutable ?              | Servi à la production ?  |
+| ----------- | ---------------------- | ------------------------ |
+| `draft`     | ✅ par super_admin     | ❌                       |
+| `published` | ❌ (immutable, locked) | ✅                       |
+| `archived`  | ❌                     | ❌ (rollback uniquement) |
 
 **Workflow super_admin** :
 
@@ -112,10 +112,10 @@ const tpl = await templateStudioRepository.findVersion(templateId, version);
 
 Trois scénarios :
 
-| Scénario | Action |
-|----------|--------|
-| Bug détecté en prod sur v1.1 | `PATCH /api/templates/:id/default-version` → `1.0` (immédiat) |
-| Site spécifique veut figer v1.0 | `PATCH /api/sites/:id/templates/:tpl-id` → `pinned_version: 1.0` |
+| Scénario                             | Action                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| Bug détecté en prod sur v1.1         | `PATCH /api/templates/:id/default-version` → `1.0` (immédiat)             |
+| Site spécifique veut figer v1.0      | `PATCH /api/sites/:id/templates/:tpl-id` → `pinned_version: 1.0`          |
 | Suppression définitive d'une version | `DELETE /api/templates/:id/versions/1.1` (refusé si ≥ 1 site la consomme) |
 
 ## Alternatives Considérées
@@ -124,6 +124,7 @@ Trois scénarios :
 
 **Avantages** : simple, 1 colonne, peu de code.
 **Inconvénients** :
+
 - Pas d'audit trail
 - Pas de rollback (sauf restore PostgreSQL backup)
 - Si super_admin déverrouille pour modifier, les sites consomment immédiatement la nouvelle version → casse possible
@@ -134,6 +135,7 @@ Trois scénarios :
 ### 2. Versioning semver explicite (choisie) ✅
 
 **Avantages** :
+
 - Sites en prod immutables (chaque version `published` est figée)
 - Rollback en 1 commande SQL (`UPDATE default_version`)
 - Audit trail natif (table `template_versions`)
@@ -141,6 +143,7 @@ Trois scénarios :
 - Pattern connu (semver, npm, Docker tags)
 
 **Inconvénients** :
+
 - Plus de boulot moteur initial (résolution `template_id@version` côté runtime)
 - Snapshots JSONB → DB plus volumineuse (mitigé par GZIP de PostgreSQL)
 - Workflow super_admin plus complexe (étape "fork" explicite)
@@ -173,12 +176,12 @@ Trois scénarios :
 
 ### Risques
 
-| Risque | Mitigation |
-|--------|------------|
-| Migration backfill casse les templates en prod | Migration testée sur staging + dry-run en local + rollback script |
-| Sites Pi cachent une vieille version qui n'existe plus en DB | Sync-agent invalide le cache au push de nouvelle version |
-| Super_admin oublie de fork et bloque sur 409 Conflict | Erreur explicite + bouton "Forker en v1.1" dans le toast |
-| Perfs : JOIN supplémentaire `template_versions` à chaque rendu | Index sur `(template_id, version)` + cache 5 min côté API |
+| Risque                                                         | Mitigation                                                        |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Migration backfill casse les templates en prod                 | Migration testée sur staging + dry-run en local + rollback script |
+| Sites Pi cachent une vieille version qui n'existe plus en DB   | Sync-agent invalide le cache au push de nouvelle version          |
+| Super_admin oublie de fork et bloque sur 409 Conflict          | Erreur explicite + bouton "Forker en v1.1" dans le toast          |
+| Perfs : JOIN supplémentaire `template_versions` à chaque rendu | Index sur `(template_id, version)` + cache 5 min côté API         |
 
 ## Plan d'implémentation
 

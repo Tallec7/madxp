@@ -122,17 +122,17 @@ sequenceDiagram
 
 ### Domaine Template Studio (Remotion)
 
-**Ce que c'est :** templates vidéo data-driven — un template = rows DB + assets, pas de .tsx spécifique.
+**Ce que c'est :** templates vidéo code-driven (V1) — 1 `.tsx` + 1 `manifest.json` par template, bundlé in-process. V2 legacy data-driven supprimé en ADR-129.
 
-| Quoi       | Où                                                                     |
-| ---------- | ---------------------------------------------------------------------- |
-| Spec       | [templates-studio.spec.md](../specs/features/templates-studio.spec.md) |
-| ADRs clés  | ADR-075, ADR-077, ADR-084, ADR-086, ADR-095, ADR-108, ADR-109          |
-| Runtime    | `templates-remotion/src/runtime/TemplateRuntime.tsx`                   |
-| Repository | `templateStudioRepository`                                             |
-| CLI import | `central-server/src/scripts/import-template-spec.ts`                   |
-| Smoke test | `smoke-remotion`                                                       |
-| ⚠️ Règle   | Jamais créer un .tsx par template — tout passe par le moteur générique |
+| Quoi       | Où                                                                         |
+| ---------- | -------------------------------------------------------------------------- |
+| Spec       | `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo)      |
+| ADRs clés  | ADR-123, ADR-124, ADR-125, ADR-127, ADR-128 (V1) ; ADR-129 (kill V2)       |
+| Runtime    | `central-server/templates-studio/` (`.tsx` + `manifest.json` par template) |
+| Repository | `templateDefinitionRepository`                                             |
+| Worker     | `central-server/src/services/studio-render-worker.service.ts`              |
+| Smoke test | `smoke-templates-studio*` (pluriel)                                        |
+| ⚠️ Règle   | Jamais créer un .tsx par template — tout passe par le moteur générique     |
 
 ---
 

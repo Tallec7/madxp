@@ -24,6 +24,7 @@ Pendant le testing en condition réelle, plusieurs facteurs ont rendu cette sép
 6. **La spec STUDIO_V1.md §6 disait depuis le départ** : « Worker in-process centrale + container rembg séparé » — j'ai dévié sans justification suffisante et créé 3 services au lieu de 2.
 
 Conséquences néfastes constatées :
+
 - 6 clics UI Railway requis pour démarrer (Connect Repo + Root Directory + Watch Paths × 2 services)
 - 1 hop HTTP supplémentaire entre central et render-server (latence + 1 surface d'erreur — incident `404 Application not found` le 2026-05-14)
 - ~15-23€/mois marginal Railway estimé (vs 0€ in-process)
@@ -96,7 +97,7 @@ Conséquences néfastes constatées :
 - `docs/runbooks/STUDIO-V1-RECIPE.md` → `docs/runbooks/STUDIO-RECIPE.md` (drop V1 + pré-requis simplifiés)
 - `docs/templates/STUDIO-V1-PORTING-GUIDE.md` → `docs/templates/STUDIO-PORTING-GUIDE.md` (drop V1 + paths adaptés)
 - `docs/runbooks/STUDIO-V1-RAILWAY-PROVISION.md` — supprimé (plus pertinent : 0 service Railway à provisionner)
-- `docs/specs/features/templates-studio.spec.md` — section coexistence reformulée, refs ADRs adaptées
+- ~~`docs/specs/features/templates-studio.spec.md`~~ — SPEC V2 supprimée en ADR-129. La section "coexistence" est désormais obsolète : V1 est l'unique implémentation.
 - ADR-118 + ADR-119 → status `Déprécié — voir ADR-124`
 
 ## Référence

@@ -42,7 +42,8 @@ const LEGACY_ADRS_WITHOUT_SPEC = new Set<string>([
   'ADR-026', 'ADR-027', 'ADR-030', 'ADR-031', 'ADR-032', 'ADR-036',
   // ADR-033 / ADR-042 / ADR-057 now covered by docs/specs/features/manual-video-transitions.spec.md
   'ADR-041', 'ADR-043', 'ADR-044', 'ADR-045', 'ADR-046',
-  'ADR-047', 'ADR-048', 'ADR-050', 'ADR-051', 'ADR-052', 'ADR-053', 'ADR-056',
+  // ADR-052 archivée 2026-05-16 (ADR-129 kill V2) — plus parmi les Accepté.
+  'ADR-047', 'ADR-048', 'ADR-050', 'ADR-051', 'ADR-053', 'ADR-056',
   // ADR-007 / ADR-058 / ADR-060 / ADR-092 now covered by docs/specs/features/remote.spec.md
   'ADR-063', 'ADR-064', 'ADR-065',
   'ADR-066', 'ADR-067', 'ADR-068', 'ADR-070', 'ADR-072',
@@ -73,7 +74,8 @@ const LEGACY_SERVICES_WITHOUT_SPEC = new Set<string>([
 // en Sprint 1-2 pour ajouter la section "Périmètre" formalisée. Frozen — toute
 // nouvelle SPEC doit respecter le format complet.
 const LEGACY_SPECS_PRE_DOMAIN_PIVOT = new Set<string>([
-  'docs/specs/features/templates-studio.spec.md',
+  // 'docs/specs/features/templates-studio.spec.md' retirée 2026-05-16 :
+  // SPEC V2 supprimée en ADR-129, réécrite en V1 code-driven (format complet).
   'docs/specs/services/cron-scheduler.spec.md',
   'docs/specs/services/socket-service.spec.md',
 ]);

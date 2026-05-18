@@ -1,7 +1,7 @@
 # Templates Studio — Guide de portage
 
 > **Audience** : développeur (toi ou futur teammate) qui ajoute un template au système V1 code-driven.
-> **Pré-requis** : avoir lu `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/`) et compris la philosophie code-driven vs legacy v2 data-driven (voir `docs/specs/features/templates-studio.spec.md`).
+> **Pré-requis** : avoir lu `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/`) et compris la philosophie code-driven. Le système V2 legacy data-driven a été supprimé en ADR-129.
 > **Cible** : ajouter un nouveau template en **<2h** une fois le `.tsx` Remotion fonctionnel en local.
 
 ---
@@ -237,11 +237,7 @@ export const MyComposition: React.FC<MyProps & { __assets?: AssetMap }> = ({
   // continueRender + warn console — la composition rend avec le fallback CSS.
   useCustomFont('Bulevar', assets.bulevarFont);
 
-  return (
-    <div style={{ fontFamily: 'Bulevar, sans-serif' }}>
-      {/* ... */}
-    </div>
-  );
+  return <div style={{ fontFamily: 'Bulevar, sans-serif' }}>{/* ... */}</div>;
 };
 ```
 
@@ -320,6 +316,7 @@ Le mime spécifique `application/x-png-frames` est le marqueur "directory".
 
 `/templates-studio/admin/assets/library` → toggle **Directory ZIP** →
 glisse le ZIP. Le serveur :
+
 - Décompresse en mémoire (jszip),
 - Auto-détecte le pattern depuis les filenames triés (`frame_{i:03d}.png`),
 - Push chaque PNG sur FTP via 1 connexion réutilisée (`uploadFilesToFtpBatch`),
@@ -339,18 +336,19 @@ import { useCurrentFrame } from 'remotion';
 
 interface DirectoryAssetRef {
   kind: 'directory';
-  baseUrl: string;       // URL FTP du dossier, finit par '/'
-  framePattern: string;  // ex: 'frame_{i:03d}.png'
+  baseUrl: string; // URL FTP du dossier, finit par '/'
+  framePattern: string; // ex: 'frame_{i:03d}.png'
   frameCount: number;
 }
 
 const maskAsset = __assets.maskC as DirectoryAssetRef;
 const frame = useCurrentFrame();
 const frameIdx = Math.min(frame + 1, maskAsset.frameCount); // 1-based
-const maskUrl = maskAsset.baseUrl + maskAsset.framePattern.replace(
-  /\{i:0(\d+)d\}/,
-  (_, padding) => String(frameIdx).padStart(parseInt(padding, 10), '0'),
-);
+const maskUrl =
+  maskAsset.baseUrl +
+  maskAsset.framePattern.replace(/\{i:0(\d+)d\}/, (_, padding) =>
+    String(frameIdx).padStart(parseInt(padding, 10), '0'),
+  );
 // → ex: 'https://kalonpartners.bzh/neopro-video/studio-assets/directories/abc123-mask/frame_042.png'
 ```
 

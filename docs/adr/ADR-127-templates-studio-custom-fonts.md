@@ -31,6 +31,7 @@ React `useCustomFont` qui wrappe `FontFace` + `delayRender` /
 (fallback CSS appliqué) sans crasher le render.
 
 Cascade complète :
+
 1. Designer upload `Bulevar.woff2` via `/templates-studio/admin/assets/library`
    (backend accepte `font/woff2`).
 2. Manifest déclare `{ key: 'bulevarFont', mime: 'font/woff2', fontFamily: 'Bulevar' }`.
@@ -83,5 +84,5 @@ Cascade complète :
   ajoute `RequiredAsset.fontFamily?`.
 - `central-server/src/__tests__/smoke/smoke-templates-studio-fonts.test.ts` —
   smoke garde-fou (hook signature, manifest, composition, MIME, Angular).
-- `docs/specs/features/templates-studio.spec.md` — référence ADR-127.
+- ~~`docs/specs/features/templates-studio.spec.md`~~ — SPEC V2 supprimée en ADR-129.
 - `docs/templates/STUDIO-PORTING-GUIDE.md` — section "Fonts custom".

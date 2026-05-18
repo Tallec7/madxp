@@ -5,7 +5,7 @@
 **Date** : Février 2026
 **Statut** : Proposé
 **Décideurs** : Guillaume Le Tallec
-**Lié à** : [PROP-004](./PROP-004-video-template-engine.md) (Moteur de Templates Vidéo — templates sponsors, cas différent)
+**Lié à** : ~~PROP-004 (Moteur de Templates Vidéo)~~ — proposition adoptée (ADR-052) puis supprimée avec le kill V2, cf. ADR-129.
 
 ---
 
@@ -239,7 +239,7 @@ Justification : Lottie est gratuit, instantané, léger, sans dépendance. Plain
 
 ## Références
 
-- [PROP-004: Moteur de Templates Vidéo](./PROP-004-video-template-engine.md) — Templates sponsors (cas différent)
+- ~~PROP-004: Moteur de Templates Vidéo~~ — adopté (ADR-052) puis dépréciée avec le kill V2 en ADR-129
 - [Bodymovin — Fonctionnalités supportées](https://airbnb.io/lottie/#/supported-features)
 - [Plainly — Tarifs](https://www.plainlyvideos.com/pricing)
 - [Plainly — API Documentation](https://docs.plainlyvideos.com/)
