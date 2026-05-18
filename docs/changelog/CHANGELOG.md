@@ -1,3 +1,9 @@
+## [3.321.4](https://github.com/Tallec7/neopro/compare/v3.321.3...v3.321.4) (2026-05-18)
+
+### Bug Fixes
+
+- **studio:** cache filesystem des assets FTP au boot du worker (ADR-130) ([#1041](https://github.com/Tallec7/neopro/issues/1041)) ([012bd41](https://github.com/Tallec7/neopro/commit/012bd41f04b8daa4c910ebd35f712427e863550a))
+
 ## [3.321.3](https://github.com/Tallec7/neopro/compare/v3.321.2...v3.321.3) (2026-05-18)
 
 ### Bug Fixes
