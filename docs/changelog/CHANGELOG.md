@@ -1,3 +1,13 @@
+## [3.322.3](https://github.com/Tallec7/neopro/compare/v3.322.2...v3.322.3) (2026-05-18)
+
+### Bug Fixes
+
+- **templates:** delete/update sur joueur global + rembg mime type ([#1047](https://github.com/Tallec7/neopro/issues/1047)) ([156f656](https://github.com/Tallec7/neopro/commit/156f65649cdd3642db3ec3d4cf7823e06532cb8c)), closes [#1044](https://github.com/Tallec7/neopro/issues/1044) [#1044](https://github.com/Tallec7/neopro/issues/1044)
+
+### Reverts
+
+- **studio:** rollback ADR-130 cache + CORS (render produisait du MP4 noir) ([#1045](https://github.com/Tallec7/neopro/issues/1045)) ([529d4e0](https://github.com/Tallec7/neopro/commit/529d4e0b0cad1e73e010a62f2a668b5129ff050c)), closes [#1043](https://github.com/Tallec7/neopro/issues/1043) [#1041](https://github.com/Tallec7/neopro/issues/1041)
+
 ## [3.322.2](https://github.com/Tallec7/neopro/compare/v3.322.1...v3.322.2) (2026-05-18)
 
 ### Bug Fixes
