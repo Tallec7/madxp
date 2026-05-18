@@ -41,7 +41,7 @@ exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
   renderMedia, upload FTP (ADR-124 — consolidation du studio-render-server satellite ADR-118
   désormais déprécié).
 - Worker photo-cutout in-process (BiRefNet via `@imgly/background-removal-node` ONNX) —
-  ADR-124.
+  ADR-124 (architecture) + ADR-131 (install effective de la lib Phase 2 + mock jest global).
 - Distribution multi-sites des renders via le pattern grants ADR-082 (réutilisé par ADR-123).
 - Rate limit + CORP/CORS sur les routes Studio (ADR-087 sur asset-proxy).
 

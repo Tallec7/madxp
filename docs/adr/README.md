@@ -144,6 +144,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-126](ADR-126-web-content-resolve-on-all-pi-bound-channels.md)                       | Résolution web-content (ADR-103) sur TOUS les canaux Pi-bound (helper centralisé)            | Accepté                           | Mai 2026 |
 | [ADR-128](ADR-128-templates-studio-asset-directory.md)                                   | Templates Studio — type d'asset `directory` (séquences PNG frames pour masques alpha)        | Accepté                           | Mai 2026 |
 | [ADR-129](ADR-129-kill-templates-studio-v2-legacy.md)                                    | Suppression du système Templates Studio V2 data-driven legacy (4 PRs, -38k lignes)           | Accepté                           | Mai 2026 |
+| [ADR-131](ADR-131-photo-cutout-rembg-install.md)                                         | Installation `@imgly/background-removal-node` pour worker photo-cutout (Phase 2 ADR-124)     | Accepté                           | Mai 2026 |
 | [ADR-130](ADR-130-templates-studio-assets-filesystem-cache.md)                           | Templates Studio — cache filesystem des assets FTP au boot du worker (mini HTTP localhost)   | Accepté                           | Mai 2026 |
 
 ### Supersédés
