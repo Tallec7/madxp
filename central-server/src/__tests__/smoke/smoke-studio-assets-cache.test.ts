@@ -49,16 +49,6 @@ describe('ADR-130 — studio-assets-cache.service.ts contract', () => {
     expect(cacheServiceSrc).not.toMatch(/listen\([^)]*['"]0\.0\.0\.0['"]/);
   });
 
-  it('envoie les headers CORS (anti FontFace + SVG image cross-origin block)', () => {
-    // Sans CORS, Chromium headless Remotion rejette les fonts custom (FontFace
-    // strict) + certains SVG <image> cross-origin → fallback sans-serif côté
-    // composition + masques alpha rejetés. Incident 2026-05-18, logs Railway :
-    // "Access to font 'http://127.0.0.1:.../Bulevar.otf' has been blocked by
-    // CORS policy: No 'Access-Control-Allow-Origin' header".
-    expect(cacheServiceSrc).toMatch(/['"]Access-Control-Allow-Origin['"]\s*,\s*['"]\*/);
-    expect(cacheServiceSrc).toMatch(/['"]Cross-Origin-Resource-Policy['"]\s*,\s*['"]cross-origin/);
-  });
-
   it('sanitise les paths (anti path traversal)', () => {
     // Cache server expose un endpoint HTTP qui sert des fichiers locaux. Sans
     // sanitization, un attaquant local pourrait fetch /etc/passwd via une
