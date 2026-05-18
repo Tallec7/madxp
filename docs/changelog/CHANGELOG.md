@@ -1,3 +1,9 @@
+## [3.323.1](https://github.com/Tallec7/neopro/compare/v3.323.0...v3.323.1) (2026-05-18)
+
+### Bug Fixes
+
+- **templates:** whitelist kalonpartners.bzh dans CSP connect-src ([#1049](https://github.com/Tallec7/neopro/issues/1049)) ([f99819b](https://github.com/Tallec7/neopro/commit/f99819b758d73e81a85200d4a7ff76a7c78a5c0e))
+
 # [3.323.0](https://github.com/Tallec7/neopro/compare/v3.322.3...v3.323.0) (2026-05-18)
 
 ### Features
