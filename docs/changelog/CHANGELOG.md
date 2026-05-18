@@ -1,3 +1,9 @@
+## [3.321.2](https://github.com/Tallec7/neopro/compare/v3.321.1...v3.321.2) (2026-05-18)
+
+### Bug Fixes
+
+- **studio:** preload PNG mask frames via delayRender (rendu conforme sur Railway) ([#1039](https://github.com/Tallec7/neopro/issues/1039)) ([c8adf30](https://github.com/Tallec7/neopro/commit/c8adf30745a3d43180c9258daebb0e22e9bd13e9))
+
 ## [3.321.1](https://github.com/Tallec7/neopro/compare/v3.321.0...v3.321.1) (2026-05-15)
 
 ### Bug Fixes
