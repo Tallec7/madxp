@@ -56,12 +56,15 @@ import {
   deleteTemplateAssetBinding,
 } from '../controllers/templates-studio.controller';
 
-// Multer en mémoire pour photos brutes — 8 MB max (les photos high-res de
-// shooting peuvent dépasser 5 MB). MimeType filter côté controller pour
-// retourner un message FR clair (multer rejette en silence sinon).
+// Multer en mémoire pour photos brutes — 20 MB max. Bumpé de 8→20 MB
+// (2026-05-18) : iPhone récents shootent à 10-15 MB sur photos portrait,
+// causait des 413 fréquents en saisie joueur. Heap Node Railway = 560 MB,
+// donc 20 MB en mémoire reste largement dans le budget. MimeType filter
+// côté controller pour retourner un message FR clair (multer rejette en
+// silence sinon).
 const uploadPlayerPhotoMiddleware = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
 });
 
 // Logos club — limite plus basse (2 MB suffit pour PNG/SVG club typiques).

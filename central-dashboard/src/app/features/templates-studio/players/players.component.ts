@@ -99,7 +99,7 @@ export class PlayersComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
-        this.errorMsg.set(err?.error?.error ?? 'Erreur de chargement du roster');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Erreur de chargement du roster'));
       },
     });
   }
@@ -162,7 +162,7 @@ export class PlayersComponent implements OnInit {
               this.clearCreationPhoto();
               this.addForm.reset({ is_global: false });
               this.showAddForm.set(false);
-              this.errorMsg.set(err?.error?.error ?? 'Joueur créé mais upload photo échoué');
+              this.errorMsg.set(this.extractErrorMessage(err, 'Joueur créé mais upload photo échoué'));
             },
           });
         } else {
@@ -179,7 +179,7 @@ export class PlayersComponent implements OnInit {
       },
       error: (err) => {
         this.saving.set(false);
-        this.errorMsg.set(err?.error?.error ?? 'Erreur de création');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Erreur de création'));
       },
     });
   }
@@ -225,7 +225,7 @@ export class PlayersComponent implements OnInit {
       },
       error: (err) => {
         this.grantsLoading.set(false);
-        this.grantsError.set(err?.error?.error ?? 'Erreur de chargement des sites');
+        this.grantsError.set(this.extractErrorMessage(err, 'Erreur de chargement des sites'));
       },
     });
   }
@@ -246,7 +246,7 @@ export class PlayersComponent implements OnInit {
         this.loadGrants(player.id);
       },
       error: (err) => {
-        this.grantsError.set(err?.error?.error ?? "Erreur d'octroi");
+        this.grantsError.set(this.extractErrorMessage(err, "Erreur d'octroi"));
       },
     });
   }
@@ -258,7 +258,7 @@ export class PlayersComponent implements OnInit {
     this.studio.removePlayerGrant(player.id, siteId).subscribe({
       next: () => this.loadGrants(player.id),
       error: (err) => {
-        this.grantsError.set(err?.error?.error ?? 'Erreur de révocation');
+        this.grantsError.set(this.extractErrorMessage(err, 'Erreur de révocation'));
       },
     });
   }
@@ -277,7 +277,7 @@ export class PlayersComponent implements OnInit {
         this.flashSuccess('Joueur supprimé.');
       },
       error: (err) => {
-        this.errorMsg.set(err?.error?.error ?? 'Erreur de suppression');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Erreur de suppression'));
       },
     });
   }
@@ -304,7 +304,7 @@ export class PlayersComponent implements OnInit {
       },
       error: (err) => {
         this.uploadingPhotoFor.set(null);
-        this.errorMsg.set(err?.error?.error ?? 'Upload échoué');
+        this.errorMsg.set(this.extractErrorMessage(err, 'Upload échoué'));
         input.value = '';
       },
     });
@@ -313,5 +313,15 @@ export class PlayersComponent implements OnInit {
   private flashSuccess(msg: string): void {
     this.successMsg.set(msg);
     setTimeout(() => this.successMsg.set(null), 3000);
+  }
+
+  // Le backend renvoie `{ error: { code, message, ... } }` (format AppError.toResponse).
+  // Sans cet extracteur, `err.error.error` est l'objet entier → `[object Object]` affiché.
+  // Le fallback string couvre les legacy controllers qui renvoient `{ error: 'string' }`.
+  private extractErrorMessage(err: unknown, fallback: string): string {
+    const body = (err as { error?: { error?: string | { message?: string } } })?.error?.error;
+    if (typeof body === 'string') return body;
+    if (body && typeof body === 'object' && typeof body.message === 'string') return body.message;
+    return fallback;
   }
 }
