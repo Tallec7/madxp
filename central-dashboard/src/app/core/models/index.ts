@@ -395,13 +395,6 @@ export interface SiteConnectionStatus {
   };
   statistics: {
     /**
-     * @deprecated ADR-099 — la table `metrics` est échantillonnée toutes les
-     * 5 min, ce compteur n'est PAS un proxy fiable de la connectivité. Utiliser
-     * `uptime24h` (dérivé de `connection_events`) pour tout calcul de %.
-     * Conservé pour information détaillée et compat ascendante.
-     */
-    heartbeats24h: number;
-    /**
      * Pourcentage d'uptime sur 24h (0-100). `null` lorsque la table
      * `connection_events` (ADR-099) n'a pas encore enregistré d'événement
      * pour ce site — le composant doit alors afficher un état neutre ("—"),

@@ -301,7 +301,6 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
 
     // Récupérer les statistiques de connexion récentes (24h)
     const stats = await metricsRepository.get24hStatsForSite(id);
-    const heartbeatCount24h = parseInt(stats?.heartbeat_count || '0', 10);
 
     // ADR-099 — uptime réel basé sur connection_events (issue #967).
     // L'ancienne formule divisait COUNT(metrics) par 2880 (1 sample/30s supposé)
@@ -329,7 +328,6 @@ export const getSiteConnectionStatus = async (req: AuthRequest, res: Response) =
         lastConfigSync: site.last_config_sync,
       },
       statistics: {
-        heartbeats24h: heartbeatCount24h,
         uptime24h: uptimeStats.uptimePercent,
         firstHeartbeat24h: stats?.first_heartbeat,
         lastHeartbeat24h: stats?.last_heartbeat,

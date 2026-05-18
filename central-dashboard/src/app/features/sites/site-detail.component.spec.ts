@@ -57,7 +57,6 @@ describe('SiteDetailComponent', () => {
       secondsSinceLastSeen: 0,
       localIp: '192.168.1.100',
       lastConfigSync: null,
-      heartbeat_24h: { count: 100, firstAt: null, lastAt: null },
     },
     metrics: { data: [mockMetrics] },
     health: null,
