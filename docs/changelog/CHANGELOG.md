@@ -1,3 +1,9 @@
+## [3.322.1](https://github.com/Tallec7/neopro/compare/v3.322.0...v3.322.1) (2026-05-18)
+
+### Bug Fixes
+
+- **studio:** CORS headers on assets cache server (fonts blocked by Chromium) ([#1043](https://github.com/Tallec7/neopro/issues/1043)) ([7a1cb2f](https://github.com/Tallec7/neopro/commit/7a1cb2fc91939f67e3203e36e69fa0986e3ccdb4)), closes [#1041](https://github.com/Tallec7/neopro/issues/1041)
+
 # [3.322.0](https://github.com/Tallec7/neopro/compare/v3.321.4...v3.322.0) (2026-05-18)
 
 ### Features
