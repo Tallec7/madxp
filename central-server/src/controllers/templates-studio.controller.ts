@@ -617,21 +617,40 @@ export const uploadPlayerPhoto = async (
   }
 
   try {
-    // Verify player belongs to site (defense-in-depth tenant guard).
+    // Tenant guard (defense-in-depth) :
+    // - joueur site-local (`site_id = $siteId`) → OK
+    // - joueur global (`site_id IS NULL`) → OK si grant vers ce site (ADR-123)
     const existing = await playerRepository.findById(playerId);
-    if (!existing || existing.site_id !== siteId) {
+    if (!existing) {
       res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
       return;
+    }
+    const isGlobal = existing.site_id === null;
+    if (!isGlobal && existing.site_id !== siteId) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    if (isGlobal) {
+      const granted = await playerRepository.hasGrant(playerId, siteId);
+      if (!granted) {
+        res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+        return;
+      }
     }
 
     // Hash content-addressable pour éviter les collisions FTP si le même
     // joueur est ré-uploadé. Garde versionning implicite (cleanup futur).
+    // Path namespacé sur `site_id ?? 'global'` pour rester aligné avec le
+    // worker rembg (`photo-cutout.service.ts`) qui écrit le cutout au même
+    // segment — sinon raw et cutout d'un joueur global se retrouvent dans
+    // des sous-dossiers FTP différents.
     const hash = createHash('sha1')
       .update(file.buffer)
       .digest('hex')
       .slice(0, 12);
     const ext = PHOTO_EXT_BY_MIME[file.mimetype];
-    const storagePath = `players/${siteId}/${playerId}-raw-${hash}.${ext}`;
+    const siteSegment = existing.site_id ?? 'global';
+    const storagePath = `players/${siteSegment}/${playerId}-raw-${hash}.${ext}`;
 
     const result = await uploadFileToFtp(file.buffer, storagePath, file.mimetype);
     if (!result) {
@@ -644,9 +663,11 @@ export const uploadPlayerPhoto = async (
     const publicUrl = getFtpPublicUrl(storagePath);
 
     // Update : photo_raw_url + cutout_status='pending' (re-trigger worker rembg).
-    const updated = await playerRepository.update(playerId, siteId, {
-      photo_raw_url: publicUrl,
-    });
+    // `updateGlobal` / `update` ont la même sémantique de re-trigger, l'un
+    // sans tenant guard SQL (joueur global), l'autre avec `WHERE site_id = $`.
+    const updated = isGlobal
+      ? await playerRepository.updateGlobal(playerId, { photo_raw_url: publicUrl })
+      : await playerRepository.update(playerId, siteId, { photo_raw_url: publicUrl });
     if (!updated) {
       res.status(404).json({ success: false, error: 'Joueur supprimé entre-temps' });
       return;
