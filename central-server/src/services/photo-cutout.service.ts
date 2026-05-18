@@ -80,6 +80,38 @@ async function downloadBuffer(url: string): Promise<Buffer> {
   }
 }
 
+/**
+ * Détecte le mime image via les magic bytes (en-tête binaire), indépendamment
+ * du `Content-Type` HTTP qui peut être absent/inexact selon le serveur FTP.
+ *
+ * Pourquoi : `@imgly/background-removal-node` lit `Blob.type` pour choisir
+ * son décodeur. Un Blob sans type (`new Blob([buf])` → `type: ''`) fait crasher
+ * la lib avec `Unsupported format: ` (vide). Incident 2026-05-18.
+ */
+function detectImageMime(buf: Buffer): string | null {
+  if (buf.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
+  // PNG: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return 'image/png';
+  }
+  // WebP: RIFF .... WEBP
+  if (
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
+    buf[8] === 0x57 &&
+    buf[9] === 0x45 &&
+    buf[10] === 0x42 &&
+    buf[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+  return null;
+}
+
 async function performCutout(rawBuffer: Buffer): Promise<Buffer | null> {
   const removeBackground = await getRemoveBg();
   if (!removeBackground) {
@@ -87,7 +119,15 @@ async function performCutout(rawBuffer: Buffer): Promise<Buffer | null> {
     // le player `failed` proprement (vs throw qui casserait le drain).
     return null;
   }
-  const blob = new Blob([rawBuffer]);
+  // `Blob.type` doit être un mime image reconnu par @imgly, sinon "Unsupported
+  // format: " (incident 2026-05-18). Les uploads passent par
+  // `ALLOWED_PHOTO_MIMES = jpeg|png|webp` côté controller, donc la détection
+  // doit réussir sur les inputs légitimes.
+  const mime = detectImageMime(rawBuffer);
+  if (!mime) {
+    throw new Error('Unsupported image format (no JPEG/PNG/WebP magic bytes)');
+  }
+  const blob = new Blob([rawBuffer], { type: mime });
   const outBlob = await removeBackground(blob);
   const arrayBuffer = await outBlob.arrayBuffer();
   return Buffer.from(arrayBuffer);
