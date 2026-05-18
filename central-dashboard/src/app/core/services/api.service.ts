@@ -82,6 +82,19 @@ export class ApiService {
   }
 
   /**
+   * GET avec `responseType: 'blob'` — pour les routes de download binaire
+   * (PDF, PNG, ZIP). Le backend doit poser `Content-Disposition: attachment`
+   * pour forcer le download natif côté browser. Utilisé par les proxies qui
+   * contournent CORS (ex : photo détourée Hostinger).
+   */
+  downloadBlob(endpoint: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}${endpoint}`, {
+      responseType: 'blob',
+      withCredentials: true
+    });
+  }
+
+  /**
    * Upload avec suivi de progression et retry automatique.
    * Retourne un Observable qui émet des événements de progression.
    */

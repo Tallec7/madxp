@@ -760,6 +760,125 @@ export const uploadPlayerPhoto = async (
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// GET /api/templates-studio/sites/:siteId/players/:playerId/cutout-download
+//
+// Proxy de téléchargement du PNG détouré. Le fichier est servi par Hostinger
+// (`kalonpartners.bzh/neopro-video/...`) qui ne pose pas `Access-Control-Allow-Origin`,
+// donc un fetch direct depuis `neopro-admin.kalonpartners.bzh` est bloqué par
+// CORS (les `<img>` passent car ils n'exigent pas CORS, le fetch+Blob non).
+//
+// Cette route stream le PNG depuis le FTP en y ajoutant
+// `Content-Disposition: attachment; filename="<slug>-cutout.png"` pour forcer
+// le download natif avec un filename lisible. Tenant guard ADR-123 réutilisé
+// (cf. uploadPlayerPhoto).
+// ────────────────────────────────────────────────────────────────────────────
+
+function buildCutoutFilename(player: PlayerRow): string {
+  const slug = (s: string | null | undefined): string =>
+    (s ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '') // diacritiques
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+  const parts = [slug(player.prenom), slug(player.nom)].filter(Boolean);
+  if (player.numero !== null && player.numero !== undefined) {
+    parts.push(String(player.numero));
+  }
+  parts.push('cutout');
+  return `${parts.join('-') || 'joueur-cutout'}.png`;
+}
+
+export const downloadPlayerCutout = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Non authentifié' });
+    return;
+  }
+  const { siteId, playerId } = req.params;
+  try {
+    // Tenant guard ADR-123 (cf. uploadPlayerPhoto).
+    const existing = await playerRepository.findById(playerId);
+    if (!existing) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    const isGlobal = existing.site_id === null;
+    if (!isGlobal && existing.site_id !== siteId) {
+      res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+      return;
+    }
+    if (isGlobal) {
+      const granted = await playerRepository.hasGrant(playerId, siteId);
+      if (!granted) {
+        res.status(404).json({ success: false, error: 'Joueur introuvable pour ce site' });
+        return;
+      }
+    }
+    if (!existing.photo_cutout_url) {
+      res.status(404).json({ success: false, error: 'Photo détourée non disponible' });
+      return;
+    }
+
+    // Stream le PNG depuis Hostinger. Pas de mise en cache locale — le fichier
+    // est content-addressable côté FTP (URL change quand la photo brute change),
+    // donc `Cache-Control: private, max-age=300` côté browser suffit.
+    const upstream = await fetch(existing.photo_cutout_url);
+    if (!upstream.ok || !upstream.body) {
+      logger.warn('templates-studio: cutout proxy upstream failed', {
+        player_id: playerId,
+        site_id: siteId,
+        status: upstream.status,
+        cutout_url: existing.photo_cutout_url,
+      });
+      res.status(502).json({ success: false, error: 'PNG indisponible côté FTP' });
+      return;
+    }
+
+    const filename = buildCutoutFilename(existing);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    const upstreamLength = upstream.headers.get('content-length');
+    if (upstreamLength) res.setHeader('Content-Length', upstreamLength);
+
+    // Pipe Web ReadableStream → Express Response.
+    const reader = upstream.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    res.end();
+
+    logger.info('templates-studio: cutout downloaded', {
+      player_id: playerId,
+      site_id: siteId,
+      user_id: req.user.id,
+      filename,
+      bytes: upstreamLength ? Number(upstreamLength) : null,
+    });
+  } catch (error) {
+    logger.error('templates-studio: cutout download failed', {
+      error,
+      site_id: siteId,
+      player_id: playerId,
+    });
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: 'Erreur serveur interne' });
+    } else {
+      res.end();
+    }
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // /api/templates-studio/players/global — joueurs globaux (super_admin/operator)
 // /api/templates-studio/players/:playerId/grants — octrois multi-sites
 //

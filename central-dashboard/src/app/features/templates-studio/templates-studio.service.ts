@@ -188,6 +188,18 @@ export class TemplatesStudioService {
   }
 
   /**
+   * Télécharge le PNG détouré via le proxy backend. Le PNG est servi par
+   * Hostinger (`kalonpartners.bzh`) sans CORS, donc un fetch direct depuis
+   * le dashboard est bloqué. Le backend stream le fichier avec
+   * `Content-Disposition: attachment; filename="<slug>-cutout.png"`.
+   */
+  downloadPlayerCutout(siteId: string, playerId: string): Observable<Blob> {
+    return this.api.downloadBlob(
+      `/templates-studio/sites/${siteId}/players/${playerId}/cutout-download`,
+    );
+  }
+
+  /**
    * Distribue un render `ready` vers la bibliothèque vidéo de N sites.
    *
    * Deux modes :

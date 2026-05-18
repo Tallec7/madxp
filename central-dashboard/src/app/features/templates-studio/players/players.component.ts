@@ -312,22 +312,25 @@ export class PlayersComponent implements OnInit {
 
   // Téléchargement de la photo détourée (PNG transparent) — utile pour
   // réutiliser le cutout hors templates Remotion (présentations club, slides).
-  // Fetch + Blob + ObjectURL : l'attribut `download` HTML natif est ignoré
-  // cross-origin par les navigateurs ; passer par un Blob local le force.
+  // Passe par le proxy backend (`/cutout-download`) car Hostinger ne pose
+  // pas de header `Access-Control-Allow-Origin` → fetch direct CORS-bloqué.
+  // Le backend stream le PNG avec `Content-Disposition: attachment; filename="..."`
+  // (le filename slugifié vit côté serveur).
   downloadingCutoutFor = signal<string | null>(null);
 
   downloadCutout(p: Player): void {
     if (!p.photo_cutout_url) return;
+    const siteId = this.siteId();
+    if (!siteId) return;
     this.downloadingCutoutFor.set(p.id);
-    fetch(p.photo_cutout_url, { mode: 'cors' })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
+    this.studio.downloadPlayerCutout(siteId, p.id).subscribe({
+      next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
+        // Filename fallback côté client — le `Content-Disposition` du backend
+        // est honoré pour les nav directes, mais ici on consomme un Blob donc
+        // c'est nous qui posons le nom via l'attribut `download`.
         a.download = this.cutoutFilename(p);
         document.body.appendChild(a);
         a.click();
@@ -335,12 +338,12 @@ export class PlayersComponent implements OnInit {
         // Délai recommandé avant revoke pour laisser le browser amorcer le download.
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         this.downloadingCutoutFor.set(null);
-      })
-      .catch((err: unknown) => {
+      },
+      error: (err: unknown) => {
         this.downloadingCutoutFor.set(null);
-        const msg = err instanceof Error ? err.message : String(err);
-        this.errorMsg.set(`Téléchargement échoué (${msg})`);
-      });
+        this.errorMsg.set(this.extractErrorMessage(err, 'Téléchargement échoué'));
+      },
+    });
   }
 
   private cutoutFilename(p: Player): string {
