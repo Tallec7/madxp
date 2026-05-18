@@ -13,7 +13,7 @@ jest.mock('../repositories', () => {
   const countActiveForSite = jest.fn();
   return {
     siteRepository: { findConnectionInfo: jest.fn() },
-    metricsRepository: { findBySiteId: jest.fn(), get24hStatsForSite: jest.fn() },
+    metricsRepository: { findBySiteId: jest.fn() },
     analyticsRepository: {},
     configProfileRepository: { findBySite: jest.fn(), replaceConfiguration: jest.fn() },
     siteSponsorRepository: {},

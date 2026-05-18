@@ -270,10 +270,9 @@ export class SiteDetailComponent implements OnInit, OnDestroy, AfterViewChecked 
           },
           sync: { lastConfigSync: data.connection.lastConfigSync },
           statistics: {
-            heartbeats24h: data.connection.heartbeat_24h.count,
             uptime24h: data.connection.uptime?.percent ?? null,
-            firstHeartbeat24h: data.connection.heartbeat_24h.firstAt,
-            lastHeartbeat24h: data.connection.heartbeat_24h.lastAt,
+            firstHeartbeat24h: null,
+            lastHeartbeat24h: null,
             disconnectCount24h: data.connection.uptime?.disconnectCount ?? null,
             longestGapSeconds24h: data.connection.uptime?.longestGapSeconds ?? null
           },

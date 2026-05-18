@@ -186,11 +186,6 @@ export class SitesService {
       secondsSinceLastSeen: number | null;
       localIp: string | null;
       lastConfigSync: Date | null;
-      heartbeat_24h: {
-        count: number;
-        firstAt: Date | null;
-        lastAt: Date | null;
-      };
     };
     metrics: {
       period_hours: number;

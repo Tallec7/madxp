@@ -197,8 +197,7 @@ export class ConnectionIndicatorComponent implements OnInit, OnDestroy {
       : `${s.uptime24h.toFixed(1)}%`;
     const lines = [
       `Statut: ${this.statusText}`,
-      `Uptime 24h: ${uptimeLabel}`,
-      `Heartbeats 24h: ${s.heartbeats24h}`
+      `Uptime 24h: ${uptimeLabel}`
     ];
     if (s.disconnectCount24h !== null && s.disconnectCount24h !== undefined && s.disconnectCount24h > 0) {
       lines.push(`Coupures 24h: ${s.disconnectCount24h}`);

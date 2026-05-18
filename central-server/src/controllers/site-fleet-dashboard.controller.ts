@@ -83,9 +83,6 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
       displayStatus = 'offline';
     }
 
-    // Récupérer les statistiques de connexion récentes (24h)
-    const stats = await metricsRepository.get24hStatsForSite(id);
-
     // Uptime réel basé sur connection_events (ADR-099). Source de vérité fiable,
     // contrairement au comptage de rows `metrics` qui assumait un intervalle 30s
     // alors que les samples sont écrits toutes les 5 min — d'où ~10% d'uptime
@@ -314,11 +311,6 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
         secondsSinceLastSeen,
         localIp: site.local_ip,
         lastConfigSync: site.last_config_sync,
-        heartbeat_24h: {
-          count: parseInt(stats.heartbeat_count as string),
-          firstAt: stats.first_heartbeat,
-          lastAt: stats.last_heartbeat,
-        },
         // ADR-099 — uptime réel dérivé de connection_events. Préférer ces champs
         // côté front à un calcul basé sur heartbeat_24h (calcul faux historiquement,
         // cf. issue #644). Si uptimePercent est null, le site est trop récent (pas
