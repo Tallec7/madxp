@@ -545,26 +545,40 @@ describe('Templates Studio V1 — S4-B upload photo multipart', () => {
     expect(content).toMatch(/image\/webp/);
   });
 
-  it('uploadPlayerPhoto enforces tenant guard via existing.site_id !== siteId', () => {
+  it('uploadPlayerPhoto enforces tenant guard for site-local AND global players (ADR-123)', () => {
     // Defense-in-depth : même si requireClubScope passe (admin bypass), on
-    // recheck que le player appartient bien au site_id de l'URL.
+    // recheck que le player appartient bien au site_id de l'URL OU qu'il a un
+    // grant pour ce site (joueur global, `site_id IS NULL`).
+    // Sans le branche grant, un joueur global granté retourne 404 → upload
+    // photo impossible (incident 2026-05-18).
     const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
     expect(content).toMatch(/existing\.site_id\s*!==\s*siteId/);
+    expect(content).toMatch(/playerRepository\.hasGrant\(playerId,\s*siteId\)/);
   });
 
-  it('uploadPlayerPhoto storage path is content-addressable (sha1 hash)', () => {
-    // Pattern `players/{siteId}/{playerId}-raw-{hash}.{ext}` — évite les
-    // collisions si même joueur ré-upload différentes photos.
+  it('uploadPlayerPhoto storage path is content-addressable + global-safe', () => {
+    // Pattern `players/{siteId | 'global'}/{playerId}-raw-{hash}.{ext}` — évite
+    // les collisions si même joueur ré-upload différentes photos, ET reste
+    // aligné avec le worker rembg qui écrit le cutout au même segment
+    // (`player.site_id ?? 'global'`).
     const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
     expect(content).toMatch(/createHash\(['"]sha1['"]\)/);
-    expect(content).toMatch(/players\/\$\{siteId\}\/\$\{playerId\}-raw-/);
+    // Le segment racine doit être dérivé du joueur (`existing.site_id ?? 'global'`),
+    // jamais du `siteId` de l'URL — sinon le raw d'un joueur global atterrit dans
+    // un dossier différent du cutout produit par le worker.
+    expect(content).toMatch(/existing\.site_id\s*\?\?\s*['"]global['"]/);
+    expect(content).toMatch(/players\/\$\{siteSegment\}\/\$\{playerId\}-raw-/);
   });
 
-  it('uploadPlayerPhoto bumps cutout_status to pending via repository.update', () => {
+  it('uploadPlayerPhoto bumps cutout_status to pending via update OR updateGlobal', () => {
     // Le worker rembg (S4-C) poll `WHERE cutout_status='pending'`. Sans ce
     // bump, un nouveau raw_url ne déclenche pas le re-traitement.
+    // Les 2 chemins doivent être présents : `update` pour les joueurs
+    // site-locaux (tenant guard SQL), `updateGlobal` pour les joueurs globaux
+    // (déjà gardés par `hasGrant` ci-dessus).
     const content = fs.readFileSync(CONTROLLER_FILE, 'utf8');
     expect(content).toMatch(/playerRepository\.update\(playerId,\s*siteId,\s*\{[\s\S]*?photo_raw_url:\s*publicUrl/);
+    expect(content).toMatch(/playerRepository\.updateGlobal\(playerId,\s*\{[\s\S]*?photo_raw_url:\s*publicUrl/);
   });
 
   it('routes mount POST /sites/:siteId/players/:playerId/photo with multer + tenant guard', () => {
