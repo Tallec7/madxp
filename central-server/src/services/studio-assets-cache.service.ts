@@ -177,6 +177,14 @@ export function startStudioCacheServer(): Promise<void> {
         res.statusCode = 200;
         res.setHeader('Content-Length', stat.size);
         res.setHeader('Cache-Control', 'public, max-age=3600, immutable');
+        // CORS : Chromium headless (Remotion) tourne depuis l'origin
+        // `http://localhost:<bundlePort>` (webpack-dev-server du bundle). Sans
+        // ces headers, FontFace.load et certains SVG <image> cross-origin
+        // sont bloqués → fallback sans-serif côté composition + masques vides.
+        // Incident 2026-05-18, logs Railway : "Access to font ... has been
+        // blocked by CORS policy: No 'Access-Control-Allow-Origin' header".
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         const stream = (await fs.open(filePath, 'r')).createReadStream();
         stream.pipe(res);
       } catch {
