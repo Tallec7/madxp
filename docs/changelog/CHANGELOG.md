@@ -1,3 +1,9 @@
+# [3.323.0](https://github.com/Tallec7/neopro/compare/v3.322.3...v3.323.0) (2026-05-18)
+
+### Features
+
+- **templates:** bouton download photo détourée sur card joueur ([#1048](https://github.com/Tallec7/neopro/issues/1048)) ([d7f4d4a](https://github.com/Tallec7/neopro/commit/d7f4d4ac60eac9da92a18888f6e409c26feda758))
+
 ## [3.322.3](https://github.com/Tallec7/neopro/compare/v3.322.2...v3.322.3) (2026-05-18)
 
 ### Bug Fixes
