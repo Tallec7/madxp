@@ -572,7 +572,7 @@ describe('Templates Studio V1 — S4-B upload photo multipart', () => {
     expect(routes).toMatch(/router\.post\([\s\S]*?'\/sites\/:siteId\/players\/:playerId\/photo'/);
     expect(routes).toMatch(/uploadPlayerPhotoMiddleware\.single\(['"]photo['"]\)/);
     expect(routes).toMatch(/multer\.memoryStorage\(\)/);
-    expect(routes).toMatch(/fileSize:\s*8\s*\*\s*1024\s*\*\s*1024/);
+    expect(routes).toMatch(/fileSize:\s*20\s*\*\s*1024\s*\*\s*1024/);
     // Tenant guard sur le siteId
     expect(routes).toMatch(/requireClubScope\(siteIdFromParams\)/);
   });

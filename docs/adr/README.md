@@ -145,6 +145,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-128](ADR-128-templates-studio-asset-directory.md)                                   | Templates Studio — type d'asset `directory` (séquences PNG frames pour masques alpha)        | Accepté                           | Mai 2026 |
 | [ADR-129](ADR-129-kill-templates-studio-v2-legacy.md)                                    | Suppression du système Templates Studio V2 data-driven legacy (4 PRs, -38k lignes)           | Accepté                           | Mai 2026 |
 | [ADR-131](ADR-131-photo-cutout-rembg-install.md)                                         | Installation `@imgly/background-removal-node` pour worker photo-cutout (Phase 2 ADR-124)     | Accepté                           | Mai 2026 |
+| [ADR-130](ADR-130-templates-studio-assets-filesystem-cache.md)                           | Templates Studio — cache filesystem des assets FTP au boot du worker (mini HTTP localhost)   | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
@@ -207,4 +208,4 @@ Voir **[BEST_PRACTICES.md](BEST_PRACTICES.md)** pour :
 
 ---
 
-_Dernière mise à jour : 16 mai 2026 (ADR-129 Accepté — Kill Templates Studio V2 legacy : drop intégral en 4 PRs séquentielles (backend, frontend, package + DB migration, docs), 12 ADRs V2 archivés dans `_archive/`, -38 000 lignes, -12 tables DB. V1 code-driven (ADR-123/124/125/127/128) devient la seule implémentation.)_
+_Dernière mise à jour : 18 mai 2026 (ADR-130 Accepté — Templates Studio assets filesystem cache au boot du worker. Mini Express localhost sert les WebM/PNG préchargés depuis FTP Hostinger, élimine la latence cross-region. Attendu : render `but_generique` 14 min → ~5-8 min sur Railway Hobby sans toucher au bridage CPU ADR-128. + CRF 18→23 (-30% encodage h264).)_
