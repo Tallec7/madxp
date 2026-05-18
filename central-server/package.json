@@ -37,6 +37,7 @@
   "author": "NEOPRO Team",
   "license": "PROPRIETARY",
   "dependencies": {
+    "@imgly/background-removal-node": "^1.4.5",
     "@logtail/node": "^0.5.2",
     "@logtail/winston": "^0.5.2",
     "@remotion/bundler": "^4.0.448",

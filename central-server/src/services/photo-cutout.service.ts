@@ -13,14 +13,13 @@
  * (container Python séparé). Le central a déjà tout ce qu'il faut côté
  * Node, pas besoin de tooling ML séparé pour le volume V1 (5-50 photos/jour).
  *
- * **NOTE ADR-124 Phase 1** : la lib npm `@imgly/background-removal-node`
- * (ONNX + BiRefNet) n'est PAS dans `package.json` actuellement — elle
- * apporte des deps transitives (tar 7.x + webpack shims) qui polluent
- * d'autres test suites jest avec `RawModule is not a constructor`. Le
- * worker tourne en mode "skip" : il claime la row mais marque `failed`
- * direct. À débloquer en Phase 2 (options : install proprement avec
- * mock global, switch vers API SaaS remove.bg, ou child_process exec
- * d'une CLI Python isolée).
+ * **ADR-124 Phase 2 (2026-05-18)** : la lib npm `@imgly/background-removal-node`
+ * (ONNX + BiRefNet) est désormais installée. Le mock jest global dans
+ * `src/__tests__/setup.ts` neutralise la pollution `RawModule is not a
+ * constructor` qui bloquait Phase 1. Heap Node passé à 1024 MB pour
+ * accommoder ONNX runtime + modèle BiRefNet en RAM. Le require dynamique
+ * ci-dessous reste tel quel pour la safety net (si la lib échoue à charger
+ * pour une raison ENV, le worker marque `failed` au lieu de crasher).
  *
  * Invariants :
  * - `failStaleProcessingCutouts(10)` au boot (anti-orphan)
@@ -40,10 +39,12 @@ let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
 
 // ── Lazy load de la lib rembg ───────────────────────────────────────────────
-// Phase 1 ADR-124 : la lib `@imgly/background-removal-node` n'est PAS installée
-// (deps transitives cassent les tests jest, cf. note de tête). Le require est
-// dynamique pour ne pas exploser à l'import du fichier ; si la lib est absente,
-// `getRemoveBg()` retourne null → le worker marque le player `failed` proprement.
+// ADR-124 Phase 2 : la lib `@imgly/background-removal-node` est installée
+// (cf. doc de tête). Le require reste dynamique pour 2 raisons : (1) éviter
+// le coût d'init ONNX au module-load des process qui n'exécutent pas le
+// worker (CRON, web handlers), et (2) garder la safety net qui marque
+// `failed` au lieu de crasher si l'init échoue à cause d'un env Linux
+// inattendu (native bindings ONNX manquantes).
 type RemoveBackgroundFn = (input: Blob) => Promise<Blob>;
 let removeBgFn: RemoveBackgroundFn | null | undefined;
 

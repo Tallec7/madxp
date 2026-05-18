@@ -141,4 +141,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # so running on every boot is safe and ensures Railway deploys can never ship code
 # ahead of their schema (incident ADR-076 post-mortem — missing ADR-074 migration
 # caused 500s on /hotspot-config for days before detection).
-CMD ["sh", "-c", "node dist/scripts/migrate.js && node --max-old-space-size=512 --expose-gc dist/server.js"]
+CMD ["sh", "-c", "node dist/scripts/migrate.js && node --max-old-space-size=1024 --expose-gc dist/server.js"]

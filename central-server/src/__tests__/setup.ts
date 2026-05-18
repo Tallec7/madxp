@@ -13,6 +13,16 @@ process.env.TEMPLATE_PROXY_HMAC_SECRET =
 jest.mock('../config/database');
 jest.mock('../config/logger');
 
+// ADR-124 Phase 2 — Mock global pour `@imgly/background-removal-node`.
+// La lib amène des deps transitives (onnxruntime-node native bindings + webpack
+// shims) qui polluent les tests jest parallèles avec `RawModule is not a
+// constructor`. Le mock global vide évite l'import réel et garde les suites
+// rapides + déterministes. Le worker `photo-cutout.service.ts` charge la lib
+// via `require()` dynamique en runtime prod uniquement.
+jest.mock('@imgly/background-removal-node', () => ({
+  removeBackground: jest.fn().mockResolvedValue(new Blob([])),
+}));
+
 // Clean up mocks after each test
 afterEach(() => {
   jest.clearAllMocks();
