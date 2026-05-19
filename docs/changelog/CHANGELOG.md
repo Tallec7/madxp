@@ -1,3 +1,9 @@
+## [3.324.1](https://github.com/Tallec7/neopro/compare/v3.324.0...v3.324.1) (2026-05-19)
+
+### Bug Fixes
+
+- **infra:** healthcheckTimeout Railway 100→300s (prod down depuis v3.324.0) ([#1051](https://github.com/Tallec7/neopro/issues/1051)) ([de53fd9](https://github.com/Tallec7/neopro/commit/de53fd959949f6c673c083c69df7a61cb8f4e5c6))
+
 # [3.324.0](https://github.com/Tallec7/neopro/compare/v3.323.1...v3.324.0) (2026-05-19)
 
 ### Features
