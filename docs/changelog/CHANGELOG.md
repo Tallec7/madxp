@@ -1,3 +1,9 @@
+# [3.324.0](https://github.com/Tallec7/neopro/compare/v3.323.1...v3.324.0) (2026-05-19)
+
+### Features
+
+- **templates:** proxy backend pour download photo détourée (contourne CORS Hostinger) ([#1050](https://github.com/Tallec7/neopro/issues/1050)) ([a97744c](https://github.com/Tallec7/neopro/commit/a97744cae5e085f41397785799d4d584af5d48b8)), closes [#1048](https://github.com/Tallec7/neopro/issues/1048) [#1049](https://github.com/Tallec7/neopro/issues/1049)
+
 ## [3.323.1](https://github.com/Tallec7/neopro/compare/v3.323.0...v3.323.1) (2026-05-18)
 
 ### Bug Fixes
