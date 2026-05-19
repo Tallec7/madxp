@@ -44,6 +44,17 @@ const httpRequestsInProgress = new Gauge({
   registers: [register],
 });
 
+// Total bytes envoyés au client par route (post-compression — mesure le wire size
+// qui est facturé par Railway en egress). Ajouté pour audit coûts 2026-05-19 :
+// $10.11/mois dont ~$6.30 d'egress sur trafic métier minime (1-2 Pi actifs +
+// 4-5 sessions SaaS). Permet d'identifier le top des consommateurs sans deviner.
+const httpEgressBytesTotal = new Counter({
+  name: 'http_egress_bytes_total',
+  help: 'Total bytes sent in HTTP responses (post-compression, body only)',
+  labelNames: ['method', 'path', 'status_code'],
+  registers: [register],
+});
+
 // ============= Métriques Business =============
 
 const connectedSitesGauge = new Gauge({
@@ -992,9 +1003,39 @@ class MetricsService {
     return (req: Request, res: Response, next: NextFunction) => {
       const startTime = Date.now();
       const method = req.method;
+      let bytesSent = 0;
 
       // Incrémenter les requêtes en cours
       httpRequestsInProgress.inc({ method });
+
+      // Wrap res.write et res.end pour compter les bytes envoyés au client.
+      // Mount APRÈS compression() dans server.ts → on mesure le wire size facturé.
+      // Guard typeof === 'function' pour ne pas crasher si le res est un mock léger
+      // (cf. test unitaire `metrics.service.test.ts` qui mocke uniquement statusCode + on).
+      const origWrite = typeof res.write === 'function' ? (res.write.bind(res) as typeof res.write) : null;
+      const origEnd = typeof res.end === 'function' ? (res.end.bind(res) as typeof res.end) : null;
+
+      if (origWrite) {
+        res.write = function patchedWrite(this: Response, chunk: unknown, ...args: unknown[]): boolean {
+          if (chunk != null) {
+            bytesSent += Buffer.isBuffer(chunk)
+              ? chunk.byteLength
+              : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
+          }
+          return (origWrite as (...a: unknown[]) => boolean)(chunk, ...args);
+        } as typeof res.write;
+      }
+
+      if (origEnd) {
+        res.end = function patchedEnd(this: Response, chunk?: unknown, ...args: unknown[]): Response {
+          if (chunk != null && typeof chunk !== 'function') {
+            bytesSent += Buffer.isBuffer(chunk)
+              ? chunk.byteLength
+              : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
+          }
+          return (origEnd as (...a: unknown[]) => Response)(chunk, ...args);
+        } as typeof res.end;
+      }
 
       // Capturer la fin de la requête
       res.on('finish', () => {
@@ -1005,6 +1046,9 @@ class MetricsService {
         // Enregistrer les métriques
         httpRequestsTotal.inc({ method, path, status_code: statusCode });
         httpRequestDuration.observe({ method, path, status_code: statusCode }, duration);
+        if (bytesSent > 0) {
+          httpEgressBytesTotal.inc({ method, path, status_code: statusCode }, bytesSent);
+        }
         httpRequestsInProgress.dec({ method });
       });
 
