@@ -1010,26 +1010,32 @@ class MetricsService {
 
       // Wrap res.write et res.end pour compter les bytes envoyés au client.
       // Mount APRÈS compression() dans server.ts → on mesure le wire size facturé.
-      const origWrite = res.write.bind(res) as typeof res.write;
-      const origEnd = res.end.bind(res) as typeof res.end;
+      // Guard typeof === 'function' pour ne pas crasher si le res est un mock léger
+      // (cf. test unitaire `metrics.service.test.ts` qui mocke uniquement statusCode + on).
+      const origWrite = typeof res.write === 'function' ? (res.write.bind(res) as typeof res.write) : null;
+      const origEnd = typeof res.end === 'function' ? (res.end.bind(res) as typeof res.end) : null;
 
-      res.write = function patchedWrite(this: Response, chunk: unknown, ...args: unknown[]): boolean {
-        if (chunk != null) {
-          bytesSent += Buffer.isBuffer(chunk)
-            ? chunk.byteLength
-            : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
-        }
-        return (origWrite as (...a: unknown[]) => boolean)(chunk, ...args);
-      } as typeof res.write;
+      if (origWrite) {
+        res.write = function patchedWrite(this: Response, chunk: unknown, ...args: unknown[]): boolean {
+          if (chunk != null) {
+            bytesSent += Buffer.isBuffer(chunk)
+              ? chunk.byteLength
+              : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
+          }
+          return (origWrite as (...a: unknown[]) => boolean)(chunk, ...args);
+        } as typeof res.write;
+      }
 
-      res.end = function patchedEnd(this: Response, chunk?: unknown, ...args: unknown[]): Response {
-        if (chunk != null && typeof chunk !== 'function') {
-          bytesSent += Buffer.isBuffer(chunk)
-            ? chunk.byteLength
-            : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
-        }
-        return (origEnd as (...a: unknown[]) => Response)(chunk, ...args);
-      } as typeof res.end;
+      if (origEnd) {
+        res.end = function patchedEnd(this: Response, chunk?: unknown, ...args: unknown[]): Response {
+          if (chunk != null && typeof chunk !== 'function') {
+            bytesSent += Buffer.isBuffer(chunk)
+              ? chunk.byteLength
+              : Buffer.byteLength(chunk as string, (args[0] as BufferEncoding) || 'utf8');
+          }
+          return (origEnd as (...a: unknown[]) => Response)(chunk, ...args);
+        } as typeof res.end;
+      }
 
       // Capturer la fin de la requête
       res.on('finish', () => {
