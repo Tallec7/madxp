@@ -1,3 +1,9 @@
+# [3.325.0](https://github.com/Tallec7/neopro/compare/v3.324.1...v3.325.0) (2026-05-19)
+
+### Features
+
+- **metrics:** instrumenter http_egress_bytes_total — audit coûts Railway ([#1052](https://github.com/Tallec7/neopro/issues/1052)) ([961d46c](https://github.com/Tallec7/neopro/commit/961d46cbc7a3d78cdf293d11592653523d5393d7))
+
 ## [3.324.1](https://github.com/Tallec7/neopro/compare/v3.324.0...v3.324.1) (2026-05-19)
 
 ### Bug Fixes
