@@ -38,6 +38,7 @@ import {
   updatePlayer,
   deletePlayer,
   uploadPlayerPhoto,
+  downloadPlayerCutout,
   uploadBrandKitLogo,
   distributeRender,
   listGlobalPlayers,
@@ -228,6 +229,17 @@ router.post(
   requireClubScope(siteIdFromParams),
   uploadPlayerPhotoMiddleware.single('photo'),
   uploadPlayerPhoto,
+);
+
+// Proxy download du PNG détouré (contourne CORS Hostinger, ajoute
+// Content-Disposition: attachment pour forcer le download natif).
+router.get(
+  '/sites/:siteId/players/:playerId/cutout-download',
+  authenticate,
+  apiRateLimit,
+  validateParams(paramSchemas.siteIdAndPlayerId),
+  requireClubScope(siteIdFromParams),
+  downloadPlayerCutout,
 );
 
 // ──────────────────────────────────────────────────────────────────────────
