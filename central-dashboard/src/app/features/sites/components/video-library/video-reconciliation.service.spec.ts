@@ -125,6 +125,22 @@ describe('VideoReconciliationService', () => {
     expect(result.allVideos[0].ownerType).toBe('neopro');
   });
 
+  it('overrides legacy NEOPRO token detection when uploadedForSiteId is set (club video)', () => {
+    const cloud = mkCloud({ filename: '01_NEOPRO.mp4', uploadedForSiteId: 'site-strasbourg' });
+    const result = service.reconcile(baseInput({ cloudVideos: [cloud] }));
+
+    expect(result.allVideos[0].owner).toBe('club');
+    expect(result.allVideos[0].ownerType).toBe('club');
+  });
+
+  it('keeps legacy NEOPRO token detection when uploadedForSiteId is null (admin video)', () => {
+    const cloud = mkCloud({ filename: '01_NEOPRO.mp4', uploadedForSiteId: null });
+    const result = service.reconcile(baseInput({ cloudVideos: [cloud] }));
+
+    expect(result.allVideos[0].owner).toBe('neopro');
+    expect(result.allVideos[0].ownerType).toBe('neopro');
+  });
+
   it('detects sponsor ownerType when advertiserName is present and not legacy neopro', () => {
     const cloud = mkCloud({ filename: 'club/x.mp4', advertiserName: 'Acme' });
     const result = service.reconcile(baseInput({ cloudVideos: [cloud] }));
