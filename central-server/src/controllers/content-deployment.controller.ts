@@ -11,6 +11,7 @@ import { formatPaginatedResponse } from '../middleware/pagination';
 import { uploadVerificationService, UploadStatus } from '../services/upload-verification.service';
 import { imageToVideoService } from '../services/image-to-video.service';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum } from './content.helpers';
+import { sendJsonWithEtag } from '../utils/conditional-response';
 
 export const getDeployments = async (req: AuthRequest, res: Response) => {
   try {
@@ -23,7 +24,7 @@ export const getDeployments = async (req: AuthRequest, res: Response) => {
       video_title: (d.metadata as { title?: string })?.title || d.original_name || d.filename
     }));
 
-    res.json(deployments);
+    sendJsonWithEtag(req, res, deployments);
   } catch (error) {
     logger.error('Error fetching deployments:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des déploiements' });

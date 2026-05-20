@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { memoryCache } from '../services/memory-cache.service';
+import { sendJsonWithEtag } from '../utils/conditional-response';
 import {
   siteRepository,
   metricsRepository,
@@ -34,7 +35,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     const cacheKey = `site-dashboard:${id}:${hours}`;
     const cached = memoryCache.get<Record<string, unknown>>(cacheKey);
     if (cached) {
-      return res.json(cached);
+      return sendJsonWithEtag(req, res, cached);
     }
 
     // Récupérer les infos du site
@@ -340,7 +341,7 @@ export const getSiteDashboardData = async (req: AuthRequest, res: Response) => {
     };
 
     memoryCache.set(cacheKey, response, DASHBOARD_CACHE_TTL_MS);
-    res.json(response);
+    sendJsonWithEtag(req, res, response);
   } catch (error) {
     logger.error('Get site dashboard data error:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des données du dashboard' });

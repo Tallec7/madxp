@@ -208,6 +208,14 @@ class SocketService {
       transports: ['websocket', 'polling'],
       pingInterval: 10000,
       pingTimeout: 20000,
+      // perMessageDeflate compresse les frames WebSocket > threshold bytes (audit
+      // egress Railway 2026-05-20 : WebSocket représente ~50% des 63 GB/mois du
+      // projet `divine-freedom`). zlib level 1 = trade-off CPU minimal pour la
+      // taille des payloads heartbeat/sync_local_state/config-sync typiques.
+      perMessageDeflate: {
+        threshold: 1024,
+        zlibDeflateOptions: { level: 1 },
+      },
     });
 
     logger.info('Socket.IO CORS configuration', {
