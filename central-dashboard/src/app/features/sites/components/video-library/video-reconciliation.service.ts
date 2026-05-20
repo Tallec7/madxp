@@ -95,7 +95,7 @@ export class VideoReconciliationService {
       }
       if (localMatch) matchedLocalPaths.add(localMatch.path);
 
-      const legacyOwner = this.detectOwner(cloud.filename);
+      const legacyOwner = this.detectOwner(cloud.uploadedForSiteId, cloud.filename);
       const effectivePath = cloud.url || cloud.filename;
       const configRoles = input.configVideoRoles.get(effectivePath)
         || this.lookupConfigRolesByFilename(cloud.filename, input.configVideoRoles);
@@ -138,7 +138,7 @@ export class VideoReconciliationService {
     const localOnlyMapped: VideoItem[] = input.videos
       .filter(local => !matchedLocalPaths.has(local.path))
       .map(local => {
-        const legacyOwner = this.detectOwner(local.path);
+        const legacyOwner = this.detectOwner(null, local.path);
         const configRoles = input.configVideoRoles.get(local.path);
         const item: VideoItem = {
           id: null,
@@ -200,7 +200,10 @@ export class VideoReconciliationService {
     return undefined;
   }
 
-  private detectOwner(pathOrFilename: string): 'club' | 'neopro' {
+  private detectOwner(uploadedForSiteId: string | null | undefined, pathOrFilename: string): 'club' | 'neopro' {
+    // Si la DB a explicitement enregistré uploaded_for_site_id, c'est une vidéo
+    // club — le nom du fichier ne peut pas la requalifier en corporate.
+    if (uploadedForSiteId) return 'club';
     return NEOPRO_OWNER_TOKENS.some(p => pathOrFilename.toUpperCase().includes(p)) ? 'neopro' : 'club';
   }
 
