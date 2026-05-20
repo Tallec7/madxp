@@ -11,7 +11,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."  # central-server root
 
 if [[ "${1:-}" == "--all" ]]; then
-  exec npx jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit
+  exec npx jest --verbose --no-coverage --forceExit '__tests__/smoke/'
 fi
 
 # ── Changed files ─────────────────────────────────────────────────
@@ -20,7 +20,7 @@ CHANGED=$(echo "$CHANGED" | sort -u | grep -v '^$' || true)
 
 if [[ -z "$CHANGED" ]]; then
   echo "No changed files — running all smoke suites."
-  exec npx jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit
+  exec npx jest --verbose --no-coverage --forceExit '__tests__/smoke/'
 fi
 
 # ── Pattern → suite mapping (one per line: pattern|suite) ─────────
@@ -82,10 +82,10 @@ fi
 # ── Run ───────────────────────────────────────────────────────────
 if [[ $COUNT -eq 0 ]] || [[ $COUNT -gt 5 ]]; then
   echo "[$COUNT suites matched] Running all smoke suites."
-  exec npx jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit
+  exec npx jest --verbose --no-coverage --forceExit '__tests__/smoke/'
 fi
 
 REGEX=$(echo "$MATCHED" | tr ' ' '|')
 echo "Smart smoke: running $COUNT suite(s) → $REGEX"
 echo ""
-exec npx jest --testPathPattern="__tests__/smoke/($REGEX)" --verbose --no-coverage --forceExit
+exec npx jest --verbose --no-coverage --forceExit "__tests__/smoke/($REGEX)"
