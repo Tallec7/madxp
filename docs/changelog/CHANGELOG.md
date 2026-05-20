@@ -1,3 +1,9 @@
+## [3.328.1](https://github.com/Tallec7/neopro/compare/v3.328.0...v3.328.1) (2026-05-20)
+
+### Bug Fixes
+
+- **saas:** club portal honore feature_overrides super_admin sur diagnostic + analytics ([#1057](https://github.com/Tallec7/neopro/issues/1057)) ([5f87b9b](https://github.com/Tallec7/neopro/commit/5f87b9bfcbc18a55de9ecbe0c2d8ff14a2506964))
+
 # [3.328.0](https://github.com/Tallec7/neopro/compare/v3.327.0...v3.328.0) (2026-05-20)
 
 ### Features
