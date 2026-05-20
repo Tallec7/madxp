@@ -1,0 +1,724 @@
+<div class="club-guide">
+  <div class="guide-header">
+    <div class="header-icon">📘</div>
+    <div class="header-text">
+      <h1>Guide d'utilisation</h1>
+      <p class="subtitle" *ngIf="siteName">{{ siteName }} · Solution Neopro SaaS</p>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="loading"><div class="spinner"></div></div>
+
+  <ng-container *ngIf="!loading">
+    <div class="guide-tabs" role="tablist" aria-label="Sections du guide">
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.active]="activeTab === 'respcom'"
+        [attr.aria-selected]="activeTab === 'respcom'"
+        (click)="setTab('respcom')"
+      >
+        <span class="tab-icon">🎯</span> Responsable communication
+      </button>
+      <button
+        role="tab"
+        class="tab-btn"
+        [class.active]="activeTab === 'operator'"
+        [attr.aria-selected]="activeTab === 'operator'"
+        (click)="setTab('operator')"
+      >
+        <span class="tab-icon">⚽</span> Opérateur matchday
+      </button>
+    </div>
+
+    <!-- ═══ Tab : Responsable communication ═══ -->
+    <div *ngIf="activeTab === 'respcom'" class="tab-content" role="tabpanel">
+      <!-- Comment fonctionne SaaS -->
+      <div class="accordion-section" [class.open]="isOpen('saas')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('saas')"
+          [attr.aria-expanded]="isOpen('saas')"
+        >
+          <span class="section-icon">💡</span
+          ><span class="section-title">Comment fonctionne l'offre SaaS</span>
+          <span class="chevron">{{ isOpen('saas') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('saas')">
+          <p>
+            Votre TV affiche une <strong>page web hébergée par Neopro</strong>. Pas de boîtier à
+            brancher, tout passe par le navigateur.
+          </p>
+          <div class="diagram">
+            <div class="diag-step">
+              <span class="diag-icon">🖥️</span
+              ><span>Dashboard<br /><small>Vous gérez le contenu</small></span>
+            </div>
+            <span class="diag-arrow">↓</span>
+            <div class="diag-step">
+              <span class="diag-icon">☁️</span
+              ><span>Serveur Neopro<br /><small>Diffuse en temps réel</small></span>
+            </div>
+            <span class="diag-arrow">↓</span>
+            <div class="diag-step">
+              <span class="diag-icon">📺</span
+              ><span>TV du gymnase<br /><small>Navigateur ouvert sur l'URL TV</small></span>
+            </div>
+            <span class="diag-arrow">↑</span>
+            <div class="diag-step">
+              <span class="diag-icon">📱</span
+              ><span>Télécommande<br /><small>Smartphone de l'opérateur</small></span>
+            </div>
+          </div>
+          <div class="warn-box">
+            ⚠️ Sans connexion internet sur le poste qui affiche la TV, l'écran est muet. Vérifiez
+            toujours la connexion avant un match.
+          </div>
+        </div>
+      </div>
+
+      <!-- Connexion -->
+      <div class="accordion-section" [class.open]="isOpen('access')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('access')"
+          [attr.aria-expanded]="isOpen('access')"
+        >
+          <span class="section-icon">🔑</span><span class="section-title">Connexion et accès</span>
+          <span class="chevron">{{ isOpen('access') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('access')">
+          <p>
+            Connectez-vous sur <strong>neopro-admin.kalonpartners.bzh</strong> avec votre email et
+            mot de passe. Vous arrivez directement sur <strong>Mon club</strong>.
+          </p>
+          <div class="info-box">
+            💡 Mot de passe oublié → cliquez sur <em>Mot de passe oublié</em> sur l'écran de
+            connexion.
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau de bord -->
+      <div class="accordion-section" [class.open]="isOpen('dashboard')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('dashboard')"
+          [attr.aria-expanded]="isOpen('dashboard')"
+        >
+          <span class="section-icon">🏠</span
+          ><span class="section-title">Vue d'ensemble du portail club</span>
+          <span class="chevron">{{ isOpen('dashboard') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('dashboard')">
+          <p>Le menu de gauche donne accès à 5 sections :</p>
+          <table class="guide-table">
+            <tr>
+              <td><strong>Mon club</strong></td>
+              <td>KPIs du jour, accès TV + télécommande, PIN</td>
+            </tr>
+            <tr>
+              <td><strong>Ma boucle</strong></td>
+              <td>Bibliothèque vidéo, catégories, ordre de diffusion</td>
+            </tr>
+            <tr>
+              <td><strong>Mes sponsors</strong></td>
+              <td>Partenaires actifs, impressions, portail sponsor</td>
+            </tr>
+            <tr>
+              <td><strong>Analytics</strong></td>
+              <td>Historique de diffusion, courbes, performances</td>
+            </tr>
+            <tr>
+              <td><strong>Diagnostic</strong></td>
+              <td>État de l'écran, alertes actives</td>
+            </tr>
+          </table>
+          <h4>KPIs en temps réel (Mon club)</h4>
+          <table class="guide-table">
+            <tr>
+              <td>📺 <strong>Clients connectés</strong></td>
+              <td>Navigateurs qui diffusent votre TV (0 = écran fermé)</td>
+            </tr>
+            <tr>
+              <td>▶️ <strong>Vidéos jouées</strong></td>
+              <td>Lectures depuis minuit + tendance vs hier</td>
+            </tr>
+            <tr>
+              <td>⏱️ <strong>Temps écran</strong></td>
+              <td>Durée cumulée de diffusion depuis minuit</td>
+            </tr>
+            <tr>
+              <td>📅 <strong>Performance semaine</strong></td>
+              <td>Taux de complétion + sponsors affichés</td>
+            </tr>
+          </table>
+          <h4>4 boutons d'actions rapides</h4>
+          <table class="guide-table">
+            <tr>
+              <td>📺 <strong>Ouvrir la TV</strong></td>
+              <td>Ouvre l'URL TV dans un onglet pour configurer l'écran du gymnase</td>
+            </tr>
+            <tr>
+              <td>🎮 <strong>Télécommande</strong></td>
+              <td>Ouvre la télécommande pour tester ou partager</td>
+            </tr>
+            <tr>
+              <td>📱 <strong>QR Codes</strong></td>
+              <td>Affiche les QR codes TV et télécommande (à scanner ou imprimer)</td>
+            </tr>
+            <tr>
+              <td>👁️ <strong>Prévisualiser</strong></td>
+              <td>Aperçu miniature de l'écran en direct dans le dashboard</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- TV Neopro -->
+      <div class="accordion-section" [class.open]="isOpen('tv')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('tv')"
+          [attr.aria-expanded]="isOpen('tv')"
+        >
+          <span class="section-icon">📺</span><span class="section-title">Votre TV Neopro</span>
+          <span class="chevron">{{ isOpen('tv') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('tv')">
+          <p>
+            Votre TV Neopro est une page web dédiée. Elle doit être ouverte sur l'écran du gymnase
+            en plein écran, et laissée ouverte en permanence.
+          </p>
+          <div class="url-block" *ngIf="tvUrl">
+            <div class="url-label">URL de votre TV</div>
+            <div class="url-row">
+              <code class="url-value">{{ tvUrl }}</code>
+              <button class="btn-copy" (click)="copyToClipboard(tvUrl, 'tv')">
+                {{ copiedKey === 'tv' ? '✅ Copié !' : '📋 Copier' }}
+              </button>
+            </div>
+          </div>
+          <ol>
+            <li>Ouvrez un navigateur (Chrome recommandé) sur le PC/TV du gymnase</li>
+            <li>Collez l'URL ci-dessus et appuyez sur Entrée</li>
+            <li>Appuyez sur <kbd>F11</kbd> pour le plein écran</li>
+            <li>Laissez la page ouverte — ne la fermez pas</li>
+          </ol>
+          <div class="info-box">
+            💡 Utilisez le <strong>QR code TV</strong> depuis le dashboard pour transférer l'URL sur
+            l'écran du gymnase depuis votre téléphone.
+          </div>
+        </div>
+      </div>
+
+      <!-- Télécommande + PIN -->
+      <div class="accordion-section" [class.open]="isOpen('remote')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('remote')"
+          [attr.aria-expanded]="isOpen('remote')"
+        >
+          <span class="section-icon">📱</span><span class="section-title">Télécommande et PIN</span>
+          <span class="chevron">{{ isOpen('remote') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('remote')">
+          <div class="url-block" *ngIf="remoteUrl">
+            <div class="url-label">URL de votre télécommande</div>
+            <div class="url-row">
+              <code class="url-value">{{ remoteUrl }}</code>
+              <button class="btn-copy" (click)="copyToClipboard(remoteUrl, 'remote')">
+                {{ copiedKey === 'remote' ? '✅ Copié !' : '📋 Copier' }}
+              </button>
+            </div>
+          </div>
+          <h4>Gérer le PIN</h4>
+          <ol>
+            <li>
+              Allez sur <strong>Mon club</strong> → section <em>Télécommande — Gestion du PIN</em>
+            </li>
+            <li>Cliquez sur <strong>Modifier le PIN</strong>, saisissez 4 chiffres, confirmez</li>
+          </ol>
+          <h4>Partager la télécommande</h4>
+          <ul>
+            <li>
+              <strong>QR code</strong> → bouton <em>📱 QR Codes</em> en haut de Mon club (URL + PIN
+              encapsulé)
+            </li>
+            <li>
+              <strong>Lien direct</strong> → copiez l'URL ci-dessus et envoyez par SMS ou email
+            </li>
+          </ul>
+          <div class="info-box">
+            💡 Bonne pratique : changez le PIN en début de saison et à chaque changement
+            d'opérateur.
+          </div>
+        </div>
+      </div>
+
+      <!-- Bibliothèque vidéo -->
+      <div class="accordion-section" [class.open]="isOpen('library')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('library')"
+          [attr.aria-expanded]="isOpen('library')"
+        >
+          <span class="section-icon">📹</span><span class="section-title">Bibliothèque vidéo</span>
+          <span class="chevron">{{ isOpen('library') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('library')">
+          <p>
+            Dans <strong>Ma boucle</strong>, la bibliothèque liste toutes vos vidéos disponibles.
+          </p>
+          <h4>Ajouter une vidéo</h4>
+          <ol>
+            <li>Cliquez sur <strong>+ Ajouter du contenu</strong></li>
+            <li>Glissez-déposez votre fichier ou cliquez pour parcourir</li>
+            <li>
+              Attendez le statut <strong>Prête</strong> (icône verte) — quelques secondes à quelques
+              minutes selon la taille
+            </li>
+          </ol>
+          <div class="info-box">
+            💡 Formats : <strong>MP4</strong> (recommandé), MOV · Résolution recommandée : 1920×1080
+            · Taille max : <strong>500 Mo</strong>
+          </div>
+          <h4>Remplacer une vidéo</h4>
+          <p>
+            Pour mettre à jour un fichier sans changer sa place dans la boucle : survolez la vidéo →
+            <strong>⋮ trois points</strong> → <strong>Remplacer</strong> → importez le nouveau
+            fichier.
+          </p>
+          <h4>Supprimer une vidéo</h4>
+          <p>
+            ⋮ trois points → <strong>Supprimer</strong> → confirmer. La vidéo est retirée
+            automatiquement de la boucle.
+          </p>
+          <div class="warn-box">
+            ⚠️ Si le statut reste <strong>Échoué</strong> après 5 min : supprimez et réessayez en
+            vérifiant que le fichier est en MP4 et fait moins de 500 Mo.
+          </div>
+        </div>
+      </div>
+
+      <!-- Catégories -->
+      <div class="accordion-section" [class.open]="isOpen('categories')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('categories')"
+          [attr.aria-expanded]="isOpen('categories')"
+        >
+          <span class="section-icon">🗂️</span
+          ><span class="section-title">Catégories de contenu</span>
+          <span class="chevron">{{ isOpen('categories') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('categories')">
+          <div class="category-cards">
+            <div class="category-card loop">
+              <div class="cat-header"><span class="cat-icon">🔄</span> <strong>Boucle</strong></div>
+              <p>
+                Vidéos en rotation <strong>automatique et continue</strong>. Ex : sponsors, annonces
+                club.
+              </p>
+            </div>
+            <div class="category-card action">
+              <div class="cat-header"><span class="cat-icon">🎬</span> <strong>Action</strong></div>
+              <p>
+                Déclenchée <strong>manuellement</strong> depuis la télécommande puis retour à la
+                boucle. Ex : animation but.
+              </p>
+            </div>
+            <div class="category-card match">
+              <div class="cat-header">
+                <span class="cat-icon">⚽</span> <strong>Phase de match</strong>
+              </div>
+              <p>
+                Associée à une <strong>phase de jeu</strong> (mi-temps, après-match). Activée via la
+                session match.
+              </p>
+            </div>
+          </div>
+          <h4>Créer / modifier / supprimer</h4>
+          <ul>
+            <li>
+              <strong>Créer</strong> → <em>+ Nouvelle catégorie</em> dans Ma boucle, choisir le
+              type, nommer, valider
+            </li>
+            <li><strong>Modifier</strong> → cliquer sur le nom ou l'icône crayon</li>
+            <li>
+              <strong>Supprimer</strong> → icône suppression (les vidéos de la catégorie ne sont pas
+              supprimées)
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Organiser la boucle -->
+      <div class="accordion-section" [class.open]="isOpen('loop')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('loop')"
+          [attr.aria-expanded]="isOpen('loop')"
+        >
+          <span class="section-icon">🔄</span
+          ><span class="section-title">Organiser et activer la boucle</span>
+          <span class="chevron">{{ isOpen('loop') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('loop')">
+          <p>
+            La <strong>boucle</strong> (partie inférieure de Ma boucle) est la liste ordonnée des
+            vidéos qui défilent à l'écran.
+          </p>
+          <ul>
+            <li>
+              <strong>Activer / désactiver</strong> → cochez ou décochez la case à côté d'une vidéo
+            </li>
+            <li>
+              <strong>Réordonner</strong> → glissez-déposez les vidéos (l'ordre = l'ordre de
+              diffusion)
+            </li>
+          </ul>
+          <h4>Enregistrer les modifications</h4>
+          <p>
+            Cliquez sur <strong>Enregistrer</strong> — la modification est prise en compte
+            <strong>immédiatement</strong> sur l'écran.
+          </p>
+          <div class="info-box">
+            💡 Le bouton s'appelle <strong>Enregistrer</strong> (pas "Déployer") car il n'y a pas de
+            boîtier Pi à synchroniser : la config est mise à jour directement dans le cloud.
+          </div>
+        </div>
+      </div>
+
+      <!-- Sponsors -->
+      <div class="accordion-section" [class.open]="isOpen('sponsors')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('sponsors')"
+          [attr.aria-expanded]="isOpen('sponsors')"
+        >
+          <span class="section-icon">💼</span><span class="section-title">Sponsors</span>
+          <span class="chevron">{{ isOpen('sponsors') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('sponsors')">
+          <p>
+            La page <strong>Mes sponsors</strong> liste vos partenaires actifs avec leur logo,
+            impressions de la semaine et un lien vers leur <strong>portail sponsor</strong>.
+          </p>
+          <div class="info-box">
+            💡 Le <strong>portail sponsor</strong> est une page personnalisée que vous pouvez
+            partager à votre partenaire pour qu'il consulte ses statistiques sans avoir de compte
+            Neopro.
+          </div>
+          <p>
+            La gestion des contrats sponsors est réalisée par l'équipe Neopro en coordination avec
+            vous. Contactez votre interlocuteur Neopro pour ajouter ou modifier un sponsor.
+          </p>
+        </div>
+      </div>
+
+      <!-- Analytics -->
+      <div class="accordion-section" [class.open]="isOpen('analytics')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('analytics')"
+          [attr.aria-expanded]="isOpen('analytics')"
+        >
+          <span class="section-icon">📊</span><span class="section-title">Analytics</span>
+          <span class="chevron">{{ isOpen('analytics') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('analytics')">
+          <ul>
+            <li><strong>Courbes de lectures</strong> par jour sur 7 / 30 jours</li>
+            <li><strong>Temps d'écran</strong> cumulé par période</li>
+            <li>
+              <strong>Taux de complétion</strong> — proportion de vidéos regardées jusqu'au bout
+            </li>
+            <li>
+              <strong>Performance par vidéo</strong> — lectures, durée moyenne, taux de complétion
+            </li>
+            <li><strong>Sponsors affichés</strong> — passages par partenaire</li>
+            <li><strong>Historique matchs</strong> — sessions passées avec scores et durée</li>
+          </ul>
+          <p>Filtrez par période (7 j, 30 j, personnalisé) ou par catégorie de vidéo.</p>
+          <div class="info-box">💡 Export CSV / PDF disponible selon votre tier d'abonnement.</div>
+        </div>
+      </div>
+
+      <!-- Diagnostic -->
+      <div class="accordion-section" [class.open]="isOpen('diag')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('diag')"
+          [attr.aria-expanded]="isOpen('diag')"
+        >
+          <span class="section-icon">🔧</span><span class="section-title">Diagnostic</span>
+          <span class="chevron">{{ isOpen('diag') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('diag')">
+          <table class="guide-table">
+            <tr>
+              <td>🟢 <strong>Connecté</strong></td>
+              <td>Au moins un navigateur diffuse votre TV en ce moment</td>
+            </tr>
+            <tr>
+              <td>🔴 <strong>Hors ligne</strong></td>
+              <td>Aucun navigateur connecté — l'écran est fermé ou hors internet</td>
+            </tr>
+            <tr>
+              <td>⚠️ <strong>Alertes actives</strong></td>
+              <td>Problèmes détectés (vidéo introuvable, erreur de lecture)</td>
+            </tr>
+            <tr>
+              <td>📊 <strong>Erreurs 24h</strong></td>
+              <td>Si &gt; 0, une bannière d'avertissement apparaît aussi sur "Mon club"</td>
+            </tr>
+          </table>
+          <div class="info-box">
+            💡 Hors ligne = PC ou tablette éteint ou sans internet. Vérifiez qu'il est allumé et que
+            la page TV est ouverte.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /tab respcom -->
+
+    <!-- ═══ Tab : Opérateur matchday ═══ -->
+    <div *ngIf="activeTab === 'operator'" class="tab-content" role="tabpanel">
+      <!-- Accès télécommande -->
+      <div class="accordion-section" [class.open]="isOpen('op-remote')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('op-remote')"
+          [attr.aria-expanded]="isOpen('op-remote')"
+        >
+          <span class="section-icon">📱</span
+          ><span class="section-title">Accès à la télécommande</span>
+          <span class="chevron">{{ isOpen('op-remote') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('op-remote')">
+          <p>
+            La télécommande est une <strong>page web</strong> — aucune application à installer.
+            Ouvrez le lien ou scannez le QR code fourni par le responsable communication.
+          </p>
+          <div class="url-block" *ngIf="remoteUrl">
+            <div class="url-label">Télécommande</div>
+            <div class="url-row">
+              <code class="url-value">{{ remoteUrl }}</code>
+              <button class="btn-copy" (click)="copyToClipboard(remoteUrl, 'op-remote')">
+                {{ copiedKey === 'op-remote' ? '✅ Copié !' : '📋 Copier' }}
+              </button>
+            </div>
+          </div>
+          <h4>Créer un raccourci sur l'écran d'accueil</h4>
+          <ul>
+            <li>
+              <strong>Safari (iOS)</strong> : icône <em>Partager</em> →
+              <em>Sur l'écran d'accueil</em> → nommer "Télécommande Match"
+            </li>
+            <li>
+              <strong>Chrome (Android)</strong> : menu ⋮ → <em>Ajouter à l'écran d'accueil</em>
+            </li>
+          </ul>
+          <p>Entrez votre <strong>PIN</strong> (4 chiffres) pour accéder aux commandes.</p>
+        </div>
+      </div>
+
+      <!-- Déroulement d'un match -->
+      <div class="accordion-section" [class.open]="isOpen('match')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('match')"
+          [attr.aria-expanded]="isOpen('match')"
+        >
+          <span class="section-icon">⚽</span
+          ><span class="section-title">Déroulement d'un match</span>
+          <span class="chevron">{{ isOpen('match') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('match')">
+          <h4>Démarrer la session</h4>
+          <ol>
+            <li>Appuyez sur <strong>Démarrer un match</strong> dans la télécommande</li>
+            <li>Saisissez l'équipe domicile et l'équipe adverse</li>
+            <li>Appuyez sur <strong>Lancer</strong> — la TV passe en affichage match</li>
+          </ol>
+          <div class="info-box">
+            ⏱️ La session se ferme automatiquement après <strong>4 heures d'inactivité</strong> ou
+            <strong>24 heures maximum</strong>.
+          </div>
+
+          <h4>Score en direct</h4>
+          <ul>
+            <li><strong>+1 Domicile</strong> / <strong>+1 Visiteur</strong> → marquer un but</li>
+            <li><strong>−1</strong> → corriger une erreur de saisie</li>
+          </ul>
+
+          <h4>Déclencher une action</h4>
+          <ol>
+            <li>Onglet <strong>Actions</strong> → appuyez sur la vidéo souhaitée</li>
+            <li>La TV joue la vidéo, puis reprend la diffusion automatiquement</li>
+          </ol>
+
+          <h4>Mi-temps et fin</h4>
+          <ol>
+            <li>
+              Onglet <strong>Match</strong> → <em>Mi-temps</em> → les vidéos de la phase mi-temps
+              s'affichent
+            </li>
+            <li><em>Reprendre le match</em> pour la 2ᵉ mi-temps</li>
+            <li><em>Terminer le match</em> → score figé dans l'historique</li>
+          </ol>
+
+          <h4>Guide des phases recommandées</h4>
+          <table class="guide-table">
+            <tr>
+              <td>30 min avant</td>
+              <td>Boucle "Sponsors" (accueil du public)</td>
+            </tr>
+            <tr>
+              <td>Entrée des équipes</td>
+              <td>Action "Animations entrée" ou phase "Échauffement"</td>
+            </tr>
+            <tr>
+              <td>Pendant le match</td>
+              <td>Boucle "Sponsors" en fond</td>
+            </tr>
+            <tr>
+              <td>But / Temps fort</td>
+              <td>Action "Célébration but"</td>
+            </tr>
+            <tr>
+              <td>Mi-temps</td>
+              <td>Phase "Mi-temps" — audience maximale = sponsors prioritaires</td>
+            </tr>
+            <tr>
+              <td>Fin de match</td>
+              <td>Boucle "Sponsors" / phase "Après-match"</td>
+            </tr>
+          </table>
+
+          <h4>Changer l'affichage</h4>
+          <p>
+            Onglet <strong>Affichage</strong> → <em>Boucle</em> (rotation normale),
+            <em>Match</em> (score en direct), <em>Suivant / Précédent</em> pour avancer
+            manuellement, <em>Pause</em> pour figer l'écran.
+          </p>
+        </div>
+      </div>
+
+      <!-- Checklist pré-match -->
+      <div class="accordion-section" [class.open]="isOpen('checklist')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('checklist')"
+          [attr.aria-expanded]="isOpen('checklist')"
+        >
+          <span class="section-icon">✅</span><span class="section-title">Checklist pré-match</span>
+          <span class="chevron">{{ isOpen('checklist') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('checklist')">
+          <div class="checklist-progress">
+            <div class="progress-label">
+              Progression : <strong>{{ checklistDoneCount }} / {{ checklistKeys.length }}</strong>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="checklistProgress"></div>
+            </div>
+            <div class="progress-pct" [class.done]="checklistProgress === 100">
+              {{ checklistProgress }}%<span *ngIf="checklistProgress === 100"> 🎉 Prêt !</span>
+            </div>
+          </div>
+          <div *ngFor="let group of checklistGroups" class="checklist-group">
+            <div class="checklist-group-header">
+              <span>{{ group.icon }} {{ group.label }}</span>
+              <span class="group-count">{{ groupDoneCount(group) }}/{{ group.keys.length }}</span>
+            </div>
+            <ul class="checklist">
+              <li
+                *ngFor="let key of group.keys"
+                class="checklist-item"
+                [class.checked]="checklist[key]"
+              >
+                <button
+                  class="check-btn"
+                  (click)="toggleCheck(key)"
+                  [attr.aria-pressed]="checklist[key]"
+                  [attr.aria-label]="checklistLabels[key]"
+                >
+                  <span class="check-box">{{ checklist[key] ? '☑' : '☐' }}</span>
+                  <span class="check-label">{{ checklistLabels[key] }}</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dépannage rapide -->
+      <div class="accordion-section" [class.open]="isOpen('op-trouble')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('op-trouble')"
+          [attr.aria-expanded]="isOpen('op-trouble')"
+        >
+          <span class="section-icon">🛟</span><span class="section-title">Dépannage rapide</span>
+          <span class="chevron">{{ isOpen('op-trouble') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('op-trouble')">
+          <div class="troubleshoot-list">
+            <div class="troubleshoot-item">
+              <div class="problem">📺 L'écran est noir ou figé</div>
+              <div class="solution">
+                → Vérifiez que le PC est allumé et connecté à internet. Rechargez la page TV
+                (<kbd>F5</kbd>). Repassez en plein écran (<kbd>F11</kbd>).
+              </div>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="problem">📱 Je n'arrive pas à entrer dans la télécommande</div>
+              <div class="solution">
+                → Vérifiez votre PIN. Si vous ne le connaissez pas, demandez au responsable com de
+                le réinitialiser depuis "Mon club".
+              </div>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="problem">📊 "Clients connectés" affiche 0 sur Mon club</div>
+              <div class="solution">
+                → L'écran n'est pas en ligne. La page TV est fermée ou le poste n'a plus internet.
+                Vérifiez et rouvrez la page TV.
+              </div>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="problem">⚽ Le score ne s'affiche pas sur la TV</div>
+              <div class="solution">
+                → Vérifiez que la session match est démarrée (statut "En cours"). Rechargez la TV si
+                nécessaire.
+              </div>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="problem">🎬 La vidéo action ne se lance pas</div>
+              <div class="solution">
+                → Vérifiez le bandeau de statut dans la télécommande. Réessayez dans 5 secondes.
+              </div>
+            </div>
+            <div class="troubleshoot-item">
+              <div class="problem">🌐 Internet coupé pendant le match</div>
+              <div class="solution">
+                → L'écran continue la dernière boucle en cache. Rétablissez internet (redémarrez la
+                box). Une fois reconnecté, la télécommande se reconnecte automatiquement.
+              </div>
+            </div>
+          </div>
+          <div class="support-box">
+            <strong>🆘 Le problème persiste ?</strong>
+            <p>
+              Contactez le support Neopro en précisant : nom du club, description du problème,
+              actions déjà tentées.
+            </p>
+            <a href="mailto:support@neopro.fr" class="btn-support">✉️ support&#64;neopro.fr</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /tab operator -->
+  </ng-container>
+</div>

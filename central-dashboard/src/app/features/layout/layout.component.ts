@@ -83,6 +83,10 @@ import { ConfirmDialogService } from '../../core/services/confirm-dialog.service
               <span class="icon" aria-hidden="true">🔧</span>
               <span>Diagnostic</span>
             </a>
+            <a routerLink="/club/guide" routerLinkActive="active" class="nav-item" (click)="closeSidebar()">
+              <span class="icon" aria-hidden="true">📘</span>
+              <span>Guide</span>
+            </a>
           </ng-container>
 
           <!-- Default navigation (admin/operator/viewer) -->
