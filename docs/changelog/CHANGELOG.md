@@ -1,3 +1,9 @@
+# [3.327.0](https://github.com/Tallec7/neopro/compare/v3.326.0...v3.327.0) (2026-05-20)
+
+### Features
+
+- **api:** ETag + 304 sur /api/sites/:id/local-content (-50% egress HTTP) ([#1054](https://github.com/Tallec7/neopro/issues/1054)) ([70d122c](https://github.com/Tallec7/neopro/commit/70d122c80afa611fe1b05a1a075447c94d787867)), closes [#1052](https://github.com/Tallec7/neopro/issues/1052)
+
 # [3.326.0](https://github.com/Tallec7/neopro/compare/v3.325.0...v3.326.0) (2026-05-20)
 
 ### Features
