@@ -87,6 +87,17 @@ class PiPasswordRepositoryImpl {
   }
 
   /**
+   * Retourne les IDs de tous les sites Pi ayant une rotation en attente.
+   * Utilisé par le controller pour notifier les Pi connectés via sendOrQueue.
+   */
+  async getPendingPiSiteIds(): Promise<string[]> {
+    const result = await query<{ id: string }>(
+      `SELECT id FROM sites WHERE site_type = 'pi' AND pi_system_password_pending = TRUE`
+    );
+    return result.rows.map((r) => r.id);
+  }
+
+  /**
    * Compte les sites Pi ayant une rotation en attente.
    * Utilisé pour le monitoring dashboard.
    */

@@ -4,7 +4,6 @@ import { SiteAuthRequest } from '../middleware/auth';
 import { piPasswordRepository } from '../repositories/pi-password.repository';
 import { piPasswordService } from '../services/pi-password.service';
 import { commandQueueService } from '../services/command-queue.service';
-import { query } from '../config/database';
 import logger from '../config/logger';
 
 /**
@@ -48,12 +47,10 @@ export const rotateFleetPiPassword = async (req: AuthRequest, res: Response): Pr
     // Les Pi offline appliqueront à la prochaine reconnexion via syncPiPasswordFromCloud().
     // sendOrQueue est best-effort : un échec ne bloque pas la rotation (le flag pending persiste).
     let dispatchErrors = 0;
-    const { rows: piSites } = await query<{ id: string }>(
-      `SELECT id FROM sites WHERE site_type = 'pi' AND pi_system_password_pending = TRUE`
-    );
-    for (const site of piSites) {
+    const pendingIds = await piPasswordRepository.getPendingPiSiteIds();
+    for (const siteId of pendingIds) {
       try {
-        await commandQueueService.sendOrQueue(site.id, 'change_pi_password', {});
+        await commandQueueService.sendOrQueue(siteId, 'change_pi_password', {});
       } catch {
         dispatchErrors++;
       }
