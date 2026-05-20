@@ -1,3 +1,9 @@
+# [3.328.0](https://github.com/Tallec7/neopro/compare/v3.327.0...v3.328.0) (2026-05-20)
+
+### Features
+
+- **club:** guide interactif SaaS intégré au portail club (/club/guide) ([#1056](https://github.com/Tallec7/neopro/issues/1056)) ([3a1ea48](https://github.com/Tallec7/neopro/commit/3a1ea4828ad20b8db436a204cec22384c1397455))
+
 # [3.327.0](https://github.com/Tallec7/neopro/compare/v3.326.0...v3.327.0) (2026-05-20)
 
 ### Features
