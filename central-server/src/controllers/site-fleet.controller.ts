@@ -3,6 +3,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { getVideoUrl } from '../services/storage.service';
 import { memoryCache } from '../services/memory-cache.service';
+import { sendJsonWithEtag } from '../utils/conditional-response';
 import {
   siteRepository,
   metricsRepository,
@@ -493,7 +494,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     }));
 
     if (!site.local_config_mirror && !isSaasWithProfileConfig) {
-      return res.json({
+      return sendJsonWithEtag(req, res, {
         siteId: id,
         siteName: site.site_name,
         clubName: site.club_name,
@@ -526,7 +527,7 @@ export const getSiteLocalContent = async (req: AuthRequest, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { _localVideos, _localStorage, _lastVideoSync, _hotspotSsid, _hotspotInfo, ...cleanConfig } = config;
 
-    res.json({
+    sendJsonWithEtag(req, res, {
       siteId: id,
       siteName: site.site_name,
       clubName: site.club_name,
