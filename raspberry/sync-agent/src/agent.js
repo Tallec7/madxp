@@ -499,6 +499,12 @@ class NeoproSyncAgent {
       logger.warn('hotspot-sync: initial sync failed', { error: err.message });
     });
 
+    // ADR-132: pull pi system password from cloud if a rotation is pending.
+    // Runs async — we don't block the auth flow on it.
+    this.syncPiPasswordFromCloud().catch((err) => {
+      logger.warn('pi-password-sync: initial sync failed', { error: err.message });
+    });
+
     // ADR-089: pull web_page / livestream entries and merge into configuration.json
     // under pseudo-category `web-content`. Runs async — non blocking.
     this.syncWebContentFromCloud().catch((err) => {
@@ -540,6 +546,24 @@ class NeoproSyncAgent {
       apiKey: config.site.apiKey,
     });
     logger.info('hotspot-sync: result', result);
+  }
+
+  /**
+   * ADR-132 — applique la rotation OTA du mot de passe système `pi` si pending.
+   * Pull le hash SHA-512-crypt depuis le cloud, l'applique via `sudo chpasswd -e`,
+   * puis acquitte. No-op si aucune rotation en attente (204). Safe to call repeatedly.
+   */
+  async syncPiPasswordFromCloud() {
+    if (!config.site.id || !config.site.apiKey || !config.central.url) return;
+    const { syncFromCloud } = require('./services/pi-password-sync');
+    const result = await syncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+    });
+    if (result.action !== 'noop') {
+      logger.info('pi-password-sync: result', result);
+    }
   }
 
   /**

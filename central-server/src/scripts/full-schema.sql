@@ -950,6 +950,11 @@ CREATE TABLE public.sites (
     wifi_psk_auth_tag bytea,
     wifi_ssid character varying(32),
     psk_rotated_at timestamp with time zone,
+    pi_password_ciphertext bytea,
+    pi_password_iv bytea,
+    pi_password_auth_tag bytea,
+    pi_system_password_pending boolean DEFAULT false NOT NULL,
+    pi_password_rotated_at timestamp with time zone,
     CONSTRAINT check_status CHECK (((status)::text = ANY (ARRAY[('online'::character varying)::text, ('offline'::character varying)::text, ('maintenance'::character varying)::text, ('error'::character varying)::text]))),
     CONSTRAINT sites_site_type_check CHECK (((site_type)::text = ANY (ARRAY[('pi'::character varying)::text, ('saas'::character varying)::text, ('demo'::character varying)::text]))),
     CONSTRAINT sites_subscription_plan_tier_check CHECK (((subscription_plan IS NULL) OR ((subscription_plan)::text = ANY (ARRAY[('trial'::character varying)::text, ('standard'::character varying)::text, ('premium'::character varying)::text, ('play'::character varying)::text, ('club'::character varying)::text, ('pro'::character varying)::text]))))
@@ -968,6 +973,20 @@ COMMENT ON COLUMN public.sites.displays IS 'N-display config: [{index, name, typ
 --
 
 COMMENT ON COLUMN public.sites.wifi_psk_encrypted IS 'ADR-074: hotspot PSK ciphertext (AES-256-GCM). NULL = Pi still on legacy local source, will bootstrap at next sync.';
+
+
+--
+-- Name: COLUMN sites.pi_password_ciphertext; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sites.pi_password_ciphertext IS 'ADR-132: Hash SHA-512-crypt du mot de passe système pi, chiffré AES-256-GCM (clé PI_PASSWORD_ENCRYPTION_KEY). NULL = pas de rotation cloud déclenchée.';
+
+
+--
+-- Name: COLUMN sites.pi_system_password_pending; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sites.pi_system_password_pending IS 'ADR-132: TRUE si le Pi doit appliquer une nouvelle rotation de mot de passe au prochain reconnect sync-agent. FALSE après acquittement.';
 
 
 --

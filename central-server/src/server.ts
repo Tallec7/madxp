@@ -71,6 +71,7 @@ import clientErrorsRoutes from './routes/client-errors.routes';
 // template-backgrounds) a été supprimé — voir ADR-129 "Drop Templates Studio V2 legacy".
 import templatesStudioV1Routes from './routes/templates-studio.routes';
 import videoCategoriesRoutes from './routes/video-categories.routes';
+import { piPasswordFleetRouter, piPasswordSitesRouter } from './routes/pi-password.routes'; // ADR-132
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
@@ -145,6 +146,20 @@ if (NODE_ENV === 'production') {
       'HOTSPOT_PSK_ENCRYPTION_KEY missing or invalid in production — must be 64 hex chars (32 bytes). Generate via `openssl rand -hex 32`. See docs/modops/RUNBOOK_HOTSPOT_PSK_INCIDENT.md.'
     );
     process.exit(1);
+  }
+  // ADR-132 — PI_PASSWORD_ENCRYPTION_KEY est optionnelle (feature active seulement si définie).
+  // On avertit si définie mais invalide pour détecter les erreurs de config Railway.
+  const piKey = process.env.PI_PASSWORD_ENCRYPTION_KEY;
+  if (piKey && !/^[0-9a-fA-F]{64}$/.test(piKey)) {
+    logger.error(
+      'PI_PASSWORD_ENCRYPTION_KEY is defined but invalid — must be 64 hex chars (32 bytes). Generate via `openssl rand -hex 32`. (ADR-132)'
+    );
+    process.exit(1);
+  }
+  if (!piKey) {
+    logger.warn(
+      'PI_PASSWORD_ENCRYPTION_KEY not set — Pi system password rotation (ADR-132) is disabled. Set it in Railway to enable.'
+    );
   }
 }
 
@@ -429,6 +444,8 @@ app.use('/api/mfa', authRateLimit, mfaRoutes);   // MFA - même restrictions que
 // Other endpoints use the default rate or sensitiveRateLimit where appropriate
 app.use('/api/sites', sitesRoutes);
 app.use('/api/sites', hotspotConfigRoutes); // ADR-074 — hotspot PSK cloud source of truth (Pi + admin endpoints, auth + rate limits per-route)
+app.use('/api/sites', piPasswordSitesRouter); // ADR-132 — Pi system password rotation (Pi pull + ack endpoints, authenticateSiteApiKey)
+app.use('/api/fleet', piPasswordFleetRouter); // ADR-132 — Fleet-wide Pi password rotation trigger (super_admin)
 app.use('/api/sites', featureFlagsPiRoutes); // ADR-092 — feature flags fetched by Pi sync-agent (authenticateSiteApiKey, :id/feature-flags)
 app.use('/api/sites', webContentPiRoutes); // ADR-088 — Pi fetch web_page/livestream entries (authenticateSiteApiKey)
 app.use('/api/sites', draftsRoutes);  // Config drafts - sous /api/sites/:siteId/draft

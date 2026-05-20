@@ -318,6 +318,10 @@ export {
 } from './hotspot-config.repository';
 
 export {
+  piPasswordRepository,
+} from './pi-password.repository';
+
+export {
   remoteCommandAuditRepository,
   type CreateRemoteCommandAuditInput,
   type RemoteCommandAuditRow,
