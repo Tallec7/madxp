@@ -48,6 +48,8 @@ const DEFAULT_ALLOWED_COMMANDS = [
   'update_hostname',
   // ADR-074 — cloud-canonical hotspot PSK
   'rotate_psk',
+  // ADR-132 — rotation OTA du mot de passe système `pi`
+  'change_pi_password',
   // v4.0 Phase 7 — cloud push receiver assignment vers Pi
   'receiver_assignment_updated',
   // v4.0 Phase 5 — Fire Stick auto-discovery (DETECT-02)

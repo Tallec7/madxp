@@ -132,6 +132,9 @@ pi ALL=(ALL) NOPASSWD: /usr/bin/dpkg --configure -a
 # --- Système ---
 pi ALL=(ALL) NOPASSWD: /usr/sbin/reboot
 pi ALL=(ALL) NOPASSWD: /usr/sbin/shutdown -r +0
+# ADR-132 — Rotation OTA du mot de passe système `pi`
+# chpasswd -e lit le hash depuis stdin (jamais le mdp en clair dans la ligne de commande)
+pi ALL=(ALL) NOPASSWD: /usr/sbin/chpasswd
 
 # --- Scripts Neopro ---
 # ADR-073 S6 — whitelist explicite (plus de wildcard /home/pi/neopro/scripts/*)

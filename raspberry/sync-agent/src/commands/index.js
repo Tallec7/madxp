@@ -45,6 +45,8 @@ const {
 } = require('./wifi-client');
 const { updateHostname } = require('./hostname');
 const { syncFromCloud: hotspotSyncFromCloud } = require('../services/hotspot-sync');
+// ADR-132 — rotation OTA du mot de passe système `pi`
+const { syncFromCloud: piPasswordSyncFromCloud } = require('../services/pi-password-sync');
 // v4.0 Phase 7 — CLOUD-04 : handler receiver_assignment_updated
 const { dispatchCommand: dispatchReceiverAssignment } = require('../command-dispatch');
 
@@ -138,6 +140,22 @@ const commands = {
       apiKey: config.site.apiKey,
     });
     logger.info('rotate_psk result', result);
+    return { success: true, ...result };
+  },
+
+  // === Rotation OTA mot de passe système `pi` (ADR-132) ===
+  /**
+   * Déclenché par le cloud après que le super_admin a lancé une rotation fleet.
+   * Le Pi pull le hash SHA-512-crypt depuis le cloud et l'applique via chpasswd.
+   */
+  async change_pi_password() {
+    logger.info('change_pi_password command received — syncing pi password from cloud');
+    const result = await piPasswordSyncFromCloud({
+      centralUrl: config.central.url,
+      siteId: config.site.id,
+      apiKey: config.site.apiKey,
+    });
+    logger.info('change_pi_password result', { action: result.action });
     return { success: true, ...result };
   },
 

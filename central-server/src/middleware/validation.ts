@@ -944,6 +944,11 @@ export const schemas = {
     ssid: Joi.string().min(1).max(32).optional(),
   }),
 
+  // ADR-132 — Rotation OTA du mot de passe système `pi`
+  rotatePiPassword: Joi.object({
+    password: Joi.string().min(8).max(128).required(),
+  }),
+
   // Template Studio V2 (ADR-075) Joi schemas supprimés — cf. ADR-129.
 
   // ADR-082 — Video club grants
