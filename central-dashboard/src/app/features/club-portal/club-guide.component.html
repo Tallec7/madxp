@@ -212,6 +212,52 @@
         </div>
       </div>
 
+      <!-- Second écran -->
+      <div class="accordion-section" [class.open]="isOpen('multi-display')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('multi-display')"
+          [attr.aria-expanded]="isOpen('multi-display')"
+        >
+          <span class="section-icon">🖥️</span
+          ><span class="section-title">Second écran (double affichage)</span>
+          <span class="badge-pro">Pro</span>
+          <span class="chevron">{{ isOpen('multi-display') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('multi-display')">
+          <p>
+            Avec l'option double affichage, deux TVs peuvent diffuser simultanément des contenus
+            différents : l'<strong>écran principal</strong> joue la boucle habituelle, et un
+            <strong>second écran</strong> joue une version dédiée (version LED, format vertical,
+            découpe spécifique).
+          </p>
+          <h4>Assigner un contenu spécifique au second écran</h4>
+          <ol>
+            <li>Allez dans <strong>Ma boucle</strong> → Bibliothèque</li>
+            <li>Survolez la vidéo concernée → <strong>⋮ trois points</strong></li>
+            <li>Cliquez sur <strong>Second écran</strong> pour ouvrir le panneau de variante</li>
+            <li>
+              Uploadez la version destinée au second écran (même nom de catégorie, format adapté)
+            </li>
+          </ol>
+          <div class="info-box">
+            💡 Si aucune variante n'est assignée à une vidéo, les deux écrans diffusent le même
+            contenu. Les variantes sont indépendantes — remplacer la vidéo principale ne touche pas
+            la variante.
+          </div>
+          <h4>Ouvrir le second écran</h4>
+          <p>
+            Le second écran est un <strong>deuxième navigateur</strong> ouvert sur la même URL TV.
+            Connectez un second PC ou TV au réseau et ouvrez l'URL — Neopro détecte automatiquement
+            que c'est le second client et lui envoie la variante correspondante.
+          </p>
+          <div class="warn-box">
+            ⚠️ Les deux navigateurs doivent rester ouverts simultanément. Si l'un se déconnecte, il
+            revient en mode principal à la reconnexion.
+          </div>
+        </div>
+      </div>
+
       <!-- Télécommande + PIN -->
       <div class="accordion-section" [class.open]="isOpen('remote')">
         <button
@@ -386,6 +432,64 @@
           <div class="info-box">
             💡 Le bouton s'appelle <strong>Enregistrer</strong> (pas "Déployer") car il n'y a pas de
             boîtier Pi à synchroniser : la config est mise à jour directement dans le cloud.
+          </div>
+        </div>
+      </div>
+
+      <!-- Pondération des sponsors -->
+      <div class="accordion-section" [class.open]="isOpen('weighting')">
+        <button
+          class="accordion-header"
+          (click)="toggleSection('weighting')"
+          [attr.aria-expanded]="isOpen('weighting')"
+        >
+          <span class="section-icon">⚖️</span
+          ><span class="section-title">Pondération des sponsors</span>
+          <span class="badge-pro">Pro</span>
+          <span class="chevron">{{ isOpen('weighting') ? '▲' : '▼' }}</span>
+        </button>
+        <div class="accordion-body" *ngIf="isOpen('weighting')">
+          <p>
+            La pondération permet de contrôler le <strong>temps d'antenne</strong> de chaque sponsor
+            dans la boucle. Par défaut, toutes les vidéos ont un poids égal (×1). En augmentant le
+            poids d'un sponsor, ses vidéos reviennent plus souvent.
+          </p>
+          <h4>Régler les poids</h4>
+          <ol>
+            <li>Allez dans <strong>Ma boucle</strong></li>
+            <li>
+              Sur chaque vidéo taggée avec un sponsor, vous voyez un contrôle
+              <strong>− ×N +</strong> accompagné d'un pourcentage
+            </li>
+            <li>
+              Cliquez <strong>+</strong> pour augmenter (jusqu'à ×10) ou <strong>−</strong> pour
+              diminuer (minimum ×1)
+            </li>
+            <li>Le pourcentage se recalcule en temps réel pour tous les sponsors</li>
+            <li>Cliquez sur <strong>Enregistrer</strong> pour appliquer</li>
+          </ol>
+          <div class="weight-example">
+            <div class="weight-row">
+              <span class="w-sponsor">Sponsor A</span>
+              <span class="w-coeff">×3</span>
+              <div class="w-bar">
+                <div class="w-fill" style="width: 75%"></div>
+              </div>
+              <span class="w-pct">75 %</span>
+            </div>
+            <div class="weight-row">
+              <span class="w-sponsor">Sponsor B</span>
+              <span class="w-coeff">×1</span>
+              <div class="w-bar">
+                <div class="w-fill w-fill--secondary" style="width: 25%"></div>
+              </div>
+              <span class="w-pct">25 %</span>
+            </div>
+          </div>
+          <div class="info-box">
+            💡 La pondération s'applique <strong>par sponsor</strong> — toutes les vidéos d'un même
+            sponsor partagent le même coefficient. Un sponsor à ×3 face à un sponsor à ×1 obtiendra
+            75 % du temps d'antenne sponsor.
           </div>
         </div>
       </div>
