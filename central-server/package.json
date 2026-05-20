@@ -21,7 +21,7 @@
     "audit:profile-filename-orphans": "ts-node src/scripts/audit-config-profile-filename-orphans.ts",
     "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
     "test": "jest",
-    "test:smoke": "jest --testPathPattern='__tests__/smoke/' --verbose --no-coverage --forceExit",
+    "test:smoke": "jest --verbose --no-coverage --forceExit '__tests__/smoke/'",
     "test:smoke:smart": "bash src/scripts/smart-smoke.sh",
     "lint": "eslint --no-warn-ignored src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\"",
