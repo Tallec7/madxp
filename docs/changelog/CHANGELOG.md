@@ -1,3 +1,9 @@
+# [3.326.0](https://github.com/Tallec7/neopro/compare/v3.325.0...v3.326.0) (2026-05-20)
+
+### Features
+
+- **security:** rotation OTA du mot de passe système pi — ADR-132 ([#1053](https://github.com/Tallec7/neopro/issues/1053)) ([a2a534a](https://github.com/Tallec7/neopro/commit/a2a534af561353d45d68b388194996f5104828fc))
+
 # [3.325.0](https://github.com/Tallec7/neopro/compare/v3.324.1...v3.325.0) (2026-05-19)
 
 ### Features
