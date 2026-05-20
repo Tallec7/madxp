@@ -1,3 +1,9 @@
+# [3.329.0](https://github.com/Tallec7/neopro/compare/v3.328.1...v3.329.0) (2026-05-20)
+
+### Features
+
+- **club:** pondération sponsors, second écran et raccourci + Ajouter dans le guide interactif ([#1058](https://github.com/Tallec7/neopro/issues/1058)) ([c39ca12](https://github.com/Tallec7/neopro/commit/c39ca128c0323bdce6f94be3eca7f3b854e9c5b3))
+
 ## [3.328.1](https://github.com/Tallec7/neopro/compare/v3.328.0...v3.328.1) (2026-05-20)
 
 ### Bug Fixes
