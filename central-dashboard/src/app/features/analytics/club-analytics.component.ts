@@ -466,7 +466,7 @@ export class ClubAnalyticsComponent implements OnInit, OnDestroy {
   private readonly gate = inject(FeatureGateService);
 
   get canUseAnalyticsAdvanced(): boolean {
-    return this.gate.canAccess('analytics_advanced', this.site?.subscription_plan ?? null);
+    return this.gate.canAccess('analytics_advanced', this.site);
   }
   private readonly logger = inject(LoggerService);
   private refreshSubscription?: Subscription;

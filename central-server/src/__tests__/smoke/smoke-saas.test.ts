@@ -2309,6 +2309,32 @@ describe('SaaS config save flow', () => {
     });
   });
 
+  it('club-diagnostic must pass site object (not subscription_plan) to canAccess for remote_diagnostic', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'club-portal', 'club-diagnostic.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      passesSiteObject: /canAccess\(\s*['"]remote_diagnostic['"]\s*,\s*this\.site\s*\)/.test(content),
+      noSubscriptionPlanOnlyCall: !/canAccess\(\s*['"]remote_diagnostic['"]\s*,\s*this\.site\?\.subscription_plan/.test(content),
+      interfaceHasFeatureOverrides: /feature_overrides\?:\s*Record<string,\s*boolean>/.test(content),
+    }).toEqual({
+      passesSiteObject: true,
+      noSubscriptionPlanOnlyCall: true,
+      interfaceHasFeatureOverrides: true,
+    });
+  });
+
+  it('club-analytics must pass site object (not subscription_plan) to canAccess for analytics_advanced', () => {
+    const filePath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'analytics', 'club-analytics.component.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+    expect({
+      passesSiteObject: /canAccess\(\s*['"]analytics_advanced['"]\s*,\s*this\.site\s*\)/.test(content),
+      noSubscriptionPlanOnlyCall: !/canAccess\(\s*['"]analytics_advanced['"]\s*,\s*this\.site\?\.subscription_plan/.test(content),
+    }).toEqual({
+      passesSiteObject: true,
+      noSubscriptionPlanOnlyCall: true,
+    });
+  });
+
   it('site-settings-tab must show feature overrides UI only for super_admin', () => {
     const htmlPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-settings-tab', 'site-settings-tab.component.html');
     const tsPath = path.join(repoRoot, 'central-dashboard', 'src', 'app', 'features', 'sites', 'components', 'site-settings-tab', 'site-settings-tab.component.ts');

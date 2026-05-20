@@ -14,6 +14,7 @@ interface SiteInfo {
   status?: string;
   site_type?: string;
   subscription_plan?: string | null;
+  feature_overrides?: Record<string, boolean> | null;
   last_seen_at?: string | null;
   software_version?: string | null;
 }
@@ -166,7 +167,7 @@ export class ClubDiagnosticComponent implements OnInit, OnDestroy {
   }
 
   get canUseDiagnostic(): boolean {
-    return this.gate.canAccess('remote_diagnostic', this.site?.subscription_plan ?? null);
+    return this.gate.canAccess('remote_diagnostic', this.site);
   }
 
   get isConnected(): boolean {
