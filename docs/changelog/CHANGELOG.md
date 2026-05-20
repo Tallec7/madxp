@@ -1,3 +1,9 @@
+## [3.329.1](https://github.com/Tallec7/neopro/compare/v3.329.0...v3.329.1) (2026-05-20)
+
+### Bug Fixes
+
+- **ci:** smart-smoke utilise regex positional jest (compat 29/30) ([#1059](https://github.com/Tallec7/neopro/issues/1059)) ([f82d116](https://github.com/Tallec7/neopro/commit/f82d1167391af232eae1f083e6e449d75ce8ecd4))
+
 # [3.329.0](https://github.com/Tallec7/neopro/compare/v3.328.1...v3.329.0) (2026-05-20)
 
 ### Features
