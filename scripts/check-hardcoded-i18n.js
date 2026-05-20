@@ -20,6 +20,11 @@ const SCAN_DIRS = ['central-dashboard/src/app'];
 // File extensions to check
 const EXTENSIONS = ['.ts', '.html'];
 
+// Files excluded from i18n enforcement (intentionally French-only content)
+const FILE_ALLOWLIST = [
+  'club-guide.component.html', // Help guide — French-only doc, not a UI component
+];
+
 // Colors for terminal output
 const colors = {
   red: (text) => `\x1b[31m${text}\x1b[0m`,
@@ -378,6 +383,7 @@ function main() {
 
   for (const file of files) {
     const relativePath = path.relative(process.cwd(), file);
+    if (FILE_ALLOWLIST.some((name) => relativePath.endsWith(name))) continue;
     const issues = findHardcodedText(file);
 
     if (issues.length > 0) {
