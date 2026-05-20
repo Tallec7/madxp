@@ -1,3 +1,9 @@
+## [3.329.2](https://github.com/Tallec7/neopro/compare/v3.329.1...v3.329.2) (2026-05-20)
+
+### Bug Fixes
+
+- **video-library:** club ownership prioritise uploaded_for_site_id sur les tokens filename ([#1060](https://github.com/Tallec7/neopro/issues/1060)) ([75f047a](https://github.com/Tallec7/neopro/commit/75f047a95c3a007008adcddfcccdb15215b6ee37))
+
 ## [3.329.1](https://github.com/Tallec7/neopro/compare/v3.329.0...v3.329.1) (2026-05-20)
 
 ### Bug Fixes
