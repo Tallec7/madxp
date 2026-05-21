@@ -1,3 +1,9 @@
+# [3.330.0](https://github.com/Tallec7/neopro/compare/v3.329.2...v3.330.0) (2026-05-21)
+
+### Features
+
+- **adr-132:** auto-rotation OTA au boot si PI_SYSTEM_PASSWORD défini ([#1061](https://github.com/Tallec7/neopro/issues/1061)) ([41bdd92](https://github.com/Tallec7/neopro/commit/41bdd92b74151e31f85f359730287df414547331))
+
 ## [3.329.2](https://github.com/Tallec7/neopro/compare/v3.329.1...v3.329.2) (2026-05-20)
 
 ### Bug Fixes
