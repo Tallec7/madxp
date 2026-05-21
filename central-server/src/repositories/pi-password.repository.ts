@@ -98,6 +98,17 @@ class PiPasswordRepositoryImpl {
   }
 
   /**
+   * Compte les sites Pi sans hash stocké (pi_password_ciphertext IS NULL).
+   * Utilisé au boot pour détecter si une auto-rotation initiale est nécessaire.
+   */
+  async countWithoutHash(): Promise<number> {
+    const result = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM sites WHERE site_type = 'pi' AND pi_password_ciphertext IS NULL`
+    );
+    return parseInt(result.rows[0]?.count ?? '0', 10);
+  }
+
+  /**
    * Compte les sites Pi ayant une rotation en attente.
    * Utilisé pour le monitoring dashboard.
    */

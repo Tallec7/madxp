@@ -515,6 +515,33 @@ const startServer = async () => {
     await pool.query('SELECT NOW()');
     logger.info('Database connection established');
 
+    // ADR-132 — Auto-rotation au boot si PI_SYSTEM_PASSWORD est défini et qu'aucun
+    // hash n'est encore stocké en DB (first-deploy uniquement, idempotent).
+    const piSystemPassword = process.env.PI_SYSTEM_PASSWORD;
+    const piEncryptionKey = process.env.PI_PASSWORD_ENCRYPTION_KEY;
+    if (piSystemPassword && piEncryptionKey) {
+      try {
+        const { piPasswordRepository } = await import('./repositories/pi-password.repository');
+        const { piPasswordService } = await import('./services/pi-password.service');
+        const sitesWithoutHash = await piPasswordRepository.countWithoutHash();
+        if (sitesWithoutHash > 0) {
+          const hash = piPasswordService.generateHash(piSystemPassword);
+          const updated = await piPasswordRepository.setFleetPendingAndStore(hash);
+          logger.info('pi-password: auto-rotation at boot (PI_SYSTEM_PASSWORD set)', {
+            sitesUpdated: updated,
+          });
+        } else {
+          logger.info(
+            'pi-password: PI_SYSTEM_PASSWORD set but all Pi sites already have a hash — skipping'
+          );
+        }
+      } catch (err) {
+        logger.warn('pi-password: auto-rotation at boot failed (non-fatal)', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     // Initialiser Socket.IO (single-instance — Redis adapter retiré 2026-05-13
     // post-incident NLF, cf. docs/runbooks/OPS-06-redis-quota-exhausted.md).
     await socketService.initialize(httpServer);
