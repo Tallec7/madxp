@@ -1,3 +1,9 @@
+## [3.330.1](https://github.com/Tallec7/neopro/compare/v3.330.0...v3.330.1) (2026-05-21)
+
+### Bug Fixes
+
+- **adr-132:** ajoute openssl dans le Dockerfile runtime stage ([#1062](https://github.com/Tallec7/neopro/issues/1062)) ([de140ce](https://github.com/Tallec7/neopro/commit/de140cefb074efc52dbc4dda446dea6dcd5735be))
+
 # [3.330.0](https://github.com/Tallec7/neopro/compare/v3.329.2...v3.330.0) (2026-05-21)
 
 ### Features
