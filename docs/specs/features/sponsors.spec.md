@@ -13,7 +13,7 @@
 
 ## En une phrase
 
-Les vidéos sponsors tournent dans la boucle de chaque club selon une pondération Bresenham, chaque diffusion est attribuée au bon sponsor, et Neopro génère automatiquement des rapports PDF mensuels accessibles via portail magic link.
+Les vidéos sponsors tournent dans la boucle de chaque club selon une pondération Bresenham, chaque diffusion est attribuée au bon sponsor, et MadXP génère automatiquement des rapports PDF mensuels accessibles via portail magic link.
 
 ## Acteurs impliqués
 
@@ -59,6 +59,7 @@ Les vidéos sponsors tournent dans la boucle de chaque club selon une pondérati
 ## Règles métier (ce qui DOIT marcher)
 
 ### Rotation pondérée
+
 - **Bresenham** : sponsor poids `W` apparaît ~1 fois toutes les `total/W` vidéos, uniformément réparti. Pas de front-loading.
 - **Épinglage** : `pinned: true` → position d'origine préservée. Bresenham répartit autour.
 - **Wrap-around** : première vidéo du 2ᵉ passage ≠ dernière du 1ᵉʳ.
@@ -67,6 +68,7 @@ Les vidéos sponsors tournent dans la boucle de chaque club selon une pondérati
 - **Modèle dual ADR-035** : `site_sponsors` (local, 1 club) ≠ `advertisers` (réseau, N clubs). Ne jamais fusionner les deux tables.
 
 ### Agrégation & Rapports
+
 - **Three catégories analytics** : `analytics_category ∈ {sponsor_local, sponsor_neopro, sponsor}`. Breakdown obligatoire par `event_type` (match/training/tournament/other) ET `period` (pre_match/halftime/post_match/loop).
 - **Agrégation quotidienne** : `site_sponsor_daily_stats` pré-calculée par CRON (rétention `video_plays` = 15j, agrégat infini). Stale > 36h → alerte Grafana.
 - **Génération mensuelle CRON** : 1ᵉʳ du mois 02h UTC → 3 types de PDF (club, annonceur, sponsor local). Idempotent (UNIQUE constraint en DB).
@@ -77,15 +79,15 @@ Les vidéos sponsors tournent dans la boucle de chaque club selon une pondérati
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Bresenham distribué | Smoke `smoke-analytics-sponsors` : gaps entre 2 vidéos d'un sponsor cohérents avec poids |
-| `site_sponsor_id` résolu | Dashboard sponsors : 0 vidéo "sponsor non identifié" |
-| Daily stats à jour | CRON `aggregation.task` horaire + Grafana stale <36h |
-| CRON mensuel PDF | Grafana + log `Monthly reports generated` avec compteur, le 1ᵉʳ du mois |
-| Rapport visible club | Dashboard club → Rapports : ligne mois N-1 avant 03h UTC |
-| Magic link fonctionnel | Lien mail → page portail charge stats sans login |
-| Idempotence | Re-lancer `POST /generate` pour la même période → 200 (pas de doublon) |
+| Règle                    | Comment on vérifie                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| Bresenham distribué      | Smoke `smoke-analytics-sponsors` : gaps entre 2 vidéos d'un sponsor cohérents avec poids |
+| `site_sponsor_id` résolu | Dashboard sponsors : 0 vidéo "sponsor non identifié"                                     |
+| Daily stats à jour       | CRON `aggregation.task` horaire + Grafana stale <36h                                     |
+| CRON mensuel PDF         | Grafana + log `Monthly reports generated` avec compteur, le 1ᵉʳ du mois                  |
+| Rapport visible club     | Dashboard club → Rapports : ligne mois N-1 avant 03h UTC                                 |
+| Magic link fonctionnel   | Lien mail → page portail charge stats sans login                                         |
+| Idempotence              | Re-lancer `POST /generate` pour la même période → 200 (pas de doublon)                   |
 
 ## Cas d'edge connus
 

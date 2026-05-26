@@ -1,6 +1,6 @@
-# Guide Opérateur - Installation Neopro Pas à Pas
+# Guide Opérateur - Installation MadXP Pas à Pas
 
-**Pour qui ?** : Techniciens et opérateurs qui installent les boîtiers Neopro dans les clubs.
+**Pour qui ?** : Techniciens et opérateurs qui installent les boîtiers MadXP dans les clubs.
 
 **Durée totale** : ~25 minutes
 
@@ -96,7 +96,7 @@ pi@raspberrypi:~ $
 
 ---
 
-## Phase 3 : Installation Neopro (15-20 min)
+## Phase 3 : Installation MadXP (15-20 min)
 
 ### Étape 3.1 - Lancer l'installation
 
@@ -224,7 +224,7 @@ Enabling neopro-kiosk...
 Enabling neopro-sync-agent...
 ```
 
-**Ce qui se passe** : Le script configure le Pi pour démarrer automatiquement l'application Neopro à chaque boot. Plus besoin d'intervention manuelle.
+**Ce qui se passe** : Le script configure le Pi pour démarrer automatiquement l'application MadXP à chaque boot. Plus besoin d'intervention manuelle.
 
 ---
 
@@ -244,7 +244,7 @@ Remote: http://neopro.local/remote
 Rebooting in 10 seconds...
 ```
 
-**Ce qui se passe** : Le Pi va redémarrer automatiquement. Après le reboot, l'application Neopro sera active.
+**Ce qui se passe** : Le Pi va redémarrer automatiquement. Après le reboot, l'application MadXP sera active.
 
 ---
 
@@ -300,7 +300,7 @@ Le script vous pose des questions. Répondez-y :
 **Exemple de session** :
 
 ```
-🏟️  Configuration d'un nouveau club Neopro
+🏟️  Configuration d'un nouveau club MadXP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📍 Adresse du Pi [neopro.local]: ↵ (appuyez Entrée)
@@ -349,7 +349,7 @@ Le boîtier est prêt à être installé !
 ### Étape 5.2 - Configuration TV
 
 1. **Allumez la TV** et sélectionnez la source HDMI correspondante
-2. **Vérifiez** que l'application Neopro s'affiche
+2. **Vérifiez** que l'application MadXP s'affiche
 3. **Réglez la TV** en mode "Jeu" ou désactivez les traitements d'image pour réduire la latence
 
 ### Étape 5.3 - Test final

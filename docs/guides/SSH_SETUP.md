@@ -173,7 +173,7 @@ ssh-copy-id pi@neopro.local
 
 ## Configuration pour plusieurs boîtiers
 
-Si vous gérez plusieurs boîtiers Neopro depuis votre poste, vous devez comprendre comment fonctionne l'accès SSH selon le contexte.
+Si vous gérez plusieurs boîtiers MadXP depuis votre poste, vous devez comprendre comment fonctionne l'accès SSH selon le contexte.
 
 ### Contexte : Réseau local vs WiFi du boîtier
 

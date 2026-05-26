@@ -1,4 +1,4 @@
-# Neopro - Système de télévision interactive pour clubs sportifs
+# MadXP - Système de télévision interactive pour clubs sportifs
 
 [![CI](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml/badge.svg)](https://github.com/kalonpartners/neopro/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/kalonpartners/neopro/graph/badge.svg)](https://codecov.io/gh/kalonpartners/neopro)
@@ -38,7 +38,7 @@ Ce guide couvre :
 
 #### ✅ Méthode Remote (RECOMMANDÉE - Production)
 
-**Sans dépendance au dossier Neopro local** - Fonctionne depuis n'importe quel ordinateur :
+**Sans dépendance au dossier MadXP local** - Fonctionne depuis n'importe quel ordinateur :
 
 ```bash
 # Télécharger le script
@@ -51,14 +51,14 @@ chmod +x setup-remote-club.sh
 
 **Avantages :**
 
-- ✅ Aucune dépendance locale (pas besoin du projet Neopro)
+- ✅ Aucune dépendance locale (pas besoin du projet MadXP)
 - ✅ Télécharge depuis GitHub Releases (toujours à jour)
 - ✅ Rapide : 2-5 minutes
 - ✅ Installation terrain facilitée
 
 #### 🔧 Méthode Local (Développement)
 
-**Nécessite le dossier Neopro complet** - Pour développement et tests :
+**Nécessite le dossier MadXP complet** - Pour développement et tests :
 
 ```bash
 ./raspberry/scripts/setup-new-club.sh
@@ -542,18 +542,18 @@ Le guardian surveille le sync-agent et le restaure automatiquement en cas de cra
 
 ## Documentation complète
 
-| Document                                                       | Description                       |
-| -------------------------------------------------------------- | --------------------------------- |
-| [docs/INDEX.md](docs/INDEX.md)                                 | Index de toute la documentation   |
-| [docs/CARTOGRAPHIE_OUTILS.md](docs/CARTOGRAPHIE_OUTILS.md)     | Cartographie des 12 outils Neopro |
-| [docs/REFERENCE.md](docs/REFERENCE.md)                         | Documentation technique complète  |
-| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi         |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Dépannage approfondi              |
-| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md)                   | Création d'image golden           |
-| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)                 | Guide de configuration            |
-| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md)         | Architecture de synchronisation   |
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | Guide des tests                   |
-| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)     | Mise en production cloud          |
+| Document                                                       | Description                      |
+| -------------------------------------------------------------- | -------------------------------- |
+| [docs/INDEX.md](docs/INDEX.md)                                 | Index de toute la documentation  |
+| [docs/CARTOGRAPHIE_OUTILS.md](docs/CARTOGRAPHIE_OUTILS.md)     | Cartographie des 12 outils MadXP |
+| [docs/REFERENCE.md](docs/REFERENCE.md)                         | Documentation technique complète |
+| [docs/INSTALLATION_COMPLETE.md](docs/INSTALLATION_COMPLETE.md) | Installation Raspberry Pi        |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)             | Dépannage approfondi             |
+| [docs/GOLDEN_IMAGE.md](docs/GOLDEN_IMAGE.md)                   | Création d'image golden          |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md)                 | Guide de configuration           |
+| [docs/SYNC_ARCHITECTURE.md](docs/SYNC_ARCHITECTURE.md)         | Architecture de synchronisation  |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)                 | Guide des tests                  |
+| [GUIDE_MISE_EN_PRODUCTION.md](GUIDE_MISE_EN_PRODUCTION.md)     | Mise en production cloud         |
 
 ---
 

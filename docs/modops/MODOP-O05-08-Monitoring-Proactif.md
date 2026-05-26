@@ -10,7 +10,7 @@
 
 ## 1. OBJECTIF
 
-Surveiller proactivement l'infrastructure Neopro pour identifier et résoudre les problèmes AVANT qu'ils n'impactent les clients.
+Surveiller proactivement l'infrastructure MadXP pour identifier et résoudre les problèmes AVANT qu'ils n'impactent les clients.
 
 ## 2. PÉRIMÈTRE
 

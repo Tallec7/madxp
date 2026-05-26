@@ -2,7 +2,7 @@
 
 **Statut** : Accepté  
 **Date** : 2026-05-20  
-**Auteur** : Daisy (Neopro)
+**Auteur** : Daisy (MadXP)
 
 ---
 

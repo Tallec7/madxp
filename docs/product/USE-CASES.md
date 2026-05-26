@@ -1,4 +1,4 @@
-# Cas d'usage Neopro — JTBD, scénarios, catalogue & journeys
+# Cas d'usage MadXP — JTBD, scénarios, catalogue & journeys
 
 > **Audience** : futur PM (jour 1, après lecture des personae) + futur CTO (comprendre les chaînes d'action) + Daisy (référence partagée pour challenger une décision produit)
 >
@@ -15,7 +15,7 @@
 | Couche                                        | Question répondue                                                                                 | Où la trouver                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Persona                                       | _Qui est cette personne ?_ archétype, motivation                                                  | [docs/PERSONAE.md](../PERSONAE.md)                          |
-| **JTBD** _(ce doc — § 1)_                     | _Quel job le persona embauche-t-il Neopro pour faire ?_                                           | Format Christensen _"Quand X, je veux Y, pour Z"_           |
+| **JTBD** _(ce doc — § 1)_                     | _Quel job le persona embauche-t-il MadXP pour faire ?_                                            | Format Christensen _"Quand X, je veux Y, pour Z"_           |
 | **Scénarios multi-acteurs** _(ce doc — § 2)_  | _Comment plusieurs personae se coordonnent dans un parcours réel ?_                               | Narratif chronologique avant/pendant/après                  |
 | **Catalogue atomique CU** _(ce doc — § 3)_    | _Quelle situation atomique vit le persona ?_ avec ID stable (`CU-3b-1`, etc.)                     | 44 CUs catalogués, 14 détaillés, 30 stubs                   |
 | **Journey maps émotionnels** _(ce doc — § 4)_ | _Quel est le ressenti du persona dans le temps ?_ courbe émotionnelle, pain points, magic moments | 3 journeys clés (matchday, prospection, mois 1 sponsor PME) |
@@ -34,7 +34,7 @@
 
 ## § 1 — Jobs-to-be-Done (JTBD)
 
-Format : _"Quand [situation déclenchante], je veux [motivation profonde], pour [résultat mesurable / émotion]"_. Un JTBD n'est pas une feature : c'est le **job qu'embauche le persona** ; plusieurs features Neopro peuvent servir le même JTBD.
+Format : _"Quand [situation déclenchante], je veux [motivation profonde], pour [résultat mesurable / émotion]"_. Un JTBD n'est pas une feature : c'est le **job qu'embauche le persona** ; plusieurs features MadXP peuvent servir le même JTBD.
 
 ### Cluster A — Piloter la flotte sans s'épuiser
 
@@ -108,7 +108,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Trame** :
 
-| Moment         | Acteur  | Action                                                                                                         | Touchpoint Neopro                    | SPEC                                                                                                                   |
+| Moment         | Acteur  | Action                                                                                                         | Touchpoint MadXP                     | SPEC                                                                                                                   |
 | -------------- | ------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | Vendredi 18h   | 3b      | Clone le scénario matchday de la semaine, met à jour les noms des joueurs, preview, déploie                    | Dashboard club → Templates Studio V1 | ADR-123/124/125/127/128 (V1 code-driven ; SPEC V2 supprimée en ADR-129)                                                |
 | Vendredi 19h   | 3c      | Vérifie que le sponsor PME en renégo est bien en pack premium ce samedi (rotation pondérée)                    | Dashboard sponsors                   | (à écrire : sponsors-rotation)                                                                                         |
@@ -118,7 +118,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 | Samedi 22h     | 4       | Quitte le gymnase. La session reste ouverte (oubli)                                                            | —                                    | —                                                                                                                      |
 | Samedi 22h45   | (CRON)  | Auto-close de la session inactive, score figé, `ended_by='timeout'`                                            | Cron scheduler                       | [cron-scheduler](../specs/services/cron-scheduler.spec.md), [match-sessions](../specs/features/match-sessions.spec.md) |
 | Samedi 23h     | 5       | (🔮 LATER) A scanné le QR à la mi-temps, son prono apparaît dans le top 3 affiché 30s sur l'écran géant        | Mini-app web mobile                  | (à écrire : spectateur-interactif)                                                                                     |
-| Lundi matin    | 3a      | Ouvre son mail, lit le rapport matchday (impressions sponsors, taux de présence) — n'a pas touché à Neopro     | Mail auto rapport hebdo              | (à écrire : sponsor-reports)                                                                                           |
+| Lundi matin    | 3a      | Ouvre son mail, lit le rapport matchday (impressions sponsors, taux de présence) — n'a pas touché à MadXP      | Mail auto rapport hebdo              | (à écrire : sponsor-reports)                                                                                           |
 | Lundi matin    | 3c      | Envoie un mot personnalisé au sponsor PME en renégo avec son rapport individuel auto-généré                    | Portail sponsor + mail               | (à écrire : sponsor-reports)                                                                                           |
 | Lundi midi     | 6 niv.2 | Reçoit son rapport mensuel consolidé, le présente en COMEX mardi                                               | Portail web sponsor                  | (à écrire : sponsor-reports)                                                                                           |
 
@@ -133,7 +133,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 ### Scénario 2 — Onboarding d'un nouveau club
 
-**Déclencheur** : club semi-pro signe un contrat Neopro après prospection. Premier match diffusé visé sous 3 semaines.
+**Déclencheur** : club semi-pro signe un contrat MadXP après prospection. Premier match diffusé visé sous 3 semaines.
 
 **Acteurs** : 1 (Super_admin), 2 (Admin Support), 3a (Président — décideur d'achat), 3b (Resp com — utilisateur quotidien à former).
 
@@ -163,7 +163,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Déclencheur** : 3c veut faire passer un prospect de "intéressé" à "signé à 8K€/an".
 
-**Acteurs** : 3c (Resp partenaires), 3a (Président — co-pilote en RDV stratégique), prospect → 6b (PME régionale), Neopro.
+**Acteurs** : 3c (Resp partenaires), 3a (Président — co-pilote en RDV stratégique), prospect → 6b (PME régionale), MadXP.
 
 **Trame** :
 
@@ -195,16 +195,16 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Trame** :
 
-| Minute      | Acteur | Action                                                                                                                             | Touchpoint              |
-| ----------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 19h45       | 3a     | Appelle Daisy en mode panique                                                                                                      | Téléphone (hors-Neopro) |
-| 19h45 + 30s | 1 ou 2 | Ouvre dashboard sites, voit Pi en `restarting` (heartbeat absent depuis 2 min après une coupure ENEDIS)                            | Dashboard admin         |
-| 19h46       | 1      | Rassure 3a : "ENEDIS, ça revient dans 2 minutes" — pas de SSH                                                                      | Téléphone               |
-| 19h47       | (Pi)   | Pi reboot terminé, reconnecte au hotspot, heartbeat reprend, kiosk relance Chromium                                                | (auto)                  |
-| 19h48       | 4      | Voit la TV revenir, lance la première vidéo manuelle pour vérifier                                                                 | Remote V2               |
-| 19h50       | 1      | Vérifie Grafana : pas d'autre site impacté, pas d'alerte cascade                                                                   | Grafana + Prometheus    |
-| 19h55       | 3a     | Rappelle pour confirmer "tout est ok, merci"                                                                                       | Téléphone               |
-| Lundi       | 1      | Vérifie post-incident : `neopro_pi_reboots_total{cause="enedis"}` cohérent, ajoute si nécessaire un cas d'edge à la SPEC concernée | Grafana                 |
+| Minute      | Acteur | Action                                                                                                                             | Touchpoint             |
+| ----------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 19h45       | 3a     | Appelle Daisy en mode panique                                                                                                      | Téléphone (hors-MadXP) |
+| 19h45 + 30s | 1 ou 2 | Ouvre dashboard sites, voit Pi en `restarting` (heartbeat absent depuis 2 min après une coupure ENEDIS)                            | Dashboard admin        |
+| 19h46       | 1      | Rassure 3a : "ENEDIS, ça revient dans 2 minutes" — pas de SSH                                                                      | Téléphone              |
+| 19h47       | (Pi)   | Pi reboot terminé, reconnecte au hotspot, heartbeat reprend, kiosk relance Chromium                                                | (auto)                 |
+| 19h48       | 4      | Voit la TV revenir, lance la première vidéo manuelle pour vérifier                                                                 | Remote V2              |
+| 19h50       | 1      | Vérifie Grafana : pas d'autre site impacté, pas d'alerte cascade                                                                   | Grafana + Prometheus   |
+| 19h55       | 3a     | Rappelle pour confirmer "tout est ok, merci"                                                                                       | Téléphone              |
+| Lundi       | 1      | Vérifie post-incident : `neopro_pi_reboots_total{cause="enedis"}` cohérent, ajoute si nécessaire un cas d'edge à la SPEC concernée | Grafana                |
 
 **Métrique de succès** : incident résolu sans SSH, TTR <5 min, 0 client perdu.
 
@@ -244,7 +244,7 @@ Chaque scénario est un parcours **chronologique** qui implique ≥2 personae. F
 
 **Déclencheur** : annonceur national signe un pack "50 clubs en France pour 6 mois", uploade son spot une seule fois.
 
-**Acteurs** : 7 (Annonceur réseau), 1 (Super_admin Neopro — validation), 3b (Resp com de chaque club — vérifie l'intégration), 4 (Opérateur matchday — neutre, ne sait rien du flux).
+**Acteurs** : 7 (Annonceur réseau), 1 (Super_admin MadXP — validation), 3b (Resp com de chaque club — vérifie l'intégration), 4 (Opérateur matchday — neutre, ne sait rien du flux).
 
 **Trame** :
 
@@ -346,101 +346,101 @@ Les ID sont **stables** : on n'en supprime pas, on en ajoute. Un CU obsolète es
 #### 🟢 CU-3b-1 : Préparation matchday hebdomadaire
 
 - **Fréquence** : weekly | **Touchpoint** : Studio + scénario match
-- **Sans Neopro** : _"Chaque vendredi je repars de zéro sur Canva — 4h pour refaire faits de jeu / intro joueurs / bandeau sponsors, rien n'est réutilisable d'une semaine sur l'autre."_
-- **Avec Neopro** : _"Je clone le scénario de la semaine dernière, j'actualise les noms des joueurs, je preview, je déploie en 45 min — le samedi soir tourne tout seul."_
+- **Sans MadXP** : _"Chaque vendredi je repars de zéro sur Canva — 4h pour refaire faits de jeu / intro joueurs / bandeau sponsors, rien n'est réutilisable d'une semaine sur l'autre."_
+- **Avec MadXP** : _"Je clone le scénario de la semaine dernière, j'actualise les noms des joueurs, je preview, je déploie en 45 min — le samedi soir tourne tout seul."_
 - **Composants** : Template Studio v2 (`docs/templates/`), scénarios matchday | **Métrique** : temps préparation < 1h (vs 4h sans)
 
 #### 🟢 CU-3b-2 : Animation live pendant le match
 
 - **Fréquence** : matchday | **Touchpoint** : Remote en tribune (smartphone/tablette)
-- **Sans Neopro** : _"Pendant le match collé au PC de régie au lieu de profiter de l'ambiance — chaque transition manuelle, je rate la moitié des moments forts."_
-- **Avec Neopro** : _"Avec la Remote sur tablette je suis en tribune, je déclenche les célébrations sur les buts en temps réel, et la mi-temps part toute seule à 25:00."_
+- **Sans MadXP** : _"Pendant le match collé au PC de régie au lieu de profiter de l'ambiance — chaque transition manuelle, je rate la moitié des moments forts."_
+- **Avec MadXP** : _"Avec la Remote sur tablette je suis en tribune, je déclenche les célébrations sur les buts en temps réel, et la mi-temps part toute seule à 25:00."_
 - **Composants** : Remote, scénarios matchday, ADR-093 match sessions | **Métrique** : 0 PC de régie nécessaire
 
 #### 🟢 CU-3b-3 : Habillage saison / charte graphique club
 
 - **Fréquence** : once + ajustements | **Touchpoint** : Studio (templates de base + variables club)
-- **Sans Neopro** : _"Quand le club change de sponsor maillot, je reprends 30 templates Canva un par un — 2 jours pour une modif qui devrait prendre 10 min."_
-- **Avec Neopro** : _"La charte club est définie une fois dans le Studio, tous les templates en héritent — 1 modif → cascade automatique sur la flotte."_
+- **Sans MadXP** : _"Quand le club change de sponsor maillot, je reprends 30 templates Canva un par un — 2 jours pour une modif qui devrait prendre 10 min."_
+- **Avec MadXP** : _"La charte club est définie une fois dans le Studio, tous les templates en héritent — 1 modif → cascade automatique sur la flotte."_
 - **Composants** : Template Studio v2 (variables club), `template_fonts`, ADR-086
 
 #### 🛣️ CU-3b-4 : Highlights + posts réseaux sociaux post-match
 
 - **Fréquence** : weekly post-match | **Touchpoint** : Studio → export auto Insta/TikTok
-- **Sans Neopro** : _"Dimanche midi je monte les highlights manuellement pendant que mes proches déjeunent — je poste lundi 14h, engagement divisé par 3."_
-- **Avec Neopro** : _"À la fin du match Neopro pousse automatiquement le clip 'score final + meilleur moment' sur les réseaux du club, engagement Insta x4 vs publication lundi."_
+- **Sans MadXP** : _"Dimanche midi je monte les highlights manuellement pendant que mes proches déjeunent — je poste lundi 14h, engagement divisé par 3."_
+- **Avec MadXP** : _"À la fin du match MadXP pousse automatiquement le clip 'score final + meilleur moment' sur les réseaux du club, engagement Insta x4 vs publication lundi."_
 - **Statut** : 🛣️ LATER — Remotion async render existe (ADR-054/055), intégration RS à faire | **Métrique** : engagement Insta cible x4
 
 #### 🟢 CU-3b-5 : Communication hors-match
 
 - **Fréquence** : weekly | **Touchpoint** : calendrier diffusion (Studio + scheduler)
-- **Sans Neopro** : _"L'écran tourne en boucle sur les pubs entre les matches — pas d'outil pour planifier les annonces club (entraînements, AG, résultats jeunes)."_
-- **Avec Neopro** : _"Je crée 'AG mercredi 18h' depuis le Studio, programmée 18h-21h les soirs d'ouverture publique — s'affiche sans toucher au reste."_
+- **Sans MadXP** : _"L'écran tourne en boucle sur les pubs entre les matches — pas d'outil pour planifier les annonces club (entraînements, AG, résultats jeunes)."_
+- **Avec MadXP** : _"Je crée 'AG mercredi 18h' depuis le Studio, programmée 18h-21h les soirs d'ouverture publique — s'affiche sans toucher au reste."_
 
 #### 🟡 CU-3b-6 : Coordination avec 3c (sponsors dans la programmation)
 
 - **Fréquence** : weekly | **Touchpoint** : Dashboard sponsors en lecture (rotation pondérée définie par 3c)
-- **Sans Neopro** : _"Resp partenaires me dit 'fais passer Decathlon plus souvent en mi-temps' — sans outil partagé je dois deviner, 2-3 allers-retours par semaine."_
-- **Avec Neopro** : _"Resp partenaires configure la rotation pondérée côté dashboard, mes scénarios matchday lisent automatiquement les emplacements alloués — contrat respecté par construction."_
+- **Sans MadXP** : _"Resp partenaires me dit 'fais passer Decathlon plus souvent en mi-temps' — sans outil partagé je dois deviner, 2-3 allers-retours par semaine."_
+- **Avec MadXP** : _"Resp partenaires configure la rotation pondérée côté dashboard, mes scénarios matchday lisent automatiquement les emplacements alloués — contrat respecté par construction."_
 - **Voir aussi** : CU-3c-6 (perspective miroir)
 
 ### § 3.2 — CUs détaillés : Persona 3c (Resp partenaires / sponsoring club)
 
-> 8 CUs — c'est la persona qui transforme Neopro d'un "outil tech" en "levier commercial".
+> 8 CUs — c'est la persona qui transforme MadXP d'un "outil tech" en "levier commercial".
 
 #### 🟡 CU-3c-1 : Prospection nouveaux sponsors
 
 - **Fréquence** : weekly | **Touchpoint** : export PDF + dashboard live en RDV
-- **Sans Neopro** : _"Prospection avec un PPT de 2023 et 3 photos de tribune — quand le prospect demande 'combien voient mon logo par mois ?' aucune réponse, il part sur du Google Ads."_
-- **Avec Neopro** : _"En RDV je sors mon ordi sur Neopro live : '12 800 impressions/mois sur 18 matches, breakdown par contrat' — le prospect signe à 8K€/an au lieu des 3K€ habituels."_
+- **Sans MadXP** : _"Prospection avec un PPT de 2023 et 3 photos de tribune — quand le prospect demande 'combien voient mon logo par mois ?' aucune réponse, il part sur du Google Ads."_
+- **Avec MadXP** : _"En RDV je sors mon ordi sur MadXP live : '12 800 impressions/mois sur 18 matches, breakdown par contrat' — le prospect signe à 8K€/an au lieu des 3K€ habituels."_
 - **Métrique** : ticket moyen 3K€ → 8K€ (×2,7)
 
 #### 🟡 CU-3c-2 : Renégociation annuelle des contrats
 
 - **Fréquence** : seasonal peak (juin) | **Touchpoint** : rapports ROI 12 mois
-- **Sans Neopro** : _"Juin = 3 semaines à fabriquer des bilans Excel, beaucoup ne renouvellent pas faute d'arguments."_
-- **Avec Neopro** : _"Clic 'rapport annuel sponsor X', PDF 8 pages avec impressions cumulées + courbe d'évolution + comparatif anonymisé — taux de reconduction 60% → 85%."_
+- **Sans MadXP** : _"Juin = 3 semaines à fabriquer des bilans Excel, beaucoup ne renouvellent pas faute d'arguments."_
+- **Avec MadXP** : _"Clic 'rapport annuel sponsor X', PDF 8 pages avec impressions cumulées + courbe d'évolution + comparatif anonymisé — taux de reconduction 60% → 85%."_
 - **Métrique** : taux reconduction 60% → 85%
 
 #### 🟡 CU-3c-3 : Construction des packs commerciaux
 
 - **Fréquence** : once + ajustements | **Touchpoint** : Dashboard sponsors / rotation pondérée
-- **Sans Neopro** : _"Tous sponsors au même tarif faute de différencier 'logo bandeau' et 'spot vidéo mi-temps' — marge laissée à chaque renouvellement."_
-- **Avec Neopro** : _"4 packs bronze/argent/or/platine avec fréquences et emplacements distincts, dashboard prouve que platine génère 4x plus d'impressions premium — facturation x4 sans débat."_
+- **Sans MadXP** : _"Tous sponsors au même tarif faute de différencier 'logo bandeau' et 'spot vidéo mi-temps' — marge laissée à chaque renouvellement."_
+- **Avec MadXP** : _"4 packs bronze/argent/or/platine avec fréquences et emplacements distincts, dashboard prouve que platine génère 4x plus d'impressions premium — facturation x4 sans débat."_
 - **Métrique** : prix pack platine = 4× pack bronze justifié par data
 
 #### 🟡 CU-3c-4 : Onboarding nouveau sponsor signé
 
 - **Fréquence** : événementiel | **Touchpoint** : Dashboard sponsors + Studio
-- **Sans Neopro** : _"Sponsor signé mardi → 3 semaines à récupérer logo HD, le faire retoucher, le pousser au resp com — sponsor s'inquiète."_
-- **Avec Neopro** : _"Sponsor signé mardi, créé dans dashboard mercredi avec logo et vidéo, premier rapport reçu samedi soir après son 1er match diffusé — onboarding 4 jours."_
+- **Sans MadXP** : _"Sponsor signé mardi → 3 semaines à récupérer logo HD, le faire retoucher, le pousser au resp com — sponsor s'inquiète."_
+- **Avec MadXP** : _"Sponsor signé mardi, créé dans dashboard mercredi avec logo et vidéo, premier rapport reçu samedi soir après son 1er match diffusé — onboarding 4 jours."_
 - **Métrique** : délai onboarding 3 semaines → 4 jours
 
 #### 🟡 CU-3c-5 : Reporting mensuel automatique aux sponsors actuels
 
 - **Fréquence** : monthly | **Touchpoint** : mail auto + portail sponsor
-- **Sans Neopro** : _"1er du mois : 2 jours à compiler 8 bilans Excel et envoyer un par un — temps perdu pour la prospection."_
-- **Avec Neopro** : _"1er du mois : 15 min à vérifier les rapports auto, mot personnalisé pour 2-3 partenaires clés, matinée libérée pour appeler des prospects."_
+- **Sans MadXP** : _"1er du mois : 2 jours à compiler 8 bilans Excel et envoyer un par un — temps perdu pour la prospection."_
+- **Avec MadXP** : _"1er du mois : 15 min à vérifier les rapports auto, mot personnalisé pour 2-3 partenaires clés, matinée libérée pour appeler des prospects."_
 - **Statut** : capacité technique prête (sponsor reports), Sponsor Portal V1 à livrer NEXT M2-3 | **Métrique** : temps reporting mensuel 2j → 15 min
 
 #### 🟡 CU-3c-6 : Allocation des emplacements premium
 
 - **Fréquence** : weekly | **Touchpoint** : Dashboard sponsors (rotation pondérée)
-- **Sans Neopro** : _"3 sponsors majeurs veulent tous 'être visibles à mi-temps' — j'arbitre manuellement chaque match, quelqu'un râle inévitablement."_
-- **Avec Neopro** : _"Rotation pondérée saisonnière (Decathlon 3x/match mi-temps, banque locale 2x/match bandeau...) — le système tourne, preuve à l'appui en cas de litige."_
+- **Sans MadXP** : _"3 sponsors majeurs veulent tous 'être visibles à mi-temps' — j'arbitre manuellement chaque match, quelqu'un râle inévitablement."_
+- **Avec MadXP** : _"Rotation pondérée saisonnière (Decathlon 3x/match mi-temps, banque locale 2x/match bandeau...) — le système tourne, preuve à l'appui en cas de litige."_
 - **Voir aussi** : CU-3b-6 (perspective miroir)
 
 #### 🟡 CU-3c-7 : Animation relationnelle VIP / soirées partenaires
 
 - **Fréquence** : event-based | **Touchpoint** : Studio + Remote
-- **Sans Neopro** : _"Soirée partenaires en loge un soir de match : message écran 'Bienvenue partenaires CA' à mailer au resp com 3 jours à l'avance."_
-- **Avec Neopro** : _"Animation événementielle 'soirée VIP CA mardi 20h' depuis le dashboard — s'affiche automatiquement entre 19h45 et 22h sans toucher à la programmation matchday standard."_
+- **Sans MadXP** : _"Soirée partenaires en loge un soir de match : message écran 'Bienvenue partenaires CA' à mailer au resp com 3 jours à l'avance."_
+- **Avec MadXP** : _"Animation événementielle 'soirée VIP CA mardi 20h' depuis le dashboard — s'affiche automatiquement entre 19h45 et 22h sans toucher à la programmation matchday standard."_
 
 #### 🟡 CU-3c-8 : Reporting institutionnel pour 6c (collectivités)
 
 - **Fréquence** : semestriel | **Touchpoint** : export PDF formaté admin
-- **Sans Neopro** : _"Mairie demande son rapport semestriel de visibilité — 1 journée par collectivité, format jamais standard."_
-- **Avec Neopro** : _"Clic 'rapport semestriel collectivité' avec dates début/fin, PDF formaté admin (heures cumulées, impressions estimées) — annexable directement à la convention de partenariat."_
+- **Sans MadXP** : _"Mairie demande son rapport semestriel de visibilité — 1 journée par collectivité, format jamais standard."_
+- **Avec MadXP** : _"Clic 'rapport semestriel collectivité' avec dates début/fin, PDF formaté admin (heures cumulées, impressions estimées) — annexable directement à la convention de partenariat."_
 - **Voir aussi** : CU-6c-1 (perspective lecteur)
 
 ### § 3.3 — CUs en stub (autres personae)
@@ -451,7 +451,7 @@ Format compact — à détailler quand priorité PM le justifie.
 
 **Persona 2 (Admin Support)** : `🟢 CU-2-1` Support distant N1 sur incident club | `🟢 CU-2-2` Création nouveau site (délégué par 1) | `🟢 CU-2-3` Vue parc temps réel (heartbeat) | `🟢 CU-2-4` Commandes remote (restart kiosk, rotate PSK)
 
-**Persona 3a (Président)** : `🟡 CU-3a-1` Lecture rapport stratégique trimestriel | `🟡 CU-3a-2` Validation budget Neopro en bureau directeur
+**Persona 3a (Président)** : `🟡 CU-3a-1` Lecture rapport stratégique trimestriel | `🟡 CU-3a-2` Validation budget MadXP en bureau directeur
 
 **Persona 4 (Staff bénévole)** : `🟢 CU-4-1` Tenir le score live pendant le match | `🟢 CU-4-2` Lancer une vidéo manuelle (entrée équipe, but)
 
@@ -483,7 +483,7 @@ Format compact — à détailler quand priorité PM le justifie.
 
 - **CU "lecture du rapport ROI par un sponsor"** : implicite dans 6a/6b/6c. Pourrait mériter un CU dédié côté lecteur (vs côté générateur 3c-5).
 - **CU "support utilisateur en autonomie"** : un président qui appelle sans pouvoir consulter de FAQ produit. Manque-t-il un CU "self-service support" ?
-- **CU "facturation / paiement Neopro"** : qui signe le devis, qui valide la CB, comment un nouveau site SaaS s'active automatiquement ? Pas couvert.
+- **CU "facturation / paiement MadXP"** : qui signe le devis, qui valide la CB, comment un nouveau site SaaS s'active automatiquement ? Pas couvert.
 - **CU "changement d'adresse / migration de site"** : un club qui change de gymnase. Edge case fréquent en saison.
 
 #### GAPs émergeant des journeys (§4)
@@ -509,8 +509,8 @@ Format compact — à détailler quand priorité PM le justifie.
 | Samedi 14h (brief bénévole) | Envoie lien Remote pré-config au lycéen volontaire, brief 5 min               | 🙂 4     | Remote (lien envoyé) | ✨ Magic : bénévole peut suivre le match, plus de freeze écran 10 min (CU-4-1, CU-4-2)              |
 | Samedi 19h45 (pré-match)    | Déploie scénario, monte en tribune avec tablette                              | 😀 4     | Studio + Remote      |                                                                                                     |
 | **Samedi 20h-22h (match)**  | Déclenche célébrations sur les buts depuis la tribune                         | **😀 5** | Remote en tribune    | ✨ MAGIC : "Léa Martinez • 47" affiché 2 sec après le but, 600 personnes vibrent ensemble (CU-3b-2) |
-| Samedi 22h05 (fin match)    | Arrête scénario matchday                                                      | 🙂 4     | Studio               | "Ce serait dingue si Neopro pouvait me sortir le clip auto"                                         |
-| **Dimanche 11h-13h**        | Monte highlights pour Insta/TikTok manuellement                               | **😟 2** | Hors Neopro          | ⚠️ PAIN CRITIQUE : pic de douleur résiduel, sacrifie son dimanche (CU-3b-4 LATER)                   |
+| Samedi 22h05 (fin match)    | Arrête scénario matchday                                                      | 🙂 4     | Studio               | "Ce serait dingue si MadXP pouvait me sortir le clip auto"                                          |
+| **Dimanche 11h-13h**        | Monte highlights pour Insta/TikTok manuellement                               | **😟 2** | Hors MadXP           | ⚠️ PAIN CRITIQUE : pic de douleur résiduel, sacrifie son dimanche (CU-3b-4 LATER)                   |
 | Dimanche 14h                | Poste highlights sur Insta + TikTok                                           | 😐 3     | Réseaux sociaux      | Engagement moyen (timing dimanche après-midi)                                                       |
 | Lundi 9h (récap)            | Vérifie impressions match dans dashboard sponsors                             | 🙂 4     | Dashboard sponsors   | ✨ Magic : 30 sec pour confirmer Decathlon a tourné 6×, vs 2h auparavant                            |
 
@@ -530,11 +530,11 @@ Format compact — à détailler quand priorité PM le justifie.
 
 | Phase                                    | Action 3c                                                                                       | Émotion  | Touchpoint                            | Note                                                                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------- | -------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Semaine 1 — appel entrant                | Prend l'appel, propose RDV au club                                                              | 🙂 4     | Téléphone (hors Neopro)               | "Si je signe, c'est 8K€/an minimum"                                                                                                  |
+| Semaine 1 — appel entrant                | Prend l'appel, propose RDV au club                                                              | 🙂 4     | Téléphone (hors MadXP)                | "Si je signe, c'est 8K€/an minimum"                                                                                                  |
 | Semaine 1 (J+2) — préparation            | Génère export PDF anonymisé "ma régie aujourd'hui" (8 sponsors actifs, 12 800 impressions/mois) | 😀 5     | Dashboard sponsors                    | ✨ Magic : 2 min vs PowerPoint de 2023 (CU-3c-1)                                                                                     |
-| **Semaine 1 (J+5) — RDV physique**       | Présente 30 min, ouvre Neopro live + démo Studio "Cabinet X partenaire NLF" générée à la volée  | **😀 5** | Dashboard live + Studio               | ✨ MAGIC côté 6b : voit ce que ça donnerait sur l'écran du gymnase (CU-3c-1, CU-3c-3)                                                |
+| **Semaine 1 (J+5) — RDV physique**       | Présente 30 min, ouvre MadXP live + démo Studio "Cabinet X partenaire NLF" générée à la volée   | **😀 5** | Dashboard live + Studio               | ✨ MAGIC côté 6b : voit ce que ça donnerait sur l'écran du gymnase (CU-3c-1, CU-3c-3)                                                |
 | Semaine 2 — négo packs                   | Envoie 4 propositions (bronze 3K / argent 5K / or 8K / platine 12K) avec breakdown impressions  | 🙂 4     | Dashboard rotation pondérée           | Le dashboard prouve que platine = 4× impressions premium → prix justifié sans débat (CU-3c-3)                                        |
-| Semaine 3 — signature pack OR            | Sponsor signe à 8K€/an, transmet logo HD                                                        | 😀 5     | Administratif (hors Neopro)           | "Avant Neopro je l'aurais vendu 3K€ par défaut" (+5K€ par contrat)                                                                   |
+| Semaine 3 — signature pack OR            | Sponsor signe à 8K€/an, transmet logo HD                                                        | 😀 5     | Administratif (hors MadXP)            | "Avant MadXP je l'aurais vendu 3K€ par défaut" (+5K€ par contrat)                                                                    |
 | **Semaine 3 (J+3) — onboarding express** | Crée sponsor dans dashboard, intègre logo + vidéo, génère accès portail sponsor                 | **😀 5** | Dashboard sponsors + Studio + portail | ✨ MAGIC : signature mardi → 1er rapport reçu dimanche soir (4 jours), 6b appelle "on va vous présenter à 3 PME du Rotary" (CU-3c-4) |
 
 **Métriques de succès** :
@@ -554,7 +554,7 @@ Format compact — à détailler quand priorité PM le justifie.
 | Phase                            | Action 6b                                                                        | Émotion  | Touchpoint                    | Note                                                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------------- | -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | J-30 → J0 (pré-saison)           | Signe le contrat, attend 1er match                                               | 😐 3     | (mail)                        | "Mon DAF m'a dit 'tu m'expliques ce que ça donne dans 6 mois'"                                          |
-| **J0 (samedi 14 sept, 22h45)**   | Reçoit mail "votre logo est passé pour la 1ère fois ce soir au match NLF vs CSM" | **😀 4** | Mail auto Neopro post-match   | ✨ MAGIC : photo logo écran + "affiché 14 fois pendant 2h12 cumulées" — pas un mail générique (CU-3c-5) |
+| **J0 (samedi 14 sept, 22h45)**   | Reçoit mail "votre logo est passé pour la 1ère fois ce soir au match NLF vs CSM" | **😀 4** | Mail auto MadXP post-match    | ✨ MAGIC : photo logo écran + "affiché 14 fois pendant 2h12 cumulées" — pas un mail générique (CU-3c-5) |
 | **J+30 (1er octobre)**           | Reçoit rapport mensuel auto sur portail sponsor (4 matches, 56 800 impressions)  | **😀 5** | Portail sponsor V1            | ✨ MAGIC : annexable directement au rapport DAF du 5 octobre, zéro question (CU-6b-1, CU-6b-2)          |
 | J+45 (mi-octobre, déjeuner pair) | Parle à un DG d'une PME tech locale, montre son portail sponsor sur mobile       | 😀 5     | Portail sponsor (démo mobile) | ✨ MAGIC côté 3c : appel mardi suivant "on me parle de votre portail" — recommandation organique        |
 

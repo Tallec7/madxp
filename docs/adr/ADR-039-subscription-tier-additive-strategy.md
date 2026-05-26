@@ -8,7 +8,7 @@
 
 ## Contexte
 
-La grille tarifaire commerciale Neopro est passée à 4 offres : **Play**, **Club**, **Pro**, **Premium**. La base de données utilisait jusqu'ici une colonne `sites.subscription_plan` avec les valeurs legacy `trial | standard | premium`, consommée par pitch-deck metrics, pipelines billing, Prometheus gauges, badges CSS `.plan-standard`, filtres dashboard, tests unitaires et exports d'abonnements.
+La grille tarifaire commerciale MadXP est passée à 4 offres : **Play**, **Club**, **Pro**, **Premium**. La base de données utilisait jusqu'ici une colonne `sites.subscription_plan` avec les valeurs legacy `trial | standard | premium`, consommée par pitch-deck metrics, pipelines billing, Prometheus gauges, badges CSS `.plan-standard`, filtres dashboard, tests unitaires et exports d'abonnements.
 
 Un rename brutal (`standard` → `club`, `trial` → `play`) impliquait ~25 fichiers modifiés à travers `central-server` + `central-dashboard`, dont plusieurs assets sensibles (métriques investisseurs, billing, services de monitoring). Un champ parallèle `subscription_tier` créait une double source de vérité sur le concept d'offre commerciale.
 

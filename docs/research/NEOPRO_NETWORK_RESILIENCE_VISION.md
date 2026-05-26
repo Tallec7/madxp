@@ -1,4 +1,4 @@
-# Vision Produit : Neopro Network Resilience
+# Vision Produit : MadXP Network Resilience
 
 > **Document stratégique** - Janvier 2026
 >
@@ -12,12 +12,12 @@
 
 Après analyse de l'industrie du digital signage, nous avons identifié que :
 
-| Fait                                                      | Implication                                                |
-| --------------------------------------------------------- | ---------------------------------------------------------- |
-| **Tous les concurrents Pi ont des problèmes WiFi**        | Ce n'est pas un bug Neopro, c'est un défi technique commun |
-| **Le driver brcmfmac a des bugs documentés**              | Certains problèmes sont hors de notre contrôle             |
-| **L'architecture dual-WiFi est unique à Neopro**          | Plus de fonctionnalités = plus de complexité               |
-| **Aucun concurrent ne gère bien les environnements mesh** | Opportunité de différenciation                             |
+| Fait                                                      | Implication                                               |
+| --------------------------------------------------------- | --------------------------------------------------------- |
+| **Tous les concurrents Pi ont des problèmes WiFi**        | Ce n'est pas un bug MadXP, c'est un défi technique commun |
+| **Le driver brcmfmac a des bugs documentés**              | Certains problèmes sont hors de notre contrôle            |
+| **L'architecture dual-WiFi est unique à MadXP**           | Plus de fonctionnalités = plus de complexité              |
+| **Aucun concurrent ne gère bien les environnements mesh** | Opportunité de différenciation                            |
 
 ### 1.2 L'Opportunité
 
@@ -38,11 +38,11 @@ Après analyse de l'industrie du digital signage, nous avons identifié que :
 │   VISION NEOPRO                                                            │
 │   ═════════════                                                             │
 │                                                                             │
-│   "Neopro s'adapte automatiquement à votre réseau"                         │
+│   "MadXP s'adapte automatiquement à votre réseau"                         │
 │   "Détection intelligente des environnements complexes"                    │
 │   "Récupération automatique en cas de problème"                            │
 │                                                                             │
-│   → Neopro RÉSOUT le problème de manière TRANSPARENTE                      │
+│   → MadXP RÉSOUT le problème de manière TRANSPARENTE                      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -53,11 +53,11 @@ Après analyse de l'industrie du digital signage, nous avons identifié que :
 
 ### 2.1 Proposition de Valeur Unique
 
-> **"Neopro fonctionne dans tous les environnements réseau, même les plus complexes, sans intervention IT."**
+> **"MadXP fonctionne dans tous les environnements réseau, même les plus complexes, sans intervention IT."**
 
 ### 2.2 Différenciateurs Clés
 
-| Fonctionnalité                            | Neopro                  | Concurrents               |
+| Fonctionnalité                            | MadXP                   | Concurrents               |
 | ----------------------------------------- | ----------------------- | ------------------------- |
 | **Détection automatique mesh/enterprise** | ✅ Automatique          | ❌ Manuel ou inexistant   |
 | **Adaptation comportement selon réseau**  | ✅ Dynamique            | ❌ Configuration statique |
@@ -69,11 +69,11 @@ Après analyse de l'industrie du digital signage, nous avons identifié que :
 
 **Pour les commerciaux** :
 
-> "Contrairement à nos concurrents qui vous demandent de changer votre infrastructure réseau, Neopro s'adapte à VOTRE réseau existant."
+> "Contrairement à nos concurrents qui vous demandent de changer votre infrastructure réseau, MadXP s'adapte à VOTRE réseau existant."
 
 **Pour les techniciens IT** :
 
-> "Neopro détecte automatiquement les environnements mesh et enterprise, et ajuste son comportement pour garantir une connectivité stable sans configuration manuelle."
+> "MadXP détecte automatiquement les environnements mesh et enterprise, et ajuste son comportement pour garantir une connectivité stable sans configuration manuelle."
 
 ---
 
@@ -384,18 +384,18 @@ Les environnements réseau complexes (mesh, enterprise, isolation client) causen
 
 ### L'Opportunité
 
-Neopro peut se différencier en étant la **première solution qui s'adapte automatiquement** aux environnements réseau complexes.
+MadXP peut se différencier en étant la **première solution qui s'adapte automatiquement** aux environnements réseau complexes.
 
 ### La Vision
 
 > **"Branchez, allumez, ça marche. Partout."**
 
-Que le client soit dans un petit club avec un routeur box ou dans un gymnase avec un réseau mesh enterprise avec isolation client, Neopro doit fonctionner sans intervention manuelle.
+Que le client soit dans un petit club avec un routeur box ou dans un gymnase avec un réseau mesh enterprise avec isolation client, MadXP doit fonctionner sans intervention manuelle.
 
 ---
 
 **Document créé** : 18 janvier 2026
-**Auteur** : Équipe Produit Neopro
+**Auteur** : Équipe Produit MadXP
 **Statut** : Phases 1-4 implémentées (v2.34-v2.37, janvier-février 2026)
 **Prochaine étape** : Monitoring et optimisation continue
 **Voir aussi** : [ADR-024 — Network Resilience 4-Layer](../adr/ADR-024-network-resilience-layers.md)

@@ -524,10 +524,10 @@
 
 ### E-15 — Score en Live Phase 2 (Table de Marque + API Fédérations)
 
-| Champ                 | Détail                 |
-| --------------------- | ---------------------- |
-| **Value Stream**      | VS1 — Club to Screen   |
-| **Thème Stratégique** | TS2 — Expérience Match |
+| Champ                 | Détail                                  |
+| --------------------- | --------------------------------------- |
+| **Value Stream**      | VS1 — Club to Screen                    |
+| **Thème Stratégique** | TS2 — Expérience Match                  |
 | **WSJF**              | 12 (↑ depuis 9 — deal-breaker prospect) |
 
 **Problème** : Le score en live (Phase 1) nécessite une saisie manuelle depuis la télécommande. Charge cognitive pour l'opérateur de table de marque, risque d'erreur, double saisie avec la console officielle du club. **Deal-breaker confirmé pour plusieurs prospects** : sans lecture automatique, pas de signature. Par ailleurs, la douleur côté clubs amateurs est bien documentée : aujourd'hui, les membres des clubs doivent s'envoyer des messages pour savoir où en est un match — aucune source officielle live n'existe.
@@ -537,7 +537,7 @@
 **Solution F-15.2**
 
 - Architecture plugin connecteur unifiée (Stramatel, Bodet, OCR, extensible à Favero/Mobatime/Daktronics)
-- Produit physique **Neopro Scorebox** (Pi Zero 2 W + HAT RS-485) en 3 modes configurables selon la topologie du club :
+- Produit physique **MadXP Scorebox** (Pi Zero 2 W + HAT RS-485) en 3 modes configurables selon la topologie du club :
   - **Mode cloud-push** : Scorebox → central-server (SaaS ou Pi en ligne)
   - **Mode local-AP** : Scorebox émet son propre mini-AP WiFi, le Pi s'y connecte via clé USB WiFi (gymnase offline)
   - **Mode lan-bridge** : S2E sur LAN club pour les gymnases connectés
@@ -744,16 +744,16 @@
 
 ### E-21 — API Partenaires OAuth
 
-| Champ                 | Détail             |
-| --------------------- | ------------------ |
-| **Value Stream**      | Transverse         |
-| **Thème Stratégique** | TS1 — Monétisation |
+| Champ                 | Détail                                           |
+| --------------------- | ------------------------------------------------ |
+| **Value Stream**      | Transverse                                       |
+| **Thème Stratégique** | TS1 — Monétisation                               |
 | **WSJF**              | 8 (↑ depuis 5 — extension F-21.2 scores publics) |
 
 **Problème** : Deux problématiques liées :
 
 1. **F-21.1** — Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données NEOPRO. Tout passe par le dashboard ou des exports manuels.
-2. **F-21.2** — Les clubs amateurs français n'ont **aucune source officielle de scores live**. Aujourd'hui les membres s'envoient des messages pour savoir où en est un match. Les médias locaux, apps clubs, agrégateurs et fédérations n'ont pas de source fiable à intégrer. Avec F-15.2 livrée en PI-2, Neopro devient la seule entité capable de lire directement les tables de marque officielles de centaines de clubs — transformer cette donnée en API publique crée un **hub temps réel du sport amateur français**.
+2. **F-21.2** — Les clubs amateurs français n'ont **aucune source officielle de scores live**. Aujourd'hui les membres s'envoient des messages pour savoir où en est un match. Les médias locaux, apps clubs, agrégateurs et fédérations n'ont pas de source fiable à intégrer. Avec F-15.2 livrée en PI-2, MadXP devient la seule entité capable de lire directement les tables de marque officielles de centaines de clubs — transformer cette donnée en API publique crée un **hub temps réel du sport amateur français**.
 
 **Solution**
 
@@ -776,7 +776,7 @@
 - Nouveau flux de revenus SaaS API (plans mensuels 0€ Free → 490€+ Enterprise)
 - **Effet réseau** : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour équiper de nouveaux clubs
 - **Positionnement marché unique** : seule source officielle de scores amateurs live en France, concurrence nulle sur ce segment
-- **Différenciateur commercial pour F-15.2** : « en installant Neopro, ton match est automatiquement visible sur toutes les apps partenaires »
+- **Différenciateur commercial pour F-15.2** : « en installant MadXP, ton match est automatiquement visible sur toutes les apps partenaires »
 - Lock-in positif des clubs (plus ils l'utilisent, plus leur data rayonne, plus ils ont intérêt à rester)
 - Base pour partenariats stratégiques fédérations (remontée automatique des scores officiels)
 
@@ -893,4 +893,4 @@
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Portfolio](PORTFOLIO.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)
+**Retour** : [SAFe MadXP](README.md) · [Portfolio](PORTFOLIO.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)

@@ -1,4 +1,4 @@
-# ADR-035: Séparation Annonceurs Neopro / Sponsors Club
+# ADR-035: Séparation Annonceurs MadXP / Sponsors Club
 
 ## Status
 
@@ -6,19 +6,19 @@ Accepted
 
 ## Context
 
-Le système actuel fusionne les annonceurs Neopro (advertisers) et les sponsors locaux (site_sponsors) dans un modèle unique. Quand un annonceur est assigné à un site, un `site_sponsor` fantôme (`source='neopro'`) est auto-créé via `upsertForAdvertiserSite()`. Ce pont permet aux vidéos annonceur d'utiliser le même pipeline analytics que les sponsors locaux (`site_sponsor_id` dans `video_plays`).
+Le système actuel fusionne les annonceurs MadXP (advertisers) et les sponsors locaux (site_sponsors) dans un modèle unique. Quand un annonceur est assigné à un site, un `site_sponsor` fantôme (`source='neopro'`) est auto-créé via `upsertForAdvertiserSite()`. Ce pont permet aux vidéos annonceur d'utiliser le même pipeline analytics que les sponsors locaux (`site_sponsor_id` dans `video_plays`).
 
 ### Problèmes à l'échelle
 
-| Problème                                      | Impact                                                                                                                      |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Fuite de données commerciales**             | L'opérateur club voit les stats des annonceurs Neopro dans son onglet Sponsors — données confidentielles                    |
-| **Benchmark pollué**                          | Le sponsor "Boulangerie du coin" est comparé à "Décathlon" national — pas de sens métier                                    |
-| **FK redondante dans video_plays**            | `site_sponsor_id` ET `sponsor_id` (= advertiser_id mal nommé) — confusion                                                   |
-| **advertiser_daily_stats sans advertiser_id** | Agrège par `video_id + site_id` — si 2 annonceurs partagent une vidéo, stats mélangées                                      |
-| **Pas de déploiement depuis l'annonceur**     | Il faut aller site par site pour ajouter les vidéos à la boucle                                                             |
-| **Campagnes non opérationnelles**             | Table `campaigns` existe mais n'est connectée à rien (pas de déploiement, pas de ciblage réel)                              |
-| **Deux mondes, un seul pipeline**             | Sponsor local = relation club/commerçant. Annonceur = relation commerciale Neopro. Business models différents, mêmes tables |
+| Problème                                      | Impact                                                                                                                     |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Fuite de données commerciales**             | L'opérateur club voit les stats des annonceurs MadXP dans son onglet Sponsors — données confidentielles                    |
+| **Benchmark pollué**                          | Le sponsor "Boulangerie du coin" est comparé à "Décathlon" national — pas de sens métier                                   |
+| **FK redondante dans video_plays**            | `site_sponsor_id` ET `sponsor_id` (= advertiser_id mal nommé) — confusion                                                  |
+| **advertiser_daily_stats sans advertiser_id** | Agrège par `video_id + site_id` — si 2 annonceurs partagent une vidéo, stats mélangées                                     |
+| **Pas de déploiement depuis l'annonceur**     | Il faut aller site par site pour ajouter les vidéos à la boucle                                                            |
+| **Campagnes non opérationnelles**             | Table `campaigns` existe mais n'est connectée à rien (pas de déploiement, pas de ciblage réel)                             |
+| **Deux mondes, un seul pipeline**             | Sponsor local = relation club/commerçant. Annonceur = relation commerciale MadXP. Business models différents, mêmes tables |
 
 ### Schéma actuel
 
@@ -84,7 +84,7 @@ video_plays
 2. **`site_sponsors` = sponsors locaux uniquement** : plus de `source='neopro'`, plus de `site_sponsor` fantôme
 3. **Les stats annonceur sont requêtées par `advertiser_id`** directement sur `video_plays` — plus besoin du pont `site_sponsor`
 4. **Les campagnes pilotent le déploiement** : l'annonceur crée une campagne → critères de ciblage → sites résolus → vidéos déployées automatiquement
-5. **Séparation front stricte** : l'opérateur club ne voit que ses sponsors locaux, l'admin Neopro gère les annonceurs dans un espace dédié
+5. **Séparation front stricte** : l'opérateur club ne voit que ses sponsors locaux, l'admin MadXP gère les annonceurs dans un espace dédié
 
 ### Changements par composant
 
@@ -107,7 +107,7 @@ video_plays
 // Sponsor local → inchangé
 { video_filename, site_sponsor_id: "ss-456", analytics_category: "sponsor_local" }
 
-// Annonceur Neopro → nouveau
+// Annonceur MadXP → nouveau
 { video_filename, advertiser_id: "adv-123", campaign_id: "camp-789", analytics_category: "sponsor_neopro" }
 ```
 
@@ -229,7 +229,7 @@ video_plays
 
 ### Positif
 
-- **Séparation métier claire** : le club gère ses sponsors, Neopro gère ses annonceurs
+- **Séparation métier claire** : le club gère ses sponsors, MadXP gère ses annonceurs
 - **Confidentialité** : les stats annonceur ne fuient plus côté club
 - **Scalabilité** : le modèle campagne permet de gérer N annonceurs × M clubs sans explosion de `site_sponsors`
 - **Déploiement simplifié** : une campagne → des critères → déploiement auto (vs aller site par site)

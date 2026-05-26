@@ -1,4 +1,4 @@
-# Architecture Neopro
+# Architecture MadXP
 
 ## Diagrammes de Sequence
 
@@ -10,7 +10,7 @@
 
 ## Vue d'ensemble
 
-Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu vidéo dans les clubs sportifs.
+MadXP est une plateforme distribuée Edge + Cloud pour la diffusion de contenu vidéo dans les clubs sportifs.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -72,7 +72,7 @@ Neopro est une plateforme distribuée Edge + Cloud pour la diffusion de contenu 
 
 ### Mode SaaS (ADR-037 — sans Raspberry Pi)
 
-En plus de l'architecture Edge (Pi), Neopro propose un mode **100% SaaS** : le club accède à sa TV interactive via une URL navigateur, sans matériel.
+En plus de l'architecture Edge (Pi), MadXP propose un mode **100% SaaS** : le club accède à sa TV interactive via une URL navigateur, sans matériel.
 
 ```
 ┌──────────────────────────────────────────────────────────┐

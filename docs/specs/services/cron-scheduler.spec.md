@@ -4,18 +4,19 @@
 > **Statut** : Live
 > **Dernière revue** : 2026-04-25
 > **Code principal** :
+>
 > - `central-server/src/services/cron-scheduler.service.ts` (orchestrateur 486 lignes)
 > - `central-server/src/cron-tasks/<name>.task.ts` (7 task executors)
 > - `central-server/src/cron-tasks/types.ts` (types partagés)
-> **ADR liés** : ADR-097 (extraction modulaire des tasks)
-> **Smoke tests** :
+>   **ADR liés** : ADR-097 (extraction modulaire des tasks)
+>   **Smoke tests** :
 > - `central-server/src/__tests__/smoke/smoke-analytics-sponsors.test.ts` (aggregation)
 > - `central-server/src/__tests__/smoke/smoke-adr093-match-sessions.test.ts` (match auto-close)
-> **`.claude/rules/` lié** : `services.md`
+>   **`.claude/rules/` lié** : `services.md`
 
 ## En une phrase
 
-Le service qui exécute automatiquement les tâches récurrentes du backend Neopro (rapports email, agrégation stats, nettoyage, fermeture sessions match, etc.) selon un planning configuré en DB.
+Le service qui exécute automatiquement les tâches récurrentes du backend MadXP (rapports email, agrégation stats, nettoyage, fermeture sessions match, etc.) selon un planning configuré en DB.
 
 ## Règles métier (ce qui DOIT marcher)
 
@@ -30,15 +31,15 @@ Le service qui exécute automatiquement les tâches récurrentes du backend Neop
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Tâche tourne à l'heure prévue | Log Winston `info` `Executing scheduled task: <name>` à l'heure exacte |
-| Exécution tracée | Row dans `recurring_schedule_executions` avec `status='success'` ou `'failed'` |
-| Échec n'arrête pas le service | Le service redémarre les tâches suivantes, `failure_count` incrémenté en DB |
-| `runNow` manuel | UI admin Dashboard → bouton "Run now" sur un schedule → log + row tracked |
-| `match_session_autoclose` actif | Métrique Prometheus `neopro_match_sessions_autoclosed_total{reason="idle"|"absolute"}` augmente |
-| `backup` fail-loud | Log Winston `warn` `[CronScheduler] Backup task triggered but not implemented` à chaque tick + `success: false` retourné |
-| `objective_check` Slack | Si `config.send_alerts=true` et objectifs <50% → 1 alerte Slack par site listant ses N objectifs à risque |
+| Règle                           | Comment on vérifie                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| Tâche tourne à l'heure prévue   | Log Winston `info` `Executing scheduled task: <name>` à l'heure exacte                                                   |
+| Exécution tracée                | Row dans `recurring_schedule_executions` avec `status='success'` ou `'failed'`                                           |
+| Échec n'arrête pas le service   | Le service redémarre les tâches suivantes, `failure_count` incrémenté en DB                                              |
+| `runNow` manuel                 | UI admin Dashboard → bouton "Run now" sur un schedule → log + row tracked                                                |
+| `match_session_autoclose` actif | Métrique Prometheus `neopro_match_sessions_autoclosed_total{reason="idle"                                                | "absolute"}` augmente |
+| `backup` fail-loud              | Log Winston `warn` `[CronScheduler] Backup task triggered but not implemented` à chaque tick + `success: false` retourné |
+| `objective_check` Slack         | Si `config.send_alerts=true` et objectifs <50% → 1 alerte Slack par site listant ses N objectifs à risque                |
 
 ## Cas d'edge connus
 
@@ -62,14 +63,14 @@ Voir `.claude/rules/services.md` pour les règles techniques smoke-testées. Rè
 ## Ce qui n'est PAS dans le scope
 
 - **Scheduling temps réel sub-minute** (high-frequency trading style) → on est sur du cron classique, granularité minute. Pas l'usage.
-- **Exécution distribuée** (worker pool, plusieurs nodes) → 1 instance Railway = 1 scheduler. Si Neopro scale à plusieurs nodes, refactor nécessaire (lock distribué, leader election).
+- **Exécution distribuée** (worker pool, plusieurs nodes) → 1 instance Railway = 1 scheduler. Si MadXP scale à plusieurs nodes, refactor nécessaire (lock distribué, leader election).
 - **Triggering par événement** (webhooks, queues) → autre concern, voir `command-queue.service.ts` ou `remotion-render-worker.service.ts`.
 - **UI de création de schedules par les clubs** → réservé super_admin uniquement. Les clubs ne créent pas de schedules custom.
 
 ## Évolutions possibles (backlog léger)
 
 - [ ] Implémenter vraiment `executeBackupTask` (S3/R2 + restore testé) — cf. TECH-DEBT P0
-- [ ] Ajouter un lock distribué si Neopro scale à plusieurs instances Railway
+- [ ] Ajouter un lock distribué si MadXP scale à plusieurs instances Railway
 - [ ] Dashboard admin `/admin/schedules` pour visualiser exécutions historiques (existe partiellement, à enrichir)
 - [ ] Métrique Prometheus globale `neopro_cron_executions_total{task_type, status}` pour dashboard Grafana
 - [ ] Alerting si une tâche n'a pas tourné depuis N×expected_interval (genre `aggregation` qui n'aurait pas tourné depuis 36h → alerte)

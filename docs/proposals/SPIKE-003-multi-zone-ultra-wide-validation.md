@@ -41,7 +41,7 @@ Le spike teste les 3 en séquence et remonte un GO sur celle qui passe les crit�
 | Composant                    | Modèle                               | Qté | Notes                                                      |
 | ---------------------------- | ------------------------------------ | --- | ---------------------------------------------------------- |
 | Raspberry Pi 5 8 GB          | Officiel + ventilateur actif         | 1   | Critique pour 2h+ sous charge                              |
-| Carte SD                     | 32 GB Class 10 A2                    | 1   | Image Neopro avec branche spike                            |
+| Carte SD                     | 32 GB Class 10 A2                    | 1   | Image MadXP avec branche spike                             |
 | TV principale                | Écran HDMI 1080p                     | 1   | HDMI 0                                                     |
 | Contrôleur LED               | **Novastar MCTRL4K** (input 7680px)  | 1   | Emprunt partenaire intégrateur ou occasion 150-250€        |
 | PC Windows + câble USB       | Pour NovaLCT                         | 1   | Flash custom EDID                                          |
@@ -322,7 +322,7 @@ curl -s http://<pi-ip>:9222/json | jq '.[].webSocketDebuggerUrl'
 Si pas de contrôleur LED physique accessible dans les 2 semaines :
 
 - **Simulation partielle** : moniteur 4K + `xrandr --mode 3840x2160` + page test avec zones logiques. Valide GPU/rendering, **ne valide pas** EDID custom ni compatibilité réelle Novastar.
-- **Partenariat** : contacter JSG Technologie ou Stramatel pour prêt 1 semaine (argument commercial : "si ça passe, vos clubs clients sont éligibles au produit Neopro multi-zone").
+- **Partenariat** : contacter JSG Technologie ou Stramatel pour prêt 1 semaine (argument commercial : "si ça passe, vos clubs clients sont éligibles au produit MadXP multi-zone").
 - **Décalage** : attendre un prospect concret demandant du multi-zone (cf. recommandation PROP-011 v2 §"Recommandations stratégiques"). Tant qu'il n'y a pas de deal, pas d'urgence à faire le spike.
 
 ---

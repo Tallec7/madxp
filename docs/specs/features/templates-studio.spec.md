@@ -19,7 +19,7 @@
 
 ## En une phrase
 
-Templates Studio V1 = chaque template vidéo Neopro = **1 `.tsx` Remotion + 1 `manifest.json`** dans
+Templates Studio V1 = chaque template vidéo MadXP = **1 `.tsx` Remotion + 1 `manifest.json`** dans
 `central-server/templates-studio/`, bundlé in-process par `studio-render-worker.service.ts`,
 exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
 

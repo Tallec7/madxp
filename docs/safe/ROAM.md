@@ -222,4 +222,4 @@
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [PI Objectives](PI-OBJECTIVES.md) · [Inspect & Adapt](INSPECT-ADAPT.md)
+**Retour** : [SAFe MadXP](README.md) · [PI Objectives](PI-OBJECTIVES.md) · [Inspect & Adapt](INSPECT-ADAPT.md)

@@ -1,4 +1,4 @@
-# Risk Register — Neopro
+# Risk Register — MadXP
 
 > Mis à jour : Avril 2026 | Sources : Business Plan §11, Audit Sécurité déc. 2025, NFR v2.0, Weekly W16
 

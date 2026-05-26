@@ -1,4 +1,4 @@
-# Installation complète d'un nouveau boîtier Neopro
+# Installation complète d'un nouveau boîtier MadXP
 
 ## 🎯 Vue d'ensemble
 
@@ -17,7 +17,7 @@ Il y a **3 méthodes** pour installer un nouveau boîtier :
 
 **Avantages :**
 
-- ✅ Aucune dépendance au dossier Neopro
+- ✅ Aucune dépendance au dossier MadXP
 - ✅ Fonctionne depuis n'importe quel ordinateur
 - ✅ Toujours la dernière version depuis GitHub
 - ✅ Installation terrain simplifiée
@@ -50,7 +50,7 @@ Sans image golden, installation manuelle complète :
 ```
 1. Flash Raspberry Pi OS Lite                        → 5 min
 2. copy-to-pi.sh + install.sh                        → 30 min
-3. setup-new-club.sh (nécessite dossier Neopro)      → 10 min
+3. setup-new-club.sh (nécessite dossier MadXP)      → 10 min
                                              TOTAL : ~45 min
 ```
 
@@ -149,7 +149,7 @@ sudo ./install.sh NANTES VotreMotDePasseWiFi123
 - ✅ **Installe le watchdog kiosk** pour récupération automatique des crashs Chromium
 - ✅ **Installe 3 services de protection** : hotspot-watchdog, sync-guardian, hotspot-optimizer
 - ✅ **Protège `club-config.json`** en `chmod 600` (contient le mot de passe WiFi)
-- ✅ **Configure le boot splash** : paramètres `cmdline.txt` (quiet, splash, logo.nologo, loglevel=1) + `disable_splash=1` dans `config.txt` — écran noir propre pendant le boot kernel, splash Neopro brandé dès l'ouverture de Chromium
+- ✅ **Configure le boot splash** : paramètres `cmdline.txt` (quiet, splash, logo.nologo, loglevel=1) + `disable_splash=1` dans `config.txt` — écran noir propre pendant le boot kernel, splash MadXP brandé dès l'ouverture de Chromium
 - ✅ **Health check post-installation** : vérifie services actifs, réponse Nginx, mode AP WiFi, fichiers critiques
 - ✅ Affiche la durée totale d'installation
 

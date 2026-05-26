@@ -2,7 +2,7 @@
 
 **Version** : 1.0
 **Date de lancement prévue** : après merge PR #484 (ADR-073)
-**Responsable** : Ops / Support Neopro
+**Responsable** : Ops / Support MadXP
 **Niveau requis** : Support Niveau 2+ (accès dashboard Pi `:8080`)
 **Durée estimée** : ~10 min par Pi + communication club
 
@@ -10,7 +10,7 @@
 
 ## Contexte
 
-Avant ADR-073, tous les boîtiers Neopro partageaient la même PSK WiFi hotspot :
+Avant ADR-073, tous les boîtiers MadXP partageaient la même PSK WiFi hotspot :
 `NeoProWiFi2025`. Après ADR-073, chaque nouveau Pi génère une PSK unique à
 l'installation.
 
@@ -68,18 +68,18 @@ Préparer **avant** la rotation :
 **Template email** :
 
 ```
-Objet : [Neopro] Mise à jour sécurité de votre boîtier — nouvelle PSK WiFi
+Objet : [MadXP] Mise à jour sécurité de votre boîtier — nouvelle PSK WiFi
 
 Bonjour,
 
 Nous renouvelons ce jour la clé WiFi du hotspot local de votre boîtier
-Neopro (mesure de sécurité ADR-073, amélioration en cours sur tout le parc).
+MadXP (mesure de sécurité ADR-073, amélioration en cours sur tout le parc).
 
 Votre nouvelle PSK : XXXXXXXXXXXXXXXNeo
 
 Actions à faire :
 1. Sur le smartphone/tablette qui sert de télécommande, aller dans Réglages WiFi
-2. "Oublier" le réseau Neopro-<VotreClub>
+2. "Oublier" le réseau MadXP-<VotreClub>
 3. Se reconnecter avec la nouvelle PSK ci-dessus
 
 Guide complet en pièce jointe (MODOP_CLUB_PSK.pdf).
@@ -87,7 +87,7 @@ Guide complet en pièce jointe (MODOP_CLUB_PSK.pdf).
 En cas de souci, répondre à cet email ou appeler le support.
 
 Cordialement,
-L'équipe Neopro
+L'équipe MadXP
 ```
 
 ---
@@ -110,7 +110,7 @@ L'équipe Neopro
 5. **Saisir la PSK custom** selon le tableau ci-dessous. **Ne pas laisser vide** — l'auto-gen produit une PSK 20-char alphanum imbuvable à taper pour le staff club
 6. **Confirmer**
 7. Copier la nouvelle PSK dans le presse-papiers (bouton Copier)
-8. Coller immédiatement dans le brouillon d'email + 1Password (entrée `Neopro / WiFi Pi / <club>`)
+8. Coller immédiatement dans le brouillon d'email + 1Password (entrée `MadXP / WiFi Pi / <club>`)
 
 #### Tableau PSK par club (parc actuel)
 
@@ -180,7 +180,7 @@ WHERE id = '<site_id>';
 
 1. Confirmer la PSK communiquée (copier-coller de l'email, pas saisie)
 2. Demander de **oublier** le réseau (pas juste se déconnecter)
-3. Vérifier le nom du réseau (SSID) : `Neopro-<NomClub>` — parfois le staff se connecte à un autre WiFi
+3. Vérifier le nom du réseau (SSID) : `MadXP-<NomClub>` — parfois le staff se connecte à un autre WiFi
 4. Onglet Events dashboard → filtrer `reason=PSK_MISMATCH` : confirme PSK incorrecte
 5. Dernier recours : régénérer une PSK simple (8 chars alphanumériques) et la communiquer par téléphone
 

@@ -1,4 +1,4 @@
-# Guide d'Onboarding Développeur Neopro
+# Guide d'Onboarding Développeur MadXP
 
 > Ce guide permet à un nouveau développeur de devenir productif en moins d'une journée.
 

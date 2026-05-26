@@ -47,8 +47,8 @@
 
 | Symptôme observé sur la TV / dashboard                         | Couche probable                 | Section |
 | -------------------------------------------------------------- | ------------------------------- | ------- |
-| Écran noir, pas de logo Neopro                                 | Couche 1 — kiosk Chromium       | §3.1    |
-| Logo Neopro mais pas de vidéos                                 | Couche 1 — webapp / nginx local | §3.2    |
+| Écran noir, pas de logo MadXP                                  | Couche 1 — kiosk Chromium       | §3.1    |
+| Logo MadXP mais pas de vidéos                                  | Couche 1 — webapp / nginx local | §3.2    |
 | Vidéos OK, télécommande pas de réponse                         | Couche 2 — Socket.IO local      | §4.1    |
 | Télécommande OK mais le score ne remonte pas dans le dashboard | Couche 3 — sync-agent ↔ cloud   | §5.1    |
 | Dashboard montre site Hors ligne mais Pi joignable en SSH      | Couche 3 — sync-agent crashé    | §5.2    |

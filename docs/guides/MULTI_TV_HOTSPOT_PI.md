@@ -8,7 +8,7 @@
 
 **Date** : 2026-04-28
 **Version** : 1.1 (ajout matrice de décision + critique honnête fiabilité grand public)
-**Public cible** : installateur Neopro, ops support, staff club autonome
+**Public cible** : installateur MadXP, ops support, staff club autonome
 **Pré-requis** : club avec **Pi déjà installé et opérationnel**.
 
 > **⚠️ À lire avant** : ce guide n'est **PAS** la solution universelle multi-TV. Pour la TV principale d'un match critique, préférer un splitter HDMI actif (scénario A de PROP-001) ou un 2ᵉ Pi 5 en mode SaaS. Voir §1 "Choisir la bonne solution selon la situation" pour la matrice de décision complète. Les Fire Stick / Chromecast sont des devices grand public — bien adaptés aux écrans secondaires (buvette, vestiaires), avec des réserves documentées en §7 pour un usage match-day.
@@ -31,7 +31,7 @@
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | **TV principale de match**, câblage HDMI possible, ≤ 10m   | **Splitter HDMI actif** + câble HDMI court ([PROP-001 scénario A](../proposals/PROP-001-multi-tv-single-pi.md#scénario-a--splitter-hdmi-14-direct-distance--10m-)) | Sync frame-perfect, fiabilité industrielle, 1 seul système à monitorer (le Pi)   |
 | **TV principale de match**, câblage possible, 10-100m      | **HDBaseT Cat6** ([PROP-001 scénario B](../proposals/PROP-001-multi-tv-single-pi.md#scénario-b--hdbaset-cat6-distance--10m-))                                      | Idem A mais sur Cat6, indépendant du WiFi/hotspot (transport pur du signal HDMI) |
-| **TV principale**, câblage impossible, ≤ 30m du Pi         | **2ᵉ Pi 5 en mode SaaS** sur le hotspot (~80€)                                                                                                                     | Stack Neopro complète : watchdog, kiosk Chromium, OTA, monitoring central        |
+| **TV principale**, câblage impossible, ≤ 30m du Pi         | **2ᵉ Pi 5 en mode SaaS** sur le hotspot (~80€)                                                                                                                     | Stack MadXP complète : watchdog, kiosk Chromium, OTA, monitoring central         |
 | **TV secondaire** (buvette, vestiaires, hall), ≤ 30m du Pi | **Ce guide — Fire Stick / Chromecast sur hotspot**                                                                                                                 | Setup 5 min, ~40€, drift 1-2s acceptable hors écran principal                    |
 | **TV secondaire**, 30-50m du Pi                            | Ce guide + **répéteur WiFi** sur SSID `NEOPRO_<club>`                                                                                                              | Étendre la portée du hotspot                                                     |
 | **TV secondaire**, > 50m                                   | HDBaseT, ou WiFi du club + 2ᵉ Pi SaaS                                                                                                                              | Hors portée hotspot                                                              |
@@ -51,7 +51,7 @@
 ⚠️ **Réserves** (cf. §7 Limitations pour le détail) :
 
 - Fire Stick / Chromecast = devices grand public, fiabilité jour de match (5h+) **non garantie** sans Fully Kiosk Browser
-- Pas de monitoring central des sticks (invisibles côté flotte Neopro)
+- Pas de monitoring central des sticks (invisibles côté flotte MadXP)
 - Pas de watchdog natif → un crash navigateur = TV figée jusqu'à intervention humaine
 
 ❌ **NE PAS utiliser ce setup pour** :
@@ -75,12 +75,12 @@
 
 **Total : ~40-50€ par TV** (ou 0€ si Smart TV moderne avec navigateur fonctionnel).
 
-> **⚠️ Attention au piège "Chromecast"** : il existe deux familles de produits Google qui partagent ce nom — seule la **2ᵉ génération** fonctionne pour Neopro :
+> **⚠️ Attention au piège "Chromecast"** : il existe deux familles de produits Google qui partagent ce nom — seule la **2ᵉ génération** fonctionne pour MadXP :
 >
-> | Produit                                                                                      | Description                                                                                                                                   | Compatible Neopro ? |
-> | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-> | **Chromecast 1ʳᵉ-3ᵉ gen / Chromecast Ultra** (2013-2020)                                     | Dongle simple **sans télécommande, sans UI, sans navigateur**. Reçoit uniquement du contenu casté depuis un téléphone/laptop via Google Cast. | ❌ **NON**          |
-> | **Google TV Streamer (4K)** 2024 — ou ancien **Chromecast with Google TV (4K/HD)** 2020-2023 | Vrai device Android TV avec **télécommande, UI, Play Store, Chrome préinstallé**. Tu navigues comme sur une Smart TV.                         | ✅ **OUI**          |
+> | Produit                                                                                      | Description                                                                                                                                   | Compatible MadXP ? |
+> | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+> | **Chromecast 1ʳᵉ-3ᵉ gen / Chromecast Ultra** (2013-2020)                                     | Dongle simple **sans télécommande, sans UI, sans navigateur**. Reçoit uniquement du contenu casté depuis un téléphone/laptop via Google Cast. | ❌ **NON**         |
+> | **Google TV Streamer (4K)** 2024 — ou ancien **Chromecast with Google TV (4K/HD)** 2020-2023 | Vrai device Android TV avec **télécommande, UI, Play Store, Chrome préinstallé**. Tu navigues comme sur une Smart TV.                         | ✅ **OUI**         |
 >
 > Lors de l'achat, **vérifier explicitement** : la boîte mentionne "Google TV" ou "with Google TV", contient une télécommande, et le produit a un app store. Un simple "Chromecast" sans cette mention = ancien dongle Cast = **ne marchera pas standalone** (il faudrait laisser un laptop allumé en permanence en train de caster `neopro.local/tv`, pas viable en prod).
 
@@ -98,7 +98,7 @@
 
 ## 4. Procédure d'installation (5 minutes par TV)
 
-> **Aucune des deux options ne nécessite de développement Neopro.** Choisir selon l'écosystème que le club préfère (compte Amazon vs Google) ou ce qu'il a déjà.
+> **Aucune des deux options ne nécessite de développement MadXP.** Choisir selon l'écosystème que le club préfère (compte Amazon vs Google) ou ce qu'il a déjà.
 
 ### 4.A — Option Amazon Fire TV Stick 4K (Silk Browser)
 
@@ -192,8 +192,8 @@ Configuration commune :
 
 - **Pas de fiabilité industrielle** : Fire Stick / Chromecast sont conçus pour un usage domestique (Netflix le soir, ~2h max), pas pour 5-8h en boucle pendant un match. Risques connus : memory leak du navigateur après plusieurs heures, redémarrages intempestifs pour mise à jour OS poussée par Amazon/Google, retour à l'écran d'accueil avec pubs si l'app navigateur ferme. **Mitigation obligatoire jour de match** : Fully Kiosk Browser (cf. §5).
 - **Pas de watchdog natif** : sur le Pi, un script systemd redémarre Chromium en cas de crash. Sur un stick, **rien**. Si le navigateur freeze, la TV reste figée jusqu'à intervention humaine.
-- **Pas de monitoring central** : les Fire Sticks / Chromecasts n'apparaissent pas dans le dashboard Neopro (le Pi reste le seul site monitoré). Si la 2ᵉ TV crashe en match, **personne n'est alerté côté flotte** — il faut qu'un humain regarde la TV.
-- **Pas d'OTA Neopro** : impossible de pousser une nouvelle version du frontend sur le stick à distance. Le stick recharge automatiquement la version servie par le Pi à chaque reload, mais la mise à jour Silk/Chrome elle-même dépend du cycle de release Amazon/Google.
+- **Pas de monitoring central** : les Fire Sticks / Chromecasts n'apparaissent pas dans le dashboard MadXP (le Pi reste le seul site monitoré). Si la 2ᵉ TV crashe en match, **personne n'est alerté côté flotte** — il faut qu'un humain regarde la TV.
+- **Pas d'OTA MadXP** : impossible de pousser une nouvelle version du frontend sur le stick à distance. Le stick recharge automatiquement la version servie par le Pi à chaque reload, mais la mise à jour Silk/Chrome elle-même dépend du cycle de release Amazon/Google.
 - **Veille agressive** : si le Fire Stick passe en veille, la TV s'éteint. À désactiver explicitement dans Settings → Display & Sounds → Screen Saver → "Never".
 
 ### Conséquence pratique

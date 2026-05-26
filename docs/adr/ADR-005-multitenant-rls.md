@@ -2,24 +2,25 @@
 
 **Date** : Novembre 2024
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
 ## Contexte
 
-Neopro est une plateforme multi-tenant avec différents niveaux d'accès :
+MadXP est une plateforme multi-tenant avec différents niveaux d'accès :
 
-| Rôle | Accès |
-|------|-------|
-| super_admin | Tout |
-| admin | Tous les sites |
-| operator | Sites assignés uniquement |
-| advertiser | Ses vidéos et stats uniquement |
-| agency | Ses annonceurs et leurs données |
-| viewer | Lecture seule sur sites autorisés |
+| Rôle        | Accès                             |
+| ----------- | --------------------------------- |
+| super_admin | Tout                              |
+| admin       | Tous les sites                    |
+| operator    | Sites assignés uniquement         |
+| advertiser  | Ses vidéos et stats uniquement    |
+| agency      | Ses annonceurs et leurs données   |
+| viewer      | Lecture seule sur sites autorisés |
 
 Contraintes :
+
 - Isolation stricte des données
 - Performance : pas de dégradation avec 50+ sites
 - Maintenance : éviter la duplication de code de filtrage
@@ -50,10 +51,12 @@ ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ### 1. Filtrage applicatif (WHERE dans chaque requête)
 
 **Avantages** :
+
 - Simple à comprendre
 - Pas de configuration DB
 
 **Inconvénients** :
+
 - Duplication de code
 - Risque d'oubli (faille de sécurité)
 - Difficile à maintenir
@@ -63,10 +66,12 @@ ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ### 2. Schema par tenant
 
 **Avantages** :
+
 - Isolation totale
 - Performance optimale par tenant
 
 **Inconvénients** :
+
 - Complexité migrations
 - Overhead : 50+ schemas
 - Cross-tenant queries impossibles
@@ -76,10 +81,12 @@ ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ### 3. Base de données par tenant
 
 **Avantages** :
+
 - Isolation maximale
 - Backup/restore individuel
 
 **Inconvénients** :
+
 - Coût infrastructure élevé
 - Gestion connexions complexe
 - Impossible pour analytics cross-tenant
@@ -89,12 +96,14 @@ ALTER TABLE sites ENABLE ROW LEVEL SECURITY;
 ### 4. Row-Level Security (RLS) ✅
 
 **Avantages** :
+
 - **Sécurité garantie** : Filtre au niveau DB, impossible à contourner
 - **DRY** : Politique définie une fois, appliquée partout
 - **Performance** : Optimiseur PostgreSQL intègre les filtres
 - **Audit** : Politiques versionnées avec le schéma
 
 **Inconvénients** :
+
 - Complexité initiale de configuration
 - Debug parfois difficile
 - Nécessite `set_config` pour le contexte
@@ -207,7 +216,7 @@ it('operator sees only assigned sites', async () => {
   const result = await query('SELECT * FROM sites');
 
   expect(result.rows).toHaveLength(2); // Seulement sites assignés
-  expect(result.rows.map(r => r.id)).not.toContain(unassignedSiteId);
+  expect(result.rows.map((r) => r.id)).not.toContain(unassignedSiteId);
 });
 ```
 
@@ -219,4 +228,4 @@ it('operator sees only assigned sites', async () => {
 
 ---
 
-*Créé le 9 janvier 2026*
+_Créé le 9 janvier 2026_

@@ -22,11 +22,11 @@ Sans intervention, un club peut laisser son Pi offline plusieurs mois sans qu'au
 
 Trois patterns sont déjà implémentés dans le code pour des cas similaires :
 
-| Pattern | Code | Adaptable au Pi reconnect ? |
-|---|---|---|
-| Warning in-app via `message_remote` télécommande | `subscription.service.ts:181-213` | ✅ Oui — afficher "Dernière sync il y a X jours" en permanence |
-| Email CRON aux admins NEOPRO | `cron-tasks/report.task.ts:34-50` | ✅ Oui — déjà câblé, juste à étendre |
-| Email CRON via `contact_email` (sponsors) | `monthly-reports.service.ts:512-527` | ⚠️ Nécessite ajout `sites.contact_email` |
+| Pattern                                          | Code                                 | Adaptable au Pi reconnect ?                                    |
+| ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------- |
+| Warning in-app via `message_remote` télécommande | `subscription.service.ts:181-213`    | ✅ Oui — afficher "Dernière sync il y a X jours" en permanence |
+| Email CRON aux admins NEOPRO                     | `cron-tasks/report.task.ts:34-50`    | ✅ Oui — déjà câblé, juste à étendre                           |
+| Email CRON via `contact_email` (sponsors)        | `monthly-reports.service.ts:512-527` | ⚠️ Nécessite ajout `sites.contact_email`                       |
 
 L'architecture est prête. Il faut câbler le cas spécifique "Pi reconnect" en s'appuyant dessus.
 
@@ -54,6 +54,7 @@ Inspiré du Pattern 1 (subscription warning).
 **Indépendant du cloud** : marche même si Pi offline depuis longtemps (lecture filesystem local).
 
 **Effort estimé** : ~1 jour
+
 - Sync-agent : écriture `last-cloud-sync.json` (~2h)
 - Server Pi : endpoint `/api/connectivity-status` (~2h)
 - Télécommande Angular : bannière conditionnelle (~3h)
@@ -75,18 +76,21 @@ Inspiré du Pattern 3 (sponsor monthly).
    - Dédup : ne renvoie un email que si pas envoyé pour la même tranche (`pi_offline_reminders_sent` table ou colonne sur `sites`)
    - Appelle `emailService.sendPiOfflineReminder(contactEmail, { siteName, daysSinceLastSync, tier, helpUrl })`
 5. **Template email** dans `email.service.ts` : `sendPiOfflineReminder()` avec corps :
+
    ```
    Bonjour,
 
-   Votre boîtier Neopro du club <X> n'a pas été connecté à internet depuis
+   Votre boîtier MadXP du club <X> n'a pas été connecté à internet depuis
    <N> jours. Pour conserver vos analytics et recevoir les dernières mises
    à jour, merci de connecter le Pi à internet quand vous pouvez.
 
    Aide : <lien support>
    ```
+
 6. **Anti-spam** : 4 emails max sur l'année par site (J+15, J+25, J+35, J+60), puis silence sauf nouvelle déconnexion après une reconnexion.
 
 **Effort estimé** : ~2-3 jours
+
 - Migration DB + backfill (~0.5 j)
 - UI dashboard + form onboarding (~0.5 j)
 - Nouveau CRON task + dédup (~1 j)
@@ -114,6 +118,7 @@ Complément aux Options α et β : on veut aussi que NEOPRO (équipe interne) so
 3. **Auto-resolve** : quand le Pi reconnecte (`socket.service.ts` event), passer les rows `alerts.alert_type LIKE 'site_offline_%'` à `status = 'resolved'`.
 
 **Effort estimé** : ~0.5 jour
+
 - Check supplémentaire dans `assessSiteRisks()` (~2h)
 - Auto-resolve à la reconnexion (~1h)
 - Smoke test garde-fou (~1h)
@@ -162,13 +167,13 @@ Complément aux Options α et β : on veut aussi que NEOPRO (équipe interne) so
 
 ### Risques
 
-| Risque | Mitigation |
-|---|---|
-| Sync-agent ne write pas `last-cloud-sync.json` correctement → bannière incohérente | Smoke test `smoke-pi-connectivity-banner.test.ts` qui valide le flow E2E |
-| Email finit dans les spams du club | Utiliser le domaine email NEOPRO authentifié SPF/DKIM/DMARC ; éviter sujets sensationnalistes |
-| Spam si Pi reconnecte/déconnecte en flip-flop | Dédup par tranche dans `pi_offline_reminders_sent` ; reset uniquement après reconnect stable > 24h |
-| Colonne `sites.contact_email` reste NULL pour la flotte existante | Backfill manuel via dashboard + script CLI pour les sites principaux ; alerte NEOPRO si un Pi tier ≥ premium reste sans contact_email |
-| Confusion entre `users` rôle `'club'` (login portail) et `sites.contact_email` (notif) | Doc explicite + nullable ; ne pas réutiliser l'email user club (peut être différent) |
+| Risque                                                                                 | Mitigation                                                                                                                            |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync-agent ne write pas `last-cloud-sync.json` correctement → bannière incohérente     | Smoke test `smoke-pi-connectivity-banner.test.ts` qui valide le flow E2E                                                              |
+| Email finit dans les spams du club                                                     | Utiliser le domaine email NEOPRO authentifié SPF/DKIM/DMARC ; éviter sujets sensationnalistes                                         |
+| Spam si Pi reconnecte/déconnecte en flip-flop                                          | Dédup par tranche dans `pi_offline_reminders_sent` ; reset uniquement après reconnect stable > 24h                                    |
+| Colonne `sites.contact_email` reste NULL pour la flotte existante                      | Backfill manuel via dashboard + script CLI pour les sites principaux ; alerte NEOPRO si un Pi tier ≥ premium reste sans contact_email |
+| Confusion entre `users` rôle `'club'` (login portail) et `sites.contact_email` (notif) | Doc explicite + nullable ; ne pas réutiliser l'email user club (peut être différent)                                                  |
 
 ## Plan d'implémentation
 

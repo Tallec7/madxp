@@ -1,4 +1,4 @@
-# Strategy — Benchmark concurrentiel Neopro
+# Strategy — Benchmark concurrentiel MadXP
 
 > **Dernière mise à jour** : 2026-04-23
 > **Périmètre** : 25+ concurrents identifiés, 12 analysés en profondeur, 5 segments couverts (FR + EU)

@@ -16,7 +16,7 @@ Quand un iPhone/iPad se connecte au hotspot `NEOPRO-{CLUB}`, plusieurs symptôme
 
 **Cause** : La règle `iptables DNAT wlan0 tcp/443 → 192.168.4.1:80` (ancien pattern pour capturer les probes HTTPS Android) redirigeait le probe HTTPS iOS vers nginx en HTTP clair → handshake TLS invalide → page blanche.
 
-**Fix** : Retrait de la règle DNAT 443. Seul le probe HTTP `/hotspot-detect.html` (port 80) est intercepté. iOS reçoit la page brandée Neopro (`raspberry/captive-portal.html`) et affiche `Utiliser sans Internet`.
+**Fix** : Retrait de la règle DNAT 443. Seul le probe HTTP `/hotspot-detect.html` (port 80) est intercepté. iOS reçoit la page brandée MadXP (`raspberry/captive-portal.html`) et affiche `Utiliser sans Internet`.
 
 **Vérification sur le Pi** :
 

@@ -2,7 +2,7 @@
 
 **Date** : 2026-04-18
 **Statut** : Proposé
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 **Lié à** : [ADR-037](../adr/ADR-037-saas-mode-architecture.md) (Mode SaaS), [ADR-069](../adr/ADR-069-delivery-strategy-pattern.md) (Delivery Strategy pattern), [PLAN Phase 6](../../.planning/video-deploy-unification/PLAN.md)
 **Epic SAFe** : à créer (E-XX — Multi-Delivery Channels)
 
@@ -10,7 +10,7 @@
 
 ## Contexte
 
-Neopro livre aujourd'hui la même expérience (boucle vidéo + sponsors + score overlay) via **2 canaux** : un boîtier Raspberry Pi chez le club, ou une URL SaaS chargée sur n'importe quelle TV avec navigateur. Chaque canal a un code chemin distinct (socket Pi vs. FTP direct), une courbe de coût matériel différente (100 €+ vs. 0 €), et des trade-offs opérationnels opposés (autonomie offline vs. zéro-matériel).
+MadXP livre aujourd'hui la même expérience (boucle vidéo + sponsors + score overlay) via **2 canaux** : un boîtier Raspberry Pi chez le club, ou une URL SaaS chargée sur n'importe quelle TV avec navigateur. Chaque canal a un code chemin distinct (socket Pi vs. FTP direct), une courbe de coût matériel différente (100 €+ vs. 0 €), et des trade-offs opérationnels opposés (autonomie offline vs. zéro-matériel).
 
 L'arrivée de 3-4 canaux additionnels (Chromecast natif, Smart TV Tizen/webOS, Apple TV, Fire TV, Pi v2) est pressentie par le marché mais n'a pas de cadre architectural formalisé. Sans catalogue partagé :
 
@@ -29,7 +29,7 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 ### 1. Mode Pi — canal historique
 
-**Expérience club** : Neopro livre un boîtier Raspberry Pi 4/5 pré-configuré. Le club le branche en HDMI sur la TV, alimentation + Ethernet/WiFi. Le Pi tourne 24/7, télécharge les vidéos en local, les joue même sans internet momentanément.
+**Expérience club** : MadXP livre un boîtier Raspberry Pi 4/5 pré-configuré. Le club le branche en HDMI sur la TV, alimentation + Ethernet/WiFi. Le Pi tourne 24/7, télécharge les vidéos en local, les joue même sans internet momentanément.
 
 **Architecture code** :
 
@@ -39,7 +39,7 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 - Dashboard → `content.controller` → `content_deployments` → socket `deploy_video` → sync-agent → FTP pull
 - Offline : fallback local (cache vidéos + dernière config)
 
-**Matériel club** : Pi 4/5 + alim + carte SD (~100 € coût Neopro, immobilisation matériel)
+**Matériel club** : Pi 4/5 + alim + carte SD (~100 € coût MadXP, immobilisation matériel)
 
 **Maturité** : ✅ Production (50+ sites, v2.0+)
 
@@ -73,17 +73,17 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 ### 3. Mode Chromecast natif
 
-**Expérience club** : le club branche un Chromecast (35 € en Google Store) sur la TV. Une fois. Il scanne un QR code Neopro qui enrôle le Chromecast comme device du site. Ensuite la TV diffuse Neopro en direct, sans téléphone intermédiaire (contrairement au "cast page web" actuel, fragile car le téléphone de source doit rester allumé).
+**Expérience club** : le club branche un Chromecast (35 € en Google Store) sur la TV. Une fois. Il scanne un QR code MadXP qui enrôle le Chromecast comme device du site. Ensuite la TV diffuse MadXP en direct, sans téléphone intermédiaire (contrairement au "cast page web" actuel, fragile car le téléphone de source doit rester allumé).
 
 **Architecture code** :
 
-- App **Google Cast Receiver** (HTML5 packagé) hébergée chez Neopro, enregistrée au Google Cast SDK Developer Console
-- Enrôlement du Chromecast au site Neopro via token court (ex: QR code + API cast channel)
+- App **Google Cast Receiver** (HTML5 packagé) hébergée chez MadXP, enregistrée au Google Cast SDK Developer Console
+- Enrôlement du Chromecast au site MadXP via token court (ex: QR code + API cast channel)
 - Pas de Socket.IO direct → passage par **Cast Channel** (canal bidirectionnel Google Cast entre sender et receiver)
 - Déploiement = `MediaLoadRequest` côté sender via API Cast, pas un sync FTP
 - Format vidéo imposé par Google (voir [Google Cast supported media](https://developers.google.com/cast/docs/media))
 
-**Matériel club** : Chromecast 35 € (Google, sans engagement Neopro sur la supply chain)
+**Matériel club** : Chromecast 35 € (Google, sans engagement MadXP sur la supply chain)
 
 **Effort dev** : moyen (3-5 semaines) — Google Cast Receiver en TypeScript/HTML5, strategy `ChromecastStrategy` côté serveur, enrôlement device, compat codecs
 
@@ -93,7 +93,7 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 ### 4. Mode Smart TV native (Samsung Tizen + LG webOS)
 
-**Expérience club** : le club a une Samsung ou LG récente. Il va sur le Tizen Store / LG Content Store, télécharge l'app Neopro, la lance. 0 € de matériel, 0 config.
+**Expérience club** : le club a une Samsung ou LG récente. Il va sur le Tizen Store / LG Content Store, télécharge l'app MadXP, la lance. 0 € de matériel, 0 config.
 
 **Architecture code** :
 
@@ -107,13 +107,13 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 **Effort dev** : élevé (8-12 semaines pour les 2 plateformes) — 2 SDK distincts, 2 validations store, compat matrices (Samsung 2019+, LG webOS 5+), 2 builds CI, maintenance continue à chaque version OS
 
-**Risques** : fragmentation (anciens modèles non compatibles), validation store bloquante à chaque release (possible regression gate sur CI Neopro), obsolescence API (Samsung/LG changent leurs SDK majeures tous les 2-3 ans)
+**Risques** : fragmentation (anciens modèles non compatibles), validation store bloquante à chaque release (possible regression gate sur CI MadXP), obsolescence API (Samsung/LG changent leurs SDK majeures tous les 2-3 ans)
 
 ---
 
 ### 5. Mode Apple TV
 
-**Expérience club** : le club a un Apple TV (boîtier Apple 150 €). Il télécharge l'app Neopro dans l'App Store tvOS.
+**Expérience club** : le club a un Apple TV (boîtier Apple 150 €). Il télécharge l'app MadXP dans l'App Store tvOS.
 
 **Architecture code** :
 
@@ -123,7 +123,7 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 **Matériel club** : Apple TV 150 € (neuf) ou déjà possédé
 
-**Pertinence Neopro** : **faible** pour les clubs sportifs (rarement équipés Apple TV). Potentiellement pertinent pour **bars/restaurants partenaires** ou segments haut de gamme futurs.
+**Pertinence MadXP** : **faible** pour les clubs sportifs (rarement équipés Apple TV). Potentiellement pertinent pour **bars/restaurants partenaires** ou segments haut de gamme futurs.
 
 **Effort dev** : élevé (6-8 semaines) — compétence Swift + Xcode + Apple Developer Program 99 $/an + risque de rejet App Store
 
@@ -133,7 +133,7 @@ Ce document **catalogue** les modes existants et futurs, les classe par maturit�
 
 ### 6. Mode Fire TV (Amazon)
 
-**Expérience club** : similaire Chromecast — le club branche un Fire Stick Amazon (40 €) sur la TV, télécharge l'app Neopro depuis l'Amazon Appstore.
+**Expérience club** : similaire Chromecast — le club branche un Fire Stick Amazon (40 €) sur la TV, télécharge l'app MadXP depuis l'Amazon Appstore.
 
 **Architecture code** :
 

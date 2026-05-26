@@ -1,4 +1,4 @@
-# Specs Neopro
+# Specs MadXP
 
 > Une SPEC = règles métier vivantes d'un **domaine métier cohérent** (pas d'un fichier). **1 page max**, lisible métier, mise à jour dans la même PR que tout changement de comportement.
 
@@ -8,7 +8,7 @@ Un domaine métier regroupe N services + N composants + N features qui partagent
 
 ## Pourquoi pas un PRD ?
 
-Le PRD (Product Requirements Document) est conçu pour **aligner plusieurs personnes sur un produit qui n'existe pas encore** (15-50 pages, owner PM, semaines de revue). Il ne match pas le contexte solo dev sur un code qui existe déjà. La SPEC garde les sections vraiment utiles d'un PRD (Problem, Goals, Non-Goals, Functional/Non-Functional, Open Questions, Success Metrics) en 1 page focalisée. Si Neopro recrute un PM un jour, on bascule certaines SPECs en PRDs (chemin facile).
+Le PRD (Product Requirements Document) est conçu pour **aligner plusieurs personnes sur un produit qui n'existe pas encore** (15-50 pages, owner PM, semaines de revue). Il ne match pas le contexte solo dev sur un code qui existe déjà. La SPEC garde les sections vraiment utiles d'un PRD (Problem, Goals, Non-Goals, Functional/Non-Functional, Open Questions, Success Metrics) en 1 page focalisée. Si MadXP recrute un PM un jour, on bascule certaines SPECs en PRDs (chemin facile).
 
 ## Différence avec ce qui existe déjà
 

@@ -19,7 +19,7 @@ Valider en conditions réelles que le Raspberry Pi 5 supporte 2 flux vidéo simu
 | Composant                | Modèle                               | Quantité | Notes                                  |
 | ------------------------ | ------------------------------------ | -------- | -------------------------------------- |
 | Raspberry Pi 5           | 8 GB (idéal) ou 4 GB (minimum)       | 1        | Avec alimentation officielle 27W USB-C |
-| Carte SD                 | 32 GB Class 10 A2                    | 1        | Image Neopro pré-flashée               |
+| Carte SD                 | 32 GB Class 10 A2                    | 1        | Image MadXP pré-flashée                |
 | TV principale            | Tout écran HDMI 1080p                | 1        | HDMI 0 (micro-HDMI gauche)             |
 | Contrôleur LED           | Linsn MC100 **OU** Novastar MX40 Pro | 1        | HDMI 1 (micro-HDMI droite)             |
 | Panneau LED              | Compatible contrôleur ci-dessus      | 1+       | Résolution bandeau (ex: 1920×384)      |
@@ -59,7 +59,7 @@ hdmi_cvt=1920 384 60    # Adapter selon résolution réelle du panneau LED
 - 1 variante TV (16:9) + 1 variante secondary (bandeau 1920×384)
 - Placer dans `/home/pi/neopro/data/videos/` et `/home/pi/neopro/data/videos-secondary/`
 
-### 3. Services Neopro
+### 3. Services MadXP
 
 ```bash
 # Vérifier que le build est à jour

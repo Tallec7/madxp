@@ -13,7 +13,7 @@
 - **Communauté** : massive, mondiale (millions d'utilisateurs)
 - **Cas d'usage principal** : streaming Twitch/YouTube, enregistrement vidéo
 
-## Pourquoi c'est un concurrent de Neopro
+## Pourquoi c'est un concurrent de MadXP
 
 Confirmation utilisateur : des clubs sportifs débrouillards utilisent OBS pour bricoler une solution d'affichage TV. Le scénario typique :
 
@@ -65,9 +65,9 @@ Confirmation utilisateur : des clubs sportifs débrouillards utilisent OBS pour 
 
 **TCO estimé an 1** pour un club avec 30 matchs et 5 sponsors : **PC 600€ + 200h bénévole** ≈ équivalent 4-6k€ de coût caché si on valorise le bénévolat à 20-30€/h.
 
-## Positionnement vs Neopro
+## Positionnement vs MadXP
 
-| Dimension                  | OBS bricolé             | Neopro             |
+| Dimension                  | OBS bricolé             | MadXP              |
 | -------------------------- | ----------------------- | ------------------ |
 | Coût licence               | 0 €                     | OpEx mensuel       |
 | TCO réel an 1              | 4-6k€ caché (bénévolat) | Tarif transparent  |
@@ -80,24 +80,24 @@ Confirmation utilisateur : des clubs sportifs débrouillards utilisent OBS pour 
 | Support pro                | ❌                      | ✅                 |
 | Robustesse en match        | 🟡 dépend du bénévole   | 🔴 Pi watchdog     |
 
-## Pitch différenciateur Neopro vs OBS (draft)
+## Pitch différenciateur MadXP vs OBS (draft)
 
 > \*\*"OBS est gratuit, c'est vrai. Et excellent pour streamer un match sur YouTube.
 > Mais pour piloter votre TV de hall pendant 30 matchs par saison, avec 5 sponsors
 > à faire tourner et un reporting à fournir à vos partenaires, OBS coûte en réalité
-> plus cher que Neopro :
+> plus cher que MadXP :
 >
 > - Le bénévole technique passe 200h/an dessus (quel est le coût réel ?)
 > - Vous ne pouvez pas prouver à vos sponsors que leur logo a tourné X fois
 > - Si OBS plante en finale de coupe, vous n'avez personne à appeler
 > - Vous ne pouvez pas gérer 2 écrans depuis le même endroit
 >
-> Neopro vous coûte un abonnement mensuel transparent, et libère votre bénévole
+> MadXP vous coûte un abonnement mensuel transparent, et libère votre bénévole
 > pour ce qu'il fait le mieux : faire vivre le club."\*\*
 
 **Stratégie** : ne pas dénigrer OBS (excellent outil dans son domaine). Mettre en avant le **coût caché du bricolage** + la **monétisation sponsor impossible sans reporting**.
 
-## Risques pour Neopro
+## Risques pour MadXP
 
 1. **OBS + plugin score communautaire** : un plugin malin pourrait combler une partie du gap
 2. **Streamlabs / vMix** : versions semi-pro d'OBS, pourraient évoluer vers du multi-écran
@@ -105,8 +105,8 @@ Confirmation utilisateur : des clubs sportifs débrouillards utilisent OBS pour 
 
 ## Actions recommandées
 
-1. **Étude de cas** : interviewer 2-3 clubs qui ont fait la transition OBS → Neopro (ROI bénévole)
-2. **Calculateur de TCO** sur le site Neopro : "Combien vous coûte vraiment OBS ?"
+1. **Étude de cas** : interviewer 2-3 clubs qui ont fait la transition OBS → MadXP (ROI bénévole)
+2. **Calculateur de TCO** sur le site MadXP : "Combien vous coûte vraiment OBS ?"
 3. **Argumentaire commercial dédié** : kit de réponse "OBS objection"
 4. **Veille** sur les plugins OBS dédiés au sport (potentielle commoditisation)
 

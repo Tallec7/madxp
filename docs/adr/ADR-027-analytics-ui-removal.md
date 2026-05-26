@@ -4,13 +4,13 @@
 
 **Date** : Février 2026 (v3.0)
 **Statut** : Accepté
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 
 ---
 
 ## Contexte
 
-Le dashboard Neopro incluait 6 pages analytics (vue d'ensemble, comparaison multi-sites, temps réel, analytics par club, catégories analytics, analytics annonceur) représentant environ 4100 lignes de code.
+Le dashboard MadXP incluait 6 pages analytics (vue d'ensemble, comparaison multi-sites, temps réel, analytics par club, catégories analytics, analytics annonceur) représentant environ 4100 lignes de code.
 
 Problèmes identifiés lors d'un audit des données affichées :
 

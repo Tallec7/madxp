@@ -10,7 +10,7 @@
 
 ## 1. OBJECTIF
 
-Accompagner un nouveau client dans l'installation et la configuration complète d'un boîtier Neopro, de la collecte d'informations initiale jusqu'à la validation finale du fonctionnement.
+Accompagner un nouveau client dans l'installation et la configuration complète d'un boîtier MadXP, de la collecte d'informations initiale jusqu'à la validation finale du fonctionnement.
 
 ## 2. PÉRIMÈTRE
 
@@ -162,7 +162,7 @@ MOTS DE PASSE (à communiquer au client de manière sécurisée)
 
 ✅ **Avantages :**
 
-- Pas de dépendance au dossier Neopro local
+- Pas de dépendance au dossier MadXP local
 - Installation depuis n'importe quel ordinateur
 - Toujours à jour (dernière release GitHub)
 - Rapide (2-5 minutes vs 30-40 min en local)
@@ -230,7 +230,7 @@ ssh pi@<IP_DU_PI>
 # Mot de passe : celui configuré dans Raspberry Pi Imager
 ```
 
-#### 5.3.4 Installation Neopro sur le Pi
+#### 5.3.4 Installation MadXP sur le Pi
 
 **Depuis votre ordinateur, lancer l'installation en une ligne :**
 
@@ -269,7 +269,7 @@ ping neopro.local
 # Se connecter au nouveau hostname
 ssh pi@neopro.local
 
-# Vérifier que le dossier Neopro existe
+# Vérifier que le dossier MadXP existe
 ls -la /home/pi/neopro
 
 # Vérifier les services
@@ -378,14 +378,14 @@ ssh pi@neopro.local 'cat /home/pi/neopro/VERSION'
 ❌ **N'utilisez PAS cette méthode si :**
 
 - Vous installez un site en production
-- Vous n'avez pas le dossier Neopro complet sur votre machine
+- Vous n'avez pas le dossier MadXP complet sur votre machine
 - Vous n'avez pas les dépendances (Node.js, Angular CLI, etc.)
 
 ### 6.2 Prérequis
 
 **Sur votre ordinateur :**
 
-- Dossier Neopro complet cloné
+- Dossier MadXP complet cloné
 - Node.js 20+ et npm
 - Angular CLI : `npm install -g @angular/cli`
 - Toutes les dépendances installées : `npm install`
@@ -393,7 +393,7 @@ ssh pi@neopro.local 'cat /home/pi/neopro/VERSION'
 ### 6.3 Procédure
 
 ```bash
-# Depuis la racine du projet Neopro
+# Depuis la racine du projet MadXP
 cd /path/to/neopro
 
 # Lancer le script de setup local
@@ -412,12 +412,12 @@ cd /path/to/neopro
 
 ### 6.4 Différences avec la méthode Remote
 
-| Critère         | Remote          | Local                  |
-| --------------- | --------------- | ---------------------- |
-| **Source**      | GitHub Releases | Build local            |
-| **Version**     | Release taggée  | Branche courante       |
-| **Temps**       | 2-5 min         | 30-40 min              |
-| **Dépendances** | Aucune          | Dossier Neopro complet |
+| Critère         | Remote          | Local                 |
+| --------------- | --------------- | --------------------- |
+| **Source**      | GitHub Releases | Build local           |
+| **Version**     | Release taggée  | Branche courante      |
+| **Temps**       | 2-5 min         | 30-40 min             |
+| **Dépendances** | Aucune          | Dossier MadXP complet |
 
 ---
 
@@ -477,7 +477,7 @@ sudo systemctl restart hostapd
    - Se connecter avec le mot de passe configuré
    - Ouvrir un navigateur : http://neopro.local ou http://192.168.4.1
 
-**✅ Le hotspot fonctionne si vous accédez à l'interface Neopro**
+**✅ Le hotspot fonctionne si vous accédez à l'interface MadXP**
 
 ---
 

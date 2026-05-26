@@ -85,7 +85,7 @@
 | NLFH-REGIE | **11**  | -68/-72 dBm      |
 | SFR_141F   | 1       | -76 dBm          |
 
-> ⚠️ **MCS 2 / MCS 1 = débit réel ~7-10 Mbps.** Le USB dongle tourne à bas débit malgré le 802.11n disponible. Causes probables : signal -66 dBm (limite basse du MCS 3), ou capacités limitées du dongle. Le débit est suffisant pour le sync Neopro mais laisse peu de marge.
+> ⚠️ **MCS 2 / MCS 1 = débit réel ~7-10 Mbps.** Le USB dongle tourne à bas débit malgré le 802.11n disponible. Causes probables : signal -66 dBm (limite basse du MCS 3), ou capacités limitées du dongle. Le débit est suffisant pour le sync MadXP mais laisse peu de marge.
 
 > ⚠️ **Toute l'infra NLFH est sur canal 1.** Le dongle wlan1 partage le canal avec 4-6 APs du club. Contention élevée en canal 1.
 

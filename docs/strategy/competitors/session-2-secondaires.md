@@ -27,7 +27,7 @@
 - **Catalogue** : 20+ apps (Facebook, Instagram, LinkedIn, YouTube, TikTok, météo, maps, RSS, calendars, QR, PowerBI)
 - **Multi-tenant / sponsoring / mobile** : non détaillé sur la home
 - **Pricing** : non public en home (page pricing référencée mais non extraite)
-- **Verdict** : 🟢 menace faible — **généraliste qui mentionne le sport sans l'adresser sérieusement**. Pas de différenciateur fonctionnel pour un club sportif vs Neopro.
+- **Verdict** : 🟢 menace faible — **généraliste qui mentionne le sport sans l'adresser sérieusement**. Pas de différenciateur fonctionnel pour un club sportif vs MadXP.
 - Source : [bizplay.com](https://www.bizplay.com) (2026-04-23)
 
 ### SportMember (DK/EU) — surprise positive
@@ -37,10 +37,10 @@
 - **Cible** : administrateurs club, trésoriers, coachs, membres, parents
 - **Sports** : 50+ disciplines (rugby, tennis, cyclisme, foot, danse…)
 - **Features** : gestion membres, calendrier, encaissement cotisations, chat interne, réservations, website builder, billetterie, compositions tactiques, comptes-rendus de match, stats
-- ⚠️ **Module "écran dynamique"** : mentionné comme module disponible pour communication membres — **MAIS pas un concurrent affichage TV au sens Neopro** (pas de régie pub, pas de templates Remotion, pas de pilotage match)
+- ⚠️ **Module "écran dynamique"** : mentionné comme module disponible pour communication membres — **MAIS pas un concurrent affichage TV au sens MadXP** (pas de régie pub, pas de templates Remotion, pas de pilotage match)
 - **Pricing** : Basic gratuit · **Pro €0.18/membre/mois (min €22/mois)** · add-ons (Website €25, Widgets €10, Compta €12)
 - **Mobile** : iOS + Android natif
-- **Verdict** : 🟡 **complémentaire plutôt que concurrent** — un club peut utiliser Neopro pour la TV + SportMember pour la gestion. **Opportunité partenariat** (intégration calendrier SportMember → écran Neopro). À explorer commercialement.
+- **Verdict** : 🟡 **complémentaire plutôt que concurrent** — un club peut utiliser MadXP pour la TV + SportMember pour la gestion. **Opportunité partenariat** (intégration calendrier SportMember → écran MadXP). À explorer commercialement.
 - Source : [sportmember.fr](https://www.sportmember.fr) (2026-04-23)
 
 ### ClubTV (FR) / FanCloud
@@ -51,8 +51,8 @@
 
 ### Synthèse Segment B
 
-- **Aucun concurrent FR/EU sport-spécialiste ne fait mieux que Neopro sur le multi-tenant + régie pub native + edge offline**
-- **SportMember = opportunité partenariat** (gestion club + Neopro affichage TV = stack complète club)
+- **Aucun concurrent FR/EU sport-spécialiste ne fait mieux que MadXP sur le multi-tenant + régie pub native + edge offline**
+- **SportMember = opportunité partenariat** (gestion club + MadXP affichage TV = stack complète club)
 - **Bizplay = signal faible** : généraliste avec vertical sport mou
 - **Digital Sport** à retirer du benchmark (agence, pas concurrent)
 
@@ -76,7 +76,7 @@
 - **API** : disponible Premium+
 - **Apps** : 80+ (Power BI, Teams, Grafana, Tableau, SharePoint…)
 - **Sport** : ❌ **aucune feature sport spécifique**
-- **Verdict** : 🔴 **architecture la plus proche de Neopro** (Pi + SaaS). Différenciation Neopro = **verticalisation club sportif + régie pub native sponsor weighted rotation + mode SaaS pur ADR-037 + portail club self-service + templates Remotion data-driven**. Yodeck est généraliste, ne fait ni régie pub ni sport.
+- **Verdict** : 🔴 **architecture la plus proche de MadXP** (Pi + SaaS). Différenciation MadXP = **verticalisation club sportif + régie pub native sponsor weighted rotation + mode SaaS pur ADR-037 + portail club self-service + templates Remotion data-driven**. Yodeck est généraliste, ne fait ni régie pub ni sport.
 - Source : [yodeck.com/pricing](https://www.yodeck.com/pricing/) (2026-04-23)
 
 ### ScreenCloud (UK) — leader EU SaaS
@@ -107,7 +107,7 @@
 - **API** : **GraphQL en Enterprise**, OptiSync API-to-Screen en Pro Plus+
 - **Apps** : 25 Free / **100+ payant**
 - **Sport** : ❌
-- **Verdict** : 🟡 **acteur le plus pricing-agressif du segment**. Free 3 écrans = vraie pression sur l'entrée de gamme. Mais pas de spécialisation sport. Référence prix bas pour le pitch Neopro.
+- **Verdict** : 🟡 **acteur le plus pricing-agressif du segment**. Free 3 écrans = vraie pression sur l'entrée de gamme. Mais pas de spécialisation sport. Référence prix bas pour le pitch MadXP.
 - Source : [optisigns.com/pricing](https://www.optisigns.com/pricing) (2026-04-23)
 
 ### Synthèse Segment C
@@ -116,7 +116,7 @@
 - **Catalogue 100+ apps = table-stake** (Yodeck 80+, ScreenCloud 100+, OptiSigns 100+)
 - **Multi-tenant Workspaces = barrière haute payante** (Enterprise tier chez tous)
 - **API publique = Premium+/Enterprise** (Yodeck Premium, OptiSigns Enterprise GraphQL)
-- **Aucun n'a de spécialisation sport** → angle de marché ouvert pour Neopro
+- **Aucun n'a de spécialisation sport** → angle de marché ouvert pour MadXP
 
 ---
 
@@ -143,14 +143,14 @@
 - **Maintenance** : projet actif maintenu par Screenly Inc.
 - **Pricing** : gratuit
 - **Sport** : ❌
-- **Verdict** : 🟢 **menace faible** sur le segment cible Neopro. Anthias = solution mono-écran ultra-minimaliste. **Aucun club ne peut bricoler une régie pub multi-tenant + reporting sponsors avec Anthias**. Ne couvre pas le besoin.
+- **Verdict** : 🟢 **menace faible** sur le segment cible MadXP. Anthias = solution mono-écran ultra-minimaliste. **Aucun club ne peut bricoler une régie pub multi-tenant + reporting sponsors avec Anthias**. Ne couvre pas le besoin.
 - Source : [anthias.screenly.io](https://anthias.screenly.io) (2026-04-23)
 
 ### Synthèse Segment E
 
 - **Open-source = TCO caché élevé** : Xibo demande compétences sysadmin (web server, DB, backups), Anthias est mono-écran
-- **Aucune alternative open-source crédible** ne reproduit la pile multi-tenant + régie pub Neopro
-- **Argument pour Neopro** : "le coût caché de l'open-source = un bénévole technique compétent + risque de panne en match sans support"
+- **Aucune alternative open-source crédible** ne reproduit la pile multi-tenant + régie pub MadXP
+- **Argument pour MadXP** : "le coût caché de l'open-source = un bénévole technique compétent + risque de panne en match sans support"
 
 ---
 
@@ -170,7 +170,7 @@
 - **Verdict** : 🟢 **pas un concurrent direct** (broadcasters, pas affichage hall club) MAIS **inspiration UX majeure** pour Template Studio v2 :
   - **Composer = data-driven editor avec scripting HTML/JS** → modèle pour évolution Template Studio v2
   - **AI Script Buddy** → opportunité d'intégrer un assistant IA pour création template
-  - **REST API rate-limited par tier** → modèle économique pour API publique Neopro
+  - **REST API rate-limited par tier** → modèle économique pour API publique MadXP
   - **Tarification événementielle (3/7/30j)** → modèle pour clubs qui n'organisent que quelques matchs/an
 - Source : [singular.live/pricing](https://www.singular.live/pricing) (2026-04-23)
 
@@ -184,16 +184,16 @@
 2. **Free trial 14-30 jours** sans CB (Yodeck, OptiSigns, Xibo)
 3. **Multi-tenant Workspaces** (mais réservé Enterprise tier)
 4. **API REST/GraphQL** (Premium+/Enterprise)
-5. **Hardware Pi bundlé gratuit** (Yodeck en annuel — référence à matcher si Neopro veut concurrencer)
+5. **Hardware Pi bundlé gratuit** (Yodeck en annuel — référence à matcher si MadXP veut concurrencer)
 6. **Pricing transparent en ligne** (tous sauf TVTools, Bodet, Stramatel, A2Display, ClubTV)
 
-### Lacunes Neopro à corriger en priorité (vs SaaS généralistes)
+### Lacunes MadXP à corriger en priorité (vs SaaS généralistes)
 
 1. ❌ **Catalogue apps faible** vs 80-100+ chez Yodeck/ScreenCloud/OptiSigns → roadmap apps marketplace
 2. ❌ **Free tier non publié** (Yodeck a 1 écran free permanent, OptiSigns 3 écrans free)
-3. ❌ **Multi-tenant Workspaces** : Neopro a la techno, mais doit le packager comme tier différencié
+3. ❌ **Multi-tenant Workspaces** : MadXP a la techno, mais doit le packager comme tier différencié
 
-### Opportunités Neopro confirmées
+### Opportunités MadXP confirmées
 
 1. ✅ **Aucun concurrent SaaS généraliste n'a de spécialisation sport** → angle de marché ouvert
 2. ✅ **Régie pub native + reporting sponsors = différenciateur unique** (aucun SaaS généraliste ne le fait)
@@ -204,7 +204,7 @@
 ### Acteurs à creuser en priorité Session 3+ (futur)
 
 - **Yodeck** : architecture la plus proche, surveillance churn et features sport éventuelles
-- **SportMember** : approche partenariat commercial (intégration calendrier ↔ Neopro)
+- **SportMember** : approche partenariat commercial (intégration calendrier ↔ MadXP)
 - **Singular.live** : pas un concurrent mais inspiration produit pour Template Studio v3
 
 ### Acteurs à retirer du benchmark

@@ -22,7 +22,7 @@ Ajout d'un role `club` dans le systeme d'authentification existant (meme page de
 
 ## Consequences
 
-- Les clubs peuvent gerer leur contenu en autonomie sans solliciter l'operateur Neopro
+- Les clubs peuvent gerer leur contenu en autonomie sans solliciter l'operateur MadXP
 - Les super_admin controlent finement ce que chaque club voit/fait via 6 permissions toggleables
 - Le middleware `requireClubScope` garantit l'isolation des donnees au niveau API
 - Migration DB necessaire (`add-club-role-and-permissions.sql`) avant deploiement

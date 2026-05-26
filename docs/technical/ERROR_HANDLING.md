@@ -1,10 +1,10 @@
 # Error Handling - Guide Complet
 
-> Système centralisé de gestion des erreurs pour le dashboard central Neopro.
+> Système centralisé de gestion des erreurs pour le dashboard central MadXP.
 
 ## Vue d'ensemble
 
-Le système d'error handling de Neopro permet :
+Le système d'error handling de MadXP permet :
 
 - **Traçabilité complète** via correlation IDs (frontend → backend)
 - **Logs structurés** avec contexte riche (userId, siteId, action)
@@ -86,7 +86,7 @@ error: (error) => {
 
 **Ordre d'extraction** :
 
-1. `error.error?.error` (format API Neopro)
+1. `error.error?.error` (format API MadXP)
 2. `error.error?.message`
 3. `error.message`
 4. `error.statusText`

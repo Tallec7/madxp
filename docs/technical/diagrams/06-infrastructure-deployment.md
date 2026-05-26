@@ -1,6 +1,6 @@
 # Infrastructure & Déploiement
 
-> Topologie des services, hébergement, et flux de déploiement Neopro.
+> Topologie des services, hébergement, et flux de déploiement MadXP.
 
 ## 1. Carte d'infrastructure
 

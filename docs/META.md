@@ -1,4 +1,4 @@
-# META — Charte documentaire Neopro
+# META — Charte documentaire MadXP
 
 > **Statut** : ACTIF | **Créé** : 2026-05-01 | **Owner** : Daisy (Lead Dev)
 >
@@ -10,12 +10,12 @@
 
 Tout document `docs/` appartient à l'un de ces quatre états :
 
-| Statut | Signification | Bandeau à ajouter |
-|--------|--------------|-------------------|
-| **ACTIF** | Contenu à jour, maintenu activement | _(aucun)_ |
-| **STALE** | Contenu potentiellement périmé, non invalidé | `> ⚠️ **STALE** — Dernière révision : YYYY-MM-DD.` |
-| **DRAFT** | En cours de rédaction, incomplet | `> 🚧 **DRAFT** — Ne pas utiliser comme référence.` |
-| **ARCHIVÉ** | Obsolète, conservé pour l'historique | Déplacer dans `docs/archive/` |
+| Statut      | Signification                                | Bandeau à ajouter                                   |
+| ----------- | -------------------------------------------- | --------------------------------------------------- |
+| **ACTIF**   | Contenu à jour, maintenu activement          | _(aucun)_                                           |
+| **STALE**   | Contenu potentiellement périmé, non invalidé | `> ⚠️ **STALE** — Dernière révision : YYYY-MM-DD.`  |
+| **DRAFT**   | En cours de rédaction, incomplet             | `> 🚧 **DRAFT** — Ne pas utiliser comme référence.` |
+| **ARCHIVÉ** | Obsolète, conservé pour l'historique         | Déplacer dans `docs/archive/`                       |
 
 **Règle** : un document sans statut explicite est présumé ACTIF. Ajouter le bandeau dès qu'un doute existe.
 
@@ -25,9 +25,9 @@ Tout document `docs/` appartient à l'un de ces quatre états :
 
 ```yaml
 ---
-title: "Titre lisible"
-status: ACTIF          # ACTIF | STALE | DRAFT | ARCHIVÉ
-owner: lead-dev        # lead-dev | ops | product | daisy
+title: 'Titre lisible'
+status: ACTIF # ACTIF | STALE | DRAFT | ARCHIVÉ
+owner: lead-dev # lead-dev | ops | product | daisy
 last_reviewed: YYYY-MM-DD
 ---
 ```
@@ -56,26 +56,26 @@ Ne pas créer de dossier vide en anticipation. Si un dossier existe mais est vid
 
 ## 5. Durées de vie recommandées par type
 
-| Type | Revue recommandée | Owner par défaut |
-|------|--------------------|------------------|
-| ADR | Permanente (pas de revue — remplacer par un nouvel ADR si besoin) | lead-dev |
-| Specs métier (`docs/specs/`) | Chaque PR qui change un comportement | lead-dev |
-| Guides opérateurs | Semestrielle | ops |
-| Runbooks d'incident | Annuelle ou post-incident | ops |
-| ROADMAP, KPIS, RISKS | Mensuelle | daisy / product |
-| TECH-DEBT | Trimestrielle | lead-dev |
-| Business Changelog | Hebdomadaire (par sprint) | daisy |
-| Archive | Pas de revue | — |
+| Type                         | Revue recommandée                                                 | Owner par défaut |
+| ---------------------------- | ----------------------------------------------------------------- | ---------------- |
+| ADR                          | Permanente (pas de revue — remplacer par un nouvel ADR si besoin) | lead-dev         |
+| Specs métier (`docs/specs/`) | Chaque PR qui change un comportement                              | lead-dev         |
+| Guides opérateurs            | Semestrielle                                                      | ops              |
+| Runbooks d'incident          | Annuelle ou post-incident                                         | ops              |
+| ROADMAP, KPIS, RISKS         | Mensuelle                                                         | daisy / product  |
+| TECH-DEBT                    | Trimestrielle                                                     | lead-dev         |
+| Business Changelog           | Hebdomadaire (par sprint)                                         | daisy            |
+| Archive                      | Pas de revue                                                      | —                |
 
 ---
 
 ## 6. Organisation des runbooks
 
-| Préfixe | Type | Exemple |
-|---------|------|---------|
-| `OPS-NN-` | Runbook technique (infra, DB, déploiement) | `OPS-01-rollback.md` |
-| `INC-NN-` | Runbook d'incident (résolution d'urgence) | `INC-01-hotspot-psk.md` |
-| `J-NN-` | Runbook d'onboarding | `J1-onboarding-dev.md` |
+| Préfixe   | Type                                       | Exemple                 |
+| --------- | ------------------------------------------ | ----------------------- |
+| `OPS-NN-` | Runbook technique (infra, DB, déploiement) | `OPS-01-rollback.md`    |
+| `INC-NN-` | Runbook d'incident (résolution d'urgence)  | `INC-01-hotspot-psk.md` |
+| `J-NN-`   | Runbook d'onboarding                       | `J1-onboarding-dev.md`  |
 
 Les deux dossiers `runbooks/` et `modops/` coexistent en phase 2. La consolidation est planifiée.
 
@@ -85,13 +85,13 @@ Les deux dossiers `runbooks/` et `modops/` coexistent en phase 2. La consolidati
 
 Ces numéros sont **vides et non réutilisables** :
 
-| Numéro(s) | Raison |
-|-----------|--------|
-| ADR-016 à ADR-020 | Créés hors séquence, slots jamais utilisés |
-| ADR-023 | Slot jamais utilisé |
-| ADR-101 | Remplacé lors d'une collision entre sessions parallèles (→ ADR-102) |
-| ADR-104 | Remplacé par ADR-105 lors de la refonte preview TV |
-| ADR-107 | Slot jamais utilisé |
+| Numéro(s)         | Raison                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| ADR-016 à ADR-020 | Créés hors séquence, slots jamais utilisés                          |
+| ADR-023           | Slot jamais utilisé                                                 |
+| ADR-101           | Remplacé lors d'une collision entre sessions parallèles (→ ADR-102) |
+| ADR-104           | Remplacé par ADR-105 lors de la refonte preview TV                  |
+| ADR-107           | Slot jamais utilisé                                                 |
 
 > **Note** : ADR-016 est désormais utilisé par `ADR-016-double-buffer-video.md` (renommé depuis ADR-006 le 2026-05-01 — doublon résolu).
 
@@ -101,13 +101,13 @@ Ces numéros sont **vides et non réutilisables** :
 
 Tableau de bord mis à jour manuellement lors des revues documentaires.
 
-| Indicateur | Cible | Mesuré le | Valeur |
-|------------|-------|-----------|--------|
-| Liens internes cassés | 0 | 2026-05-01 | 0 (traité en phase 2) |
-| ADR sans trou de numérotation | ✓ | 2026-05-01 | 8 trous (dont ADR-016 résolu) |
-| Répertoires vides | 0 | 2026-05-01 | 2 (`api/`, `Charte graphique/`) |
-| Fichiers STALE non banderolés | <5 | 2026-05-01 | 0 (traité en phase 1) |
-| Documents sans owner | <20 | — | non mesuré |
+| Indicateur                    | Cible | Mesuré le  | Valeur                          |
+| ----------------------------- | ----- | ---------- | ------------------------------- |
+| Liens internes cassés         | 0     | 2026-05-01 | 0 (traité en phase 2)           |
+| ADR sans trou de numérotation | ✓     | 2026-05-01 | 8 trous (dont ADR-016 résolu)   |
+| Répertoires vides             | 0     | 2026-05-01 | 2 (`api/`, `Charte graphique/`) |
+| Fichiers STALE non banderolés | <5    | 2026-05-01 | 0 (traité en phase 1)           |
+| Documents sans owner          | <20   | —          | non mesuré                      |
 
 ---
 

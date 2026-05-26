@@ -10,9 +10,9 @@
 
 L'incident à l'origine de la PR #613 (recovery TV) a mis en évidence un trou de
 détection : une vidéo supprimée directement sur le FTP Hostinger (hors API
-Neopro) cassait silencieusement les players Pi et SaaS, sans qu'aucune alerte
+MadXP) cassait silencieusement les players Pi et SaaS, sans qu'aucune alerte
 ne remonte avant qu'un client ne se plaigne. La cascade DELETE côté API
-(PRs #616/#617/#618) corrige le cas où la suppression passe par Neopro, mais
+(PRs #616/#617/#618) corrige le cas où la suppression passe par MadXP, mais
 ne couvre pas les divergences `videos.storage_path` ↔ FTP créées hors API
 (suppression manuelle, upload jamais réussi, fichier déplacé).
 
@@ -49,7 +49,7 @@ la **complétude** (aucun orphelin ne dort plus de 24h).
   d'événement sur la suppression de fichiers. Dépendance commerciale + pas
   de SLA — non viable.
 - **Polling synchrone à chaque DELETE API** : rejeté car ne couvre que les
-  suppressions via Neopro (or la cause racine de l'incident #613 est
+  suppressions via MadXP (or la cause racine de l'incident #613 est
   précisément une suppression FTP-direct, hors API).
 - **CRON horaire** au lieu de quotidien : rejeté car bruyant côté FTP
   (4000+ fichiers, throttle Hostinger observé à ~100 req/min), gain

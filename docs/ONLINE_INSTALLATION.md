@@ -1,6 +1,6 @@
-# Installation en ligne Neopro
+# Installation en ligne MadXP
 
-Guide pour configurer et utiliser l'installation en ligne de Neopro via curl depuis Internet.
+Guide pour configurer et utiliser l'installation en ligne de MadXP via curl depuis Internet.
 
 ## 🎯 Concept
 
@@ -132,7 +132,7 @@ Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (Git
 4. **Attendre 15-20 minutes**
 
    À la fin, le Pi est installé avec :
-   - ✅ Serveur Neopro actif
+   - ✅ Serveur MadXP actif
    - ✅ WiFi hotspot : `NEOPRO-[CLUB_NAME]`
    - ✅ (Optionnel) WiFi client configuré automatiquement si une clé USB et un SSID ont été fournis
    - ✅ Application accessible sur `http://neopro.local`
@@ -431,4 +431,4 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | less
 
 **Version :** 2.1.0
 **Date :** Février 2026
-**Auteur :** Neopro / Kalon Partners
+**Auteur :** MadXP / Kalon Partners

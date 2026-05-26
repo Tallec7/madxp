@@ -18,16 +18,16 @@ Prospect Lanester (++) équipé d'un panneau LED Bodet **P10 V2 USB2** (modèle 
 - Clé USB en **FAT32** préparée par un "vieux logiciel Bodet" qui prend en entrée largeur × hauteur du panneau
 - Usage actuel : boucle vidéo statique → **zéro pilotage à distance, zéro rotation pondérée, zéro stats de diffusion**
 
-L'archi Neopro standard (Pi → HDMI → TV) est **incompatible** : pas de HDMI sur le Bodet. Les adaptateurs USB ↔ HDHI standards vont dans le mauvais sens (PC → écran HDMI). Le Bodet ne lit pas un flux vidéo, il lit des **fichiers** sur un système de fichiers FAT32.
+L'archi MadXP standard (Pi → HDMI → TV) est **incompatible** : pas de HDMI sur le Bodet. Les adaptateurs USB ↔ HDHI standards vont dans le mauvais sens (PC → écran HDMI). Le Bodet ne lit pas un flux vidéo, il lit des **fichiers** sur un système de fichiers FAT32.
 
 ## Décision (provisoire — pending test terrain)
 
-**Piste retenue** : Pi en mode **USB gadget mass storage** (`g_mass_storage`) qui se présente au panneau Bodet comme une fausse clé USB FAT32, dont le contenu est régénéré dynamiquement par les déploiements Neopro.
+**Piste retenue** : Pi en mode **USB gadget mass storage** (`g_mass_storage`) qui se présente au panneau Bodet comme une fausse clé USB FAT32, dont le contenu est régénéré dynamiquement par les déploiements MadXP.
 
 Topologie cible :
 
 ```
-Cloud Neopro ──WS──> Pi (sync-agent) ──USB-C(gadget mode)──> Bodet maître 1.1 ──RJ45──> 7 modules esclaves
+Cloud MadXP ──WS──> Pi (sync-agent) ──USB-C(gadget mode)──> Bodet maître 1.1 ──RJ45──> 7 modules esclaves
                           │
                           └─ /var/neopro/bodet-loop.img (image FAT32 régénérée à chaque déploiement)
 ```
@@ -35,7 +35,7 @@ Cloud Neopro ──WS──> Pi (sync-agent) ──USB-C(gadget mode)──> Bod
 **Limitations acceptées** :
 
 - Pas de pilotage **temps réel** (le panneau ne re-scanne la clé qu'au remount → un changement = `umount` + régénération image + `mount` côté gadget, latence ~5–10 s)
-- Pas de score live ni remote temps réel sur le panneau Bodet (à monetiser via TV Neopro standard si demandé plus tard)
+- Pas de score live ni remote temps réel sur le panneau Bodet (à monetiser via TV MadXP standard si demandé plus tard)
 - Encodage vidéo contraint à la résolution/format que le panneau attend (probablement 400×80 px, codec à déterminer)
 
 **Risque #1 (à valider samedi) — structure proprio Bodet** : leur "vieux logiciel" pourrait écrire un manifeste / playlist / convention de nommage spécifique sur la clé. Si oui, on doit reverse engineer cette structure avant le POC. C'est l'objet principal du test terrain.
@@ -109,10 +109,10 @@ Cloud Neopro ──WS──> Pi (sync-agent) ──USB-C(gadget mode)──> Bod
 
 ### Plan B (si POC samedi KO)
 
-Proposer au prospect une **TV Neopro standard à côté** du panneau Bodet :
+Proposer au prospect une **TV MadXP standard à côté** du panneau Bodet :
 
 - Bodet garde sa boucle USB primitive existante
-- TV 55"/65" + Pi standard Neopro à côté → toute la valeur Neopro (pilotage, sponsors, score, monétisation) sur la TV, le Bodet reste sur scoreboard/ambiance
+- TV 55"/65" + Pi standard MadXP à côté → toute la valeur MadXP (pilotage, sponsors, score, monétisation) sur la TV, le Bodet reste sur scoreboard/ambiance
 - Devis simple, déploiement classique en 1 semaine
 
 ### Données à ramener (pour rédiger l'ADR final lundi)

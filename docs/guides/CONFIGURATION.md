@@ -1,4 +1,4 @@
-# Guide de configuration Neopro
+# Guide de configuration MadXP
 
 Ce document explique **tous les fichiers de configuration** et leur rôle.
 

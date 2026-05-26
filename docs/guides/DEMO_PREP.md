@@ -1,6 +1,6 @@
 # Préparer une configuration de club pour la démo
 
-Guide pour enrichir les fichiers JSON de `demo-configs/` afin de montrer toutes les fonctionnalités Neopro lors d'une démonstration.
+Guide pour enrichir les fichiers JSON de `demo-configs/` afin de montrer toutes les fonctionnalités MadXP lors d'une démonstration.
 
 > Les configs sont dans `raspberry/src/assets/demo-configs/`.
 > Après un build, elles peuvent aussi être modifiées **directement sur le serveur** dans `demo-configs/` sans rebuild.

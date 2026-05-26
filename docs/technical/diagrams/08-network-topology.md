@@ -6,7 +6,7 @@
 
 ```mermaid
 graph TB
-    subgraph CLOUD["☁️ Cloud Neopro"]
+    subgraph CLOUD["☁️ Cloud MadXP"]
         API["Central Server<br/>Railway<br/>WSS + HTTPS"]
         FTP["FTP Hostinger<br/>Vidéos"]
     end
@@ -100,7 +100,7 @@ graph TB
 
     PHONES["📱 Clients locaux"] -->|"WiFi AP"| WLAN0
     WLAN1 -->|"WiFi Client"| BOX["📶 Box Internet"]
-    BOX -->|"Internet"| CLOUD["☁️ Cloud Neopro"]
+    BOX -->|"Internet"| CLOUD["☁️ Cloud MadXP"]
 
     style PI fill:#fff3e0,stroke:#E65100
 ```
@@ -128,7 +128,7 @@ graph TB
     PHONES["📱 Clients locaux"] -->|"WiFi AP"| WLAN0
     ETH0 -->|"Câble RJ45"| SWITCH["🔌 Switch réseau"]
     SWITCH --> BOX["📶 Box Internet"]
-    BOX -->|"Internet"| CLOUD["☁️ Cloud Neopro"]
+    BOX -->|"Internet"| CLOUD["☁️ Cloud MadXP"]
 
     style PI fill:#e8f5e9,stroke:#2E7D32
 ```

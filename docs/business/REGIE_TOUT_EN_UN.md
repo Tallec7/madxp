@@ -1,25 +1,25 @@
-# Neopro — La Régie Tout-en-Un pour Clubs Sportifs
+# MadXP — La Régie Tout-en-Un pour Clubs Sportifs
 
 > **Le JCDecaux des gymnases** : régie technique match-day + régie publicitaire à deux niveaux dans un seul boîtier.
 
 **Date** : Février 2026
 **Statut** : Plan stratégique produit
-**Auteur** : Équipe Neopro
+**Auteur** : Équipe MadXP
 
 ---
 
 ## Vision
 
-Neopro se positionne comme la **première régie tout-en-un** conçue pour le sport amateur :
+MadXP se positionne comme la **première régie tout-en-un** conçue pour le sport amateur :
 
 - **Régie technique** : gérer l'expérience spectateur pendant les matchs (score, ambiance, animations)
-- **Régie publicitaire à deux niveaux** : diffuser les annonceurs du réseau Neopro ET les partenaires locaux de chaque club
+- **Régie publicitaire à deux niveaux** : diffuser les annonceurs du réseau MadXP ET les partenaires locaux de chaque club
 
-Là où les clubs pro disposent d'une cabine régie avec régisseurs, mélangeurs vidéo et budgets à 6 chiffres, Neopro offre l'essentiel dans un Raspberry Pi à 80€ contrôlé depuis un smartphone.
+Là où les clubs pro disposent d'une cabine régie avec régisseurs, mélangeurs vidéo et budgets à 6 chiffres, MadXP offre l'essentiel dans un Raspberry Pi à 80€ contrôlé depuis un smartphone.
 
 ### Le modèle double régie publicitaire
 
-C'est le coeur du modèle économique. Comme JCDecaux, Neopro gère **deux niveaux de publicité** sur le même écran :
+C'est le coeur du modèle économique. Comme JCDecaux, MadXP gère **deux niveaux de publicité** sur le même écran :
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -35,65 +35,65 @@ C'est le coeur du modèle économique. Comme JCDecaux, Neopro gère **deux nivea
 │  │                        │  │                            │ │
 │  │  Vendus par NEOPRO     │  │  Vendus par LE CLUB        │ │
 │  │  Diffusés sur 50+ clubs│  │  Diffusés sur 1 club       │ │
-│  │  Neopro facture        │  │  Le club facture           │ │
+│  │  MadXP facture        │  │  Le club facture           │ │
 │  └────────────────────────┘  └────────────────────────────┘ │
 │                                                              │
 │  Les deux coexistent dans la même boucle de sponsors         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Niveau 1 — Régie réseau Neopro** :
+**Niveau 1 — Régie réseau MadXP** :
 
-- Neopro commercialise des campagnes nationales/régionales auprès de marques (Décathlon, Intersport, fédérations...)
+- MadXP commercialise des campagnes nationales/régionales auprès de marques (Décathlon, Intersport, fédérations...)
 - Ces campagnes sont déployées sur tout ou partie du réseau (50+ clubs)
-- Neopro gère la relation annonceur, la facturation, le reporting
+- MadXP gère la relation annonceur, la facturation, le reporting
 - Le club reçoit une rémunération ou une réduction sur son abonnement
 - Analogie : les pubs nationales sur les abribus JCDecaux
 
 **Niveau 2 — Régie locale du club** :
 
 - Le club vend ses propres espaces à ses partenaires locaux (commerçants, artisans, sponsors historiques)
-- Le club gère la relation, fixe ses prix, fournit les preuves de diffusion via Neopro
-- Neopro fournit les outils (dashboard annonceur, proof of play, rapports)
+- Le club gère la relation, fixe ses prix, fournit les preuves de diffusion via MadXP
+- MadXP fournit les outils (dashboard annonceur, proof of play, rapports)
 - Analogie : l'affichage local vendu par une mairie sur son mobilier urbain
 
 **Coexistence sur le même écran** :
 
 - La boucle de sponsors mélange les deux niveaux
 - La rotation pondérée permet de garantir un % de diffusion à chaque niveau
-- Exemple : 40% annonceurs réseau Neopro + 60% partenaires locaux du club
+- Exemple : 40% annonceurs réseau MadXP + 60% partenaires locaux du club
 
 ### Pourquoi "Le JCDecaux des gymnases" ?
 
-| Aspect              | JCDecaux                                  | Neopro                                       |
+| Aspect              | JCDecaux                                  | MadXP                                        |
 | ------------------- | ----------------------------------------- | -------------------------------------------- |
 | Réseau              | Abribus, aéroports, mobilier urbain       | Écrans TV dans 50+ clubs sportifs            |
 | Infrastructure      | Mobilier urbain + écrans DOOH             | Raspberry Pi + TV du club                    |
-| Pub réseau          | Campagnes nationales vendues par JCDecaux | Campagnes réseau vendues par Neopro          |
+| Pub réseau          | Campagnes nationales vendues par JCDecaux | Campagnes réseau vendues par MadXP           |
 | Pub locale          | Affichage local vendu par la collectivité | Partenaires locaux vendus par le club        |
 | Gestion parc        | Maintenance, monitoring à distance        | Dashboard central, alertes prédictives, OTA  |
 | Reporting           | Preuves de diffusion, audience            | Impressions, proof of play, audience estimée |
 | **Différenciateur** | —                                         | **Régie technique match-day intégrée**       |
 | **Audience**        | Passants (quelques secondes d'attention)  | **Spectateurs captifs (2h de match)**        |
 
-JCDecaux vend de l'affichage devant des passants. Neopro vend de l'affichage **+ l'animation du match** devant une **audience captive pendant 2h**. Un spectateur dans un gymnase est plus engagé qu'un piéton devant un abribus. C'est un inventaire publicitaire premium.
+JCDecaux vend de l'affichage devant des passants. MadXP vend de l'affichage **+ l'animation du match** devant une **audience captive pendant 2h**. Un spectateur dans un gymnase est plus engagé qu'un piéton devant un abribus. C'est un inventaire publicitaire premium.
 
 ### Ce que ça change pour le business model
 
-| Revenu          | Source                                  | Qui vend | Qui encaisse             |
-| --------------- | --------------------------------------- | -------- | ------------------------ |
-| Abonnement club | Forfait mensuel (standard/premium)      | Neopro   | Neopro                   |
-| Pub réseau      | Campagnes marques nationales/régionales | Neopro   | Neopro (reverse au club) |
-| Pub locale      | Partenaires du club                     | Le club  | Le club                  |
+| Revenu          | Source                                  | Qui vend | Qui encaisse            |
+| --------------- | --------------------------------------- | -------- | ----------------------- |
+| Abonnement club | Forfait mensuel (standard/premium)      | MadXP    | MadXP                   |
+| Pub réseau      | Campagnes marques nationales/régionales | MadXP    | MadXP (reverse au club) |
+| Pub locale      | Partenaires du club                     | Le club  | Le club                 |
 
-Le club a **deux incitations** à utiliser Neopro :
+Le club a **deux incitations** à utiliser MadXP :
 
 1. L'outil match-day (régie technique) — c'est ce qui le fait adopter
 2. Les revenus pub (locaux + reverse réseau) — c'est ce qui le fait rester
 
 ---
 
-## État actuel — Ce que Neopro fait déjà
+## État actuel — Ce que MadXP fait déjà
 
 ### Fonctions de régie technique (match-day)
 
@@ -129,7 +129,7 @@ Le club a **deux incitations** à utiliser Neopro :
 | Détection TV allumée           | ✅ Opérationnel | HDMI-CEC confirme la diffusion effective           |
 | Rapport PDF club               | ✅ Opérationnel | `pdf-report.service.ts`                            |
 
-#### Régie réseau Neopro (annonceurs multi-clubs)
+#### Régie réseau MadXP (annonceurs multi-clubs)
 
 | Fonction                       | État                      | Détail                                      |
 | ------------------------------ | ------------------------- | ------------------------------------------- |
@@ -157,7 +157,7 @@ Le club a **deux incitations** à utiliser Neopro :
 La structure technique supporte déjà les deux niveaux :
 
 ```sql
--- Un annonceur réseau Neopro = associé à N sites
+-- Un annonceur réseau MadXP = associé à N sites
 SELECT a.name, COUNT(ast.site_id) as nb_clubs
 FROM advertisers a
 JOIN advertiser_sites ast ON ast.advertiser_id = a.id
@@ -187,14 +187,14 @@ Il manque un champ `advertiser_type` ('network' | 'local') pour distinguer forme
 
 #### 0.1 Champ `advertiser_type` sur la table `advertisers`
 
-**Problème** : Aujourd'hui rien ne distingue un annonceur réseau Neopro d'un partenaire local du club. On ne peut pas filtrer, prioriser ni reporter différemment.
+**Problème** : Aujourd'hui rien ne distingue un annonceur réseau MadXP d'un partenaire local du club. On ne peut pas filtrer, prioriser ni reporter différemment.
 
 **Solution** : Ajout d'un champ `type` sur `advertisers`.
 
 ```sql
 -- Migration
 ALTER TABLE advertisers ADD COLUMN advertiser_type VARCHAR(20) DEFAULT 'local';
--- 'network' = annonceur du réseau Neopro (déployé sur plusieurs clubs)
+-- 'network' = annonceur du réseau MadXP (déployé sur plusieurs clubs)
 -- 'local'   = partenaire local d'un club (géré par le club)
 
 -- Les annonceurs déjà associés à plusieurs sites → network
@@ -219,7 +219,7 @@ WHERE id IN (
 
 #### 0.2 Distinction dans la boucle de diffusion
 
-**Problème** : La boucle mélange tous les sponsors sans distinction. Impossible de garantir un % au réseau Neopro.
+**Problème** : La boucle mélange tous les sponsors sans distinction. Impossible de garantir un % au réseau MadXP.
 
 **Solution** : Dans `configuration.json`, marquer l'origine de chaque sponsor.
 
@@ -340,9 +340,9 @@ AND cs.audience_estimate IS NOT NULL;
 
 #### 1.3 Contrôle volume HDMI-CEC
 
-**Problème** : Le son est géré par la TV, pas par Neopro. Un bénévole doit chercher la télécommande TV pour baisser le volume.
+**Problème** : Le son est géré par la TV, pas par MadXP. Un bénévole doit chercher la télécommande TV pour baisser le volume.
 
-**Solution** : Boutons volume +/- dans la télécommande Neopro (locale et cloud).
+**Solution** : Boutons volume +/- dans la télécommande MadXP (locale et cloud).
 
 **Ce qui existe déjà** :
 
@@ -381,7 +381,7 @@ echo "tx 50:44:43" | cec-client -s -d 1
 ### Phase 2 — Régie pub complète (2-4 semaines)
 
 > **Objectif** : Fonctions avancées qui permettent une vraie gestion publicitaire.
-> **Priorité** : HAUTE — transforme Neopro d'un diffuseur en une régie
+> **Priorité** : HAUTE — transforme MadXP d'un diffuseur en une régie
 
 #### 2.1 Rotation pondérée des sponsors
 
@@ -610,7 +610,7 @@ const ANNOUNCEMENT_TEMPLATES = [
 
 #### 3.3 Playlist audio d'ambiance
 
-**Problème** : L'ambiance sonore du gymnase est gérée séparément (enceinte Bluetooth, téléphone du bénévole). Neopro ne gère que l'image.
+**Problème** : L'ambiance sonore du gymnase est gérée séparément (enceinte Bluetooth, téléphone du bénévole). MadXP ne gère que l'image.
 
 **Solution** : Player audio intégré au Pi, contrôlé depuis la télécommande.
 
@@ -769,7 +769,7 @@ Fév. 2026       Mars 2026       Avril 2026      Mai 2026
 | Phase 1 | Rapports PDF générés par mois               | 10+ rapports                       |
 | Phase 2 | Clubs utilisant la rotation pondérée        | 50% des clubs avec sponsors        |
 | Phase 2 | Proof of play téléchargés                   | 20+ par mois                       |
-| Phase 2 | Annonceurs réseau Neopro actifs             | 3+ marques diffusées sur 10+ clubs |
+| Phase 2 | Annonceurs réseau MadXP actifs              | 3+ marques diffusées sur 10+ clubs |
 | Phase 3 | Utilisation timer multi-sport               | 70% des matchs                     |
 | Phase 3 | Clubs utilisant l'audio                     | 30% des clubs                      |
 | Global  | Revenu pub réseau / club / mois             | Couvre 30%+ de l'abonnement        |
@@ -788,7 +788,7 @@ Fév. 2026       Mars 2026       Avril 2026      Mai 2026
 | Audio + vidéo simultanés sur Pi                          | Surcharge GPU/CPU                                                   | Ducking automatique, test sur Pi 4 et Pi 5, option désactivable                                                      |
 | Conflit réseau/local sur la boucle                       | Club mécontent que "ses" sponsors soient dilués par les pubs réseau | Garantie contractuelle du % local minimum (ex: 60% local, 40% réseau max). Le club garde le contrôle sur sa boucle.  |
 | Annonceur réseau refuse le contexte amateur              | Image de marque dégradée dans un gymnase                            | Proposer des formats premium (phase avant-match uniquement, watermark, habillage) et des preuves d'audience captive  |
-| Club vend pas de pub locale                              | Pas de revenu local, Neopro = juste un coût                         | Simplifier les outils de vente (Phase 4), fournir des packs clé-en-main, former les clubs                            |
+| Club vend pas de pub locale                              | Pas de revenu local, MadXP = juste un coût                          | Simplifier les outils de vente (Phase 4), fournir des packs clé-en-main, former les clubs                            |
 
 ---
 

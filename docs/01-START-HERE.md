@@ -107,7 +107,7 @@ Puis selon vos besoins :
 
 ### 🎯 Je suis Chef de Projet / Product Owner
 
-→ **[SAFe Neopro](safe/README.md)** - Framework SAFe Essential complet 🆕
+→ **[SAFe MadXP](safe/README.md)** - Framework SAFe Essential complet 🆕
 
 - 21 Epics, 35 Features, 40 User Stories avec WSJF
 - Roadmap PI (3 incréments de 6 semaines)
@@ -227,7 +227,7 @@ Ces documents sont conservés pour historique mais **ne pas utiliser** :
 
 ### Parcours 3 : Chef de Projet / Product Owner
 
-1. **[SAFe Neopro](safe/README.md)** (20 min) - Framework SAFe, Epics, Roadmap PI 🆕
+1. **[SAFe MadXP](safe/README.md)** (20 min) - Framework SAFe, Epics, Roadmap PI 🆕
 2. **[Portfolio SAFe](safe/PORTFOLIO.md)** (15 min) - Vue d'ensemble, Gantt, métriques ARR
 3. **[BUSINESS_PLAN_COMPLET.md](BUSINESS_PLAN_COMPLET.md) §13** (15 min) - Vision Analytics Sponsors
 4. **[AVANCEMENT_ANALYTICS_SPONSORS.md](AVANCEMENT_ANALYTICS_SPONSORS.md)** (10 min) - État projet

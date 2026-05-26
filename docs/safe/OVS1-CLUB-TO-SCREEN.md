@@ -128,4 +128,4 @@ flowchart TD
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Documentation principale](../00-INDEX.md)
+**Retour** : [SAFe MadXP](README.md) · [Documentation principale](../00-INDEX.md)

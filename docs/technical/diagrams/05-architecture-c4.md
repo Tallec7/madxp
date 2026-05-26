@@ -1,6 +1,6 @@
 # Architecture Système — Vue C4
 
-> Vue d'ensemble de l'architecture 3-tiers Neopro : Cloud ↔ Edge ↔ Utilisateurs.
+> Vue d'ensemble de l'architecture 3-tiers MadXP : Cloud ↔ Edge ↔ Utilisateurs.
 
 ## 1. Vue Contexte — Acteurs & Systèmes
 
@@ -14,7 +14,7 @@ graph TB
         TV["📺 Spectateurs"]
     end
 
-    subgraph NEOPRO["☁️ Plateforme Neopro"]
+    subgraph NEOPRO["☁️ Plateforme MadXP"]
         DASH["Dashboard Angular 20"]
         API["Central Server<br/>Express + TypeScript"]
         DB["PostgreSQL 15<br/>Supabase"]

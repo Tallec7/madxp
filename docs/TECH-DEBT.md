@@ -1,4 +1,4 @@
-# Tech Debt Register Neopro
+# Tech Debt Register MadXP
 
 > ⚠️ **STALE** — Dernière révision : 2026-04-30. Contenu potentiellement périmé. Revue trimestrielle recommandée.
 

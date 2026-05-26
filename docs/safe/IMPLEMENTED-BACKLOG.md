@@ -420,4 +420,4 @@
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Features & US](FEATURES.md)
+**Retour** : [SAFe MadXP](README.md) · [Features & US](FEATURES.md)

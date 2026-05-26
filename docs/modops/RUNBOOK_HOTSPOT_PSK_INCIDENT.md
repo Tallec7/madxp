@@ -66,7 +66,7 @@ KEY=$(openssl rand -hex 32)
 echo "$KEY"  # 64 chars hex
 
 # 2. Sauvegarder dans 1Password :
-#    Entrée : Neopro / HOTSPOT_PSK_ENCRYPTION_KEY
+#    Entrée : MadXP / HOTSPOT_PSK_ENCRYPTION_KEY
 #    Tag : production, infra
 
 # 3. Setter sur Railway (depuis central-server/, projet linké)

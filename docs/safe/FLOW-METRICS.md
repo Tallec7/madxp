@@ -116,7 +116,7 @@
 
 ---
 
-## DVS-1 — Neopro Platform Development
+## DVS-1 — MadXP Platform Development
 
 ### Flow Distribution DVS-1 (PI-1)
 
@@ -197,4 +197,4 @@ pie title Flow Distribution PI-1
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Inspect & Adapt](INSPECT-ADAPT.md) · [PI Objectives](PI-OBJECTIVES.md)
+**Retour** : [SAFe MadXP](README.md) · [Inspect & Adapt](INSPECT-ADAPT.md) · [PI Objectives](PI-OBJECTIVES.md)

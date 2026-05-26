@@ -11,7 +11,7 @@
 
 ## Contexte
 
-Un designer externe crée des animations motion design dans After Effects (annonces de but, événements match, etc.). Neopro veut permettre à un opérateur de **personnaliser ces animations** (nom du joueur, numéro, couleur d'équipe) **depuis le dashboard, sans coder**, puis de déployer la vidéo personnalisée sur les Pi des clubs.
+Un designer externe crée des animations motion design dans After Effects (annonces de but, événements match, etc.). MadXP veut permettre à un opérateur de **personnaliser ces animations** (nom du joueur, numéro, couleur d'équipe) **depuis le dashboard, sans coder**, puis de déployer la vidéo personnalisée sur les Pi des clubs.
 
 **Cas d'usage principal** : Le designer livre un template "annonce de but" → l'opérateur saisit "DUPONT #7" en bleu → une vidéo personnalisée est générée → déployée sur le Pi du club.
 

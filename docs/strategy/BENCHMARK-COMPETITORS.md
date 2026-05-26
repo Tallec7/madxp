@@ -1,4 +1,4 @@
-# Benchmark concurrentiel Neopro — Affichage dynamique sportif
+# Benchmark concurrentiel MadXP — Affichage dynamique sportif
 
 > **Statut** : en cours — Session 1 terminée (2026-04-23). Sessions 2 & 3 à venir.
 > **Dernière mise à jour** : 2026-04-23
@@ -7,9 +7,9 @@
 
 ## 1. Executive Summary (préliminaire)
 
-### Positionnement de Neopro
+### Positionnement de MadXP
 
-Neopro est une **solution hybride SaaS + edge** (Pi) de TV interactive multi-tenant pour clubs sportifs, avec **régie pub native** (sponsor weighted rotation) et **Template Studio v2 data-driven** (Remotion). Architecture résiliente offline depuis ADR-037 (mode SaaS pur ajouté).
+MadXP est une **solution hybride SaaS + edge** (Pi) de TV interactive multi-tenant pour clubs sportifs, avec **régie pub native** (sponsor weighted rotation) et **Template Studio v2 data-driven** (Remotion). Architecture résiliente offline depuis ADR-037 (mode SaaS pur ajouté).
 
 ### Concurrence terrain confirmée
 
@@ -21,7 +21,7 @@ Les concurrents que les **prospects clubs citent spontanément** sont :
 
 ### Hypothèses de positionnement (révisées 2026-04-23 après analyse logiciels)
 
-| Concurrent    | Type de combat                                                            | Pitch Neopro à construire                                                         |
+| Concurrent    | Type de combat                                                            | Pitch MadXP à construire                                                          |
 | ------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | **Bodet**     | Hardware LED + suite logicielle complète (VIDEOSPORT/VIDEOMEDIA/SCOREAPP) | "Cloud-native multi-tenant, régie pub multi-clubs, déploiement flotte centralisé" |
 | **Stramatel** | Hardware + apps Android (Outsport/Multisport) + suite SL                  | "Plateforme cloud unifiée vs apps fragmentées, multi-tenant agency/club"          |
@@ -41,7 +41,7 @@ L'analyse approfondie des **logiciels** Bodet (VIDEOSPORT, VIDEOMEDIA, SCOREAPP,
 - ✅ Tous deux **certifiés/recommandés FFBB + FIBA** côté Bodet/Stramatel
 - ✅ Stramatel a **service terrain** (formation, intervention week-end)
 
-**Ce qui RESTE différenciateur Neopro** (à confirmer en session 3) :
+**Ce qui RESTE différenciateur MadXP** (à confirmer en session 3) :
 
 1. **SaaS Cloud multi-tenant true** : workflow agency/advertiser/club avec approbation, monitoring de flotte centralisé multi-sites
 2. **Edge Pi résilient** : Bodet/Stramatel restent en console locale/serveur local
@@ -71,8 +71,8 @@ Catalogue vidéo FR (16 p.) + brochure Sports Display EN. Faits saillants :
 
 **Implications stratégiques** :
 
-1. ✅ **Lacune Neopro confirmée** : animations auto sur action de jeu + sync social media intégré avec modérateur — à intégrer roadmap
-2. ✅ **Avantage Neopro confirmé** : pas de dashboard cloud chez Bodet (Excel export VIDEOMEDIA), pas d'OTA (USB SCOREPAD), pas de multi-tenant agency/club
+1. ✅ **Lacune MadXP confirmée** : animations auto sur action de jeu + sync social media intégré avec modérateur — à intégrer roadmap
+2. ✅ **Avantage MadXP confirmé** : pas de dashboard cloud chez Bodet (Excel export VIDEOMEDIA), pas d'OTA (USB SCOREPAD), pas de multi-tenant agency/club
 3. ⚠️ **Vigilance** : un bureau d'études de 30 personnes peut bâtir une plateforme cloud Bodet Sport rapidement — la techno Cloud existe déjà chez Bodet pour Kelio (SIRH)
 4. ⚠️ **Garantie révisée** : 2 ans hardware (pas 10), seul l'amortissement LED dépasse 10 ans
 
@@ -89,21 +89,21 @@ Admis explicitement par le chatbot commercial Stramatel sur le SL Video Scoreboa
 
 Non confirmables par le chatbot (= probablement absents) : reporting sponsor (impressions/durée par logo), multi-tenant, intégration régie pub externe, mise à jour à distance Internet, formats vidéo acceptés, compatibilité pupitre hors basket (FIBA), portée radio / tolérance aux interférences gymnase.
 
-**Implication stratégique** : le SL Video Scoreboard est un afficheur LED moderne mais architecturé comme un équipement autonome on-premise des années 2010. Neopro dispose d'un **avantage technologique structurel majeur** (cloud-native, multi-tenant, OTA, multi-sites) — à articuler clairement dans le pitch commercial.
+**Implication stratégique** : le SL Video Scoreboard est un afficheur LED moderne mais architecturé comme un équipement autonome on-premise des années 2010. MadXP dispose d'un **avantage technologique structurel majeur** (cloud-native, multi-tenant, OTA, multi-sites) — à articuler clairement dans le pitch commercial.
 
 ### Top 3 opportunités (révisées)
 
 1. **Vraie plateforme cloud multi-tenant** : aucun des 3 acteurs FR (Bodet, Stramatel, A2Display) n'a ça aujourd'hui — leurs solutions restent **mono-club / mono-installation**
-2. **API REST publique + intégrations data fédérales** : ni Bodet ni Stramatel n'exposent d'API publique documentée — Neopro peut devenir la plateforme d'intégration calendrier/résultats fédéraux
+2. **API REST publique + intégrations data fédérales** : ni Bodet ni Stramatel n'exposent d'API publique documentée — MadXP peut devenir la plateforme d'intégration calendrier/résultats fédéraux
 3. **Mode SaaS pur low-CapEx (ADR-037)** : segment des petits clubs amateurs / SaaS sans matériel — angle mort des fabricants LED qui vendent du hardware
 
-## 1bis. Matrice fonctionnelle détaillée Neopro vs Bodet vs Stramatel
+## 1bis. Matrice fonctionnelle détaillée MadXP vs Bodet vs Stramatel
 
 Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qualifier)
 
 ### Affichage de score (cœur historique des concurrents)
 
-| Fonction                                      | Bodet                 | Stramatel               | Neopro           |
+| Fonction                                      | Bodet                 | Stramatel               | MadXP            |
 | --------------------------------------------- | --------------------- | ----------------------- | ---------------- |
 | Tableau de score réglementaire homologué      | ✅ FIBA niv 1&2, FFBB | ✅ FIBA, FFBB           | ❌ Hors scope    |
 | Multi-sport (15+ sports)                      | ✅ VIDEOSPORT         | ✅ Multisport           | ⚠️ via templates |
@@ -113,7 +113,7 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 
 ### Pilotage & contrôle
 
-| Fonction                        | Bodet                            | Stramatel                         | Neopro                  |
+| Fonction                        | Bodet                            | Stramatel                         | MadXP                   |
 | ------------------------------- | -------------------------------- | --------------------------------- | ----------------------- |
 | Console hardware physique       | ✅ SCOREPAD                      | ✅ console 452 Android            | ❌                      |
 | App mobile pilotage             | ✅ via SCOREPAD multi-controller | ✅ Outsport, Multisport, Icesport | ✅ Dashboard responsive |
@@ -123,7 +123,7 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 
 ### Régie publicitaire / sponsoring
 
-| Fonction                                           | Bodet                                        | Stramatel                           | Neopro                  |
+| Fonction                                           | Bodet                                        | Stramatel                           | MadXP                   |
 | -------------------------------------------------- | -------------------------------------------- | ----------------------------------- | ----------------------- |
 | Diffusion logos/vidéos sponsors                    | ✅ VIDEOMEDIA                                | ✅ SL Box, SL Video Scoreboard      | ✅                      |
 | Playlists par moment de match                      | ✅ pré-match, mi-temps, time-out, faute, but | ⚠️ playlists temporelles génériques | ✅                      |
@@ -137,18 +137,18 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 
 ### Contenu / templates
 
-| Fonction                             | Bodet                                                                                     | Stramatel                        | Neopro                         |
+| Fonction                             | Bodet                                                                                     | Stramatel                        | MadXP                          |
 | ------------------------------------ | ----------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------ |
 | Templates personnalisables par sport | ✅ VIDEOSPORT                                                                             | ⚠️ via SL Box                    | ✅ Template Studio v2          |
-| Animations sur action de jeu (auto)  | ✅ **VIDEOSPORT** : but, pénalité, 3-points, temps forts (média associé déclenché auto)   | ⚠️                               | ❌ **lacune Neopro confirmée** |
+| Animations sur action de jeu (auto)  | ✅ **VIDEOSPORT** : but, pénalité, 3-points, temps forts (média associé déclenché auto)   | ⚠️                               | ❌ **lacune MadXP confirmée**  |
 | **Templates data-driven Remotion**   | ❌ "skins" de score                                                                       | ❌                               | ✅ ADR-086 layers + safe-zones |
 | **Composition vidéo paramétrique**   | ❌                                                                                        | ❌                               | ✅ DIFFÉRENCIATEUR             |
 | Bibliothèque pré-faite               | ✅                                                                                        | ✅                               | ✅                             |
-| Sync social media (Twitter/RSS)      | ✅ **VIDEOSPORT** : Twitter + RSS, hashtags ou comptes prédéfinis, **modérateur intégré** | ✅ Outsport partage SMS/email/RS | ❌ **lacune Neopro confirmée** |
+| Sync social media (Twitter/RSS)      | ✅ **VIDEOSPORT** : Twitter + RSS, hashtags ou comptes prédéfinis, **modérateur intégré** | ✅ Outsport partage SMS/email/RS | ❌ **lacune MadXP confirmée**  |
 
 ### Architecture & déploiement
 
-| Fonction                                      | Bodet                                                                   | Stramatel                                        | Neopro                        |
+| Fonction                                      | Bodet                                                                   | Stramatel                                        | MadXP                         |
 | --------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------- |
 | Hardware propriétaire LED                     | ✅ catalogue complet                                                    | ✅ catalogue complet (SL Video Scoreboard 82 kg) | ❌ utilise TV existante       |
 | **Connectivité Internet/WiFi**                | ⚠️ partielle                                                            | ❌ **Radio sur SL Video Scoreboard**             | ✅ WiFi/Ethernet Pi           |
@@ -165,15 +165,15 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 
 ### Streaming / production vidéo
 
-| Fonction                                    | Bodet                            | Stramatel                                   | Neopro |
-| ------------------------------------------- | -------------------------------- | ------------------------------------------- | ------ |
-| Streaming live match social media           | ❌ (pas trouvé)                  | ✅ SL Stream Box                            | ❌     |
-| **Score auto intégré dans live stream**     | ❌                               | ✅ SL Stream Box                            | ❌     |
-| Innovation hybride score + vidéo all-in-one | ⚠️ via cubes vidéo grands stades | ✅ **SL Video Scoreboard** (cible amateurs) | ❌     |
+| Fonction                                    | Bodet                            | Stramatel                                   | MadXP |
+| ------------------------------------------- | -------------------------------- | ------------------------------------------- | ----- |
+| Streaming live match social media           | ❌ (pas trouvé)                  | ✅ SL Stream Box                            | ❌    |
+| **Score auto intégré dans live stream**     | ❌                               | ✅ SL Stream Box                            | ❌    |
+| Innovation hybride score + vidéo all-in-one | ⚠️ via cubes vidéo grands stades | ✅ **SL Video Scoreboard** (cible amateurs) | ❌    |
 
 ### Business model & service
 
-| Fonction                                     | Bodet             | Stramatel           | Neopro                    |
+| Fonction                                     | Bodet             | Stramatel           | MadXP                     |
 | -------------------------------------------- | ----------------- | ------------------- | ------------------------- |
 | Modèle CapEx hardware                        | ✅ ticket 4-50k€+ | ✅ ticket variable  | ❌                        |
 | Modèle OpEx SaaS mensuel                     | ❌                | ❌                  | ✅                        |
@@ -182,7 +182,7 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 | Recommandation/partenariat fédéral           | ✅ FFBB, FIBA     | ✅ FFBB, FIBA       | ❌ à construire           |
 | Made in France assumé                        | ✅ Trémentines    | ✅ La Roche-sur-Yon | ⚠️ R&D FR mais Pi importé |
 
-### Synthèse de la matrice — vrais différenciateurs Neopro qui résistent à l'analyse
+### Synthèse de la matrice — vrais différenciateurs MadXP qui résistent à l'analyse
 
 🟢 **Différenciateurs forts confirmés** (5) :
 
@@ -194,7 +194,7 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 
 🟡 **Avantages secondaires** (3) : 6. API REST publique = plateforme intégrable 7. Edge Pi watchdog résilient (vs console locale) 8. Workflow d'approbation contenu multi-rôles
 
-🔴 **Lacunes Neopro vs concurrents à corriger** :
+🔴 **Lacunes MadXP vs concurrents à corriger** :
 
 - ❌ Pas d'auto-arbitrage joueur (Bodet SCOREAPP — innovation unique)
 - ❌ Pas de streaming live avec score auto (Stramatel SL Stream Box)
@@ -210,7 +210,7 @@ Légende : ✅ présent / ⚠️ partiel / ❌ absent / 🟡 différent (à qual
 ```
                    Sport/Club spécialisé
                           |
-          Bodet ──────────┼──────────── Neopro
+          Bodet ──────────┼──────────── MadXP
           Stramatel       |             TVTools
           DigitalSport    |
                           |
@@ -271,7 +271,7 @@ DigitalSport.fr, Bizplay, ClubTV, FanCloud, SportMember, ScreenCloud, Yodeck, Xi
 
 - Pricing benchmark consolidé (€/écran/mois)
 - Feature matrix (25 features × 12 acteurs)
-- SWOT Neopro
+- SWOT MadXP
 - Recommandations roadmap produit
 - Recommandations stratégie commerciale
 

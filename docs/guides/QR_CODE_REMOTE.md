@@ -1,6 +1,6 @@
 # QR Code Telecommande
 
-Ce guide explique comment generer et utiliser le QR code permettant aux utilisateurs d'acceder facilement a la telecommande du boitier Neopro.
+Ce guide explique comment generer et utiliser le QR code permettant aux utilisateurs d'acceder facilement a la telecommande du boitier MadXP.
 
 ## Fonctionnalite
 

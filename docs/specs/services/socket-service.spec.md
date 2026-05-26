@@ -6,24 +6,26 @@
 > **last_verified** : 2026-05-10
 > **verified_against_commit** : 1890d43
 > **Code principal** :
+>
 > - `central-server/src/services/socket.service.ts` (orchestrateur 991 lignes)
 > - `central-server/src/handlers/*.handler.ts` (10 handlers extraits)
 > - `central-server/src/handlers/saas-relay.handler.ts` (relais SaaS isolé — ADR-096)
-> **ADR liés** : ADR-002 (Socket.IO temps réel), ADR-037 (mode SaaS), ADR-061 (coexistence Remote v1/v2), ADR-081 (audit télécommande), ADR-090 (scoreboard-state push), ADR-093 (sessions match), ADR-096 (extraction SaaS relay)
-> **Smoke tests** :
+>   **ADR liés** : ADR-002 (Socket.IO temps réel), ADR-037 (mode SaaS), ADR-061 (coexistence Remote v1/v2), ADR-081 (audit télécommande), ADR-090 (scoreboard-state push), ADR-093 (sessions match), ADR-096 (extraction SaaS relay)
+>   **Smoke tests** :
 > - `central-server/src/__tests__/smoke/smoke-wiring.test.ts` (handlers + repos exports)
 > - `central-server/src/__tests__/smoke/smoke-socket-realtime.test.ts` (memory leak guards SaaS — issue #594)
 > - `central-server/src/__tests__/smoke/smoke-adr-refactoring.test.ts` (14 patterns relay SaaS)
 > - `central-server/src/__tests__/smoke/smoke-scoreboard-saas.test.ts` (scoreboard push)
-> **`.claude/rules/` lié** : `services.md` (anti-patterns Socket.IO + config enrichment)
+>   **`.claude/rules/` lié** : `services.md` (anti-patterns Socket.IO + config enrichment)
 
 ## En une phrase
 
-Le service qui orchestre toute la communication temps réel du système Neopro : Pi ↔ Cloud (auth, heartbeat, commandes, deploy progress) ET clients SaaS ↔ Cloud (relais sans Pi, master-slave TV, score live, pubs sponsors).
+Le service qui orchestre toute la communication temps réel du système MadXP : Pi ↔ Cloud (auth, heartbeat, commandes, deploy progress) ET clients SaaS ↔ Cloud (relais sans Pi, master-slave TV, score live, pubs sponsors).
 
 ## Règles métier (ce qui DOIT marcher)
 
 ### Côté Pi (agents Raspberry connectés au cloud)
+
 - **Un Pi s'authentifie** via `register` avec `siteId + apiKey`. Hash SHA-256 de l'API key vérifié contre `sites.api_key_hash`. Auth réussie → socket joint la room `siteId`.
 - **Heartbeat toutes les 30s** : Pi envoie `heartbeat { siteId, metrics: { cpu, memory, temp } }`. Le cloud throttle l'INSERT en DB à 1× toutes les 5 minutes (sinon bloate `metrics`). Liveness reste à 30s.
 - **Commande envoyée Cloud → Pi** est trackée (`pendingCommands`) avec `commandId`, `timeoutMs`. Si pas de `command_result` reçu dans le timeout, alerte logée et metric `command_timeout` incrémentée.
@@ -31,6 +33,7 @@ Le service qui orchestre toute la communication temps réel du système Neopro :
 - **Disconnect Pi** : guard `socket.id` matche le socket courant (sinon fausse alerte sur reconnexion rapide). Si match → `connectedSites.delete(siteId)` + `alertService.siteOffline()` après 60s grace (anti flip-flop Railway 3-16s).
 
 ### Côté SaaS (clients sans Pi physique — ADR-037)
+
 - **Un client SaaS s'authentifie** via JWT user et `saas-register { siteId }`. Vérifie l'accès au site (RLS), join la room.
 - **Le central server fait le relai local** : reproduit le rôle du serveur Socket.IO local du Pi pour les sites SaaS. Toute commande émise par la Remote SaaS est rebroadcastée vers les TVs du même site (`socket.to(siteId).emit('action', data)`).
 - **État partagé in-memory** (`saasStates` Map per `siteId`) stocke score, phase, options, timer, recording, master-slave TV, loop state. État perdu au reboot du serveur (acceptable car les Pi sont autoritatifs).
@@ -38,22 +41,23 @@ Le service qui orchestre toute la communication temps réel du système Neopro :
 - **GC périodique des `saasStates`** : sweep toutes les 5 min purge les entries dont la room est vide ET `tvInstances.size === 0` (zombie sockets qui ne fire jamais `disconnect`).
 
 ### Cross-cutting (Pi ET SaaS)
+
 - **Audit télécommande ADR-081** : chaque commande relayée (Pi ou SaaS) déclenche un INSERT dans `remote_command_audit` avec `commandId`, `siteId`, `commandType`, `roomSize`. Fire-and-forget non-bloquant.
 - **scoreboard-state-push ADR-090** : valide via `validateScoreboardStatePush`, persist `scoreboard_state` repo, broadcast à la room. Pas de JWT requis (déjà auth par siteId room).
 - **score-update gel** : si le `score-update` arrive sur une session match avec `ended_at IS NULL`, le score est UPDATE dans `club_sessions`. Si `ended_at` est déjà set, l'UPDATE est skip (score figé après auto-close ou fermeture manuelle).
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Auth Pi réussie | Log `Pi agent authenticated` + métrique `recordPiAgentAuth('success')` + Pi join la room siteId |
-| Auth Pi échouée | Log `Pi agent auth failed` + métrique `recordPiAgentAuth('failure', errorMessage)` + socket disconnect |
-| Heartbeat throttle DB | `lastMetricsInsertAt` Map track le dernier INSERT par siteId (1× toutes les 5min max) |
-| Reconnexion processing | Logs `Processing pending deployments` + `Processing pending commands` à chaque register |
-| GC saasStates | Log `SaaS states GC sweep purged orphan entries` toutes les 5 min si purges effectives |
-| Master-Slave promotion | Log `SaaS TV promoted to master` quand le master disconnect |
-| Audit commande | INSERT dans `remote_command_audit` (Phase 0 ADR-081 — pas d'audit si pas de commandId) |
-| Score figé | `UPDATE club_sessions WHERE ended_at IS NULL` filtre — sessions fermées sont immutables |
+| Règle                  | Comment on vérifie                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| Auth Pi réussie        | Log `Pi agent authenticated` + métrique `recordPiAgentAuth('success')` + Pi join la room siteId        |
+| Auth Pi échouée        | Log `Pi agent auth failed` + métrique `recordPiAgentAuth('failure', errorMessage)` + socket disconnect |
+| Heartbeat throttle DB  | `lastMetricsInsertAt` Map track le dernier INSERT par siteId (1× toutes les 5min max)                  |
+| Reconnexion processing | Logs `Processing pending deployments` + `Processing pending commands` à chaque register                |
+| GC saasStates          | Log `SaaS states GC sweep purged orphan entries` toutes les 5 min si purges effectives                 |
+| Master-Slave promotion | Log `SaaS TV promoted to master` quand le master disconnect                                            |
+| Audit commande         | INSERT dans `remote_command_audit` (Phase 0 ADR-081 — pas d'audit si pas de commandId)                 |
+| Score figé             | `UPDATE club_sessions WHERE ended_at IS NULL` filtre — sessions fermées sont immutables                |
 
 ## Cas d'edge connus
 

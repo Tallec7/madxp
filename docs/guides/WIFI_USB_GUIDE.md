@@ -1,6 +1,6 @@
 # Guide complet : Clé WiFi USB (wlan1)
 
-> Documentation centralisée pour la clé WiFi USB utilisée comme interface Internet (wlan1) sur les Raspberry Pi Neopro.
+> Documentation centralisée pour la clé WiFi USB utilisée comme interface Internet (wlan1) sur les Raspberry Pi MadXP.
 
 ## Table des matières
 
@@ -21,7 +21,7 @@
 
 ## Rôle et architecture
 
-Le Raspberry Pi Neopro utilise **deux interfaces WiFi** distinctes :
+Le Raspberry Pi MadXP utilise **deux interfaces WiFi** distinctes :
 
 ```
 ┌─────────────────────────────────────────────────────────┐

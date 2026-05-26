@@ -135,11 +135,11 @@ xychart-beta
 
 ### Par PI
 
-| PI   | Période        | Epics | SP  | Focus                                                   | Milestone                     |
-| ---- | -------------- | ----- | --- | ------------------------------------------------------- | ----------------------------- |
-| Done | Avant PI-1     | 6     | ~59 | Profils, WiFi, Alertes, Audit, Monitoring, Analytics ⚠️ | -                             |
-| PI-1 | Fév-Mars 2026  | 3+3   | 61  | Sponsors self-service, onboarding + reliquats           | 5 clubs payants               |
-| PI-2 | Avr-Mai 2026   | 7     | 300 | Régie, score live multi-vendor, email auto, A/B, TV+LED | Lancement régie à 15 clubs    |
+| PI   | Période        | Epics | SP  | Focus                                                          | Milestone                     |
+| ---- | -------------- | ----- | --- | -------------------------------------------------------------- | ----------------------------- |
+| Done | Avant PI-1     | 6     | ~59 | Profils, WiFi, Alertes, Audit, Monitoring, Analytics ⚠️        | -                             |
+| PI-1 | Fév-Mars 2026  | 3+3   | 61  | Sponsors self-service, onboarding + reliquats                  | 5 clubs payants               |
+| PI-2 | Avr-Mai 2026   | 7     | 300 | Régie, score live multi-vendor, email auto, A/B, TV+LED        | Lancement régie à 15 clubs    |
 | PI-3 | Juin-Juil 2026 | 7     | 94  | Multi-écrans, marque blanche, billetterie, ML, API Live Scores | 20 clubs, premiers annonceurs |
 
 ### Par Thème Stratégique
@@ -159,10 +159,10 @@ xychart-beta
 | ---------------------------------------------------------------------------- | ------------------------------------ |
 | [🟢 OVS1 — Club to Screen](OVS1-CLUB-TO-SCREEN.md)                           | Canvas du flux club → écran          |
 | [🟠 OVS2 — Sponsor to Impression](OVS2-SPONSOR-TO-IMPRESSION.md)             | Canvas du flux sponsor → rapport ROI |
-| [🟣 DVS-1 — Neopro Platform](DVS1-NEOPRO-PLATFORM.md)                        | Canvas de développement complet      |
+| [🟣 DVS-1 — MadXP Platform](DVS1-NEOPRO-PLATFORM.md)                         | Canvas de développement complet      |
 | [🏆 OKR NEOPRO 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d) | 5 Objectifs, 17 Key Results          |
-| [SAFe Neopro — Hub](README.md)                                               | Hub principal avec databases         |
+| [SAFe MadXP — Hub](README.md)                                                | Hub principal avec databases         |
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Documentation principale](../00-INDEX.md)
+**Retour** : [SAFe MadXP](README.md) · [Documentation principale](../00-INDEX.md)

@@ -1,4 +1,4 @@
-# Requêtes SQL Utiles - Neopro
+# Requêtes SQL Utiles - MadXP
 
 > Requêtes SQL courantes pour le debugging, monitoring et analytics.
 

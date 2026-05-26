@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADR)
 
-> Ce dossier contient les décisions architecturales majeures du projet Neopro.
+> Ce dossier contient les décisions architecturales majeures du projet MadXP.
 > Les propositions non encore décidées sont dans [`../proposals/`](../proposals/).
 
 ## Qu'est-ce qu'un ADR ?
@@ -51,7 +51,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-032](ADR-032-restore-secondary-variants-replace-mode.md)                            | restoreSecondaryVariants en mode replace                                                     | Accepté                           | Mar 2026 |
 | [ADR-033](ADR-033-videos-secondary-serving.md)                                           | Secondary variant serving, path & race condition fixes                                       | Accepté                           | Mar 2026 |
 | [ADR-034](ADR-034-synchronized-manual-video-reveal.md)                                   | Synchronized manual video reveal (dual-display sync)                                         | Accepté                           | Mar 2026 |
-| [ADR-035](ADR-035-advertiser-sponsor-separation.md)                                      | Séparation Annonceurs Neopro / Sponsors Club                                                 | Proposé                           | Mar 2026 |
+| [ADR-035](ADR-035-advertiser-sponsor-separation.md)                                      | Séparation Annonceurs MadXP / Sponsors Club                                                  | Proposé                           | Mar 2026 |
 | [ADR-036](ADR-036-club-portal-scoped-access.md)                                          | Club Portal — Accès scopé par site                                                           | Accepté                           | Avr 2026 |
 | [ADR-037](ADR-037-saas-mode-architecture.md)                                             | Architecture Mode SaaS (TV sans Raspberry Pi)                                                | Accepté                           | Avr 2026 |
 | [ADR-038](ADR-038-club-portal-saas-realtime-and-observability.md)                        | Portail club SaaS : temps réel, preview et client errors                                     | Accepté                           | Avr 2026 |

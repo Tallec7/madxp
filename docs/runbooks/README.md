@@ -1,4 +1,4 @@
-# Runbooks Neopro
+# Runbooks MadXP
 
 Procédures pas-à-pas pour les opérations infra/ops non-automatisées. Un runbook = checklist actionnable, pas un design doc.
 

@@ -176,7 +176,7 @@ free -h                                  # Mémoire
 uptime                                   # Temps de fonctionnement
 cat /etc/os-release                      # Version OS
 
-# Configuration Neopro
+# Configuration MadXP
 cat /home/pi/neopro/webapp/configuration.json | head -50
 cat /home/pi/neopro/VERSION
 cat /home/pi/neopro/release.json

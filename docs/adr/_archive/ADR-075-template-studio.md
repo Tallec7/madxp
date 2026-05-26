@@ -21,8 +21,8 @@ Le moteur de rendu est une **meta-composition Remotion data-driven** : aucune co
 
 MVP livré en ~3 semaines. Architecture posée pour 3 modes d'usage :
 
-- **A (MVP)** : catalogue Neopro, super_admin crée via wizard, users remplissent et rendent
-- **B (V2)** : white-glove club templates, équipe Neopro configure pour un club spécifique
+- **A (MVP)** : catalogue MadXP, super_admin crée via wizard, users remplissent et rendent
+- **B (V2)** : white-glove club templates, équipe MadXP configure pour un club spécifique
 - **C (V3)** : self-service club (club compose ses propres templates)
 
 ---
@@ -716,7 +716,7 @@ Quand un template legacy passe en v2, il devient intéressant de splitter les m�
 **Trigger** : 3-5 clubs pilotes demandent un template personnalisé.
 **Scope** :
 
-- Processus commercial : club envoie vidéo + brief, équipe Neopro utilise wizard super_admin (déjà en place MVP) pour créer un template dédié au club
+- Processus commercial : club envoie vidéo + brief, équipe MadXP utilise wizard super_admin (déjà en place MVP) pour créer un template dédié au club
 - Ajout `site_id` nullable sur `remotion_templates` → template scopé à 1 club
 - UI filtre "Mes templates perso" dans la galerie
 - Feature gate Premium (ADR-039)
@@ -845,7 +845,7 @@ Visual drag-to-position super_admin sur canvas. Composant `AdminCanvasOverlayCom
 
 ### V2 (3 mois)
 
-- ≥3 templates Neopro actifs en catalogue
+- ≥3 templates MadXP actifs en catalogue
 - ≥3 templates club perso (white-glove)
 - ≥50 renders/mois (total toutes sites)
 
@@ -857,7 +857,7 @@ Visual drag-to-position super_admin sur canvas. Composant `AdminCanvasOverlayCom
 ### V4 (12 mois)
 
 - ≥1000 renders publics/mois sur studio.neopro.fr
-- Taux conversion lead → inscription Neopro ≥2%
+- Taux conversion lead → inscription MadXP ≥2%
 
 ---
 
@@ -895,6 +895,6 @@ Visual drag-to-position super_admin sur canvas. Composant `AdminCanvasOverlayCom
 | 2026-04-20 | Claude + GLT | Sprints 1→4 livrés (MVP complet). Ajout tableau de suivi, section supervision & invariants, procédure de flip v2 manuel pour `ButSimple`/`ButImgJoueur`. Statut passé à Accepté / MVP livré.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 2026-04-20 | Claude + GLT | Sprint 5 V2 Bootstrap : `site_id` nullable sur `neopro_templates`, `findVisibleForSite` (gallery club/operator), `templateCreateSchema` Joi, scope super_admin-only sur POST/PATCH. Smoke guards ajoutés.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-04-20 | Claude + GLT | Hardening preview Studio : validation de scheme URL (`https:`/`blob:`/`data:`) + trim côté dashboard (`TemplateRuntime.tsx`) et runtime (`templates-remotion/src/runtime/TemplateRuntime.tsx`) pour éliminer `OffthreadVideo: No src passed`. CSP `media-src` élargi (Railway + kalonpartners + blob). Endpoint `POST /api/remotion-templates/:id/studio/scaffold` (super_admin, rate-limited, métrique `studio_view/create`) pour débloquer le flip v1→v2 quand la shadow data manque — UX `window.confirm` dans le dashboard remplace le toast 409. 6 nouveaux smoke guards (preview hardening + scaffold) dans `smoke-remotion.test.ts`.                                                                                                                                                                                                                                                                                                      |
-| 2026-04-20 | Claude + GLT | Sprint 6 V2 : gallery filter segmenté "Tous / Mes templates perso / Catalogue Neopro" + badge violet "Club" sur cards scopées (`template-card.component.ts`, `remotion-templates.component.html`). Feature gate `template_studio_club_scoped` (Premium) ajouté côté dashboard (`feature-gate.service.ts`) et enforcement côté serveur dans `renderTemplate` (403 si `site_id` sans tier Premium ni override). Nouvelle migration `add-template-studio-v2-club-scoping.sql` (ALTER TABLE + index partiel).                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-04-20 | Claude + GLT | Sprint 6 V2 : gallery filter segmenté "Tous / Mes templates perso / Catalogue MadXP" + badge violet "Club" sur cards scopées (`template-card.component.ts`, `remotion-templates.component.html`). Feature gate `template_studio_club_scoped` (Premium) ajouté côté dashboard (`feature-gate.service.ts`) et enforcement côté serveur dans `renderTemplate` (403 si `site_id` sans tier Premium ni override). Nouvelle migration `add-template-studio-v2-club-scoping.sql` (ALTER TABLE + index partiel).                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-04-20 | Claude + GLT | Sprint 7 V2 Hardening : seed script idempotent `seed-white-glove-template.ts` (insert démo template scopé au premier site Premium), +7 smoke tests Sprint 6 dans `smoke-remotion.test.ts` (Premium gate controller, FEATURE_TIERS map, segmented filter, badge Club, migration partielle, seed). E2E Playwright `template-scope-filter` dans `template-studio-v2.spec.ts` (défensif : passe que le seed ait été exécuté ou non).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 2026-04-20 | Claude + GLT | Sprint 8 V2 — Upload direct admin panels : `UrlUploadInputComponent` réutilisable (input URL + bouton 📁) branché dans `admin-variants-panel` (backgroundVideoUrl + thumbnailUrl) et `admin-layers-panel` (videoUrl). Endpoint `POST /api/remotion-templates/:id/assets` rendu `prop_key`-optional : branche legacy (`remotion-assets/` + `UPDATE default_props`) préservée quand `prop_key` fourni, nouvelle branche studio v2 (`template-assets/studio/` + pas de mutation `default_props`). Ajout `uploadStudioAsset()` dans `remotion-templates-data.service.ts`. +7 smoke tests dans `smoke-remotion.test.ts` verrouillant les invariants (dossier FTP isolé, absence de mutation `default_props`, `@Input() templateId` obligatoire, orchestrator passant `[templateId]="view.id"`). Corrige le seed demo white-glove (format `TemplatePropDef[]` au lieu de JSON Schema object → `canRender()` crashait avec `filter is not a function`). |

@@ -51,14 +51,14 @@ Fichier local : `/tmp/neopro-migration/neopro_20260419_1130.dump` (13 MB) — à
 
 ### Résultats restore sur Railway staging
 
-| Item                 | Résultat                                                                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Railway PG version   | 18.3 (compatible ascendant dump PG 17)                                                                                                 |
-| Durée restore        | ~2min 18s (dump 13 MB)                                                                                                                 |
-| Erreurs résiduelles  | 15 (toutes Supabase-specific bénignes : event triggers `extensions.grant_*`, `pg_graphql`, `supabase_vault` — non utilisés par Neopro) |
-| Tables restaurées    | 57 / 57                                                                                                                                |
-| Functions restaurées | 29                                                                                                                                     |
-| DB size finale       | 53 MB (vs 71 MB source — delta = metadata Supabase supprimée)                                                                          |
+| Item                 | Résultat                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Railway PG version   | 18.3 (compatible ascendant dump PG 17)                                                                                                |
+| Durée restore        | ~2min 18s (dump 13 MB)                                                                                                                |
+| Erreurs résiduelles  | 15 (toutes Supabase-specific bénignes : event triggers `extensions.grant_*`, `pg_graphql`, `supabase_vault` — non utilisés par MadXP) |
+| Tables restaurées    | 57 / 57                                                                                                                               |
+| Functions restaurées | 29                                                                                                                                    |
+| DB size finale       | 53 MB (vs 71 MB source — delta = metadata Supabase supprimée)                                                                         |
 
 ### Checksums validés (identiques 100%)
 
@@ -116,7 +116,7 @@ pg_restore --no-owner --no-acl \
 
 Option A — via dashboard web :
 
-1. https://railway.app → projet Neopro
+1. https://railway.app → projet MadXP
 2. `+ New` → `Database` → `Add PostgreSQL`
 3. Renommer le service → `postgres-staging`
 4. Postgres version : choisir **17** (match source)
@@ -125,7 +125,7 @@ Option B — via CLI :
 
 ```bash
 railway login
-railway link  # sélectionner le projet Neopro
+railway link  # sélectionner le projet MadXP
 railway add --database postgres
 ```
 

@@ -1,11 +1,11 @@
 # MODOP Support — Rotation PSK hotspot club
 
-> Procédure à destination de l'équipe support Neopro pour gérer la PSK WiFi du hotspot local d'un club.
+> Procédure à destination de l'équipe support MadXP pour gérer la PSK WiFi du hotspot local d'un club.
 > Lié à [ADR-073](../adr/ADR-073-hotspot-security-hardening.md) — PSK unique par club.
 
 ## Contexte
 
-Depuis ADR-073, chaque Pi Neopro a une PSK WiFi **unique** générée à l'installation (plus de `NeoProWiFi2025` partagé). Cette PSK est :
+Depuis ADR-073, chaque Pi MadXP a une PSK WiFi **unique** générée à l'installation (plus de `NeoProWiFi2025` partagé). Cette PSK est :
 
 - Stockée en clair dans `/home/pi/neopro/club-config.json` (fichier `chmod 600`)
 - Configurée dans `/etc/hostapd/hostapd.conf` (ligne `wpa_passphrase=...`)
@@ -21,7 +21,7 @@ ou
 http://neopro-admin.local:8080 (mDNS si dispo)
 ```
 
-Credentials admin : voir 1Password → `Neopro / Dashboard admin Pi / <nom-club>` (mot de passe scrypt hashé côté Pi, migration automatique au premier login).
+Credentials admin : voir 1Password → `MadXP / Dashboard admin Pi / <nom-club>` (mot de passe scrypt hashé côté Pi, migration automatique au premier login).
 
 ## 2. Consulter l'état du hotspot
 

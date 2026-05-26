@@ -45,7 +45,7 @@
 
 ### Notion
 
-- Inviter sur le workspace Neopro → accès aux specs SAFe + roadmap.
+- Inviter sur le workspace MadXP → accès aux specs SAFe + roadmap.
 
 ## Étape 2 — Setup environnement local (Day 1, ~2h en pair)
 
@@ -118,7 +118,7 @@ Pairing obligatoire sur la première PR : review live ensemble.
 ```bash
 # Si TEAM.md n'existe pas encore
 cat > TEAM.md <<'EOF'
-# Team Neopro
+# Team MadXP
 
 | Nom       | Rôle    | GitHub      | Email                      | Périmètre              |
 | --------- | ------- | ----------- | -------------------------- | ---------------------- |

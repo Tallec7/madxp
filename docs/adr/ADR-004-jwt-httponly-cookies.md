@@ -2,7 +2,7 @@
 
 **Date** : Novembre 2024
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
@@ -15,6 +15,7 @@ Le dashboard central nécessite une authentification sécurisée pour :
 3. **Supporter le MFA** : Authentification à deux facteurs optionnelle
 
 Contraintes :
+
 - Application SPA (Angular)
 - API REST stateless
 - Protection contre XSS et CSRF
@@ -26,18 +27,14 @@ Utiliser **JWT** stocké dans un **cookie HttpOnly** :
 
 ```typescript
 // Création du token (auth.controller.ts)
-const token = jwt.sign(
-  { userId, role, advertiserId },
-  JWT_SECRET,
-  { expiresIn: '7d' }
-);
+const token = jwt.sign({ userId, role, advertiserId }, JWT_SECRET, { expiresIn: '7d' });
 
 // Stockage dans cookie HttpOnly
 res.cookie('neopro_token', token, {
-  httpOnly: true,      // Inaccessible à JavaScript
-  secure: true,        // HTTPS uniquement
-  sameSite: 'strict',  // Protection CSRF
-  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 jours
+  httpOnly: true, // Inaccessible à JavaScript
+  secure: true, // HTTPS uniquement
+  sameSite: 'strict', // Protection CSRF
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
 });
 ```
 
@@ -46,10 +43,12 @@ res.cookie('neopro_token', token, {
 ### 1. JWT dans localStorage
 
 **Avantages** :
+
 - Simple à implémenter
 - Fonctionne cross-origin facilement
 
 **Inconvénients** :
+
 - Vulnérable aux attaques XSS
 - Accessible via JavaScript (`localStorage.getItem`)
 - Pas de révocation facile
@@ -59,10 +58,12 @@ res.cookie('neopro_token', token, {
 ### 2. Sessions côté serveur (express-session)
 
 **Avantages** :
+
 - Révocation instantanée
 - État minimal côté client
 
 **Inconvénients** :
+
 - Nécessite stockage sessions (Redis)
 - Sticky sessions si multi-instance
 - Plus complexe à scaler
@@ -72,10 +73,12 @@ res.cookie('neopro_token', token, {
 ### 3. JWT dans cookie non-HttpOnly
 
 **Avantages** :
+
 - Accessible côté client pour UI
 - Envoi automatique
 
 **Inconvénients** :
+
 - Toujours vulnérable XSS
 
 **Verdict** : Rejeté - Pas d'amélioration sécurité.
@@ -83,12 +86,14 @@ res.cookie('neopro_token', token, {
 ### 4. JWT HttpOnly Cookie ✅
 
 **Avantages** :
+
 - **Protection XSS** : Cookie inaccessible à JavaScript
 - **Protection CSRF** : `sameSite: 'strict'`
 - **Stateless** : Pas de session serveur
 - **Automatique** : Envoyé avec chaque requête
 
 **Inconvénients** :
+
 - Pas d'accès au payload côté client
 - Nécessite endpoint `/api/auth/me` pour récupérer l'utilisateur
 
@@ -97,10 +102,12 @@ res.cookie('neopro_token', token, {
 ### 5. OAuth2 / OIDC externe
 
 **Avantages** :
+
 - SSO possible
 - Délègue la sécurité
 
 **Inconvénients** :
+
 - Dépendance externe
 - Complexité configuration
 - Overkill pour notre use case
@@ -161,10 +168,12 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
 ```typescript
 // server.ts
-app.use(cors({
-  origin: ALLOWED_ORIGINS,
-  credentials: true  // Requis pour cookies cross-origin
-}));
+app.use(
+  cors({
+    origin: ALLOWED_ORIGINS,
+    credentials: true, // Requis pour cookies cross-origin
+  }),
+);
 ```
 
 ## MFA (Multi-Factor Authentication)
@@ -189,4 +198,4 @@ Backup codes générés à l'activation (10 codes à usage unique).
 
 ---
 
-*Créé le 9 janvier 2026*
+_Créé le 9 janvier 2026_

@@ -434,9 +434,9 @@ if (process.env.NODE_ENV === 'production') {
 
 ```json
 {
-  "name": "Neopro - TV interactive pour clubs sportifs",
-  "short_name": "Neopro",
-  "description": "Neopro : solution de TV interactive pour clubs sportifs",
+  "name": "MadXP - TV interactive pour clubs sportifs",
+  "short_name": "MadXP",
+  "description": "MadXP : solution de TV interactive pour clubs sportifs",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -519,7 +519,7 @@ if (process.env.NODE_ENV === 'production') {
 #### Rôles ARIA
 
 ```html
-<div class="container" role="application" aria-label="Interface d'administration Neopro">
+<div class="container" role="application" aria-label="Interface d'administration MadXP">
   <header class="header" role="banner">
     <nav class="nav" role="navigation" aria-label="Navigation principale">
       <main id="main-content" class="content" role="main">
@@ -734,7 +734,7 @@ curl -I https://neopro.local:8080/styles.css
 
 1. Ouvrir la page dans Chrome mobile
 2. Menu > "Ajouter à l'écran d'accueil"
-3. Vérifier l'icône et le nom "Neopro"
+3. Vérifier l'icône et le nom "MadXP"
 4. Lancer l'app installée
 
 ---

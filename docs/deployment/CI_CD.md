@@ -1,4 +1,4 @@
-# CI/CD Pipeline Neopro
+# CI/CD Pipeline MadXP
 
 ## Vue d'ensemble
 

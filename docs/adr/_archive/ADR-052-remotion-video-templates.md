@@ -13,7 +13,7 @@ Le système de templates vidéo existant reposait sur deux approches parallèles
 
 ## Décision
 
-Adoption de **Remotion v4** comme moteur de templates vidéo Neopro.
+Adoption de **Remotion v4** comme moteur de templates vidéo MadXP.
 
 - Les templates sont écrits en **React/TSX** dans `templates-remotion/src/`
 - Le **render final** est déclenché côté serveur (Railway) via l'API Remotion — output MP4 H.264 uploadé sur FTP puis injecté dans la bibliothèque vidéo du site

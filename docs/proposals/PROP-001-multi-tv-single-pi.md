@@ -4,20 +4,20 @@
 
 **Date** : 2026-02-11 (créé) — 2026-04-11 (révisé)
 **Statut** : Proposé
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 **Lié à** : [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo), [ADR-001](../adr/ADR-001-edge-cloud-architecture.md) (Edge-Cloud Architecture), [ADR-037](../adr/ADR-037-saas-site-type.md) (SaaS Site Type)
 
 ---
 
 ## Contexte
 
-Un prospect (club sportif) souhaite diffuser du contenu Neopro sur **4 écrans TV simultanément**. Les TV sont réparties dans différentes zones du club (hall d'accueil, buvette, tribunes, vestiaires) et peuvent être **espacées de 5 mètres ou plus** les unes des autres.
+Un prospect (club sportif) souhaite diffuser du contenu MadXP sur **4 écrans TV simultanément**. Les TV sont réparties dans différentes zones du club (hall d'accueil, buvette, tribunes, vestiaires) et peuvent être **espacées de 5 mètres ou plus** les unes des autres.
 
 ### Évolution majeure depuis la v1 de cette proposition
 
 Deux évolutions changent fondamentalement la donne :
 
-1. **L'offre SaaS** (ADR-037) : n'importe quel navigateur moderne peut devenir un écran Neopro en chargeant une URL → **scénario D** (cloud pur).
+1. **L'offre SaaS** (ADR-037) : n'importe quel navigateur moderne peut devenir un écran MadXP en chargeant une URL → **scénario D** (cloud pur).
 
 2. **Le mode hybride Pi+SaaS** (scénario E) : le Pi existant sert déjà le frontend Angular + les vidéos + Socket.IO via son hotspot WiFi. N'importe quel device (Fire Stick, Smart TV, tablette) connecté au hotspot `NEOPRO_xxx` peut charger `http://neopro.local/tv` et devenir un écran supplémentaire. **Ça fonctionne déjà aujourd'hui, zéro dev.** C'est le meilleur des deux mondes : la résilience offline du Pi + la flexibilité multi-écran du SaaS.
 
@@ -143,7 +143,7 @@ La Remote est une page web accessible depuis n'importe quel smartphone. Elle per
 
 ## Scénario D — SaaS Multi-URL (NOUVEAU) ✅ Recommandé
 
-> **Le game-changer.** Chaque TV du club exécute un navigateur qui charge l'URL SaaS du site. Zéro matériel Neopro.
+> **Le game-changer.** Chaque TV du club exécute un navigateur qui charge l'URL SaaS du site. Zéro matériel MadXP.
 
 ```
                         Internet / WiFi du club
@@ -393,7 +393,7 @@ Configuration actuelle (`hostapd.conf`) :
 | Situation                           | Scénario recommandé     | Raison                                                         |
 | ----------------------------------- | ----------------------- | -------------------------------------------------------------- |
 | Club avec Pi déjà installé          | **E**                   | Le Pi est là, autant l'utiliser comme hub                      |
-| Club sans Pi, WiFi club fiable      | **D** (SaaS cloud)      | Pas de hardware Neopro du tout                                 |
+| Club sans Pi, WiFi club fiable      | **D** (SaaS cloud)      | Pas de hardware MadXP du tout                                  |
 | Club sans Pi, WiFi club instable    | **E** (installer un Pi) | Le hotspot Pi est un réseau dédié et fiable                    |
 | Club avec Stramatel                 | **E**                   | Le Pi capte le score en série — pas d'alternative cloud fiable |
 | Club rural, internet intermittent   | **E**                   | Offline total, aucune dépendance internet                      |
@@ -412,7 +412,7 @@ Alternative : **Scénario A/B** (splitter HDMI) si le club veut la synchronisati
 
 ### Court terme — Nouveaux clubs sans Pi
 
-→ **Scénario D1 (SaaS cloud)** : Fonctionne aujourd'hui sans développement. Chaque TV charge l'URL SaaS cloud. Pas de hardware Neopro.
+→ **Scénario D1 (SaaS cloud)** : Fonctionne aujourd'hui sans développement. Chaque TV charge l'URL SaaS cloud. Pas de hardware MadXP.
 
 Si le club a besoin de Stramatel ou d'offline → installer un Pi et passer en **scénario E**.
 

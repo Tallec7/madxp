@@ -9,7 +9,7 @@
 
 ## 1. OBJECTIF
 
-Permettre au support de diagnostiquer à distance les problèmes d'un boîtier Neopro sans intervention physique sur site, via les outils de monitoring et de commande à distance disponibles depuis le dashboard central.
+Permettre au support de diagnostiquer à distance les problèmes d'un boîtier MadXP sans intervention physique sur site, via les outils de monitoring et de commande à distance disponibles depuis le dashboard central.
 
 ## 2. PÉRIMÈTRE
 
@@ -144,7 +144,7 @@ Le boîtier est connecté au serveur central via WebSocket. Vous pouvez utiliser
    - `neopro-app` : Application principale
    - `neopro-admin` : Interface admin
    - `nginx` : Serveur web
-   - `all` : Tous les services Neopro
+   - `all` : Tous les services MadXP
 3. Confirmer le redémarrage
 4. Attendre 10-15 secondes
 5. Vérifier le statut du service

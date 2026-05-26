@@ -1,4 +1,4 @@
-# Déploiement du serveur central Neopro
+# Déploiement du serveur central MadXP
 
 ## 🎯 Objectif
 

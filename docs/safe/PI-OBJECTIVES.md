@@ -135,4 +135,4 @@ Cible : > 80% → BV Réel ≥ 30
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Features](FEATURES.md) · [Inspect & Adapt](INSPECT-ADAPT.md)
+**Retour** : [SAFe MadXP](README.md) · [Features](FEATURES.md) · [Inspect & Adapt](INSPECT-ADAPT.md)

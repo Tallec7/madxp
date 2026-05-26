@@ -1,4 +1,4 @@
-# Incidents Neopro
+# Incidents MadXP
 
 > **Statut** : ACTIF | **Owner** : ops / lead-dev
 
@@ -11,6 +11,7 @@ YYYY-MM-DD-slug-description.md
 ```
 
 Exemples :
+
 - `2026-04-28-saas-tv-loop-web_page-crash.md`
 - `2026-03-15-hotspot-psk-rotation-failure.md`
 

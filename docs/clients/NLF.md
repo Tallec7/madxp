@@ -287,7 +287,7 @@ Téléphone (NLFH) → Internet → Central Server → WebSocket → Pi
 - ✅ Fonctionne sur réseaux avec isolation client
 - ✅ Fonctionne depuis n'importe où (debug à distance)
 - ✅ Pas besoin de changer de WiFi
-- ✅ Authentification via compte Neopro
+- ✅ Authentification via compte MadXP
 
 **Comment utiliser :**
 
@@ -498,7 +498,7 @@ sudo systemctl restart neopro-hotspot-watchdog
 
 ### Étude Industrie
 
-Voir `/docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` pour l'analyse complète des problèmes réseau dans l'industrie du digital signage. Conclusion : Neopro n'est pas seul avec ces défis, mais peut se différencier par une meilleure gestion automatique.
+Voir `/docs/research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md` pour l'analyse complète des problèmes réseau dans l'industrie du digital signage. Conclusion : MadXP n'est pas seul avec ces défis, mais peut se différencier par une meilleure gestion automatique.
 
 ---
 

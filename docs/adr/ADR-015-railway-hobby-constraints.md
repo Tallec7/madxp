@@ -2,13 +2,13 @@
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
 ## Contexte
 
-Le central-server Neopro est hébergé sur **Railway Hobby plan** (~$5/mois). Ce plan impose une limite stricte de **512MB de RAM**. En production, le serveur gère :
+Le central-server MadXP est hébergé sur **Railway Hobby plan** (~$5/mois). Ce plan impose une limite stricte de **512MB de RAM**. En production, le serveur gère :
 
 - 50+ connexions Socket.IO simultanées
 - API REST Express avec JWT

@@ -31,7 +31,7 @@ Plus 2 « fonctionnelles » priorisées (impact offline-first) :
 - **F7** — Pertes d'événements hostapd (auth failures, PSK mismatch) quand le socket central
   est déconnecté — diagnostic à distance impossible après coup
 
-Contrainte forte Neopro : le Pi doit rester **fonctionnel hors-ligne** (clubs sans internet),
+Contrainte forte MadXP : le Pi doit rester **fonctionnel hors-ligne** (clubs sans internet),
 donc pas de dépendance serveur pour générer/vérifier les credentials, et aucune rotation
 automatique silencieuse qui casserait les clients staff.
 
@@ -87,7 +87,7 @@ Whitelist explicite dans `raspberry/config/sudoers.d/neopro` :
 - `cp /tmp/neopro-*` → destinations précises `wpa_supplicant-wlan1.conf` + `wpa_supplicant.conf`
 - `/home/pi/neopro/scripts/*` → whitelist `fix-hotspot.sh --json [--auto-fix]`,
   `validate-pi.sh --json`, `setup-captive-portal-iptables.sh`, `auto-backup.sh`
-- `systemctl` sur `.service` : uniquement les services Neopro (backup, video-processor)
+- `systemctl` sur `.service` : uniquement les services MadXP (backup, video-processor)
 - `apt install *` conservé (sync-agent sanitize les noms de packages pour l'OTA dynamique)
 - `sed -i * /etc/hostapd/hostapd.conf` conservé (nécessaire pour rotate-psk ; contenu
   validé côté admin-server avant sed)

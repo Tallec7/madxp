@@ -2,7 +2,7 @@
 
 **Date** : Février 2026
 **Statut** : ⚠️ Supersédé par [ADR-027](./ADR-027-analytics-ui-removal.md) — Version initiale moins détaillée, remplacée par l'ADR-027 qui couvre le même sujet avec plus de contexte.
-**Décideurs** : Équipe produit Neopro
+**Décideurs** : Équipe produit MadXP
 
 ---
 

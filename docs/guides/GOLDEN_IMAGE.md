@@ -1,8 +1,8 @@
-# Guide Image Golden Neopro
+# Guide Image Golden MadXP
 
 ## Qu'est-ce qu'une Image Golden ?
 
-Une **Image Golden** est une copie complète d'une carte SD Raspberry Pi pré-configurée avec tout le système Neopro installé. Elle permet de déployer de nouveaux boîtiers en **10 minutes** au lieu de 45 minutes.
+Une **Image Golden** est une copie complète d'une carte SD Raspberry Pi pré-configurée avec tout le système MadXP installé. Elle permet de déployer de nouveaux boîtiers en **10 minutes** au lieu de 45 minutes.
 
 ```
 Sans Image Golden              Avec Image Golden

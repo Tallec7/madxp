@@ -80,7 +80,7 @@ Format de ligne bug : `[TXX] <observation> — <étape> — <device>`.
 #### T6 — Hotspot QR (nouveau — couche 2)
 
 - **Étapes** : TV affiche le QR via `?fallback=hotspot` (ou trigger manuel depuis l'admin Pi). Scanner avec iPhone.
-- **Attendu** : iPhone se connecte au SSID `Neopro-<siteId>`, accède à `http://neopro.local:3001`, remote fonctionne.
+- **Attendu** : iPhone se connecte au SSID `MadXP-<siteId>`, accède à `http://neopro.local:3001`, remote fonctionne.
 - **Tolérance** : < 15s entre le scan et la télécommande opérationnelle.
 - **Vérif sécurité** : PSK différent de la session précédente si rotation déclenchée.
 

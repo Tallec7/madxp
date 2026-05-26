@@ -13,7 +13,7 @@
 Aujourd'hui, les interactions sponsor passent systématiquement par la chargée de com' du club :
 
 1. Le sponsor envoie son visuel par email
-2. La chargée de com' l'uploade dans Neopro
+2. La chargée de com' l'uploade dans MadXP
 3. Le sponsor demande ses stats → elle génère un PDF et l'envoie
 4. Le sponsor change de créa → elle recommence
 

@@ -2,13 +2,13 @@
 
 **Date** : 2026-04-05
 **Statut** : Accepté
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 
 ---
 
 ## Contexte
 
-Neopro nécessite un Raspberry Pi par club. L'objectif est de proposer une **offre 100% SaaS** : le club reçoit une URL, l'ouvre sur n'importe quel écran (Smart TV, Chromecast, Fire Stick, navigateur), et dispose de sa TV interactive + télécommande sans matériel Neopro.
+MadXP nécessite un Raspberry Pi par club. L'objectif est de proposer une **offre 100% SaaS** : le club reçoit une URL, l'ouvre sur n'importe quel écran (Smart TV, Chromecast, Fire Stick, navigateur), et dispose de sa TV interactive + télécommande sans matériel MadXP.
 
 - Le mode DEMO existant prouve le concept (TV + remote dans un navigateur via LocalBroadcastService)
 - Le mode DEMO est statique (configs JSON locales, pas de connexion au central)

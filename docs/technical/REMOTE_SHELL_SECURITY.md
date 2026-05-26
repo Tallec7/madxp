@@ -79,7 +79,7 @@ Le terminal distant permet aux administrateurs d'exécuter des commandes shell s
   - Network : `ping`, `ip`, `ss`, `netstat`, `ifconfig`, `traceroute`, `nslookup`, `dig`, `host`
   - Service status : `systemctl status/is-active/is-enabled`
   - Logs : `journalctl`, `dmesg`
-  - Neopro : `pm2 status/list/logs`
+  - MadXP : `pm2 status/list/logs`
 
 ### viewer, advertiser, sponsor, agency
 

@@ -8,7 +8,7 @@
 
 ## Contexte
 
-F-15.2 vise l'intégration de consoles de marque (Bodet Scorepad, Stramatel) pour afficher un scoreboard live dans les overlays Neopro. Les simulateurs `sim-bodet-scorepad` et `sim-stramatel` (PROP-003) produisent déjà des trames binaires fidèles, mais le connecteur Pi byte-level est un gros investissement (parsing LRC, frame 0x33, retry série/Ethernet) et on ne sait pas encore quel est le bon modèle de données cloud-side. On veut valider le contrat **sim/connector → cloud → dashboard** avant de plomber le Pi.
+F-15.2 vise l'intégration de consoles de marque (Bodet Scorepad, Stramatel) pour afficher un scoreboard live dans les overlays MadXP. Les simulateurs `sim-bodet-scorepad` et `sim-stramatel` (PROP-003) produisent déjà des trames binaires fidèles, mais le connecteur Pi byte-level est un gros investissement (parsing LRC, frame 0x33, retry série/Ethernet) et on ne sait pas encore quel est le bon modèle de données cloud-side. On veut valider le contrat **sim/connector → cloud → dashboard** avant de plomber le Pi.
 
 ## Décision
 

@@ -2,7 +2,7 @@
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
@@ -56,10 +56,12 @@ Créer un **watchdog bash ultra-minimal (~200 lignes)** en tant que service syst
 ### 1. Watchdog intégré au sync-agent (Node.js)
 
 **Avantages** :
+
 - Code en un seul endroit
 - Accès aux APIs Node.js
 
 **Inconvénients** :
+
 - **Si le sync-agent crashe, le watchdog crashe aussi**
 - Un fichier JS corrompu empêche le démarrage du watchdog
 - Dépend de Node.js et npm
@@ -69,9 +71,11 @@ Créer un **watchdog bash ultra-minimal (~200 lignes)** en tant que service syst
 ### 2. Processus Node.js séparé (pm2, forever)
 
 **Avantages** :
+
 - Plus de fonctionnalités que bash
 
 **Inconvénients** :
+
 - Dépend de Node.js (peut aussi crasher si le runtime est corrompu)
 - `pm2` ajoute une dépendance globale à maintenir
 - Ne peut pas détecter un fichier JS corrompu sans l'exécuter
@@ -81,6 +85,7 @@ Créer un **watchdog bash ultra-minimal (~200 lignes)** en tant que service syst
 ### 3. Script bash indépendant ✅
 
 **Avantages** :
+
 - **Zéro dépendance** : bash est toujours disponible sur le Pi
 - **Indépendant de Node.js** : Fonctionne même si Node est cassé
 - **Ultra simple** : ~200 lignes, facile à auditer
@@ -88,6 +93,7 @@ Créer un **watchdog bash ultra-minimal (~200 lignes)** en tant que service syst
 - **Restauration fiable** : Simple `cp -r` depuis le golden
 
 **Inconvénients** :
+
 - Bash est limité (pas de parsing JSON, etc.)
 - Logique de détection basique
 
@@ -117,4 +123,4 @@ Créer un **watchdog bash ultra-minimal (~200 lignes)** en tant que service syst
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_
