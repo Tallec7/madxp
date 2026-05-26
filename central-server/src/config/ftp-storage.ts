@@ -100,7 +100,8 @@ export const uploadFileToFtp = async (
     const stream = Readable.from(fileBuffer);
 
     const uploadStart = Date.now();
-    // Upload du fichier (le compte FTP est déjà dans /neopro-video)
+    // Upload du fichier (le compte FTP chdir auto vers son home dir,
+    // ex: /neopro-video ou /madxp-video selon FTP_USER configuré).
     await client.uploadFrom(stream, filename);
     const uploadDuration = (Date.now() - uploadStart) / 1000;
 
