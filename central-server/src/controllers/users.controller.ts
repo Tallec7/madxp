@@ -490,7 +490,7 @@ export const deleteOwnAccount = async (req: AuthRequest, res: Response): Promise
     });
 
     // Invalider le cookie de session
-    res.clearCookie('neopro_token');
+    res.clearCookie('madxp_token');
 
     res.json({
       success: true,

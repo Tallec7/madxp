@@ -6,8 +6,8 @@
  * blind spot — the metric is collected but nobody looks at it.
  *
  * Detection:
- *   - Source: lines like `name: 'neopro_xxx_total',` in `central-server/src/services/metrics.service.ts`
- *   - Sinks:  any `neopro_xxx_total` substring in:
+ *   - Source: lines like `name: 'madxp_xxx_total',` in `central-server/src/services/metrics.service.ts`
+ *   - Sinks:  any `madxp_xxx_total` substring in:
  *               - docker/grafana/provisioning/dashboards/json/**\/*.json
  *               - docker/prometheus/rules.yml
  *
@@ -18,7 +18,7 @@
  * The allowlist is FROZEN — do not add entries. When you wire a metric to a dashboard
  * or alert, remove the entry in the same PR.
  *
- * Companion dashboard: `docker/grafana/provisioning/dashboards/json/cloud/neopro-blind-spots-cloud.json`
+ * Companion dashboard: `docker/grafana/provisioning/dashboards/json/cloud/madxp-blind-spots-cloud.json`
  * — the dashboard surfaces every blind-spot metric so the allowlist can shrink.
  */
 
@@ -99,7 +99,7 @@ describe('Smoke — metrics observability guard', () => {
         `(under ${path.relative(REPO_ROOT, DASHBOARDS_DIR)}/) or one Prometheus alert rule`,
         `(in ${path.relative(REPO_ROOT, RULES_FILE)}).`,
         '',
-        'Quick fix: add a panel to neopro-blind-spots-cloud.json (the catch-all dashboard)',
+        'Quick fix: add a panel to madxp-blind-spots-cloud.json (the catch-all dashboard)',
         'then promote to a domain-specific dashboard once the metric earns its keep.',
         '',
         'Do NOT add to LEGACY_METRICS_WITHOUT_VIZ — the allowlist is frozen.',

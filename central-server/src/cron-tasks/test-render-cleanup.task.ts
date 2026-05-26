@@ -4,7 +4,7 @@
  * Règles :
  * - Scanne les sous-dossiers de `/test-renders/` (un par templateId).
  * - Supprime tous les fichiers .mp4 plus vieux que `ttlDays` (défaut 7).
- * - Compte succès / erreurs via la métrique `neopro_test_renders_cleaned_total`.
+ * - Compte succès / erreurs via la métrique `madxp_test_renders_cleaned_total`.
  *
  * Smoke-test enforced (`smoke/smoke-template-studio-v3-test-render-cron`) :
  * ne pas retirer la métrique Prometheus + le `logger.info` (sans eux, un bug

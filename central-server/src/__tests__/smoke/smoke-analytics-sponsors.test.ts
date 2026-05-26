@@ -1432,11 +1432,11 @@ describe('Weighted sponsor rotation guards', () => {
 describe('PR3 — Video playback errors observability', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
 
-  it('metrics.service expose neopro_video_playback_errors_total + recordVideoPlaybackErrors', () => {
+  it('metrics.service expose madxp_video_playback_errors_total + recordVideoPlaybackErrors', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      counterDeclared: /name:\s*['"]neopro_video_playback_errors_total['"]/.test(content),
+      counterDeclared: /name:\s*['"]madxp_video_playback_errors_total['"]/.test(content),
       labelsBySite: /labelNames:\s*\[\s*['"]site_id['"]\s*\]/.test(content),
       recorderExposed: /recordVideoPlaybackErrors\(siteId:\s*string,\s*count:\s*number\)/.test(content),
     }).toEqual({

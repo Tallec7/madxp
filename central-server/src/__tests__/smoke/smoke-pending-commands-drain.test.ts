@@ -15,7 +15,7 @@
  *   3. full-schema.sql aligné sur la migration
  *   4. Executor isolé (`cron-tasks/pending-commands-drain.task.ts`) et enregistré
  *      dans le dispatch table de cron-scheduler.service
- *   5. Métrique Prometheus `neopro_pending_commands_drain_total` exposée
+ *   5. Métrique Prometheus `madxp_pending_commands_drain_total` exposée
  *      (sans elle un bug silencieux du drainer reste invisible)
  *   6. Le task itère bien `socketService.getConnectedSites()` (pas un autre
  *      proxy) et délègue à `commandQueueService.processPendingCommands`
@@ -88,12 +88,12 @@ describe('Phase 14 — pending_commands_drain CRON', () => {
     expect(scheduler).toMatch(/pending_commands_drain:\s*executePendingCommandsDrainTask/);
   });
 
-  it('metrics.service expose neopro_pending_commands_drain_total et recordPendingCommandsDrain', () => {
+  it('metrics.service expose madxp_pending_commands_drain_total et recordPendingCommandsDrain', () => {
     const metrics = fs.readFileSync(
       path.join(REPO_ROOT, 'central-server/src/services/metrics.service.ts'),
       'utf8'
     );
-    expect(metrics).toMatch(/neopro_pending_commands_drain_total/);
+    expect(metrics).toMatch(/madxp_pending_commands_drain_total/);
     expect(metrics).toMatch(/recordPendingCommandsDrain\s*\(/);
     // Labels structurés (site_id, outcome) pour distinguer drain ok / failed
     expect(metrics).toMatch(/labelNames:\s*\[\s*'site_id'\s*,\s*'outcome'\s*\]/);

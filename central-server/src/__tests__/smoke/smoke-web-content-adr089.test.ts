@@ -50,9 +50,9 @@ describe('Smoke — ADR-089 web_page / livestream', () => {
     expect(/req\.siteId\s*!==\s*id/.test(controller)).toBe(true);
   });
 
-  it('central-server — Prometheus counter neopro_web_content_fetch_total is registered', () => {
+  it('central-server — Prometheus counter madxp_web_content_fetch_total is registered', () => {
     const metrics = read('central-server/src/services/metrics.service.ts');
-    expect(/neopro_web_content_fetch_total/.test(metrics)).toBe(true);
+    expect(/madxp_web_content_fetch_total/.test(metrics)).toBe(true);
     expect(/recordWebContentFetch/.test(metrics)).toBe(true);
   });
 

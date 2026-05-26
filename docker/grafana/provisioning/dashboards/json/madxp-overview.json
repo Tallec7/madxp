@@ -69,7 +69,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_websocket_connections{job=~\"$job\"}",
+          "expr": "madxp_websocket_connections{job=~\"$job\"}",
           "legendFormat": "Sites connectés",
           "refId": "A"
         }
@@ -174,7 +174,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_deployments_total{job=~\"$job\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_deployments_total{job=~\"$job\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -221,7 +221,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_alerts_total{job=~\"$job\"}[5m])) by (severity)",
+          "expr": "sum(rate(madxp_alerts_total{job=~\"$job\"}[5m])) by (severity)",
           "legendFormat": "{{severity}}",
           "refId": "A"
         }
@@ -322,7 +322,7 @@
       },
       "targets": [
         {
-          "expr": "sum(neopro_canary_deployments_active{job=~\"$job\"})",
+          "expr": "sum(madxp_canary_deployments_active{job=~\"$job\"})",
           "legendFormat": "In Progress",
           "refId": "A"
         }
@@ -367,12 +367,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_deployment_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(madxp_deployment_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_deployment_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_deployment_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -434,7 +434,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["neopro", "overview"],
+  "tags": ["madxp", "overview"],
   "templating": {
     "list": [
       {
@@ -457,8 +457,8 @@
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "NeoPro Overview",
-  "uid": "neopro-overview",
+  "title": "MadXP Overview",
+  "uid": "madxp-overview",
   "version": 2,
   "weekStart": ""
 }

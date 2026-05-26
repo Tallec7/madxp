@@ -33,9 +33,9 @@ DECLARE
   simple_image_id UUID;
   but_generique_id UUID;
 BEGIN
-  SELECT id INTO simple_generique_id FROM neopro_templates WHERE composition_id = 'JoueurSimpleGenerique';
-  SELECT id INTO simple_image_id FROM neopro_templates WHERE composition_id = 'JoueurSimpleImage';
-  SELECT id INTO but_generique_id FROM neopro_templates WHERE composition_id = 'JoueurButGenerique';
+  SELECT id INTO simple_generique_id FROM madxp_templates WHERE composition_id = 'JoueurSimpleGenerique';
+  SELECT id INTO simple_image_id FROM madxp_templates WHERE composition_id = 'JoueurSimpleImage';
+  SELECT id INTO but_generique_id FROM madxp_templates WHERE composition_id = 'JoueurButGenerique';
 
   -- ── JOUEUR SIMPLE GÉNÉRIQUE : swap z_index B↔P + respect_alpha OFF ──
   IF simple_generique_id IS NOT NULL THEN

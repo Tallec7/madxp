@@ -96,7 +96,7 @@ Définis dans `central-server/src/services/alerting.service.ts:50-123`
 En complément des alertes métier Pi (section 3.3), des alertes infrastructure surveillent le **serveur central** lui-même :
 
 **Local** : Prometheus rules (`docker/prometheus/rules.yml`) → Alertmanager (`localhost:9093`) → Slack
-**Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) → Contact point Slack
+**Prod** : Grafana Cloud managed alerts (`docker/grafana/provisioning/alerting/madxp-alerts-cloud.yml`) → Contact point Slack
 
 | Alerte                         | Condition                     | Délai  | Sévérité | Action                                         |
 | ------------------------------ | ----------------------------- | ------ | -------- | ---------------------------------------------- |

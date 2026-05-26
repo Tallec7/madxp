@@ -14,7 +14,7 @@
  *   2. Une réduction MAX_AUTO_DEPLOY 10 → 5
  *   3. Une sérialisation des deploys (INTER_DEPLOY_DELAY_MS)
  *   4. Un re-check mid-loop pour break si la cap est atteinte en cours de batch
- *   5. Une métrique Prometheus neopro_auto_deploy_throttled_total{reason}
+ *   5. Une métrique Prometheus madxp_auto_deploy_throttled_total{reason}
  */
 
 import * as fs from 'fs';
@@ -86,8 +86,8 @@ describe('ADR-117 — auto-deploy hardening NLF 2026-05-13 (smoke)', () => {
   });
 
   describe('metrics.service.ts', () => {
-    it('expose le Counter neopro_auto_deploy_throttled_total', () => {
-      expect(metrics).toMatch(/name:\s*['"]neopro_auto_deploy_throttled_total['"]/);
+    it('expose le Counter madxp_auto_deploy_throttled_total', () => {
+      expect(metrics).toMatch(/name:\s*['"]madxp_auto_deploy_throttled_total['"]/);
     });
 
     it('expose recordAutoDeployThrottled(siteId, reason) avec union typée stricte', () => {

@@ -11,7 +11,7 @@ UPDATE template_text_fields
 SET default_value = 'PRÉNOM NOM'
 WHERE slot_key = 'prenomNom'
   AND template_id IN (
-    SELECT id FROM neopro_templates
+    SELECT id FROM madxp_templates
     WHERE composition_id IN ('JoueurSimpleGenerique', 'JoueurSimpleImage', 'JoueurButGenerique')
   )
   AND default_value LIKE '%' || E'\n' || '%';

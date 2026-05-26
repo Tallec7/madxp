@@ -12,7 +12,7 @@ import metricsService from '../services/metrics.service';
 // Configuration des cookies sécurisés
 // Note: sameSite: 'none' est requis pour les cookies cross-origin (frontend et backend sur domaines différents)
 // secure: true est obligatoire avec sameSite: 'none'
-const COOKIE_NAME = 'neopro_token';
+const COOKIE_NAME = 'madxp_token';
 
 // Durée de session plus longue : 7 jours (au lieu de 8h)
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 jours

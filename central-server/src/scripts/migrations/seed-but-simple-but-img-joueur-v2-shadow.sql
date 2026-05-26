@@ -8,7 +8,7 @@
 -- continue d'utiliser la composition codée. Aucun impact production.
 --
 -- Pour activer le mode V2 sur un template donné après validation QA :
---   UPDATE neopro_templates SET schema_version=2 WHERE composition_id='ButSimple';
+--   UPDATE madxp_templates SET schema_version=2 WHERE composition_id='ButSimple';
 -- (à exécuter manuellement, voir docs/adr/ADR-075-remotion-template-studio-v2.md).
 --
 -- Idempotence : toutes les insertions utilisent ON CONFLICT DO NOTHING ou
@@ -20,8 +20,8 @@ DECLARE
   but_simple_id   UUID;
   but_joueur_id   UUID;
 BEGIN
-  SELECT id INTO but_simple_id FROM neopro_templates WHERE composition_id = 'ButSimple' LIMIT 1;
-  SELECT id INTO but_joueur_id FROM neopro_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
+  SELECT id INTO but_simple_id FROM madxp_templates WHERE composition_id = 'ButSimple' LIMIT 1;
+  SELECT id INTO but_joueur_id FROM madxp_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
 
   -- ── ButSimple ────────────────────────────────────────────────────────────
   IF but_simple_id IS NOT NULL THEN
@@ -75,5 +75,5 @@ BEGIN
   END IF;
 END$$;
 
-COMMENT ON COLUMN neopro_templates.schema_version IS
+COMMENT ON COLUMN madxp_templates.schema_version IS
   'ADR-075 : 1 = legacy (composition codée), 2 = data-driven (couches+slots). Migration ButSimple/ButImgJoueur : shadow data seedée Sprint 4, flip vers 2 manuel après QA.';

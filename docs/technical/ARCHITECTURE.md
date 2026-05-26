@@ -777,7 +777,7 @@ Alertes infrastructure côté serveur, complémentaires aux alertes métier Pi (
 | Sponsor Analytics | `CampaignDataInconsistency`    | campaign_id FK orphelins      | 15 min      | warning  |
 | Sponsor Analytics | `VerifiedImpressionsDropoff`   | TV-on rate < 10%              | 30 min      | warning  |
 
-- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`) — 30 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
+- **Grafana Cloud alerts** (`docker/grafana/provisioning/alerting/madxp-alerts-cloud.yml`) — 30 managed alert rules (parité complète avec local, format Grafana Cloud provisioning) pour la production sur `grafanacloud-tallec7-prom`
 - **Stack local** : `docker compose up prometheus alertmanager grafana`
 - **Stack prod** : Import YAML dans Grafana Cloud → Alerting → Alert rules + configurer Contact point Slack
 

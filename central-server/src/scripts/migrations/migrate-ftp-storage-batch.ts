@@ -112,7 +112,7 @@ function formatSize(bytes: number): string {
 
 async function migrateVideo(video: VideoRow, newPath: string): Promise<'migrated' | 'skipped' | 'error'> {
   const ext = path.extname(video.filename) || '.mp4';
-  const tmpFile = path.join(os.tmpdir(), `neopro_migrate_${video.id}${ext}`);
+  const tmpFile = path.join(os.tmpdir(), `madxp_migrate_${video.id}${ext}`);
 
   try {
     // 1. Download from public URL
@@ -177,7 +177,7 @@ async function migrateVideo(video: VideoRow, newPath: string): Promise<'migrated
 async function generateThumbnail(video: VideoRow): Promise<'generated' | 'skipped' | 'error'> {
   const ext = path.extname(video.filename) || '.mp4';
   const thumbStoragePath = buildThumbnailPath(video.id);
-  const tmpFile = path.join(os.tmpdir(), `neopro_thumb_${video.id}${ext}`);
+  const tmpFile = path.join(os.tmpdir(), `madxp_thumb_${video.id}${ext}`);
 
   try {
     // Download video to temp file

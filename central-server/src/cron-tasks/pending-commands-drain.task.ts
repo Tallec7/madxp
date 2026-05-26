@@ -19,7 +19,7 @@
  * Smoke-test enforced (`smoke-pending-commands-drain`) :
  * - task_type 'pending_commands_drain' dans `check_task_type`
  * - executor enregistré dans le dispatch table de cron-scheduler
- * - métrique `neopro_pending_commands_drain_total` exposée
+ * - métrique `madxp_pending_commands_drain_total` exposée
  * - schedule seed dans la migration
  */
 

@@ -191,7 +191,7 @@ describe('Auth Controller', () => {
       await login(req, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
-        'neopro_token',
+        'madxp_token',
         'mock-jwt-token',
         expect.objectContaining({
           httpOnly: true,
@@ -238,7 +238,7 @@ describe('Auth Controller', () => {
 
       await logout(req, res);
 
-      expect(res.clearCookie).toHaveBeenCalledWith('neopro_token', { path: '/' });
+      expect(res.clearCookie).toHaveBeenCalledWith('madxp_token', { path: '/' });
     });
   });
 

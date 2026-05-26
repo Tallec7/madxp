@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Vue exécutive — Santé globale du système Neopro. 9 panels.",
+  "description": "Vue exécutive — Santé globale du système MadXP. 9 panels.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -13,9 +13,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["neopro"],
+      "tags": ["madxp"],
       "targetBlank": false,
-      "title": "Neopro Dashboards",
+      "title": "MadXP Dashboards",
       "type": "dashboards"
     }
   ],
@@ -97,7 +97,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_connected_sites_total{scrape_job=\"NEOPRO\"}",
+          "expr": "madxp_connected_sites_total{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Sites",
           "refId": "A"
         }
@@ -138,7 +138,7 @@
       },
       "targets": [
         {
-          "expr": "sum(neopro_active_alerts{scrape_job=\"NEOPRO\"})",
+          "expr": "sum(madxp_active_alerts{scrape_job=\"NEOPRO\"})",
           "legendFormat": "Alertes",
           "refId": "A"
         }
@@ -305,7 +305,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(neopro_deployments_total{scrape_job=\"NEOPRO\",status=\"failed\"}[24h])) or vector(0)",
+          "expr": "sum(increase(madxp_deployments_total{scrape_job=\"NEOPRO\",status=\"failed\"}[24h])) or vector(0)",
           "legendFormat": "Échecs 24h",
           "refId": "A"
         }
@@ -369,7 +369,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_deployments_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_deployments_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -411,7 +411,7 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_deployment_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[1h])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_deployment_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[1h])) by (le))",
           "legendFormat": "p95",
           "refId": "A"
         }
@@ -452,7 +452,7 @@
       },
       "targets": [
         {
-          "expr": "sum(neopro_receivers_total{status=\"detected\"})",
+          "expr": "sum(madxp_receivers_total{status=\"detected\"})",
           "legendFormat": "Fire Sticks",
           "refId": "A"
         }
@@ -464,7 +464,7 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["neopro", "overview"],
+  "tags": ["madxp", "overview"],
   "templating": {
     "list": []
   },
@@ -474,8 +474,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "NeoPro Overview",
-  "uid": "neopro-overview-cloud",
+  "title": "MadXP Overview",
+  "uid": "madxp-overview-cloud",
   "version": 4,
   "weekStart": ""
 }

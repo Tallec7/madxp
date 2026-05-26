@@ -53,7 +53,7 @@ SELECT
   l.id AS layer_id,
   l.name AS layer_name,
   l.video_url
-FROM neopro_templates t
+FROM madxp_templates t
 JOIN template_layers l ON l.template_id = t.id
 WHERE l.video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
 ORDER BY t.name, l.z_index;
@@ -67,7 +67,7 @@ SELECT
   v.id AS variant_id,
   v.name AS variant_name,
   v.background_video_url
-FROM neopro_templates t
+FROM madxp_templates t
 JOIN template_variants v ON v.template_id = t.id
 WHERE v.background_video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
 ORDER BY t.name, v.sort_order;
@@ -75,7 +75,7 @@ ORDER BY t.name, v.sort_order;
 \echo ''
 \echo '── Audit : templates impactés (à archiver) ──'
 SELECT DISTINCT t.id, t.name, t.status, t.created_at
-FROM neopro_templates t
+FROM madxp_templates t
 WHERE EXISTS (
   SELECT 1 FROM template_layers l
   WHERE l.template_id = t.id
@@ -92,18 +92,18 @@ ORDER BY t.name;
 
 \echo ''
 \echo '── Archivage des templates impactés ──'
-UPDATE neopro_templates
+UPDATE madxp_templates
 SET status = 'archived'
 WHERE status IS DISTINCT FROM 'archived'
   AND (
     EXISTS (
       SELECT 1 FROM template_layers l
-      WHERE l.template_id = neopro_templates.id
+      WHERE l.template_id = madxp_templates.id
         AND l.video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
     )
     OR EXISTS (
       SELECT 1 FROM template_variants v
-      WHERE v.template_id = neopro_templates.id
+      WHERE v.template_id = madxp_templates.id
         AND v.background_video_url ~* 'up\.railway\.app/[^?#]+\.(webm|mp4)'
     )
   )

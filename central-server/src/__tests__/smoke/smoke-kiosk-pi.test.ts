@@ -1482,7 +1482,7 @@ describe('Deploy script kiosk restart ordering', () => {
 describe('Grafana kiosk health alerts', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const alertsYml = fs.readFileSync(
-    path.join(repoRoot, 'docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml'),
+    path.join(repoRoot, 'docker/grafana/provisioning/alerting/madxp-alerts-cloud.yml'),
     'utf8'
   );
 
@@ -1496,13 +1496,13 @@ describe('Grafana kiosk health alerts', () => {
       .toEqual({ hasKioskDownAlert: true });
   });
 
-  it('must query neopro_kiosk_crashes_total metric', () => {
-    expect({ queriesCrashMetric: alertsYml.includes('neopro_kiosk_crashes_total') })
+  it('must query madxp_kiosk_crashes_total metric', () => {
+    expect({ queriesCrashMetric: alertsYml.includes('madxp_kiosk_crashes_total') })
       .toEqual({ queriesCrashMetric: true });
   });
 
-  it('must query neopro_kiosk_status metric', () => {
-    expect({ queriesStatusMetric: alertsYml.includes('neopro_kiosk_status') })
+  it('must query madxp_kiosk_status metric', () => {
+    expect({ queriesStatusMetric: alertsYml.includes('madxp_kiosk_status') })
       .toEqual({ queriesStatusMetric: true });
   });
 });
@@ -2685,7 +2685,7 @@ describe('Orphan systemd service monitoring pipeline', () => {
 
   it('metrics.service.ts must have Prometheus counter for orphan services', () => {
     // Observability: Prometheus counter allows Grafana alerting on fleet-wide orphan patterns
-    expect({ hasCounter: metricsService.includes('neopro_orphan_service_detected_total') })
+    expect({ hasCounter: metricsService.includes('madxp_orphan_service_detected_total') })
       .toEqual({ hasCounter: true });
     expect({ hasMethod: metricsService.includes('recordOrphanServiceDetected') })
       .toEqual({ hasMethod: true });
@@ -2729,7 +2729,7 @@ describe('GPU decode monitoring pipeline (v3.99.5)', () => {
 
   it('metrics.service.ts must have Prometheus counter for GPU decode fallback', () => {
     // Prometheus counter allows Grafana alerting on fleet-wide GPU decode failures
-    expect({ hasCounter: metricsService.includes('neopro_gpu_decode_fallback_total') })
+    expect({ hasCounter: metricsService.includes('madxp_gpu_decode_fallback_total') })
       .toEqual({ hasCounter: true });
     expect({ hasMethod: metricsService.includes('recordGpuDecodeFallback') })
       .toEqual({ hasMethod: true });

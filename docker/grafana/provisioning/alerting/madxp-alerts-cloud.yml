@@ -23,7 +23,7 @@ groups:
     interval: 1m
     rules:
       # Central Server unreachable
-      - uid: neopro-server-down
+      - uid: madxp-server-down
         title: Central Server Down
         condition: C
         data:
@@ -65,7 +65,7 @@ groups:
           description: "Prometheus cannot scrape the central server for 2 minutes. Check Railway deployment."
 
       # Zero Pi heartbeats
-      - uid: neopro-zero-heartbeats
+      - uid: madxp-zero-heartbeats
         title: Zero Pi Heartbeats
         condition: C
         data:
@@ -75,7 +75,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_heartbeats_total[5m])
+              expr: rate(madxp_heartbeats_total[5m])
               instant: true
               refId: A
           - refId: B
@@ -104,7 +104,7 @@ groups:
           description: "No heartbeats received. All Pi disconnected or WebSocket is broken."
 
       # No agent WebSocket connections
-      - uid: neopro-no-agents
+      - uid: madxp-no-agents
         title: No Pi Agents Connected
         condition: C
         data:
@@ -114,7 +114,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_websocket_connections{type="agent"}
+              expr: madxp_websocket_connections{type="agent"}
               instant: true
               refId: A
           - refId: B
@@ -151,7 +151,7 @@ groups:
     interval: 1m
     rules:
       # High HTTP error rate
-      - uid: neopro-high-error-rate
+      - uid: madxp-high-error-rate
         title: High HTTP 5xx Error Rate
         condition: C
         data:
@@ -190,7 +190,7 @@ groups:
           description: "More than 5% of API requests are returning server errors."
 
       # High API latency
-      - uid: neopro-high-latency
+      - uid: madxp-high-latency
         title: High API Latency (P95)
         condition: C
         data:
@@ -229,7 +229,7 @@ groups:
           description: "95th percentile response time exceeds 3 seconds."
 
       # High memory usage
-      - uid: neopro-high-memory
+      - uid: madxp-high-memory
         title: High Memory Usage
         condition: C
         data:
@@ -268,7 +268,7 @@ groups:
           description: "Heap approaching 256MB limit. OOM risk."
 
       # DB pool saturation
-      - uid: neopro-db-pool-saturation
+      - uid: madxp-db-pool-saturation
         title: DB Pool Saturation
         condition: C
         data:
@@ -278,7 +278,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_db_connections{state="active"} / neopro_db_connections{state="total"}
+              expr: madxp_db_connections{state="active"} / madxp_db_connections{state="total"}
               instant: true
               refId: A
           - refId: B
@@ -307,7 +307,7 @@ groups:
           description: "Active connections approaching pool limit. Risk of exhaustion."
 
       # Slow DB queries
-      - uid: neopro-slow-queries
+      - uid: madxp-slow-queries
         title: Slow DB Queries (P95)
         condition: C
         data:
@@ -317,7 +317,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m]))
+              expr: histogram_quantile(0.95, rate(madxp_db_query_duration_seconds_bucket[5m]))
               instant: true
               refId: A
           - refId: B
@@ -346,7 +346,7 @@ groups:
           description: "Database queries are slow. Check for missing indexes or heavy queries."
 
       # High WebSocket disconnect rate
-      - uid: neopro-high-disconnects
+      - uid: madxp-high-disconnects
         title: High WebSocket Disconnect Rate
         condition: C
         data:
@@ -356,7 +356,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_websocket_disconnects_total[5m])
+              expr: rate(madxp_websocket_disconnects_total[5m])
               instant: true
               refId: A
           - refId: B
@@ -385,7 +385,7 @@ groups:
           description: "More than 0.5 disconnections/sec. Possible network instability."
 
       # Too many active alerts
-      - uid: neopro-too-many-alerts
+      - uid: madxp-too-many-alerts
         title: Too Many Active Alerts
         condition: C
         data:
@@ -395,7 +395,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_active_alerts
+              expr: madxp_active_alerts
               instant: true
               refId: A
           - refId: B
@@ -432,7 +432,7 @@ groups:
     interval: 1m
     rules:
       # Server responding but health endpoint failing
-      - uid: neopro-server-unhealthy
+      - uid: madxp-server-unhealthy
         title: Central Server Unhealthy
         condition: C
         data:
@@ -442,7 +442,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_health_status
+              expr: madxp_health_status
               instant: true
               refId: A
           - refId: B
@@ -471,7 +471,7 @@ groups:
           description: "Health endpoint returns unhealthy for 3 minutes. Server is up but degraded."
 
       # High CPU usage (event loop saturation)
-      - uid: neopro-high-cpu
+      - uid: madxp-high-cpu
         title: High CPU Usage
         condition: C
         data:
@@ -518,7 +518,7 @@ groups:
     interval: 1m
     rules:
       # Sudden drop in connected sites (fleet issue)
-      - uid: neopro-sites-drop
+      - uid: madxp-sites-drop
         title: Connected Sites Drop 50%
         condition: C
         data:
@@ -528,7 +528,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_connected_sites_total < (neopro_connected_sites_total offset 10m) * 0.5 and neopro_connected_sites_total offset 10m > 3
+              expr: madxp_connected_sites_total < (madxp_connected_sites_total offset 10m) * 0.5 and madxp_connected_sites_total offset 10m > 3
               instant: true
               refId: A
           - refId: B
@@ -565,7 +565,7 @@ groups:
     interval: 5m
     rules:
       # Database approaching Supabase free tier quota (500 MB)
-      - uid: neopro-db-size-warning
+      - uid: madxp-db-size-warning
         title: Database Size Warning (400 MB)
         condition: C
         data:
@@ -575,7 +575,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_db_size_bytes
+              expr: madxp_db_size_bytes
               instant: true
               refId: A
           - refId: B
@@ -604,7 +604,7 @@ groups:
           description: "Consider running cleanup or reducing retention."
 
       # Database size critical — approaching hard limit
-      - uid: neopro-db-size-critical
+      - uid: madxp-db-size-critical
         title: Database Size Critical (475 MB)
         condition: C
         data:
@@ -614,7 +614,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_db_size_bytes
+              expr: madxp_db_size_bytes
               instant: true
               refId: A
           - refId: B
@@ -643,7 +643,7 @@ groups:
           description: "Immediate action required: VACUUM FULL or reduce retention."
 
       # Single table consuming too much space
-      - uid: neopro-db-table-size
+      - uid: madxp-db-table-size
         title: Database Table Size High (200 MB)
         condition: C
         data:
@@ -653,7 +653,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_db_table_size_bytes
+              expr: madxp_db_table_size_bytes
               instant: true
               refId: A
           - refId: B
@@ -690,7 +690,7 @@ groups:
     interval: 1m
     rules:
       # High upload failure rate
-      - uid: neopro-upload-failures
+      - uid: madxp-upload-failures
         title: High Video Upload Failure Rate
         condition: C
         data:
@@ -700,7 +700,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_video_uploads_total{status="failed"}[10m])
+              expr: rate(madxp_video_uploads_total{status="failed"}[10m])
               instant: true
               refId: A
           - refId: B
@@ -729,7 +729,7 @@ groups:
           description: "More than 3 upload failures per minute over 10 minutes."
 
       # Frequent filename encoding corrections
-      - uid: neopro-encoding-corrections
+      - uid: madxp-encoding-corrections
         title: Frequent Filename Encoding Corrections
         condition: C
         data:
@@ -739,7 +739,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_filename_encoding_corrections_total[1h])
+              expr: rate(madxp_filename_encoding_corrections_total[1h])
               instant: true
               refId: A
           - refId: B
@@ -776,7 +776,7 @@ groups:
     interval: 1m
     rules:
       # FTP verification failure rate (detects regression on verify logic)
-      - uid: neopro-ftp-verify-failures
+      - uid: madxp-ftp-verify-failures
         title: FTP Verification Failure Rate High
         condition: C
         data:
@@ -788,9 +788,9 @@ groups:
             model:
               expr: |
                 (
-                  sum(rate(neopro_ftp_operations_total{operation="verify", status=~"failed|not_found"}[30m]))
+                  sum(rate(madxp_ftp_operations_total{operation="verify", status=~"failed|not_found"}[30m]))
                   /
-                  clamp_min(sum(rate(neopro_ftp_operations_total{operation="verify"}[30m])), 0.001)
+                  clamp_min(sum(rate(madxp_ftp_operations_total{operation="verify"}[30m])), 0.001)
                 ) > 0.5
               instant: true
               refId: A
@@ -820,7 +820,7 @@ groups:
           description: "More than half of FTP upload verifications are failing over 30 minutes. This may indicate an FTP server issue or a regression in verifyFtpFileExists() (e.g. root-listing bug). Check ftp-storage.ts and FTP server health."
 
       # FTP excessive retries (detects wasted bandwidth from failed verifications)
-      - uid: neopro-ftp-excessive-retries
+      - uid: madxp-ftp-excessive-retries
         title: FTP Excessive Retries
         condition: C
         data:
@@ -830,7 +830,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_ftp_retries_total[30m])
+              expr: rate(madxp_ftp_retries_total[30m])
               instant: true
               refId: A
           - refId: B
@@ -867,7 +867,7 @@ groups:
     interval: 1m
     rules:
       # Network stats cross-club query latency (P6.1)
-      - uid: neopro-slow-network-sponsor
+      - uid: madxp-slow-network-sponsor
         title: Slow Network Sponsor Stats (P95)
         condition: C
         data:
@@ -877,7 +877,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m]))
+              expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m]))
               instant: true
               refId: A
           - refId: B
@@ -906,7 +906,7 @@ groups:
           description: "Cross-club aggregation queries are slow. Consider adding indexes or caching."
 
       # Benchmark query latency (P6.2)
-      - uid: neopro-slow-benchmark
+      - uid: madxp-slow-benchmark
         title: Slow Sponsor Benchmark Query (P95)
         condition: C
         data:
@@ -916,7 +916,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m]))
+              expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m]))
               instant: true
               refId: A
           - refId: B
@@ -945,7 +945,7 @@ groups:
           description: "Benchmark query scanning all site sponsors is slow."
 
       # PDF report generation failures (P6.4)
-      - uid: neopro-report-failures
+      - uid: madxp-report-failures
         title: High Sponsor Report Failure Rate
         condition: C
         data:
@@ -955,7 +955,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m])
+              expr: rate(madxp_report_generations_total{report_type="site_sponsor",status="failed"}[15m])
               instant: true
               refId: A
           - refId: B
@@ -984,7 +984,7 @@ groups:
           description: "More than 1 PDF generation failure per minute. Check match breakdown data."
 
       # Sponsor sync missing from deployments (P8)
-      - uid: neopro-sponsor-sync-missing
+      - uid: madxp-sponsor-sync-missing
         title: Sponsor Sync Missing from Deployments
         condition: C
         data:
@@ -994,7 +994,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0
+              expr: rate(madxp_sponsor_sync_total{status="included"}[1h]) == 0 and rate(madxp_deployments_total{status="completed"}[1h]) > 0
               instant: true
               refId: A
           - refId: B
@@ -1023,7 +1023,7 @@ groups:
           description: "Deployments are completing but no sponsor data is being synced."
 
       # Sponsor resolution failures
-      - uid: neopro-sponsor-resolution
+      - uid: madxp-sponsor-resolution
         title: Elevated Sponsor Resolution Failures
         condition: C
         data:
@@ -1033,7 +1033,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_sponsor_resolution_failures_total[15m])
+              expr: rate(madxp_sponsor_resolution_failures_total[15m])
               instant: true
               refId: A
           - refId: B
@@ -1062,7 +1062,7 @@ groups:
           description: "Check config-sync.handler or advertiser-analytics.controller."
 
       # Over 50% impressions without sponsor attribution
-      - uid: neopro-impressions-unresolved
+      - uid: madxp-impressions-unresolved
         title: Impressions Without Sponsor Attribution
         condition: C
         data:
@@ -1072,7 +1072,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_impression_resolution_total{method="unresolved"}[30m]) / rate(neopro_impression_resolution_total[30m])
+              expr: rate(madxp_impression_resolution_total{method="unresolved"}[30m]) / rate(madxp_impression_resolution_total[30m])
               instant: true
               refId: A
           - refId: B
@@ -1101,7 +1101,7 @@ groups:
           description: "Check site_sponsor_videos table and loop manager config."
 
       # Pi agent authentication failures
-      - uid: neopro-pi-auth-failures
+      - uid: madxp-pi-auth-failures
         title: High Pi Agent Auth Failure Rate
         condition: C
         data:
@@ -1111,7 +1111,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_pi_agent_auth_total{status="failure"}[5m])
+              expr: rate(madxp_pi_agent_auth_total{status="failure"}[5m])
               instant: true
               refId: A
           - refId: B
@@ -1140,7 +1140,7 @@ groups:
           description: "Possible DB pool exhaustion or server overload."
 
       # Analytics video-plays 500 errors
-      - uid: neopro-analytics-500
+      - uid: madxp-analytics-500
         title: High Analytics 500 Error Rate
         condition: C
         data:
@@ -1179,7 +1179,7 @@ groups:
           description: "Check DB schema and pool connections."
 
       # FK fallback on video_plays
-      - uid: neopro-fk-fallback
+      - uid: madxp-fk-fallback
         title: High Video Plays FK Fallback Rate
         condition: C
         data:
@@ -1189,7 +1189,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_video_plays_fk_fallback_total[30m])
+              expr: rate(madxp_video_plays_fk_fallback_total[30m])
               instant: true
               refId: A
           - refId: B
@@ -1218,7 +1218,7 @@ groups:
           description: "Pi may be sending stale references to deleted records."
 
       # Report endpoint validation errors
-      - uid: neopro-report-validation
+      - uid: madxp-report-validation
         title: Report Generation Validation Errors
         condition: C
         data:
@@ -1257,7 +1257,7 @@ groups:
           description: "Likely frontend sending wrong parameter format (snake_case vs camelCase)."
 
       # KPIs endpoint latency (consolidated pipeline)
-      - uid: neopro-kpis-slow
+      - uid: madxp-kpis-slow
         title: Slow Advertiser KPIs Endpoint (P95)
         condition: C
         data:
@@ -1267,7 +1267,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m]))
+              expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m]))
               instant: true
               refId: A
           - refId: B
@@ -1296,7 +1296,7 @@ groups:
           description: "Consolidated pipeline KPIs query is slow. Check video_plays indexes."
 
       # Campaign data inconsistency
-      - uid: neopro-campaign-fk
+      - uid: madxp-campaign-fk
         title: Campaign Data Inconsistency
         condition: C
         data:
@@ -1306,7 +1306,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: rate(neopro_video_plays_fk_fallback_total{column="campaign_id"}[30m])
+              expr: rate(madxp_video_plays_fk_fallback_total{column="campaign_id"}[30m])
               instant: true
               refId: A
           - refId: B
@@ -1335,7 +1335,7 @@ groups:
           description: "Check campaign lifecycle management."
 
       # Verified impressions quality dropoff
-      - uid: neopro-verified-impressions-drop
+      - uid: madxp-verified-impressions-drop
         title: Verified Impressions (TV-on) Dropoff
         condition: C
         data:
@@ -1345,7 +1345,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: sum(rate(neopro_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(neopro_video_plays_total{category="sponsor"}[1h]))
+              expr: sum(rate(madxp_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(madxp_video_plays_total{category="sponsor"}[1h]))
               instant: true
               refId: A
           - refId: B
@@ -1382,7 +1382,7 @@ groups:
     interval: 1m
     rules:
       # Predictive checks failing
-      - uid: neopro-predictive-checks-failing
+      - uid: madxp-predictive-checks-failing
         title: Predictive Checks Failing
         condition: C
         data:
@@ -1392,7 +1392,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_predictive_checks_total{status="failed"}[2h])
+              expr: increase(madxp_predictive_checks_total{status="failed"}[2h])
               instant: true
               refId: A
           - refId: B
@@ -1421,7 +1421,7 @@ groups:
           description: "Failed predictive check runs in the last 2 hours. Check predictive-alerts.service.ts logs."
 
       # Burst of predictive alerts
-      - uid: neopro-high-predictive-alert-rate
+      - uid: madxp-high-predictive-alert-rate
         title: High Predictive Alert Rate
         condition: C
         data:
@@ -1431,7 +1431,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_predictive_alerts_generated_total[2h])
+              expr: increase(madxp_predictive_alerts_generated_total[2h])
               instant: true
               refId: A
           - refId: B
@@ -1468,7 +1468,7 @@ groups:
     interval: 1m
     rules:
       # Rate limit hits spike — any limiter
-      - uid: neopro-rate-limit-spike
+      - uid: madxp-rate-limit-spike
         title: Rate Limit Hits Spike
         condition: C
         data:
@@ -1478,7 +1478,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: sum(increase(neopro_rate_limit_hits_total[5m])) by (limiter)
+              expr: sum(increase(madxp_rate_limit_hits_total[5m])) by (limiter)
               instant: true
               refId: A
           - refId: B
@@ -1507,7 +1507,7 @@ groups:
           description: "A rate limiter is actively rejecting requests. Check which limiter via label. Sustained 429s degrade dashboard UX and can cascade to frontend logging endpoints."
 
       # Admin rate limit near exhaustion — early warning for sponsor routes
-      - uid: neopro-admin-rate-limit-near-exhaustion
+      - uid: madxp-admin-rate-limit-near-exhaustion
         title: Admin Rate Limit Near Exhaustion
         condition: C
         data:
@@ -1517,7 +1517,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_rate_limit_near_exhaustion_total{limiter="admin"}[5m])
+              expr: increase(madxp_rate_limit_near_exhaustion_total{limiter="admin"}[5m])
               instant: true
               refId: A
           - refId: B
@@ -1554,7 +1554,7 @@ groups:
     interval: 1m
     rules:
       # Kiosk Chromium crash detected (critical)
-      - uid: neopro-kiosk-crash
+      - uid: madxp-kiosk-crash
         title: Kiosk Chromium Crash
         condition: C
         data:
@@ -1564,7 +1564,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_kiosk_crashes_total[10m])
+              expr: increase(madxp_kiosk_crashes_total[10m])
               instant: true
               refId: A
           - refId: B
@@ -1593,7 +1593,7 @@ groups:
           description: "A Pi kiosk Chromium process has crashed. Check kiosk-watchdog logs: journalctl -u neopro-kiosk -n 50. If repeated, GPU state may be corrupted — power cycle the Pi."
 
       # Kiosk unstable — repeated crashes (warning)
-      - uid: neopro-kiosk-unstable
+      - uid: madxp-kiosk-unstable
         title: Kiosk Chromium Unstable (repeated crashes)
         condition: C
         data:
@@ -1603,7 +1603,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_kiosk_crashes_total[1h])
+              expr: increase(madxp_kiosk_crashes_total[1h])
               instant: true
               refId: A
           - refId: B
@@ -1632,7 +1632,7 @@ groups:
           description: "The kiosk Chromium process has crashed more than 3 times in the last hour. Likely cause: GPU V3D state corruption after SIGKILL. Power cycle the Pi to reset GPU state."
 
       # Kiosk down — Chromium not running (critical)
-      - uid: neopro-kiosk-down
+      - uid: madxp-kiosk-down
         title: Kiosk Chromium Down
         condition: C
         data:
@@ -1642,7 +1642,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_kiosk_status
+              expr: madxp_kiosk_status
               instant: true
               refId: A
           - refId: B
@@ -1671,7 +1671,7 @@ groups:
           description: "The kiosk Chromium process is not running for 3+ minutes. The TV display is blank. Check Pi connectivity and kiosk service: systemctl status neopro-kiosk."
 
       # Kiosk high restart count (warning)
-      - uid: neopro-kiosk-high-restarts
+      - uid: madxp-kiosk-high-restarts
         title: Kiosk High Restart Count
         condition: C
         data:
@@ -1681,7 +1681,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: neopro_kiosk_restart_count
+              expr: madxp_kiosk_restart_count
               instant: true
               refId: A
           - refId: B
@@ -1712,7 +1712,7 @@ groups:
       # Content deployment stuck (no progress events for 30min)
       # Auto-completion at 100% is handled by alerting.service.ts,
       # but deployments genuinely stuck below 100% need operator attention.
-      - uid: neopro-content-deploy-stuck
+      - uid: madxp-content-deploy-stuck
         title: Content Deployment Stuck
         condition: C
         data:
@@ -1722,7 +1722,7 @@ groups:
               to: 0
             datasourceUid: grafanacloud-tallec7-prom
             model:
-              expr: increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[1h]) + increase(neopro_deploy_progress_events_total{type="content",status="completed"}[1h])
+              expr: increase(madxp_deploy_progress_events_total{type="content",status="in_progress"}[1h]) + increase(madxp_deploy_progress_events_total{type="content",status="completed"}[1h])
               instant: true
               refId: A
           - refId: B

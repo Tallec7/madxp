@@ -227,15 +227,15 @@ describe('Metrics endpoint', () => {
   it('GET /metrics includes all critical supervision metrics', async () => {
     const res = await request(app).get('/metrics');
     const criticalMetrics = [
-      'neopro_deployments_total',
-      'neopro_websocket_disconnects_total',
-      'neopro_kiosk_crashes_total',
-      'neopro_video_transition_safety_timeout_total',
-      'neopro_heartbeats_total',
-      'neopro_license_status_pushes_total',
-      'neopro_deploy_progress_events_total',
-      'neopro_ota_errors_total',
-      'neopro_wifi_config_total',
+      'madxp_deployments_total',
+      'madxp_websocket_disconnects_total',
+      'madxp_kiosk_crashes_total',
+      'madxp_video_transition_safety_timeout_total',
+      'madxp_heartbeats_total',
+      'madxp_license_status_pushes_total',
+      'madxp_deploy_progress_events_total',
+      'madxp_ota_errors_total',
+      'madxp_wifi_config_total',
     ];
     for (const metric of criticalMetrics) {
       expect({ metric, registered: res.text.includes(metric) })
@@ -365,7 +365,7 @@ describe('Auth middleware', () => {
   it('accepts token from cookie', async () => {
     const res = await request(app)
       .get('/api/auth/me')
-      .set('Cookie', `neopro_token=${adminToken}`);
+      .set('Cookie', `madxp_token=${adminToken}`);
     expect(res.status).not.toBe(401);
   });
 

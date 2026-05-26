@@ -62,7 +62,7 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     // Legacy key référencée UNIQUEMENT pour cleanup (removeItem) — jamais écrite.
     // Multi-tenant SaaS hotfix : `?v2=…` ne doit pas persister en localStorage
     // (sinon il fuite à tous les sites partageant le domaine).
-    expect(/neopro_remote_v2_override/.test(content)).toBe(true);
+    expect(/madxp_remote_v2_override/.test(content)).toBe(true);
     expect(/localStorage\.setItem\([^)]*v2_override/i.test(content)).toBe(false);
     expect(/localStorage\.removeItem\(/.test(content)).toBe(true);
   });
@@ -82,7 +82,7 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/backToV1\s*\(/.test(content)).toBe(true);
     expect(/queryParams:\s*\{\s*v2:\s*['"]0['"]/.test(content)).toBe(true);
     // Doit pas réécrire la clé legacy localStorage (multi-tenant SaaS).
-    expect(/localStorage\.setItem\([^)]*neopro_remote_v2_override/.test(content)).toBe(false);
+    expect(/localStorage\.setItem\([^)]*madxp_remote_v2_override/.test(content)).toBe(false);
     // Must reuse V1 scoped services (ADR-051 Phase 4) — no logic fork.
     expect(/RemoteScoreService/.test(content)).toBe(true);
     expect(/RemoteTimerService/.test(content)).toBe(true);
@@ -99,7 +99,7 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     expect(/getScopedStorageKey/.test(svc)).toBe(true);
     // Plus aucune écriture sur la clé globale legacy non scopée.
     expect(
-      /localStorage\.setItem\(\s*['"]neopro_remote_prefs['"]\s*,/.test(svc),
+      /localStorage\.setItem\(\s*['"]madxp_remote_prefs['"]\s*,/.test(svc),
     ).toBe(false);
     // Méthode de rechargement après switch de profil.
     expect(/reloadFromStorage\s*\(/.test(svc)).toBe(true);
@@ -113,10 +113,10 @@ describe('Smoke — ADR-092 Remote V2 feature flag', () => {
     // saasConfig.getScopedStorageKey pour les deux clés.
     expect(/getScopedStorageKey/.test(v2)).toBe(true);
     expect(
-      /localStorage\.setItem\(\s*['"]neopro_remote_v2_widgets['"]\s*,/.test(v2),
+      /localStorage\.setItem\(\s*['"]madxp_remote_v2_widgets['"]\s*,/.test(v2),
     ).toBe(false);
     expect(
-      /localStorage\.setItem\(\s*['"]neopro_remote_v2_recent['"]\s*,/.test(v2),
+      /localStorage\.setItem\(\s*['"]madxp_remote_v2_recent['"]\s*,/.test(v2),
     ).toBe(false);
   });
 

@@ -580,7 +580,7 @@ describe('SaaS mode guards (ADR-037)', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      hasCounter: content.includes('neopro_video_path_resolution_total'),
+      hasCounter: content.includes('madxp_video_path_resolution_total'),
       hasMethod: content.includes('recordVideoPathResolution'),
       hasExactLabel: /result.*exact.*fuzzy.*miss/s.test(content),
     }).toEqual({
@@ -1118,7 +1118,7 @@ describe('SaaS site-detail dashboard guards', () => {
   });
 
   // --- Video playback errors surface (chantier vidéos manquantes) ---
-  // Le counter Prometheus `neopro_video_playback_errors_total{site_id}` ne
+  // Le counter Prometheus `madxp_video_playback_errors_total{site_id}` ne
   // sert à rien si l'utilisateur club ne le voit pas. Pinné ici pour empêcher
   // une régression silencieuse côté repo / controller / dashboard.
   it('analytics.repository.ts must have countVideoPlaybackErrors filtering on interruption_reason=video_error', () => {
@@ -2899,9 +2899,9 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     const filePath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
     const content = fs.readFileSync(filePath, 'utf8');
     expect({
-      counterWarnings: /name:\s*['"]neopro_video_ftp_audit_warnings_total['"]/.test(content),
-      counterScanned: /name:\s*['"]neopro_video_ftp_audit_scanned_total['"]/.test(content),
-      gaugeCurrent: /name:\s*['"]neopro_video_ftp_orphans_current['"]/.test(content),
+      counterWarnings: /name:\s*['"]madxp_video_ftp_audit_warnings_total['"]/.test(content),
+      counterScanned: /name:\s*['"]madxp_video_ftp_audit_scanned_total['"]/.test(content),
+      gaugeCurrent: /name:\s*['"]madxp_video_ftp_orphans_current['"]/.test(content),
       recorderExposed: /recordVideoFtpAudit\(payload:/.test(content),
     }).toEqual({
       counterWarnings: true,
@@ -2965,13 +2965,13 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
-  it('video-stream.controller instruments Prometheus counter neopro_video_stream_requests_total', () => {
+  it('video-stream.controller instruments Prometheus counter madxp_video_stream_requests_total', () => {
     const controllerPath = path.join(repoRoot, 'central-server', 'src', 'controllers', 'video-stream.controller.ts');
     const controller = fs.readFileSync(controllerPath, 'utf8');
     const metricsPath = path.join(repoRoot, 'central-server', 'src', 'services', 'metrics.service.ts');
     const metrics = fs.readFileSync(metricsPath, 'utf8');
     expect({
-      counterRegistered: /neopro_video_stream_requests_total/.test(metrics),
+      counterRegistered: /madxp_video_stream_requests_total/.test(metrics),
       recorderExposed: /recordVideoStreamRequest/.test(metrics),
       recordsSuccess: /recordVideoStreamRequest\(['"]success['"]\)/.test(controller),
       recordsMissingToken: /recordVideoStreamRequest\(['"]missing_token['"]\)/.test(controller),
@@ -3105,9 +3105,9 @@ describe('ADR-082 Video Club Grants — routes, guards and Prometheus instrument
     });
   });
 
-  it('Prometheus counter neopro_video_club_grants_total is registered in metrics.service', () => {
+  it('Prometheus counter madxp_video_club_grants_total is registered in metrics.service', () => {
     expect({
-      counterDefined: /neopro_video_club_grants_total/.test(metricsContent),
+      counterDefined: /madxp_video_club_grants_total/.test(metricsContent),
       recorderExposed: /recordVideoClubGrant/.test(metricsContent),
       hasOperationLabel: /operation/.test(metricsContent) && /labelNames/.test(metricsContent),
     }).toEqual({

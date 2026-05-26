@@ -97,8 +97,8 @@ describe('ADR-111 — alerts dedup at repository level (smoke)', () => {
       'utf8'
     );
 
-    it('declares neopro_alerts_dedup_skipped_total Counter', () => {
-      expect(src).toMatch(/neopro_alerts_dedup_skipped_total/);
+    it('declares madxp_alerts_dedup_skipped_total Counter', () => {
+      expect(src).toMatch(/madxp_alerts_dedup_skipped_total/);
       expect(src).toMatch(/labelNames: \['type'\]/);
     });
 

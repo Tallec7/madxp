@@ -9,7 +9,7 @@
  * Effets de bord :
  *   1. bcrypt.hash(pin, 12) sur le profil par défaut (si pas déjà configuré)
  *   2. `sites.remote_pin_hash = NULL` (on ne garde plus le legacy)
- *   3. metric `neopro_legacy_pin_migrations_total{status}`
+ *   3. metric `madxp_legacy_pin_migrations_total{status}`
  *   4. log Winston info (success) / warn (failed, skipped)
  *
  * Non-fatal : toute erreur retourne silencieusement sans casser la vérif PIN.

@@ -215,7 +215,7 @@ export const recordVideoPlays = async (req: SiteAuthRequest, res: Response) => {
 
     // PR3 — exposer les erreurs de lecture player dans Prometheus. Compte les
     // plays avec interruption_reason='video_error' du batch et incrémente le
-    // counter `neopro_video_playback_errors_total{site_id}` (alimente l'alerte
+    // counter `madxp_video_playback_errors_total{site_id}` (alimente l'alerte
     // `video_errors_24h` + le widget Grafana).
     const videoErrorCount = validPlays.filter(p => p.interruptionReason === 'video_error').length;
     if (videoErrorCount > 0) {

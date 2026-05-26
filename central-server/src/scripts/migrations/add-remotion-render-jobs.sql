@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS remotion_render_jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   -- Input
-  template_id UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES madxp_templates(id) ON DELETE CASCADE,
   props JSONB NOT NULL DEFAULT '{}'::jsonb,
   title TEXT NOT NULL,
   requested_by UUID REFERENCES users(id) ON DELETE SET NULL,

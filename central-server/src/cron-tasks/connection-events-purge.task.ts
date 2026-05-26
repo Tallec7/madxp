@@ -6,7 +6,7 @@
  * - Permet les post-mortems sur "pourquoi le Pi X était-il rouge le ?".
  * - 50 Pi × ~2 events/jour × 90j = ~9k rows en régime stationnaire (peanuts).
  * - Si la flotte explose ou que la fréquence des reconnects augmente, le compteur
- *   `neopro_connection_events_rows_current` permet d'ajuster la rétention.
+ *   `madxp_connection_events_rows_current` permet d'ajuster la rétention.
  *
  * Tunable via `task_config.retentionDays` dans la table `recurring_schedules`.
  *

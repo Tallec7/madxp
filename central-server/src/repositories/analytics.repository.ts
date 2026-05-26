@@ -938,7 +938,7 @@ class AnalyticsRepositoryImpl {
    * Count video playback errors for a site since a given date.
    * Source : `video_plays` rows with `interruption_reason = 'video_error'`
    * (alimenté par les Pi/SaaS quand la TV émet `lastError: 'play_error'`).
-   * Aligné sur le counter Prometheus `neopro_video_playback_errors_total`.
+   * Aligné sur le counter Prometheus `madxp_video_playback_errors_total`.
    */
   async countVideoPlaybackErrors(siteId: string, since: string): Promise<number> {
     const result = await query<{ count: string }>(

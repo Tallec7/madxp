@@ -38,9 +38,9 @@ describe('MetricsService', () => {
 
       const metrics = await metricsService.getMetrics();
 
-      expect(metrics).toContain('neopro_connected_sites_total');
-      expect(metrics).toContain('neopro_deployments_total');
-      expect(metrics).toContain('neopro_video_uploads_total');
+      expect(metrics).toContain('madxp_connected_sites_total');
+      expect(metrics).toContain('madxp_deployments_total');
+      expect(metrics).toContain('madxp_video_uploads_total');
     });
   });
 
@@ -57,7 +57,7 @@ describe('MetricsService', () => {
       metricsService.recordConnectedSites(10);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_connected_sites_total 10');
+      expect(metrics).toContain('madxp_connected_sites_total 10');
     });
 
     it('should update to new value', async () => {
@@ -65,7 +65,7 @@ describe('MetricsService', () => {
       metricsService.recordConnectedSites(5);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_connected_sites_total 5');
+      expect(metrics).toContain('madxp_connected_sites_total 5');
     });
   });
 
@@ -76,7 +76,7 @@ describe('MetricsService', () => {
       metricsService.recordDeployment('failed', 'group');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_deployments_total');
+      expect(metrics).toContain('madxp_deployments_total');
       expect(metrics).toContain('status="completed"');
       expect(metrics).toContain('target_type="site"');
     });
@@ -88,7 +88,7 @@ describe('MetricsService', () => {
       metricsService.recordDeploymentDuration('group', 120.0);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_deployment_duration_seconds');
+      expect(metrics).toContain('madxp_deployment_duration_seconds');
     });
   });
 
@@ -99,8 +99,8 @@ describe('MetricsService', () => {
       metricsService.recordVideoUpload('failure');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_video_uploads_total');
-      expect(metrics).toContain('neopro_video_upload_bytes');
+      expect(metrics).toContain('madxp_video_uploads_total');
+      expect(metrics).toContain('madxp_video_upload_bytes');
     });
   });
 
@@ -110,7 +110,7 @@ describe('MetricsService', () => {
       metricsService.recordAlert('critical', 'site_offline');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_alerts_total');
+      expect(metrics).toContain('madxp_alerts_total');
       expect(metrics).toContain('severity="warning"');
       expect(metrics).toContain('severity="critical"');
     });
@@ -122,7 +122,7 @@ describe('MetricsService', () => {
       metricsService.recordActiveAlerts('critical', 1);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_active_alerts');
+      expect(metrics).toContain('madxp_active_alerts');
     });
   });
 
@@ -133,7 +133,7 @@ describe('MetricsService', () => {
       metricsService.recordCommand('update_config', 'success');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_commands_total');
+      expect(metrics).toContain('madxp_commands_total');
     });
   });
 
@@ -143,7 +143,7 @@ describe('MetricsService', () => {
       metricsService.recordCommandLatency('get_logs', 0.8);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_command_latency_seconds');
+      expect(metrics).toContain('madxp_command_latency_seconds');
     });
   });
 
@@ -154,7 +154,7 @@ describe('MetricsService', () => {
       metricsService.recordAuthAttempt('failure', false);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_auth_attempts_total');
+      expect(metrics).toContain('madxp_auth_attempts_total');
       expect(metrics).toContain('mfa_used="true"');
       expect(metrics).toContain('mfa_used="false"');
     });
@@ -166,7 +166,7 @@ describe('MetricsService', () => {
       metricsService.recordPiAgentAuth('failure', 'Clé API invalide');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_pi_agent_auth_total');
+      expect(metrics).toContain('madxp_pi_agent_auth_total');
     });
   });
 
@@ -176,7 +176,7 @@ describe('MetricsService', () => {
       metricsService.recordWebsocketMessage('outbound', 'command');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_websocket_messages_total');
+      expect(metrics).toContain('madxp_websocket_messages_total');
     });
   });
 
@@ -188,7 +188,7 @@ describe('MetricsService', () => {
       metricsService.recordSocketDisconnect('zombie_timeout', 'agent');
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_websocket_disconnects_total');
+      expect(metrics).toContain('madxp_websocket_disconnects_total');
       expect(metrics).toContain('reason="transport close"');
       expect(metrics).toContain('client_type="agent"');
       expect(metrics).toContain('client_type="dashboard"');
@@ -210,7 +210,7 @@ describe('MetricsService', () => {
       metricsService.recordCanaryDeployment('gradual', 1);
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_canary_deployments_active');
+      expect(metrics).toContain('madxp_canary_deployments_active');
     });
   });
 
@@ -220,7 +220,7 @@ describe('MetricsService', () => {
       metricsService.recordCanaryRollback();
 
       const metrics = await metricsService.getMetrics();
-      expect(metrics).toContain('neopro_canary_rollbacks_total');
+      expect(metrics).toContain('madxp_canary_rollbacks_total');
     });
   });
 
@@ -272,7 +272,7 @@ describe('MetricsService', () => {
       const metrics = await metricsService.getMetrics();
 
       // Counters should be reset
-      expect(metrics).not.toContain('neopro_deployments_total{status="completed"');
+      expect(metrics).not.toContain('madxp_deployments_total{status="completed"');
     });
   });
 

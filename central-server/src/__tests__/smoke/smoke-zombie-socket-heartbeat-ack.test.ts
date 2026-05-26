@@ -99,8 +99,8 @@ describe('Issue #824 — zombie socket heartbeat ACK wiring (smoke)', () => {
       src = fs.readFileSync(path.join(SERVER_ROOT, 'services/metrics.service.ts'), 'utf8');
     });
 
-    it('declares neopro_sync_agent_zombie_socket_recoveries_total counter', () => {
-      expect(src).toMatch(/neopro_sync_agent_zombie_socket_recoveries_total/);
+    it('declares madxp_sync_agent_zombie_socket_recoveries_total counter', () => {
+      expect(src).toMatch(/madxp_sync_agent_zombie_socket_recoveries_total/);
     });
 
     it('exposes recordZombieSocketRecovery() method', () => {

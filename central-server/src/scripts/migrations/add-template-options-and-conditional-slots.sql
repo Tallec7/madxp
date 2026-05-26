@@ -29,7 +29,7 @@
 
 CREATE TABLE IF NOT EXISTS template_options (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id     UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
+  template_id     UUID NOT NULL REFERENCES madxp_templates(id) ON DELETE CASCADE,
   key             VARCHAR(64) NOT NULL,
   label           VARCHAR(200) NOT NULL,
   type            VARCHAR(20) NOT NULL DEFAULT 'enum',
@@ -82,10 +82,10 @@ COMMENT ON COLUMN template_image_slots.visible_if IS
 
 CREATE TABLE IF NOT EXISTS template_packshot_refs (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id              UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
+  template_id              UUID NOT NULL REFERENCES madxp_templates(id) ON DELETE CASCADE,
   option_key               VARCHAR(64) NOT NULL,
   option_value             TEXT NOT NULL,
-  packshot_template_id     UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE RESTRICT,
+  packshot_template_id     UUID NOT NULL REFERENCES madxp_templates(id) ON DELETE RESTRICT,
   start_at_ms              INTEGER NOT NULL DEFAULT 0,
   z_index_offset           INT NOT NULL DEFAULT 100,
   created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
