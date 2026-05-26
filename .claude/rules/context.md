@@ -1,6 +1,6 @@
-# Contexte Métier Neopro
+# Contexte Métier MadXP
 
-**Neopro** = Système de TV interactive pour clubs sportifs.
+**MadXP** = Système de TV interactive pour clubs sportifs (ex-NEOPRO, rebrand en cours — cf. [ADR-133](../../docs/adr/ADR-133-rebrand-neopro-to-madxp.md)).
 
 ## Architecture
 
@@ -24,10 +24,10 @@ L'offre **Pi** est vendue comme "TV interactive sans dépendance internet en liv
 
 Deux UIs cohabitent volontairement, pour deux personae distinctes :
 
-| UI | Persona | Connectivité | Usage typique |
-|---|---|---|---|
-| Central dashboard | Super admin / operator / advertiser distant | Toujours en ligne | Push content vers la flotte, support distant, multi-sites, analytics, abonnements. **Pas d'accès physique aux Pi.** |
-| `:8080` (admin Pi local) | Opérateur ON-SITE au club | Pi possiblement offline | Config locale, debug, profils, sponsors, vidéos locales, diag réseau, switch club. |
+| UI                       | Persona                                     | Connectivité            | Usage typique                                                                                                       |
+| ------------------------ | ------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Central dashboard        | Super admin / operator / advertiser distant | Toujours en ligne       | Push content vers la flotte, support distant, multi-sites, analytics, abonnements. **Pas d'accès physique aux Pi.** |
+| `:8080` (admin Pi local) | Opérateur ON-SITE au club                   | Pi possiblement offline | Config locale, debug, profils, sponsors, vidéos locales, diag réseau, switch club.                                  |
 
 **Implication produit (ADR-120)** : toute feature touchant `categories`, `sponsors`, `timeCategories`, `displays`, `profiles/{id}.json` ou `configuration.json` doit être réalisable depuis `:8080` quand le Pi est offline. Sinon l'opérateur terrain est bloqué jusqu'au prochain reconnect. Pour `site_type = 'pi'`, le Pi est source de vérité de sa config locale ; le cloud reflète et orchestre. Pour `site_type = 'saas'`, le cloud reste source de vérité (pas de `:8080`).
 
@@ -48,14 +48,14 @@ Détails complets : [ADR-120](../../docs/adr/ADR-120-pi-saas-ownership-model.md)
 
 ## Rôles utilisateurs
 
-| Rôle        | Actions                                                                    |
-| ----------- | -------------------------------------------------------------------------- |
-| Super Admin | Tout (users, sites, content, abonnements)                                  |
-| Operator    | Gère ses clubs assignés, upload vidéos                                     |
-| Advertiser  | Upload pubs, gère ses vidéos                                               |
-| Agency      | Gère plusieurs advertisers                                                 |
-| Club        | Portail club : upload/supprime ses vidéos, déploie sur son Pi (pas NEOPRO) |
-| Club Staff  | Utilise la télécommande locale (pas de compte dashboard)                   |
+| Rôle        | Actions                                                                   |
+| ----------- | ------------------------------------------------------------------------- |
+| Super Admin | Tout (users, sites, content, abonnements)                                 |
+| Operator    | Gère ses clubs assignés, upload vidéos                                    |
+| Advertiser  | Upload pubs, gère ses vidéos                                              |
+| Agency      | Gère plusieurs advertisers                                                |
+| Club        | Portail club : upload/supprime ses vidéos, déploie sur son Pi (pas MadXP) |
+| Club Staff  | Utilise la télécommande locale (pas de compte dashboard)                  |
 
 ## Glossaire
 
