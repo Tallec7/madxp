@@ -1,5 +1,5 @@
 {
-  "name": "neopro-poc-stramatel",
+  "name": "madxp-poc-stramatel",
   "version": "0.1.0",
   "private": true,
   "description": "POC standalone pour valider la lecture d'une console Stramatel via RS-485 ou Serial-to-Ethernet. Voir PROP-003.",

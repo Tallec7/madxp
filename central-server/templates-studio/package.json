@@ -1,5 +1,5 @@
 {
-  "name": "neopro-templates-studio",
+  "name": "madxp-templates-studio",
   "version": "1.0.0",
   "private": true,
   "description": "Compositions Remotion Templates Studio — bundlées par central-server/src/services/studio-render-worker.service.ts",

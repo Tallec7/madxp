@@ -1,7 +1,7 @@
 {
-  "name": "Neopro TV",
-  "short_name": "Neopro",
-  "description": "Affichage TV interactive Neopro pour clubs sportifs",
+  "name": "MadXP TV",
+  "short_name": "MadXP",
+  "description": "Affichage TV interactive MadXP pour clubs sportifs",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

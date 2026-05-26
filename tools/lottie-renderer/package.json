@@ -1,5 +1,5 @@
 {
-  "name": "neopro-lottie-renderer",
+  "name": "madxp-lottie-renderer",
   "version": "0.1.0",
   "private": true,
   "description": "Prototype: composite Lottie animation overlay on MP4 video → new MP4",

@@ -1,5 +1,5 @@
 {
-  "name": "neopro-central-server",
+  "name": "madxp-central-server",
   "version": "1.0.0",
   "description": "Serveur central de gestion de flotte NEOPRO",
   "main": "dist/server.js",

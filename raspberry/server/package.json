@@ -1,5 +1,5 @@
 {
-  "name": "neopro-socket-server",
+  "name": "madxp-socket-server",
   "version": "v3.330.1",
   "description": "Socket.IO server for Neopro application",
   "main": "server.js",
