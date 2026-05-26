@@ -1,4 +1,4 @@
-# NEOPRO - Technical Deep Dive Pack
+# MADXP - Technical Deep Dive Pack
 
 **For Software Architects, DevOps Engineers & System Designers**
 
@@ -14,7 +14,7 @@ Use this pack when:
 - Planning infrastructure scaling
 - Designing system integrations
 - Solving complex technical problems
-- Making technology decisions for NEOPRO
+- Making technology decisions for MADXP
 
 **Copy & paste into Claude/ChatGPT:** Optimized for technical deep dives and architecture discussions.
 
@@ -122,7 +122,7 @@ Use this pack when:
 │      │  │  │  ├── sponsors/                                           │ │   │
 │      │  │  │  ├── jingles/                                            │ │   │
 │      │  │  │  └── ambiance/                                           │ │   │
-│      │  │  ├── configuration.json  (Merged: NEOPRO + Club)             │ │   │
+│      │  │  ├── configuration.json  (Merged: MADXP + Club)             │ │   │
 │      │  │  └── logs/            Application logs                      │ │   │
 │      │  └────────────────────────────────────────────────────────────┘ │   │
 │      │                                                                  │   │
@@ -298,7 +298,7 @@ Sends to cloud:
 
 Receives from cloud:
 - Pending commands (reboot, update, deploy)
-- New NEOPRO content to download
+- New MADXP content to download
 - Configuration updates
 ```
 
@@ -310,10 +310,10 @@ function mergeConfig(local, remote) {
   // Keep all local "club" content
   const clubContent = local.categories.filter((c) => c.owner === 'club');
 
-  // Pull all NEOPRO content
+  // Pull all MADXP content
   const neoProContent = remote.categories.filter((c) => c.locked === true);
 
-  // Merge: NEOPRO overrides, club content preserved
+  // Merge: MADXP overrides, club content preserved
   return {
     categories: [...neoProContent, ...clubContent],
   };
@@ -410,8 +410,8 @@ POST /api/system/restart     - Restart services
 │                        CONTENT TYPES                             │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│ 1. NEOPRO Content (Locked)                                     │
-│    ├── Owner: NEOPRO central                                   │
+│ 1. MADXP Content (Locked)                                     │
+│    ├── Owner: MADXP central                                   │
 │    ├── Modifiable by Club: NO                                  │
 │    ├── Deletable by Club: NO                                   │
 │    ├── Examples: National sponsor videos, platform updates     │
@@ -427,7 +427,7 @@ POST /api/system/restart     - Restart services
 │    └── Flag in JSON: "locked": false, "owner": "club"         │
 │                                                                 │
 │ 3. System Configuration (Locked)                               │
-│    ├── Owner: NEOPRO central                                   │
+│    ├── Owner: MADXP central                                   │
 │    ├── Modifiable by Club: NO                                  │
 │    ├── Examples: Passwords, system settings                    │
 │    └── Flag in JSON: "locked": true                           │
@@ -437,11 +437,11 @@ POST /api/system/restart     - Restart services
 
 ### Sync Scenarios & Behavior
 
-**Scenario 1: NEOPRO deploys national sponsor video**
+**Scenario 1: MADXP deploys national sponsor video**
 
 ```
 Timeline:
-T0: NEOPRO admin uploads Décathlon video via dashboard
+T0: MADXP admin uploads Décathlon video via dashboard
     → Stored in PostgreSQL
     → Marked as locked, owner=neopro, expires_at=2025-01-31
 
@@ -480,10 +480,10 @@ T1: Operator restarts application (or auto-save trigger)
 T2: Next sync with cloud (Sync Agent)
     → Pushes configuration to central server
     → Central stores in database (mirror, not source of truth)
-    → NEOPRO can see what club has locally
+    → MADXP can see what club has locally
 
-T3: NEOPRO later deploys conflicting update
-    → Algorithm: Keep club content, merge NEOPRO content
+T3: MADXP later deploys conflicting update
+    → Algorithm: Keep club content, merge MADXP content
     → Both videos coexist (hommage + national content)
     → No data loss
 
@@ -496,7 +496,7 @@ T4: Club goes offline for 2 weeks
 **Scenario 3: Merge conflict resolution**
 
 ```
-Problem: Club has category "SPONSORS" locally, but NEOPRO
+Problem: Club has category "SPONSORS" locally, but MADXP
 pushes new structure with sub-categories.
 
 Solution:
@@ -511,9 +511,9 @@ Solution:
 
 Algorithm (simplified):
 const merged = {
-  ...remote, // Start with remote (NEOPRO content)
+  ...remote, // Start with remote (MADXP content)
   categories: [
-    ...remote.categories.filter(c => c.locked), // NEOPRO locked
+    ...remote.categories.filter(c => c.locked), // MADXP locked
     ...local.categories.filter(c => !c.locked)  // Club editable
   ]
 };

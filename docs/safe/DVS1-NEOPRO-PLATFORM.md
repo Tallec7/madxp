@@ -1,4 +1,4 @@
-# 🟣 DVS-1 — Neopro Platform Development
+# 🟣 DVS-1 — MadXP Platform Development
 
 > _Le Development Value Stream unique qui alimente les deux OVS._
 
@@ -33,7 +33,7 @@ flowchart TB
 
 > **POUR** les clubs sportifs amateurs et sponsors locaux
 > **QUI** veulent professionnaliser leur image et prouver leur ROI
-> **LA** Plateforme Neopro
+> **LA** Plateforme MadXP
 > **EST UNE** solution tout-en-un boîtier + logiciel + support
 > **QUI** transforme les écrans de gymnases en outils de valorisation pro
 > **CONTRAIREMENT À** PowerPoint, Canva, boucles USB qui ne génèrent aucun revenu
@@ -53,13 +53,13 @@ flowchart TB
 
 ### 🎫 Solution Context
 
-| Segment            | Contexte d'usage                                     |
-| ------------------ | ---------------------------------------------------- |
-| Bénévole club      | Smartphone en bord de terrain, WiFi gymnase instable |
-| Admin club         | Dashboard web, bureau ou domicile                    |
-| Sponsor            | Dashboard web, bureau                                |
-| Annonceur régie    | Portail web self-service                             |
-| Super admin NEOPRO | Dashboard central, monitoring flotte                 |
+| Segment           | Contexte d'usage                                     |
+| ----------------- | ---------------------------------------------------- |
+| Bénévole club     | Smartphone en bord de terrain, WiFi gymnase instable |
+| Admin club        | Dashboard web, bureau ou domicile                    |
+| Sponsor           | Dashboard web, bureau                                |
+| Annonceur régie   | Portail web self-service                             |
+| Super admin MADXP | Dashboard central, monitoring flotte                 |
 
 ### 👥 Équipe & Localisation
 
@@ -158,4 +158,4 @@ quadrantChart
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Documentation principale](../00-INDEX.md)
+**Retour** : [SAFe MadXP](README.md) · [Documentation principale](../00-INDEX.md)

@@ -1,21 +1,24 @@
-# NEOPRO Documentation Packs
+# MADXP Documentation Packs
 
 Self-contained documentation bundles optimized for copy-paste into Claude, ChatGPT, and other AI platforms.
 
 ## Available Packs
 
 ### 1. PACK_DEV_QUICKSTART.md
+
 **For:** Developers, engineers, architects
 
 **Size:** 817 lines | 28KB
 
 **Use when:**
+
 - You're a new developer joining the team
 - You need to set up local development quickly
 - You want to understand the codebase architecture
 - You're pairing with Claude for code reviews
 
 **Contents:**
+
 - Project overview & technology stack
 - Complete architecture diagrams
 - Local development setup (3 methods)
@@ -29,11 +32,13 @@ Self-contained documentation bundles optimized for copy-paste into Claude, ChatG
 ---
 
 ### 2. PACK_BUSINESS_PITCH.md
+
 **For:** Business stakeholders, investors, partners, sales teams
 
 **Size:** 561 lines | 20KB
 
 **Use when:**
+
 - Pitching to investors or VCs
 - Presenting to potential customers
 - Creating marketing materials
@@ -41,6 +46,7 @@ Self-contained documentation bundles optimized for copy-paste into Claude, ChatG
 - Explaining the business model
 
 **Contents:**
+
 - Executive summary (problem/solution)
 - Market analysis (TAM, SAM, segments)
 - Product overview (3-component ecosystem)
@@ -55,11 +61,13 @@ Self-contained documentation bundles optimized for copy-paste into Claude, ChatG
 ---
 
 ### 3. PACK_TECHNICAL_DEEP_DIVE.md
+
 **For:** Technical architects, DevOps engineers, system designers
 
 **Size:** 1,613 lines | 52KB
 
 **Use when:**
+
 - Conducting architecture reviews
 - Planning infrastructure scaling
 - Designing system integrations
@@ -67,11 +75,12 @@ Self-contained documentation bundles optimized for copy-paste into Claude, ChatG
 - Making technology decisions
 
 **Contents:**
+
 - Complete system topology & data flows
 - Cloud components architecture (Express, PostgreSQL, Socket.IO)
 - Edge components (Sync Agent, Local Server)
 - Synchronization architecture (offline-first patterns)
-- Content ownership model (NEOPRO vs Club)
+- Content ownership model (MADXP vs Club)
 - Database design (10 tables with SQL schemas)
 - Technology stack deep dive (Angular 20, Node.js 18, etc.)
 - Deployment strategies (Golden Image, OTA, CI/CD)
@@ -117,7 +126,9 @@ For technical details: See `docs/packs/PACK_TECHNICAL_DEEP_DIVE.md`
 
 ```markdown
 ## Context
+
 See relevant pack:
+
 - [ ] Development context: PACK_DEV_QUICKSTART.md
 - [ ] Technical context: PACK_TECHNICAL_DEEP_DIVE.md
 ```
@@ -129,26 +140,31 @@ See relevant pack:
 All packs share these characteristics:
 
 ✅ **Self-Contained**
+
 - No external links needed for core understanding
 - All necessary context included in document
 
 ✅ **Well-Organized**
+
 - Table of Contents with section anchors
 - Clear hierarchical structure
 - 150+ sections total
 
 ✅ **AI-Optimized**
+
 - Formatted for copy-paste
 - Includes code examples & SQL schemas
 - ASCII diagrams instead of image files
 - Clear, concise explanations
 
 ✅ **Production Data**
+
 - Uses real metrics (27 clubs, 98.5% uptime)
 - Actual technology versions documented
 - Current architecture as of Dec 17, 2025
 
 ✅ **Practical**
+
 - Actionable guidance
 - Code examples with context
 - Common workflows documented
@@ -158,6 +174,7 @@ All packs share these characteristics:
 ## Content Mapping
 
 ### Business Context
+
 ```
 PACK_BUSINESS_PITCH.md
 ├── Problem Definition (market)
@@ -169,6 +186,7 @@ PACK_BUSINESS_PITCH.md
 ```
 
 ### Developer Context
+
 ```
 PACK_DEV_QUICKSTART.md
 ├── Technology Stack
@@ -180,6 +198,7 @@ PACK_DEV_QUICKSTART.md
 ```
 
 ### Technical Context
+
 ```
 PACK_TECHNICAL_DEEP_DIVE.md
 ├── System Architecture (detailed)
@@ -197,12 +216,12 @@ PACK_TECHNICAL_DEEP_DIVE.md
 
 ## File Statistics
 
-| Pack | Lines | Size | Focus |
-|------|-------|------|-------|
-| PACK_DEV_QUICKSTART.md | 817 | 28KB | Developer setup & coding |
-| PACK_BUSINESS_PITCH.md | 561 | 20KB | Business & investment |
-| PACK_TECHNICAL_DEEP_DIVE.md | 1,613 | 52KB | Architecture & systems |
-| **Total** | **2,991** | **100KB** | Comprehensive knowledge |
+| Pack                        | Lines     | Size      | Focus                    |
+| --------------------------- | --------- | --------- | ------------------------ |
+| PACK_DEV_QUICKSTART.md      | 817       | 28KB      | Developer setup & coding |
+| PACK_BUSINESS_PITCH.md      | 561       | 20KB      | Business & investment    |
+| PACK_TECHNICAL_DEEP_DIVE.md | 1,613     | 52KB      | Architecture & systems   |
+| **Total**                   | **2,991** | **100KB** | Comprehensive knowledge  |
 
 ---
 
@@ -231,7 +250,7 @@ Updates to source documentation will require updating corresponding packs:
 
 ## Questions?
 
-These packs are self-explanatory and designed for AI interaction. For questions about NEOPRO itself, reference the detailed documentation in `docs/` directory.
+These packs are self-explanatory and designed for AI interaction. For questions about MADXP itself, reference the detailed documentation in `docs/` directory.
 
 ---
 

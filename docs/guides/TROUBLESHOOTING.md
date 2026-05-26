@@ -1,4 +1,4 @@
-# Guide de dépannage Neopro
+# Guide de dépannage MadXP
 
 ## Table des matières
 
@@ -59,7 +59,7 @@
 
 ## Boot splash / écran de démarrage (v3.96+)
 
-Le boot d'un Pi affiche désormais un écran noir propre (pas de texte console) suivi d'un splash Neopro brandé (logo + spinner + "Chargement...") avant qu'Angular ne bootstrap.
+Le boot d'un Pi affiche désormais un écran noir propre (pas de texte console) suivi d'un splash MadXP brandé (logo + spinner + "Chargement...") avant qu'Angular ne bootstrap.
 
 ### Le splash ne s'affiche pas (écran blanc au démarrage)
 
@@ -173,7 +173,7 @@ ssh pi@raspberrypi.local
 
 ### Gestion de plusieurs boîtiers
 
-Si vous gérez plusieurs Raspberry Pi Neopro, consultez la section **Configuration pour plusieurs boîtiers** dans [SSH_SETUP.md](SSH_SETUP.md#configuration-pour-plusieurs-boîtiers).
+Si vous gérez plusieurs Raspberry Pi MadXP, consultez la section **Configuration pour plusieurs boîtiers** dans [SSH_SETUP.md](SSH_SETUP.md#configuration-pour-plusieurs-boîtiers).
 
 ---
 
@@ -286,7 +286,7 @@ sudo tee /etc/avahi/services/neopro.service > /dev/null << 'EOF'
 <?xml version="1.0" standalone='no'?>
 <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
 <service-group>
-  <name replace-wildcards="yes">Neopro %h</name>
+  <name replace-wildcards="yes">MadXP %h</name>
   <service>
     <type>_http._tcp</type>
     <port>80</port>
@@ -882,7 +882,7 @@ sudo systemctl restart neopro-admin
 **Redémarrage depuis l'interface :8080**
 
 - Les boutons "Redémarrer service" de l'interface admin exécutent `sudo systemctl restart ...` via `raspberry/admin/admin-server.js`.
-- Il faut que **toutes** les unités systemd Neopro (`neopro-app`, `neopro-admin`, `neopro-sync`) n'aient **pas** `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et tous ses enfants. Sinon `sudo` affiche _"no new privileges"_.
+- Il faut que **toutes** les unités systemd MadXP (`neopro-app`, `neopro-admin`, `neopro-sync`) n'aient **pas** `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et tous ses enfants. Sinon `sudo` affiche _"no new privileges"_.
 - Après modification d'un fichier `.service`, déployer-le sur le Raspberry Pi puis :
   ```bash
   sudo systemctl daemon-reload
@@ -1093,7 +1093,7 @@ ssh pi@neopro.local 'sudo cp /home/pi/neopro/config/systemd/neopro-kiosk.service
 - Se produit en boucle toutes les ~30s, surtout pendant les coupures WiFi
 - Aucun impact sur la lecture vidéo locale, mais pollue les logs
 
-**Cause :** Chromium tente de se connecter à Google Cloud Messaging (`mtalk.google.com`) pour les push notifications internes. L'erreur `-105` = `ERR_NAME_NOT_RESOLVED` — le DNS échoue quand le WiFi est instable (fréquent avec les dongles USB RTL8192EU). Neopro n'utilise pas les push notifications Chromium.
+**Cause :** Chromium tente de se connecter à Google Cloud Messaging (`mtalk.google.com`) pour les push notifications internes. L'erreur `-105` = `ERR_NAME_NOT_RESOLVED` — le DNS échoue quand le WiFi est instable (fréquent avec les dongles USB RTL8192EU). MadXP n'utilise pas les push notifications Chromium.
 
 **Correction (v3.84.2) :** `GCMDriver` ajouté dans `--disable-features` du kiosk-watchdog.sh (primaire et secondaire). Désactive entièrement le client GCM de Chromium.
 
@@ -1287,7 +1287,7 @@ Les logs contiendront : `🚨 FENÊTRE PARASITE détectée: '<nom>'`.
 ```bash
 # Vérifier quelle fenêtre est au premier plan
 DISPLAY=:0 xdotool getactivewindow getwindowname
-# Attendu: "Neopro - Chromium". Si autre chose: fenêtre parasite
+# Attendu: "MadXP - Chromium". Si autre chose: fenêtre parasite
 
 # Lister TOUS les services neopro
 systemctl list-units 'neopro-*' --all --no-pager
@@ -2082,11 +2082,11 @@ Si la réponse contient `advertisers` au lieu de `sponsors`, mettre à jour le b
 
 **Fix :** Mettre à jour vers v3.58.1+ (backend) et redéployer le dashboard Angular sur Hostinger.
 
-### Sponsors parasites créés automatiquement ("Intro Neopro", doublons) (corrigé v3.113.3)
+### Sponsors parasites créés automatiquement ("Intro MadXP", doublons) (corrigé v3.113.3)
 
 **Symptômes :**
 
-- L'onglet Sponsors affiche des sponsors indésirables ("B", "J", "P", "Intro Neopro") avec 0 impressions
+- L'onglet Sponsors affiche des sponsors indésirables ("B", "J", "P", "Intro MadXP") avec 0 impressions
 - Le nombre de sponsors est supérieur à ce qui a été configuré manuellement
 - Les sponsors parasites réapparaissent après suppression
 
@@ -2631,7 +2631,7 @@ Le code de retour = nombre d'erreurs (0 = Pi sain). Le mode `--json` est automat
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║              DIAGNOSTIC RASPBERRY PI NEOPRO                    ║
+║              DIAGNOSTIC RASPBERRY PI MADXP                    ║
 ╚════════════════════════════════════════════════════════════════╝
 
 >>> Services systemd
@@ -2767,7 +2767,7 @@ ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 8. **Flush les buffers** analytics et sponsors bloqués
 9. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
 10. **Vérifie hdmi_force_hotplug** sur les 2 ports HDMI (E-23)
-11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1 + Plymouth NEOPRO + desktop noir + image splash kiosk)
+11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1 + Plymouth MADXP + desktop noir + image splash kiosk)
 12. **Captive portal iptables** (Android HTTPS connectivity checks)
 13. **Pi 5 Active Cooler** (dtparam=cooling_fan dans config.txt)
 
@@ -3582,13 +3582,13 @@ Le `onTimeUpdate()` de la boucle arrière-plan ne vérifiait pas `isManualMode`.
 - Ajout de `if (this.isManualMode) return;` dans `onTimeUpdate()` pour bloquer l'early switch pendant les vidéos manuelles
 - Protection de tous les `hideBlackOverlay()` dans `switchPlayers()`, `playOnActivePlayer()` et `startSeamlessLoop()` avec `if (!this.isManualMode)`
 
-### 7b. Boucle vidéo reprend au début après une vidéo manuelle (logo Neopro)
+### 7b. Boucle vidéo reprend au début après une vidéo manuelle (logo MadXP)
 
 **Symptômes :**
 
 - Depuis la télécommande, on lance une vidéo manuelle
 - La vidéo joue correctement
-- Au retour en boucle, la boucle repart de la vidéo 0 (le logo Neopro) au lieu de reprendre là où elle en était
+- Au retour en boucle, la boucle repart de la vidéo 0 (le logo MadXP) au lieu de reprendre là où elle en était
 
 **Cause racine (corrigée en v3.60.1) :**
 
@@ -5756,7 +5756,7 @@ ssh pi@neopro.local 'ls -la /home/pi/neopro/webapp/profiles/*.json'
 
 ## Ventilateur Active Cooler Pi 5 non détecté (v3.104.3+)
 
-Le ventilateur officiel Active Cooler du Pi 5 tourne à 100% en permanence au lieu d'être régulé par PWM, et n'est pas détecté par le monitoring Neopro.
+Le ventilateur officiel Active Cooler du Pi 5 tourne à 100% en permanence au lieu d'être régulé par PWM, et n'est pas détecté par le monitoring MadXP.
 
 ### Symptômes
 
@@ -5810,7 +5810,7 @@ vcgencmd get_throttled
 ```bash
 # Ajouter le paramètre
 echo "" >> /boot/firmware/config.txt
-echo "# Active Cooler Pi 5 — contrôle PWM ventilateur (surveillance Neopro)" >> /boot/firmware/config.txt
+echo "# Active Cooler Pi 5 — contrôle PWM ventilateur (surveillance MadXP)" >> /boot/firmware/config.txt
 echo "dtparam=cooling_fan" >> /boot/firmware/config.txt
 
 # Redémarrer pour appliquer

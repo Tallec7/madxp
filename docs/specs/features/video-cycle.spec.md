@@ -59,7 +59,7 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
   - `MAX_IN_FLIGHT_PER_SITE = 8` (cap global, lu via `deploymentRepository.countActivePerSite(siteId)`) — si déjà N actifs ≥ 8 sur le site, l'appel est refusé, métrique `neopro_auto_deploy_throttled_total{reason='in_flight_cap'}` incrémentée
   - `INTER_DEPLOY_DELAY_MS = 1500` (sérialisation : pause 1.5s entre chaque INSERT pour ne pas saturer le CPU Pi)
   - Re-check mid-loop : si la cap est atteinte en cours de batch, `break` avec `reason='in_flight_cap_midloop'`
-- **Club grants** : un club peut accéder aux vidéos qui lui ont été explicitement accordées via `video_club_grants` (table dédiée — pas d'accès universel aux vidéos Neopro).
+- **Club grants** : un club peut accéder aux vidéos qui lui ont été explicitement accordées via `video_club_grants` (table dédiée — pas d'accès universel aux vidéos MadXP).
 - **Quota tier** : le nombre de vidéos uploadables par un club est limité par son tier d'abonnement (tier Play = 25 max). Checked à l'upload.
 
 ## Comportements observables

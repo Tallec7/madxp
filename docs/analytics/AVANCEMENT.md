@@ -1,6 +1,6 @@
 # Avancement Analytics Sponsors - 17 Février 2026
 
-> **Note** : Ce document couvre le module advertiser analytics legacy (annonceurs réseau NEOPRO). Depuis février 2026, le modèle unifié `site_sponsors` a été implémenté (Paliers P0-P5). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle actuel.
+> **Note** : Ce document couvre le module advertiser analytics legacy (annonceurs réseau MADXP). Depuis février 2026, le modèle unifié `site_sponsors` a été implémenté (Paliers P0-P5). Voir [ADR-SITE-SPONSORS-ANALYTICS.md](ADR-SITE-SPONSORS-ANALYTICS.md) pour le modèle actuel.
 
 ## Ancien modèle : Advertiser Analytics - 25 Décembre 2025 (100% Complet)
 
@@ -30,7 +30,7 @@
 - ✅ Graphiques Chart.js (ligne + anneau)
 - ✅ Mise en page 4 pages (garde, KPIs, graphiques, certificat)
 - ✅ Signature numérique SHA-256
-- ✅ Charte graphique NEOPRO (couleurs, typographie)
+- ✅ Charte graphique MADXP (couleurs, typographie)
 
 ### Frontend Dashboard (100%) ✅
 
@@ -150,7 +150,7 @@
 **Implémentation** : `central-server/src/services/pdf-report.service.ts`
 
 - ✅ **Page 1 - Page de garde** :
-  - Logo NEOPRO stylisé
+  - Logo MADXP stylisé
   - Titre rapport (SPONSOR/CLUB)
   - Nom sponsor/club
   - Période d'analyse (DD/MM/YYYY)
@@ -193,7 +193,7 @@
 
 **Charte Graphique** :
 
-- ✅ Couleurs NEOPRO définies (primaire #1e3a8a, secondaire #3b82f6, etc.)
+- ✅ Couleurs MADXP définies (primaire #1e3a8a, secondaire #3b82f6, etc.)
 - ✅ Typographie Helvetica (Bold/Regular/Oblique) + Courier (signature)
 - ✅ Tailles police cohérentes (8-32pt)
 - ✅ Marges 50pt, format A4 (595x842pt)
@@ -391,7 +391,7 @@ neopro/
 
 ## 🎯 Impact Business (Rappel BP §13.6)
 
-### Pour NEOPRO
+### Pour MADXP
 
 - **Différenciateur majeur** vs concurrence
 - **Upsell analytics premium** : +€10-25/mois

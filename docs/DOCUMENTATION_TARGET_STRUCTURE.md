@@ -1,4 +1,4 @@
-# Documentation cible (canonique) — NEOPRO
+# Documentation cible (canonique) — MADXP
 
 ## Objectif
 

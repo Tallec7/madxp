@@ -49,7 +49,7 @@ lite, cohérent avec `studio-render-server/` PR #983).
   Python/ONNX.
 - **API externe (remove.bg, ClipDrop)** : rejeté — coût récurrent (~$0.20/photo),
   dépendance externe critique, RGPD sur les photos joueurs envoyées hors
-  du périmètre Neopro.
+  du périmètre MadXP.
 - **Process colocalisé via `child_process.spawn` Python depuis le central** :
   rejeté — un crash du Python ferait tomber le central, et le coût mémoire
   de charger BiRefNet en process collocé est inacceptable. Pattern aligné

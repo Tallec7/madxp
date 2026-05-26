@@ -1,4 +1,4 @@
-# 📊 NEOPRO - État du Projet
+# 📊 MADXP - État du Projet
 
 > **Dernière mise à jour** : 31 Décembre 2025
 > **Version** : 2.5
@@ -10,7 +10,7 @@
 
 ### Statut Global : 🟢 PRODUCTION-READY v2.5
 
-NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu vidéo pour clubs sportifs avec :
+MADXP est une plateforme **complète et fonctionnelle** de gestion de contenu vidéo pour clubs sportifs avec :
 
 - ✅ **Core System** : 100% opérationnel
 - ✅ **Analytics Club** : 100% implémenté (Phases 1-3 complètes)
@@ -57,7 +57,7 @@ NEOPRO est une plateforme **complète et fonctionnelle** de gestion de contenu v
 - ✅ Synchronisation automatique boîtiers ↔ central
 - ✅ Mode offline avec queue
 - ✅ Gestion conflits (central prioritaire)
-- ✅ Expiration vidéos NEOPRO automatique
+- ✅ Expiration vidéos MADXP automatique
 - ✅ Support vidéos sponsors avec métadonnées
 
 #### 1.2 Diffusion Vidéos
@@ -405,7 +405,7 @@ Pour activer le score en live, ajouter dans `configuration.json` :
 }
 ```
 
-Cette option est activée manuellement par NEOPRO (option payante).
+Cette option est activée manuellement par MADXP (option payante).
 
 **Fichiers Modifiés** :
 
@@ -755,7 +755,7 @@ Total: ~50,000 lignes de code
 
 ## 🏆 CONCLUSION
 
-**NEOPRO est un produit mature, fonctionnel et prêt pour le marché.**
+**MADXP est un produit mature, fonctionnel et prêt pour le marché.**
 
 ### Forces
 
@@ -785,5 +785,5 @@ Total: ~50,000 lignes de code
 
 **Version** : 2.5.0
 **Date** : 31 Décembre 2025
-**Auteur** : Équipe NEOPRO + Claude Code
+**Auteur** : Équipe MADXP + Claude Code
 **Statut** : 🟢 Production-Ready v2.5 avec P1 Janvier 2026 implémenté en avance

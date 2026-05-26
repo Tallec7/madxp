@@ -57,9 +57,9 @@
 4. **Notoriété sport amateur** : limitée
 5. **Pas de mode SaaS pur low-cost** apparent pour clubs
 
-## Positionnement vs Neopro
+## Positionnement vs MadXP
 
-| Dimension                           | A2Display                                 | Neopro                 |
+| Dimension                           | A2Display                                 | MadXP                  |
 | ----------------------------------- | ----------------------------------------- | ---------------------- |
 | Spécialisation sport                | ❌ Généraliste                            | ✅ Vertical sport      |
 | Intégrations sport (scores, fédés)  | ❌                                        | 🟡 À développer        |
@@ -68,17 +68,17 @@
 | Hardware LED catalog                | ✅                                        | ❌ (Pi + TV existante) |
 | Cible                               | Multi-secteur (retail, corp, sport, etc.) | Clubs sportifs         |
 
-## Pitch différenciateur Neopro vs A2Display (draft)
+## Pitch différenciateur MadXP vs A2Display (draft)
 
 > **"A2Display est une excellente solution générique d'affichage dynamique.
 > Mais un club sportif n'a pas les mêmes besoins qu'un magasin :
 > il faut gérer des sponsors par catégorie, intégrer des données de match,
 > respecter les contraintes du contexte sportif.
-> Neopro est conçu pour ça depuis le premier jour."**
+> MadXP est conçu pour ça depuis le premier jour."**
 
-**Stratégie** : capitaliser sur **la verticalisation sport**. A2Display ne peut pas suivre Neopro sur les use-cases pointus club (sponsor weighted rotation, intégrations fédérations).
+**Stratégie** : capitaliser sur **la verticalisation sport**. A2Display ne peut pas suivre MadXP sur les use-cases pointus club (sponsor weighted rotation, intégrations fédérations).
 
-## Risques pour Neopro
+## Risques pour MadXP
 
 - **Faible** : A2Display est généraliste, peu probable qu'ils investissent massivement le vertical sport
 - **Modéré** si A2Display décroche un partenariat fédération ou ligue

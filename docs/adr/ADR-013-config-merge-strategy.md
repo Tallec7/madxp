@@ -2,7 +2,7 @@
 
 **Date** : Décembre 2025 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
@@ -10,7 +10,7 @@
 
 Le dashboard central envoie des mises à jour de configuration vers les Pi via la commande `update_config`. La configuration d'un Pi contient :
 
-1. **Contenu Neopro** (géré par le central) : sponsors, catégories, boucles vidéo, mappings
+1. **Contenu MadXP** (géré par le central) : sponsors, catégories, boucles vidéo, mappings
 2. **Paramètres locaux** (propres au Pi) : langue, timezone, siteId, apiKey, clubName, réseau
 
 Le problème : un remplacement complet de la configuration écraserait les paramètres locaux.
@@ -31,25 +31,25 @@ Le mode par défaut est **merge** (pas replace). Le central envoie uniquement `n
 
 **Champs gérés par le central** (fusionnés) :
 
-| Champ | Comportement merge |
-|-------|-------------------|
-| `sponsors` | Fusion intelligente : sponsors du central appliqués, sponsors locaux préservés |
-| `categories` | Fusion NEOPRO/Club |
-| `timeCategories` | Remplacement complet |
-| `categoryMappings` | Remplacement complet |
-| `liveScoreEnabled` | Mise à jour |
-| `scoreOverlay` | Mise à jour |
-| `watermark` | Mise à jour |
+| Champ              | Comportement merge                                                             |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `sponsors`         | Fusion intelligente : sponsors du central appliqués, sponsors locaux préservés |
+| `categories`       | Fusion MADXP/Club                                                              |
+| `timeCategories`   | Remplacement complet                                                           |
+| `categoryMappings` | Remplacement complet                                                           |
+| `liveScoreEnabled` | Mise à jour                                                                    |
+| `scoreOverlay`     | Mise à jour                                                                    |
+| `watermark`        | Mise à jour                                                                    |
 
 **Champs protégés** (jamais écrasés par le central) :
 
-| Champ | Raison |
-|-------|--------|
+| Champ                           | Raison                            |
+| ------------------------------- | --------------------------------- |
 | `settings` (language, timezone) | Configurés localement par le club |
-| `siteId`, `apiKey` | Identité du boîtier |
-| `siteName`, `clubName` | Personnalisés localement |
-| `auth` (password remote) | Sécurité locale |
-| `hotspot`, `localNetwork` | Configuration réseau locale |
+| `siteId`, `apiKey`              | Identité du boîtier               |
+| `siteName`, `clubName`          | Personnalisés localement          |
+| `auth` (password remote)        | Sécurité locale                   |
+| `hotspot`, `localNetwork`       | Configuration réseau locale       |
 
 ### Règles spéciales pour les sponsors
 
@@ -62,6 +62,7 @@ Le mode par défaut est **merge** (pas replace). Le central envoie uniquement `n
 **Problème** : Après un `update_config`, le Pi envoie `sync_local_state` avec l'ancienne config (pas encore mise à jour). Le cloud stockait cette ancienne config dans `local_config_mirror`, écrasant la nouvelle.
 
 **Solution** : Blocage temporaire de 60 secondes :
+
 ```sql
 ALTER TABLE sites ADD COLUMN config_update_pending_until TIMESTAMP;
 ```
@@ -73,9 +74,11 @@ Pendant ces 60s, `handleSyncLocalState` met à jour uniquement les métadonnées
 ### 1. Replace complet
 
 **Avantages** :
+
 - Simple, pas d'ambiguïté
 
 **Inconvénients** :
+
 - Écrase la langue, le timezone, le mot de passe remote, le réseau
 - Le club doit reconfigurer après chaque déploiement central
 
@@ -84,11 +87,13 @@ Pendant ces 60s, `handleSyncLocalState` met à jour uniquement les métadonnées
 ### 2. Merge intelligent ✅
 
 **Avantages** :
+
 - Les clubs gardent leurs personnalisations
 - Le central contrôle le contenu
 - Séparation claire central vs local
 
 **Inconvénients** :
+
 - Logique de merge à maintenir
 - Cas limites possibles (conflit de structure)
 
@@ -117,4 +122,4 @@ Pendant ces 60s, `handleSyncLocalState` met à jour uniquement les métadonnées
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

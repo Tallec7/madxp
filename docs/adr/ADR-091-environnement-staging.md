@@ -9,7 +9,7 @@
 
 ## Contexte
 
-Aujourd'hui Neopro n'a que **2 environnements** : `dev` (machine locale) et `prod` (Railway + Hostinger + 50 Pi clients). Tout merge sur `main` déclenche `release.yml` → semantic-release → tag → build & deploy Hostinger FTP **direct prod**.
+Aujourd'hui MadXP n'a que **2 environnements** : `dev` (machine locale) et `prod` (Railway + Hostinger + 50 Pi clients). Tout merge sur `main` déclenche `release.yml` → semantic-release → tag → build & deploy Hostinger FTP **direct prod**.
 
 Conséquences :
 

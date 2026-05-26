@@ -555,7 +555,7 @@ private triggerScorePopup(): void {
 **Structure:**
 
 ```markdown
-# 🚀 NEOPRO - Point de Départ
+# 🚀 MADXP - Point de Départ
 
 ## ⚡ Démarrage Rapide
 

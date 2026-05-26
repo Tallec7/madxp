@@ -5,7 +5,7 @@
 ## TL;DR métier
 
 - Quand un sponsor est supprimé côté cloud, ses références dans la config et les analytics restent **silencieusement orphelines**. Aucun garde-fou n'empêche cette dérive.
-- Sur le terrain : NLF a perdu les analytics sponsor de 2 vidéos (Intro Neopro + Laugier) sur 5 jours = ~2 300 plays. Pas de vrai dommage utilisateur final, mais alertes Slack en boucle et reports sponsor sous-comptés.
+- Sur le terrain : NLF a perdu les analytics sponsor de 2 vidéos (Intro MadXP + Laugier) sur 5 jours = ~2 300 plays. Pas de vrai dommage utilisateur final, mais alertes Slack en boucle et reports sponsor sous-comptés.
 - Sans correction structurante, n'importe quelle suppression de sponsor sur n'importe quel club rejouera le même film.
 
 ## Symptômes observés (logs Railway 2026-05-07 17:39 → 17:42)
@@ -76,7 +76,7 @@ Les 4 autres colonnes sponsor/campaign/session/video ont des FK avec `ON DELETE`
   - Vérifier également `site_sponsor_daily_video_stats` et autres tables référençantes (déjà CASCADE, à confirmer)
 - [ ] **Validation API** : tout patch sur `config_profiles.configuration` qui contient des `site_sponsor_id` doit valider leur existence en DB (Joi custom validator + service guard)
 - [ ] **Migration de cleanup** automatique : scanner tous les `config_profiles.configuration.timeCategories[].loopVideos[].site_sponsor_id` non-existants → `null` + `analytics_category: 'other'`. Log la liste.
-- [ ] **Cleanup ciblé NLF + Demo SaaS** : remap "Intro Neopro" et "Laugier" via la même migration ou via dashboard avant.
+- [ ] **Cleanup ciblé NLF + Demo SaaS** : remap "Intro MadXP" et "Laugier" via la même migration ou via dashboard avant.
 - [ ] **Smoke test** garde-fou enforced : interdire un `site_sponsor_id` orphelin dans n'importe quelle config_profile au boot.
 - [ ] **ADR léger** : "FK strategy on `site_sponsors` references — `ON DELETE SET NULL` everywhere + API validation contract".
 
@@ -105,7 +105,7 @@ Les 4 autres colonnes sponsor/campaign/session/video ont des FK avec `ON DELETE`
 
 ## Risques résiduels si plan non exécuté
 
-- **Court terme** : au prochain match NLF, les 2 vidéos "Intro Neopro" + "Laugier" généreront 200-2 000 nouveaux plays orphelins (selon volume du match). Le UPDATE D1 sera à refaire.
+- **Court terme** : au prochain match NLF, les 2 vidéos "Intro MadXP" + "Laugier" généreront 200-2 000 nouveaux plays orphelins (selon volume du match). Le UPDATE D1 sera à refaire.
 - **Moyen terme** : toute suppression d'un sponsor sur un club existant peut reproduire le bug sans alerte. Le bruit Slack `Skipping video sync` masque les vrais signaux.
 - **Long terme** : la dette analytics par sponsor devient invisible. Reports clients faussés.
 

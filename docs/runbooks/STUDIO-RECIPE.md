@@ -1,7 +1,7 @@
 # Recette Templates Studio
 
 > Recette E2E pour valider la **Definition of Done §11** du spec `STUDIO_V1.md` (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, hors du repo neopro/).
-> À exécuter par l'opérateur Neopro **avant** d'annoncer Templates Studio disponible en interne.
+> À exécuter par l'opérateur MadXP **avant** d'annoncer Templates Studio disponible en interne.
 
 ---
 
@@ -14,10 +14,10 @@ services satellites Railway (le studio-render-server et python-rembg-worker
 ont été consolidés dans le central via `studio-render-worker.service.ts` et
 `photo-cutout.service.ts`).
 
-| Service             | URL                                       | Vérif                                            |
-| ------------------- | ----------------------------------------- | ------------------------------------------------ |
-| `central-server`    | https://api.neopro.fr (ou local `:3001`)  | `curl <url>/api/health` → `{ ok: true }`         |
-| `central-dashboard` | https://app.neopro.fr (ou local `:4300`)  | Page `/templates-studio` charge sans 404         |
+| Service             | URL                                      | Vérif                                    |
+| ------------------- | ---------------------------------------- | ---------------------------------------- |
+| `central-server`    | https://api.neopro.fr (ou local `:3001`) | `curl <url>/api/health` → `{ ok: true }` |
+| `central-dashboard` | https://app.neopro.fr (ou local `:4300`) | Page `/templates-studio` charge sans 404 |
 
 ### 0.2 — Env vars critiques
 
@@ -344,4 +344,3 @@ lftp -e "rm -rf studio/v1/<SITE_ID>; bye" -u $FTP_USER,$FTP_PASS $FTP_HOST
 - `STUDIO_V1.md §11` — Definition of Done source (sibling repo `studio-template/templates-remotion/spec/STUDIO_V1.md`, pas linké car hors du repo neopro/)
 - [ADR-124](../adr/ADR-124-templates-studio-consolidation-in-central.md) — Consolidation in-process (déprécie ADR-118 + ADR-119)
 - [ADR-111](../adr/ADR-111-alert-repository-dedup.md) — Pattern alerting dedup
-

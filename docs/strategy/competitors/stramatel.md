@@ -146,24 +146,24 @@
 - **HBC Fessenheim** (handball)
 - **Courbevoie — gymnase des Renardières**
 
-#### ⚠️ Limites révélées par les specs (forces de Neopro)
+#### ⚠️ Limites révélées par les specs (forces de MadXP)
 
-| Limite SL Video Scoreboard                     | Avantage Neopro                                                       |
+| Limite SL Video Scoreboard                     | Avantage MadXP                                                        |
 | ---------------------------------------------- | --------------------------------------------------------------------- |
 | **Transmission radio** = pas connecté Internet | ✅ Pi WiFi/Ethernet → mise à jour OTA contenu en temps réel           |
-| **82 kg, installation murale dédiée**          | ✅ Neopro tourne sur **TV existante** du club (pas de gros œuvre)     |
+| **82 kg, installation murale dédiée**          | ✅ MadXP tourne sur **TV existante** du club (pas de gros œuvre)      |
 | **Garantie 3 ans seulement**                   | ✅ SaaS = service continu, pas de fin de garantie hardware à craindre |
 | **MPA = option payante** pour la régie media   | ✅ Régie pub native incluse                                           |
 | **Pupitre Stramatel obligatoire en plus**      | ✅ Pilotage depuis n'importe quel device (web responsive)             |
-| **1 afficheur = 1 gymnase, pas multi-sites**   | ✅ Gestion flotte centralisée multi-sites Neopro                      |
+| **1 afficheur = 1 gymnase, pas multi-sites**   | ✅ Gestion flotte centralisée multi-sites MadXP                       |
 | **Pas d'API publique, pas d'OTA**              | ✅ API REST + déploiement OTA Pi                                      |
-| **Sports raquette/glace/indoor uniquement**    | ✅ Neopro = tout sport (templates configurables)                      |
+| **Sports raquette/glace/indoor uniquement**    | ✅ MadXP = tout sport (templates configurables)                       |
 
 #### Pricing (non révélé dans le chat — à demander)
 
 - ⚠️ Le commercial n'a pas donné de prix
-- **Estimation Neopro** sur la base du marché LED P3.9 indoor 2 m × 1,3 m + intégration scoring + pupitre + installation 82 kg : **15 000 – 30 000 € HT** par installation (à confirmer)
-- Comparaison : un abonnement Neopro sur 5 ans à équivalent de 50-100 €/mois = 3 000-6 000 € — soit **5-10× moins cher** sur 5 ans
+- **Estimation MadXP** sur la base du marché LED P3.9 indoor 2 m × 1,3 m + intégration scoring + pupitre + installation 82 kg : **15 000 – 30 000 € HT** par installation (à confirmer)
+- Comparaison : un abonnement MadXP sur 5 ans à équivalent de 50-100 €/mois = 3 000-6 000 € — soit **5-10× moins cher** sur 5 ans
 
 #### ⚠️⚠️ Confirmations officielles du chatbot Stramatel (2026-04-23)
 
@@ -187,9 +187,9 @@
 - ❌ Portée radio et comportement aux interférences gymnase
 - ❌ Concurrents cités, roadmap, nombre d'unités vendues
 
-⚠️ **Implication stratégique** : le chatbot Stramatel confirme officiellement que **le SL Video Scoreboard n'est pas une solution cloud-native**. C'est un afficheur LED moderne mais architecturé comme un équipement autonome on-premise des années 2010. Neopro a un avantage technologique structurel majeur.
+⚠️ **Implication stratégique** : le chatbot Stramatel confirme officiellement que **le SL Video Scoreboard n'est pas une solution cloud-native**. C'est un afficheur LED moderne mais architecturé comme un équipement autonome on-premise des années 2010. MadXP a un avantage technologique structurel majeur.
 
-**⚠️ Pitch Neopro vs SL Video Scoreboard (draft)** :
+**⚠️ Pitch MadXP vs SL Video Scoreboard (draft)** :
 
 > _"Le SL Video Scoreboard est un superbe afficheur LED, mais c'est avant tout un gros panneau de 82 kg, fixé en dur, piloté par radio (donc pas de mises à jour à distance), avec une garantie de 3 ans seulement. Le module media ('MPA') est en option, et il faut acheter le pupitre Stramatel en plus._
 >
@@ -247,15 +247,15 @@
 
 1. **Notoriété < Bodet** sur le marché FR (challenger structurel)
 2. **Pas de SaaS Cloud multi-tenant** apparent — apps mobiles connectent en local à la console, pas de plateforme cloud centralisée multi-sites
-3. **Pas de régie pub multi-annonceurs avec workflow agency/advertiser/club** type Neopro
+3. **Pas de régie pub multi-annonceurs avec workflow agency/advertiser/club** type MadXP
 4. **Modèle hardware-centric** : CapEx élevé, pas d'OpEx mensuel
 5. **SL Box = signage CMS classique** : pas de templates data-driven Remotion-like
 6. **Modularité écosystème** : la suite (SL Video / SL Box / Easy Click / Outsport / Multisport / Icesport) est fragmentée — multi-app par usage, pas un dashboard unique
 7. **Pas de monitoring de flotte cloud** centralisé multi-installations
 
-## Positionnement vs Neopro
+## Positionnement vs MadXP
 
-| Dimension           | Stramatel                 | Neopro                     |
+| Dimension           | Stramatel                 | MadXP                      |
 | ------------------- | ------------------------- | -------------------------- |
 | Modèle              | CapEx hardware LED        | OpEx SaaS + Pi             |
 | Spécialité          | Chronométrage + LED vidéo | TV interactive + régie pub |
@@ -265,17 +265,17 @@
 | Partenariat fédéral | ✅ FIBA                   | ❌ À construire            |
 | Régie pub native    | ❌                        | ✅                         |
 
-## Pitch différenciateur Neopro vs Stramatel (draft)
+## Pitch différenciateur MadXP vs Stramatel (draft)
 
 > **"Stramatel est référence sur le tableau LED et le chronométrage homologué.
 > Si vous avez besoin de chronométrer vos compétitions ou afficher un score
 > réglementaire FIBA, restez avec eux.
 > Pour tout le reste — TV de hall, buvette, sponsoring rotatif sur écrans intérieurs,
-> contenus animés — Neopro fait mieux, plus moderne, en mode SaaS."**
+> contenus animés — MadXP fait mieux, plus moderne, en mode SaaS."**
 
 **Stratégie** : co-existence plus que substitution. Cibler les clubs qui ont déjà un Stramatel et qui cherchent à équiper d'autres écrans.
 
-## Risques pour Neopro
+## Risques pour MadXP
 
 - **Stramatel pourrait s'allier avec un éditeur SaaS** pour combler le gap logiciel
 - **Sur le segment basket**, le partenariat FIBA crée un biais d'achat fort
@@ -284,7 +284,7 @@
 
 1. **Étudier le segment basket** : où Stramatel est fort, attaquer en complément (TV de hall) plutôt qu'en substitution
 2. **Référencer Stramatel comme partenaire technique potentiel** : mêmes valeurs Made in France
-3. **Se positionner sur le chronométrage interconnecté** ? (Neopro pourrait afficher le chrono Stramatel via API si elle existe)
+3. **Se positionner sur le chronométrage interconnecté** ? (MadXP pourrait afficher le chrono Stramatel via API si elle existe)
 
 ## Sources
 

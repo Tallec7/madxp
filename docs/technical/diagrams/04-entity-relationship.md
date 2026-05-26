@@ -1,6 +1,6 @@
 # Diagramme Entités-Relations (ERD)
 
-> Vue complète du schéma de base de données Neopro — 30+ tables organisées par domaine métier.
+> Vue complète du schéma de base de données MadXP — 30+ tables organisées par domaine métier.
 
 ## Vue d'ensemble des domaines
 

@@ -251,7 +251,7 @@ chaîne de PRs le 2026-04-20 — résumé des 4 causes racines + corrections :
 
 - 2026-04-20 T+00 : NLF Pi déployée, bootstrap renvoie 500 muet côté dashboard.
 - 2026-04-20 T+04h : root cause identifiée (env var manquante). Générée via `openssl rand -hex 32`,
-  setée via Railway CLI, sauvegardée dans 1Password (entrée `Neopro / HOTSPOT_PSK_ENCRYPTION_KEY`).
+  setée via Railway CLI, sauvegardée dans 1Password (entrée `MadXP / HOTSPOT_PSK_ENCRYPTION_KEY`).
 - 2026-04-20 T+05h : healthcheck toujours KO → découverte chaîne migrate.js / Start Command / uuid-ossp.
 - 2026-04-20 T+06h : 4 PRs mergées, redeploy réussi, NLF bootstrappée à T+07h.
 

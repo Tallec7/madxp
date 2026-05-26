@@ -4,7 +4,7 @@
 
 **Date** : Février 2026 (v3.0)
 **Statut** : Accepté
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 
 ---
 

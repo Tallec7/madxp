@@ -1,4 +1,4 @@
-# Documentation Neopro
+# Documentation MadXP
 
 ## 🚀 PERDU ? COMMENCEZ ICI !
 
@@ -15,7 +15,7 @@
 
 ## 🗺️ Cartographie des outils
 
-**[Cartographie des outils Neopro](CARTOGRAPHIE_OUTILS.md)** — Vue complète des 12 outils, leur rôle, public cible et fonctionnalités 🆕
+**[Cartographie des outils MadXP](CARTOGRAPHIE_OUTILS.md)** — Vue complète des 12 outils, leur rôle, public cible et fonctionnalités 🆕
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### 📖 [Guides Utilisateur](guides/)
 
-Installation, configuration et utilisation de Neopro.
+Installation, configuration et utilisation de MadXP.
 
 - **[Guide Opérateur Installation](guides/GUIDE_OPERATEUR_INSTALLATION.md)** - **Pas-à-pas pour terrain** (~30 min) 🆕 v2.28
 - [Installation en ligne (technique)](ONLINE_INSTALLATION.md) - Setup remote (~22 min) ✨ v2.0
@@ -87,9 +87,9 @@ Framework SAFe Essential pour le pilotage produit structuré. 🆕
 - **[README SAFe](safe/README.md)** - Hub principal : Epics, Features, User Stories, Sprint Tracker
 - [🟢 OVS1 — Club to Screen](safe/OVS1-CLUB-TO-SCREEN.md) - Flux club → écran TV
 - [🟠 OVS2 — Sponsor to Impression](safe/OVS2-SPONSOR-TO-IMPRESSION.md) - Flux sponsor → rapport ROI
-- [🟣 DVS-1 — Neopro Platform](safe/DVS1-NEOPRO-PLATFORM.md) - Value Proposition, stack, budget, WSJF
+- [🟣 DVS-1 — MadXP Platform](safe/DVS1-NEOPRO-PLATFORM.md) - Value Proposition, stack, budget, WSJF
 - [📊 Portfolio SAFe](safe/PORTFOLIO.md) - Roadmap Gantt, architecture, métriques ARR
-- **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+- **Notion (visualisation)** : [SAFe MadXP](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ### 🔍 [Audits](audit/)
 

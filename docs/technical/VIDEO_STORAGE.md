@@ -789,4 +789,4 @@ CREATE TABLE site_videos (
 
 ---
 
-_Document généré pour le projet NEOPRO - Confidentiel_
+_Document généré pour le projet MADXP - Confidentiel_

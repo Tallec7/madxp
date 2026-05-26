@@ -27,7 +27,7 @@ Un réseau **mesh WiFi** (ou WiFi maillé) utilise plusieurs points d'accès (AP
 - Réseaux d'entreprise avec contrôleur (Ubiquiti UniFi, Cisco Meraki, Aruba)
 - Bornes Livebox/Freebox avec répéteurs
 
-### Pourquoi c'est problématique pour Neopro ?
+### Pourquoi c'est problématique pour MadXP ?
 
 Le Raspberry Pi utilise **deux interfaces WiFi** :
 
@@ -407,7 +407,7 @@ sudo wpa_cli -i wlan1 reconfigure
 - **Analyse industrie** : [NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md](../research/NETWORK_CHALLENGES_INDUSTRY_ANALYSIS.md)
   - Comparaison avec PiSignage, Screenly, BrightSign, ScreenCloud, Yodeck
   - Bugs documentés du driver brcmfmac Raspberry Pi
-  - Conclusion : Neopro n'est pas seul, mais peut se différencier par la gestion automatique
+  - Conclusion : MadXP n'est pas seul, mais peut se différencier par la gestion automatique
 
 - **Vision produit** : [NEOPRO_NETWORK_RESILIENCE_VISION.md](../research/NEOPRO_NETWORK_RESILIENCE_VISION.md)
   - 4 profils réseau : simple, mesh, mesh_isolated, enterprise

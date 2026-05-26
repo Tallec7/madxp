@@ -1,10 +1,10 @@
 # Rôles et Permissions
 
-> Modèle de permissions pour la plateforme Neopro — Central Server + Dashboard.
+> Modèle de permissions pour la plateforme MadXP — Central Server + Dashboard.
 
 ## Philosophie
 
-Neopro utilise un **système de rôles hiérarchique** où chaque rôle hérite des capacités des rôles inférieurs. Le rôle `super_admin` est spécial : il **contourne toutes les vérifications de rôle** dans les middleware backend et les guards frontend.
+MadXP utilise un **système de rôles hiérarchique** où chaque rôle hérite des capacités des rôles inférieurs. Le rôle `super_admin` est spécial : il **contourne toutes les vérifications de rôle** dans les middleware backend et les guards frontend.
 
 ## Rôles
 

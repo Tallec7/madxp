@@ -9,7 +9,7 @@
 
 ## Contexte
 
-La base de données Neopro était historiquement hébergée sur **Supabase Free** (cf. ADR-003, Oct 2024). En avril 2026, 3 frictions rendent cette solution inadéquate :
+La base de données MadXP était historiquement hébergée sur **Supabase Free** (cf. ADR-003, Oct 2024). En avril 2026, 3 frictions rendent cette solution inadéquate :
 
 1. **Latence cross-region** : Supabase EU-West-2 (London) + Railway central-server EU-West-1 (Amsterdam) → ~166 ms DB round-trip (dégrade l'UX dashboard).
 2. **Coûts cachés** : le Free plan pousse vers Pro (25 €/mois) dès qu'on veut backup auto ou pooling configurable.

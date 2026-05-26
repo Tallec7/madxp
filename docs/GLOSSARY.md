@@ -1,6 +1,6 @@
-# Glossaire Neopro
+# Glossaire MadXP
 
-> Termes métier et techniques utilisés dans le projet Neopro.
+> Termes métier et techniques utilisés dans le projet MadXP.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### Site
 
-Un **club sportif** géré par Neopro. Deux types existent :
+Un **club sportif** géré par MadXP. Deux types existent :
 
 - **Pi** (`site_type = 'pi'`) : équipé d'un Raspberry Pi connecté à une TV, provisionné depuis le terminal du Pi via `setup-new-club.sh` / `register-site.js`
 - **SaaS** (`site_type = 'saas'`) : fonctionne dans un navigateur web, créé depuis le dashboard central
@@ -39,7 +39,7 @@ Le **Raspberry Pi 4** physique installé dans un club. Contient l'application An
 
 ### Flotte
 
-L'ensemble des boîtiers Raspberry Pi gérés depuis le dashboard central. Neopro gère actuellement 50+ boîtiers.
+L'ensemble des boîtiers Raspberry Pi gérés depuis le dashboard central. MadXP gère actuellement 50+ boîtiers.
 
 **Métrique clé** : Taux de disponibilité de la flotte (% sites en ligne)
 
@@ -108,13 +108,13 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 
 ### Site Sponsor
 
-**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau NEOPRO) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
+**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau MADXP) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
 
 **Voir aussi** : Advertiser, Magic Link
 
 ### Portail Annonceur (Advertiser Portal)
 
-**Espace authentifié pour annonceurs Neopro** (`/advertiser-portal`). Vue cross-clubs avec KPIs, sites, vidéos et campagnes. Distinct du portail sponsor local (magic link, mono-club).
+**Espace authentifié pour annonceurs MadXP** (`/advertiser-portal`). Vue cross-clubs avec KPIs, sites, vidéos et campagnes. Distinct du portail sponsor local (magic link, mono-club).
 
 **Voir aussi** : Advertiser, Campagne, Sponsor Portal
 
@@ -152,7 +152,7 @@ Moment du match qui détermine **quelle playlist de vidéos est jouée** :
 Une **vidéo dans une boucle de phase**. Structure : `{ name, path, type, weight?, pinned?, variants? }`.
 
 - **`weight`** (1-10, défaut 1) : Facteur de pondération. Plus le poids est élevé, plus la vidéo passe souvent. Ex: sponsor Or ×4, Argent ×2, Bronze ×1.
-- **`pinned`** (boolean) : Si `true`, la vidéo reste fixée à sa position d'origine dans la boucle (ex: intro Neopro toujours en 1ère position). Les vidéos épinglées ne participent pas au scheduling Bresenham.
+- **`pinned`** (boolean) : Si `true`, la vidéo reste fixée à sa position d'origine dans la boucle (ex: intro MadXP toujours en 1ère position). Les vidéos épinglées ne participent pas au scheduling Bresenham.
 - **`variants`** (optionnel) : chemins alternatifs par type d'écran : `{ secondary?: string }`. Si une variante `secondary` existe, l'écran secondaire utilisera ce chemin au lieu du `path` principal.
 
 ### Bresenham (smooth scheduling)

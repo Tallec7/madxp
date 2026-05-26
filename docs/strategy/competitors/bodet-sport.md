@@ -65,7 +65,7 @@
 - Auto-arbitrage en autonomie complète "du bout des doigts"
 - Compatible **toute la gamme Bodet** : tableau de score, TV, écran vidéo
 - Use case : sport amateur loisir sans arbitre dédié
-- ⚠️ Neopro n'a pas d'équivalent — c'est une vraie innovation produit Bodet
+- ⚠️ MadXP n'a pas d'équivalent — c'est une vraie innovation produit Bodet
 
 #### SCOREPAD multi-controller (pupitre tactile) — capacités étendues
 
@@ -96,7 +96,7 @@ Bodet revendique des **mesures précises pour annonceurs** (selon page produit) 
 - Nombre de spectateurs présents au moment de diffusion
 - **Interaction générée** (à creuser : comment mesurent-ils ça ?)
 
-Argumentaire commercial Bodet : _"Les sponsors sont plus enclins à renouveler leur engagement quand on leur fournit des indicateurs précis sur la performance de leur campagne"_ — exactement le pitch Neopro.
+Argumentaire commercial Bodet : _"Les sponsors sont plus enclins à renouveler leur engagement quand on leur fournit des indicateurs précis sur la performance de leur campagne"_ — exactement le pitch MadXP.
 
 ⚠️ **Limite probable** : workflow mono-club, mono-événement. Pas de plateforme multi-tenant agency / advertiser / club. Le club gère ses propres sponsors localement, pas d'inventaire publicitaire centralisé pour une régie pub multi-sites.
 
@@ -133,7 +133,7 @@ Sources : _Catalogue vidéo FR_ (16 p., réf. 652A00) + _Sports Display brochure
 - **Régie vidéo livrée clé en main** et configurée selon besoin
 - **Diffusion auto via playlists OU manuelle** au choix
 - **Présentation équipes/staff/arbitres** avant match (module dédié)
-- **Animations sur action de jeu** : pénalité, but, 3-points, temps forts → **média/vidéo associé déclenché automatiquement** (lacune Neopro confirmée)
+- **Animations sur action de jeu** : pénalité, but, 3-points, temps forts → **média/vidéo associé déclenché automatiquement** (lacune MadXP confirmée)
 - **Social media** : affichage publications RS suivant **hashtags ou comptes prédéfinis**, avec **modérateur** pour sélectionner les messages
 
 ### VIDEOMEDIA — précision critique sur le reporting
@@ -182,11 +182,11 @@ Betclic Élite, FIBA EuroBasket, France Handball 2017, All Star Game Paris, Disn
 ### Implications stratégiques (mises à jour)
 
 1. ✅ **Bodet a confirmé l'absence de dashboard cloud** : son reporting sponsoring est un **export tableur**, donc pas de visualisation moderne, pas d'accès distant, pas de partage agency/advertiser
-2. ✅ **Pas de OTA Internet** sur SCOREPAD (USB only) — Neopro est structurellement plus moderne
+2. ✅ **Pas de OTA Internet** sur SCOREPAD (USB only) — MadXP est structurellement plus moderne
 3. ✅ **Le "Cloud" mentionné** sur le Player Vidéo Autonome est un **storage**, pas une plateforme multi-tenant
 4. ✅ **Apps mobiles existent** mais ciblées arbitrage (SCOREAPP), pas de gestion club/admin
-5. ⚠️ **Animations auto sur action de jeu** = vraie capacité Bodet, **lacune confirmée chez Neopro**
-6. ⚠️ **Social media intégré + modération** = vraie capacité Bodet, **lacune confirmée chez Neopro**
+5. ⚠️ **Animations auto sur action de jeu** = vraie capacité Bodet, **lacune confirmée chez MadXP**
+6. ⚠️ **Social media intégré + modération** = vraie capacité Bodet, **lacune confirmée chez MadXP**
 7. ⚠️ **180 salariés Trémentines + bureau études 30 personnes** = capacité R&D significative, ne pas sous-estimer un éventuel pivot Bodet vers le SaaS Cloud
 
 ## Pricing collecté
@@ -214,7 +214,7 @@ Betclic Élite, FIBA EuroBasket, France Handball 2017, All Star Game Paris, Disn
 
 1. **Pas de SaaS multi-tenant cloud-native** : VIDEOSPORT/VIDEOMEDIA semblent desktop/serveur local, pas de plateforme cloud de gestion de flotte multi-sites
 2. **Hardware-centric** : modèle CapEx élevé, pas d'OpEx mensuel transparent
-3. **Régie pub présente mais probablement mono-club / mono-annonceur** : VIDEOMEDIA tracke le temps de diffusion par budget annonceur (✅ reporting), mais ne semble pas multi-tenant agency/advertiser/club avec workflow d'approbation à la Neopro
+3. **Régie pub présente mais probablement mono-club / mono-annonceur** : VIDEOMEDIA tracke le temps de diffusion par budget annonceur (✅ reporting), mais ne semble pas multi-tenant agency/advertiser/club avec workflow d'approbation à la MadXP
 4. **Pas de mode SaaS pur** : le client achète du hardware + licence logicielle, pas un service abonné
 5. **UX logicielle desktop traditionnelle** (à confronter à une démo réelle — captures d'écran disponibles en ligne montrent une UX années 2010)
 6. **Pas de gestion de flotte cloud** : monitoring centralisé multi-sites non apparent
@@ -222,9 +222,9 @@ Betclic Élite, FIBA EuroBasket, France Handball 2017, All Star Game Paris, Disn
 8. **Sync social media basique** : Twitter + RSS uniquement, pas d'API moderne (Instagram, TikTok)
 9. **Cible apparente : compétition** : très orienté match (animations sur action de jeu) — moins clair pour usage TV de hall/buvette en continu
 
-## Positionnement vs Neopro
+## Positionnement vs MadXP
 
-| Dimension                      | Bodet                   | Neopro                                |
+| Dimension                      | Bodet                   | MadXP                                 |
 | ------------------------------ | ----------------------- | ------------------------------------- |
 | Modèle                         | CapEx hardware (4-50k€) | OpEx SaaS + Pi (low CapEx)            |
 | Cible                          | Gymnase / stade pro     | Club amateur → semi-pro               |
@@ -236,17 +236,17 @@ Betclic Élite, FIBA EuroBasket, France Handball 2017, All Star Game Paris, Disn
 | Force commerciale FR           | 🔴 Très forte           | 🟡 À construire                       |
 | Reconnaissance fédérale        | 🔴 Très forte           | 🟡 À construire                       |
 
-## Pitch différenciateur Neopro vs Bodet (draft)
+## Pitch différenciateur MadXP vs Bodet (draft)
 
 > **"Bodet est imbattable sur le tableau de score réglementaire — gardez-le.
-> Neopro complète votre installation avec une TV interactive intelligente :
+> MadXP complète votre installation avec une TV interactive intelligente :
 > sponsoring multi-annonceurs avec reporting, contenus animés modernes,
 > et tout ça en mode SaaS sans gros investissement initial.
 > Vous monétisez votre TV de hall, vous engagez vos adhérents, et vous gardez votre Bodet pour le score."**
 
 **Stratégie** : ne pas attaquer frontalement le tableau de score (territoire perdu d'avance). Se positionner en **complément intelligent** sur l'écran TV intérieur/hall/buvette + sponsoring pub.
 
-## Risques pour Neopro
+## Risques pour MadXP
 
 - **Bodet pourrait lancer une offre SaaS Cloud Bodet Sport** (déjà en place pour Kelio — la techno existe en interne)
 - **Force commerciale fédérations** : si Bodet bundle "tableau LED + abonnement contenu pub", devient très dur à concurrencer
@@ -255,7 +255,7 @@ Betclic Élite, FIBA EuroBasket, France Handball 2017, All Star Game Paris, Disn
 ## Actions recommandées (à valider session 3)
 
 1. **Veille active** sur lancement éventuel "Bodet Cloud" pour Sport
-2. **Partenariat à explorer** : intégration VIDEOSPORT ↔ Neopro (Bodet pilote le tableau, Neopro pilote la TV)
+2. **Partenariat à explorer** : intégration VIDEOSPORT ↔ MadXP (Bodet pilote le tableau, MadXP pilote la TV)
 3. **Démarchage croisé** : prospects Casalsport, dirigeants ayant déjà un Bodet (= déjà sensibilisés à l'affichage)
 
 ## Sources

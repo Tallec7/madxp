@@ -3,7 +3,7 @@
 ## M\u00e9tadonn\u00e9es
 
 - Statut: `active`
-- Owner: \u00e9quipe NEOPRO
+- Owner: \u00e9quipe MADXP
 - Derni\u00e8re revue: 2026-02-10
 - Version: 3.9.0
 - D\u00e9pend de: PostgreSQL 15 (Supabase), Redis, FTP Hostinger

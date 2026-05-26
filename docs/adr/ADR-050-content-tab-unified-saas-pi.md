@@ -34,7 +34,7 @@ Ajouter à la bibliothèque vidéo existante :
   - ⬜ Disponible — uploadée mais pas dans la config
   - ⏳ À déployer — cloud uniquement, pas sur le Pi (Pi only)
 - **Colonne "Propriétaire"** :
-  - 🔒 NEOPRO — `category = 'NEOPRO'`
+  - 🔒 MADXP — `category = 'NEOPRO'`
   - 🏠 Club — `uploaded_for_site_id` = site
   - 📢 Sponsor — `advertiser_id` != null
   - 👤 Admin — upload opérateur/admin

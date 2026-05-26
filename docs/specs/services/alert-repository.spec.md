@@ -4,14 +4,15 @@
 > **Statut** : Live
 > **Dernière revue** : 2026-05-05
 > **Code principal** :
+>
 > - `central-server/src/repositories/alert.repository.ts` (repository upsert + dédup)
 > - `central-server/src/services/alerting.service.ts` (`createAlert` délègue au repo)
 > - `central-server/src/services/alerting-checks.service.ts` (5 émetteurs cron, passe par alertingService)
 > - `central-server/src/services/sponsor-alert.service.ts` + `canary-monitor.service.ts` (callers historiques avec `existsActive`)
-> **ADR liés** : ADR-111 (dédup au niveau repository)
-> **Smoke tests** :
+>   **ADR liés** : ADR-111 (dédup au niveau repository)
+>   **Smoke tests** :
 > - `central-server/src/__tests__/smoke/smoke-alerts-dedup.test.ts` (garde-fou complet ADR-111)
-> **`.claude/rules/` lié** : `alerts-dedup.md`
+>   **`.claude/rules/` lié** : `alerts-dedup.md`
 
 ## En une phrase
 
@@ -19,7 +20,7 @@ Le repository qui crée et dédupe les alertes système (incidents Pi, déploiem
 
 ## Périmètre
 
-- **Inclus** : toute insertion d'alerte côté backend Neopro (`alertRepository.create`), incluant les chemins via `alertingService.createAlert` (cron stuck-deployments, render jobs, kiosk crashes, etc.) et les callers historiques (`sponsor-alert.service`, `canary-monitor.service`).
+- **Inclus** : toute insertion d'alerte côté backend MadXP (`alertRepository.create`), incluant les chemins via `alertingService.createAlert` (cron stuck-deployments, render jobs, kiosk crashes, etc.) et les callers historiques (`sponsor-alert.service`, `canary-monitor.service`).
 - **Couvre** : la table `alerts`, son index partiel `idx_alerts_dedup_active`, les colonnes `last_seen_at` + `occurrences`, la métrique Prometheus `neopro_alerts_dedup_skipped_total`, le panel Grafana "Alerts dedup skipped".
 - **Hors périmètre** : les notifications email/Slack (`alerting-notifier.service`), l'évaluation des seuils (`alerting.service.evaluateMetric`), la résolution manuelle d'alertes (UI dashboard).
 
@@ -35,13 +36,13 @@ Le repository qui crée et dédupe les alertes système (incidents Pi, déploiem
 
 ## Comportements observables
 
-| Règle | Comment on vérifie |
-|---|---|
-| Dédup active | `SELECT occurrences FROM alerts WHERE site_id = X AND alert_type = Y AND status = 'active'` retourne 1 row, occurrences > 1 si récurrence |
-| Métrique exposée | `curl /metrics | grep neopro_alerts_dedup_skipped_total` affiche un compteur par type |
-| Panel Grafana actif | Dashboard "NeoPro Blind Spots" → panel "Alerts dedup skipped (ADR-111)" — pic = émetteur en boucle d'un type donné |
-| `last_seen_at` opérationnel | Pour alertes longues, `last_seen_at - created_at` mesure la durée de l'incident |
-| Cleanup historique | 22 688 rows en `status='resolved'` avec `metadata.resolved_reason='bulk_dedup_cleanup_2026-05-05'` (audit 2026-05-05) |
+| Règle                       | Comment on vérifie                                                                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Dédup active                | `SELECT occurrences FROM alerts WHERE site_id = X AND alert_type = Y AND status = 'active'` retourne 1 row, occurrences > 1 si récurrence |
+| Métrique exposée            | `curl /metrics                                                                                                                            | grep neopro_alerts_dedup_skipped_total` affiche un compteur par type |
+| Panel Grafana actif         | Dashboard "NeoPro Blind Spots" → panel "Alerts dedup skipped (ADR-111)" — pic = émetteur en boucle d'un type donné                        |
+| `last_seen_at` opérationnel | Pour alertes longues, `last_seen_at - created_at` mesure la durée de l'incident                                                           |
+| Cleanup historique          | 22 688 rows en `status='resolved'` avec `metadata.resolved_reason='bulk_dedup_cleanup_2026-05-05'` (audit 2026-05-05)                     |
 
 ## Cas d'edge connus
 

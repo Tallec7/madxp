@@ -9,7 +9,7 @@ Migration sémantique complète de "Sponsor" vers "Advertiser" (Annonceur) pour 
 - **Sponsor** = Partenariat long terme, soutien en échange de visibilité
 - **Advertiser** (Annonceur) = Relation commerciale, achat d'espace publicitaire
 
-NEOPRO vend des espaces publicitaires sur écrans → "Annonceur" est plus approprié.
+MADXP vend des espaces publicitaires sur écrans → "Annonceur" est plus approprié.
 
 ## Changements
 

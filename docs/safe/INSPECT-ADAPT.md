@@ -1,4 +1,4 @@
-# Inspect & Adapt — NEOPRO
+# Inspect & Adapt — MADXP
 
 > **Dernière mise à jour** : 11 Avril 2026
 > **Framework** : SAFe Essential
@@ -197,4 +197,4 @@ Cible : > 80%
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [PI Objectives](PI-OBJECTIVES.md) · [ROAM](ROAM.md) · [Flow Metrics](FLOW-METRICS.md)
+**Retour** : [SAFe MadXP](README.md) · [PI Objectives](PI-OBJECTIVES.md) · [ROAM](ROAM.md) · [Flow Metrics](FLOW-METRICS.md)

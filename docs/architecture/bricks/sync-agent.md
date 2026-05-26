@@ -3,7 +3,7 @@
 ## M\u00e9tadonn\u00e9es
 
 - Statut: `active`
-- Owner: \u00e9quipe NEOPRO
+- Owner: \u00e9quipe MADXP
 - Derni\u00e8re revue: 2026-02-21
 - Version: 3.67.0
 - D\u00e9pend de: Central Server (Socket.IO), Local Server (port 3000), Admin Server (port 8080)
@@ -20,13 +20,13 @@ Agent Node.js r\u00e9sident sur le Raspberry Pi qui maintient la connexion Socke
 - **Sync config** : envoie `sync_local_state` \u00e0 la connexion et apr\u00e8s chaque changement local
 - **Ex\u00e9cution commandes** : re\u00e7oit et ex\u00e9cute `deploy_video`, `update_config`, `delete_video`, etc.
 - **T\u00e9l\u00e9chargement vid\u00e9os** : download vid\u00e9os depuis FTP avec checksum SHA256
-- **Config merge** : fusionne le contenu NEOPRO (cloud) avec le contenu club (local)
+- **Config merge** : fusionne le contenu MADXP (cloud) avec le contenu club (local)
 - **Analytics push** : pousse sessions TV et plays vid\u00e9o (club + sponsor) vers le cloud via pipeline unifi\u00e9 `video_plays` (v3.66+)
 - **Surveillance fichiers** : VideoWatcher + ConfigWatcher d\u00e9tectent les changements locaux
 - **Gestion offline** : queue les commandes sortantes quand d\u00e9connect\u00e9
 - **Connexion locale persistante** : maintient Socket.IO vers localhost:3000 (singleton `local-socket.js`)
 - **Relai cloud remote** : transf\u00e8re les commandes t\u00e9l\u00e9commande cloud vers localhost:3000
-- **Expiration vid\u00e9os** : v\u00e9rifie et supprime les vid\u00e9os NEOPRO expir\u00e9es
+- **Expiration vid\u00e9os** : v\u00e9rifie et supprime les vid\u00e9os MADXP expir\u00e9es
 - **Backup local** : sauvegarde p\u00e9riodique de configuration.json
 
 ## 3. Interfaces / Services expos\u00e9s
@@ -90,14 +90,14 @@ Depuis v3.36.1, le sync-agent maintient une **connexion Socket.IO persistante** 
 
 ## 6. Donn\u00e9es manipul\u00e9es
 
-| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9      | R\u00e8gles d'acc\u00e8s                        |
-| ------------------ | ---- | ------------------------------- | ----------------------------------------------- |
-| configuration.json | CRUD | Locale (merge cloud+local)      | Lock cat\u00e9gories NEOPRO (c\u00f4t\u00e9 Pi) |
-| /videos/           | CRD  | Locale                          | Download cloud, upload local admin              |
-| offline-queue      | CR   | Locale (m\u00e9moire + fichier) | Replay \u00e0 la reconnexion                    |
-| sync-history       | CR   | Locale                          | Historique des syncs                            |
-| analytics buffer   | CR   | Locale                          | Push vers cloud p\u00e9riodique                 |
-| licence cache      | RU   | Cloud (TTL 24h)                 | V\u00e9rifi\u00e9e \u00e0 la connexion          |
+| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9      | R\u00e8gles d'acc\u00e8s                       |
+| ------------------ | ---- | ------------------------------- | ---------------------------------------------- |
+| configuration.json | CRUD | Locale (merge cloud+local)      | Lock cat\u00e9gories MADXP (c\u00f4t\u00e9 Pi) |
+| /videos/           | CRD  | Locale                          | Download cloud, upload local admin             |
+| offline-queue      | CR   | Locale (m\u00e9moire + fichier) | Replay \u00e0 la reconnexion                   |
+| sync-history       | CR   | Locale                          | Historique des syncs                           |
+| analytics buffer   | CR   | Locale                          | Push vers cloud p\u00e9riodique                |
+| licence cache      | RU   | Cloud (TTL 24h)                 | V\u00e9rifi\u00e9e \u00e0 la connexion         |
 
 ## 7. Modes de panne et d\u00e9gradation
 
@@ -182,7 +182,7 @@ raspberry/sync-agent/
 \u2502   \u2502   \u2514\u2500\u2500 local-backup.js          # Backup p\u00e9riodique config
 \u2502   \u2502
 \u2502   \u251c\u2500\u2500 utils/                       # Utilitaires
-\u2502   \u2502   \u251c\u2500\u2500 config-merge.js          # Algorithme merge NEOPRO/Club
+\u2502   \u2502   \u251c\u2500\u2500 config-merge.js          # Algorithme merge MADXP/Club
 \u2502   \u2502   \u251c\u2500\u2500 config-validator.js      # Validation configuration
 \u2502   \u2502   \u2514\u2500\u2500 version-info.js          # Info version logicielle
 \u2502   \u2502
@@ -260,7 +260,7 @@ deploy-video.js
   \u2502 2. T\u00e9l\u00e9charger depuis FTP (streaming)
   \u2502 3. V\u00e9rifier checksum SHA256
   \u2502 4. Sauver dans /videos/{category}/{filename}
-  \u2502 5. Merge configuration.json (contenu NEOPRO = locked)
+  \u2502 5. Merge configuration.json (contenu MADXP = locked)
   \u2502 6. Emit deploy_progress (100%)
   \u25bc
 Local Server (3000) notifi\u00e9 via ConfigWatcher

@@ -10,7 +10,7 @@
 
 ## 1. OBJECTIF
 
-Réagir efficacement aux alertes système pour maintenir la disponibilité et les performances de l'infrastructure Neopro.
+Réagir efficacement aux alertes système pour maintenir la disponibilité et les performances de l'infrastructure MadXP.
 
 ## 2. PÉRIMÈTRE
 
@@ -24,7 +24,7 @@ Réagir efficacement aux alertes système pour maintenir la disponibilité et le
 
 ---
 
-## 3. SYSTÈME D'ALERTING NEOPRO
+## 3. SYSTÈME D'ALERTING MADXP
 
 ### 3.1 Architecture
 
@@ -381,11 +381,11 @@ vcgencmd measure_temp
 **Email type :**
 
 ```
-Objet : URGENT - Température élevée sur votre boîtier Neopro
+Objet : URGENT - Température élevée sur votre boîtier MadXP
 
 Bonjour,
 
-Nous avons détecté une température critique sur votre boîtier Neopro (82°C).
+Nous avons détecté une température critique sur votre boîtier MadXP (82°C).
 
 Actions immédiates à effectuer :
 
@@ -399,7 +399,7 @@ Le boîtier a été partiellement arrêté pour éviter la surchauffe.
 Merci de nous confirmer la prise en compte de ces actions.
 
 Cordialement,
-Support Neopro
+Support MadXP
 ```
 
 #### Action 3 : Surveillance (30 min)
@@ -608,11 +608,11 @@ sudo journalctl -u neopro-sync -n 50
 Contacter le client :
 
 ```
-Objet : Votre boîtier Neopro est hors ligne
+Objet : Votre boîtier MadXP est hors ligne
 
 Bonjour,
 
-Nous avons détecté que votre boîtier Neopro est hors ligne depuis [durée].
+Nous avons détecté que votre boîtier MadXP est hors ligne depuis [durée].
 
 Pouvez-vous vérifier les points suivants :
 
@@ -623,7 +623,7 @@ Pouvez-vous vérifier les points suivants :
 Si le problème persiste, merci de nous contacter.
 
 Cordialement,
-Support Neopro
+Support MadXP
 ```
 
 #### Étape 3 : Résolution automatique
@@ -656,7 +656,7 @@ Support Neopro
 **Via Logtail (si configuré) :**
 
 1. Se connecter à Logtail : https://logtail.com
-2. Sélectionner le projet Neopro
+2. Sélectionner le projet MadXP
 3. Filtrer par :
    - Source : `central-server` ou `raspberry-pi`
    - Level : `error`, `warn`

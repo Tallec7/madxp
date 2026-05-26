@@ -2,7 +2,7 @@
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
@@ -12,7 +12,7 @@ La télécommande Cloud Remote permet de contrôler un site à distance via `htt
 
 Contraintes :
 
-1. **Pas de compte utilisateur** : Les bénévoles n'ont pas de login Neopro
+1. **Pas de compte utilisateur** : Les bénévoles n'ont pas de login MadXP
 2. **Accès immédiat** : Scanner le QR code → télécommande fonctionnelle en 2 secondes
 3. **Réseaux variés** : Le téléphone peut être sur le hotspot du club, le WiFi du lieu, ou la 4G
 4. **Cas mesh WiFi** : L'isolation client peut bloquer l'accès local à `/remote`

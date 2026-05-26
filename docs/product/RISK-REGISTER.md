@@ -1,4 +1,4 @@
-# Risk Register — Neopro
+# Risk Register — MadXP
 
 > Mis à jour : Avril 2026 | Sources : Business Plan §11, Audit Sécurité déc. 2025, NFR v2.0, Weekly W16
 
@@ -42,7 +42,7 @@
 | RISK-P02 | **Churn annonceurs sans self-service portal** — renouvellement sans ROI prouvé → 30-40% churn annuel estimé                          | 3     | 3      | 9     | **P0**   | Ouvert       | Analytics sponsors en prod ; dashboard ROI ; portail self-service (roadmap)                       | Product  |
 | RISK-P03 | **6 features mergées sans test plan validé** (W16 : #472, #467, #449, #441, #439, #438) — régressions silencieuses en prod           | 3     | 2      | 6     | **P1**   | Ouvert       | Validation manuelle planifiée ; test plan obligatoire avant merge (processus)                     | Lead Dev |
 | RISK-P04 | **229 commits directs sur main sans PR** (W16) — revue de code partielle, décisions non tracées                                      | 3     | 2      | 6     | **P1**   | Ouvert       | Renforcer règle PR systématique ou assouplir formellement pour chores                             | Lead Dev |
-| RISK-P05 | **Absence de portail self-service annonceur** — toute campagne passe par NEOPRO → frein à l'échelle                                  | 2     | 3      | 6     | **P1**   | Roadmap      | Feature SAFe planifiée ; prioriser pour réduire churn annonceurs                                  | Product  |
+| RISK-P05 | **Absence de portail self-service annonceur** — toute campagne passe par MADXP → frein à l'échelle                                   | 2     | 3      | 6     | **P1**   | Roadmap      | Feature SAFe planifiée ; prioriser pour réduire churn annonceurs                                  | Product  |
 | RISK-P06 | **Dépendance NLF** — client critique concentré ; perte = impact revenus significatif                                                 | 2     | 3      | 6     | **P1**   | Surveillance | Diversification portefeuille clients ; contractualisation multi-année                             | CEO      |
 | RISK-P07 | **Zéro couverture tests frontend Pi** — bugs TV non détectés avant terrain                                                           | 2     | 2      | 4     | **P2**   | Ouvert       | Ajouter tests unitaires Angular Pi ; smoke E2E Pi simulé                                          | Lead Dev |
 

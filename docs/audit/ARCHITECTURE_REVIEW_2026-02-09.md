@@ -1,4 +1,4 @@
-# Revue d'Architecture Neopro — Audit Complet
+# Revue d'Architecture MadXP — Audit Complet
 
 **Date** : 2026-02-09
 **Version analysee** : 3.7.15
@@ -35,7 +35,7 @@
 
 ### Verdict global
 
-Le projet Neopro est un systeme de TV interactive pour clubs sportifs, architecturalement mature et fonctionnellement complet. La documentation principale (CLAUDE.md, 239 KB) constitue un document de reference remarquablement detaille, couvrant l'essentiel de l'architecture, des patterns de code, et de l'historique des changements.
+Le projet MadXP est un systeme de TV interactive pour clubs sportifs, architecturalement mature et fonctionnellement complet. La documentation principale (CLAUDE.md, 239 KB) constitue un document de reference remarquablement detaille, couvrant l'essentiel de l'architecture, des patterns de code, et de l'historique des changements.
 
 **Points forts :**
 
@@ -849,7 +849,7 @@ users (7 roles)
 **Structure cible** (~50-80 lignes) :
 
 ```markdown
-# CLAUDE.md - Neopro
+# CLAUDE.md - MadXP
 
 ## Commandes
 

@@ -1,4 +1,4 @@
-# Bonnes pratiques ADR - Neopro
+# Bonnes pratiques ADR - MadXP
 
 > Quand, pourquoi et comment documenter les décisions techniques.
 
@@ -29,7 +29,7 @@ La décision est-elle...
 
 ### Matrice détaillée
 
-| Type de décision                       | Exemple Neopro                                | Traçabilité                |
+| Type de décision                       | Exemple MadXP                                 | Traçabilité                |
 | -------------------------------------- | --------------------------------------------- | -------------------------- |
 | Choix d'architecture cross-composant   | Edge + Cloud (ADR-001)                        | ADR complet                |
 | Choix de technologie structurant       | Socket.IO (ADR-002), PostgreSQL (ADR-003)     | ADR complet                |

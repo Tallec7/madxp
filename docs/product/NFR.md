@@ -1,6 +1,6 @@
 # NFR — Non-Functional Requirements
 
-> Neopro — Système de TV interactive pour clubs sportifs.
+> MadXP — Système de TV interactive pour clubs sportifs.
 > Architecture 3-tiers : Dashboard Angular 20 → Central Server Express/PG → Raspberry Pi Edge.
 > **Date** : Avril 2026 | **Version** : 2.0
 

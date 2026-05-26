@@ -1,6 +1,6 @@
 # Guides Utilisateur
 
-Documentation pour installer, configurer et utiliser Neopro.
+Documentation pour installer, configurer et utiliser MadXP.
 
 ## 🚀 Installation
 

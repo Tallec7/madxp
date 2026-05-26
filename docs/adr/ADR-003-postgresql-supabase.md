@@ -2,7 +2,7 @@
 
 **Date** : Octobre 2024
 **Statut** : ⚠️ Déprécié — Supersédé par [ADR-070](ADR-070-migration-postgres-railway-backup-strategy.md) (2026-04-19)
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 > **Note 2026-04-19** : la DB a migré vers Railway PostgreSQL 18 (URL interne, latence 9 ms vs 166 ms Supabase cross-region). Supabase est conservé en **hot standby read-only** via mirror quotidien (cf. ADR-070 § Stratégie de backup triangulaire).
 
@@ -10,7 +10,7 @@
 
 ## Contexte
 
-Neopro nécessite une base de données pour stocker :
+MadXP nécessite une base de données pour stocker :
 
 1. **Données transactionnelles** : Utilisateurs, sites, vidéos, déploiements
 2. **Données analytiques** : Impressions sponsors, lectures vidéos

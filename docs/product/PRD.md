@@ -1,4 +1,4 @@
-# PRD — Neopro Platform
+# PRD — MadXP Platform
 
 > **Version** : 2.0 — Avril 2026
 > **Sources** : [Business Plan](../business/BUSINESS_PLAN_COMPLET.md) · [Features](../safe/FEATURES.md) · [User Stories](../safe/USER-STORIES.md) · [Implemented Backlog](../safe/IMPLEMENTED-BACKLOG.md) · [NFR](./NFR.md)
@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-Neopro est le premier réseau publicitaire sportif amateur en France. La plateforme transforme les écrans TV des gymnases en médias interactifs : diffusion vidéo dynamique, scores en direct, rotation sponsors avec analytics de preuve. Le modèle est une two-sided marketplace — clubs abonnés (€50-120/mois) + annonceurs régionaux (€250/mois) — avec effet réseau vertueux. 3 clubs beta en production (CESSON, NARH, RACC), 98.5% uptime, 241 features livrées, pipeline 15 clubs qualifiés, TAM combiné €6,4M France.
+MadXP est le premier réseau publicitaire sportif amateur en France. La plateforme transforme les écrans TV des gymnases en médias interactifs : diffusion vidéo dynamique, scores en direct, rotation sponsors avec analytics de preuve. Le modèle est une two-sided marketplace — clubs abonnés (€50-120/mois) + annonceurs régionaux (€250/mois) — avec effet réseau vertueux. 3 clubs beta en production (CESSON, NARH, RACC), 98.5% uptime, 241 features livrées, pipeline 15 clubs qualifiés, TAM combiné €6,4M France.
 
 ---
 
@@ -22,7 +22,7 @@ Neopro est le premier réseau publicitaire sportif amateur en France. La platefo
 ### Pain points sponsors/annonceurs
 
 - Pas de preuve de diffusion mesurable → renouvellement difficile à défendre
-- Aucun accès self-service : tout passe par l'équipe Neopro
+- Aucun accès self-service : tout passe par l'équipe MadXP
 - Rapport de diffusion manuel ou inexistant
 
 ### Marché adressable
@@ -57,7 +57,7 @@ Gérant les contrats sponsors du club. Veut prouver la valeur aux partenaires po
 
 Utilise la télécommande smartphone pendant le match. Pas de compte dashboard — accès local via PIN sur le Pi. A besoin de simplicité maximale : saisir un score, déclencher une vidéo, gérer les phases avant/pendant/après. Tolérance zéro pour la complexité.
 
-### Operator Neopro
+### Operator MadXP
 
 Gère la flotte de 50+ Pi depuis le dashboard central. Déploie les contenus, monitore la santé, traite les alertes, configure les profils de sites. Bloqué actuellement par l'onboarding SSH manuel (2-3 jours/club).
 

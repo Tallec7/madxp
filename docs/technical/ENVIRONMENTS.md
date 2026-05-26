@@ -1,4 +1,4 @@
-# Environnements & Delivery System Neopro
+# Environnements & Delivery System MadXP
 
 > Source de vérité : qui déploie quoi, où, comment. À tenir à jour à chaque modif d'infra ou de workflow CI/CD.
 

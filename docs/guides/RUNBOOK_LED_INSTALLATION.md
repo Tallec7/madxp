@@ -1,16 +1,16 @@
 # Runbook — Installation LED (panneau unique & multi-zone)
 
-> Procédure terrain pour raccorder un Raspberry Pi Neopro à un contrôleur LED. Couvre le mode **LED unique** (produit vendable dès 2026-04-22, zéro dev) et le mode **multi-zone** (après GO SPIKE-003, cf. [PROP-011 v2](../proposals/PROP-011-multi-zone-led.md)).
+> Procédure terrain pour raccorder un Raspberry Pi MadXP à un contrôleur LED. Couvre le mode **LED unique** (produit vendable dès 2026-04-22, zéro dev) et le mode **multi-zone** (après GO SPIKE-003, cf. [PROP-011 v2](../proposals/PROP-011-multi-zone-led.md)).
 
 **Date** : 2026-04-22
 **Version** : 1.0
-**Public cible** : installateur Neopro, technicien intégrateur LED, admin super_admin
+**Public cible** : installateur MadXP, technicien intégrateur LED, admin super_admin
 
 ---
 
 ## Contrat en 1 phrase
 
-> La config `sites.displays` dans le dashboard Neopro DOIT matcher pixel à pixel la config NovaLCT du contrôleur LED, faute de quoi l'affichage est cassé silencieusement (zones fantômes) sans erreur technique détectable.
+> La config `sites.displays` dans le dashboard MadXP DOIT matcher pixel à pixel la config NovaLCT du contrôleur LED, faute de quoi l'affichage est cassé silencieusement (zones fantômes) sans erreur technique détectable.
 
 Le PV d'installation (§6) scelle ce contrat. Sans PV signé, ne pas mettre en production.
 
@@ -18,9 +18,9 @@ Le PV d'installation (§6) scelle ce contrat. Sans PV signé, ne pas mettre en p
 
 ## 1. Prérequis avant déplacement
 
-### Côté Neopro (atelier)
+### Côté MadXP (atelier)
 
-- [ ] Raspberry Pi 5 flashé image Neopro à jour (`npm run build:raspberry` récent)
+- [ ] Raspberry Pi 5 flashé image MadXP à jour (`npm run build:raspberry` récent)
 - [ ] Site créé côté dashboard central (`site_type='pi'`, `api_key` générée)
 - [ ] `sites.displays` **laissé à `null`** jusqu'à validation sur place (évite de pousser une config incohérente)
 - [ ] Câble micro-HDMI → HDMI standard × 2 (un pour TV, un pour contrôleur)
@@ -49,7 +49,7 @@ Le PV d'installation (§6) scelle ce contrat. Sans PV signé, ne pas mettre en p
 
 ## 2. Mode LED unique — installation standard (zéro dev)
 
-Cas le plus simple : 1 bandeau LED couvre un ou plusieurs côtés, **une seule source** de contenu (pas de différenciation par zone). C'est le produit Neopro vendable dès maintenant.
+Cas le plus simple : 1 bandeau LED couvre un ou plusieurs côtés, **une seule source** de contenu (pas de différenciation par zone). C'est le produit MadXP vendable dès maintenant.
 
 ### 2.1 Câblage
 
@@ -106,7 +106,7 @@ Le `D` force le mode en ignorant l'EDID. Reboot. Attention : si le contrôleur e
 **Voie 3 — Accepter le fallback**
 Si le contrôleur ne sait qu'accepter du 1920×1080 et que le bandeau est 1920×384, il y aura du letterbox ou du crop côté contrôleur. Le rendu reste utilisable si le client accepte la qualité.
 
-### 2.4 Configuration Neopro
+### 2.4 Configuration MadXP
 
 Une fois la résolution validée :
 
@@ -125,7 +125,7 @@ Si le site n'a **pas** de TV (LED seule), mettre `null` sur l'index 0 ou omettre
 Avant le premier vrai contenu client :
 
 ```bash
-# Uploader via le dashboard une vidéo 1920×384 "mire de test Neopro"
+# Uploader via le dashboard une vidéo 1920×384 "mire de test MadXP"
 # display_type = 'secondary'
 # Vérifier qu'elle apparaît sur le bandeau dans les 5 min après déploiement
 ```
@@ -174,7 +174,7 @@ NovaLCT, pour un terrain 4 zones × 1920×384 :
 
 **Flasher** la config dans le contrôleur. **Exporter le PDF NovaLCT** (source de vérité).
 
-### 3.3 Configuration Neopro (admin super_admin uniquement)
+### 3.3 Configuration MadXP (admin super_admin uniquement)
 
 ```json
 [
@@ -190,7 +190,7 @@ NovaLCT, pour un terrain 4 zones × 1920×384 :
 
 ### 3.4 Mire de test au boot
 
-Après reboot du Pi, la mire Neopro affiche 5 secondes :
+Après reboot du Pi, la mire MadXP affiche 5 secondes :
 
 ```
 ┌─────────────────┬─────────────────┬─────────────────┬─────────────────┐
@@ -283,9 +283,9 @@ Chercher la ligne d'erreur `xrandr --addmode`. Si `BadMatch` → le mode custom 
 
 ### 5.1 Signatures requises
 
-- [ ] PV d'installation signé intégrateur LED + admin Neopro
+- [ ] PV d'installation signé intégrateur LED + admin MadXP
 - [ ] Photos terrain archivées (dashboard admin → onglet site → `installation_photos/`)
-- [ ] PDF NovaLCT archivé côté Neopro
+- [ ] PDF NovaLCT archivé côté MadXP
 - [ ] Compte admin/operator créé côté client si applicable
 
 ### 5.2 Monitoring post-installation
@@ -311,19 +311,19 @@ Si le multi-zone ne tient pas la charge terrain :
 
 ```
 ═══════════════════════════════════════════════════════════════════════
-  PV D'INSTALLATION LED NEOPRO
+  PV D'INSTALLATION LED MADXP
 ═══════════════════════════════════════════════════════════════════════
 
 Date d'installation   : ________________________________________________
 Site / Club           : ________________________________________________
-Site ID Neopro        : ________________________________________________
+Site ID MadXP        : ________________________________________________
 Adresse               : ________________________________________________
 
 ─── INTERVENANTS ──────────────────────────────────────────────────────
 
 Intégrateur LED       : ________________________________________________
 Société               : ________________________________________________
-Admin Neopro          : ________________________________________________
+Admin MadXP          : ________________________________________________
 
 ─── MATÉRIEL INSTALLÉ ─────────────────────────────────────────────────
 
@@ -343,9 +343,9 @@ Port 2 → crop (___, ___) → (___, ___)  → Destination : __________________
 Port 3 → crop (___, ___) → (___, ___)  → Destination : __________________
 Port 4 → crop (___, ___) → (___, ___)  → Destination : __________________
 
-PDF NovaLCT export    : [ ] fourni à Neopro   [ ] non fourni
+PDF NovaLCT export    : [ ] fourni à MadXP   [ ] non fourni
 
-─── CONFIGURATION NEOPRO (sites.displays) ─────────────────────────────
+─── CONFIGURATION MADXP (sites.displays) ─────────────────────────────
 
 [ ] sites.displays saisi par super_admin et validé
 [ ] Coordonnées x match les crops NovaLCT ci-dessus
@@ -363,12 +363,12 @@ PDF NovaLCT export    : [ ] fourni à Neopro   [ ] non fourni
 ─── ENGAGEMENT ────────────────────────────────────────────────────────
 
 Les deux parties confirment que la configuration NovaLCT du contrôleur
-et la configuration sites.displays du dashboard Neopro décrivent la
+et la configuration sites.displays du dashboard MadXP décrivent la
 MÊME réalité physique (nombre de panneaux et coordonnées). Toute
 modification ultérieure (ajout/retrait de zones) nécessite une
 intervention terrain conjointe.
 
-Signature intégrateur LED :           Signature admin Neopro :
+Signature intégrateur LED :           Signature admin MadXP :
 
 _____________________________         _____________________________
 

@@ -4,7 +4,7 @@
 
 **Date** : Janvier 2026 (v2.35-v2.37)
 **Statut** : Accepté
-**Décideurs** : Équipe Neopro (suite incident NLF — réseau mesh avec isolation client)
+**Décideurs** : Équipe MadXP (suite incident NLF — réseau mesh avec isolation client)
 
 ---
 

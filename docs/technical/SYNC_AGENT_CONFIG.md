@@ -10,7 +10,7 @@
 - **Credentials admin :**
   - Email : `<ADMIN_EMAIL>`
   - Password : `<ADMIN_PASSWORD>`
-  - _Les credentials sont disponibles auprès de l'équipe Neopro._
+  - _Les credentials sont disponibles auprès de l'équipe MadXP._
 
 ## 🔧 Configuration du sync-agent sur le boîtier
 
@@ -37,7 +37,7 @@ Admin email: <ADMIN_EMAIL>
 Admin password: <ADMIN_PASSWORD>
 ```
 
-**⚠️ Important :** Demandez les credentials admin à l'équipe Neopro avant de procéder.
+**⚠️ Important :** Demandez les credentials admin à l'équipe MadXP avant de procéder.
 
 #### Étape 2 : Informations du site
 
@@ -72,7 +72,7 @@ sudo systemctl status neopro-sync-agent
 **Résultat attendu :**
 
 ```
-● neopro-sync-agent.service - NEOPRO Sync Agent
+● neopro-sync-agent.service - MADXP Sync Agent
    Active: active (running)
 ```
 
@@ -141,7 +141,7 @@ curl https://neopro-central-production.up.railway.app/
 
 **Solution :**
 
-- Vérifier que vous utilisez bien les credentials fournis par l'équipe Neopro
+- Vérifier que vous utilisez bien les credentials fournis par l'équipe MadXP
 - Tester le login :
 
 ```bash

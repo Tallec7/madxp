@@ -1,11 +1,11 @@
 # SPEC PRODUIT — Page "Création de Contenu"
 
-## Dashboard Central NEOPRO — Module Lottie V1
+## Dashboard Central MADXP — Module Lottie V1
 
 **Version :** 1.1
 **Date :** 1er avril 2026
 **Statut :** Draft — À valider par Gwenvael & Gabin
-**Scope :** Usage interne admin NEOPRO uniquement
+**Scope :** Usage interne admin MADXP uniquement
 **Réf. technique :** [PROP-009](./PROP-009-motion-design-personnalise.md) (analyse Lottie vs Plainly)
 
 ---
@@ -14,7 +14,7 @@
 
 Aujourd'hui, créer une animation personnalisée pour un club prend 2 heures : Gabin ouvre After Effects, intègre les données du club, exporte, déploie manuellement. Ce processus fonctionne à 3 clubs. Il ne fonctionnera pas à 30.
 
-L'objectif de cette page est simple : permettre à n'importe quel admin NEOPRO de créer et déployer un contenu personnalisé en moins de 5 minutes, sans toucher à After Effects.
+L'objectif de cette page est simple : permettre à n'importe quel admin MADXP de créer et déployer un contenu personnalisé en moins de 5 minutes, sans toucher à After Effects.
 
 C'est aussi la brique fondatrice du self-service club — quand les clubs pourront faire ça eux-mêmes en V2.
 
@@ -22,7 +22,7 @@ C'est aussi la brique fondatrice du self-service club — quand les clubs pourro
 
 ## 2. Qui utilise cette page ?
 
-Uniquement les deux fondateurs NEOPRO dans un premier temps.
+Uniquement les deux fondateurs MADXP dans un premier temps.
 
 **Gwenvael** (super_admin) — prépare les contenus avant match, supervise les déploiements à distance.
 **Gabin** (admin) — valide le rendu visuel, déploie après avoir créé un nouveau template.

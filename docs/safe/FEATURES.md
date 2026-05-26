@@ -1,4 +1,4 @@
-# Features & User Stories — NEOPRO SAFe
+# Features & User Stories — MADXP SAFe
 
 > **Dernière mise à jour** : 30 Avril 2026 <!-- ADR-071 hosting Cloudflare Pages (phases 2-3 livrées), ADR-103 web/live in loop (phases 1→4 livrées), ADR-104 TV preview HTTP pull SaaS (livré + kill-switch flotté), ADR-105 TV preview iframe local-first Pi (livré). Voir IMPLEMENTED-BACKLOG IMP-VID-29, IMP-PI-43/44/45, IMP-ADM-24. -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -126,7 +126,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Validation email obligatoire avant accès _(non applicable — magic link)_
 - [x] Profil : nom entreprise, logo, secteur d'activité, contact — `sponsor-dashboard.component.ts`
 - [x] Le rôle `advertiser` est assigné automatiquement — `sponsor-access.service.ts`
-- [ ] L'admin NEOPRO reçoit une notification de nouvelle inscription
+- [ ] L'admin MADXP reçoit une notification de nouvelle inscription
 
 | US        | Description                                                                      | SP  | Sprint | Priorité |
 | --------- | -------------------------------------------------------------------------------- | --- | ------ | -------- |
@@ -156,7 +156,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-01.3 : Validation admin des spots ⚠️ PARTIEL
 
-> _En tant qu'admin NEOPRO, je peux valider ou refuser les spots soumis par les sponsors avec un motif._
+> _En tant qu'admin MADXP, je peux valider ou refuser les spots soumis par les sponsors avec un motif._
 
 **Critères d'acceptation**
 
@@ -290,7 +290,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-06.2 : Wizard de configuration club
 
-> _En tant qu'admin NEOPRO, je peux configurer un nouveau club via un wizard étape par étape._
+> _En tant qu'admin MADXP, je peux configurer un nouveau club via un wizard étape par étape._
 
 **Critères d'acceptation**
 
@@ -424,7 +424,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 - [ ] Rapport mensuel automatique (PDF + email)
 - [ ] Impressions par gymnase, par jour, par créneau
-- [ ] Revenue split visible : 90% NEOPRO, 10% club
+- [ ] Revenue split visible : 90% MADXP, 10% club
 
 | US        | Description                                                          | SP  | Sprint  | Priorité |
 | --------- | -------------------------------------------------------------------- | --- | ------- | -------- |
@@ -745,7 +745,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 **Critères d'acceptation**
 
-- [ ] Splash screen animé "En attente d'écran…" avec logo Neopro (affiché dès que HDMI détecté)
+- [ ] Splash screen animé "En attente d'écran…" avec logo MadXP (affiché dès que HDMI détecté)
 - [ ] Config "mode PC" dans le dashboard : marque un site comme fonctionnant sans écran physique
 - [ ] LED GPIO clignotement lent = en attente d'écran (Pi 4/5)
 - [ ] Bip sonore court quand HDMI est détecté (confirmation branchement)
@@ -753,7 +753,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 | US        | Description                                                                            | SP  | Sprint  | Priorité |
 | --------- | -------------------------------------------------------------------------------------- | --- | ------- | -------- |
-| US-23.2.1 | Splash screen d'attente animé (logo Neopro + "En attente d'écran…" + spinner)          | 3   | PI-2 S5 | Should   |
+| US-23.2.1 | Splash screen d'attente animé (logo MadXP + "En attente d'écran…" + spinner)           | 3   | PI-2 S5 | Should   |
 | US-23.2.2 | Configuration "mode PC" dans le dashboard (marquer site sans écran physique)           | 5   | PI-2 S5 | Should   |
 | US-23.2.3 | LED pattern Pi "en attente d'écran" (GPIO clignotement lent, compatible Pi 4 et Pi 5)  | 2   | PI-2 S6 | Could    |
 | US-23.2.4 | Bip sonore sur détection HDMI (feedback audio confirmation branchement via buzzer/PWM) | 2   | PI-2 S6 | Could    |
@@ -917,7 +917,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-14.1 : Gestion du fonds
 
-> _En tant que NEOPRO, 2% des revenus régie alimentent un fonds de solidarité pour les clubs modestes._
+> _En tant que MADXP, 2% des revenus régie alimentent un fonds de solidarité pour les clubs modestes._
 
 **Critères d'acceptation**
 
@@ -993,7 +993,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-21.1 : API OAuth 2.0 pour partenaires
 
-> _En tant que partenaire externe (agence, sponsor multi-clubs), j'accède à l'API NEOPRO de manière sécurisée._
+> _En tant que partenaire externe (agence, sponsor multi-clubs), j'accède à l'API MADXP de manière sécurisée._
 
 **Critères d'acceptation**
 
@@ -1006,11 +1006,11 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 | --------- | ---------------------------------------------------------------- | --- | ------- | ------------ |
 | US-21.1.1 | OAuth 2.0 server + scopes + rate limiting + portail développeurs | 13  | PI-3 S3 | Won't (PI-3) |
 
-### F-21.2 : API publique Neopro Live Scores
+### F-21.2 : API publique MadXP Live Scores
 
 > _En tant qu'éditeur tiers (app club, média local, agrégateur, fédération, bornes interactives), je récupère en temps réel les scores officiels des matchs amateurs français via une API documentée, sans passer par une saisie humaine._
 
-**Contexte & vision produit** : aujourd'hui, les clubs amateurs n'ont pas de source officielle de scores live — il faut demander par message si quelqu'un est sur place. Avec F-15.2 en prod, Neopro devient **la seule source capable de lire directement les tables de marque officielles** de centaines de clubs. Exposer cette donnée en API transforme Neopro en **hub de données temps réel du sport amateur français**, avec un effet réseau naturel : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour les clubs. Vision détaillée dans [PROP-003 §Vision API publique](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+**Contexte & vision produit** : aujourd'hui, les clubs amateurs n'ont pas de source officielle de scores live — il faut demander par message si quelqu'un est sur place. Avec F-15.2 en prod, MadXP devient **la seule source capable de lire directement les tables de marque officielles** de centaines de clubs. Exposer cette donnée en API transforme MadXP en **hub de données temps réel du sport amateur français**, avec un effet réseau naturel : plus de clubs équipés → plus de matchs couverts → plus de clients API → plus d'attractivité pour les clubs. Vision détaillée dans [PROP-003 §Vision API publique](../proposals/PROP-003-score-live-multi-vendor.md) et figée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 **Positionnement commercial**
 
@@ -1021,7 +1021,7 @@ Cible clients API : apps clubs, médias locaux (Ouest-France, presse régionale)
 **Prérequis métier**
 
 - **F-15.2 livrée** (fondation data : `scoreboard_events`, `ScoreboardData v1` comme contrat public, source/confidence/audit trail)
-- **Clause CGU data licence** validée avec un juriste (le club accorde à Neopro une licence non-exclusive d'exploitation commerciale des scores générés sur son site)
+- **Clause CGU data licence** validée avec un juriste (le club accorde à MadXP une licence non-exclusive d'exploitation commerciale des scores générés sur son site)
 - **Stratégie RGPD** : l'API n'expose **pas** les noms de joueurs en v1 (seulement score, équipe, temps, faits agrégés)
 
 **Critères d'acceptation**
@@ -1128,4 +1128,4 @@ Cible clients API : apps clubs, médias locaux (Ouest-France, presse régionale)
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Lean Business Cases](LEAN-BUSINESS-CASES.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)
+**Retour** : [SAFe MadXP](README.md) · [Lean Business Cases](LEAN-BUSINESS-CASES.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)

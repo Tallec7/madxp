@@ -21,7 +21,7 @@
 
 ## Définition des types d'items
 
-| Type        | Description                                          | Exemples NEOPRO                                  |
+| Type        | Description                                          | Exemples MADXP                                   |
 | ----------- | ---------------------------------------------------- | ------------------------------------------------ |
 | **Feature** | Nouvelle capacité business visible par l'utilisateur | Portail sponsor, Analytics, Profils match        |
 | **Enabler** | Travail technique qui active de futures features     | Migration repository, monitoring, audit sécurité |
@@ -106,17 +106,17 @@
 
 ### Lead Time OVS2 (opérationnel)
 
-| Étape                                 | Temps actuel     | Cible fin PI-1          | Cible PI-2   |
-| ------------------------------------- | ---------------- | ----------------------- | ------------ |
-| Sponsor contacte NEOPRO → Compte créé | 1-2 semaines     | < 1 jour (self-service) | < 1 heure    |
-| Upload spot → Validation              | 48h (email)      | < 4h (dashboard)        | < 1h         |
-| Validation → Première diffusion       | 24h              | < 2h                    | Immédiat     |
-| Match → Rapport disponible            | Jamais (manuel)  | J+1 (auto)              | Temps réel   |
-| **Total Lead Time**                   | **2-3 semaines** | **2-3 jours**           | **< 1 jour** |
+| Étape                                | Temps actuel     | Cible fin PI-1          | Cible PI-2   |
+| ------------------------------------ | ---------------- | ----------------------- | ------------ |
+| Sponsor contacte MADXP → Compte créé | 1-2 semaines     | < 1 jour (self-service) | < 1 heure    |
+| Upload spot → Validation             | 48h (email)      | < 4h (dashboard)        | < 1h         |
+| Validation → Première diffusion      | 24h              | < 2h                    | Immédiat     |
+| Match → Rapport disponible           | Jamais (manuel)  | J+1 (auto)              | Temps réel   |
+| **Total Lead Time**                  | **2-3 semaines** | **2-3 jours**           | **< 1 jour** |
 
 ---
 
-## DVS-1 — Neopro Platform Development
+## DVS-1 — MadXP Platform Development
 
 ### Flow Distribution DVS-1 (PI-1)
 
@@ -197,4 +197,4 @@ pie title Flow Distribution PI-1
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Inspect & Adapt](INSPECT-ADAPT.md) · [PI Objectives](PI-OBJECTIVES.md)
+**Retour** : [SAFe MadXP](README.md) · [Inspect & Adapt](INSPECT-ADAPT.md) · [PI Objectives](PI-OBJECTIVES.md)

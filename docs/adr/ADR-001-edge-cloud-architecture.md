@@ -2,13 +2,13 @@
 
 **Date** : Octobre 2024
 **Statut** : Accepté
-**Décideurs** : Équipe fondatrice Neopro
+**Décideurs** : Équipe fondatrice MadXP
 
 ---
 
 ## Contexte
 
-Neopro doit diffuser du contenu vidéo sur des télévisions dans des clubs sportifs. Ces clubs ont des contraintes spécifiques :
+MadXP doit diffuser du contenu vidéo sur des télévisions dans des clubs sportifs. Ces clubs ont des contraintes spécifiques :
 
 1. **Connexion Internet variable** : WiFi instable, parfois coupure pendant les matchs
 2. **Latence critique** : La télécommande doit répondre instantanément
@@ -35,10 +35,12 @@ Adopter une **architecture Edge + Cloud** avec :
 ### 1. Full Cloud (streaming)
 
 **Avantages** :
+
 - Pas de matériel à déployer
 - Mise à jour instantanée
 
 **Inconvénients** :
+
 - Dépendance Internet totale
 - Latence télécommande inacceptable (>500ms)
 - Coûts de bande passante élevés (streaming 1080p × 50 clubs)
@@ -48,10 +50,12 @@ Adopter une **architecture Edge + Cloud** avec :
 ### 2. Full Edge (autonome)
 
 **Avantages** :
+
 - Aucune dépendance Internet
 - Latence nulle
 
 **Inconvénients** :
+
 - Pas de visibilité centrale sur la flotte
 - Mise à jour manuelle site par site
 - Pas d'analytics centralisées
@@ -61,12 +65,14 @@ Adopter une **architecture Edge + Cloud** avec :
 ### 3. Edge + Cloud (hybride) ✅
 
 **Avantages** :
+
 - Autonomie locale (fonctionne offline)
 - Latence nulle pour la télécommande
 - Gestion centralisée de la flotte
 - Analytics et déploiements à distance
 
 **Inconvénients** :
+
 - Complexité de synchronisation
 - Deux codebases à maintenir
 
@@ -89,11 +95,11 @@ Adopter une **architecture Edge + Cloud** avec :
 
 ### Risques Mitigés
 
-| Risque | Mitigation |
-|--------|------------|
-| Perte de sync | Command Queue stocke les commandes pour sites offline |
-| État incohérent | Config Mirror reflète l'état réel du Pi dans le cloud |
-| Mise à jour bloquée | Rollback automatique si échec, accès SSH fallback |
+| Risque              | Mitigation                                            |
+| ------------------- | ----------------------------------------------------- |
+| Perte de sync       | Command Queue stocke les commandes pour sites offline |
+| État incohérent     | Config Mirror reflète l'état réel du Pi dans le cloud |
+| Mise à jour bloquée | Rollback automatique si échec, accès SSH fallback     |
 
 ---
 
@@ -135,13 +141,13 @@ L'expérience de production a montré que le Pi doit survivre à des conditions 
 
 Le réseau des clubs sportifs est rarement un simple WiFi domestique. Détection automatique du profil réseau :
 
-| Profil | Comportement adapté |
-|--------|--------------------|
-| `simple` | BSSID lock autorisé, restart hotspot direct |
-| `mesh` | BSSID lock interdit, bgscan auto, reboot pour hotspot (voir ADR-011) |
-| `mesh_isolated` | Cloud Remote recommandé (voir ADR-007) |
-| `enterprise` | Configuration IT requise |
-| `ethernet` | Connexion stable, pas de surveillance WiFi |
+| Profil          | Comportement adapté                                                  |
+| --------------- | -------------------------------------------------------------------- |
+| `simple`        | BSSID lock autorisé, restart hotspot direct                          |
+| `mesh`          | BSSID lock interdit, bgscan auto, reboot pour hotspot (voir ADR-011) |
+| `mesh_isolated` | Cloud Remote recommandé (voir ADR-007)                               |
+| `enterprise`    | Configuration IT requise                                             |
+| `ethernet`      | Connexion stable, pas de surveillance WiFi                           |
 
 ### Cloud Remote comme fallback réseau (v2.33)
 
@@ -156,6 +162,7 @@ Latence 100-300ms, acceptable pour une télécommande. Voir ADR-007.
 ### Configuration Mirror améliorée (v2.42)
 
 Le mécanisme de Config Mirror a été renforcé pour éviter les race conditions :
+
 - Blocage temporaire (60s) du `sync_local_state` après un `update_config` (voir ADR-013)
 - Le Pi envoie l'ancienne config avant de traiter la nouvelle → le cloud la rejetait et écrasait la nouvelle
 
@@ -171,4 +178,4 @@ Le mécanisme de Config Mirror a été renforcé pour éviter les race condition
 
 ---
 
-*Créé le 9 janvier 2026 — Mis à jour le 11 février 2026*
+_Créé le 9 janvier 2026 — Mis à jour le 11 février 2026_

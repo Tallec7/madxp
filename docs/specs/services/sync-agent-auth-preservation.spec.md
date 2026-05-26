@@ -33,7 +33,7 @@ Le bloc `auth` du `configuration.json` Pi (`clubName` + `password` télécommand
 
 ## Règles métier
 
-- Le `password` télécommande appartient au club et est saisi/déployé par un admin Neopro depuis le dashboard. Il n'est pas dérivé d'une source externe.
+- Le `password` télécommande appartient au club et est saisi/déployé par un admin MadXP depuis le dashboard. Il n'est pas dérivé d'une source externe.
 - Le password est stocké en clair dans `configuration.json.auth.password` côté Pi (consommé par `/login` Angular du Pi) — la confidentialité est assurée par le périmètre LAN du Pi et les permissions fichier (`pi:pi`, 644). Le PIN bcrypt par profil ADR-058 est un canal séparé qui ne remplace pas celui-ci.
 - Le bouton "Déployer Authentification Club" du Settings tab est l'UNIQUE chemin de mise à jour (mode Pi et mode SaaS) ; un sync de profil cloud ne peut JAMAIS modifier l'auth Pi sans intention explicite.
 - Le profil cloud par défaut (`config_profiles.is_default = TRUE`) doit refléter l'état Pi pour permettre le ré-imaging d'un boîtier (continuité de service en cas de panne hardware).

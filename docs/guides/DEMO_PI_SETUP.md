@@ -1,6 +1,6 @@
 # Préparer un Raspberry Pi de démo
 
-Guide pour configurer un Raspberry Pi physique dédié aux démonstrations Neopro.
+Guide pour configurer un Raspberry Pi physique dédié aux démonstrations MadXP.
 
 **Architecture hybride** :
 
@@ -31,8 +31,8 @@ Guide pour configurer un Raspberry Pi physique dédié aux démonstrations Neopr
 1. Se connecter sur [neopro-admin.kalonpartners.bzh](https://neopro-admin.kalonpartners.bzh)
 2. **Sites** → **Ajouter un site**
 3. Remplir :
-   - **Nom du site** : `NEOPRO DEMO`
-   - **Nom du club** : `Neopro Demo`
+   - **Nom du site** : `MADXP DEMO`
+   - **Nom du club** : `MadXP Demo`
    - **Ville** : `Nantes`
    - **Sport** : `Handball` (ou multi-sport)
    - **Modèle** : `Raspberry Pi 4` ou `Raspberry Pi 5`
@@ -167,10 +167,10 @@ Référence complète : **[DEMO_PREP.md](./DEMO_PREP.md)**
 ```
 /home/pi/neopro/webapp/videos/
 ├── DEMO/                           # Vidéo par défaut
-│   └── NEOPRO.mp4
+│   └── MADXP.mp4
 ├── narh/                           # Club NARH
 │   ├── PARTENAIRES/
-│   │   ├── NEOPRO.mp4
+│   │   ├── MADXP.mp4
 │   │   └── BOUCLE_PARTENAIRES.mp4
 │   ├── FOCUS_PARTENAIRE/
 │   │   ├── COULEUR_CARRELAGE.mp4
@@ -227,7 +227,7 @@ Ajouter le bloc `sync` :
     "enabled": true,
     "serverUrl": "https://neopro-central-production.up.railway.app",
     "siteName": "NEOPRO DEMO",
-    "clubName": "Neopro Demo"
+    "clubName": "MadXP Demo"
   }
 }
 ```

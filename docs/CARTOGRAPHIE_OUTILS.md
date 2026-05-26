@@ -1,4 +1,4 @@
-# Cartographie des outils Neopro
+# Cartographie des outils MadXP
 
 > Aperçu complet et synthétique du rôle de chaque outil, de ses fonctionnalités et de son public cible.
 
@@ -243,10 +243,10 @@
 | **Public** | **Dual mode** — 2 publics distincts               |
 | **Accès**  | Web locale `http://neopro.local:8080` (hotspot)   |
 
-| Mode                 | Public            | Usage                                 |
-| -------------------- | ----------------- | ------------------------------------- |
-| **Club** (simplifié) | Staff du club     | Ajouter du contenu vidéo au quotidien |
-| **Tech** (complet)   | Technicien Neopro | Installation, maintenance, diagnostic |
+| Mode                 | Public           | Usage                                 |
+| -------------------- | ---------------- | ------------------------------------- |
+| **Club** (simplifié) | Staff du club    | Ajouter du contenu vidéo au quotidien |
+| **Tech** (complet)   | Technicien MadXP | Installation, maintenance, diagnostic |
 
 **Fonctionnalités mode Club :**
 
@@ -431,7 +431,7 @@
 |            |                                                              |
 | ---------- | ------------------------------------------------------------ |
 | **Rôle**   | Installer, configurer et maintenir les boîtiers Raspberry Pi |
-| **Public** | Techniciens Neopro                                           |
+| **Public** | Techniciens MadXP                                            |
 | **Accès**  | Scripts bash via SSH ou local                                |
 
 **Scripts principaux :**
@@ -463,7 +463,7 @@
 | 9   | **Pi Server Socket.IO**           | Télécommande, TV               | Infra edge           |
 | 10  | **Watchdogs**                     | Système (automatisé)           | Infra edge           |
 | 11  | **Monitoring**                    | Équipe support, fondateurs     | Ops                  |
-| 12  | **Toolbox Déploiement**           | Techniciens Neopro             | Ops                  |
+| 12  | **Toolbox Déploiement**           | Techniciens MadXP              | Ops                  |
 
 ---
 

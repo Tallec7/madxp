@@ -546,6 +546,6 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f central-server/src/scripts/migration
 
 ---
 
-_Document généré pour le projet NEOPRO - Confidentiel_
+_Document généré pour le projet MADXP - Confidentiel_
 
 _Dernière mise à jour : 10 février 2026_

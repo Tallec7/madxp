@@ -3,7 +3,7 @@
 **Date v1** : 2026-03-01
 **Date v2** : 2026-04-22
 **Statut** : Proposé — spike Phase 0 pré-requis avant engagement commercial
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 **Lié à** : [PROP-002](./PROP-002-tv-led-dual-output.md), [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md), [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md), [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md), [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md)
 
 ---
@@ -15,7 +15,7 @@ Audit 52 jours après la v1. Mises à jour :
 - ❌ **Section "Extension du modèle de variantes vidéo" supprimée** — la migration `n-display-model.sql` a déjà été appliquée : `video_variants.display_type` accepte `^[a-z0-9-]+$` (1-20 chars) et `sites.displays JSONB` existe avec repository prêt (`siteRepository.getDisplays/updateDisplays`). Socket event `displays-changed` déjà émis.
 - ✅ **Contrainte GPU ajoutée** : le double-buffer ADR-042 (4 `<video>` par zone) × 4 zones = 16 flux simultanés. Non validé par SPIKE-001. Décision CTO requise : dégrader en mono-player pour les zones (option A, recommandée) ou limiter N≤2 (option B).
 - ✅ **7 nouvelles contraintes** listées (EDID custom, hauteur uniforme bandeaux, alerte mismatch, PV installation, mire de test, dégradation double-buffer, budget réel LED).
-- ✅ **Budget clarifié** : Neopro **n'achète pas** le contrôleur LED côté client. L'intégrateur LED du club livre le contrôleur avec les dalles. Seul le spike R&D nécessite un contrôleur (0-250€ via emprunt ou occasion).
+- ✅ **Budget clarifié** : MadXP **n'achète pas** le contrôleur LED côté client. L'intégrateur LED du club livre le contrôleur avec les dalles. Seul le spike R&D nécessite un contrôleur (0-250€ via emprunt ou occasion).
 - ⚠️ **Découplage de PROP-010** : l'auto-génération de variantes reste proposal. PROP-011 v1 s'appuyait dessus comme pré-requis implicite. En v2, on accepte l'upload manuel en premier palier et on pointe **ADR-086 Template Studio v2** comme voie d'auto-génération privilégiée.
 - ✅ **SPIKE-003 ouvert** pour valider Pi 5 + 7680×384 + N flux vidéo avant engagement Phase 1.
 - ✅ **Effort révisé** : 9-13 jours (au lieu de 11-16j), la Phase 2 étant partiellement retirée (BD déjà prête).
@@ -37,7 +37,7 @@ Aujourd'hui, PROP-002 / ADR-029 gèrent **2 contenus simultanés** via les 2 HDM
 | **Bodet Sport**     | Tableaux d'affichage + LED | HDMI via contrôleur | Propriétaire ou Novastar |
 | **Daktronics**      | LED pro (stades)           | HDMI via contrôleur | Propriétaire             |
 
-Neopro est agnostique du fabricant des dalles. Le signal d'entrée passe toujours par un **contrôleur LED** (sending card) qui accepte du HDMI standard. Neopro envoie du HDMI, le contrôleur distribue.
+MadXP est agnostique du fabricant des dalles. Le signal d'entrée passe toujours par un **contrôleur LED** (sending card) qui accepte du HDMI standard. MadXP envoie du HDMI, le contrôleur distribue.
 
 ### Modèle économique — Qui achète quoi
 
@@ -45,10 +45,10 @@ Neopro est agnostique du fabricant des dalles. Le signal d'entrée passe toujour
 | ------------------------------- | ---------------- | --------------------------------------- |
 | Dalles LED (JSG/Stramatel/etc.) | Club             | Installation pré-existante le + souvent |
 | Contrôleur LED (Novastar, etc.) | Intégrateur LED  | Livré **avec** les dalles               |
-| Raspberry Pi 5 + câbles         | **Neopro**       | Produit vendu                           |
+| Raspberry Pi 5 + câbles         | **MadXP**        | Produit vendu                           |
 | Installation HDMI Pi↔contrôleur | Intégrateur/tech | Setup terrain                           |
 
-**Neopro n'achète pas de contrôleur LED côté client.** Pour le spike R&D interne, un seul contrôleur suffit (emprunt partenaire intégrateur, occasion 150-250€, ou neuf 300-500€).
+**MadXP n'achète pas de contrôleur LED côté client.** Pour le spike R&D interne, un seul contrôleur suffit (emprunt partenaire intégrateur, occasion 150-250€, ou neuf 300-500€).
 
 ### Contraintes
 
@@ -119,9 +119,9 @@ Ce que le contrôleur LED distribue physiquement :
 
 ### Configuration contrôleur — contrat statique à 3 acteurs
 
-Le contrôleur LED est configuré **une fois à l'installation** via NovaLCT, jamais piloté dynamiquement par Neopro. La config doit matcher pixel à pixel `sites.displays` côté cloud. Voir [RUNBOOK_LED_INSTALLATION.md](../guides/RUNBOOK_LED_INSTALLATION.md) pour le PV d'installation signé intégrateur ↔ Neopro.
+Le contrôleur LED est configuré **une fois à l'installation** via NovaLCT, jamais piloté dynamiquement par MadXP. La config doit matcher pixel à pixel `sites.displays` côté cloud. Voir [RUNBOOK_LED_INSTALLATION.md](../guides/RUNBOOK_LED_INSTALLATION.md) pour le PV d'installation signé intégrateur ↔ MadXP.
 
-### Implémentation Neopro (delta réel à 2026-04-22)
+### Implémentation MadXP (delta réel à 2026-04-22)
 
 | Brique                                        | État         | Travail restant                                                   |
 | --------------------------------------------- | ------------ | ----------------------------------------------------------------- |
@@ -170,7 +170,7 @@ Un sponsor qui livre 1 variante bandeau est auto-dupliqué sur les 4 zones. Un s
 2. **GPU V3D Pi 5 non validé** pour N flux vidéo simultanés. SPIKE-001 a testé 2 Chromium × 1 flux, pas 1 Chromium × 16 flux. SPIKE-003 à livrer avant Phase 1.
 3. **Hauteur uniforme des bandeaux** : tous les côtés d'un même terrain doivent partager la même hauteur pixel. Un Nord 1920×384 + Est 1920×160 casse la géométrie framebuffer. Alternative : 2 contrôleurs LED ou padding noir.
 4. **Alerte `edid_mismatch`** côté sync-agent : lire l'EDID réel du contrôleur, comparer à `sites.displays`, lever une alerte si divergence. Évite la dérive silencieuse (cas A du doc audit).
-5. **PV d'installation signé** intégrateur LED ↔ admin Neopro qui fige les coordonnées de crop et le nombre de panneaux physiques. Source de vérité commerciale contre les zones fantômes.
+5. **PV d'installation signé** intégrateur LED ↔ admin MadXP qui fige les coordonnées de crop et le nombre de panneaux physiques. Source de vérité commerciale contre les zones fantômes.
 6. **Mire de test au boot** : 3-5 secondes d'affichage numéros de zone + couleurs distinctes avant de basculer sur le contenu réel. Permet à l'installateur de valider visuellement.
 7. **Verrou `super_admin`** sur `sites.displays` : modification impossible depuis le dashboard standard avec warning explicite sur la nécessité d'une intervention terrain parallèle.
 
@@ -230,7 +230,7 @@ Note : la partie BD (CHECK constraint + JSONB) est **déjà faite**. Phase rédu
 ### Phase 4 — Validation terrain (2-3 jours)
 
 1. Premier déploiement pilote chez un prospect avec panneaux LED multi-côtés
-2. PV d'installation signé intégrateur ↔ Neopro
+2. PV d'installation signé intégrateur ↔ MadXP
 3. Validation mire de test
 4. Monitoring post-déploiement 72h (RAM, GPU errors, crashs Chromium)
 
@@ -240,9 +240,9 @@ Note : la partie BD (CHECK constraint + JSONB) est **déjà faite**. Phase rédu
 
 | Rôle               | Hardware                     | Acheteur                 | Coût                           |
 | ------------------ | ---------------------------- | ------------------------ | ------------------------------ |
-| Déploiement client | Pi 5 + câbles HDMI           | Neopro (produit)         | Déjà dans le BOM               |
-| Déploiement client | Contrôleur LED + dalles      | **Client / intégrateur** | Hors budget Neopro             |
-| Spike R&D interne  | Contrôleur Novastar MCTRL4K  | Neopro (one-off)         | 0-500€ (emprunt/occasion/neuf) |
+| Déploiement client | Pi 5 + câbles HDMI           | MadXP (produit)          | Déjà dans le BOM               |
+| Déploiement client | Contrôleur LED + dalles      | **Client / intégrateur** | Hors budget MadXP              |
+| Spike R&D interne  | Contrôleur Novastar MCTRL4K  | MadXP (one-off)          | 0-500€ (emprunt/occasion/neuf) |
 | Spike R&D interne  | Panneau LED ou moniteur test | Emprunt partenaire       | 0€                             |
 
 ### Développement

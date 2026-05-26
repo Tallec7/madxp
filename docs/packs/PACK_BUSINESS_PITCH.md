@@ -1,4 +1,4 @@
-# NEOPRO - Business Pitch Pack
+# MADXP - Business Pitch Pack
 
 **Executive Summary for Investors, Partners & Business Stakeholders**
 
@@ -9,6 +9,7 @@
 ## Usage
 
 Use this pack when:
+
 - Pitching to investors, VCs, or business partners
 - Presenting to potential customers
 - Creating marketing materials
@@ -36,9 +37,9 @@ Use this pack when:
 
 ## 1. Executive Summary
 
-### What is NEOPRO?
+### What is MADXP?
 
-**NEOPRO is a complete interactive TV system for sports clubs** combining:
+**MADXP is a complete interactive TV system for sports clubs** combining:
 
 - **Hardware:** Pre-configured Raspberry Pi (€80 cost, €0 customer investment)
 - **Local Software:** TV display + mobile remote control + admin interface
@@ -52,14 +53,14 @@ Use this pack when:
 - **~1,200 daily video plays**
 - **Business model:** Hybrid (SaaS + Premium features)
 
-### Why NEOPRO?
+### Why MADXP?
 
-| Challenge | Traditional Solution | NEOPRO Solution |
-|-----------|--------------------|--------------------|
-| **Animating matches** | Expensive equipment + technician | Plug & play with mobile remote |
-| **Sponsorship value** | Manual tracking, no analytics | Automatic impression tracking + reports |
-| **Multiple clubs** | Separate systems per site | Centralized cloud management |
-| **Cost** | €500-2000+ per installation | €80 hardware + SaaS subscription |
+| Challenge             | Traditional Solution             | MADXP Solution                          |
+| --------------------- | -------------------------------- | --------------------------------------- |
+| **Animating matches** | Expensive equipment + technician | Plug & play with mobile remote          |
+| **Sponsorship value** | Manual tracking, no analytics    | Automatic impression tracking + reports |
+| **Multiple clubs**    | Separate systems per site        | Centralized cloud management            |
+| **Cost**              | €500-2000+ per installation      | €80 hardware + SaaS subscription        |
 
 ---
 
@@ -70,33 +71,37 @@ Use this pack when:
 European sports clubs (semi-pro & amateur) face critical challenges:
 
 #### Challenge 1: Poor Match Experience
+
 - **Current reality:** Gray screens, no dynamic content
 - **Impact:** Reduced stadium experience, lower attendance repeat rate
 - **Cost to fix:** €500-2000+ per club for traditional scoreboard/display systems
 
 #### Challenge 2: Sponsor Visibility
+
 - **Current reality:** Static banners, no engagement tracking
 - **Impact:** Sponsors unsure of ROI, harder to renew sponsorships
 - **Cost to fix:** Manual tracking or no tracking at all
 
 #### Challenge 3: Content Management
+
 - **Current reality:** Complex systems, high technical barrier
 - **Impact:** Most clubs give up, revert to static displays
 - **Cost to fix:** IT support required
 
 #### Challenge 4: Fleet Management
+
 - **Current reality:** Each club operates independently
 - **Impact:** No economies of scale, fragmented operations
 - **Cost to fix:** Manual management, no visibility across sites
 
 ### Target Market Segments
 
-| Segment | Size | Pain Points |
-|---------|------|------------|
-| **Regional Handball** | 200-300 clubs | Sponsorship ROI, match experience |
-| **Amateur Basketball** | 300-400 clubs | Multiple court management, content |
-| **Local Football** | 1,000+ clubs | Sponsor activation, attendance growth |
-| **Volleyball** | 150-200 clubs | Match energy, fan engagement |
+| Segment                | Size          | Pain Points                           |
+| ---------------------- | ------------- | ------------------------------------- |
+| **Regional Handball**  | 200-300 clubs | Sponsorship ROI, match experience     |
+| **Amateur Basketball** | 300-400 clubs | Multiple court management, content    |
+| **Local Football**     | 1,000+ clubs  | Sponsor activation, attendance growth |
+| **Volleyball**         | 150-200 clubs | Match energy, fan engagement          |
 
 ---
 
@@ -106,7 +111,7 @@ European sports clubs (semi-pro & amateur) face critical challenges:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         NEOPRO ECOSYSTEM                        │
+│                         MADXP ECOSYSTEM                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
@@ -126,30 +131,35 @@ European sports clubs (semi-pro & amateur) face critical challenges:
 **What it is:** Raspberry Pi 4 + SD card + power supply (pre-configured)
 
 **What customers get:**
+
 - Plug & play setup (WiFi + HDMI)
 - 98.5% uptime SLA
 - Offline functionality (works without internet)
 - Automatic cloud synchronization
 
 **Customer ROI:**
+
 - Cost: €80 (vs. €500-2000+ for traditional systems)
 - Payback in 2-3 months of sponsorship activation
 
 ### Component 2: TV Display + Mobile Remote
 
 **TV Display Features:**
+
 - Full-screen video player (4K video support)
 - Automatic sponsor loop (10-30 second cycles)
 - Kiosk mode (no manual intervention needed)
 - Works during network outages
 
 **Mobile Remote Control:**
+
 - One-touch video triggering
 - Real-time synchronization (<100ms latency)
 - Works on any smartphone (iOS/Android via browser)
 - Categories: Pre-match / Match / Post-match
 
 **Customer Use Case:**
+
 ```
 Match Day (Jean, the operator):
 1. Connects to WiFi hotspot (NEOPRO-CLUB_NAME)
@@ -163,17 +173,20 @@ Match Day (Jean, the operator):
 ### Component 3: Central Dashboard
 
 **For Sports Club Managers:**
+
 - **Fleet view:** Status of all remote sites (online/offline)
 - **Content management:** Upload & organize videos centrally
 - **Analytics:** Usage reports, top videos, system health
 - **Remote commands:** Reboot, update, diagnostics without SSH
 
 **For Sponsors:**
+
 - **Impression tracking:** Exactly how many times their video played
 - **Professional reports:** PDF with KPIs, breakdown by location/date
 - **Reach analytics:** How many clubs, how many spectators (estimated)
 
 **For Regional Operators:**
+
 - **Multi-site control:** Manage 5-100 clubs from one dashboard
 - **Content distribution:** Push videos to group of clubs (e.g., all Handball clubs)
 - **Centralized administration:** User management, permissions, audit logs
@@ -186,37 +199,37 @@ Match Day (Jean, the operator):
 
 #### Core Features ✅ COMPLETE
 
-| Feature | Description | Status |
-|---------|-----------|--------|
-| TV Display | Full-screen video player with Video.js | ✅ Live |
-| Remote Control | Mobile web app with real-time control | ✅ Live |
-| Admin Interface | Local management (port 8080) | ✅ Live |
-| Configuration UI | JSON editor with validation | ✅ Live |
-| Multi-user Support | RBAC (admin, operator, viewer) | ✅ Live |
-| Offline Mode | Full functionality without internet | ✅ Live |
-| Cloud Synchronization | Automatic config + content sync | ✅ Live |
+| Feature               | Description                            | Status  |
+| --------------------- | -------------------------------------- | ------- |
+| TV Display            | Full-screen video player with Video.js | ✅ Live |
+| Remote Control        | Mobile web app with real-time control  | ✅ Live |
+| Admin Interface       | Local management (port 8080)           | ✅ Live |
+| Configuration UI      | JSON editor with validation            | ✅ Live |
+| Multi-user Support    | RBAC (admin, operator, viewer)         | ✅ Live |
+| Offline Mode          | Full functionality without internet    | ✅ Live |
+| Cloud Synchronization | Automatic config + content sync        | ✅ Live |
 
 #### Analytics & Reporting ✅ COMPLETE
 
-| Feature | Description | Status |
-|---------|-----------|--------|
-| Club Analytics Dashboard | 4-tab dashboard (Overview/Usage/Content/Health) | ✅ Live |
-| Video Play Tracking | Granular playback analytics | ✅ Live |
-| System Health Monitoring | CPU, RAM, Temperature, Disk, Uptime | ✅ Live |
-| CSV Export | Downloadable analytics data | ✅ Live |
-| PDF Reports | Professional 6-page reports with certification | ✅ Live |
-| Sponsor Impression Tracking | Video-level impression counts | ✅ Live |
-| Sponsor Analytics | Reach, duration, completion metrics | ✅ Live |
-| Sponsor Reports | PDF with KPIs and digital signature | ✅ Live |
+| Feature                     | Description                                     | Status  |
+| --------------------------- | ----------------------------------------------- | ------- |
+| Club Analytics Dashboard    | 4-tab dashboard (Overview/Usage/Content/Health) | ✅ Live |
+| Video Play Tracking         | Granular playback analytics                     | ✅ Live |
+| System Health Monitoring    | CPU, RAM, Temperature, Disk, Uptime             | ✅ Live |
+| CSV Export                  | Downloadable analytics data                     | ✅ Live |
+| PDF Reports                 | Professional 6-page reports with certification  | ✅ Live |
+| Sponsor Impression Tracking | Video-level impression counts                   | ✅ Live |
+| Sponsor Analytics           | Reach, duration, completion metrics             | ✅ Live |
+| Sponsor Reports             | PDF with KPIs and digital signature             | ✅ Live |
 
 #### Advanced Features ✅ COMPLETE
 
-| Feature | Description | Status |
-|---------|-----------|--------|
+| Feature             | Description                        | Status           |
+| ------------------- | ---------------------------------- | ---------------- |
 | Audience Estimation | Input spectator count during match | ✅ Live (15 Dec) |
-| Live Score Widget | Display live game score on remote | ✅ Live (15 Dec) |
-| Video Search | Full-text search across all videos | ✅ Live (15 Dec) |
-| Match Configuration | Date, name, audience metadata | ✅ Live (15 Dec) |
+| Live Score Widget   | Display live game score on remote  | ✅ Live (15 Dec) |
+| Video Search        | Full-text search across all videos | ✅ Live (15 Dec) |
+| Match Configuration | Date, name, audience metadata      | ✅ Live (15 Dec) |
 
 ### What's NOT Yet Built (Roadmap Phase 2+)
 
@@ -232,24 +245,24 @@ Match Day (Jean, the operator):
 
 ### Production Metrics (Real Data)
 
-| Metric | Current Value | Trend |
-|--------|--------------|-------|
-| **Active Clubs** | 27 | ↑ Growing |
-| **Uptime** | 98.5% | ↑ Stable |
-| **Daily Plays** | ~1,200 videos | ↑ Growing |
-| **Response Time** | <200ms (p95) | ✓ Excellent |
-| **System Score** | 9.5/10 | ✓ Production-Ready |
+| Metric            | Current Value | Trend              |
+| ----------------- | ------------- | ------------------ |
+| **Active Clubs**  | 27            | ↑ Growing          |
+| **Uptime**        | 98.5%         | ↑ Stable           |
+| **Daily Plays**   | ~1,200 videos | ↑ Growing          |
+| **Response Time** | <200ms (p95)  | ✓ Excellent        |
+| **System Score**  | 9.5/10        | ✓ Production-Ready |
 
 ### Business Progress
 
-| Indicator | Status | Details |
-|-----------|--------|---------|
-| **MVP** | ✅ Complete | Core system working with 27 clubs |
-| **Documentation** | ✅ Complete | 180+ documentation files |
-| **Test Coverage** | ✅ Good | 93% backend coverage, Jest tests |
-| **Security** | ✅ Addressed | JWT auth, RBAC, HTTPS, rate-limiting |
-| **Scalability** | ✅ Proven | Handling multi-site, 0ms latency WebSocket |
-| **Business Model** | ✅ Validated | SaaS + premium features working |
+| Indicator          | Status       | Details                                    |
+| ------------------ | ------------ | ------------------------------------------ |
+| **MVP**            | ✅ Complete  | Core system working with 27 clubs          |
+| **Documentation**  | ✅ Complete  | 180+ documentation files                   |
+| **Test Coverage**  | ✅ Good      | 93% backend coverage, Jest tests           |
+| **Security**       | ✅ Addressed | JWT auth, RBAC, HTTPS, rate-limiting       |
+| **Scalability**    | ✅ Proven    | Handling multi-site, 0ms latency WebSocket |
+| **Business Model** | ✅ Validated | SaaS + premium features working            |
 
 ### Recent Achievements (Last 30 Days)
 
@@ -271,13 +284,14 @@ Match Day (Jean, the operator):
 
 **Pricing Tiers:**
 
-| Tier | Monthly | Annual | For Whom |
-|------|---------|--------|----------|
-| **Starter** | €30 | €300 | Single club, basic features |
-| **Professional** | €80 | €800 | Multi-site, analytics, PDF reports |
-| **Enterprise** | €200+ | Custom | 50+ clubs, API access, white-label |
+| Tier             | Monthly | Annual | For Whom                           |
+| ---------------- | ------- | ------ | ---------------------------------- |
+| **Starter**      | €30     | €300   | Single club, basic features        |
+| **Professional** | €80     | €800   | Multi-site, analytics, PDF reports |
+| **Enterprise**   | €200+   | Custom | 50+ clubs, API access, white-label |
 
 **Unit Economics:**
+
 ```
 Costs per club:
 - Hardware: €80 (one-time)
@@ -302,19 +316,19 @@ Available monthly add-ons:
 
 #### Stream 3: Sponsor Network
 
-**NEOPRO as intermediary between national sponsors and local clubs:**
+**MADXP as intermediary between national sponsors and local clubs:**
 
 ```
 Sponsor wants to reach all French handball clubs:
-1. Pays NEOPRO €5,000 for campaign
-2. NEOPRO uploads sponsor video
+1. Pays MADXP €5,000 for campaign
+2. MADXP uploads sponsor video
 3. Deploys to 500 clubs (€10 per club distribution fee)
 4. Tracks impressions across all locations
 5. Generates professional sponsorship report
 6. Sponsor happy (they can measure ROI)
 7. Clubs happy (10% revenue share: €50 per club)
 
-NEOPRO margin: 40-50% on sponsor campaigns
+MADXP margin: 40-50% on sponsor campaigns
 ```
 
 #### Stream 4: Professional Services
@@ -325,11 +339,11 @@ NEOPRO margin: 40-50% on sponsor campaigns
 
 ### Financial Projections (Conservative)
 
-| Phase | Timeline | Clubs | MRR | ARR | Team |
-|-------|----------|-------|-----|-----|------|
-| **Current** | Dec 2025 | 27 | €0 | €0 | 1-2 |
-| **Phase 1** | 3-6 months | 50-100 | €2-4K | €30-50K | 4-5 |
-| **Phase 2** | 6-12 months | 300-500 | €10-20K | €150-250K | 8-10 |
+| Phase       | Timeline     | Clubs     | MRR      | ARR       | Team  |
+| ----------- | ------------ | --------- | -------- | --------- | ----- |
+| **Current** | Dec 2025     | 27        | €0       | €0        | 1-2   |
+| **Phase 1** | 3-6 months   | 50-100    | €2-4K    | €30-50K   | 4-5   |
+| **Phase 2** | 6-12 months  | 300-500   | €10-20K  | €150-250K | 8-10  |
 | **Phase 3** | 12-24 months | 2000-5000 | €50-100K | €600-1.2M | 20-25 |
 
 ---
@@ -381,17 +395,17 @@ SAM estimate: €2.8M in Year 1-3
 
 ## 8. Competitive Advantage
 
-### Why NEOPRO Wins
+### Why MADXP Wins
 
-| Factor | NEOPRO | Competitors | Advantage |
-|--------|--------|-------------|-----------|
-| **Cost** | €80 hardware | €500-2000+ | 6-25x cheaper |
-| **Setup Time** | 10 minutes | 1-2 days | Plug & play |
-| **Offline** | Full support | Requires internet | Works anywhere |
-| **Analytics** | Built-in | None or expensive add-on | Included |
-| **Mobile Remote** | Included | Requires expensive equipment | Smartphone only |
-| **Cloud Dashboard** | Included | Not always available | Fleet visibility |
-| **Time to ROI** | 2-3 months | 12+ months | 5x faster |
+| Factor              | MADXP        | Competitors                  | Advantage        |
+| ------------------- | ------------ | ---------------------------- | ---------------- |
+| **Cost**            | €80 hardware | €500-2000+                   | 6-25x cheaper    |
+| **Setup Time**      | 10 minutes   | 1-2 days                     | Plug & play      |
+| **Offline**         | Full support | Requires internet            | Works anywhere   |
+| **Analytics**       | Built-in     | None or expensive add-on     | Included         |
+| **Mobile Remote**   | Included     | Requires expensive equipment | Smartphone only  |
+| **Cloud Dashboard** | Included     | Not always available         | Fleet visibility |
+| **Time to ROI**     | 2-3 months   | 12+ months                   | 5x faster        |
 
 ### Unique Features
 
@@ -404,7 +418,7 @@ SAM estimate: €2.8M in Year 1-3
 
 ### Network Effects
 
-As more clubs adopt NEOPRO:
+As more clubs adopt MADXP:
 
 1. **Sponsor ecosystem grows:** "I can reach 500 clubs with one campaign"
 2. **Club adoption accelerates:** "All our competitors use NEOPRO"
@@ -418,11 +432,13 @@ As more clubs adopt NEOPRO:
 ### Phase 1: Consolidation (0-3 months)
 
 **Goals:**
+
 - Reach 50-100 paying clubs
 - Establish sales & support processes
 - Validate business model
 
 **Actions:**
+
 - Sales & customer success hiring
 - Professional onboarding playbook
 - Customer testimonials & case studies
@@ -433,11 +449,13 @@ As more clubs adopt NEOPRO:
 ### Phase 2: Growth (3-12 months)
 
 **Goals:**
+
 - Reach 300-500 clubs
 - Expand to 2-3 additional countries
 - Launch sponsor network MVP
 
 **Actions:**
+
 - Regional sales team (FR, BE, NL, DE)
 - League partnerships (official integrations)
 - Sponsor platform beta
@@ -448,11 +466,13 @@ As more clubs adopt NEOPRO:
 ### Phase 3: Scale (12-24 months)
 
 **Goals:**
+
 - 2,000-5,000 clubs
 - Pan-European presence
 - €50-100K monthly recurring revenue
 
 **Actions:**
+
 - White-label versions
 - API marketplace
 - Advanced analytics (ML/AI)
@@ -466,10 +486,10 @@ As more clubs adopt NEOPRO:
 
 ### Total Funding Ask
 
-| Phase | Amount | Use |
-|-------|--------|-----|
-| **Seed** | €500K - €1M | Tech consolidation + early sales |
-| **Series A** | €3-5M | Sales team, marketing, product |
+| Phase        | Amount      | Use                              |
+| ------------ | ----------- | -------------------------------- |
+| **Seed**     | €500K - €1M | Tech consolidation + early sales |
+| **Series A** | €3-5M       | Sales team, marketing, product   |
 
 ### Seed Use of Funds (€500K-1M)
 
@@ -532,22 +552,22 @@ Investor return: €14.4M (14x return)
 
 ## Key Differentiators Summary
 
-| Aspect | What We Offer |
-|--------|---------------|
-| **Product** | Complete, production-ready system (not beta) |
-| **Customer Base** | 27 paying/pilot clubs validating market demand |
+| Aspect             | What We Offer                                         |
+| ------------------ | ----------------------------------------------------- |
+| **Product**        | Complete, production-ready system (not beta)          |
+| **Customer Base**  | 27 paying/pilot clubs validating market demand        |
 | **Business Model** | Multiple revenue streams (SaaS + hardware + sponsors) |
-| **Timing** | Sports clubs digitizing faster post-COVID |
-| **Technology** | Modern, scalable stack vs. legacy competitors |
-| **Unit Economics** | 60-80% gross margins, <3 month payback |
-| **Team** | Technical founder + advisor network |
-| **IP** | Proprietary sync architecture + analytics engine |
+| **Timing**         | Sports clubs digitizing faster post-COVID             |
+| **Technology**     | Modern, scalable stack vs. legacy competitors         |
+| **Unit Economics** | 60-80% gross margins, <3 month payback                |
+| **Team**           | Technical founder + advisor network                   |
+| **IP**             | Proprietary sync architecture + analytics engine      |
 
 ---
 
 ## Contact & Next Steps
 
-**For investors:** Let's discuss your typical investment thesis and how NEOPRO fits.
+**For investors:** Let's discuss your typical investment thesis and how MADXP fits.
 
 **For partners:** We're actively looking for regional sales partners and league integrations.
 
@@ -558,4 +578,3 @@ Investor return: €14.4M (14x return)
 **Version:** 1.0
 **Date:** December 17, 2025
 **Confidentiality:** This document contains proprietary information
-

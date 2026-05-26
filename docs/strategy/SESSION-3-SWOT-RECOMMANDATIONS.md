@@ -6,14 +6,14 @@
 
 ---
 
-## 1. SWOT Neopro consolidé
+## 1. SWOT MadXP consolidé
 
 ### 🟢 Forces (différenciateurs confirmés vs marché)
 
 | #   | Force                                                                                                          | Preuve concurrentielle                                                                                                                                                      |
 | --- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | F1  | **Régie pub multi-tenant native** (advertiser/agency/club + sponsor weighted rotation + reporting impressions) | Aucun concurrent analysé n'offre la stack complète. Bodet=playlist statique. TVTools=playlist scheduling. Yodeck/ScreenCloud=apps génériques sans logique sponsoring sport. |
-| F2  | **Architecture hybride Pi edge + SaaS pur** (ADR-037)                                                          | Yodeck = Pi only. ScreenCloud = cloud only. Bodet = LED hardware only. Neopro = seul à offrir les 2 modes.                                                                  |
+| F2  | **Architecture hybride Pi edge + SaaS pur** (ADR-037)                                                          | Yodeck = Pi only. ScreenCloud = cloud only. Bodet = LED hardware only. MadXP = seul à offrir les 2 modes.                                                                   |
 | F3  | **Template Studio v2 data-driven** (Remotion, ADR-086, layers + safe-zones + animations réversibles)           | Singular.live = équivalent broadcast mais €€ et hors sport amateur. Bodet/Stramatel = templates statiques.                                                                  |
 | F4  | **Portail club self-service multi-tenant** (ADR-082 Video Club Grants)                                         | Aucun concurrent : tous orientés admin central → club consommateur passif.                                                                                                  |
 | F5  | **Edge offline résilient + Pi <500€**                                                                          | Bodet=15-30k€, TVTools=hardware proprio CapEx élevé. Yodeck Pi seul équivalent technique mais sans verticalisation sport.                                                   |
@@ -57,23 +57,23 @@
 
 ## 2. Pricing benchmark consolidé
 
-| Acteur                | Modèle                       | Prix entry-level       | Prix moyen €/écran/mois   | Public/Devis   |
-| --------------------- | ---------------------------- | ---------------------- | ------------------------- | -------------- |
-| **Bodet Sport**       | CapEx hardware + maintenance | 15 000 € (LED basique) | 30-50k€ TCO 5 ans         | 🔴 Devis       |
-| **Stramatel**         | CapEx hardware + maintenance | ~15 000 €              | Similaire Bodet           | 🔴 Devis       |
-| **TVTools**           | SaaS ou On-Prem + hardware   | non publié             | non publié                | 🔴 Devis       |
-| **A2Display**         | CapEx LED + intégration      | non collecté           | —                         | 🔴 Devis       |
-| **Yodeck**            | SaaS + Pi bundle             | **0 €** (1 écran free) | **8-15 €/mois**           | 🟢 Public      |
-| **ScreenCloud**       | SaaS pur                     | $20/écran/mois         | **20-30 $/mois**          | 🟢 Public      |
-| **OptiSigns**         | SaaS pur                     | $9/écran/mois          | **9-45 $/mois**           | 🟢 Public      |
-| **Xibo CMS**          | Dual-license                 | 0 € (self-host)        | varie cloud               | 🟡 Hybride     |
-| **Anthias**           | Open-source Pi               | 0 €                    | 0 €                       | 🟢 Gratuit     |
-| **OBS Studio**        | Open-source                  | 0 €                    | 4-6k€ TCO caché bénévolat | 🟢 Gratuit     |
-| **SportMember**       | SaaS membres                 | freemium               | 0,18 €/membre/mois        | 🟢 Public      |
-| **Singular.live**     | SaaS broadcast               | freemium               | 99-999 $/mois             | 🟢 Public      |
-| **Neopro** _(actuel)_ | SaaS + Pi                    | À cadrer               | À cadrer                  | 🟢 Public visé |
+| Acteur               | Modèle                       | Prix entry-level       | Prix moyen €/écran/mois   | Public/Devis   |
+| -------------------- | ---------------------------- | ---------------------- | ------------------------- | -------------- |
+| **Bodet Sport**      | CapEx hardware + maintenance | 15 000 € (LED basique) | 30-50k€ TCO 5 ans         | 🔴 Devis       |
+| **Stramatel**        | CapEx hardware + maintenance | ~15 000 €              | Similaire Bodet           | 🔴 Devis       |
+| **TVTools**          | SaaS ou On-Prem + hardware   | non publié             | non publié                | 🔴 Devis       |
+| **A2Display**        | CapEx LED + intégration      | non collecté           | —                         | 🔴 Devis       |
+| **Yodeck**           | SaaS + Pi bundle             | **0 €** (1 écran free) | **8-15 €/mois**           | 🟢 Public      |
+| **ScreenCloud**      | SaaS pur                     | $20/écran/mois         | **20-30 $/mois**          | 🟢 Public      |
+| **OptiSigns**        | SaaS pur                     | $9/écran/mois          | **9-45 $/mois**           | 🟢 Public      |
+| **Xibo CMS**         | Dual-license                 | 0 € (self-host)        | varie cloud               | 🟡 Hybride     |
+| **Anthias**          | Open-source Pi               | 0 €                    | 0 €                       | 🟢 Gratuit     |
+| **OBS Studio**       | Open-source                  | 0 €                    | 4-6k€ TCO caché bénévolat | 🟢 Gratuit     |
+| **SportMember**      | SaaS membres                 | freemium               | 0,18 €/membre/mois        | 🟢 Public      |
+| **Singular.live**    | SaaS broadcast               | freemium               | 99-999 $/mois             | 🟢 Public      |
+| **MadXP** _(actuel)_ | SaaS + Pi                    | À cadrer               | À cadrer                  | 🟢 Public visé |
 
-### Recommandation pricing Neopro
+### Recommandation pricing MadXP
 
 - **Entry / Club amateur** : **15-25 €/écran/mois** (positionnement entre Yodeck et ScreenCloud, premium justifié par spec sport + régie pub)
 - **Free tier** : **1 écran SaaS gratuit** (acquisition virale type Yodeck) — non disponible pour Pi
@@ -118,7 +118,7 @@
 
 **Lacune** vs Yodeck/Xibo. Acquisition virale.
 
-- 1 écran SaaS gratuit, watermark Neopro discret
+- 1 écran SaaS gratuit, watermark MadXP discret
 - Limites : 5 vidéos, 1 sponsor, 0 multi-tenant
 - Conversion path clair vers payant à 15 €/mois
 - **Effort** : 1 sprint pricing + dashboard. **Impact** : top of funnel 10x.
@@ -161,7 +161,7 @@
 
 > "Vos 44k clubs gèrent leurs membres avec vous. Offrez-leur l'affichage TV de la buvette en cross-sell — vous gardez le membership, on gère la TV. Revenue share 20%."
 
-- **Modèle** : intégration login OAuth + bundle "SportMember + Neopro TV" à 25 €/mois
+- **Modèle** : intégration login OAuth + bundle "SportMember + MadXP TV" à 25 €/mois
 - **Bénéfice** : accès distribution massif sans CAC commercial
 - **Risque** : dilution marque, dépendance partenaire — à cadrer juridiquement
 
@@ -177,7 +177,7 @@
 
 ### Top 3 opportunités
 
-1. 🟢 **Zone blanche club amateur** : Bodet trop cher, TVTools ne cible pas, OBS bricolage → Neopro seul positionné
+1. 🟢 **Zone blanche club amateur** : Bodet trop cher, TVTools ne cible pas, OBS bricolage → MadXP seul positionné
 2. 🟢 **Régie pub multi-tenant** : 2-3 ans d'avance, lacune structurelle équipes concurrentes trop petites
 3. 🟢 **Partenariat SportMember** : 44k clubs accessibles via cross-sell, CAC quasi-nul
 
@@ -193,7 +193,7 @@
 | S4-S8   | Build & launch free tier (R4)                                         | Tech + marketing     |
 | S5-S10  | Build animations actions de jeu (R1)                                  | Tech                 |
 | S6      | Premier contact SportMember (S3)                                      | CEO / Bizdev         |
-| S8      | Calculateur TCO "OBS vs Neopro" sur site (anti-T2)                    | Marketing            |
+| S8      | Calculateur TCO "OBS vs MadXP" sur site (anti-T2)                     | Marketing            |
 | S10-S12 | Pricing tier Agency (S2) live                                         | Produit + commercial |
 | S12     | Bilan : KPI free tier conversion, pipeline Agency, retour SportMember | Direction            |
 

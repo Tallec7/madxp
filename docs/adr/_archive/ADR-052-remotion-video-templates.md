@@ -13,7 +13,7 @@ Le système de templates vidéo existant reposait sur deux approches parallèles
 
 ## Décision
 
-Adoption de **Remotion v4** comme moteur de templates vidéo Neopro.
+Adoption de **Remotion v4** comme moteur de templates vidéo MadXP.
 
 - Les templates sont écrits en **React/TSX** dans `templates-remotion/src/`
 - Le **render final** est déclenché côté serveur (Railway) via l'API Remotion — output MP4 H.264 uploadé sur FTP puis injecté dans la bibliothèque vidéo du site
@@ -152,7 +152,7 @@ Le `@remotion/player` dans `templates-remotion/preview/src/app.tsx` **doit** êt
 
 **Problème identifié (2026-04-17)** : CSS `mask-image: url(frameXXXX.png)` avec une URL qui change **30 fois/seconde** invalide le cache raster du compositeur navigateur. À chaque swap, Chrome/Safari re-rastérisent la couche masquée → flash visible sur le contenu texte/image. Un premier contournement (précharger `Image` + `decode()` + rétention globale pour verrouiller le bitmap décodé) n'a **pas résolu** le problème : le pipeline CSS paint ignore le cache JS, l'invalidation raster persistait. Pire, la rétention ajoutait ~300 Mo de RAM sans bénéfice.
 
-**Impact produit** : le preview dashboard deviendra l'UI principale des clubs pour générer leurs propres visuels (ex. adversaires, joueurs du mois — ADR-037 site SaaS). Un flash systématique sur le texte = confusion utilisateur + tickets support. Le MP4 final n'est pas affecté (headless Chromium + FFmpeg passe sans flash), donc la divergence preview ↔ rendu aurait été acceptable si seul NEOPRO admin voyait le preview — ce n'est plus le cas.
+**Impact produit** : le preview dashboard deviendra l'UI principale des clubs pour générer leurs propres visuels (ex. adversaires, joueurs du mois — ADR-037 site SaaS). Un flash systématique sur le texte = confusion utilisateur + tickets support. Le MP4 final n'est pas affecté (headless Chromium + FFmpeg passe sans flash), donc la divergence preview ↔ rendu aurait été acceptable si seul MADXP admin voyait le preview — ce n'est plus le cas.
 
 **Solution adoptée** : remplacer `<div style={luminanceMask(url)}>` par un `<canvas>` 1920×1080 (`templates-remotion/src/mask-canvas.tsx`).
 

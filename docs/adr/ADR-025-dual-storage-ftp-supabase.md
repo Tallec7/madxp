@@ -4,13 +4,13 @@
 
 **Date** : Décembre 2024 (documenté rétroactivement)
 **Statut** : ⚠️ Supersédé par [ADR-085](ADR-085-simplification-2026.md) — fallback Supabase Storage supprimé (avril 2026). FTP Hostinger reste le seul backend ; migration future vers Cloudflare R2 actée par ADR-085.
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
 ## Contexte
 
-Neopro doit stocker des vidéos (10MB-500MB chacune) uploadées depuis le dashboard et téléchargées par les Pi. Le volume total est modéré (~50 clubs × ~20 vidéos = ~1000 fichiers, ~50GB).
+MadXP doit stocker des vidéos (10MB-500MB chacune) uploadées depuis le dashboard et téléchargées par les Pi. Le volume total est modéré (~50 clubs × ~20 vidéos = ~1000 fichiers, ~50GB).
 
 Contraintes :
 

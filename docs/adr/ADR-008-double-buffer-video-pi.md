@@ -2,7 +2,7 @@
 
 **Date** : Janvier-Février 2026 (v2.24-v3.23.x)
 **Statut** : Accepté (itéré sur 5 commits majeurs + correctifs v3.9.x-v3.23.x)
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 
 ---
 

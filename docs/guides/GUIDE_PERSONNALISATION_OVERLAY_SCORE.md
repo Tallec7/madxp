@@ -196,4 +196,4 @@ Si vous aviez configuré l'overlay avec l'ancienne version (v1), vos paramètres
 
 ## Questions ?
 
-Contacter l'équipe technique NEOPRO.
+Contacter l'équipe technique MADXP.

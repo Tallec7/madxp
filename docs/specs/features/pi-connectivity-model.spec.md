@@ -11,7 +11,7 @@
 > - `central-server/src/services/socket.service.ts:373,455,723` (maj `last_seen_at` sur connect/heartbeat/disconnect)
 > - `central-server/src/services/subscription.service.ts:181-213` (pattern in-app `message_remote`)
 > - `central-server/src/services/monthly-reports.service.ts:512-527` (pattern email CRON via `contact_email`)
-> - `central-server/src/cron-tasks/report.task.ts` (pattern email admin NEOPRO)
+> - `central-server/src/cron-tasks/report.task.ts` (pattern email admin MADXP)
 > - `raspberry/sync-agent/src/agent.js:50` (Socket.IO reconnect adaptatif côté Pi)
 > - `central-server/src/services/pending-commands-drain.task.ts` (drain queue à la reconnexion)
 >
@@ -31,21 +31,22 @@ Un Pi conçu pour fonctionner offline doit néanmoins se reconnecter régulière
 ## ⚠️ Promesse produit vs réalité technique — les écarts
 
 **Promesse commerciale offre Pi** (cf. `.claude/rules/context.md`) :
+
 > "Pi reconnecté au minimum 1×/mois pour push analytics + pull MAJ config."
 
 **Réalité technique au 2026-05-14** :
 
-| Mécanisme | État | Périmètre | Destinataire |
-|---|---|---|---|
-| Alerte instantanée à la déconnexion Pi (`alertingService.siteOffline()`, grace 60s) | ✅ Implémenté | Tous Pi (au moment de la déco) | Équipe NEOPRO (Slack/dashboard) |
-| Alerte Pi mesh offline > 24h via CRON 4h (`network-alerts.service.ts:220-233`) | ✅ Implémenté | **Sites mesh uniquement** | Équipe NEOPRO |
-| Alerte Pi simple/ethernet/enterprise offline > 24h | ❌ Inexistant | n/a | n/a |
-| Alerte Pi offline > 30 jours (générique) | ❌ Inexistant | n/a | n/a |
-| Email automatique au club "Pensez à reconnecter votre Pi" | ❌ Inexistant | n/a | n/a |
-| Notification in-app télécommande "Dernière sync il y a X jours" | ❌ Inexistant (le pattern existe pour abonnements, pas appliqué à Pi reconnect) | n/a | n/a |
-| Sanction technique (désactivation après N jours) | ❌ Inexistant | n/a | n/a |
+| Mécanisme                                                                           | État                                                                            | Périmètre                      | Destinataire                   |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------ | ------------------------------ |
+| Alerte instantanée à la déconnexion Pi (`alertingService.siteOffline()`, grace 60s) | ✅ Implémenté                                                                   | Tous Pi (au moment de la déco) | Équipe MADXP (Slack/dashboard) |
+| Alerte Pi mesh offline > 24h via CRON 4h (`network-alerts.service.ts:220-233`)      | ✅ Implémenté                                                                   | **Sites mesh uniquement**      | Équipe MADXP                   |
+| Alerte Pi simple/ethernet/enterprise offline > 24h                                  | ❌ Inexistant                                                                   | n/a                            | n/a                            |
+| Alerte Pi offline > 30 jours (générique)                                            | ❌ Inexistant                                                                   | n/a                            | n/a                            |
+| Email automatique au club "Pensez à reconnecter votre Pi"                           | ❌ Inexistant                                                                   | n/a                            | n/a                            |
+| Notification in-app télécommande "Dernière sync il y a X jours"                     | ❌ Inexistant (le pattern existe pour abonnements, pas appliqué à Pi reconnect) | n/a                            | n/a                            |
+| Sanction technique (désactivation après N jours)                                    | ❌ Inexistant                                                                   | n/a                            | n/a                            |
 
-→ **La promesse "1 mois max" n'est pas tenue par le système**. Elle repose entièrement sur la bonne volonté du club et la vigilance opérationnelle de NEOPRO.
+→ **La promesse "1 mois max" n'est pas tenue par le système**. Elle repose entièrement sur la bonne volonté du club et la vigilance opérationnelle de MADXP.
 
 ## Règles métier (état actuel)
 
@@ -66,19 +67,19 @@ Un Pi conçu pour fonctionner offline doit néanmoins se reconnecter régulière
   }
   ```
   Avec un filtre SELECT amont `WHERE network_profile IS NOT NULL` (line 121). Donc **uniquement les sites pour lesquels un profil réseau mesh a été détecté**.
-- **Alerte ponctuelle** : `alertingService.siteOffline()` avec `OFFLINE_GRACE_PERIOD_MS = 60s` (évite le bruit Railway flip-flops 3-16s). Cible : admin NEOPRO uniquement.
+- **Alerte ponctuelle** : `alertingService.siteOffline()` avec `OFFLINE_GRACE_PERIOD_MS = 60s` (évite le bruit Railway flip-flops 3-16s). Cible : admin MADXP uniquement.
 
 ### Côté Pi — reconnexion adaptative
 
 `raspberry/sync-agent/src/agent.js:50` configure Socket.IO client :
 
-| Paramètre | Valeur | Effet |
-|---|---|---|
-| `reconnection` | `true` | Retry automatique sur disconnect |
-| `reconnectionDelay` | `1000` ms | Délai initial entre tentatives |
-| `reconnectionDelayMax` | `15000` ms | Délai max (exponential backoff plafonné) |
-| `maxReconnectAttempts` | `10` | Après 10 échecs successifs, log `exhausted reconnect` |
-| `timeout` | `5000` ms | Timeout par tentative |
+| Paramètre              | Valeur     | Effet                                                 |
+| ---------------------- | ---------- | ----------------------------------------------------- |
+| `reconnection`         | `true`     | Retry automatique sur disconnect                      |
+| `reconnectionDelay`    | `1000` ms  | Délai initial entre tentatives                        |
+| `reconnectionDelayMax` | `15000` ms | Délai max (exponential backoff plafonné)              |
+| `maxReconnectAttempts` | `10`       | Après 10 échecs successifs, log `exhausted reconnect` |
+| `timeout`              | `5000` ms  | Timeout par tentative                                 |
 
 Après épuisement des 10 tentatives, le sync-agent **log un message d'erreur** mais ne tue pas le process — il reste idle, et un nouveau cycle de tentatives peut être déclenché manuellement (restart service, signal applicatif, etc.). Côté Pi en pratique : `systemd` redémarre le service en cas de crash dur, donc dans les faits le retry reprend.
 
@@ -101,9 +102,9 @@ Trois patterns sont implémentés dans le code pour des cas similaires — l'ADR
 
 `subscription.service.ts:181-213` retourne un champ `message_remote` que le Pi affiche dans la télécommande quand le staff la consulte. Seuils existants pour les abonnements : 30 j / 7 j / expired+grace / blocked. **Limite** : Pi doit être online pour fetcher le message — donc à coupler avec un stockage local Pi-side du `last_cloud_sync_at`.
 
-### Pattern 2 — Email CRON aux admins NEOPRO (modèle rapport périodique)
+### Pattern 2 — Email CRON aux admins MADXP (modèle rapport périodique)
 
-`cron-tasks/report.task.ts:34-50` envoie un rapport résumé périodique par email à tous les users avec `role IN ('admin', 'super_admin')`. **Réutilisable directement** pour notifier l'équipe NEOPRO d'un Pi orphelin (offline > N jours).
+`cron-tasks/report.task.ts:34-50` envoie un rapport résumé périodique par email à tous les users avec `role IN ('admin', 'super_admin')`. **Réutilisable directement** pour notifier l'équipe MADXP d'un Pi orphelin (offline > N jours).
 
 ### Pattern 3 — Email CRON via contact_email (modèle rapport mensuel sponsor)
 
@@ -111,22 +112,22 @@ Trois patterns sont implémentés dans le code pour des cas similaires — l'ADR
 
 ## Comportements observables (état actuel)
 
-| Situation | Comportement attendu |
-|---|---|
-| Pi connecté, push heartbeat OK | `last_seen_at` mis à jour à `NOW()` |
-| Pi disconnect Socket.IO | `last_seen_at` figé, alerte `siteOffline` après 60s grace |
-| Pi mesh offline depuis 23h59m | Aucune alerte 24h (sous seuil) |
-| Pi mesh offline depuis 24h01m | Alerte `mesh_offline_extended` au prochain tick CRON 4h |
-| Pi simple/ethernet offline depuis 30 jours | **Aucune alerte spécifique** (gap connu) |
-| Pi offline depuis 6 mois | **Aucune notification active** ni au club, ni à NEOPRO au-delà de l'alerte initiale (gap connu) |
-| Pi reconnecte après 3 jours offline | Toutes commandes pending délivrées dans les 30s |
-| Pi a épuisé 10 tentatives reconnect | Log local `exhausted reconnect`, service idle. systemd peut restart |
+| Situation                                  | Comportement attendu                                                                           |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Pi connecté, push heartbeat OK             | `last_seen_at` mis à jour à `NOW()`                                                            |
+| Pi disconnect Socket.IO                    | `last_seen_at` figé, alerte `siteOffline` après 60s grace                                      |
+| Pi mesh offline depuis 23h59m              | Aucune alerte 24h (sous seuil)                                                                 |
+| Pi mesh offline depuis 24h01m              | Alerte `mesh_offline_extended` au prochain tick CRON 4h                                        |
+| Pi simple/ethernet offline depuis 30 jours | **Aucune alerte spécifique** (gap connu)                                                       |
+| Pi offline depuis 6 mois                   | **Aucune notification active** ni au club, ni à MADXP au-delà de l'alerte initiale (gap connu) |
+| Pi reconnecte après 3 jours offline        | Toutes commandes pending délivrées dans les 30s                                                |
+| Pi a épuisé 10 tentatives reconnect        | Log local `exhausted reconnect`, service idle. systemd peut restart                            |
 
 ## Risques et angles morts connus (= gaps)
 
 - ❌ **Pas de garde-fou générique "Pi offline depuis N jours"** : seul le profil mesh est couvert. La majorité de la flotte (sites simples + ethernet + enterprise) peut rester offline ad vitam sans signal.
 - ❌ **Pas de canal d'alerte vers le club** : aucune colonne `contact_email` sur `sites`, aucun email automatique, aucune notification in-app dédiée. Le club doit deviner qu'il faut reconnecter le Pi.
-- ❌ **Pas de notif active** sur l'alerte `siteOffline` au-delà de la déco initiale : si NEOPRO rate le ping initial, le Pi devient orphelin silencieux.
+- ❌ **Pas de notif active** sur l'alerte `siteOffline` au-delà de la déco initiale : si MADXP rate le ping initial, le Pi devient orphelin silencieux.
 - ⚠️ **Pas d'auto-resolve `site_offline`** : quand un Pi reconnecte après une alerte, la row reste `status = 'active'` jusqu'à action manuelle.
 - ⚠️ **Pas de seuil per-tier** : un site Premium et un site Free ont le même comportement (= aucun garde-fou pour les non-mesh). Si commercial veut différencier les SLA, c'est une feature à ajouter.
 - ⚠️ **`last_seen_at` ne distingue pas "Pi crashé" de "Pi sans internet"** : du point de vue cloud, c'est identique (silence radio). Diagnostic nécessite SSH/visite physique.
@@ -174,7 +175,7 @@ Statut implémentation : **validé par le fondateur (2026-05-14)**, à implémen
 - `central-server/src/services/network-alerts.service.ts` — CRON détection mesh-only
 - `central-server/src/services/subscription.service.ts` — pattern in-app `message_remote`
 - `central-server/src/services/monthly-reports.service.ts` — pattern email via `contact_email`
-- `central-server/src/cron-tasks/report.task.ts` — pattern email admin NEOPRO
+- `central-server/src/cron-tasks/report.task.ts` — pattern email admin MADXP
 - `central-server/src/services/socket.service.ts` — maj `last_seen_at`
 - `raspberry/sync-agent/src/agent.js` — Socket.IO reconnect adaptatif
 - [command-queue.spec.md](../services/command-queue.spec.md) — drain à la reconnexion

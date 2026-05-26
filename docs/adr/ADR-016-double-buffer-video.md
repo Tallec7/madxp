@@ -2,7 +2,7 @@
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : ⚠️ Supersédé par [ADR-008](./ADR-008-double-buffer-video-pi.md) — Version initiale simplifiée, remplacée par la version itérée avec freeze-frame pré-capturé et disk cache warming.
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 

@@ -31,7 +31,7 @@ Depuis la v3.99.5, le fix est **automatique** :
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Android phone connecte au hotspot NEOPRO                    │
+│  Android phone connecte au hotspot MADXP                    │
 │  → Check HTTPS: https://connectivitycheck.gstatic.com/...   │
 │  → Port 443                                                  │
 └───────────────────────────┬──────────────────────────────────┘

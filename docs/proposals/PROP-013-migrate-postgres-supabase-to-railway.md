@@ -24,7 +24,7 @@ Le 18 avril 2026, le quota egress Supabase Free (5 GB/mois) a été dépassé (7
 
 Grep exhaustif du code (commit `532357f2`) :
 
-| Capacité Supabase   | Utilisation Neopro                                                                                                                                                             |
+| Capacité Supabase   | Utilisation MadXP                                                                                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Postgres managé** | ✅ Seul usage via `pg` driver, port 6543 (pooler)                                                                                                                              |
 | Auth                | ❌ JWT maison (`jsonwebtoken`) + bcrypt + MFA TOTP maison                                                                                                                      |

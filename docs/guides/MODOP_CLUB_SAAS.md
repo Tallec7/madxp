@@ -1,19 +1,19 @@
-# Mode opératoire — Club Neopro (offre SaaS)
+# Mode opératoire — Club MadXP (offre SaaS)
 
 > **Pour qui** : Responsable communication / animateur club + Opérateur matchday
 > **Offre couverte** : SaaS (sans boîtier Raspberry Pi — votre TV affiche une page web cloud)
-> **Prérequis** : identifiants fournis par Neopro + connexion internet active sur l'écran et sur votre téléphone
+> **Prérequis** : identifiants fournis par MadXP + connexion internet active sur l'écran et sur votre téléphone
 
 ---
 
 ## Comment fonctionne l'offre SaaS
 
-Avec l'offre SaaS, votre TV affiche simplement une **page web** hébergée par Neopro. Pas de boîtier à brancher, pas de mise à jour matérielle — tout se passe dans le navigateur.
+Avec l'offre SaaS, votre TV affiche simplement une **page web** hébergée par MadXP. Pas de boîtier à brancher, pas de mise à jour matérielle — tout se passe dans le navigateur.
 
 ```
 Votre navigateur (dashboard)
         ↓ vous gérez le contenu
-   Serveur Neopro
+   Serveur MadXP
         ↓ diffuse en temps réel
    TV du gymnase (navigateur ouvert sur l'URL TV)
         ↑ pilotée par
@@ -62,7 +62,7 @@ Votre navigateur (dashboard)
 **Adresse** : `https://neopro-admin.kalonpartners.bzh`
 
 1. Ouvrez un navigateur (Chrome ou Safari recommandé)
-2. Entrez votre **email** et **mot de passe** fournis par Neopro
+2. Entrez votre **email** et **mot de passe** fournis par MadXP
 3. Cliquez sur **Se connecter** → vous arrivez directement sur **Mon club**
 
 > **Mot de passe oublié ?** Cliquez sur « Mot de passe oublié » sur la page de connexion. Un email de réinitialisation vous sera envoyé.
@@ -267,9 +267,9 @@ La page **Mes sponsors** liste tous vos partenaires actifs avec :
 
 - Le **logo** de chaque sponsor
 - Le nombre d'**impressions cette semaine**
-- Un lien vers le **portail sponsor** — une page personnalisée que vous pouvez partager à votre partenaire pour qu'il consulte ses statistiques sans compte Neopro
+- Un lien vers le **portail sponsor** — une page personnalisée que vous pouvez partager à votre partenaire pour qu'il consulte ses statistiques sans compte MadXP
 
-> **Ajouter ou modifier un sponsor ?** La gestion des contrats sponsors est réalisée par l'équipe Neopro en coordination avec vous. Contactez votre interlocuteur Neopro.
+> **Ajouter ou modifier un sponsor ?** La gestion des contrats sponsors est réalisée par l'équipe MadXP en coordination avec vous. Contactez votre interlocuteur MadXP.
 
 ---
 

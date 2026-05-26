@@ -914,7 +914,7 @@ site_sponsor_id fourni et UUID valide ?
 
 ---
 
-**Auteur** : Claude Code + Équipe NEOPRO
+**Auteur** : Claude Code + Équipe MADXP
 **Version** : 2.2.0
 **Conformité** : 95% BP §13
 **Dernière mise à jour** : 22 Février 2026

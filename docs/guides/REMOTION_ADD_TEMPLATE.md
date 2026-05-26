@@ -1,6 +1,6 @@
 # Ajouter un nouveau template Remotion
 
-Ce guide explique comment ajouter un template vidéo (ex: `CartonRouge`, `Victoire`, `Promo`) au système Remotion de Neopro. L'architecture est conçue pour que l'ajout soit minimal — 3 fichiers à modifier + 1 migration SQL.
+Ce guide explique comment ajouter un template vidéo (ex: `CartonRouge`, `Victoire`, `Promo`) au système Remotion de MadXP. L'architecture est conçue pour que l'ajout soit minimal — 3 fichiers à modifier + 1 migration SQL.
 
 ## Prérequis
 

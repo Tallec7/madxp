@@ -2,7 +2,7 @@
 
 **Date** : Janvier 2026 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
@@ -18,20 +18,20 @@ Certains clubs ont du WiFi 2.4GHz avec plusieurs bornes portant le même SSID (r
 
 **Interdire le BSSID lock en environnement mesh** avec blocage multi-couches :
 
-| Couche | Protection |
-|--------|-----------|
-| **Admin panel (:8080)** | Checkbox désactivée + message si mesh détecté |
-| **Backend sync-agent** | Validation qui refuse la commande `set_bssid_lock` si profil mesh |
-| **Dashboard central** | Badge d'alerte pulsant si BSSID lock + mesh détectés |
-| **Auto-correction** | Au boot, `safeNetworkOperations.autoOptimize()` supprime le BSSID lock en mesh |
+| Couche                  | Protection                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| **Admin panel (:8080)** | Checkbox désactivée + message si mesh détecté                                  |
+| **Backend sync-agent**  | Validation qui refuse la commande `set_bssid_lock` si profil mesh              |
+| **Dashboard central**   | Badge d'alerte pulsant si BSSID lock + mesh détectés                           |
+| **Auto-correction**     | Au boot, `safeNetworkOperations.autoOptimize()` supprime le BSSID lock en mesh |
 
 **Matrice de sécurité SafeNetworkOperations** :
 
-| Opération | Simple | Mesh | Mesh Isolé | Enterprise |
-|-----------|--------|------|------------|------------|
-| `set_bssid_lock` | ✅ | ❌ | ❌ | ❌ |
-| `remove_bssid_lock` | ✅ | ✅ | ✅ | ✅ |
-| `configure_bgscan` | ✅ | ✅ | ✅ | ✅ |
+| Opération           | Simple | Mesh | Mesh Isolé | Enterprise |
+| ------------------- | ------ | ---- | ---------- | ---------- |
+| `set_bssid_lock`    | ✅     | ❌   | ❌         | ❌         |
+| `remove_bssid_lock` | ✅     | ✅   | ✅         | ✅         |
+| `configure_bgscan`  | ✅     | ✅   | ✅         | ✅         |
 
 **Alternative au BSSID lock en mesh** : `bgscan` (background scan) configuré automatiquement pour un roaming plus contrôlé sans verrouillage.
 
@@ -44,9 +44,11 @@ Certains clubs ont du WiFi 2.4GHz avec plusieurs bornes portant le même SSID (r
 ### 2. BSSID lock avec détection de perte et fallback automatique
 
 **Avantages** :
+
 - Stabilité du BSSID lock + sécurité du fallback
 
 **Inconvénients** :
+
 - Le driver `brcmfmac` du Pi ne gère pas bien le fallback après un lock
 - Délai de détection de perte (30-60s) inacceptable
 - Complexité élevée pour un bénéfice marginal
@@ -56,11 +58,13 @@ Certains clubs ont du WiFi 2.4GHz avec plusieurs bornes portant le même SSID (r
 ### 3. Interdiction stricte + bgscan ✅
 
 **Avantages** :
+
 - Sécurité maximale : impossible de se retrouver verrouillé sur une borne morte
 - bgscan améliore le roaming sans verrouillage
 - Auto-correction au boot
 
 **Inconvénients** :
+
 - Le roaming reste imparfait (micro-coupures possibles)
 - Cloud Remote nécessaire si isolation client
 
@@ -89,4 +93,4 @@ Certains clubs ont du WiFi 2.4GHz avec plusieurs bornes portant le même SSID (r
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

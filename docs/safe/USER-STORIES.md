@@ -1,8 +1,8 @@
-# User Stories — NEOPRO SAFe
+# User Stories — MADXP SAFe
 
 > **Dernière mise à jour** : 11 Avril 2026 _(F-15.2 scoreboard multi-vendor + F-21.2 public scores API — PROP-003)_
 > **PI actuel** : PI-1 (Février - Mars 2026)
-> Ce document recense **toutes** les User Stories du produit NEOPRO :
+> Ce document recense **toutes** les User Stories du produit MADXP :
 >
 > - **182 US livrées** (13 domaines, traçabilité code + ADR) — dont 4 requalifiées depuis E-03
 > - **72 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))
@@ -540,7 +540,7 @@
 
 #### E-21 — API Partenaires OAuth (5 US, 34 SP)
 
-> F-21.2 ajoutée en Avr 2026 : API publique Neopro Live Scores, prérequis = F-15.2 livrée. Transforme Neopro en hub de données temps réel du sport amateur français. Vision détaillée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
+> F-21.2 ajoutée en Avr 2026 : API publique MadXP Live Scores, prérequis = F-15.2 livrée. Transforme MadXP en hub de données temps réel du sport amateur français. Vision détaillée dans [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md).
 
 | US        | Feature | Description                                                                                  | SP  | Sprint  | Priorité      | Statut     |
 | --------- | ------- | -------------------------------------------------------------------------------------------- | --- | ------- | ------------- | ---------- |
@@ -613,4 +613,4 @@ Les ADR suivants sont référencés dans les User Stories livrées :
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Features & Critères](FEATURES.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)
+**Retour** : [SAFe MadXP](README.md) · [Features & Critères](FEATURES.md) · [Implemented Backlog](IMPLEMENTED-BACKLOG.md)

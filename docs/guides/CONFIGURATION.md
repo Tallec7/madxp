@@ -1,4 +1,4 @@
-# Guide de configuration Neopro
+# Guide de configuration MadXP
 
 Ce document explique **tous les fichiers de configuration** et leur rôle.
 
@@ -213,7 +213,7 @@ Le dashboard central propose deux modes lors du déploiement :
 En mode `merge`, seuls les champs suivants sont envoyés et fusionnés :
 
 - **`sponsors`** : Le central est la source de vérité. Les sponsors modifiés sont mis à jour, les nouveaux sont ajoutés. Les sponsors créés localement (non présents dans la liste du central) sont préservés.
-- **`categories`** : Fusion intelligente entre contenu NEOPRO (verrouillé) et Club.
+- **`categories`** : Fusion intelligente entre contenu MADXP (verrouillé) et Club.
 - **`timeCategories`** : Remplacement complet par la version du central.
 - **`categoryMappings`** : Remplacement complet par la version du central.
 

@@ -2,13 +2,14 @@
 
 **Date** : Octobre 2024 (documenté rétroactivement)
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
 ## Contexte
 
 Le sync-agent est le composant le plus critique du Raspberry Pi. Il gère :
+
 - La connexion Socket.IO avec le cloud
 - L'exécution des commandes (deploy_video, update_config, etc.)
 - L'envoi des heartbeats et analytics
@@ -36,10 +37,12 @@ class SyncAgent {
 ### 1. TypeScript compilé
 
 **Avantages** :
+
 - Typage, cohérence avec le serveur central
 - Meilleure maintenabilité
 
 **Inconvénients** :
+
 - **Build step obligatoire** : `tsc` doit être exécuté sur le Pi ou les fichiers compilés déployés
 - **Debugging** : Les stacktraces pointent vers le JS compilé, pas le source TS
 - **Dépendances** : `typescript`, `ts-node`, `@types/*` alourdissent le Pi
@@ -51,6 +54,7 @@ class SyncAgent {
 ### 2. JavaScript vanilla ✅
 
 **Avantages** :
+
 - **Zéro build step** : `node agent.js` suffit
 - **Déploiement immédiat** : `scp agent.js pi@club:` + restart = fix en 30 secondes
 - **Debug direct** : Les stacktraces pointent vers le code source
@@ -58,6 +62,7 @@ class SyncAgent {
 - **Moins de dépendances** : Pas de typescript, @types, tsconfig
 
 **Inconvénients** :
+
 - Pas de typage → erreurs runtime possibles
 - Incohérence avec le serveur central (TS)
 - JSDoc pour documentation (moins strict que TS)
@@ -93,4 +98,4 @@ class SyncAgent {
 
 ---
 
-*Créé le 11 février 2026*
+_Créé le 11 février 2026_

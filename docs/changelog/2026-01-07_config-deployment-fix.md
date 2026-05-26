@@ -26,7 +26,7 @@ function mergeSponsors(localSponsors, centralSponsors) {
   const result = [];
   const processedPaths = new Set();
 
-  // 1. Appliquer tous les sponsors du central (NEOPRO et Club)
+  // 1. Appliquer tous les sponsors du central (MADXP et Club)
   for (const sponsor of centralSponsors) {
     result.push(sponsor);
     processedPaths.add(sponsor.path);

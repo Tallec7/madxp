@@ -5,7 +5,7 @@
 **Date** : 2026-02-11
 **Dernière révision** : 2026-04-11
 **Statut** : ✅ Phases 1-5 done — N-display model fully implemented
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 **Epic SAFe** : [E-22 — Contenus Différenciés TV + LED](../safe/FEATURES.md#e-22--contenus-différenciés-tv--led) (PI-2)
 **ADR** : [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md) (décision architecturale)
 **Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [ADR-008](../adr/ADR-008-double-buffer-video-pi.md) (Double-Buffer Vidéo)

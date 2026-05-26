@@ -3,7 +3,7 @@ tags: [architecture, navigation, map]
 updated: 2026-05-04
 ---
 
-# Carte du projet Neopro
+# Carte du projet MadXP
 
 > **Je cherche…**
 >

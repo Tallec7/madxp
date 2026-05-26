@@ -57,9 +57,9 @@ Avantage : Claude prépare les commandes prêtes à coller le jour J.
 
 Créer 3 événements récurrents :
 
-1. **"Neopro — Test restore DB"** — 1er du mois, 30 min, lien vers [OPS-02](OPS-02-restore-db-from-backup.md)
-2. **"Neopro — Rotate JWT_SECRET"** — 1er janvier/avril/juillet/octobre, 1h, lien vers [OPS-03](OPS-03-rotate-jwt-secret.md)
-3. **"Neopro — Audit ADR-091 staging"** — tous les 6 mois, 1h, lien vers ADR
+1. **"MadXP — Test restore DB"** — 1er du mois, 30 min, lien vers [OPS-02](OPS-02-restore-db-from-backup.md)
+2. **"MadXP — Rotate JWT_SECRET"** — 1er janvier/avril/juillet/octobre, 1h, lien vers [OPS-03](OPS-03-rotate-jwt-secret.md)
+3. **"MadXP — Audit ADR-091 staging"** — tous les 6 mois, 1h, lien vers ADR
 
 ## Référence
 

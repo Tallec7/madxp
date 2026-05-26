@@ -1,4 +1,4 @@
-# Audit systémique — Hotspot WiFi Neopro
+# Audit systémique — Hotspot WiFi MadXP
 
 **Date** : 2026-04-19
 **Contexte** : suite incident Strogatien (iPhone non connecté, 17h), ADR-072 OTA-1 + OTA-2 livrés. L'utilisateur a demandé un vrai audit CTO systémique au-delà du patch incident.
@@ -210,7 +210,7 @@ Perspective : un utilisateur connecté au hotspot `NEOPRO-CLUB` (un staff, un sp
 
 **Friction** : étape 3-4 infranchissables sans formation. **Solution** : captive portal qui redirige automatiquement vers la remote (F1 + auto-redirect).
 
-### Persona B — Support Neopro N1
+### Persona B — Support MadXP N1
 
 **Contexte** : Slack Alert "Strogatien: iPhone n'a pas pu rejoindre". Il a 5 min avant que le président du club appelle.
 
@@ -223,14 +223,14 @@ Perspective : un utilisateur connecté au hotspot `NEOPRO-CLUB` (un staff, un sp
 
 **Friction** : quasi aveugle tant que le Pi est offline. **Solution** : buffer local events + dashboard hotspot fleet-wide (F7 + H2).
 
-### Persona C — CTO/Founder Neopro (toi)
+### Persona C — CTO/Founder MadXP (toi)
 
 **Contexte** : tu veux scaler à 500 clubs. Aujourd'hui 50. Tu veux savoir quel risque tu portes.
 
 **Risques actuels si scale × 10** :
 
 - S1 (PSK partagé) : incident sécurité presse amplifiable 10×.
-- S2 (Socket.IO open) : 1 compétiteur malveillant sur 1 match = vidéo virale "Neopro piraté en direct".
+- S2 (Socket.IO open) : 1 compétiteur malveillant sur 1 match = vidéo virale "MadXP piraté en direct".
 - F1 (captive portal) : 10× plus de tickets support "iPhone pas connecté".
 - H2 (pas de SLO) : tu apprends les pannes par Slack client, pas par dashboard.
 
@@ -252,22 +252,22 @@ Perspective : un utilisateur connecté au hotspot `NEOPRO-CLUB` (un staff, un sp
 
 Lecture publique, sans accès web en direct dans l'environnement d'audit — à reconfirmer avec WebSearch avant décision finale.
 
-| Acteur                               | Hotspot local                                  | Offline                 | Tier hardware           | Pricing                | Pertinence              |
-| ------------------------------------ | ---------------------------------------------- | ----------------------- | ----------------------- | ---------------------- | ----------------------- |
-| **Spond**                            | ❌ app mobile seule                            | partiel                 | aucun HW                | freemium + 2-4€/membre | Faible (pas de HW club) |
-| **Sportradar**                       | N/A upmarket                                   | N/A                     | N/A                     | enterprise             | Hors scope              |
-| **Sportity**                         | non-vérifiable                                 | annoncé                 | écrans tiers            | 100-500€/event         | Moyen                   |
-| **Pixellot**                         | ❌ besoin WiFi club                            | ✅ upload différé       | 1 tier 5-15k€           | 100-400€/mois          | Moyen (adjacent caméra) |
-| **Veo Cam 2/3**                      | ✅ **même pattern que Neopro** (hotspot setup) | ✅ enregistrement local | 2 tiers (1000€ / 1600€) | ~250€/mois             | **Référence #1**        |
-| **ScoreVision / Daktronics / Nevco** | partiel (AP optionnel)                         | ✅ scoreboard local     | 3-4 gammes              | 15k-500k$              | Leçon tiers HW          |
-| **GameChanger / Meridix**            | ❌ dépendant WiFi                              | ✅ scoring offline      | BYOD                    | ~15$/mois              | Faible                  |
+| Acteur                               | Hotspot local                                 | Offline                 | Tier hardware           | Pricing                | Pertinence              |
+| ------------------------------------ | --------------------------------------------- | ----------------------- | ----------------------- | ---------------------- | ----------------------- |
+| **Spond**                            | ❌ app mobile seule                           | partiel                 | aucun HW                | freemium + 2-4€/membre | Faible (pas de HW club) |
+| **Sportradar**                       | N/A upmarket                                  | N/A                     | N/A                     | enterprise             | Hors scope              |
+| **Sportity**                         | non-vérifiable                                | annoncé                 | écrans tiers            | 100-500€/event         | Moyen                   |
+| **Pixellot**                         | ❌ besoin WiFi club                           | ✅ upload différé       | 1 tier 5-15k€           | 100-400€/mois          | Moyen (adjacent caméra) |
+| **Veo Cam 2/3**                      | ✅ **même pattern que MadXP** (hotspot setup) | ✅ enregistrement local | 2 tiers (1000€ / 1600€) | ~250€/mois             | **Référence #1**        |
+| **ScoreVision / Daktronics / Nevco** | partiel (AP optionnel)                        | ✅ scoreboard local     | 3-4 gammes              | 15k-500k$              | Leçon tiers HW          |
+| **GameChanger / Meridix**            | ❌ dépendant WiFi                             | ✅ scoring offline      | BYOD                    | ~15$/mois              | Faible                  |
 
 **Leçons clés** :
 
 1. **Veo** est la référence pattern hotspot + multi-tier hardware → étudier leur UX d'appairage et specs sécurité.
 2. **Daktronics** légitime le **tier hardware** sur ce segment (ils ont 4 gammes).
 3. **Personne ne fait le captive portal** sur ce segment → **opportunité différenciante** pour onboarding staff.
-4. **Offline-first** est rare (Veo + scoreboards US) → Neopro doit le garder comme pillar marketing.
+4. **Offline-first** est rare (Veo + scoreboards US) → MadXP doit le garder comme pillar marketing.
 
 ---
 
@@ -300,17 +300,17 @@ Lecture publique, sans accès web en direct dans l'environnement d'audit — à 
 
 ### 🟡 Trimestre (P2 + stratégique)
 
-| Action                                                                              | Effort                    | Gain                           |
-| ----------------------------------------------------------------------------------- | ------------------------- | ------------------------------ |
-| **ACS one-shot boot** (canal auto figé)                                             | 1j                        | 80% des "canal saturé" résolus |
-| **Alerte PSK-mismatch burst** côté central                                          | 4h                        | Détection fuite PSK            |
-| **i18n** (au moins EN + FR)                                                         | 5-10j                     | Marchés export                 |
-| **SLO hotspot** défini + dashboard Grafana                                          | 3j                        | Détection proactive            |
-| **Smoke test config hotspot** (parse + validation `hostapd.conf` syntaxique)        | 1j                        | Régression impossible          |
-| **Tier "Neopro Pro"** : option AP externe dédié (GL.iNet ou équivalent) + dongle 4G | 3 mois (produit + supply) | Upsell + fiabilité gros clubs  |
-| **Audit RF terrain NLF** (WiFi Explorer + Wireshark)                                | 1j sur site               | Root cause vraies              |
-| **Test charge 50 clients simultanés** (iperf + bots auth)                           | 2j                        | Validation `max_num_sta=50`    |
-| **UPS Pi** (batterie onduleur ~30€) recommandé pour clubs critiques                 | doc + partenariat         | SD corruption quasi-éliminée   |
+| Action                                                                             | Effort                    | Gain                           |
+| ---------------------------------------------------------------------------------- | ------------------------- | ------------------------------ |
+| **ACS one-shot boot** (canal auto figé)                                            | 1j                        | 80% des "canal saturé" résolus |
+| **Alerte PSK-mismatch burst** côté central                                         | 4h                        | Détection fuite PSK            |
+| **i18n** (au moins EN + FR)                                                        | 5-10j                     | Marchés export                 |
+| **SLO hotspot** défini + dashboard Grafana                                         | 3j                        | Détection proactive            |
+| **Smoke test config hotspot** (parse + validation `hostapd.conf` syntaxique)       | 1j                        | Régression impossible          |
+| **Tier "MadXP Pro"** : option AP externe dédié (GL.iNet ou équivalent) + dongle 4G | 3 mois (produit + supply) | Upsell + fiabilité gros clubs  |
+| **Audit RF terrain NLF** (WiFi Explorer + Wireshark)                               | 1j sur site               | Root cause vraies              |
+| **Test charge 50 clients simultanés** (iperf + bots auth)                          | 2j                        | Validation `max_num_sta=50`    |
+| **UPS Pi** (batterie onduleur ~30€) recommandé pour clubs critiques                | doc + partenariat         | SD corruption quasi-éliminée   |
 
 ---
 
@@ -318,7 +318,7 @@ Lecture publique, sans accès web en direct dans l'environnement d'audit — à 
 
 **Si tu n'as qu'une semaine** : S1 + S2 + S3 + S5. Ça bloque les 3 vecteurs d'attaque les plus triviaux depuis le hotspot.
 
-**Si tu n'as qu'un mois** : les 6 P0 + F1 (captive portal) + F7 (buffer events) + dashboard hotspot local. Ça transforme Neopro d'un produit "semi-sécurisé" à un produit "défense en profondeur".
+**Si tu n'as qu'un mois** : les 6 P0 + F1 (captive portal) + F7 (buffer events) + dashboard hotspot local. Ça transforme MadXP d'un produit "semi-sécurisé" à un produit "défense en profondeur".
 
 **Si tu scales à 500 clubs** : impossible sans canary OTA automatique + SLO hotspot + audit terrain NLF + tier Pro hardware. L'un d'entre eux lâche → PR nightmare.
 

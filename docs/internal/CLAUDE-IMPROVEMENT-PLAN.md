@@ -1,6 +1,6 @@
 # Plan d'amélioration de l'utilisation de Claude Code
 
-> Audit du 2026-05-09 — solo dev, fondateur Neopro, peur dominante = burnout, ratio fix/feat = 27/1 sur 36h, 8 PRs en cascade SaaS variants, push direct sur main, incident NLF causé par auto-fix.
+> Audit du 2026-05-09 — solo dev, fondateur MadXP, peur dominante = burnout, ratio fix/feat = 27/1 sur 36h, 8 PRs en cascade SaaS variants, push direct sur main, incident NLF causé par auto-fix.
 >
 > **Ce plan n'est PAS une roadmap rigide. C'est un menu d'actions priorisées pour réduire la surface mentale et stopper la cascade hotfix.**
 
@@ -58,70 +58,70 @@ Doc stale + propos imprécis sous fatigue + état prod divergent = Claude code a
 
 ### COUCHE 1 — Réduction de surface (anti-burnout, J+0 à J+2)
 
-| Action | Origine | Effet |
-|---|---|---|
-| Désinstaller GSD (archives `.planning/`, `.claude/agents/`, `.claude/get-shit-done/`, `.claude/commands/gsd/`, manifest) | Audit GSD : 0 utilisation depuis 3+ jours | -40% contexte Claude, -38 commands friction |
-| Couper CLAUDE.md à ~90 lignes (sortir conventions session vers `docs/internal/CLAUDE-WORKFLOW.md`) | Audit CLAUDE.md : 65% non appliqué | -bruit aspirational, +attention sur règles qui comptent |
-| Cap **1 session Claude active** | Profil burnout | -3× context-switching mental |
-| Cap **3 releases/jour max** | 22 releases en 36h | -85% pression deploy |
-| Logout dashboard pendant blocs coding | 3 triggers fix permanents | Stoppe l'auto-interruption |
-| Pas de hotfix après 21h sauf P0 NLF | Cascade SaaS 23:26→00:23 | Casse le pic de fatigue |
+| Action                                                                                                                   | Origine                                   | Effet                                                   |
+| ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------- |
+| Désinstaller GSD (archives `.planning/`, `.claude/agents/`, `.claude/get-shit-done/`, `.claude/commands/gsd/`, manifest) | Audit GSD : 0 utilisation depuis 3+ jours | -40% contexte Claude, -38 commands friction             |
+| Couper CLAUDE.md à ~90 lignes (sortir conventions session vers `docs/internal/CLAUDE-WORKFLOW.md`)                       | Audit CLAUDE.md : 65% non appliqué        | -bruit aspirational, +attention sur règles qui comptent |
+| Cap **1 session Claude active**                                                                                          | Profil burnout                            | -3× context-switching mental                            |
+| Cap **3 releases/jour max**                                                                                              | 22 releases en 36h                        | -85% pression deploy                                    |
+| Logout dashboard pendant blocs coding                                                                                    | 3 triggers fix permanents                 | Stoppe l'auto-interruption                              |
+| Pas de hotfix après 21h sauf P0 NLF                                                                                      | Cascade SaaS 23:26→00:23                  | Casse le pic de fatigue                                 |
 
 ### COUCHE 2 — Mémoire fiable et auto-vérifiée (J+2 à J+5)
 
-| Action | Origine | Effet |
-|---|---|---|
-| Routing SPECs dans CLAUDE.md (table domaine → SPEC obligatoire à lire avant edit) | Mémoire features non connectée | Plus de re-briefing |
-| `last_verified` + auto-stale dans chaque SPEC critique | Risque doc stale | Doc qui s'auto-décrédibilise quand vieille |
-| Section "Challenge mode" dans CLAUDE.md (Claude DOIT pousser back si hypothèse falsifiable) | Risque propos faux | Système qui se protège contre input erroné |
-| Section "Cas d'edge connus" obligatoire dans SPEC | Mémoire bugs | Bug knowledge cumulatif |
-| INCIDENT-LOG.md vivant + format strict | Régression répétée | Traçabilité incidents → tests → SPEC |
-| Convention nommage `smoke-<domaine>-incident-<date>` | Mémoire bugs | Tests qui racontent leur histoire |
-| 1 session "consolidation doc" hebdo (vendredi 17h) | Mémoire features | Doc à jour mécaniquement |
-| 3 templates de prompt collables (`incident.md`, `fix.md`, `feat.md`) | Prompt "fix-le" toxique | Triangulation et plan mode forcés |
+| Action                                                                                      | Origine                        | Effet                                      |
+| ------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------ |
+| Routing SPECs dans CLAUDE.md (table domaine → SPEC obligatoire à lire avant edit)           | Mémoire features non connectée | Plus de re-briefing                        |
+| `last_verified` + auto-stale dans chaque SPEC critique                                      | Risque doc stale               | Doc qui s'auto-décrédibilise quand vieille |
+| Section "Challenge mode" dans CLAUDE.md (Claude DOIT pousser back si hypothèse falsifiable) | Risque propos faux             | Système qui se protège contre input erroné |
+| Section "Cas d'edge connus" obligatoire dans SPEC                                           | Mémoire bugs                   | Bug knowledge cumulatif                    |
+| INCIDENT-LOG.md vivant + format strict                                                      | Régression répétée             | Traçabilité incidents → tests → SPEC       |
+| Convention nommage `smoke-<domaine>-incident-<date>`                                        | Mémoire bugs                   | Tests qui racontent leur histoire          |
+| 1 session "consolidation doc" hebdo (vendredi 17h)                                          | Mémoire features               | Doc à jour mécaniquement                   |
+| 3 templates de prompt collables (`incident.md`, `fix.md`, `feat.md`)                        | Prompt "fix-le" toxique        | Triangulation et plan mode forcés          |
 
 ### COUCHE 3 — Accès et autonomie (J+5 à J+10)
 
-| Action | Origine | Effet |
-|---|---|---|
-| MCP Postgres read-only sur Railway (user `claude_readonly`, GRANT SELECT ONLY) | Aucun accès DB | Triangulation DB possible (-50% cascades) |
-| Skill `fewer-permission-prompts` lancé | Allowlist Bash trop courte (14 cmds) | Auto-allowlist depuis transcripts |
-| Allowlist Bash élargie (npm test, jest, psql, find, jq, sed -n) | Friction validation | Zéro friction au quotidien |
-| `.claude/ACCESS.md` documente ce que Claude peut/pas | Tâtonnement | Plus de trial-and-error |
-| MCP Railway logs (ou alias bash autorisé) | Pas de logs prod | Diagnostic prod possible |
-| MCP Prometheus / curl whitelisté | Pas de métriques | Métriques accessibles |
-| SSH NLF read-only via script wrapper (`npm run pi:logs:nlf`) | Pas de logs Pi NLF | Logs vérifiables sans demander |
+| Action                                                                         | Origine                              | Effet                                     |
+| ------------------------------------------------------------------------------ | ------------------------------------ | ----------------------------------------- |
+| MCP Postgres read-only sur Railway (user `claude_readonly`, GRANT SELECT ONLY) | Aucun accès DB                       | Triangulation DB possible (-50% cascades) |
+| Skill `fewer-permission-prompts` lancé                                         | Allowlist Bash trop courte (14 cmds) | Auto-allowlist depuis transcripts         |
+| Allowlist Bash élargie (npm test, jest, psql, find, jq, sed -n)                | Friction validation                  | Zéro friction au quotidien                |
+| `.claude/ACCESS.md` documente ce que Claude peut/pas                           | Tâtonnement                          | Plus de trial-and-error                   |
+| MCP Railway logs (ou alias bash autorisé)                                      | Pas de logs prod                     | Diagnostic prod possible                  |
+| MCP Prometheus / curl whitelisté                                               | Pas de métriques                     | Métriques accessibles                     |
+| SSH NLF read-only via script wrapper (`npm run pi:logs:nlf`)                   | Pas de logs Pi NLF                   | Logs vérifiables sans demander            |
 
 ### COUCHE 4 — Enforcement mécanique (J+10 à J+14)
 
-| Hook | Bloque | Origine |
-|---|---|---|
-| `pre-push` refuse `main` direct | Push #7610806 | Workflow propre |
-| `pre-commit` refuse `fix(saas\|config\|sync\|content)` sans diff dans `docs/specs/` ou `NLF.md` | Cascade SaaS, SPEC stale | Maintien doc à jour |
-| `PreToolUse Edit` warne si fichier modifié 3+ fois en 7 jours | Audit fichiers churn | Alerte zone fragile |
-| `UserPromptSubmit` spec-autoload (mots-clés → SPEC injectée) | Mémoire features | Doc auto-chargée |
-| `post-commit` régression check (test régression + log incident) | Mémoire bugs | Force le pattern |
-| Notif desktop 21h "no hotfix mode P0-only" | Profil burnout | Casse le réflexe nuit |
-| Hook qui refuse > 3 releases/jour (env var override P0) | Profil burnout | Cap mécanique |
+| Hook                                                                                            | Bloque                   | Origine               |
+| ----------------------------------------------------------------------------------------------- | ------------------------ | --------------------- |
+| `pre-push` refuse `main` direct                                                                 | Push #7610806            | Workflow propre       |
+| `pre-commit` refuse `fix(saas\|config\|sync\|content)` sans diff dans `docs/specs/` ou `NLF.md` | Cascade SaaS, SPEC stale | Maintien doc à jour   |
+| `PreToolUse Edit` warne si fichier modifié 3+ fois en 7 jours                                   | Audit fichiers churn     | Alerte zone fragile   |
+| `UserPromptSubmit` spec-autoload (mots-clés → SPEC injectée)                                    | Mémoire features         | Doc auto-chargée      |
+| `post-commit` régression check (test régression + log incident)                                 | Mémoire bugs             | Force le pattern      |
+| Notif desktop 21h "no hotfix mode P0-only"                                                      | Profil burnout           | Casse le réflexe nuit |
+| Hook qui refuse > 3 releases/jour (env var override P0)                                         | Profil burnout           | Cap mécanique         |
 
 ---
 
 ## Séquençage 14 jours
 
-| Jour | Couche | Action | Temps estimé |
-|---|---|---|---|
-| **J+0** | 1 | Désinstaller GSD + couper CLAUDE.md à 90 lignes + 3 templates prompt | 1h30 |
-| **J+1** | 1 | Logout dashboard test + cap 1 session Claude (vis le test) | — |
-| **J+2** | 2 | Routing SPECs dans CLAUDE.md + section "Challenge mode" + frontmatter `last_verified` template | 1h |
-| **J+3** | 2 | Backfill `last_verified` sur les 10 SPECs critiques (saas, sponsors, NLF, match, templates...) | 1h |
-| **J+4** | 3 | MCP Postgres read-only setup + skill `fewer-permission-prompts` | 1h |
-| **J+5** | — | **Off complet**. Pas de code. Pas de dashboard. | — |
-| **J+6** | 3 | `.claude/ACCESS.md` + élargir allowlist Bash | 30min |
-| **J+7** | 4 | Hook pre-push refuse main + hook spec-autoload | 1h |
-| **J+8-9** | 4 | Hook pre-commit blocker SaaS sans SPEC + hook PreToolUse fichier instable | 2h |
-| **J+10** | 4 | Hook post-commit régression check + notif 21h | 1h |
-| **J+11-13** | — | Test en condition réelle. 1 vrai bug avec le système entier. | — |
-| **J+14** | — | Retro : ratio fix/feat de la semaine, énergie, blockers | 1h |
+| Jour        | Couche | Action                                                                                         | Temps estimé |
+| ----------- | ------ | ---------------------------------------------------------------------------------------------- | ------------ |
+| **J+0**     | 1      | Désinstaller GSD + couper CLAUDE.md à 90 lignes + 3 templates prompt                           | 1h30         |
+| **J+1**     | 1      | Logout dashboard test + cap 1 session Claude (vis le test)                                     | —            |
+| **J+2**     | 2      | Routing SPECs dans CLAUDE.md + section "Challenge mode" + frontmatter `last_verified` template | 1h           |
+| **J+3**     | 2      | Backfill `last_verified` sur les 10 SPECs critiques (saas, sponsors, NLF, match, templates...) | 1h           |
+| **J+4**     | 3      | MCP Postgres read-only setup + skill `fewer-permission-prompts`                                | 1h           |
+| **J+5**     | —      | **Off complet**. Pas de code. Pas de dashboard.                                                | —            |
+| **J+6**     | 3      | `.claude/ACCESS.md` + élargir allowlist Bash                                                   | 30min        |
+| **J+7**     | 4      | Hook pre-push refuse main + hook spec-autoload                                                 | 1h           |
+| **J+8-9**   | 4      | Hook pre-commit blocker SaaS sans SPEC + hook PreToolUse fichier instable                      | 2h           |
+| **J+10**    | 4      | Hook post-commit régression check + notif 21h                                                  | 1h           |
+| **J+11-13** | —      | Test en condition réelle. 1 vrai bug avec le système entier.                                   | —            |
+| **J+14**    | —      | Retro : ratio fix/feat de la semaine, énergie, blockers                                        | 1h           |
 
 **Temps total investi** : ~10h sur 14 jours. **ROI attendu** : -50% volume hotfix dès J+10, -3h/jour de re-briefing.
 

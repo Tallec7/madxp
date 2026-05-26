@@ -6,7 +6,7 @@
 
 ## Résumé
 
-Implémentation anticipée de 4 features majeures prévues pour le P1 de Janvier 2026, alignées avec le Business Plan NEOPRO.
+Implémentation anticipée de 4 features majeures prévues pour le P1 de Janvier 2026, alignées avec le Business Plan MADXP.
 
 ---
 
@@ -89,14 +89,14 @@ Permet aux clubs de définir des objectifs mesurables et de recevoir des alertes
 
 ### API Endpoints
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/objectives` | Liste des objectifs du club |
-| GET | `/api/objectives/:id` | Détail d'un objectif |
-| POST | `/api/objectives` | Créer un objectif |
-| PUT | `/api/objectives/:id` | Modifier un objectif |
-| DELETE | `/api/objectives/:id` | Supprimer un objectif |
-| GET | `/api/objectives/:id/progress` | Progression actuelle |
+| Méthode | Endpoint                       | Description                 |
+| ------- | ------------------------------ | --------------------------- |
+| GET     | `/api/objectives`              | Liste des objectifs du club |
+| GET     | `/api/objectives/:id`          | Détail d'un objectif        |
+| POST    | `/api/objectives`              | Créer un objectif           |
+| PUT     | `/api/objectives/:id`          | Modifier un objectif        |
+| DELETE  | `/api/objectives/:id`          | Supprimer un objectif       |
+| GET     | `/api/objectives/:id/progress` | Progression actuelle        |
 
 ### Tables Base de Données
 
@@ -159,13 +159,13 @@ Système de programmation automatique des playlists basé sur des règles horair
 
 ### API Endpoints
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/playlist-schedules` | Liste des règles |
-| POST | `/api/playlist-schedules` | Créer une règle |
-| PUT | `/api/playlist-schedules/:id` | Modifier une règle |
-| DELETE | `/api/playlist-schedules/:id` | Supprimer une règle |
-| GET | `/api/playlist-schedules/active` | Règles actives actuellement |
+| Méthode | Endpoint                         | Description                 |
+| ------- | -------------------------------- | --------------------------- |
+| GET     | `/api/playlist-schedules`        | Liste des règles            |
+| POST    | `/api/playlist-schedules`        | Créer une règle             |
+| PUT     | `/api/playlist-schedules/:id`    | Modifier une règle          |
+| DELETE  | `/api/playlist-schedules/:id`    | Supprimer une règle         |
+| GET     | `/api/playlist-schedules/active` | Règles actives actuellement |
 
 ### Tables Base de Données
 
@@ -216,12 +216,12 @@ Permet aux annonceurs d'uploader leurs propres créatifs vidéo directement depu
 
 ### API Endpoints
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/api/advertiser/videos` | Uploader une vidéo |
-| PUT | `/api/advertiser/videos/:id` | Modifier une vidéo |
-| DELETE | `/api/advertiser/videos/:id` | Supprimer une vidéo |
-| GET | `/api/advertiser/videos/:id/stats` | Statistiques vidéo |
+| Méthode | Endpoint                           | Description         |
+| ------- | ---------------------------------- | ------------------- |
+| POST    | `/api/advertiser/videos`           | Uploader une vidéo  |
+| PUT     | `/api/advertiser/videos/:id`       | Modifier une vidéo  |
+| DELETE  | `/api/advertiser/videos/:id`       | Supprimer une vidéo |
+| GET     | `/api/advertiser/videos/:id/stats` | Statistiques vidéo  |
 
 ---
 

@@ -2,19 +2,19 @@
 
 > **Document de recherche** - Janvier 2026
 >
-> Objectif : Comprendre si les problèmes réseau de Neopro sont uniques ou communs à l'industrie
+> Objectif : Comprendre si les problèmes réseau de MadXP sont uniques ou communs à l'industrie
 
 ---
 
 ## Résumé Exécutif
 
-**Conclusion principale** : Les problèmes réseau rencontrés par Neopro (mesh WiFi, roaming, instabilité hotspot) sont **communs à toute l'industrie du digital signage**. Ce n'est pas un problème spécifique à Neopro, mais un défi structurel lié à :
+**Conclusion principale** : Les problèmes réseau rencontrés par MadXP (mesh WiFi, roaming, instabilité hotspot) sont **communs à toute l'industrie du digital signage**. Ce n'est pas un problème spécifique à MadXP, mais un défi structurel lié à :
 
 1. L'utilisation du Raspberry Pi et son driver WiFi (brcmfmac)
 2. Le déploiement dans des environnements réseau non contrôlés
 3. L'architecture double-WiFi (hotspot + client) peu courante
 
-**Neopro n'est pas seul**, mais peut se différencier par une **meilleure gestion automatique** de ces problèmes.
+**MadXP n'est pas seul**, mais peut se différencier par une **meilleure gestion automatique** de ces problèmes.
 
 ---
 
@@ -84,11 +84,11 @@ Le driver WiFi intégré du Raspberry Pi (`brcmfmac`) a des **bugs connus** :
 
 ---
 
-## 3. Position de Neopro par Rapport à l'Industrie
+## 3. Position de MadXP par Rapport à l'Industrie
 
-### 3.1 Ce que Neopro Fait Bien (Différenciateurs)
+### 3.1 Ce que MadXP Fait Bien (Différenciateurs)
 
-| Fonctionnalité                             | Neopro       | PiSignage       | Screenly | Xibo   |
+| Fonctionnalité                             | MadXP        | PiSignage       | Screenly | Xibo   |
 | ------------------------------------------ | ------------ | --------------- | -------- | ------ |
 | **Hotspot local intégré**                  | ✅ Oui       | ✅ Oui (récent) | ❌ Non   | ❌ Non |
 | **Télécommande locale**                    | ✅ `/remote` | ❌ Non          | ❌ Non   | ❌ Non |
@@ -97,7 +97,7 @@ Le driver WiFi intégré du Raspberry Pi (`brcmfmac`) a des **bugs connus** :
 | **Hotspot channel optimizer**              | ✅ v2.28     | ❌ Non          | ❌ Non   | ❌ Non |
 | **Cache vidéo offline**                    | ✅ Oui       | ✅ Oui          | ✅ Oui   | ✅ Oui |
 
-### 3.2 Ce que Neopro Peut Améliorer
+### 3.2 Ce que MadXP Peut Améliorer
 
 | Gap                         | État Actuel                | Amélioration Proposée        |
 | --------------------------- | -------------------------- | ---------------------------- |
@@ -107,12 +107,12 @@ Le driver WiFi intégré du Raspberry Pi (`brcmfmac`) a des **bugs connus** :
 | **Watchdog Internet**       | Basique (zombie detection) | Complet avec recovery        |
 | **Recommandation Ethernet** | Non documenté              | Afficher si WiFi instable    |
 
-### 3.3 Architecture Unique de Neopro
+### 3.3 Architecture Unique de MadXP
 
-Neopro a une architecture **plus complexe** que ses concurrents :
+MadXP a une architecture **plus complexe** que ses concurrents :
 
 ```
-NEOPRO (Architecture Dual-WiFi)
+MADXP (Architecture Dual-WiFi)
 ┌─────────────────────────────────────────────┐
 │  wlan0 (intégré)     wlan1 (USB dongle)    │
 │  ├── Hotspot         ├── Connexion Internet │
@@ -134,11 +134,11 @@ CONCURRENTS (Architecture Simple)
 └─────────────────────────────────────────────┘
 ```
 
-**Conséquence** : Les bugs `brcmfmac` avec Virtual AP affectent plus Neopro que les concurrents.
+**Conséquence** : Les bugs `brcmfmac` avec Virtual AP affectent plus MadXP que les concurrents.
 
 ---
 
-## 4. Bugs brcmfmac Spécifiques à l'Architecture Neopro
+## 4. Bugs brcmfmac Spécifiques à l'Architecture MadXP
 
 ### 4.1 Le Problème du Virtual AP
 
@@ -146,7 +146,7 @@ Citation du rapport de bug GitHub :
 
 > "When creating an access point with an uplink client connection using a virtual interface of type \_\_ap, users noticed crashes of the brcmfmac firmware."
 
-**Neopro utilise exactement cette configuration** : wlan0 en mode AP (hostapd) + wlan1 en client.
+**MadXP utilise exactement cette configuration** : wlan0 en mode AP (hostapd) + wlan1 en client.
 
 ### 4.2 Impact du Restart hostapd
 
@@ -158,7 +158,7 @@ Le restart de hostapd peut perturber le driver partagé :
 
 ### 4.3 Solutions Documentées
 
-| Solution                    | Faisabilité Neopro    | Impact                    |
+| Solution                    | Faisabilité MadXP     | Impact                    |
 | --------------------------- | --------------------- | ------------------------- |
 | **Deux dongles USB**        | Possible mais coûteux | Élimine les bugs brcmfmac |
 | **Désactiver WiFi interne** | Nécessite 2 dongles   | Même chose                |
@@ -175,7 +175,7 @@ Le restart de hostapd peut perturber le driver partagé :
 
 PiSignage recommande de **désactiver le WiFi interne** et d'utiliser Ethernet ou un dongle USB dédié.
 
-**Différence Neopro** : Neopro a besoin du WiFi interne pour le hotspot local.
+**Différence MadXP** : MadXP a besoin du WiFi interne pour le hotspot local.
 
 ### 5.2 Screenly : Approche "Access Point Temporaire"
 
@@ -183,7 +183,7 @@ PiSignage recommande de **désactiver le WiFi interne** et d'utiliser Ethernet o
 
 L'AP est **temporaire** et se désactive après configuration.
 
-**Différence Neopro** : Le hotspot Neopro est **permanent** pour la télécommande.
+**Différence MadXP** : Le hotspot MadXP est **permanent** pour la télécommande.
 
 ### 5.3 BrightSign : Approche "Enterprise Ready"
 
@@ -191,7 +191,7 @@ L'AP est **temporaire** et se désactive après configuration.
 
 BrightSign investit dans le support enterprise (certificats, RADIUS).
 
-**Opportunité Neopro** : Ajouter le support 802.1X pour les clients enterprise.
+**Opportunité MadXP** : Ajouter le support 802.1X pour les clients enterprise.
 
 ---
 
@@ -203,7 +203,7 @@ BrightSign investit dans le support enterprise (certificats, RADIUS).
 | ------------------------------------ | --------------------------------------------------- |
 | **Documenter "Ethernet recommandé"** | Alignement avec l'industrie                         |
 | **Watchdog hotspot**                 | PiSignage et Screenly ont des mécanismes similaires |
-| **Bloquer BSSID lock en mesh**       | Unique à Neopro, mais nécessaire                    |
+| **Bloquer BSSID lock en mesh**       | Unique à MadXP, mais nécessaire                     |
 | **Détection automatique profil**     | Différenciateur vs concurrents                      |
 
 ### 6.2 Moyen Terme (v2.36-2.40)
@@ -226,7 +226,7 @@ BrightSign investit dans le support enterprise (certificats, RADIUS).
 
 ## 7. Conclusion
 
-### Neopro n'est PAS Unique
+### MadXP n'est PAS Unique
 
 Les problèmes rencontrés sont **systémiques à l'industrie** :
 
@@ -234,13 +234,13 @@ Les problèmes rencontrés sont **systémiques à l'industrie** :
 - Le driver brcmfmac a des bugs documentés
 - Les environnements mesh/enterprise sont problématiques pour tous
 
-### Neopro a des Défis Supplémentaires
+### MadXP a des Défis Supplémentaires
 
 L'architecture **dual-WiFi (hotspot + client)** est plus complexe et expose plus de bugs brcmfmac.
 
-### Neopro peut se Différencier
+### MadXP peut se Différencier
 
-En implémentant une **gestion automatique et proactive** des problèmes réseau, Neopro peut devenir la solution la plus robuste du marché pour les environnements difficiles.
+En implémentant une **gestion automatique et proactive** des problèmes réseau, MadXP peut devenir la solution la plus robuste du marché pour les environnements difficiles.
 
 ---
 
@@ -278,5 +278,5 @@ En implémentant une **gestion automatique et proactive** des problèmes réseau
 ---
 
 **Document créé** : 18 janvier 2026
-**Auteur** : Analyse Claude pour Neopro
+**Auteur** : Analyse Claude pour MadXP
 **Statut** : Recherche complète

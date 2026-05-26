@@ -1,4 +1,4 @@
-# Product Vision — Neopro
+# Product Vision — MadXP
 
 > **Version** : 1.0 — Avril 2026
 > **Audience** : Investisseurs, partenaires, nouveaux collaborateurs
@@ -7,7 +7,7 @@
 
 ## Our Vision
 
-D'ici 2031, Neopro est le réseau de diffusion sportif amateur de référence en France — chaque gymnase équipé transforme ses écrans en média professionnel générant des revenus passifs pour le club et des impressions mesurables pour ses sponsors.
+D'ici 2031, MadXP est le réseau de diffusion sportif amateur de référence en France — chaque gymnase équipé transforme ses écrans en média professionnel générant des revenus passifs pour le club et des impressions mesurables pour ses sponsors.
 
 ---
 
@@ -23,7 +23,7 @@ D'ici 2031, Neopro est le réseau de diffusion sportif amateur de référence en
 
 ## Our Solution
 
-Neopro fournit aux clubs sportifs amateurs un boîtier Raspberry Pi branché sur leur TV (installation 10 minutes) couplé à une plateforme cloud. Le club pilote son écran depuis son smartphone pendant le match (score en direct, vidéos joueurs, phases avant/pendant/après), ses sponsors voient leurs spots tourner automatiquement avec analytics en temps réel, et reçoivent un rapport PDF mensuel signé. Côté marché, Neopro agrège les clubs en réseau publicitaire : un annonceur régional signe un seul contrat pour être diffusé dans tous les gymnases partenaires, avec CPM attractif (€8-12 vs €15-25 digital). Le modèle est une two-sided marketplace avec effet réseau vertueux : plus de clubs = audience plus large = CPM plus attractif = plus d'annonceurs = revenus passifs pour les clubs.
+MadXP fournit aux clubs sportifs amateurs un boîtier Raspberry Pi branché sur leur TV (installation 10 minutes) couplé à une plateforme cloud. Le club pilote son écran depuis son smartphone pendant le match (score en direct, vidéos joueurs, phases avant/pendant/après), ses sponsors voient leurs spots tourner automatiquement avec analytics en temps réel, et reçoivent un rapport PDF mensuel signé. Côté marché, MadXP agrège les clubs en réseau publicitaire : un annonceur régional signe un seul contrat pour être diffusé dans tous les gymnases partenaires, avec CPM attractif (€8-12 vs €15-25 digital). Le modèle est une two-sided marketplace avec effet réseau vertueux : plus de clubs = audience plus large = CPM plus attractif = plus d'annonceurs = revenus passifs pour les clubs.
 
 ---
 
@@ -44,7 +44,7 @@ Ce KPI capture simultanément la valeur livrée aux deux côtés du marché : de
 
 1. **Solution complète match day** — Seul acteur combinant score en direct, vidéos joueurs, rotation sponsors et analytics en une seule plateforme clé-en-main. Les concurrents (solutions DOOH génériques, tableaux d'affichage) n'intègrent aucune couche analytics ni télécommande match.
 
-2. **Premier réseau publicitaire sportif amateur en France** — Marché vierge. Un annonceur régional peut aujourd'hui atteindre 15 000 spectateurs/mois via un seul contrat. Ce levier n'existait pas avant Neopro.
+2. **Premier réseau publicitaire sportif amateur en France** — Marché vierge. Un annonceur régional peut aujourd'hui atteindre 15 000 spectateurs/mois via un seul contrat. Ce levier n'existait pas avant MadXP.
 
 3. **Proof of play SHA-256 certifiée** — Chaque diffusion est horodatée et certifiée. Le sponsor reçoit une preuve irréfutable, pas une estimation. C'est le différenciateur qui réduit le churn de 40% à <20%.
 
@@ -83,7 +83,7 @@ Ce KPI capture simultanément la valeur livrée aux deux côtés du marché : de
 
 ## Success in 3 Years
 
-En avril 2029, Neopro équipe 300 clubs sportifs amateurs en France. Chaque week-end de championnat, 15 000 heures de contenu tournent sur nos écrans — scores en direct, vidéos joueurs, spots de 25 annonceurs régionaux. Les clubs membres touchent en moyenne €1 800/an de revenus passifs, leurs sponsors renouvellent à 85% grâce aux rapports PDF automatiques. L'ARR atteint €420K avec deux value streams équilibrées (clubs et régie). Une première levée de €500K est en cours pour accélérer le déploiement en Belgique et en Suisse, marchés identifiés avec des partenaires ligues locaux. L'équipe est passée de 2 à 10 personnes.
+En avril 2029, MadXP équipe 300 clubs sportifs amateurs en France. Chaque week-end de championnat, 15 000 heures de contenu tournent sur nos écrans — scores en direct, vidéos joueurs, spots de 25 annonceurs régionaux. Les clubs membres touchent en moyenne €1 800/an de revenus passifs, leurs sponsors renouvellent à 85% grâce aux rapports PDF automatiques. L'ARR atteint €420K avec deux value streams équilibrées (clubs et régie). Une première levée de €500K est en cours pour accélérer le déploiement en Belgique et en Suisse, marchés identifiés avec des partenaires ligues locaux. L'équipe est passée de 2 à 10 personnes.
 
 ---
 

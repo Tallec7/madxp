@@ -1,6 +1,6 @@
-# Guide de Test Neopro
+# Guide de Test MadXP
 
-Ce document décrit comment tester le système Neopro de manière exhaustive avant chaque release ou déploiement commercial.
+Ce document décrit comment tester le système MadXP de manière exhaustive avant chaque release ou déploiement commercial.
 
 ## Table des matières
 
@@ -145,7 +145,7 @@ curl http://localhost:3001/api/auth/me
 ### Prérequis
 
 1. Pi allumé et connecté au réseau
-2. Services Neopro démarrés sur le Pi
+2. Services MadXP démarrés sur le Pi
 3. API centrale accessible depuis le Pi
 
 ### Vérification de la connexion

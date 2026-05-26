@@ -1,4 +1,4 @@
-# Neopro — Roadmap Produit
+# MadXP — Roadmap Produit
 
 > ADRs et PROPs validés ou proposés, **non encore implémentés**.
 > Exclut : les ADRs acceptés et entièrement codés. Inclut : les décisions architecturales en attente de code et les propositions ouvertes.
@@ -24,7 +24,7 @@
 
 **ADR-049 · PROP-003** · Rattachement SAFe : F-15.2, F-21.2 (PI-3)
 
-**Problème** : plusieurs prospects refusent la double saisie (table de marque + opérateur Neopro). Deal-breaker commercial identifié en prod.
+**Problème** : plusieurs prospects refusent la double saisie (table de marque + opérateur MadXP). Deal-breaker commercial identifié en prod.
 
 **Architecture décidée (ADR-049 — Proposé, non codé)** :
 
@@ -43,7 +43,7 @@
 | **A3** — Pi + S2E WiFi      | Club avec WiFi couvrant gymnase       | WiFi club via `wlan1`         |
 | **B** — Scorebox Pi Zero AP | Gymnase offline total (80% des clubs) | Mini-AP local `scorebox-XXXX` |
 
-**Produit matériel** : **Neopro Scorebox** (Pi Zero 2 W + HAT RS-485 SN65HVD72) — 3 modes configurables : `cloud-push`, `local-ap`, `lan-bridge`.
+**Produit matériel** : **MadXP Scorebox** (Pi Zero 2 W + HAT RS-485 SN65HVD72) — 3 modes configurables : `cloud-push`, `local-ap`, `lan-bridge`.
 
 **Effort estimé** : 15-20 j dev + sourcing hardware
 **Référence** : [ADR-049](../adr/ADR-049-score-live-multi-vendor-architecture.md) · [PROP-003](../proposals/PROP-003-score-live-multi-vendor.md)
@@ -91,7 +91,7 @@ Ces propositions ont un statut `Proposé` — la décision architecture n'est pa
 
 **PROP-006** · Rattachement SAFe : E-01, E-02
 
-**Problème** : un annonceur régional ne peut pas aujourd'hui acheter un placement, uploader sa vidéo, et voir ses statistiques sans passer par l'opérateur Neopro. Frein à la scalabilité commerciale.
+**Problème** : un annonceur régional ne peut pas aujourd'hui acheter un placement, uploader sa vidéo, et voir ses statistiques sans passer par l'opérateur MadXP. Frein à la scalabilité commerciale.
 
 **Options ouvertes** :
 
@@ -224,11 +224,11 @@ Ces propositions ont un statut `Proposé` — la décision architecture n'est pa
 
 ## Vision long terme — F-21.2 (PI-3)
 
-### 🟡 API Publique Score Live — Neopro comme source of truth sport régional
+### 🟡 API Publique Score Live — MadXP comme source of truth sport régional
 
 **Rattachement SAFe** : F-21.2
 
-Une fois ADR-049 implémenté sur 30+ clubs, Neopro sera la **seule entité capable de lire en temps réel les tables de marque de centaines de clubs régionaux français**. Le contrat `ScoreboardData v1` est conçu dès maintenant comme un schéma public versionné.
+Une fois ADR-049 implémenté sur 30+ clubs, MadXP sera la **seule entité capable de lire en temps réel les tables de marque de centaines de clubs régionaux français**. Le contrat `ScoreboardData v1` est conçu dès maintenant comme un schéma public versionné.
 
 **Modèle envisagé** :
 

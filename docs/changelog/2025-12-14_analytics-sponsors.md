@@ -27,11 +27,11 @@ Module complet d'analytics pour sponsors permettant :
 - Implémentation complète génération PDF professionnelle avec PDFKit
 - Support graphiques Chart.js rendus côté serveur (chartjs-node-canvas)
 - Structure 4 pages :
-  - Page 1 : Page de garde (logo NEOPRO, titre, sponsor, période)
+  - Page 1 : Page de garde (logo MADXP, titre, sponsor, période)
   - Page 2 : Résumé exécutif (6 KPIs en grille 2x3 avec icônes)
   - Page 3 : Tendances et analyses (graphique ligne + graphique anneau)
   - Page 4 : Certificat de diffusion avec signature SHA-256
-- Charte graphique NEOPRO (couleurs, typographie professionnelle)
+- Charte graphique MADXP (couleurs, typographie professionnelle)
 - Fonctions utilitaires :
   - `generateDailyImpressionsChart()` - Graphique ligne Chart.js → Buffer PNG
   - `generateEventTypePieChart()` - Graphique anneau Chart.js → Buffer PNG
@@ -319,7 +319,7 @@ d6c71e0 docs(sponsors): update progress tracking - Week 1 complete (80% conformi
 
 ## Impact Business (BP §13.6)
 
-### Pour NEOPRO
+### Pour MADXP
 
 - ✅ Différenciateur majeur vs concurrence
 - ✅ Upsell analytics premium : +10-25€/mois/club
@@ -426,7 +426,7 @@ Phase 4 (optionnel) :
 
 ## Mainteneurs
 
-- **Lead Dev** : Équipe NEOPRO
+- **Lead Dev** : Équipe MADXP
 - **Business Owner** : Voir BUSINESS_PLAN_COMPLET.md
 - **Support** : GitHub Issues
 

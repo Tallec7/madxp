@@ -2,13 +2,13 @@
 
 **Date** : Janvier 2026 (v2.47)
 **Statut** : Accepté
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 
 ---
 
 ## Contexte
 
-Neopro opère sur un modèle SaaS avec des Raspberry Pi déployés chez les clubs sportifs. Plusieurs contraintes devaient être adressées :
+MadXP opère sur un modèle SaaS avec des Raspberry Pi déployés chez les clubs sportifs. Plusieurs contraintes devaient être adressées :
 
 1. **Monétisation** : Besoin de contrôler l'accès selon le statut d'abonnement (essai, standard, premium)
 2. **Fonctionnement offline** : Les Pi peuvent rester sans connexion Internet pendant des jours/semaines

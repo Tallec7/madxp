@@ -47,7 +47,7 @@ Stramatel n'émet pas des trames isolées mais un **flux continu** composé de p
 - **`<type>`** est un seul octet qui identifie la structure du payload (score principal, individual points, noms, message texte…).
 - Le **payload** a une taille qui dépend du type. Pour le message principal `0x33`, le payload total (incluant start + type) fait **54 octets** et le suivant commence immédiatement après (octet 54 = `0xF8` du message suivant).
 
-**Confiance** : Haute sur le start-byte et le principe de concaténation (confirmé par `explode(chr(248)."3", …)` dans `stramatel.php` lignes 272-275). Haute sur la longueur 54 du message principal (aligné avec POC Neopro). Moyenne sur la longueur exacte des autres types.
+**Confiance** : Haute sur le start-byte et le principe de concaténation (confirmé par `explode(chr(248)."3", …)` dans `stramatel.php` lignes 272-275). Haute sur la longueur 54 du message principal (aligné avec POC MadXP). Moyenne sur la longueur exacte des autres types.
 
 ### 1.3 Types de messages observés
 
@@ -125,7 +125,7 @@ Stramatel n'émet **pas** de trames dédiées pour les événements. Tous les ch
 
 **Aucun** checksum, CRC, parité applicative ou octet de fin identifié. Le code Panel2Net n'en vérifie aucun (`stramatel.php` — grep négatif sur `crc`, `checksum`, `lrc`). La robustesse repose sur :
 
-1. La resynchronisation sur `0xF8` en cas de désalignement (approche POC Neopro l.133-169).
+1. La resynchronisation sur `0xF8` en cas de désalignement (approche POC MadXP l.133-169).
 2. La redondance temporelle (10 trames/s) : une trame corrompue est immédiatement écrasée par la suivante.
 
 **Implication simulateur** : pas besoin de calculer de CRC. Émettre simplement le flux binaire au rythme nominal.
@@ -149,7 +149,7 @@ Le protocole est **fortement orienté basket FIBA**. La présence des champs sho
 - **`Panel2Net/stramatel.php`** — https://github.com/tomkohler/Panel2Net/blob/master/stramatel.php (531 lignes, auteur Thomas Gervaise, commentaire `// Stramatel Reader - 01/12/2017`). Toutes les références "l.XXX" dans cette section renvoient à ce fichier.
 - **`Panel2Net/Stramatel_GEN_HEL_20171125.txt`** — dump hex brut d'un vrai match (GEN vs HEL, 25/11/2017), utile pour tests unitaires du décodeur.
 - **`BaSta-LedControl`** — https://github.com/christianduerselen/BaSta-LedControl (Arduino, décodeur Stramatel pour bandes LED fautes). **N'a pas pu être inventorié fichier par fichier** (l'API GitHub n'a pas retourné l'arbre lors de la rédaction) — source à ouvrir manuellement pour valider le layout fautes individuelles (offsets 20-43).
-- **POC Neopro** — `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` dans ce repo.
+- **POC MadXP** — `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` dans ce repo.
 
 ---
 
@@ -563,7 +563,7 @@ Un premier simulateur focalisé sur **Stramatel basket + Bodet Scorepad basket**
 
 - **Bodet Scorepad Network Protocol PDF** (réf 608264J) : https://static.bodet-sport.com/images/stories/EN/support/Pdfs/manuals/Scorepad/608264-Network%20output%20and%20protocols-Scorepad.pdf. **Source principale** de toute la section 2.
 
-### Interne Neopro
+### Interne MadXP
 
 - `docs/proposals/PROP-003-score-live-multi-vendor.md` — proposition dont cette spec est l'annexe.
 - `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` — POC listener fonctionnel, incorpore le layout § 1.4 partiellement.

@@ -103,7 +103,7 @@ if (response.status === 401 && ...) {
 
 - Suppression des références aux icônes manquantes
 - Conservation uniquement de `/favicon.ico`
-- Mise à jour du nom en "Neopro Admin"
+- Mise à jour du nom en "MadXP Admin"
 
 ---
 

@@ -10,7 +10,7 @@
 
 ## 1. OBJECTIF
 
-Former le client à l'utilisation et à la configuration autonome de son boîtier Neopro via l'interface d'administration, de l'upload de vidéos à la configuration des time-blocks.
+Former le client à l'utilisation et à la configuration autonome de son boîtier MadXP via l'interface d'administration, de l'upload de vidéos à la configuration des time-blocks.
 
 ## 2. PÉRIMÈTRE
 
@@ -69,7 +69,7 @@ TEMPS TOTAL : 40-45 minutes
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    NEOPRO ADMIN                         │
+│                    MADXP ADMIN                         │
 ├─────────────────────────────────────────────────────────┤
 │  📊 Système  |  📹 Vidéos  |  ⚙️ Configuration  |  📝 Logs │
 └─────────────────────────────────────────────────────────┘
@@ -573,7 +573,7 @@ sudo systemctl restart neopro-sync
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│       GUIDE RAPIDE NEOPRO - [NOM CLUB]               │
+│       GUIDE RAPIDE MADXP - [NOM CLUB]               │
 └──────────────────────────────────────────────────────┘
 
 📺 AFFICHER DES VIDÉOS

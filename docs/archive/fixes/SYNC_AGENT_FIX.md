@@ -131,7 +131,7 @@ ssh pi@neopro.local 'sudo systemctl status neopro-sync'
 **Résultat attendu :**
 
 ```
-● neopro-sync.service - Neopro Sync Agent
+● neopro-sync.service - MadXP Sync Agent
      Loaded: loaded
      Active: active (running)
 ```

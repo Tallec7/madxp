@@ -9,6 +9,7 @@
 ## Résumé
 
 Implémentation complète des 7 TODOs identifiés dans le code :
+
 - Notifications multi-canaux (Webhook, Slack)
 - Escalade des alertes avec notification superviseurs
 - Déploiement OTA (Over-The-Air) des mises à jour logicielles
@@ -24,12 +25,14 @@ Implémentation complète des 7 TODOs identifiés dans le code :
 Ajout d'une méthode `sendWebhookNotification()` pour envoyer les alertes vers des systèmes externes.
 
 **Configuration** :
+
 ```bash
 ALERTING_WEBHOOK_URL=https://votre-webhook.com/alerts
 DASHBOARD_URL=https://dashboard.neopro.fr
 ```
 
 **Payload envoyé** :
+
 ```json
 {
   "event": "alert",
@@ -53,11 +56,13 @@ DASHBOARD_URL=https://dashboard.neopro.fr
 Ajout d'une méthode `sendSlackNotification()` utilisant les Incoming Webhooks Slack avec Block Kit.
 
 **Configuration** :
+
 ```bash
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
 ```
 
 **Fonctionnalités** :
+
 - Couleur selon sévérité (vert/orange/rouge)
 - Emoji contextuel (ℹ️/⚠️/🚨)
 - Bouton "Voir le dashboard" (si `DASHBOARD_URL` configuré)
@@ -70,11 +75,13 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
 Ajout d'une méthode `notifySupervisors()` appelée automatiquement quand une alerte est escaladée.
 
 **Comportement** :
+
 1. Récupère les utilisateurs avec rôle `admin` ou `supervisor`
 2. Envoie un email avec contexte complet (durée depuis création, message original)
 3. Envoie également sur Slack si configuré (les escalades sont toujours critiques)
 
 **Modification de `checkEscalations()`** :
+
 ```typescript
 // Avant: juste un log
 logger.warn('Alert escalated', { alertId: row.id });
@@ -82,8 +89,13 @@ logger.warn('Alert escalated', { alertId: row.id });
 
 // Après: notification complète
 await this.notifySupervisors({
-  alertId, siteId, type, severity, message,
-  createdAt, escalatedAt
+  alertId,
+  siteId,
+  type,
+  severity,
+  message,
+  createdAt,
+  escalatedAt,
 });
 ```
 
@@ -94,6 +106,7 @@ await this.notifySupervisors({
 Connexion du scheduler au service `updateDeploymentService` existant.
 
 **Modification** :
+
 ```typescript
 // Avant
 // TODO: Implementer updateDeploymentService.startDeployment()
@@ -105,6 +118,7 @@ await updateDeploymentService.startDeployment(deployment_id);
 ```
 
 **Fonctionnement** :
+
 - Le scheduler détecte les mises à jour planifiées (`deployment_type = 'update'`)
 - Appelle `updateDeploymentService.startDeployment()`
 - Le service envoie la commande `update_software` via WebSocket
@@ -115,21 +129,24 @@ await updateDeploymentService.startDeployment(deployment_id);
 ### 5. Site ID pour Analytics Sponsors (Raspberry)
 
 **Fichiers modifiés** :
+
 - `raspberry/server/server.js` : Nouvel endpoint `/api/site-info`
 - `raspberry/src/app/components/tv/tv.component.ts` : Récupération et configuration du siteId
 
 **Endpoint `/api/site-info`** :
+
 ```javascript
 app.get('/api/site-info', (req, res) => {
   res.json({
     siteId: SITE_ID || null,
     siteName: process.env.SITE_NAME || null,
-    configured: !!SITE_ID
+    configured: !!SITE_ID,
   });
 });
 ```
 
 **Composant TV** :
+
 ```typescript
 private loadSiteId(): void {
   this.http.get<{ siteId: string | null }>(`${environment.socketUrl}/api/site-info`)
@@ -152,7 +169,8 @@ private loadSiteId(): void {
 Le TODO était obsolète - l'implémentation PDFKit était déjà complète. Mise à jour de la documentation du code.
 
 **Fonctionnalités existantes** :
-- Page de garde (logo NEOPRO, nom sponsor, période)
+
+- Page de garde (logo MADXP, nom sponsor, période)
 - Résumé exécutif (6 KPIs en grille)
 - Graphiques Chart.js (ligne temporelle, donut répartition)
 - Certificat de diffusion avec signature SHA-256
@@ -164,6 +182,7 @@ Le TODO était obsolète - l'implémentation PDFKit était déjà complète. Mis
 Mise à jour de la documentation du fichier de test (40 tests passent).
 
 **Tests couverts** :
+
 - `getClubHealth` : Métriques de santé d'un site
 - `getClubAvailability` : Historique de disponibilité
 - `getClubAlerts` : Alertes d'un site
@@ -205,14 +224,14 @@ SITE_NAME=Nom du Club
 
 ## Fichiers modifiés
 
-| Fichier | Modifications |
-|---------|---------------|
-| `central-server/src/services/alerting.service.ts` | +180 lignes : webhook, slack, superviseurs |
-| `central-server/src/services/scheduler.service.ts` | Import updateDeploymentService, appel startDeployment |
-| `central-server/src/services/pdf-report.service.ts` | Mise à jour documentation |
-| `central-server/src/controllers/analytics.controller.test.ts` | Mise à jour documentation |
-| `raspberry/server/server.js` | Endpoint `/api/site-info` |
-| `raspberry/src/app/components/tv/tv.component.ts` | Méthode `loadSiteId()` |
+| Fichier                                                       | Modifications                                         |
+| ------------------------------------------------------------- | ----------------------------------------------------- |
+| `central-server/src/services/alerting.service.ts`             | +180 lignes : webhook, slack, superviseurs            |
+| `central-server/src/services/scheduler.service.ts`            | Import updateDeploymentService, appel startDeployment |
+| `central-server/src/services/pdf-report.service.ts`           | Mise à jour documentation                             |
+| `central-server/src/controllers/analytics.controller.test.ts` | Mise à jour documentation                             |
+| `raspberry/server/server.js`                                  | Endpoint `/api/site-info`                             |
+| `raspberry/src/app/components/tv/tv.component.ts`             | Méthode `loadSiteId()`                                |
 
 ---
 

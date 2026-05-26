@@ -4,7 +4,7 @@
 
 **Date** : 2026-02-11 (créé) · 2026-04-11 (patch profond après ADR-049)
 **Statut** : Proposé → en cours d'exécution via [F-15.2](../safe/FEATURES.md)
-**Décideurs** : Équipe Neopro
+**Décideurs** : Équipe MadXP
 **Rattachement SAFe** : [E-15 Score Live Hardware](../safe/EPICS.md), [F-15.2 Score Live multi-vendor MVP](../safe/FEATURES.md), [F-21.2 Public Score API](../safe/FEATURES.md) (PI-3, vision)
 **ADR de référence** : [ADR-049 Score Live Multi-Vendor Architecture](../adr/ADR-049-score-live-multi-vendor-architecture.md)
 **Lié à** : [PROP-001](./PROP-001-multi-tv-single-pi.md) (Multi-TV), [PROP-002](./PROP-002-tv-led-dual-output.md) (TV + LED)
@@ -59,7 +59,7 @@ C'est un **deal breaker** pour le prospect : sans cette fonctionnalité, pas de 
 - **1 seul Pi** : le connecteur tourne sur le même Pi que l'affichage
 - **Remote comme couche d'enrichissement** : le score vient de la table de marque automatiquement, mais l'opérateur via la Remote déclenche les **faits de jeu** (animation de but, breaking news, changement de phase) qui produisent des réactions différenciées sur TV et LED (cf. PROP-002)
 
-### État actuel du système de score Neopro
+### État actuel du système de score MadXP
 
 Le système de score live est **100% implémenté** depuis décembre 2025 (Phase 1) :
 
@@ -331,7 +331,7 @@ L'interface unique cache trois topologies physiques d'installation. Le choix se 
 
 ```
 ┌─────────────┐  RS-485   ┌──────────────────┐  WiFi/LAN  ┌──────────────┐  HDMI  ┌────────┐
-│ Console     │ ─────────→│ Neopro Scorebox  │ ──────────→│ Raspberry Pi │ ──────→│ TV/LED │
+│ Console     │ ─────────→│ MadXP Scorebox  │ ──────────→│ Raspberry Pi │ ──────→│ TV/LED │
 │             │           │ (Pi Zero 2 W)    │  Socket.IO │ d'affichage  │        │        │
 └─────────────┘           └────────┬─────────┘            └──────────────┘        └────────┘
                                    │
@@ -358,9 +358,9 @@ L'interface unique cache trois topologies physiques d'installation. Le choix se 
 | Multi-TV depuis une seule console         | ⚠️ splitter | ⚠️ splitter |      ✅       |
 | Budget minimal                            |     ✅      |     ✅      |  ❌ (+80 €)   |
 
-### Neopro Scorebox unifié (3 modes logiciels)
+### MadXP Scorebox unifié (3 modes logiciels)
 
-Le **Neopro Scorebox** est un Pi Zero 2 W flashé avec **une seule image** qui supporte trois modes logiciels, sélectionnés au provisioning depuis le dashboard central :
+Le **MadXP Scorebox** est un Pi Zero 2 W flashé avec **une seule image** qui supporte trois modes logiciels, sélectionnés au provisioning depuis le dashboard central :
 
 | Mode                | Rôle                                                                                     | Pousse vers    | Topologie                  |
 | ------------------- | ---------------------------------------------------------------------------------------- | -------------- | -------------------------- |
@@ -372,7 +372,7 @@ Le mode est défini par une variable `SCOREBOX_MODE=local|cloud|hybrid` dans `/e
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│         Neopro Scorebox — image unique, 3 modes            │
+│         MadXP Scorebox — image unique, 3 modes            │
 │                                                            │
 │  ┌──────────────┐    ┌────────────────┐   ┌─────────────┐  │
 │  │ Connector    │ →  │ ScoreboardData │ → │ Mode router │  │
@@ -548,13 +548,13 @@ case 'bodet':
 
 ### Variante SaaS — Option SaaS-1 (cloud-push direct)
 
-Le mode SaaS de Neopro (ADR-037 — sites `site_type='saas'`, navigateur uniquement, pas de Pi d'affichage) crée un cas particulier : **comment recevoir le score d'une console physique sur un site qui n'a pas de matériel Neopro côté affichage** ?
+Le mode SaaS de MadXP (ADR-037 — sites `site_type='saas'`, navigateur uniquement, pas de Pi d'affichage) crée un cas particulier : **comment recevoir le score d'une console physique sur un site qui n'a pas de matériel MadXP côté affichage** ?
 
 #### Option SaaS-1 retenue : Scorebox + push direct Central Server
 
 ```
 ┌─────────────┐  RS-485   ┌────────────────┐   HTTPS/WSS    ┌──────────────────┐
-│ Console     │ ─────────→│ Neopro Scorebox│ ──────────────→│  Central Server  │
+│ Console     │ ─────────→│ MadXP Scorebox│ ──────────────→│  Central Server  │
 │ (club)      │           │ mode "cloud"   │  (mTLS + JWT)  │  /scoreboard/    │
 └─────────────┘           └────────────────┘                │   ingest/v1      │
                                                             └────────┬─────────┘
@@ -726,7 +726,7 @@ CREATE INDEX scoreboard_events_match ON scoreboard_events (match_id) WHERE match
 
 ## Vision — API Score Publique (F-21.2, PI-3)
 
-L'investissement matériel + logiciel de PROP-003 ouvre la voie à un produit additionnel positionné en **PI-3** : une **API publique de score live** que Neopro peut commercialiser auprès de :
+L'investissement matériel + logiciel de PROP-003 ouvre la voie à un produit additionnel positionné en **PI-3** : une **API publique de score live** que MadXP peut commercialiser auprès de :
 
 - **Fédérations sportives** régionales (compétitions amateurs non couvertes par les diffuseurs)
 - **Médias locaux** (Ouest France, presse régionale) qui veulent un widget score live sur leur site
@@ -752,13 +752,13 @@ GET  /api/public/v1/sites/{siteId}/matches?from=&to=    → liste paginée des m
 
 ### Vente Score Live à un club
 
-| Composant                              | Mode                           | Coût Neopro                  | Prix client (HT)                                 |
+| Composant                              | Mode                           | Coût MadXP                   | Prix client (HT)                                 |
 | -------------------------------------- | ------------------------------ | ---------------------------- | ------------------------------------------------ |
 | **Identification console** (pré-vente) | Visite ou photo                | 30 min commercial            | Inclus dans le devis                             |
 | **Connecteur Stramatel/Bodet série**   | HAT RS-485 + câble             | ~45 €                        | **149 € one-shot**                               |
 | **Connecteur Bodet réseau**            | 0 € (LAN club)                 | 0 €                          | **49 € one-shot** (config)                       |
 | **OCR fallback**                       | Caméra USB                     | ~25 €                        | **99 € one-shot**                                |
-| **Neopro Scorebox** (Topologie B)      | Pi Zero 2 W + boîtier          | ~80 €                        | **249 € one-shot**                               |
+| **MadXP Scorebox** (Topologie B)       | Pi Zero 2 W + boîtier          | ~80 €                        | **249 € one-shot**                               |
 | **Abonnement Score Live**              | API + persistance + monitoring | 0 € (déjà couvert par infra) | **+15 €/mois** sur l'abonnement de base          |
 | **Installation sur site** (1ère)       | 1 déplacement technicien       | 1 j-h                        | **350 € one-shot** (ou inclus dans pack premium) |
 
@@ -768,9 +768,9 @@ GET  /api/public/v1/sites/{siteId}/matches?from=&to=    → liste paginée des m
 - Le **+15 €/mois** finance la maintenance des connecteurs, les évolutions de protocoles, l'API publique partagée, et l'astreinte (panne en plein match = appel critique).
 - Le **Scorebox dédié à 249 €** est positionné comme un **upgrade premium** pour clubs avec contraintes physiques. Marge brute > 60 %.
 
-### Vente Score Live SaaS-pur (sans matériel d'affichage Neopro)
+### Vente Score Live SaaS-pur (sans matériel d'affichage MadXP)
 
-Pour les clubs qui veulent **uniquement** la donnée score (intégration dans leur propre app, leur site web, leur affichage non-Neopro) :
+Pour les clubs qui veulent **uniquement** la donnée score (intégration dans leur propre app, leur site web, leur affichage non-MadXP) :
 
 - **Pack SaaS Score** : Scorebox installé chez le club + API publique (F-21.2) → **149 €/mois** (engagement 12 mois) + **349 €** d'installation.
 - C'est aussi l'offre de pénétration pour entrer dans des clubs déjà équipés d'un autre fournisseur d'affichage (sans cannibaliser leur stack actuel).
@@ -959,7 +959,7 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 1. **Migration `scoreboard_events`** côté Central (+ repository + tests Jest)
 2. **Endpoint d'ingestion** `POST /api/v1/scoreboard/ingest` avec auth `api_key` + signature HMAC + idempotence
 3. **Pipeline Pi → Central** : forward des `ScoreboardData v1` du Pi vers Central (en plus du broadcast Socket.IO local), avec buffer disque en cas de coupure réseau
-4. **Image Neopro Scorebox** : Pi Zero 2 W flashé avec l'image Pi standard + flag `SCOREBOX_MODE=local|cloud|hybrid` + script de provisioning OTA
+4. **Image MadXP Scorebox** : Pi Zero 2 W flashé avec l'image Pi standard + flag `SCOREBOX_MODE=local|cloud|hybrid` + script de provisioning OTA
 5. **Dashboard** : nouvelle entité "scorebox" rattachée à un site, monitoring statut + dernière mise à jour reçue
 6. **Tests E2E** Playwright : ingest → persistance → restitution overlay sur navigateur SaaS
 
@@ -984,16 +984,16 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 
 ### Par club (hardware)
 
-| Configuration                  | Hardware                     | Coût Neopro | Topologie |
-| ------------------------------ | ---------------------------- | ----------: | --------- |
-| Bodet Scorepad (TCP/IP réseau) | Aucun (réseau existant)      |     **0 €** | A1        |
-| Bodet BT6000 (RS-485 série)    | HAT RS-485 + câble RJ-45     |   **~40 €** | A1/A3     |
-| Stramatel (RS-485)             | HAT RS-485 + câble PTT       |   **~45 €** | A1/A3     |
-| Mobatime/Favero (RS-232/422)   | Adaptateur USB-série + câble |   **~25 €** | A1/A3     |
-| OCR fallback                   | Caméra USB                   |   **~25 €** | A1/A3     |
-| **Neopro Scorebox dédié**      | Pi Zero 2 W + boîtier + HAT  |   **~80 €** | B         |
-| Clé 4G/5G (sites sans LAN)     | Dongle USB cellulaire        |   **~30 €** | A3 ou B   |
-| Manuel (statu quo)             | Aucun                        |     **0 €** | n/a       |
+| Configuration                  | Hardware                     | Coût MadXP | Topologie |
+| ------------------------------ | ---------------------------- | ---------: | --------- |
+| Bodet Scorepad (TCP/IP réseau) | Aucun (réseau existant)      |    **0 €** | A1        |
+| Bodet BT6000 (RS-485 série)    | HAT RS-485 + câble RJ-45     |  **~40 €** | A1/A3     |
+| Stramatel (RS-485)             | HAT RS-485 + câble PTT       |  **~45 €** | A1/A3     |
+| Mobatime/Favero (RS-232/422)   | Adaptateur USB-série + câble |  **~25 €** | A1/A3     |
+| OCR fallback                   | Caméra USB                   |  **~25 €** | A1/A3     |
+| **MadXP Scorebox dédié**       | Pi Zero 2 W + boîtier + HAT  |  **~80 €** | B         |
+| Clé 4G/5G (sites sans LAN)     | Dongle USB cellulaire        |  **~30 €** | A3 ou B   |
+| Manuel (statu quo)             | Aucun                        |    **0 €** | n/a       |
 
 ### Développement
 
@@ -1030,7 +1030,7 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 
 - [ ] **Sortie data documentée** ? (RS-485 / RS-232 / RJ-45 Ethernet / aucune)
 - [ ] **Connecteur physique** disponible côté console (PTT / DB9 / RJ-45 / borne à vis)
-- [ ] **Documentation constructeur** du protocole (PDF Bodet, manuel Stramatel) : Neopro a-t-il déjà la doc ou faut-il la demander au club ?
+- [ ] **Documentation constructeur** du protocole (PDF Bodet, manuel Stramatel) : MadXP a-t-il déjà la doc ou faut-il la demander au club ?
 - [ ] Si Bodet Scorepad : le **port 4001 TCP** est-il déjà utilisé par un afficheur tiers ? (le Scorepad limite parfois à 1 client)
 
 ### Topologie physique du gymnase
@@ -1052,7 +1052,7 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 - [ ] **Quel niveau d'enrichissement** veut le club : score seul (L1) / score+chrono (L2) / complet basket (L5) ?
 - [ ] **Mode hybride remote** souhaité ? (override manuel + connecteur)
 - [ ] **Affichage TV uniquement**, ou **TV + LED** (cf. PROP-002), ou **multi-TV** (cf. PROP-001) ?
-- [ ] **Mode SaaS-pur** demandé (pas d'affichage Neopro, juste la donnée API) ?
+- [ ] **Mode SaaS-pur** demandé (pas d'affichage MadXP, juste la donnée API) ?
 - [ ] **Persistance / replay** demandée pour audit fédéral ou rejeu vidéo ?
 
 ### Validation finale
@@ -1077,7 +1077,7 @@ Chaque connecteur suit le même pattern : implémenter `ScoreboardConnector`, pa
 - [PROP-002 — TV + LED dual output](./PROP-002-tv-led-dual-output.md)
 - [ADR-037 — Site type SaaS (browser-only)](../adr/ADR-037-site-type-saas.md)
 
-### Code & docs Neopro
+### Code & docs MadXP
 
 - `raspberry/scripts/poc-stramatel/test-stramatel-listener.js` — Script POC Phase 0 (lecture standalone trames Stramatel, série direct ou Serial-to-Ethernet)
 - `raspberry/scripts/poc-stramatel/README.md` — Câblage RS-485, prérequis UART, critères d'acceptation POC

@@ -38,7 +38,7 @@ Maquette de référence : `docs/templates/mockups/template-studio-v3-mockup.html
 
 - **Refondre le moteur** : rejeté car le moteur v2 est solide (15/20), le gap est purement UX. Refondre casserait les 4+ templates en prod et 14 migrations sans bénéfice métier.
 - **Garder SPEC.md + CLI comme workflow principal** : rejeté car incompatible avec l'objectif "personne novice autonome". Le fichier markdown sur disque + commande terminal reste réservé au seeding initial / cas exceptionnels.
-- **Exposer directement les clubs sans finaliser l'admin** : rejeté car chaque demande "ajoute un fond bleu" deviendrait un ticket pour l'équipe Neopro à perpétuité (pas scalable au-delà de NLF).
+- **Exposer directement les clubs sans finaliser l'admin** : rejeté car chaque demande "ajoute un fond bleu" deviendrait un ticket pour l'équipe MadXP à perpétuité (pas scalable au-delà de NLF).
 - **Refondre l'admin sans phasage (big bang)** : rejeté car ~3 semaines en un bloc bloque toute évolution autre. Les 3 phases livrent de la valeur incrémentale.
 
 ## Conséquences
@@ -46,7 +46,7 @@ Maquette de référence : `docs/templates/mockups/template-studio-v3-mockup.html
 **Positives** :
 
 - Daisy autonome côté admin → débloque le pilotage produit des templates (peut produire sans demander à un dev).
-- Designer externalisable : la maquette montre que le vocabulaire métier est suffisant pour qu'un designer non-Neopro travaille seul.
+- Designer externalisable : la maquette montre que le vocabulaire métier est suffisant pour qu'un designer non-MadXP travaille seul.
 - Onboarding nouveau template passe de ~1 journée (SPEC.md + CLI + SQL + assets) à ~30 min (wizard + asset manager).
 - Réduit la dette mentale : les rules `templates.md` "NE JAMAIS FAIRE" deviennent invisibles côté UI (le moteur les enforce, pas l'humain).
 - Prépare l'exposition club portal : une fois l'admin propre, l'UI consommation côté club s'aligne sur le même vocabulaire.

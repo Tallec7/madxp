@@ -1,15 +1,15 @@
-# SAFe Framework — Pilotage Produit NEOPRO
+# SAFe Framework — Pilotage Produit MADXP
 
 > **Dernière mise à jour** : 18 Février 2026
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
-> **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+> **Notion (visualisation)** : [SAFe MadXP](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ---
 
 ## Pourquoi SAFe ?
 
-NEOPRO est passé d'un backlog plat (BACKLOG.md) à un framework SAFe structuré pour :
+MADXP est passé d'un backlog plat (BACKLOG.md) à un framework SAFe structuré pour :
 
 - Aligner le développement produit sur la stratégie business (OKR 2026)
 - Structurer les flux de valeur (Value Streams) entre clubs et sponsors
@@ -25,7 +25,7 @@ Vision Stratégique (OKR 2026)
   ├── Value Streams (2 OVS + 1 DVS)
   │    ├── VS1: Club to Screen (OVS)
   │    ├── VS2: Sponsor to Impression (OVS)
-  │    └── DVS-1: Neopro Platform Development
+  │    └── DVS-1: MadXP Platform Development
   ├── Thèmes Stratégiques (transverses)
   │    ├── TS1: Monétisation (O2+O4)
   │    ├── TS2: Expérience Match (O3+O5)
@@ -36,11 +36,11 @@ Vision Stratégique (OKR 2026)
 
 ## Value Streams
 
-| VS    | Nom                         | Type | Trigger                 | Valeur délivrée               |
-| ----- | --------------------------- | ---- | ----------------------- | ----------------------------- |
-| VS1   | Club to Screen              | OVS  | Club signe              | Contenu pro sur TV du gymnase |
-| VS2   | Sponsor to Impression       | OVS  | Sponsor veut visibilité | Rapport d'impressions ROI     |
-| DVS-1 | Neopro Platform Development | DVS  | Demande OVS             | Features logicielles          |
+| VS    | Nom                        | Type | Trigger                 | Valeur délivrée               |
+| ----- | -------------------------- | ---- | ----------------------- | ----------------------------- |
+| VS1   | Club to Screen             | OVS  | Club signe              | Contenu pro sur TV du gymnase |
+| VS2   | Sponsor to Impression      | OVS  | Sponsor veut visibilité | Rapport d'impressions ROI     |
+| DVS-1 | MadXP Platform Development | DVS  | Demande OVS             | Features logicielles          |
 
 ## Roadmap PI (2026)
 
@@ -128,7 +128,7 @@ Le pilotage produit se fait dans **`docs/safe/`** (source de vérité) :
 ## Liens
 
 - **Source de vérité** : `docs/safe/README.md` (ce repo)
-- **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+- **Notion (visualisation)** : [SAFe MadXP](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 - **OKR 2026** : [Notion — OKR](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
 - **Changelog code** : `docs/changelog/CHANGELOG.md`
 

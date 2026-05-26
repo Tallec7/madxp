@@ -224,7 +224,7 @@ ORDER BY tablename;
 - Transparence (confiance dans partenariat)
 - Reporting automatisé (gain temps admin)
 
-### Pour NEOPRO
+### Pour MADXP
 
 - **Différenciateur majeur** vs concurrence
 - Argument de vente B2B fort

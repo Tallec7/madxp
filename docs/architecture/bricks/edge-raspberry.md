@@ -3,7 +3,7 @@
 ## M\u00e9tadonn\u00e9es
 
 - Statut: `active`
-- Owner: \u00e9quipe NEOPRO
+- Owner: \u00e9quipe MADXP
 - Derni\u00e8re revue: 2026-02-16
 - Version: 3.9.1
 - D\u00e9pend de: Central Server (Socket.IO), stockage local
@@ -88,24 +88,24 @@ Bo\u00eetier Raspberry Pi 4 install\u00e9 dans chaque club sportif. Diffuse du c
 
 ## 6. Donn\u00e9es manipul\u00e9es
 
-| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9 | R\u00e8gles d'acc\u00e8s                                                     |
-| ------------------ | ---- | -------------------------- | ---------------------------------------------------------------------------- |
-| configuration.json | CRUD | Locale (Pi)                | Merge NEOPRO content=cloud, Club content=local                               |
-| /videos/           | CRD  | Locale                     | Lock sur vid\u00e9os NEOPRO c\u00f4t\u00e9 Pi (non supprimables par le club) |
-| analytics buffer   | CR   | Locale                     | Push vers cloud quand connect\u00e9                                          |
-| licence            | R    | Cloud (cache local)        | V\u00e9rifi\u00e9e \u00e0 la connexion                                       |
-| sync history       | CR   | Locale                     | Historique des syncs r\u00e9ussies                                           |
+| Entit\u00e9        | CRUD | Source de v\u00e9rit\u00e9 | R\u00e8gles d'acc\u00e8s                                                    |
+| ------------------ | ---- | -------------------------- | --------------------------------------------------------------------------- |
+| configuration.json | CRUD | Locale (Pi)                | Merge MADXP content=cloud, Club content=local                               |
+| /videos/           | CRD  | Locale                     | Lock sur vid\u00e9os MADXP c\u00f4t\u00e9 Pi (non supprimables par le club) |
+| analytics buffer   | CR   | Locale                     | Push vers cloud quand connect\u00e9                                         |
+| licence            | R    | Cloud (cache local)        | V\u00e9rifi\u00e9e \u00e0 la connexion                                      |
+| sync history       | CR   | Locale                     | Historique des syncs r\u00e9ussies                                          |
 
 ## 7. Modes de panne et d\u00e9gradation
 
-| Incident                  | D\u00e9tection                        | Effet                                          | Mitigation                                              | Runbook           |
-| ------------------------- | ------------------------------------- | ---------------------------------------------- | ------------------------------------------------------- | ----------------- |
-| Internet coup\u00e9       | network-watchdog.js                   | Pas de sync cloud, fonctionnement local OK     | Offline queue, reconnexion auto                         | \u00c0 cr\u00e9er |
-| Disque plein              | M\u00e9triques heartbeat (>90%)       | Impossible d'ajouter des vid\u00e9os           | Alerte cloud + nettoyage auto vid\u00e9os expir\u00e9es | \u00c0 cr\u00e9er |
-| Surchauffe CPU            | M\u00e9triques heartbeat (>70\u00b0C) | Throttling, risque crash                       | Alerte PredictiveAlerts, reboot command\u00e9           | \u00c0 cr\u00e9er |
-| HDMI d\u00e9connect\u00e9 | hdmi.service.js                       | Pas d'affichage TV                             | CEC auto-detect, alerte locale                          | \u00c0 cr\u00e9er |
-| Corruption config         | config-validator.js                   | Config invalide                                | Backup auto (local-backup.js), restauration             | \u00c0 cr\u00e9er |
-| Licence expir\u00e9e      | license-cache.js                      | Mode d\u00e9grad\u00e9 (pas de contenu NEOPRO) | Cache licence 24h, alerte cloud                         | \u00c0 cr\u00e9er |
+| Incident                  | D\u00e9tection                        | Effet                                         | Mitigation                                              | Runbook           |
+| ------------------------- | ------------------------------------- | --------------------------------------------- | ------------------------------------------------------- | ----------------- |
+| Internet coup\u00e9       | network-watchdog.js                   | Pas de sync cloud, fonctionnement local OK    | Offline queue, reconnexion auto                         | \u00c0 cr\u00e9er |
+| Disque plein              | M\u00e9triques heartbeat (>90%)       | Impossible d'ajouter des vid\u00e9os          | Alerte cloud + nettoyage auto vid\u00e9os expir\u00e9es | \u00c0 cr\u00e9er |
+| Surchauffe CPU            | M\u00e9triques heartbeat (>70\u00b0C) | Throttling, risque crash                      | Alerte PredictiveAlerts, reboot command\u00e9           | \u00c0 cr\u00e9er |
+| HDMI d\u00e9connect\u00e9 | hdmi.service.js                       | Pas d'affichage TV                            | CEC auto-detect, alerte locale                          | \u00c0 cr\u00e9er |
+| Corruption config         | config-validator.js                   | Config invalide                               | Backup auto (local-backup.js), restauration             | \u00c0 cr\u00e9er |
+| Licence expir\u00e9e      | license-cache.js                      | Mode d\u00e9grad\u00e9 (pas de contenu MADXP) | Cache licence 24h, alerte cloud                         | \u00c0 cr\u00e9er |
 
 ## 8. Observabilit\u00e9
 

@@ -12,7 +12,7 @@
 
 ## Contexte
 
-Le projet Neopro maintenait depuis avril 2026 **deux systèmes Templates Studio en parallèle** :
+Le projet MadXP maintenait depuis avril 2026 **deux systèmes Templates Studio en parallèle** :
 
 1. **V2 data-driven (legacy)** — ADR-075 / 077 / 084 / 086 / 095 / 110
    - Tables DB : `neopro_templates`, `template_variants`, `template_layers`,

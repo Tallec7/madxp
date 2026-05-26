@@ -2,7 +2,7 @@
 
 **Date** : Octobre 2024
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 

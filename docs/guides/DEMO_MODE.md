@@ -53,7 +53,7 @@ dist/raspberry/browser/           # Racine du serveur web
 │   └── {club}.json               # Config par club
 └── videos/                       # À AJOUTER MANUELLEMENT
     ├── DEMO/                     # Vidéo par défaut
-    │   └── NEOPRO.mp4
+    │   └── MADXP.mp4
     └── {club}/                   # Un dossier par club (ex: narh/)
         ├── PARTENAIRES/          # Vidéos sponsors/boucle
         ├── FOCUS_PARTENAIRE/     # Vidéos focus partenaires
@@ -77,7 +77,7 @@ dist/raspberry/browser/           # Racine du serveur web
 2. **Copier le build** : Tout le contenu de `dist/raspberry/browser/`
 
 3. **Ajouter les vidéos** :
-   - Créer `videos/DEMO/NEOPRO.mp4` (vidéo par défaut)
+   - Créer `videos/DEMO/MADXP.mp4` (vidéo par défaut)
    - Créer `videos/{club}/` pour chaque club avec les vidéos référencées dans les configurations
 
 4. **Configurer le socket** : Modifier `environment.demo.ts` si nécessaire pour pointer vers le bon serveur Socket.IO (actuellement `https://neopro.onrender.com`)
@@ -189,7 +189,7 @@ Quand l'utilisateur accède à `/login` ou `/tv` sans avoir sélectionné de clu
 
 1. **Config chargée** : `demo-configs/default.json`
 2. **Mot de passe** : `DEMO`
-3. **Vidéo affichée** : `videos/DEMO/NEOPRO.mp4`
+3. **Vidéo affichée** : `videos/DEMO/MADXP.mp4`
 
 Une fois qu'un club est sélectionné sur `/remote` :
 

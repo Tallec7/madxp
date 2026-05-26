@@ -44,7 +44,7 @@ flowchart LR
 
 ### 🚧 Bottleneck actuel
 
-> **Pas de self-service sponsor** — Tout passe par l'équipe NEOPRO. Aucun rapport de diffusion automatisé. Zéro preuve pour les sponsors = churn.
+> **Pas de self-service sponsor** — Tout passe par l'équipe MADXP. Aucun rapport de diffusion automatisé. Zéro preuve pour les sponsors = churn.
 >
 > **Solutions en cours** : E-01 Portail Sponsor (PI-1) + E-03 Analytics (PI-1)
 
@@ -99,7 +99,7 @@ flowchart LR
 
     subgraph MODEL2["Modèle 2 : Régie Publicitaire"]
         S2["Annonceur\nrégional"] --> |"300€/mois\npour 5 gymnases"| C2["5-50 gymnases"]
-        C2 --> R["Revenue split\n90% NEOPRO\n10% Club"]
+        C2 --> R["Revenue split\n90% MADXP\n10% Club"]
     end
 ```
 
@@ -142,4 +142,4 @@ flowchart LR
 
 ---
 
-**Retour** : [SAFe Neopro](README.md) · [Documentation principale](../00-INDEX.md)
+**Retour** : [SAFe MadXP](README.md) · [Documentation principale](../00-INDEX.md)

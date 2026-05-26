@@ -1,4 +1,4 @@
-# Proposition – Console d'administration locale Neopro
+# Proposition – Console d'administration locale MadXP
 
 ## Validation du besoin
 

@@ -1,4 +1,4 @@
-# NEOPRO - Developer Quickstart Pack
+# MADXP - Developer Quickstart Pack
 
 **Version:** 1.0 | **Last Updated:** December 17, 2025
 
@@ -8,7 +8,7 @@
 
 Use this pack when:
 
-- You're a new developer joining the NEOPRO team
+- You're a new developer joining the MADXP team
 - You need to set up a local development environment quickly
 - You want to understand the codebase architecture for coding
 - You're ready to start contributing to the project
@@ -32,7 +32,7 @@ Use this pack when:
 
 ## 1. Project Overview
 
-**NEOPRO** is a complete interactive TV system for sports clubs combining:
+**MADXP** is a complete interactive TV system for sports clubs combining:
 
 - **Hardware:** Raspberry Pi 4 with pre-configured setup (€80)
 - **Local Software:** Angular app + Socket.IO server for real-time TV control
@@ -587,10 +587,10 @@ socket.on('play-video', (data) => {
 **Central Content → Local:**
 
 ```
-1. NEOPRO admin deploys video to "ANNONCES_NEOPRO" category
+1. MADXP admin deploys video to "ANNONCES_NEOPRO" category
 2. Sync Agent polls /api/sites/status every 30s
 3. Downloads new video + config merge
-4. Merges: NEOPRO content (PUSH) + Club content (PULL)
+4. Merges: MADXP content (PUSH) + Club content (PULL)
 5. Writes merged config to configuration.json
 6. Frontend reloads
 ```
@@ -602,7 +602,7 @@ socket.on('play-video', (data) => {
 2. Admin UI saves to configuration.json
 3. Sync Agent periodically pushes state to central
 4. Central stores in database (read-only mirror)
-5. NEOPRO can see what clubs have locally
+5. MADXP can see what clubs have locally
 ```
 
 ### Authentication & Authorization

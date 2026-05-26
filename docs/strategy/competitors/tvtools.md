@@ -22,7 +22,7 @@
 - **Déploiement dual** : SaaS (Cloud Edition, datacenter France) ET On-Premise (vrai dual mode, rare)
 - **Architecture** : 100 % web, datacenter français, 100 Mb/s garantis, 150 Go disque évolutif
 - **Sécurité** : 2FA, Google Authenticator, **SSO/ADFS, Office 365**, HTTPS, RGPD
-- **Multi-tenant / rôles** : "**6 niveaux d'utilisateurs**" (créateur, validateur, superviseur). Workflow d'approbation implicite. ⚠️ **Pas de concepts agency/advertiser/club** comme Neopro — orienté entreprise/collectivité
+- **Multi-tenant / rôles** : "**6 niveaux d'utilisateurs**" (créateur, validateur, superviseur). Workflow d'approbation implicite. ⚠️ **Pas de concepts agency/advertiser/club** comme MadXP — orienté entreprise/collectivité
 - **Edge offline** : ✅ "Fonctionnement résilient hors ligne, écrans continuent de diffuser en cas de coupure réseau"
 - **API publique / webhooks** : ❌ **Non documentés / non publiés** — intégration data tiers en mode projet sur mesure
 - **Hardware player** : mini-PC ou format industriel, Android/Windows, 4G/5G, PoE, plug & play. Compatible aussi écrans system-on-chip. **Hardware-agnostic mais TVTools vend ses propres players** (modèle hybride)
@@ -68,23 +68,23 @@ Entreprise · Industrie/Logistique · Retail · Collectivités · Immobilier · 
 5. **6 niveaux utilisateurs, 2FA, RGPD** = conformité enterprise-ready
 6. **Multi-vertical** = diversification revenus, moins exposé au churn d'un secteur
 
-## Faiblesses exploitables par Neopro
+## Faiblesses exploitables par MadXP
 
 1. 🔴 **Équipe minuscule (4-19 personnes)** vs ambitions multi-vertical → vélocité produit faible, support probablement saturé
 2. 🔴 **Pas de pricing public** → friction commerciale, **exclut le self-service / clubs amateurs**
 3. 🔴 **Pas d'API REST / webhooks documentés** → intégration data live (FFBB, FFR, Opta) **custom-only et coûteuse**
-4. 🔴 **Pas de régie pub native sophistiquée** : pas de rotation pondérée, pas de reporting impressions/annonceur, pas de portail advertiser → **Neopro a 2-3 ans d'avance fonctionnelle**
+4. 🔴 **Pas de régie pub native sophistiquée** : pas de rotation pondérée, pas de reporting impressions/annonceur, pas de portail advertiser → **MadXP a 2-3 ans d'avance fonctionnelle**
 5. 🔴 **Pas de portail club self-service** (upload vidéo + déploiement Pi par le club lui-même)
 6. **Sport = vertical secondaire (1/9)**, pas de roadmap dédiée visible
 7. **Aucun module replay/ralenti/stats avancées**
 8. **Marque franco-française**, pas d'expansion EU visible (tvtools.eu redirige .fr)
-9. **Hardware player propriétaire** = CapEx élevé, frein vs Neopro Pi <500 €
+9. **Hardware player propriétaire** = CapEx élevé, frein vs MadXP Pi <500 €
 10. **Pas de templates Remotion / motion design programmable** : 250 templates statiques
 11. 🔴 **Croissance organique lente, autofinancée, résultat net négatif récent** → fenêtre de marché ouverte
 
-## Positionnement vs Neopro
+## Positionnement vs MadXP
 
-| Dimension                 | TVTools                               | Neopro                                        |
+| Dimension                 | TVTools                               | MadXP                                         |
 | ------------------------- | ------------------------------------- | --------------------------------------------- |
 | Cible primaire            | Stade L1 / grande enceinte            | Club amateur → semi-pro                       |
 | Modèle                    | SaaS ou On-Premise + hardware proprio | SaaS + Pi edge low CapEx                      |
@@ -98,12 +98,12 @@ Entreprise · Industrie/Logistique · Retail · Collectivités · Immobilier · 
 | Références prestige       | ✅ Stade de France, LOSC, OM          | 🟡 À construire                               |
 | Vélocité R&D (équipe)     | 🔴 4-19 personnes                     | 🟢 Plus agile                                 |
 
-## Pitch différenciateur Neopro vs TVTools
+## Pitch différenciateur MadXP vs TVTools
 
 > **"TVTools est solide pour équiper le Stade de France ou un club de Ligue 1.
 > Pour un club amateur ou semi-pro qui veut un portail self-service, une régie pub
 > multi-annonceur avec reporting transparent, et une mise en route en 30 minutes
-> sans devis ni installateur, Neopro est conçu pour ça — TVTools ne s'adresse pas
+> sans devis ni installateur, MadXP est conçu pour ça — TVTools ne s'adresse pas
 > à votre segment."**
 
 ## Synthèse stratégique
@@ -114,7 +114,7 @@ TVTools verrouille le **haut de pyramide stade L1** mais :
 - ❌ N'a **pas de régie pub data-driven**
 - ❌ N'a **pas de portail self-service multi-tenant**
 
-Neopro doit :
+MadXP doit :
 
 1. **Éviter la confrontation frontale** sur les stades L1 où les références TVTools pèsent
 2. **Cibler agressivement** L2/National/clubs amateurs/SaaS = zone blanche TVTools

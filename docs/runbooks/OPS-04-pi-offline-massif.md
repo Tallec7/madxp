@@ -228,11 +228,11 @@ Updates toutes les 15 min.
 ### Template email client (externe)
 
 ```
-Objet : [Neopro] Information service en cours
+Objet : [MadXP] Information service en cours
 
 Bonjour,
 
-Nous détectons actuellement une coupure de service sur la TV Neopro
+Nous détectons actuellement une coupure de service sur la TV MadXP
 de votre club <NOM_CLUB>. Nos équipes sont mobilisées.
 
 Cause identifiée : <ISP / coupure réseau / mise à jour technique>
@@ -244,7 +244,7 @@ au rétablissement.
 
 Pour toute question : contact@neopro.fr
 
-— Équipe Neopro
+— Équipe MadXP
 ```
 
 ⚠️ Envoyer **uniquement** aux clients impactés (filtrer par `site_type='pi' AND last_seen < ...`). Pas à toute la base.

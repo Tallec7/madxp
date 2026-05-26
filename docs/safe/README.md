@@ -1,10 +1,10 @@
-# SAFe Neopro — Pilotage Produit
+# SAFe MadXP — Pilotage Produit
 
 > **Dernière mise à jour** : 11 Avril 2026 (E-15 pivot API fédérale → table de marque multi-vendor, E-21 extension F-21.2 API publique scores — PROP-003)
 > **Framework** : SAFe Essential (simplifié)
 > **Cadence PI** : 6 semaines (3 sprints de 2 semaines)
 > **PI actuel** : PI-1 (Février - Mars 2026)
-> **Notion (visualisation)** : [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
+> **Notion (visualisation)** : [SAFe MadXP](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)
 
 ---
 
@@ -164,7 +164,7 @@ Le Sprint Tracker est disponible via **trois canaux** :
 | ---------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **Dashboard Angular**        | `/safe/sprints`                                                            | UI interactive : sélecteur de sprint, KPIs, stories par feature, update inline du statut |
 | **API REST**                 | `GET /api/safe/sprints`, `PUT /api/safe/sprints/:sid/stories/:stid/status` | Données JSON avec DB hybrid layer (markdown + PostgreSQL)                                |
-| **Notion**                   | [SAFe Neopro](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)      | Visualisation read-only                                                                  |
+| **Notion**                   | [SAFe MadXP](https://www.notion.so/30bc27de363881d49d06e50eabbdd6b5)       | Visualisation read-only                                                                  |
 | **Markdown source of truth** | `docs/safe/USER-STORIES.md` (sections `## Sprint X.Y`)                     | Parsé par `SafeParserService`, overrides DB appliqués ensuite                            |
 
 **Architecture hybride** : les fichiers `.md` restent la source de vérité. Deux tables PostgreSQL (`safe_sprint_velocity`, `safe_story_status_override`) stockent les overrides dynamiques (vélocité persistée, changements de statut inline). Le parser lit d'abord le markdown, puis applique les overrides DB. Dégradation gracieuse si les tables n'existent pas encore.
@@ -213,7 +213,7 @@ Le Sprint Tracker capture automatiquement :
 | [📊 Portfolio SAFe](PORTFOLIO.md)                                | Roadmap Gantt, architecture SAFe, métriques clés |
 | [🟢 OVS1 — Club to Screen](OVS1-CLUB-TO-SCREEN.md)               | Flux opérationnel, étapes, segments, KPIs        |
 | [🟠 OVS2 — Sponsor to Impression](OVS2-SPONSOR-TO-IMPRESSION.md) | Flux sponsor, modèles de revenus, KPIs           |
-| [🟣 DVS-1 — Neopro Platform](DVS1-NEOPRO-PLATFORM.md)            | Value Proposition, stack, budget, WSJF chart     |
+| [🟣 DVS-1 — MadXP Platform](DVS1-NEOPRO-PLATFORM.md)             | Value Proposition, stack, budget, WSJF chart     |
 
 ## Artefacts PI Planning
 
@@ -259,7 +259,7 @@ Quand Claude effectue un commit `feat(scope)` ou `fix(scope)` qui implémente un
 
 ## Références
 
-- [🏆 OKR NEOPRO 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
+- [🏆 OKR MADXP 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
 - [📝 Documentation principale](../00-INDEX.md)
 - [💼 Business Plan](../business/BUSINESS_PLAN_COMPLET.md)
 

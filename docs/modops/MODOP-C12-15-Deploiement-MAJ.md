@@ -10,7 +10,7 @@
 
 ## 1. OBJECTIF
 
-Gérer les déploiements de contenu et mises à jour logicielles vers les boîtiers Neopro de manière sécurisée et progressive.
+Gérer les déploiements de contenu et mises à jour logicielles vers les boîtiers MadXP de manière sécurisée et progressive.
 
 ## 2. PÉRIMÈTRE
 

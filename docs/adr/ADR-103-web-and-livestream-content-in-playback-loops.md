@@ -34,7 +34,7 @@
 
 - **Multi-tenant Pi + SaaS** : le système doit fonctionner sur Pi (Chromium kiosk, V3D GPU, mémoire limitée) ET en SaaS (navigateur quelconque).
 - **Pi hors-ligne** : si la page web ou le livestream n'est pas atteignable (Pi sans Internet), l'entrée doit être skip rapidement (≤1s exigence métier).
-- **Robustesse vidéo Neopro** : le DoubleBuffer (4 players, freeze-frame canvas, error recovery, watchdog 10s) est volontairement ultra-tolérant aux fautes. Toute extension ne doit PAS dégrader cette tolérance pour les vidéos MP4.
+- **Robustesse vidéo MadXP** : le DoubleBuffer (4 players, freeze-frame canvas, error recovery, watchdog 10s) est volontairement ultra-tolérant aux fautes. Toute extension ne doit PAS dégrader cette tolérance pour les vidéos MP4.
 - **Master/slave sync** : multi-écran (TV principale + secondaire) doit rester synchronisé pour une page web ou un livestream comme pour un MP4.
 - **Sécurité iframe** : la page web peut venir de n'importe quel domaine (clubhouse.scorenco.com, sites partenaires, etc.). Sandbox stricte obligatoire (XSS, clickjacking, mining).
 - **Cross-origin freeze-frame** : `canvas.captureStream()` ou `html2canvas` ne peut **pas** capturer le contenu d'une iframe cross-origin (security policy navigateur). Les transitions doivent fonctionner sans freeze-frame du contenu web.
@@ -370,22 +370,22 @@ Si Phase 1 (manuel) s'avère instable : revert ADR-089 → ADR-089 reste mode ma
 
 Toutes les phases sont livrées. ADR clôturé.
 
-| Phase  | Scope                                                                                  | Livré le | PR                                                                  |
-| ------ | -------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
-| 0      | Filets défensifs TV + cleanup DB                                                       | 28/04    | [#699](https://github.com/Tallec7/neopro/pull/699)                  |
-| 0.5    | Strip serveur + reject 400                                                             | 28/04    | [#701](https://github.com/Tallec7/neopro/pull/701)                  |
-| 0.6    | Visibilité Web/Live dans Remote                                                        | 28/04    | [#703](https://github.com/Tallec7/neopro/pull/703)                  |
-| 1      | WebContentService manuel + 1s timeout + analytics `web_load_failed`                    | 28/04    | [#705](https://github.com/Tallec7/neopro/pull/705)                  |
-| 2a     | Backend résout les paths synthétiques au read + drop 400 reject                        | 28/04    | [#710](https://github.com/Tallec7/neopro/pull/710)                  |
-| 2.5    | Take-over manuel propre + anti-flash + bouton Stop Remote V2                           | 28/04    | [#714](https://github.com/Tallec7/neopro/pull/714)                  |
-| 2.6    | Instant show (no opacity transition under freeze)                                      | 28/04    | [#716](https://github.com/Tallec7/neopro/pull/716)                  |
-| 2.7    | Paint-stable reveal (2× rAF + 250ms)                                                   | 28/04    | [#718](https://github.com/Tallec7/neopro/pull/718)                  |
-| 2b     | TV runtime délègue à WebContentService pour la rotation auto                           | 29/04    | [#720](https://github.com/Tallec7/neopro/pull/720)                  |
-| 1.5a   | hls.js lazy-loaded pour livestreams                                                    | 29/04    | —                                                                   |
-| 1.5b   | Master/slave sync of web/live content (dual-display)                                   | 29/04    | [#723](https://github.com/Tallec7/neopro/pull/723)                  |
-| 3      | Backend refuse les saves boucle web/live sans `durationSeconds` (HTTP 400)             | 29/04    | —                                                                   |
-| 3 v2   | Library proactive : icônes 🌐/📡 + prompt durée add-to-loop                            | 29/04    | [#724](https://github.com/Tallec7/neopro/pull/724)                  |
-| **4**  | **Supervision : counters Prometheus + alertes + persistance `web_load_failed` + clôture** | **29/04** | **(cette PR)**                                                  |
+| Phase | Scope                                                                                     | Livré le  | PR                                                 |
+| ----- | ----------------------------------------------------------------------------------------- | --------- | -------------------------------------------------- |
+| 0     | Filets défensifs TV + cleanup DB                                                          | 28/04     | [#699](https://github.com/Tallec7/neopro/pull/699) |
+| 0.5   | Strip serveur + reject 400                                                                | 28/04     | [#701](https://github.com/Tallec7/neopro/pull/701) |
+| 0.6   | Visibilité Web/Live dans Remote                                                           | 28/04     | [#703](https://github.com/Tallec7/neopro/pull/703) |
+| 1     | WebContentService manuel + 1s timeout + analytics `web_load_failed`                       | 28/04     | [#705](https://github.com/Tallec7/neopro/pull/705) |
+| 2a    | Backend résout les paths synthétiques au read + drop 400 reject                           | 28/04     | [#710](https://github.com/Tallec7/neopro/pull/710) |
+| 2.5   | Take-over manuel propre + anti-flash + bouton Stop Remote V2                              | 28/04     | [#714](https://github.com/Tallec7/neopro/pull/714) |
+| 2.6   | Instant show (no opacity transition under freeze)                                         | 28/04     | [#716](https://github.com/Tallec7/neopro/pull/716) |
+| 2.7   | Paint-stable reveal (2× rAF + 250ms)                                                      | 28/04     | [#718](https://github.com/Tallec7/neopro/pull/718) |
+| 2b    | TV runtime délègue à WebContentService pour la rotation auto                              | 29/04     | [#720](https://github.com/Tallec7/neopro/pull/720) |
+| 1.5a  | hls.js lazy-loaded pour livestreams                                                       | 29/04     | —                                                  |
+| 1.5b  | Master/slave sync of web/live content (dual-display)                                      | 29/04     | [#723](https://github.com/Tallec7/neopro/pull/723) |
+| 3     | Backend refuse les saves boucle web/live sans `durationSeconds` (HTTP 400)                | 29/04     | —                                                  |
+| 3 v2  | Library proactive : icônes 🌐/📡 + prompt durée add-to-loop                               | 29/04     | [#724](https://github.com/Tallec7/neopro/pull/724) |
+| **4** | **Supervision : counters Prometheus + alertes + persistance `web_load_failed` + clôture** | **29/04** | **(cette PR)**                                     |
 
 ### Métriques livrées (Phase 4)
 

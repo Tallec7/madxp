@@ -1,8 +1,8 @@
-# Système de Versioning Automatique Neopro
+# Système de Versioning Automatique MadXP
 
 ## Vue d'ensemble
 
-Neopro utilise **semantic-release** pour gérer automatiquement les versions selon les commits conventionnels.
+MadXP utilise **semantic-release** pour gérer automatiquement les versions selon les commits conventionnels.
 
 ## Comment ça fonctionne
 

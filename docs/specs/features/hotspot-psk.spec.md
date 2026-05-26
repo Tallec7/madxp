@@ -79,7 +79,7 @@ Domaine restreint à la gestion du PSK hotspot du Pi (consommation cloud → éc
 - **Pi qui flap (reboot intempestif)** : chaque sync re-écrit `hostapd.conf` même si identique → diff détecté côté sync-agent, pas de restart inutile (idempotence garantie).
 - **Cache chmod incorrect** : sync-agent re-applique chmod 600 à chaque écriture (le hash du fichier change, donc l'inode aussi).
 - **Admin oublie de copier le nouveau PSK après rotation** : modal affiche le PSK une fois (copy-paste obligatoire). Si oublié, re-rotation nécessaire (pas de "show again").
-- **Hostapd legacy déjà installé sans `hostapd.conf` aux specs Neopro** : `POST /bootstrap` accepte le PSK existant et le pousse au cloud. Pas de régression terrain.
+- **Hostapd legacy déjà installé sans `hostapd.conf` aux specs MadXP** : `POST /bootstrap` accepte le PSK existant et le pousse au cloud. Pas de régression terrain.
 
 ## Contraintes / NE PAS FAIRE
 

@@ -1,6 +1,6 @@
 # Parcours Utilisateurs par Rôle
 
-> User journeys pour chaque rôle Neopro — du login à l'action métier principale.
+> User journeys pour chaque rôle MadXP — du login à l'action métier principale.
 
 ## 1. Hiérarchie des rôles
 

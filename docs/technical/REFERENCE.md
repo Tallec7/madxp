@@ -1,4 +1,4 @@
-# Documentation technique Neopro
+# Documentation technique MadXP
 
 ## Table des matières
 
@@ -472,16 +472,16 @@ Accès dashboard scoped pour le personnel de club. Un utilisateur `club` est li�
 
 ### Rôle et permissions
 
-| Action                  | Autorisé | Guard                                                 |
-| ----------------------- | -------- | ----------------------------------------------------- |
-| Voir son site           | ✅       | `requireRole` bypass si `:id` === `user.site_id`      |
-| Upload vidéos           | ✅       | `uploaded_for_site_id` auto-tagué serveur             |
-| Supprimer ses vidéos    | ✅       | Ownership: `uploaded_for_site_id === user.site_id`    |
-| Supprimer vidéos NEOPRO | ❌       | Guard catégorie `NEOPRO` dans `content.controller.ts` |
-| Modifier ses vidéos     | ✅       | Même guard ownership                                  |
-| Modifier vidéos NEOPRO  | ❌       | Même guard catégorie                                  |
-| Déployer sur son Pi     | ✅       | Bypass site-scoped                                    |
-| Voir d'autres sites     | ❌       | `requireRole` rejette                                 |
+| Action                 | Autorisé | Guard                                                |
+| ---------------------- | -------- | ---------------------------------------------------- |
+| Voir son site          | ✅       | `requireRole` bypass si `:id` === `user.site_id`     |
+| Upload vidéos          | ✅       | `uploaded_for_site_id` auto-tagué serveur            |
+| Supprimer ses vidéos   | ✅       | Ownership: `uploaded_for_site_id === user.site_id`   |
+| Supprimer vidéos MADXP | ❌       | Guard catégorie `MADXP` dans `content.controller.ts` |
+| Modifier ses vidéos    | ✅       | Même guard ownership                                 |
+| Modifier vidéos MADXP  | ❌       | Même guard catégorie                                 |
+| Déployer sur son Pi    | ✅       | Bypass site-scoped                                   |
+| Voir d'autres sites    | ❌       | `requireRole` rejette                                |
 
 ### Architecture technique
 
@@ -498,15 +498,15 @@ JWT payload: { id, email, role: 'club', site_id: 'uuid' }
               ┌───────────────────────────┼───────────────────────┐
               │ Upload                    │ Delete/Update          │ List
               │ auto-tag                  │ ownership guard        │ filtre par
-              │ uploaded_for_site_id      │ + NEOPRO block         │ uploaded_for_site_id
-              │ côté serveur              │                        │ + vidéos NEOPRO
+              │ uploaded_for_site_id      │ + MADXP block         │ uploaded_for_site_id
+              │ côté serveur              │                        │ + vidéos MADXP
               └───────────────────────────┴───────────────────────┘
 ```
 
 ### Fichiers clés
 
 - `central-server/src/middleware/auth.ts` — Bypass site-scoped pour rôle `club`
-- `central-server/src/controllers/content.controller.ts` — Guards ownership + NEOPRO
+- `central-server/src/controllers/content.controller.ts` — Guards ownership + MADXP
 - `central-server/src/repositories/video.repository.ts` — `findVideoById` (doit inclure `uploaded_for_site_id`), `findVideosForSite`
 
 ---
@@ -866,7 +866,7 @@ transitoires de Supabase/PgBouncer sans intervention manuelle.
 2. `setup-remote-club.sh` / `deploy-remote.sh` copient ces fichiers sur le Pi et redémarrent le sync-agent.
 3. Le sync-agent lit cette version via `utils/version-info.js` et l’envoie dans chaque heartbeat.
 4. Le central-server met à jour `sites.software_version`, ce qui alimente les écrans “Sites” / “Détails” du dashboard central.
-5. L’admin local (port 8080) lit aussi `webapp/version.json` pour afficher la version (`Neopro vX.Y.Z | Raspberry Pi Admin Panel`).
+5. L’admin local (port 8080) lit aussi `webapp/version.json` pour afficher la version (`MadXP vX.Y.Z | Raspberry Pi Admin Panel`).
 
 > ℹ️ Besoin d’un build plus rapide sur macOS : ajoute `--skip-xattr` ou `SKIP_XATTR_CLEANUP=true` à `build-raspberry.sh` / `build-and-deploy.sh` pour sauter la purge des attributs étendus (gain ~30 s, mais tar peut afficher des warnings sur Linux).
 
@@ -1063,7 +1063,7 @@ sudo journalctl -u neopro-sync-agent -f
 
 ### Convention : pas de NoNewPrivileges
 
-Les fichiers `.service` Neopro ne doivent **jamais** contenir `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et ses enfants, ce qui empêche les commandes d'administration depuis le dashboard et l'OTA.
+Les fichiers `.service` MadXP ne doivent **jamais** contenir `NoNewPrivileges=true`. Ce flag kernel bloque irréversiblement `sudo` pour le process et ses enfants, ce qui empêche les commandes d'administration depuis le dashboard et l'OTA.
 
 - **Smoke test** : `npm run test:smoke` vérifie cette convention automatiquement
 - **Auto-correction** : l'OTA >= v3.17.1 corrige les `.service` via `POST /api/system/apply-services` sur l'admin-server local
@@ -1919,7 +1919,7 @@ Tous les accès PostgreSQL passent par des repositories typés héritant de `Bas
 | `site-sponsor`      | `site_sponsors`, `site_sponsor_videos`, `site_sponsor_daily_stats`, `site_sponsor_daily_video_stats`                   |
 | `campaign`          | `campaigns`, `campaign_videos`, `campaign_sites`                                                                       |
 
-> **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs Neopro utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
+> **ADR-035 Phase 4** : Les colonnes `source` et `advertiser_id` ont été retirées de `site_sponsors`. La table ne contient plus que les sponsors locaux de club. Les annonceurs MadXP utilisent désormais le système de campagnes (`campaigns`, `campaign_videos`, `campaign_sites`).
 >
 > **Migration sponsor stats (v3.127.15+)** : Les requêtes lourdes sur `video_plays` dans `site-sponsor.repository.ts` ont été migrées vers `site_sponsor_daily_stats` (table pré-agrégée, rétention indéfinie). Requêtes migrées : `getStatsSummary`, `getDailyTrends`, `getBenchmark`, `listForSite` (impression count). Requêtes encore sur `video_plays` : `getStatsByVideo`, `getStatsByPeriod`, `getStatsByEventType`, `getMatchDayBreakdown` (nécessitent granularité par vidéo/événement). Fonction PG : `calculate_site_sponsor_daily_stats(date)` exécutée par le CRON à 1h50 pour J-1. Monitoring : `checkAggregationStaleness()` alerte si >36h sans agrégation.
 > | `benchmark` | `sites`, `club_sessions`, `video_plays`, `metrics` (lecture) |
@@ -2305,14 +2305,14 @@ Le boot du Pi est optimisé pour une expérience fluide en 2 couches :
 
 **Couche 2 — Splash inline HTML (index.html) :**
 
-Le fichier `index.html` contient un `<div id="neopro-boot-splash">` avec le logo Neopro, un spinner animé et "Chargement..." — rendu instantanément par Chromium avant tout JavaScript. `app.component.ts` le retire avec un fade-out 0.5s dès qu'Angular est prêt (`ngOnInit`).
+Le fichier `index.html` contient un `<div id="neopro-boot-splash">` avec le logo MadXP, un spinner animé et "Chargement..." — rendu instantanément par Chromium avant tout JavaScript. `app.component.ts` le retire avec un fade-out 0.5s dès qu'Angular est prêt (`ngOnInit`).
 
 **Chaîne de boot complète :**
 
 ```
 Power On → firmware (écran noir, pas de rainbow) → kernel/systemd (écran noir propre)
 → graphical.target → neopro-kiosk.service → kiosk-watchdog.sh → Chromium ouvre /tv
-→ index.html affiche le splash Neopro instantanément → Angular bootstrap (5-15s)
+→ index.html affiche le splash MadXP instantanément → Angular bootstrap (5-15s)
 → app.component retire le splash (fade-out 0.5s) → waiting-screen / vidéo
 ```
 
@@ -2371,7 +2371,7 @@ Les deux instances Chromium se synchronisent via Socket.IO master-slave :
 | Phase change   | `switchToPhase()` → relance boucle                 | `startSeamlessLoop()` → retourne immédiatement, attend master                                  |
 | Action directe | —                                                  | Reçoit `action` → `preloadManualVideo()` (prépare sans révéler, ADR-034)                       |
 
-**Rotation pondérée (v3.110+, Bresenham v3.111+)** : `startSeamlessLoop()` applique `generateWeightedPlaylist()` (`raspberry/src/app/utils/weighted-playlist.ts`) sur les vidéos filtrées. Chaque vidéo a un `weight` optionnel (défaut 1, range 1-10). L'algorithme **Bresenham smooth scheduling** distribue les vidéos de façon régulière sur toute la playlist, contrairement au greedy initial qui front-loadait le sponsor dominant (visible "1 sur 2" quel que soit le poids). Bresenham : chaque vidéo accumule son poids à chaque itération → la vidéo avec le plus gros accumulateur est sélectionnée → son accumulateur est réduit du total. Contrainte anti-consécutif par sponsor préservée. Résultat : ×4 = gap ~3.3 vidéos, ×10 = gap ~1.8 vidéos — la différence est visuellement perceptible. La playlist étendue remplace `currentLoopVideos` — tout le code downstream (next index, prefetch, analytics) fonctionne sans changement. L'algo est **déterministe** : même input → même output → sync dual-display fiable. Le dashboard loop-manager reproduit l'algo côté client pour une **prévisualisation en temps réel** de l'ordre de diffusion. Les vidéos avec `pinned: true` restent à leur position d'origine dans la boucle (ex: intro Neopro toujours en 1ère position) — elles ne participent pas au scheduling Bresenham, qui ne distribue que les vidéos "mobiles".
+**Rotation pondérée (v3.110+, Bresenham v3.111+)** : `startSeamlessLoop()` applique `generateWeightedPlaylist()` (`raspberry/src/app/utils/weighted-playlist.ts`) sur les vidéos filtrées. Chaque vidéo a un `weight` optionnel (défaut 1, range 1-10). L'algorithme **Bresenham smooth scheduling** distribue les vidéos de façon régulière sur toute la playlist, contrairement au greedy initial qui front-loadait le sponsor dominant (visible "1 sur 2" quel que soit le poids). Bresenham : chaque vidéo accumule son poids à chaque itération → la vidéo avec le plus gros accumulateur est sélectionnée → son accumulateur est réduit du total. Contrainte anti-consécutif par sponsor préservée. Résultat : ×4 = gap ~3.3 vidéos, ×10 = gap ~1.8 vidéos — la différence est visuellement perceptible. La playlist étendue remplace `currentLoopVideos` — tout le code downstream (next index, prefetch, analytics) fonctionne sans changement. L'algo est **déterministe** : même input → même output → sync dual-display fiable. Le dashboard loop-manager reproduit l'algo côté client pour une **prévisualisation en temps réel** de l'ordre de diffusion. Les vidéos avec `pinned: true` restent à leur position d'origine dans la boucle (ex: intro MadXP toujours en 1ère position) — elles ne participent pas au scheduling Bresenham, qui ne distribue que les vidéos "mobiles".
 
 **Sync par index** : le slave utilise `videoIndex` (pas `videoPath`) car les variants secondaires ont des chemins différents. Les deux boucles ont le même ordre, donc l'index est toujours fiable. Avec la rotation pondérée, les index réfèrent à la playlist étendue (pas au tableau original) — les deux côtés génèrent la même playlist car l'algo est déterministe.
 

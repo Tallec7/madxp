@@ -11,7 +11,7 @@
 
 ## En une phrase
 
-Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** — la TV affiche une page web cloud, la télécommande pilote tout via Socket.IO, et le portail club offre insights d'activité, diagnostic, gestion de la boucle et des sponsors.
+Le mode SaaS permet à un club d'utiliser MadXP **sans hardware Raspberry Pi** — la TV affiche une page web cloud, la télécommande pilote tout via Socket.IO, et le portail club offre insights d'activité, diagnostic, gestion de la boucle et des sponsors.
 
 ## Acteurs impliqués
 
@@ -56,7 +56,7 @@ Le mode SaaS permet à un club d'utiliser Neopro **sans hardware Raspberry Pi** 
 - **Insights dashboard** : 4 KPI + tendances vs hier/semaine précédente (±3% num, ±2pts completion), sparkline SVG 7j, top 3 vidéos semaine, profil actif, sponsors actifs.
 - **Empty state hint** : si aucune activité (`todayVideosPlayed === 0`), afficher CTA → `club/loop` pour onboarder le club.
 - **Diagnostic distance** : `club-diagnostic.component.ts` expose l'état de santé du site (Pi ou SaaS) depuis le cloud — connexion, version, alertes actives, dernière OTA.
-- **Gestion boucle** : le club peut réordonner, activer/désactiver ses vidéos via `club-loop.component.ts` sans passer par l'admin Neopro.
+- **Gestion boucle** : le club peut réordonner, activer/désactiver ses vidéos via `club-loop.component.ts` sans passer par l'admin MadXP.
 - **Sponsors actifs** : `club-sponsors.component.ts` affiche les sponsors `status='active'` avec logos, impressions semaine et lien vers le portail sponsor.
 
 ### Tiers d'abonnement (ADR-039)

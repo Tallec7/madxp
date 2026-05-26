@@ -10,7 +10,7 @@
 
 ## Contexte
 
-À 2 ans d'existence, Neopro a accumulé un outillage périphérique justifié à différentes époques mais dont le **coût de maintenance dépasse désormais la valeur produite** :
+À 2 ans d'existence, MadXP a accumulé un outillage périphérique justifié à différentes époques mais dont le **coût de maintenance dépasse désormais la valeur produite** :
 
 1. **Auto-génération Excel SAFe** (`docs/safe/scripts/export-to-excel.py` + hook pre-commit + 3 `.xlsx` versionnés) — 13 onglets régénérés à chaque commit qui touche `docs/safe/*.md`. Aucun consommateur identifié : le pilotage SAFe se fait via les `.md`, le dashboard Angular `/safe/*` et la DB hybrid layer (`safe.repository.ts`). L'Excel n'est lu par personne en pratique.
 

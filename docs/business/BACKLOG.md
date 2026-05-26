@@ -1,4 +1,4 @@
-# BACKLOG NEOPRO - Features à Développer
+# BACKLOG MADXP - Features à Développer
 
 > **Date de création** : 15 Décembre 2025
 > **Dernière MAJ** : 31 Décembre 2025
@@ -781,7 +781,7 @@ ADD COLUMN ab_variant VARCHAR(10);
 
 - **Sponsor** : READ ONLY ses vidéos
 - **Club Admin** : FULL ACCESS + gestion sponsors
-- **NEOPRO Admin** : FULL ACCESS global
+- **MADXP Admin** : FULL ACCESS global
 
 **Routes** :
 

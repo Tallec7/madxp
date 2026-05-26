@@ -7,7 +7,7 @@
 
 Phase 10 inverse le signal captif Fire OS : au lieu de répondre `200 Success` (qui dit à Fire OS "Internet OK, pas besoin de portail"), nginx répond désormais `302` vers `/kindle-wifi/wifiredirect.html`, qui redirige vers la racine Pi (`http://192.168.4.1/`).
 
-Cela déclenche le `CaptivePortalLauncher` natif Fire OS → Silk Browser s'ouvre automatiquement sur la page Neopro sans intervention du bénévole (CAPTIVE-05 / CAPTIVE-06).
+Cela déclenche le `CaptivePortalLauncher` natif Fire OS → Silk Browser s'ouvre automatiquement sur la page MadXP sans intervention du bénévole (CAPTIVE-05 / CAPTIVE-06).
 
 ## Option A — OTA via re-run install.sh (recommandé pour la flotte)
 
@@ -50,9 +50,9 @@ ssh pi@neopro.local 'curl -I -H "Host: spectrum.s3.amazonaws.com" http://192.168
 
 - [ ] Fire Stick éteint (débrancher alim 30s)
 - [ ] Brancher Fire Stick sur HDMI Pi
-- [ ] Au boot Fire OS, sélectionner le Wi-Fi `Neopro-<club>` et entrer le PSK
-- [ ] **Observer dans les 10s** : Silk Browser doit s'ouvrir AUTOMATIQUEMENT sur la page Neopro (CAPTIVE-05 / CAPTIVE-06) — OU une notification système "Connectez-vous au réseau" doit apparaître (acceptable, 1 tap télécommande)
-- [ ] Si rien ne se déclenche après 30s → fallback CAPTIVE-07 : ouvrir Silk manuellement, taper `firetvcaptiveportal.com` → la page d'attente Neopro doit s'afficher avec la MAC du Fire Stick
+- [ ] Au boot Fire OS, sélectionner le Wi-Fi `MadXP-<club>` et entrer le PSK
+- [ ] **Observer dans les 10s** : Silk Browser doit s'ouvrir AUTOMATIQUEMENT sur la page MadXP (CAPTIVE-05 / CAPTIVE-06) — OU une notification système "Connectez-vous au réseau" doit apparaître (acceptable, 1 tap télécommande)
+- [ ] Si rien ne se déclenche après 30s → fallback CAPTIVE-07 : ouvrir Silk manuellement, taper `firetvcaptiveportal.com` → la page d'attente MadXP doit s'afficher avec la MAC du Fire Stick
 
 ## Rollback
 
@@ -79,7 +79,7 @@ Fire OS boot → probe spectrum.s3.amazonaws.com/kindle-wifi/wifistub.html
     ↓ nginx : GET /kindle-wifi/wifiredirect.html → 302 http://192.168.4.1/
     ↓ nginx : GET / → Angular bootstrap
     ↓ Angular router → /api/captive/whoami (CAPTIVE-02)
-    ↓ Si MAC assignée : page Neopro plein écran
+    ↓ Si MAC assignée : page MadXP plein écran
     ↓ Si MAC inconnue : page d'attente firestick-wait.html (CAPTIVE-03/07)
 ```
 

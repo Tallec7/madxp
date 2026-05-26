@@ -638,7 +638,7 @@ export interface Site {
   // ... champs existants
   /**
    * Active l'affichage du score en live sur la télécommande et la TV
-   * Option premium activable par NEOPRO
+   * Option premium activable par MADXP
    */
   live_score_enabled?: boolean;
 }

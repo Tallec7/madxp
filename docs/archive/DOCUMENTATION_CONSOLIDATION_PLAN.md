@@ -1,8 +1,9 @@
-# Plan de Consolidation de la Documentation NEOPRO
+# Plan de Consolidation de la Documentation MADXP
 
 ## Problème Actuel
 
 **199 fichiers de documentation** répartis de manière peu structurée:
+
 - ❌ Difficile de trouver l'information
 - ❌ Duplication de contenu
 - ❌ Pas de point d'entrée clair
@@ -11,6 +12,7 @@
 ## Solution Proposée
 
 Réorganiser en **structure hiérarchique intuitive** avec:
+
 - ✅ Point d'entrée unique (`00-START-HERE.md`)
 - ✅ Organisation par thème et rôle
 - ✅ Navigation claire
@@ -96,33 +98,33 @@ docs/
 
 ### Fichiers à Consolider
 
-| Ancien Fichier | Nouveau Fichier | Action |
-|----------------|-----------------|--------|
-| `INSTALLATION_COMPLETE.md` | `quick-start/raspberry-pi-installation.md` | Fusionner + simplifier |
-| `TROUBLESHOOTING.md` | `reference/troubleshooting.md` | Réorganiser par catégorie |
-| `REFERENCE.md` | Diviser en `reference/*` | Séparer par thème |
-| `GUIDE_MISE_EN_PRODUCTION.md` | `deployment/cloud-deployment.md` | Renommer + compléter |
-| `TESTING_GUIDE.md` | `development/testing-guide.md` | Déplacer |
-| `CONFIGURATION.md` | `reference/configuration-reference.md` | Renommer |
-| `SYNC_ARCHITECTURE.md` | `architecture/sync-architecture.md` | Déplacer |
-| `GOLDEN_IMAGE.md` | `deployment/raspberry-deployment.md#golden-image` | Intégrer |
+| Ancien Fichier                | Nouveau Fichier                                   | Action                    |
+| ----------------------------- | ------------------------------------------------- | ------------------------- |
+| `INSTALLATION_COMPLETE.md`    | `quick-start/raspberry-pi-installation.md`        | Fusionner + simplifier    |
+| `TROUBLESHOOTING.md`          | `reference/troubleshooting.md`                    | Réorganiser par catégorie |
+| `REFERENCE.md`                | Diviser en `reference/*`                          | Séparer par thème         |
+| `GUIDE_MISE_EN_PRODUCTION.md` | `deployment/cloud-deployment.md`                  | Renommer + compléter      |
+| `TESTING_GUIDE.md`            | `development/testing-guide.md`                    | Déplacer                  |
+| `CONFIGURATION.md`            | `reference/configuration-reference.md`            | Renommer                  |
+| `SYNC_ARCHITECTURE.md`        | `architecture/sync-architecture.md`               | Déplacer                  |
+| `GOLDEN_IMAGE.md`             | `deployment/raspberry-deployment.md#golden-image` | Intégrer                  |
 
 ### Fichiers à Supprimer (Obsolètes)
 
-| Fichier | Raison | Alternative |
-|---------|--------|-------------|
-| Duplicatas de README | Redondant | README.md principal |
-| Fichiers `.draft.md` | Brouillons non finalisés | Archiver dans `legacy/` |
-| Screenshots anciens | Obsolètes | Mettre à jour ou supprimer |
+| Fichier              | Raison                   | Alternative                |
+| -------------------- | ------------------------ | -------------------------- |
+| Duplicatas de README | Redondant                | README.md principal        |
+| Fichiers `.draft.md` | Brouillons non finalisés | Archiver dans `legacy/`    |
+| Screenshots anciens  | Obsolètes                | Mettre à jour ou supprimer |
 
 ### Fichiers à Conserver Tel Quel
 
-| Fichier | Localisation |
-|---------|--------------|
-| `README.md` | Racine (point d'entrée GitHub) |
-| `LICENSE` | Racine |
-| `CHANGELOG.md` | Racine |
-| `.gitignore`, `.env.example` | Racine (config) |
+| Fichier                      | Localisation                   |
+| ---------------------------- | ------------------------------ |
+| `README.md`                  | Racine (point d'entrée GitHub) |
+| `LICENSE`                    | Racine                         |
+| `CHANGELOG.md`               | Racine                         |
+| `.gitignore`, `.env.example` | Racine (config)                |
 
 ---
 
@@ -146,19 +148,15 @@ touch docs/use-cases/README.md
 ### Phase 2: Migration des Contenus (4-6h)
 
 **Priorité 1 (Critique):**
+
 1. `00-START-HERE.md` ✅ (déjà créé)
 2. `quick-start/raspberry-pi-installation.md` (consolider INSTALLATION_COMPLETE.md)
 3. `reference/troubleshooting.md` (réorganiser TROUBLESHOOTING.md)
 4. `deployment/cloud-deployment.md` (renommer GUIDE_MISE_EN_PRODUCTION.md)
 
-**Priorité 2 (Important):**
-5. `architecture/*` (déplacer fichiers existants)
-6. `development/*` (déplacer + créer getting-started.md)
-7. `reference/*` (diviser REFERENCE.md)
+**Priorité 2 (Important):** 5. `architecture/*` (déplacer fichiers existants) 6. `development/*` (déplacer + créer getting-started.md) 7. `reference/*` (diviser REFERENCE.md)
 
-**Priorité 3 (Nice-to-have):**
-8. `use-cases/*` (créer nouveaux guides scénarios)
-9. `INDEX.md` (générer automatiquement)
+**Priorité 3 (Nice-to-have):** 8. `use-cases/*` (créer nouveaux guides scénarios) 9. `INDEX.md` (générer automatiquement)
 
 ### Phase 3: Mise à Jour des Liens (2-3h)
 
@@ -228,7 +226,7 @@ def generate_index(docs_dir='docs'):
 
     # Générer Markdown
     with open(os.path.join(docs_dir, 'INDEX.md'), 'w') as f:
-        f.write('# Index de la Documentation NEOPRO\n\n')
+        f.write('# Index de la Documentation MADXP\n\n')
         f.write('Index alphabétique complet de toute la documentation.\n\n')
 
         current_letter = ''
@@ -252,6 +250,7 @@ if __name__ == '__main__':
 ### Avec Docusaurus
 
 **Avantages:**
+
 - ✅ Site statique avec recherche
 - ✅ Versioning de la doc
 - ✅ Sidebar navigation automatique
@@ -328,11 +327,13 @@ export default {
 ## Checklist de Migration
 
 ### Avant de Commencer
+
 - [ ] Backup complet de `docs/` actuel
 - [ ] Créer branche Git: `git checkout -b docs-consolidation`
 - [ ] Lire ce plan entièrement
 
 ### Exécution
+
 - [x] ✅ Phase 1: Créer structure dossiers
 - [x] ✅ Phase 1: Créer `00-START-HERE.md`
 - [ ] Phase 2: Migrer fichiers priorité 1
@@ -345,6 +346,7 @@ export default {
 - [ ] Phase 5: Vérifier INDEX complet
 
 ### Validation
+
 - [ ] Tous les liens fonctionnent
 - [ ] Aucun fichier orphelin (sauf legacy)
 - [ ] README.md racine pointe vers `docs/00-START-HERE.md`
@@ -352,6 +354,7 @@ export default {
 - [ ] Feedback équipe positif
 
 ### Finalisation
+
 - [ ] Commit: `git commit -m "docs: consolidate documentation structure"`
 - [ ] Push: `git push origin docs-consolidation`
 - [ ] Créer PR avec description détaillée
@@ -415,15 +418,15 @@ done
 
 ## Estimation Temps Total
 
-| Phase | Durée | Priorité |
-|-------|-------|----------|
-| Phase 1: Structure | 1-2h | 🔴 Critique |
-| Phase 2: Migration | 4-6h | 🔴 Critique |
-| Phase 3: Liens | 2-3h | 🟠 Important |
-| Phase 4: Nettoyage | 1h | 🟡 Nice-to-have |
-| Phase 5: Index | 1h | 🟡 Nice-to-have |
-| **Total Minimum** | **7-11h** | **2 jours** |
-| Docusaurus (opt.) | +4-6h | 🟢 Optionnel |
+| Phase              | Durée     | Priorité        |
+| ------------------ | --------- | --------------- |
+| Phase 1: Structure | 1-2h      | 🔴 Critique     |
+| Phase 2: Migration | 4-6h      | 🔴 Critique     |
+| Phase 3: Liens     | 2-3h      | 🟠 Important    |
+| Phase 4: Nettoyage | 1h        | 🟡 Nice-to-have |
+| Phase 5: Index     | 1h        | 🟡 Nice-to-have |
+| **Total Minimum**  | **7-11h** | **2 jours**     |
+| Docusaurus (opt.)  | +4-6h     | 🟢 Optionnel    |
 
 ---
 
@@ -431,13 +434,13 @@ done
 
 ### Outils Utiles
 
-| Outil | Usage | Lien |
-|-------|-------|------|
-| **markdownlint** | Validation syntaxe | [GitHub](https://github.com/markdownlint/markdownlint) |
-| **markdown-link-check** | Vérifier liens | [GitHub](https://github.com/tcort/markdown-link-check) |
-| **doctoc** | Générer TOC automatique | [GitHub](https://github.com/thlorenz/doctoc) |
-| **Docusaurus** | Site statique | [Site](https://docusaurus.io/) |
-| **VuePress** | Alternative Docusaurus | [Site](https://vuepress.vuejs.org/) |
+| Outil                   | Usage                   | Lien                                                   |
+| ----------------------- | ----------------------- | ------------------------------------------------------ |
+| **markdownlint**        | Validation syntaxe      | [GitHub](https://github.com/markdownlint/markdownlint) |
+| **markdown-link-check** | Vérifier liens          | [GitHub](https://github.com/tcort/markdown-link-check) |
+| **doctoc**              | Générer TOC automatique | [GitHub](https://github.com/thlorenz/doctoc)           |
+| **Docusaurus**          | Site statique           | [Site](https://docusaurus.io/)                         |
+| **VuePress**            | Alternative Docusaurus  | [Site](https://vuepress.vuejs.org/)                    |
 
 ### Références
 
@@ -450,6 +453,7 @@ done
 ## Conclusion
 
 Cette consolidation apportera:
+
 - ✅ **Navigation 10x plus rapide**
 - ✅ **Maintenance 5x plus facile**
 - ✅ **Onboarding nouveaux dev 3x plus rapide**

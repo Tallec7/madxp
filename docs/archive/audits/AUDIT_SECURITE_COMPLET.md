@@ -1,4 +1,4 @@
-# AUDIT DE SÉCURITÉ ET QUALITÉ APPLICATIVE - NEOPRO
+# AUDIT DE SÉCURITÉ ET QUALITÉ APPLICATIVE - MADXP
 
 **Date de l'audit :** 25 décembre 2025
 **Version :** 1.0
@@ -22,7 +22,7 @@
 
 ## 1.1 Présentation du Projet
 
-**NEOPRO** est une plateforme de télévision interactive pour clubs sportifs, composée de :
+**MADXP** est une plateforme de télévision interactive pour clubs sportifs, composée de :
 
 - Un **serveur central** (API REST + WebSocket) déployé sur Render.com
 - Un **dashboard administrateur** (Angular 20) pour la gestion de flotte
@@ -144,7 +144,7 @@ Le projet est **viable en production** avec des améliorations de sécurité pri
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         ARCHITECTURE NEOPRO                               │
+│                         ARCHITECTURE MADXP                               │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                           │
 │   ┌─────────────┐     HTTPS/WSS      ┌──────────────────┐                │

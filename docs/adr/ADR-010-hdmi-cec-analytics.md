@@ -2,13 +2,13 @@
 
 **Date** : Février 2026
 **Statut** : Accepté
-**Décideurs** : Équipe technique Neopro
+**Décideurs** : Équipe technique MadXP
 
 ---
 
 ## Contexte
 
-Les analytics Neopro comptaient toutes les lectures vidéo, y compris quand la TV était éteinte ou débranchée. Le Pi continue de lire des vidéos en boucle même si personne ne regarde.
+Les analytics MadXP comptaient toutes les lectures vidéo, y compris quand la TV était éteinte ou débranchée. Le Pi continue de lire des vidéos en boucle même si personne ne regarde.
 
 **Exemple réel** : Un club affichait 1200h/jour de "temps de diffusion" et 3000 vidéos jouées alors que la TV était débranchée depuis des semaines.
 

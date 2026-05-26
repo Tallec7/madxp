@@ -1,6 +1,6 @@
 # Guide Onboarding Développeur - Module Analytics Sponsors
 
-**Bienvenue sur le module Analytics Sponsors NEOPRO !**
+**Bienvenue sur le module Analytics Sponsors MADXP !**
 
 Ce guide vous permettra de démarrer rapidement sur le projet, que vous soyez nouveau développeur ou que vous repreniez le développement après une pause.
 
@@ -517,7 +517,7 @@ Idées de premières tâches pour se familiariser (par difficulté) :
 ### Facile (1-2h)
 
 - [ ] Ajouter tooltip sur graphique Chart.js
-- [ ] Modifier couleurs charte NEOPRO dans PDF
+- [ ] Modifier couleurs charte MADXP dans PDF
 - [ ] Ajouter validation email sponsor
 - [ ] Améliorer texte certificat PDF (FR/EN)
 
@@ -569,5 +569,5 @@ Vous avez maintenant toutes les clés pour démarrer sur le module Analytics Spo
 ---
 
 **Dernière mise à jour** : 14 Décembre 2025
-**Mainteneur** : Équipe NEOPRO
+**Mainteneur** : Équipe MADXP
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md]

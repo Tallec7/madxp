@@ -1,6 +1,6 @@
 # Déploiement et Production
 
-Guides pour déployer Neopro en production.
+Guides pour déployer MadXP en production.
 
 ## ☁️ Déploiement Cloud
 
