@@ -69,7 +69,7 @@ Collecter toutes les informations nécessaires avant l'installation pour éviter
 
 ### 4.2 Questionnaire de collecte
 
-**📋 FORMULAIRE DE COLLECTE CLIENT NEOPRO**
+**📋 FORMULAIRE DE COLLECTE CLIENT MADXP**
 
 #### Informations Générales
 
@@ -135,7 +135,7 @@ Créer un document de synthèse :
 
 ```
 ┌────────────────────────────────────────────────────┐
-│         FICHE CLIENT NEOPRO - [NOM CLUB]           │
+│         FICHE CLIENT MADXP - [NOM CLUB]           │
 └────────────────────────────────────────────────────┘
 
 Club            : CESSON
@@ -296,7 +296,7 @@ chmod +x setup-remote-club.sh
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║     CONFIGURATION REMOTE NOUVEAU CLUB NEOPRO                   ║
+║     CONFIGURATION REMOTE NOUVEAU CLUB MADXP                   ║
 ╚════════════════════════════════════════════════════════════════╝
 
 >>> Collecte des informations du club
@@ -685,7 +685,7 @@ df -h
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│     RECETTE D'INSTALLATION NEOPRO - [NOM CLUB]          │
+│     RECETTE D'INSTALLATION MADXP - [NOM CLUB]          │
 └─────────────────────────────────────────────────────────┘
 
 Date installation : 23/12/2025
@@ -741,7 +741,7 @@ SIGNATURE CLIENT (optionnel) : _______________
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│       INFORMATIONS D'ACCÈS NEOPRO - [NOM CLUB]          │
+│       INFORMATIONS D'ACCÈS MADXP - [NOM CLUB]          │
 └─────────────────────────────────────────────────────────┘
 
 📡 CONNEXION WIFI

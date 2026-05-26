@@ -16,7 +16,7 @@ L'analyse des solutions d'intégration de scores externes (Bodet Sport, Stramate
 
 ### Solution retenue : Double Saisie Locale
 
-L'opérateur de table de marque (qui gère déjà la feuille de match officielle) saisit également le score dans la télécommande NEOPRO. Cette approche :
+L'opérateur de table de marque (qui gère déjà la feuille de match officielle) saisit également le score dans la télécommande MADXP. Cette approche :
 
 - ✅ Ne dépend d'aucun fournisseur externe
 - ✅ Fonctionne immédiatement sans configuration

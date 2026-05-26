@@ -54,7 +54,7 @@ POST /api/reports/generate { type: "club"|"advertiser"|"site_sponsor", entityId,
 
 #### Page 1 : Page de garde
 
-- Logo NEOPRO stylisé
+- Logo MADXP stylisé
 - Titre "RAPPORT SPONSOR"
 - Nom du sponsor
 - Période d'analyse (DD/MM/YYYY - DD/MM/YYYY)
@@ -305,7 +305,7 @@ function generateDigitalSignature(data: ReportData, options: PdfReportOptions): 
 
 ## Charte Graphique
 
-### Couleurs NEOPRO
+### Couleurs MADXP
 
 ```typescript
 const COLORS = {

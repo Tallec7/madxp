@@ -74,7 +74,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│            NEOPRO OVERVIEW - Last 24h                   │
+│            MADXP OVERVIEW - Last 24h                   │
 ├─────────────────────────────────────────────────────────┤
 │ Sites Connectés : 47 / 50 (94%)        [Graph 📊]       │
 │   ↓ 3 sites hors ligne depuis > 2h                     │

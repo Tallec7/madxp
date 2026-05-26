@@ -26,14 +26,14 @@ C'est le coeur du modèle économique. Comme JCDecaux, MadXP gère **deux niveau
 │                     ÉCRAN TV DU CLUB                         │
 │                                                              │
 │  ┌────────────────────────┐  ┌────────────────────────────┐ │
-│  │  ANNONCEURS NEOPRO     │  │  PARTENAIRES DU CLUB       │ │
+│  │  ANNONCEURS MADXP     │  │  PARTENAIRES DU CLUB       │ │
 │  │  (réseau national)     │  │  (sponsors locaux)         │ │
 │  │                        │  │                            │ │
 │  │  • Décathlon            │  │  • Boulangerie Martin      │ │
 │  │  • Intersport           │  │  • Garage Dupont           │ │
 │  │  • Nike                 │  │  • Pizzeria du coin        │ │
 │  │                        │  │                            │ │
-│  │  Vendus par NEOPRO     │  │  Vendus par LE CLUB        │ │
+│  │  Vendus par MADXP     │  │  Vendus par LE CLUB        │ │
 │  │  Diffusés sur 50+ clubs│  │  Diffusés sur 1 club       │ │
 │  │  MadXP facture        │  │  Le club facture           │ │
 │  └────────────────────────┘  └────────────────────────────┘ │

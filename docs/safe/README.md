@@ -259,7 +259,7 @@ Quand Claude effectue un commit `feat(scope)` ou `fix(scope)` qui implémente un
 
 ## Références
 
-- [🏆 OKR NEOPRO 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
+- [🏆 OKR MADXP 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d)
 - [📝 Documentation principale](../00-INDEX.md)
 - [💼 Business Plan](../business/BUSINESS_PLAN_COMPLET.md)
 

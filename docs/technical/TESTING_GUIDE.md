@@ -1,6 +1,6 @@
-# Guide de Tests NEOPRO
+# Guide de Tests MADXP
 
-Ce document décrit la stratégie de tests pour le projet NEOPRO, couvrant le central-server, le central-dashboard et le sync-agent.
+Ce document décrit la stratégie de tests pour le projet MADXP, couvrant le central-server, le central-dashboard et le sync-agent.
 
 ## Vue d'ensemble
 
@@ -116,7 +116,7 @@ Certains fichiers sont exclus de la couverture car ils sont difficiles à tester
 
 ### 1. Config Merge (sync-agent)
 
-Le module de fusion de configuration est **CRITIQUE** car il gère la synchronisation entre le contenu NEOPRO (verrouillé) et le contenu Club (libre).
+Le module de fusion de configuration est **CRITIQUE** car il gère la synchronisation entre le contenu MADXP (verrouillé) et le contenu Club (libre).
 
 **Fichier**: `raspberry/sync-agent/src/__tests__/config-merge.test.js`
 
@@ -126,13 +126,13 @@ Le module de fusion de configuration est **CRITIQUE** car il gère la synchronis
 - Création de backup avant modification
 - Détection du contenu verrouillé (locked/owner)
 - Nettoyage des vidéos expirées
-- Fusion des catégories NEOPRO
+- Fusion des catégories MADXP
 - Préservation du contenu Club
-- Suppression des catégories NEOPRO retirées
+- Suppression des catégories MADXP retirées
 
 ```javascript
 // Exemple de test
-it('should preserve club content during NEOPRO update', () => {
+it('should preserve club content during MADXP update', () => {
   const localConfig = {
     categories: [
       { id: 'club', name: 'Club', locked: false, owner: 'club', videos: [...] }
@@ -274,7 +274,7 @@ beforeEach(() => {
 
 ```javascript
 describe('Real-World Scenarios', () => {
-  it('Scenario: Club adds content after NEOPRO setup', () => {
+  it('Scenario: Club adds content after MADXP setup', () => {
     // Test complet du flux utilisateur
   });
 });

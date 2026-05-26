@@ -6,7 +6,7 @@
 
 ---
 
-## Architecture SAFe NEOPRO
+## Architecture SAFe MADXP
 
 ```mermaid
 flowchart TB
@@ -54,7 +54,7 @@ flowchart TB
 
 ```mermaid
 gantt
-    title Roadmap NEOPRO 2026
+    title Roadmap MADXP 2026
     dateFormat YYYY-MM-DD
     axisFormat %b %Y
 
@@ -155,13 +155,13 @@ xychart-beta
 
 ## Navigation
 
-| Page                                                                         | Description                          |
-| ---------------------------------------------------------------------------- | ------------------------------------ |
-| [🟢 OVS1 — Club to Screen](OVS1-CLUB-TO-SCREEN.md)                           | Canvas du flux club → écran          |
-| [🟠 OVS2 — Sponsor to Impression](OVS2-SPONSOR-TO-IMPRESSION.md)             | Canvas du flux sponsor → rapport ROI |
-| [🟣 DVS-1 — MadXP Platform](DVS1-NEOPRO-PLATFORM.md)                         | Canvas de développement complet      |
-| [🏆 OKR NEOPRO 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d) | 5 Objectifs, 17 Key Results          |
-| [SAFe MadXP — Hub](README.md)                                                | Hub principal avec databases         |
+| Page                                                                        | Description                          |
+| --------------------------------------------------------------------------- | ------------------------------------ |
+| [🟢 OVS1 — Club to Screen](OVS1-CLUB-TO-SCREEN.md)                          | Canvas du flux club → écran          |
+| [🟠 OVS2 — Sponsor to Impression](OVS2-SPONSOR-TO-IMPRESSION.md)            | Canvas du flux sponsor → rapport ROI |
+| [🟣 DVS-1 — MadXP Platform](DVS1-NEOPRO-PLATFORM.md)                        | Canvas de développement complet      |
+| [🏆 OKR MADXP 2026](https://www.notion.so/2ddc27de363880c9931af8f16684916d) | 5 Objectifs, 17 Key Results          |
+| [SAFe MadXP — Hub](README.md)                                               | Hub principal avec databases         |
 
 ---
 

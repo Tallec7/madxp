@@ -1,4 +1,4 @@
-# NEOPRO - Architecture de Synchronisation
+# MADXP - Architecture de Synchronisation
 
 > **Document de référence technique et fonctionnel**
 > Version 1.0 - 9 Décembre 2025
@@ -23,11 +23,11 @@
 
 ### 1.1 Le Problème Initial
 
-Les boîtiers NEOPRO dans les clubs peuvent être :
+Les boîtiers MADXP dans les clubs peuvent être :
 
 - **Offline pendant des semaines** (pas de connexion internet permanente)
 - **Modifiés localement** par l'opérateur du club
-- **Mis à jour depuis le central** par l'équipe NEOPRO
+- **Mis à jour depuis le central** par l'équipe MADXP
 
 Sans architecture de synchronisation intelligente, les modifications locales sont écrasées lors de la prochaine synchronisation centrale.
 
@@ -35,10 +35,10 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SERVEUR CENTRAL NEOPRO                       │
+│                    SERVEUR CENTRAL MADXP                       │
 │                                                                 │
 │  ┌─────────────────────┐      ┌─────────────────────┐          │
-│  │ Contenu NEOPRO      │      │ Miroir Config Clubs │          │
+│  │ Contenu MADXP      │      │ Miroir Config Clubs │          │
 │  │ (Annonceurs, MAJ)   │      │ (lecture du Pi)     │          │
 │  │ VERROUILLÉ          │      │                     │          │
 │  └──────────┬──────────┘      └──────────▲──────────┘          │
@@ -50,7 +50,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 │                      BOÎTIER CLUB (Raspberry Pi)                │
 │                                                                 │
 │  ┌─────────────────────┐      ┌─────────────────────┐          │
-│  │ ANNONCES NEOPRO     │      │ CONTENU CLUB        │          │
+│  │ ANNONCES MADXP     │      │ CONTENU CLUB        │          │
 │  │ Lecture seule       │      │ Modifiable          │          │
 │  │ Catégorie verrouillée│      │ par l'opérateur     │          │
 │  └─────────────────────┘      └─────────────────────┘          │
@@ -64,7 +64,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 │  │ ADMIN UI LOCALE (port 8080)                               │ │
 │  │ • Voit tout le contenu                                    │ │
 │  │ • Modifie uniquement les catégories "Club"                │ │
-│  │ • ANNONCES NEOPRO = lecture seule côté Pi (non supprimable par le club) │ │
+│  │ • ANNONCES MADXP = lecture seule côté Pi (non supprimable par le club) │ │
 │  └───────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -73,9 +73,9 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ## 2. Les Acteurs (Personas)
 
-### 2.1 Équipe NEOPRO (Administrateur Central)
+### 2.1 Équipe MADXP (Administrateur Central)
 
-**Qui** : L'entreprise NEOPRO qui gère le système pour tous les clubs clients
+**Qui** : L'entreprise MADXP qui gère le système pour tous les clubs clients
 
 **Accès** : Dashboard Central (https://dashboard.neopro.fr)
 
@@ -86,7 +86,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 - Pousser les mises à jour logicielles
 - Surveiller l'état de santé des boîtiers (CPU, température, disque)
 - Gérer les alertes et incidents
-- Diffuser les annonces nationales des partenaires NEOPRO
+- Diffuser les annonces nationales des partenaires MADXP
 
 **Cas d'usage typiques** :
 
@@ -120,7 +120,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 **Ce qu'il NE PEUT PAS faire** :
 
 - Modifier ou supprimer le contenu "ANNONCES NEOPRO"
-- Modifier les paramètres système poussés par NEOPRO
+- Modifier les paramètres système poussés par MADXP
 - Accéder aux autres clubs
 
 **Cas d'usage typiques** :
@@ -134,15 +134,15 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ### 2.3 Partenaire National (Décathlon, Orange, etc.)
 
-**Qui** : Annonceur qui paye NEOPRO pour diffuser du contenu sur tous les clubs
+**Qui** : Annonceur qui paye MADXP pour diffuser du contenu sur tous les clubs
 
-**Accès** : Aucun accès direct (passe par l'équipe NEOPRO)
+**Accès** : Aucun accès direct (passe par l'équipe MADXP)
 
 **Workflow** :
 
-1. Partenaire envoie sa vidéo à NEOPRO
-2. NEOPRO upload sur le dashboard central
-3. NEOPRO déploie vers tous les clubs (ou un groupe ciblé)
+1. Partenaire envoie sa vidéo à MADXP
+2. MADXP upload sur le dashboard central
+3. MADXP déploie vers tous les clubs (ou un groupe ciblé)
 4. La vidéo apparaît dans "ANNONCES NEOPRO" sur chaque boîtier
 5. L'opérateur club voit la vidéo mais ne peut pas la supprimer
 
@@ -152,20 +152,20 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 ### 3.1 Tableau Récapitulatif
 
-| Type                | Propriétaire | Stockage Central   | Stockage Local               | Modifiable par Club | Supprimable par Club |
-| ------------------- | ------------ | ------------------ | ---------------------------- | ------------------- | -------------------- |
-| **Annonces NEOPRO** | NEOPRO       | DB + FTP Hostinger | configuration.json + /videos | Non                 | Non                  |
-| **Contenu Club**    | Club         | Miroir (lecture)   | configuration.json + /videos | Oui                 | Oui                  |
-| **Config Système**  | NEOPRO       | DB                 | configuration.json           | Non                 | Non                  |
+| Type               | Propriétaire | Stockage Central   | Stockage Local               | Modifiable par Club | Supprimable par Club |
+| ------------------ | ------------ | ------------------ | ---------------------------- | ------------------- | -------------------- |
+| **Annonces MADXP** | MADXP        | DB + FTP Hostinger | configuration.json + /videos | Non                 | Non                  |
+| **Contenu Club**   | Club         | Miroir (lecture)   | configuration.json + /videos | Oui                 | Oui                  |
+| **Config Système** | MADXP        | DB                 | configuration.json           | Non                 | Non                  |
 
-### 3.2 Contenu NEOPRO (Verrouillé)
+### 3.2 Contenu MADXP (Verrouillé)
 
-**Définition** : Contenu poussé par l'équipe NEOPRO centrale, non modifiable par les clubs.
+**Définition** : Contenu poussé par l'équipe MADXP centrale, non modifiable par les clubs.
 
 **Exemples** :
 
 - Vidéos partenaires nationaux (Décathlon, Orange...)
-- Animations NEOPRO (logo, transitions)
+- Animations MADXP (logo, transitions)
 - Annonces réglementaires
 
 **Caractéristiques** :
@@ -173,7 +173,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 - Catégorie dédiée : `ANNONCES_NEOPRO` (ou nom configurable)
 - Flag `locked: true` dans la configuration
 - L'admin UI **côté Pi** affiche ces éléments en lecture seule (cadenas visible pour l'opérateur club)
-- Le **Dashboard Central** a un accès complet (suppression, modification) — c'est l'outil de gestion NEOPRO
+- Le **Dashboard Central** a un accès complet (suppression, modification) — c'est l'outil de gestion MADXP
 
 **Structure dans configuration.json** :
 
@@ -218,10 +218,10 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 
 **Caractéristiques** :
 
-- Catégories créées par l'opérateur ou par NEOPRO (mais éditables)
+- Catégories créées par l'opérateur ou par MADXP (mais éditables)
 - Pas de flag `locked` ou `locked: false`
 - Pleinement modifiable via l'admin UI
-- Synchronisé vers le central quand connecté (pour visibilité NEOPRO)
+- Synchronisé vers le central quand connecté (pour visibilité MADXP)
 
 **Structure dans configuration.json** :
 
@@ -260,7 +260,7 @@ Sans architecture de synchronisation intelligente, les modifications locales son
 ```
                     CENTRAL                         LOCAL (Pi)
 
-Contenu NEOPRO:     ────────────────────────────►   Lecture seule
+Contenu MADXP:     ────────────────────────────►   Lecture seule
                     PUSH (déploiement)
 
 Contenu Club:       ◄────────────────────────────   Modifiable
@@ -278,7 +278,7 @@ Commandes:          ────────────────────
 | Événement                      | Direction          | Déclencheur                    | Action                                                                                |
 | ------------------------------ | ------------------ | ------------------------------ | ------------------------------------------------------------------------------------- |
 | **Connexion du Pi**            | Bidirectionnel     | Pi se connecte au central      | Échange état complet + traitement pending (queue + config)                            |
-| **Déploiement vidéo NEOPRO**   | Central → Local    | Admin NEOPRO clique "Déployer" | Download + merge config                                                               |
+| **Déploiement vidéo MADXP**    | Central → Local    | Admin MADXP clique "Déployer"  | Download + merge config                                                               |
 | **Modification locale**        | Local → Central    | Opérateur modifie via Admin UI | Upload état vers central                                                              |
 | **sync_local_state**           | Local → Central    | Connexion + changement vidéos  | Config + liste vidéos + stockage                                                      |
 | **Heartbeat**                  | Local → Central    | Timer 30s                      | Métriques système + statut kiosk + recording state + player state                     |
@@ -292,7 +292,7 @@ Commandes:          ────────────────────
 | **recording-toggle** (cloud)   | Central → Local    | Dashboard cloud remote         | Toggle recording on/off                                                               |
 | **screenshot-request**         | Central → Local    | Dashboard cloud remote         | Capture JPEG du player TV via canvas.drawImage()                                      |
 | **screenshot-data**            | Local → Central    | Réponse screenshot             | JPEG 480p ou `{ error }` si échec (v3.49+)                                            |
-| **Commande admin**             | Central → Local    | Admin NEOPRO envoie commande   | Exécution sur Pi                                                                      |
+| **Commande admin**             | Central → Local    | Admin MADXP envoie commande    | Exécution sur Pi                                                                      |
 | **sync_profiles**              | Central → Local    | Admin déploie profils          | Écriture profiles/ + clubs.json                                                       |
 | **switch_profile**             | Central → Local    | Admin change profil actif      | Activation profil + merge config                                                      |
 | **profile-switch**             | Local (front→back) | Remote sélectionne un profil   | Activation profil + reload TV                                                         |
@@ -325,7 +325,7 @@ Pi                                              Central
 │  ──── État local complet ──────────────────────►  │
 │       (configuration.json, liste vidéos)          │
 │                                                    │
-│  ◄──── Contenu NEOPRO à synchroniser ──────────   │
+│  ◄──── Contenu MADXP à synchroniser ──────────   │
 │       (vidéos à ajouter/supprimer)                │
 │                                                    │
 │  ──── Confirmation sync terminée ──────────────►  │
@@ -518,7 +518,7 @@ Depuis P9, la synchronisation des sponsors est **bidirectionnelle** et chaque di
 3. `syncSponsorVideoAssociations()` extrait les couples sponsor-vidéo du config et upsert dans `site_sponsor_videos`
 4. Le payload `neoProContent.siteSponsors[]` est envoyé au Pi
 5. `mergeSiteSponsors()` fusionne dans `localSponsors[]` avec `source: 'neopro'`
-6. Le Pi admin affiche ces sponsors en section NEOPRO (lecture seule, `LockedError` sur edit/delete)
+6. Le Pi admin affiche ces sponsors en section MADXP (lecture seule, `LockedError` sur edit/delete)
 
 **Direction Pi → Dashboard** (sync-agent) :
 
@@ -548,7 +548,7 @@ Depuis P9, la synchronisation des sponsors est **bidirectionnelle** et chaque di
 
 ### 5.1 Principe Fondamental
 
-> **Le contenu NEOPRO (verrouillé) est toujours contrôlé par le central.**
+> **Le contenu MADXP (verrouillé) est toujours contrôlé par le central.**
 > **Le contenu Club (non verrouillé) est préservé sauf s'il est modifié depuis le central.**
 
 ### 5.2 Modes de Déploiement
@@ -557,7 +557,7 @@ Le dashboard central propose deux modes de déploiement :
 
 | Mode      | Comportement                                                                                 | Usage                          |
 | --------- | -------------------------------------------------------------------------------------------- | ------------------------------ |
-| `merge`   | Fusionne le contenu NEOPRO avec la config locale, préserve les paramètres Pi                 | **Recommandé** - Usage courant |
+| `merge`   | Fusionne le contenu MADXP avec la config locale, préserve les paramètres Pi                  | **Recommandé** - Usage courant |
 | `replace` | Remplace les champs de contenu envoyés + `restoreSecondaryVariants()` post-replace (ADR-032) | Réinitialisation de contenu    |
 
 > **Note** : Le mode `merge` est le mode par défaut depuis janvier 2026. Le mode `replace` remplace les champs de contenu (sponsors, categories, timeCategories, etc.) mais **préserve les variantes secondaires** locales grâce à `restoreSecondaryVariants()` (ajouté dans ADR-032). Les paramètres locaux (settings, siteId, etc.) ne sont pas remplacés.
@@ -568,7 +568,7 @@ Le dashboard central propose deux modes de déploiement :
 | ------------------ | ----------------------------------------------------------------------------- |
 | `sponsors`         | Central = source de vérité + sponsors locaux préservés                        |
 | `siteSponsors`     | Fusionné dans `localSponsors[]` via `mergeSiteSponsors()` (P8)                |
-| `categories`       | Fusion NEOPRO/Club (locked prend le dessus)                                   |
+| `categories`       | Fusion MADXP/Club (locked prend le dessus)                                    |
 | `timeCategories`   | Remplacement complet par le central + `restoreSecondaryVariants()` post-merge |
 | `categoryMappings` | Remplacement complet par le central                                           |
 | `settings`         | **JAMAIS écrasé** - Protégé localement                                        |
@@ -576,30 +576,30 @@ Le dashboard central propose deux modes de déploiement :
 
 ### 5.4 Tableau des Règles pour les Catégories
 
-| Situation                                 | Contenu NEOPRO        | Contenu Club   | Résultat                               |
-| ----------------------------------------- | --------------------- | -------------- | -------------------------------------- |
-| Central ajoute une vidéo NEOPRO           | Nouvelle vidéo        | -              | Ajoutée dans catégorie verrouillée     |
-| Central supprime une vidéo NEOPRO expirée | Vidéo à supprimer     | -              | Supprimée du Pi                        |
-| Central modifie une catégorie NEOPRO      | Modification          | -              | Appliquée (écrase)                     |
-| Opérateur ajoute une vidéo club           | -                     | Nouvelle vidéo | Préservée, remontée au central         |
-| Opérateur supprime une vidéo club         | -                     | Suppression    | Supprimée, central notifié             |
-| Opérateur modifie catégorie club          | -                     | Modification   | Préservée, remontée au central         |
-| Conflit : même ID catégorie               | Catégorie verrouillée | Catégorie club | Central gagne (verrouillé prioritaire) |
+| Situation                                | Contenu MADXP         | Contenu Club   | Résultat                               |
+| ---------------------------------------- | --------------------- | -------------- | -------------------------------------- |
+| Central ajoute une vidéo MADXP           | Nouvelle vidéo        | -              | Ajoutée dans catégorie verrouillée     |
+| Central supprime une vidéo MADXP expirée | Vidéo à supprimer     | -              | Supprimée du Pi                        |
+| Central modifie une catégorie MADXP      | Modification          | -              | Appliquée (écrase)                     |
+| Opérateur ajoute une vidéo club          | -                     | Nouvelle vidéo | Préservée, remontée au central         |
+| Opérateur supprime une vidéo club        | -                     | Suppression    | Supprimée, central notifié             |
+| Opérateur modifie catégorie club         | -                     | Modification   | Préservée, remontée au central         |
+| Conflit : même ID catégorie              | Catégorie verrouillée | Catégorie club | Central gagne (verrouillé prioritaire) |
 
 ### 5.5 Gestion des Conflits
 
-**Conflit de nommage** : Si NEOPRO crée une catégorie avec le même ID qu'une catégorie club existante :
+**Conflit de nommage** : Si MADXP crée une catégorie avec le même ID qu'une catégorie club existante :
 
-1. La catégorie NEOPRO (verrouillée) prend le dessus
+1. La catégorie MADXP (verrouillée) prend le dessus
 2. La catégorie club est renommée automatiquement (ajout suffixe `_club`)
 3. L'opérateur est notifié du changement
 
-**Conflit de suppression** : Si l'opérateur club tente de supprimer du contenu NEOPRO depuis l'admin Pi :
+**Conflit de suppression** : Si l'opérateur club tente de supprimer du contenu MADXP depuis l'admin Pi :
 
 1. L'action est bloquée côté Admin UI du Pi
-2. Message d'erreur : "Ce contenu est géré par NEOPRO et ne peut pas être supprimé"
+2. Message d'erreur : "Ce contenu est géré par MADXP et ne peut pas être supprimé"
 
-> **Note** : Cette protection s'applique uniquement côté Pi (clubs). Le Dashboard Central permet la suppression de tout contenu, y compris NEOPRO.
+> **Note** : Cette protection s'applique uniquement côté Pi (clubs). Le Dashboard Central permet la suppression de tout contenu, y compris MADXP.
 
 ### 5.6 Nommage des vidéos déployées
 
@@ -682,17 +682,17 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
 
 ### 6.1 Scénario : Campagne Nationale Décathlon
 
-**Contexte** : Décathlon veut diffuser une vidéo promo sur tous les clubs NEOPRO pendant 2 mois.
+**Contexte** : Décathlon veut diffuser une vidéo promo sur tous les clubs MADXP pendant 2 mois.
 
 **Étapes** :
 
-1. **NEOPRO reçoit la vidéo** de Décathlon
-2. **NEOPRO upload** sur le dashboard central
-3. **NEOPRO configure** :
+1. **MADXP reçoit la vidéo** de Décathlon
+2. **MADXP upload** sur le dashboard central
+3. **MADXP configure** :
    - Catégorie cible : `ANNONCES_NEOPRO`
    - Date d'expiration : +2 mois
    - Cibles : Tous les clubs (ou groupe "Premium")
-4. **NEOPRO déploie**
+4. **MADXP déploie**
 5. **Sync-agents** des Pi connectés reçoivent la commande `deploy_video`
    - Si le site est **online** : commande envoyée immédiatement
    - Si le site est **offline** : commande mise en queue via `sendOrQueue()`, envoyée automatiquement à la reconnexion
@@ -700,7 +700,7 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
 6. **Pi télécharge** la vidéo depuis Supabase
 7. **Pi merge** la config : vidéo ajoutée dans catégorie verrouillée
 8. **Opérateur Jean** voit la nouvelle vidéo avec un cadenas dans l'Admin UI
-9. **Après 2 mois** : NEOPRO envoie commande de suppression automatique
+9. **Après 2 mois** : MADXP envoie commande de suppression automatique
 
 ### 6.2 Scénario : Hommage Local le Jour du Match
 
@@ -717,8 +717,8 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
 5. **Pendant le match** : Jean déclenche la vidéo via la télécommande
 6. **Quand le Pi se reconnecte** au central (si internet disponible) :
    - Sync-agent envoie l'état local au central
-   - Central stocke en miroir (pour visibilité NEOPRO)
-7. **Si NEOPRO pousse une mise à jour** : la vidéo de Jean est préservée
+   - Central stocke en miroir (pour visibilité MADXP)
+7. **Si MADXP pousse une mise à jour** : la vidéo de Jean est préservée
 
 ### 6.3 Scénario : Boîtier Offline Pendant 1 Mois
 
@@ -731,9 +731,9 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
 3. Tout fonctionne en local
 4. Le central ne voit pas ces modifications
 
-**Pendant ce temps (côté NEOPRO)** :
+**Pendant ce temps (côté MADXP)** :
 
-1. NEOPRO veut pousser une nouvelle vidéo sponsor
+1. MADXP veut pousser une nouvelle vidéo sponsor
 2. Le site étant offline, la commande est mise en **file d'attente** (Command Queue)
 3. La commande reste stockée en base PostgreSQL avec priorité et expiration optionnelle
 
@@ -753,7 +753,7 @@ Les trois enrichissements sont non-fatals (try/catch + warn log) : un échec n'e
    - 1 vidéo sponsor ajoutée par la queue
    - Réorganisation catégories
 6. Central met à jour le miroir
-7. L'équipe NEOPRO peut voir sur le dashboard ce qu'il y a sur le Pi
+7. L'équipe MADXP peut voir sur le dashboard ce qu'il y a sur le Pi
 
 > **Note** : Les commandes "temps réel" (logs, diagnostic réseau) ne peuvent pas être mises en queue et nécessitent une connexion active. Voir [COMMAND_QUEUE.md](COMMAND_QUEUE.md) pour la liste complète.
 
@@ -861,12 +861,12 @@ CREATE TABLE site_configurations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id UUID REFERENCES sites(id),
 
-  -- Miroir de la config locale (lecture seule pour NEOPRO)
+  -- Miroir de la config locale (lecture seule pour MADXP)
   local_config JSONB NOT NULL,
   local_config_hash VARCHAR(64),
   last_local_sync TIMESTAMPTZ,
 
-  -- Contenu NEOPRO à pousser vers ce site
+  -- Contenu MADXP à pousser vers ce site
   neopro_content JSONB NOT NULL DEFAULT '{"categories": []}',
   neopro_content_version INTEGER DEFAULT 1,
 
@@ -969,7 +969,7 @@ GET /api/sites/:id/local-content
 #### Événement : `neopro_sync` (Central → Pi)
 
 ```javascript
-// Envoyé par le Central quand il y a du contenu NEOPRO à synchroniser
+// Envoyé par le Central quand il y a du contenu MADXP à synchroniser
 socket.emit('neopro_sync', {
   version: 5,
   actions: [
@@ -1001,7 +1001,7 @@ function canModifyCategory(category, user) {
   if (category.locked && category.owner === 'neopro') {
     return {
       allowed: false,
-      reason: 'Cette catégorie est gérée par NEOPRO et ne peut pas être modifiée.',
+      reason: 'Cette catégorie est gérée par MADXP et ne peut pas être modifiée.',
     };
   }
   return { allowed: true };
@@ -1011,7 +1011,7 @@ function canDeleteVideo(video, category) {
   if (video.locked || category.locked) {
     return {
       allowed: false,
-      reason: 'Ce contenu est géré par NEOPRO et ne peut pas être supprimé.',
+      reason: 'Ce contenu est géré par MADXP et ne peut pas être supprimé.',
     };
   }
   return { allowed: true };
@@ -1032,20 +1032,20 @@ function canDeleteVideo(video, category) {
 
 ### Q: Que se passe-t-il si le Pi est toujours offline ?
 
-**R**: Le Pi fonctionne en totale autonomie. L'opérateur peut modifier la config locale sans problème. Quand il se reconnectera, le merge préservera ses modifications et ajoutera le contenu NEOPRO en attente.
+**R**: Le Pi fonctionne en totale autonomie. L'opérateur peut modifier la config locale sans problème. Quand il se reconnectera, le merge préservera ses modifications et ajoutera le contenu MADXP en attente.
 
-### Q: NEOPRO peut-il voir ce qu'il y a sur un Pi offline ?
+### Q: MADXP peut-il voir ce qu'il y a sur un Pi offline ?
 
-**R**: Non, pas en temps réel. NEOPRO voit le dernier état synchronisé (miroir). Dès que le Pi se reconnecte, le miroir est mis à jour.
+**R**: Non, pas en temps réel. MADXP voit le dernier état synchronisé (miroir). Dès que le Pi se reconnecte, le miroir est mis à jour.
 
-### Q: Que se passe-t-il si une vidéo NEOPRO expire ?
+### Q: Que se passe-t-il si une vidéo MADXP expire ?
 
 **R**: Deux options :
 
 1. **Suppression automatique** : Le sync-agent vérifie les dates d'expiration et supprime localement
-2. **Commande centrale** : NEOPRO envoie une commande de suppression explicite
+2. **Commande centrale** : MADXP envoie une commande de suppression explicite
 
-### Q: L'opérateur peut-il cacher une catégorie NEOPRO ?
+### Q: L'opérateur peut-il cacher une catégorie MADXP ?
 
 **R**: Non, les catégories verrouillées ne peuvent pas être cachées. Cela garantit la visibilité des annonceurs nationaux.
 
@@ -1055,7 +1055,7 @@ function canDeleteVideo(video, category) {
 
 1. Alerte envoyée au central
 2. Téléchargement reporté
-3. NEOPRO notifié pour action (nettoyage distant ou contact club)
+3. MADXP notifié pour action (nettoyage distant ou contact club)
 
 ### Q: Comment fonctionnent les profils multi-config ?
 
@@ -1069,11 +1069,11 @@ function canDeleteVideo(video, category) {
 
 **Sites mono-config** : Aucun changement visible. Un seul profil "Par défaut" est auto-créé, le sélecteur n'apparaît pas.
 
-### Q: L'opérateur peut-il réorganiser l'ordre des catégories NEOPRO ?
+### Q: L'opérateur peut-il réorganiser l'ordre des catégories MADXP ?
 
 **R**: À définir. Options :
 
-- **Strict** : Non, l'ordre est imposé par NEOPRO
+- **Strict** : Non, l'ordre est imposé par MADXP
 - **Souple** : Oui, l'opérateur peut réorganiser mais pas modifier le contenu
 
 ### Q: Pourquoi mes modifications de config réapparaissent après un refresh ?
@@ -1491,32 +1491,32 @@ Un ratio `preloadCleanupCount/preloadRevealCount` élevé indique des vidéos ma
 
 ## Historique des Versions
 
-| Version | Date       | Auteur        | Modifications                                                                                                                  |
-| ------- | ---------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| 1.0     | 2024-12-09 | Claude/NEOPRO | Création initiale                                                                                                              |
-| 1.1     | 2025-12-16 | Claude/NEOPRO | Ajout Command Queue pour sites offline                                                                                         |
-| 1.2     | 2026-01-06 | Claude/NEOPRO | Ajout VideoWatcher et sync_local_state avec vidéos                                                                             |
-| 1.3     | 2026-01-07 | Claude/NEOPRO | Documentation merge sponsors, modes merge/replace, fix                                                                         |
-| 1.4     | 2026-01-08 | Claude/NEOPRO | `deploy_video` utilise `sendOrQueue()` (offline support)                                                                       |
-| 1.5     | 2026-01-24 | Claude/NEOPRO | Fix race condition sync_local_state après update_config                                                                        |
-| 1.6     | 2026-02-12 | Claude/NEOPRO | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                                    |
-| 1.7     | 2026-02-15 | Claude/NEOPRO | Ajout section OTA : pré-migration, race condition, monitoring                                                                  |
-| 1.8     | 2026-02-15 | Claude/NEOPRO | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                                        |
-| 1.9     | 2026-02-15 | Claude/NEOPRO | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                               |
-| 2.0     | 2026-02-16 | Claude/NEOPRO | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                            |
-| 2.1     | 2026-02-17 | Claude/NEOPRO | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                                   |
-| 2.2     | 2026-02-17 | Claude/NEOPRO | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                                      |
-| 2.3     | 2026-02-18 | Claude/NEOPRO | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus           |
-| 2.4     | 2026-02-19 | Claude/NEOPRO | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`                  |
-| 2.5     | 2026-02-21 | Claude/NEOPRO | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus            |
-| 2.6     | 2026-02-21 | Claude/NEOPRO | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports              |
-| 2.7     | 2026-02-22 | Claude/NEOPRO | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus                |
-| 2.8     | 2026-02-24 | Claude/NEOPRO | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu                    |
-| 2.9     | 2026-02-27 | Claude/NEOPRO | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection                        |
-| 3.0     | 2026-03-01 | Claude/NEOPRO | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path           |
-| 3.1     | 2026-03-01 | Claude/NEOPRO | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                            |
-| 3.2     | 2026-03-02 | Claude/NEOPRO | Multi-profile : sync_profiles, profile-switch handler avec merge + persistance, monitoring profileSwitchCount                  |
-| 3.3     | 2026-04-09 | Claude/NEOPRO | ADR-044 : extraction 4 modules monolithiques sync-agent (agent, metrics, network-watchdog, update-software) en 12 sous-modules |
+| Version | Date       | Auteur       | Modifications                                                                                                                  |
+| ------- | ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1.0     | 2024-12-09 | Claude/MADXP | Création initiale                                                                                                              |
+| 1.1     | 2025-12-16 | Claude/MADXP | Ajout Command Queue pour sites offline                                                                                         |
+| 1.2     | 2026-01-06 | Claude/MADXP | Ajout VideoWatcher et sync_local_state avec vidéos                                                                             |
+| 1.3     | 2026-01-07 | Claude/MADXP | Documentation merge sponsors, modes merge/replace, fix                                                                         |
+| 1.4     | 2026-01-08 | Claude/MADXP | `deploy_video` utilise `sendOrQueue()` (offline support)                                                                       |
+| 1.5     | 2026-01-24 | Claude/MADXP | Fix race condition sync_local_state après update_config                                                                        |
+| 1.6     | 2026-02-12 | Claude/MADXP | Ajout multi-config profiles (sync_profiles, switch_profile, profile-switch)                                                    |
+| 1.7     | 2026-02-15 | Claude/MADXP | Ajout section OTA : pré-migration, race condition, monitoring                                                                  |
+| 1.8     | 2026-02-15 | Claude/MADXP | Réécriture pré-migration : rm sans sudo, diagnostic, versions affectées                                                        |
+| 1.9     | 2026-02-15 | Claude/MADXP | Connexion locale persistante : relay screenshot et heartbeat via local-socket.js                                               |
+| 2.0     | 2026-02-16 | Claude/MADXP | Screenshot error response : réponse immédiate en cas d'échec + métriques Prometheus                                            |
+| 2.1     | 2026-02-17 | Claude/MADXP | OTA checksum retry : re-download + vérification 1x en cas de mismatch SHA256                                                   |
+| 2.2     | 2026-02-17 | Claude/MADXP | Screenshot HTTP response : remplacement du relay Socket.IO room par request-response HTTP                                      |
+| 2.3     | 2026-02-18 | Claude/MADXP | Sync sponsors Dashboard → Pi : `siteSponsors` dans payload déploiement, `mergeSiteSponsors()`, monitoring Prometheus           |
+| 2.4     | 2026-02-19 | Claude/MADXP | Auth retry transitoire (5 tentatives), auto-optimisation canal hotspot, fix daily stats `screen_time_seconds`                  |
+| 2.5     | 2026-02-21 | Claude/MADXP | Événement `content_received` dans sync-history, bannière sync contenu admin Pi, métriques sponsor health Prometheus            |
+| 2.6     | 2026-02-21 | Claude/MADXP | Pipeline analytics unifié (video_plays), suppression sponsor-impressions.js, tables campaigns + scheduled_reports              |
+| 2.7     | 2026-02-22 | Claude/MADXP | Cloud remote relay chain : détection zombie, fix socket.data, handler match-info-updated, monitoring Prometheus                |
+| 2.8     | 2026-02-24 | Claude/MADXP | Fix race condition reboot post-OTA : `shutdown -r +0` via spawn, skip restart sync-agent quand reboot prévu                    |
+| 2.9     | 2026-02-27 | Claude/MADXP | E-23 : événements HDMI & failover, heartbeat enrichi (hdmiStatus, connectedClients), pipeline détection                        |
+| 3.0     | 2026-03-01 | Claude/MADXP | ADR-033 : fix race condition master-slave (guard anti-stale), monitoring staleLoopStateCount, secondary variant path           |
+| 3.1     | 2026-03-01 | Claude/MADXP | ADR-034 : révélation synchronisée preload/reveal, monitoring preloadRevealCount/preloadCleanupCount                            |
+| 3.2     | 2026-03-02 | Claude/MADXP | Multi-profile : sync_profiles, profile-switch handler avec merge + persistance, monitoring profileSwitchCount                  |
+| 3.3     | 2026-04-09 | Claude/MADXP | ADR-044 : extraction 4 modules monolithiques sync-agent (agent, metrics, network-watchdog, update-software) en 12 sous-modules |
 
 ---
 
@@ -1663,4 +1663,4 @@ Depuis le 2026-04-19, la vérité du PSK hotspot est **la DB cloud**. Le Pi cons
 
 ---
 
-_Document généré pour le projet NEOPRO - Confidentiel_
+_Document généré pour le projet MADXP - Confidentiel_

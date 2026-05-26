@@ -24,7 +24,7 @@ Réagir efficacement aux alertes système pour maintenir la disponibilité et le
 
 ---
 
-## 3. SYSTÈME D'ALERTING NEOPRO
+## 3. SYSTÈME D'ALERTING MADXP
 
 ### 3.1 Architecture
 

@@ -108,7 +108,7 @@ Rôle en **lecture seule** : peut voir les sites et statistiques mais ne peut ri
 
 ### Site Sponsor
 
-**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau NEOPRO) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
+**Sponsor local d'un club** — entité unifiée représentant un sponsor (local ou réseau MADXP) pour un site donné. Table `site_sponsors`. Chaque site_sponsor a un `source` (`local` ou `neopro`), des vidéos associées (`site_sponsor_videos`), et peut recevoir des impressions trackées. Permet la génération de rapports PDF par sponsor.
 
 **Voir aussi** : Advertiser, Magic Link
 

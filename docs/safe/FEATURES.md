@@ -1,4 +1,4 @@
-# Features & User Stories — NEOPRO SAFe
+# Features & User Stories — MADXP SAFe
 
 > **Dernière mise à jour** : 30 Avril 2026 <!-- ADR-071 hosting Cloudflare Pages (phases 2-3 livrées), ADR-103 web/live in loop (phases 1→4 livrées), ADR-104 TV preview HTTP pull SaaS (livré + kill-switch flotté), ADR-105 TV preview iframe local-first Pi (livré). Voir IMPLEMENTED-BACKLOG IMP-VID-29, IMP-PI-43/44/45, IMP-ADM-24. -->
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -126,7 +126,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 - [ ] Validation email obligatoire avant accès _(non applicable — magic link)_
 - [x] Profil : nom entreprise, logo, secteur d'activité, contact — `sponsor-dashboard.component.ts`
 - [x] Le rôle `advertiser` est assigné automatiquement — `sponsor-access.service.ts`
-- [ ] L'admin NEOPRO reçoit une notification de nouvelle inscription
+- [ ] L'admin MADXP reçoit une notification de nouvelle inscription
 
 | US        | Description                                                                      | SP  | Sprint | Priorité |
 | --------- | -------------------------------------------------------------------------------- | --- | ------ | -------- |
@@ -156,7 +156,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-01.3 : Validation admin des spots ⚠️ PARTIEL
 
-> _En tant qu'admin NEOPRO, je peux valider ou refuser les spots soumis par les sponsors avec un motif._
+> _En tant qu'admin MADXP, je peux valider ou refuser les spots soumis par les sponsors avec un motif._
 
 **Critères d'acceptation**
 
@@ -290,7 +290,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-06.2 : Wizard de configuration club
 
-> _En tant qu'admin NEOPRO, je peux configurer un nouveau club via un wizard étape par étape._
+> _En tant qu'admin MADXP, je peux configurer un nouveau club via un wizard étape par étape._
 
 **Critères d'acceptation**
 
@@ -424,7 +424,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 - [ ] Rapport mensuel automatique (PDF + email)
 - [ ] Impressions par gymnase, par jour, par créneau
-- [ ] Revenue split visible : 90% NEOPRO, 10% club
+- [ ] Revenue split visible : 90% MADXP, 10% club
 
 | US        | Description                                                          | SP  | Sprint  | Priorité |
 | --------- | -------------------------------------------------------------------- | --- | ------- | -------- |
@@ -917,7 +917,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-14.1 : Gestion du fonds
 
-> _En tant que NEOPRO, 2% des revenus régie alimentent un fonds de solidarité pour les clubs modestes._
+> _En tant que MADXP, 2% des revenus régie alimentent un fonds de solidarité pour les clubs modestes._
 
 **Critères d'acceptation**
 
@@ -993,7 +993,7 @@ Tous les controllers utilisent le repository pattern. ESLint bloquant actif. Aud
 
 ### F-21.1 : API OAuth 2.0 pour partenaires
 
-> _En tant que partenaire externe (agence, sponsor multi-clubs), j'accède à l'API NEOPRO de manière sécurisée._
+> _En tant que partenaire externe (agence, sponsor multi-clubs), j'accède à l'API MADXP de manière sécurisée._
 
 **Critères d'acceptation**
 

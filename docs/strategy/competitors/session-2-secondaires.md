@@ -14,7 +14,7 @@
 - **Modèle** : **agence de service**, pas une plateforme produit
 - **Offre** : développement web Drupal/WordPress/PrestaShop, community management, e-commerce
 - **Références sport** : Paris FC, Team Cofidis, Voile Banque Populaire, Esprit Basket
-- ⚠️ **Verdict** : **PAS UN CONCURRENT DE NEOPRO** — c'est une agence web qui fait des sites pour des entités sportives, pas une solution d'affichage TV. À retirer du benchmark.
+- ⚠️ **Verdict** : **PAS UN CONCURRENT DE MADXP** — c'est une agence web qui fait des sites pour des entités sportives, pas une solution d'affichage TV. À retirer du benchmark.
 - Source : [digitalsport.fr](https://www.digitalsport.fr/) (2026-04-23)
 
 ### Bizplay (NL)

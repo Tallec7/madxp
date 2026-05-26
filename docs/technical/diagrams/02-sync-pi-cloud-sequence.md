@@ -214,7 +214,7 @@ sequenceDiagram
 
     Pi->>Pi: Load configuration.json locale
     Pi->>Pi: mergeConfigurations(localConfig, newConfig)
-    Note right of Pi: Regles de merge :<br/>- Champs proteges : siteId, apiKey, settings<br/>- Sponsors : Central = source de verite + local preserves<br/>- TimeCategories, CategoryMappings : remplaces<br/>- Categories : merge (NEOPRO locked, Club preserves)<br/>- Watermark, scoreOverlay : remplaces si fournis
+    Note right of Pi: Regles de merge :<br/>- Champs proteges : siteId, apiKey, settings<br/>- Sponsors : Central = source de verite + local preserves<br/>- TimeCategories, CategoryMappings : remplaces<br/>- Categories : merge (MADXP locked, Club preserves)<br/>- Watermark, scoreOverlay : remplaces si fournis
 
     Pi->>Pi: Clean expired videos (check expires_at)
     Pi->>Pi: Write merged config to disk

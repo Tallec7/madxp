@@ -1,4 +1,4 @@
-# Rapport de valorisation technique – NEOPRO
+# Rapport de valorisation technique – MADXP
 
 > Rapport généré le 13 avril 2026 à partir de l'analyse du dépôt Git `Tallec7/neopro`.
 > Ce document fournit les données brutes nécessaires à la valorisation du logiciel pour apport en société.
@@ -10,13 +10,13 @@
 
 | Champ                             | Valeur                                                                                                                                          |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Nom**                           | NEOPRO                                                                                                                                          |
+| **Nom**                           | MADXP                                                                                                                                           |
 | **Description**                   | Système de TV interactive pour clubs sportifs. Architecture 3-tiers : Dashboard Angular → Central Server Express/PostgreSQL → Raspberry Pi Edge |
 | **Date de création (1er commit)** | 3 décembre 2025                                                                                                                                 |
 | **Dernière mise à jour**          | 13 avril 2026                                                                                                                                   |
 | **Période couverte**              | ~132 jours calendaires                                                                                                                          |
 | **Version courante**              | v3.164.2                                                                                                                                        |
-| **Licence**                       | Propriétaire (Copyright 2024 NEOPRO / Kalon Partners)                                                                                           |
+| **Licence**                       | Propriétaire (Copyright 2024 MADXP / Kalon Partners)                                                                                            |
 | **Dépôt Git**                     | `Tallec7/neopro` (public)                                                                                                                       |
 
 ### Stack technique
@@ -167,7 +167,7 @@ Fichiers de test : **995 fichiers** (.spec.ts / .test.ts)
 ### Licence du logiciel
 
 ```
-Copyright (c) 2024 NEOPRO / Kalon Partners — Tous droits réservés.
+Copyright (c) 2024 MADXP / Kalon Partners — Tous droits réservés.
 Ce logiciel est propriétaire et confidentiel.
 ```
 
@@ -210,7 +210,7 @@ Ce logiciel est propriétaire et confidentiel.
 | **Preuve de cession de droits**                | Contrats RH/freelance non stockés sur GitHub                                                              |
 | **Métriques d'usage réelles**                  | Nécessite accès analytics (le code intègre Prometheus/Grafana, mais les données ne sont pas dans le repo) |
 | **Dépôt APP / INPI**                           | Registre externe (Agence pour la Protection des Programmes)                                               |
-| **Valeur de la marque NEOPRO**                 | Évaluation marketing externe                                                                              |
+| **Valeur de la marque MADXP**                  | Évaluation marketing externe                                                                              |
 | **Revenus récurrents (MRR/ARR)**               | Données Stripe/facturation externes                                                                       |
 
 ---

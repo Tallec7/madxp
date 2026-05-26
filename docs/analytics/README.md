@@ -34,7 +34,7 @@ Le module **Analytics Sponsors** permet aux clubs sportifs de mesurer précisém
 ✅ **Rapports PDF Professionnels**
 
 - Génération PDF 4 pages avec graphiques Chart.js
-- Mise en page professionnelle (charte NEOPRO)
+- Mise en page professionnelle (charte MADXP)
 - Certificat de diffusion avec signature numérique SHA-256
 - Support multilingue (FR/EN)
 
@@ -57,7 +57,7 @@ Le module **Analytics Sponsors** permet aux clubs sportifs de mesurer précisém
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                    NEOPRO ANALYTICS SPONSORS                         │
+│                    MADXP ANALYTICS SPONSORS                         │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────┐         ┌──────────────────┐         ┌──────────────┐
@@ -468,6 +468,6 @@ npm test
 ---
 
 **Dernière mise à jour** : 19 Février 2026
-**Mainteneur** : Équipe Développement NEOPRO
+**Mainteneur** : Équipe Développement MADXP
 **Licence** : Propriétaire
 **Contact** : [Voir BUSINESS_PLAN_COMPLET.md pour contacts]

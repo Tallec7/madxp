@@ -35,7 +35,7 @@ Après analyse de l'industrie du digital signage, nous avons identifié que :
 │                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   VISION NEOPRO                                                            │
+│   VISION MADXP                                                            │
 │   ═════════════                                                             │
 │                                                                             │
 │   "MadXP s'adapte automatiquement à votre réseau"                         │
@@ -82,7 +82,7 @@ Après analyse de l'industrie du digital signage, nous avons identifié que :
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                                                                             │
-│                        NEOPRO NETWORK RESILIENCE STACK                      │
+│                        MADXP NETWORK RESILIENCE STACK                      │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐ │
 │  │  COUCHE 4: DASHBOARD INTELLIGENT                                      │ │

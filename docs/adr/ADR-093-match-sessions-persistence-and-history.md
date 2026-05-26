@@ -12,7 +12,7 @@ La télécommande Pi collecte `homeTeam`, `awayTeam`, `matchDate`, `spectators` 
 
 - **Déjà persisté** via `match-config.handler.ts` → `club_sessions` : `match_date`, `match_name` (chaîne concaténée `"CESSON vs RENNES"`), `audience_estimate`. `video_plays.session_id` référence déjà `club_sessions.id`.
 - **Non persisté** : `homeTeam`/`awayTeam` séparés, scores finaux, `profile_id` (ADR-058), signal de fin de match, type d'événement (match / entraînement / tournoi). Côté Pi, ces valeurs vivent en `localStorage` uniquement (`local-options.service.ts:463`).
-- **Dashboard** : aucune page « Historique des matchs » par site, aucun export PDF/CSV, alors que NEOPRO le demande pour ses rapports clubs.
+- **Dashboard** : aucune page « Historique des matchs » par site, aucun export PDF/CSV, alors que MADXP le demande pour ses rapports clubs.
 
 `video_plays.event_type` et `audience_estimate` existent déjà (ADR sponsor-context 2026-02-21) mais restent sous-exploités faute d'UI.
 

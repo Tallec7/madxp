@@ -25,28 +25,28 @@ Le module Analytics Sponsors dispose maintenant d'une **suite de tests automatis
 
 #### Fonctions Utilitaires (8 tests)
 
-| Test | Description | Statut |
-|------|-------------|--------|
-| **formatDate** | Format ISO → DD/MM/YYYY (UTC) | ✅ |
-| **formatNumber** | Séparateurs milliers (locale FR) | ✅ |
-| **formatDuration** | Secondes → Xh Ymin | ✅ |
-| **generateDigitalSignature** | Hash SHA-256 avec prefix NEOPRO-CERT | ✅ |
-| **generateDigitalSignature** | Signatures différentes par période | ✅ |
-| **generateDigitalSignature** | Reproductibilité (même input = même output) | ✅ |
-| **generateDigitalSignature** | Unicité (input différent = output différent) | ✅ |
-| **generateDigitalSignature** | Format 59 caractères | ✅ |
+| Test                         | Description                                  | Statut |
+| ---------------------------- | -------------------------------------------- | ------ |
+| **formatDate**               | Format ISO → DD/MM/YYYY (UTC)                | ✅     |
+| **formatNumber**             | Séparateurs milliers (locale FR)             | ✅     |
+| **formatDuration**           | Secondes → Xh Ymin                           | ✅     |
+| **generateDigitalSignature** | Hash SHA-256 avec prefix NEOPRO-CERT         | ✅     |
+| **generateDigitalSignature** | Signatures différentes par période           | ✅     |
+| **generateDigitalSignature** | Reproductibilité (même input = même output)  | ✅     |
+| **generateDigitalSignature** | Unicité (input différent = output différent) | ✅     |
+| **generateDigitalSignature** | Format 59 caractères                         | ✅     |
 
 #### PDF Buffer & Structure (7 tests)
 
-| Test | Description | Statut |
-|------|-------------|--------|
-| **PDF Buffer** | Retourne un Buffer valide | ✅ |
-| **PDF Magic Bytes** | Commence par `%PDF-` | ✅ |
-| **Report Data** | Structure complète (sponsor, period, summary, trends) | ✅ |
-| **PDF Options** | Support type/format/language/signature | ✅ |
-| **Chart Data** | Gestion tableau vide | ✅ |
-| **Chart Data** | Format daily data valide | ✅ |
-| **Event Type Data** | Validation structure event type | ✅ |
+| Test                | Description                                           | Statut |
+| ------------------- | ----------------------------------------------------- | ------ |
+| **PDF Buffer**      | Retourne un Buffer valide                             | ✅     |
+| **PDF Magic Bytes** | Commence par `%PDF-`                                  | ✅     |
+| **Report Data**     | Structure complète (sponsor, period, summary, trends) | ✅     |
+| **PDF Options**     | Support type/format/language/signature                | ✅     |
+| **Chart Data**      | Gestion tableau vide                                  | ✅     |
+| **Chart Data**      | Format daily data valide                              | ✅     |
+| **Event Type Data** | Validation structure event type                       | ✅     |
 
 ---
 
@@ -56,52 +56,52 @@ Le module Analytics Sponsors dispose maintenant d'une **suite de tests automatis
 
 #### CRUD Sponsors (7 tests)
 
-| Endpoint | Tests | Statut |
-|----------|-------|--------|
-| **GET /api/sponsors** | Liste sponsors | ✅ |
-| **POST /api/sponsors** | Création sponsor | ✅ |
-| **POST /api/sponsors** | Validation champs requis | ✅ |
-| **GET /api/sponsors/:id** | Détail sponsor | ✅ |
-| **GET /api/sponsors/:id** | 404 si inexistant | ✅ |
-| **PUT /api/sponsors/:id** | Mise à jour | ✅ |
-| **DELETE /api/sponsors/:id** | Suppression | ✅ |
+| Endpoint                     | Tests                    | Statut |
+| ---------------------------- | ------------------------ | ------ |
+| **GET /api/sponsors**        | Liste sponsors           | ✅     |
+| **POST /api/sponsors**       | Création sponsor         | ✅     |
+| **POST /api/sponsors**       | Validation champs requis | ✅     |
+| **GET /api/sponsors/:id**    | Détail sponsor           | ✅     |
+| **GET /api/sponsors/:id**    | 404 si inexistant        | ✅     |
+| **PUT /api/sponsors/:id**    | Mise à jour              | ✅     |
+| **DELETE /api/sponsors/:id** | Suppression              | ✅     |
 
 #### Analytics & Rapports (6 tests)
 
-| Endpoint | Tests | Statut |
-|----------|-------|--------|
-| **GET /api/sponsors/:id/analytics** | Retour données analytics | ✅ |
-| **GET /api/sponsors/:id/analytics** | Validation dates | ✅ |
-| **GET /api/sponsors/:id/analytics** | Calcul métriques | ✅ |
-| **GET /api/sponsors/:id/report** | Génération PDF | ✅ |
-| **GET /api/sponsors/:id/report** | Validation Buffer PDF | ✅ |
-| **GET /api/sponsors/:id/report** | Paramètres optionnels | ✅ |
+| Endpoint                            | Tests                    | Statut |
+| ----------------------------------- | ------------------------ | ------ |
+| **GET /api/sponsors/:id/analytics** | Retour données analytics | ✅     |
+| **GET /api/sponsors/:id/analytics** | Validation dates         | ✅     |
+| **GET /api/sponsors/:id/analytics** | Calcul métriques         | ✅     |
+| **GET /api/sponsors/:id/report**    | Génération PDF           | ✅     |
+| **GET /api/sponsors/:id/report**    | Validation Buffer PDF    | ✅     |
+| **GET /api/sponsors/:id/report**    | Paramètres optionnels    | ✅     |
 
 #### Impressions Tracking (5 tests)
 
-| Endpoint | Tests | Statut |
-|----------|-------|--------|
-| **POST /api/analytics/impressions** | Batch impressions | ✅ |
-| **POST /api/analytics/impressions** | Structure données | ✅ |
-| **POST /api/analytics/impressions** | Tableau vide | ✅ |
-| **POST /api/analytics/impressions** | Calcul completion rate | ✅ |
-| **POST /api/analytics/impressions** | Validation event types | ✅ |
+| Endpoint                            | Tests                  | Statut |
+| ----------------------------------- | ---------------------- | ------ |
+| **POST /api/analytics/impressions** | Batch impressions      | ✅     |
+| **POST /api/analytics/impressions** | Structure données      | ✅     |
+| **POST /api/analytics/impressions** | Tableau vide           | ✅     |
+| **POST /api/analytics/impressions** | Calcul completion rate | ✅     |
+| **POST /api/analytics/impressions** | Validation event types | ✅     |
 
 #### Associations Sponsors-Videos (3 tests)
 
-| Endpoint | Tests | Statut |
-|----------|-------|--------|
-| **GET /api/sponsors/:id/videos** | Liste videos | ✅ |
-| **POST /api/sponsors/:id/videos** | Association | ✅ |
-| **DELETE /api/sponsors/:sponsorId/videos/:videoId** | Dissociation | ✅ |
+| Endpoint                                            | Tests        | Statut |
+| --------------------------------------------------- | ------------ | ------ |
+| **GET /api/sponsors/:id/videos**                    | Liste videos | ✅     |
+| **POST /api/sponsors/:id/videos**                   | Association  | ✅     |
+| **DELETE /api/sponsors/:sponsorId/videos/:videoId** | Dissociation | ✅     |
 
 #### Validation & Erreurs (3 tests)
 
-| Test | Description | Statut |
-|------|-------------|--------|
-| **JSON invalide** | Gestion erreur parse | ✅ |
-| **UUID validation** | Regex format UUID | ✅ |
-| **Pagination** | Validation page/limit | ✅ |
+| Test                | Description           | Statut |
+| ------------------- | --------------------- | ------ |
+| **JSON invalide**   | Gestion erreur parse  | ✅     |
+| **UUID validation** | Regex format UUID     | ✅     |
+| **Pagination**      | Validation page/limit | ✅     |
 
 ---
 
@@ -115,6 +115,7 @@ npm test -- src/services/__tests__/pdf-report.service.test.ts
 ```
 
 **Résultat attendu** :
+
 ```
 PASS src/services/__tests__/pdf-report.service.test.ts
 ✓ PDF Report Service - Utility Functions (5 tests)
@@ -133,6 +134,7 @@ npm test -- src/routes/__tests__/sponsor-analytics.routes.test.ts
 ```
 
 **Résultat attendu** :
+
 ```
 PASS src/routes/__tests__/sponsor-analytics.routes.test.ts
 ✓ Sponsor Analytics Routes (21 tests)
@@ -149,6 +151,7 @@ npm test
 ```
 
 **Résultat** :
+
 ```
 Test Suites: 17 total, 13 passed, 4 failed (non-related)
 Tests:       416 total, 411 passed, 5 failed (non-related)
@@ -161,20 +164,20 @@ Time:        ~20s
 
 ### Global Project
 
-| Métrique | Valeur | Objectif |
-|----------|--------|----------|
-| **Statements** | 52.43% | 60% |
-| **Branches** | 33.87% | 50% |
-| **Functions** | 43.98% | 60% |
-| **Lines** | 51.63% | 60% |
+| Métrique       | Valeur | Objectif |
+| -------------- | ------ | -------- |
+| **Statements** | 52.43% | 60%      |
+| **Branches**   | 33.87% | 50%      |
+| **Functions**  | 43.98% | 60%      |
+| **Lines**      | 51.63% | 60%      |
 
 ### Module Analytics Sponsors
 
-| Fichier | Statements | Branches | Functions | Lines |
-|---------|------------|----------|-----------|-------|
-| **sponsor-analytics.controller.ts** | 12.55% | 0% | 0% | 7.72% |
-| **pdf-report.service.ts** | 4.87% | 0% | 0% | 5% |
-| **sponsor-analytics.routes.ts** | 100% | 100% | 100% | 100% |
+| Fichier                             | Statements | Branches | Functions | Lines |
+| ----------------------------------- | ---------- | -------- | --------- | ----- |
+| **sponsor-analytics.controller.ts** | 12.55%     | 0%       | 0%        | 7.72% |
+| **pdf-report.service.ts**           | 4.87%      | 0%       | 0%        | 5%    |
+| **sponsor-analytics.routes.ts**     | 100%       | 100%     | 100%      | 100%  |
 
 **Note** : Coverage faible sur controller/service car les tests actuels valident la **structure** et la **logique métier**, mais n'exécutent pas le code réel (mocks DB). Tests d'intégration E2E recommandés pour augmenter coverage.
 
@@ -372,7 +375,7 @@ Le module Analytics Sponsors dispose maintenant d'une **couverture tests solide*
 
 ---
 
-**Maintenu par** : Équipe NEOPRO
+**Maintenu par** : Équipe MADXP
 **Contact** : GitHub Issues
 **Version** : 1.0.0
 **Date** : 15 Décembre 2025

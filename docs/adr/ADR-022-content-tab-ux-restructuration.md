@@ -62,7 +62,7 @@ L'onglet Contenu de la page Site Detail est la page la plus dense du dashboard (
 2. **Fusion boucle par défaut + boucles par phase** en une seule section avec tabs :
    - 3 tabs primaires : Avant-match, Match, Après-match
    - 1 tab secondaire : Boucle par défaut (visuellement réduit, label "fallback", warning "pas de data")
-   - Bouton "Répartir automatiquement" : copie la boucle par défaut dans les 3 phases et la vide (sauf NEOPRO)
+   - Bouton "Répartir automatiquement" : copie la boucle par défaut dans les 3 phases et la vide (sauf MADXP)
 
 3. **Réordonnancement des sections** en pipeline logique :
    - Actuel : Bibliothèque → Preview → Boucle défaut → Catégories → Télécommande → Boucles phase → Analytics

@@ -1,4 +1,4 @@
-# Lean Business Cases — Epics NEOPRO
+# Lean Business Cases — Epics MADXP
 
 > **Dernière mise à jour** : 11 Avril 2026 (E-15 pivot API fédérale → table de marque, E-21 extension F-21.2 public scores API — PROP-003)
 > **PI actuel** : PI-1 (Février - Mars 2026)
@@ -26,7 +26,7 @@
 
 - Les sponsors locaux sont capables d'uploader une vidéo de 15-30s au bon format
 - Le taux de conversion démo → inscription augmente de 20% avec un portail autonome
-- Le support NEOPRO réduit de 60% le temps consacré aux sponsors
+- Le support MADXP réduit de 60% le temps consacré aux sponsors
 
 **Coût estimé** : 15 SP (≈ 2 semaines dev)
 
@@ -363,9 +363,9 @@
 | **Thème Stratégique** | TS1 — Monétisation          |
 | **WSJF**              | 18                          |
 
-**Problème** : Aujourd'hui, seuls les sponsors locaux (liés à un club) peuvent diffuser. Aucun moyen pour un annonceur régional (chaîne de magasins, banque) de toucher plusieurs gymnases. Pas de revenus passifs pour NEOPRO.
+**Problème** : Aujourd'hui, seuls les sponsors locaux (liés à un club) peuvent diffuser. Aucun moyen pour un annonceur régional (chaîne de magasins, banque) de toucher plusieurs gymnases. Pas de revenus passifs pour MADXP.
 
-**Solution** : Marketplace publicitaire où des annonceurs régionaux achètent des "packs gymnases" (5, 10, 50 gymnases) avec ciblage géographique, scheduling automatique et reporting consolidé. Revenue split : 90% NEOPRO, 10% club.
+**Solution** : Marketplace publicitaire où des annonceurs régionaux achètent des "packs gymnases" (5, 10, 50 gymnases) avec ciblage géographique, scheduling automatique et reporting consolidé. Revenue split : 90% MADXP, 10% club.
 
 **Hypothèses**
 
@@ -436,9 +436,9 @@
 | **Thème Stratégique** | TS2 — Expérience Match |
 | **WSJF**              | 6                      |
 
-**Problème** : L'interface affiche le branding NEOPRO. Les clubs premium veulent que l'écran porte leurs couleurs, leur logo, et leur identité. Les sponsors aussi préfèrent un branding "du club" plutôt que "d'un prestataire".
+**Problème** : L'interface affiche le branding MADXP. Les clubs premium veulent que l'écran porte leurs couleurs, leur logo, et leur identité. Les sponsors aussi préfèrent un branding "du club" plutôt que "d'un prestataire".
 
-**Solution** : Système de thématisation par club : logo, palette de couleurs, police, écran d'accueil personnalisé. Le branding NEOPRO est optionnel (mention "Powered by NEOPRO" en petit).
+**Solution** : Système de thématisation par club : logo, palette de couleurs, police, écran d'accueil personnalisé. Le branding MADXP est optionnel (mention "Powered by NEOPRO" en petit).
 
 **Hypothèses**
 
@@ -470,9 +470,9 @@
 | **Thème Stratégique** | TS3 — Acquisition & Déploiement |
 | **WSJF**              | 5                               |
 
-**Problème** : Le sport amateur manque de financement. Les clubs les plus modestes ne peuvent pas se payer NEOPRO. Pas de mécanisme de solidarité entre clubs riches et clubs modestes.
+**Problème** : Le sport amateur manque de financement. Les clubs les plus modestes ne peuvent pas se payer MADXP. Pas de mécanisme de solidarité entre clubs riches et clubs modestes.
 
-**Solution** : Fonds de solidarité alimenté par un % des revenus régie (1-2%). Les clubs éligibles (critères sociaux) reçoivent un abonnement NEOPRO subventionné. Dashboard de suivi des contributions et bénéficiaires.
+**Solution** : Fonds de solidarité alimenté par un % des revenus régie (1-2%). Les clubs éligibles (critères sociaux) reçoivent un abonnement MADXP subventionné. Dashboard de suivi des contributions et bénéficiaires.
 
 **Hypothèses**
 
@@ -752,7 +752,7 @@
 
 **Problème** : Deux problématiques liées :
 
-1. **F-21.1** — Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données NEOPRO. Tout passe par le dashboard ou des exports manuels.
+1. **F-21.1** — Les partenaires externes (agences, sponsors multi-clubs) n'ont pas d'accès programmatique aux données MADXP. Tout passe par le dashboard ou des exports manuels.
 2. **F-21.2** — Les clubs amateurs français n'ont **aucune source officielle de scores live**. Aujourd'hui les membres s'envoient des messages pour savoir où en est un match. Les médias locaux, apps clubs, agrégateurs et fédérations n'ont pas de source fiable à intégrer. Avec F-15.2 livrée en PI-2, MadXP devient la seule entité capable de lire directement les tables de marque officielles de centaines de clubs — transformer cette donnée en API publique crée un **hub temps réel du sport amateur français**.
 
 **Solution**

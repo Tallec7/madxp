@@ -28,33 +28,33 @@
 
 ### 1.1 Le besoin métier
 
-Les sponsors locaux des clubs (boulangerie, garage, assurance) paient entre 500 et 5000 EUR/an sans aucune preuve de visibilité. NEOPRO diffuse leurs spots sur les TV des clubs, mais ne peut pas prouver la valeur générée. Le bénévole du club a besoin d'un rapport PDF mensuel clair à envoyer à chaque sponsor pour justifier le renouvellement.
+Les sponsors locaux des clubs (boulangerie, garage, assurance) paient entre 500 et 5000 EUR/an sans aucune preuve de visibilité. MADXP diffuse leurs spots sur les TV des clubs, mais ne peut pas prouver la valeur générée. Le bénévole du club a besoin d'un rapport PDF mensuel clair à envoyer à chaque sponsor pour justifier le renouvellement.
 
 ### 1.2 Les deux mondes sponsor actuels
 
-**Annonceurs NEOPRO** (table `advertisers`) :
+**Annonceurs MADXP** (table `advertisers`) :
 
-- Créés par l'admin NEOPRO dans le dashboard central
+- Créés par l'admin MADXP dans le dashboard central
 - Vidéos déployées vers le Pi avec `video_id`, `sponsor_id`, `analytics_category`
 - Tracking existant (buggy — voir section 3)
 
 **Sponsors club** (aucune entité) :
 
 - Vidéos uploadées par le bénévole via l'admin local du Pi
-- Ajoutées à la boucle (`config.sponsors[]`) par l'opérateur NEOPRO via le config editor
+- Ajoutées à la boucle (`config.sponsors[]`) par l'opérateur MADXP via le config editor
 - Aucun `video_id`, aucun `sponsor_id`, aucun `analytics_category`
 - Tracking partiel (les impressions sont envoyées mais sans attribution)
 - **Impossible de générer un rapport par sponsor**
 
 ### 1.3 Pourquoi le système actuel ne suffit pas
 
-| Critère                           | Annonceurs NEOPRO                                    | Sponsors club                    |
+| Critère                           | Annonceurs MADXP                                     | Sponsors club                    |
 | --------------------------------- | ---------------------------------------------------- | -------------------------------- |
 | Entité nommée en DB               | `advertisers`                                        | Rien                             |
 | Vidéo identifiable                | `video_id` UUID                                      | Filename uniquement              |
 | Attribution impression            | Par JOIN `advertiser_videos` (cassé — video_id NULL) | Impossible                       |
 | Rapport PDF                       | Théoriquement possible                               | Impossible                       |
-| Ajout à la boucle par le bénévole | Non (opérateur NEOPRO requis)                        | Non (opérateur NEOPRO requis)    |
+| Ajout à la boucle par le bénévole | Non (opérateur MADXP requis)                         | Non (opérateur MADXP requis)     |
 | Proportion des sponsors réels     | ~10% (annonceurs réseau)                             | ~90% (sponsors locaux des clubs) |
 
 **90% des sponsors réels ne sont pas couverts par le système actuel.**
@@ -65,10 +65,10 @@ Les sponsors locaux des clubs (boulangerie, garage, assurance) paient entre 500 
 
 ### 2.1 Principe : un concept unifié `site_sponsors`
 
-Un **sponsor d'un site** est une entité à part entière, qu'il vienne de NEOPRO ou du club :
+Un **sponsor d'un site** est une entité à part entière, qu'il vienne de MADXP ou du club :
 
 ```
-advertisers (réseau NEOPRO)              site_sponsors (par club)
+advertisers (réseau MADXP)              site_sponsors (par club)
 ├── Décathlon                            ├── { site: NARH, source: neopro, advertiser_id: xxx }
 └── Nike                                 ├── { site: RACC, source: neopro, advertiser_id: xxx }
                                          ├── { site: NARH, source: local, name: "Boulangerie Dupont" }
@@ -76,9 +76,9 @@ advertisers (réseau NEOPRO)              site_sponsors (par club)
                                          └── { site: NLF,  source: local, name: "Pizzeria Roma" }
 ```
 
-- `advertisers` reste inchangé (annonceurs réseau NEOPRO)
+- `advertisers` reste inchangé (annonceurs réseau MADXP)
 - `site_sponsors` = le sponsor **d'un club donné**, avec son contrat, ses vidéos, ses impressions
-- Un annonceur NEOPRO déployé sur un site crée automatiquement un `site_sponsor` de type `neopro`
+- Un annonceur MADXP déployé sur un site crée automatiquement un `site_sponsor` de type `neopro`
 - Un sponsor local créé par le bénévole est un `site_sponsor` de type `local`
 - **Les rapports, KPIs, et PDF sont générés depuis `site_sponsors`** — indifféremment de la source
 
@@ -102,7 +102,7 @@ Les fonctionnalités existantes (portail annonceur, gestion agences, stats annon
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    PARCOURS UTILISATEURS                              │
 ├──────────────────┬───────────────────┬───────────────────────────────┤
-│  BENEVOLE CLUB   │  OPERATEUR NEOPRO │  SPONSOR LOCAL                │
+│  BENEVOLE CLUB   │  OPERATEUR MADXP │  SPONSOR LOCAL                │
 │  (admin local Pi)│  (dashboard web)  │  (portail / email)            │
 ├──────────────────┼───────────────────┼───────────────────────────────┤
 │  Crée sponsors   │  Vue d'ensemble   │  Reçoit le rapport PDF        │
@@ -121,7 +121,7 @@ Le bénévole est un bénévole associatif, souvent peu technique. Il gère tout
 ```
 1. Upload "dupont.mp4" sur l'admin local
 2. La vidéo atterrit dans les catégories (télécommande)
-3. Appeler l'opérateur NEOPRO pour qu'il ajoute à la boucle
+3. Appeler l'opérateur MADXP pour qu'il ajoute à la boucle
 4. Attendre...
 5. Aucune visibilité sur ce qui passe
 6. Pas de rapport à envoyer au sponsor
@@ -135,7 +135,7 @@ Le bénévole est un bénévole associatif, souvent peu technique. Il gère tout
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  NEOPRO  │  neopro.local:8080                           │
+│  MADXP  │  neopro.local:8080                           │
 ├──────────┴──────────────────────────────────────────────┤
 │                                                          │
 │  📺 Vidéos   │   👥 Sponsors   │   ⏱ Phases   │   ⚙️   │
@@ -169,8 +169,8 @@ Le bénévole est un bénévole associatif, souvent peu technique. Il gère tout
 │  └────────────────────────────────────────────────────┘ │
 │                                                          │
 │  ┌────────────────────────────────────────────────────┐ │
-│  │ 🔒 Décathlon (NEOPRO)                              │ │
-│  │    1 vidéo   •  ✅ En boucle  •  Géré par NEOPRO  │ │
+│  │ 🔒 Décathlon (MADXP)                              │ │
+│  │    1 vidéo   •  ✅ En boucle  •  Géré par MADXP  │ │
 │  └────────────────────────────────────────────────────┘ │
 │                                                          │
 └─────────────────────────────────────────────────────────┘
@@ -178,7 +178,7 @@ Le bénévole est un bénévole associatif, souvent peu technique. Il gère tout
 
 Principes UX :
 
-- Les sponsors NEOPRO sont visibles mais non modifiables (cadenas)
+- Les sponsors MADXP sont visibles mais non modifiables (cadenas)
 - Les sponsors locaux sont entièrement gérables par le bénévole
 - Le statut "En boucle" est visible en un coup d'oeil
 
@@ -248,7 +248,7 @@ Principes UX :
 - On peut créer un sponsor à la volée sans quitter l'upload
 - Le toggle boucle est coché par défaut pour les vidéos sponsor
 
-### 3.3 Parcours B : L'opérateur NEOPRO (dashboard central)
+### 3.3 Parcours B : L'opérateur MADXP (dashboard central)
 
 L'opérateur gère la flotte de clubs depuis le dashboard web. Il a besoin de :
 
@@ -273,7 +273,7 @@ L'opérateur gère la flotte de clubs depuis le dashboard web. Il a besoin de :
 ├───────────────────────┼──────────┼────────┼─────────┼──────────┤
 │  Boulangerie Dupont   │ 🏠 Club  │ 2      │ 127 ×   │ [📊][📥]│
 │  Garage Martin        │ 🏠 Club  │ 1      │ 84 ×    │ [📊][📥]│
-│  Décathlon            │ 📡 NEOPRO│ 1      │ 156 ×   │ [📊][📥]│
+│  Décathlon            │ 📡 MADXP│ 1      │ 156 ×   │ [📊][📥]│
 │  Pizzeria Roma        │ 🏠 Club  │ 1      │ 0 ×     │ [📊][📥]│
 ├───────────────────────┴──────────┴────────┴─────────┴──────────┤
 │                                                                  │
@@ -332,7 +332,7 @@ Clic sur [📊] ouvre le détail :
 │     Sponsor : [▼ — Aucun (contenu club) ]             [×]       │
 │                                                                  │
 │  ≡  3. decathlon.mp4                                            │
-│     Sponsor : [🔒 Décathlon (NEOPRO)    ]             [×]       │
+│     Sponsor : [🔒 Décathlon (MADXP)    ]             [×]       │
 │                                                                  │
 │  ≡  4. martin_garage.mp4                                        │
 │     Sponsor : [▼ Garage Martin         ]              [×]       │
@@ -351,7 +351,7 @@ Principes UX :
 
 - Le dropdown sponsor est pré-rempli avec les `site_sponsors` du site
 - "Aucun" = vidéo non-sponsor (ambiance, animation, etc.)
-- Les sponsors NEOPRO sont en lecture seule (lock)
+- Les sponsors MADXP sont en lecture seule (lock)
 - Un hint rappelle que seules les vidéos rattachées génèrent des rapports
 - Drag & drop (≡) pour réordonner
 
@@ -363,7 +363,7 @@ Le sponsor est un commerçant local. Il n'a aucune compétence technique. Il re�
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  De : NEOPRO <rapports@neopro.fr>                               │
+│  De : MADXP <rapports@neopro.fr>                               │
 │  À : jean@boulangerie-dupont.fr                                 │
 │  Objet : Votre rapport de visibilité — Janvier 2026             │
 ├─────────────────────────────────────────────────────────────────┤
@@ -382,7 +382,7 @@ Le sponsor est un commerçant local. Il n'a aucune compétence technique. Il re�
 │  Le rapport complet est en pièce jointe.                         │
 │                                                                  │
 │  Cordialement,                                                   │
-│  L'équipe NEOPRO                                                 │
+│  L'équipe MADXP                                                 │
 │                                                                  │
 │  📎 Rapport_Boulangerie_Dupont_Janvier_2026.pdf                 │
 │                                                                  │
@@ -394,7 +394,7 @@ Le sponsor est un commerçant local. Il n'a aucune compétence technique. Il re�
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                  │
-│  [Logo NEOPRO]                    [Logo Club NARH]               │
+│  [Logo MADXP]                    [Logo Club NARH]               │
 │                                                                  │
 │  ──────────────────────────────────────────────────────────────  │
 │                                                                  │
@@ -426,11 +426,11 @@ Le sponsor est un commerçant local. Il n'a aucune compétence technique. Il re�
 │                                                                  │
 │  ──────────────────────────────────────────────────────────────  │
 │                                                                  │
-│  Données collectées automatiquement par la plateforme NEOPRO.    │
+│  Données collectées automatiquement par la plateforme MADXP.    │
 │  Reach basé sur les spectateurs estimés par le club.            │
 │  Rapport généré le 01/02/2026                                    │
 │                                                                  │
-│                                            [Logo NEOPRO petit]   │
+│                                            [Logo MADXP petit]   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -441,7 +441,7 @@ Principes du PDF :
 - **Durées** en dessous (secondaires mais importantes)
 - **Détail par contexte** : le sponsor voit que son spot passe surtout en match
 - **Mention légale** : "Reach basé sur les spectateurs estimés" (transparence)
-- **Logos** : NEOPRO + club (quand disponible)
+- **Logos** : MADXP + club (quand disponible)
 - **Zéro jargon technique** : pas de "completion rate", pas de "trigger type"
 - **Lisible en 30 secondes** par un gérant de boulangerie
 
@@ -451,7 +451,7 @@ Principes du PDF :
 URL : app.neopro.fr/sponsors/abc123def456...
 
 ┌─────────────────────────────────────────────────────────────────┐
-│  NEOPRO                                                          │
+│  MADXP                                                          │
 │  ──────────────────────────────────────────────────────────────  │
 │                                                                  │
 │  Boulangerie Dupont                                              │
@@ -484,7 +484,7 @@ URL : app.neopro.fr/sponsors/abc123def456...
 │  [📥 Télécharger le rapport Janvier 2026 (PDF)]                │
 │                                                                  │
 │  ──────────────────────────────────────────────────────────────  │
-│  Données collectées automatiquement par NEOPRO.                  │
+│  Données collectées automatiquement par MADXP.                  │
 │  Reach basé sur les spectateurs estimés par le club.            │
 │  Questions ? Contactez votre club : contact@narh.fr             │
 └─────────────────────────────────────────────────────────────────┘
@@ -497,7 +497,7 @@ Principes UX portail :
 - **Sélection de période** : dropdown simple mois par mois
 - **Historique** : le sponsor voit la tendance sans graphique compliqué
 - **Téléchargement PDF** : le même PDF que celui envoyé par email
-- **Contact club** : le sponsor sait à qui s'adresser (pas à NEOPRO)
+- **Contact club** : le sponsor sait à qui s'adresser (pas à MADXP)
 
 ### 3.5 Principes UX transversaux
 
@@ -507,7 +507,7 @@ Principes UX portail :
 | **Zéro jargon**                            | Pas de "impression", "completion rate", "trigger". Dire "passage", "spectateurs", "durée" |
 | **Reach toujours "estimé"**                | Mention systématique. Pas de faux sentiment de précision                                  |
 | **2 clics max pour les actions courantes** | Créer un sponsor, ajouter à la boucle, envoyer un rapport                                 |
-| **Sponsors NEOPRO = lecture seule**        | Le bénévole voit les sponsors réseau mais ne peut pas les modifier                        |
+| **Sponsors MADXP = lecture seule**         | Le bénévole voit les sponsors réseau mais ne peut pas les modifier                        |
 | **Offline-first**                          | La création de sponsors et l'upload fonctionnent sans internet sur le Pi                  |
 | **Progressive disclosure**                 | L'email, le contrat, le logo sont optionnels à la création. On complète plus tard         |
 
@@ -928,7 +928,7 @@ Le bénévole devient autonome.
 - Sync via `sync_local_state` → central crée/match `site_sponsors(source='local')` → renvoie `sponsor_ids_resolved` mapping
 - Clé d'idempotence : `(site_id, LOWER(TRIM(name)), source='local')`
 - `addToLoop()` ajoute dans `sponsors[]` avec `{ owner: 'club', locked: false, _sponsorLocalId }`
-- `mergeSponsors()` préserve déjà les sponsors club non-NEOPRO (pas de modification nécessaire)
+- `mergeSponsors()` préserve déjà les sponsors club non-MADXP (pas de modification nécessaire)
 
 **Fichiers créés :**
 
@@ -1006,7 +1006,7 @@ L'expérience dashboard pour le suivi.
 
 ### Palier 6 — Stats Réseau & Régie (post-MVP)
 
-- [x] Stats réseau agrégées pour la régie NEOPRO (P6.1 — `getNetworkStatsSummary`, `NetworkSponsorStatsComponent`, route `GET /api/network/advertisers/:advertiserId/stats`)
+- [x] Stats réseau agrégées pour la régie MADXP (P6.1 — `getNetworkStatsSummary`, `NetworkSponsorStatsComponent`, route `GET /api/network/advertisers/:advertiserId/stats`)
 - [x] Comparaison sponsor vs autres sponsors du club (P6.2 — `getBenchmark`, panneau benchmark dans `site-sponsors-tab.component.ts`)
 - [x] CPI (coût par impression) (P6.3 — calcul applicatif `contract_amount / impressions`, KPI card + colonne benchmark + réseau)
 - [x] Concept de "match" lié aux impressions (P6.4 — `getMatchDayBreakdown`, page 2 conditionnelle dans `pdf-report.service.ts`)
@@ -1068,7 +1068,7 @@ configuration.json → localSponsors[] enrichi avec centralId
 
 1. **Loop manager** : le champ `sponsor_id` dans le template Angular ne correspondait pas à `site_sponsor_id` attendu par le Pi — les attributions sponsor n'étaient jamais transmises
 2. **`mergeSiteSponsors()`** ne propageait pas le champ `source` → le Pi ne pouvait pas distinguer sponsors dashboard (read-only) des sponsors locaux (éditables)
-3. **Pi admin** ne protégeait pas les sponsors du dashboard → le bénévole pouvait modifier/supprimer les sponsors NEOPRO
+3. **Pi admin** ne protégeait pas les sponsors du dashboard → le bénévole pouvait modifier/supprimer les sponsors MADXP
 4. **`handleSponsorIdsResolved()`** ne mettait à jour que `sponsors[]` (boucle par défaut) mais ignorait `timeCategories[].loopVideos[]` → les boucles par phase n'avaient pas de `site_sponsor_id`
 5. **`recordImpressions()`** n'avait aucun fallback quand `video_id` absent → sponsors locaux impossibles à attribuer
 6. **Aucune sync** entre le JSON config et la table `site_sponsor_videos` → fallback `video_filename` impossible
@@ -1083,7 +1083,7 @@ Dashboard → Pi :
     ↓ mergeSiteSponsors()
   localSponsors[] enrichi (centralId + source)
     ↓ sponsor.service.js
-  Admin Pi affiche en section NEOPRO (lecture seule + LockedError)
+  Admin Pi affiche en section MADXP (lecture seule + LockedError)
 
 Pi → Dashboard :
   Bénévole crée sponsor local → localSponsors[] (source:'local')
@@ -1208,7 +1208,7 @@ Pi → Dashboard :
 | 3   | Bénévole renomme un fichier vidéo = perte d'attribution                                       | Moyenne     | Les impressions futures ne sont plus rattachées         | Générer un `local_video_uuid` au moment de l'upload, persisté dans config                                                  |
 | 4   | `timeCategories[].loopVideos[]` écrasé par sync central                                       | Certaine    | Les sponsors club dans les boucles de phase sont perdus | Palier 3 : modifier `config-merge.js` pour préserver entrées club                                                          |
 | 5   | Volume data : 50 clubs x 5 sponsors x 150 events/match x 15 matchs = ~562K impressions/saison | Faible      | Croissance DB, perf queries                             | Indexes composites + agrégation `site_sponsor_daily_stats` (palier 5)                                                      |
-| 6   | Migration `advertiser_sites` → `site_sponsors` perd des données                               | Faible      | Sponsors NEOPRO sans `site_sponsor`                     | Script de migration avec vérification + rollback                                                                           |
+| 6   | Migration `advertiser_sites` → `site_sponsors` perd des données                               | Faible      | Sponsors MADXP sans `site_sponsor`                      | Script de migration avec vérification + rollback                                                                           |
 | 7   | Deux pipelines tracking (`video_plays` + `advertiser_impressions`) divergent                  | Moyenne     | Confusion sur la source de vérité pour les stats        | À terme (palier 5+) : unifier en un seul pipeline. Pour le MVP : `advertiser_impressions` = source unique rapports sponsor |
 
 ---
@@ -1278,7 +1278,7 @@ Pi → Dashboard :
 | --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Le player émet-il des events de lecture ? | **Oui** — 4 hooks dans `tv.component.ts`. Mais `video_id` est NULL (bug P0-01).                                                                          |
 | 2   | Quel mécanisme sync offline ?             | Double buffer : localStorage + JSON disque. Sync batch 200 toutes les 5 min. Pas de queue manager (fichier plat + setInterval). Suffisant pour 50 clubs. |
-| 3   | Le modèle Sponsor existe ?                | **Partiellement** — `advertisers` couvre les annonceurs NEOPRO. Les sponsors locaux des clubs n'ont aucune entité. D'où `site_sponsors`.                 |
+| 3   | Le modèle Sponsor existe ?                | **Partiellement** — `advertisers` couvre les annonceurs MADXP. Les sponsors locaux des clubs n'ont aucune entité. D'où `site_sponsors`.                  |
 | 4   | Outil PDF ?                               | PDFKit + chartjs-node-canvas. Pas Puppeteer.                                                                                                             |
 | 5   | Email en place ?                          | Oui, nodemailer + SMTP. Pas de support pièces jointes (à ajouter — palier 2).                                                                            |
 | 6   | Branding club accessible ?                | Oui (P5). `logo_url`, `color_primary`, `color_secondary` sur `sites`. Injectés dans `generateSiteSponsorPdf()`.                                          |

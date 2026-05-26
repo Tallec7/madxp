@@ -53,13 +53,13 @@ flowchart TB
 
 ### 🎫 Solution Context
 
-| Segment            | Contexte d'usage                                     |
-| ------------------ | ---------------------------------------------------- |
-| Bénévole club      | Smartphone en bord de terrain, WiFi gymnase instable |
-| Admin club         | Dashboard web, bureau ou domicile                    |
-| Sponsor            | Dashboard web, bureau                                |
-| Annonceur régie    | Portail web self-service                             |
-| Super admin NEOPRO | Dashboard central, monitoring flotte                 |
+| Segment           | Contexte d'usage                                     |
+| ----------------- | ---------------------------------------------------- |
+| Bénévole club     | Smartphone en bord de terrain, WiFi gymnase instable |
+| Admin club        | Dashboard web, bureau ou domicile                    |
+| Sponsor           | Dashboard web, bureau                                |
+| Annonceur régie   | Portail web self-service                             |
+| Super admin MADXP | Dashboard central, monitoring flotte                 |
 
 ### 👥 Équipe & Localisation
 

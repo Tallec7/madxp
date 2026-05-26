@@ -86,7 +86,7 @@ Ajout dans `angular.json` pour que le fichier soit copié dans le build :
 │    TÉLÉPHONE        │      │
 │                     │      │
 │  Connecté au        │      │
-│  hotspot NEOPRO     │      │
+│  hotspot MADXP     │      │
 │                     │      │
 │  /remote            │──────┘
 │  (télécommande)     │  Envoie les commandes

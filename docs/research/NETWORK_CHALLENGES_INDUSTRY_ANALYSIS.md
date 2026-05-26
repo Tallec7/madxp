@@ -112,7 +112,7 @@ Le driver WiFi intégré du Raspberry Pi (`brcmfmac`) a des **bugs connus** :
 MadXP a une architecture **plus complexe** que ses concurrents :
 
 ```
-NEOPRO (Architecture Dual-WiFi)
+MADXP (Architecture Dual-WiFi)
 ┌─────────────────────────────────────────────┐
 │  wlan0 (intégré)     wlan1 (USB dongle)    │
 │  ├── Hotspot         ├── Connexion Internet │

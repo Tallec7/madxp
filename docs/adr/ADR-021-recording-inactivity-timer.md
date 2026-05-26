@@ -31,7 +31,7 @@ Les analytics vidéo (lectures, impressions sponsors) ne sont enregistrées que 
 
 Remplacer le timer "retour neutral" par un **timer d'inactivité universel** qui fonctionne dans toutes les phases. Après 15 minutes sans interaction sur la télécommande, une popup d'avertissement apparaît avec un décompte de 3 minutes. Le club peut prolonger ou arrêter le recording.
 
-> **Note** : La "boucle NEOPRO par défaut" est un sujet séparé géré côté dashboard/central server via le système owner/lock existant dans `sponsors[]`. Ce n'est pas un champ Pi — c'est le central qui pousse les vidéos NEOPRO verrouillées dans la boucle par défaut lors du déploiement.
+> **Note** : La "boucle MADXP par défaut" est un sujet séparé géré côté dashboard/central server via le système owner/lock existant dans `sponsors[]`. Ce n'est pas un champ Pi — c'est le central qui pousse les vidéos MADXP verrouillées dans la boucle par défaut lors du déploiement.
 
 ## Alternatives Considérées
 

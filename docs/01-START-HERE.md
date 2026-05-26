@@ -1,4 +1,4 @@
-# 🚀 START HERE - Guide de Navigation Documentation NEOPRO
+# 🚀 START HERE - Guide de Navigation Documentation MADXP
 
 **Vous êtes perdu dans la documentation ? Ce guide est fait pour vous !**
 
@@ -8,7 +8,7 @@
 
 ### 👨‍💻 Je suis développeur et je veux...
 
-#### Démarrer sur le projet général NEOPRO
+#### Démarrer sur le projet général MADXP
 
 → **[README.md](../README.md)** (racine du projet)
 
@@ -366,7 +366,7 @@ Cochez au fur et à mesure :
 ---
 
 **Dernière mise à jour** : 19 Février 2026
-**Maintenu par** : Équipe NEOPRO
+**Maintenu par** : Équipe MADXP
 **Feedback** : GitHub Issues
 
-**🚀 Bonne navigation dans la documentation NEOPRO !**
+**🚀 Bonne navigation dans la documentation MADXP !**

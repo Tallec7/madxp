@@ -1,6 +1,6 @@
 # Remote Shell Security
 
-Documentation de sécurité pour le terminal distant NEOPRO.
+Documentation de sécurité pour le terminal distant MADXP.
 
 ## Vue d'ensemble
 

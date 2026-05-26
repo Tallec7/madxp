@@ -41,7 +41,7 @@ Séparer les deux business models en conservant un point de collecte analytics u
 
 ```
 ═══════════════════════════════════════════════════════════════
-                 MONDE ANNONCEUR NEOPRO
+                 MONDE ANNONCEUR MADXP
 ═══════════════════════════════════════════════════════════════
 
 agencies ──1:N──▶ advertisers

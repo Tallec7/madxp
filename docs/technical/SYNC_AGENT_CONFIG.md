@@ -72,7 +72,7 @@ sudo systemctl status neopro-sync-agent
 **Résultat attendu :**
 
 ```
-● neopro-sync-agent.service - NEOPRO Sync Agent
+● neopro-sync-agent.service - MADXP Sync Agent
    Active: active (running)
 ```
 

@@ -45,7 +45,7 @@ Solution : `scripts/cloudflare-saas-route-stubs.sh` est exécuté en fin de `bui
 
 - `curl -sL https://neopro-admin.kalonpartners.bzh/saas/remote?site=X` retourne du HTML contenant `<base href="/saas/">` et `<title>MadXP</title>`.
 - `curl -sL .../saas/tv?site=X`, `.../saas/login`, `.../saas/display/0..3` idem.
-- `curl -sL https://neopro-admin.kalonpartners.bzh/sites/<uuid>` retourne le HTML dashboard avec `<base href="/">` et `<title>NEOPRO - Dashboard Central</title>`.
+- `curl -sL https://neopro-admin.kalonpartners.bzh/sites/<uuid>` retourne le HTML dashboard avec `<base href="/">` et `<title>MADXP - Dashboard Central</title>`.
 - Le verify CI (step `Verify deployment` du job `deploy-frontend-cloudflare`) échoue si `assert_saas_html()` ne trouve pas `<base href="/saas/">` sur les routes SaaS.
 - Cloudflare retourne 308 redirect sur `/saas/<route>` (sans slash) → `/saas/<route>/` (avec slash) à cause des index.html stubs ; le browser et `curl -L` suivent transparently.
 

@@ -66,7 +66,7 @@ Si le Pi est installe dans un coffret :
 
 1. Coller une etiquette sur l'exterieur du coffret :
    ```
-   NEOPRO - [Nom du club]
+   MADXP - [Nom du club]
    HDMI VERT = TV PRINCIPALE
    HDMI ORANGE = ECRAN 2 (optionnel)
    ```

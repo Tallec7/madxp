@@ -1,4 +1,4 @@
-# Audit Complet du Projet NEOPRO
+# Audit Complet du Projet MADXP
 
 > **Date de l'audit** : 14 Décembre 2025
 > **Référence Business Plan** : BUSINESS_PLAN_COMPLET.md v1.5 (9 Décembre 2025)
@@ -27,7 +27,7 @@
 
 ### 1.1 Vue d'Ensemble
 
-Le projet NEOPRO est une **plateforme complète de gestion de télévision interactive pour clubs sportifs**, basée sur Raspberry Pi synchronisés avec un serveur central cloud. L'audit révèle un projet **mature et production-ready** avec une conformité globale au Business Plan de **72%**.
+Le projet MADXP est une **plateforme complète de gestion de télévision interactive pour clubs sportifs**, basée sur Raspberry Pi synchronisés avec un serveur central cloud. L'audit révèle un projet **mature et production-ready** avec une conformité globale au Business Plan de **72%**.
 
 ### 1.2 Scores Globaux
 
@@ -382,10 +382,10 @@ L'architecture implémentée correspond parfaitement au schéma du BP §3.2 :
 
 **Conforme au BP §3.5** - Modèle de contenu bien implémenté :
 
-| Type               | Propriétaire   | Modifiable par Club | Direction Sync           |
-| ------------------ | -------------- | ------------------- | ------------------------ |
-| **Contenu NEOPRO** | NEOPRO Central | Non (verrouillé)    | Central → Local          |
-| **Contenu Club**   | Club local     | Oui                 | Local → Central (miroir) |
+| Type              | Propriétaire  | Modifiable par Club | Direction Sync           |
+| ----------------- | ------------- | ------------------- | ------------------------ |
+| **Contenu MADXP** | MADXP Central | Non (verrouillé)    | Central → Local          |
+| **Contenu Club**  | Club local    | Oui                 | Local → Central (miroir) |
 
 **Fonctionnalités Sync Agent** :
 
@@ -1471,7 +1471,7 @@ Le projet a été significativement nettoyé suite aux corrections de décembre 
 
 ### Synthèse Globale
 
-Le projet NEOPRO est un **produit mature et production-ready** avec une note globale de **7.8/10**. L'architecture est solide, la sécurité est exemplaire (8.4/10), et la documentation est complète (8.4/10).
+Le projet MADXP est un **produit mature et production-ready** avec une note globale de **7.8/10**. L'architecture est solide, la sécurité est exemplaire (8.4/10), et la documentation est complète (8.4/10).
 
 ### Points Forts Majeurs
 

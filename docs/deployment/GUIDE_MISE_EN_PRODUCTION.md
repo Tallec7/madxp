@@ -137,7 +137,7 @@ Le code doit être dans votre compte GitHub. Deux options :
 Pendant ce guide, vous allez collecter plusieurs informations importantes. Créez un fichier texte sur votre ordinateur (ou utilisez un gestionnaire de mots de passe) pour noter :
 
 ```
-=== INFORMATIONS NEOPRO - À GARDER SECRET ===
+=== INFORMATIONS MADXP - À GARDER SECRET ===
 
 Date de configuration : _______________
 

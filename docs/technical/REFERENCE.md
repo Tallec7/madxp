@@ -472,16 +472,16 @@ Accès dashboard scoped pour le personnel de club. Un utilisateur `club` est li�
 
 ### Rôle et permissions
 
-| Action                  | Autorisé | Guard                                                 |
-| ----------------------- | -------- | ----------------------------------------------------- |
-| Voir son site           | ✅       | `requireRole` bypass si `:id` === `user.site_id`      |
-| Upload vidéos           | ✅       | `uploaded_for_site_id` auto-tagué serveur             |
-| Supprimer ses vidéos    | ✅       | Ownership: `uploaded_for_site_id === user.site_id`    |
-| Supprimer vidéos NEOPRO | ❌       | Guard catégorie `NEOPRO` dans `content.controller.ts` |
-| Modifier ses vidéos     | ✅       | Même guard ownership                                  |
-| Modifier vidéos NEOPRO  | ❌       | Même guard catégorie                                  |
-| Déployer sur son Pi     | ✅       | Bypass site-scoped                                    |
-| Voir d'autres sites     | ❌       | `requireRole` rejette                                 |
+| Action                 | Autorisé | Guard                                                |
+| ---------------------- | -------- | ---------------------------------------------------- |
+| Voir son site          | ✅       | `requireRole` bypass si `:id` === `user.site_id`     |
+| Upload vidéos          | ✅       | `uploaded_for_site_id` auto-tagué serveur            |
+| Supprimer ses vidéos   | ✅       | Ownership: `uploaded_for_site_id === user.site_id`   |
+| Supprimer vidéos MADXP | ❌       | Guard catégorie `MADXP` dans `content.controller.ts` |
+| Modifier ses vidéos    | ✅       | Même guard ownership                                 |
+| Modifier vidéos MADXP  | ❌       | Même guard catégorie                                 |
+| Déployer sur son Pi    | ✅       | Bypass site-scoped                                   |
+| Voir d'autres sites    | ❌       | `requireRole` rejette                                |
 
 ### Architecture technique
 
@@ -498,15 +498,15 @@ JWT payload: { id, email, role: 'club', site_id: 'uuid' }
               ┌───────────────────────────┼───────────────────────┐
               │ Upload                    │ Delete/Update          │ List
               │ auto-tag                  │ ownership guard        │ filtre par
-              │ uploaded_for_site_id      │ + NEOPRO block         │ uploaded_for_site_id
-              │ côté serveur              │                        │ + vidéos NEOPRO
+              │ uploaded_for_site_id      │ + MADXP block         │ uploaded_for_site_id
+              │ côté serveur              │                        │ + vidéos MADXP
               └───────────────────────────┴───────────────────────┘
 ```
 
 ### Fichiers clés
 
 - `central-server/src/middleware/auth.ts` — Bypass site-scoped pour rôle `club`
-- `central-server/src/controllers/content.controller.ts` — Guards ownership + NEOPRO
+- `central-server/src/controllers/content.controller.ts` — Guards ownership + MADXP
 - `central-server/src/repositories/video.repository.ts` — `findVideoById` (doit inclure `uploaded_for_site_id`), `findVideosForSite`
 
 ---

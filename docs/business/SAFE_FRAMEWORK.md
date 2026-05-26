@@ -1,4 +1,4 @@
-# SAFe Framework — Pilotage Produit NEOPRO
+# SAFe Framework — Pilotage Produit MADXP
 
 > **Dernière mise à jour** : 18 Février 2026
 > **Framework** : SAFe Essential (simplifié)
@@ -9,7 +9,7 @@
 
 ## Pourquoi SAFe ?
 
-NEOPRO est passé d'un backlog plat (BACKLOG.md) à un framework SAFe structuré pour :
+MADXP est passé d'un backlog plat (BACKLOG.md) à un framework SAFe structuré pour :
 
 - Aligner le développement produit sur la stratégie business (OKR 2026)
 - Structurer les flux de valeur (Value Streams) entre clubs et sponsors

@@ -1,4 +1,4 @@
-# Audit de Conformité au Business Plan NEOPRO
+# Audit de Conformité au Business Plan MADXP
 
 > **Date de l'audit**: 13 Décembre 2025
 > **Document de référence**: BUSINESS_PLAN_COMPLET.md v1.5 (9 Décembre 2025)
@@ -352,7 +352,7 @@ Le module Analytics Sponsors décrit dans le BP §13 n'est **pas du tout implém
 
 ## Conclusion
 
-L'application NEOPRO est **globalement conforme** au Business Plan sur les fonctionnalités core:
+L'application MADXP est **globalement conforme** au Business Plan sur les fonctionnalités core:
 
 - Le système Raspberry Pi (côté club) est **complet à 100%**
 - Le Dashboard Central est **à 86%** de conformité

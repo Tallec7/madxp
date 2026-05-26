@@ -2631,7 +2631,7 @@ Le code de retour = nombre d'erreurs (0 = Pi sain). Le mode `--json` est automat
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║              DIAGNOSTIC RASPBERRY PI NEOPRO                    ║
+║              DIAGNOSTIC RASPBERRY PI MADXP                    ║
 ╚════════════════════════════════════════════════════════════════╝
 
 >>> Services systemd
@@ -2767,7 +2767,7 @@ ssh pi@neopro.local 'chmod +x /tmp/fix-fleet-pi.sh && sudo /tmp/fix-fleet-pi.sh'
 8. **Flush les buffers** analytics et sponsors bloqués
 9. **Vérifie gpu_mem** (doit être 256 sur Pi 4)
 10. **Vérifie hdmi_force_hotplug** sur les 2 ports HDMI (E-23)
-11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1 + Plymouth NEOPRO + desktop noir + image splash kiosk)
+11. **Configure le boot splash** (cmdline.txt quiet boot + config.txt disable_splash=1 + Plymouth MADXP + desktop noir + image splash kiosk)
 12. **Captive portal iptables** (Android HTTPS connectivity checks)
 13. **Pi 5 Active Cooler** (dtparam=cooling_fan dans config.txt)
 

@@ -1,4 +1,4 @@
-# Inspect & Adapt — NEOPRO
+# Inspect & Adapt — MADXP
 
 > **Dernière mise à jour** : 11 Avril 2026
 > **Framework** : SAFe Essential

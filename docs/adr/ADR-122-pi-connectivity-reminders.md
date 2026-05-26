@@ -14,7 +14,7 @@ L'offre Pi est vendue avec la promesse "Pi reconnecté minimum 1×/mois pour pus
 - Seuls les sites avec `network_profile.type = 'mesh'` sont couverts par une alerte 24h (CRON `network-alerts.service.ts:220-233`)
 - La majorité de la flotte (sites simples, ethernet, enterprise) n'a aucune détection "Pi non vu depuis N jours"
 - Aucun mécanisme automatique ne rappelle au club de reconnecter son Pi (pas de colonne `sites.contact_email`, pas de CRON dédié, pas de notif in-app)
-- L'alerte ponctuelle `siteOffline` (grace 60s) cible NEOPRO uniquement et ne crie qu'au moment de la déconnexion initiale — silence total après
+- L'alerte ponctuelle `siteOffline` (grace 60s) cible MADXP uniquement et ne crie qu'au moment de la déconnexion initiale — silence total après
 
 Sans intervention, un club peut laisser son Pi offline plusieurs mois sans qu'aucun signal automatique ne soit émis.
 
@@ -25,7 +25,7 @@ Trois patterns sont déjà implémentés dans le code pour des cas similaires :
 | Pattern                                          | Code                                 | Adaptable au Pi reconnect ?                                    |
 | ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------- |
 | Warning in-app via `message_remote` télécommande | `subscription.service.ts:181-213`    | ✅ Oui — afficher "Dernière sync il y a X jours" en permanence |
-| Email CRON aux admins NEOPRO                     | `cron-tasks/report.task.ts:34-50`    | ✅ Oui — déjà câblé, juste à étendre                           |
+| Email CRON aux admins MADXP                      | `cron-tasks/report.task.ts:34-50`    | ✅ Oui — déjà câblé, juste à étendre                           |
 | Email CRON via `contact_email` (sponsors)        | `monthly-reports.service.ts:512-527` | ⚠️ Nécessite ajout `sites.contact_email`                       |
 
 L'architecture est prête. Il faut câbler le cas spécifique "Pi reconnect" en s'appuyant dessus.
@@ -72,7 +72,7 @@ Inspiré du Pattern 3 (sponsor monthly).
 4. **Nouveau CRON task** `executePiOfflineReminderTask` dans `cron-tasks/pi-offline-reminder.task.ts` :
    - Tourne toutes les 24h
    - Sélectionne les sites `site_type = 'pi'` avec `last_seen_at < NOW() - INTERVAL 'X days'` ET `contact_email IS NOT NULL`
-   - Détermine la tranche d'alerte : J+15 (info), J+25 (warning), J+35 (critique), J+60 (escalade NEOPRO)
+   - Détermine la tranche d'alerte : J+15 (info), J+25 (warning), J+35 (critique), J+60 (escalade MADXP)
    - Dédup : ne renvoie un email que si pas envoyé pour la même tranche (`pi_offline_reminders_sent` table ou colonne sur `sites`)
    - Appelle `emailService.sendPiOfflineReminder(contactEmail, { siteName, daysSinceLastSync, tier, helpUrl })`
 5. **Template email** dans `email.service.ts` : `sendPiOfflineReminder()` avec corps :
@@ -99,7 +99,7 @@ Inspiré du Pattern 3 (sponsor monthly).
 
 ### Phase 3 — Garde-fou cloud générique (= étendre `network-alerts.service.ts`)
 
-Complément aux Options α et β : on veut aussi que NEOPRO (équipe interne) soit alerté pour TOUS les Pi orphelins, pas que les mesh.
+Complément aux Options α et β : on veut aussi que MADXP (équipe interne) soit alerté pour TOUS les Pi orphelins, pas que les mesh.
 
 **Mécanisme** :
 
@@ -155,7 +155,7 @@ Complément aux Options α et β : on veut aussi que NEOPRO (équipe interne) so
 
 1. La promesse "Pi reconnecté minimum 1×/mois" devient **applicativement garantie** (rappels + détection cloud).
 2. Le club est notifié sur 2 canaux (in-app + email) → couverture maximale.
-3. NEOPRO détecte tous les Pi orphelins, plus seulement les mesh.
+3. MADXP détecte tous les Pi orphelins, plus seulement les mesh.
 4. Auto-resolve des alertes `site_offline` à la reconnexion → dashboard moins bruyant.
 5. Réutilisation des patterns existants (subscription warning + sponsor monthly) → cohérence architecturale.
 
@@ -167,19 +167,19 @@ Complément aux Options α et β : on veut aussi que NEOPRO (équipe interne) so
 
 ### Risques
 
-| Risque                                                                                 | Mitigation                                                                                                                            |
-| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync-agent ne write pas `last-cloud-sync.json` correctement → bannière incohérente     | Smoke test `smoke-pi-connectivity-banner.test.ts` qui valide le flow E2E                                                              |
-| Email finit dans les spams du club                                                     | Utiliser le domaine email NEOPRO authentifié SPF/DKIM/DMARC ; éviter sujets sensationnalistes                                         |
-| Spam si Pi reconnecte/déconnecte en flip-flop                                          | Dédup par tranche dans `pi_offline_reminders_sent` ; reset uniquement après reconnect stable > 24h                                    |
-| Colonne `sites.contact_email` reste NULL pour la flotte existante                      | Backfill manuel via dashboard + script CLI pour les sites principaux ; alerte NEOPRO si un Pi tier ≥ premium reste sans contact_email |
-| Confusion entre `users` rôle `'club'` (login portail) et `sites.contact_email` (notif) | Doc explicite + nullable ; ne pas réutiliser l'email user club (peut être différent)                                                  |
+| Risque                                                                                 | Mitigation                                                                                                                           |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Sync-agent ne write pas `last-cloud-sync.json` correctement → bannière incohérente     | Smoke test `smoke-pi-connectivity-banner.test.ts` qui valide le flow E2E                                                             |
+| Email finit dans les spams du club                                                     | Utiliser le domaine email MADXP authentifié SPF/DKIM/DMARC ; éviter sujets sensationnalistes                                         |
+| Spam si Pi reconnecte/déconnecte en flip-flop                                          | Dédup par tranche dans `pi_offline_reminders_sent` ; reset uniquement après reconnect stable > 24h                                   |
+| Colonne `sites.contact_email` reste NULL pour la flotte existante                      | Backfill manuel via dashboard + script CLI pour les sites principaux ; alerte MADXP si un Pi tier ≥ premium reste sans contact_email |
+| Confusion entre `users` rôle `'club'` (login portail) et `sites.contact_email` (notif) | Doc explicite + nullable ; ne pas réutiliser l'email user club (peut être différent)                                                 |
 
 ## Plan d'implémentation
 
 ### Phase 1 — Garde-fou cloud générique (~0.5 j) — ⚠️ priorité
 
-Rapide à livrer, débloque immédiatement la visibilité NEOPRO.
+Rapide à livrer, débloque immédiatement la visibilité MADXP.
 
 1. Étendre `network-alerts.service.ts:170-244` avec `Risk 7: site_offline_extended` indépendant du profil
 2. Auto-resolve `site_offline_*` à la reconnexion (`socket.service.ts` connect handler)
@@ -216,5 +216,5 @@ Rapide à livrer, débloque immédiatement la visibilité NEOPRO.
 - [ADR-111](ADR-111-alert-repository-dedup.md) — dédup alerts (utilisé pour `site_offline_*`)
 - `central-server/src/services/subscription.service.ts:181-213` — Pattern 1 (in-app message_remote)
 - `central-server/src/services/monthly-reports.service.ts:512-527` — Pattern 3 (email via contact_email)
-- `central-server/src/cron-tasks/report.task.ts` — Pattern 2 (email admin NEOPRO)
+- `central-server/src/cron-tasks/report.task.ts` — Pattern 2 (email admin MADXP)
 - `central-server/src/services/network-alerts.service.ts:170-244` — à étendre Phase 1

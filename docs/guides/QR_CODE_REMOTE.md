@@ -42,7 +42,7 @@ Le document genere contient :
 │      "NEOPRO-NOMCLUB"           │
 │   2. Scannez ce QR code         │
 │                                 │
-│              NEOPRO             │
+│              MADXP             │
 └─────────────────────────────────┘
 ```
 

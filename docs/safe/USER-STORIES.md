@@ -1,8 +1,8 @@
-# User Stories — NEOPRO SAFe
+# User Stories — MADXP SAFe
 
 > **Dernière mise à jour** : 11 Avril 2026 _(F-15.2 scoreboard multi-vendor + F-21.2 public scores API — PROP-003)_
 > **PI actuel** : PI-1 (Février - Mars 2026)
-> Ce document recense **toutes** les User Stories du produit NEOPRO :
+> Ce document recense **toutes** les User Stories du produit MADXP :
 >
 > - **182 US livrées** (13 domaines, traçabilité code + ADR) — dont 4 requalifiées depuis E-03
 > - **72 US futures** (PI-1 à PI-3, issues de [FEATURES.md](FEATURES.md))

@@ -69,7 +69,7 @@ TEMPS TOTAL : 40-45 minutes
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    NEOPRO ADMIN                         │
+│                    MADXP ADMIN                         │
 ├─────────────────────────────────────────────────────────┤
 │  📊 Système  |  📹 Vidéos  |  ⚙️ Configuration  |  📝 Logs │
 └─────────────────────────────────────────────────────────┘
@@ -573,7 +573,7 @@ sudo systemctl restart neopro-sync
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│       GUIDE RAPIDE NEOPRO - [NOM CLUB]               │
+│       GUIDE RAPIDE MADXP - [NOM CLUB]               │
 └──────────────────────────────────────────────────────┘
 
 📺 AFFICHER DES VIDÉOS

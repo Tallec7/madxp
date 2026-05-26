@@ -1,8 +1,8 @@
-# Guide Utilisateur NEOPRO
+# Guide Utilisateur MADXP
 
 ## Bienvenue
 
-Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme NEOPRO pour gérer vos écrans publicitaires dans les clubs sportifs.
+Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme MADXP pour gérer vos écrans publicitaires dans les clubs sportifs.
 
 ---
 
@@ -33,7 +33,7 @@ Ce guide vous accompagne dans l'utilisation quotidienne de la plateforme NEOPRO 
 
 # PARTIE 1 : GUIDE CLUB (Utilisation locale)
 
-Cette partie s'adresse aux responsables de clubs qui utilisent le système NEOPRO sur place.
+Cette partie s'adresse aux responsables de clubs qui utilisent le système MADXP sur place.
 
 ---
 
@@ -41,7 +41,7 @@ Cette partie s'adresse aux responsables de clubs qui utilisent le système NEOPR
 
 ### Installation physique
 
-Votre système NEOPRO se compose d'un boîtier (Raspberry Pi) connecté à votre écran TV.
+Votre système MADXP se compose d'un boîtier (Raspberry Pi) connecté à votre écran TV.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -50,9 +50,9 @@ Votre système NEOPRO se compose d'un boîtier (Raspberry Pi) connecté à votre
 │                                                              │
 │   📱 Votre smartphone          📺 Votre écran TV             │
 │        │                              │                      │
-│        │ WiFi NEOPRO                  │ HDMI                 │
+│        │ WiFi MADXP                  │ HDMI                 │
 │        │                              │                      │
-│        └──────────► 📦 Boîtier NEOPRO ◄────┘                │
+│        └──────────► 📦 Boîtier MADXP ◄────┘                │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -67,7 +67,7 @@ Votre système NEOPRO se compose d'un boîtier (Raspberry Pi) connecté à votre
 
 Le boîtier démarre automatiquement :
 
-1. Logo NEOPRO pendant le chargement (~30 secondes)
+1. Logo MADXP pendant le chargement (~30 secondes)
 2. Page d'accueil avec le nom de votre club
 3. Vos vidéos commencent à défiler automatiquement
 
@@ -85,7 +85,7 @@ Vous devriez voir :
 
 ## 2. Connexion locale
 
-### Se connecter au WiFi NEOPRO
+### Se connecter au WiFi MADXP
 
 Pour contrôler votre système, connectez-vous au réseau WiFi créé par le boîtier :
 
@@ -95,11 +95,11 @@ Pour contrôler votre système, connectez-vous au réseau WiFi créé par le bo�
 3. **Connectez-vous** (mot de passe fourni lors de l'installation)
 4. **Attendez** que la connexion soit établie
 
-> ⚠️ **Note** : Une fois connecté au WiFi NEOPRO, vous n'aurez plus accès à Internet. C'est normal ! Le réseau NEOPRO est dédié au contrôle de votre système.
+> ⚠️ **Note** : Une fois connecté au WiFi MADXP, vous n'aurez plus accès à Internet. C'est normal ! Le réseau MADXP est dédié au contrôle de votre système.
 
 ### Accéder à la télécommande
 
-Une fois connecté au WiFi NEOPRO :
+Une fois connecté au WiFi MADXP :
 
 1. **Ouvrez votre navigateur** (Safari, Chrome, Firefox...)
 2. **Tapez l'adresse** : `http://192.168.4.1`
@@ -154,7 +154,7 @@ La page de connexion affiche :
 
 ## 3. Guide jour de match
 
-Le jour de match est le moment idéal pour profiter pleinement de votre système NEOPRO !
+Le jour de match est le moment idéal pour profiter pleinement de votre système MADXP !
 
 ### Checklist avant le match (30 min avant)
 
@@ -209,13 +209,13 @@ Le jour de match est le moment idéal pour profiter pleinement de votre système
 
 ## 4. Télécommande web
 
-La télécommande web est votre interface principale pour contrôler le système NEOPRO.
+La télécommande web est votre interface principale pour contrôler le système MADXP.
 
 ### Écran principal
 
 ```
 ┌────────────────────────────────────────┐
-│         NEOPRO - [Votre Club]          │
+│         MADXP - [Votre Club]          │
 ├────────────────────────────────────────┤
 │                                        │
 │   ┌────────────────────────────────┐   │
@@ -269,11 +269,11 @@ L'interface d'administration permet de gérer les paramètres avancés.
 
 ### Accès
 
-1. Connectez-vous au WiFi NEOPRO
+1. Connectez-vous au WiFi MADXP
 2. Accédez à `http://192.168.4.1/admin`
 3. Entrez vos identifiants (fournis lors de l'installation)
 
-> 🔐 **Identifiants** : Fournis par votre installateur NEOPRO
+> 🔐 **Identifiants** : Fournis par votre installateur MADXP
 
 ### Tableau de bord admin
 
@@ -328,7 +328,7 @@ L'interface d'administration permet de gérer les paramètres avancés.
 - Débranchez et rebranchez l'alimentation du boîtier
 - Attendez 60 secondes le redémarrage
 
-### Impossible de se connecter au WiFi NEOPRO
+### Impossible de se connecter au WiFi MADXP
 
 **Vérifications :**
 
@@ -346,7 +346,7 @@ L'interface d'administration permet de gérer les paramètres avancés.
 
 **Vérifications :**
 
-1. ✅ Êtes-vous connecté au WiFi NEOPRO ?
+1. ✅ Êtes-vous connecté au WiFi MADXP ?
 2. ✅ L'adresse est-elle `http://192.168.4.1` (pas https) ?
 
 **Solution :**
@@ -370,11 +370,11 @@ L'interface d'administration permet de gérer les paramètres avancés.
 
 1. ✅ Volume TV monté ?
 2. ✅ TV pas en mode muet ?
-3. ✅ Volume télécommande NEOPRO activé ?
+3. ✅ Volume télécommande MADXP activé ?
 
 **Solution :**
 
-- Augmentez le volume sur la télécommande NEOPRO
+- Augmentez le volume sur la télécommande MADXP
 - Vérifiez les paramètres audio TV (sortie HDMI)
 
 ### Contacter le support
@@ -394,7 +394,7 @@ Si le problème persiste :
 
 # PARTIE 2 : GUIDE DASHBOARD (Gestionnaires)
 
-Cette partie s'adresse aux gestionnaires NEOPRO utilisant le dashboard central.
+Cette partie s'adresse aux gestionnaires MADXP utilisant le dashboard central.
 
 ---
 
@@ -681,7 +681,7 @@ Pour renforcer la sécurité de votre compte :
 
 | Terme           | Définition                                      |
 | --------------- | ----------------------------------------------- |
-| **Site**        | Un écran NEOPRO installé dans un club           |
+| **Site**        | Un écran MADXP installé dans un club            |
 | **Déploiement** | Envoi d'une vidéo vers un ou plusieurs sites    |
 | **Groupe**      | Ensemble de sites regroupés par critère         |
 | **Canary**      | Déploiement progressif avec tests préalables    |

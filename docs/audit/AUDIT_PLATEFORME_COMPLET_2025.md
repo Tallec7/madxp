@@ -1,4 +1,4 @@
-# 🎯 AUDIT GLOBAL PLATEFORME NEOPRO
+# 🎯 AUDIT GLOBAL PLATEFORME MADXP
 
 ## Rapport d'Audit Technique, Sécurité, UX/UI et Fonctionnel
 
@@ -896,7 +896,7 @@ const url = `${environment.apiUrl}/admin/jobs/stream?token=${encodeURIComponent(
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                          ROADMAP NEOPRO 2025-2026                          │
+│                          ROADMAP MADXP 2025-2026                          │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │  COURT TERME (0-3 mois)                                                    │

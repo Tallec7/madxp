@@ -14,7 +14,7 @@ graph TB
         TV["📺 Spectateurs"]
     end
 
-    subgraph NEOPRO["☁️ Plateforme MadXP"]
+    subgraph MADXP["☁️ Plateforme MadXP"]
         DASH["Dashboard Angular 20"]
         API["Central Server<br/>Express + TypeScript"]
         DB["PostgreSQL 15<br/>Supabase"]
@@ -37,7 +37,7 @@ graph TB
     API <-->|"WebSocket<br/>Socket.IO"| PI
     PI -->|"HTTPS Download"| FTP
 
-    style NEOPRO fill:#e8f4fd,stroke:#2196F3
+    style MADXP fill:#e8f4fd,stroke:#2196F3
     style EDGE fill:#fff3e0,stroke:#FF9800
     style ACTORS fill:#f3e5f5,stroke:#9C27B0
 ```
@@ -94,7 +94,7 @@ graph TB
     subgraph PI["🔧 Raspberry Pi 4 — Un par club"]
         subgraph SYNC["Sync Agent — Node.js"]
             AGENT["agent.js<br/>WebSocket client"]
-            CONFIG_MERGE["config-merge.js<br/>Fusion NEOPRO + Club"]
+            CONFIG_MERGE["config-merge.js<br/>Fusion MADXP + Club"]
             DEPLOY_VID["deploy-video.js<br/>Téléchargement + SHA256"]
             COMMANDS["commands/<br/>reboot, logs, update..."]
         end

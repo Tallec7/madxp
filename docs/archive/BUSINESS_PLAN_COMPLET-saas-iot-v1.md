@@ -1,4 +1,4 @@
-# NEOPRO - Business Plan & Roadmap Technique Complète
+# MADXP - Business Plan & Roadmap Technique Complète
 
 > **Document de référence pour investisseurs, CTO et COO**
 > Version 1.6 - 26 Décembre 2025
@@ -100,9 +100,9 @@ Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impact
 
 > **Les solutions existantes** sont soit trop chères (€500-2000+), soit trop complexes, soit inadaptées au contexte sportif amateur.
 
-## 1.2 La Solution NEOPRO
+## 1.2 La Solution MADXP
 
-**NEOPRO construit le premier réseau publicitaire sportif amateur en France**, alliant affichage dynamique professionnel et marketplace annonceurs.
+**MADXP construit le premier réseau publicitaire sportif amateur en France**, alliant affichage dynamique professionnel et marketplace annonceurs.
 
 ### 🏀 PLATEFORME DOUBLE-FACE (TWO-SIDED MARKETPLACE)
 
@@ -144,7 +144,7 @@ Les clubs sportifs amateurs font face à **quatre douleurs majeures** qui impact
 
 1. Annonceur paie €250/mois pour diffusion réseau
 2. Vidéos passent sur tous clubs partenaires (max 3/club)
-3. NEOPRO garde 90% (€225/mois), reverse 10% clubs (€25/mois)
+3. MADXP garde 90% (€225/mois), reverse 10% clubs (€25/mois)
 4. Clubs touchent €1,800/an passifs via 6 annonceurs
 
 ### 🔄 EFFET RÉSEAU VERTUEUX
@@ -157,13 +157,13 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ### 🎯 DIFFÉRENCIATEURS STRATÉGIQUES
 
-| #   | Différenciateur                                     | Description                                                                                                                                         |
-| --- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Solution complète expérience match**              | Seul acteur combinant affichage temps réel + engagement spectateurs + analytics sponsors en UNE plateforme                                          |
-| 2   | **Seul réseau publicitaire sportif amateur France** | Marché vierge €1,2M TAM                                                                                                                             |
-| 3   | **Modèle triple-win**                               | Clubs professionnalisent + valorisent + génèrent revenus passifs. Annonceurs accèdent audience qualifiée. NEOPRO scale ARR via deux sources revenus |
-| 4   | **Barrière entrée forte**                           | Effet réseau two-sided, relations clubs, tech propriétaire                                                                                          |
-| 5   | **Simplicité opérationnelle**                       | Plug & play 10min, smartphone 1 clic, rapports auto                                                                                                 |
+| #   | Différenciateur                                     | Description                                                                                                                                        |
+| --- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Solution complète expérience match**              | Seul acteur combinant affichage temps réel + engagement spectateurs + analytics sponsors en UNE plateforme                                         |
+| 2   | **Seul réseau publicitaire sportif amateur France** | Marché vierge €1,2M TAM                                                                                                                            |
+| 3   | **Modèle triple-win**                               | Clubs professionnalisent + valorisent + génèrent revenus passifs. Annonceurs accèdent audience qualifiée. MADXP scale ARR via deux sources revenus |
+| 4   | **Barrière entrée forte**                           | Effet réseau two-sided, relations clubs, tech propriétaire                                                                                         |
+| 5   | **Simplicité opérationnelle**                       | Plug & play 10min, smartphone 1 clic, rapports auto                                                                                                |
 
 ## 1.3 Chiffres Clés
 
@@ -223,7 +223,7 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         ÉCOSYSTÈME NEOPRO                       │
+│                         ÉCOSYSTÈME MADXP                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
@@ -378,7 +378,7 @@ Plus clubs → Plus audience → CPM attractif → Plus annonceurs
 
 ## 2.5 Stratégie d'Acquisition Annonceurs
 
-> **NEOPRO construit le seul réseau publicitaire sportif amateur en France.** Cette section détaille la stratégie d'acquisition et de gestion des annonceurs.
+> **MADXP construit le seul réseau publicitaire sportif amateur en France.** Cette section détaille la stratégie d'acquisition et de gestion des annonceurs.
 
 ### 2.5.1 Cibles Annonceurs Prioritaires
 
@@ -447,7 +447,7 @@ CLOSING (J45-J60)
 
 #### vs. Publicité Digitale Classique
 
-| Critère          | Digital Display     | NEOPRO              |
+| Critère          | Digital Display     | MADXP               |
 | ---------------- | ------------------- | ------------------- |
 | **CPM**          | €15-25              | €8-12               |
 | **Attention**    | Faible (ad-block)   | Captive (salle)     |
@@ -499,7 +499,7 @@ CLOSING (J45-J60)
 | **2027** (+3 régions)               | 15 (dont 3 nationaux) | €40K    |
 | **2028** (couverture nationale)     | 25+                   | €80K    |
 
-### TAM Combiné NEOPRO
+### TAM Combiné MADXP
 
 | Segment        | TAM ARR   | SAM 2026 | SAM 2027  | SAM 2028  |
 | -------------- | --------- | -------- | --------- | --------- |
@@ -517,7 +517,7 @@ CLOSING (J45-J60)
 
 ## 2.7 Production Vidéo - Différenciateur Majeur
 
-> **La production vidéo professionnelle est un PILIER de l'offre NEOPRO**, pas une option secondaire.
+> **La production vidéo professionnelle est un PILIER de l'offre MADXP**, pas une option secondaire.
 
 ### 2.7.1 Pourquoi c'est Critique
 
@@ -526,7 +526,7 @@ CLOSING (J45-J60)
 - Clubs veulent célébrations joueurs personnalisées (buts, entrées)
 - Mais n'ont pas : équipement vidéo pro, compétences montage, temps
 
-#### Solution NEOPRO
+#### Solution MADXP
 
 - Shooting terrain inclus dans offres Silver/Gold
 - Production vidéos célébrations (5-10s par joueur)
@@ -581,9 +581,9 @@ CLOSING (J45-J60)
 | Agences vidéo  | €2,000-5,000 | Pro      | Aucune          |
 | Freelances     | €500-1,500   | Variable | Aucune          |
 | Bénévoles club | Gratuit      | Amateur  | Manuelle        |
-| **NEOPRO**     | €800-2,000   | Pro      | **Automatique** |
+| **MADXP**      | €800-2,000   | Pro      | **Automatique** |
 
-#### Avantages NEOPRO
+#### Avantages MADXP
 
 - ✅ Intégré dans plateforme (vidéos uploadées automatiquement)
 - ✅ Prix compétitifs packs multi-équipes
@@ -845,14 +845,14 @@ CLOSING (J45-J60)
 
 Le système distingue deux types de contenu avec des règles de synchronisation différentes :
 
-| Type               | Propriétaire   | Modifiable par Club | Direction Sync           |
-| ------------------ | -------------- | ------------------- | ------------------------ |
-| **Contenu NEOPRO** | NEOPRO Central | Non (verrouillé)    | Central → Local          |
-| **Contenu Club**   | Club local     | Oui                 | Local → Central (miroir) |
+| Type              | Propriétaire  | Modifiable par Club | Direction Sync           |
+| ----------------- | ------------- | ------------------- | ------------------------ |
+| **Contenu MADXP** | MADXP Central | Non (verrouillé)    | Central → Local          |
+| **Contenu Club**  | Club local    | Oui                 | Local → Central (miroir) |
 
 ### Cas d'Usage
 
-**Annonceurs Nationaux** : NEOPRO déploie des vidéos partenaires (ex: Décathlon) vers tous les clubs. Ces vidéos apparaissent dans une catégorie verrouillée "ANNONCES NEOPRO" que l'opérateur club ne peut pas modifier ou supprimer.
+**Annonceurs Nationaux** : MADXP déploie des vidéos partenaires (ex: Décathlon) vers tous les clubs. Ces vidéos apparaissent dans une catégorie verrouillée "ANNONCES NEOPRO" que l'opérateur club ne peut pas modifier ou supprimer.
 
 **Contenu Local** : L'opérateur club (Jean) peut ajouter ses propres vidéos (hommages, annonces speaker) via l'Admin UI locale. Ces modifications sont préservées lors des synchronisations avec le central.
 
@@ -861,20 +861,20 @@ Le système distingue deux types de contenu avec des règles de synchronisation 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    SERVEUR CENTRAL                          │
-│  • Contenu NEOPRO (verrouillé) → PUSH vers les clubs       │
+│  • Contenu MADXP (verrouillé) → PUSH vers les clubs       │
 │  • Miroir config clubs (lecture seule) ← PULL des clubs    │
 └─────────────────────────────────────────────────────────────┘
                            │
             ┌──────────────┴──────────────┐
             ▼                             ▼
 ┌───────────────────────┐    ┌───────────────────────┐
-│ ANNONCES NEOPRO       │    │ CONTENU CLUB          │
+│ ANNONCES MADXP       │    │ CONTENU CLUB          │
 │ 🔒 Lecture seule      │    │ ✏️ Modifiable         │
 │ Catégorie verrouillée │    │ Préservé au merge     │
 └───────────────────────┘    └───────────────────────┘
 ```
 
-**Principe clé** : Les modifications locales du club sont TOUJOURS préservées lors d'une synchronisation. Le contenu NEOPRO est ajouté/mis à jour sans écraser le contenu club.
+**Principe clé** : Les modifications locales du club sont TOUJOURS préservées lors d'une synchronisation. Le contenu MADXP est ajouté/mis à jour sans écraser le contenu club.
 
 ---
 
@@ -1423,7 +1423,7 @@ CEO
 
 # 8. Modèle Économique
 
-> **NEOPRO génère des revenus via DEUX SOURCES RÉCURRENTES** : Abonnements Clubs (SaaS sportif) et Réseau Annonceurs (Marketplace).
+> **MADXP génère des revenus via DEUX SOURCES RÉCURRENTES** : Abonnements Clubs (SaaS sportif) et Réseau Annonceurs (Marketplace).
 
 ## 8.1 Sources de Revenus
 
@@ -1514,7 +1514,7 @@ CEO
 | Élément                  | Valeur                              |
 | ------------------------ | ----------------------------------- |
 | **Prix annonceur**       | €250/mois                           |
-| **Commission NEOPRO**    | 90% (€225/mois par annonceur)       |
+| **Commission MADXP**     | 90% (€225/mois par annonceur)       |
 | **Reverse club**         | 10% (€25/mois par annonceur)        |
 | **Limite par club**      | 3 annonceurs maximum                |
 | **Revenus club passifs** | €1,800/an (6 annonceurs × €25 × 12) |
@@ -1528,13 +1528,13 @@ CEO
 
 #### Attractivité pour les Clubs
 
-**Coût net NEOPRO avec annonceurs :**
+**Coût net MADXP avec annonceurs :**
 
 ```
 €950/an (abonnement Autonome) - €1,800/an (revenus annonceurs) = -€850/an
 ```
 
-> **Résultat** : Le club GAGNE de l'argent en utilisant NEOPRO !
+> **Résultat** : Le club GAGNE de l'argent en utilisant MADXP !
 >
 > Revenus annonceurs couvrent **190% du coût abonnement**.
 >
@@ -2082,7 +2082,7 @@ Les clubs sportifs amateurs peinent à :
 - **Attirer de nouveaux sponsors** sans preuves d'exposition
 - **Valoriser leur audience** lors des événements
 
-### Solution NEOPRO Analytics
+### Solution MADXP Analytics
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -2355,7 +2355,7 @@ class SponsorAnalyticsService {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  NEOPRO - Rapport Sponsor : DÉCATHLON CESSON                    Jan 2025   │
+│  MADXP - Rapport Sponsor : DÉCATHLON CESSON                    Jan 2025   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐            │
@@ -2502,7 +2502,7 @@ Le rapport PDF inclut :
 | **Transparence**         | Confiance dans le partenariat             |
 | **Reporting automatisé** | Gain de temps administratif               |
 
-### Pour NEOPRO
+### Pour MADXP
 
 | Bénéfice                     | Impact                      |
 | ---------------------------- | --------------------------- |
@@ -2547,11 +2547,11 @@ Le rapport PDF inclut :
 
 **Cas concret CESSON Handball (N3) :**
 
-- AVANT NEOPRO : 2 sponsors perdus (pas de preuves ROI)
-- AVEC NEOPRO : 5/5 sponsors renouvelés ("enfin des données !")
+- AVANT MADXP : 2 sponsors perdus (pas de preuves ROI)
+- AVEC MADXP : 5/5 sponsors renouvelés ("enfin des données !")
 - +1 nouveau sponsor attiré (visibilité écran démontrée)
 - **+€2,500 revenus sponsoring annuels**
-- **ROI NEOPRO : 4 mois**
+- **ROI MADXP : 4 mois**
 
 ### Taux Adoption Prévu 2026
 
@@ -2623,7 +2623,7 @@ PHASE 3 (Mois 5-8)
 
 > **Objectif : Donner aux clubs une vision complète de leur utilisation du système pour optimiser l'animation des événements et justifier l'investissement.**
 
-Cette fonctionnalité permet aux clubs de mesurer l'utilisation réelle de leur système NEOPRO et d'identifier les axes d'amélioration.
+Cette fonctionnalité permet aux clubs de mesurer l'utilisation réelle de leur système MADXP et d'identifier les axes d'amélioration.
 
 ## 14.0 Offre Commerciale Analytics Club
 
@@ -2878,7 +2878,7 @@ launchVideo(video: Video) {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  NEOPRO - Analytics : CESSON HANDBALL                           Jan 2025   │
+│  MADXP - Analytics : CESSON HANDBALL                           Jan 2025   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ══════════════════════════════════════════════════════════════════════════ │
@@ -2999,7 +2999,7 @@ launchVideo(video: Video) {
 | **Anticiper les problèmes** | Alertes proactives santé système            |
 | **Historique activité**     | Preuve d'utilisation pour partenaires       |
 
-### Pour NEOPRO
+### Pour MADXP
 
 | Bénéfice             | Impact                        |
 | -------------------- | ----------------------------- |
@@ -3119,7 +3119,7 @@ SEMAINE 2: AUTONOMIE
 
 > **RECOMMANDATION : INVESTIR avec due diligence technique**
 >
-> Le projet NEOPRO présente un potentiel significatif sur un marché fragmenté avec peu de concurrence directe. Le produit est fonctionnel et répond à un besoin réel des clubs sportifs amateurs.
+> Le projet MADXP présente un potentiel significatif sur un marché fragmenté avec peu de concurrence directe. Le produit est fonctionnel et répond à un besoin réel des clubs sportifs amateurs.
 >
 > **Points forts :**
 >
@@ -3176,4 +3176,4 @@ SEMAINE 2: AUTONOMIE
 
 ---
 
-_Ce document constitue une analyse exhaustive du projet NEOPRO et sert de référence pour les décisions stratégiques, techniques et opérationnelles._
+_Ce document constitue une analyse exhaustive du projet MADXP et sert de référence pour les décisions stratégiques, techniques et opérationnelles._

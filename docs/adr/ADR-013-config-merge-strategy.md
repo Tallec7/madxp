@@ -34,7 +34,7 @@ Le mode par défaut est **merge** (pas replace). Le central envoie uniquement `n
 | Champ              | Comportement merge                                                             |
 | ------------------ | ------------------------------------------------------------------------------ |
 | `sponsors`         | Fusion intelligente : sponsors du central appliqués, sponsors locaux préservés |
-| `categories`       | Fusion NEOPRO/Club                                                             |
+| `categories`       | Fusion MADXP/Club                                                              |
 | `timeCategories`   | Remplacement complet                                                           |
 | `categoryMappings` | Remplacement complet                                                           |
 | `liveScoreEnabled` | Mise à jour                                                                    |

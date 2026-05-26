@@ -311,7 +311,7 @@ Si le multi-zone ne tient pas la charge terrain :
 
 ```
 ═══════════════════════════════════════════════════════════════════════
-  PV D'INSTALLATION LED NEOPRO
+  PV D'INSTALLATION LED MADXP
 ═══════════════════════════════════════════════════════════════════════
 
 Date d'installation   : ________________________________________________
@@ -345,7 +345,7 @@ Port 4 → crop (___, ___) → (___, ___)  → Destination : __________________
 
 PDF NovaLCT export    : [ ] fourni à MadXP   [ ] non fourni
 
-─── CONFIGURATION NEOPRO (sites.displays) ─────────────────────────────
+─── CONFIGURATION MADXP (sites.displays) ─────────────────────────────
 
 [ ] sites.displays saisi par super_admin et validé
 [ ] Coordonnées x match les crops NovaLCT ci-dessus

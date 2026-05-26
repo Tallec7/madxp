@@ -3,6 +3,7 @@
 ## Vue d'ensemble
 
 Cette mise à jour complète la **Phase 1 du Business Plan** avec l'implémentation de :
+
 1. Tests Frontend Angular pour les services manquants
 2. Monitoring centralisé avec Logtail
 3. Alertes Slack pour les événements critiques
@@ -16,11 +17,11 @@ Cette mise à jour complète la **Phase 1 du Business Plan** avec l'implémentat
 
 Ajout de tests unitaires pour les 3 services qui n'en avaient pas :
 
-| Service | Fichier | Tests |
-|---------|---------|-------|
-| NotificationService | `notification.service.spec.ts` | 6 tests (success, error, warning, info, IDs) |
-| AnalyticsService | `analytics.service.spec.ts` | 10 tests (health, availability, alerts, usage, export) |
-| SocketService | `socket.service.spec.ts` | 9 tests (connect, disconnect, emit, events) |
+| Service             | Fichier                        | Tests                                                  |
+| ------------------- | ------------------------------ | ------------------------------------------------------ |
+| NotificationService | `notification.service.spec.ts` | 6 tests (success, error, warning, info, IDs)           |
+| AnalyticsService    | `analytics.service.spec.ts`    | 10 tests (health, availability, alerts, usage, export) |
+| SocketService       | `socket.service.spec.ts`       | 9 tests (connect, disconnect, emit, events)            |
 
 **Couverture totale des services core : 9/9** (100%)
 
@@ -29,11 +30,13 @@ Ajout de tests unitaires pour les 3 services qui n'en avaient pas :
 Intégration de [Better Stack Logtail](https://betterstack.com/logtail) pour centraliser les logs en production.
 
 **Configuration :**
+
 ```env
 LOGTAIL_TOKEN=your-logtail-source-token
 ```
 
 **Fonctionnement :**
+
 - En production, tous les logs Winston sont envoyés à Logtail
 - Les logs fichiers locaux sont conservés en backup
 - Permet la recherche, alerting et dashboards dans Better Stack
@@ -43,6 +46,7 @@ LOGTAIL_TOKEN=your-logtail-source-token
 Service d'alertes Slack pour les événements critiques du système.
 
 **Configuration :**
+
 ```env
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK
 SLACK_ALERTS_ENABLED=true
@@ -50,17 +54,18 @@ SLACK_ALERTS_ENABLED=true
 
 **Alertes disponibles :**
 
-| Méthode | Déclencheur | Sévérité |
-|---------|-------------|----------|
-| `siteOffline()` | Site passe offline | Error |
-| `siteOnline()` | Site revient online | Info |
-| `highTemperature()` | Température > 75°C | Warning/Critical |
-| `lowDiskSpace()` | Disque > 90% | Warning/Critical |
-| `deploymentSuccess()` | Déploiement vidéo réussi | Info |
-| `deploymentFailed()` | Échec déploiement | Error |
-| `serverError()` | Erreur serveur | Error |
+| Méthode               | Déclencheur              | Sévérité         |
+| --------------------- | ------------------------ | ---------------- |
+| `siteOffline()`       | Site passe offline       | Error            |
+| `siteOnline()`        | Site revient online      | Info             |
+| `highTemperature()`   | Température > 75°C       | Warning/Critical |
+| `lowDiskSpace()`      | Disque > 90%             | Warning/Critical |
+| `deploymentSuccess()` | Déploiement vidéo réussi | Info             |
+| `deploymentFailed()`  | Échec déploiement        | Error            |
+| `serverError()`       | Erreur serveur           | Error            |
 
 **Format des messages :**
+
 - Couleurs par sévérité (bleu, orange, rouge)
 - Emojis indicateurs
 - Métadonnées structurées
@@ -71,18 +76,21 @@ SLACK_ALERTS_ENABLED=true
 Nouvel onglet "Contenu local" dans la page de détail d'un site.
 
 **Fonctionnalités :**
+
 - Affiche le miroir de la configuration stockée sur le Pi
 - Visualisation des catégories et vidéos
-- Indicateurs de verrouillage (NEOPRO vs Club)
+- Indicateurs de verrouillage (MADXP vs Club)
 - Hash de configuration et date de dernière sync
-- Badges owner (NEOPRO/CLUB) colorés
+- Badges owner (MADXP/CLUB) colorés
 
 **Endpoint API :**
+
 ```
 GET /api/sites/:id/local-content
 ```
 
 **Réponse :**
+
 ```json
 {
   "siteId": "uuid",
@@ -91,7 +99,9 @@ GET /api/sites/:id/local-content
   "hasContent": true,
   "lastSync": "2025-12-10T10:00:00Z",
   "configHash": "abc123...",
-  "configuration": { /* SiteConfiguration */ }
+  "configuration": {
+    /* SiteConfiguration */
+  }
 }
 ```
 
@@ -101,27 +111,27 @@ GET /api/sites/:id/local-content
 
 ### Central Server
 
-| Fichier | Modification |
-|---------|--------------|
-| `package.json` | Ajout `@logtail/node`, `@logtail/winston` |
-| `.env.example` | Variables `LOGTAIL_TOKEN`, `SLACK_WEBHOOK_URL`, `SLACK_ALERTS_ENABLED` |
-| `src/config/logger.ts` | Transport Logtail en production |
-| `src/services/alert.service.ts` | **Nouveau** - Service d'alertes Slack |
-| `src/services/socket.service.ts` | Intégration alertes (offline, temperature, disk) |
-| `src/controllers/sites.controller.ts` | Fonction `getSiteLocalContent` |
-| `src/routes/sites.routes.ts` | Route `GET /:id/local-content` |
+| Fichier                               | Modification                                                           |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `package.json`                        | Ajout `@logtail/node`, `@logtail/winston`                              |
+| `.env.example`                        | Variables `LOGTAIL_TOKEN`, `SLACK_WEBHOOK_URL`, `SLACK_ALERTS_ENABLED` |
+| `src/config/logger.ts`                | Transport Logtail en production                                        |
+| `src/services/alert.service.ts`       | **Nouveau** - Service d'alertes Slack                                  |
+| `src/services/socket.service.ts`      | Intégration alertes (offline, temperature, disk)                       |
+| `src/controllers/sites.controller.ts` | Fonction `getSiteLocalContent`                                         |
+| `src/routes/sites.routes.ts`          | Route `GET /:id/local-content`                                         |
 
 ### Central Dashboard
 
-| Fichier | Modification |
-|---------|--------------|
-| `angular.json` | Fix styles.scss, budgets augmentés |
-| `src/app/core/services/notification.service.spec.ts` | **Nouveau** - Tests |
-| `src/app/core/services/analytics.service.spec.ts` | **Nouveau** - Tests |
-| `src/app/core/services/socket.service.spec.ts` | **Nouveau** - Tests |
-| `src/app/core/services/sites.service.ts` | Méthode `getLocalContent()` |
-| `src/app/features/sites/site-detail.component.ts` | Onglet Contenu local |
-| `src/app/features/sites/site-content-viewer/` | **Nouveau** - Composant visualisation |
+| Fichier                                              | Modification                          |
+| ---------------------------------------------------- | ------------------------------------- |
+| `angular.json`                                       | Fix styles.scss, budgets augmentés    |
+| `src/app/core/services/notification.service.spec.ts` | **Nouveau** - Tests                   |
+| `src/app/core/services/analytics.service.spec.ts`    | **Nouveau** - Tests                   |
+| `src/app/core/services/socket.service.spec.ts`       | **Nouveau** - Tests                   |
+| `src/app/core/services/sites.service.ts`             | Méthode `getLocalContent()`           |
+| `src/app/features/sites/site-detail.component.ts`    | Onglet Contenu local                  |
+| `src/app/features/sites/site-content-viewer/`        | **Nouveau** - Composant visualisation |
 
 ---
 
@@ -150,6 +160,7 @@ SLACK_ALERTS_ENABLED=true
 ### 3. Migration base de données
 
 Si pas encore fait, exécuter :
+
 ```sql
 -- Voir central-server/src/scripts/add-local-config-mirror.sql
 ALTER TABLE sites
@@ -174,23 +185,23 @@ cd central-dashboard && npm run build
 
 ### Phase 1 - Consolidation Technique (0-3 mois)
 
-| Tâche | Statut |
-|-------|--------|
-| CI/CD GitHub Actions | ✅ |
-| Tests backend (230 tests, ~67% couverture) | ✅ |
-| Tests frontend (9 services core) | ✅ |
-| Sécurité JWT HttpOnly | ✅ |
-| TLS PostgreSQL | ✅ |
-| API Key hashée | ✅ |
-| Analytics Club | ✅ |
-| Éditeur config avancé | ✅ |
-| CRUD vidéos inline | ✅ |
-| Upload fichiers | ✅ |
-| Toast notifications | ✅ |
-| Synchronisation intelligente | ✅ |
-| **Monitoring/Logging (Logtail)** | ✅ **Nouveau** |
-| **Alerting (Slack)** | ✅ **Nouveau** |
-| Documentation OpenAPI/Swagger | ⏳ À faire |
+| Tâche                                      | Statut         |
+| ------------------------------------------ | -------------- |
+| CI/CD GitHub Actions                       | ✅             |
+| Tests backend (230 tests, ~67% couverture) | ✅             |
+| Tests frontend (9 services core)           | ✅             |
+| Sécurité JWT HttpOnly                      | ✅             |
+| TLS PostgreSQL                             | ✅             |
+| API Key hashée                             | ✅             |
+| Analytics Club                             | ✅             |
+| Éditeur config avancé                      | ✅             |
+| CRUD vidéos inline                         | ✅             |
+| Upload fichiers                            | ✅             |
+| Toast notifications                        | ✅             |
+| Synchronisation intelligente               | ✅             |
+| **Monitoring/Logging (Logtail)**           | ✅ **Nouveau** |
+| **Alerting (Slack)**                       | ✅ **Nouveau** |
+| Documentation OpenAPI/Swagger              | ⏳ À faire     |
 
 **Progression Phase 1 : ~95%**
 

@@ -261,7 +261,7 @@ Le code de retour = nombre d'erreurs (0 = Pi sain).
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
-║              DIAGNOSTIC RASPBERRY PI NEOPRO                    ║
+║              DIAGNOSTIC RASPBERRY PI MADXP                    ║
 ╚════════════════════════════════════════════════════════════════╝
 
 >>> Services systemd

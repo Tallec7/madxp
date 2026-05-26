@@ -39,11 +39,11 @@ Le module est **COMPLET et PRÊT POUR PRODUCTION** avec :
 - ✅ Installation dépendances (PDFKit, chartjs-node-canvas)
 - ✅ Implémentation complète 785 lignes
 - ✅ Structure PDF 4 pages :
-  - **Page 1** : Page de garde (logo NEOPRO, titre, sponsor, période)
+  - **Page 1** : Page de garde (logo MADXP, titre, sponsor, période)
   - **Page 2** : Résumé exécutif (6 KPIs en grille 2x3 avec icônes)
   - **Page 3** : Graphiques (ligne impressions + anneau répartition événements)
   - **Page 4** : Certificat diffusion avec signature SHA-256
-- ✅ Charte graphique NEOPRO (couleurs, typographie professionnelle)
+- ✅ Charte graphique MADXP (couleurs, typographie professionnelle)
 - ✅ 6 fonctions utilitaires (formatDate, formatNumber, generateCharts, etc.)
 
 #### 2. Documentation (`docs/`)
@@ -271,7 +271,7 @@ Le module est **PRÊT pour déploiement production** :
 
 ### Impact Business
 
-**Pour NEOPRO** :
+**Pour MADXP** :
 
 - ✅ Différenciateur majeur vs concurrence
 - ✅ Upsell premium : +10-25€/mois/club
@@ -435,5 +435,5 @@ Le **module Analytics Sponsors est COMPLET et PRÊT POUR PRODUCTION** avec :
 ---
 
 **Généré le** : 14 Décembre 2025
-**Auteur** : Claude Code + Équipe NEOPRO
+**Auteur** : Claude Code + Équipe MADXP
 **Version** : 1.0.0 (Release initiale)

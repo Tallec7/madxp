@@ -1,4 +1,4 @@
-# ROADMAP VERS 10/10 - NEOPRO
+# ROADMAP VERS 10/10 - MADXP
 
 > Plan d'amelioration pour atteindre l'excellence sur chaque composant
 > Date initiale: 13 Decembre 2025
@@ -126,7 +126,7 @@ export class ConnectionStatusComponent {
 
 #### 1.3 Gestion expiration videos offline
 
-**Probleme**: Les videos NEOPRO avec `expires_at` ne sont pas supprimees automatiquement en offline.
+**Probleme**: Les videos MADXP avec `expires_at` ne sont pas supprimees automatiquement en offline.
 
 ```javascript
 // A ajouter dans raspberry/sync-agent/src/tasks/expiration-checker.js
@@ -809,7 +809,7 @@ export class SocketService {
 function resolveConflict(localItem, remoteItem) {
   // Si les deux ont le meme ID mais des contenus differents
   if (localItem.id === remoteItem.id) {
-    // Le contenu verrouille (NEOPRO) gagne toujours
+    // Le contenu verrouille (MADXP) gagne toujours
     if (remoteItem.locked) return remoteItem;
     if (localItem.locked) return localItem;
 
@@ -1035,7 +1035,7 @@ import QRCode from 'qrcode';
 class MFAService {
   generateSecret(email: string) {
     const secret = speakeasy.generateSecret({
-      name: `NEOPRO (${email})`,
+      name: `MADXP (${email})`,
       length: 32,
     });
     return secret;
@@ -1286,9 +1286,9 @@ module.exports = {
 # A creer dans central-server/openapi.yaml
 openapi: 3.0.3
 info:
-  title: NEOPRO Central API
+  title: MADXP Central API
   version: 1.0.0
-  description: API de gestion de flotte NEOPRO
+  description: API de gestion de flotte MADXP
 
 paths:
   /api/auth/login:
@@ -1347,7 +1347,7 @@ paths:
 ```markdown
 # A creer dans docs/USER_GUIDE.md
 
-# Guide Utilisateur NEOPRO
+# Guide Utilisateur MADXP
 
 ## Pour le Regisseur (jour de match)
 

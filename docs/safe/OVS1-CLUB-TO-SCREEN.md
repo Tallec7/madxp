@@ -28,7 +28,7 @@ flowchart LR
 
 ### 🎯 Trigger
 
-> Un club sportif amateur signe un contrat NEOPRO (Essentiel, Autonomie ou Premium)
+> Un club sportif amateur signe un contrat MADXP (Essentiel, Autonomie ou Premium)
 
 ### 💰 Valeur délivrée
 
