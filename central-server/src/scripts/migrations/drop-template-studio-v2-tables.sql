@@ -2,7 +2,7 @@
 --
 -- Drop des 12 tables V2 + 2 trigger functions associées.
 -- Audit pré-PR (2026-05-16) : 0 usage actif en production.
---   - madxp_templates : 11 rows (9 archived, 2 zombies draft/published)
+--   - neopro_templates : 11 rows (9 archived, 2 zombies draft/published)
 --   - template_layers/text_fields/image_slots/variants/options/versions/...
 --   - remotion_render_jobs : 1 job historique du 2026-05-07 (failed)
 --   - template_backgrounds : 1 row catalogue, 0 grants actifs
@@ -16,7 +16,7 @@
 
 BEGIN;
 
--- Tables enfants (FK vers madxp_templates / template_layers / template_options) en premier.
+-- Tables enfants (FK vers neopro_templates / template_layers / template_options) en premier.
 DROP TABLE IF EXISTS madxp_template_versions CASCADE;
 DROP TABLE IF EXISTS template_versions CASCADE;
 DROP TABLE IF EXISTS template_packshot_refs CASCADE;
@@ -30,11 +30,11 @@ DROP TABLE IF EXISTS template_backgrounds_grants CASCADE;
 DROP TABLE IF EXISTS template_backgrounds CASCADE;
 
 -- Table racine.
-DROP TABLE IF EXISTS madxp_templates CASCADE;
+DROP TABLE IF EXISTS neopro_templates CASCADE;
 
 -- Trigger functions devenues orphelines (les triggers eux-mêmes sont
 -- supprimés par CASCADE avec leurs tables).
-DROP FUNCTION IF EXISTS madxp_templates_snapshot_version() CASCADE;
+DROP FUNCTION IF EXISTS neopro_templates_snapshot_version() CASCADE;
 DROP FUNCTION IF EXISTS remotion_render_jobs_set_updated_at() CASCADE;
 
 COMMIT;

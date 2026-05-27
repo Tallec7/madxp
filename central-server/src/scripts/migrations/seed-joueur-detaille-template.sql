@@ -26,10 +26,10 @@ DECLARE
   asset_prefix TEXT := '/BUT_img_joueur_';
 BEGIN
   -- ── 1. Template row (schema_version=2 direct) ───────────────────────────
-  SELECT id INTO tpl_id FROM madxp_templates WHERE composition_id = 'JoueurDetaille' LIMIT 1;
+  SELECT id INTO tpl_id FROM neopro_templates WHERE composition_id = 'JoueurDetaille' LIMIT 1;
 
   IF tpl_id IS NULL THEN
-    INSERT INTO madxp_templates (
+    INSERT INTO neopro_templates (
       name, composition_id, description,
       props_schema, default_props,
       published, schema_version,
@@ -176,5 +176,5 @@ BEGIN
   ON CONFLICT (template_id, slot_key) DO NOTHING;
 END$$;
 
-COMMENT ON COLUMN madxp_templates.schema_version IS
+COMMENT ON COLUMN neopro_templates.schema_version IS
   'ADR-075/086 : 1 = legacy (composition codée), 2 = data-driven (runtime générique). Joueur détaillé = premier template 100 % data-driven.';

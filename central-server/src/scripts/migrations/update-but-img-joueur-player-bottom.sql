@@ -1,7 +1,7 @@
 -- Migration : ajout playerImgBottom + max playerImgSize 5000 pour ButImgJoueur
 -- Idempotente : safe à rejouer
 
-UPDATE madxp_templates
+UPDATE neopro_templates
 SET
   props_schema = '[
     {"key": "prenom", "type": "text", "label": "Prénom", "required": true, "placeholder": "KEVIN"},

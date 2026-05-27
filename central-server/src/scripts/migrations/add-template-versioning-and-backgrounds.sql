@@ -15,22 +15,22 @@
 --   - SPEC famille JOUEUR : docs/templates/JOUEUR-SPEC-GLOBAL.md
 
 -- =============================================================================
--- 1) VERSIONING — extension madxp_templates + table snapshot
+-- 1) VERSIONING — extension neopro_templates + table snapshot
 -- =============================================================================
 
-ALTER TABLE madxp_templates
+ALTER TABLE neopro_templates
   ADD COLUMN IF NOT EXISTS version            TEXT          NOT NULL DEFAULT '1.0',
   ADD COLUMN IF NOT EXISTS status             TEXT          NOT NULL DEFAULT 'draft'
     CHECK (status IN ('draft', 'published', 'archived')),
   ADD COLUMN IF NOT EXISTS published_at       TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS published_by       UUID REFERENCES users(id),
-  ADD COLUMN IF NOT EXISTS parent_template_id UUID REFERENCES madxp_templates(id);
+  ADD COLUMN IF NOT EXISTS parent_template_id UUID REFERENCES neopro_templates(id);
 
-COMMENT ON COLUMN madxp_templates.version IS
+COMMENT ON COLUMN neopro_templates.version IS
   'ADR-108 : version semver du template (MAJOR.MINOR). Slug + version = identité unique.';
-COMMENT ON COLUMN madxp_templates.status IS
+COMMENT ON COLUMN neopro_templates.status IS
   'ADR-108 : draft = mutable, published = locked immutable, archived = rollback only.';
-COMMENT ON COLUMN madxp_templates.parent_template_id IS
+COMMENT ON COLUMN neopro_templates.parent_template_id IS
   'ADR-108 : si fork, pointe sur la version parente (tracé d''origine).';
 
 -- Snapshot immutable d'une version publiée
@@ -40,7 +40,7 @@ COMMENT ON COLUMN madxp_templates.parent_template_id IS
 -- + variants + fonts) requis pour le verrouillage des masters.
 CREATE TABLE IF NOT EXISTS template_versions (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id          UUID NOT NULL REFERENCES madxp_templates(id) ON DELETE CASCADE,
+  template_id          UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
   version              TEXT NOT NULL,
   layers_snapshot      JSONB NOT NULL,
   text_fields_snapshot JSONB NOT NULL,
@@ -134,7 +134,7 @@ COMMENT ON TABLE template_backgrounds_grants IS
 --
 -- Le backfill est idempotent (ON CONFLICT DO NOTHING sur template_versions).
 
-UPDATE madxp_templates
+UPDATE neopro_templates
 SET status = 'published',
     published_at = COALESCE(published_at, created_at, NOW())
 WHERE status = 'draft' AND created_at IS NOT NULL;
@@ -172,7 +172,7 @@ SELECT
     t.published_by,
     (SELECT id FROM users WHERE role = 'super_admin' ORDER BY created_at LIMIT 1)
   )
-FROM madxp_templates t
+FROM neopro_templates t
 WHERE NOT EXISTS (
   SELECT 1 FROM template_versions tv
   WHERE tv.template_id = t.id AND tv.version = COALESCE(t.version, '1.0')

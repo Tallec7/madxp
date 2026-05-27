@@ -26,7 +26,7 @@ DECLARE
   -- Asset Railway connu fonctionnel (utilisé par "Joueur détaillé")
   webm_url TEXT := 'https://neopro-central-production.up.railway.app/remotion-preview/public/BUT_img_joueur_E.webm';
 BEGIN
-  SELECT id INTO tpl_id FROM madxp_templates
+  SELECT id INTO tpl_id FROM neopro_templates
    WHERE composition_id = 'HelloTest' LIMIT 1;
 
   IF tpl_id IS NOT NULL THEN
@@ -35,7 +35,7 @@ BEGIN
   END IF;
 
   -- ── 1. Template row ─────────────────────────────────────────────────────
-  INSERT INTO madxp_templates (
+  INSERT INTO neopro_templates (
     name, composition_id, description,
     props_schema, default_props,
     published, schema_version,

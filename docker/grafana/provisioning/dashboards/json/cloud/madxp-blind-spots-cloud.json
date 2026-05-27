@@ -730,7 +730,7 @@
       },
       "targets": [
         {
-          "expr": "madxp_templates_snapshot",
+          "expr": "neopro_templates_snapshot",
           "refId": "A"
         }
       ]

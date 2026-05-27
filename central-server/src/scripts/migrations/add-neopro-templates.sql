@@ -1,7 +1,7 @@
--- Migration: Add madxp_templates table
+-- Migration: Add neopro_templates table
 -- Templates vidéo Remotion publiables par les admins, utilisables par les clubs (feature: video_templates)
 
-CREATE TABLE IF NOT EXISTS madxp_templates (
+CREATE TABLE IF NOT EXISTS neopro_templates (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name          VARCHAR(255) NOT NULL,
   composition_id VARCHAR(100) NOT NULL,        -- ID de la composition Remotion (ex: 'ButSimple')
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS madxp_templates (
 );
 
 -- Seed: template but-simple initial
-INSERT INTO madxp_templates (name, composition_id, description, props_schema, default_props, published)
+INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, published)
 VALUES (
   'BUT Simple',
   'ButSimple',
@@ -31,4 +31,4 @@ VALUES (
   true
 );
 
-COMMENT ON TABLE madxp_templates IS 'Templates vidéo Remotion — ADR-052';
+COMMENT ON TABLE neopro_templates IS 'Templates vidéo Remotion — ADR-052';

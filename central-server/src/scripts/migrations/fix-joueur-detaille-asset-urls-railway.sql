@@ -28,7 +28,7 @@ DECLARE
   new_prefix TEXT := 'https://neopro-central-production.up.railway.app/remotion-preview/public/BUT_img_joueur_';
   tpl_id     UUID;
 BEGIN
-  SELECT id INTO tpl_id FROM madxp_templates WHERE composition_id = 'JoueurDetaille' LIMIT 1;
+  SELECT id INTO tpl_id FROM neopro_templates WHERE composition_id = 'JoueurDetaille' LIMIT 1;
 
   IF tpl_id IS NULL THEN
     RAISE NOTICE 'Template JoueurDetaille absent — seed non appliqué, migration skippée.';

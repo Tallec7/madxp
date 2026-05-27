@@ -26,8 +26,8 @@ DECLARE
   but_joueur_id   UUID;
   base_url        TEXT := 'https://kalonpartners.bzh/neopro-video/template-assets/studio/legacy';
 BEGIN
-  SELECT id INTO but_simple_id FROM madxp_templates WHERE composition_id = 'ButSimple' LIMIT 1;
-  SELECT id INTO but_joueur_id FROM madxp_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
+  SELECT id INTO but_simple_id FROM neopro_templates WHERE composition_id = 'ButSimple' LIMIT 1;
+  SELECT id INTO but_joueur_id FROM neopro_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
 
   -- ── ButSimple (3 fragments : A=background, B+C=layers) ───────────────────
   IF but_simple_id IS NOT NULL THEN

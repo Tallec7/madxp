@@ -216,7 +216,7 @@ describe('Metrics endpoint', () => {
   it('GET /metrics includes custom neopro metrics', async () => {
     const res = await request(app).get('/metrics');
     expect(res.text).toContain('http_requests_total');
-    expect(res.text).toContain('neopro_');
+    expect(res.text).toContain('madxp_');
   });
 
   it('GET /metrics returns correct Content-Type', async () => {

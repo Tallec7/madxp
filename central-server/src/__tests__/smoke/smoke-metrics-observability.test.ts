@@ -50,7 +50,7 @@ function walkJson(dir: string, out: string[] = []): string[] {
 }
 
 function extractRegisteredMetrics(source: string): string[] {
-  const re = /name:\s*['"](neopro_[a-z0-9_]+)['"]/g;
+  const re = /name:\s*['"](madxp_[a-z0-9_]+)['"]/g;
   const names = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(source)) !== null) names.add(m[1]);
@@ -67,7 +67,7 @@ function loadSinkContent(): string {
 }
 
 describe('Smoke — metrics observability guard', () => {
-  it('every registered neopro_ metric is referenced in a dashboard or alert rule', () => {
+  it('every registered madxp_ metric is referenced in a dashboard or alert rule', () => {
     expect(fs.existsSync(METRICS_FILE)).toBe(true);
     expect(fs.existsSync(DASHBOARDS_DIR)).toBe(true);
 
@@ -95,7 +95,7 @@ describe('Smoke — metrics observability guard', () => {
         `Found ${blindSpots.length} metric(s) registered but not visualized anywhere:`,
         ...blindSpots.map((m) => `  - ${m}`),
         '',
-        'Every neopro_* metric must appear in at least one Grafana dashboard panel',
+        'Every madxp_* metric must appear in at least one Grafana dashboard panel',
         `(under ${path.relative(REPO_ROOT, DASHBOARDS_DIR)}/) or one Prometheus alert rule`,
         `(in ${path.relative(REPO_ROOT, RULES_FILE)}).`,
         '',

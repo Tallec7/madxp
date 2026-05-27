@@ -7,7 +7,7 @@
  *
  * Ce smoke vérifie que `raspberry/scripts/sync-agent-guardian.sh` :
  *   1. Référence le service `neopro-app` (is-active + restart)
- *   2. Émet un événement structuré `madxp_app_restart_attempt` (observabilité)
+ *   2. Émet un événement structuré `neopro_app_restart_attempt` (observabilité)
  *   3. Implémente un plafond de restart (cap 5/h) pour éviter la boucle infinie
  *   4. Implémente un backoff (BACKOFF_FILE) pour éviter de taper en boucle
  */
@@ -41,15 +41,15 @@ describe('Pi sync-guardian — neopro-app watchdog (incident 2026-05-13)', () =>
   });
 
   it('émet un événement structuré sur la tentative de restart', () => {
-    expect(script).toMatch(/madxp_app_restart_attempt/);
-    expect(script).toMatch(/madxp_app_down/);
-    expect(script).toMatch(/madxp_app_recovered/);
+    expect(script).toMatch(/neopro_app_restart_attempt/);
+    expect(script).toMatch(/neopro_app_down/);
+    expect(script).toMatch(/neopro_app_recovered/);
   });
 
   it('implémente un plafond de restart (5/heure)', () => {
     expect(script).toMatch(/NEOPRO_APP_RESTART_CAP=5/);
     expect(script).toMatch(/NEOPRO_APP_RESTART_WINDOW=3600/);
-    expect(script).toMatch(/madxp_app_restart_cap_reached/);
+    expect(script).toMatch(/neopro_app_restart_cap_reached/);
   });
 
   it('implémente un backoff exponentiel pour éviter la boucle infinie', () => {

@@ -7,13 +7,13 @@
  *   2. OTA récent déploie /etc/nginx/sites-enabled/{neopro-base, neopro-hls,
  *      firestick-captive} mais ne supprime pas le legacy
  *   3. nginx au reload : "duplicate default_server for 0.0.0.0:80" → fail
- *   4. neopro-hls.conf déclare proxy_cache_path /var/cache/nginx/madxp_videos
+ *   4. neopro-hls.conf déclare proxy_cache_path /var/cache/nginx/neopro_videos
  *      qui n'existe pas → "mkdir() failed (2: No such file or directory)" → fail
  *
  * FIX — ota-install.js (raspberry/sync-agent/src/commands/ota-install.js)
  *   doit auto-réparer à chaque OTA :
  *   - retirer /etc/nginx/sites-enabled/neopro AVANT de déployer neopro-base
- *   - mkdir -p /var/cache/nginx/madxp_videos AVANT de déployer neopro-hls
+ *   - mkdir -p /var/cache/nginx/neopro_videos AVANT de déployer neopro-hls
  *
  * Sans ces 2 actions, le bug RACC se reproduira sur tout Pi de la flotte
  * qui a un ancien install.sh + reçoit un OTA avec neopro-base/hls.
@@ -47,12 +47,12 @@ describe('Smoke — Pi nginx cleanup (incident RACC 2026-05-10)', () => {
     expect(src).toMatch(/sudo rm -f \/etc\/nginx\/sites-enabled\/neopro(\s|['"])/);
   });
 
-  it('ota-install.js ensures /var/cache/nginx/madxp_videos exists before deploying neopro-hls', () => {
+  it('ota-install.js ensures /var/cache/nginx/neopro_videos exists before deploying neopro-hls', () => {
     // neopro-hls.conf déclare proxy_cache_path sur ce dossier. Sans mkdir,
     // nginx -t échoue et le reload tue tout le service.
     expect(src).toMatch(/confFiles\.includes\(['"]neopro-hls\.conf['"]\)/);
-    expect(src).toMatch(/sudo mkdir -p \/var\/cache\/nginx\/madxp_videos/);
-    expect(src).toMatch(/sudo chown www-data:www-data \/var\/cache\/nginx\/madxp_videos/);
+    expect(src).toMatch(/sudo mkdir -p \/var\/cache\/nginx\/neopro_videos/);
+    expect(src).toMatch(/sudo chown www-data:www-data \/var\/cache\/nginx\/neopro_videos/);
   });
 
   it('ota-install.js cleanup runs BEFORE the deploy loop (so legacy symlink removed before nginx reload)', () => {
@@ -62,7 +62,7 @@ describe('Smoke — Pi nginx cleanup (incident RACC 2026-05-10)', () => {
     // Ancre spécifique : la boucle de déploiement contient `sudo cp ${src} ${dest}`
     // — c'est elle qu'il faut localiser, pas n'importe quelle boucle confFiles.
     const idxRm = src.search(/sudo rm -f \/etc\/nginx\/sites-enabled\/neopro(\s|['"])/);
-    const idxMkdir = src.search(/sudo mkdir -p \/var\/cache\/nginx\/madxp_videos/);
+    const idxMkdir = src.search(/sudo mkdir -p \/var\/cache\/nginx\/neopro_videos/);
     const idxDeployCp = src.search(/sudo cp \$\{src\} \$\{dest\}/);
     expect(idxRm).toBeGreaterThan(0);
     expect(idxMkdir).toBeGreaterThan(0);

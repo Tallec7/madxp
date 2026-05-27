@@ -1,11 +1,11 @@
--- Migration: Insert ButImgJoueur template into madxp_templates
+-- Migration: Insert ButImgJoueur template into neopro_templates
 -- Le template ButSimple était déjà inséré dans add-neopro-templates.sql.
 -- add-video-assets-to-templates.sql faisait un UPDATE sur ButImgJoueur
 -- mais aucun INSERT n'existait → no-op silencieux. Cette migration corrige ça.
 --
 -- Idempotent : ne fait rien si le template existe déjà (pas de UNIQUE sur composition_id).
 
-INSERT INTO madxp_templates (name, composition_id, description, props_schema, default_props, published)
+INSERT INTO neopro_templates (name, composition_id, description, props_schema, default_props, published)
 SELECT
   'BUT Img Joueur',
   'ButImgJoueur',
@@ -27,5 +27,5 @@ SELECT
   '{"prenom": "PRENOM", "nom": "NOM", "club": "NOM DU CLUB", "logoSize": 400, "scoreLabel": "+1"}'::jsonb,
   true
 WHERE NOT EXISTS (
-  SELECT 1 FROM madxp_templates WHERE composition_id = 'ButImgJoueur'
+  SELECT 1 FROM neopro_templates WHERE composition_id = 'ButImgJoueur'
 );

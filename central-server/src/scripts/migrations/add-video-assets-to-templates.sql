@@ -2,7 +2,7 @@
 -- Allows admins to swap background WebM videos from the dashboard without redeploying.
 -- type "asset" = file upload UI (admin only), stored as FTP URL in default_props.
 
-UPDATE madxp_templates
+UPDATE neopro_templates
 SET
   props_schema = '[
     {"key": "prenom",   "label": "Prénom",     "type": "text",   "required": true,  "placeholder": "KEVIN"},
@@ -17,7 +17,7 @@ SET
   updated_at = NOW()
 WHERE composition_id = 'ButSimple';
 
-UPDATE madxp_templates
+UPDATE neopro_templates
 SET
   props_schema = '[
     {"key": "prenom",      "label": "Prénom",        "type": "text",  "required": true,  "placeholder": "KEVIN"},

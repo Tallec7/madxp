@@ -1487,12 +1487,12 @@ describe('Grafana kiosk health alerts', () => {
   );
 
   it('must have kiosk crash alert rule', () => {
-    expect({ hasKioskCrashAlert: alertsYml.includes('neopro-kiosk-crash') })
+    expect({ hasKioskCrashAlert: alertsYml.includes('madxp-kiosk-crash') })
       .toEqual({ hasKioskCrashAlert: true });
   });
 
   it('must have kiosk down alert rule', () => {
-    expect({ hasKioskDownAlert: alertsYml.includes('neopro-kiosk-down') })
+    expect({ hasKioskDownAlert: alertsYml.includes('madxp-kiosk-down') })
       .toEqual({ hasKioskDownAlert: true });
   });
 

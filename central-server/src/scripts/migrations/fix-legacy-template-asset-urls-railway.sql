@@ -25,8 +25,8 @@ DECLARE
   but_simple_id   UUID;
   but_joueur_id   UUID;
 BEGIN
-  SELECT id INTO but_simple_id FROM madxp_templates WHERE composition_id = 'ButSimple' LIMIT 1;
-  SELECT id INTO but_joueur_id FROM madxp_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
+  SELECT id INTO but_simple_id FROM neopro_templates WHERE composition_id = 'ButSimple' LIMIT 1;
+  SELECT id INTO but_joueur_id FROM neopro_templates WHERE composition_id = 'ButImgJoueur' LIMIT 1;
 
   -- ── template_variants ────────────────────────────────────────────────────────
   UPDATE template_variants

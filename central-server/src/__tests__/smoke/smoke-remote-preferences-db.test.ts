@@ -113,6 +113,6 @@ describe('Smoke — ADR-102 Remote Preferences DB', () => {
     // (le service gère la persistance).
     expect(/WIDGETS_STORAGE_KEY_BASE/.test(v2)).toBe(false);
     // Pas de localStorage.setItem direct sur la clé widgets.
-    expect(/localStorage\.setItem\(\s*['"]madxp_remote_v2_widgets/.test(v2)).toBe(false);
+    expect(/localStorage\.setItem\(\s*['"]neopro_remote_v2_widgets/.test(v2)).toBe(false);
   });
 });

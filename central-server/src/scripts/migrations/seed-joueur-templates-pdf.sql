@@ -45,11 +45,11 @@ BEGIN
   -- Options : intro_mode (logo/numero)
   -- Durée   : 5.96s @ 25fps (= 5960 ms)
 
-  SELECT id INTO tpl_id FROM madxp_templates
+  SELECT id INTO tpl_id FROM neopro_templates
    WHERE composition_id = 'JoueurSimpleGenerique' LIMIT 1;
 
   IF tpl_id IS NULL THEN
-    INSERT INTO madxp_templates (
+    INSERT INTO neopro_templates (
       name, composition_id, description,
       props_schema, default_props,
       published, schema_version,
@@ -194,11 +194,11 @@ BEGIN
   -- Idem SIMPLE_GENERIQUE mais layer packshot remplacé par packshot IMG
   -- + slot photo joueur + textes asymétriques (gauche prénom, droite numéro)
 
-  SELECT id INTO tpl_id FROM madxp_templates
+  SELECT id INTO tpl_id FROM neopro_templates
    WHERE composition_id = 'JoueurSimpleImage' LIMIT 1;
 
   IF tpl_id IS NULL THEN
-    INSERT INTO madxp_templates (
+    INSERT INTO neopro_templates (
       name, composition_id, description,
       props_schema, default_props,
       published, schema_version,
@@ -333,11 +333,11 @@ BEGIN
   -- Pas d'option intro_mode (toujours logo en intro pour BUT)
   -- Durée : 6.96s @ 25fps
 
-  SELECT id INTO tpl_id FROM madxp_templates
+  SELECT id INTO tpl_id FROM neopro_templates
    WHERE composition_id = 'JoueurButGenerique' LIMIT 1;
 
   IF tpl_id IS NULL THEN
-    INSERT INTO madxp_templates (
+    INSERT INTO neopro_templates (
       name, composition_id, description,
       props_schema, default_props,
       published, schema_version,

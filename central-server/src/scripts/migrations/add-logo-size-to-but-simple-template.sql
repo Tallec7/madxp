@@ -1,7 +1,7 @@
 -- Migration: Add logoSize prop to ButSimple template
 -- Adds a number slider for logo width (px) — default 500, range 100-1000
 
-UPDATE madxp_templates
+UPDATE neopro_templates
 SET
   props_schema = '[
     {"key": "prenom",   "label": "Prénom",     "type": "text",   "required": true,  "placeholder": "KEVIN"},
