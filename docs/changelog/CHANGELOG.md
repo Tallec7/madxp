@@ -1,3 +1,9 @@
+# [4.1.0](https://github.com/Tallec7/madxp/compare/v4.0.0...v4.1.0) (2026-05-27)
+
+### Features
+
+- **rebrand:** add MadXP domains in CSP frameAncestors (PR 7/N — prep Phase 7) ([#1070](https://github.com/Tallec7/madxp/issues/1070)) ([212794b](https://github.com/Tallec7/madxp/commit/212794b18c82afd0b42cbbef0fd821502ceeef21))
+
 # [4.0.0](https://github.com/Tallec7/neopro/compare/v3.330.1...v4.0.0) (2026-05-27)
 
 - feat(rebrand)!: rename Prometheus metrics neopro*\*→madxp*\* + Grafana dashboards (PR 5/N) ([#1068](https://github.com/Tallec7/neopro/issues/1068)) ([ccd9eb3](https://github.com/Tallec7/neopro/commit/ccd9eb35b571315a7a92647ab484c26026680675)), closes [#5](https://github.com/Tallec7/neopro/issues/5)
