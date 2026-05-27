@@ -1,3 +1,9 @@
+# [4.2.0](https://github.com/Tallec7/madxp/compare/v4.1.0...v4.2.0) (2026-05-27)
+
+### Features
+
+- **rebrand:** support madxp.kalonpartners.bzh runtime in parallel of legacy (PR 9/N) ([#1072](https://github.com/Tallec7/madxp/issues/1072)) ([aa93c9c](https://github.com/Tallec7/madxp/commit/aa93c9ca5bbba6e8cd8448c46bebf1f7e65afc0b))
+
 # [4.1.0](https://github.com/Tallec7/madxp/compare/v4.0.0...v4.1.0) (2026-05-27)
 
 ### Features
