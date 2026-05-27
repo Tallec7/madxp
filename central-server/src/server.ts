@@ -178,14 +178,14 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", 'blob:', 'https://kalonpartners.bzh'],  // blob: for @remotion/player prefetch, kalonpartners.bzh for FTP assets
       frameSrc: ["'none'"],
-      // ADR-133 Phase 7 prep : on accepte les futurs domaines MadXP en plus
-      // des anciens (NEOPRO) pour que le serveur soit prêt avant la bascule DNS.
-      // Les anciens domaines pourront être retirés une fois la migration validée.
+      // ADR-133 Phase 7 prep : on accepte le futur domaine MadXP en plus de
+      // l'ancien (NEOPRO) pour que le serveur soit prêt avant la bascule DNS.
+      // `madxp.kalonpartners.bzh` REMPLACE `neopro-admin.kalonpartners.bzh`
+      // (admin + portail club SaaS sous /saas/, même pattern qu'avant).
       frameAncestors: [
         "'self'",
-        'https://neopro-admin.kalonpartners.bzh',
-        'https://madxp-admin.kalonpartners.bzh',
-        'https://madxp.kalonpartners.bzh',
+        'https://neopro-admin.kalonpartners.bzh', // legacy, à retirer post-bascule
+        'https://madxp.kalonpartners.bzh',        // cible
       ],
     },
   },

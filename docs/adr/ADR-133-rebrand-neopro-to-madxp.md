@@ -43,8 +43,8 @@ Rebrand **complet** en 8 phases séquencées, avec **convention naming figée** 
 
 | Surface              | Avant                                      | Après                                          |
 | -------------------- | ------------------------------------------ | ---------------------------------------------- |
-| Dashboard admin      | `neopro-admin.kalonpartners.bzh`           | `madxp-admin.kalonpartners.bzh`                |
-| Portail club SaaS    | `neopro-admin.kalonpartners.bzh/saas/`     | `madxp.kalonpartners.bzh`                      |
+| Dashboard admin      | `neopro-admin.kalonpartners.bzh`           | `madxp.kalonpartners.bzh`                      |
+| Portail club SaaS    | `neopro-admin.kalonpartners.bzh/saas/`     | `madxp.kalonpartners.bzh/saas/`                |
 | API prod             | `neopro-central-production.up.railway.app` | `api.madxp.kalonpartners.bzh` (custom Railway) |
 | API staging          | `api-staging.kalonpartners.bzh`            | `api-staging.madxp.kalonpartners.bzh`          |
 | CF Pages prod        | `neopro-frontend-prod`                     | `madxp-frontend-prod`                          |
