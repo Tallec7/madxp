@@ -36,19 +36,19 @@ Au lieu de créer une image golden de 58GB, on héberge un script d'installation
 
 **Configuration (déjà fait) :**
 
-1. Allez sur votre repository : https://github.com/Tallec7/neopro
+1. Allez sur votre repository : https://github.com/Tallec7/madxp
 2. Settings → Pages → Source : **GitHub Actions**
 3. C'est tout ! Quand vous sélectionnez "GitHub Actions", c'est automatiquement activé
 
 **Vérifier que ça fonctionne :**
 
 - Onglet "Actions" → Workflow "Publish Installation Scripts to GitHub Pages" doit être ✓
-- Visitez : https://tallec7.github.io/neopro/install/
+- Visitez : https://tallec7.github.io/madxp/install/
 
 **URL d'installation :**
 
 ```bash
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 ```
 
 ---
@@ -101,23 +101,23 @@ Les deux fonctionnent parfaitement et sont gratuites. Utilisez **Option 1** (Git
    **Option recommandée (GitHub Pages - URL courte) :**
 
    ```bash
-   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
    ```
 
    **Exemples (hotspot seul) :**
 
    ```bash
    # Pour le club de Nantes
-   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
+   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
 
    # Pour une installation master
-   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass
+   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s MASTER MasterPass
    ```
 
    **Ajouter le WiFi Internet (clé USB branchée) :**
 
    ```bash
-   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123 Livebox-F730 MonPassInternet456
+   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123 Livebox-F730 MonPassInternet456
    ```
 
    > Les arguments 3 et 4 correspondent au SSID et au mot de passe du WiFi qui fournira Internet via la clé USB (`wlan1`).  
@@ -188,7 +188,7 @@ Le numéro affiché correspond exactement au tag GitHub (`v2.4.0`, `v2.4.0+hotfi
 │  1. Modifier code et créer une release                          │
 │  2. git tag v1.x.x && git push origin v1.x.x                    │
 │  3. GitHub Actions build et publie automatiquement :            │
-│     → https://tallec7.github.io/neopro/install/setup.sh         │
+│     → https://tallec7.github.io/madxp/install/setup.sh         │
 │     → https://github.com/.../releases/v1.x.x/                   │
 │        neopro-raspberry-deploy.tar.gz (VERSION + release.json)  │
 └─────────────────────────────────────────────────────────────────┘
@@ -387,7 +387,7 @@ sudo apt-get update && sudo apt-get install -y curl
 
 ```bash
 # Voir les logs détaillés
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh > /tmp/setup.sh
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh > /tmp/setup.sh
 sudo bash -x /tmp/setup.sh CLUB_NAME PASSWORD 2>&1 | tee install.log
 ```
 
@@ -409,7 +409,7 @@ ssh pi@neopro.local 'pgrep -a chromium | grep swiftshader'
 
 ```bash
 # Juste télécharger et afficher
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | less
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | less
 ```
 
 ---
@@ -418,9 +418,9 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | less
 
 **Problèmes avec l'installation en ligne :**
 
-- Vérifier les GitHub Actions : https://github.com/Tallec7/neopro/actions
+- Vérifier les GitHub Actions : https://github.com/Tallec7/madxp/actions
 - Vérifier GitHub Pages : Settings → Pages
-- Tester l'URL : https://tallec7.github.io/neopro/install/
+- Tester l'URL : https://tallec7.github.io/madxp/install/
 
 **Documentation :**
 

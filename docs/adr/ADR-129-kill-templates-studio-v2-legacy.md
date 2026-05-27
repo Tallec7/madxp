@@ -68,7 +68,7 @@ arrivé en premier, V1 (code-driven) plus tard mais désigné comme refonte
 
 **Drop intégral du système V2 en 4 PRs séquentielles** :
 
-1. **PR 1 — Backend** ([apps#1029](https://github.com/Tallec7/neopro/pull/1029), mergée)
+1. **PR 1 — Backend** ([apps#1029](https://github.com/Tallec7/madxp/pull/1029), mergée)
    Suppression des routes/controllers/repositories/services/types/scripts V2 dans
    `central-server/`, drop des 4 mounts API, retrait du middleware multer V2
    (`uploadTemplate`/`uploadTemplateAsset`/`uploadUserTemplateImage`/`uploadPngBuffer`),
@@ -77,12 +77,12 @@ arrivé en premier, V1 (code-driven) plus tard mais désigné comme refonte
    `templateStudioOperations`, `templateDeleted`), retrait du `checkStuckRenderJobs`
    d'`alerting-checks.service.ts`. 89 fichiers, -17 763 lignes.
 
-2. **PR 2 — Dashboard frontend** ([apps#1030](https://github.com/Tallec7/neopro/pull/1030))
+2. **PR 2 — Dashboard frontend** ([apps#1030](https://github.com/Tallec7/madxp/pull/1030))
    Drop du folder `central-dashboard/src/app/features/content/remotion-templates/`
    (63 fichiers), retrait des 6 routes V2 d'`app.routes.ts`, retrait du lien
    sidebar dans `layout.component.ts`. 65 fichiers, -15 167 lignes.
 
-3. **PR 3 — Package + DB** ([apps#1031](https://github.com/Tallec7/neopro/pull/1031))
+3. **PR 3 — Package + DB** ([apps#1031](https://github.com/Tallec7/madxp/pull/1031))
    Drop du package `templates-remotion/` (runtime + preview Vite + assets WebM +
    PNG masks), retrait des 3 stages Dockerfile V2 (`remotion-deps`, `preview-builder`,
    COPY runtime), retrait du watchPattern dans `railway.staging.json`, **migration
@@ -207,9 +207,9 @@ résultat des PRs, traçabilité explicite des décisions parentes dépréciées
 
 ## Références
 
-- PRs : [apps#1029](https://github.com/Tallec7/neopro/pull/1029),
-  [apps#1030](https://github.com/Tallec7/neopro/pull/1030),
-  [apps#1031](https://github.com/Tallec7/neopro/pull/1031)
+- PRs : [apps#1029](https://github.com/Tallec7/madxp/pull/1029),
+  [apps#1030](https://github.com/Tallec7/madxp/pull/1030),
+  [apps#1031](https://github.com/Tallec7/madxp/pull/1031)
 - ADRs V1 conservés : [ADR-123](ADR-123-templates-studio-v1-sharing-distribution.md),
   [ADR-124](ADR-124-templates-studio-consolidation-in-central.md),
   [ADR-125](ADR-125-templates-studio-asset-library.md),

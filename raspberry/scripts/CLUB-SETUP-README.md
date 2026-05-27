@@ -35,13 +35,13 @@ Si le Pi n'est pas encore installé, lancez d'abord la commande d'installation e
 
 ```bash
 # Sur le Raspberry Pi (via SSH)
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 ```
 
 **Exemple :**
 
 ```bash
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
 ```
 
 ### Configuration du club
@@ -151,7 +151,7 @@ Le script va :
 
 ```bash
 # Étape 1 : Installation initiale du Pi (15-20 minutes)
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 
 # Étape 2 : Configuration du club (2-5 minutes)
 curl -O https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup-remote-club.sh

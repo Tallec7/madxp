@@ -103,7 +103,7 @@ pi@raspberrypi:~ $
 C'est LA commande magique. Copiez-collez exactement :
 
 ```bash
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NOM_CLUB MOT_DE_PASSE_WIFI
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NOM_CLUB MOT_DE_PASSE_WIFI
 ```
 
 **Remplacez** :
@@ -114,13 +114,13 @@ curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NOM_C
 **Exemple concret** :
 
 ```bash
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MonWiFi2024!
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MonWiFi2024!
 ```
 
 **Option avancée** - Ajouter le WiFi Internet du club (si vous avez une clé USB WiFi) :
 
 ```bash
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MonWiFi2024! Livebox-F730 MotDePasseBox
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MonWiFi2024! Livebox-F730 MotDePasseBox
 ```
 
 ### Ce qui se passe pendant l'installation
@@ -425,7 +425,7 @@ Le QR code contient l'URL de la télécommande et les instructions de connexion 
 
 - **Documentation complète** : [docs/guides/](../guides/)
 - **Problèmes techniques** : [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **GitHub Issues** : https://github.com/Tallec7/neopro/issues
+- **GitHub Issues** : https://github.com/Tallec7/madxp/issues
 
 ---
 

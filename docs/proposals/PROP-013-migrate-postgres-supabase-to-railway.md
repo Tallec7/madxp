@@ -9,7 +9,7 @@
 
 ## 1. Contexte
 
-Le 18 avril 2026, le quota egress Supabase Free (5 GB/mois) a été dépassé (7.93 GB consommés) — services restreints en prod, flotte 50+ Pi bloquée. Le déclencheur immédiat (`cb540d3a` étendant le bloc analytics dashboard à tous les sites) a été corrigé par [PR #474](https://github.com/Tallec7/neopro/pull/474) (cache 30s + LIMIT metrics). Mais la cause **structurelle** reste : toute l'egress Supabase = lectures Railway → Supabase, facturées côté Supabase.
+Le 18 avril 2026, le quota egress Supabase Free (5 GB/mois) a été dépassé (7.93 GB consommés) — services restreints en prod, flotte 50+ Pi bloquée. Le déclencheur immédiat (`cb540d3a` étendant le bloc analytics dashboard à tous les sites) a été corrigé par [PR #474](https://github.com/Tallec7/madxp/pull/474) (cache 30s + LIMIT metrics). Mais la cause **structurelle** reste : toute l'egress Supabase = lectures Railway → Supabase, facturées côté Supabase.
 
 ### Pourquoi c'est un problème de fond, pas juste un bug
 
@@ -228,7 +228,7 @@ Chaque phase aura son plan détaillé + tests de validation.
 
 **Références** :
 
-- Incident egress 2026-04-18 : [PR #474](https://github.com/Tallec7/neopro/pull/474)
+- Incident egress 2026-04-18 : [PR #474](https://github.com/Tallec7/madxp/pull/474)
 - ADR-003 : choix initial Supabase
 - ADR-015 : contraintes Railway Hobby (pool max 5)
 - RISK-T04 (RISK-REGISTER.md) : saturation pool Supabase

@@ -370,22 +370,22 @@ Si Phase 1 (manuel) s'avère instable : revert ADR-089 → ADR-089 reste mode ma
 
 Toutes les phases sont livrées. ADR clôturé.
 
-| Phase | Scope                                                                                     | Livré le  | PR                                                 |
-| ----- | ----------------------------------------------------------------------------------------- | --------- | -------------------------------------------------- |
-| 0     | Filets défensifs TV + cleanup DB                                                          | 28/04     | [#699](https://github.com/Tallec7/neopro/pull/699) |
-| 0.5   | Strip serveur + reject 400                                                                | 28/04     | [#701](https://github.com/Tallec7/neopro/pull/701) |
-| 0.6   | Visibilité Web/Live dans Remote                                                           | 28/04     | [#703](https://github.com/Tallec7/neopro/pull/703) |
-| 1     | WebContentService manuel + 1s timeout + analytics `web_load_failed`                       | 28/04     | [#705](https://github.com/Tallec7/neopro/pull/705) |
-| 2a    | Backend résout les paths synthétiques au read + drop 400 reject                           | 28/04     | [#710](https://github.com/Tallec7/neopro/pull/710) |
-| 2.5   | Take-over manuel propre + anti-flash + bouton Stop Remote V2                              | 28/04     | [#714](https://github.com/Tallec7/neopro/pull/714) |
-| 2.6   | Instant show (no opacity transition under freeze)                                         | 28/04     | [#716](https://github.com/Tallec7/neopro/pull/716) |
-| 2.7   | Paint-stable reveal (2× rAF + 250ms)                                                      | 28/04     | [#718](https://github.com/Tallec7/neopro/pull/718) |
-| 2b    | TV runtime délègue à WebContentService pour la rotation auto                              | 29/04     | [#720](https://github.com/Tallec7/neopro/pull/720) |
-| 1.5a  | hls.js lazy-loaded pour livestreams                                                       | 29/04     | —                                                  |
-| 1.5b  | Master/slave sync of web/live content (dual-display)                                      | 29/04     | [#723](https://github.com/Tallec7/neopro/pull/723) |
-| 3     | Backend refuse les saves boucle web/live sans `durationSeconds` (HTTP 400)                | 29/04     | —                                                  |
-| 3 v2  | Library proactive : icônes 🌐/📡 + prompt durée add-to-loop                               | 29/04     | [#724](https://github.com/Tallec7/neopro/pull/724) |
-| **4** | **Supervision : counters Prometheus + alertes + persistance `web_load_failed` + clôture** | **29/04** | **(cette PR)**                                     |
+| Phase | Scope                                                                                     | Livré le  | PR                                                |
+| ----- | ----------------------------------------------------------------------------------------- | --------- | ------------------------------------------------- |
+| 0     | Filets défensifs TV + cleanup DB                                                          | 28/04     | [#699](https://github.com/Tallec7/madxp/pull/699) |
+| 0.5   | Strip serveur + reject 400                                                                | 28/04     | [#701](https://github.com/Tallec7/madxp/pull/701) |
+| 0.6   | Visibilité Web/Live dans Remote                                                           | 28/04     | [#703](https://github.com/Tallec7/madxp/pull/703) |
+| 1     | WebContentService manuel + 1s timeout + analytics `web_load_failed`                       | 28/04     | [#705](https://github.com/Tallec7/madxp/pull/705) |
+| 2a    | Backend résout les paths synthétiques au read + drop 400 reject                           | 28/04     | [#710](https://github.com/Tallec7/madxp/pull/710) |
+| 2.5   | Take-over manuel propre + anti-flash + bouton Stop Remote V2                              | 28/04     | [#714](https://github.com/Tallec7/madxp/pull/714) |
+| 2.6   | Instant show (no opacity transition under freeze)                                         | 28/04     | [#716](https://github.com/Tallec7/madxp/pull/716) |
+| 2.7   | Paint-stable reveal (2× rAF + 250ms)                                                      | 28/04     | [#718](https://github.com/Tallec7/madxp/pull/718) |
+| 2b    | TV runtime délègue à WebContentService pour la rotation auto                              | 29/04     | [#720](https://github.com/Tallec7/madxp/pull/720) |
+| 1.5a  | hls.js lazy-loaded pour livestreams                                                       | 29/04     | —                                                 |
+| 1.5b  | Master/slave sync of web/live content (dual-display)                                      | 29/04     | [#723](https://github.com/Tallec7/madxp/pull/723) |
+| 3     | Backend refuse les saves boucle web/live sans `durationSeconds` (HTTP 400)                | 29/04     | —                                                 |
+| 3 v2  | Library proactive : icônes 🌐/📡 + prompt durée add-to-loop                               | 29/04     | [#724](https://github.com/Tallec7/madxp/pull/724) |
+| **4** | **Supervision : counters Prometheus + alertes + persistance `web_load_failed` + clôture** | **29/04** | **(cette PR)**                                    |
 
 ### Métriques livrées (Phase 4)
 

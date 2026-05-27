@@ -34,6 +34,7 @@
 
 Le workflow `.github/workflows/db-backup.yml` exécute un `pg_dump` quotidien de la
 base Railway et upload le dump sur le FTP Hostinger.
+
 - **Fréquence** : Quotidienne (cron `0 3 * * *` UTC)
 - **Rétention** : conservée sur FTP (rotation manuelle)
 - **Type** : Dump custom (`pg_dump --format=custom`)
@@ -70,18 +71,18 @@ pg_restore --dbname=$DATABASE_URL --table=sites --clean backup.dump
 
 ### 2.4 Tables critiques (priorité de restore)
 
-| Priorité | Table | Justification |
-|----------|-------|---------------|
-| P0 | `users` | Accès au système |
-| P0 | `sites` | Configuration des clubs (api_key, subscription) |
-| P0 | `videos` | Catalogue vidéo (métadonnées, storage_path) |
-| P1 | `config_history` | Historique des configurations déployées |
-| P1 | `content_deployments` | État des déploiements en cours |
-| P1 | `subscription_history` | Historique abonnements |
-| P2 | `club_daily_stats` | Agrégations analytics (irremplaçables) |
-| P2 | `advertiser_daily_stats` | Agrégations annonceurs |
-| P3 | `metrics` | Métriques système (7j rétention) |
-| P3 | `audit_logs` | Logs d'audit (90j rétention) |
+| Priorité | Table                    | Justification                                   |
+| -------- | ------------------------ | ----------------------------------------------- |
+| P0       | `users`                  | Accès au système                                |
+| P0       | `sites`                  | Configuration des clubs (api_key, subscription) |
+| P0       | `videos`                 | Catalogue vidéo (métadonnées, storage_path)     |
+| P1       | `config_history`         | Historique des configurations déployées         |
+| P1       | `content_deployments`    | État des déploiements en cours                  |
+| P1       | `subscription_history`   | Historique abonnements                          |
+| P2       | `club_daily_stats`       | Agrégations analytics (irremplaçables)          |
+| P2       | `advertiser_daily_stats` | Agrégations annonceurs                          |
+| P3       | `metrics`                | Métriques système (7j rétention)                |
+| P3       | `audit_logs`             | Logs d'audit (90j rétention)                    |
 
 ### 2.5 Schéma de référence
 
@@ -137,13 +138,13 @@ SELECT filename, storage_path FROM videos WHERE storage_backend = 'ftp';
 
 ### 4.1 Fichiers critiques par Pi
 
-| Fichier | Contenu | Backup |
-|---------|---------|--------|
-| `/home/pi/neopro/webapp/configuration.json` | Config du site | Miroir dans `local_config_mirror` en DB |
-| `/home/pi/neopro/data/license_cache.json` | Cache licence | Recalculé automatiquement |
-| `/etc/hostapd/hostapd.conf` | Config hotspot WiFi | Copie dans debug-bundle |
-| `/etc/wpa_supplicant/wpa_supplicant.conf` | Config WiFi client | Non sauvegardé automatiquement |
-| `/home/pi/neopro/sync-agent-golden/` | Snapshot sync-agent | Créé par le guardian |
+| Fichier                                     | Contenu             | Backup                                  |
+| ------------------------------------------- | ------------------- | --------------------------------------- |
+| `/home/pi/neopro/webapp/configuration.json` | Config du site      | Miroir dans `local_config_mirror` en DB |
+| `/home/pi/neopro/data/license_cache.json`   | Cache licence       | Recalculé automatiquement               |
+| `/etc/hostapd/hostapd.conf`                 | Config hotspot WiFi | Copie dans debug-bundle                 |
+| `/etc/wpa_supplicant/wpa_supplicant.conf`   | Config WiFi client  | Non sauvegardé automatiquement          |
+| `/home/pi/neopro/sync-agent-golden/`        | Snapshot sync-agent | Créé par le guardian                    |
 
 ### 4.2 Backup d'un Pi
 
@@ -169,7 +170,7 @@ ssh pi@neopro.local 'sudo systemctl restart neopro-app'
 # Réinstallation complète (nouveau Pi ou SD corrompue)
 # 1. Flash Raspberry Pi OS Lite sur la SD
 # 2. Exécuter le script d'installation
-curl -O https://tallec7.github.io/neopro/install/install.sh
+curl -O https://tallec7.github.io/madxp/install/install.sh
 chmod +x install.sh && sudo ./install.sh
 
 # 3. Restaurer la config (api_key, siteId)
@@ -216,6 +217,7 @@ SLACK_WEBHOOK_URL
 ### 5.2 Restore
 
 En cas de perte des variables Railway :
+
 1. Recréer le projet Railway
 2. Configurer les variables depuis le backup sécurisé
 3. Redéployer depuis GitHub (Railway pull automatique)
@@ -267,4 +269,4 @@ git push origin HEAD:deploy-rollback
 
 ---
 
-*Créé le 9 février 2026*
+_Créé le 9 février 2026_

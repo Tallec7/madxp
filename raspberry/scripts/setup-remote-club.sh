@@ -367,7 +367,7 @@ get_pi_address() {
     else
         print_error "Neopro n'est pas installé sur ce Pi"
         print_info "Installez d'abord Neopro avec :"
-        print_info "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s ${CLUB_NAME} PASSWORD"
+        print_info "  curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s ${CLUB_NAME} PASSWORD"
         exit 1
     fi
 }

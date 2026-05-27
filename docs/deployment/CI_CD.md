@@ -37,7 +37,7 @@ Commit → Pre-commit Hooks → PR → CI Workflow → Merge main → Semantic R
 
 - **Trigger** : Changements dans `raspberry/scripts/` ou `install.sh`
 - Publie les scripts d'installation sur GitHub Pages
-- URL : `https://tallec7.github.io/neopro/install/`
+- URL : `https://tallec7.github.io/madxp/install/`
 
 ### 4. Railway Restart (`railway-restart.yml`)
 

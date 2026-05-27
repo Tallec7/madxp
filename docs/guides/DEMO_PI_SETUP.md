@@ -58,7 +58,7 @@ Suivre le guide d'installation standard : **[INSTALLATION_COMPLETE.md](./INSTALL
 
 ```bash
 # Depuis le Pi (après avoir flashé Raspberry Pi OS Lite + activé SSH)
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | \
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | \
   sudo bash -s NEOPRO-DEMO DemoWifi2024
 ```
 

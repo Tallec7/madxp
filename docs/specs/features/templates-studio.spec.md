@@ -12,9 +12,9 @@
 > côté `neopro/`.
 >
 > **Historique** : le système V2 data-driven legacy (ADR-052/054/055/075/077/084/086/095/108/109/110/118)
-> a été supprimé en **ADR-129** ([apps#1029](https://github.com/Tallec7/neopro/pull/1029) /
-> [apps#1030](https://github.com/Tallec7/neopro/pull/1030) /
-> [apps#1031](https://github.com/Tallec7/neopro/pull/1031) + cette PR). V1 est désormais
+> a été supprimé en **ADR-129** ([apps#1029](https://github.com/Tallec7/madxp/pull/1029) /
+> [apps#1030](https://github.com/Tallec7/madxp/pull/1030) /
+> [apps#1031](https://github.com/Tallec7/madxp/pull/1031) + cette PR). V1 est désormais
 > l'unique implémentation.
 
 ## En une phrase

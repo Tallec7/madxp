@@ -254,7 +254,7 @@ Tous les bugs rencontrés pendant la mise au point sont désormais interceptés 
 ### Supervision
 
 - **Failure email GitHub** : notifié automatiquement sur workflow_dispatch ou schedule failure
-- **Dashboard** : https://github.com/Tallec7/neopro/actions/workflows/db-backup.yml
+- **Dashboard** : https://github.com/Tallec7/madxp/actions/workflows/db-backup.yml
 - **Règle ops** : 2 échecs consécutifs = RPO > 48h → investiguer immédiatement (cf. [TROUBLESHOOTING § Workflow db-backup](../guides/TROUBLESHOOTING.md#workflow-db-backup-github-actions-échoue-post-migration-railway))
 
 ---

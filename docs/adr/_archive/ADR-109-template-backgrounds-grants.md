@@ -221,6 +221,6 @@ WHERE b.archived_at IS NULL
 - ADR-082 — Video Club Grants (pattern source)
 - ADR-086 — Template Studio n-layers
 - [ADR-108](ADR-108-template-versioning-and-master-locking.md) — Versioning des templates (couplé)
-- [PR #757](https://github.com/Tallec7/neopro/pull/757) — SPEC famille JOUEUR
+- [PR #757](https://github.com/Tallec7/madxp/pull/757) — SPEC famille JOUEUR
 - [JOUEUR-SPEC-GLOBAL.md §5.3](../templates/JOUEUR-SPEC-GLOBAL.md) — exigence visibilité backgrounds
 - [JOUEUR-ACTION-PLAN.md §3.1](../templates/JOUEUR-ACTION-PLAN.md) — plan d'implémentation

@@ -225,7 +225,7 @@ Trois scénarios :
 
 - ADR-086 — Template Studio n-layers, safe-zones, animations réversibles
 - ADR-095 — Template Studio admin UX v2
-- [PR #757](https://github.com/Tallec7/neopro/pull/757) — SPEC famille JOUEUR (déclencheur)
+- [PR #757](https://github.com/Tallec7/madxp/pull/757) — SPEC famille JOUEUR (déclencheur)
 - [JOUEUR-SPEC-GLOBAL.md §5](../templates/JOUEUR-SPEC-GLOBAL.md) — exigence verrouillage masters
 - [JOUEUR-ACTION-PLAN.md §2.1](../templates/JOUEUR-ACTION-PLAN.md) — plan d'implémentation
 - semver.org — convention de versioning

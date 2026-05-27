@@ -178,21 +178,21 @@ Avant cette mise à jour (PR `fix/web-content-config-entry-format`), les 2 canau
 
 ## États (Phase de livraison)
 
-| Phase    | Scope                                                            | État          | PR                                                 |
-| -------- | ---------------------------------------------------------------- | ------------- | -------------------------------------------------- |
-| 0        | Filets défensifs TV + cleanup DB                                 | ✅ Livrée     | [#699](https://github.com/Tallec7/neopro/pull/699) |
-| 0.5      | Strip serveur + reject 400                                       | ✅ Livrée     | [#701](https://github.com/Tallec7/neopro/pull/701) |
-| 0.6      | Visibilité Web/Live dans Remote                                  | ✅ Livrée     | [#703](https://github.com/Tallec7/neopro/pull/703) |
-| 1        | WebContentPlayer manuel + 1s timeout + analytics                 | ✅ Livrée     | [#705](https://github.com/Tallec7/neopro/pull/705) |
-| 2a       | Backend résout les paths synthétiques au read + drop 400 reject  | ✅ Livrée     | [#710](https://github.com/Tallec7/neopro/pull/710) |
-| 2.5      | Take-over manuel propre + anti-flash + bouton Stop Remote V2     | ✅ Livrée     | [#714](https://github.com/Tallec7/neopro/pull/714) |
-| 2.6      | Instant show (no opacity transition under freeze)                | ✅ Livrée     | [#716](https://github.com/Tallec7/neopro/pull/716) |
-| 2.7      | Paint-stable reveal (2× rAF + 250ms)                             | ✅ Livrée     | [#718](https://github.com/Tallec7/neopro/pull/718) |
-| **2b**   | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                                     |
-| 1.5      | hls.js + master/slave sync                                       | ⏳ À venir    | —                                                  |
-| 3        | Dashboard UX (sélecteur, validation, preview)                    | ⏳ À venir    | —                                                  |
-| **3 v2** | **Library proactive : icônes 🌐/📡 + prompt durée add-to-loop**  | **✅ Livrée** | **(cette PR)**                                     |
-| 4        | Supervision + ADR fermeture                                      | ⏳ À venir    | —                                                  |
+| Phase    | Scope                                                            | État          | PR                                                |
+| -------- | ---------------------------------------------------------------- | ------------- | ------------------------------------------------- |
+| 0        | Filets défensifs TV + cleanup DB                                 | ✅ Livrée     | [#699](https://github.com/Tallec7/madxp/pull/699) |
+| 0.5      | Strip serveur + reject 400                                       | ✅ Livrée     | [#701](https://github.com/Tallec7/madxp/pull/701) |
+| 0.6      | Visibilité Web/Live dans Remote                                  | ✅ Livrée     | [#703](https://github.com/Tallec7/madxp/pull/703) |
+| 1        | WebContentPlayer manuel + 1s timeout + analytics                 | ✅ Livrée     | [#705](https://github.com/Tallec7/madxp/pull/705) |
+| 2a       | Backend résout les paths synthétiques au read + drop 400 reject  | ✅ Livrée     | [#710](https://github.com/Tallec7/madxp/pull/710) |
+| 2.5      | Take-over manuel propre + anti-flash + bouton Stop Remote V2     | ✅ Livrée     | [#714](https://github.com/Tallec7/madxp/pull/714) |
+| 2.6      | Instant show (no opacity transition under freeze)                | ✅ Livrée     | [#716](https://github.com/Tallec7/madxp/pull/716) |
+| 2.7      | Paint-stable reveal (2× rAF + 250ms)                             | ✅ Livrée     | [#718](https://github.com/Tallec7/madxp/pull/718) |
+| **2b**   | **TV runtime délègue à WebContentService pour la rotation auto** | **✅ Livrée** | **(cette PR)**                                    |
+| 1.5      | hls.js + master/slave sync                                       | ⏳ À venir    | —                                                 |
+| 3        | Dashboard UX (sélecteur, validation, preview)                    | ⏳ À venir    | —                                                 |
+| **3 v2** | **Library proactive : icônes 🌐/📡 + prompt durée add-to-loop**  | **✅ Livrée** | **(cette PR)**                                    |
+| 4        | Supervision + ADR fermeture                                      | ⏳ À venir    | —                                                 |
 
 ## Référence code
 
