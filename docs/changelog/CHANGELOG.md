@@ -1,3 +1,84 @@
+# [4.0.0](https://github.com/Tallec7/neopro/compare/v3.330.1...v4.0.0) (2026-05-27)
+
+- feat(rebrand)!: rename Prometheus metrics neopro*\*→madxp*\* + Grafana dashboards (PR 5/N) ([#1068](https://github.com/Tallec7/neopro/issues/1068)) ([ccd9eb3](https://github.com/Tallec7/neopro/commit/ccd9eb35b571315a7a92647ab484c26026680675)), closes [#5](https://github.com/Tallec7/neopro/issues/5)
+
+### BREAKING CHANGES
+
+- tous les compteurs/gauges/histogrammes Prometheus exposés par
+  le central-server sont renommés `neopro_*` → `madxp_*`. Les dashboards Grafana,
+  règles Prometheus et règles Alertmanager sont remappés en parallèle. Tout système
+  externe qui scrape ces métriques (Grafana cloud, Datadog, etc.) doit refresh
+  ses requêtes — cf. ADR-133 stratégie "rename brutal" accepté.
+
+Scope (cloud-only, aucun impact flotte Pi) :
+
+- central-server/src/services/metrics.service.ts : 119 occ
+- 18 smoke tests qui assertent les noms de métriques
+- central-server/src/cron-tasks/\*.ts (4 fichiers) : emitters de métriques
+- docker/prometheus/rules.yml : 50 règles alerting
+- docker/grafana/provisioning/alerting/\*-alerts-cloud.yml : 36 règles
+- 7 dashboards Grafana JSON (panels, queries, uids, titres, tags)
+- Cross-refs dans docs (README, ARCHITECTURE.md, ADR-111, modops, .claude/rules)
+
+Rename de fichiers (git mv) :
+
+- docker/grafana/.../neopro-alerts-cloud.yml → madxp-alerts-cloud.yml
+- 7 dashboards JSON neopro-_ → madxp-_ (overview, services, blind-spots,
+  business, infrastructure, sponsor, overview-cloud)
+- uids des dashboards : "neopro-X" → "madxp-X" (Grafana URLs bookmarkées
+  cassent — rebuild bookmarks après merge)
+
+85 fichiers, 738 lignes (+/-).
+
+Hors scope (préservé volontairement) :
+
+- `#neopro-alerts` (canal Slack) — rename Slack en Phase 7
+- `grafana.neopro.tv` (domaine) — rename DNS en Phase 7
+- `support@neopro.fr`, `api.neopro.fr` (openapi.yaml) — Phase 7 domaines
+- `neopro_app_*` events Loki ne sont PAS modifiés (emitted by guardian
+  bash script raspberry/scripts/sync-agent-guardian.sh — Pi-side, Phase 4/8)
+
+Aucune migration data DB. Aucun changement runtime hors métriques.
+
+Action requise post-merge :
+
+- Refresh Grafana dashboards (les nouveaux JSON sont auto-provisionnés)
+- Vérifier que les alertes Prometheus refirent sur les nouveaux noms
+- Refresh bookmarks Grafana (uids changés)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+
+- fix(rebrand): revert false-positive Pi-side identifiers from Prometheus rename (PR 5/N follow-up)
+
+Mon sed initial \bneopro*[a-zA-Z0-9*]+\b → madxp\_$1 sur central-server/src
+docker/ a renommé plusieurs identifiants qui NE SONT PAS des métriques
+Prometheus mais des références Pi-side / DB que je ne devais pas toucher
+(ADR-133 stratégie hybride : Pi-side et DB tables intacts).
+
+Reverts (false positives) :
+
+- neopro*app*{down,recovered,restart_attempt,restart_cap_reached,
+  restart_failed,restart_issued,recent_restart_count} : events JSON
+  structurés émis par raspberry/scripts/sync-agent-guardian.sh →
+  journald/Loki (cf. .claude/rules/raspberry.md ADR-115).
+- neopro*remote_prefs, neopro_remote_v2*{override,recent,widgets} :
+  clés localStorage de la frontend Raspberry. Renommer perdrait les
+  préférences UX persistantes des utilisateurs sur le Pi déployé.
+- neopro_videos : path nginx cache Pi (/var/cache/nginx/neopro_videos)
+  configuré dans ota-install.js Pi-side, non renommable sans OTA flotte.
+- neopro_templates : nom de table DB (ADR-133 explicit out-of-scope :
+  "no migration of table/column names"). Référencé dans 6 migrations SQL
+  - 1 trigger SQL function neopro_templates_snapshot_version + 1 Grafana
+    panel query neopro_templates_snapshot.
+
+Updates des tests qui asseraient l'ancien prefix Prometheus :
+
+- smoke-server-core.test.ts:219 : expect /metrics contains 'madxp*'
+  (au lieu de 'neopro*')
+- smoke-metrics-observability.test.ts:53,70,98 : regex + descriptions
+  scannent 'madxp*' au lieu de 'neopro*'
+- smoke-kiosk-pi.test.ts:1490,1495 : uid 'madxp-kiosk-{crash,down}'
+
 ## [3.330.1](https://github.com/Tallec7/neopro/compare/v3.330.0...v3.330.1) (2026-05-21)
 
 ### Bug Fixes
