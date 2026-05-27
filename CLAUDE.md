@@ -1,6 +1,10 @@
-# CLAUDE.md - Neopro
+# CLAUDE.md - MadXP
 
 > Système de TV interactive pour clubs sportifs. Architecture 3-tiers : Dashboard Angular 20 → Central Server Express/PG → Raspberry Pi Edge.
+>
+> **Rebrand en cours (mai 2026)** : NEOPRO → MadXP, cf. [ADR-133](docs/adr/ADR-133-rebrand-neopro-to-madxp.md). Tant que la migration n'est pas terminée, beaucoup de références techniques contiennent encore `neopro` (paths Pi `/etc/neopro/`, services `neopro-*.service`, métriques `neopro_*`, domaines `neopro-admin.kalonpartners.bzh`, FTP `neopro-video/`, enum DB `category='NEOPRO'`, SSID `NEOPRO-CLUB-*`). **Ne pas renommer "à la volée"** — suivre le phasage de l'ADR.
+>
+> **Convention naming** : `madxp` (paths/URLs/env vars/identifiants techniques), `MadXP` (UI/prose/branding), `MADXP` (titres uppercase et constantes).
 
 ## Commandes
 

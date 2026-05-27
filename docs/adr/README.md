@@ -146,6 +146,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-129](ADR-129-kill-templates-studio-v2-legacy.md)                                    | Suppression du système Templates Studio V2 data-driven legacy (4 PRs, -38k lignes)           | Accepté                           | Mai 2026 |
 | [ADR-131](ADR-131-photo-cutout-rembg-install.md)                                         | Installation `@imgly/background-removal-node` pour worker photo-cutout (Phase 2 ADR-124)     | Accepté                           | Mai 2026 |
 | [ADR-132](ADR-132-pi-system-password-ota-rotation.md)                                    | Rotation OTA du mot de passe système `pi` — one-shot avec acquittement (flotte entière)      | Accepté                           | Mai 2026 |
+| [ADR-133](ADR-133-rebrand-neopro-to-madxp.md)                                            | Rebrand NEOPRO → MadXP — convention naming, phasage en 8 PRs, hybride flotte Pi              | Accepté                           | Mai 2026 |
 
 ### Supersédés
 
