@@ -156,7 +156,7 @@ Après l'étape 8 (migration SQL exécutée) :
 
 ## Références
 
-- [ADR-133](../adr/ADR-133-rebrand-neopro-to-madxp.md)
+- ADR-133 (Rebrand NEOPRO → MadXP) — vit dans PR #1067 jusqu'à merge dans main
 - [ADR-113 — FTP creds rotation](../adr/ADR-113-ftp-creds-rotation-procedure.md)
 - Script audit : `central-server/src/scripts/audit-ftp-path-rebrand.ts`
 - Migration SQL : `central-server/src/scripts/migrations/migrate-ftp-paths-to-madxp.sql`

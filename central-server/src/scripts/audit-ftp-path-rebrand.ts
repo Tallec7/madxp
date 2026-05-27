@@ -27,9 +27,10 @@
  * Aucune modification DB. Aucun side-effect.
  */
 
+import type { QueryResultRow } from 'pg';
 import pool, { query } from '../config/database';
 
-interface ColumnInfo {
+interface ColumnInfo extends QueryResultRow {
   table_name: string;
   column_name: string;
   data_type: string;
@@ -66,7 +67,7 @@ async function countLegacyRefs(col: ColumnInfo, token: string): Promise<number> 
     : `"${col.column_name}" LIKE $1`;
   const sql = `SELECT COUNT(*)::int AS cnt FROM public."${col.table_name}" WHERE ${expr}`;
   try {
-    const { rows } = await query<{ cnt: number }>(sql, [`%${token}%`]);
+    const { rows } = await query<{ cnt: number } & QueryResultRow>(sql, [`%${token}%`]);
     return rows[0]?.cnt ?? 0;
   } catch (err) {
     console.warn(`  ⚠️  scan failed on ${col.table_name}.${col.column_name}: ${(err as Error).message}`);
@@ -81,7 +82,7 @@ async function fetchSample(col: ColumnInfo, token: string): Promise<string | nul
     : `"${col.column_name}" LIKE $1`;
   const sql = `SELECT "${col.column_name}"::text AS val FROM public."${col.table_name}" WHERE ${expr} LIMIT 1`;
   try {
-    const { rows } = await query<{ val: string }>(sql, [`%${token}%`]);
+    const { rows } = await query<{ val: string } & QueryResultRow>(sql, [`%${token}%`]);
     const raw = rows[0]?.val;
     if (!raw) return null;
     return raw.length > 120 ? raw.slice(0, 117) + '...' : raw;
