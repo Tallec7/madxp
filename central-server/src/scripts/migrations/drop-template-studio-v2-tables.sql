@@ -17,7 +17,7 @@
 BEGIN;
 
 -- Tables enfants (FK vers neopro_templates / template_layers / template_options) en premier.
-DROP TABLE IF EXISTS madxp_template_versions CASCADE;
+DROP TABLE IF EXISTS neopro_template_versions CASCADE;
 DROP TABLE IF EXISTS template_versions CASCADE;
 DROP TABLE IF EXISTS template_packshot_refs CASCADE;
 DROP TABLE IF EXISTS template_options CASCADE;

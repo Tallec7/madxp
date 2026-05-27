@@ -484,10 +484,10 @@ CREATE POLICY site_read_sponsor_videos ON sponsor_videos
 -- (L'application elle-même gère les permissions via JWT et middleware)
 
 -- Note: Cette commande doit être exécutée par un superuser
--- CREATE ROLE madxp_backend WITH LOGIN PASSWORD 'CHANGE_ME_IN_PRODUCTION';
--- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO madxp_backend;
--- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO madxp_backend;
--- ALTER ROLE madxp_backend BYPASSRLS;
+-- CREATE ROLE neopro_backend WITH LOGIN PASSWORD 'CHANGE_ME_IN_PRODUCTION';
+-- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO neopro_backend;
+-- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO neopro_backend;
+-- ALTER ROLE neopro_backend BYPASSRLS;
 
 -- =============================================================================
 -- HELPER FUNCTIONS POUR L'APPLICATION

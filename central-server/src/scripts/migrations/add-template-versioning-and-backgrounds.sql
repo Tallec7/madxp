@@ -34,7 +34,7 @@ COMMENT ON COLUMN neopro_templates.parent_template_id IS
   'ADR-108 : si fork, pointe sur la version parente (tracé d''origine).';
 
 -- Snapshot immutable d'une version publiée
--- NOTE : table distincte de `madxp_template_versions` (ADR-054/055) qui ne
+-- NOTE : table distincte de `neopro_template_versions` (ADR-054/055) qui ne
 -- snapshot que props_schema + default_props pour les templates legacy v1.
 -- Cette nouvelle table couvre le périmètre complet ADR-086 v2 (layers + slots
 -- + variants + fonts) requis pour le verrouillage des masters.

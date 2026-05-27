@@ -7,13 +7,13 @@
 --
 -- Architecture (ADR-055):
 --   1. Every UPDATE of neopro_templates that changes props_schema or
---      default_props triggers a snapshot row in madxp_template_versions.
+--      default_props triggers a snapshot row in neopro_template_versions.
 --   2. Admin endpoints list versions and restore a chosen version
 --      (restore = UPDATE of the live row → triggers a new snapshot, so the
 --      pre-restore state is never lost).
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS madxp_template_versions (
+CREATE TABLE IF NOT EXISTS neopro_template_versions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id UUID NOT NULL REFERENCES neopro_templates(id) ON DELETE CASCADE,
 
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS madxp_template_versions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_template_versions_template
-  ON madxp_template_versions (template_id, created_at DESC);
+  ON neopro_template_versions (template_id, created_at DESC);
 
 -- Trigger: snapshot on INSERT (initial version) and on UPDATE whenever
 -- props_schema or default_props change.
@@ -36,7 +36,7 @@ CREATE OR REPLACE FUNCTION neopro_templates_snapshot_version()
 RETURNS TRIGGER AS $$
 BEGIN
   IF (TG_OP = 'INSERT') THEN
-    INSERT INTO madxp_template_versions
+    INSERT INTO neopro_template_versions
       (template_id, props_schema, default_props, snapshot_reason, created_by)
     VALUES
       (NEW.id, NEW.props_schema, NEW.default_props, 'initial', NEW.created_by);
@@ -47,7 +47,7 @@ BEGIN
      AND (OLD.props_schema::text IS DISTINCT FROM NEW.props_schema::text
           OR OLD.default_props::text IS DISTINCT FROM NEW.default_props::text)
   THEN
-    INSERT INTO madxp_template_versions
+    INSERT INTO neopro_template_versions
       (template_id, props_schema, default_props, snapshot_reason, created_by)
     VALUES
       (NEW.id, OLD.props_schema, OLD.default_props, 'pre-update', NULL);
@@ -65,12 +65,12 @@ CREATE TRIGGER trg_neopro_templates_snapshot
 
 -- Backfill: create one initial snapshot for each existing template that has
 -- no version yet (idempotent via NOT EXISTS).
-INSERT INTO madxp_template_versions (template_id, props_schema, default_props, snapshot_reason, created_by)
+INSERT INTO neopro_template_versions (template_id, props_schema, default_props, snapshot_reason, created_by)
 SELECT t.id, t.props_schema, t.default_props, 'backfill', t.created_by
 FROM neopro_templates t
 WHERE NOT EXISTS (
-  SELECT 1 FROM madxp_template_versions v WHERE v.template_id = t.id
+  SELECT 1 FROM neopro_template_versions v WHERE v.template_id = t.id
 );
 
-COMMENT ON TABLE madxp_template_versions IS
+COMMENT ON TABLE neopro_template_versions IS
   'Snapshots of neopro_templates (props_schema + default_props) for audit/restore. ADR-055.';
