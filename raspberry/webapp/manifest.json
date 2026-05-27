@@ -1,6 +1,6 @@
 {
-  "name": "Neopro - Ecran Club",
-  "short_name": "Neopro",
+  "name": "MadXP - Ecran Club",
+  "short_name": "MadXP",
   "description": "Interface de diffusion TV interactive pour clubs sportifs",
   "start_url": "/",
   "display": "standalone",

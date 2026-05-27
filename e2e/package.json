@@ -1,5 +1,5 @@
 {
-  "name": "neopro-e2e",
+  "name": "madxp-e2e",
   "version": "1.0.0",
   "description": "Tests E2E pour NEOPRO avec Playwright",
   "scripts": {

@@ -3,7 +3,7 @@
     <div class="header-icon">📘</div>
     <div class="header-text">
       <h1>Guide d'utilisation</h1>
-      <p class="subtitle" *ngIf="siteName">{{ siteName }} · Solution Neopro SaaS</p>
+      <p class="subtitle" *ngIf="siteName">{{ siteName }} · Solution MadXP SaaS</p>
     </div>
   </div>
 
@@ -46,7 +46,7 @@
         </button>
         <div class="accordion-body" *ngIf="isOpen('saas')">
           <p>
-            Votre TV affiche une <strong>page web hébergée par Neopro</strong>. Pas de boîtier à
+            Votre TV affiche une <strong>page web hébergée par MadXP</strong>. Pas de boîtier à
             brancher, tout passe par le navigateur.
           </p>
           <div class="diagram">
@@ -57,7 +57,7 @@
             <span class="diag-arrow">↓</span>
             <div class="diag-step">
               <span class="diag-icon">☁️</span
-              ><span>Serveur Neopro<br /><small>Diffuse en temps réel</small></span>
+              ><span>Serveur MadXP<br /><small>Diffuse en temps réel</small></span>
             </div>
             <span class="diag-arrow">↓</span>
             <div class="diag-step">
@@ -175,20 +175,20 @@
         </div>
       </div>
 
-      <!-- TV Neopro -->
+      <!-- TV MadXP -->
       <div class="accordion-section" [class.open]="isOpen('tv')">
         <button
           class="accordion-header"
           (click)="toggleSection('tv')"
           [attr.aria-expanded]="isOpen('tv')"
         >
-          <span class="section-icon">📺</span><span class="section-title">Votre TV Neopro</span>
+          <span class="section-icon">📺</span><span class="section-title">Votre TV MadXP</span>
           <span class="chevron">{{ isOpen('tv') ? '▲' : '▼' }}</span>
         </button>
         <div class="accordion-body" *ngIf="isOpen('tv')">
           <p>
-            Votre TV Neopro est une page web dédiée. Elle doit être ouverte sur l'écran du gymnase
-            en plein écran, et laissée ouverte en permanence.
+            Votre TV MadXP est une page web dédiée. Elle doit être ouverte sur l'écran du gymnase en
+            plein écran, et laissée ouverte en permanence.
           </p>
           <div class="url-block" *ngIf="tvUrl">
             <div class="url-label">URL de votre TV</div>
@@ -248,7 +248,7 @@
           <h4>Ouvrir le second écran</h4>
           <p>
             Le second écran est un <strong>deuxième navigateur</strong> ouvert sur la même URL TV.
-            Connectez un second PC ou TV au réseau et ouvrez l'URL — Neopro détecte automatiquement
+            Connectez un second PC ou TV au réseau et ouvrez l'URL — MadXP détecte automatiquement
             que c'est le second client et lui envoie la variante correspondante.
           </p>
           <div class="warn-box">
@@ -539,11 +539,11 @@
           <div class="info-box">
             💡 Le <strong>portail sponsor</strong> est une page personnalisée que vous pouvez
             partager à votre partenaire pour qu'il consulte ses statistiques sans avoir de compte
-            Neopro.
+            MadXP.
           </div>
           <p>
-            La gestion des contrats sponsors est réalisée par l'équipe Neopro en coordination avec
-            vous. Contactez votre interlocuteur Neopro pour ajouter ou modifier un sponsor.
+            La gestion des contrats sponsors est réalisée par l'équipe MadXP en coordination avec
+            vous. Contactez votre interlocuteur MadXP pour ajouter ou modifier un sponsor.
           </p>
         </div>
       </div>
@@ -842,7 +842,7 @@
           <div class="support-box">
             <strong>🆘 Le problème persiste ?</strong>
             <p>
-              Contactez le support Neopro en précisant : nom du club, description du problème,
+              Contactez le support MadXP en précisant : nom du club, description du problème,
               actions déjà tentées.
             </p>
             <a href="mailto:support@neopro.fr" class="btn-support">✉️ support&#64;neopro.fr</a>

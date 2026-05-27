@@ -1,7 +1,7 @@
 <main>
   <div class="hero">
-    <img *ngIf="!isSaasMode" class="logo" src="/neopro-logo-white.png" alt="Neopro" />
-    <h1 *ngIf="isSaasMode" class="saas-title">Neopro TV</h1>
+    <img *ngIf="!isSaasMode" class="logo" src="/neopro-logo-white.png" alt="MadXP" />
+    <h1 *ngIf="isSaasMode" class="saas-title">MadXP TV</h1>
   </div>
 
   <a class="cta" routerLink="/remote" [queryParams]="siteQueryParams">
@@ -22,6 +22,6 @@
 <footer>
   <a *ngIf="!isSaasMode" class="admin-link" href="/admin/">Administration</a>
   <span *ngIf="!isSaasMode" class="sep">&middot;</span>
-  <span>Neopro &copy; 2024-2026</span>
+  <span>MadXP &copy; 2024-2026</span>
   <span class="version">v{{ appVersion }}</span>
 </footer>
