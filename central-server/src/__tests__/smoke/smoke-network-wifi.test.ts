@@ -1314,14 +1314,17 @@ describe('ADR-079 Phase 1 — captive portal HTTPS (443) regression guards', () 
       .toEqual({ copiesPortal: true });
   });
 
-  it('raspberry/captive-portal.html must exist and load the Neopro logo', () => {
+  it('raspberry/captive-portal.html must exist and load the brand logo', () => {
     const portal = fs.readFileSync(
       path.join(repoRoot, 'raspberry/captive-portal.html'),
       'utf8'
     );
+    // ADR-133 rebrand : asset filename `neopro-logo-white.png` est conservé
+    // (rename en Phase 8 avec OTA flotte). Le <title> est rebrandé MadXP/MADXP
+    // dès PR #1066. Le test accepte les deux brand names pendant la transition.
     expect({
       hasLogo: /neopro-logo-white\.png/.test(portal),
-      hasTitle: /<title>[^<]*NEOPRO/i.test(portal),
+      hasTitle: /<title>[^<]*(NEOPRO|MADXP|MadXP)/i.test(portal),
     }).toEqual({ hasLogo: true, hasTitle: true });
   });
 });
