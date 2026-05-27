@@ -2,18 +2,18 @@
 
 ## 📋 Commandes essentielles
 
-| Action                                  | Commande                                                                                | Où           |
-| --------------------------------------- | --------------------------------------------------------------------------------------- | ------------ |
-| **Nouveau boîtier (en ligne)** 🆕       | `curl -sSL https://tallec7.github.io/neopro/install/setup.sh \| sudo bash -s CLUB PASS` | Pi           |
-| **Nouveau boîtier (avec image golden)** | Flash + `./first-boot-setup.sh`                                                         | Pi           |
-| **Nouveau boîtier (sans image)**        | `./raspberry/scripts/copy-to-pi.sh` + `install.sh`                                      | Mac → Pi     |
-| **Nouveau club (remote)** ✅            | `./raspberry/scripts/setup-remote-club.sh`                                              | N'importe où |
-| **Nouveau club (local - dev)** 🔧       | `./raspberry/scripts/setup-new-club.sh`                                                 | Mac          |
-| **Mise à jour**                         | `npm run deploy:raspberry`                                                              | Mac          |
-| **Créer image golden**                  | `./raspberry/tools/prepare-golden-image.sh`                                             | Pi           |
-| **Supprimer un club**                   | `./raspberry/scripts/delete-club.sh`                                                    | Mac          |
-| **Backup un club**                      | `./raspberry/scripts/backup-club.sh`                                                    | Mac          |
-| **Restaurer un club**                   | `./raspberry/scripts/restore-club.sh`                                                   | Mac          |
+| Action                                  | Commande                                                                               | Où           |
+| --------------------------------------- | -------------------------------------------------------------------------------------- | ------------ |
+| **Nouveau boîtier (en ligne)** 🆕       | `curl -sSL https://tallec7.github.io/madxp/install/setup.sh \| sudo bash -s CLUB PASS` | Pi           |
+| **Nouveau boîtier (avec image golden)** | Flash + `./first-boot-setup.sh`                                                        | Pi           |
+| **Nouveau boîtier (sans image)**        | `./raspberry/scripts/copy-to-pi.sh` + `install.sh`                                     | Mac → Pi     |
+| **Nouveau club (remote)** ✅            | `./raspberry/scripts/setup-remote-club.sh`                                             | N'importe où |
+| **Nouveau club (local - dev)** 🔧       | `./raspberry/scripts/setup-new-club.sh`                                                | Mac          |
+| **Mise à jour**                         | `npm run deploy:raspberry`                                                             | Mac          |
+| **Créer image golden**                  | `./raspberry/tools/prepare-golden-image.sh`                                            | Pi           |
+| **Supprimer un club**                   | `./raspberry/scripts/delete-club.sh`                                                   | Mac          |
+| **Backup un club**                      | `./raspberry/scripts/backup-club.sh`                                                   | Mac          |
+| **Restaurer un club**                   | `./raspberry/scripts/restore-club.sh`                                                  | Mac          |
 
 **Note :** Pour configurer un nouveau club, préférez la méthode **remote** (✅) pour la production (sans dépendance locale) et la méthode **local** (🔧) pour le développement. Voir [CLUB-SETUP-README.md](scripts/CLUB-SETUP-README.md) pour plus de détails.
 
@@ -110,7 +110,7 @@ raspberry/
 # 1. Flasher Raspberry Pi OS Lite avec WiFi/SSH activé
 # 2. Se connecter au Pi et lancer l'installation
 ssh pi@raspberrypi.local
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 # Optionnel : ajouter SSID/PASS du WiFi Internet si une clé USB est branchée
 # curl -sSL ... | sudo bash -s CLUB_NAME PASSWORD Livebox-F730 MonPassInternet456
 

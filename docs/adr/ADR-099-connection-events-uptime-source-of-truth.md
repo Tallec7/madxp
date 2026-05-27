@@ -21,10 +21,10 @@ indiquant qu'il n'y avait jamais eu d'instabilité réelle.
 
 Le calcul d'uptime mélangeait deux signaux distincts :
 
-| Signal Pi → Cloud | Cadence | Rôle |
-|---|---|---|
-| `heartbeat` Socket.IO | 30 s ([raspberry/sync-agent/src/config.js:99](../../raspberry/sync-agent/src/config.js)) | Met à jour `sites.last_seen_at` |
-| Écriture table `metrics` | **5 min** ([raspberry/sync-agent/src/config.js:100](../../raspberry/sync-agent/src/config.js)) | Loggue CPU / RAM / temp |
+| Signal Pi → Cloud        | Cadence                                                                                        | Rôle                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------- |
+| `heartbeat` Socket.IO    | 30 s ([raspberry/sync-agent/src/config.js:99](../../raspberry/sync-agent/src/config.js))       | Met à jour `sites.last_seen_at` |
+| Écriture table `metrics` | **5 min** ([raspberry/sync-agent/src/config.js:100](../../raspberry/sync-agent/src/config.js)) | Loggue CPU / RAM / temp         |
 
 Le dashboard ([central-server/src/controllers/site-fleet-dashboard.controller.ts](../../central-server/src/controllers/site-fleet-dashboard.controller.ts)) calculait :
 
@@ -157,6 +157,6 @@ cours, et un test "regression guard" qui interdit qu'un site stable retombe
 
 ## Références
 
-- Issue : [Tallec7/neopro#644](https://github.com/Tallec7/neopro/issues/644)
+- Issue : [Tallec7/neopro#644](https://github.com/Tallec7/madxp/issues/644)
 - Code Pi : [raspberry/sync-agent/src/config.js:99-100](../../raspberry/sync-agent/src/config.js)
 - Migration : [add-connection-events.sql](../../central-server/src/scripts/migrations/add-connection-events.sql)

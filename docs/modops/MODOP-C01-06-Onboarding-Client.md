@@ -235,7 +235,7 @@ ssh pi@<IP_DU_PI>
 **Depuis votre ordinateur, lancer l'installation en une ligne :**
 
 ```bash
-ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME WIFI_PASSWORD'
+ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME WIFI_PASSWORD'
 ```
 
 **Remplacer :**
@@ -246,7 +246,7 @@ ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/neopro/install/set
 **Exemple :**
 
 ```bash
-ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CESSON WiFiNeopro2025'
+ssh pi@raspberrypi.local 'curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CESSON WiFiNeopro2025'
 ```
 
 **Ce script va :**
@@ -809,7 +809,7 @@ SIGNATURE CLIENT (optionnel) : _______________
 
 **Solution** :
 
-1. Vérifier qu'une release existe : https://github.com/Tallec7/neopro/releases
+1. Vérifier qu'une release existe : https://github.com/Tallec7/madxp/releases
 2. Si aucune release, utiliser la méthode locale (MODOP-C03)
 3. Ou créer une release : `git tag v1.0.0 && git push origin v1.0.0`
 

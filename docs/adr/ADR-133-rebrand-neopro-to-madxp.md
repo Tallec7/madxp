@@ -86,16 +86,16 @@ L'audit du 2026-05-26 a exposé un GitHub PAT en clair dans le transcript d'un a
 
 ## Plan en 8 phases
 
-| #   | Scope                                                                                  | Risque                     | PR                                                      |
-| --- | -------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------- |
-| 1   | Docs froides (brand mentions)                                                          | LOW                        | [#1065](https://github.com/Tallec7/neopro/pull/1065) ✅ |
-| 2   | Code surface (package.json, manifests, HTML brand)                                     | LOW                        | [#1066](https://github.com/Tallec7/neopro/pull/1066) ✅ |
-| 3   | ADR-133 + CLAUDE.md + `.claude/rules/context.md`                                       | LOW                        | cette PR                                                |
-| 4   | Hybride Pi double-path (lecture `/etc/madxp/` fallback `/etc/neopro/`) + alias systemd | MEDIUM                     | à venir                                                 |
-| 5   | Métriques Prometheus rename brutal + dashboards Grafana + Alertmanager                 | MEDIUM                     | à venir                                                 |
-| 6   | FTP migration data + script SQL `storage_path` + double-écriture                       | HIGH                       | à venir                                                 |
-| 7   | Bascule cloud : Railway/CF Pages rename + env vars + secrets rotation + DNS            | HIGH (fenêtre maintenance) | à venir                                                 |
-| 8   | Repo GitHub rename + bootstrap Pi `install.sh` URL + OTA flotte                        | HIGH                       | à venir                                                 |
+| #   | Scope                                                                                  | Risque                     | PR                                                     |
+| --- | -------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------ |
+| 1   | Docs froides (brand mentions)                                                          | LOW                        | [#1065](https://github.com/Tallec7/madxp/pull/1065) ✅ |
+| 2   | Code surface (package.json, manifests, HTML brand)                                     | LOW                        | [#1066](https://github.com/Tallec7/madxp/pull/1066) ✅ |
+| 3   | ADR-133 + CLAUDE.md + `.claude/rules/context.md`                                       | LOW                        | cette PR                                               |
+| 4   | Hybride Pi double-path (lecture `/etc/madxp/` fallback `/etc/neopro/`) + alias systemd | MEDIUM                     | à venir                                                |
+| 5   | Métriques Prometheus rename brutal + dashboards Grafana + Alertmanager                 | MEDIUM                     | à venir                                                |
+| 6   | FTP migration data + script SQL `storage_path` + double-écriture                       | HIGH                       | à venir                                                |
+| 7   | Bascule cloud : Railway/CF Pages rename + env vars + secrets rotation + DNS            | HIGH (fenêtre maintenance) | à venir                                                |
+| 8   | Repo GitHub rename + bootstrap Pi `install.sh` URL + OTA flotte                        | HIGH                       | à venir                                                |
 
 **Sunset** (mois +3 à +12 après Phase 8) : drop redirects ancien domaine, drop fallback `/etc/neopro/`, drop alias `neopro-*.service`, drop FTP legacy paths après audit.
 
@@ -145,14 +145,14 @@ L'audit du 2026-05-26 a exposé un GitHub PAT en clair dans le transcript d'un a
 
 ### Risques
 
-| Risque                                                                              | Mitigation                                                                            |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| OTA Phase 8 casse un Pi en prod                                                     | Double-path en Phase 4 garantit le fallback ; OTA non urgente                         |
-| Rotation `HOTSPOT_PSK_ENCRYPTION_KEY` casse le décrypt des PSK existants            | Rotation = re-chiffrement à chaud de tous les PSK avec migration script (cf. ADR-074) |
-| Cassure liens externes (Slack, Notion, badges) après rename repo                    | Maintenir l'ancien repo en redirect GitHub (auto), audit liens externes               |
-| Email `noreply@madxp.kalonpartners.bzh` en spam folder                              | Configurer SPF/DKIM/DMARC pour `kalonpartners.bzh` AVANT bascule SendGrid sender      |
-| Synthetic monitoring (`frontend-health.yml`) casse                                  | Mettre à jour le workflow dans la même PR que la bascule DNS                          |
-| Bootstrap Pi `tallec7.github.io/neopro/install/setup.sh` casse pour nouveaux flashs | Publier sous nouveau path **avant** rename repo, garder ancien path en redirect       |
+| Risque                                                                             | Mitigation                                                                            |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| OTA Phase 8 casse un Pi en prod                                                    | Double-path en Phase 4 garantit le fallback ; OTA non urgente                         |
+| Rotation `HOTSPOT_PSK_ENCRYPTION_KEY` casse le décrypt des PSK existants           | Rotation = re-chiffrement à chaud de tous les PSK avec migration script (cf. ADR-074) |
+| Cassure liens externes (Slack, Notion, badges) après rename repo                   | Maintenir l'ancien repo en redirect GitHub (auto), audit liens externes               |
+| Email `noreply@madxp.kalonpartners.bzh` en spam folder                             | Configurer SPF/DKIM/DMARC pour `kalonpartners.bzh` AVANT bascule SendGrid sender      |
+| Synthetic monitoring (`frontend-health.yml`) casse                                 | Mettre à jour le workflow dans la même PR que la bascule DNS                          |
+| Bootstrap Pi `tallec7.github.io/madxp/install/setup.sh` casse pour nouveaux flashs | Publier sous nouveau path **avant** rename repo, garder ancien path en redirect       |
 
 ## Hors scope ADR-133 (explicitement)
 

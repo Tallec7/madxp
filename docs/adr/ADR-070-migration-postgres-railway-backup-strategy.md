@@ -88,7 +88,7 @@ Toutes les sorties `|| true` qui pourraient masquer un échec sont proscrites da
 ## Monitoring / supervision
 
 - **Workflow failure** : GitHub envoie un email automatique à l'utilisateur qui a triggé le dernier run (ou au commit author pour le schedule).
-- **Dashboard Actions** : https://github.com/Tallec7/neopro/actions/workflows/db-backup.yml → check daily.
+- **Dashboard Actions** : https://github.com/Tallec7/madxp/actions/workflows/db-backup.yml → check daily.
 - **Runbook de restauration** : [PROP-013-RUNBOOK.md § Rollback](../proposals/PROP-013-RUNBOOK.md)
 
 **Règle opérationnelle** : si 2 runs consécutifs échouent, investiguer immédiatement — on est en RPO > 48h.

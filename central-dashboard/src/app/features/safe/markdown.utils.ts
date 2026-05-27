@@ -58,7 +58,7 @@ export function parseAdrRefs(content: string, currentId: string): AdrRef[] {
   };
 
   for (const m of content.matchAll(/PR #(\d+)/g)) {
-    add({ type: 'pr', label: `PR #${m[1]}`, external: true, href: `https://github.com/Tallec7/neopro/pull/${m[1]}` });
+    add({ type: 'pr', label: `PR #${m[1]}`, external: true, href: `https://github.com/Tallec7/madxp/pull/${m[1]}` });
   }
 
   for (const m of content.matchAll(/\bADR-(\d+)\b/g)) {

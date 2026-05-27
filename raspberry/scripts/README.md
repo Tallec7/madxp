@@ -41,7 +41,7 @@
 ssh pi@raspberrypi.local
 
 # 3. Lancer l'installation en une ligne
-curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
+curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD
 
 # Alternative (URL longue) :
 curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD

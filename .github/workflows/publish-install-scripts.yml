@@ -98,13 +98,13 @@ jobs:
 
               <p>Connectez-vous au Pi via SSH et exécutez :</p>
 
-              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD</pre>
+              <pre>curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD</pre>
 
               <h3>Exemples :</h3>
 
-              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123</pre>
+              <pre>curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123</pre>
 
-              <pre>curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass</pre>
+              <pre>curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s MASTER MasterPass</pre>
 
               <div class="warning">
                   <strong>⚠️ Important :</strong>
@@ -139,8 +139,8 @@ jobs:
 
               <h2>🔗 Ressources</h2>
               <ul>
-                  <li><a href="https://github.com/Tallec7/neopro">Repository GitHub</a></li>
-                  <li><a href="https://github.com/Tallec7/neopro/blob/main/raspberry/README.md">Documentation complète</a></li>
+                  <li><a href="https://github.com/Tallec7/madxp">Repository GitHub</a></li>
+                  <li><a href="https://github.com/Tallec7/madxp/blob/main/raspberry/README.md">Documentation complète</a></li>
               </ul>
 
               <hr>

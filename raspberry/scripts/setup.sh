@@ -9,15 +9,15 @@
 # Usage (deux options - les deux sont gratuites) :
 #
 #   Option 1 - GitHub Pages (URL courte, recommandé) :
-#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB PASS [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
+#   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB PASS [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
 #
 #   Option 2 - Raw GitHub (aucune configuration) :
 #   curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB PASS [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]
 #
 # Exemples:
-#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
-#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123 Livebox-F730 MonPassInternet456
-#   curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass
+#   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123
+#   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123 Livebox-F730 MonPassInternet456
+#   curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s MASTER MasterPass
 #
 # Documentation complète : docs/ONLINE_INSTALLATION.md
 ################################################################################
@@ -65,11 +65,11 @@ check_root() {
 check_parameters() {
     if [ -z "$CLUB_NAME" ] || [ -z "$WIFI_PASSWORD" ]; then
         print_error "Usage:"
-        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]"
+        echo "  curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s CLUB_NAME PASSWORD [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]"
         echo ""
         echo "Exemples:"
-        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s NANTES MyWiFiPass123"
-        echo "  curl -sSL https://tallec7.github.io/neopro/install/setup.sh | sudo bash -s MASTER MasterPass"
+        echo "  curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s NANTES MyWiFiPass123"
+        echo "  curl -sSL https://tallec7.github.io/madxp/install/setup.sh | sudo bash -s MASTER MasterPass"
         echo ""
         echo "Alternative (URL longue):"
         echo "  curl -sSL https://raw.githubusercontent.com/Tallec7/neopro/main/raspberry/scripts/setup.sh | sudo bash -s CLUB_NAME PASSWORD [SSID_WIFI_CLIENT] [PASS_WIFI_CLIENT]"
@@ -117,7 +117,7 @@ download_installation_files() {
     print_step "Téléchargement de l'archive repository..."
     local ARCHIVE_DIR
     ARCHIVE_DIR=$(mktemp -d /tmp/neopro-archive-XXXXXX)
-    if ! curl -sSLf "https://github.com/Tallec7/neopro/archive/refs/heads/main.tar.gz" \
+    if ! curl -sSLf "https://github.com/Tallec7/madxp/archive/refs/heads/main.tar.gz" \
          | tar -xz -C "$ARCHIVE_DIR"; then
         print_error "Échec du téléchargement de l'archive"
         rm -rf "$ARCHIVE_DIR"
@@ -179,7 +179,7 @@ download_installation_files() {
         | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
     if [ -n "$LATEST_RELEASE" ]; then
         print_step "Téléchargement de la version $LATEST_RELEASE..."
-        if curl -sSL "https://github.com/Tallec7/neopro/releases/download/$LATEST_RELEASE/neopro-webapp.tar.gz" \
+        if curl -sSL "https://github.com/Tallec7/madxp/releases/download/$LATEST_RELEASE/neopro-webapp.tar.gz" \
              -o webapp.tar.gz 2>/dev/null && tar -xzf webapp.tar.gz -C webapp; then
             rm webapp.tar.gz
             print_success "Application web téléchargée"
