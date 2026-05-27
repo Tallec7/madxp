@@ -178,7 +178,15 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", 'blob:', 'https://kalonpartners.bzh'],  // blob: for @remotion/player prefetch, kalonpartners.bzh for FTP assets
       frameSrc: ["'none'"],
-      frameAncestors: ["'self'", 'https://neopro-admin.kalonpartners.bzh'],
+      // ADR-133 Phase 7 prep : on accepte les futurs domaines MadXP en plus
+      // des anciens (NEOPRO) pour que le serveur soit prêt avant la bascule DNS.
+      // Les anciens domaines pourront être retirés une fois la migration validée.
+      frameAncestors: [
+        "'self'",
+        'https://neopro-admin.kalonpartners.bzh',
+        'https://madxp-admin.kalonpartners.bzh',
+        'https://madxp.kalonpartners.bzh',
+      ],
     },
   },
   // X-XSS-Protection header (legacy but still useful for older browsers)
