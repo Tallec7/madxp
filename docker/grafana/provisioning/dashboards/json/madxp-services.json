@@ -77,7 +77,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_connected_sites_total{job=~\"$job\"}",
+          "expr": "madxp_connected_sites_total{job=~\"$job\"}",
           "legendFormat": "Sites",
           "refId": "A"
         }
@@ -112,7 +112,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_active_alerts{job=~\"$job\"}",
+          "expr": "madxp_active_alerts{job=~\"$job\"}",
           "legendFormat": "Active Alerts",
           "refId": "A"
         }
@@ -143,7 +143,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_uploads_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(madxp_video_uploads_total{job=~\"$job\"}[5m]))",
           "legendFormat": "Uploads/s",
           "refId": "A"
         }
@@ -191,17 +191,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(madxp_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(neopro_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(madxp_db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -249,12 +249,12 @@
       },
       "targets": [
         {
-          "expr": "neopro_db_connections{job=~\"$job\", state=\"active\"}",
+          "expr": "madxp_db_connections{job=~\"$job\", state=\"active\"}",
           "legendFormat": "Active",
           "refId": "A"
         },
         {
-          "expr": "neopro_db_connections{job=~\"$job\", state=\"idle\"}",
+          "expr": "madxp_db_connections{job=~\"$job\", state=\"idle\"}",
           "legendFormat": "Idle",
           "refId": "B"
         }
@@ -302,7 +302,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_websocket_messages_total{job=~\"$job\"}[5m])) by (direction)",
+          "expr": "sum(rate(madxp_websocket_messages_total{job=~\"$job\"}[5m])) by (direction)",
           "legendFormat": "{{direction}}",
           "refId": "A"
         }
@@ -350,7 +350,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_auth_attempts_total{job=~\"$job\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_auth_attempts_total{job=~\"$job\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -398,7 +398,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_uploads_total{job=~\"$job\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_video_uploads_total{job=~\"$job\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -446,17 +446,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(madxp_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(neopro_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(madxp_command_latency_seconds_bucket{job=~\"$job\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -500,22 +500,22 @@
       },
       "targets": [
         {
-          "expr": "neopro_site_network_type{job=~\"$job\", connection_type=\"ethernet\"}",
+          "expr": "madxp_site_network_type{job=~\"$job\", connection_type=\"ethernet\"}",
           "legendFormat": "Ethernet",
           "refId": "A"
         },
         {
-          "expr": "neopro_site_network_type{job=~\"$job\", connection_type=\"simple\"}",
+          "expr": "madxp_site_network_type{job=~\"$job\", connection_type=\"simple\"}",
           "legendFormat": "WiFi Simple",
           "refId": "B"
         },
         {
-          "expr": "neopro_site_network_type{job=~\"$job\", connection_type=\"mesh\"}",
+          "expr": "madxp_site_network_type{job=~\"$job\", connection_type=\"mesh\"}",
           "legendFormat": "WiFi Mesh",
           "refId": "C"
         },
         {
-          "expr": "neopro_site_network_type{job=~\"$job\", connection_type=\"mesh_isolated\"}",
+          "expr": "madxp_site_network_type{job=~\"$job\", connection_type=\"mesh_isolated\"}",
           "legendFormat": "Mesh Isolated",
           "refId": "D"
         }
@@ -552,7 +552,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_site_stability_score{job=~\"$job\"}",
+          "expr": "madxp_site_stability_score{job=~\"$job\"}",
           "legendFormat": "Stability",
           "refId": "A"
         }
@@ -580,7 +580,7 @@
       },
       "targets": [
         {
-          "expr": "rate(neopro_heartbeats_total{job=~\"$job\"}[5m]) * 60",
+          "expr": "rate(madxp_heartbeats_total{job=~\"$job\"}[5m]) * 60",
           "legendFormat": "Heartbeats/min",
           "refId": "A"
         }
@@ -625,7 +625,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_network_alerts_total{job=~\"$job\"}[5m])) by (type, severity)",
+          "expr": "sum(rate(madxp_network_alerts_total{job=~\"$job\"}[5m])) by (type, severity)",
           "legendFormat": "{{type}} ({{severity}})",
           "refId": "A"
         }
@@ -670,7 +670,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_commands_total{job=~\"$job\"}[5m])) by (type, status)",
+          "expr": "sum(rate(madxp_commands_total{job=~\"$job\"}[5m])) by (type, status)",
           "legendFormat": "{{type}} ({{status}})",
           "refId": "A"
         }
@@ -715,17 +715,17 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_network_rollbacks_total{job=~\"$job\"}[5m])) by (operation)",
+          "expr": "sum(rate(madxp_network_rollbacks_total{job=~\"$job\"}[5m])) by (operation)",
           "legendFormat": "{{operation}}",
           "refId": "A"
         },
         {
-          "expr": "rate(neopro_network_recovery_attempts_total{job=~\"$job\"}[5m])",
+          "expr": "rate(madxp_network_recovery_attempts_total{job=~\"$job\"}[5m])",
           "legendFormat": "Recovery Attempts",
           "refId": "B"
         },
         {
-          "expr": "sum(increase(neopro_network_recovery_cycles_total{job=~\"$job\"}[1h])) by (site_id, interface)",
+          "expr": "sum(increase(madxp_network_recovery_cycles_total{job=~\"$job\"}[1h])) by (site_id, interface)",
           "legendFormat": "Cycles {{site_id}} ({{interface}})",
           "refId": "C"
         }
@@ -825,7 +825,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_websocket_disconnects_total{job=~\"$job\"}[5m])) by (reason)",
+          "expr": "sum(rate(madxp_websocket_disconnects_total{job=~\"$job\"}[5m])) by (reason)",
           "legendFormat": "{{reason}}",
           "refId": "A"
         }
@@ -870,7 +870,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_websocket_disconnects_total{job=~\"$job\"}[5m])) by (client_type)",
+          "expr": "sum(rate(madxp_websocket_disconnects_total{job=~\"$job\"}[5m])) by (client_type)",
           "legendFormat": "{{client_type}}",
           "refId": "A"
         }
@@ -882,7 +882,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["neopro", "services"],
+  "tags": ["madxp", "services"],
   "templating": {
     "list": [
       {
@@ -905,8 +905,8 @@
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "NeoPro Services",
-  "uid": "neopro-services",
+  "title": "MadXP Services",
+  "uid": "madxp-services",
   "version": 1,
   "weekStart": ""
 }

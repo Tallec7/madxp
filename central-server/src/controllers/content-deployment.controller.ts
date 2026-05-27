@@ -326,7 +326,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     let thumbnailUrl: string | null = null;
     if (uploadStatus === 'ready') {
       try {
-        const tmpVideoPath = path.join(require('os').tmpdir(), `neopro_thumb_${video.id}.mp4`);
+        const tmpVideoPath = path.join(require('os').tmpdir(), `madxp_thumb_${video.id}.mp4`);
         fs.writeFileSync(tmpVideoPath, result.buffer);
         const thumbBuffer = await thumbnailService.generateThumbnailBuffer(tmpVideoPath);
         fs.unlinkSync(tmpVideoPath);

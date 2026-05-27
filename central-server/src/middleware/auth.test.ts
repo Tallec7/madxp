@@ -122,7 +122,7 @@ describe('Auth Middleware', () => {
     // Tests pour les cookies HttpOnly
     it('should authenticate with valid token in cookie', () => {
       const token = generateToken(testPayload);
-      const req = createMockRequest({ cookies: { neopro_token: token } });
+      const req = createMockRequest({ cookies: { madxp_token: token } });
       const res = createMockResponse();
       const next: NextFunction = jest.fn();
 
@@ -134,7 +134,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should return 401 for invalid token in cookie', () => {
-      const req = createMockRequest({ cookies: { neopro_token: 'invalid-token' } });
+      const req = createMockRequest({ cookies: { madxp_token: 'invalid-token' } });
       const res = createMockResponse();
       const next: NextFunction = jest.fn();
 
@@ -148,7 +148,7 @@ describe('Auth Middleware', () => {
       const cookieToken = generateToken({ ...testPayload, email: 'cookie@example.com' });
       const headerToken = generateToken({ ...testPayload, email: 'header@example.com' });
       const req = createMockRequest({
-        cookies: { neopro_token: cookieToken },
+        cookies: { madxp_token: cookieToken },
         authHeader: `Bearer ${headerToken}`,
       });
       const res = createMockResponse();

@@ -13,9 +13,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["neopro"],
+      "tags": ["madxp"],
       "targetBlank": false,
-      "title": "Neopro Dashboards",
+      "title": "MadXP Dashboards",
       "type": "dashboards"
     }
   ],
@@ -49,7 +49,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_hotspot_bootstrap_attempts_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_hotspot_bootstrap_attempts_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -71,7 +71,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_hotspot_rotation_attempts_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_hotspot_rotation_attempts_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -123,7 +123,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(neopro_hotspot_psk_decrypt_errors_total[1h]))",
+          "expr": "sum(increase(madxp_hotspot_psk_decrypt_errors_total[1h]))",
           "refId": "A"
         }
       ]
@@ -156,7 +156,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (reason) (increase(neopro_match_sessions_autoclosed_total[1h]))",
+          "expr": "sum by (reason) (increase(madxp_match_sessions_autoclosed_total[1h]))",
           "legendFormat": "{{reason}}",
           "refId": "A"
         }
@@ -178,7 +178,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (command_type) (rate(neopro_match_commands_total[5m]))",
+          "expr": "sum by (command_type) (rate(madxp_match_commands_total[5m]))",
           "legendFormat": "{{command_type}}",
           "refId": "A"
         }
@@ -246,7 +246,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_video_ftp_orphans_current",
+          "expr": "madxp_video_ftp_orphans_current",
           "refId": "A"
         }
       ]
@@ -296,7 +296,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(neopro_video_ftp_audit_warnings_total[1h]))",
+          "expr": "sum(increase(madxp_video_ftp_audit_warnings_total[1h]))",
           "refId": "A"
         }
       ]
@@ -317,7 +317,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_ftp_audit_scanned_total[5m]))",
+          "expr": "sum(rate(madxp_video_ftp_audit_scanned_total[5m]))",
           "legendFormat": "scanned/s",
           "refId": "A"
         }
@@ -339,7 +339,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(neopro_video_ftp_audit_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(madxp_video_ftp_audit_duration_seconds_bucket[5m])))",
           "legendFormat": "p95",
           "refId": "A"
         }
@@ -361,7 +361,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (action) (rate(neopro_video_club_grants_total[5m]))",
+          "expr": "sum by (action) (rate(madxp_video_club_grants_total[5m]))",
           "legendFormat": "{{action}}",
           "refId": "A"
         }
@@ -418,7 +418,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_connection_events_rows_current",
+          "expr": "madxp_connection_events_rows_current",
           "refId": "A"
         }
       ]
@@ -465,7 +465,7 @@
       },
       "targets": [
         {
-          "expr": "increase(neopro_connection_events_purged_total[24h])",
+          "expr": "increase(madxp_connection_events_purged_total[24h])",
           "refId": "A"
         }
       ]
@@ -494,7 +494,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (result) (increase(neopro_test_renders_cleaned_total[24h]))",
+          "expr": "sum by (result) (increase(madxp_test_renders_cleaned_total[24h]))",
           "legendFormat": "{{result}}",
           "refId": "A"
         }
@@ -528,7 +528,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (error_type) (rate(neopro_video_playback_errors_total[5m]))",
+          "expr": "sum by (error_type) (rate(madxp_video_playback_errors_total[5m]))",
           "legendFormat": "{{error_type}}",
           "refId": "A"
         }
@@ -550,7 +550,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_video_stream_requests_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_video_stream_requests_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -572,7 +572,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_gpu_decode_fallback_total[5m]))",
+          "expr": "sum(rate(madxp_gpu_decode_fallback_total[5m]))",
           "legendFormat": "fallback/s",
           "refId": "A"
         }
@@ -594,12 +594,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_preload_reveal_total[5m]))",
+          "expr": "sum(rate(madxp_video_preload_reveal_total[5m]))",
           "legendFormat": "reveal",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(neopro_video_preload_cleanup_total[5m]))",
+          "expr": "sum(rate(madxp_video_preload_cleanup_total[5m]))",
           "legendFormat": "cleanup",
           "refId": "B"
         }
@@ -621,7 +621,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_video_stale_loop_state_total[5m]))",
+          "expr": "sum(rate(madxp_video_stale_loop_state_total[5m]))",
           "legendFormat": "stale/s",
           "refId": "A"
         }
@@ -643,7 +643,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (strategy) (rate(neopro_video_path_resolution_total[5m]))",
+          "expr": "sum by (strategy) (rate(madxp_video_path_resolution_total[5m]))",
           "legendFormat": "{{strategy}}",
           "refId": "A"
         }
@@ -677,7 +677,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (operation) (rate(neopro_template_studio_operations_total[5m]))",
+          "expr": "sum by (operation) (rate(madxp_template_studio_operations_total[5m]))",
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
@@ -699,7 +699,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_template_asset_proxy_upstream_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_template_asset_proxy_upstream_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -763,7 +763,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (step) (rate(neopro_mfa_setup_total[5m]))",
+          "expr": "sum by (step) (rate(madxp_mfa_setup_total[5m]))",
           "legendFormat": "{{step}}",
           "refId": "A"
         }
@@ -785,7 +785,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_legacy_pin_migrations_total[5m]))",
+          "expr": "sum(rate(madxp_legacy_pin_migrations_total[5m]))",
           "legendFormat": "migrations/s",
           "refId": "A"
         }
@@ -816,7 +816,7 @@
       },
       "targets": [
         {
-          "expr": "sum(neopro_profile_device_tokens_active)",
+          "expr": "sum(madxp_profile_device_tokens_active)",
           "refId": "A"
         }
       ]
@@ -902,7 +902,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_db_circuit_breaker_state",
+          "expr": "madxp_db_circuit_breaker_state",
           "refId": "A"
         }
       ]
@@ -952,7 +952,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(neopro_canary_rollbacks_total[1h]))",
+          "expr": "sum(increase(madxp_canary_rollbacks_total[1h]))",
           "refId": "A"
         }
       ]
@@ -973,7 +973,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_orphan_service_detected_total[15m]))",
+          "expr": "sum(rate(madxp_orphan_service_detected_total[15m]))",
           "legendFormat": "detected/s",
           "refId": "A"
         }
@@ -995,7 +995,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (route) (rate(neopro_rate_limit_near_exhaustion_total[5m]))",
+          "expr": "sum by (route) (rate(madxp_rate_limit_near_exhaustion_total[5m]))",
           "legendFormat": "{{route}}",
           "refId": "A"
         }
@@ -1017,7 +1017,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (relay_type) (rate(neopro_state_sync_relays_total[5m]))",
+          "expr": "sum by (relay_type) (rate(madxp_state_sync_relays_total[5m]))",
           "legendFormat": "{{relay_type}}",
           "refId": "A"
         }
@@ -1039,7 +1039,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_license_status_pushes_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_license_status_pushes_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1061,7 +1061,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (operation) (rate(neopro_ftp_retries_total[5m]))",
+          "expr": "sum by (operation) (rate(madxp_ftp_retries_total[5m]))",
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
@@ -1095,7 +1095,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (status) (rate(neopro_web_content_fetch_total[5m]))",
+          "expr": "sum by (status) (rate(madxp_web_content_fetch_total[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1117,7 +1117,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum by (action) (rate(neopro_wifi_config_total[5m]))",
+          "expr": "sum by (action) (rate(madxp_wifi_config_total[5m]))",
           "legendFormat": "{{action}}",
           "refId": "A"
         }
@@ -1139,12 +1139,12 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_secondary_variant_enrichment_total[5m]))",
+          "expr": "sum(rate(madxp_secondary_variant_enrichment_total[5m]))",
           "legendFormat": "enrichment/s",
           "refId": "A"
         },
         {
-          "expr": "sum(neopro_secondary_variant_enriched_count)",
+          "expr": "sum(madxp_secondary_variant_enriched_count)",
           "legendFormat": "enriched count",
           "refId": "B"
         }
@@ -1167,7 +1167,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(neopro_variant_replace_dispatched_total{scrape_job=\"NEOPRO\"}[1h])) by (status)",
+          "expr": "sum(increase(madxp_variant_replace_dispatched_total{scrape_job=\"NEOPRO\"}[1h])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1189,7 +1189,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_memory_gc_runs_total[5m]))",
+          "expr": "sum(rate(madxp_memory_gc_runs_total[5m]))",
           "legendFormat": "gc runs/s",
           "refId": "A"
         }
@@ -1212,7 +1212,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_alerts_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (type)",
+          "expr": "sum(rate(madxp_alerts_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (type)",
           "legendFormat": "{{type}}",
           "refId": "A"
         }
@@ -1235,7 +1235,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_analytics_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id)",
+          "expr": "sum(rate(madxp_analytics_dedup_skipped_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id)",
           "legendFormat": "{{site_id}}",
           "refId": "A"
         }
@@ -1258,7 +1258,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_auto_deploy_throttled_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id, reason)",
+          "expr": "sum(rate(madxp_auto_deploy_throttled_total{scrape_job=\"NEOPRO\"}[5m])) by (site_id, reason)",
           "legendFormat": "{{site_id}} / {{reason}}",
           "refId": "A"
         }
@@ -1281,7 +1281,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_sync_agent_zombie_socket_recoveries_total{scrape_job=\"NEOPRO\"}[5m]))",
+          "expr": "sum(rate(madxp_sync_agent_zombie_socket_recoveries_total{scrape_job=\"NEOPRO\"}[5m]))",
           "legendFormat": "recoveries/s",
           "refId": "A"
         }
@@ -1304,7 +1304,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(neopro_template_deleted_total{scrape_job=\"NEOPRO\"}[1h])) by (cascade_status, reason)",
+          "expr": "sum(increase(madxp_template_deleted_total{scrape_job=\"NEOPRO\"}[1h])) by (cascade_status, reason)",
           "legendFormat": "{{cascade_status}} / {{reason}}",
           "refId": "A"
         }
@@ -1327,7 +1327,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_template_proxy_signature_validation_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_template_proxy_signature_validation_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -1346,11 +1346,11 @@
       },
       "id": 810,
       "title": "Fire Stick inconnus d\u00e9tect\u00e9s (Phase 12 OBSERVE)",
-      "description": "Fire Sticks non assign\u00e9s d\u00e9tect\u00e9s sur hotspot Pi (Counter neopro_hotspot_unknown_firestick_total par site_id). Pic = Fire Stick branch\u00e9 sans assignation dashboard. Badge ambre d\u00e9clench\u00e9 c\u00f4t\u00e9 displays-editor.",
+      "description": "Fire Sticks non assign\u00e9s d\u00e9tect\u00e9s sur hotspot Pi (Counter madxp_hotspot_unknown_firestick_total par site_id). Pic = Fire Stick branch\u00e9 sans assignation dashboard. Badge ambre d\u00e9clench\u00e9 c\u00f4t\u00e9 displays-editor.",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(neopro_hotspot_unknown_firestick_total{scrape_job=\"NEOPRO\"}[1h])) by (site_id)",
+          "expr": "sum(increase(madxp_hotspot_unknown_firestick_total{scrape_job=\"NEOPRO\"}[1h])) by (site_id)",
           "legendFormat": "site {{site_id}}",
           "refId": "A"
         }
@@ -1373,7 +1373,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(neopro_variant_dispatch_displaytype_total{scrape_job=\"NEOPRO\"}[1h])) by (display_type, source)",
+          "expr": "sum(increase(madxp_variant_dispatch_displaytype_total{scrape_job=\"NEOPRO\"}[1h])) by (display_type, source)",
           "legendFormat": "{{display_type}} / {{source}}",
           "refId": "A"
         }
@@ -1396,7 +1396,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(increase(neopro_filename_collisions_total{scrape_job=\"NEOPRO\"}[1h])) by (suffix_count)",
+          "expr": "sum(increase(madxp_filename_collisions_total{scrape_job=\"NEOPRO\"}[1h])) by (suffix_count)",
           "legendFormat": "suffix _{{suffix_count}}",
           "refId": "A"
         }
@@ -1419,7 +1419,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "sum(rate(neopro_pending_commands_drain_total{scrape_job=\"NEOPRO\"}[5m])) by (outcome)",
+          "expr": "sum(rate(madxp_pending_commands_drain_total{scrape_job=\"NEOPRO\"}[5m])) by (outcome)",
           "legendFormat": "{{outcome}}",
           "refId": "A"
         }
@@ -1428,7 +1428,7 @@
   ],
   "refresh": "1m",
   "schemaVersion": 39,
-  "tags": ["neopro", "blind-spots", "audit"],
+  "tags": ["madxp", "blind-spots", "audit"],
   "templating": {
     "list": []
   },
@@ -1438,8 +1438,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "NeoPro Blind Spots",
-  "uid": "neopro-blind-spots",
+  "title": "MadXP Blind Spots",
+  "uid": "madxp-blind-spots",
   "version": 1,
   "weekStart": ""
 }

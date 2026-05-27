@@ -12,7 +12,7 @@
  *
  * Ce smoke test bloque la régression : si quelqu'un revient à `recorded: validPlays.length`
  * ou si la méthode `recordVideoPlays()` cesse de retourner le rowCount réel,
- * le compteur Prometheus `neopro_analytics_dedup_skipped_total` retombe muet et
+ * le compteur Prometheus `madxp_analytics_dedup_skipped_total` retombe muet et
  * un Pi en boucle redevient invisible.
  */
 
@@ -75,11 +75,11 @@ describe('Analytics ingestion — true recorded count (P3 incident 2026-05-14, s
     });
   });
 
-  describe('metrics.service.ts — Counter neopro_analytics_dedup_skipped_total', () => {
+  describe('metrics.service.ts — Counter madxp_analytics_dedup_skipped_total', () => {
     const src = readFile(METRICS);
 
     it('déclare le Counter avec label site_id', () => {
-      expect(src).toMatch(/name:\s*'neopro_analytics_dedup_skipped_total'/);
+      expect(src).toMatch(/name:\s*'madxp_analytics_dedup_skipped_total'/);
       expect(src).toMatch(/labelNames:\s*\[\s*'site_id'\s*\]/);
     });
 

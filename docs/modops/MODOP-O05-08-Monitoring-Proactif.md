@@ -205,7 +205,7 @@ Vérifier chaque jour (matin) que tous les systèmes fonctionnent normalement et
 | `HighDisconnectRate`  | > 0.5 déconnexions/s | Instabilité réseau fleet-wide                 |
 | `TooManyActiveAlerts` | > 10 alertes actives | Incident fleet-wide probable                  |
 
-> **Config** : Rules Prometheus dans `docker/prometheus/rules.yml`, rules Grafana Cloud dans `docker/grafana/provisioning/alerting/neopro-alerts-cloud.yml`
+> **Config** : Rules Prometheus dans `docker/prometheus/rules.yml`, rules Grafana Cloud dans `docker/grafana/provisioning/alerting/madxp-alerts-cloud.yml`
 
 ### 3.5 Rapport quotidien (template)
 

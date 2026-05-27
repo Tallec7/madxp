@@ -21,7 +21,7 @@ groups:
 
       # Server responding but unhealthy
       - alert: CentralServerUnhealthy
-        expr: neopro_health_status == 0
+        expr: madxp_health_status == 0
         for: 3m
         labels:
           severity: critical
@@ -59,7 +59,7 @@ groups:
           category: stability
         annotations:
           summary: "RSS memory growing steadily — possible memory leak"
-          description: "process_resident_memory_bytes increasing at {{ $value | humanize }}B/s over 1h. At this rate the process gains >40MB/day. Check neopro_saas_states_active and nodejs_active_handles in Grafana."
+          description: "process_resident_memory_bytes increasing at {{ $value | humanize }}B/s over 1h. At this rate the process gains >40MB/day. Check madxp_saas_states_active and nodejs_active_handles in Grafana."
 
       # Active handles growing — resource leak
       - alert: HighActiveHandles
@@ -79,7 +79,7 @@ groups:
     rules:
       # No heartbeats at all (all Pi disconnected or server issue)
       - alert: ZeroHeartbeats
-        expr: rate(neopro_heartbeats_total[5m]) == 0
+        expr: rate(madxp_heartbeats_total[5m]) == 0
         for: 5m
         labels:
           severity: critical
@@ -89,7 +89,7 @@ groups:
 
       # No WebSocket connections (agent)
       - alert: NoAgentConnections
-        expr: neopro_websocket_connections{type="agent"} == 0
+        expr: madxp_websocket_connections{type="agent"} == 0
         for: 5m
         labels:
           severity: critical
@@ -99,7 +99,7 @@ groups:
 
       # Sudden drop in connected sites (fleet issue)
       - alert: ConnectedSitesDrop
-        expr: neopro_connected_sites_total < (neopro_connected_sites_total offset 10m) * 0.5 and neopro_connected_sites_total offset 10m > 3
+        expr: madxp_connected_sites_total < (madxp_connected_sites_total offset 10m) * 0.5 and madxp_connected_sites_total offset 10m > 3
         for: 5m
         labels:
           severity: warning
@@ -109,7 +109,7 @@ groups:
 
       # Cloud remote zombie connections (command sent to empty room)
       - alert: CloudRemoteZombieConnections
-        expr: increase(neopro_commands_total{status="zombie"}[15m]) > 3
+        expr: increase(madxp_commands_total{status="zombie"}[15m]) > 3
         for: 5m
         labels:
           severity: warning
@@ -119,7 +119,7 @@ groups:
 
       # Cloud remote high failure rate (zombie + error combined)
       - alert: CloudRemoteHighFailureRate
-        expr: sum(rate(neopro_commands_total{status=~"zombie|error"}[10m])) / sum(rate(neopro_commands_total[10m])) > 0.3
+        expr: sum(rate(madxp_commands_total{status=~"zombie|error"}[10m])) / sum(rate(madxp_commands_total[10m])) > 0.3
         for: 5m
         labels:
           severity: warning
@@ -129,7 +129,7 @@ groups:
 
       # High WebSocket disconnect rate
       - alert: HighDisconnectRate
-        expr: rate(neopro_websocket_disconnects_total[5m]) > 0.5
+        expr: rate(madxp_websocket_disconnects_total[5m]) > 0.5
         for: 3m
         labels:
           severity: warning
@@ -144,7 +144,7 @@ groups:
     rules:
       # Pool saturation (approaching max connections)
       - alert: DbPoolSaturation
-        expr: neopro_db_connections{state="active"} / neopro_db_connections{state="total"} > 0.8
+        expr: madxp_db_connections{state="active"} / madxp_db_connections{state="total"} > 0.8
         for: 3m
         labels:
           severity: warning
@@ -154,7 +154,7 @@ groups:
 
       # Pool idle-client errors (PgBouncer disconnects)
       - alert: DbPoolErrors
-        expr: rate(neopro_db_pool_errors_total[5m]) * 60 > 3
+        expr: rate(madxp_db_pool_errors_total[5m]) * 60 > 3
         for: 5m
         labels:
           severity: warning
@@ -164,7 +164,7 @@ groups:
 
       # Slow queries
       - alert: SlowDbQueries
-        expr: histogram_quantile(0.95, rate(neopro_db_query_duration_seconds_bucket[5m])) > 2
+        expr: histogram_quantile(0.95, rate(madxp_db_query_duration_seconds_bucket[5m])) > 2
         for: 5m
         labels:
           severity: warning
@@ -174,7 +174,7 @@ groups:
 
       # Database size approaching Supabase free tier quota (500 MB)
       - alert: DbSizeWarning
-        expr: neopro_db_size_bytes > 400 * 1024 * 1024
+        expr: madxp_db_size_bytes > 400 * 1024 * 1024
         for: 10m
         labels:
           severity: warning
@@ -184,7 +184,7 @@ groups:
 
       # Database size critical — over quota
       - alert: DbSizeCritical
-        expr: neopro_db_size_bytes > 475 * 1024 * 1024
+        expr: madxp_db_size_bytes > 475 * 1024 * 1024
         for: 5m
         labels:
           severity: critical
@@ -194,7 +194,7 @@ groups:
 
       # Single table consuming too much space (>200 MB)
       - alert: DbTableSizeHigh
-        expr: neopro_db_table_size_bytes > 200 * 1024 * 1024
+        expr: madxp_db_table_size_bytes > 200 * 1024 * 1024
         for: 30m
         labels:
           severity: warning
@@ -234,7 +234,7 @@ groups:
     rules:
       # High upload failure rate
       - alert: HighUploadFailureRate
-        expr: rate(neopro_video_uploads_total{status="failed"}[10m]) > 0.05
+        expr: rate(madxp_video_uploads_total{status="failed"}[10m]) > 0.05
         for: 5m
         labels:
           severity: warning
@@ -244,7 +244,7 @@ groups:
 
       # Frequent filename encoding corrections (indicates client-side issue)
       - alert: FrequentEncodingCorrections
-        expr: rate(neopro_filename_encoding_corrections_total[1h]) > 0.1
+        expr: rate(madxp_filename_encoding_corrections_total[1h]) > 0.1
         for: 30m
         labels:
           severity: info
@@ -259,7 +259,7 @@ groups:
     rules:
       # Too many active alerts (something is very wrong)
       - alert: TooManyActiveAlerts
-        expr: neopro_active_alerts > 10
+        expr: madxp_active_alerts > 10
         for: 10m
         labels:
           severity: warning
@@ -269,7 +269,7 @@ groups:
 
       # Predictive checks failing (service may be broken)
       - alert: PredictiveChecksFailing
-        expr: increase(neopro_predictive_checks_total{status="failed"}[2h]) > 1
+        expr: increase(madxp_predictive_checks_total{status="failed"}[2h]) > 1
         for: 10m
         labels:
           severity: warning
@@ -279,7 +279,7 @@ groups:
 
       # Burst of predictive alerts (possible fleet-wide config issue)
       - alert: HighPredictiveAlertRate
-        expr: increase(neopro_predictive_alerts_generated_total[2h]) > 20
+        expr: increase(madxp_predictive_alerts_generated_total[2h]) > 20
         for: 10m
         labels:
           severity: warning
@@ -297,7 +297,7 @@ groups:
       # More than 3 recovery attempts/hour means either a false-positive bug (like the
       # grep -c || echo antipattern in v3.89.1) or genuine persistent hotspot failure.
       - alert: ExcessiveHotspotRecovery
-        expr: increase(neopro_network_recovery_attempts_total[1h]) > 3
+        expr: increase(madxp_network_recovery_attempts_total[1h]) > 3
         for: 5m
         labels:
           severity: warning
@@ -312,7 +312,7 @@ groups:
     rules:
       # Network stats cross-club query latency (P6.1 — heavy aggregation)
       - alert: SlowNetworkSponsorStats
-        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m])) > 5
+        expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/network/advertisers/.*/stats"}[5m])) > 5
         for: 5m
         labels:
           severity: warning
@@ -322,7 +322,7 @@ groups:
 
       # Benchmark query latency (P6.2 — full site sponsor scan)
       - alert: SlowBenchmarkQuery
-        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m])) > 3
+        expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/sites/.*/sponsors/benchmark"}[5m])) > 3
         for: 5m
         labels:
           severity: warning
@@ -332,7 +332,7 @@ groups:
 
       # Fleet benchmark query latency (peer comparison across sites)
       - alert: SlowFleetBenchmarkQuery
-        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path="/benchmark/sites/:id"}[5m])) > 5
+        expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path="/benchmark/sites/:id"}[5m])) > 5
         for: 5m
         labels:
           severity: warning
@@ -342,7 +342,7 @@ groups:
 
       # PDF report generation failures (P6.4 — match breakdown page 2)
       - alert: HighReportFailureRate
-        expr: rate(neopro_report_generations_total{report_type="site_sponsor",status="failed"}[15m]) > 0.02
+        expr: rate(madxp_report_generations_total{report_type="site_sponsor",status="failed"}[15m]) > 0.02
         for: 10m
         labels:
           severity: warning
@@ -356,8 +356,8 @@ groups:
       # after adding a new one to the registry.
       - alert: DeliveryStrategyHighFailureRate
         expr: |
-          sum by (strategy) (rate(neopro_deployment_delivery_total{outcome="failed"}[15m]))
-            / sum by (strategy) (rate(neopro_deployment_delivery_total[15m])) > 0.3
+          sum by (strategy) (rate(madxp_deployment_delivery_total{outcome="failed"}[15m]))
+            / sum by (strategy) (rate(madxp_deployment_delivery_total[15m])) > 0.3
         for: 15m
         labels:
           severity: warning
@@ -367,7 +367,7 @@ groups:
 
       # Sponsor sync deployment monitoring (P8 — dashboard→Pi sponsor sync)
       - alert: SponsorSyncMissing
-        expr: rate(neopro_sponsor_sync_total{status="included"}[1h]) == 0 and rate(neopro_deployments_total{status="completed"}[1h]) > 0
+        expr: rate(madxp_sponsor_sync_total{status="included"}[1h]) == 0 and rate(madxp_deployments_total{status="completed"}[1h]) > 0
         for: 30m
         labels:
           severity: warning
@@ -377,7 +377,7 @@ groups:
 
       # Sponsor resolution failures: Pi local sponsors failing to resolve or impressions unmatched
       - alert: SponsorResolutionFailures
-        expr: rate(neopro_sponsor_resolution_failures_total[15m]) > 0.05
+        expr: rate(madxp_sponsor_resolution_failures_total[15m]) > 0.05
         for: 10m
         labels:
           severity: warning
@@ -387,7 +387,7 @@ groups:
 
       # Impression tracking: too many impressions without sponsor attribution
       - alert: ImpressionSponsorUnresolved
-        expr: rate(neopro_impression_resolution_total{method="unresolved"}[30m]) / rate(neopro_impression_resolution_total[30m]) > 0.5
+        expr: rate(madxp_impression_resolution_total{method="unresolved"}[30m]) / rate(madxp_impression_resolution_total[30m]) > 0.5
         for: 15m
         labels:
           severity: warning
@@ -397,7 +397,7 @@ groups:
 
       # Pi agent authentication failures (transient DB errors, pool exhaustion)
       - alert: HighPiAuthFailureRate
-        expr: rate(neopro_pi_agent_auth_total{status="failure"}[5m]) > 0.1
+        expr: rate(madxp_pi_agent_auth_total{status="failure"}[5m]) > 0.1
         for: 5m
         labels:
           severity: warning
@@ -417,7 +417,7 @@ groups:
 
       # FK fallback: video_plays rows with nullified FK references (deleted sponsors/videos/sessions)
       - alert: HighVideoPlaysFkFallbackRate
-        expr: rate(neopro_video_plays_fk_fallback_total[30m]) > 0.1
+        expr: rate(madxp_video_plays_fk_fallback_total[30m]) > 0.1
         for: 15m
         labels:
           severity: warning
@@ -437,7 +437,7 @@ groups:
 
       # KPIs endpoint latency (consolidated pipeline — verified impressions, rotation fairness)
       - alert: AnalyticsKpisEndpointSlow
-        expr: histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m])) > 5
+        expr: histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~"/api/analytics/advertisers/.*/kpis"}[5m])) > 5
         for: 5m
         labels:
           severity: warning
@@ -447,7 +447,7 @@ groups:
 
       # Campaign data inconsistency: video_plays referencing non-existent campaigns
       - alert: CampaignDataInconsistency
-        expr: rate(neopro_video_plays_fk_fallback_total{column="campaign_id"}[30m]) > 0.05
+        expr: rate(madxp_video_plays_fk_fallback_total{column="campaign_id"}[30m]) > 0.05
         for: 15m
         labels:
           severity: warning
@@ -457,7 +457,7 @@ groups:
 
       # Verified impressions quality: TV-on rate dropping (HDMI-CEC detection issues)
       - alert: VerifiedImpressionsDropoff
-        expr: sum(rate(neopro_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(neopro_video_plays_total{category="sponsor"}[1h])) < 0.1
+        expr: sum(rate(madxp_video_plays_total{category="sponsor",tv_status="on"}[1h])) / sum(rate(madxp_video_plays_total{category="sponsor"}[1h])) < 0.1
         for: 30m
         labels:
           severity: warning
@@ -471,7 +471,7 @@ groups:
       # the config drift metric — if a Pi repeatedly drifts after deployment,
       # the secondary display settings may be getting dropped during merge.
       - alert: SecondaryDisplayConfigDrift
-        expr: increase(neopro_config_drift_total[2h]) > 10 and increase(neopro_deployments_total{status="completed"}[2h]) > 3
+        expr: increase(madxp_config_drift_total[2h]) > 10 and increase(madxp_deployments_total{status="completed"}[2h]) > 3
         for: 30m
         labels:
           severity: warning
@@ -481,7 +481,7 @@ groups:
 
       # Display resolution fallback: Pi using default resolution (xrandr + EDID unavailable)
       - alert: DisplayFallbackDetected
-        expr: increase(neopro_display_fallback_total[1h]) > 0
+        expr: increase(madxp_display_fallback_total[1h]) > 0
         for: 10m
         labels:
           severity: warning
@@ -493,7 +493,7 @@ groups:
       # Auto-completion at 100% is handled by alerting.service.ts (checkStuckDeployments),
       # but deployments genuinely stuck below 100% need operator attention.
       - alert: ContentDeploymentStuck
-        expr: increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[1h]) == 0 and increase(neopro_deploy_progress_events_total{type="content",status="completed"}[1h]) == 0 and neopro_active_alerts > 0
+        expr: increase(madxp_deploy_progress_events_total{type="content",status="in_progress"}[1h]) == 0 and increase(madxp_deploy_progress_events_total{type="content",status="completed"}[1h]) == 0 and madxp_active_alerts > 0
         for: 30m
         labels:
           severity: warning
@@ -506,7 +506,7 @@ groups:
       # Informational: confirms the safety net is working, but frequent firing
       # suggests WiFi reliability issues across the fleet.
       - alert: DeployAutoCompletionTriggered
-        expr: increase(neopro_deploy_progress_events_total{type="content",status="completed"}[30m]) > 0 and increase(neopro_deploy_progress_events_total{type="content",status="in_progress"}[30m]) == 0
+        expr: increase(madxp_deploy_progress_events_total{type="content",status="completed"}[30m]) > 0 and increase(madxp_deploy_progress_events_total{type="content",status="in_progress"}[30m]) == 0
         for: 10m
         labels:
           severity: info
@@ -517,7 +517,7 @@ groups:
       # Display type misclassification: monitor-only manufacturer (LEN, DEL, etc.) classified as TV
       # Catches regressions in monitorOnlyMfg filter in metrics.js or hdmi.service.js (v3.99.2)
       - alert: DisplayTypeMisclassification
-        expr: increase(neopro_display_type_misclassification_total[1h]) > 0
+        expr: increase(madxp_display_type_misclassification_total[1h]) > 0
         for: 5m
         labels:
           severity: warning
@@ -527,7 +527,7 @@ groups:
 
       # Sponsor analytics pipeline stall: club plays flowing but no sponsor plays (unified pipeline v3.67+)
       - alert: SponsorAnalyticsPipelineStall
-        expr: rate(neopro_video_plays_total{category="sponsor"}[2h]) == 0 and rate(neopro_video_plays_total{category="club"}[2h]) > 0
+        expr: rate(madxp_video_plays_total{category="sponsor"}[2h]) == 0 and rate(madxp_video_plays_total{category="club"}[2h]) > 0
         for: 2h
         labels:
           severity: warning
@@ -543,7 +543,7 @@ groups:
     rules:
       # Burst of failed PIN verifications on the fleet (>20/h) — possible targeted attack.
       - alert: ProfilePinBurstFailures
-        expr: increase(neopro_profile_pin_verifications_total{status="failure"}[1h]) > 20
+        expr: increase(madxp_profile_pin_verifications_total{status="failure"}[1h]) > 20
         for: 5m
         labels:
           severity: critical
@@ -555,8 +555,8 @@ groups:
       # Sustained brute-force ratio — more than 50% of verifications failing over 15 min.
       - alert: ProfilePinBruteForce
         expr: |
-          sum(rate(neopro_profile_pin_verifications_total{status="failure"}[15m]))
-            / sum(rate(neopro_profile_pin_verifications_total[15m])) > 0.5
+          sum(rate(madxp_profile_pin_verifications_total{status="failure"}[15m]))
+            / sum(rate(madxp_profile_pin_verifications_total[15m])) > 0.5
         for: 10m
         labels:
           severity: warning
@@ -567,7 +567,7 @@ groups:
 
       # High lockout rate — several IPs hitting the 5/10min lockout window simultaneously.
       - alert: ProfilePinHighLockoutRate
-        expr: rate(neopro_profile_pin_verifications_total{status="lockout"}[5m]) > 1
+        expr: rate(madxp_profile_pin_verifications_total{status="lockout"}[5m]) > 1
         for: 5m
         labels:
           severity: warning
@@ -582,8 +582,8 @@ groups:
       # Adoption v2 < 70% — escalade support à J+5 mois (objectif sunset 1er nov 2026)
       - alert: RemoteLegacyAdoptionLow
         expr: |
-          sum(rate(neopro_remote_client_version_total{version="v2"}[7d]))
-            / sum(rate(neopro_remote_client_version_total[7d])) < 0.70
+          sum(rate(madxp_remote_client_version_total{version="v2"}[7d]))
+            / sum(rate(madxp_remote_client_version_total[7d])) < 0.70
         for: 24h
         labels:
           severity: warning
@@ -594,13 +594,13 @@ groups:
 
       # Sanity check — alerte si les commandes granulaires ne sont plus comptées
       - alert: MatchCommandsMetricSilent
-        expr: absent(neopro_match_commands_total)
+        expr: absent(madxp_match_commands_total)
         for: 2h
         labels:
           severity: warning
           category: observability
         annotations:
-          summary: "neopro_match_commands_total metric absent"
+          summary: "madxp_match_commands_total metric absent"
           description: "No match command metrics in 2h. Either no remote activity (expected off-season) or ADR-059 instrumentation broke. Check remote.controller.ts."
 
   # Web/Live Content (ADR-103 Phase 4)
@@ -610,7 +610,7 @@ groups:
       # Indique soit une URL externe HS, soit un X-Frame-Options: DENY récent,
       # soit un Pi sans Internet. Action : checker l'URL dans le dashboard.
       - alert: WebContentLoadFailedSpike
-        expr: sum(rate(neopro_web_content_plays_total{outcome="load_failed"}[15m])) > 0.1
+        expr: sum(rate(madxp_web_content_plays_total{outcome="load_failed"}[15m])) > 0.1
         for: 10m
         labels:
           severity: warning
@@ -622,7 +622,7 @@ groups:
       # Burst de saves bloqués par le validator durationSeconds — signe que le
       # prompt Phase 3 v2 ne couvre pas tout (ex: Remote V1, import legacy).
       - alert: WebLoopDurationRequiredBurst
-        expr: sum(rate(neopro_web_loop_duration_required_blocks_total[10m])) > 0.05
+        expr: sum(rate(madxp_web_loop_duration_required_blocks_total[10m])) > 0.05
         for: 5m
         labels:
           severity: info

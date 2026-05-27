@@ -12,7 +12,7 @@ const JWT_SECRET: Secret = (() => {
 })();
 
 // Nom du cookie (doit correspondre à auth.controller.ts)
-const COOKIE_NAME = 'neopro_token';
+const COOKIE_NAME = 'madxp_token';
 
 export interface JwtPayload {
   id: string;

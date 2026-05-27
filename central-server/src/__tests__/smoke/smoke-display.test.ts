@@ -671,13 +671,13 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     });
   });
 
-  it('metrics.service.ts must have neopro_display_type_misclassification_total counter', () => {
+  it('metrics.service.ts must have madxp_display_type_misclassification_total counter', () => {
     const content = fs.readFileSync(
       path.join(repoRoot, 'central-server/src/services/metrics.service.ts'),
       'utf8'
     );
     expect({
-      hasCounter: content.includes('neopro_display_type_misclassification_total'),
+      hasCounter: content.includes('madxp_display_type_misclassification_total'),
       hasMethod: content.includes('recordDisplayTypeMisclassification'),
     }).toEqual({
       hasCounter: true,
@@ -692,7 +692,7 @@ describe('E-23 HDMI monitoring and alerts wiring', () => {
     );
     expect({
       hasAlert: content.includes('DisplayTypeMisclassification'),
-      hasMetric: content.includes('neopro_display_type_misclassification_total'),
+      hasMetric: content.includes('madxp_display_type_misclassification_total'),
     }).toEqual({
       hasAlert: true,
       hasMetric: true,
@@ -2354,7 +2354,7 @@ describe('N-display deploy-video generalization guard (issue #914 PR2)', () => {
   });
 });
 
-describe('N-display migration monitoring guard — neopro_variant_dispatch_displaytype_total (issue #914 PR3)', () => {
+describe('N-display migration monitoring guard — madxp_variant_dispatch_displaytype_total (issue #914 PR3)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const metricsPath = path.join(repoRoot, 'central-server/src/services/metrics.service.ts');
   const deploymentPath = path.join(repoRoot, 'central-server/src/services/deployment.service.ts');
@@ -2366,8 +2366,8 @@ describe('N-display migration monitoring guard — neopro_variant_dispatch_displ
     deploymentContent = fs.readFileSync(deploymentPath, 'utf8');
   });
 
-  it('metrics.service must define neopro_variant_dispatch_displaytype_total counter', () => {
-    expect(metricsContent).toMatch(/neopro_variant_dispatch_displaytype_total/);
+  it('metrics.service must define madxp_variant_dispatch_displaytype_total counter', () => {
+    expect(metricsContent).toMatch(/madxp_variant_dispatch_displaytype_total/);
   });
 
   it('metrics.service must expose recordVariantDispatchByDisplayType method', () => {
@@ -3128,8 +3128,8 @@ describe('ADR-034 preload-reveal metrics pipeline', () => {
   it('metrics.service MUST have Prometheus counters for preload_reveal and preload_cleanup', () => {
     const metricsContent = fs.readFileSync(path.join(repoRoot, 'central-server/src/services/metrics.service.ts'), 'utf8');
     expect({
-      hasRevealCounter: metricsContent.includes('neopro_video_preload_reveal_total'),
-      hasCleanupCounter: metricsContent.includes('neopro_video_preload_cleanup_total'),
+      hasRevealCounter: metricsContent.includes('madxp_video_preload_reveal_total'),
+      hasCleanupCounter: metricsContent.includes('madxp_video_preload_cleanup_total'),
     }).toEqual({
       hasRevealCounter: true,
       hasCleanupCounter: true,

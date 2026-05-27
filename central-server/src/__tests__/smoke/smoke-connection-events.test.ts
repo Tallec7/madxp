@@ -232,8 +232,8 @@ describe('ADR-099 — connection_events tracking (smoke)', () => {
     it('metricsService exposes recordConnectionEventsPurge counter+gauge', () => {
       const metrics = fs.readFileSync(path.join(ROOT, 'services/metrics.service.ts'), 'utf8');
       expect(metrics).toMatch(/recordConnectionEventsPurge\s*\(/);
-      expect(metrics).toMatch(/neopro_connection_events_purged_total/);
-      expect(metrics).toMatch(/neopro_connection_events_rows_current/);
+      expect(metrics).toMatch(/madxp_connection_events_purged_total/);
+      expect(metrics).toMatch(/madxp_connection_events_rows_current/);
     });
   });
 });

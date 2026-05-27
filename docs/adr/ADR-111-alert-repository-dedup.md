@@ -11,12 +11,12 @@
 Audit DB du 2026-05-05 : **22 688 rows actives** dans `alerts`, dont 99 % sont du
 spam de 4 types récurrents sur 3 Pi.
 
-| Site | Type | Rows | Période |
-|---|---|---|---|
-| RACC (Saint Rogatien) | `Déploiement bloqué` | 16 912 | 2026-04-01 → 04-06 |
-| NOOR | `saas_empty_profile` | 4 405 | 2026-04-12 → en cours |
-| NLF (Mangin-Beaulieu) | `no_display` | 730 | 2026-04 |
-| NLF | `gpu_decode_fallback` | 641 | 2026-04 |
+| Site                  | Type                  | Rows   | Période               |
+| --------------------- | --------------------- | ------ | --------------------- |
+| RACC (Saint Rogatien) | `Déploiement bloqué`  | 16 912 | 2026-04-01 → 04-06    |
+| NOOR                  | `saas_empty_profile`  | 4 405  | 2026-04-12 → en cours |
+| NLF (Mangin-Beaulieu) | `no_display`          | 730    | 2026-04               |
+| NLF                   | `gpu_decode_fallback` | 641    | 2026-04               |
 
 **Cause racine** : deux paths d'insertion d'alertes coexistent.
 
@@ -31,6 +31,7 @@ disqualifiant et opérationnellement inexploitable.
 **Dédup au niveau du repository, pas des callers.**
 
 `alertRepository.create()` devient un upsert :
+
 1. UPDATE prioritaire sur `(site_id, alert_type, status='active')` qui bumpe
    `last_seen_at = NOW()` et `occurrences = occurrences + 1`, et rafraîchit
    `severity / message / metadata`.
@@ -40,6 +41,7 @@ disqualifiant et opérationnellement inexploitable.
 (`site_id = NULL`).
 
 Migration `add-alerts-dedup-columns.sql` :
+
 - `last_seen_at TIMESTAMP NOT NULL DEFAULT NOW()`
 - `occurrences INTEGER NOT NULL DEFAULT 1`
 - Index partiel `idx_alerts_dedup_active ON (site_id, alert_type) WHERE status = 'active'`
@@ -73,7 +75,7 @@ détecter en prod les futurs émetteurs à haute fréquence (visible dans Grafan
 - `central-server/src/services/alerting.service.test.ts` — mocks ajustés (UPDATE puis INSERT)
 - `central-server/src/services/metrics.service.ts` — Counter `neopro_alerts_dedup_skipped_total`
 - `central-server/src/__tests__/smoke/smoke-alerts-dedup.test.ts` — garde-fou
-- `docker/grafana/provisioning/dashboards/json/cloud/neopro-blind-spots-cloud.json` — panel "Alerts dedup skipped"
+- `docker/grafana/provisioning/dashboards/json/cloud/madxp-blind-spots-cloud.json` — panel "Alerts dedup skipped"
 - `.claude/rules/alerts-dedup.md` — invariants smoke-enforced
 
 ## Suivi

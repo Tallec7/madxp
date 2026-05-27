@@ -69,7 +69,7 @@ export function sanitizeFilename(filename: string): string {
  * Si le fichier existe déjà, ajoute un suffixe numérique (ex: video_1.mp4, video_2.mp4).
  *
  * **Observabilité (issue #920)** : chaque collision incrémente la métrique
- * Prometheus `neopro_filename_collisions_total` + warn log. Un spike de cette
+ * Prometheus `madxp_filename_collisions_total` + warn log. Un spike de cette
  * métrique signale un admin qui re-uploade en boucle des versions du même
  * fichier — situation qui crée du drift cloud↔Pi (les variants config peuvent
  * pointer vers l'ancien filename pendant que le Pi disque a le nouveau).

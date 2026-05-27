@@ -65,9 +65,9 @@ describe('Smoke — ADR-093 match sessions', () => {
     expect(/recordMatchSessionAutoclosed/.test(task)).toBe(true);
   });
 
-  it('metrics.service exposes neopro_match_sessions_autoclosed_total with reason label', () => {
+  it('metrics.service exposes madxp_match_sessions_autoclosed_total with reason label', () => {
     const metrics = read('central-server/src/services/metrics.service.ts');
-    expect(/neopro_match_sessions_autoclosed_total/.test(metrics)).toBe(true);
+    expect(/madxp_match_sessions_autoclosed_total/.test(metrics)).toBe(true);
     expect(/recordMatchSessionAutoclosed/.test(metrics)).toBe(true);
     expect(/labelNames:\s*\[\s*'reason'\s*\]/.test(metrics)).toBe(true);
   });

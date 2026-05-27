@@ -13,9 +13,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["neopro"],
+      "tags": ["madxp"],
       "targetBlank": false,
-      "title": "Neopro Dashboards",
+      "title": "MadXP Dashboards",
       "type": "dashboards"
     }
   ],
@@ -83,7 +83,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_sponsor_sync_total[5m])",
+          "expr": "rate(madxp_sponsor_sync_total[5m])",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -133,13 +133,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.5, rate(neopro_sponsor_sync_count_bucket[15m]))",
+          "expr": "histogram_quantile(0.5, rate(madxp_sponsor_sync_count_bucket[15m]))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.95, rate(neopro_sponsor_sync_count_bucket[15m]))",
+          "expr": "histogram_quantile(0.95, rate(madxp_sponsor_sync_count_bucket[15m]))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -203,7 +203,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_sponsor_auto_resolution_total[5m])",
+          "expr": "rate(madxp_sponsor_auto_resolution_total[5m])",
           "legendFormat": "{{outcome}}",
           "refId": "A"
         }
@@ -256,7 +256,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_sponsor_resolution_failures_total[5m])",
+          "expr": "rate(madxp_sponsor_resolution_failures_total[5m])",
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
@@ -334,7 +334,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_impression_resolution_total[5m])",
+          "expr": "rate(madxp_impression_resolution_total[5m])",
           "legendFormat": "{{method}}",
           "refId": "A"
         }
@@ -376,7 +376,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_impression_resolution_total{method=\"unresolved\"}[30m]) / rate(neopro_impression_resolution_total[30m])",
+          "expr": "rate(madxp_impression_resolution_total{method=\"unresolved\"}[30m]) / rate(madxp_impression_resolution_total[30m])",
           "legendFormat": "unresolved %",
           "refId": "A"
         }
@@ -439,7 +439,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_video_plays_fk_fallback_total[5m])",
+          "expr": "rate(madxp_video_plays_fk_fallback_total[5m])",
           "legendFormat": "{{column}}",
           "refId": "A"
         }
@@ -480,7 +480,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_pi_agent_auth_total{status=\"failure\"}[5m])",
+          "expr": "rate(madxp_pi_agent_auth_total{status=\"failure\"}[5m])",
           "legendFormat": "failures/sec",
           "refId": "A"
         }
@@ -578,7 +578,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "neopro_sponsor_health_entries",
+          "expr": "madxp_sponsor_health_entries",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -629,7 +629,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_sponsor_health_check_total[5m])",
+          "expr": "rate(madxp_sponsor_health_check_total[5m])",
           "legendFormat": "{{trigger}}",
           "refId": "A"
         }
@@ -680,13 +680,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.95, rate(neopro_sponsor_health_check_duration_seconds_bucket[15m]))",
+          "expr": "histogram_quantile(0.95, rate(madxp_sponsor_health_check_duration_seconds_bucket[15m]))",
           "legendFormat": "p95",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.5, rate(neopro_sponsor_health_check_duration_seconds_bucket[15m]))",
+          "expr": "histogram_quantile(0.5, rate(madxp_sponsor_health_check_duration_seconds_bucket[15m]))",
           "legendFormat": "p50",
           "refId": "B"
         }
@@ -727,7 +727,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "neopro_sponsor_health_alerts_created_total",
+          "expr": "madxp_sponsor_health_alerts_created_total",
           "legendFormat": "alerts created",
           "refId": "A"
         }
@@ -794,7 +794,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "rate(neopro_report_generations_total{report_type=\"site_sponsor\"}[5m])",
+          "expr": "rate(madxp_report_generations_total{report_type=\"site_sponsor\"}[5m])",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -845,13 +845,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.95, rate(neopro_report_generation_duration_seconds_bucket{report_type=\"site_sponsor\"}[15m]))",
+          "expr": "histogram_quantile(0.95, rate(madxp_report_generation_duration_seconds_bucket{report_type=\"site_sponsor\"}[15m]))",
           "legendFormat": "p95",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.5, rate(neopro_report_generation_duration_seconds_bucket{report_type=\"site_sponsor\"}[15m]))",
+          "expr": "histogram_quantile(0.5, rate(madxp_report_generation_duration_seconds_bucket{report_type=\"site_sponsor\"}[15m]))",
           "legendFormat": "p50",
           "refId": "B"
         }
@@ -907,7 +907,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~\"/api/network/advertisers/.*/stats\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~\"/api/network/advertisers/.*/stats\"}[5m]))",
           "legendFormat": "network stats p95",
           "refId": "A"
         }
@@ -963,7 +963,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
-          "expr": "histogram_quantile(0.95, rate(neopro_http_request_duration_seconds_bucket{path=~\"/api/sites/.*/sponsors/benchmark\"}[5m]))",
+          "expr": "histogram_quantile(0.95, rate(madxp_http_request_duration_seconds_bucket{path=~\"/api/sites/.*/sponsors/benchmark\"}[5m]))",
           "legendFormat": "benchmark p95",
           "refId": "A"
         }
@@ -972,7 +972,7 @@
   ],
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["neopro", "sponsor", "analytics"],
+  "tags": ["madxp", "sponsor", "analytics"],
   "templating": {
     "list": []
   },
@@ -982,7 +982,7 @@
   },
   "timepicker": {},
   "timezone": "Europe/Paris",
-  "title": "NeoPro — Sponsor Analytics",
-  "uid": "neopro-sponsor-cloud",
+  "title": "MadXP — Sponsor Analytics",
+  "uid": "madxp-sponsor-cloud",
   "version": 1
 }

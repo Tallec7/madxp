@@ -119,9 +119,9 @@ describe('Smoke — hotspot PSK incident regressions (2026-04-20)', () => {
     it('metrics.service.ts exports the three hotspot counters', () => {
       const svc = read('central-server/src/services/metrics.service.ts');
       expect({
-        hasBootstrapCounter: /neopro_hotspot_bootstrap_attempts_total/.test(svc),
-        hasRotationCounter: /neopro_hotspot_rotation_attempts_total/.test(svc),
-        hasDecryptCounter: /neopro_hotspot_psk_decrypt_errors_total/.test(svc),
+        hasBootstrapCounter: /madxp_hotspot_bootstrap_attempts_total/.test(svc),
+        hasRotationCounter: /madxp_hotspot_rotation_attempts_total/.test(svc),
+        hasDecryptCounter: /madxp_hotspot_psk_decrypt_errors_total/.test(svc),
         hasBootstrapRecorder: /recordHotspotBootstrapAttempt\s*\(/.test(svc),
         hasRotationRecorder: /recordHotspotRotationAttempt\s*\(/.test(svc),
         hasDecryptRecorder: /recordHotspotPskDecryptError\s*\(/.test(svc),

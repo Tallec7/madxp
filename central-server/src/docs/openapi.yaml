@@ -76,7 +76,7 @@ components:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: neopro_token
+      name: madxp_token
 
   schemas:
     User:

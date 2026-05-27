@@ -58,20 +58,20 @@ const httpEgressBytesTotal = new Counter({
 // ============= Métriques Business =============
 
 const connectedSitesGauge = new Gauge({
-  name: 'neopro_connected_sites_total',
+  name: 'madxp_connected_sites_total',
   help: 'Number of currently connected sites',
   registers: [register],
 });
 
 const deploymentsTotal = new Counter({
-  name: 'neopro_deployments_total',
+  name: 'madxp_deployments_total',
   help: 'Total number of content deployments',
   labelNames: ['status', 'target_type'],
   registers: [register],
 });
 
 const deploymentDuration = new Histogram({
-  name: 'neopro_deployment_duration_seconds',
+  name: 'madxp_deployment_duration_seconds',
   help: 'Duration of content deployments in seconds',
   labelNames: ['target_type'],
   buckets: [1, 5, 10, 30, 60, 120, 300, 600],
@@ -83,28 +83,28 @@ const deploymentDuration = new Histogram({
 // strategy, utile pour détecter une régression isolée (ex: strategy X failing
 // pendant que les autres tournent bien).
 const deliveryTotal = new Counter({
-  name: 'neopro_deployment_delivery_total',
+  name: 'madxp_deployment_delivery_total',
   help: 'Total number of deliveries per strategy and outcome (ADR-069)',
   labelNames: ['strategy', 'outcome'],
   registers: [register],
 });
 
 const videoUploadsTotal = new Counter({
-  name: 'neopro_video_uploads_total',
+  name: 'madxp_video_uploads_total',
   help: 'Total number of video uploads',
   labelNames: ['status'],
   registers: [register],
 });
 
 const videoUploadSize = new Summary({
-  name: 'neopro_video_upload_bytes',
+  name: 'madxp_video_upload_bytes',
   help: 'Size of uploaded videos in bytes',
   percentiles: [0.5, 0.9, 0.99],
   registers: [register],
 });
 
 const filenameEncodingCorrections = new Counter({
-  name: 'neopro_filename_encoding_corrections_total',
+  name: 'madxp_filename_encoding_corrections_total',
   help: 'Total number of filename encoding corrections (multer latin1 to UTF-8)',
   registers: [register],
 });
@@ -121,21 +121,21 @@ const filenameEncodingCorrections = new Counter({
  * prioriser le redesign UX "replace existing version".
  */
 const filenameCollisionsTotal = new Counter({
-  name: 'neopro_filename_collisions_total',
+  name: 'madxp_filename_collisions_total',
   help: 'Number of filename collisions resolved by appending _N suffix (issue #920 — drift cloud↔Pi)',
   labelNames: ['suffix_count'],  // labels: '1' (premier doublon), '2', '3'+, 'uuid_fallback'
   registers: [register],
 });
 
 const alertsTotal = new Counter({
-  name: 'neopro_alerts_total',
+  name: 'madxp_alerts_total',
   help: 'Total number of alerts generated',
   labelNames: ['severity', 'type'],
   registers: [register],
 });
 
 const alertsDedupSkippedTotal = new Counter({
-  name: 'neopro_alerts_dedup_skipped_total',
+  name: 'madxp_alerts_dedup_skipped_total',
   help: 'Number of alert inserts deduplicated into an existing active alert (ADR-111)',
   labelNames: ['type'],
   registers: [register],
@@ -145,7 +145,7 @@ const alertsDedupSkippedTotal = new Counter({
 // DO NOTHING peut silencer un Pi qui replay le même play_at en boucle. Ce compteur
 // expose le vrai nombre de rows écartées vs ingérées pour qu'un Pi en flap reste visible.
 const analyticsDedupSkippedTotal = new Counter({
-  name: 'neopro_analytics_dedup_skipped_total',
+  name: 'madxp_analytics_dedup_skipped_total',
   help: 'video_plays rows deduplicated by ON CONFLICT DO NOTHING (Pi replaying same played_at)',
   labelNames: ['site_id'],
   registers: [register],
@@ -156,7 +156,7 @@ const analyticsDedupSkippedTotal = new Counter({
 // reason ∈ ['in_flight_cap','in_flight_cap_midloop'] distingue le refus initial
 // du break mid-loop quand la cap est atteinte en cours de batch.
 const autoDeployThrottledTotal = new Counter({
-  name: 'neopro_auto_deploy_throttled_total',
+  name: 'madxp_auto_deploy_throttled_total',
   help: 'Auto-deploys (ADR-117) refused by in-flight-per-site cap (NLF 2026-05-13 hardening)',
   labelNames: ['site_id', 'reason'],
   registers: [register],
@@ -166,21 +166,21 @@ const autoDeployThrottledTotal = new Counter({
 // templateDeletedTotal (V2 DELETE /api/remotion-templates/:id) supprimé — cf. ADR-129.
 
 const activeAlertsGauge = new Gauge({
-  name: 'neopro_active_alerts',
+  name: 'madxp_active_alerts',
   help: 'Number of currently active alerts',
   labelNames: ['severity'],
   registers: [register],
 });
 
 const commandsTotal = new Counter({
-  name: 'neopro_commands_total',
+  name: 'madxp_commands_total',
   help: 'Total number of remote commands sent',
   labelNames: ['type', 'status'],
   registers: [register],
 });
 
 const commandLatency = new Histogram({
-  name: 'neopro_command_latency_seconds',
+  name: 'madxp_command_latency_seconds',
   help: 'Latency of remote commands in seconds',
   labelNames: ['type'],
   buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
@@ -190,7 +190,7 @@ const commandLatency = new Histogram({
 // ============= Métriques Receivers (Fire Stick — Phase 9 OBSERVE) =============
 
 const receiversTotal = new Counter({
-  name: 'neopro_receivers_total',
+  name: 'madxp_receivers_total',
   help: 'Total number of receiver state transitions (Fire Stick detection, assignment, disconnection)',
   labelNames: ['site_id', 'status'],
   registers: [register],
@@ -201,7 +201,7 @@ const receiversTotal = new Counter({
 // vit dans socket.service.ts (Map<siteId, Set<mac>>) pour éviter le spam à chaque
 // tick state-sync (~10s). kind === 'browser' (téléphones bénévoles) jamais comptés.
 const hotspotUnknownFirestickTotal = new Counter({
-  name: 'neopro_hotspot_unknown_firestick_total',
+  name: 'madxp_hotspot_unknown_firestick_total',
   help: 'Fire Sticks (kind=firestick) détectés sur le hotspot Pi sans assignation à un display (displayIndex=null), comptés une fois par (site_id, mac) (Phase 12 OBSERVE)',
   labelNames: ['site_id'],
   registers: [register],
@@ -210,7 +210,7 @@ const hotspotUnknownFirestickTotal = new Counter({
 // ============= Métriques Database =============
 
 const dbQueryDuration = new Histogram({
-  name: 'neopro_db_query_duration_seconds',
+  name: 'madxp_db_query_duration_seconds',
   help: 'Duration of database queries in seconds',
   labelNames: ['operation'],
   buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
@@ -218,33 +218,33 @@ const dbQueryDuration = new Histogram({
 });
 
 const dbConnectionsGauge = new Gauge({
-  name: 'neopro_db_connections',
+  name: 'madxp_db_connections',
   help: 'Number of database connections',
   labelNames: ['state'],
   registers: [register],
 });
 
 const dbSizeBytesGauge = new Gauge({
-  name: 'neopro_db_size_bytes',
+  name: 'madxp_db_size_bytes',
   help: 'Total database size in bytes (pg_database_size)',
   registers: [register],
 });
 
 const dbTableSizeBytesGauge = new Gauge({
-  name: 'neopro_db_table_size_bytes',
+  name: 'madxp_db_table_size_bytes',
   help: 'Total relation size per table in bytes (top tables only)',
   labelNames: ['table'],
   registers: [register],
 });
 
 const dbPoolErrorsCounter = new Counter({
-  name: 'neopro_db_pool_errors_total',
+  name: 'madxp_db_pool_errors_total',
   help: 'Total idle-client errors on the database connection pool (PgBouncer disconnects)',
   registers: [register],
 });
 
 const dbCircuitBreakerGauge = new Gauge({
-  name: 'neopro_db_circuit_breaker_state',
+  name: 'madxp_db_circuit_breaker_state',
   help: 'DB circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)',
   registers: [register],
 });
@@ -252,28 +252,28 @@ const dbCircuitBreakerGauge = new Gauge({
 // ============= Métriques WebSocket =============
 
 const websocketConnectionsGauge = new Gauge({
-  name: 'neopro_websocket_connections',
+  name: 'madxp_websocket_connections',
   help: 'Number of WebSocket connections',
   labelNames: ['type'],
   registers: [register],
 });
 
 const websocketMessagesTotal = new Counter({
-  name: 'neopro_websocket_messages_total',
+  name: 'madxp_websocket_messages_total',
   help: 'Total WebSocket messages',
   labelNames: ['direction', 'type'],
   registers: [register],
 });
 
 const websocketDisconnectsTotal = new Counter({
-  name: 'neopro_websocket_disconnects_total',
+  name: 'madxp_websocket_disconnects_total',
   help: 'Total WebSocket disconnections by reason and client type',
   labelNames: ['reason', 'client_type'],
   registers: [register],
 });
 
 const saasStatesActiveGauge = new Gauge({
-  name: 'neopro_saas_states_active',
+  name: 'madxp_saas_states_active',
   help: 'Number of active in-memory SaaS state entries (one per connected SaaS site)',
   registers: [register],
 });
@@ -281,14 +281,14 @@ const saasStatesActiveGauge = new Gauge({
 // ============= Métriques Authentication =============
 
 const authAttemptsTotal = new Counter({
-  name: 'neopro_auth_attempts_total',
+  name: 'madxp_auth_attempts_total',
   help: 'Total authentication attempts',
   labelNames: ['status', 'mfa_used'],
   registers: [register],
 });
 
 const mfaSetupTotal = new Counter({
-  name: 'neopro_mfa_setup_total',
+  name: 'madxp_mfa_setup_total',
   help: 'Total MFA setup attempts',
   labelNames: ['status'],
   registers: [register],
@@ -297,20 +297,20 @@ const mfaSetupTotal = new Counter({
 // ============= Métriques Remote PIN par profil (ADR-058) =============
 
 const profilePinVerificationsTotal = new Counter({
-  name: 'neopro_profile_pin_verifications_total',
+  name: 'madxp_profile_pin_verifications_total',
   help: 'Total profile PIN verifications (ADR-058 Phase 1 remote auth)',
   labelNames: ['status'], // success | failure | lockout | misconfigured
   registers: [register],
 });
 
 const profileDeviceTokensActiveGauge = new Gauge({
-  name: 'neopro_profile_device_tokens_active',
+  name: 'madxp_profile_device_tokens_active',
   help: 'Number of active (non-revoked, non-expired) profile device tokens',
   registers: [register],
 });
 
 const legacyPinMigrationsTotal = new Counter({
-  name: 'neopro_legacy_pin_migrations_total',
+  name: 'madxp_legacy_pin_migrations_total',
   help: 'Opportunistic migrations from site-scope legacy PIN to default profile PIN (ADR-058 Phase 2A)',
   labelNames: ['status'], // success | skipped_no_default | skipped_already_set | failed
   registers: [register],
@@ -319,14 +319,14 @@ const legacyPinMigrationsTotal = new Counter({
 // ============= Métriques Remote Match Commands (ADR-059) =============
 
 const matchCommandsTotal = new Counter({
-  name: 'neopro_match_commands_total',
+  name: 'madxp_match_commands_total',
   help: 'Total granular match commands relayed to Pi (ADR-059 pub/sub)',
   labelNames: ['command'], // increment_home | decrement_home | set_phase | timer_start | ...
   registers: [register],
 });
 
 const stateSyncRelaysTotal = new Counter({
-  name: 'neopro_state_sync_relays_total',
+  name: 'madxp_state_sync_relays_total',
   help: 'Total state-sync events relayed from Pi to dashboard rooms (ADR-059)',
   registers: [register],
 });
@@ -337,7 +337,7 @@ const stateSyncRelaysTotal = new Counter({
 // de fois le backend bloque un save sans durationSeconds.
 
 const webContentPlaysTotal = new Counter({
-  name: 'neopro_web_content_plays_total',
+  name: 'madxp_web_content_plays_total',
   help: 'Total web_page / livestream playbacks dispatched by the TV (ADR-103)',
   labelNames: ['content_type', 'mode', 'outcome'],
   // content_type: web_page | livestream
@@ -347,7 +347,7 @@ const webContentPlaysTotal = new Counter({
 });
 
 const webLoopDurationRequiredBlocksTotal = new Counter({
-  name: 'neopro_web_loop_duration_required_blocks_total',
+  name: 'madxp_web_loop_duration_required_blocks_total',
   help: 'Total config saves rejected because a web_page / livestream loop entry lacked durationSeconds (ADR-103 Phase 3)',
   labelNames: ['endpoint'], // config-profiles | config-history
   registers: [register],
@@ -356,7 +356,7 @@ const webLoopDurationRequiredBlocksTotal = new Counter({
 // ============= Métriques Match Sessions Auto-Close (ADR-093) =============
 
 const matchSessionsAutoclosedTotal = new Counter({
-  name: 'neopro_match_sessions_autoclosed_total',
+  name: 'madxp_match_sessions_autoclosed_total',
   help: 'Total club_sessions auto-closed by CRON (ADR-093)',
   labelNames: ['reason'], // idle | absolute
   registers: [register],
@@ -367,27 +367,27 @@ const matchSessionsAutoclosedTotal = new Counter({
 // (suppression hors API, upload jamais réussi). CRON quotidien 03:00.
 
 const videoFtpAuditWarningsTotal = new Counter({
-  name: 'neopro_video_ftp_audit_warnings_total',
+  name: 'madxp_video_ftp_audit_warnings_total',
   help: 'Total warnings recorded by the FTP orphan audit (per status)',
   labelNames: ['status'], // missing | unreachable | resolved
   registers: [register],
 });
 
 const videoFtpAuditScannedTotal = new Counter({
-  name: 'neopro_video_ftp_audit_scanned_total',
+  name: 'madxp_video_ftp_audit_scanned_total',
   help: 'Total videos scanned by the FTP orphan audit',
   registers: [register],
 });
 
 const videoFtpAuditDuration = new Histogram({
-  name: 'neopro_video_ftp_audit_duration_seconds',
+  name: 'madxp_video_ftp_audit_duration_seconds',
   help: 'Duration of the FTP orphan audit run (full scan)',
   buckets: [10, 30, 60, 180, 600, 1800],
   registers: [register],
 });
 
 const videoFtpAuditCurrentOrphansGauge = new Gauge({
-  name: 'neopro_video_ftp_orphans_current',
+  name: 'madxp_video_ftp_orphans_current',
   help: 'Current count of videos flagged as missing on FTP (active warnings)',
   labelNames: ['status'],
   registers: [register],
@@ -399,7 +399,7 @@ const videoFtpAuditCurrentOrphansGauge = new Gauge({
 // laisserait grossir /test-renders/* indéfiniment côté FTP Hostinger.
 
 const testRendersCleanedTotal = new Counter({
-  name: 'neopro_test_renders_cleaned_total',
+  name: 'madxp_test_renders_cleaned_total',
   help: 'Total test render files cleaned by the weekly cleanup CRON (ADR-110 Phase 3 PUB-02)',
   labelNames: ['result'], // success | error
   registers: [register],
@@ -411,13 +411,13 @@ const testRendersCleanedTotal = new Counter({
 // CRON ferait gonfler la table indéfiniment.
 
 const connectionEventsPurgedTotal = new Counter({
-  name: 'neopro_connection_events_purged_total',
+  name: 'madxp_connection_events_purged_total',
   help: 'Total connection_events rows deleted by retention purge CRON',
   registers: [register],
 });
 
 const connectionEventsCurrentRowsGauge = new Gauge({
-  name: 'neopro_connection_events_rows_current',
+  name: 'madxp_connection_events_rows_current',
   help: 'Current row count in connection_events table after purge',
   registers: [register],
 });
@@ -430,7 +430,7 @@ const connectionEventsCurrentRowsGauge = new Gauge({
 // sur la wait page". Cf. incident Mangin-Beaulieu 2026-05-09.
 
 const pendingCommandsDrainTotal = new Counter({
-  name: 'neopro_pending_commands_drain_total',
+  name: 'madxp_pending_commands_drain_total',
   help: 'Pending commands drained by CRON pending_commands_drain (labels: site_id, outcome)',
   labelNames: ['site_id', 'outcome'] as const,
   registers: [register],
@@ -439,7 +439,7 @@ const pendingCommandsDrainTotal = new Counter({
 // ============= Métriques Coexistence Legacy/New Remote (ADR-061) =============
 
 const remoteClientVersionTotal = new Counter({
-  name: 'neopro_remote_client_version_total',
+  name: 'madxp_remote_client_version_total',
   help: 'Remote access events by client version — tracks v1/v2 adoption for sunset (ADR-061)',
   labelNames: ['version', 'event_type'], // version: v1|v2  event_type: pin_verify|token_use|state_load
   registers: [register],
@@ -448,14 +448,14 @@ const remoteClientVersionTotal = new Counter({
 // ============= Métriques Canary Deployment =============
 
 const canaryDeploymentsGauge = new Gauge({
-  name: 'neopro_canary_deployments_active',
+  name: 'madxp_canary_deployments_active',
   help: 'Number of active canary deployments',
   labelNames: ['phase'],
   registers: [register],
 });
 
 const canaryRollbacksTotal = new Counter({
-  name: 'neopro_canary_rollbacks_total',
+  name: 'madxp_canary_rollbacks_total',
   help: 'Total number of canary deployment rollbacks',
   registers: [register],
 });
@@ -463,14 +463,14 @@ const canaryRollbacksTotal = new Counter({
 // ============= Métriques FTP/Storage =============
 
 const ftpOperationsTotal = new Counter({
-  name: 'neopro_ftp_operations_total',
+  name: 'madxp_ftp_operations_total',
   help: 'Total FTP operations (upload, delete, verify)',
   labelNames: ['operation', 'status', 'storage_type'],
   registers: [register],
 });
 
 const ftpOperationDuration = new Histogram({
-  name: 'neopro_ftp_operation_duration_seconds',
+  name: 'madxp_ftp_operation_duration_seconds',
   help: 'Duration of FTP operations in seconds',
   labelNames: ['operation', 'storage_type'],
   buckets: [0.5, 1, 2, 5, 10, 30, 60, 120],
@@ -478,14 +478,14 @@ const ftpOperationDuration = new Histogram({
 });
 
 const ftpRetriesTotal = new Counter({
-  name: 'neopro_ftp_retries_total',
+  name: 'madxp_ftp_retries_total',
   help: 'Total FTP retry attempts',
   labelNames: ['operation', 'storage_type'],
   registers: [register],
 });
 
 const ftpUploadBytesTotal = new Counter({
-  name: 'neopro_ftp_upload_bytes_total',
+  name: 'madxp_ftp_upload_bytes_total',
   help: 'Total bytes uploaded to FTP',
   labelNames: ['storage_type'],
   registers: [register],
@@ -494,20 +494,20 @@ const ftpUploadBytesTotal = new Counter({
 // ============= Métriques Sync Agent (côté central) =============
 
 const syncOperationsTotal = new Counter({
-  name: 'neopro_sync_operations_total',
+  name: 'madxp_sync_operations_total',
   help: 'Total sync operations received from Pi agents',
   labelNames: ['type', 'status'],
   registers: [register],
 });
 
 const configDriftTotal = new Counter({
-  name: 'neopro_config_drift_total',
+  name: 'madxp_config_drift_total',
   help: 'Total config drift detections (Pi config hash mismatch)',
   registers: [register],
 });
 
 const configSyncPendingGauge = new Gauge({
-  name: 'neopro_config_sync_pending',
+  name: 'madxp_config_sync_pending',
   help: 'Number of sites with pending config deployments',
   registers: [register],
 });
@@ -515,14 +515,14 @@ const configSyncPendingGauge = new Gauge({
 // ============= Métriques Rate Limiting =============
 
 const rateLimitHitsTotal = new Counter({
-  name: 'neopro_rate_limit_hits_total',
+  name: 'madxp_rate_limit_hits_total',
   help: 'Total rate limit violations (429 responses)',
   labelNames: ['limiter', 'key_type'],
   registers: [register],
 });
 
 const rateLimitNearExhaustionTotal = new Counter({
-  name: 'neopro_rate_limit_near_exhaustion_total',
+  name: 'madxp_rate_limit_near_exhaustion_total',
   help: 'Total requests where rate limit was >80% consumed',
   labelNames: ['limiter'],
   registers: [register],
@@ -531,26 +531,26 @@ const rateLimitNearExhaustionTotal = new Counter({
 // ============= Métriques Memory Manager =============
 
 const memoryHeapUsageGauge = new Gauge({
-  name: 'neopro_memory_heap_usage_percent',
+  name: 'madxp_memory_heap_usage_percent',
   help: 'Current heap usage as percentage (0-100)',
   registers: [register],
 });
 
 const memoryPressureEventsTotal = new Counter({
-  name: 'neopro_memory_pressure_events_total',
+  name: 'madxp_memory_pressure_events_total',
   help: 'Total memory pressure events by severity',
   labelNames: ['severity'],
   registers: [register],
 });
 
 const memoryGcRunsTotal = new Counter({
-  name: 'neopro_memory_gc_runs_total',
+  name: 'madxp_memory_gc_runs_total',
   help: 'Total forced garbage collection runs',
   registers: [register],
 });
 
 const memoryGcFreedBytes = new Counter({
-  name: 'neopro_memory_gc_freed_bytes',
+  name: 'madxp_memory_gc_freed_bytes',
   help: 'Total bytes freed by forced garbage collection',
   registers: [register],
 });
@@ -558,14 +558,14 @@ const memoryGcFreedBytes = new Counter({
 // ============= Métriques Subscriptions/Billing =============
 
 const subscriptionStatusGauge = new Gauge({
-  name: 'neopro_subscription_status',
+  name: 'madxp_subscription_status',
   help: 'Number of sites by subscription status',
   labelNames: ['status'],
   registers: [register],
 });
 
 const subscriptionPlanGauge = new Gauge({
-  name: 'neopro_subscription_plan',
+  name: 'madxp_subscription_plan',
   help: 'Number of sites by subscription plan',
   labelNames: ['plan'],
   registers: [register],
@@ -574,34 +574,34 @@ const subscriptionPlanGauge = new Gauge({
 // ============= Métriques Réseau Pi =============
 
 const siteNetworkTypeGauge = new Gauge({
-  name: 'neopro_site_network_type',
+  name: 'madxp_site_network_type',
   help: 'Network connection type per site (1=active for that type)',
   labelNames: ['connection_type'],
   registers: [register],
 });
 
 const siteStabilityScoreGauge = new Gauge({
-  name: 'neopro_site_stability_score',
+  name: 'madxp_site_stability_score',
   help: 'Average network stability score across connected sites (0-100)',
   registers: [register],
 });
 
 const networkAlertsTotal = new Counter({
-  name: 'neopro_network_alerts_total',
+  name: 'madxp_network_alerts_total',
   help: 'Total network alerts from Pi watchdog',
   labelNames: ['type', 'severity'],
   registers: [register],
 });
 
 const networkRollbacksTotal = new Counter({
-  name: 'neopro_network_rollbacks_total',
+  name: 'madxp_network_rollbacks_total',
   help: 'Total network config rollbacks on Pi',
   labelNames: ['operation'],
   registers: [register],
 });
 
 const networkRecoveryAttemptsTotal = new Counter({
-  name: 'neopro_network_recovery_attempts_total',
+  name: 'madxp_network_recovery_attempts_total',
   help: 'Total auto-recovery attempts by Pi watchdog',
   registers: [register],
 });
@@ -609,20 +609,20 @@ const networkRecoveryAttemptsTotal = new Counter({
 // Issue #823 : un "cycle" = série de tentatives jusqu'au cooldown du watchdog.
 // Permet d'identifier les sites avec un réseau récurrent instable (ex. NLF NLFH-REGIE).
 const networkRecoveryCyclesTotal = new Counter({
-  name: 'neopro_network_recovery_cycles_total',
+  name: 'madxp_network_recovery_cycles_total',
   help: 'Total recovery cycles (attempts exhausted → cooldown) by Pi watchdog',
   labelNames: ['site_id', 'interface'],
   registers: [register],
 });
 
 const heartbeatsTotal = new Counter({
-  name: 'neopro_heartbeats_total',
+  name: 'madxp_heartbeats_total',
   help: 'Total heartbeats received from Pi sites',
   registers: [register],
 });
 
 const zombieSocketRecoveriesTotal = new Counter({
-  name: 'neopro_sync_agent_zombie_socket_recoveries_total',
+  name: 'madxp_sync_agent_zombie_socket_recoveries_total',
   help: 'Total zombie socket recoveries detected by Pi sync-agent health check (issue #824)',
   registers: [register],
 });
@@ -630,49 +630,49 @@ const zombieSocketRecoveriesTotal = new Counter({
 // ============= Métriques Video Transition =============
 
 const videoTransitionEarlySwitchTotal = new Counter({
-  name: 'neopro_video_transition_early_switch_total',
+  name: 'madxp_video_transition_early_switch_total',
   help: 'Total early switch transitions (happy path, no black hole)',
   registers: [register],
 });
 
 const videoTransitionSafetyTimeoutTotal = new Counter({
-  name: 'neopro_video_transition_safety_timeout_total',
+  name: 'madxp_video_transition_safety_timeout_total',
   help: 'Total safety timeout triggers (potential black hole)',
   registers: [register],
 });
 
 const videoTransitionCleanupSkippedTotal = new Counter({
-  name: 'neopro_video_transition_cleanup_skipped_total',
+  name: 'madxp_video_transition_cleanup_skipped_total',
   help: 'Total cleanup skips on short videos (<5s)',
   registers: [register],
 });
 
 const videoTransitionErrorTotal = new Counter({
-  name: 'neopro_video_transition_error_total',
+  name: 'madxp_video_transition_error_total',
   help: 'Total video player errors during transitions',
   registers: [register],
 });
 
 const videoTransitionsTotal = new Counter({
-  name: 'neopro_video_transitions_total',
+  name: 'madxp_video_transitions_total',
   help: 'Total video transitions attempted',
   registers: [register],
 });
 
 const videoStaleLoopStateTotal = new Counter({
-  name: 'neopro_video_stale_loop_state_total',
+  name: 'madxp_video_stale_loop_state_total',
   help: 'Total stale tv-loop-state messages ignored by slave guard (ADR-033 race condition)',
   registers: [register],
 });
 
 const videoPreloadRevealTotal = new Counter({
-  name: 'neopro_video_preload_reveal_total',
+  name: 'madxp_video_preload_reveal_total',
   help: 'Total successful preload-reveal syncs on slave (ADR-034 synchronized manual video)',
   registers: [register],
 });
 
 const videoPreloadCleanupTotal = new Counter({
-  name: 'neopro_video_preload_cleanup_total',
+  name: 'madxp_video_preload_cleanup_total',
   help: 'Total preload aborts before reveal (ADR-034 master returned to loop)',
   registers: [register],
 });
@@ -680,7 +680,7 @@ const videoPreloadCleanupTotal = new Counter({
 // ============= Métriques Video Stream Proxy (ADR-068) =============
 
 const videoStreamRequestsTotal = new Counter({
-  name: 'neopro_video_stream_requests_total',
+  name: 'madxp_video_stream_requests_total',
   help: 'Total signed video-stream proxy requests (ADR-068) by outcome',
   labelNames: ['status'], // success | missing_token | expired | invalid | upstream_error | proxy_error
   registers: [register],
@@ -692,7 +692,7 @@ const videoStreamRequestsTotal = new Counter({
 // ============= Métriques Video Path Resolution (ADR-083) =============
 
 const videoPathResolutionTotal = new Counter({
-  name: 'neopro_video_path_resolution_total',
+  name: 'madxp_video_path_resolution_total',
   help: 'Config video path resolution outcomes (ADR-083 drift resilience)',
   labelNames: ['result'], // exact | fuzzy | miss
   registers: [register],
@@ -701,7 +701,7 @@ const videoPathResolutionTotal = new Counter({
 // ============= Métriques License Push =============
 
 const licenseStatusPushesTotal = new Counter({
-  name: 'neopro_license_status_pushes_total',
+  name: 'madxp_license_status_pushes_total',
   help: 'Total license status pushes to Pi sites',
   labelNames: ['status'],
   registers: [register],
@@ -710,7 +710,7 @@ const licenseStatusPushesTotal = new Counter({
 // ============= Métriques Deploy Progress =============
 
 const deployProgressEventsTotal = new Counter({
-  name: 'neopro_deploy_progress_events_total',
+  name: 'madxp_deploy_progress_events_total',
   help: 'Total deploy progress events received from Pi',
   labelNames: ['type', 'status'],
   registers: [register],
@@ -719,7 +719,7 @@ const deployProgressEventsTotal = new Counter({
 // ============= Métriques OTA Errors =============
 
 const otaErrorsTotal = new Counter({
-  name: 'neopro_ota_errors_total',
+  name: 'madxp_ota_errors_total',
   help: 'Total OTA deployment errors by error type',
   labelNames: ['error_type'],
   registers: [register],
@@ -728,7 +728,7 @@ const otaErrorsTotal = new Counter({
 // ============= Métriques WiFi Configuration =============
 
 const wifiConfigTotal = new Counter({
-  name: 'neopro_wifi_config_total',
+  name: 'madxp_wifi_config_total',
   help: 'Total WiFi client configuration operations',
   labelNames: ['operation', 'status'],
   registers: [register],
@@ -737,7 +737,7 @@ const wifiConfigTotal = new Counter({
 // ============= Métriques Pi Agent Auth =============
 
 const piAgentAuthTotal = new Counter({
-  name: 'neopro_pi_agent_auth_total',
+  name: 'madxp_pi_agent_auth_total',
   help: 'Total Pi agent authentication attempts via WebSocket',
   labelNames: ['status', 'reason'],
   registers: [register],
@@ -746,19 +746,19 @@ const piAgentAuthTotal = new Counter({
 // ============= Métriques Fan Pi =============
 
 const fanPresentGauge = new Gauge({
-  name: 'neopro_fan_present',
+  name: 'madxp_fan_present',
   help: 'Whether a fan cooling device is detected on Pi (1=yes, 0=no)',
   registers: [register],
 });
 
 const fanStateGauge = new Gauge({
-  name: 'neopro_fan_state',
+  name: 'madxp_fan_state',
   help: 'Current fan cooling state (0=off, max depends on model)',
   registers: [register],
 });
 
 const fanFailuresTotal = new Counter({
-  name: 'neopro_fan_failures_total',
+  name: 'madxp_fan_failures_total',
   help: 'Total fan failure alerts (fan off at high temperature)',
   registers: [register],
 });
@@ -766,44 +766,44 @@ const fanFailuresTotal = new Counter({
 // ============= Métriques Kiosk =============
 
 const kioskStatusGauge = new Gauge({
-  name: 'neopro_kiosk_status',
+  name: 'madxp_kiosk_status',
   help: 'Kiosk Chromium status (1=running, 0=crashed)',
   registers: [register],
 });
 
 const kioskRestartCountGauge = new Gauge({
-  name: 'neopro_kiosk_restart_count',
+  name: 'madxp_kiosk_restart_count',
   help: 'Number of recent kiosk Chromium restarts',
   registers: [register],
 });
 
 const kioskCrashesTotal = new Counter({
-  name: 'neopro_kiosk_crashes_total',
+  name: 'madxp_kiosk_crashes_total',
   help: 'Total kiosk Chromium crashes detected',
   registers: [register],
 });
 
 const displayFallbackTotal = new Counter({
-  name: 'neopro_display_fallback_total',
+  name: 'madxp_display_fallback_total',
   help: 'Total display resolution fallback events (xrandr + EDID unavailable)',
   registers: [register],
 });
 
 const orphanServiceDetectedTotal = new Counter({
-  name: 'neopro_orphan_service_detected_total',
+  name: 'madxp_orphan_service_detected_total',
   help: 'Total orphan systemd services detected on Pi (crash-looping non-legitimate services)',
   labelNames: ['service_name'],
   registers: [register],
 });
 
 const displayTypeMisclassificationTotal = new Counter({
-  name: 'neopro_display_type_misclassification_total',
+  name: 'madxp_display_type_misclassification_total',
   help: 'Total display_type cross-validation failures (monitor manufacturer classified as TV)',
   registers: [register],
 });
 
 const gpuDecodeFallbackTotal = new Counter({
-  name: 'neopro_gpu_decode_fallback_total',
+  name: 'madxp_gpu_decode_fallback_total',
   help: 'Total GPU decode software fallback events (Pi 5 V4L2 hardware decode crashed)',
   registers: [register],
 });
@@ -811,42 +811,42 @@ const gpuDecodeFallbackTotal = new Counter({
 // ============= Métriques Report Generation =============
 
 const sponsorSyncTotal = new Counter({
-  name: 'neopro_sponsor_sync_total',
+  name: 'madxp_sponsor_sync_total',
   help: 'Total sponsor sync operations included in config deployments',
   labelNames: ['status'],
   registers: [register],
 });
 
 const sponsorSyncCount = new Histogram({
-  name: 'neopro_sponsor_sync_count',
+  name: 'madxp_sponsor_sync_count',
   help: 'Number of sponsors synced per deployment',
   buckets: [0, 1, 2, 5, 10, 20, 50],
   registers: [register],
 });
 
 const impressionResolutionTotal = new Counter({
-  name: 'neopro_impression_resolution_total',
+  name: 'madxp_impression_resolution_total',
   help: 'Impression sponsor resolution attempts by method',
   labelNames: ['method'],  // 'site_sponsor_id' | 'video_id' | 'filename' | 'unresolved'
   registers: [register],
 });
 
 const sponsorResolutionFailuresTotal = new Counter({
-  name: 'neopro_sponsor_resolution_failures_total',
+  name: 'madxp_sponsor_resolution_failures_total',
   help: 'Failed sponsor resolution attempts (sync or impressions)',
   labelNames: ['operation'],  // 'resolve_local' | 'resolve_impression' | 'sync_videos'
   registers: [register],
 });
 
 const reportGenerationsTotal = new Counter({
-  name: 'neopro_report_generations_total',
+  name: 'madxp_report_generations_total',
   help: 'Total PDF report generation attempts',
   labelNames: ['report_type', 'status'],
   registers: [register],
 });
 
 const reportGenerationDuration = new Histogram({
-  name: 'neopro_report_generation_duration_seconds',
+  name: 'madxp_report_generation_duration_seconds',
   help: 'Duration of PDF report generation in seconds',
   labelNames: ['report_type'],
   buckets: [0.5, 1, 2, 5, 10, 30, 60],
@@ -856,7 +856,7 @@ const reportGenerationDuration = new Histogram({
 // ============= Métriques Auto-Résolution Sponsor (déploiement) =============
 
 const sponsorAutoResolutionTotal = new Counter({
-  name: 'neopro_sponsor_auto_resolution_total',
+  name: 'madxp_sponsor_auto_resolution_total',
   help: 'Sponsor auto-resolution outcomes during deployment config enrichment',
   labelNames: ['outcome'],  // 'resolved' | 'skipped' | 'unresolved'
   registers: [register],
@@ -865,7 +865,7 @@ const sponsorAutoResolutionTotal = new Counter({
 // ============= Métriques FK Fallback (video_plays) =============
 
 const videoPlaysFkFallbackTotal = new Counter({
-  name: 'neopro_video_plays_fk_fallback_total',
+  name: 'madxp_video_plays_fk_fallback_total',
   help: 'Video plays where a FK reference was nullified because the target row was missing',
   labelNames: ['column'],  // 'sponsor_id' | 'video_id' | 'session_id'
   registers: [register],
@@ -878,7 +878,7 @@ const videoPlaysFkFallbackTotal = new Counter({
 // alerting (`video_errors_24h`).
 
 const videoPlaybackErrorsTotal = new Counter({
-  name: 'neopro_video_playback_errors_total',
+  name: 'madxp_video_playback_errors_total',
   help: 'Video playback errors reported by Pi/SaaS clients (video_plays.interruption_reason=video_error)',
   labelNames: ['site_id'],
   registers: [register],
@@ -887,27 +887,27 @@ const videoPlaybackErrorsTotal = new Counter({
 // ============= Métriques Sponsor Health (F-AUD-07) =============
 
 const sponsorHealthCheckTotal = new Counter({
-  name: 'neopro_sponsor_health_check_total',
+  name: 'madxp_sponsor_health_check_total',
   help: 'Total sponsor health check runs (manual or automated)',
   labelNames: ['trigger'],  // 'manual' | 'automated'
   registers: [register],
 });
 
 const sponsorHealthEntriesGauge = new Gauge({
-  name: 'neopro_sponsor_health_entries',
+  name: 'madxp_sponsor_health_entries',
   help: 'Current sponsor health matrix entries by status',
   labelNames: ['status'],  // 'healthy' | 'warning' | 'critical'
   registers: [register],
 });
 
 const sponsorHealthAlertsCreatedTotal = new Counter({
-  name: 'neopro_sponsor_health_alerts_created_total',
+  name: 'madxp_sponsor_health_alerts_created_total',
   help: 'Total proactive sponsor alerts created from health checks',
   registers: [register],
 });
 
 const sponsorHealthCheckDuration = new Histogram({
-  name: 'neopro_sponsor_health_check_duration_seconds',
+  name: 'madxp_sponsor_health_check_duration_seconds',
   help: 'Duration of sponsor health check in seconds',
   buckets: [0.1, 0.5, 1, 2, 5, 10],
   registers: [register],
@@ -916,14 +916,14 @@ const sponsorHealthCheckDuration = new Histogram({
 // ============= Métriques Secondary Variant Enrichment =============
 
 const secondaryVariantEnrichmentTotal = new Counter({
-  name: 'neopro_secondary_variant_enrichment_total',
+  name: 'madxp_secondary_variant_enrichment_total',
   help: 'Secondary variant enrichment outcomes during config deployment/sync',
   labelNames: ['outcome', 'pipeline'],  // outcome: 'success' | 'empty' | 'failed', pipeline: 'deployment' | 'config_sync'
   registers: [register],
 });
 
 const secondaryVariantEnrichedCount = new Histogram({
-  name: 'neopro_secondary_variant_enriched_count',
+  name: 'madxp_secondary_variant_enriched_count',
   help: 'Number of video entries enriched with secondary variants per operation',
   buckets: [0, 1, 2, 5, 10, 20, 50],
   registers: [register],
@@ -932,7 +932,7 @@ const secondaryVariantEnrichedCount = new Histogram({
 // ============= Variant Replace Dispatch (issue #781) =============
 
 const variantReplaceDispatchedTotal = new Counter({
-  name: 'neopro_variant_replace_dispatched_total',
+  name: 'madxp_variant_replace_dispatched_total',
   help: 'deploy_video commands dispatched to Pi sites after a secondary variant replace',
   labelNames: ['status'],  // 'sent' | 'queued' | 'failed'
   registers: [register],
@@ -941,7 +941,7 @@ const variantReplaceDispatchedTotal = new Counter({
 // ============= N-display Variant Dispatch (issue #914 PR3) =============
 
 const variantDispatchDisplayTypeTotal = new Counter({
-  name: 'neopro_variant_dispatch_displaytype_total',
+  name: 'madxp_variant_dispatch_displaytype_total',
   help: 'deploy_video variants dispatched to Pi sites by display_type — tracks N-display migration progress',
   labelNames: ['display_type', 'source'],  // source: 'deploy' | 'variant_replace'
   registers: [register],
@@ -952,7 +952,7 @@ const variantDispatchDisplayTypeTotal = new Counter({
 // ============= Video Club Grants (ADR-082) =============
 
 const videoClubGrantsTotal = new Counter({
-  name: 'neopro_video_club_grants_total',
+  name: 'madxp_video_club_grants_total',
   help: 'Video club grant operations (ADR-082)',
   labelNames: ['operation', 'status'],
   registers: [register],
@@ -961,7 +961,7 @@ const videoClubGrantsTotal = new Counter({
 // ============= Web Content (ADR-088) =============
 
 const webContentFetchTotal = new Counter({
-  name: 'neopro_web_content_fetch_total',
+  name: 'madxp_web_content_fetch_total',
   help: 'Pi fetch of web_page/livestream entries via GET /api/sites/:id/web-content (ADR-088)',
   // success | forbidden | error
   labelNames: ['status'],
@@ -971,7 +971,7 @@ const webContentFetchTotal = new Counter({
 // ============= Hotspot PSK (ADR-074) =============
 
 const hotspotBootstrapAttemptsTotal = new Counter({
-  name: 'neopro_hotspot_bootstrap_attempts_total',
+  name: 'madxp_hotspot_bootstrap_attempts_total',
   help: 'Hotspot PSK bootstrap attempts from Pi (ADR-074)',
   // success | already_bootstrapped | forbidden | decrypt_error | error
   labelNames: ['status'],
@@ -979,7 +979,7 @@ const hotspotBootstrapAttemptsTotal = new Counter({
 });
 
 const hotspotRotationAttemptsTotal = new Counter({
-  name: 'neopro_hotspot_rotation_attempts_total',
+  name: 'madxp_hotspot_rotation_attempts_total',
   help: 'Hotspot PSK rotation attempts from dashboard (ADR-074)',
   // success | command_dispatch_failed | error
   labelNames: ['status'],
@@ -987,7 +987,7 @@ const hotspotRotationAttemptsTotal = new Counter({
 });
 
 const hotspotPskDecryptErrorsTotal = new Counter({
-  name: 'neopro_hotspot_psk_decrypt_errors_total',
+  name: 'madxp_hotspot_psk_decrypt_errors_total',
   help: 'Failed decryption attempts of sites.wifi_psk_encrypted — likely cause is HOTSPOT_PSK_ENCRYPTION_KEY rotated without re-encrypt (ADR-074)',
   registers: [register],
 });
@@ -1660,7 +1660,7 @@ class MetricsService {
   }
 
   /**
-   * Phase 12 OBSERVE — Incrémenter le Counter neopro_hotspot_unknown_firestick_total.
+   * Phase 12 OBSERVE — Incrémenter le Counter madxp_hotspot_unknown_firestick_total.
    * Fire Stick non assigné détecté sur le hotspot. La dédup par (site_id, mac)
    * est gérée par l'appelant (socket.service.ts state-sync handler).
    */

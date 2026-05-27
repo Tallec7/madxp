@@ -11,9 +11,9 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["neopro"],
+      "tags": ["madxp"],
       "targetBlank": false,
-      "title": "Neopro Dashboards",
+      "title": "MadXP Dashboards",
       "type": "dashboards"
     }
   ],
@@ -270,7 +270,7 @@
       },
       "targets": [
         {
-          "expr": "neopro_memory_heap_usage_percent{scrape_job=\"NEOPRO\"}",
+          "expr": "madxp_memory_heap_usage_percent{scrape_job=\"NEOPRO\"}",
           "legendFormat": "Heap %",
           "refId": "A"
         }
@@ -399,7 +399,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_memory_pressure_events_total{scrape_job=\"NEOPRO\"}[1h])) by (severity)",
+          "expr": "sum(rate(madxp_memory_pressure_events_total{scrape_job=\"NEOPRO\"}[1h])) by (severity)",
           "legendFormat": "{{severity}}",
           "refId": "A"
         }
@@ -444,7 +444,7 @@
       },
       "targets": [
         {
-          "expr": "rate(neopro_memory_gc_freed_bytes{scrape_job=\"NEOPRO\"}[5m])",
+          "expr": "rate(madxp_memory_gc_freed_bytes{scrape_job=\"NEOPRO\"}[5m])",
           "legendFormat": "GC freed bytes/s",
           "refId": "A"
         }
@@ -501,7 +501,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_auth_attempts_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_auth_attempts_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -545,7 +545,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_rate_limit_hits_total{scrape_job=\"NEOPRO\"}[5m])) by (limiter)",
+          "expr": "sum(rate(madxp_rate_limit_hits_total{scrape_job=\"NEOPRO\"}[5m])) by (limiter)",
           "legendFormat": "{{limiter}}",
           "refId": "A"
         }
@@ -597,17 +597,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(madxp_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(neopro_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(madxp_db_query_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -651,12 +651,12 @@
       },
       "targets": [
         {
-          "expr": "neopro_db_connections{scrape_job=\"NEOPRO\",state=\"active\"}",
+          "expr": "madxp_db_connections{scrape_job=\"NEOPRO\",state=\"active\"}",
           "legendFormat": "active",
           "refId": "A"
         },
         {
-          "expr": "neopro_db_connections{scrape_job=\"NEOPRO\",state=\"idle\"}",
+          "expr": "madxp_db_connections{scrape_job=\"NEOPRO\",state=\"idle\"}",
           "legendFormat": "idle",
           "refId": "B"
         }
@@ -713,7 +713,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(neopro_ftp_operations_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
+          "expr": "sum(rate(madxp_ftp_operations_total{scrape_job=\"NEOPRO\"}[5m])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
@@ -758,12 +758,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(neopro_ftp_operation_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(madxp_ftp_operation_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(neopro_ftp_operation_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(madxp_ftp_operation_duration_seconds_bucket{scrape_job=\"NEOPRO\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         }
@@ -808,7 +808,7 @@
       },
       "targets": [
         {
-          "expr": "rate(neopro_ftp_upload_bytes_total{scrape_job=\"NEOPRO\"}[5m])",
+          "expr": "rate(madxp_ftp_upload_bytes_total{scrape_job=\"NEOPRO\"}[5m])",
           "legendFormat": "{{storage_type}}",
           "refId": "A"
         }
@@ -820,13 +820,13 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["neopro", "infrastructure"],
+  "tags": ["madxp", "infrastructure"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "",
-  "title": "NeoPro Infrastructure",
-  "uid": "neopro-infrastructure-cloud",
+  "title": "MadXP Infrastructure",
+  "uid": "madxp-infrastructure-cloud",
   "version": 1,
   "weekStart": ""
 }

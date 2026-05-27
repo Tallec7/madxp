@@ -1,7 +1,7 @@
 -- Script : Création de l'utilisateur claude_readonly pour MCP Postgres
 -- Usage  : railway run psql < central-server/src/scripts/create-claude-readonly.sql
 --          (ou psql $DATABASE_URL < ...)
--- Cible  : Railway PostgreSQL (neopro_central / railway)
+-- Cible  : Railway PostgreSQL (madxp_central / railway)
 -- Rôle   : SELECT-only sur toutes les tables — utilisé par Claude Code via MCP
 --
 -- AVANT de lancer : remplace <PASSWORD> par un mot de passe fort

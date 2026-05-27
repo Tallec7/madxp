@@ -113,18 +113,18 @@ describe('Smoke — receivers discovery (Phase 9 OBSERVE-02)', () => {
 
 });
 
-describe('Phase 12 OBSERVE — neopro_hotspot_unknown_firestick_total', () => {
+describe('Phase 12 OBSERVE — madxp_hotspot_unknown_firestick_total', () => {
 
   const metricsSource = () => read('central-server/src/services/metrics.service.ts');
   const socketSource = () => read('central-server/src/services/socket.service.ts');
 
   // ── Task 1: Counter + recorder in metrics.service.ts ─────────────────────
 
-  it('metrics.service.ts — declare Counter neopro_hotspot_unknown_firestick_total avec label site_id', () => {
+  it('metrics.service.ts — declare Counter madxp_hotspot_unknown_firestick_total avec label site_id', () => {
     const src = metricsSource();
-    expect(src).toContain('neopro_hotspot_unknown_firestick_total');
+    expect(src).toContain('madxp_hotspot_unknown_firestick_total');
     // labelNames must contain site_id (within ~15 lines of the counter name)
-    const idx = src.indexOf('neopro_hotspot_unknown_firestick_total');
+    const idx = src.indexOf('madxp_hotspot_unknown_firestick_total');
     const window = src.slice(idx, idx + 500);
     expect(window).toMatch(/labelNames.*site_id/s);
   });
@@ -142,9 +142,9 @@ describe('Phase 12 OBSERVE — neopro_hotspot_unknown_firestick_total', () => {
     expect(body).toMatch(/hotspotUnknownFirestickTotal\.inc\(\s*\{/);
   });
 
-  it('metrics.service.ts — neopro_hotspot_unknown_firestick_total has NO mac label (high cardinality guard)', () => {
+  it('metrics.service.ts — madxp_hotspot_unknown_firestick_total has NO mac label (high cardinality guard)', () => {
     const src = metricsSource();
-    const idx = src.indexOf('neopro_hotspot_unknown_firestick_total');
+    const idx = src.indexOf('madxp_hotspot_unknown_firestick_total');
     const window = src.slice(idx, idx + 500);
     // mac must NOT appear in the labelNames array for this counter
     expect(window).not.toMatch(/'mac'/);

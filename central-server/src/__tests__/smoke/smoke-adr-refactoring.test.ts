@@ -1842,8 +1842,8 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       'utf8'
     );
     expect({
-      pinCounter: /neopro_profile_pin_verifications_total/.test(content),
-      tokensGauge: /neopro_profile_device_tokens_active/.test(content),
+      pinCounter: /madxp_profile_pin_verifications_total/.test(content),
+      tokensGauge: /madxp_profile_device_tokens_active/.test(content),
       recordPinMethod: /recordProfilePinVerification\(/.test(content),
       recordTokensMethod: /recordProfileDeviceTokensActive\(/.test(content),
     }).toEqual({
@@ -2068,13 +2068,13 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
     });
   });
 
-  it('metrics.service exposes neopro_legacy_pin_migrations_total counter (ADR-058 Phase 2A)', () => {
+  it('metrics.service exposes madxp_legacy_pin_migrations_total counter (ADR-058 Phase 2A)', () => {
     const content = fs.readFileSync(
       path.resolve(repoRoot, 'central-server/src/services/metrics.service.ts'),
       'utf8'
     );
     expect({
-      counter: /neopro_legacy_pin_migrations_total/.test(content),
+      counter: /madxp_legacy_pin_migrations_total/.test(content),
       recordMethod: /recordLegacyPinMigration\(/.test(content),
       allStatuses: /success[\s\S]{0,120}skipped_no_default[\s\S]{0,120}skipped_already_set[\s\S]{0,120}failed/.test(content),
     }).toEqual({
@@ -2096,7 +2096,7 @@ describe('ADR-058 Phase 1: Pi offline PIN validation wiring', () => {
       burstAlert: /alert:\s*ProfilePinBurstFailures/.test(content),
       bruteForceAlert: /alert:\s*ProfilePinBruteForce/.test(content),
       lockoutAlert: /alert:\s*ProfilePinHighLockoutRate/.test(content),
-      usesMetric: /neopro_profile_pin_verifications_total/.test(content),
+      usesMetric: /madxp_profile_pin_verifications_total/.test(content),
       taggedSecurity: /category:\s*security/.test(content),
     }).toEqual({
       group: true,

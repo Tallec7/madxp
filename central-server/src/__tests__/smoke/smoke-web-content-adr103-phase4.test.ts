@@ -2,8 +2,8 @@
  * Smoke tests — ADR-103 Phase 4 supervision (Prometheus + alertes).
  *
  * Phase 4 ferme l'ADR avec :
- *   - Counter `neopro_web_content_plays_total{content_type, mode, outcome}`
- *   - Counter `neopro_web_loop_duration_required_blocks_total{endpoint}`
+ *   - Counter `madxp_web_content_plays_total{content_type, mode, outcome}`
+ *   - Counter `madxp_web_loop_duration_required_blocks_total{endpoint}`
  *   - `web_load_failed` accepté côté server-side validInterruptionReasons
  *     (Phase 1 le générait côté Pi mais le serveur le droppait silencieusement)
  *   - Alertes Prometheus `WebContentLoadFailedSpike` + `WebLoopDurationRequiredBurst`
@@ -20,19 +20,19 @@ const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 describe('Smoke — ADR-103 Phase 4 supervision', () => {
   // ------------ metrics.service.ts — counter definitions ------------
 
-  it('metrics.service — defines neopro_web_content_plays_total counter', () => {
+  it('metrics.service — defines madxp_web_content_plays_total counter', () => {
     const src = read('central-server/src/services/metrics.service.ts');
-    expect(/name:\s*'neopro_web_content_plays_total'/.test(src)).toBe(true);
+    expect(/name:\s*'madxp_web_content_plays_total'/.test(src)).toBe(true);
     // Labels: content_type, mode, outcome
-    const idx = src.indexOf("name: 'neopro_web_content_plays_total'");
+    const idx = src.indexOf("name: 'madxp_web_content_plays_total'");
     const block = src.slice(idx, idx + 600);
     expect(/labelNames:\s*\[\s*'content_type',\s*'mode',\s*'outcome'\s*\]/.test(block)).toBe(true);
   });
 
-  it('metrics.service — defines neopro_web_loop_duration_required_blocks_total counter', () => {
+  it('metrics.service — defines madxp_web_loop_duration_required_blocks_total counter', () => {
     const src = read('central-server/src/services/metrics.service.ts');
-    expect(/name:\s*'neopro_web_loop_duration_required_blocks_total'/.test(src)).toBe(true);
-    const idx = src.indexOf("name: 'neopro_web_loop_duration_required_blocks_total'");
+    expect(/name:\s*'madxp_web_loop_duration_required_blocks_total'/.test(src)).toBe(true);
+    const idx = src.indexOf("name: 'madxp_web_loop_duration_required_blocks_total'");
     const block = src.slice(idx, idx + 400);
     expect(/labelNames:\s*\[\s*'endpoint'\s*\]/.test(block)).toBe(true);
   });
@@ -76,13 +76,13 @@ describe('Smoke — ADR-103 Phase 4 supervision', () => {
   it('rules.yml — declares WebContentLoadFailedSpike alert', () => {
     const src = read('docker/prometheus/rules.yml');
     expect(/alert:\s*WebContentLoadFailedSpike/.test(src)).toBe(true);
-    expect(/neopro_web_content_plays_total\{outcome="load_failed"\}/.test(src)).toBe(true);
+    expect(/madxp_web_content_plays_total\{outcome="load_failed"\}/.test(src)).toBe(true);
   });
 
   it('rules.yml — declares WebLoopDurationRequiredBurst alert', () => {
     const src = read('docker/prometheus/rules.yml');
     expect(/alert:\s*WebLoopDurationRequiredBurst/.test(src)).toBe(true);
-    expect(/neopro_web_loop_duration_required_blocks_total/.test(src)).toBe(true);
+    expect(/madxp_web_loop_duration_required_blocks_total/.test(src)).toBe(true);
   });
 
   // ------------ ADR closure ------------

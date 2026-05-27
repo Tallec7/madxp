@@ -74,7 +74,7 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 - **Coût aujourd'hui** : pour répondre "comment va le produit ?" il faut écrire une query SQL ad hoc. Le PM ne pourra pas piloter sans ça.
 - **Effort** : 5-10 métriques business à ajouter dans Prometheus + 1 dashboard Grafana dédié "Business" = ~2-3j. Le contenu des queries existe déjà dans `pitch-deck-metrics.sql`.
 - **Bloquant pour** : recrutement PM (1ère chose qu'il demandera).
-- **Note (2026-04-27)** : la dette voisine "métriques émises sans dashboard" a été traitée par PR #631 (`neopro-blind-spots-cloud.json` + smoke guard). Le pattern audit-then-guard est désormais réplicable pour ce chantier business.
+- **Note (2026-04-27)** : la dette voisine "métriques émises sans dashboard" a été traitée par PR #631 (`madxp-blind-spots-cloud.json` + smoke guard). Le pattern audit-then-guard est désormais réplicable pour ce chantier business.
 
 ### Pas de Sentry ou équivalent (error tracking)
 
@@ -211,11 +211,11 @@ Si un item est résolu, on le déplace dans `## ✅ Résolu` en bas.
 
 ### Session 2026-04-27 (cleanup Supabase + observabilité)
 
-| Item                                                                                                 | Résolu par                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 30 métriques `neopro_*` émises sans dashboard ni alerte                                              | PR #631 — dashboard catch-all `neopro-blind-spots-cloud.json` + smoke guard `smoke-metrics-observability` (allowlist gelée vide) |
-| Références Supabase mortes éparpillées (code actif, runbooks, README, legal/RGPD)                    | PR #633 — 27 fichiers nettoyés en 4 commits atomiques (env vars, code backend/frontend, docs ops, docs RGPD/legal)               |
-| `@types/react` + `@types/react-dom` non déclarés en devDeps (cassait `ng serve` sur Remotion Studio) | PR #636 — devDeps ajoutés en root                                                                                                |
+| Item                                                                                                 | Résolu par                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 30 métriques `neopro_*` émises sans dashboard ni alerte                                              | PR #631 — dashboard catch-all `madxp-blind-spots-cloud.json` + smoke guard `smoke-metrics-observability` (allowlist gelée vide) |
+| Références Supabase mortes éparpillées (code actif, runbooks, README, legal/RGPD)                    | PR #633 — 27 fichiers nettoyés en 4 commits atomiques (env vars, code backend/frontend, docs ops, docs RGPD/legal)              |
+| `@types/react` + `@types/react-dom` non déclarés en devDeps (cassait `ng serve` sur Remotion Studio) | PR #636 — devDeps ajoutés en root                                                                                               |
 
 ### Session 2026-04-25 (audit Lead Dev)
 

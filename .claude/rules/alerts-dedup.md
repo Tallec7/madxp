@@ -36,7 +36,7 @@ plus à dédupliquer eux-mêmes — c'est centralisé au repository.
 
 - **Modifier la migration `add-alerts-dedup-columns.sql`** déjà déployée. Toute
   évolution passe par une nouvelle migration (`ALTER TABLE alerts ADD COLUMN
-  IF NOT EXISTS ...`).
+IF NOT EXISTS ...`).
 - **Supprimer l'index partiel `idx_alerts_dedup_active`** — il est dimensionné
   pour rendre le UPDATE de dédup O(log N) sur les seules rows actives. Sans
   lui, chaque INSERT scanne potentiellement la table entière (tableau de
@@ -48,7 +48,7 @@ plus à dédupliquer eux-mêmes — c'est centralisé au repository.
 ### Métrique
 
 - **Retirer le Counter `neopro_alerts_dedup_skipped_total`** de
-  `metrics.service.ts` ou son panel du dashboard `neopro-blind-spots-cloud.json`.
+  `metrics.service.ts` ou son panel du dashboard `madxp-blind-spots-cloud.json`.
   Sans la métrique, un futur émetteur en boucle reste invisible (la dédup le
   masque côté DB, donc seul le compteur Prometheus le révèle).
 
