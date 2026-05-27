@@ -2,6 +2,8 @@
 
 > Une SPEC = règles métier vivantes d'un **domaine métier cohérent** (pas d'un fichier). **1 page max**, lisible métier, mise à jour dans la même PR que tout changement de comportement.
 
+> **ADRs cross-cutting (sans SPEC métier dédiée)** : [ADR-133](../adr/ADR-133-rebrand-neopro-to-madxp.md) — rebrand NEOPRO → MadXP (infra/branding, touche tous les composants, ne décrit aucun comportement métier nouveau).
+
 ## SPEC = domaine, pas SPEC = fichier
 
 Un domaine métier regroupe N services + N composants + N features qui partagent un parcours utilisateur cohérent. Exemple : la SPEC "Match" couvre `match-sessions`, `scoreboard PROP-003`, `match-history-view`, `match-auto-close` — c'est un seul mental model, pas 4 docs à corréler. Cette approche évite de répliquer l'arborescence du code (inutile, le code suffit) et matérialise les **frontières métier** (irremplaçable, le code ne le dit pas).
