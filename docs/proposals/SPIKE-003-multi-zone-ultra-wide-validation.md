@@ -1,5 +1,7 @@
 # SPIKE-003 — Validation Pi 5 + Résolution Ultra-Wide + N Flux Vidéo
 
+> ⚠️ **Redéfini (2026-05-31).** Le SPIKE ne porte plus sur "le Pi sort-il une résolution ultra-wide" mais sur **mode A (plug & play) vs mode B (pixel-perfect) + nombre de bandes du processeur**, sur une install réelle. Protocole à jour : `docs/proposals/SPIKE-003-protocole.md` + PROP-014 §7. Voir PROP-014 pour le modèle.
+
 > **Epic** : E-22 — Contenus Différenciés TV + Écran Secondaire
 > **Feature** : F-22.X — Enabler Multi-Zone LED
 > **US** : à créer (3 SP)
