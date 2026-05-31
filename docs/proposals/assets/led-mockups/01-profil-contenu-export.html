@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MadXP — Maquettes LED v3</title>
+    <style>
+      :root {
+        --bg: #0b0e1a;
+        --panel: #141a2e;
+        --panel2: #1c2440;
+        --line: #2a3454;
+        --txt: #e8ecf6;
+        --muted: #8a93ad;
+        --accent: #5b8cff;
+        --ok: #33d17a;
+        --warn: #ffb020;
+        --chip: #23304f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--txt);
+        font:
+          15px/1.5 -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial;
+      }
+      header {
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      header b {
+        font-size: 18px;
+      }
+      .tag {
+        background: var(--chip);
+        color: var(--muted);
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 6px;
+      }
+      .wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .screen {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 22px;
+        margin-bottom: 28px;
+      }
+      .screen h2 {
+        margin: 0 0 4px;
+        font-size: 17px;
+      }
+      .screen .sub {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+      .sect {
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 16px;
+        margin: 14px 0;
+        background: var(--panel2);
+      }
+      .sect h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin: 10px 0;
+      }
+      label.f {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input,
+      select {
+        background: #10162b;
+        border: 1px solid var(--line);
+        color: var(--txt);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      input[type='number'] {
+        width: 74px;
+      }
+      .btn {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 9px;
+        padding: 9px 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--txt);
+      }
+      .btn.dim {
+        opacity: 0.45;
+      }
+      .btn.sm {
+        padding: 5px 9px;
+        font-size: 12px;
+      }
+      .switch {
+        display: inline-flex;
+        background: #10162b;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        overflow: hidden;
+        cursor: pointer;
+      }
+      .switch span {
+        padding: 7px 13px;
+        font-size: 13px;
+        color: var(--muted);
+        user-select: none;
+      }
+      .switch span.on {
+        background: var(--accent);
+        color: #fff;
+      }
+      .note {
+        font-size: 12.5px;
+        border-radius: 8px;
+        padding: 8px 11px;
+        margin: 8px 0;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      .note.warn {
+        background: rgba(255, 176, 32, 0.12);
+        color: var(--warn);
+        border: 1px solid rgba(255, 176, 32, 0.3);
+      }
+      .note.ok {
+        background: rgba(51, 209, 122, 0.12);
+        color: var(--ok);
+        border: 1px solid rgba(51, 209, 122, 0.3);
+      }
+      .note.info {
+        background: rgba(91, 140, 255, 0.1);
+        color: #9db8ff;
+        border: 1px solid rgba(91, 140, 255, 0.25);
+      }
+      .note.anchor {
+        background: rgba(91, 140, 255, 0.07);
+        border: 1px dashed var(--line);
+        color: #9db8ff;
+      }
+      .divider {
+        border-top: 1px dashed var(--line);
+        margin: 16px 0 8px;
+        padding-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+      }
+      td,
+      th {
+        text-align: left;
+        padding: 9px 8px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 500;
+        font-size: 12px;
+      }
+      .pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: var(--chip);
+        color: var(--muted);
+      }
+      .badge {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+      }
+      .b-ok {
+        color: var(--ok);
+        border-color: rgba(51, 209, 122, 0.4);
+      }
+      .b-warn {
+        color: var(--warn);
+        border-color: rgba(255, 176, 32, 0.4);
+      }
+      .b-studio {
+        color: #9db8ff;
+        border-color: rgba(91, 140, 255, 0.4);
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        margin: 6px 0 10px;
+        flex-wrap: wrap;
+      }
+      .tabs span {
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .tabs span.on {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .shared {
+        font-size: 10px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 1px 5px;
+      }
+      .ribbon {
+        display: flex;
+        height: 32px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        margin: 6px 0;
+        background: #0c1024;
+      }
+      .cell {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        background: linear-gradient(180deg, #2a1d52, #1a1238);
+      }
+      .gap {
+        flex: 0 0 auto;
+        background: #0c1024;
+      }
+      .corner {
+        flex: 0 0 3px;
+        background: var(--warn);
+      }
+      .folded {
+        display: grid;
+        grid-template-rows: repeat(7, 1fr);
+        gap: 2px;
+        background: #0c1024;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px;
+        height: 112px;
+      }
+      .band {
+        background: linear-gradient(90deg, #2a1d52, #1a1238);
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        color: #cdd6f4;
+        font-size: 9px;
+        padding-left: 6px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .zone {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 11px;
+        margin: 8px 0;
+        background: #10162b;
+      }
+      .zone h4 {
+        margin: 0 0 7px;
+        font-size: 13px;
+      }
+      .chips span {
+        display: inline-block;
+        font-size: 12px;
+        padding: 3px 9px;
+        border-radius: 20px;
+        background: var(--chip);
+        border: 1px solid var(--line);
+        margin: 3px 4px 0 0;
+      }
+      .mini {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .hide {
+        display: none;
+      }
+      .lock {
+        color: #7e88a3;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <b>MadXP — LED bord de terrain</b
+      ><span class="tag">Maquettes v3 — extension de l'existant</span
+      ><span class="tag">Réf : PROP-014</span>
+    </header>
+    <div class="wrap">
+      <!-- 1 PROFIL -->
+      <div class="screen">
+        <h2>1 · Profil LED du site</h2>
+        <div class="sub">
+          Géométrie saisie ici. Le LED devient un <b>display</b> du site (règle : tout contenu cible
+          un display prédéfini).
+        </div>
+        <div class="row">
+          <label class="f"
+            >Ruban LED
+            <div class="switch"><span class="on">Activé</span><span>Désactivé</span></div></label
+          >
+        </div>
+
+        <div class="divider">Côtés du terrain</div>
+        <div id="sides">
+          <div class="row side">
+            <label class="f">Côté 1 (m)<input type="number" value="40" /></label
+            ><button class="btn ghost sm del">🗑️</button>
+          </div>
+          <div class="row side">
+            <label class="f">Côté 2 (m)<input type="number" value="20" /></label
+            ><button class="btn ghost sm del">🗑️</button>
+          </div>
+          <div class="row side">
+            <label class="f">Côté 3 (m)<input type="number" value="20" /></label
+            ><button class="btn ghost sm del">🗑️</button>
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn ghost sm" id="addSide">+ ajouter un côté</button>
+          <label class="f"
+            >Pitch<select>
+              <option>P6</option>
+              <option>P8</option>
+              <option>P10</option>
+            </select></label
+          >
+          <label class="f">Hauteur (px)<input type="number" value="160" /></label>
+        </div>
+        <div class="note info">📐 Ruban calculé : <b>13 344 × 160 px</b> (80 m · P6).</div>
+        <div class="note anchor">
+          🔗 Ce ruban sera enregistré comme display <b>« LED périmètre » (#1)</b> du site. Le
+          contenu LED ne sera proposé que si ce display existe.
+        </div>
+
+        <div class="row">
+          <label class="f"
+            >Diffusion
+            <div class="switch">
+              <span class="on">Export (fichier)</span><span>Live (Pi branché)</span>
+            </div></label
+          >
+        </div>
+
+        <div class="sect" style="border-style: dashed">
+          <h3>
+            🔌 Processeur LED
+            <span class="pill" style="color: var(--warn)">⏳ détecté à l'install (SPIKE)</span>
+          </h3>
+          <div class="mini" style="margin-bottom: 8px">
+            Lecture seule — lu sur le processeur, pas saisi. <b>Mode A</b> = on envoie un signal
+            standard, le processeur mappe seul. <b>Mode B</b> = on envoie le fichier plié, il déplie
+            1:1.
+          </div>
+          <div class="row">
+            <label class="f lock"
+              >Entrée
+              <div class="badge">🔒 1920×1200 (prov.)</div></label
+            >
+            <label class="f lock"
+              >Bandes
+              <div class="badge">🔒 7 (prov.)</div></label
+            >
+            <label class="f lock"
+              >Mode
+              <div class="badge">🔒 à déterminer</div></label
+            >
+            <button class="btn sm" style="align-self: flex-end">▶︎ Assistant d'install</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 CONTENU (EXTENSION) -->
+      <div class="screen">
+        <h2>2 · Contenu LED <span class="shared">extension du loop-manager existant</span></h2>
+        <div class="sub">
+          La boucle, les poids (1-10) et les 3 temps sont <b>partagés avec la TV</b> — tu ne les
+          ressaisis pas. Le LED = variantes + réglages.
+        </div>
+        <div class="note anchor">🔗 Cible : display <b>« LED périmètre » (#1)</b>.</div>
+
+        <div class="tabs">
+          <span>Avant-match</span><span class="on">Match</span><span>Après-match</span
+          ><span>Défaut</span
+          ><span class="shared" style="align-self: center; margin-left: 6px"
+            >↑ 3 temps partagés</span
+          >
+        </div>
+
+        <div class="sect">
+          <h3>🔁 Boucle — variantes LED des vidéos de la phase « Match »</h3>
+          <table>
+            <tr>
+              <th>Vidéo (boucle TV)</th>
+              <th>Poids <span class="shared">partagé</span></th>
+              <th>Variante LED</th>
+              <th>Mise en page</th>
+            </tr>
+            <tr>
+              <td>Intersport</td>
+              <td>4/10</td>
+              <td><span class="badge b-ok">✅ fournie</span></td>
+              <td>
+                <select>
+                  <option>Répété</option>
+                  <option>Défilant</option>
+                  <option>Étalé</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>Burger King</td>
+              <td>2/10</td>
+              <td>
+                <span class="badge b-warn">⚠️ à fournir</span>
+                <button class="btn sm ghost">＋ uploader</button>
+              </td>
+              <td>
+                <select>
+                  <option>Répété</option>
+                  <option>Défilant</option>
+                  <option>Étalé</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>King Jouet</td>
+              <td>1/10</td>
+              <td><span class="badge b-studio">🎬 studio (auto)</span></td>
+              <td>
+                <select>
+                  <option>Répété</option>
+                  <option>Défilant</option>
+                  <option>Étalé</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <div class="mini" style="margin-top: 6px">
+            Le poids et l'ordre viennent de la boucle TV (Bresenham). Ici on ne gère que
+            <b>le visuel LED</b> de chaque vidéo + sa mise en page.
+          </div>
+
+          <div class="divider">Réglages LED de ce display</div>
+          <div class="row">
+            <label class="f"
+              >Cadence de la boucle<select title="aligné sur les angles">
+                <option>1 / 10 m (8×)</option>
+                <option>1 / 5 m (16×)</option>
+                <option>1 / 4 m (20×)</option>
+                <option>1 / 20 m (4×)</option>
+              </select></label
+            >
+            <label class="f"
+              >Répartition
+              <div class="switch" id="repart">
+                <span class="on">Même contenu partout</span><span>Par côté (zones)</span>
+              </div></label
+            >
+          </div>
+          <div class="note info">
+            💡 Cadence = réglage du display (pas du sponsor). Seuls les espacements qui alignent les
+            angles (divisent 40/20/20) sont proposés — <b>8 m exclu</b>.
+          </div>
+
+          <div id="zones" class="hide">
+            <div class="zone">
+              <h4>▮ Côté 1 — 40 m</h4>
+              <div class="chips">
+                <span>Intersport</span><span>Burger King</span><span>＋</span>
+              </div>
+            </div>
+            <div class="zone">
+              <h4>▮ Côté 2 — 20 m</h4>
+              <div class="chips"><span>King Jouet</span><span>＋</span></div>
+            </div>
+            <div class="zone">
+              <h4>▮ Côté 3 — 20 m</h4>
+              <div class="chips"><span>Sponsor maillot (étalé)</span><span>＋</span></div>
+            </div>
+          </div>
+
+          <div class="divider">Aperçu ruban (phase Match, cadence 10 m)</div>
+          <div class="ribbon" id="ribbon"></div>
+          <div class="mini">▮ angle (40/60 m) — tombe entre 2 visuels ✓</div>
+        </div>
+
+        <div class="note info">
+          ⚡ Les <b>événements</b> (entrée joueur, but, jingle) ne sont pas ici : ce sont les
+          <b>catégories existantes</b> déclenchées à la télécommande. Leur variante LED se gère dans
+          le même panneau de variantes, par catégorie.
+        </div>
+      </div>
+
+      <!-- 3 EXPORT -->
+      <div class="screen">
+        <h2>3 · Génération &amp; sortie</h2>
+        <div class="sub">
+          L'aperçu s'adapte au mode processeur. Le validateur juge le <b>format</b>, pas la source.
+        </div>
+        <div class="row">
+          <span class="mini">Mode (déterminé au SPIKE) :</span>
+          <div class="switch" id="mode">
+            <span class="on">A — le processeur mappe</span><span>B — on plie</span>
+          </div>
+        </div>
+
+        <div class="divider">Aperçu déroulé (ce que voit le public)</div>
+        <div class="ribbon" id="ribbon2"></div>
+        <div id="foldWrap" class="hide">
+          <div class="divider">Aperçu plié (fichier envoyé) — 1920×1200, 7 bandes</div>
+          <div class="folded" id="folded"></div>
+        </div>
+        <div id="modeA" class="note info">
+          Mode A : signal standard envoyé, <b>le processeur scale/mappe lui-même</b> → pas de
+          pliage.
+        </div>
+
+        <div class="divider">
+          Validateur de format
+          <span class="shared" style="align-self: center"
+            >source indifférente — studio OU vidéo fournie</span
+          >
+        </div>
+        <div class="row">
+          <span class="mini">Exemple :</span>
+          <div class="switch" id="val">
+            <span class="on">Vidéo au bon format</span><span>Vidéo mauvais ratio</span>
+          </div>
+        </div>
+        <div id="vOk" class="note ok">
+          ✅ Format OK (13344×160) — prête.
+          <span class="mini">(studio comme vidéo fournie : seul le format compte.)</span>
+        </div>
+        <div id="vWarn" class="note info hide">
+          ℹ️ Cette vidéo est en 4800×800 (6:1), pas au ratio du ruban (~83:1). Je la plie quand même
+          (rendu correct mais espacé), ou tu la refais en 13344×160 / via le studio.
+          <span class="mini">Pas bloquant — la vidéo fournie est le cas normal aujourd'hui.</span>
+        </div>
+
+        <div class="row" style="margin-top: 12px">
+          <button class="btn">⬇︎ Télécharger pour LED</button
+          ><button class="btn ghost">▶︎ Diffuser en direct</button>
+        </div>
+      </div>
+
+      <p class="mini">
+        v3 — corrections : extension du loop-manager (pas de boucle parallèle) · 3 temps partagés ·
+        variante LED par vidéo · poids 1-10 réels · ancrage display obligatoire · suppr. côté · mode
+        A/B expliqué · validateur sur le format (vidéo fournie = cas normal, pas un avertissement).
+      </p>
+    </div>
+    <script>
+      function ribbon(el, n, l) {
+        let h = '',
+          w = 58;
+        for (let i = 0; i < n; i++) {
+          h += `<div class="cell" style="width:${w}px">${l}</div>`;
+          if (i === 3 || i === 5) h += '<div class="corner"></div>';
+          if (i < n - 1) h += '<div class="gap" style="width:14px"></div>';
+        }
+        el.innerHTML = h;
+      }
+      ribbon(document.getElementById('ribbon'), 8, 'INTERSPORT');
+      ribbon(document.getElementById('ribbon2'), 8, 'INTERSPORT');
+      const f = document.getElementById('folded'),
+        segs = [
+          '…INTERSPO',
+          'RT   INTE',
+          'RSPORT   ',
+          'INTERSPOR',
+          'T   INTER',
+          'SPORT   I',
+          'NTERSPORT…',
+        ];
+      segs.forEach((s, i) => {
+        const d = document.createElement('div');
+        d.className = 'band';
+        d.textContent = 'b' + (i + 1) + ' · ' + s;
+        f.appendChild(d);
+      });
+      function bind(id, fn) {
+        const s = document.getElementById(id);
+        [...s.children].forEach(
+          (c, i) =>
+            (c.onclick = () => {
+              [...s.children].forEach((x) => x.classList.remove('on'));
+              c.classList.add('on');
+              fn(i);
+            }),
+        );
+      }
+      bind('repart', (i) => document.getElementById('zones').classList.toggle('hide', i === 0));
+      bind('mode', (i) => {
+        const B = i === 1;
+        document.getElementById('foldWrap').classList.toggle('hide', !B);
+        document.getElementById('modeA').classList.toggle('hide', B);
+      });
+      bind('val', (i) => {
+        document.getElementById('vOk').classList.toggle('hide', i === 1);
+        document.getElementById('vWarn').classList.toggle('hide', i === 0);
+      });
+      document.getElementById('addSide').onclick = () => {
+        const d = document.createElement('div');
+        d.className = 'row side';
+        d.innerHTML =
+          '<label class="f">Côté (m)<input type="number" value="20"></label><button class="btn ghost sm del">🗑️</button>';
+        document.getElementById('sides').appendChild(d);
+        bindDel();
+      };
+      function bindDel() {
+        document
+          .querySelectorAll('.del')
+          .forEach((b) => (b.onclick = () => b.closest('.side').remove()));
+      }
+      bindDel();
+    </script>
+  </body>
+</html>

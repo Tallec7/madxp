@@ -92,6 +92,18 @@ Sortie attendue : **go / no-go** + la valeur du paramètre "nombre de bandes" + 
 
 ---
 
+## Un SPIKE valide UN club — il produit une procédure répétable
+
+⚠️ `canvas_in` (les 3 nombres) et le mode A/B sont **par club** (chaque processeur diffère). Le SPIKE ne donne donc PAS "la config de tous les clubs". Son vrai livrable :
+
+1. **Prouver le mécanisme** (fold → processeur → ruban) — généralisable.
+2. **Produire une procédure d'onboarding répétable** : "comment lire n'importe quel processeur et remplir le profil". Ensuite, chaque club = dérouler cette check-list une fois (pas un nouveau SPIKE).
+3. **Découvrir le cas courant** → fixer de bons **défauts** (la plupart en mode A ? input 1920 ?).
+
+Idéalement, couvrir **2-3 processeurs différents** (Novastar / Colorlight / kit éco) pour voir la plage de comportements. Certains processeurs n'accepteront pas le Pi en live → ces clubs basculent en **export-only** (dégradation propre, pas un blocage).
+
+Rappel : le contrôle des contenus reste **piloté par le type de display** (`led-perimeter`), jamais par l'index — un display #1 peut être une 2ᵉ TV.
+
 ## Rappel : pourquoi ce test est non négociable
 
-Tout le reste (export, temps réel, templates) se construit sur ces 3 valeurs. Sans elles, on **devine** — et deviner le format, c'est exactement ce qui a cassé les fichiers du club (cf. `reencode.sh`, vidéo 4800×800 fragmentée). 1 h de test = des semaines de dev sécurisées.
+Tout le reste (export, temps réel, templates) se construit sur ces valeurs. Sans elles, on **devine** — et deviner le format, c'est exactement ce qui a cassé les fichiers du club (cf. `reencode.sh`, vidéo 4800×800 fragmentée). 1 h de test = des semaines de dev sécurisées.

@@ -1,10 +1,10 @@
 # PROP-011 v2: Multi-Zone LED — Contenus Différenciés par Côté de Terrain depuis un Seul Pi
 
-> ⚠️ **Suspendu / remplacé (2026-05-31).** Le modèle "N zones indépendantes stitchées" est remplacé par le modèle **ruban continu + motif répété + pliage paramétrique** de **PROP-014**. Ne pas implémenter PROP-011 en l'état — se référer à PROP-014.
+> ⚠️ **Intégré à PROP-014 (2026-05-31).** Le _besoin_ (contenu différent par côté de terrain) est **repris** dans PROP-014 §5 (contenu par côté / zones). Le _mécanisme_ "N zones indépendantes stitchées" est en revanche **remplacé** par le modèle ruban continu composé par segment + pliage unique. Ne pas implémenter PROP-011 en l'état — voir PROP-014.
 
 **Date v1** : 2026-03-01
 **Date v2** : 2026-04-22
-**Statut** : Proposé — spike Phase 0 pré-requis avant engagement commercial
+**Statut** : ⛔ **Remplacé par [PROP-014](./PROP-014-led-perimeter-content-pipeline.md)** (2026-05-31) — besoin intégré, mécanisme raffiné. Doc conservée pour traçabilité (marché/économie/contrôleurs absorbés dans PROP-014 §9bis).
 **Décideurs** : Équipe MadXP
 **Lié à** : [PROP-002](./PROP-002-tv-led-dual-output.md), [ADR-029](../adr/ADR-029-dual-hdmi-tv-led.md), [SPIKE-001](./SPIKE-001-dual-hdmi-hardware-validation.md), [SPIKE-003](./SPIKE-003-multi-zone-ultra-wide-validation.md), [ADR-086](../adr/ADR-086-template-studio-n-layers-safe-zones-reversible-animations.md)
 
