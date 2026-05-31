@@ -1,4 +1,6 @@
-# PROP-010 — Auto-génération de variantes vidéo par type d'écran
+# PROP-010 — Auto-génération de variantes vidéo
+
+> ⚠️ **Modèle LED périmétrique revu (2026-05-31).** Le contenu LED bord de terrain n'est PAS un crop 16:9 → 1920×384. Voir **PROP-014** (résolution native du ruban, motif répété, pliage). Cette PROP reste pertinente pour les autres variants d'écran. par type d'écran
 
 > **Epic** : E-22 — Contenus Différenciés TV + Écran Secondaire
 > **Feature** : F-22.5 — Auto-génération variantes vidéo

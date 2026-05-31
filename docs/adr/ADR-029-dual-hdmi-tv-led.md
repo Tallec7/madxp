@@ -1,5 +1,7 @@
 # ADR-029 : Dual HDMI — Contenus Différenciés Écran Principal + Secondaire
 
+> ⚠️ **Modèle LED périmétrique revu (2026-05-31).** Le cadrage "LED = écran secondaire 16:9 / variant croppé" de cet ADR ne s'applique PAS au ruban LED bord de terrain (surface continue ultra-wide, fichier plié en bandes, parfois branchée en HDMI primaire). Pour tout sujet ruban périmétrique, voir **PROP-014** (modèle de référence). Cet ADR reste valable pour le cas "2ᵉ écran TV/bandeau classique".
+
 | Champ      | Valeur                                                                            |
 | ---------- | --------------------------------------------------------------------------------- |
 | Statut     | Accepté                                                                           |

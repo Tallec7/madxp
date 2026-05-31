@@ -1,5 +1,7 @@
 # PROP-002: Multi-Display — Contenus Différenciés par Écran depuis un Seul Pi
 
+> ⚠️ **Modèle LED périmétrique revu (2026-05-31).** L'hypothèse "variant LED = bandeau ~1920×384 croppé du 16:9" est invalidée pour le ruban bord de terrain. Voir **PROP-014** (modèle de référence : surface continue, motif répété, pliage en bandes). PROP-002 reste valable pour le multi-display TV générique.
+
 > _Anciennement ADR-012. Mise à jour majeure le 11 avril 2026 (audit implémentation + modèle N-display + Phases 3-4 implémentées)._
 
 **Date** : 2026-02-11
