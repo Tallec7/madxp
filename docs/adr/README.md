@@ -148,6 +148,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-132](ADR-132-pi-system-password-ota-rotation.md)                                    | Rotation OTA du mot de passe système `pi` — one-shot avec acquittement (flotte entière)      | Accepté                           | Mai 2026  |
 | [ADR-133](ADR-133-rebrand-neopro-to-madxp.md)                                            | Rebrand NEOPRO → MadXP — convention naming, phasage en 8 PRs, hybride flotte Pi              | Accepté                           | Mai 2026  |
 | [ADR-134](ADR-134-led-perimeter-render-directly-folded.md)                               | Rendu LED périmétrique — studio rend directement plié (POC : ruban plat OOM ≥10000px)        | Accepté                           | Juin 2026 |
+| [ADR-135](ADR-135-led-perimeter-per-side-zones.md)                                       | LED périmétrique — pliage par côté + zones de contenu/cadence par côté (`side_zones`)        | Accepté                           | Juin 2026 |
 
 ### Supersédés
 
