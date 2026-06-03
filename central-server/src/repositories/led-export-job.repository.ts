@@ -56,6 +56,27 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
     return result.rows[0] ?? null;
   }
 
+  /**
+   * Dernier export PRÊT pour un (vidéo × club × fit) donné — permet de réutiliser
+   * un ruban déjà plié plutôt que de replier (la source à plat est globale, le
+   * ruban produit est propre au club). Retourne null si aucun n'est prêt.
+   */
+  async findReady(
+    videoId: string,
+    siteId: string,
+    fit: LedExportFit
+  ): Promise<LedExportJobRow | null> {
+    const result = await query<LedExportJobRow>(
+      `SELECT * FROM led_export_jobs
+       WHERE video_id = $1 AND site_id = $2 AND fit = $3
+         AND status = 'ready' AND output_url IS NOT NULL
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [videoId, siteId, fit]
+    );
+    return result.rows[0] ?? null;
+  }
+
   /** Claim atomique du prochain job en queue (multi-worker safe). */
   async claimNextQueued(): Promise<LedExportJobRow | null> {
     const result = await query<LedExportJobRow>(

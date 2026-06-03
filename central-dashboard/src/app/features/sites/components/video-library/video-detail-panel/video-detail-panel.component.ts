@@ -37,6 +37,8 @@ export class VideoDetailPanelComponent {
   @Input() totalDisplays = 1;
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() availableVideos: CloudVideo[] = [];
+  /** Club consulté — propagé au panneau variantes pour l'export LD (plie pour ce club). */
+  @Input() siteId: string | null = null;
   /** For delete button — true when club user doesn't own this video */
   @Input() isClubLocked = false;
   /** For "Add to config" — same as isClubLocked but relaxed by grants (ADR-082) */

@@ -64,6 +64,8 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     fixture = TestBed.createComponent(VideoVariantPanelComponent);
     component = fixture.componentInstance;
     component.videoId = 'vid-1';
+    // Par défaut on est dans le contexte d'un club (export LED possible).
+    component.siteId = 'site-1';
     httpMock = TestBed.inject(HttpTestingController);
 
     // ngOnInit → GET variants (flush vide, on injecte ensuite à la main).
@@ -171,7 +173,7 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
 
   // --- Export plié async (PROP-014 §6 / étape 6) ---
 
-  it('le bouton d\'export n\'apparaît que pour led-perimeter', () => {
+  it('le bouton d\'export n\'apparaît que pour led-perimeter (avec un club en contexte)', () => {
     openVariant(makeVariant('secondary'));
     expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeNull();
 
@@ -179,15 +181,27 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeTruthy();
   });
 
-  it('exportLed : enqueue → poll → lien de téléchargement quand ready', () => {
+  it('hors contexte club (siteId null) : bouton export MASQUÉ + note explicative', () => {
+    component.siteId = null;
+    openVariant(makeVariant('led-perimeter'));
+
+    expect(component.canExportLed).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeNull();
+    const hint = fixture.nativeElement.querySelector('[data-testid="led-export-hint"]');
+    expect(hint).toBeTruthy();
+    expect(hint.textContent).toContain('page d\'un club');
+  });
+
+  it('exportLed : enqueue (avec target_site_id du club) → poll → lien de téléchargement', () => {
     const variant = makeVariant('led-perimeter');
     openVariant(variant);
 
     component.exportLed(variant as never);
 
-    // 1) enqueue POST → 202 { job_id }
+    // 1) enqueue POST → body cible le club consulté
     const enqueue = httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/export`);
     expect(enqueue.request.method).toBe('POST');
+    expect(enqueue.request.body).toEqual({ target_site_id: 'site-1' });
     enqueue.flush({ job_id: 'job-1', status: 'queued' });
 
     // 2) poll GET → ready + url
@@ -212,5 +226,23 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     expect(component.exportStates['led-perimeter'].status).toBe('failed');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-testid="led-export-download"]')).toBeNull();
+  });
+
+  it('exportLed : réutilisation (200 ready) → lien direct, sans polling', () => {
+    const variant = makeVariant('led-perimeter');
+    openVariant(variant);
+    component.exportLed(variant as never);
+
+    // Le serveur renvoie un ruban déjà plié (réutilisé) → prêt immédiatement.
+    httpMock
+      .expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/export`)
+      .flush({ job_id: 'job-9', status: 'ready', output_url: 'https://x/reuse.mp4', reused: true });
+
+    expect(component.exportStates['led-perimeter'].status).toBe('ready');
+    // Aucun GET de polling ne doit être émis.
+    httpMock.verify();
+    fixture.detectChanges();
+    const dl = fixture.nativeElement.querySelector('[data-testid="led-export-download"]') as HTMLAnchorElement;
+    expect(dl.getAttribute('href')).toBe('https://x/reuse.mp4');
   });
 });

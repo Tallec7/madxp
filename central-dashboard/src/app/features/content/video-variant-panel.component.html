@@ -102,10 +102,12 @@
             {{ notice.message }}
           </div>
 
-          <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement. -->
+          <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement.
+               Plie pour le club consulté → affiché seulement quand un club est en
+               contexte (masqué dans la bibliothèque globale). -->
           <div
             class="led-export-row"
-            *ngIf="isLedPerimeter(variant.display_type)"
+            *ngIf="isLedPerimeter(variant.display_type) && canExportLed"
             data-testid="led-export-row"
           >
             <button
@@ -134,6 +136,16 @@
               *ngIf="exportStates[variant.display_type]?.status === 'failed'"
               >échec</span
             >
+          </div>
+
+          <!-- Hors contexte club (bibliothèque globale) : on plie depuis la page d'un club. -->
+          <div
+            class="led-export-hint"
+            *ngIf="isLedPerimeter(variant.display_type) && !canExportLed"
+            data-testid="led-export-hint"
+          >
+            Pour exporter le ruban plié, ouvre cette vidéo depuis la page d'un club (le pliage
+            s'adapte à la taille de son bandeau).
           </div>
         </div>
       </div>

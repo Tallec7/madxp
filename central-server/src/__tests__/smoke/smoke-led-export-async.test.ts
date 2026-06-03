@@ -53,4 +53,20 @@ describe('Smoke — export LED async (PROP-014 étape 6)', () => {
     expect(routes).toMatch(/router\.post\([^)]*\/variants\/:displayType\/export['"]/);
     expect(routes).toMatch(/router\.get\([^)]*\/led-export-jobs\/:jobId['"]/);
   });
+
+  it('l’export plie pour le CLUB CIBLE (target_site_id), pas le propriétaire de la vidéo', () => {
+    const ctrl = read('controllers/content-variant.controller.ts');
+    expect(ctrl).toMatch(/target_site_id/);
+    // Le club cible doit avoir un profil LED périmétrique (fail-fast).
+    expect(ctrl).toMatch(/getDisplays\(targetSiteId\)/);
+  });
+
+  it('réutilise un ruban déjà plié pour le même (vidéo × club × fit)', () => {
+    const ctrl = read('controllers/content-variant.controller.ts');
+    expect(ctrl).toMatch(/findReady\(/);
+    expect(ctrl).toMatch(/reused: true/);
+    const repo = read('repositories/led-export-job.repository.ts');
+    expect(repo).toMatch(/async findReady\(/);
+    expect(repo).toMatch(/status = 'ready'/);
+  });
 });

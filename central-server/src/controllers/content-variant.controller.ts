@@ -357,9 +357,23 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
-    const siteId = video.uploaded_for_site_id ?? null;
-    if (!siteId) {
-      return res.status(400).json({ error: 'Export LED indisponible : la vidéo n’est rattachée à aucun site (profil LED requis)' });
+    // Le pliage est PAR CLUB : la source (même globale/partagée) est pliée à la
+    // taille du ruban du club VISÉ. Cible = site passé par le dashboard (la page
+    // consultée), sinon le propriétaire de la vidéo. La même source rangée par
+    // (vidéo × site) est réutilisable d'un club à l'autre.
+    const targetSiteId =
+      (typeof req.body?.target_site_id === 'string' ? req.body.target_site_id : null) ||
+      video.uploaded_for_site_id ||
+      null;
+    if (!targetSiteId) {
+      return res.status(400).json({ error: 'Club cible requis pour plier la vidéo (la taille du ruban dépend du club)' });
+    }
+
+    // Fail-fast : le club cible doit avoir un écran led-perimeter avec un profil.
+    const displays = await siteRepository.getDisplays(targetSiteId);
+    const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+    if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
+      return res.status(400).json({ error: 'Le club cible n’a pas de profil LED périmétrique configuré' });
     }
 
     const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType as DisplayType);
@@ -367,15 +381,30 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
     }
 
+    const fit = fitFromLayout(variant.layout);
+
+    // Réutilisation : un ruban déjà plié pour ce (vidéo × club × fit) ? On le rend
+    // directement (200) au lieu de replier inutilement.
+    const existing = await ledExportJobRepository.findReady(id, targetSiteId, fit);
+    if (existing) {
+      logger.info('led-export: reusing ready export', { jobId: existing.id, videoId: id, siteId: targetSiteId });
+      return res.status(200).json({
+        job_id: existing.id,
+        status: 'ready',
+        output_url: existing.output_url,
+        reused: true,
+      });
+    }
+
     const job = await ledExportJobRepository.create({
-      site_id: siteId,
+      site_id: targetSiteId,
       video_id: id,
       display_type: displayType,
-      fit: fitFromLayout(variant.layout),
+      fit,
       created_by: req.user?.id ?? null,
     });
 
-    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, fit: job.fit });
+    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, siteId: targetSiteId, fit });
     res.status(202).json({ job_id: job.id, status: job.status });
   } catch (error) {
     logger.error('Error enqueuing LED export:', error);
