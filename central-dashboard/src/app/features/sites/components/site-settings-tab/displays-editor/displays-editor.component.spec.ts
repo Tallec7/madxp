@@ -430,3 +430,129 @@ describe('Phase 12 OBSERVE — badge ambre Non assigné', () => {
     expect(badges.length).toBe(0);
   });
 });
+
+describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+
+  const ledDisplay: DisplayConfig = {
+    index: 1,
+    name: 'Bord de terrain',
+    type: 'led-perimeter',
+    led: {
+      sides: [40, 20, 20],
+      pitch: 'P6',
+      height: 160,
+      spacing_m: 10,
+      zones: 'uniform',
+      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+    },
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('renders the LED panel ONLY for type led-perimeter (type-driven, not index)', () => {
+    component.displays = [
+      { index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' },
+      { ...ledDisplay, led: { ...ledDisplay.led! } },
+    ];
+    fixture.detectChanges();
+
+    const panels = fixture.nativeElement.querySelectorAll('[data-testid="led-panel"]');
+    expect(panels.length).toBe(1); // only the led-perimeter display, not the TV
+    expect(fixture.nativeElement.querySelector('[data-testid="led-sides"]')).toBeTruthy();
+  });
+
+  it('normalizes a led-perimeter display missing its led profile (defaults applied)', () => {
+    component.displays = [{ index: 1, name: 'LED', type: 'led-perimeter' } as DisplayConfig];
+    fixture.detectChanges();
+
+    const d = component.displays[0];
+    expect(d.led).toBeTruthy();
+    expect(d.led!.pitch).toBe('P6');
+    expect(d.led!.canvas_in?.band_width).toBe(1920);
+    expect(d.led!.canvas_in?.mode).toBe('B');
+  });
+
+  it('adding the led-perimeter template seeds a default led profile', () => {
+    component.displays = [{ index: 0, name: 'TV', type: 'tv' }];
+    fixture.detectChanges();
+
+    const tpl = component.templates.find((t) => t.type === 'led-perimeter')!;
+    expect(tpl).toBeTruthy();
+    component.addFromTemplate(tpl);
+    fixture.detectChanges();
+
+    const added = component.displays.find((d) => d.type === 'led-perimeter');
+    expect(added?.led).toBeTruthy();
+    expect(added?.led?.zones).toBe('uniform');
+  });
+
+  it('computes ribbon width and band count (80 m P6 → 13333×160 → 7 bands)', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+
+    const d = component.displays[0];
+    // 80 m × (1000/6) = 13333.3 → round 13333
+    expect(component.getLedRibbonWidth(d)).toBe(13333);
+    expect(component.getLedBandCount(d)).toBe(7); // ceil(13333/1920)
+    expect(component.getLedCanvasHeight(d)).toBe(1120); // 7 × 160
+  });
+
+  it('parses comma-separated sides and emits change', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led!, sides: [40] } }];
+    fixture.detectChanges();
+
+    let emitted: DisplayConfig[] | undefined;
+    component.displaysChange.subscribe((v) => (emitted = v));
+
+    component.onLedSidesChange(component.displays[0], '40, 20, 20');
+    expect(component.displays[0].led!.sides).toEqual([40, 20, 20]);
+    expect(emitted).toBeDefined();
+  });
+
+  it('drops invalid side tokens (non-numeric, zero, negative)', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    component.onLedSidesChange(component.displays[0], '40, abc, 0, -5, 20');
+    expect(component.displays[0].led!.sides).toEqual([40, 20]);
+  });
+
+  it('spacing options = divisors of gcd(sides) ≥ 4 m (40/20/20 → 4,5,10,20; never 8)', () => {
+    const opts = component.getSpacingOptions({ ...ledDisplay, led: { ...ledDisplay.led! } });
+    expect(opts).toContain(4);
+    expect(opts).toContain(5);
+    expect(opts).toContain(10);
+    expect(opts).toContain(20);
+    expect(opts).not.toContain(8); // 8 ne divise pas 20 → exclu (PROP-014 §4)
+  });
+
+  it('spacing options always include the current value even if not a divisor', () => {
+    const led = { ...ledDisplay.led!, spacing_m: 7 };
+    const opts = component.getSpacingOptions({ ...ledDisplay, led });
+    expect(opts).toContain(7);
+  });
+
+  it('flags canvas as provisional until SPIKE confirms band_count', () => {
+    const provisional = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    expect(component.isCanvasProvisional(provisional)).toBe(true);
+
+    const confirmed = {
+      ...ledDisplay,
+      led: { ...ledDisplay.led!, canvas_in: { band_width: 1920, band_count: 7, order: 'top-to-bottom' as const, mode: 'B' as const } },
+    };
+    expect(component.isCanvasProvisional(confirmed)).toBe(false);
+  });
+
+  it('renders the provisional badge in the derived readout', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    const badge = fixture.nativeElement.querySelector('.led-provisional');
+    expect(badge).toBeTruthy();
+    expect(badge.textContent).toContain('provisoire');
+  });
+});

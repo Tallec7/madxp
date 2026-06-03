@@ -123,11 +123,27 @@ export interface TimeCategory {
  * Configuration complète d'un site Neopro.
  * Structure principale stockée localement et synchronisée avec le central.
  */
-/** Entrée de configuration d'un écran physique (PROP-002 / ADR-114). */
+/** Profil LED périmétrique consommé par le Pi (PROP-014 §3, §12). */
+export interface LedProfileConfig {
+  sides: number[];
+  pitch: string;
+  height: number;
+  spacing_m: number;
+  zones: 'uniform' | 'per-side';
+  canvas_in?: {
+    band_width: number;
+    band_count?: number;
+    order: 'top-to-bottom' | 'bottom-to-top';
+    mode: 'A' | 'B';
+  };
+}
+
+/** Entrée de configuration d'un écran physique (PROP-002 / ADR-114 / PROP-014). */
 export interface DisplayConfig {
-  type: string;        // 'tv', 'led-banner', 'secondary', 'totem', etc.
+  type: string;        // 'tv', 'led-banner', 'secondary', 'totem', 'led-perimeter', etc.
   resolution?: string;
   receiver?: { kind?: string; mac?: string } | null;
+  led?: LedProfileConfig | null; // présent pour type === 'led-perimeter'
 }
 
 export interface Configuration {

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DisplayConfig, ReceiverConfig, ReceiverInfo } from '../../../../../core/models';
+import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
 
 interface DisplayTemplate {
   icon: string;
@@ -19,11 +19,15 @@ interface DisplayTemplate {
   resolution: string;
 }
 
+/** Type d'écran LED périmétrique (PROP-014) — pilote l'affichage du panneau LED. */
+const LED_PERIMETER_TYPE = 'led-perimeter';
+
 const DISPLAY_TEMPLATES: DisplayTemplate[] = [
   { icon: '📺', label: 'TV classique', type: 'tv', resolution: '1920x1080' },
   { icon: '🖥️', label: 'Bandeau LED horizontal', type: 'led-banner', resolution: '1920x384' },
   { icon: '📱', label: 'Totem portrait', type: 'totem', resolution: '1080x1920' },
   { icon: '🖥️', label: 'Mur LED', type: 'led-wall', resolution: '1920x1080' },
+  { icon: '🟥', label: 'LED périmétrique (bord de terrain)', type: LED_PERIMETER_TYPE, resolution: '1920x1120' },
 ];
 
 @Component({
@@ -33,7 +37,8 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="displays-list">
-      <div class="display-row" *ngFor="let display of displays; trackBy: trackByIndex">
+      <div class="display-entry" *ngFor="let display of displays; trackBy: trackByIndex">
+      <div class="display-row">
         <span class="display-index">#{{ display.index }}</span>
         <span class="display-icon">{{ getDisplayIcon(display.type) }}</span>
         <input
@@ -139,6 +144,85 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
         >&times;</button>
         <span class="display-locked" *ngIf="display.index === 0" title="Ecran principal (non supprimable)">🔒</span>
       </div>
+
+      <!-- Panneau profil LED périmétrique — rendu UNIQUEMENT pour le type 'led-perimeter'
+           (PROP-014 §8 règle d'or : piloté par TYPE, pas par index). -->
+      <div class="led-panel" *ngIf="isLedPerimeter(display) && display.led" data-testid="led-panel">
+        <div class="led-grid">
+          <label class="led-field">
+            <span>Côtés (m)</span>
+            <input
+              class="form-input"
+              type="text"
+              data-testid="led-sides"
+              [ngModel]="getLedSidesInput(display)"
+              (ngModelChange)="onLedSidesChange(display, $event)"
+              placeholder="40, 20, 20"
+            />
+          </label>
+          <label class="led-field">
+            <span>Pas (pitch)</span>
+            <input
+              class="form-input"
+              type="text"
+              data-testid="led-pitch"
+              [(ngModel)]="display.led!.pitch"
+              (ngModelChange)="onDisplayChanged()"
+              placeholder="P6"
+            />
+          </label>
+          <label class="led-field">
+            <span>Hauteur dalle (px)</span>
+            <input
+              class="form-input"
+              type="number"
+              min="1"
+              data-testid="led-height"
+              [(ngModel)]="display.led!.height"
+              (ngModelChange)="onDisplayChanged()"
+            />
+          </label>
+          <label class="led-field">
+            <span>Espacement motif</span>
+            <select
+              class="form-input"
+              data-testid="led-spacing"
+              [(ngModel)]="display.led!.spacing_m"
+              (ngModelChange)="onDisplayChanged()"
+            >
+              <option *ngFor="let s of getSpacingOptions(display)" [ngValue]="s">{{ s }} m</option>
+            </select>
+          </label>
+          <label class="led-field">
+            <span>Zones</span>
+            <select
+              class="form-input"
+              data-testid="led-zones"
+              [(ngModel)]="display.led!.zones"
+              (ngModelChange)="onDisplayChanged()"
+            >
+              <option value="uniform">Même contenu partout</option>
+              <option value="per-side">Contenu par côté</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="led-derived" data-testid="led-derived">
+          Ruban
+          <strong>{{ getLedRibbonWidth(display) }}×{{ display.led!.height }}</strong>
+          → plié en
+          <strong>{{ getLedBandCount(display) }}</strong> bande(s) de
+          {{ display.led!.canvas_in?.band_width || 1920 }}×{{ display.led!.height }}
+          (canvas {{ display.led!.canvas_in?.band_width || 1920 }}×{{ getLedCanvasHeight(display) }})
+          <span
+            class="led-provisional"
+            *ngIf="isCanvasProvisional(display)"
+            title="Valeurs processeur provisoires — confirmées à l'installation (SPIKE-003)"
+            >⏳ pliage provisoire</span
+          >
+        </div>
+      </div>
+      </div>
     </div>
 
     <div class="add-display" *ngIf="!showCustomForm">
@@ -231,6 +315,66 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       font-size: 0.75rem;
       color: #94a3b8;
       white-space: nowrap;
+    }
+
+    /* LED perimeter profile panel (PROP-014) */
+    .display-entry {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .led-panel {
+      margin: 0 0 0.25rem 1.75rem;
+      padding: 0.625rem 0.75rem;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .led-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .led-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.7rem;
+      color: #9a3412;
+      font-weight: 600;
+    }
+
+    .led-field .form-input {
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #fdba74;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: #1e293b;
+      background: white;
+    }
+
+    .led-derived {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #7c2d12;
+    }
+
+    .led-derived strong {
+      color: #9a3412;
+    }
+
+    .led-provisional {
+      margin-left: 0.5rem;
+      font-size: 0.7rem;
+      color: #b45309;
+      background: #fef3c7;
+      padding: 0.0625rem 0.375rem;
+      border-radius: 4px;
     }
 
     .btn-remove {
@@ -482,7 +626,20 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
   `]
 })
 export class DisplaysEditorComponent {
-  @Input() displays: DisplayConfig[] = [];
+  private _displays: DisplayConfig[] = [];
+
+  /**
+   * Les displays de type `led-perimeter` reçoivent un profil `led` par défaut s'il
+   * manque (chargement d'anciens displays). Normaliser ici garantit que les bindings
+   * `display.led!.*` du panneau LED ne crashent jamais. PROP-014 §8.
+   */
+  @Input() set displays(value: DisplayConfig[]) {
+    this._displays = (value ?? []).map((d) => this.normalizeLed(d));
+  }
+  get displays(): DisplayConfig[] {
+    return this._displays;
+  }
+
   @Output() displaysChange = new EventEmitter<DisplayConfig[]>();
 
   @Input() connectedReceivers: ReceiverInfo[] = [];
@@ -657,6 +814,118 @@ export class DisplaysEditorComponent {
       this.activeDropdownIndex = null;
       this.cdr.markForCheck();
     }
+  }
+
+  // --- LED perimeter profile (PROP-014) ---
+
+  isLedPerimeter(display: DisplayConfig): boolean {
+    return display.type === LED_PERIMETER_TYPE;
+  }
+
+  /** Profil LED par défaut (canvas_in provisoire jusqu'au SPIKE — PROP-014 §13). */
+  private defaultLedProfile(): LedProfileConfig {
+    return {
+      sides: [40],
+      pitch: 'P6',
+      height: 160,
+      spacing_m: 10,
+      zones: 'uniform',
+      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+    };
+  }
+
+  /** Garantit qu'un display led-perimeter porte un profil led complet. */
+  private normalizeLed(display: DisplayConfig): DisplayConfig {
+    if (display.type !== LED_PERIMETER_TYPE) return display;
+    if (display.led) {
+      // Complète canvas_in si absent (rétro-compat profils partiels).
+      if (!display.led.canvas_in) {
+        return { ...display, led: { ...display.led, canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' } } };
+      }
+      return display;
+    }
+    return { ...display, led: this.defaultLedProfile() };
+  }
+
+  getLedSidesInput(display: DisplayConfig): string {
+    return (display.led?.sides ?? []).join(', ');
+  }
+
+  onLedSidesChange(display: DisplayConfig, raw: string): void {
+    if (!display.led) return;
+    const sides = raw
+      .split(',')
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    display.led.sides = sides;
+    this.onDisplayChanged();
+  }
+
+  /** Pas de pixel en mm (P6 → 6). Retourne 0 si non parsable. */
+  private pitchMm(pitch: string | undefined): number {
+    if (!pitch) return 0;
+    const mm = parseFloat(pitch.replace(/^P/i, ''));
+    return Number.isFinite(mm) && mm > 0 ? mm : 0;
+  }
+
+  /** Largeur du ruban déroulé (px) = Σ côtés (m) × (1000 / pitch_mm). PROP-014 §3. */
+  getLedRibbonWidth(display: DisplayConfig): number {
+    const led = display.led;
+    if (!led) return 0;
+    const mm = this.pitchMm(led.pitch);
+    if (mm === 0) return 0;
+    const sumSides = (led.sides ?? []).reduce((a, b) => a + b, 0);
+    return Math.round(sumSides * (1000 / mm));
+  }
+
+  private bandWidth(display: DisplayConfig): number {
+    return display.led?.canvas_in?.band_width || 1920;
+  }
+
+  /** Nb de bandes = ceil(ribbonWidth / bandWidth) — même calcul que fold(). */
+  getLedBandCount(display: DisplayConfig): number {
+    const ribbon = this.getLedRibbonWidth(display);
+    const bw = this.bandWidth(display);
+    if (ribbon <= 0 || bw <= 0) return 0;
+    return Math.ceil(ribbon / bw);
+  }
+
+  /** Hauteur du canvas plié = bandCount × hauteur dalle. */
+  getLedCanvasHeight(display: DisplayConfig): number {
+    return this.getLedBandCount(display) * (display.led?.height || 0);
+  }
+
+  /** Provisoire tant que le SPIKE n'a pas confirmé band_count (PROP-014 §13). */
+  isCanvasProvisional(display: DisplayConfig): boolean {
+    return !display.led?.canvas_in?.band_count;
+  }
+
+  /**
+   * Espacements proposés (m) : diviseurs entiers du PGCD des côtés ≥ 4 m → angles
+   * alignés + nombre entier de répétitions (PROP-014 §4, anti-drift : jamais saisie
+   * libre). La valeur courante est toujours incluse pour ne pas la perdre.
+   */
+  getSpacingOptions(display: DisplayConfig): number[] {
+    const led = display.led;
+    const current = led?.spacing_m;
+    const sides = (led?.sides ?? []).filter((s) => Number.isInteger(s) && s > 0);
+    const opts = new Set<number>();
+
+    if (sides.length > 0) {
+      const g = sides.reduce((a, b) => this.gcd(a, b));
+      for (let d = 1; d <= g; d++) {
+        if (g % d === 0 && d >= 4) opts.add(d);
+      }
+      // Fallback : si aucun diviseur ≥ 4 (petits côtés), proposer au moins le PGCD.
+      if (opts.size === 0 && g > 0) opts.add(g);
+    }
+
+    if (current && current > 0) opts.add(current);
+    return Array.from(opts).sort((a, b) => a - b);
+  }
+
+  private gcd(a: number, b: number): number {
+    return b === 0 ? a : this.gcd(b, a % b);
   }
 
   private getNextIndex(): number {
