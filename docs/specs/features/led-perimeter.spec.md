@@ -31,7 +31,9 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Validateur de format à l'upload** (`validateLedFormat`) : juge le format d'une vidéo club uploadée contre le ruban du profil, retourne un `format_notice` **non bloquant**.
 
-**Export** : moteur ffmpeg `applyFoldExport()` (vidéo club → canvas plié, `fit` dérivé du `layout` via `fitFromLayout()`) servi en **async** — table `led_export_jobs`, worker in-process `led-export-worker.service.ts` (claim `FOR UPDATE SKIP LOCKED`, `failStaleRunning` au boot), `POST /videos/:id/variants/:displayType/export` (202 `{job_id}`) + `GET /led-export-jobs/:jobId` (polling), bouton + lien de téléchargement dans le panneau variantes. Le studio rend directement plié (`LedPerimeterFolded`). CLI `npm run led:export`.
+**Export** : moteur ffmpeg `applyFoldExport()` (vidéo club → canvas plié, `fit` dérivé du `layout` via `fitFromLayout()`) servi en **async** — table `led_export_jobs`, worker in-process `led-export-worker.service.ts` (claim `FOR UPDATE SKIP LOCKED`, `failStaleRunning` au boot, source = variante led-perimeter **sinon** binaire principal de la vidéo), `POST /videos/:id/variants/:displayType/export` (202 `{job_id}`) + `GET /led-export-jobs/:jobId` (polling), bouton + lien de téléchargement dans le panneau variantes. Le studio rend directement plié (`LedPerimeterFolded`). CLI `npm run led:export`.
+
+**Banc d'essai** : depuis le panneau LED (`displays-editor`), l'opérateur plie une **vidéo au choix** (pas besoin de variante dédiée) avec le profil du club et la mise en page choisie (Répété/Défilant/Étalé/Centré) pour comparer le rendu avant de figer une variante — `POST /led-test-export/:siteId {video_id, layout}` réutilise le pipeline d'export (`led_export_jobs` + worker), avec réutilisation d'un ruban déjà plié pour le même `(vidéo × club × layout)`.
 
 **Hors périmètre de cette SPEC** : le live HDMI Pi→processeur, le SPIKE matériel (`canvas_in` + mode A/B).
 
@@ -56,6 +58,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
 - `npm run led:export` plie une vidéo (ex. testsrc 4800×800) au canvas exact du profil (1920×1120) — vérifié par ffprobe (`match: true`), sans OOM Chromium (ffmpeg pur).
 - Cliquer « Exporter le MP4 plié » sur une variante led-perimeter enqueue un job, affiche « Export en cours… », puis un lien de téléchargement quand le worker a fini (polling 2s). Un job `processing` orphelin (crash worker) est re-queué au boot suivant.
+- Dans le panneau LED, le **banc d'essai** « 🧪 Tester une vidéo » (visible seulement si un club est en contexte) plie une vidéo au choix avec la mise en page sélectionnée et affiche un lecteur + lien de téléchargement — utile pour comparer Répété/Défilant/Étalé/Centré sans créer de variante. Une vidéo sans variante led-perimeter est pliée depuis son binaire principal.
 
 ## Cas d'edge
 

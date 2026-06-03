@@ -21,6 +21,7 @@ import logger from '../config/logger';
 import {
   ledExportJobRepository,
   videoVariantRepository,
+  videoRepository,
   siteRepository,
   type LedExportJobRow,
 } from '../repositories';
@@ -81,13 +82,22 @@ async function resolveGeometry(siteId: string) {
 }
 
 async function performExport(job: LedExportJobRow): Promise<string> {
+  // Source à plier : la variante led-perimeter si elle existe (export "officiel"
+  // d'une vidéo déjà déclinée), sinon le binaire principal de la vidéo (banc
+  // d'essai — l'opérateur teste n'importe quelle vidéo sans variante dédiée).
   const variant = await videoVariantRepository.findByVideoAndDisplay(job.video_id, job.display_type);
-  if (!variant) {
-    throw new Error(`variante ${job.display_type} introuvable pour la vidéo ${job.video_id}`);
+  let sourcePath = variant?.storage_path ?? null;
+  if (!sourcePath) {
+    // findVideoById aliase `storage_path AS url` → le chemin FTP est dans `.url`.
+    const video = await videoRepository.findVideoById(job.video_id);
+    sourcePath = video?.url ?? null;
+  }
+  if (!sourcePath) {
+    throw new Error(`aucune source à plier pour la vidéo ${job.video_id}`);
   }
 
   const { geometry, cellPx } = await resolveGeometry(job.site_id);
-  const inputUrl = getVideoUrl(variant.storage_path);
+  const inputUrl = getVideoUrl(sourcePath);
 
   const tmpIn = path.join(os.tmpdir(), `led-export-in-${job.id}.mp4`);
   const tmpOut = path.join(os.tmpdir(), `led-export-out-${job.id}.mp4`);

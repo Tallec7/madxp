@@ -69,4 +69,31 @@ describe('Smoke — export LED async (PROP-014 étape 6)', () => {
     expect(repo).toMatch(/async findReady\(/);
     expect(repo).toMatch(/status = 'ready'/);
   });
+
+  // --- Banc d'essai (test bench) : plier une vidéo AU CHOIX pour ce club ---
+
+  it('le worker retombe sur le binaire principal quand la vidéo n’a pas de variante', () => {
+    const worker = read('services/led-export-worker.service.ts');
+    // Source = variante led-perimeter si elle existe, sinon vidéo principale.
+    expect(worker).toMatch(/findByVideoAndDisplay/);
+    expect(worker).toMatch(/videoRepository\.findVideoById/);
+    expect(worker).toMatch(/variant\?\.storage_path \?\? null/);
+  });
+
+  it('le controller expose enqueueLedTestExport (banc d’essai, vidéo au choix)', () => {
+    const ctrl = read('controllers/content-variant.controller.ts');
+    expect(ctrl).toMatch(/export const enqueueLedTestExport/);
+    expect(ctrl).toMatch(/normalizeLayout\(req\.body\?\.layout\)/);
+    // Fail-fast : le club doit avoir un profil LED.
+    expect(ctrl).toMatch(/getDisplays\(siteId\)/);
+  });
+
+  it('la route /led-test-export/:siteId est montée avec validation', () => {
+    const routes = read('routes/content.routes.ts');
+    expect(routes).toMatch(/router\.post\([^)]*\/led-test-export\/:siteId['"]/);
+    expect(routes).toMatch(/validate\(schemas\.ledTestExport\)/);
+    const validation = read('middleware/validation.ts');
+    expect(validation).toMatch(/ledTestExport:/);
+    expect(validation).toMatch(/repeated.*scrolling.*stretched.*centered/);
+  });
 });

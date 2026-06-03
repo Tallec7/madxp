@@ -414,6 +414,65 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * POST /content/sites/:siteId/led-test-export
+ * Banc d'essai LED : plie une vidéo AU CHOIX (par son id) pour le profil LED du
+ * club, dans la mise en page demandée — sans exiger de variante led-perimeter
+ * dédiée (le worker retombe sur le binaire principal). Permet à l'opérateur de
+ * comparer Répété / Défilant / Étalé / Centré avant de figer la variante.
+ * PROP-014 §6 / ADR-134.
+ */
+export const enqueueLedTestExport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+    const videoId = typeof req.body?.video_id === 'string' ? req.body.video_id : null;
+    if (!videoId) {
+      return res.status(400).json({ error: 'video_id requis' });
+    }
+
+    const video = await videoRepository.findVideoById(videoId);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    // Fail-fast : le club doit avoir un écran led-perimeter avec un profil complet.
+    const displays = await siteRepository.getDisplays(siteId);
+    const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+    if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
+      return res.status(400).json({ error: 'Ce club n’a pas de profil LED périmétrique configuré' });
+    }
+
+    const layout = normalizeLayout(req.body?.layout);
+
+    // Réutilisation : un ruban déjà plié pour ce (vidéo × club × mise en page) ?
+    const existing = await ledExportJobRepository.findReady(videoId, siteId, layout);
+    if (existing) {
+      logger.info('led-test-export: reusing ready export', { jobId: existing.id, videoId, siteId, layout });
+      return res.status(200).json({
+        job_id: existing.id,
+        status: 'ready',
+        output_url: existing.output_url,
+        reused: true,
+      });
+    }
+
+    const job = await ledExportJobRepository.create({
+      site_id: siteId,
+      video_id: videoId,
+      display_type: 'led-perimeter',
+      fit: fitFromLayout(layout),
+      layout,
+      created_by: req.user?.id ?? null,
+    });
+
+    logger.info('led-test-export: job enqueued', { jobId: job.id, videoId, siteId, layout });
+    res.status(202).json({ job_id: job.id, status: job.status });
+  } catch (error) {
+    logger.error('Error enqueuing LED test export:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise en file de l’aperçu' });
+  }
+};
+
+/**
  * GET /content/led-export-jobs/:jobId
  * Statut d'un job d'export LED (polling dashboard).
  */

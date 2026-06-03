@@ -546,6 +546,7 @@
     <app-displays-editor
       [displays]="siteDisplays"
       [connectedReceivers]="connectedReceivers"
+      [siteId]="siteId"
       (displaysChange)="saveDisplays($event)"
     ></app-displays-editor>
     <span class="saving-indicator" *ngIf="savingDisplays">Enregistrement...</span>

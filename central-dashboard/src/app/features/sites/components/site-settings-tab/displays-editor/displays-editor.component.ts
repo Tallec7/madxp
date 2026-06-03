@@ -7,10 +7,13 @@ import {
   ElementRef,
   ChangeDetectorRef,
   HostListener,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
+import { environment } from '../../../../../../environments/environment';
 
 interface DisplayTemplate {
   icon: string;
@@ -230,6 +233,44 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           </div>
           <div class="led-band-overflow" *ngIf="getLedBandOverflow(display) > 0">+{{ getLedBandOverflow(display) }} bandes</div>
         </div>
+
+        <!-- Banc d'essai (PROP-014 §6 / ADR-134) : plie une vidéo AU CHOIX avec ce
+             profil pour comparer les mises en page avant de figer une variante. -->
+        <div class="led-testbench" *ngIf="siteId" data-testid="led-testbench">
+          <button type="button" class="led-tb-toggle" (click)="toggleTestbench()" data-testid="led-tb-toggle">
+            🧪 Banc d'essai — tester une vidéo {{ tbOpen ? '▲' : '▼' }}
+          </button>
+          <div class="led-tb-body" *ngIf="tbOpen">
+            <p class="led-tb-hint">
+              Plie une vidéo au choix avec le profil ci-dessus. Compare Répété / Défilant /
+              Étalé / Centré sans toucher aux variantes.
+            </p>
+            <div class="led-tb-row">
+              <select class="form-input" data-testid="led-tb-video" [(ngModel)]="tbVideoId" [disabled]="tbBusy">
+                <option value="">— Choisir une vidéo —</option>
+                <option *ngFor="let v of tbVideos" [value]="v.id">{{ v.title }}</option>
+              </select>
+              <select class="form-input" data-testid="led-tb-layout" [(ngModel)]="tbLayout" [disabled]="tbBusy">
+                <option *ngFor="let opt of tbLayoutOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                data-testid="led-tb-run"
+                (click)="runTestExport()"
+                [disabled]="!tbVideoId || tbBusy || !ledProfileValid(display)"
+              >
+                {{ tbBusy ? 'Pliage…' : 'Générer l’aperçu' }}
+              </button>
+            </div>
+            <div class="led-tb-status" *ngIf="tbStatus" data-testid="led-tb-status">{{ tbStatus }}</div>
+            <div class="led-tb-error" *ngIf="tbError" data-testid="led-tb-error">{{ tbError }}</div>
+            <div class="led-tb-result" *ngIf="tbUrl" data-testid="led-tb-result">
+              <video class="led-tb-player" [src]="tbUrl" controls></video>
+              <a class="led-tb-download" [href]="tbUrl" target="_blank" rel="noopener" download>⬇ Télécharger le MP4 plié</a>
+            </div>
+          </div>
+        </div>
       </div>
       </div>
     </div>
@@ -416,6 +457,76 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
     .led-band-overflow {
       font-size: 0.7rem;
       color: #9a3412;
+    }
+
+    /* Banc d'essai LED */
+    .led-testbench {
+      margin-top: 0.625rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #fdba74;
+    }
+
+    .led-tb-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #9a3412;
+      padding: 0.125rem 0;
+    }
+
+    .led-tb-hint {
+      margin: 0.375rem 0;
+      font-size: 0.72rem;
+      color: #7c2d12;
+    }
+
+    .led-tb-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .led-tb-row .form-input {
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #fdba74;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #1e293b;
+      background: white;
+    }
+
+    .led-tb-status {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #9a3412;
+    }
+
+    .led-tb-error {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: #dc2626;
+    }
+
+    .led-tb-result {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+
+    .led-tb-player {
+      width: 100%;
+      max-width: 480px;
+      border-radius: 6px;
+      background: #000;
+    }
+
+    .led-tb-download {
+      font-size: 0.8125rem;
+      color: #2563eb;
     }
 
     .btn-remove {
@@ -666,8 +777,29 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
     }
   `]
 })
-export class DisplaysEditorComponent {
+export class DisplaysEditorComponent implements OnDestroy {
   private _displays: DisplayConfig[] = [];
+
+  /** Club consulté — requis pour le banc d'essai (le pliage se fait pour CE club). */
+  @Input() siteId: string | null = null;
+
+  // --- Banc d'essai LED (PROP-014 §6 / ADR-134) ---
+  readonly tbLayoutOptions: { value: string; label: string }[] = [
+    { value: 'repeated', label: 'Répété' },
+    { value: 'scrolling', label: 'Défilant' },
+    { value: 'stretched', label: 'Étalé' },
+    { value: 'centered', label: 'Centré' },
+  ];
+  tbOpen = false;
+  tbVideos: { id: string; title: string }[] = [];
+  private tbVideosLoaded = false;
+  tbVideoId = '';
+  tbLayout = 'repeated';
+  tbBusy = false;
+  tbStatus = '';
+  tbError = '';
+  tbUrl: string | null = null;
+  private tbPollTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Les displays de type `led-perimeter` reçoivent un profil `led` par défaut s'il
@@ -699,11 +831,113 @@ export class DisplaysEditorComponent {
 
   constructor(
     private elementRef: ElementRef,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) {}
+
+  ngOnDestroy(): void {
+    if (this.tbPollTimer) clearTimeout(this.tbPollTimer);
+  }
 
   trackByIndex(_: number, display: DisplayConfig): number {
     return display.index;
+  }
+
+  // --- Banc d'essai LED ---
+
+  /** Wrapper public de la validation profil (le template gate le bouton dessus). */
+  ledProfileValid(display: DisplayConfig): boolean {
+    return this.isLedProfileValid(display);
+  }
+
+  toggleTestbench(): void {
+    this.tbOpen = !this.tbOpen;
+    if (this.tbOpen && !this.tbVideosLoaded) this.loadTestVideos();
+  }
+
+  private loadTestVideos(): void {
+    this.tbVideosLoaded = true;
+    this.http
+      .get<{ id: string; title: string }[]>(`${environment.apiUrl}/videos/names`, {
+        withCredentials: true,
+      })
+      .subscribe({
+        next: (rows) => {
+          this.tbVideos = rows ?? [];
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tbVideosLoaded = false;
+          this.tbError = 'Impossible de charger la liste des vidéos';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  runTestExport(): void {
+    if (!this.siteId || !this.tbVideoId || this.tbBusy) return;
+    this.tbBusy = true;
+    this.tbError = '';
+    this.tbUrl = null;
+    this.tbStatus = 'Mise en file…';
+    this.http
+      .post<{ job_id: string; status: string; output_url?: string | null; reused?: boolean }>(
+        `${environment.apiUrl}/led-test-export/${this.siteId}`,
+        { video_id: this.tbVideoId, layout: this.tbLayout },
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: (res) => {
+          if (res.status === 'ready' && res.output_url) {
+            this.tbBusy = false;
+            this.tbStatus = '';
+            this.tbUrl = res.output_url;
+          } else {
+            this.tbStatus = 'Pliage en cours…';
+            this.pollTbExport(res.job_id);
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.tbBusy = false;
+          this.tbStatus = '';
+          this.tbError = err?.error?.error || 'Erreur lors du pliage';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  private pollTbExport(jobId: string): void {
+    // Cache-buster obligatoire (incident 2026-06-03) : sinon le navigateur sert le
+    // 1er statut depuis son cache et le polling ne voit jamais 'ready'.
+    this.http
+      .get<{ status: string; output_url: string | null; error_msg: string | null }>(
+        `${environment.apiUrl}/led-export-jobs/${jobId}?_=${Date.now()}`,
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: (job) => {
+          if (job.status === 'ready') {
+            this.tbBusy = false;
+            this.tbStatus = '';
+            this.tbUrl = job.output_url;
+          } else if (job.status === 'failed') {
+            this.tbBusy = false;
+            this.tbStatus = '';
+            this.tbError = job.error_msg || 'Pliage échoué';
+          } else {
+            this.tbStatus = job.status === 'processing' ? 'Pliage en cours…' : 'En file…';
+            this.tbPollTimer = setTimeout(() => this.pollTbExport(jobId), 2000);
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.tbBusy = false;
+          this.tbStatus = '';
+          this.tbError = 'Erreur de suivi du job';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   getDisplayIcon(type: string): string {
