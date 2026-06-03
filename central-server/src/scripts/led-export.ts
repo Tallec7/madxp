@@ -24,7 +24,8 @@ import {
   computeRibbonDimensions,
   computeFoldGeometry,
   applyFoldExport,
-  type LedExportFit,
+  normalizeLayout,
+  type LedExportLayout,
 } from '../services/led-fold.service';
 
 interface Args {
@@ -32,7 +33,8 @@ interface Args {
   pitchMm: number;
   height: number;
   bandWidth: number;
-  fit: LedExportFit;
+  spacingM: number;
+  layout: LedExportLayout;
   inPath: string | null;
   outPath: string;
 }
@@ -49,11 +51,20 @@ function parseArgs(argv: string[]): Args {
   const pitchMm = Number(get('--pitch') ?? 6);
   const height = Number(get('--height') ?? 160);
   const bandWidth = Number(get('--band-width') ?? 1920);
-  const fitArg = get('--fit') ?? 'contain';
-  const fit: LedExportFit = fitArg === 'stretch' || fitArg === 'cover' ? fitArg : 'contain';
+  const spacingM = Number(get('--spacing') ?? 10);
+  const layout = normalizeLayout(get('--layout') ?? 'repeated');
   const inPath = get('--in') ?? null;
-  const outPath = get('--out') ?? path.join(os.tmpdir(), `led-export-${fit}.mp4`);
-  return { sides: sides.length ? sides : [40], pitchMm, height, bandWidth, fit, inPath, outPath };
+  const outPath = get('--out') ?? path.join(os.tmpdir(), `led-export-${layout}.mp4`);
+  return {
+    sides: sides.length ? sides : [40],
+    pitchMm,
+    height,
+    bandWidth,
+    spacingM: Number.isFinite(spacingM) && spacingM > 0 ? spacingM : 10,
+    layout,
+    inPath,
+    outPath,
+  };
 }
 
 function runFfmpeg(args: string[]): Promise<void> {
@@ -96,6 +107,8 @@ async function main(): Promise<void> {
     height: args.height,
   });
   const geometry = computeFoldGeometry({ ribbonWidth, ribbonHeight, bandWidth: args.bandWidth });
+  const pxPerMeter = 1000 / args.pitchMm;
+  const cellPx = Math.max(1, Math.round(args.spacingM * pxPerMeter));
 
   logger.info('led-export: profil', {
     sides: args.sides,
@@ -104,7 +117,9 @@ async function main(): Promise<void> {
     ribbonHeight,
     bandCount: geometry.bandCount,
     canvas: `${geometry.canvasWidth}×${geometry.canvasHeight}`,
-    fit: args.fit,
+    layout: args.layout,
+    spacingM: args.spacingM,
+    cellPx,
   });
 
   // Source : fichier fourni, sinon un testsrc 4800×800 (créa club typique 6:1).
@@ -125,7 +140,8 @@ async function main(): Promise<void> {
   const result = await applyFoldExport(geometry, {
     inputPath,
     outputPath: args.outPath,
-    fit: args.fit,
+    layout: args.layout,
+    cellPx,
   });
 
   if (!result.success) {

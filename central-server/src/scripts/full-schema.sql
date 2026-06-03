@@ -3155,6 +3155,7 @@ CREATE TABLE public.led_export_jobs (
     video_id uuid NOT NULL,
     display_type character varying(50) NOT NULL,
     fit character varying(16) DEFAULT 'contain'::character varying NOT NULL,
+    layout character varying(16),
     status character varying(16) DEFAULT 'queued'::character varying NOT NULL,
     output_url text,
     error_msg text,

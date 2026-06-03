@@ -1,7 +1,7 @@
 import { QueryResultRow } from 'pg';
 import { query } from '../config/database';
 import { BaseRepository } from './base.repository';
-import type { LedExportFit } from '../services/led-fold.service';
+import type { LedExportFit, LedExportLayout } from '../services/led-fold.service';
 
 /**
  * File de jobs d'export LED (PROP-014 étape 6 / ADR-134). Pollée par
@@ -17,6 +17,8 @@ export interface LedExportJobRow extends QueryResultRow {
   video_id: string;
   display_type: string;
   fit: LedExportFit;
+  /** Mise en page réelle (pavage). NULL = legacy (utilise `fit`). PROP-014 §4. */
+  layout: LedExportLayout | null;
   status: LedExportStatus;
   output_url: string | null;
   error_msg: string | null;
@@ -30,6 +32,7 @@ export interface CreateLedExportJobInput {
   video_id: string;
   display_type: string;
   fit: LedExportFit;
+  layout: LedExportLayout;
   created_by: string | null;
 }
 
@@ -40,10 +43,10 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
 
   async create(input: CreateLedExportJobInput): Promise<LedExportJobRow> {
     const result = await query<LedExportJobRow>(
-      `INSERT INTO led_export_jobs (site_id, video_id, display_type, fit, status, created_by)
-       VALUES ($1, $2, $3, $4, 'queued', $5)
+      `INSERT INTO led_export_jobs (site_id, video_id, display_type, fit, layout, status, created_by)
+       VALUES ($1, $2, $3, $4, $5, 'queued', $6)
        RETURNING *`,
-      [input.site_id, input.video_id, input.display_type, input.fit, input.created_by]
+      [input.site_id, input.video_id, input.display_type, input.fit, input.layout, input.created_by]
     );
     return result.rows[0];
   }
@@ -57,22 +60,22 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
   }
 
   /**
-   * Dernier export PRÊT pour un (vidéo × club × fit) donné — permet de réutiliser
-   * un ruban déjà plié plutôt que de replier (la source à plat est globale, le
-   * ruban produit est propre au club). Retourne null si aucun n'est prêt.
+   * Dernier export PRÊT pour un (vidéo × club × mise en page) donné — permet de
+   * réutiliser un ruban déjà plié plutôt que de replier (la source à plat est
+   * globale, le ruban produit est propre au club). Retourne null si aucun n'est prêt.
    */
   async findReady(
     videoId: string,
     siteId: string,
-    fit: LedExportFit
+    layout: LedExportLayout
   ): Promise<LedExportJobRow | null> {
     const result = await query<LedExportJobRow>(
       `SELECT * FROM led_export_jobs
-       WHERE video_id = $1 AND site_id = $2 AND fit = $3
+       WHERE video_id = $1 AND site_id = $2 AND layout = $3
          AND status = 'ready' AND output_url IS NOT NULL
        ORDER BY updated_at DESC
        LIMIT 1`,
-      [videoId, siteId, fit]
+      [videoId, siteId, layout]
     );
     return result.rows[0] ?? null;
   }

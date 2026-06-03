@@ -25,7 +25,7 @@ import {
   type LedExportJobRow,
 } from '../repositories';
 import { getVideoUrl, uploadVideoFromDisk } from './storage.service';
-import { computeRibbonDimensions, computeFoldGeometry, applyFoldExport } from './led-fold.service';
+import { computeRibbonDimensions, computeFoldGeometry, applyFoldExport, normalizeLayout } from './led-fold.service';
 
 const POLL_INTERVAL_MS = 2_000;
 const STALE_PROCESSING_MAX_AGE_MIN = 15;
@@ -73,7 +73,11 @@ async function resolveGeometry(siteId: string) {
     pitchMm,
     height: led.height,
   });
-  return computeFoldGeometry({ ribbonWidth, ribbonHeight, bandWidth });
+  const geometry = computeFoldGeometry({ ribbonWidth, ribbonHeight, bandWidth });
+  // Cadence du motif en px (= espacement_m × px/m) pour le pavage 'repeated'/'scrolling'.
+  const spacingM = typeof led.spacing_m === 'number' && led.spacing_m > 0 ? led.spacing_m : 10;
+  const cellPx = Math.max(1, Math.round(spacingM * (1000 / pitchMm)));
+  return { geometry, cellPx };
 }
 
 async function performExport(job: LedExportJobRow): Promise<string> {
@@ -82,7 +86,7 @@ async function performExport(job: LedExportJobRow): Promise<string> {
     throw new Error(`variante ${job.display_type} introuvable pour la vidéo ${job.video_id}`);
   }
 
-  const geometry = await resolveGeometry(job.site_id);
+  const { geometry, cellPx } = await resolveGeometry(job.site_id);
   const inputUrl = getVideoUrl(variant.storage_path);
 
   const tmpIn = path.join(os.tmpdir(), `led-export-in-${job.id}.mp4`);
@@ -95,7 +99,8 @@ async function performExport(job: LedExportJobRow): Promise<string> {
     const result = await applyFoldExport(geometry, {
       inputPath: tmpIn,
       outputPath: tmpOut,
-      fit: job.fit,
+      layout: normalizeLayout(job.layout),
+      cellPx,
     });
     if (!result.success) {
       throw new Error(result.error ?? 'fold export failed');
@@ -124,7 +129,7 @@ async function processOne(): Promise<boolean> {
     site_id: job.site_id,
     video_id: job.video_id,
     display_type: job.display_type,
-    fit: job.fit,
+    layout: job.layout ?? `fit:${job.fit}`,
   });
 
   try {
