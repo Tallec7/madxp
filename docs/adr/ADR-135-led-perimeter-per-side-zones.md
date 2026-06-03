@@ -8,6 +8,28 @@
 
 ---
 
+## 🔄 Révision 2026-06-03 — le « par côté » vit sur la VARIANTE d'une vidéo, pas sur l'écran
+
+**Validation UX avec Daisy** : choisir la vidéo de chaque côté **dans les Réglages de l'écran** (modèle initial ci-dessous, `display.led.side_zones`) est **incohérent** avec le reste de l'appli — le contenu se gère côté **Contenu** (boucle + à la demande), et la déclinaison d'une vidéo par type d'écran se fait via les **variantes (« visuel 2nd écran »)**. Le modèle de **contenu** est donc corrigé (la **géométrie** #1089 et la **compose** #1091 restent inchangées) :
+
+- **L'écran (`display.led`) ne porte que la GÉOMÉTRIE** : `sides`, `pitch`, `height`, `spacing_m`, `canvas_in`. On **retire** `zones` et `side_zones` de l'écran.
+- **Le « par côté » est une propriété de la VARIANTE led-perimeter d'une vidéo.** Pour une vidéo donnée (dans une **boucle** OU jouée **à la demande**), sa déclinaison LED est :
+  - **uniforme** : 1 fichier plié, répété sur tous les côtés (comportement actuel) ;
+  - **par côté** : une vidéo (de la bibliothèque) assignée à chaque côté.
+- **Où on clique** : dans le panneau **variantes** de la vidéo (`video-variant-panel`, côté Contenu), pas dans les Réglages. Il connaît déjà les côtés du site (via `siteDisplays`).
+- **Source de la compose** (`applyPerSideFold`, #1091) : `inputs[i]` = la vidéo assignée au côté `i` **dans la variante** (au lieu des `side_zones` de l'écran).
+
+**Conséquences sur le code déjà livré :**
+
+- **#1088 supersédé** : le sélecteur « vidéo par côté » + le toggle `zones` dans `displays-editor`, et le champ `led.side_zones` (modèle + Joi) → **à retirer** ; le « par côté » est reporté sur la variante. PR de rework dédiée.
+- **#1089 (géométrie) + #1091 (compose ffmpeg)** : **conservés tels quels**.
+
+**Inchangé** : pliage **par côté** (géométrie, #1089) ; **1 vidéo par côté en v1** (rotation/playlist par côté = v2) ; angles respectés.
+
+> Le reste de l'ADR ci-dessous décrit le **modèle initial** (`side_zones` sur l'écran). Conservé pour l'historique, **supersédé sur le point « où vit le contenu par côté »** par cette révision.
+
+---
+
 ## Contexte
 
 Le moteur de pliage (ADR-134, `led-fold.service.ts`) traite le périmètre comme **un ruban continu unique** : `computeRibbonDimensions` calcule `largeur = Σ côtés × (1000/pitch_mm)`, puis `computeFoldGeometry` découpe ce ruban en bandes de `band_width` (1920 px par défaut).
