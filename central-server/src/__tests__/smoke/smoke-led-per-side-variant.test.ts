@@ -59,4 +59,16 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
   it('le type SideFile est exporté par le barrel repositories', () => {
     expect(read('repositories/index.ts')).toMatch(/type VideoVariantSideFile/);
   });
+
+  it('le worker d’export compose PAR CÔTÉ quand la variante a des side_files', () => {
+    const worker = read('services/led-export-worker.service.ts');
+    // Branche per-side : side_files → applyPerSideFold (géométrie par côté).
+    expect(worker).toMatch(/computeFoldGeometryPerSide/);
+    expect(worker).toMatch(/applyPerSideFold/);
+    expect(worker).toMatch(/async function performPerSideExport/);
+    // Détection : side_files non vide → composition par côté.
+    expect(worker).toMatch(/sideFiles\.length > 0/);
+    // Repli : un côté sans fichier retombe sur la source uniforme.
+    expect(worker).toMatch(/\?\?\s*uniformFallback/);
+  });
 });
