@@ -1,3 +1,9 @@
+# [4.8.0](https://github.com/Tallec7/madxp/compare/v4.7.0...v4.8.0) (2026-06-03)
+
+### Features
+
+- **led:** refonte panneau LED — côtés en cases, pitch menu, section Avancé ([#1086](https://github.com/Tallec7/madxp/issues/1086)) ([2e30543](https://github.com/Tallec7/madxp/commit/2e30543a7e9c3f0d2b448f4b0547753d3f74bf19))
+
 # [4.7.0](https://github.com/Tallec7/madxp/compare/v4.6.0...v4.7.0) (2026-06-03)
 
 ### Features
