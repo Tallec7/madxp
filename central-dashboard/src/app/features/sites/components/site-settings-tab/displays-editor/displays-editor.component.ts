@@ -176,15 +176,21 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
             />
           </label>
           <label class="led-field">
-            <span>Hauteur dalle (px)</span>
+            <span>Hauteur dalle (cm)</span>
             <input
+              #heightCmInput
               class="form-input"
               type="number"
               min="1"
+              step="1"
               data-testid="led-height"
-              [(ngModel)]="display.led!.height"
-              (blur)="commitLed(display)"
+              [ngModel]="getLedHeightCm(display)"
+              (change)="onLedHeightCmChange(display, heightCmInput.value)"
+              placeholder="96"
             />
+            <small class="led-subhint" data-testid="led-height-rows"
+              >= {{ display.led!.height }} rangées @ {{ display.led!.pitch }}</small
+            >
           </label>
           <label class="led-field">
             <span>Espacement motif</span>
@@ -406,6 +412,12 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       font-weight: 400;
       color: #1e293b;
       background: white;
+    }
+
+    .led-subhint {
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: #b45309;
     }
 
     .led-derived {
@@ -1163,6 +1175,33 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (!pitch) return 0;
     const mm = parseFloat(pitch.replace(/^P/i, ''));
     return Number.isFinite(mm) && mm > 0 ? mm : 0;
+  }
+
+  /**
+   * Hauteur dalle exprimée en cm pour la saisie (un moldu mesure sa dalle en cm,
+   * pas en rangées de LED). En interne le modèle reste en `height` = rangées px
+   * (= la matrice réelle) ; on dérive cm = rangées × pitch_mm / 10. PROP-014 §4.
+   */
+  getLedHeightCm(display: DisplayConfig): number {
+    const mm = this.pitchMm(display.led?.pitch);
+    const rows = display.led?.height;
+    if (mm === 0 || !(typeof rows === 'number' && rows > 0)) return 0;
+    return Math.round((rows * mm) / 10);
+  }
+
+  /**
+   * Saisie physique en cm → rangées de LED (entier, via le pitch). Une dalle ne
+   * peut pas avoir une fraction de rangée → on arrête à l'entier le plus proche
+   * (le sous-libellé « = N rangées » affiche le résultat effectif).
+   */
+  onLedHeightCmChange(display: DisplayConfig, raw: string): void {
+    const led = display.led;
+    if (!led) return;
+    const cm = parseFloat(String(raw).replace(',', '.'));
+    const mm = this.pitchMm(led.pitch);
+    if (!Number.isFinite(cm) || cm <= 0 || mm === 0) return;
+    led.height = Math.max(1, Math.round((cm * 10) / mm));
+    this.commitLed(display);
   }
 
   /** Largeur du ruban déroulé (px) = Σ côtés (m) × (1000 / pitch_mm). PROP-014 §3. */

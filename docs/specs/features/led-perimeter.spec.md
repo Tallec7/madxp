@@ -41,6 +41,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 - **Topologie en données, jamais en code** : un site décrit son périmètre par `sides` (1 à 8 côtés en mètres) + `pitch` (ex. `P6` = 6 mm). `largeur_ruban = Σ côtés × (1000 / pitch_mm)`. On ne code pas par cas (1 côté, 3 côtés…).
 - **Espacement contraint, jamais saisie libre** : la cadence du motif (`spacing_m`) est un dropdown limité aux diviseurs alignés sur les côtés (angles alignés + répétitions entières — PROP-014 §4). Leçon anti-drift.
+- **Saisie en unités physiques (moldu), px en interne** : l'opérateur terrain mesure sa dalle en **cm** — le champ « Hauteur dalle » est en cm. Le modèle DB `height` reste en **rangées px** (= la matrice LED réelle, requise par le pliage/render). Conversion : `rangées = round(cm × 10 / pitch_mm)` (une dalle n'a pas de fraction de rangée → arrondi entier, le sous-libellé « = N rangées » montre le résultat effectif). Symétrique de la largeur (`côtés` en m → px). Zéro migration : `height` reste px côté serveur.
 - **Le contenu ne traverse jamais un angle** : chaque côté est une zone naturelle. `zones: 'uniform'` (même contenu partout) ou `'per-side'` (par côté).
 - **`canvas_in` = config processeur, provisoire jusqu'au SPIKE** : `band_width` (défaut 1920), `band_count` (dérivé), `order` (`top-to-bottom` | `bottom-to-top`, **même enum que `fold()`**), `mode` (`A` plug&play | `B` pixel-perfect — tranché post-SPIKE). Défauts provisoires → aucune refonte quand le SPIKE remplit les vraies valeurs.
 - **Studio rend directement plié, club passe par `fold()`** (ADR-134) : le contenu généré par le studio est rendu directement dans le canvas plié (≤ `band_width × N`) ; la vidéo finie fournie par un club est pliée via ffmpeg. Ne jamais rastériser un ruban plat ultra-wide dans Chromium (OOM ≥ ~10000px).
@@ -50,7 +51,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 ## Comportements observables
 
-- Saisir un profil `sides:[40,20,20] pitch:P6 height:160` dans le dashboard affiche en direct : « Ruban 13333×160 → plié en 7 bandes (canvas 1920×1120) » + badge ⏳ provisoire tant que `band_count` n'est pas confirmé.
+- Saisir un profil `sides:[40,20,20] pitch:P6`, hauteur **96 cm** (→ `height:160` rangées, affiché « = 160 rangées @ P6 ») dans le dashboard affiche en direct : « Ruban 13333×160 → plié en 7 bandes (canvas 1920×1120) » + badge ⏳ provisoire tant que `band_count` n'est pas confirmé.
 - `computeFoldGeometry({ ribbonWidth:13344, ribbonHeight:160, bandWidth:1920 })` → 7 bandes, canvas 1920×1120, dernière bande 1824px (padding 96px).
 - `npm run led:ribbon-poc --folded` rend la composition pliée à toutes les largeurs sans OOM (sortie ≤ 1920×N) ; sans `--folded`, le ruban plat échoue dès ~10000px (preuve ADR-134).
 - Le panneau LED n'apparaît **que** pour un display `type: 'led-perimeter'` — une 2ᵉ TV reste inchangée.
