@@ -71,4 +71,10 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
     // Repli : un côté sans fichier retombe sur la source uniforme.
     expect(worker).toMatch(/\?\?\s*uniformFallback/);
   });
+
+  it('l’enrichissement déploiement SAUTE les variantes par côté sans fichier (anti MP4 noir)', () => {
+    const enrich = read('utils/config-secondary-variants.ts');
+    // Garde-fou : ni storage_path ni filename → on n'injecte pas `videos-.../null`.
+    expect(enrich).toMatch(/if \(!v\.storage_path && !v\.filename\) continue;/);
+  });
 });
