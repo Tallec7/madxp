@@ -1,3 +1,9 @@
+# [4.5.0](https://github.com/Tallec7/madxp/compare/v4.4.1...v4.5.0) (2026-06-03)
+
+### Features
+
+- **led:** pliage par mise en page réelle — pavage du motif (Répété/Défilant/Étalé/Centré) ([#1083](https://github.com/Tallec7/madxp/issues/1083)) ([95e81cc](https://github.com/Tallec7/madxp/commit/95e81cc048fb25a5ad645707d8c6e21475ba3874))
+
 ## [4.4.1](https://github.com/Tallec7/madxp/compare/v4.4.0...v4.4.1) (2026-06-03)
 
 ### Bug Fixes
