@@ -67,8 +67,11 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     httpMock = TestBed.inject(HttpTestingController);
 
     // ngOnInit → GET variants (flush vide, on injecte ensuite à la main).
+    // Par défaut la vidéo est rattachée à un site (cas courant, export possible).
     fixture.detectChanges();
-    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+    httpMock
+      .expectOne(`${environment.apiUrl}/videos/vid-1/variants`)
+      .flush({ variants: [], video_site_id: 'site-1' });
   });
 
   afterEach(() => httpMock.verify());
@@ -177,6 +180,26 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
 
     openVariant(makeVariant('led-perimeter'));
     expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeTruthy();
+  });
+
+  it('vidéo globale (sans site) : bouton export MASQUÉ + note explicative', () => {
+    component.videoSiteId = null; // vidéo admin/globale
+    openVariant(makeVariant('led-perimeter'));
+
+    expect(component.canExportLed).toBe(false);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeNull();
+    const hint = fixture.nativeElement.querySelector('[data-testid="led-export-hint"]');
+    expect(hint).toBeTruthy();
+    expect(hint.textContent).toContain('rattachée à aucun site');
+  });
+
+  it('vidéo rattachée à un site : bouton export visible, pas de note', () => {
+    component.videoSiteId = 'site-1';
+    openVariant(makeVariant('led-perimeter'));
+
+    expect(component.canExportLed).toBe(true);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-hint"]')).toBeNull();
   });
 
   it('exportLed : enqueue → poll → lien de téléchargement quand ready', () => {

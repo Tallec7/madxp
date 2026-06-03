@@ -379,3 +379,13 @@
   font-size: 0.78rem;
   color: #dc2626;
 }
+
+/* Note export indisponible (vidéo globale sans site) */
+.led-export-hint {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #fed7aa;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+}

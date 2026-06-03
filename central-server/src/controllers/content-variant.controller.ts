@@ -74,6 +74,9 @@ export const getVideoVariants = async (req: AuthRequest, res: Response) => {
 
     res.json({
       video_id: id,
+      // Site propriétaire de la vidéo (null pour les vidéos globales/admin). Le
+      // dashboard s'en sert pour masquer l'export LED, qui exige un profil de site.
+      video_site_id: video.uploaded_for_site_id ?? null,
       variants: variants.map(v => ({
         ...v,
         url: getVideoUrl(v.storage_path),

@@ -53,4 +53,9 @@ describe('Smoke — export LED async (PROP-014 étape 6)', () => {
     expect(routes).toMatch(/router\.post\([^)]*\/variants\/:displayType\/export['"]/);
     expect(routes).toMatch(/router\.get\([^)]*\/led-export-jobs\/:jobId['"]/);
   });
+
+  it('getVideoVariants expose video_site_id (le dashboard masque l’export pour les vidéos globales)', () => {
+    const ctrl = read('controllers/content-variant.controller.ts');
+    expect(ctrl).toMatch(/video_site_id:\s*video\.uploaded_for_site_id/);
+  });
 });

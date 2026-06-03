@@ -102,10 +102,12 @@
             {{ notice.message }}
           </div>
 
-          <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement. -->
+          <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement.
+               Masqué pour les vidéos globales (sans site) : l'export exige le profil
+               LED d'un site pour connaître les dimensions du ruban. -->
           <div
             class="led-export-row"
-            *ngIf="isLedPerimeter(variant.display_type)"
+            *ngIf="isLedPerimeter(variant.display_type) && canExportLed"
             data-testid="led-export-row"
           >
             <button
@@ -134,6 +136,15 @@
               *ngIf="exportStates[variant.display_type]?.status === 'failed'"
               >échec</span
             >
+          </div>
+
+          <!-- Vidéo globale (sans site) : l'export plié est indisponible. -->
+          <div
+            class="led-export-hint"
+            *ngIf="isLedPerimeter(variant.display_type) && !canExportLed"
+            data-testid="led-export-hint"
+          >
+            Export plié indisponible : cette vidéo n'est rattachée à aucun site (profil LED requis).
           </div>
         </div>
       </div>

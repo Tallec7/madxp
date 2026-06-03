@@ -89,6 +89,8 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   formatNotices: Record<string, LedFormatNotice> = {};
   /** État d'export plié async par display_type (PROP-014 §6 / étape 6). */
   exportStates: Record<string, LedExportState> = {};
+  /** Site propriétaire de la vidéo (null = globale/admin). L'export LED l'exige. */
+  videoSiteId: string | null = null;
   private exportPollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
   readonly layoutOptions = LAYOUT_OPTIONS;
@@ -159,13 +161,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
 
   loadVariants(): void {
     this.loading = true;
-    this.http.get<{ variants: VideoVariant[] }>(
+    this.http.get<{ variants: VideoVariant[]; video_site_id?: string | null }>(
       `${environment.apiUrl}/videos/${this.videoId}/variants`,
       { withCredentials: true }
     ).subscribe({
       next: (response) => {
         this.loading = false;
         this.loaded = true;
+        this.videoSiteId = response.video_site_id ?? null;
         this.variants = response.variants.filter(v => v.display_type !== 'tv');
         this.emitChange();
       },
@@ -356,6 +359,11 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   isExporting(type: string): boolean {
     const s = this.exportStates[type]?.status;
     return s === 'queued' || s === 'processing';
+  }
+
+  /** L'export plié n'est possible que si la vidéo est rattachée à un site (profil LED). */
+  get canExportLed(): boolean {
+    return !!this.videoSiteId;
   }
 
   exportButtonLabel(type: string): string {
