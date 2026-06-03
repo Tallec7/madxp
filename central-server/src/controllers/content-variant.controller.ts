@@ -2,7 +2,7 @@ import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
 import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
-import type { DisplayType, VariantLayout } from '../repositories';
+import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
@@ -76,7 +76,10 @@ export const getVideoVariants = async (req: AuthRequest, res: Response) => {
       video_id: id,
       variants: variants.map(v => ({
         ...v,
-        url: getVideoUrl(v.storage_path),
+        // storage_path est nullable depuis ADR-135 (variante « par côté pure »).
+        url: v.storage_path ? getVideoUrl(v.storage_path) : null,
+        // Résout les URLs publiques des fichiers par côté (ADR-135).
+        side_files: (v.side_files ?? []).map((s) => ({ ...s, url: getVideoUrl(s.storage_path) })),
       })),
     });
   } catch (error) {
@@ -336,6 +339,100 @@ export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) 
   } catch (error) {
     logger.error('Error updating video variant layout:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la mise en page' });
+  }
+};
+
+/**
+ * POST /content/videos/:id/variants/led-perimeter/sides/:sideIndex
+ * Upload le fichier vidéo d'UN côté d'une variante led-perimeter « par côté »
+ * (ADR-135). Stocke le fichier puis upsert l'élément dans `side_files`.
+ */
+export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) => {
+  const file = req.file;
+  const tempFilePath = file?.path;
+  try {
+    if (!file) {
+      return res.status(400).json({ error: 'Aucun fichier vidéo fourni' });
+    }
+    if (!file.size || file.size === 0) {
+      if (tempFilePath) cleanupTempFile(tempFilePath);
+      return res.status(400).json({ error: 'Le fichier vidéo est vide (0 octets)' });
+    }
+
+    const { id, displayType } = req.params;
+    const sideIndex = parseInt(req.params.sideIndex, 10);
+    if (displayType !== 'led-perimeter') {
+      return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
+    }
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    const correctedOriginalname = fixMulterEncoding(file.originalname);
+    const variantFilename = await generateUniqueFilename(correctedOriginalname);
+    const checksum = tempFilePath
+      ? await calculateChecksumFromFile(tempFilePath)
+      : calculateChecksum(file.buffer);
+    const storagePath = `variants/${id}/led-perimeter/side-${sideIndex}/${variantFilename}`;
+
+    const uploadResult = tempFilePath
+      ? await uploadVideoFromDisk(tempFilePath, file.size, storagePath, file.mimetype)
+      : await uploadVideo(file.buffer, storagePath, file.mimetype);
+    if (!uploadResult) {
+      return res.status(500).json({ error: 'Erreur lors de l’upload du fichier de côté' });
+    }
+
+    const width = req.body.width ? parseInt(req.body.width, 10) : null;
+    const height = req.body.height ? parseInt(req.body.height, 10) : null;
+
+    const sideFile: VideoVariantSideFile = {
+      side_index: sideIndex,
+      filename: variantFilename,
+      original_name: correctedOriginalname,
+      storage_path: uploadResult.path,
+      file_size: file.size,
+      checksum,
+      mime_type: file.mimetype,
+      width,
+      height,
+    };
+
+    const variant = await videoVariantRepository.setSideFile(id, displayType as DisplayType, sideFile);
+    logger.info('led side file uploaded', { videoId: id, sideIndex, filename: variantFilename });
+
+    // NB : pas de dispatch vers les Pi ici — une variante « par côté » ne se
+    // déploie qu'une fois COMPOSÉE en canvas plié (brique C/D, ADR-135).
+
+    res.status(201).json({
+      ...variant,
+      side_files: (variant.side_files ?? []).map((s) => ({ ...s, url: getVideoUrl(s.storage_path) })),
+    });
+  } catch (error) {
+    logger.error('Error uploading led side file:', error);
+    res.status(500).json({ error: 'Erreur lors de l’upload du fichier de côté' });
+  } finally {
+    if (tempFilePath) cleanupTempFile(tempFilePath);
+  }
+};
+
+/**
+ * DELETE /content/videos/:id/variants/led-perimeter/sides/:sideIndex
+ * Retire le fichier d'un côté (ADR-135). Supprime la variante si plus rien.
+ */
+export const deleteVideoVariantSide = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+    const sideIndex = parseInt(req.params.sideIndex, 10);
+    if (displayType !== 'led-perimeter') {
+      return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
+    }
+    const variant = await videoVariantRepository.clearSideFile(id, displayType as DisplayType, sideIndex);
+    res.json({ ok: true, side_files: variant?.side_files ?? [] });
+  } catch (error) {
+    logger.error('Error deleting led side file:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du fichier de côté' });
   }
 };
 
