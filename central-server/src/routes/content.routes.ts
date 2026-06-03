@@ -37,6 +37,9 @@ router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'
 router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
 // PROP-014 §8 / ADR-134 : mise en page de la variante LED (métadonnée, pas de re-upload).
 router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.updateVideoVariantLayout);
+// PROP-014 §6 / étape 6 : export plié async (enqueue + polling statut).
+router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.enqueueLedExport);
+router.get('/led-export-jobs/:jobId', authenticate, adminRateLimit, contentController.getLedExportJob);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 
 // Image to video conversion

@@ -289,6 +289,12 @@ export {
   type VariantLayout,
 } from './video-variant.repository';
 export {
+  ledExportJobRepository,
+  type LedExportJobRow,
+  type CreateLedExportJobInput,
+  type LedExportStatus,
+} from './led-export-job.repository';
+export {
   benchmarkRepository,
   type SiteBenchmarkInfoRow,
   type SiteMetricsRow,

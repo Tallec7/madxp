@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
@@ -20,6 +20,13 @@ interface VideoVariant {
   url: string | null;
   created_at: string;
   layout?: string | null; // PROP-014 §8 : mise en page (variantes led-perimeter)
+}
+
+/** État d'un export LED async par display_type (PROP-014 §6 / étape 6). */
+interface LedExportState {
+  status: 'queued' | 'processing' | 'ready' | 'failed';
+  url?: string | null;
+  error?: string | null;
 }
 
 /** Avis de format LED renvoyé par l'API à l'upload (PROP-014 §6) — non bloquant. */
@@ -58,7 +65,7 @@ const LAYOUT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   templateUrl: './video-variant-panel.component.html',
   styleUrls: ['./video-variant-panel.component.scss'],
 })
-export class VideoVariantPanelComponent implements OnInit {
+export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   @Input() videoId!: string;
   @Input() autoOpen = false;
   @Input() siteDisplays: DisplayConfig[] = [];
@@ -80,6 +87,9 @@ export class VideoVariantPanelComponent implements OnInit {
   savingLayoutType: string | null = null;
   /** Avis de format LED par display_type (PROP-014 §6), affiché après upload. */
   formatNotices: Record<string, LedFormatNotice> = {};
+  /** État d'export plié async par display_type (PROP-014 §6 / étape 6). */
+  exportStates: Record<string, LedExportState> = {};
+  private exportPollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 
   readonly layoutOptions = LAYOUT_OPTIONS;
 
@@ -108,6 +118,10 @@ export class VideoVariantPanelComponent implements OnInit {
       this.isOpen = true;
     }
     this.loadVariants();
+  }
+
+  ngOnDestroy(): void {
+    Object.values(this.exportPollTimers).forEach((t) => clearTimeout(t));
   }
 
   toggleOpen(): void {
@@ -333,6 +347,58 @@ export class VideoVariantPanelComponent implements OnInit {
         variant.layout = previous; // rollback optimiste
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  // --- Export plié async (PROP-014 §6 / étape 6) ---
+
+  isExporting(type: string): boolean {
+    const s = this.exportStates[type]?.status;
+    return s === 'queued' || s === 'processing';
+  }
+
+  exportButtonLabel(type: string): string {
+    return this.isExporting(type) ? 'Export en cours…' : 'Exporter le MP4 plié';
+  }
+
+  /** Enqueue un export plié pour la variante LED puis poll le statut. */
+  exportLed(variant: VideoVariant): void {
+    const type = variant.display_type;
+    this.exportStates[type] = { status: 'queued' };
+
+    this.http.post<{ job_id: string; status: string }>(
+      `${environment.apiUrl}/videos/${this.videoId}/variants/${type}/export`,
+      {},
+      { withCredentials: true }
+    ).subscribe({
+      next: (res) => this.pollExport(type, res.job_id),
+      error: (error) => {
+        this.exportStates[type] = { status: 'failed', error: ErrorExtractor.getMessage(error) };
+        this.notificationService.error(`Erreur export: ${ErrorExtractor.getMessage(error)}`);
+      }
+    });
+  }
+
+  private pollExport(type: string, jobId: string): void {
+    this.http.get<{ status: string; output_url: string | null; error_msg: string | null }>(
+      `${environment.apiUrl}/led-export-jobs/${jobId}`,
+      { withCredentials: true }
+    ).subscribe({
+      next: (job) => {
+        if (job.status === 'ready') {
+          this.exportStates[type] = { status: 'ready', url: job.output_url };
+          this.notificationService.success('Export plié prêt au téléchargement');
+        } else if (job.status === 'failed') {
+          this.exportStates[type] = { status: 'failed', error: job.error_msg };
+          this.notificationService.error(`Export échoué: ${job.error_msg ?? 'erreur inconnue'}`);
+        } else {
+          this.exportStates[type] = { status: job.status === 'processing' ? 'processing' : 'queued' };
+          this.exportPollTimers[type] = setTimeout(() => this.pollExport(type, jobId), 2000);
+        }
+      },
+      error: () => {
+        this.exportStates[type] = { status: 'failed', error: 'Erreur de suivi du job' };
       }
     });
   }

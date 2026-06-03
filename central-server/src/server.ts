@@ -623,6 +623,15 @@ const startServer = async () => {
       logger.warn('templates-studio: render worker skipped at boot', { err });
     }
 
+    // LED périmétrique — worker d'export plié async (PROP-014 étape 6, ADR-134).
+    // Poll led_export_jobs WHERE status='queued', plie via ffmpeg, upload FTP.
+    try {
+      const { startLedExportWorker } = await import('./services/led-export-worker.service');
+      await startLedExportWorker();
+    } catch (err) {
+      logger.warn('led-export: worker skipped at boot', { err });
+    }
+
     // Templates Studio — worker photo cutout in-process (ADR-124).
     // Poll players WHERE cutout_status='pending' toutes les 5s, applique
     // BiRefNet via @imgly/background-removal-node (ONNX), upload FTP, mark
@@ -711,6 +720,16 @@ process.on('SIGTERM', async () => {
     stopStudioRenderWorker();
   } catch (err) {
     logger.warn('Failed to stop Templates Studio render worker', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // Stop LED export worker — processing jobs will be reclaimed at next boot.
+  try {
+    const { stopLedExportWorker } = await import('./services/led-export-worker.service');
+    stopLedExportWorker();
+  } catch (err) {
+    logger.warn('Failed to stop LED export worker', {
       error: err instanceof Error ? err.message : String(err),
     });
   }

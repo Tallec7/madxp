@@ -101,6 +101,40 @@
           >
             {{ notice.message }}
           </div>
+
+          <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement. -->
+          <div
+            class="led-export-row"
+            *ngIf="isLedPerimeter(variant.display_type)"
+            data-testid="led-export-row"
+          >
+            <button
+              class="btn btn-sm btn-secondary"
+              data-testid="led-export-btn"
+              (click)="exportLed(variant)"
+              [disabled]="isExporting(variant.display_type)"
+            >
+              {{ exportButtonLabel(variant.display_type) }}
+            </button>
+            <a
+              class="led-export-download"
+              *ngIf="
+                exportStates[variant.display_type]?.status === 'ready' &&
+                exportStates[variant.display_type]?.url
+              "
+              data-testid="led-export-download"
+              [href]="exportStates[variant.display_type]!.url!"
+              target="_blank"
+              rel="noopener"
+              download
+              >⬇ Télécharger le MP4 plié</a
+            >
+            <span
+              class="led-export-failed"
+              *ngIf="exportStates[variant.display_type]?.status === 'failed'"
+              >échec</span
+            >
+          </div>
         </div>
       </div>
 

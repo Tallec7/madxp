@@ -31,9 +31,9 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Validateur de format à l'upload** (`validateLedFormat`) : juge le format d'une vidéo club uploadée contre le ruban du profil, retourne un `format_notice` **non bloquant**.
 
-**Export** : moteur ffmpeg `applyFoldExport()` (vidéo club → canvas plié, `fit` dérivé du `layout` via `fitFromLayout()`) ; le studio rend directement plié (`LedPerimeterFolded`). CLI `npm run led:export`.
+**Export** : moteur ffmpeg `applyFoldExport()` (vidéo club → canvas plié, `fit` dérivé du `layout` via `fitFromLayout()`) servi en **async** — table `led_export_jobs`, worker in-process `led-export-worker.service.ts` (claim `FOR UPDATE SKIP LOCKED`, `failStaleRunning` au boot), `POST /videos/:id/variants/:displayType/export` (202 `{job_id}`) + `GET /led-export-jobs/:jobId` (polling), bouton + lien de téléchargement dans le panneau variantes. Le studio rend directement plié (`LedPerimeterFolded`). CLI `npm run led:export`.
 
-**Hors périmètre de cette SPEC** : le bouton de téléchargement async côté dashboard (intégration HTTP/job restante au-dessus de `applyFoldExport`), le live HDMI Pi→processeur, le SPIKE matériel (`canvas_in` + mode A/B).
+**Hors périmètre de cette SPEC** : le live HDMI Pi→processeur, le SPIKE matériel (`canvas_in` + mode A/B).
 
 ## Règles métier
 
@@ -55,6 +55,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - Uploader une vidéo club 4800×800 (6:1) sur un ruban ~83:1 affiche un avis ⚠️ « ratio incompatible → blocs/espaces » sans bloquer l'upload ; une vidéo aux dimensions exactes affiche ✅ « pliage direct ».
 - Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
 - `npm run led:export` plie une vidéo (ex. testsrc 4800×800) au canvas exact du profil (1920×1120) — vérifié par ffprobe (`match: true`), sans OOM Chromium (ffmpeg pur).
+- Cliquer « Exporter le MP4 plié » sur une variante led-perimeter enqueue un job, affiche « Export en cours… », puis un lien de téléchargement quand le worker a fini (polling 2s). Un job `processing` orphelin (crash worker) est re-queué au boot suivant.
 
 ## Cas d'edge
 

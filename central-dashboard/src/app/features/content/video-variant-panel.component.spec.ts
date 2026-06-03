@@ -168,4 +168,49 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     openVariant(makeVariant('led-perimeter'));
     expect(fixture.nativeElement.querySelector('[data-testid="format-notice"]')).toBeNull();
   });
+
+  // --- Export plié async (PROP-014 §6 / étape 6) ---
+
+  it('le bouton d\'export n\'apparaît que pour led-perimeter', () => {
+    openVariant(makeVariant('secondary'));
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeNull();
+
+    openVariant(makeVariant('led-perimeter'));
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-btn"]')).toBeTruthy();
+  });
+
+  it('exportLed : enqueue → poll → lien de téléchargement quand ready', () => {
+    const variant = makeVariant('led-perimeter');
+    openVariant(variant);
+
+    component.exportLed(variant as never);
+
+    // 1) enqueue POST → 202 { job_id }
+    const enqueue = httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/export`);
+    expect(enqueue.request.method).toBe('POST');
+    enqueue.flush({ job_id: 'job-1', status: 'queued' });
+
+    // 2) poll GET → ready + url
+    const poll = httpMock.expectOne(`${environment.apiUrl}/led-export-jobs/job-1`);
+    expect(poll.request.method).toBe('GET');
+    poll.flush({ status: 'ready', output_url: 'https://x/led.mp4', error_msg: null });
+
+    expect(component.exportStates['led-perimeter'].status).toBe('ready');
+    fixture.detectChanges();
+    const dl = fixture.nativeElement.querySelector('[data-testid="led-export-download"]') as HTMLAnchorElement;
+    expect(dl).toBeTruthy();
+    expect(dl.getAttribute('href')).toBe('https://x/led.mp4');
+  });
+
+  it('exportLed : statut failed → état failed (pas de lien)', () => {
+    const variant = makeVariant('led-perimeter');
+    openVariant(variant);
+    component.exportLed(variant as never);
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/export`).flush({ job_id: 'job-2', status: 'queued' });
+    httpMock.expectOne(`${environment.apiUrl}/led-export-jobs/job-2`).flush({ status: 'failed', output_url: null, error_msg: 'boom' });
+
+    expect(component.exportStates['led-perimeter'].status).toBe('failed');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-export-download"]')).toBeNull();
+  });
 });

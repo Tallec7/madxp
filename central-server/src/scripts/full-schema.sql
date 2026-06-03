@@ -3145,6 +3145,25 @@ CREATE VIEW public.video_plays_visible WITH (security_invoker='true') AS
 
 
 --
+-- Name: led_export_jobs; Type: TABLE; Schema: public; Owner: -
+-- PROP-014 étape 6 / ADR-134 : file de jobs d'export LED (vidéo club → canvas plié).
+--
+
+CREATE TABLE public.led_export_jobs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    site_id uuid NOT NULL,
+    video_id uuid NOT NULL,
+    display_type character varying(50) NOT NULL,
+    fit character varying(16) DEFAULT 'contain'::character varying NOT NULL,
+    status character varying(16) DEFAULT 'queued'::character varying NOT NULL,
+    output_url text,
+    error_msg text,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+--
 -- Name: video_variants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3937,6 +3956,19 @@ ALTER TABLE ONLY public.video_ftp_audit_warnings
 ALTER TABLE ONLY public.video_plays
     ADD CONSTRAINT video_plays_pkey PRIMARY KEY (id);
 
+
+--
+-- Name: led_export_jobs led_export_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.led_export_jobs
+    ADD CONSTRAINT led_export_jobs_pkey PRIMARY KEY (id);
+
+--
+-- Name: idx_led_export_jobs_queued; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_led_export_jobs_queued ON public.led_export_jobs USING btree (status, created_at) WHERE ((status)::text = 'queued'::text);
 
 --
 -- Name: video_variants video_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: -

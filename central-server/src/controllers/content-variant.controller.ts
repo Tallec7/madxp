@@ -1,13 +1,13 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS } from '../repositories';
+import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
 import type { DisplayType, VariantLayout } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
 import deploymentService from '../services/deployment.service';
-import { computeRibbonDimensions, validateLedFormat, type LedFormatNotice } from '../services/led-fold.service';
+import { computeRibbonDimensions, validateLedFormat, fitFromLayout, type LedFormatNotice } from '../services/led-fold.service';
 
 /**
  * Validateur de format LED à l'upload (PROP-014 §6) — non bloquant.
@@ -336,6 +336,73 @@ export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) 
   } catch (error) {
     logger.error('Error updating video variant layout:', error);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la mise en page' });
+  }
+};
+
+/**
+ * POST /content/videos/:id/variants/:displayType/export
+ * Enqueue un job d'export LED (vidéo → canvas plié, async — PROP-014 §6 / ADR-134).
+ * Retourne 202 { job_id } ; le worker `led-export-worker` traite hors cycle HTTP.
+ */
+export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+
+    if (displayType !== 'led-perimeter') {
+      return res.status(400).json({ error: "L'export plié n'existe que pour les écrans led-perimeter" });
+    }
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    const siteId = video.uploaded_for_site_id ?? null;
+    if (!siteId) {
+      return res.status(400).json({ error: 'Export LED indisponible : la vidéo n’est rattachée à aucun site (profil LED requis)' });
+    }
+
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType as DisplayType);
+    if (!variant) {
+      return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
+    }
+
+    const job = await ledExportJobRepository.create({
+      site_id: siteId,
+      video_id: id,
+      display_type: displayType,
+      fit: fitFromLayout(variant.layout),
+      created_by: req.user?.id ?? null,
+    });
+
+    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, fit: job.fit });
+    res.status(202).json({ job_id: job.id, status: job.status });
+  } catch (error) {
+    logger.error('Error enqueuing LED export:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise en file de l’export' });
+  }
+};
+
+/**
+ * GET /content/led-export-jobs/:jobId
+ * Statut d'un job d'export LED (polling dashboard).
+ */
+export const getLedExportJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const job = await ledExportJobRepository.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ error: 'Job d’export non trouvé' });
+    }
+    res.json({
+      id: job.id,
+      status: job.status,
+      output_url: job.output_url,
+      error_msg: job.error_msg,
+    });
+  } catch (error) {
+    logger.error('Error getting LED export job:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du job' });
   }
 };
 
