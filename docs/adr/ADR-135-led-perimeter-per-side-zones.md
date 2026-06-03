@@ -26,6 +26,18 @@
 
 **Inchangé** : pliage **par côté** (géométrie, #1089) ; **1 vidéo par côté en v1** (rotation/playlist par côté = v2) ; angles respectés.
 
+### Modèle de stockage — un fichier uploadé par côté (validé Daisy 2026-06-03)
+
+Le « par côté » d'une vidéo = **un fichier vidéo uploadé par côté** (pas une référence à une autre vidéo de la biblio). On **étend la variante led-perimeter existante**, sans toucher à sa contrainte d'unicité `(video_id, display_type)` :
+
+- Nouvelle colonne **`video_variants.side_files JSONB`** (nullable). Contient un tableau `[{ side_index, filename, original_name, storage_path, file_size, checksum, mime_type, width, height }]`, un élément par côté renseigné. Migration légère (ADD COLUMN), **zéro changement de contrainte**.
+- `storage_path` / `filename` rendus **nullable** (migration `DROP NOT NULL`) : une variante **par côté pure** (sans fichier « uniforme ») a `storage_path = NULL` + `side_files` rempli.
+- **Mode dérivé** (pas de flag) : `side_files` non vide → **par côté** ; sinon → **uniforme** (le `storage_path` de la row, comportement actuel).
+- **Upload par côté** : `POST /videos/:id/variants/led-perimeter/sides/:sideIndex` (multipart) → upload FTP → upsert l'élément `side_files[sideIndex]`. `DELETE …/sides/:sideIndex` le retire.
+- **Compose** (#1091) : `inputs[i]` = `side_files[i].storage_path` (téléchargé par le worker), classés par `side_index`.
+
+**Plan de build** : (A) migration + repo + endpoints upload/delete par côté (serveur, testable) → (B) UI panneau variantes (uniforme vs par côté + slots d'upload) → (C) aperçu plié (réutilise `applyPerSideFold` + la file de jobs export) → (D) runtime Pi.
+
 > Le reste de l'ADR ci-dessous décrit le **modèle initial** (`side_zones` sur l'écran). Conservé pour l'historique, **supersédé sur le point « où vit le contenu par côté »** par cette révision.
 
 ---
