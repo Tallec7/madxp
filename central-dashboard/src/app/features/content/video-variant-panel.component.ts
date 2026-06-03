@@ -70,6 +70,8 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   @Input() autoOpen = false;
   @Input() siteDisplays: DisplayConfig[] = [];
   @Input() availableVideos: CloudVideo[] = [];
+  /** Club consulté (la page sur laquelle on est). L'export LED plie pour CE club. */
+  @Input() siteId: string | null = null;
   @Output() variantChanged = new EventEmitter<{ videoId: string; count: number; types: string[] }>();
 
   private http = inject(HttpClient);
@@ -358,21 +360,34 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
     return s === 'queued' || s === 'processing';
   }
 
+  /** L'export plié plie pour le club consulté → un site doit être en contexte. */
+  get canExportLed(): boolean {
+    return !!this.siteId;
+  }
+
   exportButtonLabel(type: string): string {
     return this.isExporting(type) ? 'Export en cours…' : 'Exporter le MP4 plié';
   }
 
-  /** Enqueue un export plié pour la variante LED puis poll le statut. */
+  /** Enqueue un export plié (pour le club consulté) puis poll le statut. */
   exportLed(variant: VideoVariant): void {
     const type = variant.display_type;
     this.exportStates[type] = { status: 'queued' };
 
-    this.http.post<{ job_id: string; status: string }>(
+    this.http.post<{ job_id: string; status: string; output_url?: string | null; reused?: boolean }>(
       `${environment.apiUrl}/videos/${this.videoId}/variants/${type}/export`,
-      {},
+      { target_site_id: this.siteId },
       { withCredentials: true }
     ).subscribe({
-      next: (res) => this.pollExport(type, res.job_id),
+      next: (res) => {
+        // Réutilisation : ruban déjà plié pour ce club → prêt immédiatement.
+        if (res.status === 'ready' && res.output_url) {
+          this.exportStates[type] = { status: 'ready', url: res.output_url };
+          this.notificationService.success('Ruban déjà disponible — prêt au téléchargement');
+        } else {
+          this.pollExport(type, res.job_id);
+        }
+      },
       error: (error) => {
         this.exportStates[type] = { status: 'failed', error: ErrorExtractor.getMessage(error) };
         this.notificationService.error(`Erreur export: ${ErrorExtractor.getMessage(error)}`);
