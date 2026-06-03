@@ -551,12 +551,12 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     expect(component.isCanvasProvisional(confirmed)).toBe(false);
   });
 
-  it('renders the provisional badge in the derived readout', () => {
+  it('renders the provisional badge (« à confirmer install ») while band_count unset', () => {
     component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
     fixture.detectChanges();
     const badge = fixture.nativeElement.querySelector('.led-provisional');
     expect(badge).toBeTruthy();
-    expect(badge.textContent).toContain('provisoire');
+    expect(badge.textContent).toContain('à confirmer');
   });
 
   it('renders a ribbon preview with one bar per fold band (7 for 80 m P6)', () => {
@@ -662,6 +662,143 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     const rows = fixture.nativeElement.querySelector('[data-testid="led-height-rows"]');
     expect(rows.textContent).toContain('160 rangées');
     expect(rows.textContent).toContain('P6');
+  });
+});
+
+describe('DisplaysEditorComponent — Refonte panneau LED', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+
+  const ledDisplay: DisplayConfig = {
+    index: 1,
+    name: 'Bord de terrain',
+    type: 'led-perimeter',
+    led: {
+      sides: [40, 20, 20],
+      pitch: 'P6',
+      height: 160,
+      spacing_m: 10,
+      zones: 'uniform',
+      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+    },
+  };
+
+  const fresh = (): DisplayConfig => ({ ...ledDisplay, led: { ...ledDisplay.led!, sides: [...ledDisplay.led!.sides], canvas_in: { ...ledDisplay.led!.canvas_in! } } });
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DisplaysEditorComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+  });
+
+  // --- Côtés : cases éditables ---
+
+  it('rend une case par côté + un bouton « + » d’ajout', () => {
+    component.displays = [fresh()];
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.led-side-input').length).toBe(3);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-side-add"]')).toBeTruthy();
+  });
+
+  it('addSide ajoute un côté (max 8) et émet', () => {
+    const d = fresh();
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.addSide(d);
+    expect(d.led!.sides.length).toBe(4);
+    expect(emitted).toBe(true);
+  });
+
+  it('addSide plafonne à 8 côtés', () => {
+    const d = fresh();
+    d.led!.sides = [10, 10, 10, 10, 10, 10, 10, 10];
+    component.addSide(d);
+    expect(d.led!.sides.length).toBe(8);
+  });
+
+  it('removeSide retire un côté mais en garde toujours au moins 1', () => {
+    const d = fresh();
+    component.removeSide(d, 1);
+    expect(d.led!.sides).toEqual([40, 20]);
+    const single = fresh();
+    single.led!.sides = [9];
+    component.removeSide(single, 0);
+    expect(single.led!.sides).toEqual([9]); // pas de suppression du dernier
+  });
+
+  it('updateSide remplace une valeur et ignore une saisie invalide', () => {
+    const d = fresh();
+    component.updateSide(d, 0, '50');
+    expect(d.led!.sides[0]).toBe(50);
+    component.updateSide(d, 0, 'abc');
+    expect(d.led!.sides[0]).toBe(50); // inchangé
+  });
+
+  it('getLedPerimeterM somme les côtés', () => {
+    expect(component.getLedPerimeterM(fresh())).toBe(80);
+  });
+
+  // --- Pitch : datalist ---
+
+  it('propose les pas courants dans un datalist (saisie libre conservée)', () => {
+    component.displays = [fresh()];
+    fixture.detectChanges();
+    const datalist = fixture.nativeElement.querySelector('datalist');
+    expect(datalist).toBeTruthy();
+    expect(datalist.querySelectorAll('option').length).toBe(component.pitchOptions.length);
+    // input reste un text (saisie libre), lié au datalist
+    const pitch = fixture.nativeElement.querySelector('[data-testid="led-pitch"]') as HTMLInputElement;
+    expect(pitch.getAttribute('list')).toBe('led-pitch-1');
+  });
+
+  // --- Répétition par défaut (libellés « tous les X m ») ---
+
+  it('le sélecteur de répétition affiche « tous les X m »', () => {
+    component.displays = [fresh()];
+    fixture.detectChanges();
+    const sel = fixture.nativeElement.querySelector('[data-testid="led-spacing"]');
+    expect(sel.textContent).toContain('tous les');
+  });
+
+  // --- Avancé (processeur) ---
+
+  it('la section Avancé est repliée par défaut et s’ouvre au clic', () => {
+    component.displays = [fresh()];
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-adv-body"]')).toBeNull();
+    (fixture.nativeElement.querySelector('[data-testid="led-adv-toggle"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-adv-body"]')).toBeTruthy();
+  });
+
+  it('updateBandCount fige le band_count (lève le provisoire) et le vide le rétablit', () => {
+    const d = fresh();
+    expect(component.isCanvasProvisional(d)).toBe(true);
+    component.updateBandCount(d, '7');
+    expect(d.led!.canvas_in!.band_count).toBe(7);
+    expect(component.isCanvasProvisional(d)).toBe(false);
+    component.updateBandCount(d, '');
+    expect(d.led!.canvas_in!.band_count).toBeUndefined();
+    expect(component.isCanvasProvisional(d)).toBe(true);
+  });
+
+  it('getLedCanvasHeight suit le band_count confirmé quand il diffère du dérivé', () => {
+    const d = fresh(); // 80 m P6 → 7 bandes dérivées
+    expect(component.getLedCanvasHeight(d)).toBe(1120); // 7 × 160
+    component.updateBandCount(d, '8');
+    expect(component.getLedCanvasHeight(d)).toBe(1280); // 8 × 160
+  });
+
+  it('Entrée processeur = band_width × canvas height', () => {
+    component.displays = [fresh()];
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('[data-testid="led-adv-toggle"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('[data-testid="led-adv-input"]');
+    expect(input.textContent).toContain('1920×1120');
   });
 });
 
