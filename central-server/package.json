@@ -22,6 +22,7 @@
     "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
     "led:ribbon-poc": "ts-node src/scripts/led-ribbon-poc.ts",
     "led:export": "ts-node src/scripts/led-export.ts",
+    "led:fold-per-side": "ts-node src/scripts/led-fold-per-side-poc.ts",
     "test": "jest",
     "test:smoke": "jest --verbose --no-coverage --forceExit '__tests__/smoke/'",
     "test:smoke:smart": "bash src/scripts/smart-smoke.sh",

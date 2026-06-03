@@ -19,7 +19,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Services backend** :
 
-- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `computeFoldGeometryPerSide()` (pliage **par côté** — chaque côté déroulé+plié indépendamment puis empilé, ADR-135 ; pur, testé ; consommé par la composition multi-zones à venir), `validateLedFormat()` (validateur §6), `applyFold()` (pliage d'un ruban plat) et `applyFoldExport()` (adapte une vidéo quelconque au ruban via `fit` contain/cover/stretch puis plie — voie d'export vidéo club). CLI démontrable : `npm run led:export`.
+- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `computeFoldGeometryPerSide()` (pliage **par côté** — chaque côté déroulé+plié indépendamment puis empilé, ADR-135 ; pur, testé), `buildPerSideFoldFilterGraph()` / `applyPerSideFold()` (composition **une vidéo par côté** → canvas plié, ADR-135 étape 3 : `side_zones[i].video_id` → `inputs[i]`), `validateLedFormat()` (validateur §6), `applyFold()` (pliage d'un ruban plat) et `applyFoldExport()` (adapte une vidéo quelconque au ruban via `fit` contain/cover/stretch puis plie — voie d'export vidéo club). CLI démontrables : `npm run led:export`, `npm run led:fold-per-side`.
 - `central-server/templates-studio/templates/led_perimeter_folded/` — composition Remotion de **production** : rend directement le canvas plié (ADR-134).
 - `central-server/templates-studio/templates/led_perimeter_ribbon/` — composition **POC** (ruban plat) + outil de mesure `npm run led:ribbon-poc`.
 
@@ -61,6 +61,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - Uploader une vidéo club 4800×800 (6:1) sur un ruban ~83:1 affiche un avis ⚠️ « ratio incompatible → blocs/espaces » sans bloquer l'upload ; une vidéo aux dimensions exactes affiche ✅ « pliage direct ».
 - Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
 - `npm run led:export` plie une vidéo (ex. testsrc 4800×800) au canvas exact du profil (1920×1120) — vérifié par ffprobe (`match: true`), sans OOM Chromium (ffmpeg pur).
+- `npm run led:fold-per-side` compose **une source distincte par côté** ([40,20,20] P6 → 3 couleurs) dans le canvas plié par côté (1920×1280, 8 bandes) — vérifié par ffprobe (`match: true`). Preuve ffmpeg de bout en bout du « contenu par côté » (ADR-135 étape 3).
 - Cliquer « Exporter le MP4 plié » sur une variante led-perimeter enqueue un job, affiche « Export en cours… », puis un lien de téléchargement quand le worker a fini (polling 2s). Un job `processing` orphelin (crash worker) est re-queué au boot suivant.
 - Dans le panneau LED, le **banc d'essai** « 🧪 Tester une vidéo » (visible seulement si un club est en contexte) plie une vidéo au choix avec la mise en page sélectionnée et affiche un lecteur + lien de téléchargement — utile pour comparer Répété/Défilant/Étalé/Centré sans créer de variante. Une vidéo sans variante led-perimeter est pliée depuis son binaire principal.
 
