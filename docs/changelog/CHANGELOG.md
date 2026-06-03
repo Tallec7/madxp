@@ -1,3 +1,9 @@
+# [4.9.0](https://github.com/Tallec7/madxp/compare/v4.8.0...v4.9.0) (2026-06-03)
+
+### Features
+
+- **led:** contenu par côté — étape 1 (modèle side_zones + écran) ([#1088](https://github.com/Tallec7/madxp/issues/1088)) ([a0b6f3b](https://github.com/Tallec7/madxp/commit/a0b6f3bbefe9e3af82b244eff9b8a686cabafacd))
+
 # [4.8.0](https://github.com/Tallec7/madxp/compare/v4.7.0...v4.8.0) (2026-06-03)
 
 ### Features
