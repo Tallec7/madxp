@@ -704,6 +704,158 @@ export function buildFoldExportFfmpegArgs(
   ];
 }
 
+// ── 2b. Composition multi-sources par côté (ADR-135, étape 3) ─────────────────
+
+/** Options de composition par côté : une source par côté (ordre = index de côté). */
+export interface PerSideFoldComposeOptions {
+  /** Chemins des sources, un par côté. `inputs[i]` = vidéo du côté `i`. */
+  inputs: string[];
+  outputPath: string;
+  /** Couleur de remplissage (padding dernière bande de chaque côté). Défaut `'black'`. */
+  padColor?: string;
+  crf?: number;
+  preset?: string;
+}
+
+/** Résultat d'un `applyPerSideFold`. */
+export interface PerSideFoldApplyResult {
+  success: boolean;
+  outputPath: string | null;
+  geometry: PerSideFoldGeometry;
+  durationMs: number;
+  error?: string;
+}
+
+/**
+ * Construit le `filter_complex` qui compose **une source par côté** dans le canvas
+ * plié (ADR-135, étape 3). Pour chaque côté : la source est adaptée à son ruban
+ * (`scale`), pliée en son bloc de bandes (`crop`+`pad`+`vstack`), puis tous les
+ * blocs sont empilés (`vstack`) dans l'ordre des côtés. Comme chaque bloc fait
+ * `bandWidth` de large et que `dstYStart` est cumulatif, l'empilement vertical
+ * reproduit exactement le canvas global. Fonction pure (string) — testable sans ffmpeg.
+ *
+ * Adaptation source→ruban = étirement (`scale` exact) en v1 ; un `fit` par côté
+ * (contain/cover) pourra être ajouté ensuite.
+ */
+export function buildPerSideFoldFilterGraph(
+  geometry: PerSideFoldGeometry,
+  padColor = 'black'
+): string {
+  const { segments, ribbonHeight, bandWidth, bandHeight } = geometry;
+  const single = segments.length === 1;
+  const parts: string[] = [];
+  const blockLabels: string[] = [];
+
+  const cropPad = (b: FoldBand): string =>
+    `crop=${b.w}:${b.h}:${b.srcX}:0,pad=${bandWidth}:${bandHeight}:0:0:${padColor}`;
+
+  for (const seg of segments) {
+    const i = seg.sideIndex;
+    const blockLabel = single ? '[out]' : `[block${i}]`;
+    // 1) adapter la source du côté à son ruban (étirement v1).
+    parts.push(`[${i}:v]scale=${seg.ribbonWidth}:${ribbonHeight},setsar=1[rib${i}]`);
+    // 2) plier le ruban du côté en son bloc de bandes.
+    if (seg.bandCount === 1) {
+      parts.push(`[rib${i}]${cropPad(seg.bands[0])}${blockLabel}`);
+    } else {
+      const splitOut = seg.bands.map((_, k) => `[s${i}_${k}]`).join('');
+      parts.push(`[rib${i}]split=${seg.bandCount}${splitOut}`);
+      seg.bands.forEach((b, k) => parts.push(`[s${i}_${k}]${cropPad(b)}[b${i}_${k}]`));
+      // empile les bandes du côté par dstY croissant (ordre vertical du bloc).
+      const order = seg.bands
+        .map((b, k) => ({ b, k }))
+        .sort((a, z) => a.b.dstY - z.b.dstY);
+      const vinputs = order.map((o) => `[b${i}_${o.k}]`).join('');
+      parts.push(`${vinputs}vstack=inputs=${seg.bandCount}${blockLabel}`);
+    }
+    blockLabels.push(blockLabel);
+  }
+
+  if (!single) {
+    parts.push(`${blockLabels.join('')}vstack=inputs=${segments.length}[out]`);
+  }
+
+  return parts.join(';');
+}
+
+/**
+ * Assemble les arguments ffmpeg de composition par côté (N entrées → canvas plié).
+ * Fonction pure (string[]). Lève si le nombre de sources ≠ nombre de côtés.
+ */
+export function buildPerSideFoldComposeArgs(
+  geometry: PerSideFoldGeometry,
+  options: PerSideFoldComposeOptions
+): string[] {
+  if (options.inputs.length !== geometry.segments.length) {
+    throw new Error(
+      `buildPerSideFoldComposeArgs: ${options.inputs.length} source(s) pour ${geometry.segments.length} côté(s)`
+    );
+  }
+  const padColor = options.padColor ?? 'black';
+  const crf = options.crf ?? 18;
+  const preset = options.preset ?? 'medium';
+  const filterGraph = buildPerSideFoldFilterGraph(geometry, padColor);
+  const inputArgs = options.inputs.flatMap((p) => ['-i', p]);
+
+  return [
+    ...inputArgs,
+    '-filter_complex',
+    filterGraph,
+    '-map',
+    '[out]',
+    '-c:v',
+    'libx264',
+    '-crf',
+    String(crf),
+    '-preset',
+    preset,
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    '-an',
+    '-y',
+    options.outputPath,
+  ];
+}
+
+/**
+ * Compose une vidéo par côté dans le canvas plié, en une passe ffmpeg (ADR-135).
+ * C'est la voie « contenu par côté » : `side_zones[i].video_id` → `inputs[i]`.
+ */
+export async function applyPerSideFold(
+  geometry: PerSideFoldGeometry,
+  options: PerSideFoldComposeOptions
+): Promise<PerSideFoldApplyResult> {
+  const startTime = Date.now();
+  const args = buildPerSideFoldComposeArgs(geometry, options);
+
+  logger.info('led-fold: applying per-side fold', {
+    outputPath: options.outputPath,
+    sides: geometry.segments.length,
+    bandCount: geometry.bandCount,
+    canvasWidth: geometry.canvasWidth,
+    canvasHeight: geometry.canvasHeight,
+  });
+
+  try {
+    await runFfmpeg(args);
+    const durationMs = Date.now() - startTime;
+    logger.info('led-fold: per-side fold completed', { outputPath: options.outputPath, durationMs });
+    return { success: true, outputPath: options.outputPath, geometry, durationMs };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('led-fold: per-side fold failed', { error: message });
+    return {
+      success: false,
+      outputPath: null,
+      geometry,
+      durationMs: Date.now() - startTime,
+      error: message,
+    };
+  }
+}
+
 /** Vérifie que ffmpeg est disponible (même sonde que `video-compression.service.ts`). */
 export function isFfmpegAvailable(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -833,6 +985,9 @@ export const ledFoldService = {
   computeFoldGeometry,
   computeFoldGeometryPerSide,
   computeRibbonDimensions,
+  buildPerSideFoldFilterGraph,
+  buildPerSideFoldComposeArgs,
+  applyPerSideFold,
   validateLedFormat,
   fitFromLayout,
   normalizeLayout,

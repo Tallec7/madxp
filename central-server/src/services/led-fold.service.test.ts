@@ -23,6 +23,8 @@ import {
   computeFoldGeometry,
   computeFoldGeometryPerSide,
   computeRibbonDimensions,
+  buildPerSideFoldFilterGraph,
+  buildPerSideFoldComposeArgs,
   validateLedFormat,
   fitFromLayout,
   normalizeLayout,
@@ -250,6 +252,66 @@ describe('led-fold.service — pliage par côté (computeFoldGeometryPerSide, AD
 
   it('exposé via le singleton ledFoldService', () => {
     expect(typeof ledFoldService.computeFoldGeometryPerSide).toBe('function');
+  });
+});
+
+describe('led-fold.service — composition par côté (buildPerSideFold*, ADR-135 étape 3)', () => {
+  const geom = () => computeFoldGeometryPerSide({ sides: [40, 20, 20], pitchMm: 6, height: 160, bandWidth: 1920 });
+
+  it('adapte CHAQUE source à son ruban puis empile les blocs des côtés', () => {
+    const g = buildPerSideFoldFilterGraph(geom());
+    // une entrée par côté, adaptée à la largeur de SON ruban
+    expect(g).toContain('[0:v]scale=6667:160,setsar=1[rib0]');
+    expect(g).toContain('[1:v]scale=3333:160,setsar=1[rib1]');
+    expect(g).toContain('[2:v]scale=3333:160,setsar=1[rib2]');
+    // chaque côté produit son bloc, puis vstack final des 3 blocs → [out]
+    expect(g).toContain('[block0]');
+    expect(g).toContain('[block1]');
+    expect(g).toContain('[block2]');
+    expect(g).toMatch(/\[block0\]\[block1\]\[block2\]vstack=inputs=3\[out\]$/);
+  });
+
+  it('plie chaque côté en bandes (split + crop/pad + vstack interne)', () => {
+    const g = buildPerSideFoldFilterGraph(geom());
+    // côté 0 (4 bandes) : split en 4 puis vstack de 4
+    expect(g).toContain('[rib0]split=4');
+    expect(g).toContain('vstack=inputs=4[block0]');
+    // côté 1 (2 bandes)
+    expect(g).toContain('vstack=inputs=2[block1]');
+  });
+
+  it('un seul côté : sort directement [out], sans vstack de blocs', () => {
+    const g1 = buildPerSideFoldFilterGraph(
+      computeFoldGeometryPerSide({ sides: [9], pitchMm: 10, height: 110, bandWidth: 1920 })
+    );
+    // 1 côté, 1 bande → crop/pad direct → [out]
+    expect(g1).toContain('[0:v]scale=900:110,setsar=1[rib0]');
+    expect(g1).toMatch(/\[rib0\]crop=900:110:0:0,pad=1920:110:0:0:black\[out\]$/);
+    expect(g1).not.toContain('block');
+  });
+
+  it('args ffmpeg : une entrée -i par côté, map [out], encodage h264', () => {
+    const args = buildPerSideFoldComposeArgs(geom(), {
+      inputs: ['/t/c0.mp4', '/t/c1.mp4', '/t/c2.mp4'],
+      outputPath: '/t/out.mp4',
+    });
+    expect(args.filter((a) => a === '-i')).toHaveLength(3);
+    expect(args).toContain('/t/c0.mp4');
+    expect(args).toContain('/t/c2.mp4');
+    expect(args[args.indexOf('-map') + 1]).toBe('[out]');
+    expect(args).toContain('libx264');
+    expect(args[args.length - 1]).toBe('/t/out.mp4');
+  });
+
+  it('rejette un nombre de sources ≠ nombre de côtés', () => {
+    expect(() =>
+      buildPerSideFoldComposeArgs(geom(), { inputs: ['/t/a.mp4'], outputPath: '/t/o.mp4' })
+    ).toThrow(/3 côté/);
+  });
+
+  it('exposé via le singleton ledFoldService', () => {
+    expect(typeof ledFoldService.buildPerSideFoldFilterGraph).toBe('function');
+    expect(typeof ledFoldService.applyPerSideFold).toBe('function');
   });
 });
 
