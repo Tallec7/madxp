@@ -12,7 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig, SideZone } from '../../../../../core/models';
+import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
 import { environment } from '../../../../../../environments/environment';
 
 interface DisplayTemplate {
@@ -242,71 +242,6 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
             </select>
           </label>
 
-          <label class="led-field">
-            <span>Zones</span>
-            <select
-              class="form-input"
-              data-testid="led-zones"
-              [(ngModel)]="display.led!.zones"
-              (ngModelChange)="onZonesChange(display)"
-            >
-              <option value="uniform">Même contenu partout</option>
-              <option value="per-side">Contenu par côté</option>
-            </select>
-          </label>
-        </div>
-
-        <!-- Contenu par côté (PROP-014 §5 / ADR-135) : une vidéo + une cadence par
-             côté. La sélection est enregistrée ; la diffusion par côté arrive en
-             PRs suivantes (pliage par côté + runtime). -->
-        <div class="led-sidezones" *ngIf="display.led!.zones === 'per-side'" data-testid="led-sidezones">
-          <div class="led-sz-note">
-            ⚠️ Diffusion par côté en cours de développement (ADR-135) — ta sélection est bien enregistrée.
-          </div>
-          <div
-            class="led-sz-row"
-            *ngFor="let s of display.led!.sides; let i = index; trackBy: trackBySideIndex"
-          >
-            <div class="led-sz-head">
-              <strong>Côté {{ i + 1 }}</strong>
-              <input
-                #szName
-                class="led-sz-name"
-                type="text"
-                placeholder="Nom (ex: Tribune)"
-                [ngModel]="getSideZone(display, i).name || ''"
-                (change)="setSideName(display, i, szName.value)"
-                [attr.data-testid]="'led-sz-name-' + i"
-              />
-              <span class="led-sz-len">{{ s }} m</span>
-            </div>
-            <div class="led-sz-fields">
-              <label class="led-sz-field">
-                <span>Contenu</span>
-                <select
-                  class="form-input"
-                  [attr.data-testid]="'led-sz-video-' + i"
-                  [ngModel]="getSideZone(display, i).video_id || ''"
-                  (ngModelChange)="setSideVideo(display, i, $event)"
-                >
-                  <option value="">— Choisir une vidéo —</option>
-                  <option *ngFor="let v of tbVideos" [value]="v.id">{{ v.title }}</option>
-                </select>
-              </label>
-              <label class="led-sz-field">
-                <span>Répétition</span>
-                <select
-                  class="form-input"
-                  [attr.data-testid]="'led-sz-spacing-' + i"
-                  [ngModel]="getSideZone(display, i).spacing_m ?? null"
-                  (ngModelChange)="setSideSpacing(display, i, $event)"
-                >
-                  <option [ngValue]="null">défaut ({{ display.led!.spacing_m }} m)</option>
-                  <option *ngFor="let sp of getSpacingOptions(display)" [ngValue]="sp">tous les {{ sp }} m</option>
-                </select>
-              </label>
-            </div>
-          </div>
         </div>
 
         <!-- Avancé (processeur) : repliable. Valeurs dérivées + override install
@@ -623,84 +558,6 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
     .led-side-add:disabled {
       opacity: 0.4;
       cursor: not-allowed;
-    }
-
-    /* Contenu par côté (ADR-135) */
-    .led-sidezones {
-      margin-top: 0.625rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .led-sz-note {
-      font-size: 0.7rem;
-      color: #b45309;
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-      padding: 0.375rem 0.5rem;
-    }
-
-    .led-sz-row {
-      border: 1px solid #fed7aa;
-      border-radius: 8px;
-      padding: 0.5rem 0.625rem;
-      background: white;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .led-sz-head {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8125rem;
-      color: #9a3412;
-    }
-
-    .led-sz-name {
-      flex: 1;
-      border: 1px solid #fdba74;
-      border-radius: 6px;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.8125rem;
-      color: #1e293b;
-      min-width: 0;
-    }
-
-    .led-sz-len {
-      font-size: 0.75rem;
-      color: #b45309;
-      white-space: nowrap;
-    }
-
-    .led-sz-fields {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 0.75rem;
-    }
-
-    .led-sz-field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-      font-size: 0.7rem;
-      color: #9a3412;
-      font-weight: 600;
-      flex: 1;
-      min-width: 140px;
-    }
-
-    .led-sz-field .form-input {
-      padding: 0.3rem 0.5rem;
-      border: 1px solid #fdba74;
-      border-radius: 6px;
-      font-size: 0.8125rem;
-      font-weight: 400;
-      color: #1e293b;
-      background: white;
     }
 
     /* Section Avancé (processeur) */
@@ -1170,11 +1027,6 @@ export class DisplaysEditorComponent implements OnDestroy {
    */
   @Input() set displays(value: DisplayConfig[]) {
     this._displays = (value ?? []).map((d) => this.normalizeLed(d));
-    // Si un profil est déjà en « Contenu par côté », précharger la liste vidéos
-    // pour que les sélecteurs affichent le titre du contenu choisi.
-    if (this._displays.some((d) => this.isLedPerimeter(d) && d.led?.zones === 'per-side')) {
-      this.ensureVideosLoaded();
-    }
   }
   get displays(): DisplayConfig[] {
     return this._displays;
@@ -1646,66 +1498,17 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (sides.length >= 8) return;
     const seed = sides.length > 0 ? sides[sides.length - 1] : 10;
     display.led.sides = [...sides, seed];
-    if (display.led.side_zones) display.led.side_zones = [...display.led.side_zones, {}];
     this.commitLed(display);
   }
 
-  /** Retire un côté (garde toujours au moins 1) — réaligne side_zones. */
+  /** Retire un côté (garde toujours au moins 1). */
   removeSide(display: DisplayConfig, index: number): void {
     if (!display.led) return;
     const sides = [...(display.led.sides ?? [])];
     if (sides.length <= 1) return;
     sides.splice(index, 1);
     display.led.sides = sides;
-    if (display.led.side_zones) {
-      const zones = [...display.led.side_zones];
-      zones.splice(index, 1);
-      display.led.side_zones = zones;
-    }
     this.commitLed(display);
-  }
-
-  // --- Contenu par côté (PROP-014 §5 / ADR-135) ---
-
-  /** Bascule du mode zones : commit + précharge les vidéos en mode per-side. */
-  onZonesChange(display: DisplayConfig): void {
-    if (display.led?.zones === 'per-side') this.ensureVideosLoaded();
-    this.commitLed(display);
-  }
-
-  /** Zone d'un côté (lecture sûre, jamais undefined pour le template). */
-  getSideZone(display: DisplayConfig, index: number): SideZone {
-    return display.led?.side_zones?.[index] ?? {};
-  }
-
-  /** Garantit que side_zones existe et a la longueur de sides (aligné par index). */
-  private ensureSideZones(led: LedProfileConfig): SideZone[] {
-    const zones = Array.isArray(led.side_zones) ? [...led.side_zones] : [];
-    while (zones.length < led.sides.length) zones.push({});
-    zones.length = led.sides.length;
-    return zones;
-  }
-
-  private patchSideZone(display: DisplayConfig, index: number, patch: Partial<SideZone>): void {
-    if (!display.led) return;
-    const zones = this.ensureSideZones(display.led);
-    zones[index] = { ...zones[index], ...patch };
-    display.led.side_zones = zones;
-    this.commitLed(display);
-  }
-
-  setSideName(display: DisplayConfig, index: number, raw: string): void {
-    this.patchSideZone(display, index, { name: raw?.trim() || undefined });
-  }
-
-  setSideVideo(display: DisplayConfig, index: number, videoId: string): void {
-    this.patchSideZone(display, index, { video_id: videoId || undefined });
-  }
-
-  setSideSpacing(display: DisplayConfig, index: number, spacing: number | null): void {
-    this.patchSideZone(display, index, {
-      spacing_m: typeof spacing === 'number' && spacing > 0 ? spacing : undefined,
-    });
   }
 
   /**
@@ -1732,23 +1535,28 @@ export class DisplaysEditorComponent implements OnDestroy {
   }
 
   /**
-   * Espacements proposés (m) : diviseurs entiers du PGCD des côtés ≥ 4 m → angles
-   * alignés + nombre entier de répétitions (PROP-014 §4, anti-drift : jamais saisie
-   * libre). La valeur courante est toujours incluse pour ne pas la perdre.
+   * Espacements proposés (m) : diviseurs du PGCD des côtés ≥ 4 m → angles alignés +
+   * nombre entier de répétitions (PROP-014 §4, anti-drift : jamais saisie libre).
+   * Gère les côtés DÉCIMAUX (ex. 4,5 m) en travaillant en dixièmes de mètre : ×10
+   * préserve exactement les options des côtés entiers, et débloque 4,5 m & co.
+   * La valeur courante est toujours incluse pour ne pas la perdre.
    */
   getSpacingOptions(display: DisplayConfig): number[] {
     const led = display.led;
     const current = led?.spacing_m;
-    const sides = (led?.sides ?? []).filter((s) => Number.isInteger(s) && s > 0);
+    // Dixièmes de mètre : 4,5 m → 45, 40 m → 400. Le PGCD se calcule sur entiers.
+    const tenths = (led?.sides ?? [])
+      .filter((s) => Number.isFinite(s) && s > 0)
+      .map((s) => Math.round(s * 10));
     const opts = new Set<number>();
 
-    if (sides.length > 0) {
-      const g = sides.reduce((a, b) => this.gcd(a, b));
+    if (tenths.length > 0) {
+      const g = tenths.reduce((a, b) => this.gcd(a, b)); // PGCD en dixièmes
       for (let d = 1; d <= g; d++) {
-        if (g % d === 0 && d >= 4) opts.add(d);
+        if (g % d === 0 && d >= 40) opts.add(d / 10); // diviseurs ≥ 4 m
       }
-      // Fallback : si aucun diviseur ≥ 4 (petits côtés), proposer au moins le PGCD.
-      if (opts.size === 0 && g > 0) opts.add(g);
+      // Fallback : si aucun diviseur ≥ 4 m (petits côtés), proposer au moins le PGCD.
+      if (opts.size === 0 && g > 0) opts.add(g / 10);
     }
 
     if (current && current > 0) opts.add(current);
