@@ -190,6 +190,16 @@ export interface LedCanvasInConfig {
   mode: 'A' | 'B';               // A = plug & play, B = pixel-perfect (PROP-014 §10)
 }
 
+/**
+ * Zone de contenu d'un côté (PROP-014 §5 / ADR-135) — alignée par index sur `sides`.
+ * `side_zones[i]` décrit le côté `sides[i]`. V1 : 1 vidéo par côté + cadence propre.
+ */
+export interface SideZone {
+  name?: string;        // libellé opérateur, ex. « Tribune »
+  video_id?: string;    // vidéo assignée à ce côté (storage_path résolu côté serveur)
+  spacing_m?: number;   // cadence propre ; sinon hérite du spacing_m global
+}
+
 /** Profil LED périmétrique d'un display (PROP-014 §3). */
 export interface LedProfileConfig {
   sides: number[];               // longueurs des côtés (m), ex. [40, 20, 20]
@@ -197,6 +207,7 @@ export interface LedProfileConfig {
   height: number;                // hauteur de dalle (px)
   spacing_m: number;             // cadence de répétition du motif (m)
   zones: 'uniform' | 'per-side'; // même contenu partout vs par côté (PROP-014 §5)
+  side_zones?: SideZone[];       // contenu/cadence par côté (ADR-135), aligné sur sides
   canvas_in?: LedCanvasInConfig; // ⏳ config processeur (SPIKE)
 }
 

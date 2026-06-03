@@ -891,3 +891,103 @@ describe('DisplaysEditorComponent — Banc d\'essai LED (PROP-014 §6)', () => {
     // Aucun polling : pas de requête en attente (httpMock.verify en afterEach).
   });
 });
+
+describe('DisplaysEditorComponent — Contenu par côté (ADR-135)', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+  let httpMock: HttpTestingController;
+
+  const perSide = (): DisplayConfig => ({
+    index: 1,
+    name: 'Bord de terrain',
+    type: 'led-perimeter',
+    led: {
+      sides: [40, 20, 20],
+      pitch: 'P6',
+      height: 160,
+      spacing_m: 10,
+      zones: 'per-side',
+      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+    },
+  });
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DisplaysEditorComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  function flushVideos(): void {
+    const req = httpMock.expectOne((r) => r.url.endsWith('/videos/names'));
+    req.flush([
+      { id: 'v1', title: 'Pub Coca' },
+      { id: 'v2', title: 'Pub Nike' },
+    ]);
+  }
+
+  it('le bloc « Contenu par côté » n’apparaît qu’en mode per-side', () => {
+    component.displays = [perSide()];
+    flushVideos();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-sidezones"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelectorAll('.led-sz-row').length).toBe(3);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-sz-video-0"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-sz-spacing-1"]')).toBeTruthy();
+    // Note honnête « diffusion à venir » (anti flag mort).
+    expect(fixture.nativeElement.querySelector('.led-sz-note')).toBeTruthy();
+  });
+
+  it('mode uniform : pas de bloc par côté ni de chargement vidéos', () => {
+    component.displays = [{ ...perSide(), led: { ...perSide().led!, zones: 'uniform' } }];
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-sidezones"]')).toBeNull();
+    httpMock.expectNone((r) => r.url.endsWith('/videos/names'));
+  });
+
+  it('précharge la liste vidéos quand un profil est déjà en per-side', () => {
+    component.displays = [perSide()];
+    flushVideos();
+    expect(component.tbVideos.length).toBe(2);
+  });
+
+  it('setSideName / setSideVideo / setSideSpacing patchent side_zones par index', () => {
+    const d = perSide();
+    component.setSideName(d, 0, 'Tribune');
+    component.setSideVideo(d, 1, 'v2');
+    component.setSideSpacing(d, 2, 5);
+    expect(d.led!.side_zones!.length).toBe(3);
+    expect(d.led!.side_zones![0].name).toBe('Tribune');
+    expect(d.led!.side_zones![1].video_id).toBe('v2');
+    expect(d.led!.side_zones![2].spacing_m).toBe(5);
+  });
+
+  it('efface un champ (vidéo vide / répétition null → undefined)', () => {
+    const d = perSide();
+    component.setSideVideo(d, 0, 'v1');
+    component.setSideVideo(d, 0, '');
+    expect(d.led!.side_zones![0].video_id).toBeUndefined();
+    component.setSideSpacing(d, 0, 5);
+    component.setSideSpacing(d, 0, null);
+    expect(d.led!.side_zones![0].spacing_m).toBeUndefined();
+  });
+
+  it('removeSide réaligne side_zones (retire la bonne zone)', () => {
+    const d = perSide();
+    component.setSideName(d, 0, 'A');
+    component.setSideName(d, 1, 'B');
+    component.setSideName(d, 2, 'C');
+    component.removeSide(d, 1);
+    expect(d.led!.sides).toEqual([40, 20]);
+    expect(d.led!.side_zones!.map((z) => z.name)).toEqual(['A', 'C']);
+  });
+
+  it('getSideZone retourne {} si non défini (jamais undefined)', () => {
+    expect(component.getSideZone(perSide(), 0)).toEqual({});
+  });
+});
