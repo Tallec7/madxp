@@ -1,3 +1,9 @@
+# [4.7.0](https://github.com/Tallec7/madxp/compare/v4.6.0...v4.7.0) (2026-06-03)
+
+### Features
+
+- **led:** saisie hauteur dalle en cm (physique) au lieu de px ([#1085](https://github.com/Tallec7/madxp/issues/1085)) ([a113ac4](https://github.com/Tallec7/madxp/commit/a113ac40442530b6140ab0419b55345ff024d5bf))
+
 # [4.6.0](https://github.com/Tallec7/madxp/compare/v4.5.0...v4.6.0) (2026-06-03)
 
 ### Features
