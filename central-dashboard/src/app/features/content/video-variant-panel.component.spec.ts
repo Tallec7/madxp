@@ -204,8 +204,8 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     expect(enqueue.request.body).toEqual({ target_site_id: 'site-1' });
     enqueue.flush({ job_id: 'job-1', status: 'queued' });
 
-    // 2) poll GET → ready + url
-    const poll = httpMock.expectOne(`${environment.apiUrl}/led-export-jobs/job-1`);
+    // 2) poll GET → ready + url (URL avec cache-buster `?_=...` → match par préfixe)
+    const poll = httpMock.expectOne((r) => r.url.startsWith(`${environment.apiUrl}/led-export-jobs/job-1`));
     expect(poll.request.method).toBe('GET');
     poll.flush({ status: 'ready', output_url: 'https://x/led.mp4', error_msg: null });
 
@@ -221,7 +221,7 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     openVariant(variant);
     component.exportLed(variant as never);
     httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/export`).flush({ job_id: 'job-2', status: 'queued' });
-    httpMock.expectOne(`${environment.apiUrl}/led-export-jobs/job-2`).flush({ status: 'failed', output_url: null, error_msg: 'boom' });
+    httpMock.expectOne((r) => r.url.startsWith(`${environment.apiUrl}/led-export-jobs/job-2`)).flush({ status: 'failed', output_url: null, error_msg: 'boom' });
 
     expect(component.exportStates['led-perimeter'].status).toBe('failed');
     fixture.detectChanges();

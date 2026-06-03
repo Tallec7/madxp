@@ -396,8 +396,11 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   }
 
   private pollExport(type: string, jobId: string): void {
+    // Cache-buster : sans ça, le navigateur peut servir le 1er statut depuis son
+    // cache HTTP → le polling reste bloqué sur 'queued'/'processing' et ne voit
+    // jamais 'ready' (incident 2026-06-03).
     this.http.get<{ status: string; output_url: string | null; error_msg: string | null }>(
-      `${environment.apiUrl}/led-export-jobs/${jobId}`,
+      `${environment.apiUrl}/led-export-jobs/${jobId}?_=${Date.now()}`,
       { withCredentials: true }
     ).subscribe({
       next: (job) => {
