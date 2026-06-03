@@ -246,3 +246,87 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
     expect(dl.getAttribute('href')).toBe('https://x/reuse.mp4');
   });
 });
+
+describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
+  let fixture: ComponentFixture<VideoVariantPanelComponent>;
+  let component: VideoVariantPanelComponent;
+  let httpMock: HttpTestingController;
+  const notificationStub = { success: jasmine.createSpy('s'), error: jasmine.createSpy('e') };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [VideoVariantPanelComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NotificationService, useValue: notificationStub },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(VideoVariantPanelComponent);
+    component = fixture.componentInstance;
+    component.videoId = 'vid-1';
+    component.siteId = 'site-1';
+    // Ruban LED à 3 côtés → le « par côté » est pertinent.
+    component.siteDisplays = [
+      { index: 1, type: 'led-perimeter', name: 'LED', led: { sides: [40, 20, 20], pitch: 'P6', height: 160, spacing_m: 10 } } as never,
+    ];
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+  });
+
+  afterEach(() => httpMock.verify());
+
+  function openLed(sideFiles: unknown[] | null = null): void {
+    component.isOpen = true;
+    component.variants = [makeVariant('led-perimeter', 'repeated') as never];
+    (component.variants[0] as unknown as { side_files: unknown }).side_files = sideFiles;
+    component.openPanels['led-perimeter'] = true;
+    fixture.detectChanges();
+  }
+
+  it('affiche le bloc « par côté » avec un slot par côté quand on coche le mode', () => {
+    openLed();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-perside"]')).toBeTruthy();
+    // Au départ : mode uniforme → pas de slots.
+    expect(fixture.nativeElement.querySelector('[data-testid="led-perside-slot-0"]')).toBeNull();
+    // Coche « une vidéo par côté ».
+    component.setPerSideMode(component.variants[0] as never, true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.led-perside-slot').length).toBe(3);
+    expect(fixture.nativeElement.querySelector('[data-testid="led-perside-slot-2"]')).toBeTruthy();
+  });
+
+  it('une variante avec side_files est détectée « par côté » et montre les slots d\'emblée', () => {
+    openLed([{ side_index: 0, filename: 'coca.mp4', original_name: 'Coca', file_size: 10, width: null, height: null }]);
+    expect(component.isPerSide(component.variants[0] as never)).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.led-perside-slot').length).toBe(3);
+    // Le côté 0 montre le fichier + un bouton Retirer ; les autres, un upload.
+    expect(fixture.nativeElement.querySelector('[data-testid="led-perside-slot-0"]').textContent).toContain('Coca');
+  });
+
+  it('uploader un côté POST sur .../sides/:i puis recharge', () => {
+    openLed();
+    const file = new File(['x'], 'side.mp4', { type: 'video/mp4' });
+    component.onSideFileSelected({ target: { files: [file], value: '' } } as unknown as Event, 1);
+    const req = httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/sides/1`);
+    expect(req.request.method).toBe('POST');
+    req.flush({ side_files: [{ side_index: 1, filename: 'side.mp4' }] });
+    // reload → GET variants
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+    expect(component.uploadingSide).toBeNull();
+  });
+
+  it('retirer un côté → DELETE .../sides/:i', () => {
+    openLed([{ side_index: 1, filename: 'x.mp4', original_name: null, file_size: 1, width: null, height: null }]);
+    component.removeSideFile(component.variants[0] as never, 1);
+    const req = httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/sides/1`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush({ ok: true, side_files: [] });
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+  });
+
+  it('ledSides lit les côtés du display led-perimeter du site', () => {
+    expect(component.ledSides).toEqual([40, 20, 20]);
+  });
+});
