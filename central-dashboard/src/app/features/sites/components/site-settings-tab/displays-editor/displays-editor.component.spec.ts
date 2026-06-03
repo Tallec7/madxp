@@ -575,4 +575,48 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     expect(bands[6].fillPct).toBeLessThan(100);
     expect(bands[0].fillPct).toBe(100);
   });
+
+  // --- Régression : ne pas sauvegarder un profil LED transitoire/invalide ---
+  // (pitch "P3." en cours de frappe provoquait des PATCH 400 par keystroke)
+
+  it('commitLed émet quand le profil est valide', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.commitLed(d);
+    expect(emitted).toBe(true);
+  });
+
+  it("commitLed N'émet PAS pour un pitch invalide (ex. \"P3.\" en cours de frappe)", () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led!, pitch: 'P3.' } };
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.commitLed(d);
+    expect(emitted).toBe(false);
+  });
+
+  it("commitLed N'émet PAS quand sides est vide", () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led!, sides: [] } };
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.commitLed(d);
+    expect(emitted).toBe(false);
+  });
+
+  it('le pitch commit sur (blur), pas sur (ngModelChange) — pas de PATCH par frappe', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    const pitch = fixture.nativeElement.querySelector('[data-testid="led-pitch"]') as HTMLInputElement;
+    let emitCount = 0;
+    component.displaysChange.subscribe(() => emitCount++);
+
+    // Frappe d'un état transitoire invalide : aucun emit tant qu'on n'a pas blur.
+    pitch.value = 'P3.';
+    pitch.dispatchEvent(new Event('input'));
+    expect(emitCount).toBe(0);
+
+    // Blur avec une valeur invalide → toujours aucun emit (gate).
+    pitch.dispatchEvent(new Event('blur'));
+    expect(emitCount).toBe(0);
+  });
 });
