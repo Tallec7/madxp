@@ -39,6 +39,9 @@ router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin'
 router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.updateVideoVariantLayout);
 // PROP-014 §6 / étape 6 : export plié async (enqueue + polling statut).
 router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.enqueueLedExport);
+// PROP-014 §6 / ADR-134 : banc d'essai — plie une vidéo au choix pour le profil
+// LED du club. Hors namespace /sites pour éviter toute collision avec sitesRoutes.
+router.post('/led-test-export/:siteId', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.siteId), validate(schemas.ledTestExport), contentController.enqueueLedTestExport);
 router.get('/led-export-jobs/:jobId', authenticate, adminRateLimit, contentController.getLedExportJob);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 

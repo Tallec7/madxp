@@ -8,6 +8,8 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { DisplaysEditorComponent } from './displays-editor.component';
 import { DisplayConfig, ReceiverInfo } from '../../../../../core/models';
 
@@ -53,6 +55,7 @@ describe('DisplaysEditorComponent — Phase 8 Receiver UX', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DisplaysEditorComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DisplaysEditorComponent);
@@ -219,7 +222,7 @@ describe('DisplaysEditorComponent — Phase 11 Reassign UX', () => {
   ];
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent], providers: [provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
     fixture = TestBed.createComponent(DisplaysEditorComponent);
     component = fixture.componentInstance;
   });
@@ -361,7 +364,7 @@ describe('Phase 12 OBSERVE — badge ambre Non assigné', () => {
   let component: DisplaysEditorComponent;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent], providers: [provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
     fixture = TestBed.createComponent(DisplaysEditorComponent);
     component = fixture.componentInstance;
   });
@@ -450,7 +453,7 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [DisplaysEditorComponent], providers: [provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
     fixture = TestBed.createComponent(DisplaysEditorComponent);
     component = fixture.componentInstance;
   });
@@ -618,5 +621,95 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     // Blur avec une valeur invalide → toujours aucun emit (gate).
     pitch.dispatchEvent(new Event('blur'));
     expect(emitCount).toBe(0);
+  });
+});
+
+describe('DisplaysEditorComponent — Banc d\'essai LED (PROP-014 §6)', () => {
+  let fixture: ComponentFixture<DisplaysEditorComponent>;
+  let component: DisplaysEditorComponent;
+  let httpMock: HttpTestingController;
+
+  const ledDisplay: DisplayConfig = {
+    index: 1,
+    name: 'Bord de terrain',
+    type: 'led-perimeter',
+    led: {
+      sides: [40, 20, 20],
+      pitch: 'P6',
+      height: 160,
+      spacing_m: 10,
+      zones: 'uniform',
+      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+    },
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DisplaysEditorComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    fixture = TestBed.createComponent(DisplaysEditorComponent);
+    component = fixture.componentInstance;
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('masque le banc d’essai quand aucun siteId n’est fourni', () => {
+    component.siteId = null;
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-testbench"]')).toBeNull();
+  });
+
+  it('affiche le banc d’essai quand un siteId est fourni', () => {
+    component.siteId = 'site-1';
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="led-testbench"]')).toBeTruthy();
+  });
+
+  it('charge la liste des vidéos à la 1re ouverture (lazy)', () => {
+    component.siteId = 'site-1';
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+
+    component.toggleTestbench();
+    const req = httpMock.expectOne((r) => r.url.endsWith('/videos/names'));
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 'v1', title: 'Jingle' }]);
+    expect(component.tbVideos.length).toBe(1);
+  });
+
+  it('runTestExport POST /led-test-export/:siteId puis poll jusqu’à ready', () => {
+    component.siteId = 'site-1';
+    component.tbVideoId = 'v1';
+    component.tbLayout = 'scrolling';
+
+    component.runTestExport();
+    const post = httpMock.expectOne((r) => r.url.endsWith('/led-test-export/site-1'));
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ video_id: 'v1', layout: 'scrolling' });
+    post.flush({ job_id: 'job-1', status: 'queued' });
+
+    const poll = httpMock.expectOne((r) => r.url.includes('/led-export-jobs/job-1'));
+    expect(poll.request.method).toBe('GET');
+    poll.flush({ status: 'ready', output_url: 'https://x/y.mp4', error_msg: null });
+
+    expect(component.tbBusy).toBe(false);
+    expect(component.tbUrl).toBe('https://x/y.mp4');
+  });
+
+  it('réutilisation : un export déjà prêt (200) affiche l’URL sans polling', () => {
+    component.siteId = 'site-1';
+    component.tbVideoId = 'v1';
+
+    component.runTestExport();
+    const post = httpMock.expectOne((r) => r.url.endsWith('/led-test-export/site-1'));
+    post.flush({ job_id: 'job-9', status: 'ready', output_url: 'https://x/reused.mp4', reused: true });
+
+    expect(component.tbUrl).toBe('https://x/reused.mp4');
+    expect(component.tbBusy).toBe(false);
+    // Aucun polling : pas de requête en attente (httpMock.verify en afterEach).
   });
 });

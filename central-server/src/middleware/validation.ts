@@ -199,6 +199,13 @@ export const schemas = {
     target_ids: Joi.array().items(Joi.string().uuid()).min(1).required(),
   }),
 
+  // PROP-014 §6 / ADR-134 — banc d'essai LED : plie une vidéo au choix pour le
+  // profil LED du club dans la mise en page demandée.
+  ledTestExport: Joi.object({
+    video_id: Joi.string().uuid().required(),
+    layout: Joi.string().valid('repeated', 'scrolling', 'stretched', 'centered').required(),
+  }),
+
   deployUpdate: Joi.object({
     update_id: Joi.string().uuid().required(),
     target_type: Joi.string().valid('site', 'group').required(),
