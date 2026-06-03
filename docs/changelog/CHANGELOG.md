@@ -1,3 +1,9 @@
+## [4.3.1](https://github.com/Tallec7/madxp/compare/v4.3.0...v4.3.1) (2026-06-03)
+
+### Bug Fixes
+
+- **led:** ne pas PATCH le profil LED à chaque frappe (pitch transitoire → 400) ([#1078](https://github.com/Tallec7/madxp/issues/1078)) ([484bc6e](https://github.com/Tallec7/madxp/commit/484bc6e82069194a9f1a3703260246711a6f2b4c))
+
 # [4.3.0](https://github.com/Tallec7/madxp/compare/v4.2.0...v4.3.0) (2026-06-03)
 
 ### Features
