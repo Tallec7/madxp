@@ -423,6 +423,10 @@ export const getLedExportJob = async (req: AuthRequest, res: Response) => {
     if (!job) {
       return res.status(404).json({ error: 'Job d’export non trouvé' });
     }
+    // Statut pollé toutes les 2s par le dashboard — JAMAIS de cache navigateur,
+    // sinon le polling reste bloqué sur le 1er statut ('queued'/'processing') et
+    // ne voit jamais 'ready' (incident 2026-06-03).
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({
       id: job.id,
       status: job.status,
