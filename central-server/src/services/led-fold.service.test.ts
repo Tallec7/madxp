@@ -24,9 +24,11 @@ import {
   computeRibbonDimensions,
   validateLedFormat,
   fitFromLayout,
+  normalizeLayout,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   buildFoldExportFilterGraph,
+  buildFoldExportLayoutGraph,
   buildFoldExportFfmpegArgs,
   ledFoldService,
   type FoldGeometry,
@@ -330,6 +332,64 @@ describe('led-fold.service — construction ffmpeg (pure)', () => {
       const fcIndex = args.indexOf('-filter_complex');
       expect(args[fcIndex + 1]).toContain('pad=1920:160:0:0:white');
     });
+  });
+});
+
+describe('led-fold.service — export par mise en page (pavage réel)', () => {
+  const geom: FoldGeometry = computeFoldGeometry({
+    ribbonWidth: 6667,
+    ribbonHeight: 160,
+    bandWidth: 1920,
+  });
+  const cellPx = 1667;
+
+  it('normalizeLayout : défaut = repeated, sinon valeur reconnue', () => {
+    expect(normalizeLayout(null)).toBe('repeated');
+    expect(normalizeLayout(undefined)).toBe('repeated');
+    expect(normalizeLayout('repeated')).toBe('repeated');
+    expect(normalizeLayout('scrolling')).toBe('scrolling');
+    expect(normalizeLayout('stretched')).toBe('stretched');
+    expect(normalizeLayout('centered')).toBe('centered');
+    expect(normalizeLayout('n_importe_quoi')).toBe('repeated');
+  });
+
+  it('repeated : pave la cellule (split+hstack) puis crop au ruban, puis plie', () => {
+    const g = buildFoldExportLayoutGraph(geom, 'repeated', cellPx, 'black');
+    expect(g).toContain('scale=1667:160:force_original_aspect_ratio=decrease'); // cellule
+    expect(g).toContain('hstack=inputs='); // pavage
+    expect(g).toContain('crop=6667:160:0:0[rib]'); // crop au ruban
+    expect(g).toContain('vstack=inputs=4'); // pliage en 4 bandes
+  });
+
+  it('scrolling : pave + défile (crop x = expression mod, virgule protégée)', () => {
+    const g = buildFoldExportLayoutGraph(geom, 'scrolling', cellPx, 'black');
+    expect(g).toContain('hstack=inputs=');
+    expect(g).toMatch(/crop=6667:160:'mod\(t\*\d+,1667\)':0/); // x animé, comma quotée
+    expect(g).toContain('vstack=inputs=4');
+  });
+
+  it('stretched : étire au ruban (déforme), pas de pavage', () => {
+    const g = buildFoldExportLayoutGraph(geom, 'stretched', cellPx, 'black');
+    expect(g).toContain('[0:v]scale=6667:160,setsar=1[rib]');
+    expect(g).not.toContain('hstack');
+  });
+
+  it('centered : une copie centrée + padding, pas de pavage', () => {
+    const g = buildFoldExportLayoutGraph(geom, 'centered', cellPx, 'black');
+    expect(g).toContain('scale=6667:160:force_original_aspect_ratio=decrease');
+    expect(g).toContain('pad=6667:160:(ow-iw)/2:(oh-ih)/2:black');
+    expect(g).not.toContain('hstack');
+  });
+
+  it('buildFoldExportFfmpegArgs : layout prend le pas sur fit', () => {
+    const args = buildFoldExportFfmpegArgs(geom, {
+      inputPath: '/tmp/in.mp4',
+      outputPath: '/tmp/out.mp4',
+      layout: 'repeated',
+      cellPx,
+    });
+    const fc = args[args.indexOf('-filter_complex') + 1];
+    expect(fc).toContain('hstack=inputs=');
   });
 });
 

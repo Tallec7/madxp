@@ -413,6 +413,96 @@ export function buildFoldExportFilterGraph(
 }
 
 /**
+ * Mise en page LED périmétrique réelle (PROP-014 §4) — comment la source remplit
+ * le ruban AVANT pliage. C'est ce qui rend le rendu cohérent (un logo se RÉPÈTE le
+ * long du bord, il ne reste pas une mini-image perdue au centre).
+ *  - `repeated`  : motif scalé à la hauteur du ruban, pavé tous les `spacingPx`.
+ *  - `scrolling` : pavé idem, mais qui défile horizontalement (animé).
+ *  - `stretched` : source étirée au ratio du ruban (déforme).
+ *  - `centered`  : une seule copie centrée + padding (cas « vidéo déjà ruban »).
+ */
+export type LedExportLayout = 'repeated' | 'scrolling' | 'stretched' | 'centered';
+
+/** Vitesse de défilement (px/s) pour `scrolling`. */
+const SCROLL_SPEED_PX_PER_SEC = 120;
+
+/** Normalise une valeur de `video_variants.layout` (ou input UI) vers un layout d'export. */
+export function normalizeLayout(layout: string | null | undefined): LedExportLayout {
+  switch (layout) {
+    case 'scrolling':
+      return 'scrolling';
+    case 'stretched':
+      return 'stretched';
+    case 'centered':
+      return 'centered';
+    case 'repeated':
+    default:
+      // Défaut produit bord-de-terrain = motif répété (logos sponsors).
+      return 'repeated';
+  }
+}
+
+/**
+ * Construit la chaîne ffmpeg `[0:v]…[rib]` qui remplit le ruban (W×H) selon le layout.
+ * Pour `repeated`/`scrolling` : fabrique une cellule de `cellPx×H` (motif scalé à la
+ * hauteur + centré), la pave horizontalement (split+hstack), puis crop à W (+ scroll).
+ * Pure (string).
+ */
+function buildRibbonClause(
+  W: number,
+  H: number,
+  layout: LedExportLayout,
+  cellPx: number,
+  padColor: string
+): string {
+  const cw = Math.max(1, Math.round(cellPx));
+  const cell = `scale=${cw}:${H}:force_original_aspect_ratio=decrease,pad=${cw}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
+
+  switch (layout) {
+    case 'stretched':
+      return `[0:v]scale=${W}:${H},setsar=1[rib]`;
+    case 'centered':
+      return `[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1[rib]`;
+    case 'scrolling': {
+      // Une cellule de marge en plus pour un wrap sans couture (contenu périodique).
+      const n = Math.max(2, Math.ceil(W / cw) + 1);
+      const labels = Array.from({ length: n }, (_, i) => `[c${i}]`).join('');
+      // crop positionnel w:h:x:y ; x = expression de défilement. La virgule de
+      // `mod(…,…)` est protégée par les quotes simples (sinon = séparateur de filtre).
+      return (
+        `[0:v]${cell},split=${n}${labels};` +
+        `${labels}hstack=inputs=${n}[strip];` +
+        `[strip]crop=${W}:${H}:'mod(t*${SCROLL_SPEED_PX_PER_SEC},${cw})':0,setsar=1[rib]`
+      );
+    }
+    case 'repeated':
+    default: {
+      // +1 cellule de marge : garantit que le strip pavé dépasse W (robuste aux
+      // arrondis de scale/pad), on crop ensuite à la largeur exacte du ruban.
+      const n = Math.max(2, Math.ceil(W / cw) + 1);
+      const labels = Array.from({ length: n }, (_, i) => `[c${i}]`).join('');
+      return `[0:v]${cell},split=${n}${labels};${labels}hstack=inputs=${n},crop=${W}:${H}:0:0[rib]`;
+    }
+  }
+}
+
+/**
+ * Filter graph d'export piloté par la MISE EN PAGE (pavage réel), puis pliage.
+ * `cellPx` = cadence du motif en px (= espacement_m × px/m du profil).
+ * Pure (string) — testable sans ffmpeg.
+ */
+export function buildFoldExportLayoutGraph(
+  geometry: FoldGeometry,
+  layout: LedExportLayout,
+  cellPx: number,
+  padColor = 'black'
+): string {
+  const ribbon = buildRibbonClause(geometry.ribbonWidth, geometry.ribbonHeight, layout, cellPx, padColor);
+  const foldGraph = buildFoldFilterGraph(geometry, padColor, '[rib]');
+  return `${ribbon};${foldGraph}`;
+}
+
+/**
  * Assemble les arguments ffmpeg complets pour produire le MP4 plié.
  * Fonction pure (string[]) — testable sans spawn.
  */
@@ -450,12 +540,16 @@ export function buildFoldFfmpegArgs(
 
 /** Options d'export (adapte la source au ruban avant pliage). */
 export interface FoldExportOptions extends FoldFfmpegOptions {
-  /** Mode d'adaptation source → ruban. Défaut `'contain'`. */
+  /** Mode d'adaptation source → ruban (legacy). Défaut `'contain'`. */
   fit?: LedExportFit;
+  /** Mise en page réelle (pavage). Si fournie, prend le pas sur `fit`. */
+  layout?: LedExportLayout;
+  /** Cadence du motif en px (= espacement_m × px/m). Requis pour `repeated`/`scrolling`. */
+  cellPx?: number;
 }
 
 /**
- * Assemble les arguments ffmpeg d'EXPORT (scale/pad au ruban puis pliage).
+ * Assemble les arguments ffmpeg d'EXPORT (mise en page → ruban puis pliage).
  * Fonction pure (string[]). Pour la vidéo finie d'un club (taille quelconque).
  */
 export function buildFoldExportFfmpegArgs(
@@ -465,8 +559,10 @@ export function buildFoldExportFfmpegArgs(
   const padColor = options.padColor ?? 'black';
   const crf = options.crf ?? 18;
   const preset = options.preset ?? 'medium';
-  const fit = options.fit ?? 'contain';
-  const filterGraph = buildFoldExportFilterGraph(geometry, fit, padColor);
+  // Mise en page réelle si fournie (pavage), sinon fallback legacy `fit`.
+  const filterGraph = options.layout
+    ? buildFoldExportLayoutGraph(geometry, options.layout, options.cellPx ?? geometry.ribbonWidth, padColor)
+    : buildFoldExportFilterGraph(geometry, options.fit ?? 'contain', padColor);
 
   return [
     '-i',
@@ -567,7 +663,8 @@ export async function applyFoldExport(
   logger.info('led-fold: applying fold export', {
     inputPath: options.inputPath,
     outputPath: options.outputPath,
-    fit: options.fit ?? 'contain',
+    layout: options.layout ?? `fit:${options.fit ?? 'contain'}`,
+    cellPx: options.cellPx,
     ribbonWidth: geometry.ribbonWidth,
     bandCount: geometry.bandCount,
     canvasWidth: geometry.canvasWidth,
@@ -620,9 +717,11 @@ export const ledFoldService = {
   computeRibbonDimensions,
   validateLedFormat,
   fitFromLayout,
+  normalizeLayout,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   buildFoldExportFilterGraph,
+  buildFoldExportLayoutGraph,
   buildFoldExportFfmpegArgs,
   isFfmpegAvailable,
   applyFold,

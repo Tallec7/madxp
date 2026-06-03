@@ -7,7 +7,7 @@ import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, ge
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
 import deploymentService from '../services/deployment.service';
-import { computeRibbonDimensions, validateLedFormat, fitFromLayout, type LedFormatNotice } from '../services/led-fold.service';
+import { computeRibbonDimensions, validateLedFormat, fitFromLayout, normalizeLayout, type LedFormatNotice } from '../services/led-fold.service';
 
 /**
  * Validateur de format LED à l'upload (PROP-014 §6) — non bloquant.
@@ -381,11 +381,11 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
     }
 
-    const fit = fitFromLayout(variant.layout);
+    const layout = normalizeLayout(variant.layout);
 
-    // Réutilisation : un ruban déjà plié pour ce (vidéo × club × fit) ? On le rend
-    // directement (200) au lieu de replier inutilement.
-    const existing = await ledExportJobRepository.findReady(id, targetSiteId, fit);
+    // Réutilisation : un ruban déjà plié pour ce (vidéo × club × mise en page) ?
+    // On le rend directement (200) au lieu de replier inutilement.
+    const existing = await ledExportJobRepository.findReady(id, targetSiteId, layout);
     if (existing) {
       logger.info('led-export: reusing ready export', { jobId: existing.id, videoId: id, siteId: targetSiteId });
       return res.status(200).json({
@@ -400,11 +400,12 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       site_id: targetSiteId,
       video_id: id,
       display_type: displayType,
-      fit,
+      fit: fitFromLayout(variant.layout),
+      layout,
       created_by: req.user?.id ?? null,
     });
 
-    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, siteId: targetSiteId, fit });
+    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, siteId: targetSiteId, layout });
     res.status(202).json({ job_id: job.id, status: job.status });
   } catch (error) {
     logger.error('Error enqueuing LED export:', error);
