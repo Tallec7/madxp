@@ -1,3 +1,9 @@
+## [4.4.1](https://github.com/Tallec7/madxp/compare/v4.4.0...v4.4.1) (2026-06-03)
+
+### Bug Fixes
+
+- **led:** polling export bloqué sur « en cours » (cache du GET statut) ([#1082](https://github.com/Tallec7/madxp/issues/1082)) ([7760ff2](https://github.com/Tallec7/madxp/commit/7760ff2fd391025808c8c2b1025a7a9afb57f9f6))
+
 # [4.4.0](https://github.com/Tallec7/madxp/compare/v4.3.1...v4.4.0) (2026-06-03)
 
 ### Features
