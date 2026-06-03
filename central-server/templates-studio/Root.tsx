@@ -12,6 +12,16 @@ import {
   FaitsDeJeuComposition,
   faitsDeJeuSchema,
 } from './templates/faits_de_jeu/Composition';
+import {
+  LedPerimeterRibbonComposition,
+  ledPerimeterRibbonSchema,
+  calculateLedRibbonMetadata,
+} from './templates/led_perimeter_ribbon/Composition';
+import {
+  LedPerimeterFoldedComposition,
+  ledPerimeterFoldedSchema,
+  calculateLedFoldedMetadata,
+} from './templates/led_perimeter_folded/Composition';
 
 /**
  * Registre Remotion des compositions Templates Studio.
@@ -74,6 +84,60 @@ export const Root: React.FC = () => {
         height={1080}
         schema={faitsDeJeuSchema}
         defaultProps={{ label: '2MIN' }}
+      />
+
+      {/*
+        POC LED périmétrique (PROP-014 étape 3). Dimensions DYNAMIQUES via
+        calculateMetadata — width/height ci-dessous ne sont que des fallbacks
+        Remotion Studio, surchargés au render par le profil LED. Pas de manifest
+        ni de row DB : compo POC rendue directement par `npm run led:ribbon-poc`
+        (le seed templates-studio skippe les dossiers sans manifest.json).
+      */}
+      <Composition
+        id="LedPerimeterRibbon"
+        component={LedPerimeterRibbonComposition}
+        calculateMetadata={calculateLedRibbonMetadata}
+        durationInFrames={50}
+        fps={25}
+        width={1920}
+        height={160}
+        schema={ledPerimeterRibbonSchema}
+        defaultProps={{
+          sides: [40, 20, 20],
+          pitchMm: 6,
+          height: 160,
+          spacingM: 10,
+          zones: 'uniform',
+          bandWidth: 1920,
+          label: 'MADXP',
+        }}
+      />
+
+      {/*
+        Composition de PRODUCTION (PROP-014 étape 3) — ruban rendu directement PLIÉ
+        (canvas ≤ bandWidth × N). Stratégie validée par le POC (flat OOM ≥10000px).
+        Dimensions dynamiques via calculateMetadata. Pas de manifest (skeleton, le
+        binding motif/asset viendra plus tard).
+      */}
+      <Composition
+        id="LedPerimeterFolded"
+        component={LedPerimeterFoldedComposition}
+        calculateMetadata={calculateLedFoldedMetadata}
+        durationInFrames={50}
+        fps={25}
+        width={1920}
+        height={1120}
+        schema={ledPerimeterFoldedSchema}
+        defaultProps={{
+          sides: [40, 20, 20],
+          pitchMm: 6,
+          height: 160,
+          spacingM: 10,
+          zones: 'uniform',
+          bandWidth: 1920,
+          order: 'top-to-bottom',
+          label: 'MADXP',
+        }}
       />
     </>
   );

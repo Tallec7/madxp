@@ -179,6 +179,56 @@ export function computeFoldGeometry(input: FoldGeometryInput): FoldGeometry {
   };
 }
 
+// ── 1b. Profil LED → ruban déroulé ────────────────────────────────────────────
+
+/** Entrée du calcul des dimensions du ruban depuis le profil LED (PROP-014 §3). */
+export interface RibbonDimensionsInput {
+  /** Longueurs des côtés du périmètre, en mètres. */
+  sides: number[];
+  /** Pas de pixel en mm (P6 → 6). */
+  pitchMm: number;
+  /** Hauteur de dalle (px). */
+  height: number;
+}
+
+export interface RibbonDimensions {
+  ribbonWidth: number;
+  ribbonHeight: number;
+  /** Densité linéaire = 1000 / pitch_mm (px/m). */
+  pxPerMeter: number;
+}
+
+const ribbonSchema = Joi.object<RibbonDimensionsInput>({
+  sides: Joi.array().items(Joi.number().positive().max(500)).min(1).max(8).required(),
+  pitchMm: Joi.number().positive().max(100).required(),
+  height: Joi.number().integer().positive().max(2000).required(),
+}).required();
+
+/**
+ * Dimensions du ruban déroulé à plat (couche contenu, PROP-014 §2).
+ * `ribbonWidth = Σ côtés (m) × (1000 / pitch_mm)`.
+ *
+ * **Source de vérité de la formule.** La composition Remotion
+ * `templates-studio/templates/led_perimeter_ribbon` la duplique (frontière de
+ * bundle : la compo est webpack-bundlée à part et ne peut pas importer `src/`) —
+ * tout changement ici doit y être répercuté.
+ *
+ * @throws si l'entrée est invalide (Joi).
+ */
+export function computeRibbonDimensions(input: RibbonDimensionsInput): RibbonDimensions {
+  const { error, value } = ribbonSchema.validate(input, { convert: false });
+  if (error) {
+    throw new Error(`computeRibbonDimensions: entrée invalide — ${error.message}`);
+  }
+  const pxPerMeter = 1000 / value.pitchMm;
+  const sumSides = value.sides.reduce((a, b) => a + b, 0);
+  return {
+    ribbonWidth: Math.round(sumSides * pxPerMeter),
+    ribbonHeight: value.height,
+    pxPerMeter,
+  };
+}
+
 // ── 2. Application ffmpeg ──────────────────────────────────────────────────────
 
 /**
@@ -334,6 +384,7 @@ function runFfmpeg(args: string[]): Promise<void> {
 // Pattern singleton — regroupe les helpers purs + l'application réelle.
 export const ledFoldService = {
   computeFoldGeometry,
+  computeRibbonDimensions,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   isFfmpegAvailable,

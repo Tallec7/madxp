@@ -21,6 +21,7 @@ jest.mock('../config/logger', () => ({
 
 import {
   computeFoldGeometry,
+  computeRibbonDimensions,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   ledFoldService,
@@ -179,6 +180,33 @@ describe('led-fold.service — géométrie pure', () => {
         computeFoldGeometry({ ribbonWidth: 1920, ribbonHeight: 160, bandWidth: 1920, order: 'diagonal' }),
       ).toThrow();
     });
+  });
+});
+
+describe('led-fold.service — profil LED → ruban (computeRibbonDimensions)', () => {
+  it('80 m P6 → 13333×160 (px/m = 1000/6)', () => {
+    const r = computeRibbonDimensions({ sides: [40, 20, 20], pitchMm: 6, height: 160 });
+    expect(r.ribbonWidth).toBe(13333); // round(80 × 166.6667)
+    expect(r.ribbonHeight).toBe(160);
+    expect(r.pxPerMeter).toBeCloseTo(166.6667, 3);
+  });
+
+  it('un seul côté de 40 m P10 → 4000×160', () => {
+    const r = computeRibbonDimensions({ sides: [40], pitchMm: 10, height: 160 });
+    expect(r.ribbonWidth).toBe(4000);
+  });
+
+  it('alimente fold() : ribbonWidth → bandCount cohérent', () => {
+    const { ribbonWidth, ribbonHeight } = computeRibbonDimensions({ sides: [40, 20, 20], pitchMm: 6, height: 160 });
+    const geom = computeFoldGeometry({ ribbonWidth, ribbonHeight, bandWidth: 1920 });
+    expect(geom.bandCount).toBe(7); // ceil(13333/1920)
+    expect(geom.canvasHeight).toBe(1120);
+  });
+
+  it('rejette (Joi) des entrées invalides', () => {
+    expect(() => computeRibbonDimensions({ sides: [], pitchMm: 6, height: 160 })).toThrow();
+    expect(() => computeRibbonDimensions({ sides: [40], pitchMm: 0, height: 160 })).toThrow();
+    expect(() => computeRibbonDimensions({ sides: [40], pitchMm: 6, height: 160.5 })).toThrow();
   });
 });
 
