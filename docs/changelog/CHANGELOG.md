@@ -1,3 +1,9 @@
+# [4.4.0](https://github.com/Tallec7/madxp/compare/v4.3.1...v4.4.0) (2026-06-03)
+
+### Features
+
+- **led:** export plié piloté par le club consulté + réutilisation (supersède [#1080](https://github.com/Tallec7/madxp/issues/1080)) ([#1081](https://github.com/Tallec7/madxp/issues/1081)) ([e2fdcbf](https://github.com/Tallec7/madxp/commit/e2fdcbf284c3d9a141a3312b4e48ff8da0987486))
+
 ## [4.3.1](https://github.com/Tallec7/madxp/compare/v4.3.0...v4.3.1) (2026-06-03)
 
 ### Bug Fixes
