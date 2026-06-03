@@ -1,3 +1,10 @@
+# [4.10.0](https://github.com/Tallec7/madxp/compare/v4.9.0...v4.10.0) (2026-06-03)
+
+### Features
+
+- **led:** composition une vidéo par côté → canvas plié (ADR-135 étape 3a) ([#1091](https://github.com/Tallec7/madxp/issues/1091)) ([39c0108](https://github.com/Tallec7/madxp/commit/39c010823aace624efa1538c56c1293839dbad2c))
+- **led:** moteur de pliage par côté — étape 2 (computeFoldGeometryPerSide) ([#1089](https://github.com/Tallec7/madxp/issues/1089)) ([cded702](https://github.com/Tallec7/madxp/commit/cded702adecf4f16c3311a8d9feb24b94ef5366a))
+
 # [4.9.0](https://github.com/Tallec7/madxp/compare/v4.8.0...v4.9.0) (2026-06-03)
 
 ### Features
