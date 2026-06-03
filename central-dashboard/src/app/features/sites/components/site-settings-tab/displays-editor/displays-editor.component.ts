@@ -151,30 +151,66 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       <!-- Panneau profil LED périmétrique — rendu UNIQUEMENT pour le type 'led-perimeter'
            (PROP-014 §8 règle d'or : piloté par TYPE, pas par index). -->
       <div class="led-panel" *ngIf="isLedPerimeter(display) && display.led" data-testid="led-panel">
+        <div class="led-header">🟥 Ruban LED</div>
+
         <div class="led-grid">
-          <label class="led-field">
+          <!-- Côtés : une case par côté + bouton ajouter (1 à 8). PROP-014 §3. -->
+          <div class="led-field led-field--sides">
             <span>Côtés (m)</span>
-            <input
-              #sidesInput
-              class="form-input"
-              type="text"
-              data-testid="led-sides"
-              [ngModel]="getLedSidesInput(display)"
-              (change)="onLedSidesChange(display, sidesInput.value)"
-              placeholder="40, 20, 20"
-            />
-          </label>
+            <div class="led-sides-editor" data-testid="led-sides">
+              <span
+                class="led-side-chip"
+                *ngFor="let s of display.led!.sides; let i = index; trackBy: trackBySideIndex"
+              >
+                <input
+                  #sideInput
+                  class="led-side-input"
+                  type="number"
+                  min="1"
+                  [ngModel]="s"
+                  (change)="updateSide(display, i, sideInput.value)"
+                  [attr.data-testid]="'led-side-' + i"
+                />
+                <button
+                  type="button"
+                  class="led-side-remove"
+                  *ngIf="display.led!.sides.length > 1"
+                  (click)="removeSide(display, i)"
+                  title="Remove side"
+                >✕</button>
+              </span>
+              <button
+                type="button"
+                class="led-side-add"
+                data-testid="led-side-add"
+                (click)="addSide(display)"
+                [disabled]="display.led!.sides.length >= 8"
+                title="Add side"
+              >+</button>
+            </div>
+            <small class="led-subhint" data-testid="led-perimeter"
+              >Périmètre : {{ getLedPerimeterM(display) }} m</small
+            >
+          </div>
+
+          <!-- Pitch : menu de pas courants + saisie libre (datalist). -->
           <label class="led-field">
-            <span>Pas (pitch)</span>
+            <span>Pitch</span>
             <input
               class="form-input"
               type="text"
               data-testid="led-pitch"
               [(ngModel)]="display.led!.pitch"
               (blur)="commitLed(display)"
+              [attr.list]="'led-pitch-' + display.index"
               placeholder="P6"
             />
+            <datalist [id]="'led-pitch-' + display.index">
+              <option *ngFor="let p of pitchOptions" [value]="p"></option>
+            </datalist>
           </label>
+
+          <!-- Hauteur en cm (modèle interne = rangées px). -->
           <label class="led-field">
             <span>Hauteur dalle (cm)</span>
             <input
@@ -192,17 +228,20 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               >= {{ display.led!.height }} rangées @ {{ display.led!.pitch }}</small
             >
           </label>
+
+          <!-- Répétition par défaut (= cadence du motif, ex-« Espacement motif »). -->
           <label class="led-field">
-            <span>Espacement motif</span>
+            <span>Répétition par défaut</span>
             <select
               class="form-input"
               data-testid="led-spacing"
               [(ngModel)]="display.led!.spacing_m"
               (ngModelChange)="commitLed(display)"
             >
-              <option *ngFor="let s of getSpacingOptions(display)" [ngValue]="s">{{ s }} m</option>
+              <option *ngFor="let s of getSpacingOptions(display)" [ngValue]="s">tous les {{ s }} m</option>
             </select>
           </label>
+
           <label class="led-field">
             <span>Zones</span>
             <select
@@ -217,19 +256,57 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           </label>
         </div>
 
-        <div class="led-derived" data-testid="led-derived">
-          Ruban
-          <strong>{{ getLedRibbonWidth(display) }}×{{ display.led!.height }}</strong>
-          → plié en
-          <strong>{{ getLedBandCount(display) }}</strong> bande(s) de
-          {{ display.led!.canvas_in?.band_width || 1920 }}×{{ display.led!.height }}
-          (canvas {{ display.led!.canvas_in?.band_width || 1920 }}×{{ getLedCanvasHeight(display) }})
-          <span
-            class="led-provisional"
-            *ngIf="isCanvasProvisional(display)"
-            title="Valeurs processeur provisoires — confirmées à l'installation (SPIKE-003)"
-            >⏳ pliage provisoire</span
+        <!-- Avancé (processeur) : repliable. Valeurs dérivées + override install
+             (band_count / mode) — PROP-014 §3, §10, §12. -->
+        <div class="led-advanced">
+          <button
+            type="button"
+            class="led-adv-toggle"
+            data-testid="led-adv-toggle"
+            (click)="advOpen = !advOpen"
           >
+            {{ advOpen ? '▾' : '▸' }} Avancé (processeur)
+            <span
+              class="led-provisional"
+              *ngIf="isCanvasProvisional(display)"
+              title="Valeurs processeur provisoires — à confirmer à l'installation (SPIKE-003)"
+              >⚠️ à confirmer install</span
+            >
+          </button>
+          <div class="led-adv-body" *ngIf="advOpen" data-testid="led-adv-body">
+            <div class="led-adv-item">
+              <span>Entrée processeur</span>
+              <strong data-testid="led-adv-input"
+                >{{ getLedBandWidth(display) }}×{{ getLedCanvasHeight(display) }}</strong
+              >
+              <em class="led-adv-note">ruban déroulé {{ getLedRibbonWidth(display) }}×{{ display.led!.height }}</em>
+            </div>
+            <label class="led-adv-item">
+              <span>Bandes</span>
+              <input
+                #bandCountInput
+                class="form-input led-adv-input-sm"
+                type="number"
+                min="1"
+                data-testid="led-adv-bands"
+                [ngModel]="display.led!.canvas_in?.band_count ?? null"
+                (change)="updateBandCount(display, bandCountInput.value)"
+                [attr.placeholder]="getLedBandCount(display)"
+              />
+            </label>
+            <label class="led-adv-item">
+              <span>Mode</span>
+              <select
+                class="form-input led-adv-input-sm"
+                data-testid="led-adv-mode"
+                [(ngModel)]="display.led!.canvas_in!.mode"
+                (ngModelChange)="commitLed(display)"
+              >
+                <option value="A">A — plug & play</option>
+                <option value="B">B — pixel-perfect</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <!-- Aperçu schématique du canvas plié (bandes empilées) -->
@@ -418,6 +495,142 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       font-size: 0.65rem;
       font-weight: 400;
       color: #b45309;
+    }
+
+    .led-header {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #9a3412;
+      margin-bottom: 0.5rem;
+    }
+
+    .led-field--sides {
+      grid-column: 1 / -1;
+    }
+
+    .led-sides-editor {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .led-side-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.125rem;
+      background: white;
+      border: 1px solid #fdba74;
+      border-radius: 6px;
+      padding: 0.125rem 0.25rem;
+    }
+
+    .led-side-input {
+      width: 3.5rem;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: #1e293b;
+      text-align: center;
+    }
+
+    .led-side-remove {
+      border: none;
+      background: none;
+      color: #c2410c;
+      cursor: pointer;
+      font-size: 0.7rem;
+      line-height: 1;
+      padding: 0;
+      opacity: 0.6;
+    }
+
+    .led-side-remove:hover {
+      opacity: 1;
+    }
+
+    .led-side-add {
+      border: 1px dashed #fb923c;
+      background: white;
+      color: #c2410c;
+      border-radius: 6px;
+      width: 1.75rem;
+      height: 1.75rem;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .led-side-add:hover:not(:disabled) {
+      background: #ffedd5;
+    }
+
+    .led-side-add:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Section Avancé (processeur) */
+    .led-advanced {
+      margin-top: 0.625rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed #fdba74;
+    }
+
+    .led-adv-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #9a3412;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .led-adv-body {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem 1.25rem;
+    }
+
+    .led-adv-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      font-size: 0.7rem;
+      color: #9a3412;
+      font-weight: 600;
+    }
+
+    .led-adv-item strong {
+      font-weight: 700;
+      color: #7c2d12;
+      font-size: 0.8125rem;
+    }
+
+    .led-adv-note {
+      font-weight: 400;
+      font-style: normal;
+      color: #b45309;
+      font-size: 0.62rem;
+    }
+
+    .led-adv-input-sm {
+      width: 5rem;
+      padding: 0.25rem 0.4rem;
+      border: 1px solid #fdba74;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: #1e293b;
+      background: white;
     }
 
     .led-derived {
@@ -812,6 +1025,12 @@ export class DisplaysEditorComponent implements OnDestroy {
   tbError = '';
   tbUrl: string | null = null;
   private tbPollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // --- Panneau LED ---
+  /** Section « Avancé (processeur) » repliée par défaut. */
+  advOpen = false;
+  /** Pas LED courants proposés dans le datalist (saisie libre conservée). */
+  readonly pitchOptions: string[] = ['P2.5', 'P3', 'P3.9', 'P4', 'P5', 'P6', 'P8', 'P10'];
 
   /**
    * Les displays de type `led-perimeter` reçoivent un profil `led` par défaut s'il
@@ -1218,6 +1437,11 @@ export class DisplaysEditorComponent implements OnDestroy {
     return display.led?.canvas_in?.band_width || 1920;
   }
 
+  /** Largeur d'entrée processeur (px) — exposé au template (section Avancé). */
+  getLedBandWidth(display: DisplayConfig): number {
+    return this.bandWidth(display);
+  }
+
   /** Nb de bandes = ceil(ribbonWidth / bandWidth) — même calcul que fold(). */
   getLedBandCount(display: DisplayConfig): number {
     const ribbon = this.getLedRibbonWidth(display);
@@ -1226,14 +1450,72 @@ export class DisplaysEditorComponent implements OnDestroy {
     return Math.ceil(ribbon / bw);
   }
 
-  /** Hauteur du canvas plié = bandCount × hauteur dalle. */
-  getLedCanvasHeight(display: DisplayConfig): number {
-    return this.getLedBandCount(display) * (display.led?.height || 0);
+  /**
+   * Nb de bandes effectif = override processeur confirmé (`canvas_in.band_count`)
+   * sinon la valeur dérivée. L'installateur peut figer le vrai nombre sur place.
+   */
+  getLedBandsEffective(display: DisplayConfig): number {
+    return display.led?.canvas_in?.band_count ?? this.getLedBandCount(display);
   }
 
-  /** Provisoire tant que le SPIKE n'a pas confirmé band_count (PROP-014 §13). */
+  /** Hauteur du canvas plié = bandes effectives × hauteur dalle. */
+  getLedCanvasHeight(display: DisplayConfig): number {
+    return this.getLedBandsEffective(display) * (display.led?.height || 0);
+  }
+
+  /** Provisoire tant que le band_count processeur n'est pas confirmé (PROP-014 §13). */
   isCanvasProvisional(display: DisplayConfig): boolean {
     return !display.led?.canvas_in?.band_count;
+  }
+
+  /** Override install du nb de bandes : vide → repasse en provisoire (dérivé). */
+  updateBandCount(display: DisplayConfig, raw: string): void {
+    if (!display.led?.canvas_in) return;
+    const v = parseInt(String(raw).trim(), 10);
+    display.led.canvas_in.band_count = Number.isFinite(v) && v > 0 ? v : undefined;
+    this.commitLed(display);
+  }
+
+  // --- Côtés (cases éditables) ---
+
+  trackBySideIndex(index: number): number {
+    return index;
+  }
+
+  /** Périmètre total (m) = Σ côtés. */
+  getLedPerimeterM(display: DisplayConfig): number {
+    return (display.led?.sides ?? []).reduce((a, b) => a + b, 0);
+  }
+
+  /** Met à jour un côté (m). Ignore une saisie ≤ 0 ou non numérique. */
+  updateSide(display: DisplayConfig, index: number, raw: string): void {
+    if (!display.led) return;
+    const v = parseFloat(String(raw).replace(',', '.'));
+    if (!Number.isFinite(v) || v <= 0) return;
+    const sides = [...(display.led.sides ?? [])];
+    sides[index] = v;
+    display.led.sides = sides;
+    this.commitLed(display);
+  }
+
+  /** Ajoute un côté (max 8) — duplique le dernier comme valeur de départ. */
+  addSide(display: DisplayConfig): void {
+    if (!display.led) return;
+    const sides = display.led.sides ?? [];
+    if (sides.length >= 8) return;
+    const seed = sides.length > 0 ? sides[sides.length - 1] : 10;
+    display.led.sides = [...sides, seed];
+    this.commitLed(display);
+  }
+
+  /** Retire un côté (garde toujours au moins 1). */
+  removeSide(display: DisplayConfig, index: number): void {
+    if (!display.led) return;
+    const sides = [...(display.led.sides ?? [])];
+    if (sides.length <= 1) return;
+    sides.splice(index, 1);
+    display.led.sides = sides;
+    this.commitLed(display);
   }
 
   /**
