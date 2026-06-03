@@ -116,4 +116,54 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
     expect(error).toBeDefined();
     expect(error!.message).toMatch(/order/);
   });
+
+  // --- side_zones : contenu/cadence par côté (ADR-135) ---
+
+  it('préserve side_zones (n’est PAS retiré par stripUnknown)', () => {
+    const { error, value } = wrap({
+      index: 1,
+      name: 'LED',
+      type: 'led-perimeter',
+      led: {
+        ...ledMinimal,
+        zones: 'per-side',
+        side_zones: [
+          { name: 'Tribune', video_id: '11111111-1111-1111-1111-111111111111', spacing_m: 10 },
+          { name: 'But Est', video_id: '22222222-2222-2222-2222-222222222222' },
+          {},
+        ],
+      },
+    });
+    expect(error).toBeUndefined();
+    expect(value.displays[0].led.side_zones).toHaveLength(3);
+    expect(value.displays[0].led.side_zones[0].name).toBe('Tribune');
+    expect(value.displays[0].led.side_zones[1].video_id).toBe('22222222-2222-2222-2222-222222222222');
+  });
+
+  it('accepte side_zones absent (mode uniform)', () => {
+    const { error, value } = wrap({ index: 1, name: 'LED', type: 'led-perimeter', led: ledMinimal });
+    expect(error).toBeUndefined();
+    expect(value.displays[0].led.side_zones).toBeUndefined();
+  });
+
+  it('rejette un video_id non-uuid dans side_zones', () => {
+    const { error } = wrap({
+      index: 1,
+      name: 'LED',
+      type: 'led-perimeter',
+      led: { ...ledMinimal, side_zones: [{ video_id: 'pas-un-uuid' }] },
+    });
+    expect(error).toBeDefined();
+    expect(error!.message).toMatch(/video_id/);
+  });
+
+  it('rejette plus de 8 zones', () => {
+    const { error } = wrap({
+      index: 1,
+      name: 'LED',
+      type: 'led-perimeter',
+      led: { ...ledMinimal, side_zones: Array.from({ length: 9 }, () => ({})) },
+    });
+    expect(error).toBeDefined();
+  });
 });

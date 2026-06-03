@@ -163,6 +163,19 @@ export const schemas = {
           spacing_m: Joi.number().positive().max(500).required(),
           // Même contenu partout vs contenu par côté (PROP-014 §5).
           zones: Joi.string().valid('uniform', 'per-side').default('uniform'),
+          // PROP-014 §5 / ADR-135 — contenu + cadence par côté, aligné par index sur
+          // `sides`. Optionnel (mode 'per-side'). V1 : 1 vidéo par côté (video_id) +
+          // cadence propre (spacing_m, sinon hérite du spacing_m global).
+          side_zones: Joi.array()
+            .max(8)
+            .items(
+              Joi.object({
+                name: Joi.string().max(100).allow('').optional(),
+                video_id: Joi.string().uuid().optional(),
+                spacing_m: Joi.number().positive().max(500).optional(),
+              })
+            )
+            .optional(),
           // ⏳ Config processeur LED — lue à l'install (SPIKE), défauts provisoires.
           canvas_in: Joi.object({
             band_width: Joi.number().integer().positive().max(7680).default(1920),
