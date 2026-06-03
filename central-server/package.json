@@ -20,6 +20,8 @@
     "audit:ftp-legacy": "ts-node src/scripts/audit-ftp-legacy-videos.ts",
     "audit:profile-filename-orphans": "ts-node src/scripts/audit-config-profile-filename-orphans.ts",
     "rotate:ftp-creds": "ts-node src/scripts/rotate-ftp-creds.ts",
+    "led:ribbon-poc": "ts-node src/scripts/led-ribbon-poc.ts",
+    "led:export": "ts-node src/scripts/led-export.ts",
     "test": "jest",
     "test:smoke": "jest --verbose --no-coverage --forceExit '__tests__/smoke/'",
     "test:smoke:smart": "bash src/scripts/smart-smoke.sh",

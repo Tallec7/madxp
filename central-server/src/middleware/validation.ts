@@ -148,6 +148,29 @@ export const schemas = {
           mac: Joi.string().pattern(/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/).optional(),
           last_seen_at: Joi.string().isoDate().optional(),
         }).optional().allow(null),
+        // Profil LED périmétrique (PROP-014 §3, §12) — présent uniquement pour les
+        // displays de type 'led-perimeter'. `stripUnknown` retirerait cette clé si elle
+        // n'était pas déclarée ici. `canvas_in` = config processeur, défauts provisoires
+        // jusqu'au SPIKE matériel (SPIKE-003) ; `order` réutilise l'enum de fold().
+        led: Joi.object({
+          // Longueurs des côtés du périmètre, en mètres (topologie 1 à 8 côtés).
+          sides: Joi.array().items(Joi.number().positive().max(500)).min(1).max(8).required(),
+          // Pas de pixel (slug constructeur), ex. 'P6' = 6 mm.
+          pitch: Joi.string().pattern(/^P\d+(\.\d+)?$/).max(8).required(),
+          // Hauteur de dalle en px.
+          height: Joi.number().integer().positive().max(2000).required(),
+          // Cadence de répétition du motif, en mètres (dropdown contraint côté UI).
+          spacing_m: Joi.number().positive().max(500).required(),
+          // Même contenu partout vs contenu par côté (PROP-014 §5).
+          zones: Joi.string().valid('uniform', 'per-side').default('uniform'),
+          // ⏳ Config processeur LED — lue à l'install (SPIKE), défauts provisoires.
+          canvas_in: Joi.object({
+            band_width: Joi.number().integer().positive().max(7680).default(1920),
+            band_count: Joi.number().integer().positive().max(64).optional(), // dérivé
+            order: Joi.string().valid('top-to-bottom', 'bottom-to-top').default('top-to-bottom'),
+            mode: Joi.string().valid('A', 'B').default('B'),
+          }).optional(),
+        }).optional().allow(null),
       })
     ).min(1).max(20).required(),
   }),

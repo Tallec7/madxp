@@ -282,10 +282,18 @@ export {
 } from './campaign.repository';
 export {
   videoVariantRepository,
+  VARIANT_LAYOUTS,
   type VideoVariantRow,
   type CreateVideoVariantInput,
   type DisplayType,
+  type VariantLayout,
 } from './video-variant.repository';
+export {
+  ledExportJobRepository,
+  type LedExportJobRow,
+  type CreateLedExportJobInput,
+  type LedExportStatus,
+} from './led-export-job.repository';
 export {
   benchmarkRepository,
   type SiteBenchmarkInfoRow,

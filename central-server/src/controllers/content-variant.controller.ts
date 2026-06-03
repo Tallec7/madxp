@@ -1,12 +1,44 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, videoVariantRepository, siteRepository } from '../repositories';
-import type { DisplayType } from '../repositories';
+import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
+import type { DisplayType, VariantLayout } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
 import deploymentService from '../services/deployment.service';
+import { computeRibbonDimensions, validateLedFormat, fitFromLayout, type LedFormatNotice } from '../services/led-fold.service';
+
+/**
+ * Validateur de format LED à l'upload (PROP-014 §6) — non bloquant.
+ * Retourne un avis informatif sur l'adéquation des dimensions de la vidéo au ruban
+ * du profil LED du display, ou `null` si le display n'est pas led-perimeter / sans profil.
+ */
+async function computeLedFormatNotice(
+  siteId: string | null,
+  displayType: string,
+  width: number | null,
+  height: number | null,
+): Promise<LedFormatNotice | null> {
+  if (displayType !== 'led-perimeter' || !siteId) return null;
+  const displays = await siteRepository.getDisplays(siteId);
+  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
+
+  const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+  if (!Number.isFinite(pitchMm) || pitchMm <= 0) return null;
+
+  try {
+    const { ribbonWidth, ribbonHeight } = computeRibbonDimensions({
+      sides: led.sides,
+      pitchMm,
+      height: led.height,
+    });
+    return validateLedFormat({ videoWidth: width, videoHeight: height, ribbonWidth, ribbonHeight });
+  } catch {
+    return null; // profil incomplet → pas d'avis (jamais bloquant)
+  }
+}
 
 // ============================================================================
 // Video Variants (E-22: LED dual output)
@@ -151,9 +183,18 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
     });
 
+    // Validateur de format LED (PROP-014 §6) — informatif, jamais bloquant.
+    const formatNotice = await computeLedFormatNotice(
+      video.uploaded_for_site_id ?? null,
+      displayType,
+      width,
+      height,
+    );
+
     res.status(201).json({
       ...variant,
       url: uploadResult.url,
+      ...(formatNotice ? { format_notice: formatNotice } : {}),
     });
   } catch (error) {
     logger.error('Error creating video variant:', error);
@@ -254,6 +295,114 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       error: 'Erreur lors de la création de la variante',
       details: errorMessage,
     });
+  }
+};
+
+/**
+ * PATCH /content/videos/:id/variants/:displayType/layout
+ * Met à jour la mise en page d'une variante LED périmétrique (PROP-014 §8, ADR-134).
+ * Body: { layout: 'repeated' | 'scrolling' | 'stretched' | null }
+ */
+export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type invalide (slug alphanumérique avec tirets attendu)' });
+    }
+
+    const rawLayout = (req.body as { layout?: unknown }).layout;
+    // `null` réinitialise ; sinon doit appartenir à l'enum.
+    const layout: VariantLayout | null = rawLayout === null || rawLayout === undefined ? null : (rawLayout as VariantLayout);
+    if (layout !== null && !VARIANT_LAYOUTS.includes(layout)) {
+      return res.status(400).json({
+        error: `layout invalide. Valeurs autorisées : ${VARIANT_LAYOUTS.join(', ')} (ou null)`,
+      });
+    }
+
+    const updated = await videoVariantRepository.updateLayout(id, displayType as DisplayType, layout);
+    if (!updated) {
+      return res.status(404).json({ error: 'Variante non trouvée' });
+    }
+
+    logger.info('Video variant layout updated', { videoId: id, displayType, layout });
+
+    // Propage aux Pi qui ont cette vidéo (fire-and-forget, non bloquant).
+    deploymentService.dispatchVariantUpdateToSites(id, updated).catch((err) => {
+      logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
+    });
+
+    res.json({ ...updated, url: getVideoUrl(updated.storage_path) });
+  } catch (error) {
+    logger.error('Error updating video variant layout:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la mise en page' });
+  }
+};
+
+/**
+ * POST /content/videos/:id/variants/:displayType/export
+ * Enqueue un job d'export LED (vidéo → canvas plié, async — PROP-014 §6 / ADR-134).
+ * Retourne 202 { job_id } ; le worker `led-export-worker` traite hors cycle HTTP.
+ */
+export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+
+    if (displayType !== 'led-perimeter') {
+      return res.status(400).json({ error: "L'export plié n'existe que pour les écrans led-perimeter" });
+    }
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+
+    const siteId = video.uploaded_for_site_id ?? null;
+    if (!siteId) {
+      return res.status(400).json({ error: 'Export LED indisponible : la vidéo n’est rattachée à aucun site (profil LED requis)' });
+    }
+
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType as DisplayType);
+    if (!variant) {
+      return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
+    }
+
+    const job = await ledExportJobRepository.create({
+      site_id: siteId,
+      video_id: id,
+      display_type: displayType,
+      fit: fitFromLayout(variant.layout),
+      created_by: req.user?.id ?? null,
+    });
+
+    logger.info('led-export: job enqueued', { jobId: job.id, videoId: id, fit: job.fit });
+    res.status(202).json({ job_id: job.id, status: job.status });
+  } catch (error) {
+    logger.error('Error enqueuing LED export:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise en file de l’export' });
+  }
+};
+
+/**
+ * GET /content/led-export-jobs/:jobId
+ * Statut d'un job d'export LED (polling dashboard).
+ */
+export const getLedExportJob = async (req: AuthRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const job = await ledExportJobRepository.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ error: 'Job d’export non trouvé' });
+    }
+    res.json({
+      id: job.id,
+      status: job.status,
+      output_url: job.output_url,
+      error_msg: job.error_msg,
+    });
+  } catch (error) {
+    logger.error('Error getting LED export job:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération du job' });
   }
 };
 

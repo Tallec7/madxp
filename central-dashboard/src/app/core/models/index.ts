@@ -179,13 +179,35 @@ export interface ReceiverConfig {
   last_seen_at?: string; // ISO8601 — last time receiver was seen by Pi
 }
 
+/**
+ * Config processeur LED (PROP-014 §3, §12) — défauts provisoires jusqu'au SPIKE
+ * matériel (SPIKE-003). `order` réutilise l'enum du module fold() côté serveur.
+ */
+export interface LedCanvasInConfig {
+  band_width: number;            // largeur d'entrée processeur (px), défaut 1920
+  band_count?: number;           // nb de bandes — dérivé (ribbonWidth / band_width)
+  order: 'top-to-bottom' | 'bottom-to-top';
+  mode: 'A' | 'B';               // A = plug & play, B = pixel-perfect (PROP-014 §10)
+}
+
+/** Profil LED périmétrique d'un display (PROP-014 §3). */
+export interface LedProfileConfig {
+  sides: number[];               // longueurs des côtés (m), ex. [40, 20, 20]
+  pitch: string;                 // pas de pixel, ex. 'P6' (= 6 mm)
+  height: number;                // hauteur de dalle (px)
+  spacing_m: number;             // cadence de répétition du motif (m)
+  zones: 'uniform' | 'per-side'; // même contenu partout vs par côté (PROP-014 §5)
+  canvas_in?: LedCanvasInConfig; // ⏳ config processeur (SPIKE)
+}
+
 /** N-display configuration entry (PROP-002 Phase 5H) */
 export interface DisplayConfig {
   index: number;
   name: string;
-  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
+  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', 'led-perimeter', etc.
   resolution?: string; // e.g. '1920x1080', '1920x384'
   receiver?: ReceiverConfig | null; // Phase 8: Fire Stick / Pi native assignment
+  led?: LedProfileConfig | null;    // PROP-014: présent pour type === 'led-perimeter'
 }
 
 /** Receiver detected by the Pi sync-agent — returned by GET /api/sites/:id/connected-receivers */

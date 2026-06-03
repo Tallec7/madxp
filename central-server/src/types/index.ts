@@ -95,10 +95,27 @@ export interface Site {
 export interface DisplayConfig {
   index: number;
   name: string;
-  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', etc.
+  type: string;       // 'tv', 'secondary', 'led-banner', 'totem', 'led-perimeter', etc.
   resolution?: string; // e.g. '1920x1080', '1920x384'
   /** v4.0: identité du récepteur physique. NULL ou absent = display non assigné. */
   receiver?: DisplayReceiver | null;
+  /** PROP-014: profil LED périmétrique, présent pour type === 'led-perimeter'. */
+  led?: LedProfileConfig | null;
+}
+
+/** Profil LED périmétrique (PROP-014 §3, §12). */
+export interface LedProfileConfig {
+  sides: number[];
+  pitch: string;
+  height: number;
+  spacing_m: number;
+  zones: 'uniform' | 'per-side';
+  canvas_in?: {
+    band_width: number;
+    band_count?: number;
+    order: 'top-to-bottom' | 'bottom-to-top';
+    mode: 'A' | 'B';
+  };
 }
 
 /** v4.0 DATA-01: récepteur physique d'un display (Pi natif HDMI, Fire Stick WiFi, browser SaaS) */
