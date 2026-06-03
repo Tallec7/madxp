@@ -152,11 +152,12 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           <label class="led-field">
             <span>Côtés (m)</span>
             <input
+              #sidesInput
               class="form-input"
               type="text"
               data-testid="led-sides"
               [ngModel]="getLedSidesInput(display)"
-              (ngModelChange)="onLedSidesChange(display, $event)"
+              (change)="onLedSidesChange(display, sidesInput.value)"
               placeholder="40, 20, 20"
             />
           </label>
@@ -167,7 +168,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               type="text"
               data-testid="led-pitch"
               [(ngModel)]="display.led!.pitch"
-              (ngModelChange)="onDisplayChanged()"
+              (blur)="commitLed(display)"
               placeholder="P6"
             />
           </label>
@@ -179,7 +180,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               min="1"
               data-testid="led-height"
               [(ngModel)]="display.led!.height"
-              (ngModelChange)="onDisplayChanged()"
+              (blur)="commitLed(display)"
             />
           </label>
           <label class="led-field">
@@ -188,7 +189,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               class="form-input"
               data-testid="led-spacing"
               [(ngModel)]="display.led!.spacing_m"
-              (ngModelChange)="onDisplayChanged()"
+              (ngModelChange)="commitLed(display)"
             >
               <option *ngFor="let s of getSpacingOptions(display)" [ngValue]="s">{{ s }} m</option>
             </select>
@@ -199,7 +200,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               class="form-input"
               data-testid="led-zones"
               [(ngModel)]="display.led!.zones"
-              (ngModelChange)="onDisplayChanged()"
+              (ngModelChange)="commitLed(display)"
             >
               <option value="uniform">Même contenu partout</option>
               <option value="per-side">Contenu par côté</option>
@@ -749,6 +750,28 @@ export class DisplaysEditorComponent {
     this.displaysChange.emit(this.displays);
   }
 
+  /**
+   * Émet les changements d'un display LED UNIQUEMENT si son profil est valide.
+   * Évite d'envoyer au serveur des états transitoires (`pitch` "P3." en cours de
+   * frappe → 400 "Données invalides"). Appelé sur blur/change, jamais par frappe.
+   */
+  commitLed(display: DisplayConfig): void {
+    if (this.isLedProfileValid(display)) {
+      this.onDisplayChanged();
+    }
+  }
+
+  /** Le profil LED est-il sauvegardable (mêmes contraintes que le schéma Joi serveur) ? */
+  private isLedProfileValid(display: DisplayConfig): boolean {
+    const led = display.led;
+    if (!led) return false;
+    if (!Array.isArray(led.sides) || led.sides.length === 0) return false;
+    if (!/^P\d+(\.\d+)?$/.test(led.pitch ?? '')) return false;
+    if (!(typeof led.height === 'number' && led.height > 0)) return false;
+    if (!(typeof led.spacing_m === 'number' && led.spacing_m > 0)) return false;
+    return true;
+  }
+
   // --- Receiver UX (Phase 8) ---
 
   formatMac(mac: string): string {
@@ -898,7 +921,7 @@ export class DisplaysEditorComponent {
       .map((s) => parseFloat(s.trim()))
       .filter((n) => Number.isFinite(n) && n > 0);
     display.led.sides = sides;
-    this.onDisplayChanged();
+    this.commitLed(display);
   }
 
   /** Pas de pixel en mm (P6 → 6). Retourne 0 si non parsable. */
