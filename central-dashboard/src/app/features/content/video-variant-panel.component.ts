@@ -19,6 +19,7 @@ interface VideoVariant {
   duration: number | null;
   url: string | null;
   created_at: string;
+  layout?: string | null; // PROP-014 §8 : mise en page (variantes led-perimeter)
 }
 
 const DISPLAY_ICONS: Record<string, string> = {
@@ -26,8 +27,19 @@ const DISPLAY_ICONS: Record<string, string> = {
   secondary: '🖥️',
   'led-banner': '🖥️',
   'led-wall': '🖥️',
+  'led-perimeter': '🟥',
   totem: '📱',
 };
+
+/** Type d'écran LED périmétrique (PROP-014) — pilote l'affichage du sélecteur de mise en page. */
+const LED_PERIMETER_TYPE = 'led-perimeter';
+
+/** Options de mise en page LED (PROP-014 §8 / ADR-134). Slugs alignés sur l'API. */
+const LAYOUT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'repeated', label: 'Répété' },
+  { value: 'scrolling', label: 'Défilant' },
+  { value: 'stretched', label: 'Étalé' },
+];
 
 @Component({
   selector: 'app-video-variant-panel',
@@ -55,6 +67,14 @@ export class VideoVariantPanelComponent implements OnInit {
   uploadProgress = 0;
   deletingType: string | null = null;
   linkingType: string | null = null;
+  savingLayoutType: string | null = null;
+
+  readonly layoutOptions = LAYOUT_OPTIONS;
+
+  /** Le sélecteur de mise en page n'apparaît QUE pour les variantes led-perimeter (PROP-014 §8 : piloté par TYPE). */
+  isLedPerimeter(type: string): boolean {
+    return type === LED_PERIMETER_TYPE;
+  }
 
   // F2 fallback: sites without displays[] configured get a virtual 'secondary' option
   get effectiveSiteDisplays(): DisplayConfig[] {
@@ -222,6 +242,35 @@ export class VideoVariantPanelComponent implements OnInit {
       },
       error: (error) => {
         this.deletingType = null;
+        const message = ErrorExtractor.getMessage(error);
+        this.notificationService.error(`Erreur: ${message}`);
+      }
+    });
+  }
+
+  /**
+   * Persiste la mise en page d'une variante LED (PATCH métadonnée, pas de re-upload).
+   * Valeur vide → null (réinitialise). PROP-014 §8 / ADR-134.
+   */
+  onLayoutChange(variant: VideoVariant, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const layout = select.value === '' ? null : select.value;
+    const previous = variant.layout ?? null;
+    this.savingLayoutType = variant.display_type;
+
+    this.http.patch<VideoVariant>(
+      `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/layout`,
+      { layout },
+      { withCredentials: true }
+    ).subscribe({
+      next: (updated) => {
+        this.savingLayoutType = null;
+        variant.layout = updated.layout ?? null;
+        this.notificationService.success(`Mise en page ${this.getDisplayLabel(variant.display_type)} enregistrée`);
+      },
+      error: (error) => {
+        this.savingLayoutType = null;
+        variant.layout = previous; // rollback optimiste
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
       }

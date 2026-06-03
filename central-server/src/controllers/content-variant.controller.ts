@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, videoVariantRepository, siteRepository } from '../repositories';
-import type { DisplayType } from '../repositories';
+import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS } from '../repositories';
+import type { DisplayType, VariantLayout } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
@@ -254,6 +254,47 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       error: 'Erreur lors de la création de la variante',
       details: errorMessage,
     });
+  }
+};
+
+/**
+ * PATCH /content/videos/:id/variants/:displayType/layout
+ * Met à jour la mise en page d'une variante LED périmétrique (PROP-014 §8, ADR-134).
+ * Body: { layout: 'repeated' | 'scrolling' | 'stretched' | null }
+ */
+export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+
+    if (!displayType || !/^[a-z0-9-]+$/.test(displayType)) {
+      return res.status(400).json({ error: 'display_type invalide (slug alphanumérique avec tirets attendu)' });
+    }
+
+    const rawLayout = (req.body as { layout?: unknown }).layout;
+    // `null` réinitialise ; sinon doit appartenir à l'enum.
+    const layout: VariantLayout | null = rawLayout === null || rawLayout === undefined ? null : (rawLayout as VariantLayout);
+    if (layout !== null && !VARIANT_LAYOUTS.includes(layout)) {
+      return res.status(400).json({
+        error: `layout invalide. Valeurs autorisées : ${VARIANT_LAYOUTS.join(', ')} (ou null)`,
+      });
+    }
+
+    const updated = await videoVariantRepository.updateLayout(id, displayType as DisplayType, layout);
+    if (!updated) {
+      return res.status(404).json({ error: 'Variante non trouvée' });
+    }
+
+    logger.info('Video variant layout updated', { videoId: id, displayType, layout });
+
+    // Propage aux Pi qui ont cette vidéo (fire-and-forget, non bloquant).
+    deploymentService.dispatchVariantUpdateToSites(id, updated).catch((err) => {
+      logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
+    });
+
+    res.json({ ...updated, url: getVideoUrl(updated.storage_path) });
+  } catch (error) {
+    logger.error('Error updating video variant layout:', error);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la mise en page' });
   }
 };
 

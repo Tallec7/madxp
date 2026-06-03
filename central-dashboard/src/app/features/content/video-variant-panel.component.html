@@ -60,6 +60,37 @@
               </button>
             </div>
           </div>
+
+          <!-- Mise en page LED périmétrique — UNIQUEMENT pour le type led-perimeter
+               (PROP-014 §8 règle d'or : piloté par TYPE, pas par index). -->
+          <div
+            class="variant-layout-row"
+            *ngIf="isLedPerimeter(variant.display_type)"
+            data-testid="variant-layout-row"
+          >
+            <label class="variant-layout-label" [attr.for]="'layout-' + variant.display_type"
+              >Mise en page</label
+            >
+            <select
+              class="variant-layout-select"
+              [id]="'layout-' + variant.display_type"
+              data-testid="variant-layout-select"
+              (change)="onLayoutChange(variant, $event)"
+              [disabled]="savingLayoutType === variant.display_type"
+            >
+              <option value="" [selected]="!variant.layout">— Non définie —</option>
+              <option
+                *ngFor="let opt of layoutOptions"
+                [value]="opt.value"
+                [selected]="opt.value === variant.layout"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <span class="variant-layout-saving" *ngIf="savingLayoutType === variant.display_type"
+              >…</span
+            >
+          </div>
         </div>
       </div>
 

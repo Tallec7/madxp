@@ -296,3 +296,33 @@
     flex-wrap: wrap;
   }
 }
+
+/* Mise en page LED périmétrique (PROP-014 §8) */
+.variant-layout-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #fed7aa;
+}
+
+.variant-layout-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.variant-layout-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  background: white;
+  color: #1e293b;
+}
+
+.variant-layout-saving {
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}

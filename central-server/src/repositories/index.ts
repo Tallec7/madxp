@@ -282,9 +282,11 @@ export {
 } from './campaign.repository';
 export {
   videoVariantRepository,
+  VARIANT_LAYOUTS,
   type VideoVariantRow,
   type CreateVideoVariantInput,
   type DisplayType,
+  type VariantLayout,
 } from './video-variant.repository';
 export {
   benchmarkRepository,

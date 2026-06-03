@@ -9,6 +9,13 @@ import { BaseRepository } from './base.repository';
 /** Display type slug — 'tv', 'secondary', or any custom type (e.g. 'led-banner', 'totem') */
 export type DisplayType = string;
 
+/**
+ * Mise en page d'une variante LED périmétrique (PROP-014 §8, ADR-134).
+ * NULL pour les variantes non-LED (la colonne est inerte hors du domaine LED).
+ */
+export type VariantLayout = 'repeated' | 'scrolling' | 'stretched';
+export const VARIANT_LAYOUTS: readonly VariantLayout[] = ['repeated', 'scrolling', 'stretched'];
+
 export interface VideoVariantRow extends QueryResultRow {
   id: string;
   video_id: string;
@@ -26,6 +33,7 @@ export interface VideoVariantRow extends QueryResultRow {
   uploaded_by: string | null;
   created_at: Date;
   updated_at: Date;
+  layout: VariantLayout | null;
 }
 
 export interface CreateVideoVariantInput {
@@ -42,6 +50,8 @@ export interface CreateVideoVariantInput {
   duration: number | null;
   metadata: Record<string, unknown>;
   uploaded_by: string | null;
+  /** Mise en page LED (PROP-014). NULL/omis pour les variantes non-LED. */
+  layout?: VariantLayout | null;
 }
 
 export interface SecondaryVariantByFilenameRow extends QueryResultRow {
@@ -98,8 +108,8 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
       `INSERT INTO video_variants
        (video_id, display_type, filename, original_name, storage_path,
         file_size, checksum, mime_type, width, height, duration,
-        metadata, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        metadata, uploaded_by, layout)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        ON CONFLICT (video_id, display_type) DO UPDATE SET
          filename = EXCLUDED.filename,
          original_name = EXCLUDED.original_name,
@@ -112,6 +122,8 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
          duration = EXCLUDED.duration,
          metadata = EXCLUDED.metadata,
          uploaded_by = EXCLUDED.uploaded_by,
+         -- Préserve le layout existant si l'upsert (ré-upload) n'en fournit pas.
+         layout = COALESCE(EXCLUDED.layout, video_variants.layout),
          updated_at = NOW()
        RETURNING *`,
       [
@@ -119,9 +131,29 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
         input.original_name, input.storage_path, input.file_size,
         input.checksum, input.mime_type, input.width, input.height,
         input.duration, input.metadata, input.uploaded_by,
+        input.layout ?? null,
       ]
     );
     return result.rows[0];
+  }
+
+  /**
+   * Met à jour uniquement la mise en page (PROP-014 §8) d'une variante existante.
+   * `layout = null` réinitialise. Retourne la row mise à jour ou null si absente.
+   */
+  async updateLayout(
+    videoId: string,
+    displayType: DisplayType,
+    layout: VariantLayout | null
+  ): Promise<VideoVariantRow | null> {
+    const result = await query<VideoVariantRow>(
+      `UPDATE video_variants
+       SET layout = $3, updated_at = NOW()
+       WHERE video_id = $1 AND display_type = $2
+       RETURNING *`,
+      [videoId, displayType, layout]
+    );
+    return result.rows[0] || null;
   }
 
   async findStoragePath(

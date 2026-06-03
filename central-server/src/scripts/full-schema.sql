@@ -3165,6 +3165,7 @@ CREATE TABLE public.video_variants (
     uploaded_by uuid,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
+    layout character varying(16),
     CONSTRAINT video_variants_display_type_check CHECK ((((display_type)::text ~ '^[a-z0-9-]+$'::text) AND ((length((display_type)::text) >= 1) AND (length((display_type)::text) <= 20))))
 );
 

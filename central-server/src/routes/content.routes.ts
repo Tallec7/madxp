@@ -35,6 +35,8 @@ router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator
 // jour file_size + checksum + thumbnail, push les sites pour bust le cache.
 router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'), uploadRateLimit, validateParams(paramSchemas.id), uploadVideo.single('video'), contentController.replaceVideo);
 router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
+// PROP-014 §8 / ADR-134 : mise en page de la variante LED (métadonnée, pas de re-upload).
+router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.updateVideoVariantLayout);
 router.delete('/videos/:videoId/variants/:displayType', authenticate, requireRole('admin'), sensitiveRateLimit, contentController.deleteVideoVariant);
 
 // Image to video conversion
