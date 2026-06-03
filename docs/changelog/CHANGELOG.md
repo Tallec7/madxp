@@ -1,3 +1,9 @@
+# [4.3.0](https://github.com/Tallec7/madxp/compare/v4.2.0...v4.3.0) (2026-06-03)
+
+### Features
+
+- **led:** pipeline contenu LED périmétrique — étapes 1→6 (PROP-014) ([#1077](https://github.com/Tallec7/madxp/issues/1077)) ([fa70bda](https://github.com/Tallec7/madxp/commit/fa70bda8d833a15e9a902de4eb91f20b55400622))
+
 # [4.2.0](https://github.com/Tallec7/madxp/compare/v4.1.0...v4.2.0) (2026-05-27)
 
 ### Features
