@@ -7,6 +7,38 @@ import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, ge
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
 import deploymentService from '../services/deployment.service';
+import { computeRibbonDimensions, validateLedFormat, type LedFormatNotice } from '../services/led-fold.service';
+
+/**
+ * Validateur de format LED à l'upload (PROP-014 §6) — non bloquant.
+ * Retourne un avis informatif sur l'adéquation des dimensions de la vidéo au ruban
+ * du profil LED du display, ou `null` si le display n'est pas led-perimeter / sans profil.
+ */
+async function computeLedFormatNotice(
+  siteId: string | null,
+  displayType: string,
+  width: number | null,
+  height: number | null,
+): Promise<LedFormatNotice | null> {
+  if (displayType !== 'led-perimeter' || !siteId) return null;
+  const displays = await siteRepository.getDisplays(siteId);
+  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
+
+  const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+  if (!Number.isFinite(pitchMm) || pitchMm <= 0) return null;
+
+  try {
+    const { ribbonWidth, ribbonHeight } = computeRibbonDimensions({
+      sides: led.sides,
+      pitchMm,
+      height: led.height,
+    });
+    return validateLedFormat({ videoWidth: width, videoHeight: height, ribbonWidth, ribbonHeight });
+  } catch {
+    return null; // profil incomplet → pas d'avis (jamais bloquant)
+  }
+}
 
 // ============================================================================
 // Video Variants (E-22: LED dual output)
@@ -151,9 +183,18 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       logger.error('dispatchVariantUpdateToSites failed (non-blocking)', { videoId: id, error: err });
     });
 
+    // Validateur de format LED (PROP-014 §6) — informatif, jamais bloquant.
+    const formatNotice = await computeLedFormatNotice(
+      video.uploaded_for_site_id ?? null,
+      displayType,
+      width,
+      height,
+    );
+
     res.status(201).json({
       ...variant,
       url: uploadResult.url,
+      ...(formatNotice ? { format_notice: formatNotice } : {}),
     });
   } catch (error) {
     logger.error('Error creating video variant:', error);

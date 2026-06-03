@@ -91,6 +91,16 @@
               >…</span
             >
           </div>
+
+          <!-- Avis de format LED (PROP-014 §6) — informatif, jamais bloquant. -->
+          <div
+            class="format-notice"
+            *ngIf="formatNotices[variant.display_type] as notice"
+            [ngClass]="formatNoticeClass(notice.verdict)"
+            data-testid="format-notice"
+          >
+            {{ notice.message }}
+          </div>
         </div>
       </div>
 

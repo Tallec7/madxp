@@ -221,6 +221,14 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
             >⏳ pliage provisoire</span
           >
         </div>
+
+        <!-- Aperçu schématique du canvas plié (bandes empilées) -->
+        <div class="led-ribbon-preview" data-testid="led-ribbon-preview" *ngIf="getLedBandCount(display) > 0">
+          <div class="led-band" *ngFor="let b of getLedBandPreview(display)" [class.led-band--last]="b.last">
+            <span class="led-band-fill" [style.width.%]="b.fillPct"></span>
+          </div>
+          <div class="led-band-overflow" *ngIf="getLedBandOverflow(display) > 0">+{{ getLedBandOverflow(display) }} bandes</div>
+        </div>
       </div>
       </div>
     </div>
@@ -375,6 +383,38 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       background: #fef3c7;
       padding: 0.0625rem 0.375rem;
       border-radius: 4px;
+    }
+
+    /* Aperçu schématique du canvas plié */
+    .led-ribbon-preview {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 220px;
+    }
+
+    .led-band {
+      height: 7px;
+      background: repeating-linear-gradient(45deg, #fed7aa 0 4px, #ffedd5 4px 8px);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .led-band-fill {
+      display: block;
+      height: 100%;
+      background: #fb923c;
+      border-radius: 2px;
+    }
+
+    .led-band--last .led-band-fill {
+      background: #f97316;
+    }
+
+    .led-band-overflow {
+      font-size: 0.7rem;
+      color: #9a3412;
     }
 
     .btn-remove {
@@ -898,6 +938,29 @@ export class DisplaysEditorComponent {
   /** Provisoire tant que le SPIKE n'a pas confirmé band_count (PROP-014 §13). */
   isCanvasProvisional(display: DisplayConfig): boolean {
     return !display.led?.canvas_in?.band_count;
+  }
+
+  /**
+   * Aperçu schématique du canvas plié : une bande = un segment de 1920px du ruban,
+   * empilées. La dernière est partiellement remplie (padding). Cap à 24 bandes pour
+   * éviter un DOM énorme sur les très grands périmètres.
+   */
+  getLedBandPreview(display: DisplayConfig): Array<{ fillPct: number; last: boolean }> {
+    const count = this.getLedBandCount(display);
+    if (count <= 0) return [];
+    const ribbon = this.getLedRibbonWidth(display);
+    const bw = this.bandWidth(display);
+    const max = Math.min(count, 24);
+    const bands: Array<{ fillPct: number; last: boolean }> = [];
+    for (let i = 0; i < max; i++) {
+      const w = Math.min(bw, ribbon - i * bw);
+      bands.push({ fillPct: Math.max(2, Math.min(100, (w / bw) * 100)), last: i === count - 1 });
+    }
+    return bands;
+  }
+
+  getLedBandOverflow(display: DisplayConfig): number {
+    return Math.max(0, this.getLedBandCount(display) - 24);
   }
 
   /**

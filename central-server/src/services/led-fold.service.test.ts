@@ -22,6 +22,7 @@ jest.mock('../config/logger', () => ({
 import {
   computeFoldGeometry,
   computeRibbonDimensions,
+  validateLedFormat,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   ledFoldService,
@@ -207,6 +208,45 @@ describe('led-fold.service — profil LED → ruban (computeRibbonDimensions)', 
     expect(() => computeRibbonDimensions({ sides: [], pitchMm: 6, height: 160 })).toThrow();
     expect(() => computeRibbonDimensions({ sides: [40], pitchMm: 0, height: 160 })).toThrow();
     expect(() => computeRibbonDimensions({ sides: [40], pitchMm: 6, height: 160.5 })).toThrow();
+  });
+});
+
+describe('led-fold.service — validateur de format (validateLedFormat)', () => {
+  const ribbon = { ribbonWidth: 13333, ribbonHeight: 160 };
+
+  it('exact : dimensions = profil → pliage direct', () => {
+    const r = validateLedFormat({ videoWidth: 13333, videoHeight: 160, ...ribbon });
+    expect(r.verdict).toBe('exact');
+    expect(r.message).toMatch(/exact/i);
+  });
+
+  it('resize : même ratio, autre taille → redimensionne + plie', () => {
+    // 6666×80 = même ratio 83.3:1 que 13333×160
+    const r = validateLedFormat({ videoWidth: 6666, videoHeight: 80, ...ribbon });
+    expect(r.verdict).toBe('resize');
+  });
+
+  it('incompatible : ratio 6:1 (créa club) vs ruban ~83:1 → note non bloquante', () => {
+    // Cas réel PROP-014 : LED_ENTREE 4800×800 (6:1)
+    const r = validateLedFormat({ videoWidth: 4800, videoHeight: 800, ...ribbon });
+    expect(r.verdict).toBe('incompatible');
+    expect(r.message).toMatch(/blocs|studio|format ruban/i);
+  });
+
+  it('unknown : dimensions inconnues → impossible de juger (non bloquant)', () => {
+    expect(validateLedFormat({ videoWidth: null, videoHeight: null, ...ribbon }).verdict).toBe('unknown');
+    expect(validateLedFormat({ videoWidth: 0, videoHeight: 160, ...ribbon }).verdict).toBe('unknown');
+  });
+
+  it('respecte la tolérance de ratio (2 % par défaut)', () => {
+    // 13333×161 : ratio très proche → resize (dans la tolérance)
+    expect(validateLedFormat({ videoWidth: 13333, videoHeight: 161, ...ribbon }).verdict).toBe('resize');
+  });
+
+  it('ne lève jamais — toujours un verdict + message', () => {
+    const r = validateLedFormat({ videoWidth: -5, videoHeight: 160, ...ribbon });
+    expect(r.message).toBeTruthy();
+    expect(['exact', 'resize', 'incompatible', 'unknown']).toContain(r.verdict);
   });
 });
 

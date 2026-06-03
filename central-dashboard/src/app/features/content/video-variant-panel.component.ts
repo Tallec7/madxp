@@ -22,6 +22,16 @@ interface VideoVariant {
   layout?: string | null; // PROP-014 §8 : mise en page (variantes led-perimeter)
 }
 
+/** Avis de format LED renvoyé par l'API à l'upload (PROP-014 §6) — non bloquant. */
+interface LedFormatNotice {
+  verdict: 'exact' | 'resize' | 'incompatible' | 'unknown';
+  message: string;
+  ribbonWidth: number;
+  ribbonHeight: number;
+  videoWidth: number | null;
+  videoHeight: number | null;
+}
+
 const DISPLAY_ICONS: Record<string, string> = {
   tv: '📺',
   secondary: '🖥️',
@@ -68,6 +78,8 @@ export class VideoVariantPanelComponent implements OnInit {
   deletingType: string | null = null;
   linkingType: string | null = null;
   savingLayoutType: string | null = null;
+  /** Avis de format LED par display_type (PROP-014 §6), affiché après upload. */
+  formatNotices: Record<string, LedFormatNotice> = {};
 
   readonly layoutOptions = LAYOUT_OPTIONS;
 
@@ -187,20 +199,39 @@ export class VideoVariantPanelComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    input.value = '';
 
+    // Pour le LED périmétrique, on lit les dimensions côté client (sans ffprobe)
+    // pour que le validateur de format serveur (PROP-014 §6) puisse juger.
+    if (this.isLedPerimeter(displayType)) {
+      this.readVideoDimensions(file).then((dims) => this.uploadVariant(file, displayType, dims));
+    } else {
+      this.uploadVariant(file, displayType, null);
+    }
+  }
+
+  private uploadVariant(
+    file: File,
+    displayType: string,
+    dims: { width: number; height: number } | null
+  ): void {
     this.uploadingType = displayType;
     this.uploadProgress = 0;
 
     const formData = new FormData();
     formData.append('video', file);
     formData.append('display_type', displayType);
+    if (dims) {
+      formData.append('width', String(dims.width));
+      formData.append('height', String(dims.height));
+    }
 
-    this.http.post<VideoVariant>(
+    this.http.post<VideoVariant & { format_notice?: LedFormatNotice }>(
       `${environment.apiUrl}/videos/${this.videoId}/variants`,
       formData,
       { withCredentials: true, reportProgress: true, observe: 'events' }
     ).subscribe({
-      next: (event: HttpEvent<VideoVariant>) => {
+      next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice }>) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
         } else if (event.type === HttpEventType.Response && event.body) {
@@ -213,6 +244,10 @@ export class VideoVariantPanelComponent implements OnInit {
           } else {
             this.variants = [...this.variants, variant];
           }
+          // Avis de format LED (PROP-014 §6) — informatif, non bloquant.
+          if (variant.format_notice) {
+            this.formatNotices[displayType] = variant.format_notice;
+          }
           this.emitChange();
           this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} uploadee`);
         }
@@ -223,8 +258,33 @@ export class VideoVariantPanelComponent implements OnInit {
         this.notificationService.error(`Erreur upload: ${message}`);
       }
     });
+  }
 
-    input.value = '';
+  /** Lit les dimensions d'une vidéo via un <video> temporaire. Null si illisible. */
+  private readVideoDimensions(file: File): Promise<{ width: number; height: number } | null> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(
+          video.videoWidth > 0 && video.videoHeight > 0
+            ? { width: video.videoWidth, height: video.videoHeight }
+            : null
+        );
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      video.src = url;
+    });
+  }
+
+  /** Classe CSS / sévérité de l'avis de format pour l'affichage. */
+  formatNoticeClass(verdict: LedFormatNotice['verdict']): string {
+    return `format-notice--${verdict}`;
   }
 
   deleteVariant(displayType: string): void {

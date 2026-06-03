@@ -137,4 +137,35 @@ describe('VideoVariantPanelComponent — LED layout (PROP-014)', () => {
 
     expect(variant.layout).toBe('repeated'); // revenu à l'état précédent
   });
+
+  // --- Validateur de format à l'upload (PROP-014 §6) ---
+
+  it('affiche l\'avis de format avec la classe du verdict', () => {
+    const variant = makeVariant('led-perimeter');
+    component.formatNotices['led-perimeter'] = {
+      verdict: 'incompatible',
+      message: 'Ratio incompatible → blocs/espaces au pliage.',
+      ribbonWidth: 13333,
+      ribbonHeight: 160,
+      videoWidth: 4800,
+      videoHeight: 800,
+    };
+    openVariant(variant);
+
+    const notice = fixture.nativeElement.querySelector('[data-testid="format-notice"]') as HTMLElement;
+    expect(notice).toBeTruthy();
+    expect(notice.textContent).toContain('Ratio incompatible');
+    expect(notice.classList.contains('format-notice--incompatible')).toBe(true);
+  });
+
+  it('formatNoticeClass mappe le verdict sur une classe', () => {
+    expect(component.formatNoticeClass('exact')).toBe('format-notice--exact');
+    expect(component.formatNoticeClass('resize')).toBe('format-notice--resize');
+    expect(component.formatNoticeClass('unknown')).toBe('format-notice--unknown');
+  });
+
+  it('pas d\'avis affiché si aucun notice pour ce type', () => {
+    openVariant(makeVariant('led-perimeter'));
+    expect(fixture.nativeElement.querySelector('[data-testid="format-notice"]')).toBeNull();
+  });
 });

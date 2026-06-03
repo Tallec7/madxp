@@ -555,4 +555,24 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     expect(badge).toBeTruthy();
     expect(badge.textContent).toContain('provisoire');
   });
+
+  it('renders a ribbon preview with one bar per fold band (7 for 80 m P6)', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    const preview = fixture.nativeElement.querySelector('[data-testid="led-ribbon-preview"]');
+    expect(preview).toBeTruthy();
+    const bands = preview.querySelectorAll('.led-band');
+    expect(bands.length).toBe(7);
+    expect(preview.querySelector('.led-band--last')).toBeTruthy();
+  });
+
+  it('getLedBandPreview marks the last band partially filled (padding)', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    const bands = component.getLedBandPreview(d);
+    expect(bands.length).toBe(7);
+    expect(bands[6].last).toBe(true);
+    // dernière bande = 13333 - 6×1920 = 1813 px → ~94.4 % de 1920
+    expect(bands[6].fillPct).toBeLessThan(100);
+    expect(bands[0].fillPct).toBe(100);
+  });
 });

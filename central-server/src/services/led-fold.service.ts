@@ -229,6 +229,92 @@ export function computeRibbonDimensions(input: RibbonDimensionsInput): RibbonDim
   };
 }
 
+// ── 1c. Validateur de format à l'upload ───────────────────────────────────────
+
+/**
+ * Verdict du validateur de format (PROP-014 §6). Le validateur juge le FORMAT,
+ * jamais la source — il n'est JAMAIS bloquant.
+ *  - `exact`        : dimensions = profil → on plie directement.
+ *  - `resize`       : même ratio, autre taille → redimensionne + plie.
+ *  - `incompatible` : ratio incompatible → note informative (blocs/espaces au pliage).
+ *  - `unknown`      : dimensions de la vidéo inconnues → impossible de juger.
+ */
+export type LedFormatVerdict = 'exact' | 'resize' | 'incompatible' | 'unknown';
+
+export interface LedFormatInput {
+  /** Dimensions de la vidéo uploadée (px). `null` si inconnues. */
+  videoWidth: number | null;
+  videoHeight: number | null;
+  /** Dimensions du ruban cible dérivées du profil LED. */
+  ribbonWidth: number;
+  ribbonHeight: number;
+  /** Tolérance d'écart de ratio (fraction). Défaut 0.02 (2 %). */
+  ratioTolerance?: number;
+}
+
+export interface LedFormatNotice {
+  verdict: LedFormatVerdict;
+  /** Message FR informatif (jamais une erreur bloquante). */
+  message: string;
+  ribbonWidth: number;
+  ribbonHeight: number;
+  videoWidth: number | null;
+  videoHeight: number | null;
+}
+
+/**
+ * Valide le format d'une vidéo LED contre le ruban cible (PROP-014 §6).
+ * Fonction pure, non bloquante : retourne toujours un verdict + un message.
+ */
+export function validateLedFormat(input: LedFormatInput): LedFormatNotice {
+  const { videoWidth, videoHeight, ribbonWidth, ribbonHeight } = input;
+  const tol = input.ratioTolerance ?? 0.02;
+
+  const base = { ribbonWidth, ribbonHeight, videoWidth, videoHeight };
+
+  if (
+    videoWidth == null ||
+    videoHeight == null ||
+    !Number.isFinite(videoWidth) ||
+    !Number.isFinite(videoHeight) ||
+    videoWidth <= 0 ||
+    videoHeight <= 0
+  ) {
+    return {
+      ...base,
+      verdict: 'unknown',
+      message:
+        'Dimensions de la vidéo inconnues — impossible de vérifier le format. Le pliage reste possible.',
+    };
+  }
+
+  if (videoWidth === ribbonWidth && videoHeight === ribbonHeight) {
+    return {
+      ...base,
+      verdict: 'exact',
+      message: `Format exact (${ribbonWidth}×${ribbonHeight}) — pliage direct.`,
+    };
+  }
+
+  const ribbonAR = ribbonWidth / ribbonHeight;
+  const videoAR = videoWidth / videoHeight;
+  const sameRatio = Math.abs(videoAR - ribbonAR) / ribbonAR <= tol;
+
+  if (sameRatio) {
+    return {
+      ...base,
+      verdict: 'resize',
+      message: `Même ratio que le ruban (${videoWidth}×${videoHeight} → ${ribbonWidth}×${ribbonHeight}) — redimensionnement puis pliage.`,
+    };
+  }
+
+  return {
+    ...base,
+    verdict: 'incompatible',
+    message: `Ratio incompatible (vidéo ${videoWidth}×${videoHeight} ≈ ${videoAR.toFixed(1)}:1 vs ruban ${ribbonWidth}×${ribbonHeight} ≈ ${ribbonAR.toFixed(1)}:1) → blocs/espaces au pliage. Pour un plein-cadre, refais la créa au format ruban ou via le studio.`,
+  };
+}
+
 // ── 2. Application ffmpeg ──────────────────────────────────────────────────────
 
 /**
@@ -385,6 +471,7 @@ function runFfmpeg(args: string[]): Promise<void> {
 export const ledFoldService = {
   computeFoldGeometry,
   computeRibbonDimensions,
+  validateLedFormat,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
   isFfmpegAvailable,

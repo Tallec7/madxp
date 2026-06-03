@@ -25,9 +25,13 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Données** : le profil LED vit sur `sites.displays[]` (JSONB) pour les displays de `type: 'led-perimeter'` — `{ sides, pitch, height, spacing_m, zones, canvas_in }`. Validé par `schemas.updateDisplays` (`middleware/validation.ts`).
 
-**UI** : panneau LED du `displays-editor.component.ts` (dashboard), rendu **par type** (`led-perimeter`), pas par index.
+**UI** : panneau LED du `displays-editor.component.ts` (dashboard) + sélecteur de mise en page du `video-variant-panel.component.ts`, rendus **par type** (`led-perimeter`), pas par index. Aperçu schématique du canvas plié (bandes empilées) dans le panneau LED.
 
-**Hors périmètre de cette SPEC** : la mise en page par variante (`video_variants.layout`), le validateur de format à l'upload, l'export téléchargeable, le live HDMI Pi→processeur (étapes 4-6 PROP-014, à venir).
+**Mise en page par variante** : `video_variants.layout` (`'repeated' | 'scrolling' | 'stretched'`, NULL hors LED) — `PATCH /videos/:id/variants/:displayType/layout`.
+
+**Validateur de format à l'upload** (`validateLedFormat`) : juge le format d'une vidéo club uploadée contre le ruban du profil, retourne un `format_notice` **non bloquant**.
+
+**Hors périmètre de cette SPEC** : l'export téléchargeable, le live HDMI Pi→processeur (étape 6 PROP-014, à venir), le SPIKE matériel (`canvas_in` + mode A/B).
 
 ## Règles métier
 
@@ -37,6 +41,8 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - **`canvas_in` = config processeur, provisoire jusqu'au SPIKE** : `band_width` (défaut 1920), `band_count` (dérivé), `order` (`top-to-bottom` | `bottom-to-top`, **même enum que `fold()`**), `mode` (`A` plug&play | `B` pixel-perfect — tranché post-SPIKE). Défauts provisoires → aucune refonte quand le SPIKE remplit les vraies valeurs.
 - **Studio rend directement plié, club passe par `fold()`** (ADR-134) : le contenu généré par le studio est rendu directement dans le canvas plié (≤ `band_width × N`) ; la vidéo finie fournie par un club est pliée via ffmpeg. Ne jamais rastériser un ruban plat ultra-wide dans Chromium (OOM ≥ ~10000px).
 - **`fold()` est paramétrique et pur** : la géométrie (bandes, srcX, dstY, padding dernière bande) ne dépend que de `(ribbonWidth, ribbonHeight, bandWidth, order)`.
+- **Le validateur juge le FORMAT, jamais la source, et n'est JAMAIS bloquant** (PROP-014 §6) : `exact` (dimensions = profil → pliage direct), `resize` (même ratio → redimensionne), `incompatible` (ratio différent → blocs/espaces, note informative), `unknown` (dimensions illisibles). On ne refuse jamais un upload club.
+- **La mise en page vit sur la variante** (`layout`), pas sur le display — par vidéo × par écran (PROP-014 §8, Option A).
 
 ## Comportements observables
 
@@ -44,6 +50,8 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - `computeFoldGeometry({ ribbonWidth:13344, ribbonHeight:160, bandWidth:1920 })` → 7 bandes, canvas 1920×1120, dernière bande 1824px (padding 96px).
 - `npm run led:ribbon-poc --folded` rend la composition pliée à toutes les largeurs sans OOM (sortie ≤ 1920×N) ; sans `--folded`, le ruban plat échoue dès ~10000px (preuve ADR-134).
 - Le panneau LED n'apparaît **que** pour un display `type: 'led-perimeter'` — une 2ᵉ TV reste inchangée.
+- Uploader une vidéo club 4800×800 (6:1) sur un ruban ~83:1 affiche un avis ⚠️ « ratio incompatible → blocs/espaces » sans bloquer l'upload ; une vidéo aux dimensions exactes affiche ✅ « pliage direct ».
+- Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
 
 ## Cas d'edge
 
