@@ -19,7 +19,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Services backend** :
 
-- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `validateLedFormat()` (validateur §6), `applyFold()` (pliage d'un ruban plat) et `applyFoldExport()` (adapte une vidéo quelconque au ruban via `fit` contain/cover/stretch puis plie — voie d'export vidéo club). CLI démontrable : `npm run led:export`.
+- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `computeFoldGeometryPerSide()` (pliage **par côté** — chaque côté déroulé+plié indépendamment puis empilé, ADR-135 ; pur, testé ; consommé par la composition multi-zones à venir), `validateLedFormat()` (validateur §6), `applyFold()` (pliage d'un ruban plat) et `applyFoldExport()` (adapte une vidéo quelconque au ruban via `fit` contain/cover/stretch puis plie — voie d'export vidéo club). CLI démontrable : `npm run led:export`.
 - `central-server/templates-studio/templates/led_perimeter_folded/` — composition Remotion de **production** : rend directement le canvas plié (ADR-134).
 - `central-server/templates-studio/templates/led_perimeter_ribbon/` — composition **POC** (ruban plat) + outil de mesure `npm run led:ribbon-poc`.
 

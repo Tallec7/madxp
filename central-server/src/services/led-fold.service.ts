@@ -229,6 +229,123 @@ export function computeRibbonDimensions(input: RibbonDimensionsInput): RibbonDim
   };
 }
 
+// ── 1b-bis. Pliage PAR CÔTÉ (ADR-135) ─────────────────────────────────────────
+
+/** Entrée du pliage par côté (zones = 'per-side'). */
+export interface PerSideFoldInput {
+  /** Longueurs des côtés (m). 1 à 8. */
+  sides: number[];
+  /** Pas de pixel en mm (P6 → 6). */
+  pitchMm: number;
+  /** Hauteur de dalle (px) = ribbonHeight. */
+  height: number;
+  /** Largeur d'entrée processeur = largeur d'une bande (px). Ex. 1920. */
+  bandWidth: number;
+  /** Hauteur allouée par bande (px). Défaut `height`. ≥ height. */
+  bandHeight?: number;
+  /** Ordre d'empilement DANS le bloc d'un côté. Défaut `'top-to-bottom'`. */
+  order?: FoldOrder;
+}
+
+/** Bloc de bandes d'UN côté dans le canvas plié global. */
+export interface PerSideFoldSegment {
+  /** Index 0-based du côté (= index dans `sides`). */
+  sideIndex: number;
+  /** Largeur du ruban déroulé de CE côté (px) = côté(m) × 1000/pitch_mm. */
+  ribbonWidth: number;
+  /** Nombre de bandes de CE côté = ceil(ribbonWidth / bandWidth). */
+  bandCount: number;
+  /** Y (px) du haut du bloc de ce côté dans le canvas global. */
+  dstYStart: number;
+  /** Bandes du côté — `srcX` local au ruban du côté, `dstY` global au canvas. */
+  bands: FoldBand[];
+}
+
+/** Géométrie complète d'un pliage par côté. */
+export interface PerSideFoldGeometry {
+  ribbonHeight: number;
+  bandWidth: number;
+  bandHeight: number;
+  /** Total de bandes = Σ bandes de chaque côté. */
+  bandCount: number;
+  /** Largeur du canvas plié = `bandWidth`. */
+  canvasWidth: number;
+  /** Hauteur du canvas plié = `bandCount × bandHeight`. */
+  canvasHeight: number;
+  order: FoldOrder;
+  segments: PerSideFoldSegment[];
+}
+
+const perSideFoldSchema = Joi.object<PerSideFoldInput>({
+  sides: Joi.array().items(Joi.number().positive().max(500)).min(1).max(8).required(),
+  pitchMm: Joi.number().positive().max(100).required(),
+  height: Joi.number().integer().positive().max(2000).required(),
+  bandWidth: Joi.number().integer().positive().max(7680).required(),
+  bandHeight: Joi.number().integer().positive().min(Joi.ref('height')).optional(),
+  order: Joi.string().valid('top-to-bottom', 'bottom-to-top').optional(),
+}).required();
+
+/**
+ * Plie le périmètre **côté par côté** (ADR-135) : chaque côté est déroulé puis plié
+ * indépendamment (`computeFoldGeometry`), et les blocs de bandes sont empilés dans
+ * l'ordre des côtés. Chaque côté est ainsi un **bloc de bandes contigu** → le
+ * contenu d'un côté n'est jamais coupé par un angle, et un contenu/cadence par
+ * côté devient trivial (étape suivante : composer chaque bloc avec sa source).
+ *
+ * Diffère du pliage continu (`computeRibbonDimensions` + `computeFoldGeometry`),
+ * qui somme d'abord les côtés : ici on paie un peu de padding par côté (chaque
+ * côté arrondit à la bande entière) contre l'alignement aux angles + le zonage.
+ *
+ * Fonction pure (aucun I/O). `dstY` des bandes est **global** au canvas.
+ * @throws si l'entrée est invalide (Joi).
+ */
+export function computeFoldGeometryPerSide(input: PerSideFoldInput): PerSideFoldGeometry {
+  const { error, value } = perSideFoldSchema.validate(input, { convert: false });
+  if (error) {
+    throw new Error(`computeFoldGeometryPerSide: entrée invalide — ${error.message}`);
+  }
+
+  const pxPerMeter = 1000 / value.pitchMm;
+  const bandHeight = value.bandHeight ?? value.height;
+  const order: FoldOrder = value.order ?? 'top-to-bottom';
+
+  const segments: PerSideFoldSegment[] = [];
+  let cumulativeBands = 0;
+
+  value.sides.forEach((sideMeters, sideIndex) => {
+    const ribbonWidth = Math.round(sideMeters * pxPerMeter);
+    const sideGeom = computeFoldGeometry({
+      ribbonWidth,
+      ribbonHeight: value.height,
+      bandWidth: value.bandWidth,
+      bandHeight,
+      order,
+    });
+    const dstYStart = cumulativeBands * bandHeight;
+    // Décale les bandes du côté dans le canvas global (dstY relatif → absolu).
+    const bands: FoldBand[] = sideGeom.bands.map((b) => ({ ...b, dstY: b.dstY + dstYStart }));
+    segments.push({
+      sideIndex,
+      ribbonWidth,
+      bandCount: sideGeom.bandCount,
+      dstYStart,
+      bands,
+    });
+    cumulativeBands += sideGeom.bandCount;
+  });
+
+  return {
+    ribbonHeight: value.height,
+    bandWidth: value.bandWidth,
+    bandHeight,
+    bandCount: cumulativeBands,
+    canvasWidth: value.bandWidth,
+    canvasHeight: cumulativeBands * bandHeight,
+    order,
+    segments,
+  };
+}
+
 // ── 1c. Validateur de format à l'upload ───────────────────────────────────────
 
 /**
@@ -714,6 +831,7 @@ function runFfmpeg(args: string[]): Promise<void> {
 // Pattern singleton — regroupe les helpers purs + l'application réelle.
 export const ledFoldService = {
   computeFoldGeometry,
+  computeFoldGeometryPerSide,
   computeRibbonDimensions,
   validateLedFormat,
   fitFromLayout,

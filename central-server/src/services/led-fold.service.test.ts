@@ -21,6 +21,7 @@ jest.mock('../config/logger', () => ({
 
 import {
   computeFoldGeometry,
+  computeFoldGeometryPerSide,
   computeRibbonDimensions,
   validateLedFormat,
   fitFromLayout,
@@ -186,6 +187,69 @@ describe('led-fold.service — géométrie pure', () => {
         computeFoldGeometry({ ribbonWidth: 1920, ribbonHeight: 160, bandWidth: 1920, order: 'diagonal' }),
       ).toThrow();
     });
+  });
+});
+
+describe('led-fold.service — pliage par côté (computeFoldGeometryPerSide, ADR-135)', () => {
+  it('[40,20,20] P6 h160 bw1920 → 4+2+2 = 8 bandes empilées', () => {
+    const g = computeFoldGeometryPerSide({ sides: [40, 20, 20], pitchMm: 6, height: 160, bandWidth: 1920 });
+    expect(g.segments).toHaveLength(3);
+    // côté 0 : 40 m → round(6666.67)=6667 → ceil(6667/1920)=4 bandes
+    expect(g.segments[0].ribbonWidth).toBe(6667);
+    expect(g.segments[0].bandCount).toBe(4);
+    // côtés 1 & 2 : 20 m → 3333 → 2 bandes chacun
+    expect(g.segments[1].bandCount).toBe(2);
+    expect(g.segments[2].bandCount).toBe(2);
+    expect(g.bandCount).toBe(8);
+    expect(g.canvasWidth).toBe(1920);
+    expect(g.canvasHeight).toBe(8 * 160); // 1280
+  });
+
+  it('empile les blocs dans l’ordre des côtés (dstYStart cumulatif)', () => {
+    const g = computeFoldGeometryPerSide({ sides: [40, 20, 20], pitchMm: 6, height: 160, bandWidth: 1920 });
+    expect(g.segments[0].dstYStart).toBe(0);
+    expect(g.segments[1].dstYStart).toBe(4 * 160); // après les 4 bandes du côté 0
+    expect(g.segments[2].dstYStart).toBe(6 * 160); // après 4+2 bandes
+    // dstY des bandes est GLOBAL : 1re bande du côté 1 commence à y=640
+    expect(g.segments[1].bands[0].dstY).toBe(640);
+  });
+
+  it('chaque côté est un bloc contigu → le contenu ne traverse jamais un angle', () => {
+    const g = computeFoldGeometryPerSide({ sides: [40, 20, 20], pitchMm: 6, height: 160, bandWidth: 1920 });
+    // srcX des bandes est LOCAL au ruban du côté (repart de 0 à chaque côté).
+    g.segments.forEach((seg) => {
+      expect(seg.bands[0].srcX).toBe(0);
+      const totalW = seg.bands.reduce((a, b) => a + b.w, 0);
+      expect(totalW).toBe(seg.ribbonWidth); // les bandes couvrent exactement le ruban du côté
+    });
+  });
+
+  it('un seul côté de 9 m P10 h110 → 900 px → 1 bande (sous la largeur de bande)', () => {
+    const g = computeFoldGeometryPerSide({ sides: [9], pitchMm: 10, height: 110, bandWidth: 1920 });
+    expect(g.segments).toHaveLength(1);
+    expect(g.segments[0].ribbonWidth).toBe(900);
+    expect(g.bandCount).toBe(1);
+    expect(g.canvasHeight).toBe(110);
+    // 1 seule bande, padding à droite = 1920 - 900
+    expect(g.segments[0].bands[0].padRight).toBe(1020);
+  });
+
+  it('coûte ≥ autant de bandes que le pliage continu (padding par côté)', () => {
+    const sides = [40, 20, 20];
+    const perSide = computeFoldGeometryPerSide({ sides, pitchMm: 6, height: 160, bandWidth: 1920 });
+    const { ribbonWidth } = computeRibbonDimensions({ sides, pitchMm: 6, height: 160 });
+    const continuous = computeFoldGeometry({ ribbonWidth, ribbonHeight: 160, bandWidth: 1920 });
+    expect(perSide.bandCount).toBeGreaterThanOrEqual(continuous.bandCount); // 8 ≥ 7
+  });
+
+  it('rejette une entrée invalide (0 côté, pitch ≤ 0, height non entière)', () => {
+    expect(() => computeFoldGeometryPerSide({ sides: [], pitchMm: 6, height: 160, bandWidth: 1920 })).toThrow();
+    expect(() => computeFoldGeometryPerSide({ sides: [40], pitchMm: 0, height: 160, bandWidth: 1920 })).toThrow();
+    expect(() => computeFoldGeometryPerSide({ sides: [40], pitchMm: 6, height: 160.5, bandWidth: 1920 })).toThrow();
+  });
+
+  it('exposé via le singleton ledFoldService', () => {
+    expect(typeof ledFoldService.computeFoldGeometryPerSide).toBe('function');
   });
 });
 
