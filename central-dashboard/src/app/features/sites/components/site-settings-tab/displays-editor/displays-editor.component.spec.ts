@@ -622,6 +622,47 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     pitch.dispatchEvent(new Event('blur'));
     expect(emitCount).toBe(0);
   });
+
+  // --- Hauteur dalle : saisie physique en cm, modèle interne en rangées px ---
+
+  it('getLedHeightCm convertit les rangées px en cm via le pitch (160 px @ P6 → 96 cm)', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    expect(component.getLedHeightCm(d)).toBe(96); // 160 × 6 / 10
+  });
+
+  it('onLedHeightCmChange convertit les cm saisis en rangées px (96 cm @ P6 → 160)', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led!, height: 0 } };
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.onLedHeightCmChange(d, '96');
+    expect(d.led!.height).toBe(160); // 96 × 10 / 6
+    expect(emitted).toBe(true);
+  });
+
+  it('onLedHeightCmChange arrondit à la rangée entière la plus proche (80 cm @ P6 → 133)', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    component.onLedHeightCmChange(d, '80'); // 800 / 6 = 133.3
+    expect(d.led!.height).toBe(133);
+  });
+
+  it('onLedHeightCmChange ignore une saisie invalide (pas de mutation ni emit)', () => {
+    const d = { ...ledDisplay, led: { ...ledDisplay.led! } };
+    let emitted = false;
+    component.displaysChange.subscribe(() => (emitted = true));
+    component.onLedHeightCmChange(d, 'abc');
+    expect(d.led!.height).toBe(160); // inchangé
+    expect(emitted).toBe(false);
+  });
+
+  it('le champ hauteur (cm) affiche le nombre de rangées effectif (160 @ P6)', () => {
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+    // Le libellé "cm" est sur le champ ; le sous-texte montre les rangées dérivées.
+    expect(fixture.nativeElement.querySelector('[data-testid="led-height"]')).toBeTruthy();
+    const rows = fixture.nativeElement.querySelector('[data-testid="led-height-rows"]');
+    expect(rows.textContent).toContain('160 rangées');
+    expect(rows.textContent).toContain('P6');
+  });
 });
 
 describe('DisplaysEditorComponent — Banc d\'essai LED (PROP-014 §6)', () => {
