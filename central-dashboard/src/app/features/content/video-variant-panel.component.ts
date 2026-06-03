@@ -7,6 +7,17 @@ import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { DisplayConfig, CloudVideo } from '../../core/models';
 import { environment } from '../../../environments/environment';
 
+/** Fichier d'un côté pour une variante led-perimeter « par côté » (ADR-135). */
+interface SideFile {
+  side_index: number;
+  filename: string;
+  original_name: string | null;
+  file_size: number;
+  width: number | null;
+  height: number | null;
+  url?: string | null;
+}
+
 interface VideoVariant {
   id: string;
   video_id: string;
@@ -20,6 +31,7 @@ interface VideoVariant {
   url: string | null;
   created_at: string;
   layout?: string | null; // PROP-014 §8 : mise en page (variantes led-perimeter)
+  side_files?: SideFile[] | null; // ADR-135 : 1 fichier par côté (mode « par côté »)
 }
 
 /** État d'un export LED async par display_type (PROP-014 §6 / étape 6). */
@@ -95,9 +107,83 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
 
   readonly layoutOptions = LAYOUT_OPTIONS;
 
+  /** Mode « par côté » ouvert dans l'UI par display_type (même sans fichier encore). */
+  perSideUiOpen: Record<string, boolean> = {};
+  /** Côté en cours d'upload (index) pour le spinner. */
+  uploadingSide: number | null = null;
+
   /** Le sélecteur de mise en page n'apparaît QUE pour les variantes led-perimeter (PROP-014 §8 : piloté par TYPE). */
   isLedPerimeter(type: string): boolean {
     return type === LED_PERIMETER_TYPE;
+  }
+
+  // --- Contenu LED « par côté » (ADR-135) ---
+
+  /** Côtés du ruban LED du site (longueurs en m). Vide si pas de display led-perimeter. */
+  get ledSides(): number[] {
+    const d = this.siteDisplays?.find((x) => x.type === LED_PERIMETER_TYPE);
+    return d?.led?.sides ?? [];
+  }
+
+  /** Une variante led-perimeter est « par côté » si elle a au moins un fichier de côté. */
+  isPerSide(variant: VideoVariant): boolean {
+    return (variant.side_files?.length ?? 0) > 0;
+  }
+
+  /** Le bloc « par côté » s'affiche si des fichiers existent OU si l'opérateur a choisi ce mode. */
+  showPerSide(variant: VideoVariant): boolean {
+    return this.isPerSide(variant) || !!this.perSideUiOpen[variant.display_type];
+  }
+
+  getSideFile(variant: VideoVariant, sideIndex: number): SideFile | null {
+    return variant.side_files?.find((s) => s.side_index === sideIndex) ?? null;
+  }
+
+  /** Bascule uniforme / par côté (UI). Repasser en « uniforme » retire les fichiers par côté. */
+  setPerSideMode(variant: VideoVariant, perSide: boolean): void {
+    this.perSideUiOpen[variant.display_type] = perSide;
+    if (!perSide) {
+      (variant.side_files ?? []).forEach((s) => this.removeSideFile(variant, s.side_index));
+    }
+  }
+
+  onSideFileSelected(event: Event, sideIndex: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.uploadingSide = sideIndex;
+    const formData = new FormData();
+    formData.append('video', file);
+    this.http
+      .post(
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}`,
+        formData,
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: () => {
+          this.uploadingSide = null;
+          input.value = '';
+          this.loadVariants();
+        },
+        error: (err) => {
+          this.uploadingSide = null;
+          this.notificationService.error(`Erreur upload côté : ${ErrorExtractor.getMessage(err)}`);
+        },
+      });
+  }
+
+  removeSideFile(variant: VideoVariant, sideIndex: number): void {
+    this.http
+      .delete(
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}`,
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: () => this.loadVariants(),
+        error: (err) =>
+          this.notificationService.error(`Erreur suppression côté : ${ErrorExtractor.getMessage(err)}`),
+      });
   }
 
   // F2 fallback: sites without displays[] configured get a virtual 'secondary' option

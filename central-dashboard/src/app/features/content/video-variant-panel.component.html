@@ -92,6 +92,70 @@
             >
           </div>
 
+          <!-- Contenu LED « par côté » (ADR-135) : uniforme vs une vidéo par côté.
+               Visible seulement si le ruban a au moins 2 côtés. -->
+          <div
+            class="led-perside"
+            *ngIf="isLedPerimeter(variant.display_type) && ledSides.length > 1"
+            data-testid="led-perside"
+          >
+            <div class="led-perside-modes">
+              <label class="led-perside-mode">
+                <input
+                  type="radio"
+                  [name]="'perside-' + variant.display_type"
+                  [checked]="!showPerSide(variant)"
+                  (change)="setPerSideMode(variant, false)"
+                />
+                Même contenu sur tout le tour
+              </label>
+              <label class="led-perside-mode">
+                <input
+                  type="radio"
+                  [name]="'perside-' + variant.display_type"
+                  data-testid="led-perside-radio-on"
+                  [checked]="showPerSide(variant)"
+                  (change)="setPerSideMode(variant, true)"
+                />
+                Une vidéo par côté
+              </label>
+            </div>
+
+            <div class="led-perside-slots" *ngIf="showPerSide(variant)">
+              <div
+                class="led-perside-slot"
+                *ngFor="let s of ledSides; let i = index"
+                [attr.data-testid]="'led-perside-slot-' + i"
+              >
+                <span class="led-perside-label"
+                  ><strong>Côté {{ i + 1 }}</strong> · {{ s }} m</span
+                >
+                <ng-container *ngIf="getSideFile(variant, i) as sf; else emptySide">
+                  <span class="led-perside-file">{{ sf.original_name || sf.filename }}</span>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger"
+                    (click)="removeSideFile(variant, i)"
+                  >
+                    Retirer
+                  </button>
+                </ng-container>
+                <ng-template #emptySide>
+                  <label class="upload-zone-compact small">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      (change)="onSideFileSelected($event, i)"
+                      hidden
+                      [disabled]="uploadingSide === i"
+                    />
+                    {{ uploadingSide === i ? '…' : 'Uploader' }}
+                  </label>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+
           <!-- Avis de format LED (PROP-014 §6) — informatif, jamais bloquant. -->
           <div
             class="format-notice"
