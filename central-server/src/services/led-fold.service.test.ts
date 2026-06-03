@@ -23,8 +23,11 @@ import {
   computeFoldGeometry,
   computeRibbonDimensions,
   validateLedFormat,
+  fitFromLayout,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
+  buildFoldExportFilterGraph,
+  buildFoldExportFfmpegArgs,
   ledFoldService,
   type FoldGeometry,
 } from './led-fold.service';
@@ -330,11 +333,77 @@ describe('led-fold.service — construction ffmpeg (pure)', () => {
   });
 });
 
+describe('led-fold.service — export (scale→pad→fold)', () => {
+  const geom7: FoldGeometry = computeFoldGeometry({
+    ribbonWidth: 13333,
+    ribbonHeight: 160,
+    bandWidth: 1920,
+  });
+
+  describe('fitFromLayout', () => {
+    it('stretched → stretch, tout le reste → contain', () => {
+      expect(fitFromLayout('stretched')).toBe('stretch');
+      expect(fitFromLayout('repeated')).toBe('contain');
+      expect(fitFromLayout('scrolling')).toBe('contain');
+      expect(fitFromLayout(null)).toBe('contain');
+      expect(fitFromLayout(undefined)).toBe('contain');
+    });
+  });
+
+  describe('buildFoldExportFilterGraph', () => {
+    it('contain : scale fit-decrease + pad au ruban, puis fold depuis [rib]', () => {
+      const g = buildFoldExportFilterGraph(geom7, 'contain');
+      expect(g).toContain('[0:v]scale=13333:160:force_original_aspect_ratio=decrease');
+      expect(g).toContain('pad=13333:160:(ow-iw)/2:(oh-ih)/2:black');
+      expect(g).toContain('[rib]');
+      expect(g).toContain('[rib]split=7'); // le fold part bien de [rib], pas [0:v]
+      expect(g).toContain('vstack=inputs=7');
+    });
+
+    it('cover : scale fit-increase + crop', () => {
+      const g = buildFoldExportFilterGraph(geom7, 'cover');
+      expect(g).toContain('force_original_aspect_ratio=increase');
+      expect(g).toContain('crop=13333:160');
+    });
+
+    it('stretch : scale au ratio du ruban (déforme)', () => {
+      const g = buildFoldExportFilterGraph(geom7, 'stretch');
+      expect(g).toContain('[0:v]scale=13333:160,setsar=1[rib]');
+      expect(g).not.toContain('force_original_aspect_ratio');
+    });
+
+    it('cas 1 bande : pas de split, fold depuis [rib]', () => {
+      const one = computeFoldGeometry({ ribbonWidth: 1200, ribbonHeight: 160, bandWidth: 1920 });
+      const g = buildFoldExportFilterGraph(one, 'contain');
+      expect(g).not.toContain('split');
+      expect(g).toContain('[rib]crop=1200:160:0:0');
+    });
+  });
+
+  describe('buildFoldExportFfmpegArgs', () => {
+    it('assemble une commande complète avec le filtre d’export', () => {
+      const args = buildFoldExportFfmpegArgs(geom7, {
+        inputPath: '/tmp/club.mp4',
+        outputPath: '/tmp/folded.mp4',
+        fit: 'contain',
+      });
+      expect(args).toContain('/tmp/club.mp4');
+      expect(args[args.length - 1]).toBe('/tmp/folded.mp4');
+      const fc = args[args.indexOf('-filter_complex') + 1];
+      expect(fc).toContain('scale=13333:160');
+      expect(fc).toContain('vstack=inputs=7');
+    });
+  });
+});
+
 describe('led-fold.service — singleton', () => {
-  it('expose les helpers purs + applyFold + isFfmpegAvailable', () => {
+  it('expose les helpers purs + applyFold/applyFoldExport + isFfmpegAvailable', () => {
     expect(typeof ledFoldService.computeFoldGeometry).toBe('function');
     expect(typeof ledFoldService.buildFoldFfmpegArgs).toBe('function');
+    expect(typeof ledFoldService.buildFoldExportFfmpegArgs).toBe('function');
     expect(typeof ledFoldService.applyFold).toBe('function');
+    expect(typeof ledFoldService.applyFoldExport).toBe('function');
+    expect(typeof ledFoldService.validateLedFormat).toBe('function');
     expect(typeof ledFoldService.isFfmpegAvailable).toBe('function');
   });
 });

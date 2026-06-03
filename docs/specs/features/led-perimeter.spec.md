@@ -19,7 +19,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Services backend** :
 
-- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `buildFoldFfmpegArgs()` / `applyFold()` (pliage ffmpeg crop+vstack d'une vidéo existante).
+- `central-server/src/services/led-fold.service.ts` — IP du domaine : `computeRibbonDimensions()` (profil → largeur ruban), `computeFoldGeometry()` (ruban → bandes empilées), `validateLedFormat()` (validateur §6), `applyFold()` (pliage d'un ruban plat) et `applyFoldExport()` (adapte une vidéo quelconque au ruban via `fit` contain/cover/stretch puis plie — voie d'export vidéo club). CLI démontrable : `npm run led:export`.
 - `central-server/templates-studio/templates/led_perimeter_folded/` — composition Remotion de **production** : rend directement le canvas plié (ADR-134).
 - `central-server/templates-studio/templates/led_perimeter_ribbon/` — composition **POC** (ruban plat) + outil de mesure `npm run led:ribbon-poc`.
 
@@ -31,7 +31,9 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 
 **Validateur de format à l'upload** (`validateLedFormat`) : juge le format d'une vidéo club uploadée contre le ruban du profil, retourne un `format_notice` **non bloquant**.
 
-**Hors périmètre de cette SPEC** : l'export téléchargeable, le live HDMI Pi→processeur (étape 6 PROP-014, à venir), le SPIKE matériel (`canvas_in` + mode A/B).
+**Export** : moteur ffmpeg `applyFoldExport()` (vidéo club → canvas plié, `fit` dérivé du `layout` via `fitFromLayout()`) ; le studio rend directement plié (`LedPerimeterFolded`). CLI `npm run led:export`.
+
+**Hors périmètre de cette SPEC** : le bouton de téléchargement async côté dashboard (intégration HTTP/job restante au-dessus de `applyFoldExport`), le live HDMI Pi→processeur, le SPIKE matériel (`canvas_in` + mode A/B).
 
 ## Règles métier
 
@@ -52,6 +54,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - Le panneau LED n'apparaît **que** pour un display `type: 'led-perimeter'` — une 2ᵉ TV reste inchangée.
 - Uploader une vidéo club 4800×800 (6:1) sur un ruban ~83:1 affiche un avis ⚠️ « ratio incompatible → blocs/espaces » sans bloquer l'upload ; une vidéo aux dimensions exactes affiche ✅ « pliage direct ».
 - Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
+- `npm run led:export` plie une vidéo (ex. testsrc 4800×800) au canvas exact du profil (1920×1120) — vérifié par ffprobe (`match: true`), sans OOM Chromium (ffmpeg pur).
 
 ## Cas d'edge
 

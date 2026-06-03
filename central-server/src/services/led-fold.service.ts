@@ -324,19 +324,23 @@ export function validateLedFormat(input: LedFormatInput): LedFormatNotice {
  *
  * Cas 1 bande : pas de split ni vstack, simple `crop` + `pad`.
  */
-export function buildFoldFilterGraph(geometry: FoldGeometry, padColor = 'black'): string {
+export function buildFoldFilterGraph(
+  geometry: FoldGeometry,
+  padColor = 'black',
+  sourceLabel = '[0:v]'
+): string {
   const { bands, bandWidth, bandHeight, bandCount } = geometry;
 
   const cropPad = (b: FoldBand): string =>
     `crop=${b.w}:${b.h}:${b.srcX}:${b.srcY},pad=${bandWidth}:${bandHeight}:${b.dstX}:0:${padColor}`;
 
   if (bandCount === 1) {
-    return `[0:v]${cropPad(bands[0])}[out]`;
+    return `${sourceLabel}${cropPad(bands[0])}[out]`;
   }
 
   // Split du flux source en autant de copies que de bandes.
   const splitOutputs = bands.map((_, i) => `[s${i}]`).join('');
-  const parts: string[] = [`[0:v]split=${bandCount}${splitOutputs}`];
+  const parts: string[] = [`${sourceLabel}split=${bandCount}${splitOutputs}`];
 
   // Une chaîne crop+pad par bande → label [b<index>].
   for (const b of bands) {
@@ -350,6 +354,62 @@ export function buildFoldFilterGraph(geometry: FoldGeometry, padColor = 'black')
   parts.push(`${vstackInputs}vstack=inputs=${bandCount}[out]`);
 
   return parts.join(';');
+}
+
+/**
+ * Mode d'adaptation d'une vidéo club au ruban avant pliage (PROP-014 §6).
+ *  - `contain` : tient dans le ruban en préservant le ratio + padding (blocs/espaces).
+ *  - `cover`   : remplit le ruban en préservant le ratio + crop (déborde).
+ *  - `stretch` : étire au ratio du ruban (déforme).
+ */
+export type LedExportFit = 'contain' | 'cover' | 'stretch';
+
+/**
+ * Mappe la mise en page de la variante (`video_variants.layout`) vers un mode
+ * d'adaptation ffmpeg. `stretched` → `stretch` ; tout le reste → `contain` (le
+ * tiling `repeated` et le `scrolling` animé relèvent de la compo studio, ADR-134).
+ */
+export function fitFromLayout(layout: string | null | undefined): LedExportFit {
+  return layout === 'stretched' ? 'stretch' : 'contain';
+}
+
+/**
+ * Clause ffmpeg `scale`/`pad` adaptant une source quelconque aux dimensions du ruban.
+ * Pure (string). `setsar=1` normalise le sample aspect ratio (anti-déformation).
+ */
+function ribbonFitClause(
+  ribbonWidth: number,
+  ribbonHeight: number,
+  fit: LedExportFit,
+  padColor: string
+): string {
+  const W = ribbonWidth;
+  const H = ribbonHeight;
+  switch (fit) {
+    case 'stretch':
+      return `scale=${W}:${H},setsar=1`;
+    case 'cover':
+      return `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1`;
+    case 'contain':
+    default:
+      return `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
+  }
+}
+
+/**
+ * Filter graph d'EXPORT : adapte d'abord la source au ruban (scale/pad selon `fit`),
+ * puis plie. Permet d'exporter la vidéo finie d'un club (taille quelconque) vers le
+ * canvas plié, sans intermédiaire géant côté Chromium (le pliage est ffmpeg pur).
+ * Fonction pure (string) — testable sans ffmpeg.
+ */
+export function buildFoldExportFilterGraph(
+  geometry: FoldGeometry,
+  fit: LedExportFit = 'contain',
+  padColor = 'black'
+): string {
+  const fitClause = ribbonFitClause(geometry.ribbonWidth, geometry.ribbonHeight, fit, padColor);
+  const foldGraph = buildFoldFilterGraph(geometry, padColor, '[rib]');
+  return `[0:v]${fitClause}[rib];${foldGraph}`;
 }
 
 /**
@@ -383,6 +443,49 @@ export function buildFoldFfmpegArgs(
     '-movflags',
     '+faststart',
     '-an', // ruban LED = pas d'audio
+    '-y',
+    options.outputPath,
+  ];
+}
+
+/** Options d'export (adapte la source au ruban avant pliage). */
+export interface FoldExportOptions extends FoldFfmpegOptions {
+  /** Mode d'adaptation source → ruban. Défaut `'contain'`. */
+  fit?: LedExportFit;
+}
+
+/**
+ * Assemble les arguments ffmpeg d'EXPORT (scale/pad au ruban puis pliage).
+ * Fonction pure (string[]). Pour la vidéo finie d'un club (taille quelconque).
+ */
+export function buildFoldExportFfmpegArgs(
+  geometry: FoldGeometry,
+  options: FoldExportOptions
+): string[] {
+  const padColor = options.padColor ?? 'black';
+  const crf = options.crf ?? 18;
+  const preset = options.preset ?? 'medium';
+  const fit = options.fit ?? 'contain';
+  const filterGraph = buildFoldExportFilterGraph(geometry, fit, padColor);
+
+  return [
+    '-i',
+    options.inputPath,
+    '-filter_complex',
+    filterGraph,
+    '-map',
+    '[out]',
+    '-c:v',
+    'libx264',
+    '-crf',
+    String(crf),
+    '-preset',
+    preset,
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    '-an',
     '-y',
     options.outputPath,
   ];
@@ -445,6 +548,50 @@ export async function applyFold(
   }
 }
 
+/**
+ * Exporte une vidéo source quelconque vers le canvas plié : adapte au ruban (fit)
+ * puis plie, en une passe ffmpeg. C'est la voie d'export de la vidéo finie d'un club
+ * (PROP-014 §6, ADR-134) — le studio, lui, rend directement plié via Remotion.
+ */
+export async function applyFoldExport(
+  geometryOrInput: FoldGeometry | FoldGeometryInput,
+  options: FoldExportOptions
+): Promise<FoldApplyResult> {
+  const startTime = Date.now();
+  const geometry = isFoldGeometry(geometryOrInput)
+    ? geometryOrInput
+    : computeFoldGeometry(geometryOrInput);
+
+  const args = buildFoldExportFfmpegArgs(geometry, options);
+
+  logger.info('led-fold: applying fold export', {
+    inputPath: options.inputPath,
+    outputPath: options.outputPath,
+    fit: options.fit ?? 'contain',
+    ribbonWidth: geometry.ribbonWidth,
+    bandCount: geometry.bandCount,
+    canvasWidth: geometry.canvasWidth,
+    canvasHeight: geometry.canvasHeight,
+  });
+
+  try {
+    await runFfmpeg(args);
+    const durationMs = Date.now() - startTime;
+    logger.info('led-fold: fold export completed', { outputPath: options.outputPath, durationMs });
+    return { success: true, outputPath: options.outputPath, geometry, durationMs };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('led-fold: fold export failed', { error: message, inputPath: options.inputPath });
+    return {
+      success: false,
+      outputPath: null,
+      geometry,
+      durationMs: Date.now() - startTime,
+      error: message,
+    };
+  }
+}
+
 function isFoldGeometry(v: FoldGeometry | FoldGeometryInput): v is FoldGeometry {
   return Array.isArray((v as FoldGeometry).bands);
 }
@@ -472,10 +619,14 @@ export const ledFoldService = {
   computeFoldGeometry,
   computeRibbonDimensions,
   validateLedFormat,
+  fitFromLayout,
   buildFoldFilterGraph,
   buildFoldFfmpegArgs,
+  buildFoldExportFilterGraph,
+  buildFoldExportFfmpegArgs,
   isFfmpegAvailable,
   applyFold,
+  applyFoldExport,
 };
 
 export default ledFoldService;
