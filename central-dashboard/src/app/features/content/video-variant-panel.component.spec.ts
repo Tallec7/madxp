@@ -329,4 +329,36 @@ describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
   it('ledSides lit les côtés du display led-perimeter du site', () => {
     expect(component.ledSides).toEqual([40, 20, 20]);
   });
+
+  it('un côté vide propose un select bibliothèque alimenté par availableVideos', () => {
+    component.availableVideos = [
+      { id: 'v-a', filename: 'a.mp4', originalName: 'Pub A', size: 100 } as never,
+      { id: 'v-b', filename: 'b.mp4', originalName: 'Pub B', size: 200 } as never,
+    ];
+    openLed();
+    component.setPerSideMode(component.variants[0] as never, true);
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('[data-testid="led-perside-select-0"]');
+    expect(select).toBeTruthy();
+    // placeholder + 2 vidéos
+    expect(select.querySelectorAll('option').length).toBe(3);
+  });
+
+  it('choisir une vidéo existante par côté POST sur .../sides/:i/from-video puis recharge', () => {
+    openLed();
+    component.setPerSideMode(component.variants[0] as never, true);
+    fixture.detectChanges();
+    component.onSideSourceSelected(
+      { target: { value: 'v-a' } } as unknown as Event,
+      2
+    );
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/videos/vid-1/variants/led-perimeter/sides/2/from-video`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ source_video_id: 'v-a' });
+    req.flush({ side_files: [{ side_index: 2, filename: 'a.mp4' }] });
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+    expect(component.linkingSide).toBeNull();
+  });
 });

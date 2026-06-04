@@ -111,6 +111,8 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   perSideUiOpen: Record<string, boolean> = {};
   /** Côté en cours d'upload (index) pour le spinner. */
   uploadingSide: number | null = null;
+  /** Côté en cours d'association depuis la bibliothèque (index). */
+  linkingSide: number | null = null;
 
   /** Le sélecteur de mise en page n'apparaît QUE pour les variantes led-perimeter (PROP-014 §8 : piloté par TYPE). */
   isLedPerimeter(type: string): boolean {
@@ -169,6 +171,32 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.uploadingSide = null;
           this.notificationService.error(`Erreur upload côté : ${ErrorExtractor.getMessage(err)}`);
+        },
+      });
+  }
+
+  /** Associe une vidéo existante de la bibliothèque à un côté (sans upload). */
+  onSideSourceSelected(event: Event, sideIndex: number): void {
+    const select = event.target as HTMLSelectElement;
+    const sourceVideoId = select.value;
+    if (!sourceVideoId) return;
+    this.linkingSide = sideIndex;
+    this.http
+      .post(
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}/from-video`,
+        { source_video_id: sourceVideoId },
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: () => {
+          this.linkingSide = null;
+          select.value = '';
+          this.loadVariants();
+        },
+        error: (err) => {
+          this.linkingSide = null;
+          select.value = '';
+          this.notificationService.error(`Erreur association côté : ${ErrorExtractor.getMessage(err)}`);
         },
       });
   }
