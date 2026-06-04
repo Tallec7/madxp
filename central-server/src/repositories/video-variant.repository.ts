@@ -16,10 +16,30 @@ export type DisplayType = string;
 export type VariantLayout = 'repeated' | 'scrolling' | 'stretched';
 export const VARIANT_LAYOUTS: readonly VariantLayout[] = ['repeated', 'scrolling', 'stretched'];
 
+/**
+ * Fichier vidéo d'UN côté pour une variante led-perimeter « par côté » (ADR-135).
+ * Stocké dans `video_variants.side_files` (JSONB array), un élément par côté.
+ */
+export interface VideoVariantSideFile {
+  side_index: number;
+  filename: string;
+  original_name: string | null;
+  storage_path: string;
+  file_size: number;
+  checksum: string | null;
+  mime_type: string;
+  width: number | null;
+  height: number | null;
+}
+
 export interface VideoVariantRow extends QueryResultRow {
   id: string;
   video_id: string;
   display_type: DisplayType;
+  // NB : en DB, `filename`/`storage_path` sont NULLABLE depuis ADR-135 (variante
+  // « par côté pure »), mais le type reste `string` car seules ces rows-là (lues
+  // uniquement via `side_files` par le code par-côté) peuvent être NULL ; tout le
+  // reste du code n'opère que sur des variantes uniformes (fichier présent).
   filename: string;
   original_name: string | null;
   storage_path: string;
@@ -34,6 +54,8 @@ export interface VideoVariantRow extends QueryResultRow {
   created_at: Date;
   updated_at: Date;
   layout: VariantLayout | null;
+  /** Fichiers par côté (LED périmétrique, ADR-135). Vide/NULL = variante uniforme. */
+  side_files: VideoVariantSideFile[] | null;
 }
 
 export interface CreateVideoVariantInput {
@@ -101,6 +123,69 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
       [videoId, displayType]
     );
     return result.rows[0] || null;
+  }
+
+  /**
+   * Upsert le fichier d'UN côté dans `side_files` (ADR-135). Crée la row de variante
+   * si absente (variante « par côté pure » : `storage_path`/`filename` NULL). Les
+   * éléments sont triés par `side_index`.
+   */
+  async setSideFile(
+    videoId: string,
+    displayType: DisplayType,
+    file: VideoVariantSideFile
+  ): Promise<VideoVariantRow> {
+    const existing = await this.findByVideoAndDisplay(videoId, displayType);
+    const sideFiles: VideoVariantSideFile[] = Array.isArray(existing?.side_files)
+      ? [...existing!.side_files]
+      : [];
+    const idx = sideFiles.findIndex((s) => s.side_index === file.side_index);
+    if (idx >= 0) sideFiles[idx] = file;
+    else sideFiles.push(file);
+    sideFiles.sort((a, b) => a.side_index - b.side_index);
+
+    if (existing) {
+      const r = await query<VideoVariantRow>(
+        `UPDATE video_variants SET side_files = $1::jsonb, updated_at = NOW()
+         WHERE video_id = $2 AND display_type = $3 RETURNING *`,
+        [JSON.stringify(sideFiles), videoId, displayType]
+      );
+      return r.rows[0];
+    }
+    const r = await query<VideoVariantRow>(
+      `INSERT INTO video_variants (video_id, display_type, side_files, metadata)
+       VALUES ($1, $2, $3::jsonb, '{}'::jsonb) RETURNING *`,
+      [videoId, displayType, JSON.stringify(sideFiles)]
+    );
+    return r.rows[0];
+  }
+
+  /**
+   * Retire le fichier d'un côté. Si la variante n'a plus ni `side_files` ni
+   * `storage_path` (uniforme), la row est supprimée (pas de variante fantôme).
+   */
+  async clearSideFile(
+    videoId: string,
+    displayType: DisplayType,
+    sideIndex: number
+  ): Promise<VideoVariantRow | null> {
+    const existing = await this.findByVideoAndDisplay(videoId, displayType);
+    if (!existing || !Array.isArray(existing.side_files)) return existing;
+
+    const sideFiles = existing.side_files.filter((s) => s.side_index !== sideIndex);
+    if (sideFiles.length === 0 && !existing.storage_path) {
+      await query(`DELETE FROM video_variants WHERE video_id = $1 AND display_type = $2`, [
+        videoId,
+        displayType,
+      ]);
+      return null;
+    }
+    const r = await query<VideoVariantRow>(
+      `UPDATE video_variants SET side_files = $1::jsonb, updated_at = NOW()
+       WHERE video_id = $2 AND display_type = $3 RETURNING *`,
+      [sideFiles.length ? JSON.stringify(sideFiles) : null, videoId, displayType]
+    );
+    return r.rows[0] ?? null;
   }
 
   async create(input: CreateVideoVariantInput): Promise<VideoVariantRow> {

@@ -109,6 +109,11 @@ export async function enrichConfigWithDisplayVariants(
   // 3. Build filename → { [displayType]: variantInfo } map
   const variantMap = new Map<string, VideoVariants>();
   for (const v of variants) {
+    // Variante led-perimeter « par côté pure » (ADR-135) : ni storage_path ni
+    // filename — son rendu déployable est le CANVAS COMPOSÉ (par site), pas cette
+    // row. On la SAUTE ici pour ne JAMAIS injecter un chemin cassé `videos-.../null`
+    // (sinon MP4 noir côté Pi). La diffusion du composé est câblée à part (D).
+    if (!v.storage_path && !v.filename) continue;
     // Use storage_path if available (FTP sharded path), fallback to legacy flat path
     const variantPath = v.storage_path
       ? v.storage_path

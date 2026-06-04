@@ -36,7 +36,14 @@ Le « par côté » d'une vidéo = **un fichier vidéo uploadé par côté** (pa
 - **Upload par côté** : `POST /videos/:id/variants/led-perimeter/sides/:sideIndex` (multipart) → upload FTP → upsert l'élément `side_files[sideIndex]`. `DELETE …/sides/:sideIndex` le retire.
 - **Compose** (#1091) : `inputs[i]` = `side_files[i].storage_path` (téléchargé par le worker), classés par `side_index`.
 
-**Plan de build** : (A) migration + repo + endpoints upload/delete par côté (serveur, testable) → (B) UI panneau variantes (uniforme vs par côté + slots d'upload) → (C) aperçu plié (réutilise `applyPerSideFold` + la file de jobs export) → (D) runtime Pi.
+**Plan de build & état** :
+
+- **A ✅** migration `side_files` + repo `setSideFile`/`clearSideFile` + endpoints `POST/DELETE …/sides/:sideIndex`.
+- **B ✅** UI panneau variantes (`video-variant-panel`) : radio uniforme/par côté + un slot d'upload par côté.
+- **C ✅** compose : le worker d'export plie PAR CÔTÉ quand la variante a des `side_files` (`computeFoldGeometryPerSide` + `applyPerSideFold`, prouvé ffmpeg #1091). Le bouton « Exporter le MP4 plié » + le polling existants servent d'aperçu téléchargeable.
+- **D (partiel)** : garde-fou **anti-MP4-noir** posé — l'enrichissement de déploiement (`config-secondary-variants`) **saute** les variantes par côté sans fichier (ni `storage_path` ni `filename`), pour ne jamais injecter `videos-led-perimeter/null`. **Reste à câbler (validation matérielle)** : que le **canvas composé par site** (sortie de C) devienne le contenu led-perimeter **servi/déployé** au Pi. Non implémenté en aveugle (risque MP4 noir, cf. `feedback_no_blind_patch_cascade`).
+
+> Lab-prouvé A→C : uploader un fichier par côté → composer → aperçu MP4 plié correct. La **diffusion réelle sur le ruban LED** (D, dernier maillon) nécessite une validation prod sur matériel.
 
 > Le reste de l'ADR ci-dessous décrit le **modèle initial** (`side_zones` sur l'écran). Conservé pour l'historique, **supersédé sur le point « où vit le contenu par côté »** par cette révision.
 

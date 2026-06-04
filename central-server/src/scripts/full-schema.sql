@@ -3172,9 +3172,9 @@ CREATE TABLE public.video_variants (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     video_id uuid NOT NULL,
     display_type character varying(20) NOT NULL,
-    filename character varying(500) NOT NULL,
+    filename character varying(500),
     original_name character varying(500),
-    storage_path character varying(1000) NOT NULL,
+    storage_path character varying(1000),
     file_size bigint DEFAULT 0 NOT NULL,
     checksum character varying(128),
     mime_type character varying(100) DEFAULT 'video/mp4'::character varying,
@@ -3186,6 +3186,7 @@ CREATE TABLE public.video_variants (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     layout character varying(16),
+    side_files jsonb,
     CONSTRAINT video_variants_display_type_check CHECK ((((display_type)::text ~ '^[a-z0-9-]+$'::text) AND ((length((display_type)::text) >= 1) AND (length((display_type)::text) <= 20))))
 );
 

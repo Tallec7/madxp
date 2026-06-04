@@ -24,9 +24,17 @@ import {
   videoRepository,
   siteRepository,
   type LedExportJobRow,
+  type VideoVariantSideFile,
 } from '../repositories';
 import { getVideoUrl, uploadVideoFromDisk } from './storage.service';
-import { computeRibbonDimensions, computeFoldGeometry, applyFoldExport, normalizeLayout } from './led-fold.service';
+import {
+  computeRibbonDimensions,
+  computeFoldGeometry,
+  computeFoldGeometryPerSide,
+  applyFoldExport,
+  applyPerSideFold,
+  normalizeLayout,
+} from './led-fold.service';
 
 const POLL_INTERVAL_MS = 2_000;
 const STALE_PROCESSING_MAX_AGE_MIN = 15;
@@ -57,7 +65,7 @@ function downloadToFile(url: string, dest: string, redirects = 3): Promise<void>
   });
 }
 
-/** Résout le profil LED (ruban + géométrie) du display led-perimeter d'un site. */
+/** Résout le profil LED (ruban + géométrie + params bruts) du display led-perimeter d'un site. */
 async function resolveGeometry(siteId: string) {
   const displays = await siteRepository.getDisplays(siteId);
   const led = displays.find((d) => d.type === 'led-perimeter')?.led;
@@ -78,26 +86,84 @@ async function resolveGeometry(siteId: string) {
   // Cadence du motif en px (= espacement_m × px/m) pour le pavage 'repeated'/'scrolling'.
   const spacingM = typeof led.spacing_m === 'number' && led.spacing_m > 0 ? led.spacing_m : 10;
   const cellPx = Math.max(1, Math.round(spacingM * (1000 / pitchMm)));
-  return { geometry, cellPx };
+  // Params bruts pour le pliage PAR CÔTÉ (ADR-135).
+  const ledParams = { sides: led.sides, pitchMm, height: led.height, bandWidth };
+  return { geometry, cellPx, ledParams };
+}
+
+/** Téléverse le MP4 plié produit et renvoie son URL publique. */
+async function uploadFolded(jobId: string, tmpOut: string): Promise<string> {
+  const yyyymm = new Date().toISOString().slice(0, 7);
+  const filename = `led-exports/${yyyymm}/${jobId}.mp4`;
+  const stat = await fs.promises.stat(tmpOut);
+  const upload = await uploadVideoFromDisk(tmpOut, stat.size, filename, 'video/mp4');
+  if (!upload || !upload.url) {
+    throw new Error('FTP upload returned no URL');
+  }
+  return upload.url;
+}
+
+/**
+ * Compose une variante led-perimeter « par côté » (ADR-135) : une source par côté
+ * (le fichier de `side_files[i]`, sinon le fallback uniforme) → canvas plié.
+ */
+async function performPerSideExport(
+  job: LedExportJobRow,
+  sideFiles: VideoVariantSideFile[],
+  uniformFallback: string | null
+): Promise<string> {
+  const { ledParams } = await resolveGeometry(job.site_id);
+  const geometry = computeFoldGeometryPerSide(ledParams);
+
+  const tmpFiles: string[] = [];
+  const tmpOut = path.join(os.tmpdir(), `led-export-out-${job.id}.mp4`);
+  try {
+    const inputs: string[] = [];
+    for (let i = 0; i < ledParams.sides.length; i++) {
+      const sp = sideFiles.find((s) => s.side_index === i)?.storage_path ?? uniformFallback;
+      if (!sp) {
+        throw new Error(`côté ${i} sans fichier et aucune source de repli`);
+      }
+      const tmp = path.join(os.tmpdir(), `led-perside-${job.id}-${i}.mp4`);
+      await downloadToFile(getVideoUrl(sp), tmp);
+      inputs.push(tmp);
+      tmpFiles.push(tmp);
+    }
+    logger.info('led-export-worker: composing per-side', { jobId: job.id, sides: inputs.length });
+    const result = await applyPerSideFold(geometry, { inputs, outputPath: tmpOut });
+    if (!result.success) {
+      throw new Error(result.error ?? 'per-side fold failed');
+    }
+    return await uploadFolded(job.id, tmpOut);
+  } finally {
+    tmpFiles.forEach((f) => fs.promises.unlink(f).catch(() => undefined));
+    fs.promises.unlink(tmpOut).catch(() => undefined);
+  }
 }
 
 async function performExport(job: LedExportJobRow): Promise<string> {
-  // Source à plier : la variante led-perimeter si elle existe (export "officiel"
-  // d'une vidéo déjà déclinée), sinon le binaire principal de la vidéo (banc
-  // d'essai — l'opérateur teste n'importe quelle vidéo sans variante dédiée).
   const variant = await videoVariantRepository.findByVideoAndDisplay(job.video_id, job.display_type);
-  let sourcePath = variant?.storage_path ?? null;
-  if (!sourcePath) {
+
+  // Source uniforme de repli : variante led-perimeter, sinon binaire principal.
+  let uniformPath = variant?.storage_path ?? null;
+  if (!uniformPath) {
     // findVideoById aliase `storage_path AS url` → le chemin FTP est dans `.url`.
     const video = await videoRepository.findVideoById(job.video_id);
-    sourcePath = video?.url ?? null;
+    uniformPath = video?.url ?? null;
   }
-  if (!sourcePath) {
+
+  // Variante « par côté » (ADR-135) : on compose un fichier par côté → canvas plié.
+  const sideFiles = (variant?.side_files ?? []) as VideoVariantSideFile[];
+  if (sideFiles.length > 0) {
+    return performPerSideExport(job, sideFiles, uniformPath);
+  }
+
+  if (!uniformPath) {
     throw new Error(`aucune source à plier pour la vidéo ${job.video_id}`);
   }
 
   const { geometry, cellPx } = await resolveGeometry(job.site_id);
-  const inputUrl = getVideoUrl(sourcePath);
+  const inputUrl = getVideoUrl(uniformPath);
 
   const tmpIn = path.join(os.tmpdir(), `led-export-in-${job.id}.mp4`);
   const tmpOut = path.join(os.tmpdir(), `led-export-out-${job.id}.mp4`);
@@ -115,15 +181,7 @@ async function performExport(job: LedExportJobRow): Promise<string> {
     if (!result.success) {
       throw new Error(result.error ?? 'fold export failed');
     }
-
-    const yyyymm = new Date().toISOString().slice(0, 7);
-    const filename = `led-exports/${yyyymm}/${job.id}.mp4`;
-    const stat = await fs.promises.stat(tmpOut);
-    const upload = await uploadVideoFromDisk(tmpOut, stat.size, filename, 'video/mp4');
-    if (!upload || !upload.url) {
-      throw new Error('FTP upload returned no URL');
-    }
-    return upload.url;
+    return await uploadFolded(job.id, tmpOut);
   } finally {
     fs.promises.unlink(tmpIn).catch(() => undefined);
     fs.promises.unlink(tmpOut).catch(() => undefined);

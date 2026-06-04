@@ -287,6 +287,7 @@ export {
   type CreateVideoVariantInput,
   type DisplayType,
   type VariantLayout,
+  type VideoVariantSideFile,
 } from './video-variant.repository';
 export {
   ledExportJobRepository,
