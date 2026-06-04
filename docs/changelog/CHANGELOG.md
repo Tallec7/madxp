@@ -1,3 +1,9 @@
+# [4.12.0](https://github.com/Tallec7/madxp/compare/v4.11.0...v4.12.0) (2026-06-04)
+
+### Features
+
+- **led:** choisir une vidéo existante par côté (variante LED « par côté ») ([#1096](https://github.com/Tallec7/madxp/issues/1096)) ([1c03989](https://github.com/Tallec7/madxp/commit/1c039894fc661e1704371f589625fae70a44cb1a))
+
 # [4.11.0](https://github.com/Tallec7/madxp/compare/v4.10.0...v4.11.0) (2026-06-04)
 
 ### Features
