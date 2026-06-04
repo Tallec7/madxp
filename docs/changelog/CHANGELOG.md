@@ -1,3 +1,9 @@
+# [4.11.0](https://github.com/Tallec7/madxp/compare/v4.10.0...v4.11.0) (2026-06-04)
+
+### Features
+
+- **led:** contenu LED « par côté » — un fichier par côté (A→D, ADR-135) [récupération [#1094](https://github.com/Tallec7/madxp/issues/1094)] ([#1095](https://github.com/Tallec7/madxp/issues/1095)) ([6edc165](https://github.com/Tallec7/madxp/commit/6edc165d5683e3b43f0fedb5fb94bd4c8f63bb92)), closes [#1091](https://github.com/Tallec7/madxp/issues/1091)
+
 # [4.10.0](https://github.com/Tallec7/madxp/compare/v4.9.0...v4.10.0) (2026-06-03)
 
 ### Features
