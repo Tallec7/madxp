@@ -48,12 +48,19 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
     expect(ctrl).toMatch(/displayType !== 'led-perimeter'/);
     // getVideoVariants résout les URLs publiques des fichiers par côté.
     expect(ctrl).toMatch(/side_files: \(v\.side_files \?\? \[\]\)\.map/);
+    // Choisir une vidéo existante par côté (sans upload).
+    expect(ctrl).toMatch(/export const setVideoVariantSideFromVideo/);
   });
 
-  it('les routes upload + delete par côté sont montées', () => {
+  it('le controller setVideoVariantSideFromVideo est re-exporté par le barrel content', () => {
+    expect(read('controllers/content.controller.ts')).toMatch(/setVideoVariantSideFromVideo/);
+  });
+
+  it('les routes upload + delete + from-video par côté sont montées', () => {
     const routes = read('routes/content.routes.ts');
     expect(routes).toMatch(/router\.post\([^)]*\/variants\/:displayType\/sides\/:sideIndex['"]/);
     expect(routes).toMatch(/router\.delete\([^)]*\/variants\/:displayType\/sides\/:sideIndex['"]/);
+    expect(routes).toMatch(/router\.post\([^)]*\/variants\/:displayType\/sides\/:sideIndex\/from-video['"]/);
   });
 
   it('le type SideFile est exporté par le barrel repositories', () => {

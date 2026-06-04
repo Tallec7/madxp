@@ -141,6 +141,18 @@
                   </button>
                 </ng-container>
                 <ng-template #emptySide>
+                  <select
+                    class="source-select"
+                    [attr.data-testid]="'led-perside-select-' + i"
+                    (change)="onSideSourceSelected($event, i)"
+                    [disabled]="linkingSide === i"
+                  >
+                    <option value="">-- Choisir une vidéo existante --</option>
+                    <option *ngFor="let v of availableVideos" [value]="v.id">
+                      {{ v.originalName || v.filename }} ({{ formatFileSize(v.size) }})
+                    </option>
+                  </select>
+                  <span class="source-or">ou</span>
                   <label class="upload-zone-compact small">
                     <input
                       type="file"

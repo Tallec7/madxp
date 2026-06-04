@@ -421,6 +421,61 @@ export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) =>
  * DELETE /content/videos/:id/variants/led-perimeter/sides/:sideIndex
  * Retire le fichier d'un côté (ADR-135). Supprime la variante si plus rien.
  */
+/**
+ * Associe une vidéo EXISTANTE de la bibliothèque à un côté d'une variante
+ * led-perimeter « par côté » (ADR-135). Pas d'upload : on pointe sur le
+ * storage de la vidéo source, comme `createVideoVariantFromVideo` mais ciblé
+ * sur un seul côté. Pas de dispatch Pi (une variante « par côté » ne se
+ * déploie qu'une fois COMPOSÉE en canvas plié — briques C/D).
+ */
+export const setVideoVariantSideFromVideo = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, displayType } = req.params;
+    const sideIndex = parseInt(req.params.sideIndex, 10);
+    const { source_video_id: sourceVideoId } = req.body as { source_video_id: string };
+
+    if (displayType !== 'led-perimeter') {
+      return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
+    }
+    if (!sourceVideoId) {
+      return res.status(400).json({ error: 'source_video_id requis' });
+    }
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    const sourceVideo = await videoRepository.findVideoById(sourceVideoId);
+    if (!sourceVideo) {
+      return res.status(404).json({ error: 'Vidéo source non trouvée' });
+    }
+
+    const sideFile: VideoVariantSideFile = {
+      side_index: sideIndex,
+      filename: sourceVideo.filename,
+      original_name: sourceVideo.original_name,
+      storage_path: sourceVideo.url || sourceVideo.filename, // url = storage_path aliasé dans findVideoById
+      file_size: sourceVideo.file_size,
+      checksum: sourceVideo.checksum || '',
+      mime_type: 'video/mp4',
+      width: null,
+      height: null,
+    };
+
+    const variant = await videoVariantRepository.setSideFile(id, displayType as DisplayType, sideFile);
+    logger.info('led side file linked from existing video', { videoId: id, sideIndex, sourceVideoId });
+
+    res.status(201).json({
+      ...variant,
+      side_files: (variant.side_files ?? []).map((s) => ({ ...s, url: getVideoUrl(s.storage_path) })),
+    });
+  } catch (error) {
+    logger.error('Error linking led side file from video:', error);
+    res.status(500).json({ error: 'Erreur lors de l’association du fichier de côté' });
+  }
+};
+
 export const deleteVideoVariantSide = async (req: AuthRequest, res: Response) => {
   try {
     const { id, displayType } = req.params;

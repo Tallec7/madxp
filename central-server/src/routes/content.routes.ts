@@ -41,6 +41,7 @@ router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRo
 router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.enqueueLedExport);
 // ADR-135 (révision) : contenu LED « par côté » — upload/suppression d'un fichier par côté.
 router.post('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.uploadVideoVariantSide);
+router.post('/videos/:id/variants/:displayType/sides/:sideIndex/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.setVideoVariantSideFromVideo);
 router.delete('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, contentController.deleteVideoVariantSide);
 // PROP-014 §6 / ADR-134 : banc d'essai — plie une vidéo au choix pour le profil
 // LED du club. Hors namespace /sites pour éviter toute collision avec sitesRoutes.
