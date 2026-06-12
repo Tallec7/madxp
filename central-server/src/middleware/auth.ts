@@ -109,8 +109,17 @@ export const requireRole = (...allowedRoles: UserRole[]) => {
       return next();
     }
 
-    // Club users can access their own site's endpoints (GET only by default)
-    if (req.user.role === 'club' && req.user.site_id) {
+    // Club users can READ their own site's endpoints via this bypass (GET only).
+    //
+    // SECURITY (2026-06-12): le bypass était auparavant tous-verbes. Combiné à
+    // `requireRole('admin', ...)` sur les routes /:siteId|:id, il laissait un
+    // club faire des ÉCRITURES admin sur son propre site (regenerate-key →
+    // casse son Pi, /command, DELETE /:id, et surtout self-grant via
+    // PUT /:siteId/club-permissions). On restreint le bypass aux GET : toute
+    // écriture du club doit désormais passer par une route qui liste
+    // explicitement 'club' dans requireRole + un scope guard (requireClubScope)
+    // + le toggle requireClubPermission. cf. auth.ts audit / smoke-saas-incident-2026-06-12.
+    if (req.method === 'GET' && req.user.role === 'club' && req.user.site_id) {
       const requestedSiteId = req.params.siteId || req.params.id;
       if (requestedSiteId && requestedSiteId === req.user.site_id) {
         return next();

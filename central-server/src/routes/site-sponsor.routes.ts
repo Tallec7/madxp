@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireRole, requireClubPermission } from '../middleware/auth';
+import { authenticate, requireRole, requireClubScope, requireClubPermission } from '../middleware/auth';
 import { siteSponsorValidation } from '../middleware/analytics-validation';
 import {
   listSiteSponsors,
@@ -15,6 +15,14 @@ import {
 } from '../controllers/site-sponsor.controller';
 
 const router = express.Router();
+
+// Scope guard club : un club ne gère QUE les sponsors de son propre site.
+// #1103 a ouvert ces routes à 'club' + requireClubPermission, mais sans scope :
+// requireRole laisse passer un club listé dans allowedRoles SANS vérifier que
+// :siteId === user.site_id (le scope ne venait que du bypass, désormais GET-only).
+// Sans ce guard, un club pourrait lire/écrire les sponsors d'un AUTRE site en
+// passant son :siteId. Les rôles internes (admin/operator) bypassent. (2026-06-12)
+const clubScopeBySiteId = requireClubScope((req) => req.params.siteId);
 
 // =============================================================================
 // SITE-SPONSOR ROUTES
@@ -35,6 +43,7 @@ router.get(
   '/:siteId/sponsors',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.listSiteSponsors,
   listSiteSponsors
@@ -51,6 +60,7 @@ router.get(
   '/:siteId/sponsors/benchmark',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.getSiteSponsorBenchmark,
   getSiteSponsorBenchmark
@@ -66,6 +76,7 @@ router.get(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   siteSponsorValidation.getSiteSponsor,
   getSiteSponsor
@@ -89,6 +100,7 @@ router.post(
   '/:siteId/sponsors',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.createSiteSponsor,
   createSiteSponsor
@@ -104,6 +116,7 @@ router.put(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.updateSiteSponsor,
   updateSiteSponsor
@@ -119,6 +132,7 @@ router.delete(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
   requireRole('admin', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   siteSponsorValidation.deleteSiteSponsor,
   deleteSiteSponsor
@@ -138,6 +152,7 @@ router.get(
   '/:siteId/sponsors/:sponsorId/stats',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.getSiteSponsorStats,
   getSiteSponsorStats
@@ -158,6 +173,7 @@ router.post(
   '/:siteId/sponsors/:sponsorId/videos',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.addVideoToSiteSponsor,
   addVideoToSiteSponsor
@@ -173,6 +189,7 @@ router.delete(
   '/:siteId/sponsors/:sponsorId/videos/:filename',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   siteSponsorValidation.removeVideoFromSiteSponsor,
   removeVideoFromSiteSponsor
@@ -189,6 +206,7 @@ router.post(
   '/:siteId/sponsors/:sponsorId/access-link',
   authenticate,
   requireRole('admin', 'operator', 'club'),
+  clubScopeBySiteId,
   requireClubPermission('manage_sponsors'),
   siteSponsorValidation.createAccessLink,
   createAccessLink

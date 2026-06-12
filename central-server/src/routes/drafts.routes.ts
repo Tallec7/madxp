@@ -5,9 +5,14 @@
  */
 
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireClubScope, requireClubPermission } from '../middleware/auth';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import { adminRateLimit, sensitiveRateLimit, monitoringRateLimit } from '../middleware/user-rate-limit';
+
+// Scope guard club (cf. config-profiles.routes.ts) : depuis le passage du
+// bypass requireRole en GET-only (2026-06-12), toute écriture club doit être
+// scopée à son propre site. Les rôles internes bypassent.
+const clubScopeBySiteId = requireClubScope((req) => req.params.siteId);
 import {
   getDraft,
   saveDraft,
@@ -39,7 +44,9 @@ router.get(
 router.put(
   '/:siteId/draft',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.siteId),
   validate(schemas.saveDraft),
@@ -53,7 +60,9 @@ router.put(
 router.delete(
   '/:siteId/draft',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.siteId),
   deleteDraft
@@ -66,7 +75,9 @@ router.delete(
 router.post(
   '/:siteId/draft/validate',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   adminRateLimit,
   validateParams(paramSchemas.siteId),
   validateDraft
@@ -79,7 +90,9 @@ router.post(
 router.post(
   '/:siteId/draft/deploy',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.siteId),
   deployDraft

@@ -5,9 +5,16 @@
  */
 
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireClubScope, requireClubPermission } from '../middleware/auth';
 import { validate, validateParams, paramSchemas, schemas } from '../middleware/validation';
 import { adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
+
+// Scope guard pour les routes ouvertes au club : le club ne peut agir que sur
+// son propre site (req.params.siteId === user.site_id). Les rôles internes
+// (super_admin/admin/operator/viewer) bypassent. Indispensable depuis que le
+// bypass `requireRole` est GET-only (2026-06-12) : sans lui, un club listé dans
+// requireRole passerait NON-scopé sur n'importe quel siteId.
+const clubScopeBySiteId = requireClubScope((req) => req.params.siteId);
 import {
   getProfiles,
   getProfile,
@@ -88,7 +95,9 @@ router.put(
 router.put(
   '/:siteId/profiles/:profileId/configuration',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.siteIdAndProfileId),
   validate(schemas.updateProfileConfiguration),
@@ -115,7 +124,9 @@ router.delete(
 router.post(
   '/:siteId/profiles/:profileId/deploy',
   authenticate,
-  requireRole('super_admin', 'admin', 'operator'),
+  requireRole('super_admin', 'admin', 'operator', 'club'),
+  clubScopeBySiteId,
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.siteIdAndProfileId),
   deployProfile
