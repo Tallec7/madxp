@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole, requireClubPermission } from '../middleware/auth';
 import { siteSponsorValidation } from '../middleware/analytics-validation';
 import {
   listSiteSponsors,
@@ -34,7 +34,8 @@ const router = express.Router();
 router.get(
   '/:siteId/sponsors',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.listSiteSponsors,
   listSiteSponsors
 );
@@ -49,7 +50,8 @@ router.get(
 router.get(
   '/:siteId/sponsors/benchmark',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.getSiteSponsorBenchmark,
   getSiteSponsorBenchmark
 );
@@ -63,7 +65,8 @@ router.get(
 router.get(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   siteSponsorValidation.getSiteSponsor,
   getSiteSponsor
 );
@@ -85,7 +88,8 @@ router.get(
 router.post(
   '/:siteId/sponsors',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.createSiteSponsor,
   createSiteSponsor
 );
@@ -99,7 +103,8 @@ router.post(
 router.put(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.updateSiteSponsor,
   updateSiteSponsor
 );
@@ -113,7 +118,8 @@ router.put(
 router.delete(
   '/:siteId/sponsors/:sponsorId',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'club'),
+  requireClubPermission('manage_sponsors'),
   siteSponsorValidation.deleteSiteSponsor,
   deleteSiteSponsor
 );
@@ -131,7 +137,8 @@ router.delete(
 router.get(
   '/:siteId/sponsors/:sponsorId/stats',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.getSiteSponsorStats,
   getSiteSponsorStats
 );
@@ -150,7 +157,8 @@ router.get(
 router.post(
   '/:siteId/sponsors/:sponsorId/videos',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   ...siteSponsorValidation.addVideoToSiteSponsor,
   addVideoToSiteSponsor
 );
@@ -164,7 +172,8 @@ router.post(
 router.delete(
   '/:siteId/sponsors/:sponsorId/videos/:filename',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   siteSponsorValidation.removeVideoFromSiteSponsor,
   removeVideoFromSiteSponsor
 );
@@ -179,7 +188,8 @@ router.delete(
 router.post(
   '/:siteId/sponsors/:sponsorId/access-link',
   authenticate,
-  requireRole('admin', 'operator'),
+  requireRole('admin', 'operator', 'club'),
+  requireClubPermission('manage_sponsors'),
   siteSponsorValidation.createAccessLink,
   createAccessLink
 );

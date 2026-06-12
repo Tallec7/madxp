@@ -12,6 +12,7 @@ import { deriveHostnameSlug, deriveHostnameWithSuffix } from '../utils/hostname'
 import {
   siteRepository,
   configProfileRepository,
+  clubPermissionRepository,
   type ExtendedSiteFilters,
   type SubscriptionFilter,
   type UpdateSiteInput,
@@ -159,6 +160,18 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     }
 
     logger.info('Site created', { siteId: id, siteName: uniqueSiteName, createdBy: req.user?.email });
+
+    // Seed les permissions club par défaut (toutes activées). Indispensable pour
+    // l'enforcement `requireClubPermission` : un site sans ligne club_permissions
+    // bloquerait son compte club sur toutes les routes gardées.
+    try {
+      await clubPermissionRepository.seedDefaults(id);
+    } catch (permError) {
+      logger.warn('Failed to seed default club permissions (non-blocking)', {
+        siteId: id,
+        error: permError instanceof Error ? permError.message : String(permError),
+      });
+    }
 
     // Auto-creer un profil de configuration par defaut
     // Pour les sites SaaS, on initialise avec les clés minimales pour éviter l'alerte saas_empty_profile

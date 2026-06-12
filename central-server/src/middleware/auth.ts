@@ -261,12 +261,15 @@ export const requireClubPermission = (permission: string) => {
       return res.status(401).json({ error: 'Non authentifié' });
     }
 
-    // Admins and internal roles bypass
-    if (INTERNAL_ROLES.includes(req.user.role)) {
+    // Seul le rôle `club` est soumis aux toggles per-site `club_permissions`.
+    // Tous les autres rôles (internes ou non) sont déjà filtrés par le
+    // `requireRole`/ownership en amont — ne pas interférer avec eux, sinon on
+    // casserait advertiser/agency/viewer sur les routes partagées.
+    if (req.user.role !== 'club') {
       return next();
     }
 
-    if (req.user.role !== 'club' || !req.user.site_id) {
+    if (!req.user.site_id) {
       return res.status(403).json({ error: 'Acc��s refusé' });
     }
 

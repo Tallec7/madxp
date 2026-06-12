@@ -3365,3 +3365,85 @@ describe('Club Portal — video variant management (ownership-guarded)', () => {
     ).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Club permissions enforcement (Option A — câblage requireClubPermission)
+//
+// Le panneau « Accès club » (table club_permissions) était décoratif : le
+// middleware requireClubPermission existait mais n'était branché sur aucune
+// route. Ce câblage le rend effectif. Invariants critiques :
+//  - le middleware NE DOIT gater QUE le rôle `club` (pass-through pour tous les
+//    autres, sinon advertiser/agency/viewer cassent sur les routes partagées) ;
+//  - createSite DOIT seeder les permissions par défaut, sinon un site neuf
+//    bloquerait son club sur tout ;
+//  - les routes contenu / sponsors / analytics portent la bonne clé.
+// ---------------------------------------------------------------------------
+describe('Club permissions enforcement (requireClubPermission wiring)', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+  const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+
+  it('requireClubPermission ne gate QUE le rôle club (pass-through sinon)', () => {
+    const auth = read('central-server/src/middleware/auth.ts');
+    const fn = auth.match(/export const requireClubPermission[\s\S]*?\n};/);
+    expect(fn).not.toBeNull();
+    expect({
+      passesThroughNonClub: /role\s*!==\s*'club'\)\s*\{\s*return next\(\)/.test(fn![0]),
+      queriesPermissions: /FROM club_permissions WHERE site_id/.test(fn![0]),
+      noLongerRejectsAdvertiser: !/INTERNAL_ROLES\.includes/.test(fn![0]),
+    }).toEqual({ passesThroughNonClub: true, queriesPermissions: true, noLongerRejectsAdvertiser: true });
+  });
+
+  it('createSite seed les permissions club par défaut (sinon site neuf = club bloqué)', () => {
+    const ctrl = read('central-server/src/controllers/sites.controller.ts');
+    const fn = ctrl.match(/export const createSite[\s\S]*?(?=\nexport const \w|$)/);
+    expect(fn).not.toBeNull();
+    expect(fn![0].includes('clubPermissionRepository.seedDefaults')).toBe(true);
+  });
+
+  it('seedDefaults insère toutes les ALL_CLUB_PERMISSIONS de façon idempotente', () => {
+    const repo = read('central-server/src/repositories/club-permission.repository.ts');
+    const fn = repo.match(/async seedDefaults[\s\S]*?\n  }/);
+    expect(fn).not.toBeNull();
+    expect({
+      usesAllPerms: /ALL_CLUB_PERMISSIONS/.test(fn![0]),
+      idempotent: /ON CONFLICT[\s\S]*DO NOTHING/.test(fn![0]),
+    }).toEqual({ usesAllPerms: true, idempotent: true });
+  });
+
+  // Routes contenu : chaque mutation porte la bonne clé.
+  it('content.routes : POST /videos→upload_video, /deployments→edit_loop, from-video→edit_loop', () => {
+    const r = read('central-server/src/routes/content.routes.ts');
+    // frags avec quote ouvrante → match exact du path (évite les sous-chemins
+    // comme /videos/:id/deployments qui contiennent aussi /deployments').
+    const lineFor = (frag: string) =>
+      r.split('\n').find((l) => l.includes('router.') && l.includes(frag) && l.includes('requireClubPermission')) || '';
+    expect(/requireClubPermission\('upload_video'\)/.test(lineFor("('/videos',"))).toBe(true);
+    expect(/requireClubPermission\('upload_video'\)/.test(lineFor("('/image-to-video',"))).toBe(true);
+    expect(/requireClubPermission\('edit_loop'\)/.test(lineFor("('/deployments',"))).toBe(true);
+    expect(/requireClubPermission\('edit_loop'\)/.test(lineFor("('/videos/:id/variants/from-video',"))).toBe(true);
+  });
+
+  it('site-sponsor.routes : toutes les routes ouvrent club + gate manage_sponsors', () => {
+    const r = read('central-server/src/routes/site-sponsor.routes.ts');
+    const routeBlocks = r.split('router.').slice(1);
+    const sponsorRoutes = routeBlocks.filter((b) => b.includes('/sponsors'));
+    expect(sponsorRoutes.length).toBeGreaterThanOrEqual(10);
+    for (const b of sponsorRoutes) {
+      expect(/requireRole\([^)]*'club'/.test(b)).toBe(true);
+      expect(b.includes("requireClubPermission('manage_sponsors')")).toBe(true);
+    }
+  });
+
+  it('analytics.routes : dashboard club gardé par view_analytics', () => {
+    const r = read('central-server/src/routes/analytics.routes.ts');
+    const line = r.split('\n').find((l) => l.includes('router.get(') && l.includes("'/clubs/:siteId/dashboard'")) || '';
+    expect(line.includes("requireClubPermission('view_analytics')")).toBe(true);
+  });
+
+  it('sites.routes : local-content→view_content, metrics→view_status', () => {
+    const r = read('central-server/src/routes/sites.routes.ts');
+    expect(/local-content[\s\S]{0,120}requireClubPermission\('view_content'\)/.test(r)).toBe(true);
+    const metrics = r.split('\n').find((l) => l.includes("/:id/metrics'")) || '';
+    expect(metrics.includes("requireClubPermission('view_status')")).toBe(true);
+  });
+});

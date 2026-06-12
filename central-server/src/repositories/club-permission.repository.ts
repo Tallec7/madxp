@@ -79,6 +79,23 @@ class ClubPermissionRepositoryImpl {
   }
 
   /**
+   * Seed les 6 permissions par défaut (toutes activées) pour un nouveau site.
+   * Idempotent (ON CONFLICT DO NOTHING). Sans ce seeding, un site créé APRÈS la
+   * migration `add-club-role-and-permissions.sql` n'aurait aucune ligne
+   * `club_permissions` → avec l'enforcement actif, son compte club serait bloqué
+   * sur TOUTES les routes gardées. À appeler depuis `createSite`.
+   */
+  async seedDefaults(siteId: string): Promise<void> {
+    const values = ALL_CLUB_PERMISSIONS.map((_, i) => `($1, $${i + 2})`).join(', ');
+    await query(
+      `INSERT INTO club_permissions (site_id, permission)
+       VALUES ${values}
+       ON CONFLICT (site_id, permission) DO NOTHING`,
+      [siteId, ...ALL_CLUB_PERMISSIONS]
+    );
+  }
+
+  /**
    * Set all permissions for a site at once (replace).
    * Removes permissions not in the list, adds missing ones.
    */
