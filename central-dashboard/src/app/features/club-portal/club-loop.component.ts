@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiService } from '../../core/services/api.service';
 import { SiteContentTabComponent } from '../sites/components/site-content-tab/site-content-tab.component';
+import { DisplayConfig } from '../../core/models';
 
 @Component({
   selector: 'app-club-loop',
@@ -26,6 +27,7 @@ import { SiteContentTabComponent } from '../sites/components/site-content-tab/si
         [siteType]="siteType"
         [subscriptionPlan]="subscriptionPlan"
         [featureOverrides]="featureOverrides"
+        [siteDisplays]="siteDisplays"
         [isConnected]="isConnected"
         (configDeployed)="onConfigDeployed()">
       </app-site-content-tab>
@@ -65,6 +67,7 @@ export class ClubLoopComponent implements OnInit {
   siteType = '';
   subscriptionPlan: string | null = null;
   featureOverrides: Record<string, boolean> | null = null;
+  siteDisplays: DisplayConfig[] = [];
   isConnected = false;
 
   ngOnInit(): void {
@@ -76,12 +79,16 @@ export class ClubLoopComponent implements OnInit {
   }
 
   private loadSiteInfo(): void {
-    this.api.get<{ site_name: string; club_name: string; status: string; site_type: string; subscription_plan?: string | null; feature_overrides?: Record<string, boolean> | null }>(`/sites/${this.siteId}`).subscribe({
+    this.api.get<{ site_name: string; club_name: string; status: string; site_type: string; subscription_plan?: string | null; feature_overrides?: Record<string, boolean> | null; displays?: DisplayConfig[] | null }>(`/sites/${this.siteId}`).subscribe({
       next: (site) => {
         this.siteName = site.site_name || site.club_name;
         this.siteType = site.site_type || '';
         this.subscriptionPlan = site.subscription_plan ?? null;
         this.featureOverrides = site.feature_overrides ?? null;
+        // Sans les displays du site, video-variant-panel retombe sur un
+        // display 'secondary' virtuel → 400 sur les sites LED (incident
+        // Piraths 2026-06-12 : « display_type 'secondary' non déclaré »).
+        this.siteDisplays = site.displays ?? [];
         this.isConnected = site.status === 'online';
       }
     });
