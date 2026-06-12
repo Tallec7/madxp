@@ -28,21 +28,24 @@ router.delete('/videos/:id/sites/:siteId', authenticate, requireRole('admin'), s
 // Video variant routes (E-22: LED variants, Phase 5H: multi-display)
 router.get('/videos/:id/variants', authenticate, adminRateLimit, contentController.getVideoVariants);
 router.post('/videos/variant-counts', authenticate, adminRateLimit, contentController.getVariantCounts);
-router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
+router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadVideo.single('video'), contentController.createVideoVariant);
 
 // Replace video binary (chantier vidéos manquantes — auto-resolve FTP orphan).
 // Garde id/filename/storage_path inchangés, overwrite le binaire FTP, met à
 // jour file_size + checksum + thumbnail, push les sites pour bust le cache.
 router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'), uploadRateLimit, validateParams(paramSchemas.id), uploadVideo.single('video'), contentController.replaceVideo);
-router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.createVideoVariantFromVideo);
+// `club` autorisé avec garde-fou d'ownership dans le controller (ne peut créer
+// une variante que sur SA propre vidéo, source limitée à ce qu'il a le droit d'utiliser).
+router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator', 'club'), adminRateLimit, contentController.createVideoVariantFromVideo);
 // PROP-014 §8 / ADR-134 : mise en page de la variante LED (métadonnée, pas de re-upload).
-router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.updateVideoVariantLayout);
+// `club` autorisé — garde-fou d'ownership dans chaque handler (variante de sa propre vidéo).
+router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator', 'club'), adminRateLimit, contentController.updateVideoVariantLayout);
 // PROP-014 §6 / étape 6 : export plié async (enqueue + polling statut).
-router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.enqueueLedExport);
+router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator', 'club'), adminRateLimit, contentController.enqueueLedExport);
 // ADR-135 (révision) : contenu LED « par côté » — upload/suppression d'un fichier par côté.
-router.post('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator'), uploadRateLimit, uploadVideo.single('video'), contentController.uploadVideoVariantSide);
-router.post('/videos/:id/variants/:displayType/sides/:sideIndex/from-video', authenticate, requireRole('admin', 'operator'), adminRateLimit, contentController.setVideoVariantSideFromVideo);
-router.delete('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator'), sensitiveRateLimit, contentController.deleteVideoVariantSide);
+router.post('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator', 'club'), uploadRateLimit, uploadVideo.single('video'), contentController.uploadVideoVariantSide);
+router.post('/videos/:id/variants/:displayType/sides/:sideIndex/from-video', authenticate, requireRole('admin', 'operator', 'club'), adminRateLimit, contentController.setVideoVariantSideFromVideo);
+router.delete('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator', 'club'), sensitiveRateLimit, contentController.deleteVideoVariantSide);
 // PROP-014 §6 / ADR-134 : banc d'essai — plie une vidéo au choix pour le profil
 // LED du club. Hors namespace /sites pour éviter toute collision avec sitesRoutes.
 router.post('/led-test-export/:siteId', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.siteId), validate(schemas.ledTestExport), contentController.enqueueLedTestExport);

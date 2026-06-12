@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
-import { videoRepository, videoVariantRepository, siteRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
+import { videoRepository, videoVariantRepository, siteRepository, videoClubGrantRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
 import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
@@ -119,6 +119,13 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
     }
 
+    // Garde-fou club : ne peut créer une variante que sur sa propre vidéo.
+    // (le tempFile est nettoyé par le bloc finally au return)
+    const ownershipError = clubOwnershipError(req.user, video);
+    if (ownershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
+    }
+
     // Valider display_type contre les écrans déclarés du site (F2 fallback: secondary si aucun écran configuré)
     const allowedTypes = await getAllowedDisplayTypes(video.uploaded_for_site_id ?? null);
     if (allowedTypes && !allowedTypes.includes(displayType)) {
@@ -214,6 +221,42 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Garde-fou d'ownership club pour la vidéo PARENTE (cible d'écriture de la variante).
+ * Un user `club` ne peut attacher une variante qu'à SA propre vidéo
+ * (`uploaded_for_site_id === site_id`). Les vidéos NEOPRO corporate restent en
+ * lecture seule — pas de variante club dessus (cf. security.md). Les rôles
+ * admin/operator/super_admin sont déjà filtrés par `requireRole` en amont.
+ * Retourne un message d'erreur 403 si refusé, sinon `null`.
+ */
+function clubOwnershipError(
+  user: AuthRequest['user'],
+  video: { uploaded_for_site_id: string | null },
+): string | null {
+  if (user?.role !== 'club') return null;
+  if (!user.site_id) return 'Compte club sans site associé';
+  if (video.uploaded_for_site_id !== user.site_id) {
+    return 'Vous ne pouvez créer une variante que sur vos propres vidéos';
+  }
+  return null;
+}
+
+/**
+ * Vérifie qu'un user `club` a le droit d'UTILISER la vidéo source référencée :
+ * sa propre vidéo, une vidéo NEOPRO, ou une vidéo grantée (ADR-082). Mirror de
+ * la visibilité club de `getSiteLocalContent`. Toujours `true` pour les non-club.
+ */
+async function clubCanUseSourceVideo(
+  user: AuthRequest['user'],
+  source: { id: string; uploaded_for_site_id: string | null; category: string | null },
+): Promise<boolean> {
+  if (user?.role !== 'club') return true;
+  if (!user.site_id) return false;
+  if (source.uploaded_for_site_id === user.site_id) return true;
+  if ((source.category ?? '').toUpperCase() === 'NEOPRO') return true;
+  return videoClubGrantRepository.hasGrant(source.id, user.site_id);
+}
+
+/**
  * POST /content/videos/:id/variants/from-video
  * Create a variant by referencing an existing video (no upload needed)
  * Body: { display_type, source_video_id }
@@ -244,6 +287,12 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
     }
 
+    // Garde-fou club : ne peut créer une variante que sur sa propre vidéo.
+    const ownershipError = clubOwnershipError(req.user, parentVideo);
+    if (ownershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
+    }
+
     // Valider display_type contre les écrans déclarés du site
     const allowedTypes = await getAllowedDisplayTypes(parentVideo.uploaded_for_site_id ?? null);
     if (allowedTypes && !allowedTypes.includes(displayType)) {
@@ -256,6 +305,11 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
     const sourceVideo = await videoRepository.findVideoById(sourceVideoId);
     if (!sourceVideo) {
       return res.status(404).json({ error: 'Vidéo source non trouvée' });
+    }
+
+    // Garde-fou club : la source doit être une vidéo qu'il a le droit d'utiliser.
+    if (!(await clubCanUseSourceVideo(req.user, sourceVideo))) {
+      return res.status(403).json({ error: 'Accès refusé', message: 'Vidéo source non autorisée pour votre club' });
     }
 
     // Create variant pointing to the source video's storage
@@ -323,6 +377,16 @@ export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) 
       });
     }
 
+    // Garde-fou club : ne peut modifier la mise en page que d'une variante de sa propre vidéo.
+    const layoutParent = await videoRepository.findVideoById(id);
+    if (!layoutParent) {
+      return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+    const layoutOwnershipError = clubOwnershipError(req.user, layoutParent);
+    if (layoutOwnershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: layoutOwnershipError });
+    }
+
     const updated = await videoVariantRepository.updateLayout(id, displayType as DisplayType, layout);
     if (!updated) {
       return res.status(404).json({ error: 'Variante non trouvée' });
@@ -368,6 +432,13 @@ export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) =>
     const video = await videoRepository.findVideoById(id);
     if (!video) {
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+
+    // Garde-fou club : ne peut éditer un côté que d'une variante de sa propre vidéo.
+    // (le tempFile est nettoyé par le bloc finally au return)
+    const sideOwnershipError = clubOwnershipError(req.user, video);
+    if (sideOwnershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: sideOwnershipError });
     }
 
     const correctedOriginalname = fixMulterEncoding(file.originalname);
@@ -446,9 +517,20 @@ export const setVideoVariantSideFromVideo = async (req: AuthRequest, res: Respon
       return res.status(404).json({ error: 'Vidéo parente non trouvée' });
     }
 
+    // Garde-fou club : variante de sa propre vidéo uniquement.
+    const sideFromVideoOwnershipError = clubOwnershipError(req.user, video);
+    if (sideFromVideoOwnershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: sideFromVideoOwnershipError });
+    }
+
     const sourceVideo = await videoRepository.findVideoById(sourceVideoId);
     if (!sourceVideo) {
       return res.status(404).json({ error: 'Vidéo source non trouvée' });
+    }
+
+    // Garde-fou club : la source doit être une vidéo qu'il a le droit d'utiliser.
+    if (!(await clubCanUseSourceVideo(req.user, sourceVideo))) {
+      return res.status(403).json({ error: 'Accès refusé', message: 'Vidéo source non autorisée pour votre club' });
     }
 
     const sideFile: VideoVariantSideFile = {
@@ -483,6 +565,17 @@ export const deleteVideoVariantSide = async (req: AuthRequest, res: Response) =>
     if (displayType !== 'led-perimeter') {
       return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
     }
+
+    // Garde-fou club : ne peut supprimer un côté que d'une variante de sa propre vidéo.
+    const delSideParent = await videoRepository.findVideoById(id);
+    if (!delSideParent) {
+      return res.status(404).json({ error: 'Vidéo parente non trouvée' });
+    }
+    const delSideOwnershipError = clubOwnershipError(req.user, delSideParent);
+    if (delSideOwnershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: delSideOwnershipError });
+    }
+
     const variant = await videoVariantRepository.clearSideFile(id, displayType as DisplayType, sideIndex);
     res.json({ ok: true, side_files: variant?.side_files ?? [] });
   } catch (error) {
@@ -509,6 +602,12 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
+    // Garde-fou club : ne peut exporter que sa propre vidéo.
+    const exportOwnershipError = clubOwnershipError(req.user, video);
+    if (exportOwnershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: exportOwnershipError });
+    }
+
     // Le pliage est PAR CLUB : la source (même globale/partagée) est pliée à la
     // taille du ruban du club VISÉ. Cible = site passé par le dashboard (la page
     // consultée), sinon le propriétaire de la vidéo. La même source rangée par
@@ -519,6 +618,11 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       null;
     if (!targetSiteId) {
       return res.status(400).json({ error: 'Club cible requis pour plier la vidéo (la taille du ruban dépend du club)' });
+    }
+
+    // Un user club ne peut plier que pour SON propre club (jamais cibler un autre site).
+    if (req.user?.role === 'club' && targetSiteId !== req.user.site_id) {
+      return res.status(403).json({ error: 'Accès refusé', message: 'Un club ne peut plier une vidéo que pour son propre site' });
     }
 
     // Fail-fast : le club cible doit avoir un écran led-perimeter avec un profil.
