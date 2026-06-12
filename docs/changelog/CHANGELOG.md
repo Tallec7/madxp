@@ -1,3 +1,9 @@
+# [4.14.0](https://github.com/Tallec7/madxp/compare/v4.13.1...v4.14.0) (2026-06-12)
+
+### Features
+
+- **saas:** activer l'enforcement des permissions club « Accès club » ([#1103](https://github.com/Tallec7/madxp/issues/1103)) ([37e2fe0](https://github.com/Tallec7/madxp/commit/37e2fe0706bb3fc958066daf548b104b86a25584))
+
 ## [4.13.1](https://github.com/Tallec7/madxp/compare/v4.13.0...v4.13.1) (2026-06-12)
 
 ### Bug Fixes
