@@ -1,3 +1,9 @@
+# [4.13.0](https://github.com/Tallec7/madxp/compare/v4.12.0...v4.13.0) (2026-06-12)
+
+### Features
+
+- **content:** autoriser les clubs à gérer les variantes LED de leurs vidéos ([#1101](https://github.com/Tallec7/madxp/issues/1101)) ([8864c61](https://github.com/Tallec7/madxp/commit/8864c619a3685fe2e275a4d4383bb4143e5779c6))
+
 # [4.12.0](https://github.com/Tallec7/madxp/compare/v4.11.0...v4.12.0) (2026-06-04)
 
 ### Features
