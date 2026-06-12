@@ -1,3 +1,9 @@
+## [4.13.1](https://github.com/Tallec7/madxp/compare/v4.13.0...v4.13.1) (2026-06-12)
+
+### Bug Fixes
+
+- **content:** le portail club transmet les displays du site aux variantes ([#1102](https://github.com/Tallec7/madxp/issues/1102)) ([cb03f80](https://github.com/Tallec7/madxp/commit/cb03f80535babefc04486de9009695e32564f336)), closes [#1101](https://github.com/Tallec7/madxp/issues/1101)
+
 # [4.13.0](https://github.com/Tallec7/madxp/compare/v4.12.0...v4.13.0) (2026-06-12)
 
 ### Features
