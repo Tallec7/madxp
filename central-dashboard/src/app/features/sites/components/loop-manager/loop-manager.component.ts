@@ -221,6 +221,15 @@ export class LoopManagerComponent implements OnInit, OnChanges {
       delete video.durationSeconds;
       delete video.thumbnailUrl;
     }
+    // Tag l'appartenance d'après l'origine réelle de la vidéo sélectionnée :
+    // une vidéo uploadée POUR ce site (`isForThisSite`) appartient au club et
+    // doit rester éditable par lui (pondération, suppression) ; toute autre
+    // (NEOPRO / partagée) reste verrouillée. Sans ce tag, les loopVideos
+    // n'ont pas d'`owner` → `isNeoproVideo()` les traite en NEOPRO read-only
+    // → un club ne peut pas gérer le poids de ses propres vidéos (incident
+    // Piraths 2026-06-12). `opt` absent (path legacy/inconnu) → 'neopro' par
+    // défaut (conserve la protection NEOPRO).
+    video.owner = opt?.isForThisSite ? 'club' : 'neopro';
     this.onChanged();
   }
 

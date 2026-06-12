@@ -3447,3 +3447,41 @@ describe('Club permissions enforcement (requireClubPermission wiring)', () => {
     expect(metrics.includes("requireClubPermission('view_status')")).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Loop video owner tagging (incident Piraths 2026-06-12)
+//
+// Les loopVideos sans `owner` étaient traitées en NEOPRO read-only par
+// loop-manager.isNeoproVideo() → un club ne pouvait pas gérer la pondération
+// de SES propres vidéos. Fix : applyVideoSelection tague owner d'après
+// isForThisSite + backfill ciblé de l'existant.
+// ---------------------------------------------------------------------------
+describe('Loop video owner tagging (club weight lock fix)', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+  const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+
+  it('loop-manager.applyVideoSelection tague owner selon isForThisSite', () => {
+    const lm = read('central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
+    expect(/video\.owner\s*=\s*opt\?\.isForThisSite\s*\?\s*'club'\s*:\s*'neopro'/.test(lm)).toBe(true);
+  });
+
+  it('loop-manager.isNeoproVideo reste owner !== club (protection NEOPRO préservée)', () => {
+    const lm = read('central-dashboard/src/app/features/sites/components/loop-manager/loop-manager.component.ts');
+    // La définition (signature typée), pas un site d'appel.
+    const def = lm.match(/isNeoproVideo\(video: \{ owner\?: string \}\): boolean \{[\s\S]*?\n  }/);
+    expect(def).not.toBeNull();
+    expect(/return video\.owner !== 'club';/.test(def![0])).toBe(true);
+  });
+
+  it('backfill loop-video-owner existe et ne tague que les uploads du club', () => {
+    const script = read('central-server/src/scripts/backfill-loop-video-owner.ts');
+    expect(script.includes('uploaded_for_site_id = $1')).toBe(true); // matche les vrais uploads club
+    expect(/if \(entry\.owner\) return;/.test(script)).toBe(true);    // jamais ré-écrire un owner existant
+    expect(script.includes("entry.owner = 'club'")).toBe(true);
+  });
+
+  it('commande npm backfill:loop-video-owner est enregistrée', () => {
+    const pkg = read('central-server/package.json');
+    expect(pkg.includes('"backfill:loop-video-owner"')).toBe(true);
+  });
+});
