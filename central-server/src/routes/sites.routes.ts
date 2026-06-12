@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as sitesController from '../controllers/sites.controller';
 import * as configHistoryController from '../controllers/config-history.controller';
 import { siteSubscriptionRouter } from './subscription.routes';
-import { authenticate, requireRole } from '../middleware/auth';
+import { authenticate, requireRole , requireClubPermission} from '../middleware/auth';
 import { validate, validateParams, validateQuery, paramSchemas, querySchemas, schemas } from '../middleware/validation';
 import { paginationMiddleware } from '../middleware/pagination';
 import { monitoringRateLimit, adminRateLimit, sensitiveRateLimit } from '../middleware/user-rate-limit';
@@ -35,16 +35,16 @@ router.get('/mini-health', authenticate, monitoringRateLimit, sitesController.ge
 
 router.get('/:id', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSite);
 
-router.get('/:id/metrics', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMetrics);
+router.get('/:id/metrics', authenticate, requireClubPermission('view_status'), monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteMetrics);
 
-router.get('/:id/connection-status', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteConnectionStatus);
+router.get('/:id/connection-status', authenticate, requireClubPermission('view_status'), monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteConnectionStatus);
 
 // Endpoint agrégé pour dashboard (réduit de 3 requêtes à 1)
-router.get('/:id/dashboard', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteDashboardData);
+router.get('/:id/dashboard', authenticate, requireClubPermission('view_status'), monitoringRateLimit, validateParams(paramSchemas.id), sitesController.getSiteDashboardData);
 
 // Liste détaillée des vidéos FTP orphelines référencées par ce site (chantier
 // vidéos manquantes — alimente la bannière du tab "Contenu").
-router.get('/:id/ftp-orphans', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteFtpOrphans);
+router.get('/:id/ftp-orphans', authenticate, requireClubPermission('view_content'), adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteFtpOrphans);
 
 // Retire la référence d'une vidéo orpheline FTP du site (cascade JSONB +
 // push Pi/SaaS). Action manuelle admin/super_admin uniquement, jamais auto.
@@ -58,10 +58,10 @@ router.delete(
 );
 
 // Timeline des événements récents (P3.4 - déploiements, commandes, alertes, configs)
-router.get('/:id/timeline', authenticate, adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
+router.get('/:id/timeline', authenticate, requireClubPermission('view_status'), adminRateLimit, validateParams(paramSchemas.id), sitesController.getSiteTimeline);
 
 // Match history for clubs (Phase 1.2 - audience, videos played per match)
-router.get('/:id/match-history', authenticate, monitoringRateLimit, validateParams(paramSchemas.id), validateQuery(querySchemas.matchHistory), sitesController.getSiteMatchHistory);
+router.get('/:id/match-history', authenticate, requireClubPermission('view_analytics'), monitoringRateLimit, validateParams(paramSchemas.id), validateQuery(querySchemas.matchHistory), sitesController.getSiteMatchHistory);
 
 router.get(
   '/:id/logs',
@@ -253,6 +253,7 @@ router.get(
 router.get(
   '/:id/local-content',
   authenticate,
+  requireClubPermission('view_content'),
   monitoringRateLimit,
   validateParams(paramSchemas.id),
   sitesController.getSiteLocalContent
@@ -263,6 +264,7 @@ router.put(
   '/:id/config',
   authenticate,
   requireRole('admin', 'operator'),
+  requireClubPermission('edit_loop'),
   sensitiveRateLimit,
   validateParams(paramSchemas.id),
   validate(schemas.saveConfigDirect),

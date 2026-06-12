@@ -59,6 +59,7 @@ Le mode SaaS permet à un club d'utiliser MadXP **sans hardware Raspberry Pi** �
 - **Gestion boucle** : le club peut réordonner, activer/désactiver ses vidéos via `club-loop.component.ts` sans passer par l'admin MadXP.
 - **Sponsors actifs** : `club-sponsors.component.ts` affiche les sponsors `status='active'` avec logos, impressions semaine et lien vers le portail sponsor.
 - **Gestion des variantes LED/secondaires** : un compte `club` peut créer/éditer/supprimer les variantes (LED périmétrique, écran secondaire) de **ses propres vidéos** depuis le portail, sans passer par un opérateur MadXP. Les 6 routes `/videos/:id/variants*` acceptent le rôle `club` avec un **garde-fou d'ownership côté API** (`content-variant.controller.ts`) : `uploaded_for_site_id === user.site_id` (vidéo parente), vidéo source ownée OU NEOPRO OU grantée (ADR-082), export LED restreint au propre site du club. Les vidéos NEOPRO corporate restent read-only. Avant ce garde-fou, le `requireRole('admin','operator')` rejetait tout club en 403 « Rôle requis: admin ou operator » (incident Piraths Strasbourg 2026-06-12).
+- **Permissions granulaires « Accès club » (enforced)** : le panneau `club-access-tab` (table `club_permissions`, 6 clés `view_status` / `view_content` / `upload_video` / `edit_loop` / `manage_sponsors` / `view_analytics`) est **effectif** côté API via le middleware `requireClubPermission(key)` ([auth.ts](../../central-server/src/middleware/auth.ts)). Invariants : (1) le middleware ne gate **que** le rôle `club` (pass-through pour tous les autres rôles, sinon advertiser/agency/viewer casseraient sur les routes partagées) ; (2) `createSite` **doit** appeler `clubPermissionRepository.seedDefaults()` (les 6 permissions activées) — un site sans ligne `club_permissions` bloquerait son club sur toutes les routes gardées ; (3) décocher une case retire la ligne (`setPermissions` = replace) → 403 « Permission manquante » sur les routes correspondantes. Mapping : `upload_video` → POST/PUT/DELETE vidéos + image-to-video + web-content + upload de variantes ; `edit_loop` → déploiements + PUT config + variantes from-video/layout/export/sides ; `view_*` → lectures contenu/statut/analytics du portail ; `manage_sponsors` → CRUD sponsors du site (routes `/:siteId/sponsors*` ouvertes au club, ownership garanti par le check `sponsor.site_id !== siteId` dans le controller). Avant ce câblage, le panneau était **décoratif** (middleware défini mais branché sur 0 route).
 
 ### Tiers d'abonnement (ADR-039)
 
@@ -69,16 +70,17 @@ Le mode SaaS permet à un club d'utiliser MadXP **sans hardware Raspberry Pi** �
 
 ## Comportements observables
 
-| Règle                | Comment on vérifie                                                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry                                                                                     |
-| Relai SaaS actif     | Smoke `saas-relay.handler` : 14 patterns de rebroadcast                                                                                                 |
-| Config rechargée     | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config`                                                                                |
-| Master-slave         | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect                                                                                  |
-| Insights trends      | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine                                                                                                 |
-| Empty state hint     | Club sans activité voit le CTA `club/loop`                                                                                                              |
-| Diagnostic           | Composant `club-diagnostic` affiche connexion + alertes actives                                                                                         |
-| Variantes club       | Smoke `smoke-saas` describe « video variant management » : routes `/variants*` ouvrent le rôle `club` + handlers gardent l'ownership (parente + source) |
+| Règle                | Comment on vérifie                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry                                                                                                                              |
+| Relai SaaS actif     | Smoke `saas-relay.handler` : 14 patterns de rebroadcast                                                                                                                                          |
+| Config rechargée     | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config`                                                                                                                         |
+| Master-slave         | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect                                                                                                                           |
+| Insights trends      | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine                                                                                                                                          |
+| Empty state hint     | Club sans activité voit le CTA `club/loop`                                                                                                                                                       |
+| Diagnostic           | Composant `club-diagnostic` affiche connexion + alertes actives                                                                                                                                  |
+| Variantes club       | Smoke `smoke-saas` describe « video variant management » : routes `/variants*` ouvrent le rôle `club` + handlers gardent l'ownership (parente + source)                                          |
+| Permissions enforced | Smoke `smoke-saas` describe « Club permissions enforcement » : `requireClubPermission` pass-through non-club, `createSite` seed defaults, routes contenu/sponsors/analytics portent la bonne clé |
 
 ## Cas d'edge connus
 
