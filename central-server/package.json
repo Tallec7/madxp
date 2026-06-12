@@ -15,6 +15,7 @@
     "db:backfill-video-durations": "ts-node src/scripts/backfill-video-durations.ts",
     "backfill:displays-resync": "ts-node src/scripts/backfill-displays-resync.ts",
     "backfill:config-video-paths": "ts-node src/scripts/backfill-config-video-paths.ts",
+    "backfill:loop-video-owner": "ts-node src/scripts/backfill-loop-video-owner.ts",
     "audit:orphan-sponsors": "ts-node src/scripts/audit-orphan-site-sponsors.ts",
     "audit:variants-drift": "ts-node src/scripts/audit-variants-drift.ts",
     "audit:ftp-legacy": "ts-node src/scripts/audit-ftp-legacy-videos.ts",
