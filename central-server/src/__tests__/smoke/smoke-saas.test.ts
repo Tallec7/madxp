@@ -3251,3 +3251,117 @@ describe('ADR-082 Video Club Grants — routes, guards and Prometheus instrument
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Variantes vidéo (LED / secondaires) — accès club ownership-guarded
+//
+// Un user `club` doit pouvoir gérer les variantes de SES vidéos depuis le
+// portail club (incident Piraths 2026-06-12 : 403 "Rôle requis: admin ou
+// operator" sur POST /variants/from-video). Le fix ouvre les routes au rôle
+// `club` MAIS impose un garde-fou d'ownership dans le controller — sinon un
+// club pourrait créer/modifier des variantes sur la vidéo d'un autre club.
+// Ce garde-fou (routes + ownership) est l'invariant de sécurité : ce test
+// échoue si un refactor rouvre le trou (route ouverte sans guard, ou guard
+// retiré).
+// ---------------------------------------------------------------------------
+describe('Club Portal — video variant management (ownership-guarded)', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+  const routesPath = path.join(repoRoot, 'central-server/src/routes/content.routes.ts');
+  const variantControllerPath = path.join(
+    repoRoot,
+    'central-server/src/controllers/content-variant.controller.ts'
+  );
+
+  let routes: string;
+  let controller: string;
+
+  beforeAll(() => {
+    routes = fs.readFileSync(routesPath, 'utf8');
+    controller = fs.readFileSync(variantControllerPath, 'utf8');
+  });
+
+  // Les 6 routes de gestion de variantes doivent autoriser le rôle `club`.
+  const clubVariantRoutes = [
+    "/videos/:id/variants',",
+    "/videos/:id/variants/from-video',",
+    "/videos/:id/variants/:displayType/layout',",
+    "/videos/:id/variants/:displayType/export',",
+    "/videos/:id/variants/:displayType/sides/:sideIndex',",
+    "/videos/:id/variants/:displayType/sides/:sideIndex/from-video',",
+    "/videos/:id/variants/:displayType/sides/:sideIndex',", // DELETE même path
+  ];
+
+  it.each(clubVariantRoutes)('route %s autorise le rôle club', (routePath) => {
+    // Récupère toutes les lignes router.* qui matchent ce path, vérifie qu'au
+    // moins une inclut 'club' dans requireRole.
+    const lines = routes
+      .split('\n')
+      .filter((l) => l.includes(routePath) && l.includes('requireRole'));
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.some((l) => /requireRole\([^)]*'club'/.test(l))).toBe(true);
+  });
+
+  it('le helper clubOwnershipError compare uploaded_for_site_id à user.site_id', () => {
+    const helper = controller.match(
+      /function clubOwnershipError[\s\S]*?\n}/
+    );
+    expect(helper).not.toBeNull();
+    expect({
+      checksRoleClub: /role\s*!==\s*'club'/.test(helper![0]),
+      comparesOwnership: /uploaded_for_site_id\s*!==\s*user\.site_id/.test(helper![0]),
+    }).toEqual({ checksRoleClub: true, comparesOwnership: true });
+  });
+
+  it('le helper clubCanUseSourceVideo autorise owné OU NEOPRO OU granté', () => {
+    const helper = controller.match(
+      /async function clubCanUseSourceVideo[\s\S]*?\n}/
+    );
+    expect(helper).not.toBeNull();
+    expect({
+      ownership: /uploaded_for_site_id\s*===\s*user\.site_id/.test(helper![0]),
+      neopro: /NEOPRO/.test(helper![0]),
+      grant: /hasGrant/.test(helper![0]),
+    }).toEqual({ ownership: true, neopro: true, grant: true });
+  });
+
+  // Chaque handler mutatif de variante doit appeler le garde-fou d'ownership.
+  const guardedHandlers = [
+    'createVideoVariant',
+    'createVideoVariantFromVideo',
+    'updateVideoVariantLayout',
+    'uploadVideoVariantSide',
+    'setVideoVariantSideFromVideo',
+    'deleteVideoVariantSide',
+    'enqueueLedExport',
+  ];
+
+  it.each(guardedHandlers)('handler %s appelle clubOwnershipError', (handler) => {
+    const fn = controller.match(
+      new RegExp(`export const ${handler}[\\s\\S]*?(?=\\nexport const \\w|$)`)
+    );
+    expect(fn).not.toBeNull();
+    expect(fn![0].includes('clubOwnershipError')).toBe(true);
+  });
+
+  // Les handlers qui référencent une vidéo SOURCE doivent aussi garder la source.
+  const sourceGuardedHandlers = ['createVideoVariantFromVideo', 'setVideoVariantSideFromVideo'];
+
+  it.each(sourceGuardedHandlers)('handler %s garde la vidéo source (clubCanUseSourceVideo)', (handler) => {
+    const fn = controller.match(
+      new RegExp(`export const ${handler}[\\s\\S]*?(?=\\nexport const \\w|$)`)
+    );
+    expect(fn).not.toBeNull();
+    expect(fn![0].includes('clubCanUseSourceVideo')).toBe(true);
+  });
+
+  // Un club ne peut plier une vidéo que pour SON propre site (jamais cibler un autre club).
+  it('enqueueLedExport interdit à un club de cibler un autre site', () => {
+    const fn = controller.match(
+      /export const enqueueLedExport[\s\S]*?(?=\nexport const \w|$)/
+    );
+    expect(fn).not.toBeNull();
+    expect(
+      /role\s*===\s*'club'[\s\S]*?targetSiteId\s*!==\s*req\.user\.site_id/.test(fn![0])
+    ).toBe(true);
+  });
+});

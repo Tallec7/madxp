@@ -2,7 +2,7 @@
 
 > **Owner** : Daisy
 > **Statut** : Live
-> **Dernière revue** : 2026-04-29
+> **Dernière revue** : 2026-06-12
 > **last_verified** : 2026-05-10
 > **verified_against_commit** : 1890d43
 > **ADR liés** : ADR-005 (RLS multi-tenant), ADR-037 (archi SaaS), ADR-038 (temps réel + observabilité), ADR-039 (tiers), ADR-040 (dashboard insights + tendances), ADR-059 (state-sync SaaS), ADR-069 (delivery strategy), ADR-088 (scoreboard SaaS-first), ADR-096 (extraction SaaS relay), ADR-102 (persistance DB des préférences UX télécommande par site/profil — amend ADR-062), ADR-105 (preview TV via iframe local-first, mode `?preview=1`), ADR-116 (baseline diff `previewConfigDiff` = profil édité pas mirror Pi + fix accumulation catégories lors du switch de profil), ADR-133 (rebrand NEOPRO → MadXP — impact branding portail SaaS, futur domaine `madxp.kalonpartners.bzh`)
@@ -58,6 +58,7 @@ Le mode SaaS permet à un club d'utiliser MadXP **sans hardware Raspberry Pi** �
 - **Diagnostic distance** : `club-diagnostic.component.ts` expose l'état de santé du site (Pi ou SaaS) depuis le cloud — connexion, version, alertes actives, dernière OTA.
 - **Gestion boucle** : le club peut réordonner, activer/désactiver ses vidéos via `club-loop.component.ts` sans passer par l'admin MadXP.
 - **Sponsors actifs** : `club-sponsors.component.ts` affiche les sponsors `status='active'` avec logos, impressions semaine et lien vers le portail sponsor.
+- **Gestion des variantes LED/secondaires** : un compte `club` peut créer/éditer/supprimer les variantes (LED périmétrique, écran secondaire) de **ses propres vidéos** depuis le portail, sans passer par un opérateur MadXP. Les 6 routes `/videos/:id/variants*` acceptent le rôle `club` avec un **garde-fou d'ownership côté API** (`content-variant.controller.ts`) : `uploaded_for_site_id === user.site_id` (vidéo parente), vidéo source ownée OU NEOPRO OU grantée (ADR-082), export LED restreint au propre site du club. Les vidéos NEOPRO corporate restent read-only. Avant ce garde-fou, le `requireRole('admin','operator')` rejetait tout club en 403 « Rôle requis: admin ou operator » (incident Piraths Strasbourg 2026-06-12).
 
 ### Tiers d'abonnement (ADR-039)
 
@@ -68,15 +69,16 @@ Le mode SaaS permet à un club d'utiliser MadXP **sans hardware Raspberry Pi** �
 
 ## Comportements observables
 
-| Règle                | Comment on vérifie                                                       |
-| -------------------- | ------------------------------------------------------------------------ |
-| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry      |
-| Relai SaaS actif     | Smoke `saas-relay.handler` : 14 patterns de rebroadcast                  |
-| Config rechargée     | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config` |
-| Master-slave         | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect   |
-| Insights trends      | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine                  |
-| Empty state hint     | Club sans activité voit le CTA `club/loop`                               |
-| Diagnostic           | Composant `club-diagnostic` affiche connexion + alertes actives          |
+| Règle                | Comment on vérifie                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `site_type` respecté | Smoke `noLegacySaasShortCircuit` : résolution via strategy registry                                                                                     |
+| Relai SaaS actif     | Smoke `saas-relay.handler` : 14 patterns de rebroadcast                                                                                                 |
+| Config rechargée     | Browser TV reçoit `saas-config-updated` → `GET /api/saas/:siteId/config`                                                                                |
+| Master-slave         | Logs `SaaS TV registered` + `SaaS TV promoted to master` au disconnect                                                                                  |
+| Insights trends      | Dashboard club : badges ↑/→/↓ sur 3 KPI vs hier/semaine                                                                                                 |
+| Empty state hint     | Club sans activité voit le CTA `club/loop`                                                                                                              |
+| Diagnostic           | Composant `club-diagnostic` affiche connexion + alertes actives                                                                                         |
+| Variantes club       | Smoke `smoke-saas` describe « video variant management » : routes `/variants*` ouvrent le rôle `club` + handlers gardent l'ownership (parente + source) |
 
 ## Cas d'edge connus
 
