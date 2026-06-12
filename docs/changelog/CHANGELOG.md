@@ -1,3 +1,9 @@
+## [4.14.1](https://github.com/Tallec7/madxp/compare/v4.14.0...v4.14.1) (2026-06-12)
+
+### Bug Fixes
+
+- **saas:** taguer owner='club' sur les vidéos de boucle du club (déverrouille la pondération) ([#1104](https://github.com/Tallec7/madxp/issues/1104)) ([02d9cee](https://github.com/Tallec7/madxp/commit/02d9ceef9e945b10131fcf46c979249d736ec23a))
+
 # [4.14.0](https://github.com/Tallec7/madxp/compare/v4.13.1...v4.14.0) (2026-06-12)
 
 ### Features
