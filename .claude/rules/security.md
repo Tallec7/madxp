@@ -54,7 +54,8 @@ Smoke tests dans `__tests__/smoke/smoke-dashboard-guards.test.ts` vérifient aut
 
 Rôle `club` = accès scoped à un seul site via `user.site_id` :
 
-- `requireRole('admin', 'club')` avec bypass automatique dans `auth.ts` quand `:id`/`:siteId` === `user.site_id`
+- `requireRole('admin', 'club')` avec bypass automatique dans `auth.ts` quand `:id`/`:siteId` === `user.site_id` — **GET-only depuis 2026-06-12** : le bypass ne couvre QUE les GET. Ne JAMAIS retirer le `req.method === 'GET'` (sinon un club peut self-grant ses permissions via `PUT /:siteId/club-permissions`, rotate son api_key, `/command`, `DELETE` son site — smoke `smoke-saas-incident-2026-06-12`)
+- **`requireRole` ne scope PAS le club quand `'club'` est dans `allowedRoles`** : il `next()` sur `allowedRoles.includes('club')` sans vérifier `:siteId === user.site_id`. Toute route `/:siteId` ouverte au club DOIT ajouter `requireClubScope((req) => req.params.siteId)` (anti cross-tenant) — sauf si le scope est garanti côté controller (ownership vidéo `uploaded_for_site_id` sur `/videos/:id/variants*`). Écriture club légitime = `requireRole(..., 'club')` + `requireClubScope` + `requireClubPermission(key)`
 - **Ownership guard vidéo** : `findVideoById()` → `uploaded_for_site_id !== user.site_id` → 403
 - **Guard NEOPRO** : les vidéos `category = 'NEOPRO'` ne peuvent être ni supprimées ni modifiées par les clubs
 - **Guard config Neopro** : `updateProfileConfiguration` vérifie que les vidéos `owner !== 'club'` de l'ancienne config sont toujours présentes dans la nouvelle (defense-in-depth)
