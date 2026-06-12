@@ -1,3 +1,9 @@
+## [4.14.2](https://github.com/Tallec7/madxp/compare/v4.14.1...v4.14.2) (2026-06-12)
+
+### Bug Fixes
+
+- **saas:** restreindre le bypass requireRole du club aux GET + écritures club explicitement scopées ([#1105](https://github.com/Tallec7/madxp/issues/1105)) ([91b392f](https://github.com/Tallec7/madxp/commit/91b392ff30bd96d0fbccbee5226dbe35ebf5cf7f)), closes [#1103](https://github.com/Tallec7/madxp/issues/1103) [#1103](https://github.com/Tallec7/madxp/issues/1103)
+
 ## [4.14.1](https://github.com/Tallec7/madxp/compare/v4.14.0...v4.14.1) (2026-06-12)
 
 ### Bug Fixes
