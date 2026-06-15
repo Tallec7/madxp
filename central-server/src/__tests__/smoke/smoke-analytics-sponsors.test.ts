@@ -689,9 +689,9 @@ describe('Sponsor Portal magic link URL guard', () => {
     });
   });
 
-  it('fallback URL must point to neopro-admin.kalonpartners.bzh', () => {
+  it('fallback URL must point to app-madxp.kalonpartners.bzh', () => {
     expect({
-      hasCorrectUrl: /neopro-admin\.kalonpartners\.bzh/.test(content),
+      hasCorrectUrl: /app-madxp\.kalonpartners\.bzh/.test(content),
     }).toEqual({
       hasCorrectUrl: true,
     });
