@@ -224,7 +224,7 @@ jobs:
       - name: Build dashboard + SaaS combined (prod)
         # `build:cloudflare:prod` = build:central + build:saas + copie SaaS
         # dans `dist/central-dashboard/browser/saas/`. Output unifié = ce que
-        # Cloudflare Pages servira sur `neopro-admin.kalonpartners.bzh`.
+        # Cloudflare Pages servira sur `app-madxp.kalonpartners.bzh`.
         run: npm run build:cloudflare:prod
 
       - name: Verify build output
@@ -288,7 +288,7 @@ jobs:
             echo "$code"
           }
 
-          BASE="https://neopro-admin.kalonpartners.bzh"
+          BASE="https://app-madxp.kalonpartners.bzh"
           ROOT=$(probe "$BASE/")
           DASH_DEEP=$(probe "$BASE/sites/ci-probe")
           SAAS_ROOT=$(probe "$BASE/saas/")

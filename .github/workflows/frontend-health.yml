@@ -1,6 +1,6 @@
 name: Frontend Health Check
 
-# Synthetic monitoring for neopro-admin.kalonpartners.bzh.
+# Synthetic monitoring for app-madxp.kalonpartners.bzh.
 #
 # Guards against the class of bugs where a deploy succeeds at the HTTP/200
 # root level but silently breaks SPA deep routes — typical symptom: missing
@@ -34,7 +34,7 @@ jobs:
       - name: Probe dashboard + SaaS deep routes
         id: probe
         run: |
-          BASE='https://neopro-admin.kalonpartners.bzh'
+          BASE='https://app-madxp.kalonpartners.bzh'
           declare -A ROUTES=(
             ['/']='200'
             ['/sites/ci-probe']='200'
