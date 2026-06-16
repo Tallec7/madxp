@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../config/logger';
+import { runWithFfmpegSlot } from '../utils/ffmpeg-concurrency';
 
 export interface ImageToVideoOptions {
   duration: number; // seconds
@@ -113,7 +114,9 @@ class ImageToVideoService {
     codec: string = 'libx264',
     blurBackground: boolean = false
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // Sérialise via le limiteur partagé : borne le nombre de ffmpeg simultanés
+    // pour éviter l'OOM-kill Railway lors des uploads en masse (incident 2026-06-16).
+    return runWithFfmpegSlot(() => new Promise<void>((resolve, reject) => {
       // Arguments ffmpeg - ordre important !
       // Options d'entrée AVANT -i, options de sortie APRÈS -i
       const args = [
@@ -190,7 +193,7 @@ class ImageToVideoService {
         logger.error('ffmpeg spawn error', { error: err.message });
         reject(new Error(`Failed to spawn ffmpeg: ${err.message}. Is ffmpeg installed?`));
       });
-    });
+    }), 'image-to-video');
   }
 
   /**
