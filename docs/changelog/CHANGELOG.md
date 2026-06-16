@@ -1,3 +1,9 @@
+## [4.14.3](https://github.com/Tallec7/madxp/compare/v4.14.2...v4.14.3) (2026-06-16)
+
+### Bug Fixes
+
+- **content:** borner la concurrence ffmpeg pour éviter l'OOM-kill Railway ([#1109](https://github.com/Tallec7/madxp/issues/1109)) ([0f33c3d](https://github.com/Tallec7/madxp/commit/0f33c3db60eaed40e66a26264b33bcd620ed469b))
+
 ## [4.14.2](https://github.com/Tallec7/madxp/compare/v4.14.1...v4.14.2) (2026-06-12)
 
 ### Bug Fixes
