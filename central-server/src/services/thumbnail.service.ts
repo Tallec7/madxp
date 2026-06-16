@@ -7,6 +7,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import logger from '../config/logger';
+import { runWithFfmpegSlot } from '../utils/ffmpeg-concurrency';
 
 export interface VideoMetadata {
   duration: number;
@@ -235,7 +236,9 @@ class ThumbnailService {
    * Exécute une commande ffmpeg
    */
   private runFfmpeg(args: string[]): Promise<string> {
-    return new Promise((resolve, reject) => {
+    // Sérialise via le limiteur partagé avec image-to-video : un seul budget de
+    // slots ffmpeg pour tout le process (anti OOM-kill Railway, incident 2026-06-16).
+    return runWithFfmpegSlot(() => new Promise<string>((resolve, reject) => {
       const process = spawn('ffmpeg', args);
       let stdout = '';
       let stderr = '';
@@ -259,7 +262,7 @@ class ThumbnailService {
           reject(new Error(`ffmpeg exited with code ${code}: ${stderr}`));
         }
       });
-    });
+    }), 'thumbnail');
   }
 
   /**
