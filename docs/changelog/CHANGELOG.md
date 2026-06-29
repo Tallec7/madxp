@@ -1,3 +1,9 @@
+## [4.14.4](https://github.com/Tallec7/madxp/compare/v4.14.3...v4.14.4) (2026-06-29)
+
+### Bug Fixes
+
+- **ops:** egress guard — CHECK 1 WARN au lieu de FAIL sans creds FTP ([#1115](https://github.com/Tallec7/madxp/issues/1115)) ([82efbc8](https://github.com/Tallec7/madxp/commit/82efbc8d2d72ea5b39ffb32322483aac1cb20a48)), closes [#1113](https://github.com/Tallec7/madxp/issues/1113)
+
 ## [4.14.3](https://github.com/Tallec7/madxp/compare/v4.14.2...v4.14.3) (2026-06-16)
 
 ### Bug Fixes
