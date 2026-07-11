@@ -24,11 +24,20 @@ const getMetricsService = () => {
   return metricsServiceInstance;
 };
 
-// Configuration - Optimized for Railway (512MB heap via --max-old-space-size=512)
+// Configuration.
+// Les seuils sont des POURCENTAGES du cap V8 réel (`heap_size_limit`, fixé par
+// --max-old-space-size et lu dynamiquement dans getMemoryStats). Ils s'auto-
+// adaptent donc au cap effectif du process (512, 1024, ou la valeur imposée
+// par NODE_OPTIONS sur Railway qui écrase le Dockerfile) — ne PAS les
+// réinterpréter comme des Mo fixes.
+// ⚠️ Ce manager ne gouverne que le HEAP V8. Il ne peut rien sur le RSS natif
+// (modèle ONNX rembg résident, Chromium, buffers off-heap) : global.gc() ne
+// libère que le heap. Pour diagnostiquer un RSS élevé à heap bas, comparer
+// rssMB vs heapUsedMB dans les logs (getMemoryStats).
 const MEMORY_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
-const HEAP_WARNING_THRESHOLD = 75; // Warn at 75% (~384MB of 512MB)
-const HEAP_CRITICAL_THRESHOLD = 85; // Take action at 85% (~435MB)
-const HEAP_EMERGENCY_THRESHOLD = 93; // Emergency at 93% (~475MB)
+const HEAP_WARNING_THRESHOLD = 75; // Warn at 75 % du cap V8 réel
+const HEAP_CRITICAL_THRESHOLD = 85; // Take action at 85 % du cap V8 réel
+const HEAP_EMERGENCY_THRESHOLD = 93; // Emergency at 93 % du cap V8 réel
 
 interface MemoryStats {
   heapUsedMB: number;
