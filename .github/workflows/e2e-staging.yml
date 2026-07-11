@@ -50,6 +50,24 @@ jobs:
       - name: Pre-flight — staging is up
         run: |
           set -e
+          # Le staging tourne en App Sleeping (Railway serverless) pour ne pas
+          # facturer ~340 MB de RSS 24/7 alors qu'il ne sert que cette nightly.
+          # La 1ʳᵉ requête le réveille : cold-start = boot Node + migrations, qui
+          # peut dépasser 10s. On warm-up avec un retry/backoff AVANT les checks
+          # stricts, sinon `set -e` ferait échouer le job pendant le réveil.
+          echo "Warming up staging (wake from sleep)..."
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS --max-time 15 "$API_BASE_URL/live" >/dev/null 2>&1; then
+              echo "Staging awake (attempt $attempt) ✅"
+              break
+            fi
+            if [ "$attempt" -eq 10 ]; then
+              echo "::error::API staging /live never woke after 10 attempts (~150s)"
+              exit 1
+            fi
+            echo "  not ready yet (attempt $attempt) — waiting 15s..."
+            sleep 15
+          done
           echo "Checking API staging..."
           curl -fsS --max-time 10 "$API_BASE_URL/live" || (echo "::error::API staging /live failed"; exit 1)
           curl -fsS --max-time 10 "$API_BASE_URL/ready" || (echo "::error::API staging /ready failed"; exit 1)
