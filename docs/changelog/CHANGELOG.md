@@ -1,3 +1,9 @@
+## [4.14.5](https://github.com/Tallec7/madxp/compare/v4.14.4...v4.14.5) (2026-07-12)
+
+### Bug Fixes
+
+- **cron:** rattraper les schedules manqués par un réveil tardif du process ([#1119](https://github.com/Tallec7/madxp/issues/1119)) ([8926085](https://github.com/Tallec7/madxp/commit/8926085553f857f4edbdbe3674b2ea665298464c)), closes [#1118](https://github.com/Tallec7/madxp/issues/1118)
+
 ## [4.14.4](https://github.com/Tallec7/madxp/compare/v4.14.3...v4.14.4) (2026-06-29)
 
 ### Bug Fixes
