@@ -30,7 +30,6 @@ const LEGACY_SERVICES_WITHOUT_TEST = new Set<string>([
   'billing.service.ts',
   'campaign-deployment.service.ts',
   'canary-monitor.service.ts',
-  'cron-scheduler.service.ts',
   'db-circuit-breaker.service.ts',
   'excel-export.service.ts',
   'github.service.ts',

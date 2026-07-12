@@ -115,10 +115,33 @@ class CronSchedulerService {
     );
 
     for (const schedule of result.rows) {
+      await this.catchUpIfOverdue(schedule);
       await this.scheduleJob(schedule);
     }
 
     logger.info(`Loaded ${result.rows.length} recurring schedules`);
+  }
+
+  /**
+   * Rattrape un schedule dont `next_run_at` est déjà dépassé au moment du boot.
+   * node-cron ne rattrape jamais un tick manqué de lui-même : si le process était
+   * éteint pile pendant la fenêtre cron (ex: réveil Railway App Sleeping après
+   * une nuit endormie), le schedule saute silencieusement son occurrence et
+   * attend le lendemain — c'est ce qui a rendu `Agrégation stats clubs/annonceurs/
+   * sponsors site` stale 36h+ en staging (2026-07-12, cf. alerte `aggregation_stale`).
+   */
+  private async catchUpIfOverdue(schedule: RecurringSchedule): Promise<void> {
+    if (!schedule.next_run_at || new Date(schedule.next_run_at) >= new Date()) {
+      return;
+    }
+
+    logger.warn(`Catching up missed schedule (next_run_at overdue)`, {
+      scheduleId: schedule.id,
+      name: schedule.name,
+      nextRunAt: schedule.next_run_at,
+    });
+
+    await this.executeSchedule(schedule);
   }
 
   /**
