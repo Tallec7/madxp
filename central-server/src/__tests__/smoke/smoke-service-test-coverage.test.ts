@@ -81,8 +81,12 @@ function hasColocatedTest(servicePath: string): boolean {
 function isImportedByAnyTest(servicePath: string, testFiles: string[]): boolean {
   const base = path.basename(servicePath, '.ts'); // e.g. "alert.service"
   const escaped = base.replace(/\./g, '\\.');
-  // Match `from '...alert.service'` or `require('...alert.service')` (with any relative prefix)
-  const re = new RegExp(`(from|require\\()\\s*['"][^'"]*${escaped}['"]`);
+  // Match `from '...alert.service'` or `require('...alert.service')` (with any relative prefix).
+  // The `[\\/]` right before the name anchors on a path segment boundary — sans lui, importer
+  // `cron-scheduler.service` matche par erreur la recherche pour `scheduler.service` (suffixe),
+  // et masque un vrai orphelin (faux négatif découvert lors de l'ajout de
+  // cron-scheduler.service.test.ts, qui a fait passer scheduler.service.ts pour "couvert").
+  const re = new RegExp(`(from|require\\()\\s*['"](?:[^'"]*[\\\\/])?${escaped}['"]`);
   for (const tf of testFiles) {
     try {
       if (re.test(fs.readFileSync(tf, 'utf8'))) return true;
