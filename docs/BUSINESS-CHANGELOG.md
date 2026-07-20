@@ -8,6 +8,24 @@
 
 ---
 
+## Semaine 29 — 14-20 Juillet 2026
+
+### 🎯 Pour le club (NLF, prospects)
+
+- **Les boîtiers Pi avec un bandeau LED, un totem ou un écran secondaire reçoivent désormais les bonnes vidéos pour chaque écran** ([#915](https://github.com/Tallec7/neopro/pull/915)) — depuis la mise en place du modèle N-écrans, le cloud envoyait au Pi une configuration tronquée : seules les variantes "secondary" étaient incluses, les variantes LED/totem/led-banner étaient silencieusement absentes. Résultat : à chaque synchronisation, le Pi recevait une config incomplète qui écrasait les chemins vidéo déjà corrects pour les écrans LED/totem. Désormais le serveur cloud lit les types d'écrans configurés pour chaque site avant d'envoyer la config, et inclut toutes les variantes correspondantes.
+
+### 🛡️ Pour la robustesse
+
+- **Fix architectural N-display enrichment : 9 points d'envoi config corrigés** ([#915](https://github.com/Tallec7/neopro/pull/915)) — tous les chemins qui envoient une configuration au Pi (sync profil, déploiement vidéo, reconnexion, SaaS) passent désormais par `resolveDisplayTypesForSite()` qui lit les displays réels du site en DB au lieu du fallback hardcodé `['secondary']`. Rétrocompatibilité maintenue : le champ `secondaryVariant` reste présent dans les payloads pour les Pi non encore mis à jour via OTA.
+- **Monitoring migration N-display via Prometheus** ([#915](https://github.com/Tallec7/neopro/pull/915)) — nouveau compteur `neopro_variant_dispatch_displaytype_total{display_type, source}` incrémenté à chaque dispatch de variante vers un Pi. Permet de voir en Grafana la progression réelle du parc : tant que le compteur LED/totem reste à 0, aucun Pi de ce type n'a encore reçu sa config multi-écrans.
+
+### 🧹 Pour l'équipe
+
+- **`deployVariant(displayType, ...)` généralise `deploySecondaryVariant()` côté sync-agent Pi** ([#915](https://github.com/Tallec7/neopro/pull/915)) — l'agent Pi déploie désormais toutes les variantes d'un coup (map `variants: {secondary, led, totem, ...}`) au lieu d'une seule. La rétrocompat `secondaryVariant` (format ancien) et `ledVariant` (très ancien) est assurée en fallback. La migration legacy `videos-led/ → videos-secondary/` a été supprimée (elle était incorrecte — `videos-led/` est désormais un dossier légitime).
+- **3 nouveaux contrats smoke dans `smoke-display`** ([#915](https://github.com/Tallec7/neopro/pull/915)) — garde-fous qui bloquent la CI si l'un des invariants N-display est retiré : wiring de `resolveDisplayTypesForSite`, généralisation de `deployVariant` côté sync-agent, et présence du compteur Prometheus de monitoring.
+
+---
+
 ## Semaine 19 — 5-11 Mai 2026 (rattrapage [#882→#902](https://github.com/Tallec7/neopro/pull/902) + v4.1 Fire Stick polish livré 2026-05-08)
 
 ### 🎯 Pour le club (NLF, prospects)
