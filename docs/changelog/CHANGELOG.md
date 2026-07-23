@@ -1,3 +1,9 @@
+## [4.14.6](https://github.com/Tallec7/madxp/compare/v4.14.5...v4.14.6) (2026-07-23)
+
+### Bug Fixes
+
+- **led:** éviter le mismatch scale/pad sur hauteur de ruban LED impaire ([#1124](https://github.com/Tallec7/madxp/issues/1124)) ([9787160](https://github.com/Tallec7/madxp/commit/9787160e356e23aca324d508da9fd47716bee52c))
+
 ## [4.14.5](https://github.com/Tallec7/madxp/compare/v4.14.4...v4.14.5) (2026-07-12)
 
 ### Bug Fixes
