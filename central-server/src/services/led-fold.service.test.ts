@@ -481,9 +481,12 @@ describe('led-fold.service — export par mise en page (pavage réel)', () => {
 
   it('repeated : pave la cellule (split+hstack) puis crop au ruban, puis plie', () => {
     const g = buildFoldExportLayoutGraph(geom, 'repeated', cellPx, 'black');
-    expect(g).toContain('scale=1667:160:force_original_aspect_ratio=decrease'); // cellule
+    // Cellule interne arrondie au pair (1667 → 1668) pour éviter le mismatch
+    // scale-decrease/pad sur source yuv420p (incident banc d'essai 2026-07-23) —
+    // le crop final ci-dessous retaille à la largeur nominale du ruban (6667).
+    expect(g).toContain('scale=1668:160:force_original_aspect_ratio=decrease'); // cellule
     expect(g).toContain('hstack=inputs='); // pavage
-    expect(g).toContain('crop=6667:160:0:0[rib]'); // crop au ruban
+    expect(g).toContain('crop=6667:160:0:0[rib]'); // crop au ruban (valeur nominale, pas arrondie)
     expect(g).toContain('vstack=inputs=4'); // pliage en 4 bandes
   });
 
@@ -502,8 +505,9 @@ describe('led-fold.service — export par mise en page (pavage réel)', () => {
 
   it('centered : une copie centrée + padding, pas de pavage', () => {
     const g = buildFoldExportLayoutGraph(geom, 'centered', cellPx, 'black');
-    expect(g).toContain('scale=6667:160:force_original_aspect_ratio=decrease');
-    expect(g).toContain('pad=6667:160:(ow-iw)/2:(oh-ih)/2:black');
+    // Boîte scale/pad arrondie au pair (6667 → 6668) — même garde-fou que `repeated`.
+    expect(g).toContain('scale=6668:160:force_original_aspect_ratio=decrease');
+    expect(g).toContain('pad=6668:160:(ow-iw)/2:(oh-ih)/2:black');
     expect(g).not.toContain('hstack');
   });
 
@@ -516,6 +520,36 @@ describe('led-fold.service — export par mise en page (pavage réel)', () => {
     });
     const fc = args[args.indexOf('-filter_complex') + 1];
     expect(fc).toContain('hstack=inputs=');
+  });
+
+  describe('régression — hauteur de ruban impaire (incident banc d\'essai 2026-07-23)', () => {
+    // Profil réel Piraths Strasbourg ATH : pitch P3.9, 4×10m, height=205 (impair).
+    // Sur une source yuv420p, `scale=W:H:decrease` peut produire un résultat 1px
+    // plus grand qu'une cible impaire littérale → le `pad` qui suit refusait
+    // l'entrée ("Padded dimensions cannot be smaller than input dimensions").
+    // Toutes les boîtes scale/pad doivent donc être arrondies au pair — le crop
+    // final, lui, reste sur la valeur nominale (205) : c'est lui qui retaille.
+    const oddGeom = computeFoldGeometry({ ribbonWidth: 10256, ribbonHeight: 205, bandWidth: 1920 });
+    const oddCellPx = 2564;
+
+    it('repeated : la cellule est arrondie au pair, le crop final reste à 205', () => {
+      const g = buildFoldExportLayoutGraph(oddGeom, 'repeated', oddCellPx, 'black');
+      expect(g).toContain('scale=2564:206:force_original_aspect_ratio=decrease');
+      expect(g).toContain('pad=2564:206:(ow-iw)/2:(oh-ih)/2:black');
+      expect(g).toContain('crop=10256:205:0:0[rib]');
+    });
+
+    it('centered : la boîte scale/pad est arrondie au pair', () => {
+      const g = buildFoldExportLayoutGraph(oddGeom, 'centered', oddCellPx, 'black');
+      expect(g).toContain('scale=10256:206:force_original_aspect_ratio=decrease');
+      expect(g).toContain('pad=10256:206:(ow-iw)/2:(oh-ih)/2:black');
+    });
+
+    it('contain (fit d\'export) : la boîte scale/pad est arrondie au pair', () => {
+      const g = buildFoldExportFilterGraph(oddGeom, 'contain');
+      expect(g).toContain('[0:v]scale=10256:206:force_original_aspect_ratio=decrease');
+      expect(g).toContain('pad=10256:206:(ow-iw)/2:(oh-ih)/2:black');
+    });
   });
 });
 
@@ -539,8 +573,9 @@ describe('led-fold.service — export (scale→pad→fold)', () => {
   describe('buildFoldExportFilterGraph', () => {
     it('contain : scale fit-decrease + pad au ruban, puis fold depuis [rib]', () => {
       const g = buildFoldExportFilterGraph(geom7, 'contain');
-      expect(g).toContain('[0:v]scale=13333:160:force_original_aspect_ratio=decrease');
-      expect(g).toContain('pad=13333:160:(ow-iw)/2:(oh-ih)/2:black');
+      // Boîte scale/pad arrondie au pair (13333 → 13334), cf. evenUp().
+      expect(g).toContain('[0:v]scale=13334:160:force_original_aspect_ratio=decrease');
+      expect(g).toContain('pad=13334:160:(ow-iw)/2:(oh-ih)/2:black');
       expect(g).toContain('[rib]');
       expect(g).toContain('[rib]split=7'); // le fold part bien de [rib], pas [0:v]
       expect(g).toContain('vstack=inputs=7');
@@ -576,7 +611,7 @@ describe('led-fold.service — export (scale→pad→fold)', () => {
       expect(args).toContain('/tmp/club.mp4');
       expect(args[args.length - 1]).toBe('/tmp/folded.mp4');
       const fc = args[args.indexOf('-filter_complex') + 1];
-      expect(fc).toContain('scale=13333:160');
+      expect(fc).toContain('scale=13334:160');
       expect(fc).toContain('vstack=inputs=7');
     });
   });
