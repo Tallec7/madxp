@@ -491,6 +491,22 @@ export function fitFromLayout(layout: string | null | undefined): LedExportFit {
 }
 
 /**
+ * Arrondit à l'entier pair supérieur. Sur une source `yuv420p` (chroma 4:2:0),
+ * `scale=…:decrease` peut produire une dimension 1px plus grande qu'une cible
+ * impaire littérale (arrondi interne swscale contraint par le sous-échantillonnage
+ * chroma) — le `pad` qui suit refuse alors l'entrée avec "Padded dimensions cannot
+ * be smaller than input dimensions" (incident banc d'essai LED 2026-07-23).
+ * Utiliser cette valeur à la fois pour la boîte de `scale` et la cible de `pad`
+ * élimine l'écart : `decrease` borne toujours le résultat par la boîte fournie,
+ * donc `pad` (même boîte) ne peut jamais recevoir plus grand que sa cible. Les
+ * consommateurs en aval (crop par bande) retaillent de toute façon à la valeur
+ * odd d'origine, donc ce léger agrandissement interne est invisible en sortie.
+ */
+function evenUp(n: number): number {
+  return n % 2 === 0 ? n : n + 1;
+}
+
+/**
  * Clause ffmpeg `scale`/`pad` adaptant une source quelconque aux dimensions du ruban.
  * Pure (string). `setsar=1` normalise le sample aspect ratio (anti-déformation).
  */
@@ -508,8 +524,11 @@ function ribbonFitClause(
     case 'cover':
       return `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1`;
     case 'contain':
-    default:
-      return `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
+    default: {
+      const ew = evenUp(W);
+      const eh = evenUp(H);
+      return `scale=${ew}:${eh}:force_original_aspect_ratio=decrease,pad=${ew}:${eh}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
+    }
   }
 }
 
@@ -573,13 +592,21 @@ function buildRibbonClause(
   padColor: string
 ): string {
   const cw = Math.max(1, Math.round(cellPx));
-  const cell = `scale=${cw}:${H}:force_original_aspect_ratio=decrease,pad=${cw}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
+  const ecw = evenUp(cw);
+  const eH = evenUp(H);
+  // La cadence (cw) et le crop final (H) restent basés sur les valeurs nominales
+  // (spacing réel du profil LED) — seule la boîte scale/pad interne est agrandie
+  // au pair pour éviter le mismatch decrease/pad (cf. evenUp).
+  const cell = `scale=${ecw}:${eH}:force_original_aspect_ratio=decrease,pad=${ecw}:${eH}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1`;
 
   switch (layout) {
     case 'stretched':
       return `[0:v]scale=${W}:${H},setsar=1[rib]`;
-    case 'centered':
-      return `[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1[rib]`;
+    case 'centered': {
+      const ew = evenUp(W);
+      const eh = evenUp(H);
+      return `[0:v]scale=${ew}:${eh}:force_original_aspect_ratio=decrease,pad=${ew}:${eh}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1[rib]`;
+    }
     case 'scrolling': {
       // Une cellule de marge en plus pour un wrap sans couture (contenu périodique).
       const n = Math.max(2, Math.ceil(W / cw) + 1);
