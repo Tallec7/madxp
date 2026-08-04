@@ -87,9 +87,47 @@ describe('ImageToVideoService.buildFfmpegArgs', () => {
       expect(bg).toContain('crop=1280:720');
     });
 
-    it('applique le filtre bandes noires par défaut', () => {
-      const args = imageToVideoService.buildFfmpegArgs('/tmp/anim.gif', OUT, 10, 'libx264', false);
-      expect(args[args.indexOf('-filter_complex') + 1]).toContain('pad=1280:720');
+    // Décision produit 2026-08-04 : un bandeau sponsor doit rester un bandeau.
+    // Le player TV applique déjà `object-fit: contain` — cuire un canvas 16:9
+    // dans le fichier cadrait deux fois et gâchait la définition du visuel.
+    describe('sortie par défaut : ratio source préservé', () => {
+      const filterOf = (input: string): string => {
+        const args = imageToVideoService.buildFfmpegArgs(input, OUT, 10, 'libx264', false);
+        return args[args.indexOf('-filter_complex') + 1];
+      };
+
+      it('ne force aucune dimension fixe (ni pad, ni canvas 1280x720)', () => {
+        const filter = filterOf('/tmp/banner.gif');
+        expect(filter).not.toContain('pad=');
+        expect(filter).not.toContain('1280:720');
+      });
+
+      it('plafonne le plus grand côté à 1920 sans jamais agrandir', () => {
+        // `min(1920,iw)` : la boîte vaut la source quand elle est plus petite
+        // que le plafond → pas d'upscale d'un petit GIF.
+        const filter = filterOf('/tmp/banner.gif');
+        expect(filter).toContain("scale='min(1920,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease");
+      });
+
+      it('force des dimensions paires (exigence yuv420p/H.264)', () => {
+        // Sans ça une source 1201x151 casse l'encodage.
+        expect(filterOf('/tmp/banner.gif')).toContain('scale=trunc(iw/2)*2:trunc(ih/2)*2');
+      });
+
+      it('force des pixels carrés', () => {
+        expect(filterOf('/tmp/banner.gif')).toContain('setsar=1');
+      });
+
+      it('s\'applique aux images fixes comme aux GIF', () => {
+        expect(filterOf('/tmp/photo.png')).toBe(filterOf('/tmp/anim.gif'));
+      });
+    });
+
+    it('habillage 16:9 : uniquement quand blurBackground est explicitement demandé', () => {
+      const withBlur = imageToVideoService.buildFfmpegArgs('/tmp/anim.gif', OUT, 10, 'libx264', true);
+      const withoutBlur = imageToVideoService.buildFfmpegArgs('/tmp/anim.gif', OUT, 10, 'libx264', false);
+      expect(withBlur[withBlur.indexOf('-filter_complex') + 1]).toContain('1280:720');
+      expect(withoutBlur[withoutBlur.indexOf('-filter_complex') + 1]).not.toContain('1280:720');
     });
 
     it('utilise -q:v pour les codecs non-libx264', () => {
