@@ -1,3 +1,9 @@
+## [4.14.7](https://github.com/Tallec7/madxp/compare/v4.14.6...v4.14.7) (2026-08-04)
+
+### Bug Fixes
+
+- **content:** restituer le vrai code HTTP sur rejet d'upload multipart + accepter les GIF animés ([#1128](https://github.com/Tallec7/madxp/issues/1128)) ([130c46d](https://github.com/Tallec7/madxp/commit/130c46d175acdf100ec184ce568cb2b3ee410399))
+
 ## [4.14.6](https://github.com/Tallec7/madxp/compare/v4.14.5...v4.14.6) (2026-07-23)
 
 ### Bug Fixes
