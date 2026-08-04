@@ -110,6 +110,14 @@ describe('smoke-content-upload-incident-2026-08-04', () => {
     expect(read(CONTROLLER_PATH)).toContain('sourceMimeType: file.mimetype');
   });
 
+  it('image-to-video.service.ts: le foreground du fond flou ne déborde jamais du canvas', () => {
+    // Régression 2026-08-04 (2e passe) : `scale=-1:720` ne borne que la hauteur.
+    // Une bannière 1200x150 devenait 5760x720 → overlay rogne → zoom + texte coupé.
+    const content = read(SERVICE_PATH);
+    expect(content).not.toContain('scale=-1:720');
+    expect(content).toContain('[0:v]scale=1280:720:force_original_aspect_ratio=decrease[fg]');
+  });
+
   // -----------------------------------------------------------------------
   // Dashboard — validation avant envoi + erreur lisible
   // -----------------------------------------------------------------------

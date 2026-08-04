@@ -172,10 +172,18 @@ class ImageToVideoService {
     let videoFilter: string;
     if (blurBackground) {
       // Filtre avec fond flou esthétique :
-      // 1. [0:v] scale=-1:720 → Image originale redimensionnée (hauteur 720, largeur proportionnelle)
-      // 2. [bg] scale=1280:720, boxblur=25:25 → Fond : image étirée à 1280x720 + flou intense
-      // 3. overlay → Superpose l'image nette centrée sur le fond flou
-      videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=-1:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
+      // 1. [bg] scale=1280:720 (increase) + crop + boxblur → fond : image étirée pour
+      //    couvrir le canvas, recadrée, floutée
+      // 2. [fg] scale=1280:720 (decrease) → image nette contenue DANS le canvas
+      // 3. overlay → superpose le foreground centré sur le fond flou
+      //
+      // Le foreground DOIT être borné par les deux dimensions (`1280:720`), jamais
+      // par la seule hauteur (`-1:720`) : avec une largeur `-1`, il n'y a pas de
+      // boîte englobante et `force_original_aspect_ratio=decrease` ne contraint
+      // rien. Une bannière 1200x150 était alors scalée en 5760x720 — 4,5× plus
+      // large que le canvas — et l'overlay en rognait tout sauf la bande centrale
+      // (incident 2026-08-04 : GIF sponsor rendu en zoom avec le texte coupé).
+      videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=1280:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
     } else {
       // Filtre standard : redimensionne et ajoute des bandes noires si nécessaire
       videoFilter = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
