@@ -62,6 +62,31 @@ describe('ImageToVideoService.buildFfmpegArgs', () => {
       expect(args[args.indexOf('-filter_complex') + 1]).toContain('boxblur');
     });
 
+    // Incident 2026-08-04 : une bannière 1200x150 était scalée en 5760x720 puis
+    // rognée par l'overlay → rendu en zoom avec le texte coupé. La largeur `-1`
+    // ne laisse aucune boîte englobante à `force_original_aspect_ratio=decrease`.
+    it('fond flou : le foreground est borné par les DEUX dimensions du canvas', () => {
+      const args = imageToVideoService.buildFfmpegArgs('/tmp/banner.gif', OUT, 10, 'libx264', true);
+      const filter = args[args.indexOf('-filter_complex') + 1];
+      const fg = filter.split(';').find(chain => chain.endsWith('[fg]'));
+
+      expect(fg).toBeDefined();
+      expect(fg).toContain('scale=1280:720:force_original_aspect_ratio=decrease');
+      // Toute largeur libre (-1 / -2 / iw*…) laisserait le foreground déborder
+      expect(fg).not.toMatch(/scale=-\d/);
+    });
+
+    it('fond flou : le background couvre le canvas puis est recadré', () => {
+      const args = imageToVideoService.buildFfmpegArgs('/tmp/banner.gif', OUT, 10, 'libx264', true);
+      const filter = args[args.indexOf('-filter_complex') + 1];
+      const bg = filter.split(';').find(chain => chain.endsWith('[bg]'));
+
+      // `increase` + crop pour le fond (il DOIT déborder puis être rogné),
+      // à ne pas confondre avec le `decrease` du foreground.
+      expect(bg).toContain('force_original_aspect_ratio=increase');
+      expect(bg).toContain('crop=1280:720');
+    });
+
     it('applique le filtre bandes noires par défaut', () => {
       const args = imageToVideoService.buildFfmpegArgs('/tmp/anim.gif', OUT, 10, 'libx264', false);
       expect(args[args.indexOf('-filter_complex') + 1]).toContain('pad=1280:720');
