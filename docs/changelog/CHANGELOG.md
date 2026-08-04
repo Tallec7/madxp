@@ -1,3 +1,9 @@
+## [4.14.8](https://github.com/Tallec7/madxp/compare/v4.14.7...v4.14.8) (2026-08-04)
+
+### Bug Fixes
+
+- **content:** borner le foreground du fond flou au canvas (bannières rognées) ([#1129](https://github.com/Tallec7/madxp/issues/1129)) ([d43c3c2](https://github.com/Tallec7/madxp/commit/d43c3c2391ce958a9104ebd44624a75aa622ea5a)), closes [#1128](https://github.com/Tallec7/madxp/issues/1128)
+
 ## [4.14.7](https://github.com/Tallec7/madxp/compare/v4.14.6...v4.14.7) (2026-08-04)
 
 ### Bug Fixes
