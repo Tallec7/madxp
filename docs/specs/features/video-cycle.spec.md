@@ -5,8 +5,8 @@
 > **Dernière revue** : 2026-04-29
 > **last_verified** : 2026-05-10
 > **verified_against_commit** : 1890d43
-> **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`)
-> **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`)
+> **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`), ADR-136 (drain multipart avant rejet précoce + allowlist image partagée + GIF animé)
+> **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`), `smoke-content-upload-incident-2026-08-04.test.ts` (drain multipart + allowlist image + régime ffmpeg GIF)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression
 
 ## En une phrase
@@ -42,12 +42,14 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
   - `DELETE /api/content/videos/:id` (cascade DELETE)
   - `DELETE /api/content/videos/:id/sites/:siteId` (unlink)
 - **Tables DB** : `videos`, `video_categories`, `video_variants`, `video_plays` (FK cascade), `deployments`
-- **ADR** : ADR-100, ADR-117
+- **ADR** : ADR-100, ADR-117, ADR-136
 - **Smoke tests** : `smoke-wiring.test.ts`, `smoke-saas.test.ts`, `smoke-deploy-ota.test.ts`
 
 ## Règles métier (ce qui DOIT marcher)
 
 - **Upload** : fichier multipart → FTP Hostinger → `storage_path` enregistré → `upload_status = 'verifying'` → `upload-verification.service` vérifie la présence du fichier FTP → `upload_status = 'ready'` si OK, `'failed'` sinon.
+- **Rejet d'upload lisible (ADR-136)** : sur une route multipart, un rejet (401/403/429/400 `fileFilter`) part pendant que le client envoie encore le corps ; l'edge Railway annule alors la stream HTTP/2 et le navigateur ne voit que `status: 0`. Le middleware global `drainOnEarlyResponse` draine le corps (plafond 64 Mo) avant de flusher la réponse, pour que le vrai code HTTP atteigne le dashboard. Toute nouvelle route d'upload en hérite automatiquement — ne pas la monter hors de la chaîne `app.use` du serveur.
+- **Formats image → vidéo (ADR-136)** : `POST /api/image-to-video` accepte JPG, PNG, WEBP et **GIF**. L'allowlist `ALLOWED_IMAGE_MIMES` (serveur) doit rester identique à `ALLOWED_IMAGE_MIME_TYPES` (dashboard) — le dashboard filtre avant l'envoi pour donner un message immédiat. Un GIF est converti en préservant son animation (`-ignore_loop 0`, bouclé jusqu'à la durée demandée), jamais figé sur sa 1ʳᵉ frame.
 - **Alias `findVideoById` (ADR-100)** : `videoRepository.findVideoById()` retourne `url` (alias de `storage_path`), PAS `storage_path`. Tout consumer de ce repo doit lire `.url`, jamais `.storage_path` (valeur runtime = `undefined` → bug zombie).
 - **Replace** : `POST /api/content/videos/:id/replace` — lit `existing.url` (ADR-100), upload le nouveau fichier sur le même chemin FTP, re-verify. **Auto-résout la warning FTP** : si une row `video_ftp_audit_warnings` existe pour cette vidéo, elle est supprimée (DELETE) après upload réussi — pas de status `'resolved'` persisté, la row disparaît. Cette résolution n'est pas comptabilisée dans la métrique Prometheus `resolved` du CRON (angle mort — ADR-098).
 - **Catégories** : les vidéos peuvent appartenir à 0..N catégories (table junction). Filtres dashboard par catégorie.
@@ -84,6 +86,8 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 ## Contraintes / NE PAS FAIRE
 
 - Ne jamais lire `existing.storage_path` après `findVideoById` (ADR-100). Utiliser `existing.url`.
+- Ne jamais placer multer avant les gardes d'auth/quota pour « régler » un rejet illisible (ADR-136) : le serveur accepterait des uploads de 500 Mo non authentifiés. Le drain est la réponse.
+- Ne jamais dupliquer la liste des mime-types image côté dashboard (ADR-136) : importer `media-upload.constants.ts`. Le smoke compare les deux listes.
 - Ne jamais appeler `storage.service.ts` directement depuis un controller — passer par `content.controller.ts` ou `upload-verification.service.ts`.
 - Ne pas supprimer un fichier FTP sans d'abord supprimer la row DB (risque de vidéo "ready" sans fichier).
 - Ne pas modifier `video_plays` lors d'une suppression (rétention analytics : les plays historiques restent, FK nullable sur `video_id`).

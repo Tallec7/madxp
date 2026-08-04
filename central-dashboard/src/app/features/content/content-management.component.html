@@ -619,12 +619,14 @@
               <span class="drop-zone-icon">🖼️</span>
               <p *ngIf="imageForm.files.length === 0">Glissez-déposez vos images ici</p>
               <p *ngIf="imageForm.files.length > 0">+ Ajouter d'autres images</p>
-              <p class="drop-zone-hint">Formats acceptés : JPG, PNG, WEBP</p>
+              <p class="drop-zone-hint">
+                Formats acceptés : {{ allowedImageLabel }} — un GIF animé garde son animation
+              </p>
             </div>
             <input
               #imageFileInput
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              [attr.accept]="imageUploadAccept"
               multiple
               (change)="onImageSelected($event)"
               style="display: none"

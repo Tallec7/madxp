@@ -18,6 +18,7 @@ import {
   VideoName,
 } from './content-management-data.service';
 import { VideoUploadService } from './video-upload.service';
+import { ALLOWED_IMAGE_LABEL, IMAGE_UPLOAD_ACCEPT } from '../../core/constants/media-upload.constants';
 import { ContentDeploymentService } from './content-deployment.service';
 
 @Component({
@@ -58,6 +59,10 @@ export class ContentManagementComponent implements OnInit, OnDestroy {
   readonly deployService = inject(ContentDeploymentService);
   private subscriptions = new Subscription();
   private searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // ── Formats image acceptés (source de vérité partagée avec le backend) ──
+  readonly imageUploadAccept = IMAGE_UPLOAD_ACCEPT;
+  readonly allowedImageLabel = ALLOWED_IMAGE_LABEL;
 
   // ── Delegate to upload service ──
   get uploadForm() { return this.uploadService.uploadForm; }

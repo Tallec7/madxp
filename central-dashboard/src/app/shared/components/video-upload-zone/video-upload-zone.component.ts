@@ -12,6 +12,12 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
 import { environment } from '@env/environment';
+import { ErrorExtractor } from '../../../core/utils/error-extractor';
+import {
+  ALLOWED_IMAGE_LABEL,
+  IMAGE_UPLOAD_ACCEPT,
+  isAllowedImageType,
+} from '../../../core/constants/media-upload.constants';
 
 export interface UploadedVideo {
   id: string;
@@ -49,7 +55,7 @@ interface UploadState {
           type="file"
           #fileInput
           (change)="onFileSelected($event)"
-          accept="video/*,image/*"
+          [attr.accept]="'video/*,' + imageUploadAccept"
           multiple
           hidden
         />
@@ -67,7 +73,8 @@ interface UploadState {
             {{ isUploading ? 'Upload en cours...' : 'Glisser des vidéos ou images ici ou cliquer pour sélectionner' }}
           </span>
           <span class="upload-hint">
-            Les images sont converties en vidéo avec la durée et le fond choisis ci-dessous
+            Les images ({{ allowedImageLabel }}) sont converties en vidéo avec la durée et le fond
+            choisis ci-dessous — un GIF animé garde son animation, bouclée sur la durée choisie
           </span>
           <span class="upload-hint" *ngIf="siteName">
             Vidéos uploadées pour {{ siteName }}
@@ -335,6 +342,8 @@ export class VideoUploadZoneComponent implements OnChanges {
 
   imageDuration = 10;
   imageBlurBackground = true;
+  readonly imageUploadAccept = IMAGE_UPLOAD_ACCEPT;
+  readonly allowedImageLabel = ALLOWED_IMAGE_LABEL;
   readonly durationOptions = [
     { value: 5, label: '5 s' },
     { value: 10, label: '10 s' },
@@ -386,12 +395,34 @@ export class VideoUploadZoneComponent implements OnChanges {
   }
 
   private uploadFiles(files: File[]): void {
-    // Accepter vidéos ET images (images → converties en vidéo côté serveur)
-    const mediaFiles = files.filter(file =>
-      file.type.startsWith('video/') || file.type.startsWith('image/')
-    );
+    // Accepter vidéos ET images (images → converties en vidéo côté serveur).
+    // Les images hors allowlist sont rejetées AVANT l'envoi : côté serveur le
+    // fileFilter multer répond 400 alors que le corps est déjà en vol, et cette
+    // réponse est perdue dans un reset de stream HTTP/2 (incident 2026-08-04).
+    const mediaFiles: File[] = [];
+    for (const file of files) {
+      if (file.type.startsWith('video/')) {
+        mediaFiles.push(file);
+      } else if (file.type.startsWith('image/')) {
+        if (isAllowedImageType(file)) {
+          mediaFiles.push(file);
+        } else {
+          this.uploads.push({
+            filename: file.name,
+            progress: 0,
+            status: 'error',
+            error: `Format non supporté (${file.type || 'inconnu'}). Utilisez ${ALLOWED_IMAGE_LABEL}.`,
+          });
+        }
+      }
+    }
 
     if (mediaFiles.length === 0) {
+      // Que des fichiers rejetés : laisser la mécanique de nettoyage habituelle
+      // faire disparaître les lignes d'erreur (sinon elles restent à l'écran).
+      if (this.uploads.length > 0) {
+        this.checkAllComplete();
+      }
       return;
     }
 
@@ -443,12 +474,28 @@ export class VideoUploadZoneComponent implements OnChanges {
           this.checkAllComplete();
         }
       },
-      error: (error) => {
+      error: (error: unknown) => {
         state.status = 'error';
-        state.error = error.error?.error || 'Erreur conversion image';
+        state.error = this.describeUploadError(error, 'Erreur conversion image');
         this.checkAllComplete();
       },
     });
+  }
+
+  /**
+   * Message d'erreur d'upload lisible.
+   *
+   * `status === 0` = la requête n'a jamais reçu de réponse exploitable : soit
+   * une vraie coupure réseau, soit un rejet serveur survenu pendant l'envoi du
+   * corps (l'edge annule alors la stream HTTP/2 et Chrome jette la réponse —
+   * incident 2026-08-04). Dans les deux cas, afficher « Erreur réseau » nu
+   * n'aide pas : on oriente vers les causes réelles.
+   */
+  private describeUploadError(error: unknown, fallback: string): string {
+    if (ErrorExtractor.isNetworkError(error)) {
+      return 'Upload interrompu : session expirée, quota d\'uploads atteint ou connexion coupée. Rechargez la page et réessayez.';
+    }
+    return ErrorExtractor.getMessage(error) || fallback;
   }
 
   private uploadFile(file: File, state: UploadState): void {
@@ -480,9 +527,9 @@ export class VideoUploadZoneComponent implements OnChanges {
           this.checkAllComplete();
         }
       },
-      error: (error) => {
+      error: (error: unknown) => {
         state.status = 'error';
-        state.error = error.error?.error || 'Erreur upload';
+        state.error = this.describeUploadError(error, 'Erreur upload');
         this.checkAllComplete();
       },
     });

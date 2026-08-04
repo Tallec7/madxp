@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { NotificationService } from '../../core/services/notification.service';
+import { ALLOWED_IMAGE_LABEL, isAllowedImageType } from '../../core/constants/media-upload.constants';
 import {
   ContentManagementDataService,
   ContentVideoRow,
@@ -148,10 +149,9 @@ export class VideoUploadService {
   // ── Image conversion ──
 
   addImageFiles(files: File[]): void {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     files.forEach(f => {
-      if (!allowedTypes.includes(f.type)) {
-        this.notificationService.error(`Format non supporté : ${f.name}. Utilisez JPG, PNG ou WEBP.`);
+      if (!isAllowedImageType(f)) {
+        this.notificationService.error(`Format non supporté : ${f.name}. Utilisez ${ALLOWED_IMAGE_LABEL}.`);
         return;
       }
       this.imageForm.files.push(f);

@@ -73,19 +73,24 @@ const updatePackageFilter = (_req: Express.Request, file: Express.Multer.File, c
   }
 };
 
+// Formats image acceptés par /api/image-to-video (source de vérité partagée
+// avec le dashboard — cf. IMAGE_TO_VIDEO_ACCEPT côté central-dashboard).
+// `image/gif` : un GIF animé est converti en vidéo en préservant l'animation
+// (bouclée jusqu'à la durée demandée) — cf. image-to-video.service.ts.
+export const ALLOWED_IMAGE_MIMES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+];
+
 // Filtre pour n'accepter que les images
 const imageFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedMimes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-  ];
-
-  if (allowedMimes.includes(file.mimetype)) {
+  if (ALLOWED_IMAGE_MIMES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new UploadTypeError(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: JPG, PNG, WEBP`));
+    cb(new UploadTypeError(`Type de fichier non autorisé: ${file.mimetype}. Formats acceptés: JPG, PNG, WEBP, GIF`));
   }
 };
 
