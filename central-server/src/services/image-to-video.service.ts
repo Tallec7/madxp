@@ -10,6 +10,12 @@ export interface ImageToVideoOptions {
   duration: number; // seconds
   outputFormat?: 'mp4';
   blurBackground?: boolean; // Si true, utilise une version floutée de l'image comme fond (effet esthétique)
+  /**
+   * Mime-type source (fourni par multer). Sert à fiabiliser la détection GIF
+   * quand le nom d'origine n'a pas d'extension : sans ça un GIF serait traité
+   * comme une image fixe et son animation serait perdue.
+   */
+  sourceMimeType?: string;
 }
 
 export interface ImageToVideoResult {
@@ -36,12 +42,16 @@ class ImageToVideoService {
     originalFilename: string,
     options: ImageToVideoOptions
   ): Promise<ImageToVideoResult> {
-    const { duration, blurBackground = false } = options;
+    const { duration, blurBackground = false, sourceMimeType } = options;
 
     // Créer des fichiers temporaires
     const tempDir = os.tmpdir();
     const tempId = uuidv4();
-    const inputExt = path.extname(originalFilename).toLowerCase();
+    // L'extension du fichier temporaire pilote la détection GIF (`buildFfmpegArgs`).
+    // On la force depuis le mime-type quand le nom d'origine n'en porte pas.
+    const inputExt = sourceMimeType === 'image/gif'
+      ? '.gif'
+      : path.extname(originalFilename).toLowerCase();
     const inputPath = path.join(tempDir, `neopro-img-${tempId}${inputExt}`);
     const outputPath = path.join(tempDir, `neopro-vid-${tempId}.mp4`);
 
@@ -104,7 +114,85 @@ class ImageToVideoService {
   }
 
   /**
-   * Exécute ffmpeg pour convertir l'image en vidéo
+   * Détermine si la source est un GIF (animé ou non).
+   * Un GIF ne doit PAS être traité comme une image fixe : `-loop 1 -framerate 1`
+   * figerait la 1ʳᵉ frame et détruirait l'animation.
+   */
+  isAnimatedSource(inputPath: string): boolean {
+    return path.extname(inputPath).toLowerCase() === '.gif';
+  }
+
+  /**
+   * Construit la ligne de commande ffmpeg (pur, testable sans spawn).
+   *
+   * Deux régimes d'entrée :
+   * - image fixe (JPG/PNG/WEBP) : `-loop 1 -framerate 1 -t D` → une frame étirée
+   *   sur D secondes (FPS d'entrée bas = peu de mémoire).
+   * - GIF : `-ignore_loop 0 -t D` → l'animation est rejouée en boucle jusqu'à
+   *   atteindre D secondes. Pas de `-framerate` d'entrée : les délais inter-frames
+   *   du GIF font foi.
+   */
+  buildFfmpegArgs(
+    inputPath: string,
+    outputPath: string,
+    duration: number,
+    codec: string = 'libx264',
+    blurBackground: boolean = false
+  ): string[] {
+    // Arguments ffmpeg - ordre important !
+    // Options d'entrée AVANT -i, options de sortie APRÈS -i
+    const args = ['-y']; // Overwrite output
+
+    if (this.isAnimatedSource(inputPath)) {
+      args.push('-ignore_loop', '0'); // Rejoue le GIF en boucle (option d'entrée)
+    } else {
+      args.push('-loop', '1'); // Loop l'image fixe (option d'entrée)
+      args.push('-framerate', '1'); // FPS d'entrée bas pour économiser la mémoire
+    }
+
+    args.push(
+      '-t', duration.toString(), // Durée d'entrée (borne le loop)
+      '-i', inputPath, // Input
+      // Options de sortie après -i
+      '-c:v', codec, // Codec vidéo
+      '-r', '25', // FPS de sortie
+      '-pix_fmt', 'yuv420p', // Format pixel compatible
+    );
+
+    // Ajouter les options spécifiques au codec
+    if (codec === 'libx264') {
+      args.push('-preset', 'ultrafast'); // Plus rapide, moins de mémoire
+      args.push('-crf', '28'); // Qualité acceptable, fichier plus petit
+    } else {
+      // Pour mpeg4 ou autres codecs
+      args.push('-q:v', '8'); // Qualité
+    }
+
+    // Filtre vidéo selon l'option blurBackground
+    let videoFilter: string;
+    if (blurBackground) {
+      // Filtre avec fond flou esthétique :
+      // 1. [0:v] scale=-1:720 → Image originale redimensionnée (hauteur 720, largeur proportionnelle)
+      // 2. [bg] scale=1280:720, boxblur=25:25 → Fond : image étirée à 1280x720 + flou intense
+      // 3. overlay → Superpose l'image nette centrée sur le fond flou
+      videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=-1:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
+    } else {
+      // Filtre standard : redimensionne et ajoute des bandes noires si nécessaire
+      videoFilter = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
+    }
+
+    // Options communes de sortie
+    args.push(
+      '-filter_complex', videoFilter,
+      '-movflags', '+faststart', // Streaming-friendly
+      outputPath,
+    );
+
+    return args;
+  }
+
+  /**
+   * Exécute ffmpeg pour convertir l'image (ou le GIF) en vidéo
    * @param blurBackground - Si true, utilise une version floutée de l'image comme fond au lieu de bandes noires
    */
   private runFfmpeg(
@@ -117,48 +205,7 @@ class ImageToVideoService {
     // Sérialise via le limiteur partagé : borne le nombre de ffmpeg simultanés
     // pour éviter l'OOM-kill Railway lors des uploads en masse (incident 2026-06-16).
     return runWithFfmpegSlot(() => new Promise<void>((resolve, reject) => {
-      // Arguments ffmpeg - ordre important !
-      // Options d'entrée AVANT -i, options de sortie APRÈS -i
-      const args = [
-        '-y', // Overwrite output
-        '-loop', '1', // Loop l'image (option d'entrée)
-        '-framerate', '1', // FPS d'entrée bas pour économiser la mémoire
-        '-t', duration.toString(), // Durée d'entrée (important pour -loop 1)
-        '-i', inputPath, // Input
-        // Options de sortie après -i
-        '-c:v', codec, // Codec vidéo
-        '-r', '25', // FPS de sortie
-        '-pix_fmt', 'yuv420p', // Format pixel compatible
-      ];
-
-      // Ajouter les options spécifiques au codec
-      if (codec === 'libx264') {
-        args.push('-preset', 'ultrafast'); // Plus rapide, moins de mémoire
-        args.push('-crf', '28'); // Qualité acceptable, fichier plus petit
-      } else {
-        // Pour mpeg4 ou autres codecs
-        args.push('-q:v', '8'); // Qualité
-      }
-
-      // Filtre vidéo selon l'option blurBackground
-      let videoFilter: string;
-      if (blurBackground) {
-        // Filtre avec fond flou esthétique :
-        // 1. [0:v] scale=-1:720 → Image originale redimensionnée (hauteur 720, largeur proportionnelle)
-        // 2. [bg] scale=1280:720, boxblur=25:25 → Fond : image étirée à 1280x720 + flou intense
-        // 3. overlay → Superpose l'image nette centrée sur le fond flou
-        videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=-1:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
-      } else {
-        // Filtre standard : redimensionne et ajoute des bandes noires si nécessaire
-        videoFilter = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
-      }
-
-      // Options communes de sortie
-      args.push(
-        '-filter_complex', videoFilter,
-        '-movflags', '+faststart', // Streaming-friendly
-        outputPath,
-      );
+      const args = this.buildFfmpegArgs(inputPath, outputPath, duration, codec, blurBackground);
 
       logger.info('Running ffmpeg', { codec, blurBackground, args: args.join(' ') });
 

@@ -8,6 +8,17 @@
 
 ---
 
+## Semaine 32 — 3-9 Août 2026 (uploads lisibles + GIF animés — PR [#1128](https://github.com/Tallec7/madxp/pull/1128))
+
+### 🎯 Pour le club
+
+- **Les GIF animés deviennent du contenu diffusable** ([#1128](https://github.com/Tallec7/madxp/pull/1128)) — un club peut désormais déposer un GIF comme n'importe quelle image : il est converti en vidéo **en gardant son animation**, bouclée sur la durée choisie (et non figé sur sa première image). Utile pour les visuels animés fournis par un sponsor ou une fédération, qui circulent souvent en GIF et devaient jusqu'ici être reconvertis à la main.
+- **Un upload refusé dit enfin pourquoi** ([#1128](https://github.com/Tallec7/madxp/pull/1128)) — jusqu'ici, un upload rejeté (session expirée, quota d'uploads atteint, permission club manquante, format non supporté) affichait un message vide ou générique : le club voyait « ça ne marche pas » sans savoir quoi corriger, et le support n'avait aucune trace exploitable. Le vrai motif s'affiche maintenant. Les formats non supportés sont même détectés **avant** l'envoi, donc sans attendre la fin d'un upload voué à échouer.
+
+### 🛡️ Pour la robustesse
+
+- **Cause racine : le serveur répondait trop tôt** ([#1128](https://github.com/Tallec7/madxp/pull/1128)) — sur toute route d'upload, les contrôles (authentification, rôle, quota, format) répondaient pendant que le navigateur envoyait encore le fichier. L'infrastructure Railway coupait alors la connexion et le navigateur jetait la réponse : le code d'erreur réel n'atteignait jamais l'écran. Le correctif attend la fin de l'envoi avant de répondre, sur **toutes** les routes d'upload — actuelles et futures. Angle mort qui existait depuis l'origine et rendait indébuggable n'importe quel refus d'upload. Documenté en ADR-136 avec 3 tests garde-fous, dont un qui vérifie que la liste des formats acceptés reste identique entre le serveur et le dashboard.
+
 ## Semaine 21 — 18-24 Mai 2026 (kill Templates Studio V2 legacy — PRs [#1029](https://github.com/Tallec7/neopro/pull/1029) → [#1032](https://github.com/Tallec7/neopro/pull/1032))
 
 ### 🧹 Pour l'équipe

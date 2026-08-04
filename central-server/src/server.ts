@@ -75,6 +75,7 @@ import { piPasswordFleetRouter, piPasswordSitesRouter } from './routes/pi-passwo
 import { authRateLimit, apiRateLimit, sensitiveRateLimit, adminRateLimit, loggingRateLimit } from './middleware/user-rate-limit';
 import { setRLSContext } from './middleware/rls-context';
 import { correlationMiddleware } from './middleware/correlation';
+import { drainOnEarlyResponse } from './middleware/drain-request';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 dotenv.config();
@@ -292,6 +293,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Correlation ID middleware - must be early to capture all requests
 // Adds X-Correlation-ID header for request tracing across frontend/backend
 app.use(correlationMiddleware);
+
+// Incident 2026-08-04 — sur une route multipart, un rejet précoce (401/403/429/400)
+// partait avant que multer ait lu le corps : l'edge Railway annulait alors la stream
+// HTTP/2 du client (RST_STREAM CANCEL) et le navigateur remontait
+// ERR_HTTP2_PROTOCOL_ERROR (status 0) au lieu du vrai code. Ce middleware draine le
+// corps avant de flusher la réponse. Doit rester AVANT les routes d'upload.
+app.use(drainOnEarlyResponse());
 
 // Rate limiting is handled per-route (see routes below)
 // No global rate limiter - the per-route limiters are sufficient

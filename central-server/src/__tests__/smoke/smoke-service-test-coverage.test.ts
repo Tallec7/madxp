@@ -33,7 +33,6 @@ const LEGACY_SERVICES_WITHOUT_TEST = new Set<string>([
   'db-circuit-breaker.service.ts',
   'excel-export.service.ts',
   'github.service.ts',
-  'image-to-video.service.ts',
   'memory-manager.service.ts',
   'monthly-reports.service.ts',
   'network-alerts.service.ts',

@@ -273,6 +273,7 @@ export const convertImageToVideo = async (req: AuthRequest, res: Response) => {
     const result = await imageToVideoService.convert(file.buffer, correctedOriginalname, {
       duration,
       blurBackground,
+      sourceMimeType: file.mimetype,
     });
 
     // Générer un nom de fichier unique
