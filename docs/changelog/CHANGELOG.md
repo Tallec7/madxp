@@ -1,3 +1,9 @@
+## [4.14.9](https://github.com/Tallec7/madxp/compare/v4.14.8...v4.14.9) (2026-08-05)
+
+### Bug Fixes
+
+- **content:** préserver le ratio source à la conversion image/GIF en vidéo ([#1130](https://github.com/Tallec7/madxp/issues/1130)) ([64b8f24](https://github.com/Tallec7/madxp/commit/64b8f2487aef04d2ce44e48bfb7adc72825ce720))
+
 ## [4.14.8](https://github.com/Tallec7/madxp/compare/v4.14.7...v4.14.8) (2026-08-04)
 
 ### Bug Fixes
