@@ -110,6 +110,21 @@ describe('smoke-content-upload-incident-2026-08-04', () => {
     expect(read(CONTROLLER_PATH)).toContain('sourceMimeType: file.mimetype');
   });
 
+  it('image-to-video.service.ts: la sortie par défaut préserve le ratio source', () => {
+    // Décision produit 2026-08-04 : le player TV fait déjà `object-fit: contain`,
+    // cuire un canvas 16:9 dans le fichier cadrait deux fois (bandeau sponsor
+    // réduit à une bande fine). Le pad fixe ne doit pas revenir par défaut.
+    const content = read(SERVICE_PATH);
+    expect(content).toContain("scale='min(1920,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease");
+    expect(content).toContain('trunc(iw/2)*2'); // dimensions paires (yuv420p)
+    expect(content).not.toContain('pad=1280:720');
+  });
+
+  it('video-upload-zone.component.ts: la zone de drag & drop ne force plus le 16:9 par défaut', () => {
+    const content = read(UPLOAD_ZONE_PATH);
+    expect(content).toMatch(/imageBlurBackground\s*=\s*false/);
+  });
+
   it('image-to-video.service.ts: le foreground du fond flou ne déborde jamais du canvas', () => {
     // Régression 2026-08-04 (2e passe) : `scale=-1:720` ne borne que la hauteur.
     // Une bannière 1200x150 devenait 5760x720 → overlay rogne → zoom + texte coupé.

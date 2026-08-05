@@ -73,8 +73,9 @@ interface UploadState {
             {{ isUploading ? 'Upload en cours...' : 'Glisser des vidéos ou images ici ou cliquer pour sélectionner' }}
           </span>
           <span class="upload-hint">
-            Les images ({{ allowedImageLabel }}) sont converties en vidéo avec la durée et le fond
-            choisis ci-dessous — un GIF animé garde son animation, bouclée sur la durée choisie
+            Les images ({{ allowedImageLabel }}) sont converties en vidéo à la durée choisie
+            ci-dessous, en gardant leur format d'origine — un GIF animé garde son animation,
+            bouclée sur la durée choisie
           </span>
           <span class="upload-hint" *ngIf="siteName">
             Vidéos uploadées pour {{ siteName }}
@@ -93,7 +94,9 @@ interface UploadState {
         </label>
         <label class="image-options-field checkbox">
           <input type="checkbox" [(ngModel)]="imageBlurBackground" [disabled]="isUploading" />
-          <span>Fond flou</span>
+          <span title="Décoché : la vidéo garde le format de l'image (un bandeau reste un bandeau). Coché : la vidéo est forcée en 16:9, le vide autour du visuel étant rempli par un fond flou.">
+            Habiller en 16:9 (fond flou)
+          </span>
         </label>
       </div>
 
@@ -341,7 +344,10 @@ export class VideoUploadZoneComponent implements OnChanges {
   uploads: UploadState[] = [];
 
   imageDuration = 10;
-  imageBlurBackground = true;
+  // Défaut : ratio source préservé. Cocher « Habiller en 16:9 » force un canvas
+  // 1280x720 avec fond flou — ce qui transformait un bandeau sponsor en bande
+  // fine au milieu de l'écran (signalé 2026-08-04).
+  imageBlurBackground = false;
   readonly imageUploadAccept = IMAGE_UPLOAD_ACCEPT;
   readonly allowedImageLabel = ALLOWED_IMAGE_LABEL;
   readonly durationOptions = [

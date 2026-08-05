@@ -9,7 +9,12 @@ import { runWithFfmpegSlot } from '../utils/ffmpeg-concurrency';
 export interface ImageToVideoOptions {
   duration: number; // seconds
   outputFormat?: 'mp4';
-  blurBackground?: boolean; // Si true, utilise une version floutée de l'image comme fond (effet esthétique)
+  /**
+   * Si true, la sortie est forcée en 1280x720 et le vide autour du visuel est
+   * rempli par une version floutée de l'image. Sinon (défaut) le ratio de la
+   * source est préservé — cf. `buildFfmpegArgs`.
+   */
+  blurBackground?: boolean;
   /**
    * Mime-type source (fourni par multer). Sert à fiabiliser la détection GIF
    * quand le nom d'origine n'a pas d'extension : sans ça un GIF serait traité
@@ -131,6 +136,12 @@ class ImageToVideoService {
    * - GIF : `-ignore_loop 0 -t D` → l'animation est rejouée en boucle jusqu'à
    *   atteindre D secondes. Pas de `-framerate` d'entrée : les délais inter-frames
    *   du GIF font foi.
+   *
+   * Deux régimes de sortie :
+   * - défaut : ratio source préservé (plafond 1920 sur le plus grand côté).
+   * - `blurBackground` : habillage 16:9 explicite, le vide autour du visuel étant
+   *   rempli par une version floutée de l'image. À n'utiliser que si l'on veut
+   *   délibérément un fichier 1280x720.
    */
   buildFfmpegArgs(
     inputPath: string,
@@ -185,8 +196,22 @@ class ImageToVideoService {
       // (incident 2026-08-04 : GIF sponsor rendu en zoom avec le texte coupé).
       videoFilter = '[0:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,boxblur=25:25[bg];[0:v]scale=1280:720:force_original_aspect_ratio=decrease[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2';
     } else {
-      // Filtre standard : redimensionne et ajoute des bandes noires si nécessaire
-      videoFilter = 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2';
+      // Défaut : PRÉSERVER LE RATIO SOURCE. Un bandeau reste un bandeau.
+      //
+      // On ne cuit plus de canvas 16:9 dans le fichier : le player TV applique
+      // déjà `object-fit: contain` (tv.component.scss), donc padder ici revenait
+      // à cadrer deux fois et à gâcher la définition du visuel utile. Un bandeau
+      // 1200x150 devenait une bande fine au milieu d'un 1280x720 (signalé
+      // 2026-08-04, après le fix du rognage).
+      //
+      // 1. `min(1920,iw)`/`min(1920,ih)` + `decrease` → plafonne le plus grand
+      //    côté à 1920 SANS jamais agrandir (la boîte vaut la source quand elle
+      //    est plus petite que le plafond).
+      // 2. `trunc(iw/2)*2` → dimensions paires, exigées par yuv420p/H.264
+      //    (une source 1201x151 casserait l'encodage).
+      // 3. `setsar=1` → pixels carrés, sinon certains players réinterprètent
+      //    le ratio d'affichage.
+      videoFilter = "scale='min(1920,iw)':'min(1920,ih)':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2,setsar=1";
     }
 
     // Options communes de sortie
