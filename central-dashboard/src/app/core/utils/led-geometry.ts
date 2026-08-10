@@ -68,3 +68,20 @@ export function ledSourceFormat(led: LedProfileConfig | null | undefined): strin
   const h = led?.height || 0;
   return w > 0 && h > 0 ? `${w}x${h}` : null;
 }
+
+/**
+ * Cadence du motif en pixels (= `spacing_m` × px/m).
+ *
+ * C'est le pas de répétition utilisé par le pavage `repeated`/`scrolling` : sur un
+ * côté de 1600 px avec une cadence de 10 m à P6.25, le motif tient une fois par
+ * côté. Sert à l'aperçu pour montrer le BON nombre de copies — en afficher deux
+ * quand il n'y en aura qu'une serait un mensonge visuel.
+ *
+ * `0` si le profil est incomplet.
+ */
+export function ledCellPx(led: LedProfileConfig | null | undefined): number {
+  const mm = ledPitchMm(led?.pitch);
+  const spacing = led?.spacing_m;
+  if (mm === 0 || !spacing || spacing <= 0) return 0;
+  return Math.max(1, Math.round(spacing * (1000 / mm)));
+}

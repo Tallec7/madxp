@@ -5,7 +5,8 @@ import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { DisplayConfig, CloudVideo } from '../../core/models';
-import { ledSourceFormat } from '../../core/utils/led-geometry';
+import { ledSourceFormat, ledCellPx } from '../../core/utils/led-geometry';
+import { LedRibbonPreviewComponent } from './led-ribbon-preview.component';
 import { environment } from '../../../environments/environment';
 
 /** Fichier d'un côté pour une variante led-perimeter « par côté » (ADR-135). */
@@ -89,7 +90,7 @@ export interface FitRecommendation {
 @Component({
   selector: 'app-video-variant-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LedRibbonPreviewComponent],
   templateUrl: './video-variant-panel.component.html',
   styleUrls: ['./video-variant-panel.component.scss'],
 })
@@ -482,6 +483,30 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           variant.layout = null;
         },
       });
+  }
+
+  /** Profil LED du site consulté (géométrie du ruban), ou `null`. */
+  private get ledProfile() {
+    return this.siteDisplays?.find((d) => d.type === LED_PERIMETER_TYPE)?.led ?? null;
+  }
+
+  /** Cadence du motif en px, pour que l'aperçu montre le BON nombre de copies. */
+  get ledCellPx(): number {
+    return ledCellPx(this.ledProfile);
+  }
+
+  /**
+   * Cadre visé par l'aperçu : la cible recommandée par le serveur si on l'a,
+   * sinon un côté déduit du profil. Sans profil, rien n'est prévisualisable.
+   */
+  previewTarget(displayType: string): { width: number; height: number } | null {
+    const reco = this.fitRecommendations[displayType];
+    if (reco) return reco.target;
+    const led = this.ledProfile;
+    if (!led || !led.sides?.length) return null;
+    const mm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+    if (!Number.isFinite(mm) || mm <= 0) return null;
+    return { width: Math.round(led.sides[0] * (1000 / mm)), height: led.height };
   }
 
   /** Libellé lisible de la mise en page proposée (« Centré », « Répété »…). */

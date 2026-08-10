@@ -198,6 +198,20 @@
             </div>
           </div>
 
+          <!-- Aperçu du rendu — une image vaut mieux qu'une phrase pour juger
+               un cadrage. Affiché seulement pour un ruban, avec un profil connu. -->
+          <app-led-ribbon-preview
+            *ngIf="
+              isLedPerimeter(variant.display_type) && previewTarget(variant.display_type) as target
+            "
+            [videoUrl]="variant.url"
+            [targetWidth]="target.width"
+            [targetHeight]="target.height"
+            [layout]="variant.layout"
+            [sidesCount]="ledSides.length"
+            [cellPx]="ledCellPx"
+          ></app-led-ribbon-preview>
+
           <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement.
                Plie pour le club consulté → affiché seulement quand un club est en
                contexte (masqué dans la bibliothèque globale). -->
