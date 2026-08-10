@@ -1,3 +1,9 @@
+# [4.15.0](https://github.com/Tallec7/madxp/compare/v4.14.9...v4.15.0) (2026-08-10)
+
+### Features
+
+- **displays:** dériver la résolution, rendre le type éditable, retirer zones ([#1134](https://github.com/Tallec7/madxp/issues/1134)) ([3d0a290](https://github.com/Tallec7/madxp/commit/3d0a2905e0cf955a1536f6c18c807591d78e4e70)), closes [#0](https://github.com/Tallec7/madxp/issues/0)
+
 ## [4.14.9](https://github.com/Tallec7/madxp/compare/v4.14.8...v4.14.9) (2026-08-05)
 
 ### Bug Fixes
