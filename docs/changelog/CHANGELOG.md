@@ -1,3 +1,9 @@
+# [4.18.0](https://github.com/Tallec7/madxp/compare/v4.17.0...v4.18.0) (2026-08-10)
+
+### Features
+
+- **led:** le canvas se dérive du terrain seul — pliage toujours par côté ([#1139](https://github.com/Tallec7/madxp/issues/1139)) ([ed87763](https://github.com/Tallec7/madxp/commit/ed87763430ea80abc4d2e692cc7ef3e3493ed0d6))
+
 # [4.17.0](https://github.com/Tallec7/madxp/compare/v4.16.0...v4.17.0) (2026-08-10)
 
 ### Features
