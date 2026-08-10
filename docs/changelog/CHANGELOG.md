@@ -1,3 +1,9 @@
+# [4.20.0](https://github.com/Tallec7/madxp/compare/v4.19.0...v4.20.0) (2026-08-10)
+
+### Features
+
+- **led:** classer, proposer et prévisualiser le cadrage d'une vidéo ([#1142](https://github.com/Tallec7/madxp/issues/1142)) ([9ac271f](https://github.com/Tallec7/madxp/commit/9ac271f88c0c3eb632aea166644bc4200fc1040c)), closes [#1140](https://github.com/Tallec7/madxp/issues/1140)
+
 # [4.19.0](https://github.com/Tallec7/madxp/compare/v4.18.0...v4.19.0) (2026-08-10)
 
 ### Features
