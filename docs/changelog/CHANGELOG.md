@@ -1,3 +1,9 @@
+# [4.16.0](https://github.com/Tallec7/madxp/compare/v4.15.1...v4.16.0) (2026-08-10)
+
+### Features
+
+- **saas:** heartbeat serveur — rafraîchir last_seen_at pendant la diffusion ([#1136](https://github.com/Tallec7/madxp/issues/1136)) ([#1137](https://github.com/Tallec7/madxp/issues/1137)) ([0a78cb4](https://github.com/Tallec7/madxp/commit/0a78cb4da2c91c8c89149976d6584d88a7d9c26e))
+
 ## [4.15.1](https://github.com/Tallec7/madxp/compare/v4.15.0...v4.15.1) (2026-08-10)
 
 ### Bug Fixes
