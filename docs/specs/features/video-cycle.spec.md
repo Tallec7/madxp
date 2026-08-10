@@ -3,8 +3,8 @@
 > **Owner** : Daisy
 > **Statut** : Live
 > **Dernière revue** : 2026-04-29
-> **last_verified** : 2026-05-10
-> **verified_against_commit** : 1890d43
+> **last_verified** : 2026-08-10
+> **verified_against_commit** : 8528e38bc
 > **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`), ADR-136 (drain multipart avant rejet précoce + allowlist image partagée + GIF animé)
 > **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`), `smoke-content-upload-incident-2026-08-04.test.ts` (drain multipart + allowlist image + régime ffmpeg GIF)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression
@@ -69,6 +69,23 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 - **Club grants** : un club peut accéder aux vidéos qui lui ont été explicitement accordées via `video_club_grants` (table dédiée — pas d'accès universel aux vidéos MadXP).
 - **Quota tier** : le nombre de vidéos uploadables par un club est limité par son tier d'abonnement (tier Play = 25 max). Checked à l'upload.
 
+### Dimensions mesurées à l'upload
+
+Toute vidéo est **mesurée** (ffprobe) au moment de l'upload, et ses dimensions
+persistées : `videos.metadata.{width,height,duration,fps}` pour une vidéo,
+`video_variants.{width,height}` pour une déclinaison d'écran.
+
+- **On mesure, on ne croit pas le client.** Les colonnes `width`/`height` des
+  variantes venaient de `req.body`, que le dashboard n'envoyait jamais — d'où
+  100 % de NULL, et un validateur de format (`validateLedFormat`) muet en verdict
+  `unknown`. Le corps de requête ne sert plus que de repli.
+- **La sonde ne bloque JAMAIS un upload.** Fichier illisible, ffprobe absent,
+  upload en mémoire sans fichier disque : on perd le diagnostic, jamais le fichier.
+- **`0 × 0` vaut inconnu, pas mesuré.** On n'écrit aucune clé plutôt que des zéros
+  qui feraient croire à une mesure.
+- **Une variante créée depuis une vidéo existante hérite** des dimensions de sa
+  source : le binaire est le même, re-télécharger pour mesurer serait absurde.
+
 ## Comportements observables
 
 | Règle           | Comment on vérifie                                                                  |
@@ -79,6 +96,9 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 | Cascade DELETE  | Après suppression : 0 variante, 0 déploiement actif, fichier FTP absent             |
 | Audit FTP       | Grafana/log CRON `video-ftp-audit.task` : compteur `neopro_video_ftp_orphans_total` |
 | Club quota      | Upload au-delà du quota → 403 avec message "Quota atteint pour votre abonnement"    |
+
+- Uploader une vidéo 1600×120 : sa fiche porte `width: 1600, height: 120`, et l'avis de format LED peut enfin se prononcer au lieu de rester `unknown`.
+- Uploader un fichier corrompu : l'upload aboutit, sans clé de dimension dans `metadata`.
 
 ## Cas d'edge connus
 

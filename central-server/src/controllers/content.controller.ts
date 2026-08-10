@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { AuthRequest } from '../types';
+import { probeVideoDimensions, dimensionsMetadata } from '../utils/video-dimensions';
 import { videoRepository, deploymentRepository, siteRepository, siteVideoRepository, configProfileRepository } from '../repositories';
 import { removeVideoFromConfig } from '../utils/config-video-cleanup';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, deleteThumbnail as deleteStorageThumbnail, getVideoUrl, uploadThumbnail, buildThumbnailPath, getThumbnailUrl } from '../services/storage.service';
@@ -220,6 +221,13 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       uploadUrl = uploadResult.url;
     }
 
+    // Dimensions mesurées à l'upload — socle du validateur de format et de tout
+    // diagnostic « cette vidéo va-t-elle sur cet écran ». Ne bloque jamais l'upload.
+    const dimensions = await probeVideoDimensions(tempFilePath);
+    if (dimensions) {
+      logger.info('Video dimensions probed', { filename, ...dimensions });
+    }
+
     logger.info('Inserting video metadata into database:', { filename, title: videoTitle, siteId: site_id, uploadStatus, isDuplicate });
     const video = await videoRepository.create({
       filename,
@@ -230,7 +238,7 @@ export const createVideo = async (req: AuthRequest, res: Response) => {
       mime_type,
       storage_path: storagePath,
       checksum,
-      metadata: { title: videoTitle, ...(isDuplicate ? { deduplicatedFrom: existingVideo!.id } : {}) },
+      metadata: { title: videoTitle, ...dimensionsMetadata(dimensions), ...(isDuplicate ? { deduplicatedFrom: existingVideo!.id } : {}) },
       uploaded_by: req.user?.id || null,
       uploaded_for_site_id: site_id || null,
       upload_status: uploadStatus,
@@ -379,6 +387,10 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           storagePath = uploadResult.path;
         }
 
+        // Même sonde que l'upload unitaire — un import en masse ne doit pas
+        // produire des vidéos sans dimensions.
+        const bulkDimensions = await probeVideoDimensions(tempFilePath);
+
         const video = await videoRepository.createBulk({
           filename,
           original_name,
@@ -388,7 +400,7 @@ export const createVideos = async (req: AuthRequest, res: Response) => {
           mime_type,
           storage_path: storagePath,
           checksum,
-          metadata: { title: videoTitle, ...(existingVideo ? { deduplicatedFrom: existingVideo.id } : {}) },
+          metadata: { title: videoTitle, ...dimensionsMetadata(bulkDimensions), ...(existingVideo ? { deduplicatedFrom: existingVideo.id } : {}) },
           uploaded_by: req.user?.id || null,
           uploaded_for_site_id: site_id || null,
         });
