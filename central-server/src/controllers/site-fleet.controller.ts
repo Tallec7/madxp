@@ -3,6 +3,7 @@ import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { getVideoUrl } from '../services/storage.service';
 import { memoryCache } from '../services/memory-cache.service';
+import { resolveSitePresence } from '../utils/site-presence';
 import { sendJsonWithEtag } from '../utils/conditional-response';
 import {
   siteRepository,
@@ -55,11 +56,17 @@ export const getSiteStats = async (req: AuthRequest, res: Response) => {
     for (const site of sitesResult.rows as Array<{
       id: string;
       status: string;
+      site_type: string | null;
       last_seen_at: Date | null;
       last_metric_at: Date | null;
     }>) {
-      // Vérifier si connecté via Socket.IO
-      const isConnectedNow = connectedSiteIds.has(site.id);
+      // Présence : agent Pi OU navigateurs SaaS connectés (cf. site-presence).
+      const { isConnectedNow } = resolveSitePresence({
+        siteId: site.id,
+        siteType: site.site_type,
+        piConnectedSiteIds: connectedSiteIds,
+        getSaasClientCount: (id) => socketService.getSaasClientCount(id),
+      });
 
       // Utiliser le plus récent entre last_seen_at et last_metric_at
       const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
@@ -114,6 +121,7 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       site_name: string;
       club_name: string;
       status: string;
+      site_type: string | null;
       last_seen_at: Date | null;
       local_ip: string | null;
       last_metric_at: Date | null;
@@ -139,11 +147,17 @@ export const getAllSitesConnectionStatus = async (req: AuthRequest, res: Respons
       site_name: string;
       club_name: string;
       status: string;
+      site_type: string | null;
       last_seen_at: Date | null;
       local_ip: string | null;
       last_metric_at: Date | null;
     }>).map((site) => {
-      const isConnectedNow = connectedSiteIds.has(site.id);
+      const { isConnectedNow } = resolveSitePresence({
+        siteId: site.id,
+        siteType: site.site_type,
+        piConnectedSiteIds: connectedSiteIds,
+        getSaasClientCount: (id) => socketService.getSaasClientCount(id),
+      });
 
       // Utiliser le plus récent entre last_seen_at et last_metric_at
       const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
