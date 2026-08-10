@@ -151,6 +151,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-135](ADR-135-led-perimeter-per-side-zones.md)                                       | LED périmétrique — pliage par côté + zones de contenu/cadence par côté (`side_zones`)        | Accepté                           | Juin 2026 |
 | [ADR-136](ADR-136-multipart-early-reject-drain-and-shared-image-allowlist.md)            | Upload multipart — drain avant rejet précoce, allowlist image partagée, GIF animé            | Accepté                           | Août 2026 |
 | [ADR-137](ADR-137-display-geometry-owns-resolution.md)                                   | Un écran porte sa géométrie ; la résolution est dérivée, jamais saisie                       | Accepté                           | Août 2026 |
+| [ADR-138](ADR-138-led-canvas-derives-from-site-only.md)                                  | Le canvas LED se dérive du terrain seul — pliage toujours par côté                           | Accepté                           | Août 2026 |
 
 ### Supersédés
 

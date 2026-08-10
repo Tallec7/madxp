@@ -346,6 +346,84 @@ export function computeFoldGeometryPerSide(input: PerSideFoldInput): PerSideFold
   };
 }
 
+// ── 1b-ter. Canvas du SITE — source de vérité unique (ADR-138) ────────────────
+
+/** Profil LED d'un site, tel qu'il vit dans `sites.displays[].led`. */
+export interface SiteLedProfile {
+  sides: number[];
+  /** Libellé pitch (`'P6'`) ou millimètres. */
+  pitch: string | number;
+  height: number;
+  canvas_in?: { band_width?: number; band_count?: number; order?: FoldOrder } | null;
+}
+
+export interface SiteCanvas {
+  geometry: PerSideFoldGeometry;
+  /** Nb de bandes DÉRIVÉ de la géométrie du terrain. */
+  derivedBandCount: number;
+  /** Nb de bandes figé par un installateur, s'il y en a un. */
+  confirmedBandCount: number | null;
+  /**
+   * `true` quand l'installateur a figé une valeur qui ne correspond PLUS au
+   * dérivé. Vaut avertissement, jamais correction silencieuse : la valeur figée
+   * décrit ce qui est gravé dans le processeur, on ne l'écrase pas dans son dos.
+   */
+  confirmedIsStale: boolean;
+  canvasWidth: number;
+  canvasHeight: number;
+}
+
+/** Millimètres depuis un pitch `'P6.25'` ou `6.25`. `0` si illisible. */
+export function parsePitchMm(pitch: string | number): number {
+  const mm = typeof pitch === 'number' ? pitch : parseFloat(String(pitch).replace(/^P/i, ''));
+  return Number.isFinite(mm) && mm > 0 ? mm : 0;
+}
+
+/**
+ * Canvas processeur d'un site — **toujours plié par côté** (ADR-138).
+ *
+ * C'est LE point d'entrée unique. Avant, la géométrie était choisie par le
+ * CONTENU (`side_files.length > 0` → par côté, sinon somme continue), ce qui
+ * donnait deux canvas différents pour le même club — 7 bandes ou 8. Or un
+ * processeur est gravé une fois à l'installation : émettre tantôt l'un tantôt
+ * l'autre rend le second immappable.
+ *
+ * Le par-côté est le sur-ensemble : « uniforme » redevient une notion de
+ * CONTENU (le même fichier sur tous les côtés), plus une géométrie concurrente.
+ * Bonus, le contenu cesse de traverser les angles — les coupes tombent enfin
+ * sur les côtés et non tous les `band_width` px.
+ *
+ * @throws si le profil est incomplet (pas de côtés, pitch illisible).
+ */
+export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
+  if (!Array.isArray(profile.sides) || profile.sides.length === 0) {
+    throw new Error('computeSiteCanvas: profil LED sans côtés');
+  }
+  const pitchMm = parsePitchMm(profile.pitch);
+  if (pitchMm === 0) {
+    throw new Error(`computeSiteCanvas: pitch illisible — ${String(profile.pitch)}`);
+  }
+
+  const bandWidth = profile.canvas_in?.band_width ?? 1920;
+  const geometry = computeFoldGeometryPerSide({
+    sides: profile.sides,
+    pitchMm,
+    height: profile.height,
+    bandWidth,
+    order: profile.canvas_in?.order,
+  });
+
+  const confirmed = profile.canvas_in?.band_count ?? null;
+  return {
+    geometry,
+    derivedBandCount: geometry.bandCount,
+    confirmedBandCount: confirmed,
+    confirmedIsStale: confirmed !== null && confirmed !== geometry.bandCount,
+    canvasWidth: geometry.canvasWidth,
+    canvasHeight: geometry.canvasHeight,
+  };
+}
+
 // ── 1c. Validateur de format à l'upload ───────────────────────────────────────
 
 /**
@@ -589,7 +667,13 @@ function buildRibbonClause(
   H: number,
   layout: LedExportLayout,
   cellPx: number,
-  padColor: string
+  padColor: string,
+  /** Label d'entrée. `[0:v]` en mono-source, `[i:v]` pour le côté `i`. */
+  inLabel = '[0:v]',
+  /** Label de sortie. `[rib]` en mono-source, `[ribI]` pour le côté `i`. */
+  outLabel = '[rib]',
+  /** Préfixe des labels internes — sans lui, deux côtés collisionnent sur `[c0]`. */
+  ns = ''
 ): string {
   const cw = Math.max(1, Math.round(cellPx));
   const ecw = evenUp(cw);
@@ -601,22 +685,22 @@ function buildRibbonClause(
 
   switch (layout) {
     case 'stretched':
-      return `[0:v]scale=${W}:${H},setsar=1[rib]`;
+      return `${inLabel}scale=${W}:${H},setsar=1${outLabel}`;
     case 'centered': {
       const ew = evenUp(W);
       const eh = evenUp(H);
-      return `[0:v]scale=${ew}:${eh}:force_original_aspect_ratio=decrease,pad=${ew}:${eh}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1[rib]`;
+      return `${inLabel}scale=${ew}:${eh}:force_original_aspect_ratio=decrease,pad=${ew}:${eh}:(ow-iw)/2:(oh-ih)/2:${padColor},setsar=1${outLabel}`;
     }
     case 'scrolling': {
       // Une cellule de marge en plus pour un wrap sans couture (contenu périodique).
       const n = Math.max(2, Math.ceil(W / cw) + 1);
-      const labels = Array.from({ length: n }, (_, i) => `[c${i}]`).join('');
+      const labels = Array.from({ length: n }, (_, i) => `[${ns}c${i}]`).join('');
       // crop positionnel w:h:x:y ; x = expression de défilement. La virgule de
       // `mod(…,…)` est protégée par les quotes simples (sinon = séparateur de filtre).
       return (
-        `[0:v]${cell},split=${n}${labels};` +
-        `${labels}hstack=inputs=${n}[strip];` +
-        `[strip]crop=${W}:${H}:'mod(t*${SCROLL_SPEED_PX_PER_SEC},${cw})':0,setsar=1[rib]`
+        `${inLabel}${cell},split=${n}${labels};` +
+        `${labels}hstack=inputs=${n}[${ns}strip];` +
+        `[${ns}strip]crop=${W}:${H}:'mod(t*${SCROLL_SPEED_PX_PER_SEC},${cw})':0,setsar=1${outLabel}`
       );
     }
     case 'repeated':
@@ -624,8 +708,8 @@ function buildRibbonClause(
       // +1 cellule de marge : garantit que le strip pavé dépasse W (robuste aux
       // arrondis de scale/pad), on crop ensuite à la largeur exacte du ruban.
       const n = Math.max(2, Math.ceil(W / cw) + 1);
-      const labels = Array.from({ length: n }, (_, i) => `[c${i}]`).join('');
-      return `[0:v]${cell},split=${n}${labels};${labels}hstack=inputs=${n},crop=${W}:${H}:0:0[rib]`;
+      const labels = Array.from({ length: n }, (_, i) => `[${ns}c${i}]`).join('');
+      return `${inLabel}${cell},split=${n}${labels};${labels}hstack=inputs=${n},crop=${W}:${H}:0:0${outLabel}`;
     }
   }
 }
@@ -740,6 +824,10 @@ export interface PerSideFoldComposeOptions {
   outputPath: string;
   /** Couleur de remplissage (padding dernière bande de chaque côté). Défaut `'black'`. */
   padColor?: string;
+  /** Mise en page de chaque source dans le ruban de son côté. Défaut `'stretched'` (v1). */
+  layout?: LedExportLayout;
+  /** Cadence du motif en px (= espacement_m × px/m). Requis pour repeated/scrolling. */
+  cellPx?: number;
   crf?: number;
   preset?: string;
 }
@@ -766,7 +854,9 @@ export interface PerSideFoldApplyResult {
  */
 export function buildPerSideFoldFilterGraph(
   geometry: PerSideFoldGeometry,
-  padColor = 'black'
+  padColor = 'black',
+  layout: LedExportLayout = 'stretched',
+  cellPx?: number
 ): string {
   const { segments, ribbonHeight, bandWidth, bandHeight } = geometry;
   const single = segments.length === 1;
@@ -779,8 +869,22 @@ export function buildPerSideFoldFilterGraph(
   for (const seg of segments) {
     const i = seg.sideIndex;
     const blockLabel = single ? '[out]' : `[block${i}]`;
-    // 1) adapter la source du côté à son ruban (étirement v1).
-    parts.push(`[${i}:v]scale=${seg.ribbonWidth}:${ribbonHeight},setsar=1[rib${i}]`);
+    // 1) remplir le ruban DE CE CÔTÉ selon la mise en page (pavage réel).
+    //    Le motif se répète donc par côté et redémarre à chaque angle, au lieu
+    //    d'être pavé sur la somme des côtés puis coupé n'importe où.
+    //    `stretched` reproduit exactement le comportement d'origine (étirement v1).
+    parts.push(
+      buildRibbonClause(
+        seg.ribbonWidth,
+        ribbonHeight,
+        layout,
+        cellPx ?? seg.ribbonWidth,
+        padColor,
+        `[${i}:v]`,
+        `[rib${i}]`,
+        `s${i}_`
+      )
+    );
     // 2) plier le ruban du côté en son bloc de bandes.
     if (seg.bandCount === 1) {
       parts.push(`[rib${i}]${cropPad(seg.bands[0])}${blockLabel}`);
@@ -821,7 +925,12 @@ export function buildPerSideFoldComposeArgs(
   const padColor = options.padColor ?? 'black';
   const crf = options.crf ?? 18;
   const preset = options.preset ?? 'medium';
-  const filterGraph = buildPerSideFoldFilterGraph(geometry, padColor);
+  const filterGraph = buildPerSideFoldFilterGraph(
+    geometry,
+    padColor,
+    options.layout ?? 'stretched',
+    options.cellPx
+  );
   const inputArgs = options.inputs.flatMap((p) => ['-i', p]);
 
   return [
@@ -1011,6 +1120,8 @@ function runFfmpeg(args: string[]): Promise<void> {
 export const ledFoldService = {
   computeFoldGeometry,
   computeFoldGeometryPerSide,
+  computeSiteCanvas,
+  parsePitchMm,
   computeRibbonDimensions,
   buildPerSideFoldFilterGraph,
   buildPerSideFoldComposeArgs,

@@ -12,24 +12,30 @@ Un processeur LED (Novastar/Colorlight) est configuré **une seule fois à l'ins
 pixel à pixel. Émettre tantôt un canvas, tantôt un autre, rend le second immappable —
 ruban noir ou décalé, un soir de match.
 
-Or aujourd'hui la géométrie est choisie par le CONTENU :
-`led-export-worker.service.ts` branche sur `side_files.length > 0` entre le pliage
-continu (`computeRibbonDimensions` + `computeFoldGeometry`) et le pliage par côté
-(`computeFoldGeometryPerSide`), qui ne donnent pas le même nombre de bandes.
+**Depuis ADR-138, c'est tenu** : `computeSiteCanvas()` est le point d'entrée unique
+et plie TOUJOURS par côté. Le contenu ne choisit plus que les SOURCES (un fichier par
+côté, ou le même partout). Avant, le worker branchait sur `side_files.length > 0`
+entre deux géométries donnant 7 ou 8 bandes pour le même club.
 
-C'est sans conséquence **tant que le pliage n'est pas dans le chemin de diffusion**.
-Il ne l'est pas : `config-secondary-variants.ts` injecte le `storage_path` brut de la
-variante. Le pliage ne sert qu'au bouton « Exporter le MP4 plié » et au banc d'essai.
+Le pliage n'est toujours PAS dans le chemin de diffusion : `config-secondary-variants.ts`
+injecte le `storage_path` brut de la variante. Il ne sert qu'au bouton « Exporter le
+MP4 plié » et au banc d'essai — l'étape D d'ADR-135 reste à câbler.
+
+**Un `band_count` figé par un installateur qui ne correspond plus au dérivé est
+SIGNALÉ (`confirmedIsStale` + `logger.warn`), jamais écrasé** : la valeur figée décrit
+ce qui est gravé dans le processeur.
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
 - **Importer `led-fold.service` ou `led-export-worker.service` depuis
   `utils/config-secondary-variants.ts`** — ni y appeler `computeFoldGeometry*` /
   `applyPerSideFold` / `applyFoldExport`. C'est le câblage de l'**étape D** d'ADR-135
-  (diffuser le canvas composé), et il ne peut pas être fait tant que la divergence de
-  géométrie existe. Le site **Saas Lanester HB** a `canvas_in.band_count = 1` figé par
-  un installateur : le passer en par-côté doublerait la hauteur du canvas (110 → 220 px)
-  face à un processeur gravé pour 110.
+  (diffuser le canvas composé). La divergence de géométrie est corrigée (ADR-138), mais
+  le contrat d'entrée réel des processeurs n'est **toujours pas observé** : le câbler en
+  aveugle reste un pari. Le préalable est la mire (`npm run led:mire`) sur un club réel.
+  Rappel du risque : **Saas Lanester HB** a `canvas_in.band_count = 1` figé par un
+  installateur alors que le dérivé par côté vaut 2 — servir le canvas dérivé sans
+  re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé pour 110.
 - **Retirer `if (!v.storage_path && !v.filename) continue;`** de
   `config-secondary-variants.ts` — une variante « par côté pure » n'a ni `storage_path`
   ni `filename` ; l'injecter produit un chemin `videos-led-perimeter/null` → MP4 noir.
@@ -47,19 +53,26 @@ variante. Le pliage ne sert qu'au bouton « Exporter le MP4 plié » et au banc 
 | Saas Lanester HB       | 2 × 4,8 m | P10   | 480       | 1 (uniforme, **figé**) |
 | Piraths Strasbourg ATH | 4 × 10 m  | P6.25 | 1600      | 4 (provisoire)         |
 
-**Aucun côté ne dépasse `band_width` (1920).** Le pliage est un no-op fonctionnel pour
-tout le parc installé — le ruban handball 80 m / 13 333 px qui justifie ADR-134 n'a
-aucun client. Ne pas étendre le moteur de pliage tant qu'un club réel n'a pas un côté
-plus large que 1920 px. Le SPIKE-003 matériel (mode A vs B) n'a pas avancé, matériel
-non commandé.
+**Aucun CÔTÉ ne dépasse `band_width` (1920)** : le pliage par côté ne coupe donc jamais
+à l'intérieur d'un côté sur le parc actuel. Attention, ça ne veut PAS dire que le pliage
+est inutile — poser un ruban long et fin sur une sortie 1920×1080 en découpant le signal
+en bandes est la configuration canonique d'un Novastar. Chez Piraths, 4 côtés de 1600 px
+donnent 4 bandes, canvas 1920×640.
+
+Le SPIKE-003 matériel n'a pas avancé (matériel non commandé), mais il est **remplacé par
+la mire** (`npm run led:mire`) : une grille diffusée sur le ruban d'un club installé +
+une photo suffisent à lire le contrat d'entrée réel du processeur, sans rien acheter.
 
 ## Quand ce garde-fou doit être révisé
 
-Le smoke `smoke-led-canvas-invariant.test.ts` est un **tripwire** : il verrouille la
-divergence actuelle. Il doit échouer — et être revu sciemment, dans la même PR — le jour où :
+Le smoke `smoke-led-canvas-invariant.test.ts` a déjà été révisé une fois (ADR-138,
+unification de la géométrie). Il vérifie désormais deux invariants :
 
-- on unifie la géométrie (« toujours plier par côté », `canvas_in` dérivé du seul profil) ;
-- ou on câble réellement l'étape D après validation matérielle.
+1. le canvas est une fonction pure du terrain ;
+2. le chemin de déploiement reste indépendant du pliage.
+
+Il doit être revu sciemment, dans la même PR, le jour où on câble réellement l'étape D
+après validation matérielle (la mire, cf. `npm run led:mire`).
 
 ## Référence
 

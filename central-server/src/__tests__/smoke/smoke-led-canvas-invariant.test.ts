@@ -1,22 +1,24 @@
 /**
  * Smoke — le canvas processeur LED ne doit JAMAIS dépendre du contenu diffusé.
  *
- * Contexte (vérifié en DB prod le 2026-08-10) : la géométrie de pliage est
- * choisie par le CONTENU et non par l'ÉCRAN — `led-export-worker.service.ts`
- * branche sur `side_files.length > 0` pour choisir entre le pliage continu
- * (`computeRibbonDimensions` + `computeFoldGeometry`) et le pliage par côté
- * (`computeFoldGeometryPerSide`). Les deux ne produisent pas le même canvas.
+ * Contexte : jusqu'à ADR-138, la géométrie de pliage était choisie par le CONTENU
+ * et non par l'ÉCRAN — le worker branchait sur `side_files.length > 0` entre deux
+ * géométries qui ne produisaient pas le même canvas (7 bandes vs 8 sur le même club).
  *
  * Un processeur LED (Novastar/Colorlight) est configuré UNE FOIS à l'installation,
  * pixel à pixel. Si la diffusion émettait tantôt l'un tantôt l'autre, le second
  * serait immappable → ruban noir ou décalé, un soir de match.
  *
- * Ce garde-fou est un TRIPWIRE, pas un test de feature. Il verrouille le fait que
- * le chemin de DÉPLOIEMENT reste indépendant du pliage tant que la divergence de
- * géométrie existe. Il doit échouer — et être révisé sciemment — le jour où :
- *   - quelqu'un câble l'étape D d'ADR-135 (diffuser le canvas composé), OU
- *   - quelqu'un unifie la géométrie (« toujours par côté »), ce qui supprime la
- *     divergence et rend ce garde-fou obsolète.
+ * ## Révisé en ADR-138 — la divergence est CORRIGÉE
+ *
+ * La géométrie est désormais unifiée : `computeSiteCanvas()` est le point d'entrée
+ * unique et plie TOUJOURS par côté. Le contenu ne choisit plus que les sources.
+ * Ce fichier ne documente donc plus une divergence à surveiller, mais deux
+ * invariants à tenir :
+ *
+ *   1. le canvas est une fonction pure du terrain (jamais du contenu) ;
+ *   2. le chemin de DÉPLOIEMENT reste indépendant du pliage — l'étape D d'ADR-135
+ *      n'est toujours pas câblée, et ne doit pas l'être par la bande.
  *
  * File-based + calcul pur (audit-then-guard), pas de DB requise.
  *
@@ -25,19 +27,15 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  computeRibbonDimensions,
-  computeFoldGeometry,
-  computeFoldGeometryPerSide,
-} from '../../services/led-fold.service';
+import { computeSiteCanvas } from '../../services/led-fold.service';
 
 const SRC = path.resolve(__dirname, '../..');
 const read = (rel: string) => fs.readFileSync(path.join(SRC, rel), 'utf8');
 
 /**
  * Profils LED réellement en production (relevés en DB le 2026-08-10).
- * Les deux sites sont `site_type='saas'` — aucun Pi. Aucun côté ne dépasse
- * `band_width`, donc le pliage est un no-op fonctionnel pour tout le parc.
+ * Les deux sites sont `site_type='saas'` — aucun Pi. Aucun CÔTÉ ne dépasse
+ * `band_width` : le pliage par côté ne coupe donc jamais à l'intérieur d'un côté.
  */
 interface ProfilProd {
   site: string;
@@ -70,54 +68,45 @@ const PROFILS_PROD: ProfilProd[] = [
 ];
 
 describe('Smoke — invariant : le canvas LED ne dépend pas du contenu', () => {
-  describe('la divergence de géométrie est réelle (raison d’être du garde-fou)', () => {
-    it.each(PROFILS_PROD)(
-      '$site — uniforme et par-côté ne donnent pas le même canvas',
-      ({ sides, pitchMm, height, bandWidth, bandCountConfirme }) => {
-        const ribbon = computeRibbonDimensions({ sides, pitchMm, height });
-        const uniforme = computeFoldGeometry({
-          ribbonWidth: ribbon.ribbonWidth,
-          ribbonHeight: ribbon.ribbonHeight,
-          bandWidth,
-        });
-        const parCote = computeFoldGeometryPerSide({ sides, pitchMm, height, bandWidth });
+  describe('le canvas ne dépend QUE du terrain (ADR-138)', () => {
+    it.each(PROFILS_PROD)('$site — canvas dérivé du seul profil', ({ sides, pitchMm, height, bandWidth }) => {
+      const canvas = computeSiteCanvas({
+        sides: [...sides],
+        pitch: pitchMm,
+        height,
+        canvas_in: { band_width: bandWidth },
+      });
+      // Toujours par côté : chaque côté est un bloc de bandes contigu.
+      expect(canvas.geometry.segments).toHaveLength(sides.length);
+      expect(canvas.canvasWidth).toBe(bandWidth);
+      expect(canvas.canvasHeight).toBe(canvas.derivedBandCount * height);
+    });
 
-        // Le canvas est identique en LARGEUR (= band_width) mais la HAUTEUR dépend
-        // du nombre de bandes, qui dépend du mode de pliage.
-        expect(uniforme.canvasWidth).toBe(parCote.canvasWidth);
-
-        // Si un installateur a figé band_count, il l'a fait sur la géométrie
-        // UNIFORME : c'est cette valeur-là qui est gravée dans le processeur.
-        if (bandCountConfirme !== null) {
-          expect(uniforme.bandCount).toBe(bandCountConfirme);
-          expect(parCote.bandCount).not.toBe(bandCountConfirme);
-        }
-      }
-    );
-
-    it('Lanester : basculer en par-côté doublerait la hauteur du canvas gravé', () => {
-      const p = PROFILS_PROD[0];
-      const ribbon = computeRibbonDimensions({
+    it('un band_count figé divergent est SIGNALÉ, jamais écrasé', () => {
+      const p = PROFILS_PROD[0]; // Lanester : 1 bande figée, 2 dérivées
+      const canvas = computeSiteCanvas({
         sides: [...p.sides],
-        pitchMm: p.pitchMm,
+        pitch: p.pitchMm,
         height: p.height,
+        canvas_in: { band_width: p.bandWidth, band_count: p.bandCountConfirme ?? undefined },
       });
-      const uniforme = computeFoldGeometry({
-        ribbonWidth: ribbon.ribbonWidth,
-        ribbonHeight: ribbon.ribbonHeight,
-        bandWidth: p.bandWidth,
-      });
-      const parCote = computeFoldGeometryPerSide({
-        sides: [...p.sides],
-        pitchMm: p.pitchMm,
-        height: p.height,
-        bandWidth: p.bandWidth,
-      });
+      expect(canvas.confirmedBandCount).toBe(1);
+      expect(canvas.derivedBandCount).toBe(2);
+      expect(canvas.confirmedIsStale).toBe(true);
+      // La valeur figée décrit ce qui est gravé dans le processeur : la corriger
+      // en douce ferait diverger le canvas émis de la config matérielle réelle.
+    });
 
-      // 1 bande (110 px) vs 2 bandes (220 px) : le processeur de Lanester attend 110.
-      expect(uniforme.canvasHeight).toBe(110);
-      expect(parCote.canvasHeight).toBe(220);
-      expect(parCote.canvasHeight).toBeGreaterThan(uniforme.canvasHeight);
+    it('sans band_count figé, rien à signaler', () => {
+      const p = PROFILS_PROD[1]; // Piraths : provisoire
+      const canvas = computeSiteCanvas({
+        sides: [...p.sides],
+        pitch: p.pitchMm,
+        height: p.height,
+        canvas_in: { band_width: p.bandWidth },
+      });
+      expect(canvas.confirmedBandCount).toBeNull();
+      expect(canvas.confirmedIsStale).toBe(false);
     });
   });
 

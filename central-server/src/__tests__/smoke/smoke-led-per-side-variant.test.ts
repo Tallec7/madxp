@@ -67,16 +67,33 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
     expect(read('repositories/index.ts')).toMatch(/type VideoVariantSideFile/);
   });
 
-  it('le worker d’export compose PAR CÔTÉ quand la variante a des side_files', () => {
+  it('le worker compose par côté, et la GÉOMÉTRIE ne regarde plus le contenu (ADR-138)', () => {
     const worker = read('services/led-export-worker.service.ts');
-    // Branche per-side : side_files → applyPerSideFold (géométrie par côté).
-    expect(worker).toMatch(/computeFoldGeometryPerSide/);
+
+    // Chemin unique : une seule géométrie, issue du terrain seul.
+    expect(worker).toMatch(/computeSiteCanvas/);
     expect(worker).toMatch(/applyPerSideFold/);
-    expect(worker).toMatch(/async function performPerSideExport/);
-    // Détection : side_files non vide → composition par côté.
-    expect(worker).toMatch(/sideFiles\.length > 0/);
-    // Repli : un côté sans fichier retombe sur la source uniforme.
-    expect(worker).toMatch(/\?\?\s*uniformFallback/);
+
+    // Assertion NÉGATIVE — c'est la formulation buguée qu'on bloque : brancher la
+    // géométrie sur le contenu redonnait deux canvas de hauteurs différentes pour
+    // le même club (uniforme 7 bandes vs par côté 8), immappables par un
+    // processeur gravé une fois à l'installation.
+    expect(worker).not.toMatch(/async function performPerSideExport/);
+    expect(worker).not.toMatch(/if \(sideFiles\.length > 0\)\s*\{?\s*return/);
+    expect(worker).not.toMatch(/computeFoldGeometryPerSide|computeRibbonDimensions/);
+
+    // Le contenu ne choisit plus que les SOURCES : side_files[i], sinon l'uniforme.
+    expect(worker).toMatch(/side_index === i\)\?\.storage_path \?\? uniformPath/);
+  });
+
+  it('un band_count figé qui ne correspond plus au dérivé est SIGNALÉ, pas écrasé', () => {
+    // La valeur figée décrit ce qui est gravé dans le processeur : la corriger en
+    // douce ferait diverger le canvas émis de la config matérielle réelle.
+    const worker = read('services/led-export-worker.service.ts');
+    expect(worker).toMatch(/confirmedIsStale/);
+    expect(worker).toMatch(/logger\.warn\(/);
+    const fold = read('services/led-fold.service.ts');
+    expect(fold).toMatch(/confirmedIsStale:\s*confirmed !== null && confirmed !== geometry\.bandCount/);
   });
 
   it('l’enrichissement déploiement SAUTE les variantes par côté sans fichier (anti MP4 noir)', () => {
