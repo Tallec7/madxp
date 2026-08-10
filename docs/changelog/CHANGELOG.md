@@ -1,3 +1,9 @@
+# [4.17.0](https://github.com/Tallec7/madxp/compare/v4.16.0...v4.17.0) (2026-08-10)
+
+### Features
+
+- **led:** mire de diagnostic — remplacer le SPIKE matériel par une photo ([#1138](https://github.com/Tallec7/madxp/issues/1138)) ([ac2da77](https://github.com/Tallec7/madxp/commit/ac2da7724120d5c390fa79c691dd85fea157a0f9))
+
 # [4.16.0](https://github.com/Tallec7/madxp/compare/v4.15.1...v4.16.0) (2026-08-10)
 
 ### Features
