@@ -1,3 +1,9 @@
+## [4.15.1](https://github.com/Tallec7/madxp/compare/v4.15.0...v4.15.1) (2026-08-10)
+
+### Bug Fixes
+
+- **saas:** lire la présence d'un site SaaS sur ses navigateurs, pas sur l'agent Pi ([#1135](https://github.com/Tallec7/madxp/issues/1135)) ([495f1c9](https://github.com/Tallec7/madxp/commit/495f1c91ce46a5354080330084fea215072d8ca5))
+
 # [4.15.0](https://github.com/Tallec7/madxp/compare/v4.14.9...v4.15.0) (2026-08-10)
 
 ### Features
