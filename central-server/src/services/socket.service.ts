@@ -828,6 +828,27 @@ class SocketService {
    * Count SaaS browser clients connected to a site's room.
    * SaaS clients join the room via saas-register but are NOT in connectedSites (Pi agents only).
    */
+  /**
+   * Sites SaaS ayant au moins un écran navigateur (`saas-tv`) connecté maintenant.
+   *
+   * Inverse de `getSaasClientCount` : on balaie les sockets une fois plutôt que
+   * d'interroger room par room. Sert au heartbeat SaaS, qui rafraîchit
+   * `last_seen_at` pendant la diffusion — sans lui, l'horodatage reste figé à la
+   * connexion et l'historique de présence est faux (les onglets Remote,
+   * `saas-remote`, sont exclus : une télécommande n'est pas un écran).
+   */
+  getConnectedSaasSiteIds(): string[] {
+    if (!this.io) return [];
+    const siteIds = new Set<string>();
+    for (const sock of this.io.sockets.sockets.values()) {
+      const s = sock as unknown as { clientType?: string; siteId?: string };
+      if (s.clientType === 'saas-tv' && s.siteId) {
+        siteIds.add(s.siteId);
+      }
+    }
+    return [...siteIds];
+  }
+
   getSaasClientCount(siteId: string): number {
     if (!this.io) return 0;
     const room = this.io.sockets.adapter.rooms.get(siteId);

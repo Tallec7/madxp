@@ -21,6 +21,7 @@ import { adminOpsService } from './services/admin-ops.service';
 import { alertingService } from './services/alerting.service';
 import { alertService } from './services/alert.service';
 import { realtimeStatsService } from './services/realtime-stats.service';
+import { saasHeartbeatService } from './services/saas-heartbeat.service';
 import { subscriptionService } from './services/subscription.service';
 import { cleanupStaleTempFiles } from './middleware/upload';
 
@@ -584,6 +585,10 @@ const startServer = async () => {
       realtimeStatsService.initialize(io);
       realtimeStatsService.start();
       logger.info('Realtime stats service started');
+
+      // Heartbeat SaaS — un site sans Pi n'a pas d'agent qui bat : sans ça son
+      // `last_seen_at` reste figé à la connexion et l'historique de présence est faux.
+      saasHeartbeatService.start(() => socketService.getConnectedSaasSiteIds());
     }
 
     // Start memory manager with cleanup callbacks
@@ -718,6 +723,7 @@ process.on('SIGTERM', async () => {
   schedulerService.stop();
   cronSchedulerService.stop();
   memoryManagerService.stop();
+  saasHeartbeatService.stop();
   alertingService.cleanup();
   adminOpsService.stopCleanup();
 
