@@ -13,24 +13,34 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
+import { ledPitchMm, ledRibbonWidth, ledBandWidth } from '../../../../../core/utils/led-geometry';
 import { environment } from '../../../../../../environments/environment';
 
 interface DisplayTemplate {
   icon: string;
   label: string;
   type: string;
-  resolution: string;
+  /** Résolution standard du type, ou `null` quand elle se dérive de la géométrie. */
+  resolution: string | null;
 }
 
 /** Type d'écran LED périmétrique (PROP-014) — pilote l'affichage du panneau LED. */
 const LED_PERIMETER_TYPE = 'led-perimeter';
 
+/**
+ * Gabarits d'écran. `resolution` est la résolution STANDARD du type, écrite à la
+ * création — sauf pour `led-perimeter`, dont la résolution ne peut pas être une
+ * constante : elle se DÉRIVE du profil du terrain (côtés × pitch → bandes × hauteur).
+ * D'où `resolution: null` : rien n'est persisté, `getDisplayResolution()` calcule.
+ * Avant, la valeur '1920x1120' était figée ici et devenait fausse dès que
+ * l'opérateur touchait un côté — y compris dans l'aide à l'upload côté Contenu.
+ */
 const DISPLAY_TEMPLATES: DisplayTemplate[] = [
   { icon: '📺', label: 'TV classique', type: 'tv', resolution: '1920x1080' },
   { icon: '🖥️', label: 'Bandeau LED horizontal', type: 'led-banner', resolution: '1920x384' },
   { icon: '📱', label: 'Totem portrait', type: 'totem', resolution: '1080x1920' },
   { icon: '🖥️', label: 'Mur LED', type: 'led-wall', resolution: '1920x1080' },
-  { icon: '🟥', label: 'LED périmétrique (bord de terrain)', type: LED_PERIMETER_TYPE, resolution: '1920x1120' },
+  { icon: '🟥', label: 'LED périmétrique (bord de terrain)', type: LED_PERIMETER_TYPE, resolution: null },
 ];
 
 @Component({
@@ -51,18 +61,30 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           (blur)="onDisplayChanged()"
           placeholder="Nom de l'ecran"
         />
-        <span class="display-type-label">{{ display.type }}</span>
-        <span class="display-resolution" *ngIf="display.resolution">{{ display.resolution }}</span>
-
-        <!-- Receiver badge — Phase 8 -->
-        <!-- State 1: Pi native (index 0 or kind=pi_native) -->
+        <!-- Type éditable sur TOUS les écrans, #0 compris : l'index dit quelle sortie,
+             le type dit quelle surface est branchée. Un club peut avoir son ruban LED
+             en sortie principale (PROP-014 §1). -->
+        <select
+          class="display-type-select"
+          [ngModel]="display.type"
+          (ngModelChange)="updateDisplayType(display, $event)"
+          [attr.data-testid]="'display-type-' + display.index"
+          [attr.aria-label]="'Type de l’écran #' + display.index"
+        >
+          <option *ngFor="let t of getTypeOptions(display)" [value]="t.type">
+            {{ t.icon }} {{ t.label }}
+          </option>
+        </select>
         <span
-          class="receiver-badge receiver-badge--native"
-          *ngIf="display.index === 0 || display.receiver?.kind === 'pi_native'"
-          title="Ecran principal — connecté directement au Pi"
-          >🖥️ Pi HDMI</span
+          class="display-resolution"
+          *ngIf="getDisplayResolution(display) as res"
+          [attr.data-testid]="'display-resolution-' + display.index"
+          title="Résolution effective — calculée, non saisie"
+          >{{ res }}</span
         >
 
+        <!-- Receiver badge — Phase 8. Pas de badge « Pi HDMI » : un écran ne sait pas
+             qui le pilote. La distinction Pi / pas-Pi vit sur site_type. -->
         <!-- State 2: Fire Stick assigned — Phase 11: badge MAC séparé + bouton [Réassigner ▾] -->
         <ng-container
           *ngIf="display.index !== 0 && display.receiver?.kind === 'firestick' && display.receiver?.mac"
@@ -356,7 +378,8 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           *ngFor="let tpl of templates"
           (click)="addFromTemplate(tpl)"
         >
-          {{ tpl.icon }} {{ tpl.label }} <span class="tpl-resolution">({{ tpl.resolution }})</span>
+          {{ tpl.icon }} {{ tpl.label }}
+          <span class="tpl-resolution">({{ templateResolutionLabel(tpl) }})</span>
         </button>
         <button class="template-option template-custom" (click)="openCustomForm()">
           ⚙️ Personnalise...
@@ -423,13 +446,25 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       outline: none;
     }
 
-    .display-type-label {
+    .display-type-select {
       font-size: 0.75rem;
-      color: #64748b;
+      color: #334155;
       background: #e2e8f0;
-      padding: 0.125rem 0.5rem;
+      border: 1px solid #cbd5e1;
+      padding: 0.125rem 0.375rem;
       border-radius: 4px;
       white-space: nowrap;
+      cursor: pointer;
+      max-width: 14rem;
+    }
+
+    .display-type-select:hover {
+      border-color: #94a3b8;
+    }
+
+    .display-type-select:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 1px;
     }
 
     .display-resolution {
@@ -1169,12 +1204,72 @@ export class DisplaysEditorComponent implements OnDestroy {
     return tpl?.icon || '🖥️';
   }
 
+  /**
+   * Résolution EFFECTIVE d'un écran — la seule source affichable.
+   *
+   * Pour un `led-perimeter`, elle est CALCULÉE depuis la géométrie du terrain
+   * (largeur de bande × bandes effectives × hauteur de dalle) : elle suit donc les
+   * côtés, le pitch et la hauteur en direct. Pour tout autre type, c'est la
+   * résolution standard choisie à la création. Renvoie `null` quand il n'y a rien
+   * d'affichable (profil incomplet, type personnalisé sans résolution).
+   */
+  getDisplayResolution(display: DisplayConfig): string | null {
+    if (this.isLedPerimeter(display)) {
+      const w = this.getLedBandWidth(display);
+      const h = this.getLedCanvasHeight(display);
+      return w > 0 && h > 0 ? `${w}x${h}` : null;
+    }
+    return display.resolution || null;
+  }
+
+  /** Libellé de résolution dans le menu de gabarits (dérivée ⇒ pas de constante). */
+  templateResolutionLabel(tpl: DisplayTemplate): string {
+    return tpl.resolution ?? 'selon le terrain';
+  }
+
+  /**
+   * Types proposés pour un écran : les gabarits connus, plus son type actuel s'il
+   * est personnalisé — sans quoi changer un autre champ ferait silencieusement
+   * retomber un slug custom sur le premier gabarit de la liste.
+   */
+  getTypeOptions(display: DisplayConfig): DisplayTemplate[] {
+    const known = DISPLAY_TEMPLATES.some(t => t.type === display.type);
+    if (known || !display.type) return DISPLAY_TEMPLATES;
+    return [...DISPLAY_TEMPLATES, { icon: '⚙️', label: display.type, type: display.type, resolution: null }];
+  }
+
+  /**
+   * Change le type d'un écran, y compris le #0. Le profil LED suit le type :
+   * il apparaît en entrant sur `led-perimeter`, et disparaît en sortant (sinon un
+   * profil orphelin resterait en base sur un écran qui n'est plus un ruban).
+   * La résolution suit la même règle que `addFromTemplate` : persistée quand elle
+   * est standard, absente quand elle se dérive.
+   */
+  updateDisplayType(display: DisplayConfig, type: string): void {
+    if (!type || type === display.type) return;
+    display.type = type;
+
+    const tpl = DISPLAY_TEMPLATES.find(t => t.type === type);
+    if (tpl?.resolution) display.resolution = tpl.resolution;
+    else delete display.resolution;
+
+    if (type === LED_PERIMETER_TYPE) {
+      if (!display.led) display.led = this.defaultLedProfile();
+    } else if (display.led) {
+      delete display.led;
+    }
+
+    this.onDisplayChanged();
+  }
+
   addFromTemplate(tpl: DisplayTemplate): void {
     const nextIndex = this.getNextIndex();
-    this.displays = [
-      ...this.displays,
-      { index: nextIndex, name: tpl.label, type: tpl.type, resolution: tpl.resolution },
-    ];
+    // `resolution` n'est PAS persistée quand elle se dérive (led-perimeter) : une
+    // valeur figée en base redeviendrait fausse au premier changement de côté.
+    const display: DisplayConfig = { index: nextIndex, name: tpl.label, type: tpl.type };
+    if (tpl.resolution) display.resolution = tpl.resolution;
+    // Le setter `displays` normalise déjà le profil LED (`normalizeLed`).
+    this.displays = [...this.displays, display];
     this.showTemplateMenu = false;
     this.displaysChange.emit(this.displays);
   }
@@ -1350,7 +1445,6 @@ export class DisplaysEditorComponent implements OnDestroy {
       pitch: 'P6',
       height: 160,
       spacing_m: 10,
-      zones: 'uniform',
       canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
     };
   }
@@ -1384,9 +1478,7 @@ export class DisplaysEditorComponent implements OnDestroy {
 
   /** Pas de pixel en mm (P6 → 6). Retourne 0 si non parsable. */
   private pitchMm(pitch: string | undefined): number {
-    if (!pitch) return 0;
-    const mm = parseFloat(pitch.replace(/^P/i, ''));
-    return Number.isFinite(mm) && mm > 0 ? mm : 0;
+    return ledPitchMm(pitch);
   }
 
   /**
@@ -1418,16 +1510,11 @@ export class DisplaysEditorComponent implements OnDestroy {
 
   /** Largeur du ruban déroulé (px) = Σ côtés (m) × (1000 / pitch_mm). PROP-014 §3. */
   getLedRibbonWidth(display: DisplayConfig): number {
-    const led = display.led;
-    if (!led) return 0;
-    const mm = this.pitchMm(led.pitch);
-    if (mm === 0) return 0;
-    const sumSides = (led.sides ?? []).reduce((a, b) => a + b, 0);
-    return Math.round(sumSides * (1000 / mm));
+    return ledRibbonWidth(display.led);
   }
 
   private bandWidth(display: DisplayConfig): number {
-    return display.led?.canvas_in?.band_width || 1920;
+    return ledBandWidth(display.led);
   }
 
   /** Largeur d'entrée processeur (px) — exposé au template (section Avancé). */

@@ -1,0 +1,70 @@
+/**
+ * Géométrie LED périmétrique — helpers purs côté dashboard.
+ *
+ * ⚠️ SOURCE DE VÉRITÉ : `central-server/src/services/led-fold.service.ts`
+ * (`computeRibbonDimensions` / `computeFoldGeometry`). Ce module en est une
+ * transposition minimale pour l'affichage — frontière de bundle, le dashboard ne
+ * peut pas importer `central-server/src`. Toute évolution de la formule doit être
+ * répercutée des deux côtés (même contrainte que la composition Remotion, ADR-134).
+ *
+ * Sert à DÉRIVER ce qui était figé en dur : la résolution d'un écran LED n'est pas
+ * une constante de gabarit, elle dépend du terrain (côtés × pitch × hauteur).
+ */
+
+import { LedProfileConfig } from '../models';
+
+/** Largeur de bande par défaut = entrée processeur (px), provisoire jusqu'au SPIKE-003. */
+export const DEFAULT_LED_BAND_WIDTH = 1920;
+
+/** Pas de pixel en mm depuis le libellé (`'P6'` → 6). `0` si illisible. */
+export function ledPitchMm(pitch: string | undefined): number {
+  if (!pitch) return 0;
+  const mm = parseFloat(pitch.replace(/^P/i, ''));
+  return Number.isFinite(mm) && mm > 0 ? mm : 0;
+}
+
+/** Largeur du ruban déroulé à plat (px) = Σ côtés × (1000 / pitch_mm). */
+export function ledRibbonWidth(led: LedProfileConfig | null | undefined): number {
+  if (!led) return 0;
+  const mm = ledPitchMm(led.pitch);
+  if (mm === 0) return 0;
+  const sumSides = (led.sides ?? []).reduce((a, b) => a + b, 0);
+  return Math.round(sumSides * (1000 / mm));
+}
+
+/** Largeur d'une bande (px) — override processeur, sinon le défaut. */
+export function ledBandWidth(led: LedProfileConfig | null | undefined): number {
+  return led?.canvas_in?.band_width || DEFAULT_LED_BAND_WIDTH;
+}
+
+/** Nb de bandes dérivé = ceil(ruban / largeur de bande). */
+export function ledBandCount(led: LedProfileConfig | null | undefined): number {
+  const ribbon = ledRibbonWidth(led);
+  const bw = ledBandWidth(led);
+  if (ribbon <= 0 || bw <= 0) return 0;
+  return Math.ceil(ribbon / bw);
+}
+
+/**
+ * Nb de bandes EFFECTIF : l'override figé par l'installateur (`canvas_in.band_count`)
+ * prime sur le dérivé — c'est lui qui est gravé dans le processeur.
+ */
+export function ledBandsEffective(led: LedProfileConfig | null | undefined): number {
+  return led?.canvas_in?.band_count ?? ledBandCount(led);
+}
+
+/** Hauteur du canvas plié (px) = bandes effectives × hauteur de dalle. */
+export function ledCanvasHeight(led: LedProfileConfig | null | undefined): number {
+  return ledBandsEffective(led) * (led?.height || 0);
+}
+
+/**
+ * Format que le club doit PRODUIRE : le ruban déroulé à plat (`largeur × hauteur`),
+ * pas le canvas plié — c'est ce que `validateLedFormat` juge côté serveur.
+ * `null` si le profil est incomplet.
+ */
+export function ledSourceFormat(led: LedProfileConfig | null | undefined): string | null {
+  const w = ledRibbonWidth(led);
+  const h = led?.height || 0;
+  return w > 0 && h > 0 ? `${w}x${h}` : null;
+}

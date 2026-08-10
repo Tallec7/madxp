@@ -161,9 +161,11 @@ export const schemas = {
           height: Joi.number().integer().positive().max(2000).required(),
           // Cadence de répétition du motif, en mètres (dropdown contraint côté UI).
           spacing_m: Joi.number().positive().max(500).required(),
-          // Legacy (PROP-014 §5) — dormant. Le « contenu par côté » a déménagé sur la
-          // variante d'une vidéo (révision ADR-135), il ne vit plus sur l'écran.
-          zones: Joi.string().valid('uniform', 'per-side').default('uniform'),
+          // `zones` (PROP-014 §5) est RETIRÉ du schéma : champ mort, aucun lecteur en
+          // production (vérifié 2026-08-10). Il n'est pas déclaré ici volontairement —
+          // `stripUnknown: true` le retire silencieusement des payloads legacy, sans
+          // 400, ce qui le fait disparaître de la DB à la première réécriture.
+          // Le « contenu par côté » vit sur la variante d'une vidéo (révision ADR-135).
           // ⏳ Config processeur LED — lue à l'install (SPIKE), défauts provisoires.
           canvas_in: Joi.object({
             band_width: Joi.number().integer().positive().max(7680).default(1920),
