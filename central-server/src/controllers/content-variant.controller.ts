@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import logger from '../config/logger';
+import { probeVideoDimensions } from '../utils/video-dimensions';
 import { AuthRequest } from '../types';
 import { videoRepository, videoVariantRepository, siteRepository, videoClubGrantRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
 import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
@@ -160,9 +161,12 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       return res.status(500).json({ error: 'Erreur lors de l\'upload de la variante' });
     }
 
-    // Parse dimensions si fournies
-    const width = req.body.width ? parseInt(req.body.width, 10) : null;
-    const height = req.body.height ? parseInt(req.body.height, 10) : null;
+    // Dimensions MESURÉES, pas déclarées : `req.body.width/height` n'était jamais
+    // envoyé par le dashboard, d'où 100 % de NULL en base et un validateur de
+    // format muet. Le corps de requête ne sert plus que de repli.
+    const probed = await probeVideoDimensions(tempFilePath);
+    const width = probed?.width ?? (req.body.width ? parseInt(req.body.width, 10) : null);
+    const height = probed?.height ?? (req.body.height ? parseInt(req.body.height, 10) : null);
 
     // Créer/mettre à jour la variante (UPSERT)
     const variant = await videoVariantRepository.create({
@@ -312,6 +316,8 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       return res.status(403).json({ error: 'Accès refusé', message: 'Vidéo source non autorisée pour votre club' });
     }
 
+    const sourceDimensions = dimensionsFromVideo(sourceVideo);
+
     // Create variant pointing to the source video's storage
     const variant = await videoVariantRepository.create({
       video_id: id,
@@ -322,8 +328,10 @@ export const createVideoVariantFromVideo = async (req: AuthRequest, res: Respons
       file_size: sourceVideo.file_size,
       checksum: sourceVideo.checksum || '',
       mime_type: 'video/mp4',
-      width: null,
-      height: null,
+      // Le fichier n'est pas local : on hérite des dimensions mesurées à l'upload
+      // de la vidéo source, plutôt que de laisser NULL.
+      width: sourceDimensions.width,
+      height: sourceDimensions.height,
       duration: sourceVideo.duration,
       metadata: { source_video_id: sourceVideoId },
       uploaded_by: req.user?.id || null,
@@ -411,6 +419,24 @@ export const updateVideoVariantLayout = async (req: AuthRequest, res: Response) 
  * Upload le fichier vidéo d'UN côté d'une variante led-perimeter « par côté »
  * (ADR-135). Stocke le fichier puis upsert l'élément dans `side_files`.
  */
+/**
+ * Dimensions d'une vidéo de la bibliothèque, telles que mesurées à son upload.
+ *
+ * Une variante « depuis une vidéo existante » ne télécharge pas le fichier : elle
+ * pointe le même binaire. Ses dimensions sont donc celles de la source — les lire
+ * dans `metadata` évite un NULL qui rendrait le validateur de format muet, et
+ * évite surtout de re-télécharger un fichier pour mesurer ce qu'on sait déjà.
+ */
+function dimensionsFromVideo(video: { metadata?: unknown } | null | undefined): {
+  width: number | null;
+  height: number | null;
+} {
+  const meta = (video?.metadata ?? {}) as Record<string, unknown>;
+  const w = typeof meta.width === 'number' && meta.width > 0 ? meta.width : null;
+  const h = typeof meta.height === 'number' && meta.height > 0 ? meta.height : null;
+  return { width: w, height: h };
+}
+
 export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) => {
   const file = req.file;
   const tempFilePath = file?.path;
@@ -455,8 +481,10 @@ export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) =>
       return res.status(500).json({ error: 'Erreur lors de l’upload du fichier de côté' });
     }
 
-    const width = req.body.width ? parseInt(req.body.width, 10) : null;
-    const height = req.body.height ? parseInt(req.body.height, 10) : null;
+    // Idem : on mesure le fichier reçu.
+    const probedSide = await probeVideoDimensions(tempFilePath);
+    const width = probedSide?.width ?? (req.body.width ? parseInt(req.body.width, 10) : null);
+    const height = probedSide?.height ?? (req.body.height ? parseInt(req.body.height, 10) : null);
 
     const sideFile: VideoVariantSideFile = {
       side_index: sideIndex,
@@ -533,6 +561,8 @@ export const setVideoVariantSideFromVideo = async (req: AuthRequest, res: Respon
       return res.status(403).json({ error: 'Accès refusé', message: 'Vidéo source non autorisée pour votre club' });
     }
 
+    const sourceDimensions = dimensionsFromVideo(sourceVideo);
+
     const sideFile: VideoVariantSideFile = {
       side_index: sideIndex,
       filename: sourceVideo.filename,
@@ -541,8 +571,8 @@ export const setVideoVariantSideFromVideo = async (req: AuthRequest, res: Respon
       file_size: sourceVideo.file_size,
       checksum: sourceVideo.checksum || '',
       mime_type: 'video/mp4',
-      width: null,
-      height: null,
+      width: sourceDimensions.width,
+      height: sourceDimensions.height,
     };
 
     const variant = await videoVariantRepository.setSideFile(id, displayType as DisplayType, sideFile);
