@@ -1,3 +1,9 @@
+# [4.19.0](https://github.com/Tallec7/madxp/compare/v4.18.0...v4.19.0) (2026-08-10)
+
+### Features
+
+- **content:** mesurer les dimensions vidéo à l'upload ([#1140](https://github.com/Tallec7/madxp/issues/1140)) ([bed4e6f](https://github.com/Tallec7/madxp/commit/bed4e6fa4da11a79106f9f3663322dab4a24f99e))
+
 # [4.18.0](https://github.com/Tallec7/madxp/compare/v4.17.0...v4.18.0) (2026-08-10)
 
 ### Features
