@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MadXP — Écrans & LED : parcours simplifié (v4)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0e1a;
+        --panel: #141a2e;
+        --panel2: #1c2440;
+        --panel3: #232d4d;
+        --line: #2a3454;
+        --line-soft: #212a45;
+        --txt: #e8ecf6;
+        --muted: #8a93ad;
+        --accent: #5b8cff;
+        --accent-dim: #2f4a8f;
+        --led: #ff5a3c;
+        --ok: #33d17a;
+        --warn: #ffb020;
+        --chip: #23304f;
+        --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+        --ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --bg: #f2f4fa;
+          --panel: #ffffff;
+          --panel2: #f6f8fd;
+          --panel3: #eaeffb;
+          --line: #d3dae9;
+          --line-soft: #e2e7f2;
+          --txt: #141a2e;
+          --muted: #5c6683;
+          --accent: #2c5fd6;
+          --accent-dim: #b9cbf5;
+          --led: #d63a1e;
+          --ok: #1c8b4d;
+          --warn: #9a6100;
+          --chip: #e6ebf7;
+        }
+      }
+
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --bg: #f2f4fa;
+        --panel: #ffffff;
+        --panel2: #f6f8fd;
+        --panel3: #eaeffb;
+        --line: #d3dae9;
+        --line-soft: #e2e7f2;
+        --txt: #141a2e;
+        --muted: #5c6683;
+        --accent: #2c5fd6;
+        --accent-dim: #b9cbf5;
+        --led: #d63a1e;
+        --ok: #1c8b4d;
+        --warn: #9a6100;
+        --chip: #e6ebf7;
+      }
+
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --bg: #0b0e1a;
+        --panel: #141a2e;
+        --panel2: #1c2440;
+        --panel3: #232d4d;
+        --line: #2a3454;
+        --line-soft: #212a45;
+        --txt: #e8ecf6;
+        --muted: #8a93ad;
+        --accent: #5b8cff;
+        --accent-dim: #2f4a8f;
+        --led: #ff5a3c;
+        --ok: #33d17a;
+        --warn: #ffb020;
+        --chip: #23304f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--txt);
+        font: 15px/1.55 var(--ui);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .masthead {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        padding: 22px 24px 20px;
+      }
+      .masthead-in {
+        max-width: 1040px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px 14px;
+      }
+      .masthead h1 {
+        margin: 0;
+        font-size: 21px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+      }
+      .masthead p {
+        margin: 8px 0 0;
+        flex-basis: 100%;
+        color: var(--muted);
+        font-size: 14px;
+        max-width: 68ch;
+      }
+
+      .tag {
+        background: var(--chip);
+        color: var(--muted);
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 28px 24px 72px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+
+      .screen {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .screen > header {
+        padding: 18px 22px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .screen-eyebrow {
+        font: 600 11.5px/1 var(--mono);
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .screen > header h2 {
+        margin: 0;
+        font-size: 17.5px;
+        font-weight: 640;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+      }
+      .screen > header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13.5px;
+        max-width: 72ch;
+      }
+      .screen-body {
+        padding: 20px 22px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .note {
+        border-left: 2px solid var(--accent);
+        background: var(--panel2);
+        padding: 12px 14px;
+        border-radius: 0 8px 8px 0;
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .note strong {
+        color: var(--txt);
+        font-weight: 600;
+      }
+      .note.note--warn {
+        border-left-color: var(--warn);
+      }
+      .note.note--led {
+        border-left-color: var(--led);
+      }
+
+      /* ── Faux dashboard chrome ───────────────────────────────── */
+      .app {
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        overflow: hidden;
+      }
+      .app-bar {
+        padding: 9px 14px;
+        background: var(--panel3);
+        border-bottom: 1px solid var(--line-soft);
+        font: 600 12px/1 var(--ui);
+        color: var(--muted);
+        letter-spacing: 0.02em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .app-body {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .disp {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .disp--focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent-dim);
+      }
+      .disp-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-wrap: wrap;
+        padding: 11px 13px;
+      }
+      .hdmi {
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        background: var(--chip);
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 5px 7px;
+        white-space: nowrap;
+      }
+      .disp-name {
+        font-weight: 600;
+        font-size: 14px;
+        min-width: 0;
+      }
+      .type-pick {
+        font: 500 12.5px/1 var(--ui);
+        color: var(--txt);
+        background: var(--panel3);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+      .derived {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .derived-label {
+        font: 600 10.5px/1 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+      }
+      .px {
+        font: 600 12.5px/1 var(--mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--ok);
+        background: color-mix(in srgb, var(--ok) 13%, transparent);
+        border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent);
+        border-radius: 5px;
+        padding: 5px 8px;
+        white-space: nowrap;
+      }
+      .px--stale {
+        color: var(--warn);
+        background: color-mix(in srgb, var(--warn) 13%, transparent);
+        border-color: color-mix(in srgb, var(--warn) 34%, transparent);
+      }
+
+      /* ── Bloc géométrie (gabarit commun) ─────────────────────── */
+      .geo {
+        border-top: 1px solid var(--line-soft);
+        padding: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .geo-head {
+        font: 600 10.5px/1 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .geo-head::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+      }
+      .fields {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px 18px;
+        align-items: flex-end;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .field > span {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .field input,
+      .field select {
+        font: 500 13.5px/1 var(--ui);
+        color: var(--txt);
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 7px 8px;
+      }
+      .field input[type='number'] {
+        width: 78px;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .field small {
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+
+      .sides-editor {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .side-chip {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 3px 3px 3px 7px;
+      }
+      .side-chip > b {
+        font: 700 10px/1 var(--mono);
+        color: var(--bg);
+        background: var(--side, var(--accent));
+        border-radius: 3px;
+        padding: 3px 4px;
+      }
+      .side-chip input {
+        width: 52px;
+        font: 500 13px/1 var(--mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--txt);
+        background: transparent;
+        border: 0;
+        padding: 5px 2px;
+      }
+      .side-chip input:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+        border-radius: 3px;
+      }
+      .icon-btn {
+        font: 600 13px/1 var(--ui);
+        color: var(--muted);
+        background: transparent;
+        border: 0;
+        border-radius: 4px;
+        padding: 5px 6px;
+        cursor: pointer;
+      }
+      .icon-btn:hover {
+        color: var(--txt);
+        background: var(--chip);
+      }
+      .icon-btn--add {
+        border: 1px dashed var(--line);
+        color: var(--accent);
+        padding: 7px 10px;
+      }
+
+      /* ── Dérivation : la ligne identique pour tous les types ── */
+      .derivation {
+        background: var(--panel2);
+        border: 1px solid var(--line-soft);
+        border-radius: 9px;
+        padding: 12px 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .deriv-chain {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 10px;
+        font-size: 13px;
+      }
+      .deriv-step {
+        font: 500 12.5px/1 var(--mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 8px;
+      }
+      .deriv-arrow {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .deriv-out {
+        font: 650 13px/1 var(--mono);
+        font-variant-numeric: tabular-nums;
+        color: var(--ok);
+        background: color-mix(in srgb, var(--ok) 13%, transparent);
+        border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent);
+        border-radius: 6px;
+        padding: 6px 9px;
+      }
+      .deriv-out--bad {
+        color: var(--led);
+        background: color-mix(in srgb, var(--led) 13%, transparent);
+        border-color: color-mix(in srgb, var(--led) 40%, transparent);
+      }
+      .deriv-caption {
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .deriv-caption strong {
+        color: var(--txt);
+      }
+
+      /* ── Visualisation des bandes ────────────────────────────── */
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: 300px;
+      }
+      .stack-band {
+        height: 15px;
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        padding-left: 5px;
+        font: 600 9px/1 var(--mono);
+        color: #0b0e1a;
+        letter-spacing: 0.03em;
+        overflow: hidden;
+      }
+      .stack-wrap {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .stack-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex: none;
+      }
+
+      /* ── Variantes / contenu ─────────────────────────────────── */
+      .radio-set {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .radio-card {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 11px 13px;
+        cursor: pointer;
+      }
+      .radio-card--on {
+        border-color: var(--accent);
+        background: var(--panel3);
+      }
+      .radio-card > span:first-child {
+        margin-top: 2px;
+        width: 13px;
+        height: 13px;
+        flex: none;
+        border-radius: 50%;
+        border: 2px solid var(--muted);
+      }
+      .radio-card--on > span:first-child {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 2.5px var(--panel3);
+        background: var(--accent);
+      }
+      .radio-card b {
+        font-weight: 600;
+        font-size: 13.5px;
+      }
+      .radio-card small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+      }
+
+      .slots {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-top: 4px;
+      }
+      .slot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 11px;
+        flex-wrap: wrap;
+      }
+      .slot-badge {
+        font: 700 10px/1 var(--mono);
+        color: var(--bg);
+        background: var(--side, var(--accent));
+        border-radius: 3px;
+        padding: 4px 5px;
+        flex: none;
+      }
+      .slot-name {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .slot-meta {
+        font: 500 11.5px/1 var(--mono);
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .slot-file {
+        margin-left: auto;
+        font-size: 12.5px;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn-ghost {
+        font: 600 12px/1 var(--ui);
+        color: var(--accent);
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 9px;
+        cursor: pointer;
+      }
+      .btn-ghost:hover {
+        border-color: var(--accent);
+      }
+      .filechip {
+        font: 500 12px/1 var(--mono);
+        color: var(--txt);
+        background: var(--chip);
+        border-radius: 5px;
+        padding: 5px 7px;
+      }
+
+      /* ── Section installateur ────────────────────────────────── */
+      .installer {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel2);
+        overflow: hidden;
+      }
+      .installer > summary {
+        padding: 11px 13px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        list-style: none;
+      }
+      .installer > summary::-webkit-details-marker {
+        display: none;
+      }
+      .installer > summary::before {
+        content: '▸';
+        color: var(--muted);
+        font-size: 11px;
+        transition: transform 0.15s;
+      }
+      .installer[open] > summary::before {
+        transform: rotate(90deg);
+      }
+      .installer > summary:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+      .installer-body {
+        padding: 0 13px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border-top: 1px solid var(--line-soft);
+        padding-top: 13px;
+      }
+
+      /* ── Tableau avant / après ───────────────────────────────── */
+      .table-scroll {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 560px;
+        font-size: 13.5px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: top;
+      }
+      th {
+        font: 600 10.5px/1.3 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        border-bottom-color: var(--line);
+      }
+      td:first-child {
+        font-weight: 600;
+        width: 30%;
+      }
+      .kill {
+        color: var(--muted);
+        text-decoration: line-through;
+        text-decoration-color: color-mix(in srgb, var(--led) 70%, transparent);
+      }
+      .keep {
+        color: var(--ok);
+      }
+
+      code {
+        font: 500 12.5px var(--mono);
+        background: var(--chip);
+        border-radius: 4px;
+        padding: 1.5px 5px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+      @media (max-width: 640px) {
+        .derived {
+          margin-left: 0;
+          width: 100%;
+        }
+        .wrap {
+          padding: 20px 14px 56px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="masthead">
+      <div class="masthead-in">
+        <h1>Écrans &amp; LED périmétrique — parcours simplifié</h1>
+        <span class="tag">Maquette v5</span>
+        <span class="tag">avant code</span>
+        <p>
+          Une seule règle porte toute la simplification :
+          <strong>la géométrie appartient à l'écran, le contenu appartient à la vidéo</strong>. La
+          LED périmétrique cesse d'être un cas spécial — c'est un type d'écran dont les unités
+          naturelles sont des mètres et un pitch, au lieu de pixels. Et rien ici ne suppose un
+          Raspberry Pi : un écran est une configuration, et le lecteur qui la rend — Pi, navigateur,
+          PC en HDMI — n'a pas à figurer dedans.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- ══════════ 1 ══════════ -->
+      <section class="screen">
+        <header>
+          <span class="screen-eyebrow">Le principe</span>
+          <h2>Un écran ne sait pas qui le pilote</h2>
+          <p>
+            L'index dit <em>quelle sortie</em>. Le type dit <em>quelle surface est branchée</em>.
+            C'est tout. Rien ici ne parle de Raspberry Pi, de Fire Stick ou de PC — un écran est une
+            configuration, et ce qui la rend la lit.
+          </p>
+        </header>
+        <div class="screen-body">
+          <div class="deriv-chain">
+            <span class="deriv-step">Index&nbsp;→&nbsp;quelle sortie</span>
+            <span class="deriv-arrow">·</span>
+            <span class="deriv-step">Type&nbsp;→&nbsp;quelle surface</span>
+            <span class="deriv-arrow">·</span>
+            <span class="deriv-step">Géométrie&nbsp;→&nbsp;unités naturelles du type</span>
+            <span class="deriv-arrow">=</span>
+            <span class="deriv-out">Canvas effectif (calculé)</span>
+          </div>
+          <div class="note">
+            <strong>Pourquoi aucun champ « source » :</strong> la distinction Pi / pas-Pi existe
+            déjà une fois, au bon niveau — <code>site_type</code>, que le déploiement consomme. La
+            dupliquer sur chaque écran n'ajouterait rien, et rendrait à l'écran une dépendance qu'on
+            cherche justement à lui retirer. Le badge « Pi HDMI » collé en dur sur l'index #0
+            disparaît, il ne dit rien d'utile.
+          </div>
+          <div class="note">
+            <strong>Ce qui change dans le modèle :</strong> <code>resolution</code> n'est plus une
+            chaîne saisie ni codée en dur dans le gabarit — c'est une
+            <strong>valeur dérivée</strong>, pour tous les types. Une TV la dérive d'un standard
+            choisi dans une liste ; un ruban LED la dérive de ses côtés + pitch + hauteur. Même
+            gabarit d'écran, même ligne de dérivation, deux jeux de champs.
+          </div>
+          <div class="note note--warn">
+            <strong>Le canvas ne dépend jamais du contenu diffusé.</strong> Aujourd'hui une vidéo «
+            par côté » et une vidéo « uniforme » produisent deux canvas différents (1920×1280 vs
+            1920×1120) sur le même club — un processeur LED figé à l'installation ne peut pas suivre
+            les deux.
+          </div>
+          <div class="note note--led">
+            <strong>Le signal, lui, contraint la géométrie.</strong> Un canvas plié fait
+            <code>bandes × rangées</code> de haut — une hauteur arbitraire, rarement un mode vidéo
+            standard. D'où une contrainte dure, vérifiée en direct plus bas :
+            <strong>Σ bandes × rangées ≤ hauteur du signal</strong>. Un club en 1080p ne peut pas
+            diffuser certains profils. C'est une propriété <em>du signal constaté</em>, pas de la
+            marque du boîtier — raison de plus pour ne modéliser que le signal.
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ 2 ══════════ -->
+      <section class="screen">
+        <header>
+          <span class="screen-eyebrow">Écran A · Réglages du site</span>
+          <h2>La liste des écrans, un seul gabarit</h2>
+          <p>
+            Ce club n'a <strong>pas de Pi</strong> — comme les deux seuls clubs LED en production
+            aujourd'hui. Rien sur cet écran ne le trahit, et c'est le but : la configuration est la
+            même, seul le lecteur change.
+          </p>
+        </header>
+        <div class="screen-body">
+          <div class="app">
+            <div class="app-bar">🖥️ Écrans du site — HB Mangin-Beaulieu</div>
+            <div class="app-body">
+              <div class="disp disp--focus">
+                <div class="disp-row">
+                  <span class="hdmi">#0</span>
+                  <span class="disp-name">Ruban bord de terrain</span>
+                  <select class="type-pick" aria-label="Type de l'écran #0">
+                    <option selected>🟥 LED périmétrique</option>
+                    <option>📺 TV classique</option>
+                    <option>🖥️ Bandeau LED</option>
+                    <option>📱 Totem portrait</option>
+                  </select>
+                  <span class="derived">
+                    <span class="derived-label">Canvas</span>
+                    <span class="px" id="hdr-canvas">1920 × 1280</span>
+                  </span>
+                </div>
+                <div class="geo">
+                  <div class="geo-head">Géométrie du ruban</div>
+                  <div class="fields">
+                    <label class="field">
+                      <span>Côtés du terrain (m)</span>
+                      <div class="sides-editor" id="sides-editor"></div>
+                      <small id="perimeter-hint">Périmètre 80 m</small>
+                    </label>
+                    <label class="field">
+                      <span>Pitch</span>
+                      <select id="pitch">
+                        <option value="2.5">P2.5</option>
+                        <option value="4">P4</option>
+                        <option value="6" selected>P6</option>
+                        <option value="8">P8</option>
+                        <option value="10">P10</option>
+                      </select>
+                      <small>pas entre 2 LED</small>
+                    </label>
+                    <label class="field">
+                      <span>Hauteur de dalle</span>
+                      <input type="number" id="height-cm" value="96" min="10" max="400" step="1" />
+                      <small id="rows-hint">= 160 rangées @ P6</small>
+                    </label>
+                    <label class="field">
+                      <span>Sortie vidéo vers le processeur</span>
+                      <select id="signal">
+                        <option value="1920x1080">Full HD — 1920 × 1080</option>
+                        <option value="1920x1200">WUXGA — 1920 × 1200</option>
+                        <option value="2560x1440">QHD — 2560 × 1440</option>
+                        <option value="3840x2160" selected>4K UHD — 3840 × 2160</option>
+                      </select>
+                      <small id="signal-hint">le mode constaté en sortie</small>
+                    </label>
+                  </div>
+
+                  <div class="derivation">
+                    <div class="deriv-chain">
+                      <span class="deriv-step" id="chain-sides">3 côtés · 80 m</span>
+                      <span class="deriv-arrow">→</span>
+                      <span class="deriv-step" id="chain-bands">8 bandes</span>
+                      <span class="deriv-arrow">→</span>
+                      <span class="deriv-out" id="chain-canvas">1920 × 1280</span>
+                    </div>
+                    <div class="stack-wrap">
+                      <div class="stack" id="stack" aria-hidden="true"></div>
+                      <div class="stack-legend" id="legend"></div>
+                    </div>
+                    <p class="deriv-caption" id="fit-caption">
+                      Chaque côté est plié <strong>indépendamment</strong> et forme un bloc de
+                      bandes contigu — le contenu ne traverse jamais un angle, et ce canvas ne
+                      bougera plus jamais quel que soit le contenu diffusé.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="disp">
+                <div class="disp-row">
+                  <span class="hdmi">#1</span>
+                  <span class="disp-name">TV du hall</span>
+                  <select class="type-pick" aria-label="Type de l'écran #1">
+                    <option selected>📺 TV classique</option>
+                    <option>🖥️ Bandeau LED</option>
+                    <option>🟥 LED périmétrique</option>
+                  </select>
+                  <span class="derived">
+                    <span class="derived-label">Canvas</span>
+                    <span class="px">1920 × 1080</span>
+                  </span>
+                </div>
+                <div class="geo">
+                  <div class="geo-head">Géométrie de l'écran</div>
+                  <div class="fields">
+                    <label class="field">
+                      <span>Standard</span>
+                      <select>
+                        <option selected>Full HD — 1920 × 1080</option>
+                        <option>4K UHD — 3840 × 2160</option>
+                        <option>HD — 1280 × 720</option>
+                      </select>
+                      <small>orientation paysage</small>
+                    </label>
+                  </div>
+                  <div class="derivation">
+                    <div class="deriv-chain">
+                      <span class="deriv-step">Full HD paysage</span>
+                      <span class="deriv-arrow">→</span>
+                      <span class="deriv-out">1920 × 1080</span>
+                    </div>
+                    <p class="deriv-caption">
+                      Même bloc, même ligne de dérivation. Une TV a juste une géométrie triviale :
+                      un standard choisi dans une liste. Rien de « spécial » côté LED — juste plus
+                      de champs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button class="icon-btn icon-btn--add" type="button">+ Ajouter un écran</button>
+            </div>
+          </div>
+
+          <div class="note">
+            <strong>Ce qu'on gagne :</strong> l'écran #0 devient un écran comme les autres — son
+            type se change — et le badge canvas dit toujours la vérité. Aujourd'hui il affiche
+            <code>1920x1120</code> figé dans le gabarit, faux dès que l'opérateur touche un côté,
+            sous un badge « Pi HDMI » affiché même sur les deux clubs LED réels, qui n'ont pas de
+            Pi.
+          </div>
+          <div class="note note--warn">
+            <strong>Essaie de passer la sortie en Full HD.</strong> Le profil ne tient plus dans le
+            signal et la maquette le dit tout de suite, dans les mots de l'opérateur — pas en 500 au
+            déploiement, ni en ruban noir le soir du match.
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ 3 ══════════ -->
+      <section class="screen">
+        <header>
+          <span class="screen-eyebrow">Écran B · Contenu → Vidéo → Déclinaisons</span>
+          <h2>Où on choisit ce qui passe sur chaque côté</h2>
+          <p>
+            Le « par côté » vit sur la vidéo, pas sur les réglages de l'écran — comme toutes les
+            autres déclinaisons de contenu. Les côtés sont nommés d'après les réglages, l'opérateur
+            reconnaît son terrain.
+          </p>
+        </header>
+        <div class="screen-body">
+          <div class="app">
+            <div class="app-bar">🎬 Sponsor Coca — Déclinaisons par écran</div>
+            <div class="app-body">
+              <div class="disp">
+                <div class="disp-row">
+                  <span class="hdmi">🟥 Ruban</span>
+                  <span class="disp-name">Déclinaison LED périmétrique</span>
+                  <span class="derived">
+                    <span class="derived-label">Cible</span>
+                    <span class="px">1920 × 1280</span>
+                  </span>
+                </div>
+                <div class="geo">
+                  <div class="radio-set">
+                    <label class="radio-card">
+                      <span></span>
+                      <span>
+                        <b>Le même visuel sur tout le tour</b>
+                        <small>Un seul fichier, répété côté par côté. Le cas courant.</small>
+                      </span>
+                    </label>
+                    <label class="radio-card radio-card--on">
+                      <span></span>
+                      <span>
+                        <b>Un visuel différent par côté</b>
+                        <small
+                          >Un fichier par côté du terrain. Pour vendre chaque côté à un sponsor
+                          différent.</small
+                        >
+                        <span class="slots" id="content-slots"></span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="note note--led">
+            <strong>Le mot « plié » n'apparaît nulle part sur cet écran.</strong> Le pliage est une
+            couche de transport vers le processeur — c'est de la mise en service, pas une fonction
+            produit. Aujourd'hui il fuit jusque dans le panneau variantes (bouton « Exporter le MP4
+            plié », banc d'essai Répété/Défilant/Étalé).
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ 4 ══════════ -->
+      <section class="screen">
+        <header>
+          <span class="screen-eyebrow">Écran C · Réglages du site, section repliée</span>
+          <h2>Le seul endroit où le mot « bande » existe</h2>
+          <p>
+            Ouverte une fois, le jour de l'installation, par la personne qui a NovaLCT sous les
+            yeux. Fermée pour toujours ensuite.
+          </p>
+        </header>
+        <div class="screen-body">
+          <details class="installer">
+            <summary>🔧 Mise en service du processeur LED</summary>
+            <div class="installer-body">
+              <div class="fields">
+                <label class="field">
+                  <span>Ordre d'empilement</span>
+                  <select>
+                    <option selected>Bande 1 en haut</option>
+                    <option>Bande 1 en bas</option>
+                  </select>
+                  <small>doit matcher la screen config</small>
+                </label>
+                <label class="field">
+                  <span>Signal émis par la source</span>
+                  <input type="text" id="installer-signal" value="3840 × 2160" readonly />
+                  <small>réglé plus haut, dans l'écran</small>
+                </label>
+              </div>
+              <div class="note">
+                <strong>La largeur de bande n'est plus un champ.</strong> Elle vaut la largeur du
+                signal — un pixel de la source est un pixel du processeur. Un réglage de moins à se
+                tromper le jour de l'install.
+              </div>
+              <div class="derivation">
+                <div class="deriv-chain">
+                  <span class="deriv-step">à configurer dans NovaLCT</span>
+                  <span class="deriv-arrow">→</span>
+                  <span class="deriv-out" id="installer-canvas">1920 × 1280 · 8 bandes</span>
+                </div>
+                <p class="deriv-caption">
+                  Cette valeur est <strong>définitive</strong> : elle ne dépend que de la géométrie
+                  du terrain. Aucun contenu diffusé ensuite ne la fera changer.
+                </p>
+              </div>
+              <button class="btn-ghost" type="button">Générer la mire de test (MP4)</button>
+            </div>
+          </details>
+
+          <div class="note note--warn">
+            <strong>Réserve honnête :</strong> tout ce bloc n'a de sens que si le SPIKE matériel
+            confirme le mode « pixel-perfect » (le player pré-plie). S'il conclut l'inverse — le
+            processeur fait le mapping lui-même — cette section et l'essentiel du moteur de pliage
+            disparaissent. C'est le pari à arbitrer avant d'écrire la moindre ligne.
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════ 5 ══════════ -->
+      <section class="screen">
+        <header>
+          <span class="screen-eyebrow">Bilan</span>
+          <h2>Ce que le parcours fait disparaître</h2>
+          <p>La simplification se mesure surtout à ce qu'on retire.</p>
+        </header>
+        <div class="screen-body">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Aujourd'hui</th>
+                  <th>Dans ce parcours</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Deux géométries de pliage selon le contenu</td>
+                  <td>
+                    <span class="kill">mode uniforme géométrique</span> → toujours par côté ; «
+                    uniforme » devient un raccourci de contenu
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>resolution</code> saisie / codée en dur par gabarit</td>
+                  <td>
+                    <span class="keep">dérivée</span> pour tous les types, affichée en lecture seule
+                  </td>
+                </tr>
+                <tr>
+                  <td>Écran #0 verrouillé sur « TV »</td>
+                  <td>type éditable ; l'index ne décrit que la sortie</td>
+                </tr>
+                <tr>
+                  <td>Panneau LED spécial greffé sous la carte</td>
+                  <td>bloc « Géométrie » commun, champs variables selon le type</td>
+                </tr>
+                <tr>
+                  <td>Bandes, mode A/B, export plié dans le parcours contenu</td>
+                  <td>repliés dans « Mise en service », vus une fois</td>
+                </tr>
+                <tr>
+                  <td><code>display.led.zones</code> (champ dormant, 0 lecteur)</td>
+                  <td>
+                    <span class="kill">supprimé</span> — sans objet si le pliage est toujours par
+                    côté
+                  </td>
+                </tr>
+                <tr>
+                  <td>Badge « Pi HDMI » codé en dur sur l'index #0</td>
+                  <td>
+                    <span class="kill">retiré</span> — <code>site_type</code> porte déjà Pi /
+                    pas-Pi, une fois, au bon niveau
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>band_width</code> saisi à la main (défaut 1920)</td>
+                  <td>
+                    <span class="keep">= la largeur du signal</span> de la source ; un champ de
+                    moins
+                  </td>
+                </tr>
+                <tr>
+                  <td>Rien ne vérifie que le pliage tient dans le signal</td>
+                  <td>
+                    contrôle <strong>Σ bandes × rangées ≤ hauteur du signal</strong>, au moment du
+                    réglage
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note">
+            <strong>Question ouverte que la maquette ne tranche pas :</strong> une animation qui
+            fait le tour complet du terrain reste-t-elle possible en pliage par côté ? En théorie
+            oui — chaque côté rend sa fenêtre du ruban logique global. Ça n'est pas implémenté, et
+            c'est à valider avant de s'engager.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        var SIDE_COLORS = [
+          '#5b8cff',
+          '#ff5a3c',
+          '#33d17a',
+          '#ffb020',
+          '#b06bff',
+          '#00c8c8',
+          '#ff70a6',
+          '#9fb4d8',
+        ];
+        var SIDE_NAMES = [
+          'Tribune',
+          'But nord',
+          'But sud',
+          'Côté caméra',
+          'Côté 5',
+          'Côté 6',
+          'Côté 7',
+          'Côté 8',
+        ];
+        var sides = [40, 20, 20];
+
+        var editor = document.getElementById('sides-editor');
+        var pitchEl = document.getElementById('pitch');
+        var heightEl = document.getElementById('height-cm');
+        var signalEl = document.getElementById('signal');
+
+        function signal() {
+          var parts = (signalEl.value || '1920x1080').split('x');
+          return { w: parseInt(parts[0], 10), h: parseInt(parts[1], 10) };
+        }
+        function bandWidth() {
+          return signal().w;
+        }
+        function pitch() {
+          return parseFloat(pitchEl.value) || 6;
+        }
+        function rows() {
+          var cm = parseFloat(heightEl.value) || 96;
+          return Math.max(1, Math.round((cm * 10) / pitch()));
+        }
+
+        function geometry() {
+          var pxPerMeter = 1000 / pitch();
+          var h = rows();
+          var bw = bandWidth();
+          var segments = sides.map(function (m, i) {
+            var ribbon = Math.round(m * pxPerMeter);
+            return {
+              index: i,
+              meters: m,
+              ribbon: ribbon,
+              bands: Math.max(1, Math.ceil(ribbon / bw)),
+            };
+          });
+          var total = segments.reduce(function (a, s) {
+            return a + s.bands;
+          }, 0);
+          var sig = signal();
+          var canvasH = total * h;
+          return {
+            segments: segments,
+            bandCount: total,
+            height: h,
+            bandWidth: bw,
+            canvasH: canvasH,
+            signal: sig,
+            fits: canvasH <= sig.h,
+            overflow: canvasH - sig.h,
+          };
+        }
+
+        function renderSides() {
+          editor.textContent = '';
+          sides.forEach(function (m, i) {
+            var chip = document.createElement('span');
+            chip.className = 'side-chip';
+            chip.style.setProperty('--side', SIDE_COLORS[i % 8]);
+
+            var badge = document.createElement('b');
+            badge.textContent = String(i + 1);
+            chip.appendChild(badge);
+
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.min = '1';
+            input.max = '500';
+            input.value = String(m);
+            input.setAttribute('aria-label', 'Longueur du côté ' + (i + 1) + ' en mètres');
+            input.addEventListener('input', function () {
+              var v = parseFloat(input.value);
+              sides[i] = isFinite(v) && v > 0 ? v : 1;
+              recompute();
+            });
+            chip.appendChild(input);
+
+            if (sides.length > 1) {
+              var rm = document.createElement('button');
+              rm.type = 'button';
+              rm.className = 'icon-btn';
+              rm.textContent = '×';
+              rm.setAttribute('aria-label', 'Retirer le côté ' + (i + 1));
+              rm.addEventListener('click', function () {
+                sides.splice(i, 1);
+                renderSides();
+                recompute();
+              });
+              chip.appendChild(rm);
+            }
+            editor.appendChild(chip);
+          });
+
+          if (sides.length < 8) {
+            var add = document.createElement('button');
+            add.type = 'button';
+            add.className = 'icon-btn icon-btn--add';
+            add.textContent = '+';
+            add.setAttribute('aria-label', 'Ajouter un côté');
+            add.addEventListener('click', function () {
+              sides.push(20);
+              renderSides();
+              recompute();
+            });
+            editor.appendChild(add);
+          }
+        }
+
+        function recompute() {
+          var g = geometry();
+          var canvas = g.bandWidth + ' × ' + g.canvasH;
+          var perim = sides.reduce(function (a, b) {
+            return a + b;
+          }, 0);
+          var plural = g.bandCount > 1 ? ' bandes' : ' bande';
+
+          document.getElementById('perimeter-hint').textContent =
+            'Périmètre ' + Math.round(perim * 10) / 10 + ' m';
+          document.getElementById('rows-hint').textContent =
+            '= ' + g.height + ' rangées @ P' + pitch();
+          document.getElementById('chain-sides').textContent =
+            sides.length +
+            (sides.length > 1 ? ' côtés · ' : ' côté · ') +
+            Math.round(perim * 10) / 10 +
+            ' m';
+          document.getElementById('chain-bands').textContent = g.bandCount + plural;
+          document.getElementById('chain-canvas').textContent = canvas;
+          document.getElementById('hdr-canvas').textContent = canvas;
+          document.getElementById('installer-canvas').textContent =
+            canvas + ' · ' + g.bandCount + plural;
+          document.getElementById('installer-signal').value = g.signal.w + ' × ' + g.signal.h;
+
+          // Contrôle de compatibilité : le pliage tient-il dans le signal émis ?
+          var out = document.getElementById('chain-canvas');
+          var hdr = document.getElementById('hdr-canvas');
+          var caption = document.getElementById('fit-caption');
+          out.classList.toggle('deriv-out--bad', !g.fits);
+          hdr.classList.toggle('px--stale', !g.fits);
+          if (g.fits) {
+            caption.innerHTML =
+              'Chaque côté est plié <strong>indépendamment</strong> et forme un bloc de bandes contigu — le contenu ' +
+              'ne traverse jamais un angle, et ce canvas ne bougera plus jamais quel que soit le contenu diffusé. ' +
+              'Il reste ' +
+              (g.signal.h - g.canvasH) +
+              ' px libres dans le signal.';
+          } else {
+            caption.innerHTML =
+              '⚠️ <strong>Ce profil ne tient pas dans la sortie choisie</strong> : ' +
+              g.canvasH +
+              ' px de bandes pour un signal de ' +
+              g.signal.h +
+              ' px de haut, soit ' +
+              g.overflow +
+              ' px de trop. Passe la sortie en 4K, ou réduis la hauteur de dalle.';
+          }
+
+          // Pile de bandes
+          var stack = document.getElementById('stack');
+          stack.textContent = '';
+          g.segments.forEach(function (seg) {
+            for (var b = 0; b < seg.bands; b++) {
+              var used = Math.min(1, (seg.ribbon - b * g.bandWidth) / g.bandWidth);
+              var row = document.createElement('div');
+              row.className = 'stack-band';
+              row.style.background = SIDE_COLORS[seg.index % 8];
+              row.style.width = Math.max(12, used * 100) + '%';
+              row.textContent = seg.index + 1 + '.' + (b + 1);
+              stack.appendChild(row);
+            }
+          });
+
+          // Légende
+          var legend = document.getElementById('legend');
+          legend.textContent = '';
+          g.segments.forEach(function (seg) {
+            var row = document.createElement('div');
+            row.className = 'legend-row';
+            var dot = document.createElement('span');
+            dot.className = 'legend-dot';
+            dot.style.background = SIDE_COLORS[seg.index % 8];
+            row.appendChild(dot);
+            var label = document.createElement('span');
+            label.textContent =
+              (SIDE_NAMES[seg.index] || 'Côté ' + (seg.index + 1)) +
+              ' — ' +
+              seg.meters +
+              ' m · ' +
+              seg.ribbon +
+              ' px · ' +
+              seg.bands +
+              (seg.bands > 1 ? ' bandes' : ' bande');
+            row.appendChild(label);
+            legend.appendChild(row);
+          });
+
+          renderSlots(g);
+        }
+
+        function renderSlots(g) {
+          var host = document.getElementById('content-slots');
+          host.textContent = '';
+          var files = ['coca_tribune.mp4', 'nike_but_nord.mp4', null, 'decathlon_cam.mp4'];
+          g.segments.forEach(function (seg) {
+            var slot = document.createElement('span');
+            slot.className = 'slot';
+            slot.style.setProperty('--side', SIDE_COLORS[seg.index % 8]);
+
+            var badge = document.createElement('span');
+            badge.className = 'slot-badge';
+            badge.textContent = String(seg.index + 1);
+            slot.appendChild(badge);
+
+            var name = document.createElement('span');
+            name.className = 'slot-name';
+            name.textContent = SIDE_NAMES[seg.index] || 'Côté ' + (seg.index + 1);
+            slot.appendChild(name);
+
+            var meta = document.createElement('span');
+            meta.className = 'slot-meta';
+            meta.textContent = seg.meters + ' m · ' + seg.ribbon + ' × ' + g.height + ' px';
+            slot.appendChild(meta);
+
+            var right = document.createElement('span');
+            right.className = 'slot-file';
+            var f = files[seg.index];
+            if (f) {
+              var chip = document.createElement('span');
+              chip.className = 'filechip';
+              chip.textContent = f;
+              right.appendChild(chip);
+              var rep = document.createElement('button');
+              rep.type = 'button';
+              rep.className = 'btn-ghost';
+              rep.textContent = 'Remplacer';
+              right.appendChild(rep);
+            } else {
+              var add = document.createElement('button');
+              add.type = 'button';
+              add.className = 'btn-ghost';
+              add.textContent = 'Choisir un visuel';
+              right.appendChild(add);
+            }
+            slot.appendChild(right);
+            host.appendChild(slot);
+          });
+        }
+
+        pitchEl.addEventListener('change', recompute);
+        heightEl.addEventListener('input', recompute);
+        signalEl.addEventListener('change', recompute);
+
+        renderSides();
+        recompute();
+      })();
+    </script>
+  </body>
+</html>
