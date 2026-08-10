@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MadXP — LED périmétrique : la matrice des montages</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0e1a;
+        --panel: #141a2e;
+        --panel2: #1c2440;
+        --panel3: #232d4d;
+        --line: #2a3454;
+        --line-soft: #212a45;
+        --txt: #e8ecf6;
+        --muted: #8a93ad;
+        --accent: #5b8cff;
+        --accent-dim: #2f4a8f;
+        --led: #ff5a3c;
+        --ok: #33d17a;
+        --warn: #ffb020;
+        --chip: #23304f;
+        --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+        --ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --bg: #f2f4fa;
+          --panel: #fff;
+          --panel2: #f6f8fd;
+          --panel3: #eaeffb;
+          --line: #d3dae9;
+          --line-soft: #e2e7f2;
+          --txt: #141a2e;
+          --muted: #5c6683;
+          --accent: #2c5fd6;
+          --accent-dim: #b9cbf5;
+          --led: #d63a1e;
+          --ok: #1c8b4d;
+          --warn: #9a6100;
+          --chip: #e6ebf7;
+        }
+      }
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --bg: #f2f4fa;
+        --panel: #fff;
+        --panel2: #f6f8fd;
+        --panel3: #eaeffb;
+        --line: #d3dae9;
+        --line-soft: #e2e7f2;
+        --txt: #141a2e;
+        --muted: #5c6683;
+        --accent: #2c5fd6;
+        --accent-dim: #b9cbf5;
+        --led: #d63a1e;
+        --ok: #1c8b4d;
+        --warn: #9a6100;
+        --chip: #e6ebf7;
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+        --bg: #0b0e1a;
+        --panel: #141a2e;
+        --panel2: #1c2440;
+        --panel3: #232d4d;
+        --line: #2a3454;
+        --line-soft: #212a45;
+        --txt: #e8ecf6;
+        --muted: #8a93ad;
+        --accent: #5b8cff;
+        --accent-dim: #2f4a8f;
+        --led: #ff5a3c;
+        --ok: #33d17a;
+        --warn: #ffb020;
+        --chip: #23304f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--txt);
+        font: 15px/1.55 var(--ui);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .masthead {
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+        padding: 22px 24px 20px;
+      }
+      .masthead-in {
+        max-width: 1060px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px 14px;
+      }
+      .masthead h1 {
+        margin: 0;
+        font-size: 21px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+      }
+      .masthead p {
+        margin: 8px 0 0;
+        flex-basis: 100%;
+        color: var(--muted);
+        font-size: 14px;
+        max-width: 70ch;
+      }
+      .tag {
+        background: var(--chip);
+        color: var(--muted);
+        font: 600 11.5px/1 var(--ui);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 5px 9px;
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+
+      .wrap {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 28px 24px 72px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+
+      .screen {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .screen > header {
+        padding: 18px 22px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .eyebrow {
+        font: 600 11.5px/1 var(--mono);
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .screen > header h2 {
+        margin: 0;
+        font-size: 17.5px;
+        font-weight: 640;
+        letter-spacing: -0.015em;
+        text-wrap: balance;
+      }
+      .screen > header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13.5px;
+        max-width: 72ch;
+      }
+      .body {
+        padding: 20px 22px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .note {
+        border-left: 2px solid var(--accent);
+        background: var(--panel2);
+        padding: 12px 14px;
+        border-radius: 0 8px 8px 0;
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .note strong {
+        color: var(--txt);
+        font-weight: 600;
+      }
+      .note--warn {
+        border-left-color: var(--warn);
+      }
+      .note--led {
+        border-left-color: var(--led);
+      }
+      .note--ok {
+        border-left-color: var(--ok);
+      }
+
+      /* ── Sélecteurs d'axes ─────────────────────────────── */
+      .axis {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+      .axis-head {
+        font: 600 10.5px/1 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .axis-head::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+      }
+      .opts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+      .opt {
+        flex: 1 1 210px;
+        text-align: left;
+        cursor: pointer;
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 11px 12px;
+        color: var(--txt);
+        font: inherit;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .opt:hover {
+        border-color: var(--accent-dim);
+      }
+      .opt:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      .opt[aria-pressed='true'] {
+        border-color: var(--accent);
+        background: var(--panel3);
+      }
+      .opt svg {
+        flex: none;
+      }
+      .opt b {
+        display: block;
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      .opt small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+      }
+
+      /* ── Verdict ───────────────────────────────────────── */
+      .verdict {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .vgrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+        gap: 12px;
+      }
+      .vcard {
+        background: var(--panel2);
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .vcard-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .vcard-head b {
+        font-size: 13.5px;
+        font-weight: 640;
+      }
+      .pill {
+        font: 700 10px/1 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 7px;
+        border-radius: 5px;
+        white-space: nowrap;
+        margin-left: auto;
+      }
+      .pill--ok {
+        color: var(--ok);
+        background: color-mix(in srgb, var(--ok) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--ok) 34%, transparent);
+      }
+      .pill--partial {
+        color: var(--warn);
+        background: color-mix(in srgb, var(--warn) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
+      }
+      .pill--gap {
+        color: var(--led);
+        background: color-mix(in srgb, var(--led) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--led) 36%, transparent);
+      }
+      .vrow {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .vrow em {
+        color: var(--txt);
+        font-style: normal;
+        font-weight: 600;
+      }
+      .vrow code,
+      code {
+        font: 500 12.5px var(--mono);
+        background: var(--chip);
+        border-radius: 4px;
+        padding: 1.5px 5px;
+      }
+
+      .ribbon-demo {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin-top: 2px;
+      }
+      .rb {
+        height: 13px;
+        border-radius: 2px;
+        display: flex;
+        overflow: hidden;
+      }
+      .rb i {
+        display: block;
+        height: 100%;
+      }
+      .rb-cap {
+        font: 500 11.5px/1.3 var(--mono);
+        color: var(--muted);
+      }
+
+      /* ── Tableau ───────────────────────────────────────── */
+      .tscroll {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 620px;
+        font-size: 13.5px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        vertical-align: top;
+      }
+      th {
+        font: 600 10.5px/1.3 var(--ui);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        border-bottom-color: var(--line);
+      }
+      td:first-child {
+        font-weight: 600;
+      }
+
+      ol.qs {
+        margin: 0;
+        padding-left: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 13.5px;
+      }
+      ol.qs li::marker {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      ol.qs b {
+        font-weight: 600;
+      }
+      ol.qs small {
+        display: block;
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+        }
+      }
+      @media (max-width: 640px) {
+        .wrap {
+          padding: 20px 14px 56px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="masthead">
+      <div class="masthead-in">
+        <h1>LED périmétrique — la matrice des montages</h1>
+        <span class="tag">Analyse</span>
+        <span class="tag">avant code</span>
+        <p>
+          Le modèle actuel suppose <strong>un seul</strong> montage, sans jamais le dire. Il y en a
+          au moins douze. Cette page les croise, montre où MadXP tient et où il casse — et donne le
+          moyen de savoir, pour un club donné, dans quelle case il tombe.
+        </p>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <!-- ══════ 1 ══════ -->
+      <section class="screen">
+        <header>
+          <span class="eyebrow">Le point de départ</span>
+          <h2>On ne sait pas ce qu'on envoie, ni ce qui est attendu</h2>
+          <p>
+            Trois constats de production, vérifiés en base. Ils expliquent pourquoi la question n'a
+            jamais été tranchée.
+          </p>
+        </header>
+        <div class="body">
+          <div class="tscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Constat</th>
+                  <th>Conséquence</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Aucune dimension vidéo n'est stockée<br /><code>metadata</code> ne contient
+                    qu'un <code>title</code>
+                  </td>
+                  <td>
+                    Le validateur de format ne peut rien juger — verdict
+                    <code>unknown</code> systématique. On ignore ce qui part sur le ruban.
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Piraths diffuse des jingles TV<br />(<code>TV_JINGLE_2MIN</code>,
+                    <code>TV_BUT_9_…</code>)
+                  </td>
+                  <td>
+                    Des vidéos 16:9 servies telles quelles sur un ruban de 6 400 px de large.
+                    Étirées, ou sur un bout du tour.
+                  </td>
+                </tr>
+                <tr>
+                  <td>38 lectures en 90 jours</td>
+                  <td>
+                    Personne ne regarde assez pour s'en plaindre.
+                    <strong>L'absence de plainte ne prouve rien.</strong>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note note--warn">
+            <strong>À retenir :</strong> tant que les dimensions ne sont pas capturées à l'upload,
+            aucun diagnostic n'est possible et le validateur restera muet — quel que soit le
+            montage.
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════ 2 ══════ -->
+      <section class="screen">
+        <header>
+          <span class="eyebrow">La matrice</span>
+          <h2>Choisis un montage, vois ce que MadXP sait en faire</h2>
+          <p>
+            Trois axes indépendants. Le code d'aujourd'hui n'en couvre qu'une combinaison — et pas
+            celle qui a le plus de clients.
+          </p>
+        </header>
+        <div class="body">
+          <div class="axis">
+            <div class="axis-head">1 · Topologie électrique</div>
+            <div class="opts" id="axis-topo"></div>
+          </div>
+
+          <div class="axis">
+            <div class="axis-head">2 · Ce que le processeur attend en entrée</div>
+            <div class="opts" id="axis-proc"></div>
+          </div>
+
+          <div class="axis">
+            <div class="axis-head">3 · Intention visuelle</div>
+            <div class="opts" id="axis-intent"></div>
+          </div>
+
+          <div class="verdict" id="verdict"></div>
+        </div>
+      </section>
+
+      <!-- ══════ 3 ══════ -->
+      <section class="screen">
+        <header>
+          <span class="eyebrow">Le diagnostic</span>
+          <h2>Une mire répond mieux qu'un SPIKE — et ne coûte rien</h2>
+          <p>
+            Le SPIKE matériel bloque depuis avril parce qu'il suppose d'acheter un processeur. Les
+            clubs installés en ont déjà un.
+          </p>
+        </header>
+        <div class="body">
+          <div class="note note--ok">
+            <strong>Le principe :</strong> MadXP génère une mire numérotée — des blocs de couleur
+            avec leur position écrite en gros, et une graduation en mètres. On la diffuse sur le
+            ruban du club, quelqu'un prend <strong>une photo</strong>. La photo dit exactement
+            comment le processeur redistribue le signal : continu, replié, étiré, répété, ou par
+            côté.
+          </div>
+          <div class="ribbon-demo">
+            <span class="rb-cap">Ce qu'on envoie — 1920 × 160, blocs numérotés</span>
+            <div class="rb" id="mire-src"></div>
+            <span class="rb-cap"
+              >Ce que la photo révélera — l'ordre réel des blocs sur le tour</span
+            >
+            <div class="rb" id="mire-out"></div>
+          </div>
+          <div class="tscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ce que montre la photo</th>
+                  <th>Ce que ça dit du montage</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Blocs 1→8 dans l'ordre, une fois sur le tour</td>
+                  <td>
+                    Surface continue, le processeur mappe lui-même. Il faut lui fournir de
+                    l'ultra-wide.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Blocs 1→8 répétés sur chaque côté</td>
+                  <td>
+                    Côtés indépendants recevant le même signal. Ce ne sont pas 4 côtés, ce sont 4
+                    écrans.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Une bande sur un côté, le reste noir</td>
+                  <td>
+                    Le processeur attend un canvas plus large que ce qu'on envoie — ou un canvas
+                    plié.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Image étirée et illisible</td>
+                  <td>
+                    Le processeur étire le signal sur toute la surface : il faut envoyer au ratio du
+                    ruban.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note">
+            La section « Mise en service » de la maquette précédente prévoyait déjà un bouton
+            <strong>« Générer la mire de test »</strong>. C'est le seul élément de cette page qui
+            mérite d'être codé tout de suite : il débloque le diagnostic sur les clubs déjà
+            installés, sans acheter de matériel.
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════ 4 ══════ -->
+      <section class="screen">
+        <header>
+          <span class="eyebrow">À défaut de mire</span>
+          <h2>Cinq questions à l'installateur</h2>
+          <p>Pour placer un club dans la matrice sans se déplacer. Un appel suffit.</p>
+        </header>
+        <div class="body">
+          <ol class="qs">
+            <li>
+              <b>Combien de processeurs pilotent le ruban ?</b
+              ><small>Un seul pour tout le tour, ou un par côté ? → axe 1</small>
+            </li>
+            <li>
+              <b
+                >Dans la screen configuration, le ruban est-il un écran unique de N×M pixels, ou
+                plusieurs zones ?</b
+              ><small>C'est la question qui tranche l'axe 1 sans ambiguïté.</small>
+            </li>
+            <li>
+              <b>Quelle résolution la source doit-elle sortir ?</b
+              ><small
+                >Si la réponse est « n'importe laquelle, je m'adapte » → le processeur mappe. Si
+                c'est un chiffre précis → il attend ce canvas-là. → axe 2</small
+              >
+            </li>
+            <li>
+              <b>Si j'envoie une mire 1920×1080, qu'est-ce qui apparaît sur le ruban ?</b
+              ><small
+                >La question la plus utile : elle donne la réponse empirique, sans jargon.</small
+              >
+            </li>
+            <li>
+              <b>Y a-t-il un scaler entre la source et le processeur ?</b
+              ><small
+                >Un scaler intercalé change tout : il peut absorber le mapping, ou le casser.</small
+              >
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- ══════ 5 ══════ -->
+      <section class="screen">
+        <header>
+          <span class="eyebrow">Ce que ça change</span>
+          <h2>Trois choses à faire, dans cet ordre</h2>
+        </header>
+        <div class="body">
+          <div class="tscroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Quoi</th>
+                  <th>Pourquoi maintenant</th>
+                  <th>Coût</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Capturer les dimensions à l'upload</td>
+                  <td>
+                    Sans ça, aucun diagnostic n'est possible et le validateur reste muet. Vrai quel
+                    que soit le montage.
+                  </td>
+                  <td>Petit</td>
+                </tr>
+                <tr>
+                  <td>Générer la mire de test</td>
+                  <td>
+                    Débloque le diagnostic sur les clubs déjà installés. Remplace le SPIKE matériel,
+                    sans achat.
+                  </td>
+                  <td>Moyen</td>
+                </tr>
+                <tr>
+                  <td>Placer Piraths et Lanester dans la matrice</td>
+                  <td>
+                    Deux clubs, deux photos. Après ça seulement, on saura quelles cases méritent du
+                    code.
+                  </td>
+                  <td>Un appel</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note note--led">
+            <strong>Ce qu'il ne faut pas faire :</strong> étendre le moteur de pliage avant de
+            savoir. Il couvre aujourd'hui une case sur douze, et rien ne dit que c'est celle de tes
+            clubs.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        var SIDE_COLORS = [
+          '#5b8cff',
+          '#ff5a3c',
+          '#33d17a',
+          '#ffb020',
+          '#b06bff',
+          '#00c8c8',
+          '#ff70a6',
+          '#9fb4d8',
+        ];
+
+        var TOPO = [
+          {
+            id: 'continu',
+            label: 'Une surface continue',
+            sub: 'Tous les côtés câblés en série sur un seul processeur. Le ruban est UN écran.',
+            svg: 'continu',
+          },
+          {
+            id: 'independants',
+            label: 'Côtés indépendants',
+            sub: 'Un processeur (ou une sortie) par côté. Chaque côté est un écran à part entière.',
+            svg: 'independants',
+          },
+          {
+            id: 'mixte',
+            label: 'Groupes mixtes',
+            sub: 'Ex. les deux longueurs ensemble, chaque but séparé.',
+            svg: 'mixte',
+          },
+        ];
+        var PROC = [
+          {
+            id: 'mappe',
+            label: 'Le processeur mappe',
+            sub: 'Sa screen configuration redistribue les régions du signal sur les dalles.',
+          },
+          {
+            id: 'plie',
+            label: 'Il attend un canvas plié',
+            sub: 'Le player doit produire exactement la disposition configurée, au pixel près.',
+          },
+        ];
+        var INTENT = [
+          {
+            id: 'continuite',
+            label: 'Continuité',
+            sub: 'Une image traverse tout le tour et franchit les angles.',
+          },
+          { id: 'repetition', label: 'Répétition', sub: 'Un motif répété tous les X mètres.' },
+          { id: 'parcote', label: 'Par côté', sub: 'Un sponsor différent sur chaque côté.' },
+        ];
+
+        var state = { topo: 'continu', proc: 'plie', intent: 'continuite' };
+
+        function svgFor(kind) {
+          var s = '<svg width="34" height="26" viewBox="0 0 34 26" aria-hidden="true">';
+          var sides = [
+            { x: 3, y: 3, w: 28, h: 3 },
+            { x: 28, y: 3, w: 3, h: 20 },
+            { x: 3, y: 20, w: 28, h: 3 },
+            { x: 3, y: 3, w: 3, h: 20 },
+          ];
+          var cols =
+            kind === 'continu'
+              ? ['#5b8cff', '#5b8cff', '#5b8cff', '#5b8cff']
+              : kind === 'independants'
+                ? ['#5b8cff', '#ff5a3c', '#33d17a', '#ffb020']
+                : ['#5b8cff', '#ff5a3c', '#5b8cff', '#33d17a'];
+          sides.forEach(function (r, i) {
+            s +=
+              '<rect x="' +
+              r.x +
+              '" y="' +
+              r.y +
+              '" width="' +
+              r.w +
+              '" height="' +
+              r.h +
+              '" rx="1" fill="' +
+              cols[i] +
+              '"/>';
+          });
+          return s + '</svg>';
+        }
+
+        function renderAxis(hostId, items, key, withSvg) {
+          var host = document.getElementById(hostId);
+          host.textContent = '';
+          items.forEach(function (it) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'opt';
+            b.setAttribute('aria-pressed', String(state[key] === it.id));
+            if (withSvg) b.innerHTML = svgFor(it.svg);
+            var txt = document.createElement('span');
+            var strong = document.createElement('b');
+            strong.textContent = it.label;
+            var small = document.createElement('small');
+            small.textContent = it.sub;
+            txt.appendChild(strong);
+            txt.appendChild(small);
+            b.appendChild(txt);
+            b.addEventListener('click', function () {
+              state[key] = it.id;
+              renderAll();
+            });
+            host.appendChild(b);
+          });
+        }
+
+        /** Ce que MadXP doit produire, et ce qu'il sait faire — par cellule. */
+        function analyse() {
+          var t = state.topo,
+            p = state.proc,
+            i = state.intent;
+
+          // Côtés indépendants : ce ne sont pas des « côtés », ce sont N écrans.
+          if (t === 'independants') {
+            return {
+              needed:
+                i === 'parcote'
+                  ? 'Une vidéo par écran, au format d’un côté (ex. 1600 × 160). Aucun pliage.'
+                  : 'La même vidéo sur chaque écran, au format d’un côté. Aucun pliage.',
+              today:
+                'Le modèle N-écrans existant couvre déjà ça — un display par côté, une variante par display.',
+              status: i === 'continuite' ? 'partial' : 'ok',
+              note:
+                i === 'continuite'
+                  ? 'La continuité est IMPOSSIBLE sur des côtés indépendants sans synchronisation image par image entre processeurs. À écarter du besoin, ou à traiter comme un décalage assumé.'
+                  : 'Le type led-perimeter est la mauvaise abstraction ici : ce club a N écrans, pas un ruban. Le déclarer en led-banner ×N évite tout le moteur de pliage.',
+              bands: i === 'parcote' ? [0, 1, 2, 3] : [0, 0, 0, 0],
+            };
+          }
+
+          // Surface continue ou groupes
+          if (p === 'mappe') {
+            return {
+              needed:
+                i === 'continuite'
+                  ? 'Une vidéo au ratio du ruban entier (ex. 6400 × 160), le processeur la redistribue.'
+                  : i === 'repetition'
+                    ? 'Une vidéo au ratio du ruban, motif déjà répété dedans.'
+                    : 'Une vidéo au ratio du ruban, composée des N segments côte à côte.',
+              today:
+                'MadXP sert le fichier brut de la variante. Un 16:9 y est étiré ou cantonné à un bout.',
+              status: 'gap',
+              note: 'Trou réel : produire de l’ultra-wide à plat est précisément ce que Chromium ne sait pas rendre (OOM ≥ 10 000 px, ADR-134). Le studio ne sait rendre que du PLIÉ, qui n’est pas ce que ce processeur attend.',
+              bands: [0, 1, 2, 3],
+            };
+          }
+
+          // p === 'plie'
+          if (i === 'parcote') {
+            return {
+              needed: 'Un canvas plié où chaque côté est un bloc de bandes contigu.',
+              today:
+                'Géométrie et composition prouvées en labo (computeFoldGeometryPerSide + applyPerSideFold), mais la sortie est un MP4 à TÉLÉCHARGER.',
+              status: 'partial',
+              note: 'C’est l’étape D d’ADR-135, non câblée. En l’état, l’opérateur devrait exporter puis reverser à la main pour chaque vidéo — l’entre-deux à ne surtout pas livrer.',
+              bands: [0, 1, 2, 3],
+            };
+          }
+          return {
+            needed: 'Un canvas plié du ruban continu (ex. 1920 × 640, 4 bandes empilées).',
+            today:
+              'Le studio rend directement plié (ADR-134) ✅. Une vidéo club se plie via ffmpeg, mais en export téléchargeable seulement.',
+            status: 'partial',
+            note:
+              i === 'continuite'
+                ? 'Le pliage uniforme coupe tous les 1920 px — soit 1920/3840/5760 chez Piraths, alors que les angles sont à 1600/3200/4800. Le contenu traverse donc les angles, à l’inverse de la règle métier.'
+                : 'Même réserve : les coupes ne tombent pas sur les angles, la répétition se décale d’un côté à l’autre.',
+            bands: [0, 0, 1, 1],
+          };
+        }
+
+        function renderAll() {
+          renderAxis('axis-topo', TOPO, 'topo', true);
+          renderAxis('axis-proc', PROC, 'proc', false);
+          renderAxis('axis-intent', INTENT, 'intent', false);
+
+          var a = analyse();
+          var pillClass =
+            a.status === 'ok' ? 'pill--ok' : a.status === 'partial' ? 'pill--partial' : 'pill--gap';
+          var pillText =
+            a.status === 'ok' ? 'couvert' : a.status === 'partial' ? 'partiel' : 'trou';
+
+          var host = document.getElementById('verdict');
+          host.textContent = '';
+
+          var grid = document.createElement('div');
+          grid.className = 'vgrid';
+
+          function card(title, pill, rows) {
+            var c = document.createElement('div');
+            c.className = 'vcard';
+            var h = document.createElement('div');
+            h.className = 'vcard-head';
+            var b = document.createElement('b');
+            b.textContent = title;
+            h.appendChild(b);
+            if (pill) {
+              var p = document.createElement('span');
+              p.className = 'pill ' + pillClass;
+              p.textContent = pill;
+              h.appendChild(p);
+            }
+            c.appendChild(h);
+            rows.forEach(function (r) {
+              var d = document.createElement('div');
+              d.className = 'vrow';
+              d.innerHTML = r;
+              c.appendChild(d);
+            });
+            return c;
+          }
+
+          grid.appendChild(card('Ce que MadXP doit produire', null, ['<em>' + a.needed + '</em>']));
+          grid.appendChild(card('Ce qu’il fait aujourd’hui', pillText, [a.today]));
+          host.appendChild(grid);
+
+          var n = document.createElement('div');
+          n.className =
+            'note ' +
+            (a.status === 'gap' ? 'note--led' : a.status === 'partial' ? 'note--warn' : 'note--ok');
+          n.innerHTML = a.note;
+          host.appendChild(n);
+        }
+
+        // Mire de démonstration
+        function renderMire() {
+          var src = document.getElementById('mire-src');
+          var out = document.getElementById('mire-out');
+          src.textContent = '';
+          out.textContent = '';
+          for (var i = 0; i < 8; i++) {
+            var a = document.createElement('i');
+            a.style.background = SIDE_COLORS[i];
+            a.style.width = '12.5%';
+            src.appendChild(a);
+          }
+          // ordre volontairement brouillé : c'est justement ce que la photo révèle
+          [0, 4, 1, 5, 2, 6, 3, 7].forEach(function (idx) {
+            var b = document.createElement('i');
+            b.style.background = SIDE_COLORS[idx];
+            b.style.width = '12.5%';
+            b.style.opacity = '.55';
+            out.appendChild(b);
+          });
+        }
+
+        renderAll();
+        renderMire();
+      })();
+    </script>
+  </body>
+</html>
