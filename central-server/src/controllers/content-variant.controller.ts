@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import logger from '../config/logger';
 import { probeVideoDimensions } from '../utils/video-dimensions';
+import { classifyVideoForRibbon, type FitRecommendation } from '../services/led-content-fit.service';
 import { AuthRequest } from '../types';
 import { videoRepository, videoVariantRepository, siteRepository, videoClubGrantRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
 import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
@@ -38,6 +39,43 @@ async function computeLedFormatNotice(
     return validateLedFormat({ videoWidth: width, videoHeight: height, ribbonWidth, ribbonHeight });
   } catch {
     return null; // profil incomplet → pas d'avis (jamais bloquant)
+  }
+}
+
+/**
+ * Recommandation de cadrage pour une vidéo sur un ruban LED.
+ *
+ * Complète `format_notice` (qui juge « ça rentre ou pas ») par une PROPOSITION :
+ * sur quoi la vidéo est cadrée, quelle mise en page pré-sélectionner, et ce que
+ * les autres choix feraient — notamment « Étalé », qui déforme sans le dire.
+ *
+ * `null` dès qu'on ne sait pas (pas un ruban, profil incomplet, dimensions
+ * illisibles) : ne pas conseiller vaut mieux que conseiller à tort.
+ */
+async function computeFitRecommendation(
+  siteId: string | null,
+  displayType: string,
+  width: number | null,
+  height: number | null,
+): Promise<FitRecommendation | null> {
+  if (displayType !== 'led-perimeter' || !siteId || !width || !height) return null;
+  const displays = await siteRepository.getDisplays(siteId);
+  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
+
+  const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+  if (!Number.isFinite(pitchMm) || pitchMm <= 0) return null;
+
+  try {
+    return classifyVideoForRibbon({
+      videoWidth: width,
+      videoHeight: height,
+      sides: led.sides,
+      pitchMm,
+      height: led.height,
+    });
+  } catch {
+    return null; // profil incomplet → pas de conseil (jamais bloquant)
   }
 }
 
@@ -205,10 +243,18 @@ export const createVideoVariant = async (req: AuthRequest, res: Response) => {
       height,
     );
 
+    const fit = await computeFitRecommendation(
+      video.uploaded_for_site_id ?? null,
+      displayType,
+      width,
+      height,
+    );
+
     res.status(201).json({
       ...variant,
       url: uploadResult.url,
       ...(formatNotice ? { format_notice: formatNotice } : {}),
+      ...(fit ? { fit_recommendation: fit } : {}),
     });
   } catch (error) {
     logger.error('Error creating video variant:', error);

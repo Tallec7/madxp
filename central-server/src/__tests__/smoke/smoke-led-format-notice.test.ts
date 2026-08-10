@@ -92,3 +92,44 @@ describe('Smoke — dimensions mesurées à l’upload', () => {
     expect((ctrl.match(/sourceDimensions/g) || []).length).toBeGreaterThanOrEqual(4);
   });
 });
+
+/**
+ * Recommandation de cadrage — la couche qui transforme deux mesures en une
+ * proposition lisible, au lieu de laisser l'opérateur choisir entre quatre
+ * options abstraites sans savoir laquelle déforme le logo d'un sponsor.
+ */
+describe('Smoke — recommandation de cadrage', () => {
+  const SRC3 = path.resolve(__dirname, '../..');
+  const read3 = (rel: string) => fs.readFileSync(path.join(SRC3, rel), 'utf8');
+
+  it('le classificateur privilégie la largeur EXACTE sur le ratio', () => {
+    const svc = read3('services/led-content-fit.service.ts');
+    expect(svc).toMatch(/export function classifyVideoForRibbon/);
+    // Sans cette priorité, une vidéo livrée pile à la taille d'un côté (1600×120,
+    // ratio à 33 % de celui du côté) serait classée « ne correspond à rien ».
+    expect(svc).toMatch(/sideWidths\.includes\(vw\)/);
+    expect(svc).toMatch(/vw === ribbonWidth/);
+  });
+
+  it('il décide du pavage sur le REMPLISSAGE, pas sur la largeur brute', () => {
+    const svc = read3('services/led-content-fit.service.ts');
+    // Régression : un 1920×1080 est plus large qu'un côté de 1600, mais une fois
+    // ramené à la hauteur du ruban il n'en remplit que 18 %.
+    expect(svc).toMatch(/const containScale = Math\.min\(/);
+    expect(svc).toMatch(/fillRatio/);
+    expect(svc).not.toMatch(/const tooNarrow = vw < target\.width/);
+  });
+
+  it('il avertit de la déformation qu’« Étalé » provoquerait', () => {
+    const svc = read3('services/led-content-fit.service.ts');
+    expect(svc).toMatch(/« Étalé » déformerait/);
+  });
+
+  it('la recommandation est jointe à la réponse d’upload, sans jamais bloquer', () => {
+    const ctrl = read3('controllers/content-variant.controller.ts');
+    expect(ctrl).toMatch(/async function computeFitRecommendation/);
+    // Spread conditionnel : pas de conseil quand on ne sait pas.
+    expect(ctrl).toMatch(/\.\.\.\(fit \? \{ fit_recommendation: fit \} : \{\}\)/);
+    expect(ctrl).toMatch(/return null; \/\/ profil incomplet/);
+  });
+});

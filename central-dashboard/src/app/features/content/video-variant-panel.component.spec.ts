@@ -362,3 +362,83 @@ describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
     expect(component.linkingSide).toBeNull();
   });
 });
+
+/**
+ * Recommandation de cadrage — le système PROPOSE, l'opérateur tranche.
+ *
+ * Le comportement critique est celui de la non-régression : une suggestion ne
+ * doit jamais écraser un choix déjà fait par un humain.
+ */
+describe('VideoVariantPanelComponent — recommandation de cadrage', () => {
+  let fixture: ComponentFixture<VideoVariantPanelComponent>;
+  let component: VideoVariantPanelComponent;
+  let httpMock: HttpTestingController;
+
+  const notificationStub = {
+    success: jasmine.createSpy('success'),
+    error: jasmine.createSpy('error'),
+  };
+
+  const reco = {
+    scope: 'one-side' as const,
+    layout: 'centered',
+    target: { width: 1600, height: 160 },
+    explanation:
+      'Ta vidéo (1600×120) sera adaptée à un côté (1600×160), avec 20 px noirs en haut et en bas.',
+    warnings: ['« Étalé » déformerait l’image de 33 % en hauteur — à éviter sur un logo.'],
+    exact: false,
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [VideoVariantPanelComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NotificationService, useValue: notificationStub },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VideoVariantPanelComponent);
+    component = fixture.componentInstance;
+    component.videoId = 'vid-1';
+    component.siteId = 'site-1';
+    httpMock = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('« Centré » est proposable — l’API l’accepte depuis toujours', () => {
+    expect(component.layoutOptions.map((o) => o.value)).toContain('centered');
+  });
+
+  it('affiche l’explication et l’avertissement du serveur', () => {
+    component.isOpen = true;
+    component.variants = [
+      { display_type: 'led-perimeter', layout: 'centered' } as never,
+    ];
+    component.openPanels['led-perimeter'] = true;
+    component.fitRecommendations['led-perimeter'] = reco;
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    const block = el.querySelector('[data-testid="fit-recommendation"]');
+    expect(block).toBeTruthy();
+    expect(block!.textContent).toContain('20 px noirs');
+    expect(el.querySelector('[data-testid="fit-warning"]')!.textContent).toContain('33 %');
+  });
+
+  it('traduit la mise en page proposée en libellé lisible', () => {
+    expect(component.recommendedLayoutLabel(reco)).toBe('Centré');
+  });
+
+  it('n’affiche rien tant que le serveur n’a rien proposé', () => {
+    component.isOpen = true;
+    component.variants = [{ display_type: 'led-perimeter' } as never];
+    component.openPanels['led-perimeter'] = true;
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="fit-recommendation"]')).toBeNull();
+  });
+});

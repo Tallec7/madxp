@@ -5,7 +5,8 @@ import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { DisplayConfig, CloudVideo } from '../../core/models';
-import { ledSourceFormat } from '../../core/utils/led-geometry';
+import { ledSourceFormat, ledCellPx } from '../../core/utils/led-geometry';
+import { LedRibbonPreviewComponent } from './led-ribbon-preview.component';
 import { environment } from '../../../environments/environment';
 
 /** Fichier d'un côté pour une variante led-perimeter « par côté » (ADR-135). */
@@ -66,15 +67,30 @@ const LED_PERIMETER_TYPE = 'led-perimeter';
 
 /** Options de mise en page LED (PROP-014 §8 / ADR-134). Slugs alignés sur l'API. */
 const LAYOUT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  // `centered` manquait alors que l'API l'accepte depuis toujours
+  // (`validation.ts` : repeated|scrolling|stretched|centered) et que c'est le
+  // choix le plus sûr pour une vidéo déjà au bon format — celui que le
+  // classificateur propose le plus souvent.
+  { value: 'centered', label: 'Centré' },
   { value: 'repeated', label: 'Répété' },
   { value: 'scrolling', label: 'Défilant' },
   { value: 'stretched', label: 'Étalé' },
 ];
 
+/** Recommandation de cadrage (serveur : `led-content-fit.service.ts`). */
+export interface FitRecommendation {
+  scope: 'one-side' | 'full-ribbon';
+  layout: string;
+  target: { width: number; height: number };
+  explanation: string;
+  warnings: string[];
+  exact: boolean;
+}
+
 @Component({
   selector: 'app-video-variant-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LedRibbonPreviewComponent],
   templateUrl: './video-variant-panel.component.html',
   styleUrls: ['./video-variant-panel.component.scss'],
 })
@@ -102,6 +118,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   savingLayoutType: string | null = null;
   /** Avis de format LED par display_type (PROP-014 §6), affiché après upload. */
   formatNotices: Record<string, LedFormatNotice> = {};
+
+  /**
+   * Recommandation de cadrage renvoyée par le serveur à l'upload (ADR-138 suite).
+   * Traduit deux mesures — la vidéo, le terrain — en une phrase lisible, au lieu
+   * de laisser choisir entre quatre options abstraites sans savoir laquelle
+   * déforme le logo d'un sponsor.
+   */
+  fitRecommendations: Record<string, FitRecommendation> = {};
   /** État d'export plié async par display_type (PROP-014 §6 / étape 6). */
   exportStates: Record<string, LedExportState> = {};
   private exportPollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
@@ -371,12 +395,12 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
       formData.append('height', String(dims.height));
     }
 
-    this.http.post<VideoVariant & { format_notice?: LedFormatNotice }>(
+    this.http.post<VideoVariant & { format_notice?: LedFormatNotice; fit_recommendation?: FitRecommendation }>(
       `${environment.apiUrl}/videos/${this.videoId}/variants`,
       formData,
       { withCredentials: true, reportProgress: true, observe: 'events' }
     ).subscribe({
-      next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice }>) => {
+      next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice; fit_recommendation?: FitRecommendation }>) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
         } else if (event.type === HttpEventType.Response && event.body) {
@@ -392,6 +416,16 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           // Avis de format LED (PROP-014 §6) — informatif, non bloquant.
           if (variant.format_notice) {
             this.formatNotices[displayType] = variant.format_notice;
+          }
+          // Recommandation de cadrage : on PRÉ-SÉLECTIONNE la mise en page
+          // proposée quand l'opérateur n'en a pas encore choisi une. Jamais
+          // d'écrasement d'un choix existant — c'est une proposition, pas une
+          // décision.
+          if (variant.fit_recommendation) {
+            this.fitRecommendations[displayType] = variant.fit_recommendation;
+            if (!variant.layout) {
+              this.applyRecommendedLayout(variant, variant.fit_recommendation.layout);
+            }
           }
           this.emitChange();
           this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} uploadee`);
@@ -428,6 +462,58 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   }
 
   /** Classe CSS / sévérité de l'avis de format pour l'affichage. */
+  /**
+   * Applique la mise en page proposée par le serveur, en base et dans l'UI.
+   * Appelée UNIQUEMENT quand l'opérateur n'a pas déjà choisi : une recommandation
+   * ne doit jamais écraser une décision humaine.
+   */
+  private applyRecommendedLayout(variant: VideoVariant, layout: string): void {
+    variant.layout = layout;
+    this.http
+      .patch<{ layout: string | null }>(
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/layout`,
+        { layout },
+        { withCredentials: true }
+      )
+      .subscribe({
+        error: () => {
+          // Silencieux : la proposition reste affichée, l'opérateur peut la
+          // rejouer à la main. Échouer bruyamment sur une suggestion serait pire
+          // que de ne rien proposer.
+          variant.layout = null;
+        },
+      });
+  }
+
+  /** Profil LED du site consulté (géométrie du ruban), ou `null`. */
+  private get ledProfile() {
+    return this.siteDisplays?.find((d) => d.type === LED_PERIMETER_TYPE)?.led ?? null;
+  }
+
+  /** Cadence du motif en px, pour que l'aperçu montre le BON nombre de copies. */
+  get ledCellPx(): number {
+    return ledCellPx(this.ledProfile);
+  }
+
+  /**
+   * Cadre visé par l'aperçu : la cible recommandée par le serveur si on l'a,
+   * sinon un côté déduit du profil. Sans profil, rien n'est prévisualisable.
+   */
+  previewTarget(displayType: string): { width: number; height: number } | null {
+    const reco = this.fitRecommendations[displayType];
+    if (reco) return reco.target;
+    const led = this.ledProfile;
+    if (!led || !led.sides?.length) return null;
+    const mm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+    if (!Number.isFinite(mm) || mm <= 0) return null;
+    return { width: Math.round(led.sides[0] * (1000 / mm)), height: led.height };
+  }
+
+  /** Libellé lisible de la mise en page proposée (« Centré », « Répété »…). */
+  recommendedLayoutLabel(rec: FitRecommendation): string {
+    return LAYOUT_OPTIONS.find((o) => o.value === rec.layout)?.label ?? 'Centré';
+  }
+
   formatNoticeClass(verdict: LedFormatNotice['verdict']): string {
     return `format-notice--${verdict}`;
   }
