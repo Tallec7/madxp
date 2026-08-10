@@ -66,10 +66,25 @@ const LED_PERIMETER_TYPE = 'led-perimeter';
 
 /** Options de mise en page LED (PROP-014 §8 / ADR-134). Slugs alignés sur l'API. */
 const LAYOUT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  // `centered` manquait alors que l'API l'accepte depuis toujours
+  // (`validation.ts` : repeated|scrolling|stretched|centered) et que c'est le
+  // choix le plus sûr pour une vidéo déjà au bon format — celui que le
+  // classificateur propose le plus souvent.
+  { value: 'centered', label: 'Centré' },
   { value: 'repeated', label: 'Répété' },
   { value: 'scrolling', label: 'Défilant' },
   { value: 'stretched', label: 'Étalé' },
 ];
+
+/** Recommandation de cadrage (serveur : `led-content-fit.service.ts`). */
+export interface FitRecommendation {
+  scope: 'one-side' | 'full-ribbon';
+  layout: string;
+  target: { width: number; height: number };
+  explanation: string;
+  warnings: string[];
+  exact: boolean;
+}
 
 @Component({
   selector: 'app-video-variant-panel',
@@ -102,6 +117,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   savingLayoutType: string | null = null;
   /** Avis de format LED par display_type (PROP-014 §6), affiché après upload. */
   formatNotices: Record<string, LedFormatNotice> = {};
+
+  /**
+   * Recommandation de cadrage renvoyée par le serveur à l'upload (ADR-138 suite).
+   * Traduit deux mesures — la vidéo, le terrain — en une phrase lisible, au lieu
+   * de laisser choisir entre quatre options abstraites sans savoir laquelle
+   * déforme le logo d'un sponsor.
+   */
+  fitRecommendations: Record<string, FitRecommendation> = {};
   /** État d'export plié async par display_type (PROP-014 §6 / étape 6). */
   exportStates: Record<string, LedExportState> = {};
   private exportPollTimers: Record<string, ReturnType<typeof setTimeout>> = {};
@@ -371,12 +394,12 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
       formData.append('height', String(dims.height));
     }
 
-    this.http.post<VideoVariant & { format_notice?: LedFormatNotice }>(
+    this.http.post<VideoVariant & { format_notice?: LedFormatNotice; fit_recommendation?: FitRecommendation }>(
       `${environment.apiUrl}/videos/${this.videoId}/variants`,
       formData,
       { withCredentials: true, reportProgress: true, observe: 'events' }
     ).subscribe({
-      next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice }>) => {
+      next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice; fit_recommendation?: FitRecommendation }>) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
         } else if (event.type === HttpEventType.Response && event.body) {
@@ -392,6 +415,16 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           // Avis de format LED (PROP-014 §6) — informatif, non bloquant.
           if (variant.format_notice) {
             this.formatNotices[displayType] = variant.format_notice;
+          }
+          // Recommandation de cadrage : on PRÉ-SÉLECTIONNE la mise en page
+          // proposée quand l'opérateur n'en a pas encore choisi une. Jamais
+          // d'écrasement d'un choix existant — c'est une proposition, pas une
+          // décision.
+          if (variant.fit_recommendation) {
+            this.fitRecommendations[displayType] = variant.fit_recommendation;
+            if (!variant.layout) {
+              this.applyRecommendedLayout(variant, variant.fit_recommendation.layout);
+            }
           }
           this.emitChange();
           this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} uploadee`);
@@ -428,6 +461,34 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   }
 
   /** Classe CSS / sévérité de l'avis de format pour l'affichage. */
+  /**
+   * Applique la mise en page proposée par le serveur, en base et dans l'UI.
+   * Appelée UNIQUEMENT quand l'opérateur n'a pas déjà choisi : une recommandation
+   * ne doit jamais écraser une décision humaine.
+   */
+  private applyRecommendedLayout(variant: VideoVariant, layout: string): void {
+    variant.layout = layout;
+    this.http
+      .patch<{ layout: string | null }>(
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/layout`,
+        { layout },
+        { withCredentials: true }
+      )
+      .subscribe({
+        error: () => {
+          // Silencieux : la proposition reste affichée, l'opérateur peut la
+          // rejouer à la main. Échouer bruyamment sur une suggestion serait pire
+          // que de ne rien proposer.
+          variant.layout = null;
+        },
+      });
+  }
+
+  /** Libellé lisible de la mise en page proposée (« Centré », « Répété »…). */
+  recommendedLayoutLabel(rec: FitRecommendation): string {
+    return LAYOUT_OPTIONS.find((o) => o.value === rec.layout)?.label ?? 'Centré';
+  }
+
   formatNoticeClass(verdict: LedFormatNotice['verdict']): string {
     return `format-notice--${verdict}`;
   }

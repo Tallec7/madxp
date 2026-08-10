@@ -433,3 +433,43 @@
   white-space: nowrap;
   color: #166534;
 }
+
+// Recommandation de cadrage — proposition du serveur, pas une décision.
+.fit-reco {
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid #2563eb;
+  background: #eff6ff;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.8125rem;
+  color: #1e3a5f;
+
+  &__line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__badge {
+    flex: none;
+    font-weight: 700;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1d4ed8;
+    background: #dbeafe;
+    padding: 0.125rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  &__text {
+    line-height: 1.45;
+  }
+
+  &__warning {
+    margin-top: 0.375rem;
+    color: #92400e;
+    line-height: 1.45;
+  }
+}

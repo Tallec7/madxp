@@ -178,6 +178,26 @@
             {{ notice.message }}
           </div>
 
+          <!-- Recommandation de cadrage : ce que le système propose, et pourquoi.
+               Remplace le choix à l'aveugle entre quatre options abstraites. -->
+          <div
+            class="fit-reco"
+            *ngIf="fitRecommendations[variant.display_type] as reco"
+            data-testid="fit-recommendation"
+          >
+            <div class="fit-reco__line">
+              <span class="fit-reco__badge">{{ recommendedLayoutLabel(reco) }}</span>
+              <span class="fit-reco__text">{{ reco.explanation }}</span>
+            </div>
+            <div
+              class="fit-reco__warning"
+              *ngFor="let w of reco.warnings"
+              data-testid="fit-warning"
+            >
+              ⚠️ {{ w }}
+            </div>
+          </div>
+
           <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement.
                Plie pour le club consulté → affiché seulement quand un club est en
                contexte (masqué dans la bibliothèque globale). -->
