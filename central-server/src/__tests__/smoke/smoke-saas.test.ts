@@ -3539,4 +3539,28 @@ describe('Smoke — présence des sites SaaS dans la santé flotte', () => {
       expect(query).toMatch(/s\.site_type/);
     }
   });
+
+  it('le heartbeat SaaS rafraîchit last_seen_at et ne réanime jamais un Pi', () => {
+    const src = read('central-server/src/services/saas-heartbeat.service.ts');
+    expect(src).toMatch(/UPDATE sites[\s\S]*last_seen_at = NOW\(\)/);
+    // Le filtre doit être DANS le WHERE, pas seulement évoqué en commentaire :
+    // on ancre sur le prédicat complet, batché + ceinture site_type.
+    expect(src).toMatch(/WHERE id = ANY\(\$1::uuid\[\]\) AND site_type = 'saas'/);
+  });
+
+  it('le heartbeat est démarré au boot et arrêté au SIGTERM', () => {
+    const server = read('central-server/src/server.ts');
+    expect(server).toMatch(/import \{ saasHeartbeatService \}/);
+    // Sans start(), le service existe mais ne bat jamais — invisible en prod.
+    expect(server).toMatch(/saasHeartbeatService\.start\(/);
+    expect(server).toMatch(/getConnectedSaasSiteIds\(\)/);
+    expect(server).toMatch(/saasHeartbeatService\.stop\(\)/);
+  });
+
+  it('getConnectedSaasSiteIds ne compte que les écrans, pas les télécommandes', () => {
+    const sock = read('central-server/src/services/socket.service.ts');
+    expect(sock).toMatch(/getConnectedSaasSiteIds\(\): string\[\]/);
+    // Une Remote (`saas-remote`) ne doit pas maintenir un site « en ligne ».
+    expect(sock).toMatch(/clientType === 'saas-tv' && s\.siteId/);
+  });
 });
