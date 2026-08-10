@@ -109,7 +109,6 @@ export interface LedProfileConfig {
   pitch: string;
   height: number;
   spacing_m: number;
-  zones: 'uniform' | 'per-side';
   canvas_in?: {
     band_width: number;
     band_count?: number;

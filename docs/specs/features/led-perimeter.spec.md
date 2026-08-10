@@ -2,11 +2,11 @@
 
 > **Owner** : Daisy
 > **Statut** : En construction (PROP-014 étapes 1-3 livrées, SPIKE matériel en attente)
-> **Dernière revue** : 2026-06-03
-> **last_verified** : 2026-06-03
-> **verified_against_commit** : 88c4ca7c
+> **Dernière revue** : 2026-08-10
+> **last_verified** : 2026-08-10
+> **verified_against_commit** : 64b8f2487
 > **Proposals liées** : [PROP-014](../../proposals/PROP-014-led-perimeter-content-pipeline.md) (modèle 3 couches, data model, plan de build), [SPIKE-003](../../proposals/SPIKE-003-multi-zone-ultra-wide-validation.md) (validation matérielle `canvas_in` + mode A/B)
-> **ADR liés** : [ADR-134](../../adr/ADR-134-led-perimeter-render-directly-folded.md) (studio rend directement plié), [ADR-135](../../adr/ADR-135-led-perimeter-per-side-zones.md) (pliage par côté + zones de contenu — **conçu, pas encore implémenté**), [ADR-128](../../adr/ADR-128-templates-studio-asset-directory.md) (bornes RAM render Remotion)
+> **ADR liés** : [ADR-134](../../adr/ADR-134-led-perimeter-render-directly-folded.md) (studio rend directement plié), [ADR-135](../../adr/ADR-135-led-perimeter-per-side-zones.md) (pliage par côté + zones de contenu — **conçu, pas encore implémenté**), [ADR-128](../../adr/ADR-128-templates-studio-asset-directory.md) (bornes RAM render Remotion), [ADR-137](../../adr/ADR-137-display-geometry-owns-resolution.md) (l'écran porte sa géométrie ; résolution dérivée, `zones` retiré)
 > **Smoke tests** : `led-fold.service.test.ts`, `display-led-profile.validation.test.ts`, `displays-editor.component.spec.ts` (bloc LED)
 
 ## En une phrase
@@ -23,7 +23,7 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - `central-server/templates-studio/templates/led_perimeter_folded/` — composition Remotion de **production** : rend directement le canvas plié (ADR-134).
 - `central-server/templates-studio/templates/led_perimeter_ribbon/` — composition **POC** (ruban plat) + outil de mesure `npm run led:ribbon-poc`.
 
-**Données** : le profil LED vit sur `sites.displays[]` (JSONB) pour les displays de `type: 'led-perimeter'` — `{ sides, pitch, height, spacing_m, zones, canvas_in }`. Validé par `schemas.updateDisplays` (`middleware/validation.ts`).
+**Données** : le profil LED vit sur `sites.displays[]` (JSONB) pour les displays de `type: 'led-perimeter'` — `{ sides, pitch, height, spacing_m, canvas_in }` (`zones` **retiré** en ADR-137 : champ mort, 0 lecteur). Validé par `schemas.updateDisplays` (`middleware/validation.ts`).
 
 **UI** : panneau LED du `displays-editor.component.ts` (dashboard) + sélecteur de mise en page du `video-variant-panel.component.ts`, rendus **par type** (`led-perimeter`), pas par index. Aperçu schématique du canvas plié (bandes empilées) dans le panneau LED.
 
@@ -44,13 +44,15 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - **Pitch = menu + saisie libre** : datalist des pas courants (`P2.5…P10`) tout en gardant la saisie libre (validée `PxX`) pour un pas exotique.
 - **Espacement contraint, jamais saisie libre** : la cadence du motif (`spacing_m`, libellé UI « Répétition par défaut », options « tous les X m ») est un dropdown limité aux diviseurs alignés sur les côtés (angles alignés + répétitions entières — PROP-014 §4). Leçon anti-drift. `getSpacingOptions` travaille en **dixièmes de mètre** pour gérer les côtés **décimaux** (ex. `[4,5 ; 4,5]` → propose `4,5 m`) sans changer les options des côtés entiers.
 - **Saisie en unités physiques (moldu), px en interne** : l'opérateur terrain mesure sa dalle en **cm** — le champ « Hauteur dalle » est en cm. Le modèle DB `height` reste en **rangées px** (= la matrice LED réelle, requise par le pliage/render). Conversion : `rangées = round(cm × 10 / pitch_mm)` (une dalle n'a pas de fraction de rangée → arrondi entier, le sous-libellé « = N rangées » montre le résultat effectif). Symétrique de la largeur (`côtés` en m → px). Zéro migration : `height` reste px côté serveur.
-- **Le contenu ne traverse jamais un angle** : chaque côté est une zone naturelle. **Le « par côté » vit sur la VARIANTE d'une vidéo, pas sur l'écran** (révision ADR-135) : l'écran (`display.led`) ne porte que la géométrie ; pour une vidéo donnée (boucle OU à la demande), sa déclinaison led-perimeter est soit **uniforme** (1 fichier, répété sur tout le tour) soit **par côté** (1 vidéo par côté), choisie dans le panneau **variantes** (côté Contenu). Le modèle initial `display.led.side_zones` + sélecteur en Réglages (#1088) a été **retiré** ; `display.led` ne porte plus que la géométrie (`zones` reste un champ legacy dormant). Le « par côté » sur la variante reste **à câbler** (prochaine PR). En attendant, `uniform` reste le rendu effectif.
+- **Le contenu ne traverse jamais un angle** : chaque côté est une zone naturelle. **Le « par côté » vit sur la VARIANTE d'une vidéo, pas sur l'écran** (révision ADR-135) : l'écran (`display.led`) ne porte que la géométrie ; pour une vidéo donnée (boucle OU à la demande), sa déclinaison led-perimeter est soit **uniforme** (1 fichier, répété sur tout le tour) soit **par côté** (1 vidéo par côté), choisie dans le panneau **variantes** (côté Contenu). Le modèle initial `display.led.side_zones` + sélecteur en Réglages (#1088) a été **retiré** ; `display.led` ne porte plus que la géométrie (`zones` a été supprimé du schéma en ADR-137). Le « par côté » sur la variante reste **à câbler** (prochaine PR). En attendant, `uniform` reste le rendu effectif.
 - **`canvas_in` = config processeur, provisoire jusqu'au SPIKE** : `band_width` (défaut 1920), `band_count` (dérivé), `order` (`top-to-bottom` | `bottom-to-top`, **même enum que `fold()`**), `mode` (`A` plug&play | `B` pixel-perfect — tranché post-SPIKE). Défauts provisoires → aucune refonte quand le SPIKE remplit les vraies valeurs.
 - **Jargon processeur replié dans « Avancé »** : `band_width` × canvas (Entrée processeur), `band_count` (Bandes) et `mode` (A/B) vivent dans une section repliable. `band_count` et `mode` sont **éditables** : l'installateur fige les vraies valeurs sur place → `isCanvasProvisional` passe à `false` et le badge « ⚠️ à confirmer install » disparaît. Vider Bandes rétablit le dérivé (provisoire). `getLedCanvasHeight` = `(band_count confirmé ?? dérivé) × hauteur`.
 - **Studio rend directement plié, club passe par `fold()`** (ADR-134) : le contenu généré par le studio est rendu directement dans le canvas plié (≤ `band_width × N`) ; la vidéo finie fournie par un club est pliée via ffmpeg. Ne jamais rastériser un ruban plat ultra-wide dans Chromium (OOM ≥ ~10000px).
 - **`fold()` est paramétrique et pur** : la géométrie (bandes, srcX, dstY, padding dernière bande) ne dépend que de `(ribbonWidth, ribbonHeight, bandWidth, order)`.
 - **Le validateur juge le FORMAT, jamais la source, et n'est JAMAIS bloquant** (PROP-014 §6) : `exact` (dimensions = profil → pliage direct), `resize` (même ratio → redimensionne), `incompatible` (ratio différent → blocs/espaces, note informative), `unknown` (dimensions illisibles). On ne refuse jamais un upload club.
 - **La mise en page vit sur la variante** (`layout`), pas sur le display — par vidéo × par écran (PROP-014 §8, Option A).
+- **La résolution d'un écran est DÉRIVÉE, jamais saisie** (ADR-137) : pour un `led-perimeter` elle se calcule depuis le profil (bandes × hauteur de dalle) et n'est **pas persistée** — une constante de gabarit (`1920x1120`) redevenait fausse au premier changement de côté. L'aide à l'upload côté Contenu affiche, elle, le **ruban déroulé** (`Σ côtés × 1000/pitch × hauteur`), c'est-à-dire ce que `validateLedFormat` juge.
+- **Un écran ne sait pas qui le pilote** (ADR-137) : l'index dit la sortie, le type dit la surface — éditable sur tous les écrans, `#0` compris (un club peut avoir son ruban en sortie principale). La distinction Pi / pas-Pi vit sur `site_type`, pas sur l'écran. Les deux sites LED en production sont d'ailleurs `site_type='saas'`, sans Pi.
 
 ## Comportements observables
 
@@ -58,6 +60,8 @@ Le LED périmétrique transforme un **motif sponsor** + un **profil de site para
 - `computeFoldGeometry({ ribbonWidth:13344, ribbonHeight:160, bandWidth:1920 })` → 7 bandes, canvas 1920×1120, dernière bande 1824px (padding 96px).
 - `npm run led:ribbon-poc --folded` rend la composition pliée à toutes les largeurs sans OOM (sortie ≤ 1920×N) ; sans `--folded`, le ruban plat échoue dès ~10000px (preuve ADR-134).
 - Le panneau LED n'apparaît **que** pour un display `type: 'led-perimeter'` — une 2ᵉ TV reste inchangée.
+- Le badge de résolution d'un ruban `[40,20,20]` P6 / 160 rangées affiche `1920x1120` ; retirer le côté de 20 m le fait passer à `1920x960` **en direct**, et rien n'est écrit en base. Une TV garde son standard `1920x1080`.
+- Changer le type de l'écran `#0` de « TV classique » à « LED périmétrique » fait apparaître le panneau LED avec un profil par défaut ; revenir à « TV » retire le profil (pas d'orphelin en base).
 - Uploader une vidéo club 4800×800 (6:1) sur un ruban ~83:1 affiche un avis ⚠️ « ratio incompatible → blocs/espaces » sans bloquer l'upload ; une vidéo aux dimensions exactes affiche ✅ « pliage direct ».
 - Le sélecteur de mise en page (Répété/Défilant/Étalé) n'apparaît que pour les variantes `led-perimeter` et persiste via PATCH (rollback optimiste si échec).
 - `npm run led:export` plie une vidéo (ex. testsrc 4800×800) au canvas exact du profil (1920×1120) — vérifié par ffprobe (`match: true`), sans OOM Chromium (ffmpeg pur).

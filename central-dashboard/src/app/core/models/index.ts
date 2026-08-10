@@ -192,13 +192,12 @@ export interface LedCanvasInConfig {
 
 /** Profil LED périmétrique d'un display (PROP-014 §3) — GÉOMÉTRIE uniquement.
  * Le « contenu par côté » a déménagé sur la variante d'une vidéo (révision ADR-135),
- * il ne vit plus sur l'écran. `zones` reste un champ legacy dormant (à purger). */
+ * il ne vit plus sur l'écran. `zones` a été retiré (champ mort, 0 lecteur). */
 export interface LedProfileConfig {
   sides: number[];               // longueurs des côtés (m), ex. [40, 20, 20]
   pitch: string;                 // pas de pixel, ex. 'P6' (= 6 mm)
   height: number;                // hauteur de dalle (px)
   spacing_m: number;             // cadence de répétition du motif (m)
-  zones?: 'uniform' | 'per-side'; // legacy (PROP-014 §5) — dormant, plus de UI
   canvas_in?: LedCanvasInConfig; // ⏳ config processeur (SPIKE)
 }
 

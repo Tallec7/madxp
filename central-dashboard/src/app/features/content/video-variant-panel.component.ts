@@ -5,6 +5,7 @@ import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
 import { NotificationService } from '../../core/services/notification.service';
 import { ErrorExtractor } from '../../core/utils/error-extractor';
 import { DisplayConfig, CloudVideo } from '../../core/models';
+import { ledSourceFormat } from '../../core/utils/led-geometry';
 import { environment } from '../../../environments/environment';
 
 /** Fichier d'un côté pour une variante led-perimeter « par côté » (ADR-135). */
@@ -257,6 +258,20 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
 
   getIcon(type: string): string {
     return DISPLAY_ICONS[type] || '🖥️';
+  }
+
+  /**
+   * Format que le club doit produire pour cet écran (« Format recommandé »).
+   *
+   * Pour un ruban LED, c'est le RUBAN DÉROULÉ (Σ côtés × pitch × hauteur) — c'est ce
+   * que `validateLedFormat` juge côté serveur, et il se dérive du terrain du club.
+   * Avant, on affichait `display.resolution`, une constante de gabarit (`1920x1120`)
+   * qui ne correspondait à aucun club réel. Pour les autres types, la résolution
+   * standard reste la bonne réponse.
+   */
+  getFormatHint(display: DisplayConfig): string | null {
+    if (display.type === LED_PERIMETER_TYPE) return ledSourceFormat(display.led);
+    return display.resolution || null;
   }
 
   getDisplayLabel(type: string): string {

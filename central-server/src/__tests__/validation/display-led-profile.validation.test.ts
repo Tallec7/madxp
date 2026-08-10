@@ -20,8 +20,7 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
   it('accepte un display led-perimeter avec profil led minimal', () => {
     const { error, value } = wrap({ index: 1, name: 'Bord de terrain', type: 'led-perimeter', led: ledMinimal });
     expect(error).toBeUndefined();
-    // zones par défaut → 'uniform'
-    expect(value.displays[0].led.zones).toBe('uniform');
+    expect(value.displays[0].led.sides).toEqual([40, 20, 20]);
   });
 
   it('préserve `led` (n’est PAS retiré par stripUnknown)', () => {
@@ -51,7 +50,6 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
       type: 'led-perimeter',
       led: {
         ...ledMinimal,
-        zones: 'per-side',
         canvas_in: { band_width: 1920, band_count: 7, order: 'bottom-to-top', mode: 'A' },
       },
     });
@@ -89,10 +87,19 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
     expect(error!.message).toMatch(/height/);
   });
 
-  it('rejette un zones inconnu', () => {
-    const { error } = wrap({ index: 1, name: 'LED', type: 'led-perimeter', led: { ...ledMinimal, zones: 'mosaic' } });
-    expect(error).toBeDefined();
-    expect(error!.message).toMatch(/zones/);
+  // `zones` est RETIRÉ du schéma (champ mort, 0 lecteur en production — vérifié
+  // 2026-08-10). Comme `side_zones`, il devient une clé inconnue : le middleware la
+  // retire silencieusement (`stripUnknown: true`) au lieu de 400, ce qui la fait
+  // disparaître de la DB à la première réécriture des displays.
+  it('retire zones envoyé par un ancien client (stripUnknown, comme le middleware)', () => {
+    const { error, value } = schemas.updateDisplays.validate(
+      { displays: [{ index: 1, name: 'LED', type: 'led-perimeter', led: { ...ledMinimal, zones: 'uniform' } }] },
+      { abortEarly: false, stripUnknown: true }
+    );
+    expect(error).toBeUndefined();
+    expect(value.displays[0].led.zones).toBeUndefined();
+    // Le reste du profil survit intact.
+    expect(value.displays[0].led.sides).toEqual([40, 20, 20]);
   });
 
   it('rejette un canvas_in.mode hors {A,B}', () => {

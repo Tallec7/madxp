@@ -258,8 +258,8 @@
               {{ uploadingType === display.type ? 'Upload ' + uploadProgress + '%' : 'Uploader' }}
             </label>
           </div>
-          <span class="upload-hint" *ngIf="display.resolution"
-            >Format recommande : {{ display.resolution }}</span
+          <span class="upload-hint" *ngIf="getFormatHint(display) as hint"
+            >Format recommande : {{ hint }}</span
           >
         </div>
       </div>

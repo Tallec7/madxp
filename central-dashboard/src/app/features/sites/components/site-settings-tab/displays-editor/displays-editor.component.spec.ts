@@ -62,16 +62,17 @@ describe('DisplaysEditorComponent — Phase 8 Receiver UX', () => {
     component = fixture.componentInstance;
   });
 
-  // Test A: Pi native badge for display.index === 0
-  it('A — display index 0 shows Pi HDMI badge (read-only)', () => {
+  // Test A: l'écran #0 n'affiche PLUS de badge « Pi HDMI » — un écran ne sait pas
+  // qui le pilote. La distinction Pi / pas-Pi vit sur site_type, une fois, au bon
+  // niveau. Le badge mentait sur les sites SaaS, qui n'ont pas de Pi.
+  it('A — display index 0 shows no Pi HDMI badge (source is not a display property)', () => {
     component.displays = [displayNative];
     component.connectedReceivers = mockReceivers;
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    const nativeBadge = el.querySelector('.receiver-badge--native');
-    expect(nativeBadge).toBeTruthy();
-    expect(nativeBadge!.textContent).toContain('Pi HDMI');
+    expect(el.querySelector('.receiver-badge--native')).toBeNull();
+    expect(el.textContent).not.toContain('Pi HDMI');
 
     // No Assigner button for index 0
     const assignerBtn = el.querySelector('.receiver-badge--unassigned');
@@ -447,7 +448,6 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
       pitch: 'P6',
       height: 160,
       spacing_m: 10,
-      zones: 'uniform',
       canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
     },
   };
@@ -492,7 +492,57 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
 
     const added = component.displays.find((d) => d.type === 'led-perimeter');
     expect(added?.led).toBeTruthy();
-    expect(added?.led?.zones).toBe('uniform');
+    expect(added?.led?.pitch).toBe('P6');
+    // La résolution n'est PAS persistée pour un led-perimeter : elle se dérive.
+    expect(added?.resolution).toBeUndefined();
+  });
+
+  // --- Résolution dérivée + type éditable (chantiers A/B) ---
+
+  it('derives the LED resolution from the profile instead of a frozen template value', () => {
+    // 80 m P6 → ruban 13333 px → 7 bandes × 160 = 1120. La valeur suit la géométrie.
+    component.displays = [{ ...ledDisplay, led: { ...ledDisplay.led! } }];
+    fixture.detectChanges();
+
+    const d = component.displays.find((x) => x.type === 'led-perimeter')!;
+    expect(component.getDisplayResolution(d)).toBe('1920x1120');
+
+    // Changer un côté change la résolution affichée — c'est tout l'intérêt.
+    // 60 m P6 → ruban 10000 px → 6 bandes × 160 = 960.
+    d.led!.sides = [40, 20];
+    expect(component.getDisplayResolution(d)).toBe('1920x960');
+
+    // Et rien n'est persisté : la valeur ne peut pas devenir périmée en base.
+    expect(d.resolution).toBeUndefined();
+  });
+
+  it('keeps the standard resolution for non-derived types', () => {
+    component.displays = [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
+    fixture.detectChanges();
+    expect(component.getDisplayResolution(component.displays[0])).toBe('1920x1080');
+  });
+
+  it('allows changing the type of display #0 and swaps the led profile accordingly', () => {
+    component.displays = [{ index: 0, name: 'TV', type: 'tv', resolution: '1920x1080' }];
+    fixture.detectChanges();
+
+    const d = component.displays[0];
+    component.updateDisplayType(d, 'led-perimeter');
+    expect(d.type).toBe('led-perimeter');
+    expect(d.led).toBeTruthy();
+    expect(d.resolution).toBeUndefined(); // dérivée désormais
+
+    // Retour à une TV : le profil LED ne doit pas rester orphelin.
+    component.updateDisplayType(d, 'tv');
+    expect(d.led).toBeUndefined();
+    expect(d.resolution).toBe('1920x1080');
+  });
+
+  it('keeps a custom type in the options so it is not silently lost', () => {
+    const custom = { index: 1, name: 'Vitrine', type: 'vitrine-4k' };
+    component.displays = [custom];
+    fixture.detectChanges();
+    expect(component.getTypeOptions(custom).some((t) => t.type === 'vitrine-4k')).toBe(true);
   });
 
   it('computes ribbon width and band count (80 m P6 → 13333×160 → 7 bands)', () => {
@@ -685,7 +735,6 @@ describe('DisplaysEditorComponent — Refonte panneau LED', () => {
       pitch: 'P6',
       height: 160,
       spacing_m: 10,
-      zones: 'uniform',
       canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
     },
   };
@@ -823,7 +872,6 @@ describe('DisplaysEditorComponent — Banc d\'essai LED (PROP-014 §6)', () => {
       pitch: 'P6',
       height: 160,
       spacing_m: 10,
-      zones: 'uniform',
       canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
     },
   };
