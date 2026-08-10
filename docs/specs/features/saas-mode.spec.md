@@ -81,12 +81,17 @@ inverse le signal :
 - **SaaS** : les navigateurs `saas-tv` de la room du site (`getSaasClientCount`).
   Un site SaaS n'a pas d'agent — il **n'entre jamais** dans `connectedSites`.
 
-Le repli sur les seuils `last_seen_at` (online < 90 s, warning < 180 s) **ne vaut que
-pour les Pi** : côté SaaS, `last_seen_at` n'est posé qu'au `saas-register` et n'est
-jamais rafraîchi (aucun heartbeat SaaS n'existe côté central — la TV émet
-`player-state` toutes les 5 s, mais c'est un event LAN sans listener central).
-S'en tenir aux seuils affichait « hors ligne » un club en pleine diffusion, trois
-minutes après l'allumage de son écran.
+Un **heartbeat SaaS** (`saas-heartbeat.service.ts`) rafraîchit `last_seen_at` toutes
+les 30 s pour les sites ayant un écran connecté, de sorte que les seuils temporels
+(online < 90 s = 3 battements manqués) restent justes pendant la diffusion. Le
+battement vit **côté serveur**, pas côté navigateur : le central sait déjà qui est
+connecté, un battement serveur profite immédiatement aux onglets déjà ouverts (aucun
+rechargement client), tient en un seul UPDATE batché, et évite la tempête de
+`displays-changed` qu'une ré-émission périodique de `saas-register` provoquerait.
+
+Le heartbeat ne **crée** jamais de présence : il ne touche que les sites ayant un
+écran à l'instant du tick, et son UPDATE porte un filtre `site_type = 'saas'` de
+ceinture — un site Pi n'est jamais réanimé par ce chemin.
 
 Tout consommateur de présence passe par `resolveSitePresence()`
 (`central-server/src/utils/site-presence.ts`) — jamais par `connectedSiteIds.has()`
