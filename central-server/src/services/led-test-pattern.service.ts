@@ -4,32 +4,34 @@
  * ## Pourquoi
  *
  * Le SPIKE-003 matériel bloque depuis avril parce qu'il suppose d'acheter un
- * processeur LED. Or les clubs installés en ont déjà un. Une mire numérotée
- * diffusée sur leur ruban, plus **une photo**, répond aux mêmes questions pour
- * zéro euro :
+ * processeur LED. Or les clubs installés en ont déjà un. Une mire diffusée sur
+ * leur ruban, plus **une photo**, répond aux mêmes questions pour zéro euro.
  *
- *  - le processeur redistribue-t-il lui-même le signal, ou attend-il un canvas
- *    déjà plié (le fameux mode A vs B, PROP-014 §10) ?
- *  - le ruban est-il une surface continue, ou N côtés indépendants recevant
- *    chacun le même signal ?
- *  - l'image est-elle étirée, répétée, ou cantonnée à un bout du tour ?
+ * ## Pourquoi une GRILLE, et une seule
  *
- * On lit la réponse dans l'ordre des blocs sur la photo. Aucun jargon requis de
- * la personne sur place : elle diffuse, elle photographie.
+ * Le lecteur TV rend la vidéo en `object-fit: contain` : quelle que soit la
+ * résolution du FICHIER, le processeur reçoit toujours le même signal — le mode
+ * de sortie de la source. Envoyer trois fichiers de tailles différentes ne teste
+ * donc rien : les trois arrivent letterboxés dans le même cadre.
  *
- * ## Comment
+ * La vraie question n'est pas « quelle taille envoyer » mais **« quelle région du
+ * signal le processeur pose-t-il sur le ruban, et dans quel ordre »**. Une grille
+ * numérotée qui couvre tout le cadre y répond d'une seule image :
  *
- * N blocs de couleurs distinctes sur toute la largeur, chacun portant **son
- * numéro en grand**. Le premier et le dernier sont marqués (`|<` et `>|`) pour
- * lever l'ambiguïté du sens de lecture — un ruban peut être câblé à l'envers.
+ *  - une seule rangée visible, cases 1→N dans l'ordre → il mappe une bande ;
+ *  - les rangées **bout à bout** le long du ruban → il DÉPLIE un canvas plié ;
+ *  - toute la grille écrasée → il étire le signal entier ;
+ *  - le même motif répété → les côtés sont indépendants, même signal.
  *
- * ffmpeg pur, jamais Chromium : la mire doit pouvoir être générée à la largeur du
- * ruban déroulé (ex. 6400 px), taille à laquelle le rendu DOM explose (ADR-134).
+ * Le pliage se voit directement : déplier un canvas met ses rangées bout à bout.
+ *
+ * ffmpeg pur, jamais Chromium — la mire doit pouvoir être générée à n'importe
+ * quelle taille, y compris celles où le rendu DOM explose (ADR-134).
  *
  * ## Ce que ça n'est pas
  *
- * Pas une feature produit : un outil de mise en service. La mire se génère, se
- * diffuse une fois, se photographie, et le club revient à son contenu.
+ * Pas une feature produit : un outil de mise en service, une fois par club. La
+ * réponse se consigne ensuite dans le profil, et tout en découle.
  */
 
 import { spawn } from 'child_process';
@@ -57,10 +59,18 @@ export const MIRE_COLORS = [
 export interface MireBlock {
   /** Numéro affiché, 1-indexé — c'est ce qu'on lit sur la photo. */
   label: number;
+  /** Rangée du bloc, 0-indexée. */
+  row: number;
+  /** Colonne du bloc, 0-indexée. */
+  colIndex: number;
   /** Position x dans le signal (px). */
   x: number;
-  /** Largeur du bloc (px) — le dernier absorbe le reste de la division. */
+  /** Position y dans le signal (px). */
+  y: number;
+  /** Largeur du bloc (px) — le dernier de la rangée absorbe le reste. */
   width: number;
+  /** Hauteur du bloc (px) — la dernière rangée absorbe le reste. */
+  height: number;
   /** Couleur de fond (#rrggbb). */
   color: string;
   /** Marqueur de bord : `start` sur le premier, `end` sur le dernier. */
@@ -72,14 +82,21 @@ export interface MireGeometryInput {
   width: number;
   /** Hauteur du signal (px). */
   height: number;
-  /** Nombre de blocs. 2 à 12. */
+  /** Nombre de colonnes. 2 à 12. */
   blocks: number;
+  /**
+   * Nombre de rangées. Défaut 1 (bande simple).
+   * `> 1` produit la GRILLE : c'est elle qui révèle un dépliage, en montrant les
+   * rangées mises bout à bout le long du ruban.
+   */
+  rows?: number;
 }
 
 const mireSchema = Joi.object<MireGeometryInput>({
   width: Joi.number().integer().min(16).max(32768).required(),
   height: Joi.number().integer().min(8).max(4320).required(),
   blocks: Joi.number().integer().min(2).max(MIRE_COLORS.length).required(),
+  rows: Joi.number().integer().min(1).max(8).optional(),
 }).required();
 
 /**
@@ -97,17 +114,29 @@ export function computeMireBlocks(input: MireGeometryInput): MireBlock[] {
     throw new Error(`computeMireBlocks: entrée invalide — ${error.message}`);
   }
 
+  const rows = value.rows ?? 1;
   const base = Math.floor(value.width / value.blocks);
+  const rowH = Math.floor(value.height / rows);
   const out: MireBlock[] = [];
-  for (let i = 0; i < value.blocks; i++) {
-    const isLast = i === value.blocks - 1;
-    out.push({
-      label: i + 1,
-      x: i * base,
-      width: isLast ? value.width - i * base : base,
-      color: MIRE_COLORS[i % MIRE_COLORS.length],
-      edge: i === 0 ? 'start' : isLast ? 'end' : null,
-    });
+
+  for (let r = 0; r < rows; r++) {
+    const isLastRow = r === rows - 1;
+    for (let i = 0; i < value.blocks; i++) {
+      const isLastCol = i === value.blocks - 1;
+      out.push({
+        label: r * value.blocks + i + 1,
+        row: r,
+        colIndex: i,
+        x: i * base,
+        y: r * rowH,
+        // Les derniers absorbent le reste de la division : la grille couvre
+        // EXACTEMENT le cadre, sinon un liseré noir passerait pour un artefact.
+        width: isLastCol ? value.width - i * base : base,
+        height: isLastRow ? value.height - r * rowH : rowH,
+        color: MIRE_COLORS[(r * value.blocks + i) % MIRE_COLORS.length],
+        edge: r === 0 && i === 0 ? 'start' : isLastRow && isLastCol ? 'end' : null,
+      });
+    }
   }
   return out;
 }
@@ -166,7 +195,6 @@ export function escapeFontPath(p: string): string {
 }
 
 export interface MireFilterOptions {
-  height: number;
   /** Police pour les numéros. `null` → repli sur un codage par barres. */
   fontFile: string | null;
 }
@@ -181,49 +209,76 @@ export interface MireFilterOptions {
  * une mire muette, ce qui serait pire qu'une mire moche.
  */
 export function buildMireFilter(blocks: MireBlock[], options: MireFilterOptions): string {
-  const h = options.height;
   const parts: string[] = [];
 
   for (const b of blocks) {
     parts.push(
-      `drawbox=x=${b.x}:y=0:w=${b.width}:h=${h}:color=${b.color}@1.0:t=fill`
+      `drawbox=x=${b.x}:y=${b.y}:w=${b.width}:h=${b.height}:color=${b.color}@1.0:t=fill`
     );
   }
 
   if (options.fontFile) {
     const font = escapeFontPath(options.fontFile);
-    const fontSize = Math.max(12, Math.floor(h * 0.55));
     for (const b of blocks) {
+      const fontSize = Math.max(12, Math.floor(b.height * 0.55));
       const cx = b.x + Math.floor(b.width / 2);
+      const cy = b.y + Math.floor(b.height / 2);
       parts.push(
         `drawtext=fontfile='${font}':text='${b.label}':fontcolor=white:fontsize=${fontSize}` +
           `:borderw=${Math.max(2, Math.floor(fontSize / 12))}:bordercolor=black` +
-          `:x=${cx}-text_w/2:y=(h-text_h)/2`
+          `:x=${cx}-text_w/2:y=${cy}-text_h/2`
       );
     }
   } else {
-    // Repli : `label` barres blanches, centrées dans le bloc.
+    // Repli sans `drawtext` : coordonnées, PAS un numéro absolu.
+    //
+    // Coder la case 27 par 27 barres donne un code-barres illisible dès la 2ᵉ
+    // rangée (constaté sur un rendu 8×4). On code donc la POSITION :
+    //   - `col` barres VERTICALES, centrées → numéro de colonne (≤ 8) ;
+    //   - `row` barres HORIZONTALES en bas   → numéro de rangée (≤ 8).
+    // Deux orientations, deux petits comptes : lisible sur photo au téléphone.
     for (const b of blocks) {
-      const barW = Math.max(2, Math.floor(h * 0.06));
+      const col = b.colIndex + 1;
+      const row = b.row + 1;
+
+      // Deux zones DISJOINTES : verticales dans le tiers haut, horizontales en
+      // bas. Sans cette séparation, la rangée 4 empiétait sur les colonnes et le
+      // glyphe devenait indéchiffrable (constaté sur un rendu 8×4).
+      const barW = Math.max(2, Math.floor(b.height * 0.07));
       const gap = barW * 2;
-      const total = b.label * barW + (b.label - 1) * gap;
-      const startX = b.x + Math.floor((b.width - total) / 2);
-      for (let k = 0; k < b.label; k++) {
-        const x = startX + k * (barW + gap);
+      const totalW = col * barW + (col - 1) * gap;
+      const startX = b.x + Math.floor((b.width - totalW) / 2);
+      const barY = b.y + Math.floor(b.height * 0.1);
+      const barH = Math.floor(b.height * 0.32);
+      for (let k = 0; k < col; k++) {
         parts.push(
-          `drawbox=x=${x}:y=${Math.floor(h * 0.2)}:w=${barW}:h=${Math.floor(h * 0.6)}:color=white@1.0:t=fill`
+          `drawbox=x=${startX + k * (barW + gap)}:y=${barY}:w=${barW}:h=${barH}:color=white@1.0:t=fill`
+        );
+      }
+
+      const hH = Math.max(2, Math.floor(b.height * 0.045));
+      const hGap = hH;
+      const hW = Math.floor(b.width * 0.25);
+      const hX = b.x + Math.floor((b.width - hW) / 2);
+      const hTotal = row * hH + (row - 1) * hGap;
+      const hY = b.y + b.height - Math.floor(b.height * 0.08) - hTotal;
+      for (let k = 0; k < row; k++) {
+        parts.push(
+          `drawbox=x=${hX}:y=${hY + k * (hH + hGap)}:w=${hW}:h=${hH}:color=white@1.0:t=fill`
         );
       }
     }
   }
 
   // Marqueurs de bord — un ruban peut être câblé à l'envers ; sans eux, on ne
-  // saurait pas distinguer « ordre 1→8 » de « ordre 8→1 » sur la photo.
-  const markW = Math.max(4, Math.floor(h * 0.1));
-  parts.push(`drawbox=x=0:y=0:w=${markW}:h=${h}:color=white@1.0:t=fill`);
+  // distingue pas « ordre 1→N » de « ordre N→1 » sur la photo.
+  const first = blocks[0];
   const last = blocks[blocks.length - 1];
-  const endX = last.x + last.width - markW;
-  parts.push(`drawbox=x=${endX}:y=0:w=${markW}:h=${h}:color=black@1.0:t=fill`);
+  const markW = Math.max(4, Math.floor(first.height * 0.1));
+  parts.push(`drawbox=x=0:y=${first.y}:w=${markW}:h=${first.height}:color=white@1.0:t=fill`);
+  parts.push(
+    `drawbox=x=${last.x + last.width - markW}:y=${last.y}:w=${markW}:h=${last.height}:color=black@1.0:t=fill`
+  );
 
   return parts.join(',');
 }
@@ -253,10 +308,11 @@ export function buildMireFfmpegArgs(options: MireRenderOptions, fontFile: string
     width: options.width,
     height: options.height,
     blocks: options.blocks,
+    rows: options.rows,
   });
   const duration = options.durationSec ?? 10;
   const fps = options.fps ?? 25;
-  const filter = buildMireFilter(blocks, { height: options.height, fontFile });
+  const filter = buildMireFilter(blocks, { fontFile });
 
   return [
     '-f',
@@ -297,6 +353,7 @@ export async function renderTestPattern(options: MireRenderOptions): Promise<Mir
       width: options.width,
       height: options.height,
       blocks: options.blocks,
+      rows: options.rows,
     });
   } catch (err) {
     return {
