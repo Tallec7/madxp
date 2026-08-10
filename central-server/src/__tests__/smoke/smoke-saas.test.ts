@@ -3485,3 +3485,58 @@ describe('Loop video owner tagging (club weight lock fix)', () => {
     expect(pkg.includes('"backfill:loop-video-owner"')).toBe(true);
   });
 });
+
+/**
+ * Présence d'un site SaaS — la santé flotte doit lire les navigateurs connectés,
+ * pas la Map des agents Pi.
+ *
+ * Sans ça (état antérieur au 2026-08-10), un club SaaS en pleine diffusion était
+ * affiché « hors ligne » : `connectedSites` n'est alimenté que par
+ * `authenticateAgent` (clé API Pi), et `last_seen_at` n'est posé qu'au
+ * `saas-register`, jamais rafraîchi — aucun heartbeat SaaS n'existe.
+ */
+describe('Smoke — présence des sites SaaS dans la santé flotte', () => {
+  const repoRoot = path.resolve(__dirname, '../../../..');
+  const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+
+  const PRESENCE = 'central-server/src/utils/site-presence.ts';
+  const CONSUMERS = [
+    'central-server/src/controllers/site-fleet-health.controller.ts',
+    'central-server/src/controllers/site-fleet.controller.ts',
+  ];
+
+  it('le helper de présence existe et distingue SaaS / Pi', () => {
+    const src = read(PRESENCE);
+    expect(src).toMatch(/export function resolveSitePresence/);
+    expect(src).toMatch(/siteType === 'saas'/);
+    expect(src).toMatch(/getSaasClientCount/);
+    expect(src).toMatch(/piConnectedSiteIds\.has/);
+  });
+
+  it('les contrôleurs flotte passent par le helper', () => {
+    for (const rel of CONSUMERS) {
+      const src = read(rel);
+      expect(src).toMatch(/import \{ resolveSitePresence \} from '\.\.\/utils\/site-presence'/);
+      expect(src).toMatch(/resolveSitePresence\(\{/);
+    }
+  });
+
+  it('aucun contrôleur flotte ne déduit la présence de la seule Map Pi', () => {
+    // Assertion NÉGATIVE : c'est la formulation buguée qu'on bloque.
+    // `connectedSiteIds.has(...)` ne doit plus servir à décider `isConnectedNow` —
+    // le Set reste passé au helper, qui tranche selon le type de site.
+    for (const rel of CONSUMERS) {
+      const src = read(rel);
+      expect(src).not.toMatch(/isConnectedNow\s*=\s*connectedSiteIds\.has/);
+    }
+  });
+
+  it('les requêtes flotte exposent site_type (sans lui, tout redevient Pi)', () => {
+    const repo = read('central-server/src/repositories/site.repository.ts');
+    for (const fn of ['getFleetHealth', 'getStats', 'findWithConnectionStatus']) {
+      const body = repo.slice(repo.indexOf(`async ${fn}(`));
+      const query = body.slice(0, body.indexOf('return result.rows'));
+      expect(query).toMatch(/s\.site_type/);
+    }
+  });
+});

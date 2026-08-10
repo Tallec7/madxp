@@ -99,6 +99,7 @@ export interface SiteConnectionRow extends QueryResultRow {
   site_name: string;
   club_name: string;
   status: string;
+  site_type: string | null;
   last_seen_at: Date | null;
   local_ip: string | null;
   last_metric_at: Date | null;
@@ -107,6 +108,7 @@ export interface SiteConnectionRow extends QueryResultRow {
 export interface SiteStatsRow extends QueryResultRow {
   id: string;
   status: string;
+  site_type: string | null;
   last_seen_at: Date | null;
   last_metric_at: Date | null;
 }
@@ -116,6 +118,7 @@ export interface FleetHealthRow extends QueryResultRow {
   site_name: string;
   club_name: string;
   status: string;
+  site_type: string | null;
   last_seen_at: Date | null;
   local_ip: string | null;
   software_version: string | null;
@@ -550,6 +553,8 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
         s.site_name,
         s.club_name,
         s.status,
+        -- Requis pour la présence : un site SaaS se lit sur ses navigateurs, pas sur l'agent.
+        s.site_type,
         s.last_seen_at,
         s.local_ip,
         (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
@@ -580,6 +585,8 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
       SELECT
         s.id,
         s.status,
+        -- Requis pour la présence : un site SaaS se lit sur ses navigateurs, pas sur l'agent.
+        s.site_type,
         s.last_seen_at,
         (SELECT recorded_at FROM metrics WHERE site_id = s.id ORDER BY recorded_at DESC LIMIT 1) as last_metric_at
       FROM sites s
@@ -616,6 +623,9 @@ class SiteRepositoryImpl extends BaseRepository<Site> {
         s.site_name,
         s.club_name,
         s.status,
+        -- Requis pour la santé flotte : un site SaaS n'a pas d'agent Pi, sa présence
+        -- se lit sur les navigateurs connectés (socketService.getSaasClientCount).
+        s.site_type,
         s.last_seen_at,
         s.local_ip,
         s.software_version,

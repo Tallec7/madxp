@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import logger from '../config/logger';
 import { memoryCache } from '../services/memory-cache.service';
+import { resolveSitePresence } from '../utils/site-presence';
 import {
   siteRepository,
   metricsRepository,
@@ -31,6 +32,7 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
       site_name: string;
       club_name: string;
       status: string;
+      site_type: string | null;
       last_seen_at: Date | null;
       local_ip: string | null;
       software_version: string | null;
@@ -43,7 +45,12 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
     }
 
     const sites = (sitesResult.rows as unknown as SiteRow[]).map((site) => {
-      const isConnectedNow = connectedSiteIds.has(site.id);
+      const { isSaas, saasClientCount, isConnectedNow } = resolveSitePresence({
+        siteId: site.id,
+        siteType: site.site_type,
+        piConnectedSiteIds: connectedSiteIds,
+        getSaasClientCount: (id) => socketService.getSaasClientCount(id),
+      });
       const lastSeenFromSite = site.last_seen_at ? new Date(site.last_seen_at) : null;
       const lastSeenFromMetrics = site.last_metric_at ? new Date(site.last_metric_at) : null;
 
@@ -58,9 +65,12 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
         ? Math.floor((now.getTime() - lastSeenAt.getTime()) / 1000)
         : null;
 
-      const connectionHealth = isConnectedNow ? socketService.getConnectionHealth(site.id) : null;
+      // La connexion zombie (socket morte mais encore dans la Map) est une notion
+      // propre à l'agent Pi — `getConnectionHealth` lit `connectedSites`. Un site
+      // SaaS n'y figure jamais : ne pas l'interroger pour lui.
+      const connectionHealth =
+        isConnectedNow && !isSaas ? socketService.getConnectionHealth(site.id) : null;
 
-      // Vérifier si c'est une vraie connexion zombie (socket morte mais flag actif)
       const isZombie = connectionHealth && !connectionHealth.socketConnected && connectionHealth.inMap;
 
       let displayStatus: 'online' | 'offline' | 'warning' | 'unknown';
@@ -84,9 +94,13 @@ export const getFleetHealthData = async (req: AuthRequest, res: Response) => {
         id: site.id,
         siteName: site.site_name,
         clubName: site.club_name,
+        siteType: site.site_type,
         displayStatus,
         lastSeenAt,
         secondsSinceLastSeen,
+        // Nb d'écrans navigateur connectés — la preuve de présence d'un site SaaS.
+        // `null` pour un site Pi, où la présence se lit sur l'agent.
+        saasClientCount: isSaas ? saasClientCount : null,
         localIp: site.local_ip,
         softwareVersion: site.software_version,
         location: site.location,
