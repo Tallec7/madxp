@@ -2,7 +2,7 @@ import { Response } from 'express';
 import logger from '../config/logger';
 import { probeVideoDimensions } from '../utils/video-dimensions';
 import { classifyVideoForRibbon, type FitRecommendation } from '../services/led-content-fit.service';
-import { AuthRequest } from '../types';
+import { AuthRequest, type DisplayConfig, type LedProfileConfig } from '../types';
 import { videoRepository, videoVariantRepository, siteRepository, videoClubGrantRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
 import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
@@ -99,11 +99,72 @@ const LED_PERIMETER_DISPLAY_TYPE = 'led-perimeter';
  */
 const BULK_LED_MAX_VIDEOS = 500;
 
-async function getAllowedDisplayTypes(siteId: string | null): Promise<string[] | null> {
-  if (!siteId) return null;
-  const displays = await siteRepository.getDisplays(siteId);
+function displaysToAllowedTypes(displays: DisplayConfig[]): string[] {
   const secondaryTypes = displays.filter(d => d.type !== 'tv').map(d => d.type);
   return secondaryTypes.length > 0 ? secondaryTypes : ['secondary'];
+}
+
+async function getAllowedDisplayTypes(siteId: string | null): Promise<string[] | null> {
+  if (!siteId) return null;
+  return displaysToAllowedTypes(await siteRepository.getDisplays(siteId));
+}
+
+/** Entrée de `classifyVideoForRibbon` dérivée d'un profil LED, ou `null` si illisible. */
+type RibbonGeometry = { sides: number[]; pitchMm: number; height: number };
+
+function ribbonGeometry(led: LedProfileConfig | null | undefined): RibbonGeometry | null {
+  if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
+  const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+  if (!Number.isFinite(pitchMm) || pitchMm <= 0) return null;
+  if (!led.height || led.height <= 0) return null;
+  return { sides: led.sides, pitchMm, height: led.height };
+}
+
+/**
+ * Seuil d'élongation en deçà duquel une vidéo n'est pas du contenu de ruban.
+ *
+ * `fillRatio` vaut exactement `ratio vidéo / ratio ruban` pour toute vidéo moins
+ * allongée que le ruban : `0,25` signifie donc « au moins 4× moins allongée ».
+ * Sur le ruban de Piraths (1600×120, ratio 13,3:1) : un 16:9 tombe à 0,13 et un
+ * carré à 0,08 — écartés ; un 1600×160 tient 0,75 et un 400×120 exactement 0,25 —
+ * gardés. Le seuil vise le clip TV, pas la tuile logo destinée à la répétition.
+ */
+const RIBBON_MIN_FILL_RATIO = 0.25;
+
+/**
+ * Motif d'exclusion d'une vidéo du parc ruban, ou `null` s'il faut la déclarer.
+ *
+ * Renvoie `null` — donc DÉCLARE — dès qu'on ne sait pas : dimensions jamais
+ * mesurées, profil LED incomplet, classement en échec. Un `null` de dimensions
+ * n'est pas un `false` : mieux vaut déclarer une variante que l'opérateur retire
+ * d'un clic que la sauter en silence (même principe que `matches_expected` dans
+ * la vue Canvas). Concrètement, tant que `backfill:video-dimensions` n'a pas
+ * tourné sur le site, ce filtre est inerte — et c'est le comportement voulu.
+ */
+function ribbonExclusion(
+  ribbon: RibbonGeometry | null,
+  dims: { width: number | null; height: number | null }
+): string | null {
+  if (!ribbon || !dims.width || !dims.height) return null;
+
+  let rec: FitRecommendation;
+  try {
+    rec = classifyVideoForRibbon({
+      videoWidth: dims.width,
+      videoHeight: dims.height,
+      ...ribbon,
+    });
+  } catch {
+    return null; // profil incomplet → on ne tranche pas
+  }
+
+  if (rec.fillRatio >= RIBBON_MIN_FILL_RATIO) return null;
+
+  return (
+    `Format ${dims.width}×${dims.height} : ne couvre que ${Math.round(rec.fillRatio * 100)} % ` +
+    `de la largeur du ruban (${rec.target.width}×${rec.target.height}) — clip TV, ` +
+    `pas du contenu de ruban. À déclarer à la main si c'est une erreur.`
+  );
 }
 
 /**
@@ -423,20 +484,25 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
     // Le site doit réellement avoir un ruban déclaré : sinon la variante serait
     // rejetée une par une par `getAllowedDisplayTypes`, autant le dire tout de suite.
-    const allowedTypes = await getAllowedDisplayTypes(siteId);
-    if (allowedTypes && !allowedTypes.includes(LED_PERIMETER_DISPLAY_TYPE)) {
+    const displays = await siteRepository.getDisplays(siteId);
+    const allowedTypes = displaysToAllowedTypes(displays);
+    if (!allowedTypes.includes(LED_PERIMETER_DISPLAY_TYPE)) {
       return res.status(400).json({
         error: "Ce site n'a pas d'écran LED périmétrique déclaré",
         message: `Types d'écran du site : ${allowedTypes.join(', ') || 'aucun'}`,
       });
     }
 
+    // Géométrie du ruban — sert à écarter les clips TV (cf. `ribbonExclusion`).
+    // Absente ou illisible → aucun filtrage : on préfère tout déclarer.
+    const ribbon = ribbonGeometry(displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led);
+
     // `findIdsOwnedBySite` filtre RÉELLEMENT sur `uploaded_for_site_id`. Ne jamais
     // revenir à `findForSitePaginated` : malgré son nom, elle ne filtre pas — le
     // siteId n'y sert qu'au tri, et elle a fait déborder cette opération sur 7 clubs.
     const videoIds = await videoRepository.findIdsOwnedBySite(siteId, BULK_LED_MAX_VIDEOS);
     if (videoIds.length === 0) {
-      return res.json({ created: 0, skipped: 0, failed: 0, total: 0, variants: [] });
+      return res.json({ created: 0, skipped: 0, excluded: 0, failed: 0, total: 0, variants: [], exclusions: [] });
     }
 
     const counts = await videoVariantRepository.findVariantCountsByVideoIds(videoIds);
@@ -446,6 +512,7 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
     const created: Array<{ video_id: string; variant_id: string }> = [];
     const failed: Array<{ video_id: string; error: string }> = [];
+    const excluded: Array<{ video_id: string; filename: string; reason: string }> = [];
 
     for (const candidateId of candidates) {
       try {
@@ -455,6 +522,20 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
         if (!video) continue;
 
         const dims = dimensionsFromVideo(video);
+
+        // Écarter les clips TV : chez Piraths, les faits de jeu (CARTON JAUNE,
+        // TEMPS MORT…) sont des 16:9 destinés à la télécommande sur la TV.
+        // Écrasés à 120 px de haut, ils donnent des vignettes noires illisibles.
+        const reason = ribbonExclusion(ribbon, dims);
+        if (reason) {
+          excluded.push({
+            video_id: video.id,
+            filename: video.original_name || video.filename,
+            reason,
+          });
+          continue;
+        }
+
         const variant = await videoVariantRepository.create({
           video_id: video.id,
           display_type: LED_PERIMETER_DISPLAY_TYPE,
@@ -489,6 +570,7 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
       total: videoIds.length,
       created: created.length,
       skipped: videoIds.length - candidates.length,
+      excluded: excluded.length,
       failed: failed.length,
     });
 
@@ -496,6 +578,11 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
       total: videoIds.length,
       created: created.length,
       skipped: videoIds.length - candidates.length,
+      // Écartées sur le format. Le détail EST le livrable : une exclusion muette se
+      // lit comme « tout a été traité », et l'opérateur ne saurait pas qu'il doit
+      // déclarer la variante à la main pour une vidéo qu'il destinait au ruban.
+      excluded: excluded.length,
+      exclusions: excluded,
       failed: failed.length,
       failures: failed,
       variants: created,

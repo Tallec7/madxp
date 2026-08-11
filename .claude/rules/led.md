@@ -38,6 +38,15 @@ ce qui est gravé dans le processeur.
   `canvas_in.band_count = 1` figé par un installateur alors que le dérivé par côté vaut 2 :
   allumer sans re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé
   pour 110. L'activation se fait club par club, après la mire (`npm run led:mire`).
+- **Exclure une vidéo aux dimensions inconnues du bouton « Créer les variantes LED
+  manquantes »** (`ribbonExclusion`, `content-variant.controller.ts`). Un `null` de
+  dimensions n'est pas un `false` : tant que `backfill:video-dimensions` n'a pas tourné
+  sur le site, AUCUN critère de format n'est fiable — les noms de fichiers mentent dans
+  les deux sens (`STRASOL_…_1600x120px.mp4` fait 4096×1416, `CALICEO.mp4` fait 1600×120
+  sans l'annoncer). Mieux vaut déclarer une variante que l'opérateur retire d'un clic
+  que la sauter en silence. Même principe que `matches_expected` dans la vue Canvas.
+  Et toute exclusion doit remonter son motif dans `exclusions[]` : une exclusion muette
+  se lit comme « tout a été traité ».
 - **Faire échouer un déploiement à cause du pliage.** Cache manquant, DB injoignable, profil
   illisible → on sert le fichier brut, on `logger.warn`, on met la fabrication en file. Le
   pliage dégrade, il ne casse jamais la diffusion.

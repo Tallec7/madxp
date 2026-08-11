@@ -60,6 +60,17 @@ export interface FitRecommendation {
   warnings: string[];
   /** `true` quand la vidéo tombe pile sur la cible (aucune adaptation). */
   exact: boolean;
+  /**
+   * Part de la largeur du cadre occupée après mise à l'échelle proportionnelle.
+   *
+   * `1` = la vidéo remplit le cadre. `0,13` = un 16:9 posé sur un ruban : ramené à
+   * 120 px de haut, il n'occupe plus qu'un huitième de la largeur. Quand la vidéo
+   * est MOINS allongée que le ruban — le cas de tout clip TV — ce nombre vaut
+   * exactement `ratio vidéo / ratio ruban` : c'est donc la mesure d'élongation
+   * relative, et le seul critère de format honnête pour trier du contenu de ruban
+   * d'un clip TV (cf. `RIBBON_MIN_FILL_RATIO` côté appelant).
+   */
+  fillRatio: number;
 }
 
 const schema = Joi.object<ClassifyInput>({
@@ -191,7 +202,7 @@ export function classifyVideoForRibbon(input: ClassifyInput): FitRecommendation 
     }
   }
 
-  return { scope, layout, target, explanation, warnings, exact };
+  return { scope, layout, target, explanation, warnings, exact, fillRatio };
 }
 
 export default { classifyVideoForRibbon };
