@@ -2851,6 +2851,48 @@ describe('ADR-068 — signed URL video stream proxy', () => {
     });
   });
 
+  /**
+   * Un audit qui détecte sans restituer ne sert à rien.
+   *
+   * Constaté le 2026-08-11 : 46 fichiers absents du FTP accumulés depuis le
+   * 2026-05-05, `notified_at` NULL sur les 51 lignes. Le CRON logguait, remplissait
+   * sa table, incrémentait sa métrique — et n'alertait personne. 16 de ces fichiers
+   * étaient encore diffusés sur 4 clubs, dont 4 vidéos sponsors facturées.
+   *
+   * Ce garde-fou fige le chaînage complet : détecter → alerter → horodater.
+   */
+  it('PR2.2 — l’audit FTP alerte ET marque notified_at (sans quoi il détecte dans le vide)', () => {
+    const taskFile = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'cron-tasks', 'video-ftp-audit.task.ts'), 'utf8');
+    const serviceFile = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'services', 'video-ftp-audit.service.ts'), 'utf8');
+    const repoFile = fs.readFileSync(
+      path.join(repoRoot, 'central-server', 'src', 'repositories', 'video-ftp-audit.repository.ts'), 'utf8');
+
+    expect({
+      // La tâche appelle la restitution, pas seulement le scan.
+      taskNotifies: /videoFtpAuditService\.notifyMissingReferencedInProfiles\(/.test(taskFile),
+      // L'alerte passe par le repository (dédup ADR-111), jamais par un INSERT brut.
+      usesAlertRepository: /alertRepository\.create\(/.test(serviceFile),
+      noRawAlertInsert: !/INSERT INTO alerts/i.test(serviceFile),
+      // `notified_at` cesse d'être une promesse non tenue.
+      marksNotified: /markNotified\(/.test(serviceFile) && /SET notified_at = NOW\(\)/.test(repoFile),
+      // On n'alerte que sur ce qui est DIFFUSÉ : le croisement avec les configs est
+      // ce qui sépare les 16 incidents des 30 rows orphelines. Sans lui, l'alerte
+      // devient du bruit et sera ignorée comme l'a été la table.
+      crossesProfiles: /FROM config_profiles|JOIN config_profiles/.test(repoFile),
+      // Le LIKE doit rester ancré : '%2MIN.mp4%' nu matche 'TV_JINGLE_2MIN.mp4'.
+      anchoredLike: /LIKE '%"' \|\| p\.expected_path \|\| '"%'/.test(repoFile),
+    }).toEqual({
+      taskNotifies: true,
+      usesAlertRepository: true,
+      noRawAlertInsert: true,
+      marksNotified: true,
+      crossesProfiles: true,
+      anchoredLike: true,
+    });
+  });
+
   it('PR2.2 — cron-scheduler dispatch table inclut video_ftp_audit (ADR-097)', () => {
     const typesFile = fs.readFileSync(path.join(repoRoot, 'central-server', 'src', 'cron-tasks', 'types.ts'), 'utf8');
     const schedFile = fs.readFileSync(path.join(repoRoot, 'central-server', 'src', 'services', 'cron-scheduler.service.ts'), 'utf8');

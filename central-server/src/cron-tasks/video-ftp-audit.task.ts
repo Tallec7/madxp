@@ -29,14 +29,31 @@ export async function executeVideoFtpAuditTask(schedule: RecurringSchedule): Pro
     concurrency: config.concurrency ?? 5,
   });
 
+  // Restitution — sans elle, l'audit ne fait que remplir une table que personne ne
+  // lit (46 fichiers absents accumulés en 3 mois, `notified_at` NULL sur toutes).
+  // Isolée dans son propre try : un échec d'alerting ne doit pas faire passer la
+  // tâche en échec alors que le scan, lui, a bien eu lieu et est déjà persisté.
+  let notified = { sitesAlerted: 0, pathsNotified: 0 };
+  try {
+    notified = await videoFtpAuditService.notifyMissingReferencedInProfiles();
+  } catch (error) {
+    logger.error('[CronScheduler] Video FTP audit: échec de la notification', {
+      error: error instanceof Error ? error.message : String(error),
+      scheduleId: schedule.id,
+    });
+  }
+
   logger.info('[CronScheduler] Video FTP audit completed', {
     ...result,
+    ...notified,
     scheduleId: schedule.id,
   });
 
   return {
     success: true,
-    message: `Scanned ${result.scanned} videos: ${result.missing} missing, ${result.unreachable} unreachable, ${result.resolved} resolved`,
-    details: result as unknown as Record<string, unknown>,
+    message:
+      `Scanned ${result.scanned} videos: ${result.missing} missing, ${result.unreachable} unreachable, ` +
+      `${result.resolved} resolved — ${notified.sitesAlerted} site(s) alerté(s)`,
+    details: { ...result, ...notified } as unknown as Record<string, unknown>,
   };
 }
