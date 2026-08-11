@@ -37,7 +37,8 @@ import { environment } from '../../../environments/environment';
   templateUrl: './tv.component.html',
   styleUrl: './tv.component.scss',
   imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent, ScoreOverlayComponent, HotspotQrComponent],
-  encapsulation: ViewEncapsulation.None // Désactiver l'encapsulation pour le double-buffer
+  encapsulation: ViewEncapsulation.None, // Désactiver l'encapsulation pour le double-buffer
+  host: { '[class.tv--pixel-exact]': 'isPixelExactDisplay' }
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
@@ -69,6 +70,23 @@ export class TvComponent implements OnInit, OnDestroy {
   public displayType = 'tv';
   // Display index for targeted commands and variant resolution
   public displayIndex = 0;
+
+  /**
+   * Écran dont la sortie est lue AU PIXEL par un processeur (ruban LED périmétrique).
+   *
+   * Un Novastar/Colorlight découpe une région fixe en pixels de la trame entrante,
+   * puis mappe chaque bande sur un panneau. Le `object-fit: contain` habituel — qui
+   * met la vidéo à l'échelle de la fenêtre et la centre — déplace donc TOUS les
+   * pixels hors de la région mappée : le ruban n'affiche rien ou du décalé, alors
+   * que la vidéo paraît parfaite dans le navigateur.
+   *
+   * Sur ces écrans on rend à la taille native, ancré en haut à gauche, sur noir.
+   * Les autres types (TV, totem, mur LED) gardent le `contain` : leur sortie est
+   * regardée par un humain, pas découpée par une machine.
+   */
+  public get isPixelExactDisplay(): boolean {
+    return this.displayType === 'led-perimeter';
+  }
 
   // HDMI status — E-23 US-23.2.1: splash screen when no display connected
   public hdmiConnected = true; // Assume connected until told otherwise (PC browsers always true)
