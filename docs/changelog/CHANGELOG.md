@@ -1,3 +1,9 @@
+## [4.22.3](https://github.com/Tallec7/madxp/compare/v4.22.2...v4.22.3) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** re-résoudre le type d'écran quand la config arrive après ngOnInit ([#1152](https://github.com/Tallec7/madxp/issues/1152)) ([253e2f3](https://github.com/Tallec7/madxp/commit/253e2f3f5b5bb037a98bd8dca67f0eff8159bf8e))
+
 ## [4.22.2](https://github.com/Tallec7/madxp/compare/v4.22.1...v4.22.2) (2026-08-11)
 
 ### Bug Fixes
