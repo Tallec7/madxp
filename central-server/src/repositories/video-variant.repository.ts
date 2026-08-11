@@ -94,6 +94,10 @@ export interface VariantByFilenameRow extends QueryResultRow {
   height: number | null;
   duration: number | null;
   source_filename: string;
+  /** Requis par l'étape D (ADR-139) : adresser le canvas plié par (site, vidéo). */
+  video_id: string;
+  /** Entre dans l'empreinte du canvas plié — deux layouts = deux canvas. */
+  layout: string | null;
 }
 
 // --------------------------------------------------------------------------
@@ -333,6 +337,7 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     if (filenames.length === 0) return [];
     const fnPlaceholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
     let sql = `SELECT vv.filename, vv.display_type, vv.storage_path, vv.width, vv.height, vv.duration,
+               vv.video_id, vv.layout,
                       v.filename AS source_filename
                FROM video_variants vv
                JOIN videos v ON v.id = vv.video_id

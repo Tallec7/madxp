@@ -278,7 +278,7 @@ export async function getSaasConfig(req: Request, res: Response) {
     // Enrichir avec les variantes display (secondary, led, etc.) selon les displays du site
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);
-      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes);
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes, { siteId });
     } catch (err) {
       logger.warn('SaaS config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, error: err });
     }
@@ -490,7 +490,7 @@ export async function getSaasProfileConfig(req: Request, res: Response) {
 
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);
-      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes);
+      await enrichConfigWithDisplayVariants(configuration as unknown as SiteConfiguration, displayTypes, { siteId });
     } catch (err) {
       logger.warn('SaaS profile config: enrichConfigWithDisplayVariants failed (non-fatal)', { siteId, profileId, error: err });
     }

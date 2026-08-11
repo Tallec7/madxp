@@ -17,9 +17,11 @@ et plie TOUJOURS par côté. Le contenu ne choisit plus que les SOURCES (un fich
 côté, ou le même partout). Avant, le worker branchait sur `side_files.length > 0`
 entre deux géométries donnant 7 ou 8 bandes pour le même club.
 
-Le pliage n'est toujours PAS dans le chemin de diffusion : `config-secondary-variants.ts`
-injecte le `storage_path` brut de la variante. Il ne sert qu'au bouton « Exporter le
-MP4 plié » et au banc d'essai — l'étape D d'ADR-135 reste à câbler.
+**L'étape D est câblée depuis ADR-139**, mais derrière un interrupteur par site éteint
+par défaut : `displays[].led.canvas_in.serve_folded`. Allumé, `config-secondary-variants.ts`
+sert le canvas plié à la place du fichier brut. Éteint — c'est-à-dire partout aujourd'hui —
+le comportement est strictement inchangé. `canvas_in.mode` ne pouvait PAS servir de bascule :
+il vaut `'B'` par défaut Joi sur tout le parc sans que personne l'ait choisi.
 
 **Un `band_count` figé par un installateur qui ne correspond plus au dérivé est
 SIGNALÉ (`confirmedIsStale` + `logger.warn`), jamais écrasé** : la valeur figée décrit
@@ -27,21 +29,28 @@ ce qui est gravé dans le processeur.
 
 ## NE JAMAIS FAIRE (smoke test enforced)
 
-- **Importer `led-fold.service` ou `led-export-worker.service` depuis
-  `utils/config-secondary-variants.ts`** — ni y appeler `computeFoldGeometry*` /
-  `applyPerSideFold` / `applyFoldExport`. C'est le câblage de l'**étape D** d'ADR-135
-  (diffuser le canvas composé). La divergence de géométrie est corrigée (ADR-138), mais
-  le contrat d'entrée réel des processeurs n'est **toujours pas observé** : le câbler en
-  aveugle reste un pari. Le préalable est la mire (`npm run led:mire`) sur un club réel.
-  Rappel du risque : **Saas Lanester HB** a `canvas_in.band_count = 1` figé par un
-  installateur alors que le dérivé par côté vaut 2 — servir le canvas dérivé sans
-  re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé pour 110.
+- **Retirer le guard `if (!led?.canvas_in?.serve_folded) return;` de `substituteFoldedCanvas`**
+  (`utils/config-secondary-variants.ts`), ou donner un défaut Joi à `serve_folded`. C'est le
+  seul rempart entre les deux clubs LED en production et un canvas que leur processeur
+  n'attend peut-être pas — ruban noir un soir de match. **Saas Lanester HB** a
+  `canvas_in.band_count = 1` figé par un installateur alors que le dérivé par côté vaut 2 :
+  allumer sans re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé
+  pour 110. L'activation se fait club par club, après la mire (`npm run led:mire`).
+- **Faire échouer un déploiement à cause du pliage.** Cache manquant, DB injoignable, profil
+  illisible → on sert le fichier brut, on `logger.warn`, on met la fabrication en file. Le
+  pliage dégrade, il ne casse jamais la diffusion.
+- **Appeler `applyPerSideFold` (ffmpeg) depuis `config-secondary-variants.ts`** — le chemin de
+  config _consomme_ le canvas via le cache, il ne le fabrique pas. Encoder dans une requête de
+  déploiement la bloquerait plusieurs secondes à plusieurs minutes.
+- **Retirer un champ de `computeFoldedCanvasHash`** (côtés, pitch, hauteur, largeur de bande,
+  ordre, source, cadrage). L'empreinte EST le mécanisme d'invalidation : un canvas dont la clé
+  a changé devient inatteignable. Retirer `height`, par exemple, ferait servir un canvas
+  fabriqué pour l'ancienne hauteur de ruban.
 - **Retirer `if (!v.storage_path && !v.filename) continue;`** de
   `config-secondary-variants.ts` — une variante « par côté pure » n'a ni `storage_path`
   ni `filename` ; l'injecter produit un chemin `videos-led-perimeter/null` → MP4 noir.
-- **Consommer `applyPerSideFold` / `computeFoldGeometryPerSide` ailleurs que dans
-  `led-export-worker.service.ts`** (et les scripts CLI/POC). Un nouveau consommateur en
-  production = étape D qui se câble par la bande.
+- **Composer un canvas (`applyPerSideFold` / `computeFoldGeometryPerSide`) ailleurs que dans
+  `led-export-worker.service.ts`** et les scripts CLI/POC. La fabrication a un seul endroit.
 
 ## État du parc (vérifié en DB prod le 2026-08-10)
 
@@ -62,19 +71,33 @@ donnent 4 bandes, canvas 1920×640.
 Le SPIKE-003 matériel n'a pas avancé (matériel non commandé), mais il est **remplacé par
 la mire** (`npm run led:mire`) : une grille diffusée sur le ruban d'un club installé +
 une photo suffisent à lire le contrat d'entrée réel du processeur, sans rien acheter.
+**Aucun des deux sites n'a `serve_folded` activé — mais Piraths devrait l'avoir.**
+Observation du 2026-08-11 : le contenu ne s'affiche que sur 1 des 4 panneaux, cinq versions
+**pliées à la main** traînent en DB (`*-SIEHR-PLIE-*`), et le nom du dernier essai
+(`5-SIEHR-PLIE-100cm-1600x640`) reproduit exactement la géométrie dérivée du terrain
+(1600 px/côté × 4 bandes de 160 px). Le processeur y attend donc un **canvas plié (mode B)**.
+Deux défauts de config à corriger AVANT d'activer : `canvas_in.band_width` vaut 1920 alors
+qu'un côté fait **1600** px (320 px de padding parasite par bande), et le site porte **deux
+écrans `led-perimeter`** aux `canvas_in` contradictoires (index 0 mode A `band_count: 4`,
+index 2 mode B). Pour **Lanester**, rien n'est encore observé.
 
 ## Quand ce garde-fou doit être révisé
 
-Le smoke `smoke-led-canvas-invariant.test.ts` a déjà été révisé une fois (ADR-138,
-unification de la géométrie). Il vérifie désormais deux invariants :
+Le smoke `smoke-led-canvas-invariant.test.ts` a été révisé deux fois : ADR-138 (unification
+de la géométrie) puis ADR-139 (câblage de l'étape D). Il vérifie désormais :
 
 1. le canvas est une fonction pure du terrain ;
-2. le chemin de déploiement reste indépendant du pliage.
+2. le canvas plié n'est atteignable que derrière `serve_folded`, qui n'a aucun défaut ;
+3. un cache manquant dégrade au lieu de casser ;
+4. la fabrication reste au worker.
 
-Il doit être revu sciemment, dans la même PR, le jour où on câble réellement l'étape D
-après validation matérielle (la mire, cf. `npm run led:mire`).
+La prochaine révision légitime sera le jour où `serve_folded` deviendra le comportement par
+défaut — ce qui suppose que la mire ait été passée sur assez de clubs pour connaître le
+contrat d'entrée réel des processeurs, pas seulement de le supposer.
 
 ## Référence
 
+- [ADR-139](../../docs/adr/ADR-139-led-serve-folded-canvas.md) — étape D derrière `serve_folded`
 - Smoke : `central-server/src/__tests__/smoke/smoke-led-canvas-invariant.test.ts`
+- Tests étape D : `central-server/src/utils/__tests__/config-secondary-variants-folded.test.ts`
 - Maquette du parcours cible : `docs/proposals/assets/led-mockups/03-parcours-simplifie-ecrans-led.html`

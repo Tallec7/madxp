@@ -13,8 +13,25 @@
 
 import { LedProfileConfig } from '../models';
 
-/** Largeur de bande par défaut = entrée processeur (px), provisoire jusqu'au SPIKE-003. */
+/** Dernier recours quand le terrain n'est pas encore saisi (aucun côté, pitch illisible). */
 export const DEFAULT_LED_BAND_WIDTH = 1920;
+
+/**
+ * Largeur d'entrée que le processeur attend, DÉRIVÉE du terrain : le côté le plus
+ * long, puisque le pliage met chaque côté dans son bloc de bandes (ADR-138).
+ *
+ * 1920 en dur était un pari sur « une sortie HDMI standard », et il est faux dès que
+ * les côtés ne font pas 1920 px. Chez Piraths (10 m en P6.25 → 1600 px/côté), il
+ * ajoutait 320 px de noir à chaque bande et décalait tout face à un processeur gravé
+ * pour 1600 — le canvas plié fabriqué à la main sur place fait bien 1600×640.
+ */
+export function ledDerivedBandWidth(led: LedProfileConfig | null | undefined): number {
+  if (!led) return DEFAULT_LED_BAND_WIDTH;
+  const mm = ledPitchMm(led.pitch);
+  const longest = Math.max(0, ...(led.sides ?? []));
+  if (mm === 0 || longest <= 0) return DEFAULT_LED_BAND_WIDTH;
+  return Math.round(longest * (1000 / mm));
+}
 
 /** Pas de pixel en mm depuis le libellé (`'P6'` → 6). `0` si illisible. */
 export function ledPitchMm(pitch: string | undefined): number {
@@ -32,9 +49,9 @@ export function ledRibbonWidth(led: LedProfileConfig | null | undefined): number
   return Math.round(sumSides * (1000 / mm));
 }
 
-/** Largeur d'une bande (px) — override processeur, sinon le défaut. */
+/** Largeur d'une bande (px) — valeur figée à l'install, sinon le dérivé du terrain. */
 export function ledBandWidth(led: LedProfileConfig | null | undefined): number {
-  return led?.canvas_in?.band_width || DEFAULT_LED_BAND_WIDTH;
+  return led?.canvas_in?.band_width || ledDerivedBandWidth(led);
 }
 
 /** Nb de bandes dérivé = ceil(ruban / largeur de bande). */
