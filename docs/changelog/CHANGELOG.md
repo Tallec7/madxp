@@ -1,3 +1,9 @@
+# [4.22.0](https://github.com/Tallec7/madxp/compare/v4.21.2...v4.22.0) (2026-08-11)
+
+### Features
+
+- **led:** créer en masse les variantes ruban manquantes d'un club ([#1147](https://github.com/Tallec7/madxp/issues/1147)) ([c1e44ba](https://github.com/Tallec7/madxp/commit/c1e44ba512cc706f56c1684f5aaa3bd33bde2141))
+
 ## [4.21.2](https://github.com/Tallec7/madxp/compare/v4.21.1...v4.21.2) (2026-08-11)
 
 ### Bug Fixes
