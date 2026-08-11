@@ -17,11 +17,19 @@ et plie TOUJOURS par côté. Le contenu ne choisit plus que les SOURCES (un fich
 côté, ou le même partout). Avant, le worker branchait sur `side_files.length > 0`
 entre deux géométries donnant 7 ou 8 bandes pour le même club.
 
-**L'étape D est câblée depuis ADR-139**, mais derrière un interrupteur par site éteint
-par défaut : `displays[].led.canvas_in.serve_folded`. Allumé, `config-secondary-variants.ts`
-sert le canvas plié à la place du fichier brut. Éteint — c'est-à-dire partout aujourd'hui —
-le comportement est strictement inchangé. `canvas_in.mode` ne pouvait PAS servir de bascule :
-il vaut `'B'` par défaut Joi sur tout le parc sans que personne l'ait choisi.
+**L'étape D est câblée depuis ADR-139**, derrière un interrupteur par site sans défaut :
+`displays[].led.canvas_in.serve_folded`. Allumé, `config-secondary-variants.ts` sert le
+canvas plié à la place du fichier brut. Éteint, le comportement est strictement inchangé.
+`canvas_in.mode` ne pouvait PAS servir de bascule : il vaut `'B'` par défaut Joi sur tout
+le parc sans que personne l'ait choisi.
+
+**Piraths Strasbourg ATH diffuse en plié depuis le 2026-08-11** (vérifié en DB prod le
+2026-08-11) : `serve_folded: true`, les deux défauts de config signalés par ADR-139 sont
+corrigés (`band_width` 1920 → **1600** = un côté ; un seul display `led-perimeter`, le
+doublon en mode A a disparu), `band_count` figé (4) = dérivé (4). Le canvas réellement
+servi mesure **1600×480** (ffprobe sur l'`output_url`), soit exactement la cible relevée
+sur B2B Alive. 37 vidéos sur 37 ont leur canvas plié `ready` pour l'empreinte courante.
+**Lanester reste éteint** — cf. plus bas, son `band_count` figé diverge du dérivé.
 
 **Un `band_count` figé par un installateur qui ne correspond plus au dérivé est
 SIGNALÉ (`confirmedIsStale` + `logger.warn`), jamais écrasé** : la valeur figée décrit
@@ -112,9 +120,9 @@ C'est le mode **B** : le processeur ne déplie pas, il attend un canvas déjà p
 question n'est donc plus « qu'attend le matériel » mais « produit-on la même chose que
 B2B » — ce qui se compare entre deux navigateurs, sans hardware.
 
-**Piraths peut être activé** (`serve_folded`) dès que sa config décrit 1600 × 120 par
-côté. **Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2),
-ne pas l'activer sans une observation équivalente.
+**Piraths est activé** (`serve_folded: true`, config 1600 × 120 par côté — cf. en-tête).
+**Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2), ne pas
+l'activer sans une observation équivalente à celle de Piraths.
 
 ## Quand ce garde-fou doit être révisé
 
