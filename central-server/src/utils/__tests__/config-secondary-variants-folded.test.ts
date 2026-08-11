@@ -181,6 +181,28 @@ describe('substituteFoldedCanvas — le canvas plié derrière l’interrupteur'
       expect(jobs.create).not.toHaveBeenCalled();
     });
 
+    it('l’empreinte utilise la largeur DÉRIVÉE, pas 1920 en dur', async () => {
+      // Profil SANS band_width figé : le dérivé vaut 1600 (10 m à P6.25). Avant, le
+      // code codait `?? 1920`, donc l'empreinte enregistrait une largeur que le
+      // worker n'utilise pas — « une empreinte = une géométrie » devenait faux.
+      const sansBandWidth = {
+        sides: [10, 10, 10, 10],
+        pitch: '6.25',
+        height: 120,
+        canvas_in: { order: 'top-to-bottom', serve_folded: true },
+      };
+      mockDisplays(sansBandWidth);
+      const c = config();
+
+      await enrichConfigWithDisplayVariants(c, ['led-perimeter'], { siteId: SITE });
+
+      const attendu1600 = computeFoldedCanvasHash({
+        sides: [10, 10, 10, 10], pitch: '6.25', height: 120,
+        bandWidth: 1600, order: 'top-to-bottom', sourcePath: BRUT, layout: 'repeated',
+      });
+      expect(jobs.findReadyByGeometry).toHaveBeenCalledWith(SITE, VIDEO, attendu1600);
+    });
+
     it('canvas manquant → brut servi ET fabrication mise en file', async () => {
       mockDisplays(LED_ON);
       const c = config();

@@ -95,18 +95,22 @@ async function substituteFoldedCanvas(
   if (!led?.canvas_in?.serve_folded) return; // interrupteur éteint = comportement historique
   if (!Array.isArray(led.sides) || led.sides.length === 0) return;
 
-  // Sonde : on ne garde pas le canvas (l'empreinte se calcule depuis le profil,
-  // qui détermine entièrement la géométrie), mais un profil qui ne se dérive pas
-  // ne doit pas produire d'empreinte — sinon on mettrait en file des fabrications
-  // vouées à échouer, à chaque déploiement.
+  // La géométrie dérivée est la SEULE source de la largeur d'entrée. Un profil qui
+  // ne se dérive pas ne doit pas produire d'empreinte — sinon on mettrait en file
+  // des fabrications vouées à échouer, à chaque déploiement.
+  let canvas;
   try {
-    computeSiteCanvas(led);
+    canvas = computeSiteCanvas(led);
   } catch (error) {
     logger.warn('folded canvas: géométrie invalide (fichier brut conservé)', { siteId, error });
     return;
   }
 
-  const bandWidth = led.canvas_in.band_width ?? 1920;
+  // `?? 1920` codait en dur une valeur que le worker n'utilise pas : l'empreinte
+  // enregistrait 1920 là où le pliage se fait à 1600. La géométrie ne changeait pas
+  // (côtés et pitch sont dans l'empreinte), mais « une empreinte = une géométrie »
+  // devenait faux dans le détail — et c'est ce qu'ADR-139 revendique.
+  const bandWidth = canvas.geometry.bandWidth;
 
   for (const variants of variantMap.values()) {
     const v = variants['led-perimeter'];
