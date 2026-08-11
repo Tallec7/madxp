@@ -1,3 +1,9 @@
+## [4.21.2](https://github.com/Tallec7/madxp/compare/v4.21.1...v4.21.2) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** plafonner la largeur d'entrée dérivée + afficher la résolution par bloc ([#1145](https://github.com/Tallec7/madxp/issues/1145)) ([c3a8e16](https://github.com/Tallec7/madxp/commit/c3a8e166881dd79a29accddbc96d4e87e27f54c2)), closes [#1143](https://github.com/Tallec7/madxp/issues/1143) [#1143](https://github.com/Tallec7/madxp/issues/1143) [#1143](https://github.com/Tallec7/madxp/issues/1143)
+
 ## [4.21.1](https://github.com/Tallec7/madxp/compare/v4.21.0...v4.21.1) (2026-08-11)
 
 ### Bug Fixes
