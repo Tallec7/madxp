@@ -512,6 +512,11 @@ export interface VideoVariantInfo {
   videoId?: string;
   /** Mise en page de la variante — entre dans l'empreinte du canvas plié. */
   layout?: string | null;
+  /**
+   * Détourage validé par un opérateur (PROP-015), en px de la source. Entre dans
+   * l'empreinte du canvas plié : le valider périme les canvas fabriqués avant lui.
+   */
+  crop?: { x: number; y: number; w: number; h: number } | null;
   /** `true` quand `path` pointe le canvas PLIÉ et non le fichier brut (ADR-139). */
   folded?: boolean;
 }

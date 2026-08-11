@@ -15,9 +15,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
 import logger from '../config/logger';
+import { downloadToFile } from '../utils/download-to-file';
 import {
   ledExportJobRepository,
   videoVariantRepository,
@@ -39,29 +38,6 @@ const STALE_PROCESSING_MAX_AGE_MIN = 15;
 
 let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
-
-/** Télécharge une URL (http/https) vers un fichier disque. Suit un niveau de redirect. */
-function downloadToFile(url: string, dest: string, redirects = 3): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const client = url.startsWith('http://') ? http : https;
-    const req = client.get(url, (res) => {
-      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume();
-        if (redirects <= 0) return reject(new Error('too many redirects'));
-        return resolve(downloadToFile(res.headers.location, dest, redirects - 1));
-      }
-      if (res.statusCode !== 200) {
-        res.resume();
-        return reject(new Error(`download failed: HTTP ${res.statusCode}`));
-      }
-      const file = fs.createWriteStream(dest);
-      res.pipe(file);
-      file.on('finish', () => file.close(() => resolve()));
-      file.on('error', (err) => reject(err));
-    });
-    req.on('error', (err) => reject(err));
-  });
-}
 
 /** Résout le profil LED (ruban + géométrie + params bruts) du display led-perimeter d'un site. */
 async function resolveGeometry(siteId: string) {
@@ -140,12 +116,18 @@ async function performExport(job: LedExportJobRow): Promise<string> {
     // Télécharger le même fichier une fois par côté, c'était 4 téléchargements et 4
     // copies disque pour une seule vidéo. On mémoïse par storage_path.
     const inputs: string[] = [];
+    // Détourage validé par un opérateur (PROP-015), aligné sur `inputs`. Il porte
+    // sur la variante, donc sur la source UNIFORME : un côté servi par son propre
+    // fichier (`side_files`) n'est pas concerné et reste à `null`.
+    const crops: Array<{ x: number; y: number; w: number; h: number } | null> = [];
     const downloaded = new Map<string, string>();
     for (let i = 0; i < sides; i++) {
-      const sp = sideFiles.find((s) => s.side_index === i)?.storage_path ?? uniformPath;
+      const sideFile = sideFiles.find((s) => s.side_index === i);
+      const sp = sideFile?.storage_path ?? uniformPath;
       if (!sp) {
         throw new Error(`côté ${i} sans fichier et aucune source de repli`);
       }
+      crops.push(sideFile ? null : (variant?.crop ?? null));
       let tmp = downloaded.get(sp);
       if (!tmp) {
         tmp = path.join(os.tmpdir(), `led-src-${job.id}-${downloaded.size}.mp4`);
@@ -160,12 +142,14 @@ async function performExport(job: LedExportJobRow): Promise<string> {
       jobId: job.id,
       sides,
       perSide: sideFiles.length > 0,
+      cropped: crops.filter(Boolean).length,
       bandCount: canvas.derivedBandCount,
       canvas: `${canvas.canvasWidth}x${canvas.canvasHeight}`,
     });
 
     const result = await applyPerSideFold(canvas.geometry, {
       inputs,
+      crops,
       outputPath: tmpOut,
       layout: normalizeLayout(job.layout),
       cellPx,

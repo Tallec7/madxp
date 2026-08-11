@@ -47,6 +47,14 @@ router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin'
 router.patch('/videos/:id/variants/:displayType/layout', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.updateVideoVariantLayout);
 // PROP-014 §6 / étape 6 : export plié async (enqueue + polling statut).
 router.post('/videos/:id/variants/:displayType/export', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.enqueueLedExport);
+// PROP-015 — détourage des marges : on ANALYSE (aucune écriture) puis un second
+// geste, explicite, ENREGISTRE le rectangle validé. Jamais l'un sans l'autre.
+// `sensitiveRateLimit` (30/min) et non `adminRateLimit` (400/min) sur l'analyse :
+// elle télécharge le MP4 et lance ffmpeg dans le cycle HTTP. Assez large pour
+// passer en revue la dizaine de vidéos d'un club, assez serré pour qu'une boucle
+// ne sature pas les décodeurs (cf. la garde `ticking` du worker d'export).
+router.post('/videos/:id/variants/led-perimeter/crop/detect', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), sensitiveRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCropDetect), contentController.detectLedVariantCrop);
+router.put('/videos/:id/variants/led-perimeter/crop', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCrop), contentController.setLedVariantCrop);
 // ADR-135 (révision) : contenu LED « par côté » — upload/suppression d'un fichier par côté.
 router.post('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('upload_video'), uploadRateLimit, uploadVideo.single('video'), contentController.uploadVideoVariantSide);
 router.post('/videos/:id/variants/:displayType/sides/:sideIndex/from-video', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.setVideoVariantSideFromVideo);

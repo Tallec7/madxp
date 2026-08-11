@@ -20,6 +20,7 @@ describe('LedCanvasOverviewComponent', () => {
     source: { width: 1600, height: 120 },
     expected: { width: 1600, height: 120 },
     matches_expected: true, has_variant: true, layout: 'repeated',
+    source_url: 'https://cdn/src.mp4', crop: null,
     canvas: { status: 'ready', url: 'https://cdn/x.mp4', updated_at: null },
     ...over,
   });
@@ -88,6 +89,88 @@ describe('LedCanvasOverviewComponent', () => {
   it('« Retirer » n’apparaît pas sans variante — rien à retirer', () => {
     openAndFlush([row({ has_variant: false })]);
     expect(fixture.nativeElement.querySelector('[data-testid="lco-del-v1"]')).toBeNull();
+  });
+
+  describe('détourage des marges (PROP-015)', () => {
+    const STRASOL = { width: 4096, height: 1416 };
+    const BANDEAU = { x: 0, y: 554, w: 4096, h: 306 };
+
+    it('analyser NE détoure pas — il faut un second geste', () => {
+      openAndFlush([row({ source: STRASOL, matches_expected: false })]);
+
+      fixture.nativeElement.querySelector('[data-testid="lco-crop-detect-v1"]').click();
+      const detect = http.expectOne(
+        `${environment.apiUrl}/videos/v1/variants/led-perimeter/crop/detect`
+      );
+      expect(detect.request.method).toBe('POST');
+      // Le format visé dépend du club consulté, pas du propriétaire de la vidéo.
+      expect(detect.request.body).toEqual({ target_site_id: 'site-1' });
+      detect.flush({ crop: BANDEAU, recommended: true, reason: 'Marges détectées…' });
+      fixture.detectChanges();
+
+      // Rien n'a été écrit : aucune requête d'enregistrement n'est partie.
+      http.verify();
+      expect(fixture.nativeElement.querySelector('[data-testid="lco-crop-panel-v1"]')).toBeTruthy();
+    });
+
+    it('« Appliquer » est le seul geste qui enregistre le rectangle', () => {
+      openAndFlush([row({ source: STRASOL, matches_expected: false })]);
+      fixture.nativeElement.querySelector('[data-testid="lco-crop-detect-v1"]').click();
+      http
+        .expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter/crop/detect`)
+        .flush({ crop: BANDEAU, recommended: true, reason: 'Marges détectées…' });
+      fixture.detectChanges();
+
+      fixture.nativeElement.querySelector('[data-testid="lco-crop-apply-v1"]').click();
+      const put = http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter/crop`);
+      expect(put.request.method).toBe('PUT');
+      expect(put.request.body).toEqual({ crop: BANDEAU });
+      put.flush({});
+      // On relit : le canvas fabriqué avant le détourage est devenu inatteignable.
+      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+    });
+
+    it('un plein cadre 16:9 ne se voit proposer AUCUN détourage', () => {
+      openAndFlush([row({ source: { width: 1920, height: 1080 }, matches_expected: false })]);
+      fixture.nativeElement.querySelector('[data-testid="lco-crop-detect-v1"]').click();
+      http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter/crop/detect`).flush({
+        crop: { x: 0, y: 0, w: 1920, h: 1080 },
+        recommended: false,
+        reason: "Aucune marge détectée : l'image occupe déjà tout le cadre…",
+      });
+      fixture.detectChanges();
+
+      // La bonne réponse ici est « Retirer », pas un détourage : le bouton
+      // d'application ne doit pas exister.
+      expect(fixture.nativeElement.querySelector('[data-testid="lco-crop-apply-v1"]')).toBeNull();
+      expect(fixture.nativeElement.textContent).toContain('Aucune marge détectée');
+    });
+
+    it('un détourage déjà validé s’affiche et se retire', () => {
+      openAndFlush([row({ source: STRASOL, crop: BANDEAU })]);
+
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="lco-crop-badge-v1"]').textContent
+      ).toContain('4096 × 306');
+
+      fixture.nativeElement.querySelector('[data-testid="lco-crop-clear-v1"]').click();
+      const put = http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter/crop`);
+      expect(put.request.body).toEqual({ crop: null });
+      put.flush({});
+      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+    });
+
+    it('l’aperçu « après » cadre exactement le rectangle, comme le fera ffmpeg', () => {
+      const r = { ...row({ source: STRASOL }), crop: null } as never;
+      const style = component.cropStyle(r, BANDEAU);
+
+      // 1416/306 ≈ 4,63 → la vidéo est agrandie de 463 % en hauteur et décalée de
+      // 554/306 ≈ 181 % vers le haut : seul le bandeau reste dans le cadre.
+      expect(style['width']).toBe('100%');
+      expect(parseFloat(style['height'])).toBeCloseTo((1416 / 306) * 100, 1);
+      expect(parseFloat(style['top'])).toBeCloseTo((-554 / 306) * 100, 1);
+      expect(style['left']).toBe('0%');
+    });
   });
 
   it('affiche le message serveur, pas un « erreur » générique', () => {

@@ -124,6 +124,11 @@ async function substituteFoldedCanvas(
       order: led.canvas_in.order,
       sourcePath: v.path,
       layout: v.layout ?? null,
+      // PROP-015 — valider un détourage doit périmer les canvas pliés AVANT lui,
+      // qui ont été fabriqués sur le fichier entier (marges comprises). Sans le
+      // `crop` ici, ces canvas resteraient servis indéfiniment (pas de TTL) et la
+      // validation de l'opérateur n'aurait aucun effet visible.
+      crop: v.crop ?? null,
     });
 
     try {
@@ -256,7 +261,9 @@ export async function enrichConfigWithDisplayVariants(
       // Requis par l'étape D (ADR-139) pour retrouver/fabriquer le canvas plié.
       // Réservé au ruban : un `secondary` n'a pas de géométrie à plier, et ces
       // deux champs partiraient dans la config servie sans rien y signifier.
-      ...(v.display_type === 'led-perimeter' ? { videoId: v.video_id, layout: v.layout ?? null } : {}),
+      ...(v.display_type === 'led-perimeter'
+        ? { videoId: v.video_id, layout: v.layout ?? null, crop: v.crop ?? null }
+        : {}),
     };
   }
 

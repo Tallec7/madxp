@@ -3,15 +3,36 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
 
+/** Rectangle de détourage, en pixels de la source (PROP-015). */
+interface CropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 interface CanvasRow {
   video_id: string;
   filename: string;
   source: { width: number; height: number };
+  source_url: string | null;
   expected: { width: number; height: number } | null;
   matches_expected: boolean | null;
   has_variant: boolean;
   layout: string | null;
+  /** Détourage VALIDÉ par un opérateur. `null` = on plie le fichier entier. */
+  crop: CropRect | null;
   canvas: { status: string; url: string | null; updated_at: string | null };
+}
+
+/** Réponse de l'analyse des marges — une proposition, jamais une action. */
+interface CropProposal {
+  crop: CropRect | null;
+  source?: { width: number; height: number };
+  target?: { width: number; height: number };
+  recommended: boolean;
+  reason: string;
+  marginFraction?: number;
 }
 
 /**
@@ -53,10 +74,11 @@ interface CanvasRow {
 
         <table class="lco__table" *ngIf="!loading && rows.length">
           <thead>
-            <tr><th>Vidéo</th><th>Livré</th><th>Canvas</th><th>Aperçu</th><th></th></tr>
+            <tr><th>Vidéo</th><th>Livré</th><th>Marges</th><th>Canvas</th><th>Aperçu</th><th></th></tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of rows" [attr.data-testid]="'lco-row-' + r.video_id">
+            <ng-container *ngFor="let r of rows">
+            <tr [attr.data-testid]="'lco-row-' + r.video_id">
               <td class="lco__name">{{ r.filename }}</td>
               <td>
                 <!-- Dimensions jamais mesurées : on ne conclut pas qu'un fichier
@@ -70,6 +92,39 @@ interface CanvasRow {
                 <span *ngIf="r.matches_expected === false" class="lco__badge lco__badge--warn"
                   >{{ r.source.width }} × {{ r.source.height }} ≠ attendu</span
                 >
+              </td>
+              <td>
+                <!-- Le détourage n'est JAMAIS automatique : on propose, l'opérateur
+                     tranche. Un visuel volontairement sur fond noir est
+                     indistinguable d'un export mal cadré (PROP-015). -->
+                <span
+                  *ngIf="r.crop"
+                  class="lco__badge lco__badge--ok"
+                  [attr.data-testid]="'lco-crop-badge-' + r.video_id"
+                  >détouré {{ r.crop.w }} × {{ r.crop.h }}</span
+                >
+                <button
+                  *ngIf="r.crop"
+                  type="button"
+                  class="lco__del"
+                  [attr.data-testid]="'lco-crop-clear-' + r.video_id"
+                  title="Revenir au fichier entier, marges comprises"
+                  [disabled]="busy[r.video_id]"
+                  (click)="clearCrop(r)"
+                >
+                  Annuler
+                </button>
+                <button
+                  *ngIf="!r.crop"
+                  type="button"
+                  class="lco__redo"
+                  [attr.data-testid]="'lco-crop-detect-' + r.video_id"
+                  title="Mesurer les marges noires — rien ne sera appliqué sans ta validation"
+                  [disabled]="!r.has_variant || busy[r.video_id]"
+                  (click)="detectCrop(r)"
+                >
+                  {{ busy[r.video_id] ? 'Analyse…' : 'Analyser' }}
+                </button>
               </td>
               <td>
                 <span class="lco__badge" [class]="'lco__badge--' + statusClass(r.canvas.status)">{{
@@ -111,6 +166,61 @@ interface CanvasRow {
                 </button>
               </td>
             </tr>
+
+            <!-- Proposition de détourage : visible seulement après une analyse
+                 explicite, et refermable sans rien appliquer. -->
+            <tr *ngIf="proposals[r.video_id] as p" [attr.data-testid]="'lco-crop-panel-' + r.video_id">
+              <td colspan="6" class="lco__crop">
+                <p class="lco__crop-reason" [class.lco__crop-reason--no]="!p.recommended">
+                  {{ p.recommended ? '✂️' : 'ℹ️' }} {{ p.reason }}
+                </p>
+
+                <div class="lco__crop-preview" *ngIf="p.recommended && p.crop && r.source_url">
+                  <figure>
+                    <figcaption>Aujourd'hui</figcaption>
+                    <div class="lco__frame" [style.aspectRatio]="frameRatio(r)">
+                      <video [src]="r.source_url" muted loop autoplay playsinline class="lco__fit"></video>
+                    </div>
+                  </figure>
+                  <figure>
+                    <figcaption>Après détourage</figcaption>
+                    <div class="lco__frame" [style.aspectRatio]="frameRatio(r)">
+                      <video
+                        [src]="r.source_url"
+                        muted
+                        loop
+                        autoplay
+                        playsinline
+                        class="lco__crop-video"
+                        [ngStyle]="cropStyle(r, p.crop)"
+                      ></video>
+                    </div>
+                  </figure>
+                </div>
+
+                <div class="lco__crop-actions">
+                  <button
+                    type="button"
+                    *ngIf="p.recommended && p.crop"
+                    class="lco__apply"
+                    [attr.data-testid]="'lco-crop-apply-' + r.video_id"
+                    [disabled]="busy[r.video_id]"
+                    (click)="applyCrop(r, p.crop)"
+                  >
+                    Appliquer ce détourage
+                  </button>
+                  <button
+                    type="button"
+                    class="lco__redo"
+                    [attr.data-testid]="'lco-crop-dismiss-' + r.video_id"
+                    (click)="dismissProposal(r)"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </td>
+            </tr>
+            </ng-container>
           </tbody>
         </table>
 
@@ -138,8 +248,20 @@ interface CanvasRow {
     /* Le canvas est un ruban très large et très plat : une vignette carrée le
        rendrait illisible. On garde son ratio et on le laisse petit. */
     .lco__thumb { width: 8rem; height: auto; background: #000; border-radius: 2px; display: block; }
-    .lco__redo, .lco__del { font-size: .78rem; padding: .15rem .5rem; cursor: pointer; }
+    .lco__redo, .lco__del, .lco__apply { font-size: .78rem; padding: .15rem .5rem; cursor: pointer; }
     .lco__del { margin-right: .3rem; color: #b91c1c; }
+    .lco__apply { margin-right: .4rem; font-weight: 600; color: #166534; }
+    .lco__crop { background: rgba(200,120,40,.05); }
+    .lco__crop-reason { margin: 0 0 .5rem; font-size: .82rem; color: #92400e; }
+    .lco__crop-reason--no { color: #475569; }
+    .lco__crop-preview { display: flex; gap: 1rem; margin-bottom: .5rem; }
+    .lco__crop-preview figure { margin: 0; flex: 1; min-width: 0; }
+    .lco__crop-preview figcaption { font-size: .75rem; color: #64748b; margin-bottom: .2rem; }
+    /* Le cadre reproduit le format d'UN CÔTÉ du ruban : c'est dans ce cadre-là que
+       le pliage va faire tenir la vidéo, donc c'est le seul aperçu honnête. */
+    .lco__frame { position: relative; overflow: hidden; background: #000; border-radius: 2px; }
+    .lco__fit { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .lco__crop-video { position: absolute; object-fit: fill; }
     .lco__none, .lco__empty, .lco__loading { color: #94a3b8; }
     .lco__error { color: #b91c1c; }
   `],
@@ -153,6 +275,8 @@ export class LedCanvasOverviewComponent {
   rows: CanvasRow[] = [];
   expected: { width: number; height: number } | null = null;
   busy: Record<string, boolean> = {};
+  /** Propositions de détourage en attente d'arbitrage — jamais appliquées seules. */
+  proposals: Record<string, CropProposal | null> = {};
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
@@ -236,6 +360,107 @@ export class LedCanvasOverviewComponent {
         error: (e) => {
           this.busy = { ...this.busy, [r.video_id]: false };
           this.error = e?.error?.error ?? 'Suppression impossible';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /**
+   * Mesure les marges de la vidéo. **Aucune écriture** : le serveur rend un
+   * rectangle et son argumentaire, l'opérateur décide ensuite.
+   *
+   * Le club cible est passé explicitement : le format visé dépend du ruban du club
+   * consulté, pas du propriétaire de la vidéo (une source partagée se plie
+   * différemment d'un club à l'autre).
+   */
+  detectCrop(r: CanvasRow): void {
+    if (!r.has_variant || this.busy[r.video_id]) return;
+    this.busy = { ...this.busy, [r.video_id]: true };
+    this.http
+      .post<CropProposal>(
+        `${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/crop/detect`,
+        { target_site_id: this.siteId },
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: (p) => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.proposals = { ...this.proposals, [r.video_id]: p };
+          this.cdr.markForCheck();
+        },
+        error: (e) => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.error = e?.error?.error ?? 'Analyse impossible';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /** Enregistre le détourage validé. C'est ce geste-là, et lui seul, qui détoure. */
+  applyCrop(r: CanvasRow, crop: CropRect): void {
+    this.writeCrop(r, crop);
+  }
+
+  /** Revient au fichier entier, marges comprises. */
+  clearCrop(r: CanvasRow): void {
+    this.writeCrop(r, null);
+  }
+
+  dismissProposal(r: CanvasRow): void {
+    this.proposals = { ...this.proposals, [r.video_id]: null };
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Format d'UN CÔTÉ du ruban — le cadre dans lequel le pliage fera tenir la vidéo.
+   * Repli `16 / 9` quand le profil est illisible : mieux vaut un aperçu approximatif
+   * qu'une division par zéro qui masque tout le panneau.
+   */
+  frameRatio(r: CanvasRow): string {
+    const e = r.expected ?? this.expected;
+    return e && e.width > 0 && e.height > 0 ? `${e.width} / ${e.height}` : '16 / 9';
+  }
+
+  /**
+   * Positionne la vidéo pour que SEUL le rectangle détouré remplisse le cadre.
+   *
+   * La vidéo est agrandie du facteur source/crop puis décalée de l'origine du
+   * rectangle — c'est l'équivalent CSS exact du `crop=w:h:x:y` que ffmpeg
+   * appliquera. L'aperçu montre donc ce qui sera diffusé, pas une approximation.
+   */
+  cropStyle(r: CanvasRow, crop: CropRect): Record<string, string> {
+    const sw = r.source?.width || 0;
+    const sh = r.source?.height || 0;
+    if (!sw || !sh || !crop.w || !crop.h) return {};
+    return {
+      width: `${(sw / crop.w) * 100}%`,
+      height: `${(sh / crop.h) * 100}%`,
+      left: `${(-crop.x / crop.w) * 100}%`,
+      top: `${(-crop.y / crop.h) * 100}%`,
+    };
+  }
+
+  private writeCrop(r: CanvasRow, crop: CropRect | null): void {
+    if (this.busy[r.video_id]) return;
+    this.busy = { ...this.busy, [r.video_id]: true };
+    this.http
+      .put(
+        `${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/crop`,
+        { crop },
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: () => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.proposals = { ...this.proposals, [r.video_id]: null };
+          // Le canvas déjà fabriqué l'a été sur le fichier entier : son empreinte
+          // change avec le `crop`, il redeviendra donc « aucun » puis sera refait
+          // au prochain déploiement. On relit pour montrer cet état réel.
+          this.load();
+        },
+        error: (e) => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.error = e?.error?.error ?? 'Enregistrement impossible';
           this.cdr.markForCheck();
         },
       });

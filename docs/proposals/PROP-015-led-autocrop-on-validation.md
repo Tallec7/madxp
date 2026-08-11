@@ -1,6 +1,6 @@
 # PROP-015 — Détourage des marges avant pliage, sur validation
 
-> **Statut** : Conçu, non implémenté
+> **Statut** : **Implémenté** → [ADR-140](../adr/ADR-140-led-autocrop-on-validation.md)
 > **Origine** : session LED 2026-08-11, club Piraths Strasbourg ATH
 > **Lié** : ADR-139 (canvas plié servi), `docs/specs/features/led-perimeter.spec.md`
 
@@ -13,6 +13,12 @@ posé au centre d'un grand cadre, avec des **marges noires** au-dessus et en des
 Le pliage prend le fichier entier. Ramené à 120 px de haut, le cadre complet passe de
 4096 à ~347 px de large — et le bandeau utile, un cinquième de la hauteur, devient un
 trait. Sur le ruban : un visuel minuscule perdu dans du noir.
+
+**Mesuré** (ffprobe + cropdetect sur le fichier de production, 2026-08-11) : bandeau
+utile = **4096 × 306** (ratio 13,4:1, identique sur les 5 instants analysés). Une fois
+plié pour Piraths, le contenu occupe **346 × 24 px** dans une bande de 1600 × 120 —
+et **1600 × 120** une fois le détourage validé. Le canvas, lui, reste 1600 × 480 dans
+les deux cas : l'invariant ADR-138 n'est pas touché.
 
 Ce n'est pas un cas isolé : c'est ce que produit un export « propre » depuis un outil
 de montage réglé sur un format standard.
@@ -35,11 +41,12 @@ détourer systématiquement. Elle est mauvaise :
 Même pattern que `fit_recommendation` (le système propose un cadrage, l'opérateur
 tranche) et que `serve_folded` (interrupteur explicite, aucun défaut).
 
-1. **Détection** — à l'upload d'une variante `led-perimeter`, ou à la demande depuis
-   la vue Canvas, `cropdetect` sur quelques frames réparties dans la vidéo (pas une
-   seule : un fondu au noir fausserait tout). Retenir le rectangle le PLUS PETIT
-   commun à toutes les frames analysées — mieux vaut sous-détourer que rogner du
-   contenu.
+1. **Détection** — à la demande depuis la vue Canvas, `cropdetect` sur quelques frames
+   réparties dans la vidéo (pas une seule : un fondu au noir fausserait tout). Retenir
+   le plus petit rectangle qui contient le contenu de TOUTES les frames analysées —
+   c'est-à-dire leur **union**, pas leur intersection : mieux vaut sous-détourer que
+   rogner du contenu. (Une intersection ferait dicter le rectangle par la frame la
+   plus sombre, exactement le piège que le multi-frames doit éviter.)
 2. **Proposition** — la vue Canvas affiche « marges détectées : 4096×1416 → 4096×285,
    soit un ratio 14,4:1 proche du ruban (13,3:1) » avec un aperçu avant/après.
 3. **Validation** — l'opérateur accepte, et le rectangle est persisté sur la variante

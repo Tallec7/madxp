@@ -153,6 +153,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-137](ADR-137-display-geometry-owns-resolution.md)                                   | Un écran porte sa géométrie ; la résolution est dérivée, jamais saisie                       | Accepté                           | Août 2026 |
 | [ADR-138](ADR-138-led-canvas-derives-from-site-only.md)                                  | Le canvas LED se dérive du terrain seul — pliage toujours par côté                           | Accepté                           | Août 2026 |
 | [ADR-139](ADR-139-led-serve-folded-canvas.md)                                            | Servir le canvas LED plié, derrière un interrupteur par site                                 | Accepté                           | Août 2026 |
+| [ADR-140](ADR-140-led-autocrop-on-validation.md)                                         | Détourer les marges d'une vidéo LED, sur validation humaine                                  | Accepté                           | Août 2026 |
 
 ### Supersédés
 
