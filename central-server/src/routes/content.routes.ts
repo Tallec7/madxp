@@ -36,6 +36,9 @@ router.post('/videos/:id/variants', authenticate, requireRole('admin', 'operator
 router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'), uploadRateLimit, validateParams(paramSchemas.id), uploadVideo.single('video'), contentController.replaceVideo);
 // `club` autorisé avec garde-fou d'ownership dans le controller (ne peut créer
 // une variante que sur SA propre vidéo, source limitée à ce qu'il a le droit d'utiliser).
+// Crée en une passe la variante led-perimeter manquante sur toutes les vidéos du club.
+// Réservé admin/operator : c'est une écriture de masse, pas un geste de club.
+router.post('/sites/:siteId/led-variants/bulk', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.siteId), contentController.bulkCreateLedVariants);
 router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.createVideoVariantFromVideo);
 // PROP-014 §8 / ADR-134 : mise en page de la variante LED (métadonnée, pas de re-upload).
 // `club` autorisé — garde-fou d'ownership dans chaque handler (variante de sa propre vidéo).
