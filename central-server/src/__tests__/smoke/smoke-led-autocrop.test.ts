@@ -102,7 +102,7 @@ describe('Smoke — détourage LED : proposé, jamais appliqué seul', () => {
     });
 
     it('le crop précède le scale dans le filter graph', () => {
-      const graph = buildPerSideFoldFilterGraph(geometry, 'black', 'centered', undefined, [
+      const graph = buildPerSideFoldFilterGraph(geometry, 'black', 'centered', undefined, undefined, [
         { x: 0, y: 554, w: 4096, h: 306 },
       ]);
       const iCrop = graph.indexOf('crop=4096:306:0:554');
@@ -115,7 +115,7 @@ describe('Smoke — détourage LED : proposé, jamais appliqué seul', () => {
 
     it('sans crop validé, le graphe est strictement inchangé', () => {
       const sans = buildPerSideFoldFilterGraph(geometry, 'black', 'centered');
-      const vide = buildPerSideFoldFilterGraph(geometry, 'black', 'centered', undefined, [null]);
+      const vide = buildPerSideFoldFilterGraph(geometry, 'black', 'centered', undefined, undefined, [null]);
       expect(vide).toBe(sans);
       expect(sans).not.toContain('[src0]');
     });

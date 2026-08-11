@@ -62,7 +62,8 @@ requête HTTP sur un encodage.
 ## Conséquences
 
 **Ce qui change en production au merge : rien.** Les deux sites LED (Saas Lanester HB,
-Piraths Strasbourg ATH) n'ont pas `serve_folded`. Le champ est posé, l'UI existe
+Piraths Strasbourg ATH) n'ont pas `serve_folded`. _(Plus vrai depuis le 2026-08-11 —
+cf. « Note d'état » plus bas : Piraths est activé.)_ Le champ est posé, l'UI existe
 (« Avancé (processeur) »), le chemin est testé — l'activation reste un geste par club.
 
 **Observation terrain (Piraths Strasbourg ATH, 2026-08-11) — le club est en mode B.**
@@ -118,6 +119,40 @@ produit le même canvas que B2B, ce qui se compare entre deux navigateurs.
 de déploiement d'importer le moteur de pliage — cette assertion devient fausse par
 construction. Elle est remplacée par celle qui protège réellement la production : le
 pliage est inatteignable sans `serve_folded === true`, et ce champ n'a pas de défaut.
+
+## Note d'état — 2026-08-11 (postérieure à la décision)
+
+_Cette section est un constat, pas une révision : la décision ci-dessus reste celle qui
+a été prise. Elle est ajoutée parce que la phrase « ce qui change en production au merge :
+rien » a cessé d'être vraie, et qu'un lecteur pressé en tirerait une conclusion fausse._
+
+**Piraths Strasbourg ATH diffuse en plié.** Vérifié en DB prod le 2026-08-11 :
+
+```json
+"canvas_in": { "mode": "B", "band_count": 4, "band_width": 1600,
+               "order": "top-to-bottom", "serve_folded": true }
+```
+
+Les deux défauts de config que cet ADR posait comme préalables sont corrigés :
+`band_width` est passé de 1920 à **1600** (= un côté de 10 m à P6.25), et le site ne porte
+plus qu'**un seul** display `led-perimeter` — le doublon en `mode: 'A'` a disparu. Le
+`band_count` figé (4) égale le dérivé (4), donc pas de `confirmedIsStale`.
+
+**Le canvas réellement servi a été mesuré**, pas déduit : `ffprobe` sur l'`output_url`
+d'un job `ready` donne **1600×480**, h264 — exactement la cible relevée sur B2B Alive.
+37 vidéos sur 37 ont leur canvas plié `ready` pour l'empreinte de géométrie courante ; les
+3 échecs résiduels portent sur des vidéos supprimées.
+
+**La vérification à coût nul proposée plus haut est donc dépassée** : il ne s'agit plus de
+savoir si notre pipeline produit le même canvas que B2B — il le produit, et c'est lui qui
+part en diffusion.
+
+**Saas Lanester HB reste éteint, et doit le rester** tant qu'aucune observation terrain
+équivalente n'a été faite : son `band_count` figé à 1 diverge du dérivé (2), l'allumer
+doublerait la hauteur (110 → 220 px) face à un processeur gravé pour 110.
+
+**L'activation reste un geste par club** — un club activé ne fait pas jurisprudence pour
+le suivant.
 
 ## Alternatives écartées
 

@@ -1,3 +1,9 @@
+## [4.25.4](https://github.com/Tallec7/madxp/compare/v4.25.3...v4.25.4) (2026-08-11)
+
+### Performance Improvements
+
+- **led:** split ffmpeg + état réel de Piraths (reste de [#1159](https://github.com/Tallec7/madxp/issues/1159)) ([#1162](https://github.com/Tallec7/madxp/issues/1162)) ([96a5f19](https://github.com/Tallec7/madxp/commit/96a5f193f84d9cbe326846198259661507b2fe8e))
+
 ## [4.25.3](https://github.com/Tallec7/madxp/compare/v4.25.2...v4.25.3) (2026-08-11)
 
 ### Bug Fixes
