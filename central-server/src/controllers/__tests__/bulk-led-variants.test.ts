@@ -45,14 +45,24 @@ beforeEach(() => {
 });
 
 function withVideos(ids: string[], existing: Record<string, string[]> = {}) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  videos.findForSitePaginated.mockResolvedValue({ rows: ids.map(video), total: ids.length } as any);
+  videos.findIdsOwnedBySite.mockResolvedValue(ids);
   variants.findVariantCountsByVideoIds.mockResolvedValue(
     new Map(Object.entries(existing).map(([k, types]) => [k, { count: types.length, types }]))
   );
 }
 
 describe('bulkCreateLedVariants', () => {
+  it('ne travaille QUE sur les vidéos du site (incident 2026-08-11)', async () => {
+    withVideos(['a']);
+    await bulkCreateLedVariants(req, res() as never);
+
+    // `findForSitePaginated` ne filtre PAS : malgré son nom, le siteId n'y sert qu'au
+    // tri, elle retourne toute la bibliothèque. L'avoir utilisée a créé 492 variantes
+    // sur 7 clubs au lieu d'un seul. Ce test interdit le retour en arrière.
+    expect(videos.findIdsOwnedBySite).toHaveBeenCalledWith(SITE, expect.any(Number));
+    expect(videos.findForSitePaginated).not.toHaveBeenCalled();
+  });
+
   it('crée la variante manquante et LAISSE INTACTES celles qui existent', async () => {
     withVideos(['a', 'b', 'c'], { b: ['led-perimeter'] });
     const r = res();
