@@ -94,6 +94,66 @@ class VideoFtpAuditRepository {
     return result.rows;
   }
 
+  /**
+   * Fichiers absents du FTP qui sont encore RÉFÉRENCÉS DANS UNE CONFIG diffusée,
+   * groupés par site.
+   *
+   * ## Pourquoi pas `site_videos`
+   *
+   * `countActiveForSite` passe par `site_videos`, alimentée à l'upload ciblé et au
+   * déploiement (ADR-048). Une config copiée d'un autre club, importée, ou établie
+   * avant cette table n'y laisse aucune trace. Mesuré le 2026-08-11 : `site_videos`
+   * ne voyait que **3** des 46 fichiers manquants, contre **16** par les configs —
+   * zéro sur deux clubs Pi qui en diffusaient pourtant 12 et 10.
+   *
+   * Ce qui part vraiment à l'écran, c'est `config_profiles.configuration`. C'est
+   * donc elle qui décide si un fichier absent est un incident ou un simple orphelin.
+   *
+   * ## Le LIKE est ancré, volontairement
+   *
+   * Les configs stockent soit `"videos/default/X.mp4"`, soit `"X.mp4"`. Un
+   * `LIKE '%X.mp4%'` nu remonterait `TV_JINGLE_2MIN.mp4` quand on cherche
+   * `2MIN.mp4` — un faux positif qui gonflerait l'alerte et la ferait ignorer.
+   * On exige donc le guillemet ouvrant ou un `/` juste avant le nom.
+   */
+  async findMissingReferencedInProfiles(): Promise<
+    Array<{ site_id: string; site_name: string; storage_paths: string[] }>
+  > {
+    const result = await query<{ site_id: string; site_name: string; storage_paths: string[] }>(
+      `WITH paths AS (
+         SELECT DISTINCT expected_path FROM video_ftp_audit_warnings WHERE status = 'missing'
+       )
+       SELECT s.id AS site_id,
+              s.site_name,
+              array_agg(DISTINCT p.expected_path ORDER BY p.expected_path) AS storage_paths
+       FROM paths p
+       JOIN config_profiles cp
+         ON cp.configuration::text LIKE '%"' || p.expected_path || '"%'
+         OR cp.configuration::text LIKE '%/' || p.expected_path || '"%'
+       JOIN sites s ON s.id = cp.site_id
+       GROUP BY s.id, s.site_name
+       ORDER BY cardinality(array_agg(DISTINCT p.expected_path)) DESC`,
+    );
+    return result.rows;
+  }
+
+  /**
+   * Horodate la notification des warnings dont le chemin vient d'être signalé.
+   *
+   * `notified_at` existait depuis l'origine sans qu'aucun code ne l'écrive : la
+   * colonne promettait une restitution qui n'a jamais eu lieu. On la renseigne
+   * pour que « détecté » et « signalé » cessent d'être confondus — c'est ce qui
+   * permettra plus tard de repérer un incident détecté mais resté muet.
+   */
+  async markNotified(storagePaths: string[]): Promise<number> {
+    if (storagePaths.length === 0) return 0;
+    const result = await query(
+      `UPDATE video_ftp_audit_warnings SET notified_at = NOW() WHERE expected_path = ANY($1::text[])`,
+      [storagePaths],
+    );
+    return result.rowCount ?? 0;
+  }
+
   async countActive(): Promise<{ missing: number; unreachable: number }> {
     const result = await query<{ status: string; count: string }>(
       `SELECT status, COUNT(*)::int AS count

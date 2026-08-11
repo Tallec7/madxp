@@ -13,6 +13,11 @@ jest.mock('./metrics.service', () => ({
   metricsService: { recordVideoFtpAudit: jest.fn() },
 }));
 
+jest.mock('../repositories', () => ({
+  alertRepository: { create: jest.fn() },
+  videoFtpAuditRepository: { findMissingReferencedInProfiles: jest.fn(), markNotified: jest.fn() },
+}));
+
 jest.mock('../config/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -24,6 +29,15 @@ jest.mock('../config/logger', () => ({
 import { videoFtpAuditService } from './video-ftp-audit.service';
 import { query } from '../config/database';
 import metricsService from './metrics.service';
+import { alertRepository, videoFtpAuditRepository } from '../repositories';
+
+const mockCreateAlert = alertRepository.create as jest.MockedFunction<typeof alertRepository.create>;
+const mockFindMissing = videoFtpAuditRepository.findMissingReferencedInProfiles as jest.MockedFunction<
+  typeof videoFtpAuditRepository.findMissingReferencedInProfiles
+>;
+const mockMarkNotified = videoFtpAuditRepository.markNotified as jest.MockedFunction<
+  typeof videoFtpAuditRepository.markNotified
+>;
 
 const mockQuery = query as jest.MockedFunction<typeof query>;
 const mockRecord = metricsService.recordVideoFtpAudit as jest.MockedFunction<typeof metricsService.recordVideoFtpAudit>;
@@ -185,5 +199,74 @@ describe('VideoFtpAuditService.auditAllVideos (PR2.2)', () => {
     expect(result.unreachable).toBe(1);
     expect(result.resolved).toBe(1);
     expect(mockRecord).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Restitution des fichiers manquants.
+ *
+ * L'audit remplissait sa table depuis mai 2026 sans que personne ne le sache :
+ * 46 fichiers absents, 51 lignes, `notified_at` NULL sur toutes. Ces tests
+ * verrouillent les deux décisions qui rendent l'alerte lisible — n'alerter que
+ * sur ce qui est diffusé, et agréger par site.
+ */
+describe('VideoFtpAuditService.notifyMissingReferencedInProfiles', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('alerte une fois par site, avec le compte et la liste complète en metadata', async () => {
+    mockFindMissing.mockResolvedValue([
+      { site_id: 'site-a', site_name: 'Gymnase Mangin-Beaulieu', storage_paths: ['a.mp4', 'b.mp4'] },
+      { site_id: 'site-b', site_name: 'GLT Sport', storage_paths: ['a.mp4'] },
+    ]);
+    mockMarkNotified.mockResolvedValue(2);
+
+    const out = await videoFtpAuditService.notifyMissingReferencedInProfiles();
+
+    expect(out).toEqual({ sitesAlerted: 2, pathsNotified: 2 });
+    expect(mockCreateAlert).toHaveBeenCalledTimes(2);
+    expect(mockCreateAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        site_id: 'site-a',
+        alert_type: 'video_missing_on_storage',
+        // `warning`, pas `critical` : la diffusion continue, le player saute le
+        // fichier absent. Ouvrir le branchement avec 4 alertes critiques ferait
+        // passer un correctif de fond pour une panne.
+        severity: 'warning',
+        metadata: { storage_paths: ['a.mp4', 'b.mp4'], count: 2 },
+      }),
+    );
+    // Le message doit porter le compte : « 2 vidéo(s) ... » se trie et se lit.
+    expect(mockCreateAlert.mock.calls[0][0].message).toMatch(/^2 vidéo/);
+
+    // Dédup des chemins avant marquage : 'a.mp4' est sur les deux sites.
+    expect(mockMarkNotified).toHaveBeenCalledWith(['a.mp4', 'b.mp4']);
+  });
+
+  it('n’alerte PAS quand aucun fichier manquant n’est diffusé', async () => {
+    // 30 des 46 fichiers absents ne sont dans aucune config : ce sont des rows
+    // orphelines. Alerter dessus noierait les 16 qui sont réellement à l'écran.
+    mockFindMissing.mockResolvedValue([]);
+
+    const out = await videoFtpAuditService.notifyMissingReferencedInProfiles();
+
+    expect(out).toEqual({ sitesAlerted: 0, pathsNotified: 0 });
+    expect(mockCreateAlert).not.toHaveBeenCalled();
+    expect(mockMarkNotified).not.toHaveBeenCalled();
+  });
+
+  it('tronque le message au-delà de 5 fichiers mais garde tout en metadata', async () => {
+    const paths = ['1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '7.mp4'];
+    mockFindMissing.mockResolvedValue([
+      { site_id: 'site-a', site_name: 'Gros club', storage_paths: paths },
+    ]);
+    mockMarkNotified.mockResolvedValue(7);
+
+    await videoFtpAuditService.notifyMissingReferencedInProfiles();
+
+    const arg = mockCreateAlert.mock.calls[0][0];
+    expect(arg.message).toContain('+2 autre(s)');
+    expect(arg.message).not.toContain('7.mp4');
+    // Celui qui traite l'incident a besoin de la liste entière.
+    expect(arg.metadata).toEqual({ storage_paths: paths, count: 7 });
   });
 });

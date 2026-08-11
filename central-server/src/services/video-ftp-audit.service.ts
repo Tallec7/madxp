@@ -17,9 +17,16 @@ import { query } from '../config/database';
 import { getVideoUrl } from './storage.service';
 import metricsService from './metrics.service';
 import logger from '../config/logger';
+import { alertRepository, videoFtpAuditRepository } from '../repositories';
 
 const PROBE_TIMEOUT_MS = 15000;
 const FALLBACK_DELAY_MS = 2000;
+
+/** Type d'alerte des vidéos programmées absentes du stockage. */
+const MISSING_VIDEO_ALERT_TYPE = 'video_missing_on_storage';
+
+/** Au-delà, le message devient illisible — la liste complète va dans `metadata`. */
+const MAX_PATHS_IN_MESSAGE = 5;
 
 interface ProbeResult {
   reachable: boolean;
@@ -110,6 +117,74 @@ class VideoFtpAuditService {
     logger.info('Video FTP audit completed', { scanned, missing, unreachable, resolved, durationMs });
 
     return { scanned, missing, unreachable, resolved, durationMs };
+  }
+
+  /**
+   * Transforme les fichiers manquants en alertes — la restitution qui manquait.
+   *
+   * ## Le défaut corrigé
+   *
+   * L'audit remplissait `video_ftp_audit_warnings` depuis mai 2026 et personne
+   * n'en savait rien : 46 fichiers absents du FTP, 51 lignes, `notified_at` NULL
+   * sur toutes. Le CRON logguait et incrémentait sa métrique, sans jamais créer
+   * d'alerte. Le système savait depuis trois mois ; l'exploitant, non.
+   *
+   * ## On n'alerte QUE sur ce qui est diffusé
+   *
+   * Sur les 46 fichiers absents, 30 ne sont référencés par aucune config : ce sont
+   * des rows orphelines, un ménage de base, pas un incident. Les noyer dans la même
+   * alerte que les 16 réellement à l'écran ferait ignorer les deux. Seul ce qui part
+   * en diffusion déclenche — les orphelins restent dans la table et la métrique.
+   *
+   * ## Une alerte par site, pas par fichier
+   *
+   * La dédup ADR-111 porte sur `(site_id, alert_type, status='active')` : émettre
+   * par fichier les fusionnerait toutes en une seule ligne dont le message ne
+   * refléterait que le dernier passage. On agrège donc explicitement par site, et
+   * `message` porte le compte + les noms. Les ré-émissions quotidiennes montent
+   * `occurrences` au lieu de spammer — « manquant depuis 90 jours » se lit alors
+   * dans le compteur.
+   */
+  async notifyMissingReferencedInProfiles(): Promise<{ sitesAlerted: number; pathsNotified: number }> {
+    const impacted = await videoFtpAuditRepository.findMissingReferencedInProfiles();
+
+    if (impacted.length === 0) {
+      logger.info('Video FTP audit: aucun fichier manquant diffusé, pas d’alerte');
+      return { sitesAlerted: 0, pathsNotified: 0 };
+    }
+
+    for (const site of impacted) {
+      const noms = site.storage_paths.slice(0, MAX_PATHS_IN_MESSAGE).join(', ');
+      const reste = site.storage_paths.length - MAX_PATHS_IN_MESSAGE;
+
+      await alertRepository.create({
+        site_id: site.site_id,
+        alert_type: MISSING_VIDEO_ALERT_TYPE,
+        // `warning` et non `critical` : la diffusion continue (le player saute le
+        // fichier absent), et le parc en accumule déjà 16 au moment du branchement.
+        // Ouvrir avec 4 alertes critiques ferait passer un correctif de fond pour
+        // une panne. À relever si l'incident s'installe — c'est `occurrences` qui
+        // le dira.
+        severity: 'warning',
+        message:
+          `${site.storage_paths.length} vidéo(s) programmée(s) sont absentes du stockage ` +
+          `et ne s'afficheront pas : ${noms}${reste > 0 ? ` (+${reste} autre(s))` : ''}`,
+        // La liste COMPLÈTE va dans metadata : le message est tronqué pour rester
+        // lisible, mais celui qui traite l'incident a besoin de tout.
+        metadata: { storage_paths: site.storage_paths, count: site.storage_paths.length },
+      });
+    }
+
+    const pathsNotified = await videoFtpAuditRepository.markNotified(
+      [...new Set(impacted.flatMap((s) => s.storage_paths))],
+    );
+
+    logger.warn('Video FTP audit: fichiers manquants diffusés signalés', {
+      sitesAlerted: impacted.length,
+      pathsNotified,
+    });
+
+    return { sitesAlerted: impacted.length, pathsNotified };
   }
 
   private async fetchAllVideos(): Promise<VideoRow[]> {
