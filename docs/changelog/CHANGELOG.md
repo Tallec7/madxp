@@ -1,3 +1,9 @@
+# [4.25.0](https://github.com/Tallec7/madxp/compare/v4.24.0...v4.25.0) (2026-08-11)
+
+### Features
+
+- **led:** backfill des dimensions vidéo + retrait d'une variante depuis la vue Canvas ([#1156](https://github.com/Tallec7/madxp/issues/1156)) ([4288bde](https://github.com/Tallec7/madxp/commit/4288bde9a0b2a5ebe4d9a4b7671399efe7c3f1d3)), closes [#1140](https://github.com/Tallec7/madxp/issues/1140)
+
 # [4.24.0](https://github.com/Tallec7/madxp/compare/v4.23.0...v4.24.0) (2026-08-11)
 
 ### Features
