@@ -37,6 +37,8 @@ exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
 - Worker render in-process : poll `studio_render_requests` toutes les 2s, bundle Remotion +
   renderMedia, upload FTP (ADR-124 — consolidation du studio-render-server satellite ADR-118
   désormais déprécié).
+- File de rendus **sérialisée par défaut** : un seul rendu en vol tous processus confondus
+  (ADR-141). Voir « Concurrence de la file de rendus » ci-dessous.
 - Worker photo-cutout in-process (BiRefNet via `@imgly/background-removal-node` ONNX) —
   ADR-124 (architecture) + ADR-131 (install effective de la lib Phase 2 + mock jest global).
 - Distribution multi-sites des renders via le pattern grants ADR-082 (réutilisé par ADR-123).
@@ -102,6 +104,39 @@ exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
 - **Templates Lottie** — voir `lottie-templates.component`.
 - **Système V2 data-driven** — supprimé en ADR-129.
 
+## Concurrence de la file de rendus (ADR-141)
+
+Un rendu lance **Chromium + le compositor Remotion** et dure **9 à 16 minutes** en
+production. Le poll, lui, est à 2 secondes. Sans plafond, une file de N demandes
+démarrait N rendus en 2N secondes — d'où deux `Compositor quit with signal SIGKILL` le
+2026-05-15 : le conteneur tue le compositor quand la mémoire manque.
+
+**Contrat** :
+
+| Règle             | Détail                                                                      |
+| ----------------- | --------------------------------------------------------------------------- |
+| Rendus simultanés | **1** par défaut, tous processus confondus                                  |
+| Réglage           | `STUDIO_RENDER_MAX_CONCURRENCY` (env, pris en compte au claim suivant)      |
+| Mécanisme         | comptage des lignes `rendering` sous `pg_try_advisory_xact_lock`, **en DB** |
+| Seuil d'orphelin  | 30 min — doit rester **au-dessus** de la durée d'un rendu réel              |
+| Signe de vie      | `touchRendering()` chaque minute pendant le rendu                           |
+
+Trois pièges, chacun déjà rencontré :
+
+- **`FOR UPDATE SKIP LOCKED` n'est pas un plafond de concurrence.** Il empêche deux
+  workers de claim la _même_ ligne, jamais d'en traiter deux _différentes_ en parallèle.
+- **Une garde booléenne en mémoire ne franchit pas la frontière d'un replica.** Deux
+  processus Railway ont chacun la leur, toutes deux à `false`. Le plafond doit vivre en DB.
+- **Un verrou consultatif de _session_ est inopérant derrière PgBouncer** en mode
+  transaction (`:6543`) : il serait pris sur un backend et relâché sur un autre, sans
+  erreur. D'où la variante `_xact_`.
+
+Ne pas confondre avec `STUDIO_RENDER_CONCURRENCY` (ADR-128), qui règle le nombre
+d'onglets Chrome **à l'intérieur** d'un rendu : le coût mémoire réel est le produit des deux.
+
+Relever le plafond est une décision d'exploitation — **après mesure de la mémoire du
+conteneur**, jamais en retirant la barrière.
+
 ## Références
 
 - **ADRs V1** : [ADR-082](../../adr/ADR-082-video-club-grants.md) (pattern grants),
@@ -110,7 +145,8 @@ exposé via `/api/templates-studio/*` et le dashboard `/templates-studio`.
   [ADR-124](../../adr/ADR-124-templates-studio-consolidation-in-central.md) (consolidation in-process),
   [ADR-125](../../adr/ADR-125-templates-studio-asset-library.md) (asset library globale),
   [ADR-127](../../adr/ADR-127-templates-studio-custom-fonts.md) (fonts custom),
-  [ADR-128](../../adr/ADR-128-templates-studio-asset-directory.md) (asset type directory).
+  [ADR-128](../../adr/ADR-128-templates-studio-asset-directory.md) (asset type directory),
+  [ADR-141](../../adr/ADR-141-studio-render-concurrency-cap.md) (plafond de concurrence des rendus).
 - **ADR de suppression V2** : [ADR-129](../../adr/ADR-129-kill-templates-studio-v2-legacy.md).
 - **Spec source V1** : `studio-template/templates-remotion/spec/STUDIO_V1.md` (sibling repo).
 - **Recette E2E** : `docs/runbooks/STUDIO-RECIPE.md`.

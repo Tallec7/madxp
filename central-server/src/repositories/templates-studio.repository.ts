@@ -128,6 +128,41 @@ export interface CreateRenderRequestInput {
   created_by: string;
 }
 
+/**
+ * Plafond de rendus Studio **en vol tous processus confondus** (ADR-141).
+ *
+ * Défaut 1. Un rendu = Chromium + le compositor Remotion, et la production a
+ * déjà connu deux `Compositor quit with signal SIGKILL` (2026-05-15) — le
+ * conteneur tue le compositor quand la mémoire manque. Un rendu qui attend son
+ * tour est lent ; un rendu tué est perdu, et il emporte parfois ses voisins.
+ *
+ * Réglable par `STUDIO_RENDER_MAX_CONCURRENCY` **sans redéploiement de code** :
+ * relever ce plafond est une décision d'exploitation qui se prend avec la
+ * mémoire du conteneur sous les yeux, pas une constante à recompiler. Noter que
+ * `STUDIO_RENDER_CONCURRENCY` (ADR-128) est un réglage différent — le nombre
+ * d'onglets Chrome **dans** un rendu. Le coût réel est le produit des deux.
+ *
+ * Lu à chaque claim : changer la variable Railway prend effet au claim suivant.
+ */
+export function getStudioRenderMaxConcurrency(): number {
+  const raw = Number(process.env.STUDIO_RENDER_MAX_CONCURRENCY);
+  return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1;
+}
+
+/**
+ * Sans nouvelle d'un rendu depuis ce délai, il est tenu pour orphelin.
+ *
+ * **30 min, pas 10.** Les rendus observés en prod durent 9 à 16 minutes : le
+ * seuil historique de 10 min passait *sous* la durée normale, si bien qu'un
+ * redémarrage en cours de rendu remettait en file un travail vivant. Couplé au
+ * battement de cœur (`touchRendering`), ce seuil signifie bien « plus aucun
+ * signe de vie », et non « rendu long ».
+ */
+export const STUDIO_RENDER_STALE_MIN = 30;
+
+/** Clé du verrou consultatif qui sérialise compter-puis-claim (cf. `claimNextQueued`). */
+const CLAIM_ADVISORY_LOCK_KEY = 140_054_128;
+
 class RenderRequestRepositoryImpl extends BaseRepository<RenderRequestRow> {
   constructor() {
     super('render_requests');
@@ -161,23 +196,81 @@ class RenderRequestRepositoryImpl extends BaseRepository<RenderRequestRow> {
   }
 
   /**
-   * Claim atomique de la prochaine demande en queue pour le worker.
-   * FOR UPDATE SKIP LOCKED permet à N workers parallèles de drainer sans collision.
-   * Le worker doit ensuite appeler `markReady` ou `markFailed`.
+   * Claim de la prochaine demande en queue — atomique ET plafonné globalement.
+   *
+   * `FOR UPDATE SKIP LOCKED` empêche deux workers de claim la MÊME demande ; il
+   * n'empêche pas N rendus **différents** de tourner ensemble. Or un rendu lance
+   * Chromium + le compositor Remotion, et le conteneur les tue quand la mémoire
+   * manque : deux `Compositor quit with signal SIGKILL` en production le
+   * 2026-05-15. Avec un poll de 2 s et des rendus de 9 à 16 minutes, une file de
+   * N demandes démarrait N rendus en 2N secondes.
+   *
+   * Le plafond vit en DB (comptage des `rendering` + `pg_try_advisory_xact_lock`
+   * pour rendre compter-puis-claim indivisible) : c'est la seule barrière qui
+   * traverse les processus, donc qui survit à un scale-up de replicas.
+   * Verrou de **transaction**, pas de session — derrière PgBouncer en mode
+   * transaction, un verrou de session serait inopérant en silence.
+   *
+   * @see ADR-141, qui révise l'hypothèse « le parallélisme est un trait
+   *      souhaitable » d'ADR-054.
    */
-  async claimNextQueued(): Promise<RenderRequestRow | null> {
-    const result = await query<RenderRequestRow>(
-      `UPDATE render_requests SET status = 'rendering', updated_at = NOW()
-       WHERE id = (
-         SELECT id FROM render_requests
-         WHERE status = 'queued'
-         ORDER BY created_at
-         FOR UPDATE SKIP LOCKED
-         LIMIT 1
-       )
-       RETURNING *`,
+  async claimNextQueued(
+    maxConcurrent: number = getStudioRenderMaxConcurrency(),
+    staleAfterMinutes: number = STUDIO_RENDER_STALE_MIN,
+  ): Promise<RenderRequestRow | null> {
+    return this.withTransaction(async (client) => {
+      const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) AS locked', [
+        CLAIM_ADVISORY_LOCK_KEY,
+      ]);
+      if (!(lock.rows[0] as { locked: boolean } | undefined)?.locked) {
+        return null;
+      }
+
+      // Un rendu sans signe de vie depuis le seuil = process mort. Le worker
+      // bat le cœur (`touchRendering`) pendant qu'il rend, donc ce seuil mesure
+      // « plus aucune nouvelle », pas « rendu long » — la distinction est
+      // vitale ici : un rendu normal dure 9 à 16 minutes.
+      await client.query(
+        `UPDATE render_requests SET status = 'queued', updated_at = NOW()
+         WHERE status = 'rendering' AND updated_at < NOW() - ($1 || ' minutes')::interval`,
+        [String(staleAfterMinutes)],
+      );
+
+      const inFlight = await client.query(
+        `SELECT COUNT(*)::text AS n FROM render_requests WHERE status = 'rendering'`,
+      );
+      const running = Number((inFlight.rows[0] as { n: string } | undefined)?.n ?? 0);
+      if (running >= maxConcurrent) {
+        return null;
+      }
+
+      const claimed = await client.query(
+        `UPDATE render_requests SET status = 'rendering', updated_at = NOW()
+         WHERE id = (
+           SELECT id FROM render_requests
+           WHERE status = 'queued'
+           ORDER BY created_at
+           FOR UPDATE SKIP LOCKED
+           LIMIT 1
+         )
+         RETURNING *`,
+      );
+      return (claimed.rows[0] as RenderRequestRow | undefined) ?? null;
+    });
+  }
+
+  /**
+   * Signe de vie d'un rendu en cours : repousse `updated_at` sans toucher au statut.
+   *
+   * Sans ce battement, le seuil d'orphelin remettrait en file un rendu **encore en
+   * train de tourner** — et un second worker le relancerait, recréant la
+   * concurrence Chromium que le plafond supprime.
+   */
+  async touchRendering(id: string): Promise<void> {
+    await query(
+      `UPDATE render_requests SET updated_at = NOW() WHERE id = $1 AND status = 'rendering'`,
+      [id],
     );
-    return result.rows[0] ?? null;
   }
 
   async markReady(id: string, outputUrl: string): Promise<void> {

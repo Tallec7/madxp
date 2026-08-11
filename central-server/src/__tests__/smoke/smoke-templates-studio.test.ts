@@ -296,6 +296,42 @@ describe('Templates Studio V1 — render worker (J4, STUB)', () => {
     expect(content).toMatch(/failStaleRunning\(\s*(?:STALE_RUNNING_MAX_AGE_MIN|10)\s*\)/);
   });
 
+  it('le rendu est plafonné GLOBALEMENT, pas seulement dans le process (ADR-141)', () => {
+    const repo = fs.readFileSync(
+      path.join(SRC, 'repositories/templates-studio.repository.ts'),
+      'utf8',
+    );
+    // Le plafond vit en DB : un booléen en mémoire ne franchit pas la frontière
+    // d'un replica. Verrou de TRANSACTION — un verrou de session serait
+    // inopérant derrière PgBouncer en mode transaction, et en silence.
+    expect(repo).toMatch(/pg_try_advisory_xact_lock/);
+    expect(repo).not.toMatch(/pg_try_advisory_lock\s*\(/);
+    expect(repo).toMatch(/COUNT\(\*\)[^;]*WHERE status = 'rendering'/);
+    expect(repo).toMatch(/running >= maxConcurrent/);
+    // SKIP LOCKED reste : il protège du double-claim d'une MÊME demande.
+    expect(repo).toMatch(/FOR UPDATE SKIP LOCKED/);
+    expect(repo).toMatch(/async touchRendering\(/);
+
+    const worker = fs.readFileSync(WORKER_FILE, 'utf8');
+    // Garde in-process : sans elle, setInterval relance un rendu toutes les 2 s
+    // alors qu'un rendu dure 9 à 16 min (SIGKILL du compositor, 2026-05-15).
+    expect(worker).toMatch(/if \(stopping \|\| ticking\) return;/);
+    expect(worker).toMatch(/touchRendering\(request\.id\)/);
+    expect(worker).toMatch(/clearInterval\(heartbeat\)/);
+  });
+
+  it('le seuil d’orphelin dépasse la durée d’un rendu réel', () => {
+    // 10 min passait SOUS la durée normale (9–16 min observées en prod) : un
+    // redémarrage en cours de rendu remettait en file un travail vivant.
+    const repo = fs.readFileSync(
+      path.join(SRC, 'repositories/templates-studio.repository.ts'),
+      'utf8',
+    );
+    const declared = repo.match(/STUDIO_RENDER_STALE_MIN\s*=\s*(\d+)/);
+    expect(declared).not.toBeNull();
+    expect(Number(declared?.[1])).toBeGreaterThan(16);
+  });
+
   it('worker is wired in server.ts boot', () => {
     const content = fs.readFileSync(SERVER_FILE, 'utf8');
     expect(content).toMatch(/studio-render-worker\.service/);

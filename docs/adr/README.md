@@ -154,6 +154,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-138](ADR-138-led-canvas-derives-from-site-only.md)                                  | Le canvas LED se dérive du terrain seul — pliage toujours par côté                           | Accepté                           | Août 2026 |
 | [ADR-139](ADR-139-led-serve-folded-canvas.md)                                            | Servir le canvas LED plié, derrière un interrupteur par site                                 | Accepté                           | Août 2026 |
 | [ADR-140](ADR-140-led-autocrop-on-validation.md)                                         | Détourer les marges d'une vidéo LED, sur validation humaine                                  | Accepté                           | Août 2026 |
+| [ADR-141](ADR-141-studio-render-concurrency-cap.md)                                      | Plafonner les rendus Studio en DB (révise « SKIP LOCKED gère » d'ADR-054)                    | Accepté                           | Août 2026 |
 
 ### Supersédés
 

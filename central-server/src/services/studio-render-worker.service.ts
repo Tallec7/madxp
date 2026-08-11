@@ -35,11 +35,21 @@ import {
   templateDefinitionRepository,
   studioAssetRepository,
   templateAssetBindingRepository,
+  STUDIO_RENDER_STALE_MIN,
   type TemplateDefinitionRow,
 } from '../repositories';
 
 const POLL_INTERVAL_MS = 2_000;
-const STALE_RUNNING_MAX_AGE_MIN = 10;
+/**
+ * Seuil d'orphelin — 30 min, défini par le repository (ADR-141).
+ *
+ * Il valait 10 min alors que les rendus observés en prod durent 9 à 16 min :
+ * le seuil passait *sous* la durée normale, donc un redémarrage en cours de
+ * rendu remettait en file un travail vivant.
+ */
+const STALE_RUNNING_MAX_AGE_MIN = STUDIO_RENDER_STALE_MIN;
+/** Battement de cœur d'un rendu en cours — largement sous le seuil d'orphelin. */
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 // Path du sous-package Remotion (compositions + manifests + assets).
 // Au runtime Docker : `/app/templates-studio` (cf. Dockerfile central).
@@ -303,6 +313,19 @@ async function processOne(): Promise<boolean> {
     template_id: request.template_id,
   });
 
+  // Signe de vie pendant le rendu. Un rendu dure 9 à 16 min et le seuil
+  // d'orphelin est réévalué à chaque claim : sans battement, un rendu vivant
+  // serait remis en file puis relancé par un autre worker PENDANT qu'il tourne.
+  const heartbeat = setInterval(() => {
+    renderRequestRepository.touchRendering(request.id).catch((error) => {
+      logger.warn('studio-render-worker: heartbeat failed', {
+        request_id: request.id,
+        error,
+      });
+    });
+  }, HEARTBEAT_INTERVAL_MS);
+  heartbeat.unref();
+
   try {
     const template = await templateDefinitionRepository.findById(request.template_id);
     if (!template) {
@@ -328,12 +351,31 @@ async function processOne(): Promise<boolean> {
       request_id: request.id,
       error: message,
     });
+  } finally {
+    clearInterval(heartbeat);
   }
   return true;
 }
 
+/**
+ * Un seul tick à la fois **dans ce process**.
+ *
+ * `setInterval` ignore la durée d'un tick asynchrone : un rendu dure 9 à
+ * 16 minutes en production, donc sans cette garde le timer relançait un tick
+ * toutes les 2 s et réclamait un rendu de plus. Une file de N demandes lançait
+ * N Chromium en 2N secondes — d'où les `Compositor quit with signal SIGKILL`
+ * du 2026-05-15 (le conteneur tue le compositor quand la mémoire manque).
+ *
+ * **Ce booléen ne suffit pas.** Il vit dans la mémoire d'un process : deux
+ * replicas Railway ont chacun le leur, tous deux à `false`. Le vrai plafond est
+ * en DB, dans `renderRequestRepository.claimNextQueued()` (ADR-141). Cette garde
+ * évite seulement d'interroger la base toutes les 2 s pendant un rendu local.
+ */
+let ticking = false;
+
 async function tick(): Promise<void> {
-  if (stopping) return;
+  if (stopping || ticking) return;
+  ticking = true;
   try {
     // Drain : on tente autant de jobs qu'il y en a dans la queue à chaque tick.
     while (await processOne()) {
@@ -341,6 +383,8 @@ async function tick(): Promise<void> {
     }
   } catch (error) {
     logger.error('studio-render-worker: tick failed', { error });
+  } finally {
+    ticking = false;
   }
 }
 
