@@ -1,3 +1,9 @@
+## [4.26.1](https://github.com/Tallec7/madxp/compare/v4.26.0...v4.26.1) (2026-08-11)
+
+### Bug Fixes
+
+- **studio:** plafonner les rendus en DB — SKIP LOCKED n'a jamais été un plafond ([#1164](https://github.com/Tallec7/madxp/issues/1164)) ([d62facb](https://github.com/Tallec7/madxp/commit/d62facbe98710f5819a2f863c594e0f9e0e19476))
+
 # [4.26.0](https://github.com/Tallec7/madxp/compare/v4.25.4...v4.26.0) (2026-08-11)
 
 ### Features
