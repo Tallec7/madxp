@@ -1,3 +1,9 @@
+# [4.27.0](https://github.com/Tallec7/madxp/compare/v4.26.1...v4.27.0) (2026-08-11)
+
+### Features
+
+- **alerts:** l'audit FTP alerte enfin sur les vidéos programmées absentes ([#1165](https://github.com/Tallec7/madxp/issues/1165)) ([cb05592](https://github.com/Tallec7/madxp/commit/cb05592b40c3526792fac9e62cf62e72e865dfbb))
+
 ## [4.26.1](https://github.com/Tallec7/madxp/compare/v4.26.0...v4.26.1) (2026-08-11)
 
 ### Bug Fixes
