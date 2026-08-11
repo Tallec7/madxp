@@ -343,6 +343,76 @@ async function clubCanUseSourceVideo(
  * un opérateur a pu y mettre un fichier différent (recadrage manuel, version par
  * côté), et l'écraser détruirait son travail.
  */
+/**
+ * Tableau de bord des canvas LED d'un club — une ligne par vidéo.
+ *
+ * ## Pourquoi
+ *
+ * Le pliage se contrôlait une vidéo à la fois (banc d'essai, export par variante),
+ * donc les défauts se découvraient en regardant la boucle tourner, un par un et en
+ * conditions réelles. Ce qui casse n'est presque jamais le pliage lui-même : c'est
+ * le FORMAT SOURCE. Un sponsor livré en 1920×1080 se retrouve minuscule au centre
+ * d'une bande, un trop large est rogné à droite — invisible tant qu'on ne compare
+ * pas source et cible côte à côte.
+ *
+ * Cette vue rapproche donc, pour chaque vidéo : ce que l'agence a livré, ce que le
+ * ruban attend, et l'état du canvas fabriqué.
+ */
+export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+
+    const displays = await siteRepository.getDisplays(siteId);
+    const led = displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led;
+    if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
+      return res.status(400).json({ error: "Ce site n'a pas de ruban LED configuré" });
+    }
+
+    // Format ATTENDU = un côté. C'est le chiffre à donner aux agences, et celui
+    // auquel comparer chaque source.
+    const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
+    const expected =
+      Number.isFinite(pitchMm) && pitchMm > 0
+        ? { width: Math.round(Math.max(...led.sides) * (1000 / pitchMm)), height: led.height }
+        : null;
+
+    const videoIds = await videoRepository.findIdsOwnedBySite(siteId, BULK_LED_MAX_VIDEOS);
+    const rows = await Promise.all(
+      videoIds.map(async (id) => {
+        const video = await videoRepository.findVideoById(id);
+        if (!video) return null;
+
+        const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+        const source = dimensionsFromVideo(video);
+        const job = await ledExportJobRepository.findLatestForVideo(siteId, id, LED_PERIMETER_DISPLAY_TYPE);
+
+        return {
+          video_id: id,
+          filename: video.original_name || video.filename,
+          // `0` = dimensions jamais mesurées (upload antérieur à la sonde ffprobe),
+          // ce qui n'est PAS la même chose qu'un format inadapté : on ne conclut pas.
+          source,
+          expected,
+          matches_expected:
+            expected && source.width && source.height
+              ? source.width === expected.width && source.height === expected.height
+              : null,
+          has_variant: !!variant,
+          layout: variant?.layout ?? null,
+          canvas: job
+            ? { status: job.status, url: job.output_url ?? null, updated_at: job.updated_at }
+            : { status: 'missing', url: null, updated_at: null },
+        };
+      })
+    );
+
+    res.json({ site_id: siteId, expected, videos: rows.filter(Boolean) });
+  } catch (error) {
+    logger.error('Error building LED canvas overview:', error);
+    res.status(500).json({ error: 'Erreur lors de la lecture des canvas LED' });
+  }
+};
+
 export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => {
   try {
     const { siteId } = req.params;

@@ -98,6 +98,27 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
    * change, le cache rate, et le canvas est refabriqué. C'est ce qui rend
    * l'invalidation automatique — pas de logique d'expiration à maintenir.
    */
+  /**
+   * Dernier job d'export pour une vidéo, quel que soit son état.
+   *
+   * `findReadyByGeometry` ne répond que pour la géométrie courante et seulement si
+   * le canvas est prêt — parfait pour la diffusion, inutile pour le diagnostic :
+   * un opérateur a justement besoin de voir les `failed` et les `processing`.
+   */
+  async findLatestForVideo(
+    siteId: string,
+    videoId: string,
+    displayType: string
+  ): Promise<LedExportJobRow | null> {
+    const result = await query<LedExportJobRow>(
+      `SELECT * FROM led_export_jobs
+       WHERE site_id = $1 AND video_id = $2 AND display_type = $3
+       ORDER BY created_at DESC LIMIT 1`,
+      [siteId, videoId, displayType]
+    );
+    return result.rows[0] ?? null;
+  }
+
   async findReadyByGeometry(
     siteId: string,
     videoId: string,

@@ -6,8 +6,8 @@
  * parce qu'une vidéo échoue — l'opérateur veut avancer, pas recommencer.
  */
 
-import { bulkCreateLedVariants } from '../content-variant.controller';
-import { videoRepository, videoVariantRepository, siteRepository } from '../../repositories';
+import { bulkCreateLedVariants, getLedCanvasOverview } from '../content-variant.controller';
+import { videoRepository, videoVariantRepository, siteRepository, ledExportJobRepository } from '../../repositories';
 import { AuthRequest } from '../../types';
 
 jest.mock('../../repositories');
@@ -20,6 +20,7 @@ jest.mock('../../config/logger', () => ({
 const videos = videoRepository as jest.Mocked<typeof videoRepository>;
 const variants = videoVariantRepository as jest.Mocked<typeof videoVariantRepository>;
 const sites = siteRepository as jest.Mocked<typeof siteRepository>;
+const jobs = ledExportJobRepository as jest.Mocked<typeof ledExportJobRepository>;
 
 const SITE = 'site-1';
 const req = { params: { siteId: SITE }, user: { id: 'u1' } } as unknown as AuthRequest;
@@ -125,5 +126,88 @@ describe('bulkCreateLedVariants', () => {
 
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ created: 0, total: 0 }));
     expect(variants.create).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Vue d'ensemble des canvas — ce qu'un opérateur doit voir AVANT le match.
+ *
+ * Ce qui casse le rendu n'est presque jamais le pliage : c'est le FORMAT SOURCE.
+ * Cette vue rapproche donc livré / attendu / état, par vidéo.
+ */
+describe('getLedCanvasOverview', () => {
+  const led = { sides: [10, 10, 10, 10], pitch: 'P6.25', height: 120, spacing_m: 5 };
+
+  beforeEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sites.getDisplays.mockResolvedValue([{ type: 'led-perimeter', led }] as any);
+  });
+
+  it('compare le format livré au format attendu, par vidéo', async () => {
+    withVideos(['a']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    videos.findVideoById.mockResolvedValue({
+      ...video('a'), metadata: { width: 1920, height: 1080 },
+    } as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    variants.findByVideoAndDisplay.mockResolvedValue({ layout: 'repeated' } as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jobs.findLatestForVideo.mockResolvedValue({ status: 'ready', output_url: 'u', updated_at: 'd' } as any);
+    const r = res();
+
+    await getLedCanvasOverview(req, r as never);
+
+    const body = r.json.mock.calls[0][0];
+    // 10 m à P6.25 = 1600 px, dalle 120 → c'est le chiffre à donner aux agences.
+    expect(body.expected).toEqual({ width: 1600, height: 120 });
+    expect(body.videos[0].source).toEqual({ width: 1920, height: 1080 });
+    expect(body.videos[0].matches_expected).toBe(false);
+  });
+
+  it('dimensions inconnues → `null`, jamais « inadapté »', async () => {
+    withVideos(['a']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    videos.findVideoById.mockResolvedValue({ ...video('a'), metadata: {} } as any);
+    variants.findByVideoAndDisplay.mockResolvedValue(null);
+    jobs.findLatestForVideo.mockResolvedValue(null);
+    const r = res();
+
+    await getLedCanvasOverview(req, r as never);
+
+    // Un upload antérieur à la sonde ffprobe n'a pas de dimensions : ne pas
+    // conclure qu'il est au mauvais format.
+    expect(r.json.mock.calls[0][0].videos[0].matches_expected).toBeNull();
+  });
+
+  it('un canvas jamais fabriqué est « missing », pas une absence de ligne', async () => {
+    withVideos(['a']);
+    variants.findByVideoAndDisplay.mockResolvedValue(null);
+    jobs.findLatestForVideo.mockResolvedValue(null);
+    const r = res();
+
+    await getLedCanvasOverview(req, r as never);
+
+    // C'est le cas CALICEO : sans ligne, l'opérateur ne voit pas le trou.
+    expect(r.json.mock.calls[0][0].videos[0].canvas.status).toBe('missing');
+  });
+
+  it('les échecs sont visibles — tout l’intérêt de la vue', async () => {
+    withVideos(['a']);
+    variants.findByVideoAndDisplay.mockResolvedValue(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jobs.findLatestForVideo.mockResolvedValue({ status: 'failed', output_url: null } as any);
+    const r = res();
+
+    await getLedCanvasOverview(req, r as never);
+
+    expect(r.json.mock.calls[0][0].videos[0].canvas.status).toBe('failed');
+  });
+
+  it('refuse un site sans ruban', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sites.getDisplays.mockResolvedValue([{ type: 'tv' }] as any);
+    const r = res();
+    await getLedCanvasOverview(req, r as never);
+    expect(r.status).toHaveBeenCalledWith(400);
   });
 });
