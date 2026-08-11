@@ -357,24 +357,27 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
       });
     }
 
-    const { rows: videos } = await videoRepository.findForSitePaginated(siteId, {}, BULK_LED_MAX_VIDEOS, 0);
-    if (videos.length === 0) {
+    // `findIdsOwnedBySite` filtre RÉELLEMENT sur `uploaded_for_site_id`. Ne jamais
+    // revenir à `findForSitePaginated` : malgré son nom, elle ne filtre pas — le
+    // siteId n'y sert qu'au tri, et elle a fait déborder cette opération sur 7 clubs.
+    const videoIds = await videoRepository.findIdsOwnedBySite(siteId, BULK_LED_MAX_VIDEOS);
+    if (videoIds.length === 0) {
       return res.json({ created: 0, skipped: 0, failed: 0, total: 0, variants: [] });
     }
 
-    const counts = await videoVariantRepository.findVariantCountsByVideoIds(videos.map((v) => v.id));
-    const candidates = videos.filter(
-      (v) => !counts.get(v.id)?.types.includes(LED_PERIMETER_DISPLAY_TYPE)
+    const counts = await videoVariantRepository.findVariantCountsByVideoIds(videoIds);
+    const candidates = videoIds.filter(
+      (id) => !counts.get(id)?.types.includes(LED_PERIMETER_DISPLAY_TYPE)
     );
 
     const created: Array<{ video_id: string; variant_id: string }> = [];
     const failed: Array<{ video_id: string; error: string }> = [];
 
-    for (const candidate of candidates) {
+    for (const candidateId of candidates) {
       try {
         // On relit la vidéo complète : `findVideoById` aliase `url` sur storage_path
         // et porte les dimensions mesurées à l'upload, dont la variante hérite.
-        const video = await videoRepository.findVideoById(candidate.id);
+        const video = await videoRepository.findVideoById(candidateId);
         if (!video) continue;
 
         const dims = dimensionsFromVideo(video);
@@ -398,10 +401,10 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
         // Une vidéo qui échoue ne doit pas annuler les neuf autres : l'opérateur
         // veut avancer, et un rapport partiel vaut mieux qu'un tout-ou-rien.
         const message = error instanceof Error ? error.message : 'Erreur inconnue';
-        failed.push({ video_id: candidate.id, error: message });
+        failed.push({ video_id: candidateId, error: message });
         logger.warn('bulk LED variant: échec sur une vidéo (les autres continuent)', {
           siteId,
-          videoId: candidate.id,
+          videoId: candidateId,
           error: message,
         });
       }
@@ -409,16 +412,16 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
     logger.info('Bulk LED variants created', {
       siteId,
-      total: videos.length,
+      total: videoIds.length,
       created: created.length,
-      skipped: videos.length - candidates.length,
+      skipped: videoIds.length - candidates.length,
       failed: failed.length,
     });
 
     res.json({
-      total: videos.length,
+      total: videoIds.length,
       created: created.length,
-      skipped: videos.length - candidates.length,
+      skipped: videoIds.length - candidates.length,
       failed: failed.length,
       failures: failed,
       variants: created,

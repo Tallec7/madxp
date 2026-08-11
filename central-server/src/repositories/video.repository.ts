@@ -526,6 +526,24 @@ class VideoRepositoryImpl extends BaseRepository<VideoRow> {
    * Liste paginee de videos priorisees pour un site.
    * Les videos uploadees pour ce site apparaissent en premier.
    */
+  /**
+   * Vidéos APPARTENANT à un site (`uploaded_for_site_id`).
+   *
+   * ⚠️ À ne pas confondre avec `findForSitePaginated`, dont le nom laisse croire à un
+   * filtre alors que le `siteId` n'y sert qu'au TRI (`is_for_site DESC`) : elle
+   * retourne toute la bibliothèque. Cette confusion a fait créer 492 variantes LED
+   * sur 7 clubs au lieu d'un seul (incident 2026-08-11).
+   *
+   * Toute opération de masse scopée à un club doit passer par ici.
+   */
+  async findIdsOwnedBySite(siteId: string, limit: number): Promise<string[]> {
+    const result = await query<{ id: string }>(
+      `SELECT id FROM videos WHERE uploaded_for_site_id = $1 ORDER BY created_at DESC LIMIT $2`,
+      [siteId, limit]
+    );
+    return result.rows.map((r) => r.id);
+  }
+
   async findForSitePaginated(
     siteId: string,
     filters: VideoFilters,
