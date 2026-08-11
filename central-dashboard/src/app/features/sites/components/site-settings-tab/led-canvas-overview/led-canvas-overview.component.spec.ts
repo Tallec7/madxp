@@ -72,6 +72,24 @@ describe('LedCanvasOverviewComponent', () => {
     expect(btn.disabled).toBe(true);
   });
 
+  it('« Retirer » supprime la variante ruban, PAS la vidéo', () => {
+    openAndFlush([row()]);
+
+    fixture.nativeElement.querySelector('[data-testid="lco-del-v1"]').click();
+
+    // Un clip TV (carton jaune, temps mort) reste dans la boucle : il cesse
+    // seulement d'être déclaré comme contenu de ruban.
+    const del = http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter`);
+    expect(del.request.method).toBe('DELETE');
+    del.flush({});
+    http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+  });
+
+  it('« Retirer » n’apparaît pas sans variante — rien à retirer', () => {
+    openAndFlush([row({ has_variant: false })]);
+    expect(fixture.nativeElement.querySelector('[data-testid="lco-del-v1"]')).toBeNull();
+  });
+
   it('affiche le message serveur, pas un « erreur » générique', () => {
     fixture.detectChanges();
     component.toggle();

@@ -91,12 +91,23 @@ interface CanvasRow {
               <td>
                 <button
                   type="button"
+                  class="lco__del"
+                  [attr.data-testid]="'lco-del-' + r.video_id"
+                  *ngIf="r.has_variant"
+                  title="Retirer cette vidéo du ruban (la vidéo elle-même n'est pas supprimée)"
+                  [disabled]="busy[r.video_id]"
+                  (click)="remove(r)"
+                >
+                  Retirer
+                </button>
+                <button
+                  type="button"
                   class="lco__redo"
                   [attr.data-testid]="'lco-redo-' + r.video_id"
-                  [disabled]="!r.has_variant || redoing[r.video_id]"
+                  [disabled]="!r.has_variant || busy[r.video_id]"
                   (click)="redo(r)"
                 >
-                  {{ redoing[r.video_id] ? '…' : 'Refaire' }}
+                  {{ busy[r.video_id] ? '…' : 'Refaire' }}
                 </button>
               </td>
             </tr>
@@ -127,7 +138,8 @@ interface CanvasRow {
     /* Le canvas est un ruban très large et très plat : une vignette carrée le
        rendrait illisible. On garde son ratio et on le laisse petit. */
     .lco__thumb { width: 8rem; height: auto; background: #000; border-radius: 2px; display: block; }
-    .lco__redo { font-size: .78rem; padding: .15rem .5rem; cursor: pointer; }
+    .lco__redo, .lco__del { font-size: .78rem; padding: .15rem .5rem; cursor: pointer; }
+    .lco__del { margin-right: .3rem; color: #b91c1c; }
     .lco__none, .lco__empty, .lco__loading { color: #94a3b8; }
     .lco__error { color: #b91c1c; }
   `],
@@ -140,7 +152,7 @@ export class LedCanvasOverviewComponent {
   error: string | null = null;
   rows: CanvasRow[] = [];
   expected: { width: number; height: number } | null = null;
-  redoing: Record<string, boolean> = {};
+  busy: Record<string, boolean> = {};
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
@@ -187,17 +199,43 @@ export class LedCanvasOverviewComponent {
    * le pliage n'a rien à quoi s'accrocher (cf. « Créer les variantes LED »).
    */
   redo(r: CanvasRow): void {
-    if (!r.has_variant || this.redoing[r.video_id]) return;
-    this.redoing = { ...this.redoing, [r.video_id]: true };
+    if (!r.has_variant || this.busy[r.video_id]) return;
+    this.busy = { ...this.busy, [r.video_id]: true };
     this.http
       .post(`${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/export`, {}, { withCredentials: true })
       .subscribe({
         next: () => {
-          this.redoing = { ...this.redoing, [r.video_id]: false };
+          this.busy = { ...this.busy, [r.video_id]: false };
           this.load();
         },
         error: () => {
-          this.redoing = { ...this.redoing, [r.video_id]: false };
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /**
+   * Retire la variante ruban — donc le canvas avec elle.
+   *
+   * Ne supprime PAS la vidéo : un clip TV (carton jaune, temps mort) reste dans la
+   * boucle, il cesse simplement d'être déclaré comme contenu de ruban. C'est le
+   * pendant de « Créer les variantes LED manquantes », qui les avait toutes
+   * déclarées sans distinguer ruban et TV.
+   */
+  remove(r: CanvasRow): void {
+    if (!r.has_variant || this.busy[r.video_id]) return;
+    this.busy = { ...this.busy, [r.video_id]: true };
+    this.http
+      .delete(`${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter`, { withCredentials: true })
+      .subscribe({
+        next: () => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.load();
+        },
+        error: (e) => {
+          this.busy = { ...this.busy, [r.video_id]: false };
+          this.error = e?.error?.error ?? 'Suppression impossible';
           this.cdr.markForCheck();
         },
       });
