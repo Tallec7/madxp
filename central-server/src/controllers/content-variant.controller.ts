@@ -9,7 +9,7 @@ import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, ge
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
 import deploymentService from '../services/deployment.service';
-import { computeRibbonDimensions, validateLedFormat, fitFromLayout, normalizeLayout, type LedFormatNotice } from '../services/led-fold.service';
+import { computeRibbonDimensions, validateLedFormat, fitFromLayout, normalizeLayout, computeSiteCanvas, type LedFormatNotice } from '../services/led-fold.service';
 
 /**
  * Validateur de format LED à l'upload (PROP-014 §6) — non bloquant.
@@ -368,13 +368,17 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "Ce site n'a pas de ruban LED configuré" });
     }
 
-    // Format ATTENDU = un côté. C'est le chiffre à donner aux agences, et celui
-    // auquel comparer chaque source.
-    const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
-    const expected =
-      Number.isFinite(pitchMm) && pitchMm > 0
-        ? { width: Math.round(Math.max(...led.sides) * (1000 / pitchMm)), height: led.height }
-        : null;
+    // Format ATTENDU = la largeur d'entrée réellement utilisée pour plier, pas un
+    // calcul refait ici. Recalculer « un côté en px » à la main ignorait deux choses
+    // que la chaîne applique : le plafond MAX_LED_BAND_WIDTH et un band_width figé
+    // par un installateur. Comme c'est CETTE vue qui dit aux agences quoi livrer,
+    // l'écart aurait fait produire des fichiers que le worker ne consomme pas.
+    let expected: { width: number; height: number } | null = null;
+    try {
+      expected = { width: computeSiteCanvas(led).geometry.bandWidth, height: led.height };
+    } catch {
+      expected = null; // profil incomplet → on n'invente pas de cible
+    }
 
     const videoIds = await videoRepository.findIdsOwnedBySite(siteId, BULK_LED_MAX_VIDEOS);
     const rows = await Promise.all(

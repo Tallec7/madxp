@@ -19,8 +19,10 @@ entre deux géométries donnant 7 ou 8 bandes pour le même club.
 
 **L'étape D est câblée depuis ADR-139**, mais derrière un interrupteur par site éteint
 par défaut : `displays[].led.canvas_in.serve_folded`. Allumé, `config-secondary-variants.ts`
-sert le canvas plié à la place du fichier brut. Éteint — c'est-à-dire partout aujourd'hui —
-le comportement est strictement inchangé. `canvas_in.mode` ne pouvait PAS servir de bascule :
+sert le canvas plié à la place du fichier brut. Éteint, le comportement est strictement inchangé —
+c'est le cas de **Saas Lanester HB**. **Piraths Strasbourg ATH l'a ALLUMÉ le
+2026-08-11** : un club de production consomme donc le canvas plié, toute régression
+sur ce chemin est visible en match. `canvas_in.mode` ne pouvait PAS servir de bascule :
 il vaut `'B'` par défaut Joi sur tout le parc sans que personne l'ait choisi.
 
 **Un `band_count` figé par un installateur qui ne correspond plus au dérivé est
@@ -42,6 +44,11 @@ ce qui est gravé dans le processeur.
 - **Appeler `applyPerSideFold` (ffmpeg) depuis `config-secondary-variants.ts`** — le chemin de
   config _consomme_ le canvas via le cache, il ne le fabrique pas. Encoder dans une requête de
   déploiement la bloquerait plusieurs secondes à plusieurs minutes.
+- **Recalculer « un côté en px » à la main** au lieu de passer par `computeSiteCanvas()`.
+  Un calcul refait ignore le plafond `MAX_LED_BAND_WIDTH` et un `band_width` figé par
+  un installateur. C'est précisément ce que faisait `getLedCanvasOverview` : comme cette
+  vue dit aux AGENCES quel format livrer, l'écart aurait fait produire des fichiers que
+  le worker ne consomme pas, sur tout club dont un côté dépasse 1920 px.
 - **Retirer un champ de `computeFoldedCanvasHash`** (côtés, pitch, hauteur, largeur de bande,
   ordre, source, cadrage). L'empreinte EST le mécanisme d'invalidation : un canvas dont la clé
   a changé devient inatteignable. Retirer `height`, par exemple, ferait servir un canvas
@@ -86,8 +93,8 @@ C'est le mode **B** : le processeur ne déplie pas, il attend un canvas déjà p
 question n'est donc plus « qu'attend le matériel » mais « produit-on la même chose que
 B2B » — ce qui se compare entre deux navigateurs, sans hardware.
 
-**Piraths peut être activé** (`serve_folded`) dès que sa config décrit 1600 × 120 par
-côté. **Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2),
+**Piraths est ACTIVÉ** depuis le 2026-08-11 (`serve_folded: true`, hauteur 120,
+largeur d'entrée 1600). **Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2),
 ne pas l'activer sans une observation équivalente.
 
 ## Quand ce garde-fou doit être révisé
