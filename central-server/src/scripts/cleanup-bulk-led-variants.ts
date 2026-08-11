@@ -18,8 +18,13 @@
  *
  * ## Usage
  *
- *   npx tsx src/scripts/cleanup-bulk-led-variants.ts --keep-site=<uuid>            # dry-run
- *   npx tsx src/scripts/cleanup-bulk-led-variants.ts --keep-site=<uuid> --apply
+ *   cd central-server
+ *   npm run led:cleanup-bulk-variants -- --keep-site=<uuid>            # dry-run
+ *   npm run led:cleanup-bulk-variants -- --keep-site=<uuid> --apply
+ *
+ * Le dry-run affiche l'inventaire par club. VÉRIFIER qu'il correspond à l'incident
+ * avant d'ajouter `--apply` : c'est le seul contrôle qui prouve qu'on parle bien à la
+ * base attendue, sans dépendre de la lecture d'un `DATABASE_URL`.
  *
  * `--keep-site` préserve les variantes légitimes du club visé. Sans lui, TOUTES les
  * variantes marquées sont candidates — à n'utiliser que si aucune n'était voulue.
