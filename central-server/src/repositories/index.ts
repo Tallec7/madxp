@@ -367,6 +367,8 @@ export {
 export {
   templateDefinitionRepository,
   renderRequestRepository,
+  getStudioRenderMaxConcurrency,
+  STUDIO_RENDER_STALE_MIN,
   siteBrandKitRepository,
   playerRepository,
   studioAssetRepository,
