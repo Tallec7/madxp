@@ -38,6 +38,8 @@ router.post('/videos/:id/replace', authenticate, requireRole('admin', 'operator'
 // une variante que sur SA propre vidéo, source limitée à ce qu'il a le droit d'utiliser).
 // Crée en une passe la variante led-perimeter manquante sur toutes les vidéos du club.
 // Réservé admin/operator : c'est une écriture de masse, pas un geste de club.
+// Vue d'ensemble des canvas LED d'un club : format source vs attendu + état.
+router.get('/sites/:siteId/led-canvases', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.siteId), contentController.getLedCanvasOverview);
 router.post('/sites/:siteId/led-variants/bulk', authenticate, requireRole('admin', 'operator'), adminRateLimit, validateParams(paramSchemas.siteId), contentController.bulkCreateLedVariants);
 router.post('/videos/:id/variants/from-video', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.createVideoVariantFromVideo);
 // PROP-014 §8 / ADR-134 : mise en page de la variante LED (métadonnée, pas de re-upload).
