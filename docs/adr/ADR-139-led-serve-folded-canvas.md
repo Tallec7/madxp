@@ -65,6 +65,16 @@ requête HTTP sur un encodage.
 HB, Piraths Strasbourg ATH) n'ont pas `serve_folded`. Le champ est posé, l'UI existe
 (« Avancé (processeur) »), le chemin est testé — mais il reste à activer club par club.
 
+**Première observation terrain (Piraths Strasbourg ATH, 2026-08-11)** — photo du ruban
+en fonctionnement, alimenté par le chemin actuel (fichier brut, `serve_folded` éteint) :
+le contenu s'affiche en **une ligne continue, lisible, aux bonnes proportions**. Aucune
+bande empilée, aucune découpe. Le processeur fait donc lui-même le mapping depuis le
+signal standard qu'il reçoit — c'est le **mode A**. Conclusion opérationnelle : **ne pas
+activer `serve_folded` à Piraths**. Lui envoyer un canvas empilé produirait exactement le
+ruban illisible que cet interrupteur existe pour éviter. Réserves : un seul côté était
+dans le champ, et le cadrage de la photo empêche de dire si le texte est tronqué par
+l'écran ou par l'objectif — la mire reste utile pour la couverture des 4 côtés.
+
 **L'activation est un geste terrain, pas une décision de bureau.** Le préalable reste
 la mire sur le club concerné. Le cas de Lanester le montre : son `canvas_in.band_count`
 est figé à 1 par un installateur alors que le dérivé par côté vaut 2. Allumer
