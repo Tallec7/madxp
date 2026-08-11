@@ -77,6 +77,13 @@ ce qui est gravé dans le processeur.
   et la garde `let ticking = false` du worker ne vit que dans **un** process, donc elle ne
   survit pas à un scale-up de replicas. **Le seul plafond qui traverse les processus est
   celui en DB.**
+- **Repasser à un `-i` par côté dans `buildPerSideFoldComposeArgs`** (déduplication des
+  chemins identiques), ou retirer le `split` des sources de `buildPerSideFoldFilterGraph`.
+  Les côtés diffusent presque toujours le même fichier : un `-i` par côté = **un décodeur
+  h264 par côté pour une seule vidéo** (4 chez Piraths). C'est le décodeur, pas le CPU, qui
+  a lâché le 2026-08-11. Le `split` redistribue le flux décodé une fois — vérifié
+  **pixel pour pixel** (framemd5 identique sur toutes les frames) contre le chemin à
+  4 décodeurs.
 - **Retirer `touchProcessing()` ou son `setInterval` dans le worker.** Le seuil d'orphelin
   (`LED_EXPORT_STALE_PROCESSING_MIN`, 15 min) est réévalué à chaque claim : sans battement
   de cœur, un pliage plus long que le seuil serait remis en file et relancé par un autre

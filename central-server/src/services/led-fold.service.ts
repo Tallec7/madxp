@@ -905,12 +905,19 @@ export interface PerSideFoldApplyResult {
  *
  * Adaptation source→ruban = étirement (`scale` exact) en v1 ; un `fit` par côté
  * (contain/cover) pourra être ajouté ensuite.
+ *
+ * `inputIndexBySide` mappe côté → **entrée ffmpeg**. Quand plusieurs côtés
+ * partagent le même fichier (le cas courant : un motif répété tout autour), ils
+ * pointent la même entrée, et le flux décodé est dupliqué par un `split` au lieu
+ * d'être re-décodé. Sans ce mapping (défaut : identité) chaque côté est sa propre
+ * entrée — c'est-à-dire un décodeur h264 par côté pour UNE seule vidéo.
  */
 export function buildPerSideFoldFilterGraph(
   geometry: PerSideFoldGeometry,
   padColor = 'black',
   layout: LedExportLayout = 'stretched',
-  cellPx?: number
+  cellPx?: number,
+  inputIndexBySide?: number[]
 ): string {
   const { segments, ribbonHeight, bandWidth, bandHeight } = geometry;
   const single = segments.length === 1;
@@ -919,6 +926,27 @@ export function buildPerSideFoldFilterGraph(
 
   const cropPad = (b: FoldBand): string =>
     `crop=${b.w}:${b.h}:${b.srcX}:0,pad=${bandWidth}:${bandHeight}:0:0:${padColor}`;
+
+  // Quels côtés consomment quelle entrée ffmpeg (ordre d'apparition = déterministe).
+  const consumersByInput = new Map<number, number[]>();
+  for (const seg of segments) {
+    const inputIndex = inputIndexBySide?.[seg.sideIndex] ?? seg.sideIndex;
+    const consumers = consumersByInput.get(inputIndex);
+    if (consumers) consumers.push(seg.sideIndex);
+    else consumersByInput.set(inputIndex, [seg.sideIndex]);
+  }
+
+  // Une entrée lue par k côtés est décodée UNE fois puis dupliquée par `split`.
+  const sourceLabelBySide = new Map<number, string>();
+  for (const [inputIndex, consumers] of consumersByInput) {
+    if (consumers.length === 1) {
+      sourceLabelBySide.set(consumers[0], `[${inputIndex}:v]`);
+      continue;
+    }
+    const outLabels = consumers.map((_, j) => `[src${inputIndex}_${j}]`);
+    parts.push(`[${inputIndex}:v]split=${consumers.length}${outLabels.join('')}`);
+    consumers.forEach((sideIndex, j) => sourceLabelBySide.set(sideIndex, outLabels[j]));
+  }
 
   for (const seg of segments) {
     const i = seg.sideIndex;
@@ -934,7 +962,7 @@ export function buildPerSideFoldFilterGraph(
         layout,
         cellPx ?? seg.ribbonWidth,
         padColor,
-        `[${i}:v]`,
+        sourceLabelBySide.get(i) ?? `[${i}:v]`,
         `[rib${i}]`,
         `s${i}_`
       )
@@ -966,6 +994,14 @@ export function buildPerSideFoldFilterGraph(
 /**
  * Assemble les arguments ffmpeg de composition par côté (N entrées → canvas plié).
  * Fonction pure (string[]). Lève si le nombre de sources ≠ nombre de côtés.
+ *
+ * **Les sources identiques ne sont ouvertes qu'une fois.** Un `-i` par côté, c'est
+ * un décodeur h264 par côté — 4 chez Piraths pour une seule vidéo, alors que les
+ * côtés diffusent presque toujours le même motif. Le décodeur est la ressource qui
+ * a lâché le 2026-08-11 (« Error while opening decoder : Resource temporarily
+ * unavailable »), pas le CPU : les dédupliquer réduit le coût d'un pliage d'un
+ * facteur `nombre de côtés` dans le cas courant. Le `split` du filter graph
+ * redistribue le flux décodé (cf. `buildPerSideFoldFilterGraph`).
  */
 export function buildPerSideFoldComposeArgs(
   geometry: PerSideFoldGeometry,
@@ -979,13 +1015,23 @@ export function buildPerSideFoldComposeArgs(
   const padColor = options.padColor ?? 'black';
   const crf = options.crf ?? 18;
   const preset = options.preset ?? 'medium';
+
+  // Côté → entrée ffmpeg, en repliant les chemins identiques sur une même entrée.
+  const uniqueInputs: string[] = [];
+  const inputIndexBySide = options.inputs.map((sourcePath) => {
+    const existing = uniqueInputs.indexOf(sourcePath);
+    if (existing !== -1) return existing;
+    return uniqueInputs.push(sourcePath) - 1;
+  });
+
   const filterGraph = buildPerSideFoldFilterGraph(
     geometry,
     padColor,
     options.layout ?? 'stretched',
-    options.cellPx
+    options.cellPx,
+    inputIndexBySide
   );
-  const inputArgs = options.inputs.flatMap((p) => ['-i', p]);
+  const inputArgs = uniqueInputs.flatMap((p) => ['-i', p]);
 
   return [
     ...inputArgs,
@@ -1023,6 +1069,8 @@ export async function applyPerSideFold(
   logger.info('led-fold: applying per-side fold', {
     outputPath: options.outputPath,
     sides: geometry.segments.length,
+    // = nombre de décodeurs ffmpeg ouverts. Écart avec `sides` = sources partagées.
+    decoders: new Set(options.inputs).size,
     bandCount: geometry.bandCount,
     canvasWidth: geometry.canvasWidth,
     canvasHeight: geometry.canvasHeight,
