@@ -1,3 +1,9 @@
+## [4.27.1](https://github.com/Tallec7/madxp/compare/v4.27.0...v4.27.1) (2026-08-11)
+
+### Bug Fixes
+
+- **test:** port éphémère sous test — supprime l'EADDRINUSE aléatoire en CI ([#1166](https://github.com/Tallec7/madxp/issues/1166)) ([3fa883a](https://github.com/Tallec7/madxp/commit/3fa883a97d584feb88a8432ed024383d5d8cefad))
+
 # [4.27.0](https://github.com/Tallec7/madxp/compare/v4.26.1...v4.27.0) (2026-08-11)
 
 ### Features
