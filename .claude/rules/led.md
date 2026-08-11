@@ -25,6 +25,14 @@ c'est le cas de **Saas Lanester HB**. **Piraths Strasbourg ATH l'a ALLUMÉ le
 sur ce chemin est visible en match. `canvas_in.mode` ne pouvait PAS servir de bascule :
 il vaut `'B'` par défaut Joi sur tout le parc sans que personne l'ait choisi.
 
+**Ce qui a été vérifié chez Piraths** (DB prod + `ffprobe`, 2026-08-11) : les deux
+défauts de config posés par ADR-139 comme préalables sont corrigés — `band_width`
+1920 → **1600** (= un côté), et un seul display `led-perimeter` (le doublon en mode A a
+disparu). `band_count` figé (4) = dérivé (4), donc pas de `confirmedIsStale`. Le canvas
+réellement servi mesure **1600×480**, mesuré sur l'`output_url` d'un job `ready` — soit
+exactement la cible relevée sur B2B Alive. 37 vidéos sur 37 ont leur canvas plié `ready`
+pour l'empreinte courante.
+
 **Un `band_count` figé par un installateur qui ne correspond plus au dérivé est
 SIGNALÉ (`confirmedIsStale` + `logger.warn`), jamais écrasé** : la valeur figée décrit
 ce qui est gravé dans le processeur.
@@ -129,8 +137,8 @@ question n'est donc plus « qu'attend le matériel » mais « produit-on la mêm
 B2B » — ce qui se compare entre deux navigateurs, sans hardware.
 
 **Piraths est ACTIVÉ** depuis le 2026-08-11 (`serve_folded: true`, hauteur 120,
-largeur d'entrée 1600). **Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2),
-ne pas l'activer sans une observation équivalente.
+largeur d'entrée 1600). **Lanester reste non observé** : son `band_count` figé à 1 diverge
+du dérivé (2), ne pas l'activer sans une observation équivalente à celle de Piraths.
 
 ## Quand ce garde-fou doit être révisé
 
