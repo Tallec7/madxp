@@ -304,6 +304,18 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
                 [attr.placeholder]="getLedBandCount(display)"
               />
             </label>
+            <label class="led-adv-item led-adv-item--switch">
+              <span>Diffuser le canvas plié</span>
+              <input
+                type="checkbox"
+                data-testid="led-adv-serve-folded"
+                [ngModel]="display.led!.canvas_in?.serve_folded === true"
+                (ngModelChange)="updateServeFolded(display, $event)"
+              />
+              <em class="led-adv-note"
+                >à n'activer qu'après avoir vérifié le rendu sur le ruban</em
+              >
+            </label>
             <label class="led-adv-item">
               <span>Mode</span>
               <select
@@ -621,6 +633,12 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
       flex-wrap: wrap;
       align-items: center;
       gap: 0.75rem 1.25rem;
+    }
+
+    .led-adv-item--switch input {
+      width: 1rem;
+      height: 1rem;
+      cursor: pointer;
     }
 
     .led-adv-item {
@@ -1546,6 +1564,19 @@ export class DisplaysEditorComponent implements OnDestroy {
   /** Provisoire tant que le band_count processeur n'est pas confirmé (PROP-014 §13). */
   isCanvasProvisional(display: DisplayConfig): boolean {
     return !display.led?.canvas_in?.band_count;
+  }
+
+  /**
+   * Bascule « diffuser le canvas plié » (ADR-139, étape D).
+   *
+   * Éteint par défaut, et volontairement : servir un canvas plié à un processeur
+   * qui n'en veut pas donne un ruban noir un soir de match. On n'active qu'après
+   * avoir observé le rendu réel (mire + photo).
+   */
+  updateServeFolded(display: DisplayConfig, on: boolean): void {
+    if (!display.led?.canvas_in) return;
+    display.led.canvas_in.serve_folded = on;
+    this.commitLed(display);
   }
 
   /** Override install du nb de bandes : vide → repasse en provisoire (dérivé). */

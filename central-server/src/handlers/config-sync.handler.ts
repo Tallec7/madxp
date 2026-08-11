@@ -449,7 +449,8 @@ async function sendPendingConfigCommand(
     const displayTypes = await resolveDisplayTypesForSite(siteId);
     const { enrichedCount } = await enrichConfigWithDisplayVariants(
       enrichedConfiguration as SiteConfiguration,
-      displayTypes
+      displayTypes,
+      { siteId }
     );
     if (enrichedCount > 0) {
       logger.info('Display variants enriched in pending config sync', {

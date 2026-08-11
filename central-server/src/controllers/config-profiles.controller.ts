@@ -513,7 +513,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
 
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);
-      await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
+      await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes, { siteId });
     } catch { /* non-fatal */ }
 
     try {
@@ -556,7 +556,7 @@ export const deployProfile = async (req: AuthRequest, res: Response) => {
         } catch { /* non-fatal */ }
 
         try {
-          await enrichConfigWithDisplayVariants(enrichedConfig, allProfilesDisplayTypes);
+          await enrichConfigWithDisplayVariants(enrichedConfig, allProfilesDisplayTypes, { siteId });
         } catch { /* non-fatal */ }
 
         try {
@@ -661,7 +661,7 @@ export const syncProfiles = async (req: AuthRequest, res: Response) => {
 
       // Enrichir avec les variants display (secondary, led, etc.) selon les displays du site
       try {
-        const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, syncProfilesDisplayTypes);
+        const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, syncProfilesDisplayTypes, { siteId });
         if (enrichedCount > 0) {
           logger.info('Display variants enriched in profile sync', {
             siteId, profileId: p.id, enrichedCount, displayTypes: syncProfilesDisplayTypes,

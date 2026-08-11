@@ -188,6 +188,8 @@ export interface LedCanvasInConfig {
   band_count?: number;           // nb de bandes — dérivé (ribbonWidth / band_width)
   order: 'top-to-bottom' | 'bottom-to-top';
   mode: 'A' | 'B';               // A = plug & play, B = pixel-perfect (PROP-014 §10)
+  /** ADR-139 étape D : diffuser le canvas plié. Éteint par défaut. */
+  serve_folded?: boolean;
 }
 
 /** Profil LED périmétrique d'un display (PROP-014 §3) — GÉOMÉTRIE uniquement.

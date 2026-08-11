@@ -266,7 +266,7 @@ class OrchestratedDeploymentService {
     // Enrichir avec les variants display (secondary, led, etc.) selon les displays du site
     try {
       const displayTypes = await resolveDisplayTypesForSite(siteId);
-      const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
+      const { enrichedCount } = await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes, { siteId });
       if (enrichedCount > 0) {
         logger.info('Display variants enriched in deployment config', {
           siteId, orchestratedId, enrichedCount, displayTypes,

@@ -3161,7 +3161,8 @@ CREATE TABLE public.led_export_jobs (
     error_msg text,
     created_by uuid,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    geometry_hash character varying(64)
 );
 
 --

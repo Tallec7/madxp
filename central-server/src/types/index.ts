@@ -114,6 +114,11 @@ export interface LedProfileConfig {
     band_count?: number;
     order: 'top-to-bottom' | 'bottom-to-top';
     mode: 'A' | 'B';
+    /**
+     * Servir le CANVAS PLIÉ au lieu du fichier brut (ADR-139, étape D).
+     * Éteint par défaut : à n'activer qu'après avoir observé le montage réel.
+     */
+    serve_folded?: boolean;
   };
 }
 
@@ -503,6 +508,12 @@ export interface VideoVariantInfo {
   width?: number;
   height?: number;
   duration?: number;
+  /** Id de la vidéo source — requis pour retrouver/fabriquer son canvas plié (ADR-139). */
+  videoId?: string;
+  /** Mise en page de la variante — entre dans l'empreinte du canvas plié. */
+  layout?: string | null;
+  /** `true` quand `path` pointe le canvas PLIÉ et non le fichier brut (ADR-139). */
+  folded?: boolean;
 }
 
 export interface VideoVariants {

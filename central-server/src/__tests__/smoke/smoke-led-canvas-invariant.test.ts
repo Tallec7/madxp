@@ -17,8 +17,10 @@
  * invariants à tenir :
  *
  *   1. le canvas est une fonction pure du terrain (jamais du contenu) ;
- *   2. le chemin de DÉPLOIEMENT reste indépendant du pliage — l'étape D d'ADR-135
- *      n'est toujours pas câblée, et ne doit pas l'être par la bande.
+ *   2. le canvas plié n'est servi QUE derrière `serve_folded`, un interrupteur
+ *      par site éteint par défaut (ADR-139, étape D). Servir un canvas plié à un
+ *      processeur qui n'en veut pas donne un ruban noir : l'activation doit
+ *      rester un geste délibéré, posé après avoir observé le montage réel.
  *
  * File-based + calcul pur (audit-then-guard), pas de DB requise.
  *
@@ -110,36 +112,64 @@ describe('Smoke — invariant : le canvas LED ne dépend pas du contenu', () => 
     });
   });
 
-  describe('le chemin de DÉPLOIEMENT reste indépendant du pliage', () => {
+  describe('le canvas plié n’est servi que derrière un interrupteur explicite (ADR-139)', () => {
     const DEPLOY = 'utils/config-secondary-variants.ts';
 
-    it('config-secondary-variants n’importe ni le moteur de pliage ni le worker d’export', () => {
+    it('la substitution est gardée par serve_folded === true', () => {
       const src = read(DEPLOY);
-      // Assertion NÉGATIVE : c'est la formulation buguée qu'on bloque, pas une
-      // formulation correcte qu'on recopie. Injecter un canvas composé dans la
-      // config déployée passerait forcément par l'un de ces deux modules.
-      expect(src).not.toMatch(/from\s+['"].*led-fold\.service['"]/);
-      expect(src).not.toMatch(/from\s+['"].*led-export-worker\.service['"]/);
-      expect(src).not.toMatch(/computeFoldGeometry|applyPerSideFold|applyFoldExport/);
+      expect(src).toMatch(/async function substituteFoldedCanvas/);
+      // LE garde-fou : sans cette condition, les deux clubs LED en production
+      // recevraient un canvas plié que leur processeur n'attend peut-être pas
+      // — ruban noir un soir de match.
+      expect(src).toMatch(/if \(!led\?\.canvas_in\?\.serve_folded\) return;/);
     });
 
-    it('l’enrichissement saute les variantes par côté sans binaire (anti-MP4 noir)', () => {
+    it('serve_folded n’a AUCUN défaut Joi — il ne peut pas s’allumer tout seul', () => {
+      const val = read('middleware/validation.ts');
+      expect(val).toMatch(/serve_folded: Joi\.boolean\(\)\.optional\(\),/);
+      expect(val).not.toMatch(/serve_folded: Joi\.boolean\(\)\.default\(/);
+      // `mode` ne pouvait pas servir de bascule : il vaut 'B' par défaut sur tout
+      // le parc sans que personne l'ait choisi.
+      expect(val).toMatch(/mode: Joi\.string\(\)\.valid\('A', 'B'\)\.default\('B'\)/);
+    });
+
+    it('un cache manquant DÉGRADE, il ne casse pas', () => {
       const src = read(DEPLOY);
-      // Garde-fou ADR-135 étape D (partiel) déjà posé : une variante « par côté
-      // pure » n'a ni storage_path ni filename → l'injecter produirait un chemin
-      // `videos-led-perimeter/null` et un MP4 noir côté lecteur.
+      // Pas de canvas encore fabriqué → on garde le fichier brut et on met en
+      // file. Le déploiement ne doit jamais échouer à cause du pliage.
+      expect(src).toMatch(/hasPendingForGeometry/);
+      expect(src).toMatch(/fichier brut conservé/);
+    });
+
+    it('le cache est clé par GÉOMÉTRIE — l’invalidation est automatique', () => {
+      const src = read(DEPLOY);
+      expect(src).toMatch(/computeFoldedCanvasHash/);
+      const fold = read('services/led-fold.service.ts');
+      // L'empreinte couvre géométrie + source + layout : changer la hauteur d'un
+      // ruban doit suffire à périmer tous ses canvas, sans logique d'expiration.
+      for (const k of ['sides', 'height', 'bandWidth', 'sourcePath', 'layout']) {
+        expect(fold.slice(fold.indexOf('computeFoldedCanvasHash'))).toContain(k);
+      }
+    });
+
+    it('l’enrichissement saute toujours les variantes par côté sans binaire', () => {
+      const src = read(DEPLOY);
+      // Garde-fou anti-MP4-noir : une variante « par côté pure » n'a ni
+      // storage_path ni filename — l'injecter produirait `videos-.../null`.
       expect(src).toMatch(/if \(!v\.storage_path && !v\.filename\) continue;/);
     });
   });
 
-  describe('le pliage par côté reste cantonné à l’export / au banc d’essai', () => {
-    it('seul le worker d’export consomme applyPerSideFold', () => {
+  describe('la FABRICATION du canvas reste au worker', () => {
+    it('seul le worker d’export compose réellement (ffmpeg)', () => {
       const worker = read('services/led-export-worker.service.ts');
       expect(worker).toMatch(/applyPerSideFold/);
 
-      // Aucun autre module de production ne doit composer par côté. Si un nouveau
-      // consommateur apparaît, c'est probablement l'étape D qu'on câble — et ce
-      // garde-fou doit être revu AVANT, pas après.
+      // L'enrichissement de déploiement CONSOMME le canvas (lecture de cache +
+      // mise en file), il ne le fabrique pas : un `applyPerSideFold` dans le
+      // chemin de config bloquerait une requête sur un encodage ffmpeg.
+      expect(read('utils/config-secondary-variants.ts')).not.toMatch(/applyPerSideFold\(/);
+
       const consommateurs = ['controllers/content-deployment.controller.ts', 'controllers/saas.controller.ts'];
       for (const rel of consommateurs) {
         expect(read(rel)).not.toMatch(/applyPerSideFold|computeFoldGeometryPerSide/);

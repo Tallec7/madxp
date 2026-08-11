@@ -30,6 +30,7 @@
  */
 
 import { spawn } from 'child_process';
+import { createHash } from 'crypto';
 import Joi from 'joi';
 import logger from '../config/logger';
 
@@ -422,6 +423,43 @@ export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
     canvasWidth: geometry.canvasWidth,
     canvasHeight: geometry.canvasHeight,
   };
+}
+
+/**
+ * Empreinte d'un canvas plié — la clé de cache de l'étape D (ADR-139).
+ *
+ * Un canvas plié n'est valable que pour UNE géométrie et UNE source. Le jour où
+ * l'opérateur corrige la hauteur d'un ruban de 100 à 75 cm, tous les canvas
+ * fabriqués avant deviennent faux — et rien ne le signalerait.
+ *
+ * En faisant de la géométrie ET de la source la clé de cache, l'invalidation
+ * devient **automatique** : un profil modifié produit une autre empreinte, donc
+ * un cache manquant, donc une refabrication. Aucune logique d'invalidation à
+ * maintenir, donc aucune à oublier.
+ *
+ * Inclut le `layout` : le même fichier plié en « Centré » et en « Répété » ne
+ * donne pas la même image.
+ */
+export function computeFoldedCanvasHash(input: {
+  sides: number[];
+  pitch: string | number;
+  height: number;
+  bandWidth: number;
+  order?: FoldOrder;
+  /** Chemin FTP de la source — un remplacement de vidéo doit invalider. */
+  sourcePath: string;
+  layout?: string | null;
+}): string {
+  const payload = [
+    input.sides.join(','),
+    parsePitchMm(input.pitch),
+    input.height,
+    input.bandWidth,
+    input.order ?? 'top-to-bottom',
+    input.sourcePath,
+    input.layout ?? 'default',
+  ].join('|');
+  return createHash('sha256').update(payload).digest('hex').slice(0, 32);
 }
 
 // ── 1c. Validateur de format à l'upload ───────────────────────────────────────
@@ -1121,6 +1159,7 @@ export const ledFoldService = {
   computeFoldGeometry,
   computeFoldGeometryPerSide,
   computeSiteCanvas,
+  computeFoldedCanvasHash,
   parsePitchMm,
   computeRibbonDimensions,
   buildPerSideFoldFilterGraph,

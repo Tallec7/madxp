@@ -21,6 +21,7 @@ export interface LedExportJobRow extends QueryResultRow {
   layout: LedExportLayout | null;
   status: LedExportStatus;
   output_url: string | null;
+  geometry_hash?: string | null;
   error_msg: string | null;
   created_by: string | null;
   created_at: Date;
@@ -34,6 +35,8 @@ export interface CreateLedExportJobInput {
   fit: LedExportFit;
   layout: LedExportLayout;
   created_by: string | null;
+  /** Empreinte géométrie + source + layout (ADR-139) — clé de cache. */
+  geometry_hash?: string | null;
 }
 
 class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
@@ -43,10 +46,18 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
 
   async create(input: CreateLedExportJobInput): Promise<LedExportJobRow> {
     const result = await query<LedExportJobRow>(
-      `INSERT INTO led_export_jobs (site_id, video_id, display_type, fit, layout, status, created_by)
-       VALUES ($1, $2, $3, $4, $5, 'queued', $6)
+      `INSERT INTO led_export_jobs (site_id, video_id, display_type, fit, layout, status, created_by, geometry_hash)
+       VALUES ($1, $2, $3, $4, $5, 'queued', $6, $7)
        RETURNING *`,
-      [input.site_id, input.video_id, input.display_type, input.fit, input.layout, input.created_by]
+      [
+        input.site_id,
+        input.video_id,
+        input.display_type,
+        input.fit,
+        input.layout,
+        input.created_by,
+        input.geometry_hash ?? null,
+      ]
     );
     return result.rows[0];
   }
@@ -78,6 +89,44 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
       [videoId, siteId, layout]
     );
     return result.rows[0] ?? null;
+  }
+
+  /**
+   * Canvas plié déjà fabriqué pour CETTE géométrie exacte (ADR-139, étape D).
+   *
+   * L'empreinte couvre géométrie + source + layout : si l'une change, la clé
+   * change, le cache rate, et le canvas est refabriqué. C'est ce qui rend
+   * l'invalidation automatique — pas de logique d'expiration à maintenir.
+   */
+  async findReadyByGeometry(
+    siteId: string,
+    videoId: string,
+    geometryHash: string
+  ): Promise<LedExportJobRow | null> {
+    const result = await query<LedExportJobRow>(
+      `SELECT * FROM led_export_jobs
+       WHERE site_id = $1 AND video_id = $2 AND geometry_hash = $3
+         AND status = 'ready' AND output_url IS NOT NULL
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [siteId, videoId, geometryHash]
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /** Un job est-il déjà en vol pour cette empreinte ? (anti-doublon d'enqueue) */
+  async hasPendingForGeometry(
+    siteId: string,
+    videoId: string,
+    geometryHash: string
+  ): Promise<boolean> {
+    const result = await query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM led_export_jobs
+       WHERE site_id = $1 AND video_id = $2 AND geometry_hash = $3
+         AND status IN ('queued', 'processing')`,
+      [siteId, videoId, geometryHash]
+    );
+    return Number(result.rows[0]?.n ?? 0) > 0;
   }
 
   /** Claim atomique du prochain job en queue (multi-worker safe). */

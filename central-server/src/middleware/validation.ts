@@ -172,6 +172,12 @@ export const schemas = {
             band_count: Joi.number().integer().positive().max(64).optional(), // dérivé
             order: Joi.string().valid('top-to-bottom', 'bottom-to-top').default('top-to-bottom'),
             mode: Joi.string().valid('A', 'B').default('B'),
+            // ADR-139 étape D — servir le canvas PLIÉ au lieu du fichier brut.
+            // PAS de `.default(true)` : l'activation doit être un geste délibéré,
+            // posé après avoir observé le montage réel du club (cf. `npm run
+            // led:mire`). `mode` ne pouvait pas servir de bascule — il vaut 'B'
+            // par défaut sur tout le parc sans que personne l'ait choisi.
+            serve_folded: Joi.boolean().optional(),
           }).optional(),
         }).optional().allow(null),
       })

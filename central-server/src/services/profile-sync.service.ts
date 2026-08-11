@@ -80,7 +80,7 @@ export async function sendSyncProfilesToSite(siteId: string): Promise<number> {
     }
 
     try {
-      await enrichConfigWithDisplayVariants(enrichedConfig, reconnectDisplayTypes);
+      await enrichConfigWithDisplayVariants(enrichedConfig, reconnectDisplayTypes, { siteId });
     } catch (err) {
       logger.warn('Display variant enrichment failed in reconnect profile sync (non-fatal)', {
         siteId, profileId: p.id, error: (err as Error).message,
@@ -196,7 +196,7 @@ export async function buildEnrichedNeoProContent(
 
   try {
     const displayTypes = await resolveDisplayTypesForSite(siteId);
-    await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes);
+    await enrichConfigWithDisplayVariants(enrichedConfig, displayTypes, { siteId });
   } catch (err) {
     logger.warn('Display variant enrichment failed in buildEnrichedNeoProContent (non-fatal)', {
       siteId, error: (err as Error).message,
