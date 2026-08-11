@@ -15,6 +15,7 @@ import { HttpClient } from '@angular/common/http';
 import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
 import { ledPitchMm, ledRibbonWidth, ledBandWidth, ledDerivedBandWidth } from '../../../../../core/utils/led-geometry';
 import { environment } from '../../../../../../environments/environment';
+import { LedCanvasOverviewComponent } from '../led-canvas-overview/led-canvas-overview.component';
 
 interface DisplayTemplate {
   icon: string;
@@ -46,7 +47,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
 @Component({
   selector: 'app-displays-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LedCanvasOverviewComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="displays-list">
@@ -361,6 +362,11 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           </div>
           <div class="led-band-overflow" *ngIf="getLedBandOverflow(display) > 0">+{{ getLedBandOverflow(display) }} bandes</div>
         </div>
+
+        <!-- Vue d'ensemble des canvas : format livré vs attendu, état, aperçu.
+             Placée ici parce que c'est l'écran où l'on règle déjà la géométrie —
+             et parce que l'écart de format est la première cause de rendu raté. -->
+        <app-led-canvas-overview [siteId]="siteId"></app-led-canvas-overview>
 
         <!-- Déclaration en masse des variantes ruban.
              Le pliage automatique (ADR-139) ne s'applique qu'aux vidéos AYANT une
