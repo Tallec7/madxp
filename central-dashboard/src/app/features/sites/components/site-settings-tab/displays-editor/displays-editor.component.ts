@@ -1667,7 +1667,14 @@ export class DisplaysEditorComponent implements OnDestroy {
     this.bulkBusy = true;
     this.bulkResult = null;
     this.http
-      .post<{ created: number; skipped: number; failed: number; total: number }>(
+      .post<{
+        created: number;
+        skipped: number;
+        excluded: number;
+        failed: number;
+        total: number;
+        exclusions?: Array<{ filename: string; reason: string }>;
+      }>(
         `${environment.apiUrl}/sites/${this.siteId}/led-variants/bulk`,
         {},
         { withCredentials: true }
@@ -1677,6 +1684,13 @@ export class DisplaysEditorComponent implements OnDestroy {
           this.bulkBusy = false;
           const parts = [`${r.created} créée(s)`];
           if (r.skipped) parts.push(`${r.skipped} déjà en place`);
+          // Nommer les écartées : sans ça, « 0 créée(s) » se lit comme une panne
+          // alors que le club n'a que des clips TV, et l'opérateur ne sait pas
+          // qu'il doit déclarer la variante à la main s'il en veut une.
+          if (r.excluded) {
+            const names = (r.exclusions ?? []).map((x) => x.filename).join(', ');
+            parts.push(`${r.excluded} écartée(s) — format TV${names ? ` : ${names}` : ''}`);
+          }
           if (r.failed) parts.push(`${r.failed} en échec`);
           this.bulkResult = parts.join(', ');
           this.cdr.markForCheck();

@@ -1,3 +1,22 @@
+## [4.25.3](https://github.com/Tallec7/madxp/compare/v4.25.2...v4.25.3) (2026-08-11)
+
+### Bug Fixes
+
+- **scripts:** outillage LED exécutable — ts-node + retry ffprobe contre les 404 par edge du CDN ([#1161](https://github.com/Tallec7/madxp/issues/1161)) ([d59939d](https://github.com/Tallec7/madxp/commit/d59939de24f0b9d1d1f7c0eaa7052c6c6a09e57d)), closes [#1156](https://github.com/Tallec7/madxp/issues/1156)
+
+## [4.25.2](https://github.com/Tallec7/madxp/compare/v4.25.1...v4.25.2) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** ne déclare plus les clips TV en contenu de ruban ([#1160](https://github.com/Tallec7/madxp/issues/1160)) ([fdb0cad](https://github.com/Tallec7/madxp/commit/fdb0cad7ceb9bd6dc2fe9f5cce263447cc048880))
+- **led:** plafonner la concurrence du pliage en DB, pas en mémoire ([#1159](https://github.com/Tallec7/madxp/issues/1159)) ([0324b27](https://github.com/Tallec7/madxp/commit/0324b279687d5c03a9a45db362b3700b7a3ba4c9)), closes [#1151](https://github.com/Tallec7/madxp/issues/1151)
+
+## [4.25.1](https://github.com/Tallec7/madxp/compare/v4.25.0...v4.25.1) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** une seule source pour la largeur d'entrée + rule à jour (suites audit) ([#1158](https://github.com/Tallec7/madxp/issues/1158)) ([0e1b3fd](https://github.com/Tallec7/madxp/commit/0e1b3fdfd3c8f36642e3a5950dd63bc1c6057e14))
+
 # [4.25.0](https://github.com/Tallec7/madxp/compare/v4.24.0...v4.25.0) (2026-08-11)
 
 ### Features

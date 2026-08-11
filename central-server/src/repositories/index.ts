@@ -292,6 +292,8 @@ export {
 } from './video-variant.repository';
 export {
   ledExportJobRepository,
+  LED_EXPORT_MAX_CONCURRENCY,
+  LED_EXPORT_STALE_PROCESSING_MIN,
   type LedExportJobRow,
   type CreateLedExportJobInput,
   type LedExportStatus,

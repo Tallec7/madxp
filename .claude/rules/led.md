@@ -38,6 +38,15 @@ ce qui est gravé dans le processeur.
   `canvas_in.band_count = 1` figé par un installateur alors que le dérivé par côté vaut 2 :
   allumer sans re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé
   pour 110. L'activation se fait club par club, après la mire (`npm run led:mire`).
+- **Exclure une vidéo aux dimensions inconnues du bouton « Créer les variantes LED
+  manquantes »** (`ribbonExclusion`, `content-variant.controller.ts`). Un `null` de
+  dimensions n'est pas un `false` : tant que `backfill:video-dimensions` n'a pas tourné
+  sur le site, AUCUN critère de format n'est fiable — les noms de fichiers mentent dans
+  les deux sens (`STRASOL_…_1600x120px.mp4` fait 4096×1416, `CALICEO.mp4` fait 1600×120
+  sans l'annoncer). Mieux vaut déclarer une variante que l'opérateur retire d'un clic
+  que la sauter en silence. Même principe que `matches_expected` dans la vue Canvas.
+  Et toute exclusion doit remonter son motif dans `exclusions[]` : une exclusion muette
+  se lit comme « tout a été traité ».
 - **Faire échouer un déploiement à cause du pliage.** Cache manquant, DB injoignable, profil
   illisible → on sert le fichier brut, on `logger.warn`, on met la fabrication en file. Le
   pliage dégrade, il ne casse jamais la diffusion.
@@ -58,6 +67,25 @@ ce qui est gravé dans le processeur.
   ni `filename` ; l'injecter produit un chemin `videos-led-perimeter/null` → MP4 noir.
 - **Composer un canvas (`applyPerSideFold` / `computeFoldGeometryPerSide`) ailleurs que dans
   `led-export-worker.service.ts`** et les scripts CLI/POC. La fabrication a un seul endroit.
+- **Retirer le verrou consultatif (`pg_try_advisory_xact_lock`) ou le comptage des jobs
+  `processing` de `ledExportJobRepository.claimNextQueued()`**, ni relever
+  `LED_EXPORT_MAX_CONCURRENCY` sans mesure. Un pliage ouvre **un décodeur ffmpeg par côté**
+  du ruban (4 chez Piraths) : quelques jobs concurrents suffisent à faire échouer les
+  décodeurs sur un conteneur Railway — « Error while opening decoder : Resource temporarily
+  unavailable », **24 pliages perdus sur 52 le 2026-08-11**. `FOR UPDATE SKIP LOCKED` ne
+  protège que du double-claim d'un **même** job, pas de deux jobs différents en parallèle ;
+  et la garde `let ticking = false` du worker ne vit que dans **un** process, donc elle ne
+  survit pas à un scale-up de replicas. **Le seul plafond qui traverse les processus est
+  celui en DB.**
+- **Retirer `touchProcessing()` ou son `setInterval` dans le worker.** Le seuil d'orphelin
+  (`LED_EXPORT_STALE_PROCESSING_MIN`, 15 min) est réévalué à chaque claim : sans battement
+  de cœur, un pliage plus long que le seuil serait remis en file et relancé par un autre
+  worker **pendant** qu'il tourne — la concurrence ffmpeg reviendrait par la porte de
+  derrière, et le garde-fou fabriquerait le bug qu'il prévient.
+- **Remplacer `pg_try_advisory_xact_lock` par `pg_advisory_lock` (verrou de session).**
+  Derrière PgBouncer en mode transaction (`DATABASE_URL` sur `:6543`), une session Node ne
+  garde pas la même connexion serveur d'une requête à l'autre : le verrou serait pris sur
+  un backend et relâché sur un autre — inopérant **en silence**.
 - **Détourer une vidéo sans validation humaine** (ADR-140). `cropdetect` ne distingue pas
   un export mal cadré d'un visuel volontairement sur fond noir : détourer d'office
   rogne un sponsor à charte noire jusqu'à son logo. `POST …/crop/detect` PROPOSE et
@@ -137,5 +165,7 @@ contrat d'entrée réel des processeurs, pas seulement de le supposer.
 - [ADR-140](../../docs/adr/ADR-140-led-autocrop-on-validation.md) — détourage des marges sur validation
 - Smoke : `central-server/src/__tests__/smoke/smoke-led-canvas-invariant.test.ts`
 - Smoke détourage : `central-server/src/__tests__/smoke/smoke-led-autocrop.test.ts`
+- Concurrence du pliage : `central-server/src/repositories/led-export-job.repository.test.ts`
+  (comportement) + `smoke-led-export-async.test.ts` (garde-fou fichier)
 - Tests étape D : `central-server/src/utils/__tests__/config-secondary-variants-folded.test.ts`
 - Maquette du parcours cible : `docs/proposals/assets/led-mockups/03-parcours-simplifie-ecrans-led.html`

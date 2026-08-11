@@ -27,6 +27,31 @@ describe('Smoke — export LED async (PROP-014 étape 6)', () => {
     expect(repo).toMatch(/markFailed/);
   });
 
+  it('le claim plafonne la concurrence GLOBALEMENT, pas seulement dans le process', () => {
+    const repo = read('repositories/led-export-job.repository.ts');
+
+    // Le plafond doit vivre en DB : un booléen en mémoire ne franchit pas la
+    // frontière d'un replica Railway. Verrou consultatif de TRANSACTION —
+    // un verrou de session serait inopérant derrière PgBouncer transaction mode.
+    expect(repo).toMatch(/pg_try_advisory_xact_lock/);
+    expect(repo).not.toMatch(/pg_try_advisory_lock\s*\(/);
+    // …et comptage des jobs réellement en vol, tous processus confondus.
+    expect(repo).toMatch(/COUNT\(\*\)[^;]*WHERE status = 'processing'/);
+    expect(repo).toMatch(/running >= maxConcurrent/);
+    // SKIP LOCKED reste : il protège du double-claim d'un MÊME job.
+    expect(repo).toMatch(/FOR UPDATE SKIP LOCKED/);
+
+    // Auto-guérison : sans elle, un replica tué en plein pliage laisse une ligne
+    // `processing` qui bloque la file entière (plafond = 1) jusqu'au prochain boot.
+    expect(repo).toMatch(/status = 'queued'[\s\S]{0,200}status = 'processing'[\s\S]{0,200}minutes/);
+
+    // Le battement de cœur distingue « pliage long » de « worker mort ».
+    expect(repo).toMatch(/async touchProcessing\(/);
+    const worker = read('services/led-export-worker.service.ts');
+    expect(worker).toMatch(/touchProcessing\(job\.id\)/);
+    expect(worker).toMatch(/clearInterval\(heartbeat\)/);
+  });
+
   it('le worker recovère les jobs orphelins au boot et plie via applyFoldExport', () => {
     const worker = read('services/led-export-worker.service.ts');
     expect(worker).toMatch(/failStaleRunning/);
