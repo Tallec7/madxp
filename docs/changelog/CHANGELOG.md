@@ -1,3 +1,9 @@
+## [4.22.2](https://github.com/Tallec7/madxp/compare/v4.22.1...v4.22.2) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** sérialiser le worker de pliage — 24 échecs sur 52 par épuisement décodeur ([#1151](https://github.com/Tallec7/madxp/issues/1151)) ([0bf2b3c](https://github.com/Tallec7/madxp/commit/0bf2b3c0fc07525cc6b6e03641f3e2d063e02240))
+
 ## [4.22.1](https://github.com/Tallec7/madxp/compare/v4.22.0...v4.22.1) (2026-08-11)
 
 ### Bug Fixes
