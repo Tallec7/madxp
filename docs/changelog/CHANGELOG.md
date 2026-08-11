@@ -1,3 +1,9 @@
+## [4.22.1](https://github.com/Tallec7/madxp/compare/v4.22.0...v4.22.1) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** scoper la création en masse au club — et nettoyer les 492 variantes de trop ([#1149](https://github.com/Tallec7/madxp/issues/1149)) ([a573186](https://github.com/Tallec7/madxp/commit/a5731862f0186472954eb219710daa60f898f780))
+
 # [4.22.0](https://github.com/Tallec7/madxp/compare/v4.21.2...v4.22.0) (2026-08-11)
 
 ### Features
