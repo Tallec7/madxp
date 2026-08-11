@@ -23,6 +23,7 @@ import {
   videoVariantRepository,
   videoRepository,
   siteRepository,
+  LED_EXPORT_STALE_PROCESSING_MIN,
   type LedExportJobRow,
   type VideoVariantSideFile,
 } from '../repositories';
@@ -35,7 +36,9 @@ import {
 } from './led-fold.service';
 
 const POLL_INTERVAL_MS = 2_000;
-const STALE_PROCESSING_MAX_AGE_MIN = 15;
+const STALE_PROCESSING_MAX_AGE_MIN = LED_EXPORT_STALE_PROCESSING_MIN;
+/** Battement de cœur d'un job en cours — largement sous le seuil d'orphelin. */
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
@@ -192,6 +195,16 @@ async function processOne(): Promise<boolean> {
     layout: job.layout ?? `fit:${job.fit}`,
   });
 
+  // Signe de vie pendant le pliage : sans lui, un job dépassant le seuil
+  // d'orphelin serait remis en file et relancé par un autre worker PENDANT
+  // qu'il tourne — la concurrence ffmpeg reviendrait par la porte de derrière.
+  const heartbeat = setInterval(() => {
+    ledExportJobRepository.touchProcessing(job.id).catch((error) => {
+      logger.warn('led-export-worker: heartbeat failed', { jobId: job.id, error });
+    });
+  }, HEARTBEAT_INTERVAL_MS);
+  heartbeat.unref();
+
   try {
     const outputUrl = await performExport(job);
     await ledExportJobRepository.markReady(job.id, outputUrl);
@@ -200,12 +213,14 @@ async function processOne(): Promise<boolean> {
     const message = error instanceof Error ? error.message : String(error);
     await ledExportJobRepository.markFailed(job.id, message);
     logger.error('led-export-worker: job failed', { jobId: job.id, error: message });
+  } finally {
+    clearInterval(heartbeat);
   }
   return true;
 }
 
 /**
- * Un seul tick à la fois.
+ * Un seul tick à la fois **dans ce process**.
  *
  * `setInterval` ne connaît pas la durée d'un tick asynchrone : un pliage dure de
  * quelques secondes à plusieurs minutes, donc sans cette garde un nouveau tick
@@ -214,6 +229,13 @@ async function processOne(): Promise<boolean> {
  * dizaines de décodeurs h264 sur un conteneur Railway — d'où
  * « Error while opening decoder : Resource temporarily unavailable » sur près d'un
  * job sur deux (24 échecs sur 52 chez Piraths, 2026-08-11).
+ *
+ * **Ce booléen ne suffit pas et n'est pas le garde-fou principal.** Il vit dans la
+ * mémoire d'un process : deux replicas Railway ont chacun le leur, tous deux à
+ * `false`, et la régression revient en silence. Le vrai plafond est en DB, dans
+ * `ledExportJobRepository.claimNextQueued()` (verrou consultatif + comptage des
+ * jobs en vol). Cette garde ne fait qu'éviter le va-et-vient inutile vers la base
+ * toutes les 2 s pendant qu'un pliage local tourne.
  *
  * Le pliage n'a aucune raison d'être parallèle : c'est du batch de fond, pas une
  * requête utilisateur. Une file sérialisée est plus lente mais elle aboutit.

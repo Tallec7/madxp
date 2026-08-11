@@ -7,9 +7,51 @@ import type { LedExportFit, LedExportLayout } from '../services/led-fold.service
  * File de jobs d'export LED (PROP-014 étape 6 / ADR-134). Pollée par
  * `led-export-worker.service.ts`. Même pattern que `render_requests` (ADR-054/124) :
  * claim atomique `FOR UPDATE SKIP LOCKED`, markReady/markFailed, failStaleRunning au boot.
+ *
+ * Différence avec `render_requests` : le pliage LED est plafonné à
+ * `LED_EXPORT_MAX_CONCURRENCY` jobs **en vol tous processus confondus** (ffmpeg
+ * ouvre un décodeur par côté du ruban — cf. `claimNextQueued`).
  */
 
 export type LedExportStatus = 'queued' | 'processing' | 'ready' | 'failed';
+
+/**
+ * Plafond de concurrence **global** du pliage LED — tous processus confondus.
+ *
+ * `FOR UPDATE SKIP LOCKED` empêche deux workers de claim le MÊME job ; il
+ * n'empêche pas deux workers de plier deux jobs DIFFÉRENTS en même temps.
+ * Or chaque pliage ouvre un décodeur ffmpeg par côté du ruban (4 chez Piraths) :
+ * quelques jobs concurrents suffisent à saturer un conteneur Railway, et le
+ * décodeur échoue en « Resource temporarily unavailable » (24 pliages perdus
+ * sur 52, 2026-08-11). Le pliage est du batch de fond : sérialisé il est plus
+ * lent, mais il aboutit.
+ *
+ * Ne pas relever cette valeur sans avoir mesuré les décodeurs simultanés qu'un
+ * conteneur encaisse (≈ `maxConcurrent × nombre de côtés`).
+ */
+export const LED_EXPORT_MAX_CONCURRENCY = 1;
+
+/**
+ * Clé du verrou consultatif Postgres qui rend le couple « compter les jobs en
+ * vol → en claim un » atomique entre processus. Sans lui, deux replicas peuvent
+ * lire « 0 en vol » à la même milliseconde et démarrer chacun un pliage.
+ *
+ * Verrou de **transaction** (`_xact_`) et non de session : il est relâché au
+ * COMMIT, donc il survit à PgBouncer en mode transaction (port 6543), où une
+ * session Node ne garde pas la même connexion serveur d'une requête à l'autre.
+ * Un `pg_advisory_lock` de session y serait silencieusement inopérant.
+ *
+ * Valeur arbitraire, mais elle doit rester unique dans cette base.
+ */
+const CLAIM_ADVISORY_LOCK_KEY = 134_139_014;
+
+/**
+ * Sans nouvelle du worker depuis ce délai, un job `processing` est considéré
+ * orphelin (process mort) et remis en file. Le worker rafraîchit `updated_at`
+ * pendant qu'il travaille (`touchProcessing`), donc ce seuil mesure bien
+ * « plus aucun signe de vie », pas « job long ».
+ */
+export const LED_EXPORT_STALE_PROCESSING_MIN = 15;
 
 export interface LedExportJobRow extends QueryResultRow {
   id: string;
@@ -150,20 +192,82 @@ class LedExportJobRepositoryImpl extends BaseRepository<LedExportJobRow> {
     return Number(result.rows[0]?.n ?? 0) > 0;
   }
 
-  /** Claim atomique du prochain job en queue (multi-worker safe). */
-  async claimNextQueued(): Promise<LedExportJobRow | null> {
-    const result = await query<LedExportJobRow>(
-      `UPDATE led_export_jobs SET status = 'processing', updated_at = NOW()
-       WHERE id = (
-         SELECT id FROM led_export_jobs
-         WHERE status = 'queued'
-         ORDER BY created_at
-         FOR UPDATE SKIP LOCKED
-         LIMIT 1
-       )
-       RETURNING *`
+  /**
+   * Claim du prochain job en queue — atomique ET plafonné globalement.
+   *
+   * Trois mécanismes empilés, chacun couvrant ce que le précédent ne couvre pas :
+   *
+   * 1. `FOR UPDATE SKIP LOCKED` — deux workers ne claim jamais le même job ;
+   * 2. le comptage des `processing` — plafond de concurrence **partagé**, visible
+   *    de tous les processus parce qu'il vit en DB et non dans la mémoire d'un
+   *    replica (une garde `let ticking = false` ne protège qu'un process) ;
+   * 3. `pg_try_advisory_xact_lock` — rend 2 et 1 indivisibles ; sans lui deux
+   *    replicas peuvent compter « 0 en vol » simultanément et démarrer chacun
+   *    un pliage.
+   *
+   * Le verrou est *try* : un worker qui ne l'obtient pas repart bredouille et
+   * repolle dans 2 s, il n'attend pas.
+   *
+   * Les `processing` sans signe de vie sont d'abord remis en file : sans cette
+   * auto-guérison, un replica tué en plein pliage laisserait une ligne
+   * `processing` qui bloquerait la file entière (plafond = 1) jusqu'au prochain
+   * boot.
+   */
+  async claimNextQueued(
+    maxConcurrent: number = LED_EXPORT_MAX_CONCURRENCY,
+    staleAfterMinutes: number = LED_EXPORT_STALE_PROCESSING_MIN
+  ): Promise<LedExportJobRow | null> {
+    return this.withTransaction(async (client) => {
+      const lock = await client.query('SELECT pg_try_advisory_xact_lock($1) AS locked', [
+        CLAIM_ADVISORY_LOCK_KEY,
+      ]);
+      if (!(lock.rows[0] as { locked: boolean } | undefined)?.locked) {
+        // Un autre worker est en train de claim (ou de plier). Rien à faire.
+        return null;
+      }
+
+      await client.query(
+        `UPDATE led_export_jobs SET status = 'queued', updated_at = NOW()
+         WHERE status = 'processing' AND updated_at < NOW() - ($1 || ' minutes')::interval`,
+        [String(staleAfterMinutes)]
+      );
+
+      const inFlight = await client.query(
+        `SELECT COUNT(*)::text AS n FROM led_export_jobs WHERE status = 'processing'`
+      );
+      const running = Number((inFlight.rows[0] as { n: string } | undefined)?.n ?? 0);
+      if (running >= maxConcurrent) {
+        return null;
+      }
+
+      const claimed = await client.query(
+        `UPDATE led_export_jobs SET status = 'processing', updated_at = NOW()
+         WHERE id = (
+           SELECT id FROM led_export_jobs
+           WHERE status = 'queued'
+           ORDER BY created_at
+           FOR UPDATE SKIP LOCKED
+           LIMIT 1
+         )
+         RETURNING *`
+      );
+      return (claimed.rows[0] as LedExportJobRow | undefined) ?? null;
+    });
+  }
+
+  /**
+   * Signe de vie d'un job en cours : repousse `updated_at` sans changer l'état.
+   *
+   * C'est ce qui distingue « pliage long » de « worker mort » — sans ce
+   * battement, un pliage dépassant `LED_EXPORT_STALE_PROCESSING_MIN` serait
+   * remis en file et relancé par un autre worker **pendant** qu'il tourne,
+   * recréant exactement la concurrence ffmpeg que le plafond supprime.
+   */
+  async touchProcessing(id: string): Promise<void> {
+    await query(
+      `UPDATE led_export_jobs SET updated_at = NOW() WHERE id = $1 AND status = 'processing'`,
+      [id]
     );
-    return result.rows[0] ?? null;
   }
 
   async markReady(id: string, outputUrl: string): Promise<void> {

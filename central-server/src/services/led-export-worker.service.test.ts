@@ -9,10 +9,13 @@ const mockRepo = {
   claimNextQueued: jest.fn().mockResolvedValue(null),
   markReady: jest.fn().mockResolvedValue(undefined),
   markFailed: jest.fn().mockResolvedValue(undefined),
+  touchProcessing: jest.fn().mockResolvedValue(undefined),
 };
 
 jest.mock('../repositories', () => ({
   ledExportJobRepository: mockRepo,
+  // Seuil d'orphelin — défini par le repository, consommé par le worker.
+  LED_EXPORT_STALE_PROCESSING_MIN: 15,
   videoVariantRepository: { findByVideoAndDisplay: jest.fn() },
   siteRepository: { getDisplays: jest.fn() },
 }));
