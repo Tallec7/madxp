@@ -1,3 +1,9 @@
+# [4.23.0](https://github.com/Tallec7/madxp/compare/v4.22.4...v4.23.0) (2026-08-11)
+
+### Features
+
+- **led:** endpoint « canvas du club » — format source vs attendu, état par vidéo ([#1154](https://github.com/Tallec7/madxp/issues/1154)) ([d55dbbf](https://github.com/Tallec7/madxp/commit/d55dbbf32a77f15bfca5052615ad54057508f010))
+
 ## [4.22.4](https://github.com/Tallec7/madxp/compare/v4.22.3...v4.22.4) (2026-08-11)
 
 ### Bug Fixes
