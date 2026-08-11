@@ -22,6 +22,9 @@ import { SiteConfiguration } from '../../types';
 jest.mock('../../repositories/video-variant.repository');
 jest.mock('../../repositories/site.repository');
 jest.mock('../../repositories/led-export-job.repository');
+jest.mock('../../services/storage.service', () => ({
+  getVideoUrl: (p: string) => `https://cdn.test/neopro-video/${p}`,
+}));
 jest.mock('../../config/logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -161,12 +164,17 @@ describe('substituteFoldedCanvas — le canvas plié derrière l’interrupteur'
       });
       mockDisplays(LED_ON);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      jobs.findReadyByGeometry.mockResolvedValue({ output_url: 'videos-led-perimeter/plie.mp4' } as any);
+      // Le repo rend une URL PUBLIQUE complète — c'est ce qui doublait le préfixe.
+      jobs.findReadyByGeometry.mockResolvedValue({
+        output_url: 'https://cdn.test/neopro-video/led-exports/2026-08/plie.mp4',
+      } as any);
       const c = config();
 
       await enrichConfigWithDisplayVariants(c, ['led-perimeter'], { siteId: SITE });
 
-      expect(servedPath(c)).toBe('videos-led-perimeter/plie.mp4');
+      // Chemin RELATIF : la base est rajoutée au moment de servir. Une URL absolue
+      // ici donnait `https://…/neopro-video/https://…` → 404 sur chaque canvas.
+      expect(servedPath(c)).toBe('led-exports/2026-08/plie.mp4');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((c.sponsors?.[0] as any).variants['led-perimeter'].folded).toBe(true);
       expect(jobs.findReadyByGeometry).toHaveBeenCalledWith(SITE, VIDEO, attendu);
