@@ -121,7 +121,34 @@ export class TvComponent implements OnInit, OnDestroy {
   // Options locales (provenant de Remote)
   public localOptions: LocalOptions = this.localOptionsService.getOptions();
 
-  @Input() public configuration: Configuration;
+  /**
+   * Config du site. En SaaS elle arrive par le resolver de route, donc APRÈS
+   * `ngOnInit` — d'où ce setter.
+   *
+   * `displayType` n'était résolu qu'une fois, dans `ngOnInit`, alors que
+   * `this.configuration` était encore vide : le repli donnait `'tv'` pour l'index 0
+   * et plus rien ne le recalculait. Conséquence sur un club à ruban LED : le player
+   * se croyait sur une TV, donc il ignorait la variante `led-perimeter` (il jouait le
+   * fichier brut au lieu du canvas plié) ET n'appliquait pas le rendu au pixel
+   * (`object-fit: contain` au lieu de `none`). Les deux symptômes, une seule cause
+   * (Piraths, 2026-08-11).
+   *
+   * On ne re-résout QUE si la config déclare réellement un type pour cet index :
+   * sinon on écraserait les surcharges volontaires (secondary/preview) posées plus
+   * loin dans `ngOnInit`.
+   */
+  @Input()
+  public set configuration(value: Configuration) {
+    this._configuration = value;
+    const declared = value?.displays?.[this.displayIndex]?.type;
+    if (declared) {
+      this.displayType = declared;
+    }
+  }
+  public get configuration(): Configuration {
+    return this._configuration;
+  }
+  private _configuration: Configuration;
 
   private lastTriggerType: 'auto' | 'manual' = 'auto';
   private currentEventType: 'match' | 'training' | 'tournament' | 'other' = 'other';

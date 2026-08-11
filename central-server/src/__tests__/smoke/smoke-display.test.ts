@@ -3369,3 +3369,24 @@ describe('SaaS controller write-through sites.displays → configuration.display
     expect(saasCtrlSrc).toMatch(/siteDisplays\.length\s*>\s*0/);
   });
 });
+
+describe('Ruban LED — le type d’écran doit survivre à une config tardive', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const TV_TS = 'raspberry/src/app/components/tv/tv.component.ts';
+
+  /**
+   * En SaaS la config arrive par le resolver de route, donc APRÈS `ngOnInit`.
+   * `displayType` n'était résolu qu'une fois, sur une config encore vide : le repli
+   * donnait 'tv' pour l'index 0 et plus rien ne le recalculait. Un club à ruban se
+   * retrouvait donc à ignorer sa variante `led-perimeter` (fichier brut au lieu du
+   * canvas plié) ET à perdre le rendu au pixel — deux symptômes, une seule cause.
+   */
+  it('la config est un setter qui re-résout le type d’écran', () => {
+    const src = fs.readFileSync(path.join(repoRoot, TV_TS), 'utf8');
+    expect(src).toMatch(/public set configuration\(/);
+    expect(src).toMatch(/value\?\.displays\?\.\[this\.displayIndex\]\?\.type/);
+    // Ne re-résoudre QUE si la config déclare un type : sinon on écraserait les
+    // surcharges volontaires (secondary, preview) posées plus loin dans ngOnInit.
+    expect(src).toMatch(/if \(declared\) \{/);
+  });
+});
