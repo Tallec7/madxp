@@ -136,16 +136,24 @@ async function performExport(job: LedExportJobRow): Promise<string> {
   const tmpOut = path.join(os.tmpdir(), `led-export-out-${job.id}.mp4`);
 
   try {
+    // Les côtés partagent presque toujours la même source (motif répété tout autour).
+    // Télécharger le même fichier une fois par côté, c'était 4 téléchargements et 4
+    // copies disque pour une seule vidéo. On mémoïse par storage_path.
     const inputs: string[] = [];
+    const downloaded = new Map<string, string>();
     for (let i = 0; i < sides; i++) {
       const sp = sideFiles.find((s) => s.side_index === i)?.storage_path ?? uniformPath;
       if (!sp) {
         throw new Error(`côté ${i} sans fichier et aucune source de repli`);
       }
-      const tmp = path.join(os.tmpdir(), `led-src-${job.id}-${i}.mp4`);
-      await downloadToFile(getVideoUrl(sp), tmp);
+      let tmp = downloaded.get(sp);
+      if (!tmp) {
+        tmp = path.join(os.tmpdir(), `led-src-${job.id}-${downloaded.size}.mp4`);
+        await downloadToFile(getVideoUrl(sp), tmp);
+        downloaded.set(sp, tmp);
+        tmpFiles.push(tmp);
+      }
       inputs.push(tmp);
-      tmpFiles.push(tmp);
     }
 
     logger.info('led-export-worker: composing', {
@@ -196,14 +204,33 @@ async function processOne(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Un seul tick à la fois.
+ *
+ * `setInterval` ne connaît pas la durée d'un tick asynchrone : un pliage dure de
+ * quelques secondes à plusieurs minutes, donc sans cette garde un nouveau tick
+ * démarrait toutes les 2 s et réclamait un job de plus. Chaque job ouvrant un ffmpeg
+ * qui décode la source une fois par côté, la concurrence réelle grimpait à des
+ * dizaines de décodeurs h264 sur un conteneur Railway — d'où
+ * « Error while opening decoder : Resource temporarily unavailable » sur près d'un
+ * job sur deux (24 échecs sur 52 chez Piraths, 2026-08-11).
+ *
+ * Le pliage n'a aucune raison d'être parallèle : c'est du batch de fond, pas une
+ * requête utilisateur. Une file sérialisée est plus lente mais elle aboutit.
+ */
+let ticking = false;
+
 async function tick(): Promise<void> {
-  if (stopping) return;
+  if (stopping || ticking) return;
+  ticking = true;
   try {
     while (await processOne()) {
       if (stopping) return;
     }
   } catch (error) {
     logger.error('led-export-worker: tick failed', { error });
+  } finally {
+    ticking = false;
   }
 }
 
