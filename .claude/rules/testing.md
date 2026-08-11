@@ -29,12 +29,28 @@ Les 13 suites smoke et leurs domaines :
 | `smoke-remotion`              | Remotion async render + template versions (ADR-054/055)                |
 | `smoke-prop003-scoreboard`    | PROP-003 corrections protocolaires + simulateurs dev (F-15.2)          |
 | `smoke-service-test-coverage` | Garde-fou : tout nouveau `src/services/*.service.ts` a au moins 1 test |
+| `smoke-test-port-isolation`   | Garde-fou : aucune suite ne fixe de port d'écoute (anti-`EADDRINUSE`)  |
 
 Pour lancer une suite spécifique manuellement :
 
 ```bash
 cd central-server && npx jest --testPathPattern='smoke/smoke-saas' --no-coverage --forceExit
 ```
+
+## Ne JAMAIS fixer un port d'écoute dans un test
+
+Importer `src/server.ts` démarre un vrai serveur HTTP. Sous test, il écoute sur le
+port **0** (éphémère, attribué par l'OS) — ne jamais réintroduire
+`process.env.PORT = 'NNNN'` dans une suite.
+
+Le registre de ports tenu à la main (3096→3109, « pour éviter les conflits »)
+comptait déjà deux doublons : Jest parallélise les suites sur des process distincts,
+donc deux d'entre elles écoutaient le même port au même instant → `EADDRINUSE` puis
+« Server is not running. » en cascade. Un échec **aléatoire**, sur une suite
+étrangère au changement testé. Le port 0 supprime la classe entière de bugs.
+
+`supertest(app)` monte son propre listener : aucun test n'a besoin de ce port.
+Enforced par `smoke-test-port-isolation.test.ts`.
 
 ## Nouveau service `.service.ts` → 1 test minimum
 
