@@ -71,11 +71,15 @@ donnent 4 bandes, canvas 1920×640.
 Le SPIKE-003 matériel n'a pas avancé (matériel non commandé), mais il est **remplacé par
 la mire** (`npm run led:mire`) : une grille diffusée sur le ruban d'un club installé +
 une photo suffisent à lire le contrat d'entrée réel du processeur, sans rien acheter.
-**Aucun des deux sites n'a `serve_folded` activé.** Pour **Piraths**, une photo du ruban en
-fonctionnement (2026-08-11) montre le fichier brut affiché en une ligne continue et lisible :
-son processeur est en **mode A** (il mappe lui-même). Y allumer `serve_folded` casserait
-l'affichage — l'interrupteur doit y rester éteint. Pour **Lanester**, rien n'est encore
-observé.
+**Aucun des deux sites n'a `serve_folded` activé — mais Piraths devrait l'avoir.**
+Observation du 2026-08-11 : le contenu ne s'affiche que sur 1 des 4 panneaux, cinq versions
+**pliées à la main** traînent en DB (`*-SIEHR-PLIE-*`), et le nom du dernier essai
+(`5-SIEHR-PLIE-100cm-1600x640`) reproduit exactement la géométrie dérivée du terrain
+(1600 px/côté × 4 bandes de 160 px). Le processeur y attend donc un **canvas plié (mode B)**.
+Deux défauts de config à corriger AVANT d'activer : `canvas_in.band_width` vaut 1920 alors
+qu'un côté fait **1600** px (320 px de padding parasite par bande), et le site porte **deux
+écrans `led-perimeter`** aux `canvas_in` contradictoires (index 0 mode A `band_count: 4`,
+index 2 mode B). Pour **Lanester**, rien n'est encore observé.
 
 ## Quand ce garde-fou doit être révisé
 

@@ -61,19 +61,40 @@ requête HTTP sur un encodage.
 
 ## Conséquences
 
-**Ce qui change en production aujourd'hui : rien.** Les deux sites LED (Saas Lanester
-HB, Piraths Strasbourg ATH) n'ont pas `serve_folded`. Le champ est posé, l'UI existe
-(« Avancé (processeur) »), le chemin est testé — mais il reste à activer club par club.
+**Ce qui change en production au merge : rien.** Les deux sites LED (Saas Lanester HB,
+Piraths Strasbourg ATH) n'ont pas `serve_folded`. Le champ est posé, l'UI existe
+(« Avancé (processeur) »), le chemin est testé — l'activation reste un geste par club.
 
-**Première observation terrain (Piraths Strasbourg ATH, 2026-08-11)** — photo du ruban
-en fonctionnement, alimenté par le chemin actuel (fichier brut, `serve_folded` éteint) :
-le contenu s'affiche en **une ligne continue, lisible, aux bonnes proportions**. Aucune
-bande empilée, aucune découpe. Le processeur fait donc lui-même le mapping depuis le
-signal standard qu'il reçoit — c'est le **mode A**. Conclusion opérationnelle : **ne pas
-activer `serve_folded` à Piraths**. Lui envoyer un canvas empilé produirait exactement le
-ruban illisible que cet interrupteur existe pour éviter. Réserves : un seul côté était
-dans le champ, et le cadrage de la photo empêche de dire si le texte est tronqué par
-l'écran ou par l'objectif — la mire reste utile pour la couverture des 4 côtés.
+**Observation terrain (Piraths Strasbourg ATH, 2026-08-11) — le club est en mode B.**
+
+Une première photo du ruban montrait le contenu affiché proprement sur un panneau, ce
+qui a été lu à tort comme « le processeur mappe lui-même » (mode A). C'était une
+sur-lecture : un côté lisible est compatible avec les deux modes. Trois faits corrigent
+cette lecture :
+
+- **Cinq versions pliées à la main** existent en DB (`2-SIEHR-PLIE-1600x480`,
+  `3-SIEHR-PLIE-1920x480`, `5-SIEHR-PLIE-100cm-1600x640`). On ne plie pas à la main un
+  signal que le processeur déplie tout seul.
+- **Le contenu n'apparaît que sur 1 des 4 panneaux.** La config sert le fichier brut
+  1600×120 (aucune variante `led-perimeter` sur les 5 fichiers SIEHR) : envoyé à un
+  processeur qui attend un canvas 4 bandes, il ne remplit qu'une bande.
+- **Le nom du fichier #5 encode la géométrie dérivée du terrain** : côté = 10 m ÷ 6,25 mm
+  = 1600 px, dalle = 100 cm ÷ 6,25 mm = 160 px, canvas plié = 4 × 160 = **1600×640**.
+
+Piraths est donc le club où `serve_folded` doit être **activé** — c'est précisément le
+travail manuel de pliage/ré-upload que l'étape D supprime.
+
+**Deux défauts de config à corriger d'abord** (sans quoi activer décalerait l'image) :
+
+- `canvas_in.band_width` vaut **1920 alors qu'un côté fait 1600 px**. À 1920, chaque
+  bande traîne 320 px de padding et tout se décale face à un processeur gravé pour 1600.
+- Le site porte **deux écrans `led-perimeter`** (index 0 en `mode: 'A'` avec
+  `band_count: 4`, index 2 en `mode: 'B'` sans) — deux vérités contradictoires sur le
+  même club.
+
+**Vérification à coût nul avant tout code** : mettre `5-SIEHR-PLIE-100cm-1600x640.mp4`
+dans la config à la place du fichier brut. S'il s'affiche sur les 4 panneaux, le mode B
+et la géométrie 1600×640 sont confirmés définitivement.
 
 **L'activation est un geste terrain, pas une décision de bureau.** Le préalable reste
 la mire sur le club concerné. Le cas de Lanester le montre : son `canvas_in.band_count`
