@@ -2236,6 +2236,49 @@ describe('TV viewport overflow guard (no 100vw in TV components)', () => {
   });
 });
 
+describe('Ruban LED — le player doit rendre au pixel, pas à l’échelle', () => {
+  const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+  const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+  const TV_TS = 'raspberry/src/app/components/tv/tv.component.ts';
+  const TV_SCSS = 'raspberry/src/app/components/tv/tv.component.scss';
+
+  /**
+   * Un Novastar/Colorlight découpe une région FIXE EN PIXELS de la trame entrante.
+   * Le `object-fit: contain` par défaut met la vidéo à l'échelle de la fenêtre et la
+   * centre — tous les pixels sortent alors de la région mappée. Symptôme trompeur :
+   * la vidéo est parfaite dans le navigateur, le ruban n'affiche rien ou du décalé.
+   * C'était le seul écart entre notre player et celui qui fonctionne au club.
+   */
+  it('un écran led-perimeter porte la classe pixel-exact', () => {
+    const ts = read(TV_TS);
+    expect(ts).toMatch(/\[class\.tv--pixel-exact\]/);
+    expect(ts).toMatch(/get isPixelExactDisplay\(\): boolean/);
+    expect(ts).toMatch(/this\.displayType === 'led-perimeter'/);
+  });
+
+  it('la classe annule la mise à l’échelle ET recale en haut à gauche', () => {
+    const scss = read(TV_SCSS);
+    const block = scss.slice(scss.indexOf('.tv--pixel-exact'));
+    expect(block).toMatch(/object-fit:\s*none/);
+    // Sans `object-position: 0 0`, `object-fit: none` centre encore la vidéo —
+    // la moitié du correctif ne corrige rien.
+    expect(block).toMatch(/object-position:\s*0 0/);
+  });
+
+  it('les autres écrans gardent le contain (leur sortie est regardée, pas découpée)', () => {
+    const scss = read(TV_SCSS);
+    // La règle doit rester PORTÉE par la classe : un `object-fit: none` global
+    // rognerait toutes les TV du parc à la taille native de leurs vidéos.
+    const code = scss
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    const idx = code.indexOf('object-fit: none');
+    expect(idx).toBeGreaterThan(code.indexOf('.tv--pixel-exact'));
+    expect(scss).toMatch(/\.double-buffer-player\b[\s\S]{0,400}object-fit:\s*contain/);
+  });
+});
+
 describe('TV video cropping guard (no object-fit: cover on video players)', () => {
   const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
   const tvScss = 'raspberry/src/app/components/tv/tv.component.scss';
