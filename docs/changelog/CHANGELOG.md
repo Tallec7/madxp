@@ -1,3 +1,10 @@
+## [4.25.2](https://github.com/Tallec7/madxp/compare/v4.25.1...v4.25.2) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** ne déclare plus les clips TV en contenu de ruban ([#1160](https://github.com/Tallec7/madxp/issues/1160)) ([fdb0cad](https://github.com/Tallec7/madxp/commit/fdb0cad7ceb9bd6dc2fe9f5cce263447cc048880))
+- **led:** plafonner la concurrence du pliage en DB, pas en mémoire ([#1159](https://github.com/Tallec7/madxp/issues/1159)) ([0324b27](https://github.com/Tallec7/madxp/commit/0324b279687d5c03a9a45db362b3700b7a3ba4c9)), closes [#1151](https://github.com/Tallec7/madxp/issues/1151)
+
 ## [4.25.1](https://github.com/Tallec7/madxp/compare/v4.25.0...v4.25.1) (2026-08-11)
 
 ### Bug Fixes
