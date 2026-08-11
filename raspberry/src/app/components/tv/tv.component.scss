@@ -277,3 +277,26 @@
 }
 
 // Secondary display overlay styles → moved to score-overlay.component.scss
+
+// ============================================================================
+// ÉCRAN LU AU PIXEL PAR UN PROCESSEUR (ruban LED périmétrique)
+//
+// Un Novastar/Colorlight découpe une région fixe en pixels de la trame entrante.
+// Le `object-fit: contain` par défaut met la vidéo à l'échelle de la fenêtre et la
+// centre : tous les pixels sortent alors de la région mappée, le ruban n'affiche
+// rien ou du décalé — alors que la vidéo paraît parfaite dans le navigateur. C'est
+// le seul écart qui restait entre notre player et celui qui fonctionne au club.
+//
+// `object-fit: none` + `object-position: 0 0` rend à la taille native, ancré en
+// haut à gauche, le reste en noir — exactement ce que le processeur attend.
+// ============================================================================
+
+.tv--pixel-exact {
+  .freeze-canvas,
+  .double-buffer-player,
+  .manual-player,
+  video {
+    object-fit: none;
+    object-position: 0 0;
+  }
+}
