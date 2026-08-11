@@ -1,3 +1,9 @@
+## [4.25.1](https://github.com/Tallec7/madxp/compare/v4.25.0...v4.25.1) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** une seule source pour la largeur d'entrée + rule à jour (suites audit) ([#1158](https://github.com/Tallec7/madxp/issues/1158)) ([0e1b3fd](https://github.com/Tallec7/madxp/commit/0e1b3fdfd3c8f36642e3a5950dd63bc1c6057e14))
+
 # [4.25.0](https://github.com/Tallec7/madxp/compare/v4.24.0...v4.25.0) (2026-08-11)
 
 ### Features

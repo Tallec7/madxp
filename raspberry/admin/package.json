@@ -1,6 +1,6 @@
 {
   "name": "madxp-admin",
-  "version": "v4.25.0",
+  "version": "v4.25.1",
   "description": "Web Admin Panel for Neopro Raspberry Pi",
   "main": "admin-server.js",
   "scripts": {
