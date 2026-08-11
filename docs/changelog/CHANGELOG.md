@@ -1,3 +1,9 @@
+# [4.24.0](https://github.com/Tallec7/madxp/compare/v4.23.0...v4.24.0) (2026-08-11)
+
+### Features
+
+- **led:** vue Canvas du club — voir les écarts de format avant le match ([#1155](https://github.com/Tallec7/madxp/issues/1155)) ([9b50192](https://github.com/Tallec7/madxp/commit/9b50192192b332b332399a08946b17708b9ad7f7)), closes [#1154](https://github.com/Tallec7/madxp/issues/1154)
+
 # [4.23.0](https://github.com/Tallec7/madxp/compare/v4.22.4...v4.23.0) (2026-08-11)
 
 ### Features
