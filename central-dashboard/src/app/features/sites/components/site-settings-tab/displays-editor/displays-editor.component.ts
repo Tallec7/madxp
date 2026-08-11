@@ -362,6 +362,27 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
           <div class="led-band-overflow" *ngIf="getLedBandOverflow(display) > 0">+{{ getLedBandOverflow(display) }} bandes</div>
         </div>
 
+        <!-- Déclaration en masse des variantes ruban.
+             Le pliage automatique (ADR-139) ne s'applique qu'aux vidéos AYANT une
+             variante led-perimeter. Un club LED en a une dizaine, toutes déjà au
+             format ruban : les déclarer une par une est dix allers-retours sans
+             aucune décision à prendre. -->
+        <div class="led-bulk" *ngIf="siteId" data-testid="led-bulk">
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            data-testid="led-bulk-btn"
+            [disabled]="bulkBusy"
+            (click)="createLedVariantsInBulk()"
+          >
+            {{ bulkBusy ? 'Création…' : '⚡ Créer les variantes LED manquantes' }}
+          </button>
+          <span class="led-bulk-hint" *ngIf="bulkResult" data-testid="led-bulk-result">{{ bulkResult }}</span>
+          <em class="led-bulk-note" *ngIf="!bulkResult"
+            >déclare les vidéos du club sur le ruban — aucun encodage, aucun ré-upload</em
+          >
+        </div>
+
         <!-- Banc d'essai (PROP-014 §6 / ADR-134) : plie une vidéo AU CHOIX avec ce
              profil pour comparer les mises en page avant de figer une variante. -->
         <div class="led-testbench" *ngIf="siteId" data-testid="led-testbench">
@@ -1618,6 +1639,50 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (mm === 0 || h <= 0 || !led?.sides?.length) return '—';
     const uniques = [...new Set(led.sides.map((m) => Math.round(m * (1000 / mm))))];
     return uniques.map((w) => `${w} × ${h}`).join(', ');
+  }
+
+  /** Création en masse en cours — désarme le bouton pour éviter le double envoi. */
+  bulkBusy = false;
+  /** Compte-rendu de la dernière création en masse, affiché à côté du bouton. */
+  bulkResult: string | null = null;
+
+  /**
+   * Déclare la variante `led-perimeter` manquante sur toutes les vidéos du club.
+   *
+   * Ce n'est pas un encodage : la variante pointe vers la vidéo elle-même, puisque
+   * le fichier EST déjà le ruban. Ce qu'on lève, c'est le prérequis du pliage
+   * automatique — sans variante, `substituteFoldedCanvas` n'a rien à substituer.
+   *
+   * Les vidéos ayant déjà une variante sont laissées intactes côté serveur : un
+   * opérateur a pu y mettre un recadrage manuel qu'on ne doit pas écraser.
+   */
+  createLedVariantsInBulk(): void {
+    if (!this.siteId || this.bulkBusy) return;
+    this.bulkBusy = true;
+    this.bulkResult = null;
+    this.http
+      .post<{ created: number; skipped: number; failed: number; total: number }>(
+        `${environment.apiUrl}/sites/${this.siteId}/led-variants/bulk`,
+        {},
+        { withCredentials: true }
+      )
+      .subscribe({
+        next: (r) => {
+          this.bulkBusy = false;
+          const parts = [`${r.created} créée(s)`];
+          if (r.skipped) parts.push(`${r.skipped} déjà en place`);
+          if (r.failed) parts.push(`${r.failed} en échec`);
+          this.bulkResult = parts.join(', ');
+          this.cdr.markForCheck();
+        },
+        error: (e) => {
+          this.bulkBusy = false;
+          // On montre le message serveur : « ce site n'a pas d'écran LED déclaré »
+          // est autrement plus utile qu'un « erreur » générique.
+          this.bulkResult = e?.error?.error ?? 'Échec de la création en masse';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   /** Largeur d'entrée dérivée (px) — le plus long côté. Exposé au template. */

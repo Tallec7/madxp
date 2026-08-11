@@ -89,6 +89,16 @@ async function computeFitRecommendation(
  * - Site with displays[] configured → non-tv types from displays
  * - Site without displays[] (DEFAULT_DISPLAYS = [tv]) → F2 fallback ['secondary']
  */
+/** Type d'écran du ruban périmétrique — la variante que le pliage consomme. */
+const LED_PERIMETER_DISPLAY_TYPE = 'led-perimeter';
+
+/**
+ * Plafond de vidéos traitées en une passe. Un club LED en a une dizaine ; la borne
+ * existe pour qu'une bibliothèque anormalement grande ne tienne pas la requête HTTP
+ * ouverte, pas pour limiter un usage réel.
+ */
+const BULK_LED_MAX_VIDEOS = 500;
+
 async function getAllowedDisplayTypes(siteId: string | null): Promise<string[] | null> {
   if (!siteId) return null;
   const displays = await siteRepository.getDisplays(siteId);
@@ -311,6 +321,117 @@ async function clubCanUseSourceVideo(
  * Create a variant by referencing an existing video (no upload needed)
  * Body: { display_type, source_video_id }
  */
+/**
+ * Crée en une fois la variante `led-perimeter` manquante sur toutes les vidéos d'un club.
+ *
+ * ## Pourquoi ce endpoint existe
+ *
+ * Le pliage automatique (ADR-139) ne s'applique qu'aux vidéos AYANT une variante
+ * `led-perimeter` : `substituteFoldedCanvas` lit `variants['led-perimeter']`, donc
+ * pas de variante = rien à plier. Or un club LED a typiquement dix sponsors, tous au
+ * format ruban, tous à déclarer un par un. Dix allers-retours dans l'UI pour une
+ * opération qui n'a aucune décision à prendre : la variante pointe vers la vidéo
+ * elle-même, puisque le fichier EST déjà le ruban.
+ *
+ * ## Ce que ça ne fait pas
+ *
+ * Aucun encodage, aucune copie de fichier : la variante réutilise le `storage_path`
+ * de la vidéo source. C'est une déclaration, pas une transformation — le canvas plié,
+ * lui, sera fabriqué par le worker au premier déploiement.
+ *
+ * Les vidéos ayant déjà une variante `led-perimeter` sont laissées telles quelles :
+ * un opérateur a pu y mettre un fichier différent (recadrage manuel, version par
+ * côté), et l'écraser détruirait son travail.
+ */
+export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => {
+  try {
+    const { siteId } = req.params;
+
+    // Le site doit réellement avoir un ruban déclaré : sinon la variante serait
+    // rejetée une par une par `getAllowedDisplayTypes`, autant le dire tout de suite.
+    const allowedTypes = await getAllowedDisplayTypes(siteId);
+    if (allowedTypes && !allowedTypes.includes(LED_PERIMETER_DISPLAY_TYPE)) {
+      return res.status(400).json({
+        error: "Ce site n'a pas d'écran LED périmétrique déclaré",
+        message: `Types d'écran du site : ${allowedTypes.join(', ') || 'aucun'}`,
+      });
+    }
+
+    const { rows: videos } = await videoRepository.findForSitePaginated(siteId, {}, BULK_LED_MAX_VIDEOS, 0);
+    if (videos.length === 0) {
+      return res.json({ created: 0, skipped: 0, failed: 0, total: 0, variants: [] });
+    }
+
+    const counts = await videoVariantRepository.findVariantCountsByVideoIds(videos.map((v) => v.id));
+    const candidates = videos.filter(
+      (v) => !counts.get(v.id)?.types.includes(LED_PERIMETER_DISPLAY_TYPE)
+    );
+
+    const created: Array<{ video_id: string; variant_id: string }> = [];
+    const failed: Array<{ video_id: string; error: string }> = [];
+
+    for (const candidate of candidates) {
+      try {
+        // On relit la vidéo complète : `findVideoById` aliase `url` sur storage_path
+        // et porte les dimensions mesurées à l'upload, dont la variante hérite.
+        const video = await videoRepository.findVideoById(candidate.id);
+        if (!video) continue;
+
+        const dims = dimensionsFromVideo(video);
+        const variant = await videoVariantRepository.create({
+          video_id: video.id,
+          display_type: LED_PERIMETER_DISPLAY_TYPE,
+          filename: video.filename,
+          original_name: video.original_name,
+          storage_path: video.url || video.filename,
+          file_size: video.file_size,
+          checksum: video.checksum || '',
+          mime_type: 'video/mp4',
+          width: dims.width,
+          height: dims.height,
+          duration: video.duration,
+          metadata: { source_video_id: video.id, created_by_bulk: true },
+          uploaded_by: req.user?.id || null,
+        });
+        created.push({ video_id: video.id, variant_id: variant.id });
+      } catch (error) {
+        // Une vidéo qui échoue ne doit pas annuler les neuf autres : l'opérateur
+        // veut avancer, et un rapport partiel vaut mieux qu'un tout-ou-rien.
+        const message = error instanceof Error ? error.message : 'Erreur inconnue';
+        failed.push({ video_id: candidate.id, error: message });
+        logger.warn('bulk LED variant: échec sur une vidéo (les autres continuent)', {
+          siteId,
+          videoId: candidate.id,
+          error: message,
+        });
+      }
+    }
+
+    logger.info('Bulk LED variants created', {
+      siteId,
+      total: videos.length,
+      created: created.length,
+      skipped: videos.length - candidates.length,
+      failed: failed.length,
+    });
+
+    res.json({
+      total: videos.length,
+      created: created.length,
+      skipped: videos.length - candidates.length,
+      failed: failed.length,
+      failures: failed,
+      variants: created,
+    });
+  } catch (error) {
+    logger.error('Error bulk-creating LED variants:', error);
+    res.status(500).json({
+      error: 'Erreur lors de la création en masse des variantes LED',
+      details: error instanceof Error ? error.message : 'Erreur inconnue',
+    });
+  }
+};
+
 export const createVideoVariantFromVideo = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
