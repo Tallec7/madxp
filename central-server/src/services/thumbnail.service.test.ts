@@ -432,3 +432,42 @@ describe('ThumbnailService', () => {
     });
   });
 });
+
+/**
+ * Nature de la source passée à ffprobe.
+ *
+ * Le guard `fs.existsSync` d'`extractMetadata` protège contre un fichier local
+ * absent. Appliqué à une URL, il rend la mesure impossible : `existsSync` est
+ * toujours faux sur un `https://…`, l'appelant reçoit `0×0` et le lit comme
+ * « illisible ». C'est ce qui rendait `backfill:video-dimensions` inopérant sur
+ * tout le parc — 39/39 vidéos « illisibles » chez Piraths, alors que ffprobe lit
+ * ces mêmes URLs sans broncher.
+ */
+describe('isRemoteSource', () => {
+  let isRemoteSource: (source: string) => boolean;
+
+  beforeEach(() => {
+    jest.isolateModules(() => {
+      isRemoteSource = require('./thumbnail.service').isRemoteSource;
+    });
+  });
+
+  it('reconnaît une URL FTP publique — le cas du backfill', () => {
+    expect(isRemoteSource('https://kalonpartners.bzh/neopro-video/CALICEO.mp4')).toBe(true);
+    expect(isRemoteSource('http://example.com/a.mp4')).toBe(true);
+    expect(isRemoteSource('HTTPS://EXAMPLE.COM/a.mp4')).toBe(true);
+  });
+
+  it('laisse tout chemin local soumis au guard d’existence', () => {
+    // Ne jamais élargir sans raison : un chemin local absent DOIT rester détecté
+    // tôt, sinon on lance un ffprobe pour rien et on perd le message d'erreur clair.
+    expect(isRemoteSource('/tmp/video.mp4')).toBe(false);
+    expect(isRemoteSource('./relative.mp4')).toBe(false);
+    expect(isRemoteSource('file:///tmp/video.mp4')).toBe(false);
+    expect(isRemoteSource('C:\\videos\\a.mp4')).toBe(false);
+  });
+
+  it('ne se laisse pas abuser par une URL au milieu du chemin', () => {
+    expect(isRemoteSource('/tmp/https://not-a-url.mp4')).toBe(false);
+  });
+});
