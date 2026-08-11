@@ -1,3 +1,9 @@
+# [4.26.0](https://github.com/Tallec7/madxp/compare/v4.25.4...v4.26.0) (2026-08-11)
+
+### Features
+
+- **led:** PROP-015 — détourage des marges avant pliage, sur validation humaine ([#1163](https://github.com/Tallec7/madxp/issues/1163)) ([9c49c94](https://github.com/Tallec7/madxp/commit/9c49c949c575190e9158866e33321e3149e410df))
+
 ## [4.25.4](https://github.com/Tallec7/madxp/compare/v4.25.3...v4.25.4) (2026-08-11)
 
 ### Performance Improvements
