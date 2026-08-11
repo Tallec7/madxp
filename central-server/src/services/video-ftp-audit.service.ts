@@ -160,7 +160,12 @@ class VideoFtpAuditService {
       await alertRepository.create({
         site_id: site.site_id,
         alert_type: MISSING_VIDEO_ALERT_TYPE,
-        severity: 'critical',
+        // `warning` et non `critical` : la diffusion continue (le player saute le
+        // fichier absent), et le parc en accumule déjà 16 au moment du branchement.
+        // Ouvrir avec 4 alertes critiques ferait passer un correctif de fond pour
+        // une panne. À relever si l'incident s'installe — c'est `occurrences` qui
+        // le dira.
+        severity: 'warning',
         message:
           `${site.storage_paths.length} vidéo(s) programmée(s) sont absentes du stockage ` +
           `et ne s'afficheront pas : ${noms}${reste > 0 ? ` (+${reste} autre(s))` : ''}`,

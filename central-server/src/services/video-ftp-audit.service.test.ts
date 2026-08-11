@@ -228,7 +228,10 @@ describe('VideoFtpAuditService.notifyMissingReferencedInProfiles', () => {
       expect.objectContaining({
         site_id: 'site-a',
         alert_type: 'video_missing_on_storage',
-        severity: 'critical',
+        // `warning`, pas `critical` : la diffusion continue, le player saute le
+        // fichier absent. Ouvrir le branchement avec 4 alertes critiques ferait
+        // passer un correctif de fond pour une panne.
+        severity: 'warning',
         metadata: { storage_paths: ['a.mp4', 'b.mp4'], count: 2 },
       }),
     );
