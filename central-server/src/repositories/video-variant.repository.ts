@@ -32,6 +32,17 @@ export interface VideoVariantSideFile {
   height: number | null;
 }
 
+/**
+ * Rectangle de détourage validé par un opérateur (PROP-015), en pixels de la source.
+ * NULL tant que personne n'a validé — le détecteur propose, il n'écrit jamais ici.
+ */
+export interface VideoVariantCrop {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface VideoVariantRow extends QueryResultRow {
   id: string;
   video_id: string;
@@ -56,6 +67,8 @@ export interface VideoVariantRow extends QueryResultRow {
   layout: VariantLayout | null;
   /** Fichiers par côté (LED périmétrique, ADR-135). Vide/NULL = variante uniforme. */
   side_files: VideoVariantSideFile[] | null;
+  /** Détourage validé (PROP-015). NULL = on plie le fichier entier, marges comprises. */
+  crop: VideoVariantCrop | null;
 }
 
 export interface CreateVideoVariantInput {
@@ -98,6 +111,8 @@ export interface VariantByFilenameRow extends QueryResultRow {
   video_id: string;
   /** Entre dans l'empreinte du canvas plié — deux layouts = deux canvas. */
   layout: string | null;
+  /** Détourage validé (PROP-015) — entre lui aussi dans l'empreinte. */
+  crop: VideoVariantCrop | null;
 }
 
 // --------------------------------------------------------------------------
@@ -245,6 +260,29 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     return result.rows[0] || null;
   }
 
+  /**
+   * Enregistre (ou retire, avec `null`) le détourage VALIDÉ d'une variante (PROP-015).
+   *
+   * C'est la seule écriture de `crop` du système : le détecteur `led-autocrop` ne
+   * touche jamais la base. Tant que cette méthode n'a pas été appelée, le pliage
+   * prend le fichier entier — un visuel volontairement sur fond noir n'est donc
+   * jamais rogné dans le dos de son sponsor.
+   */
+  async updateCrop(
+    videoId: string,
+    displayType: DisplayType,
+    crop: VideoVariantCrop | null
+  ): Promise<VideoVariantRow | null> {
+    const result = await query<VideoVariantRow>(
+      `UPDATE video_variants
+       SET crop = $3::jsonb, updated_at = NOW()
+       WHERE video_id = $1 AND display_type = $2
+       RETURNING *`,
+      [videoId, displayType, crop ? JSON.stringify(crop) : null]
+    );
+    return result.rows[0] || null;
+  }
+
   async findStoragePath(
     videoId: string,
     displayType: DisplayType
@@ -337,7 +375,7 @@ class VideoVariantRepositoryImpl extends BaseRepository<VideoVariantRow> {
     if (filenames.length === 0) return [];
     const fnPlaceholders = filenames.map((_, i) => `$${i + 1}`).join(', ');
     let sql = `SELECT vv.filename, vv.display_type, vv.storage_path, vv.width, vv.height, vv.duration,
-               vv.video_id, vv.layout,
+               vv.video_id, vv.layout, vv.crop,
                       v.filename AS source_filename
                FROM video_variants vv
                JOIN videos v ON v.id = vv.video_id

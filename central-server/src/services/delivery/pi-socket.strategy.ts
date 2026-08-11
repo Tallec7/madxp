@@ -58,7 +58,7 @@ class PiSocketStrategy implements DeliveryStrategy {
       height: number | null;
       duration: number | null;
     };
-    let variants: Record<string, VariantEntry> = {};
+    const variants: Record<string, VariantEntry> = {};
     let secondaryVariant: VariantEntry | null = null; // backward compat Pi < PR2
 
     try {

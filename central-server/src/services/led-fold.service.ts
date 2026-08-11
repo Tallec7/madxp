@@ -455,6 +455,12 @@ export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
  *
  * Inclut le `layout` : le même fichier plié en « Centré » et en « Répété » ne
  * donne pas la même image.
+ *
+ * Inclut le `crop` (PROP-015) pour la même raison, et c'est ce qui rend la
+ * validation d'un détourage immédiatement effective : les canvas fabriqués AVANT
+ * la validation ont été pliés sur le fichier entier, marges comprises. Sans le
+ * `crop` dans l'empreinte ils resteraient servis — indéfiniment, puisqu'il n'y a
+ * pas de TTL — et l'opérateur verrait son détourage validé sans effet.
  */
 export function computeFoldedCanvasHash(input: {
   sides: number[];
@@ -465,6 +471,8 @@ export function computeFoldedCanvasHash(input: {
   /** Chemin FTP de la source — un remplacement de vidéo doit invalider. */
   sourcePath: string;
   layout?: string | null;
+  /** Détourage validé, en px de la source. `null`/omis = fichier entier. */
+  crop?: { x: number; y: number; w: number; h: number } | null;
 }): string {
   const payload = [
     input.sides.join(','),
@@ -474,6 +482,7 @@ export function computeFoldedCanvasHash(input: {
     input.order ?? 'top-to-bottom',
     input.sourcePath,
     input.layout ?? 'default',
+    input.crop ? `${input.crop.x},${input.crop.y},${input.crop.w},${input.crop.h}` : 'nocrop',
   ].join('|');
   return createHash('sha256').update(payload).digest('hex').slice(0, 32);
 }
@@ -871,10 +880,23 @@ export function buildFoldExportFfmpegArgs(
 
 // ── 2b. Composition multi-sources par côté (ADR-135, étape 3) ─────────────────
 
+/** Rectangle de détourage appliqué à une source AVANT toute mise à l'échelle (PROP-015). */
+export interface SourceCrop {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** Options de composition par côté : une source par côté (ordre = index de côté). */
 export interface PerSideFoldComposeOptions {
   /** Chemins des sources, un par côté. `inputs[i]` = vidéo du côté `i`. */
   inputs: string[];
+  /**
+   * Détourage VALIDÉ de chaque source (PROP-015), aligné sur `inputs`.
+   * `null`/omis = on plie le fichier entier, marges comprises (comportement d'origine).
+   */
+  crops?: Array<SourceCrop | null>;
   outputPath: string;
   /** Couleur de remplissage (padding dernière bande de chaque côté). Défaut `'black'`. */
   padColor?: string;
@@ -911,13 +933,20 @@ export interface PerSideFoldApplyResult {
  * pointent la même entrée, et le flux décodé est dupliqué par un `split` au lieu
  * d'être re-décodé. Sans ce mapping (défaut : identité) chaque côté est sa propre
  * entrée — c'est-à-dire un décodeur h264 par côté pour UNE seule vidéo.
+ *
+ * `crops[i]`, s'il est fourni, retire les marges de la source AVANT la mise à
+ * l'échelle (PROP-015) — l'ordre compte : détourer après aurait déjà écrasé le
+ * bandeau utile en un trait. Le détourage s'applique APRÈS le `split` ci-dessus,
+ * donc par côté : deux côtés partageant une entrée peuvent avoir des cadrages
+ * distincts sans forcer un second décodage.
  */
 export function buildPerSideFoldFilterGraph(
   geometry: PerSideFoldGeometry,
   padColor = 'black',
   layout: LedExportLayout = 'stretched',
   cellPx?: number,
-  inputIndexBySide?: number[]
+  inputIndexBySide?: number[],
+  crops: Array<SourceCrop | null> = []
 ): string {
   const { segments, ribbonHeight, bandWidth, bandHeight } = geometry;
   const single = segments.length === 1;
@@ -951,6 +980,19 @@ export function buildPerSideFoldFilterGraph(
   for (const seg of segments) {
     const i = seg.sideIndex;
     const blockLabel = single ? '[out]' : `[block${i}]`;
+    // 0) retirer les marges validées de la source, AVANT toute mise à l'échelle.
+    //    Sans cette étape, un fichier 4096×1416 dont le bandeau utile ne fait que
+    //    306 px de haut est ramené entier à la hauteur du ruban : le visuel devient
+    //    un trait dans du noir (PROP-015).
+    //    Part de la source DÉDUPLIQUÉE (`sourceLabelBySide`) et non de `[i:v]` :
+    //    sinon le détourage rouvrirait un décodeur par côté et annulerait le
+    //    partage d'entrée. Label `crop{i}` distinct des `src{n}_{j}` du split.
+    const crop = crops[i] ?? null;
+    let inLabel = sourceLabelBySide.get(i) ?? `[${i}:v]`;
+    if (crop) {
+      parts.push(`${inLabel}crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}[crop${i}]`);
+      inLabel = `[crop${i}]`;
+    }
     // 1) remplir le ruban DE CE CÔTÉ selon la mise en page (pavage réel).
     //    Le motif se répète donc par côté et redémarre à chaque angle, au lieu
     //    d'être pavé sur la somme des côtés puis coupé n'importe où.
@@ -962,7 +1004,7 @@ export function buildPerSideFoldFilterGraph(
         layout,
         cellPx ?? seg.ribbonWidth,
         padColor,
-        sourceLabelBySide.get(i) ?? `[${i}:v]`,
+        inLabel,
         `[rib${i}]`,
         `s${i}_`
       )
@@ -1029,7 +1071,8 @@ export function buildPerSideFoldComposeArgs(
     padColor,
     options.layout ?? 'stretched',
     options.cellPx,
-    inputIndexBySide
+    inputIndexBySide,
+    options.crops ?? []
   );
   const inputArgs = uniqueInputs.flatMap((p) => ['-i', p]);
 
@@ -1071,6 +1114,7 @@ export async function applyPerSideFold(
     sides: geometry.segments.length,
     // = nombre de décodeurs ffmpeg ouverts. Écart avec `sides` = sources partagées.
     decoders: new Set(options.inputs).size,
+    cropped: (options.crops ?? []).filter(Boolean).length,
     bandCount: geometry.bandCount,
     canvasWidth: geometry.canvasWidth,
     canvasHeight: geometry.canvasHeight,

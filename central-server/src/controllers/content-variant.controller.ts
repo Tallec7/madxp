@@ -1,10 +1,20 @@
 import { Response } from 'express';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
 import logger from '../config/logger';
 import { probeVideoDimensions } from '../utils/video-dimensions';
 import { classifyVideoForRibbon, type FitRecommendation } from '../services/led-content-fit.service';
 import { AuthRequest, type DisplayConfig, type LedProfileConfig } from '../types';
 import { videoRepository, videoVariantRepository, siteRepository, videoClubGrantRepository, VARIANT_LAYOUTS, ledExportJobRepository } from '../repositories';
-import type { DisplayType, VariantLayout, VideoVariantSideFile } from '../repositories';
+import type { DisplayType, VariantLayout, VideoVariantSideFile, VideoVariantCrop } from '../repositories';
+import { downloadToFile } from '../utils/download-to-file';
+import {
+  detectCropRect,
+  evaluateCropProposal,
+  isRectWithin,
+  type CropRect,
+} from '../services/led-autocrop.service';
 import { uploadVideo, uploadVideoFromDisk, deleteVideo as deleteStorageVideo, getVideoUrl } from '../services/storage.service';
 import { cleanupTempFile } from '../middleware/upload';
 import { fixMulterEncoding, generateUniqueFilename, calculateChecksum, calculateChecksumFromFile } from './content.helpers';
@@ -419,6 +429,20 @@ async function clubCanUseSourceVideo(
  * Cette vue rapproche donc, pour chaque vidéo : ce que l'agence a livré, ce que le
  * ruban attend, et l'état du canvas fabriqué.
  */
+/**
+ * URL publique d'un chemin de stockage, ou `null` si le stockage n'est pas
+ * configuré. La vue Canvas est un outil de DIAGNOSTIC : une variable d'env
+ * manquante doit lui coûter une vignette, jamais la page entière.
+ */
+function safeVideoUrl(storagePath: string | null): string | null {
+  if (!storagePath) return null;
+  try {
+    return getVideoUrl(storagePath);
+  } catch {
+    return null;
+  }
+}
+
 export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
   try {
     const { siteId } = req.params;
@@ -451,9 +475,17 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
         const source = dimensionsFromVideo(video);
         const job = await ledExportJobRepository.findLatestForVideo(siteId, id, LED_PERIMETER_DISPLAY_TYPE);
 
+        const sourcePath = variant?.storage_path || video.url || null;
+
         return {
           video_id: id,
           filename: video.original_name || video.filename,
+          // Nécessaire à l'aperçu avant/après du détourage (PROP-015) : sans le
+          // fichier source, l'écran ne pourrait montrer que des chiffres.
+          // `safeVideoUrl` : une config de stockage absente ne doit pas faire
+          // tomber toute la vue de diagnostic pour un aperçu manquant.
+          source_url: safeVideoUrl(sourcePath),
+          crop: variant?.crop ?? null,
           // `0` = dimensions jamais mesurées (upload antérieur à la sonde ffprobe),
           // ce qui n'est PAS la même chose qu'un format inadapté : on ne conclut pas.
           source,
@@ -475,6 +507,213 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error building LED canvas overview:', error);
     res.status(500).json({ error: 'Erreur lors de la lecture des canvas LED' });
+  }
+};
+
+/**
+ * Résout le club cible d'une opération LED sur une vidéo, et son profil de ruban.
+ *
+ * Le pliage est PAR CLUB (la taille du ruban dépend du terrain) : la vue Canvas
+ * passe donc explicitement le site consulté. À défaut, le propriétaire de la vidéo.
+ */
+async function resolveLedTarget(
+  req: AuthRequest,
+  video: { uploaded_for_site_id: string | null }
+): Promise<{ siteId: string; expected: { width: number; height: number } } | { error: string }> {
+  const siteId =
+    (typeof req.body?.target_site_id === 'string' ? req.body.target_site_id : null) ||
+    video.uploaded_for_site_id ||
+    null;
+  if (!siteId) {
+    return { error: 'Club cible requis (la taille du ruban dépend du club)' };
+  }
+  if (req.user?.role === 'club' && siteId !== req.user.site_id) {
+    return { error: 'Un club ne peut agir que sur son propre site' };
+  }
+
+  const displays = await siteRepository.getDisplays(siteId);
+  const led = displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led;
+  if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
+    return { error: "Le club cible n'a pas de profil LED périmétrique configuré" };
+  }
+  try {
+    // Cible = la largeur d'entrée réellement utilisée par le pliage, jamais un
+    // calcul refait ici (elle respecte MAX_LED_BAND_WIDTH et un band_width figé).
+    return { siteId, expected: { width: computeSiteCanvas(led).geometry.bandWidth, height: led.height } };
+  } catch {
+    return { error: 'Profil LED incomplet — impossible de déterminer le format du ruban' };
+  }
+}
+
+/**
+ * POST /content/videos/:id/variants/led-perimeter/crop/detect
+ *
+ * Mesure les marges noires d'une variante ruban et rend une **proposition**.
+ *
+ * ## Cet endpoint n'écrit RIEN
+ *
+ * C'est le cœur de PROP-015 : `cropdetect` ne peut pas distinguer un export mal
+ * cadré d'un visuel volontairement posé sur fond noir. Détourer d'office rognerait
+ * un sponsor dont la charte est noire jusqu'à son logo. La mesure est donc rendue
+ * telle quelle, avec son argumentaire, et c'est `PUT …/crop` — un second geste,
+ * humain — qui l'enregistre.
+ *
+ * Sur un 16:9 plein cadre (carton jaune, temps mort), la réponse est
+ * `recommended: false` : il n'y a pas de marge à retirer et la bonne action est
+ * « Retirer » la vidéo du ruban, pas la détourer.
+ */
+export const detectLedVariantCrop = async (req: AuthRequest, res: Response) => {
+  let tmpFile: string | null = null;
+  try {
+    const { id } = req.params;
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+    const ownershipError = clubOwnershipError(req.user, video);
+    if (ownershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
+    }
+
+    const target = await resolveLedTarget(req, video);
+    if ('error' in target) {
+      return res.status(400).json({ error: target.error });
+    }
+
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+    // La source analysée est celle que le pliage consomme : la variante ruban si
+    // elle porte un binaire, sinon le fichier principal de la vidéo.
+    const storagePath = variant?.storage_path || video.url || null;
+    if (!storagePath) {
+      return res.status(400).json({ error: 'Aucun fichier à analyser pour cette vidéo' });
+    }
+
+    tmpFile = path.join(os.tmpdir(), `led-crop-${id}-${Date.now()}.mp4`);
+    await downloadToFile(getVideoUrl(storagePath), tmpFile);
+
+    // On mesure le fichier plutôt que de faire confiance aux dimensions en base :
+    // c'est justement un fichier dont le nom ment sur son format qui a motivé
+    // PROP-015 (`STRASOL_…_1600x120px.mp4` fait 4096×1416).
+    const probed = await probeVideoDimensions(tmpFile);
+    if (!probed) {
+      return res.status(200).json({
+        video_id: id,
+        site_id: target.siteId,
+        target: target.expected,
+        crop: null,
+        recommended: false,
+        reason: 'Impossible de mesurer cette vidéo (fichier illisible) — aucun détourage proposé.',
+      });
+    }
+
+    const detection = await detectCropRect(tmpFile, {
+      durationSec: probed.duration,
+      sourceWidth: probed.width,
+      sourceHeight: probed.height,
+    });
+
+    if (!detection.crop) {
+      return res.status(200).json({
+        video_id: id,
+        site_id: target.siteId,
+        source: { width: probed.width, height: probed.height },
+        target: target.expected,
+        crop: null,
+        recommended: false,
+        reason: 'La détection de marges n’a rien pu mesurer — aucun détourage proposé.',
+        samples: detection.samples,
+      });
+    }
+
+    const proposal = evaluateCropProposal({
+      sourceWidth: probed.width,
+      sourceHeight: probed.height,
+      crop: detection.crop,
+      targetWidth: target.expected.width,
+      targetHeight: target.expected.height,
+    });
+
+    logger.info('led-autocrop: proposition rendue (aucune écriture)', {
+      videoId: id,
+      siteId: target.siteId,
+      recommended: proposal.recommended,
+      crop: `${proposal.crop.w}x${proposal.crop.h}+${proposal.crop.x}+${proposal.crop.y}`,
+    });
+
+    res.json({
+      video_id: id,
+      site_id: target.siteId,
+      current_crop: variant?.crop ?? null,
+      samples: detection.samples,
+      ...proposal,
+    });
+  } catch (error) {
+    logger.error('Error detecting LED variant crop:', error);
+    res.status(500).json({ error: 'Erreur lors de l’analyse des marges' });
+  } finally {
+    if (tmpFile) fs.promises.unlink(tmpFile).catch(() => undefined);
+  }
+};
+
+/**
+ * PUT /content/videos/:id/variants/led-perimeter/crop
+ * Body: `{ crop: { x, y, w, h } | null }`
+ *
+ * Enregistre le détourage **validé par un humain**, ou le retire avec `null`.
+ * C'est la seule écriture de `crop` du système.
+ *
+ * Le rectangle est revérifié contre les dimensions réelles du fichier : un client
+ * qui enverrait un rectangle hors cadre produirait un `crop=` ffmpeg qui fait
+ * échouer tous les pliages de ce club — un refus ici vaut mieux qu'une file de
+ * jobs en échec.
+ */
+export const setLedVariantCrop = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const rawCrop = (req.body as { crop?: CropRect | null }).crop ?? null;
+
+    const video = await videoRepository.findVideoById(id);
+    if (!video) {
+      return res.status(404).json({ error: 'Vidéo non trouvée' });
+    }
+    const ownershipError = clubOwnershipError(req.user, video);
+    if (ownershipError) {
+      return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
+    }
+
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+    if (!variant) {
+      return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
+    }
+
+    if (rawCrop) {
+      const dims = dimensionsFromVideo(video);
+      const srcW = variant.width ?? dims.width;
+      const srcH = variant.height ?? dims.height;
+      if (srcW && srcH && !isRectWithin(rawCrop, srcW, srcH)) {
+        return res.status(400).json({
+          error: `Rectangle hors du cadre de la vidéo (${srcW} × ${srcH})`,
+        });
+      }
+    }
+
+    const updated = await videoVariantRepository.updateCrop(
+      id,
+      LED_PERIMETER_DISPLAY_TYPE,
+      rawCrop as VideoVariantCrop | null
+    );
+
+    logger.info('led-autocrop: détourage validé', { videoId: id, crop: rawCrop });
+
+    // Le canvas plié fabriqué AVANT ce détourage l'ignore : son empreinte
+    // (`computeFoldedCanvasHash`) inclut le `crop`, donc changer celui-ci suffit à
+    // le rendre inatteignable — le prochain déploiement remet la fabrication en
+    // file. Aucune purge à écrire ici.
+    res.json({ ...updated, url: updated?.storage_path ? getVideoUrl(updated.storage_path) : null });
+  } catch (error) {
+    logger.error('Error setting LED variant crop:', error);
+    res.status(500).json({ error: 'Erreur lors de l’enregistrement du détourage' });
   }
 };
 

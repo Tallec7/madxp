@@ -145,9 +145,10 @@ describe('Smoke — invariant : le canvas LED ne dépend pas du contenu', () => 
       const src = read(DEPLOY);
       expect(src).toMatch(/computeFoldedCanvasHash/);
       const fold = read('services/led-fold.service.ts');
-      // L'empreinte couvre géométrie + source + layout : changer la hauteur d'un
-      // ruban doit suffire à périmer tous ses canvas, sans logique d'expiration.
-      for (const k of ['sides', 'height', 'bandWidth', 'sourcePath', 'layout']) {
+      // L'empreinte couvre géométrie + source + layout + détourage : changer la
+      // hauteur d'un ruban, ou valider un détourage (PROP-015), doit suffire à
+      // périmer tous ses canvas, sans logique d'expiration.
+      for (const k of ['sides', 'height', 'bandWidth', 'sourcePath', 'layout', 'crop']) {
         expect(fold.slice(fold.indexOf('computeFoldedCanvasHash'))).toContain(k);
       }
     });

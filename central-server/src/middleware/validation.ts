@@ -217,6 +217,25 @@ export const schemas = {
     layout: Joi.string().valid('repeated', 'scrolling', 'stretched', 'centered').required(),
   }),
 
+  // PROP-015 — analyse des marges d'une variante ruban. Lecture seule : le club
+  // cible sert uniquement à connaître le format visé.
+  ledVariantCropDetect: Joi.object({
+    target_site_id: Joi.string().uuid().optional(),
+  }),
+
+  // PROP-015 — enregistrement du détourage VALIDÉ. `crop: null` le retire.
+  // Aucun défaut : un corps vide ne détoure rien, il ne peut pas en activer un.
+  ledVariantCrop: Joi.object({
+    crop: Joi.object({
+      x: Joi.number().integer().min(0).required(),
+      y: Joi.number().integer().min(0).required(),
+      w: Joi.number().integer().positive().required(),
+      h: Joi.number().integer().positive().required(),
+    })
+      .allow(null)
+      .required(),
+  }),
+
   deployUpdate: Joi.object({
     update_id: Joi.string().uuid().required(),
     target_type: Joi.string().valid('site', 'group').required(),

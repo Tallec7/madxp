@@ -83,7 +83,11 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
     expect(worker).not.toMatch(/computeFoldGeometryPerSide|computeRibbonDimensions/);
 
     // Le contenu ne choisit plus que les SOURCES : side_files[i], sinon l'uniforme.
-    expect(worker).toMatch(/side_index === i\)\?\.storage_path \?\? uniformPath/);
+    // On vérifie les deux termes du choix, pas une formulation exacte — le
+    // détourage (PROP-015) a fait éclater l'expression en deux lignes sans rien
+    // changer au contrat, et un smoke qui recopie le code casse à chaque refacto.
+    expect(worker).toMatch(/side_index === i/);
+    expect(worker).toMatch(/\?\? uniformPath/);
   });
 
   it('un band_count figé qui ne correspond plus au dérivé est SIGNALÉ, pas écrasé', () => {

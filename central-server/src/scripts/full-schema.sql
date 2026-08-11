@@ -3188,6 +3188,7 @@ CREATE TABLE public.video_variants (
     updated_at timestamp with time zone DEFAULT now(),
     layout character varying(16),
     side_files jsonb,
+    crop jsonb,
     CONSTRAINT video_variants_display_type_check CHECK ((((display_type)::text ~ '^[a-z0-9-]+$'::text) AND ((length((display_type)::text) >= 1) AND (length((display_type)::text) <= 20))))
 );
 

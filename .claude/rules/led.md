@@ -101,6 +101,26 @@ ce qui est gravé dans le processeur.
   Derrière PgBouncer en mode transaction (`DATABASE_URL` sur `:6543`), une session Node ne
   garde pas la même connexion serveur d'une requête à l'autre : le verrou serait pris sur
   un backend et relâché sur un autre — inopérant **en silence**.
+- **Détourer une vidéo sans validation humaine** (ADR-140). `cropdetect` ne distingue pas
+  un export mal cadré d'un visuel volontairement sur fond noir : détourer d'office
+  rogne un sponsor à charte noire jusqu'à son logo. `POST …/crop/detect` PROPOSE et
+  n'écrit rien (le service `led-autocrop` ne connaît pas les repositories) ;
+  `videoVariantRepository.updateCrop` n'a qu'un seul appelant, `PUT …/crop`. Ne jamais
+  brancher la détection sur l'upload, ni donner un défaut à `crop`.
+- **Mesurer sur une seule frame, ou prendre l'INTERSECTION des frames.** Un fondu au noir
+  dicterait alors le rectangle et couperait le contenu des autres frames — le canvas
+  changerait sans que rien n'ait changé (interdit par ADR-138). On prend l'**union**
+  (`unionRects`) : sous-détourer est l'erreur acceptable, rogner ne l'est pas.
+- **Retirer le `crop` de `computeFoldedCanvasHash`.** Les canvas fabriqués AVANT une
+  validation ont été pliés sur le fichier entier, marges comprises. Sans le `crop` dans
+  l'empreinte ils resteraient servis indéfiniment (pas de TTL) et la validation de
+  l'opérateur n'aurait aucun effet visible sur le ruban.
+- **Appliquer le `crop` APRÈS la mise à l'échelle** dans `buildPerSideFoldFilterGraph`.
+  L'ordre est tout le problème : à ce stade le bandeau utile est déjà écrasé en un trait.
+- **Proposer un détourage sur un 16:9 plein cadre** (carton jaune, temps mort). Il n'y a
+  pas de marge à retirer, et suggérer une solution est pire que rien — la bonne réponse
+  est le bouton « Retirer » de la vue Canvas. Gardé par `MIN_MARGIN_FRACTION` et
+  `RATIO_TOLERANCE` dans `evaluateCropProposal`.
 
 ## État du parc (vérifié en DB prod le 2026-08-10)
 
@@ -157,7 +177,9 @@ contrat d'entrée réel des processeurs, pas seulement de le supposer.
 ## Référence
 
 - [ADR-139](../../docs/adr/ADR-139-led-serve-folded-canvas.md) — étape D derrière `serve_folded`
+- [ADR-140](../../docs/adr/ADR-140-led-autocrop-on-validation.md) — détourage des marges sur validation
 - Smoke : `central-server/src/__tests__/smoke/smoke-led-canvas-invariant.test.ts`
+- Smoke détourage : `central-server/src/__tests__/smoke/smoke-led-autocrop.test.ts`
 - Concurrence du pliage : `central-server/src/repositories/led-export-job.repository.test.ts`
   (comportement) + `smoke-led-export-async.test.ts` (garde-fou fichier)
 - Tests étape D : `central-server/src/utils/__tests__/config-secondary-variants-folded.test.ts`
