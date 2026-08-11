@@ -96,11 +96,23 @@ travail manuel de pliage/ré-upload que l'étape D supprime.
 dans la config à la place du fichier brut. S'il s'affiche sur les 4 panneaux, le mode B
 et la géométrie 1600×640 sont confirmés définitivement.
 
-**L'activation est un geste terrain, pas une décision de bureau.** Le préalable reste
-la mire sur le club concerné. Le cas de Lanester le montre : son `canvas_in.band_count`
-est figé à 1 par un installateur alors que le dérivé par côté vaut 2. Allumer
-`serve_folded` sans re-confirmer doublerait la hauteur du signal (110 → 220 px) face à
-un processeur gravé pour 110.
+**Le contrat d'entrée est connu (2026-08-11), sans mire.** Un player concurrent —
+**B2B Alive** — tourne sur le matériel de Piraths et affiche correctement. C'est une
+preuve plus forte qu'une mire : ce n'est pas une grille à interpréter, c'est le
+résultat attendu, produit par un tiers, sur le même processeur. Cible relevée :
+canvas **1600 × 480** (4 bandes de 120 px, soit 75 cm de dalle à P6.25 — et non 160),
+signal rendu **1:1 ancré en haut à gauche**, le reste en noir.
+
+Ce dernier point était invisible dans le modèle : notre player appliquait
+`object-fit: contain`, qui met à l'échelle et centre. Un processeur découpant une
+région fixe en pixels ne recevait donc rien d'exploitable, alors que la vidéo
+paraissait parfaite dans le navigateur — un seul panneau s'allumait sur quatre.
+Corrigé par la classe `tv--pixel-exact` (PR #1144).
+
+La question résiduelle n'est plus matérielle : elle est de savoir si notre pipeline
+produit le même canvas que B2B, ce qui se compare entre deux navigateurs.
+
+**L'activation reste un geste par club.**
 
 **Le garde-fou change de nature.** `smoke-led-canvas-invariant` interdisait au chemin
 de déploiement d'importer le moteur de pliage — cette assertion devient fausse par

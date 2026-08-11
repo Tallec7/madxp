@@ -71,15 +71,24 @@ donnent 4 bandes, canvas 1920×640.
 Le SPIKE-003 matériel n'a pas avancé (matériel non commandé), mais il est **remplacé par
 la mire** (`npm run led:mire`) : une grille diffusée sur le ruban d'un club installé +
 une photo suffisent à lire le contrat d'entrée réel du processeur, sans rien acheter.
-**Aucun des deux sites n'a `serve_folded` activé — mais Piraths devrait l'avoir.**
-Observation du 2026-08-11 : le contenu ne s'affiche que sur 1 des 4 panneaux, cinq versions
-**pliées à la main** traînent en DB (`*-SIEHR-PLIE-*`), et le nom du dernier essai
-(`5-SIEHR-PLIE-100cm-1600x640`) reproduit exactement la géométrie dérivée du terrain
-(1600 px/côté × 4 bandes de 160 px). Le processeur y attend donc un **canvas plié (mode B)**.
-Deux défauts de config à corriger AVANT d'activer : `canvas_in.band_width` vaut 1920 alors
-qu'un côté fait **1600** px (320 px de padding parasite par bande), et le site porte **deux
-écrans `led-perimeter`** aux `canvas_in` contradictoires (index 0 mode A `band_count: 4`,
-index 2 mode B). Pour **Lanester**, rien n'est encore observé.
+**Le contrat d'entrée des processeurs est CONNU depuis le 2026-08-11.** Pas par une
+mire : par un player concurrent (**B2B Alive**) qui tourne sur le matériel de Piraths
+et affiche correctement. Il donne la cible sans ambiguïté :
+
+| Ce que le processeur attend | Valeur observée chez Piraths |
+| --------------------------- | ---------------------------- |
+| Canvas plié                 | **1600 × 480** (4 bandes de 120) |
+| Largeur d'entrée            | **1600** = un côté (10 m à P6.25) |
+| Hauteur de dalle            | **120 px** = 75 cm, PAS 160 |
+| Placement du signal         | **1:1, ancré en haut à gauche**, le reste en noir |
+
+C'est le mode **B** : le processeur ne déplie pas, il attend un canvas déjà plié. La
+question n'est donc plus « qu'attend le matériel » mais « produit-on la même chose que
+B2B » — ce qui se compare entre deux navigateurs, sans hardware.
+
+**Piraths peut être activé** (`serve_folded`) dès que sa config décrit 1600 × 120 par
+côté. **Lanester reste non observé** : son `band_count` figé à 1 diverge du dérivé (2),
+ne pas l'activer sans une observation équivalente.
 
 ## Quand ce garde-fou doit être révisé
 
