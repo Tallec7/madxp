@@ -113,6 +113,14 @@ export interface FoldApplyResult {
 
 // ── Validation Joi ───────────────────────────────────────────────────────────
 
+/**
+ * Borne physique de l'entrée processeur (px). Un Novastar/Colorlight n'accepte pas
+ * un signal plus large ; au-delà, le côté doit être découpé en plusieurs bandes —
+ * c'est le rôle du pliage. Sert de plafond au dérivé et de dernier recours quand le
+ * terrain n'est pas encore saisi.
+ */
+export const MAX_LED_BAND_WIDTH = 1920;
+
 const positiveInt = Joi.number().integer().positive().required();
 
 const foldGeometrySchema = Joi.object<FoldGeometryInput>({
@@ -409,9 +417,11 @@ export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
   // du plus long côté — puisque le pliage met chaque côté dans son bloc de bandes.
   // 1920 en dur était un pari sur « une sortie HDMI standard » : chez Piraths
   // (10 m en P6.25 → 1600 px/côté), il ajoutait 320 px de noir par bande et décalait
-  // tout face à un processeur gravé pour 1600.
+  // tout face à un processeur gravé pour 1600. Plafonné, car au-delà aucun processeur
+  // n'accepte le signal — le pliage prend alors le relais et découpe le côté.
   const bandWidth =
-    profile.canvas_in?.band_width ?? Math.round(Math.max(...profile.sides) * (1000 / pitchMm));
+    profile.canvas_in?.band_width ??
+    Math.min(MAX_LED_BAND_WIDTH, Math.round(Math.max(...profile.sides) * (1000 / pitchMm)));
   const geometry = computeFoldGeometryPerSide({
     sides: profile.sides,
     pitchMm,

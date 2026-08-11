@@ -213,6 +213,13 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
             <small class="led-subhint" data-testid="led-perimeter"
               >Périmètre : {{ getLedPerimeterM(display) }} m</small
             >
+            <!-- La résolution PAR BLOC en pixels : c'est le chiffre que donnent les
+                 installateurs et les régies (« 1600×120 »), alors qu'on saisit des
+                 mètres. Sans lui, impossible de vérifier d'un coup d'œil que la
+                 géométrie décrit bien le matériel posé. -->
+            <small class="led-subhint" data-testid="led-side-resolution"
+              >Chaque côté : {{ getLedSideResolutions(display) }} px</small
+            >
           </div>
 
           <!-- Pitch : menu de pas courants + saisie libre (datalist). -->
@@ -1593,6 +1600,24 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (!display.led?.canvas_in) return;
     display.led.canvas_in.serve_folded = on;
     this.commitLed(display);
+  }
+
+  /**
+   * Résolution de chaque bloc en pixels — ex. `1600 × 120`, ou
+   * `1600 × 120, 960 × 120` si les côtés diffèrent.
+   *
+   * On saisit des mètres et un pitch parce que c'est ce qui décrit la réalité
+   * physique, mais installateurs et régies parlent en pixels. Sans ce rappel,
+   * impossible de vérifier que la géométrie décrit bien le matériel posé — et
+   * l'écart ne se voit qu'un soir de match.
+   */
+  getLedSideResolutions(display: DisplayConfig): string {
+    const led = display.led;
+    const mm = ledPitchMm(led?.pitch);
+    const h = led?.height ?? 0;
+    if (mm === 0 || h <= 0 || !led?.sides?.length) return '—';
+    const uniques = [...new Set(led.sides.map((m) => Math.round(m * (1000 / mm))))];
+    return uniques.map((w) => `${w} × ${h}`).join(', ');
   }
 
   /** Largeur d'entrée dérivée (px) — le plus long côté. Exposé au template. */

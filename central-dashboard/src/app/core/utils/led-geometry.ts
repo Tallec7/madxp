@@ -24,13 +24,18 @@ export const DEFAULT_LED_BAND_WIDTH = 1920;
  * les côtés ne font pas 1920 px. Chez Piraths (10 m en P6.25 → 1600 px/côté), il
  * ajoutait 320 px de noir à chaque bande et décalait tout face à un processeur gravé
  * pour 1600 — le canvas plié fabriqué à la main sur place fait bien 1600×640.
+ *
+ * PLAFONNÉ : au-delà de 1920, aucun processeur n'accepte le signal. Une salle de 40 m
+ * en P6 donne un côté de 6667 px — il faut alors le découper en plusieurs bandes,
+ * c'est précisément le rôle du pliage. Le plafond n'est pas un pis-aller : c'est la
+ * borne physique de l'entrée, et le dérivé ne s'applique qu'en deçà.
  */
 export function ledDerivedBandWidth(led: LedProfileConfig | null | undefined): number {
   if (!led) return DEFAULT_LED_BAND_WIDTH;
   const mm = ledPitchMm(led.pitch);
   const longest = Math.max(0, ...(led.sides ?? []));
   if (mm === 0 || longest <= 0) return DEFAULT_LED_BAND_WIDTH;
-  return Math.round(longest * (1000 / mm));
+  return Math.min(Math.round(longest * (1000 / mm)), DEFAULT_LED_BAND_WIDTH);
 }
 
 /** Pas de pixel en mm depuis le libellé (`'P6'` → 6). `0` si illisible. */

@@ -477,7 +477,11 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     const d = component.displays[0];
     expect(d.led).toBeTruthy();
     expect(d.led!.pitch).toBe('P6');
-    expect(d.led!.canvas_in?.band_width).toBe(1920);
+    // `band_width` n'est plus figé à la création : il se DÉRIVE du plus long côté,
+    // plafonné à la borne physique de l'entrée processeur. Le profil par défaut
+    // (un côté de 40 m en P6 = 6667 px) dépasse le plafond → 1920, plusieurs bandes.
+    expect(d.led!.canvas_in?.band_width).toBeUndefined();
+    expect(component.getLedDerivedBandWidth(d)).toBe(1920);
     expect(d.led!.canvas_in?.mode).toBe('B');
   });
 
@@ -846,6 +850,38 @@ describe('DisplaysEditorComponent — Refonte panneau LED', () => {
     expect(component.getLedCanvasHeight(d)).toBe(1120); // 7 × 160
     component.updateBandCount(d, '8');
     expect(component.getLedCanvasHeight(d)).toBe(1280); // 8 × 160
+  });
+
+  it('la largeur d’entrée se dérive du plus long côté quand il tient dans la borne', () => {
+    // Piraths : 4 côtés de 10 m en P6.25 → 1600 px/côté. Le canvas plié fabriqué à
+    // la main sur place fait 1600×480, pas 1920×480 — 1920 en dur ajoutait 320 px de
+    // noir par bande et décalait tout face à un processeur gravé pour 1600.
+    const d = { index: 1, name: 'LED', type: 'led-perimeter',
+      led: { sides: [10, 10, 10, 10], pitch: 'P6.25', height: 120, spacing_m: 5 } } as DisplayConfig;
+    expect(component.getLedDerivedBandWidth(d)).toBe(1600);
+  });
+
+  it('un côté trop long est plafonné (aucun processeur n’accepte plus large)', () => {
+    const d = { index: 1, name: 'LED', type: 'led-perimeter',
+      led: { sides: [40], pitch: 'P6', height: 160, spacing_m: 10 } } as DisplayConfig;
+    // 40 m en P6 = 6667 px : on plafonne, et le pliage découpe le côté en bandes.
+    expect(component.getLedDerivedBandWidth(d)).toBe(1920);
+  });
+
+  it('la résolution PAR BLOC est affichée en pixels (le langage des installateurs)', () => {
+    component.displays = [{ index: 1, name: 'LED', type: 'led-perimeter',
+      led: { sides: [10, 10, 10, 10], pitch: 'P6.25', height: 120, spacing_m: 5 } } as DisplayConfig];
+    fixture.detectChanges();
+    // On saisit des mètres ; installateurs et régies parlent en pixels. Sans ce
+    // rappel, l'écart entre la config et le matériel posé ne se voit qu'en match.
+    const el = fixture.nativeElement.querySelector('[data-testid="led-side-resolution"]');
+    expect(el?.textContent).toContain('1600 × 120');
+  });
+
+  it('des côtés inégaux listent chaque résolution, sans doublon', () => {
+    const d = { index: 1, name: 'LED', type: 'led-perimeter',
+      led: { sides: [10, 6, 10, 6], pitch: 'P6.25', height: 120, spacing_m: 5 } } as DisplayConfig;
+    expect(component.getLedSideResolutions(d)).toBe('1600 × 120, 960 × 120');
   });
 
   it('Entrée processeur = band_width × canvas height', () => {
