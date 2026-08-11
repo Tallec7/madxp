@@ -1,3 +1,9 @@
+## [4.27.2](https://github.com/Tallec7/madxp/compare/v4.27.1...v4.27.2) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** rattrapage des 2 commits perdus au merge de [#1160](https://github.com/Tallec7/madxp/issues/1160) ([#1167](https://github.com/Tallec7/madxp/issues/1167)) ([eeb54df](https://github.com/Tallec7/madxp/commit/eeb54dfe3c500dc42e677ff778be041ea7f4794b)), closes [#1156](https://github.com/Tallec7/madxp/issues/1156)
+
 ## [4.27.1](https://github.com/Tallec7/madxp/compare/v4.27.0...v4.27.1) (2026-08-11)
 
 ### Bug Fixes
