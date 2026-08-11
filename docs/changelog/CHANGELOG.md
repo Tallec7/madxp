@@ -1,3 +1,9 @@
+# [4.21.0](https://github.com/Tallec7/madxp/compare/v4.20.0...v4.21.0) (2026-08-11)
+
+### Features
+
+- **led:** servir le canvas plié derrière un interrupteur par site (ADR-139) ([#1143](https://github.com/Tallec7/madxp/issues/1143)) ([520588b](https://github.com/Tallec7/madxp/commit/520588b60392e734e34855a3f4e786e67017cf02))
+
 # [4.20.0](https://github.com/Tallec7/madxp/compare/v4.19.0...v4.20.0) (2026-08-10)
 
 ### Features
