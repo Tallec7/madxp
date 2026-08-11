@@ -16,7 +16,6 @@ let httpServer: import('http').Server;
 
 describe('GET /api/sites/:id/connected-receivers', () => {
   beforeAll(async () => {
-    process.env.PORT = '3098';
     const mod = await import('../server');
     app = mod.app;
     httpServer = mod.httpServer;

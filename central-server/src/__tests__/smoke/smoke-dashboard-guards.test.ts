@@ -136,7 +136,6 @@ const advertiserToken = generateToken({
 const advertiserAuthHeader = { Authorization: `Bearer ${advertiserToken}` };
 
 beforeAll(async () => {
-  process.env.PORT = '3107';
   const server = await import('../../server');
   app = server.app;
   httpServer = server.httpServer;

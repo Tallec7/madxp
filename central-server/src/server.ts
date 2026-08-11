@@ -128,8 +128,25 @@ logger.info('CORS configuration', {
 const app = express();
 const httpServer = http.createServer(app);
 
-const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/**
+ * Port d'écoute — **éphémère (0) sous test**, laissé à l'OS.
+ *
+ * Importer ce module démarre un vrai serveur (`startServer()` en fin de fichier),
+ * et 15 suites de tests l'importent pour récupérer `app`. Chacune s'était donc vu
+ * attribuer un port à la main (3096→3109) « pour éviter les conflits » — un
+ * registre tenu par des humains, qui comptait déjà DEUX doublons (3098 et 3099).
+ * Comme Jest répartit les suites sur des process parallèles, deux d'entre elles
+ * pouvaient écouter le même port en même temps : `EADDRINUSE`, puis « Server is
+ * not running. » en cascade quand le `afterAll` fermait un serveur jamais ouvert.
+ *
+ * Un échec au hasard, sur une suite étrangère au changement testé — le pire
+ * signal possible en CI. Le port 0 supprime la classe entière de bugs : l'OS
+ * garantit l'unicité, il n'y a plus de registre à tenir. `supertest(app)` monte
+ * de toute façon son propre listener, donc aucun test ne dépend de ce port.
+ */
+const PORT = NODE_ENV === 'test' ? 0 : process.env.PORT || 3001;
 
 // Trust proxy pour fonctionner derrière un reverse proxy (Render, etc.)
 // Nécessaire pour express-rate-limit et pour obtenir la vraie IP client

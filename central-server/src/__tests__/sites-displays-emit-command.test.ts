@@ -39,7 +39,6 @@ const adminToken = generateToken({ id: 'user-1', email: 'admin@test.com', role: 
 
 describe('PATCH /api/sites/:id/displays — receiver_assignment_updated emit (CLOUD-02)', () => {
   beforeAll(async () => {
-    process.env.PORT = '3096';
     const mod = await import('../server');
     app = mod.app;
     httpServer = mod.httpServer;
