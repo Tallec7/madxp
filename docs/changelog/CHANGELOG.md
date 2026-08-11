@@ -1,3 +1,9 @@
+## [4.25.3](https://github.com/Tallec7/madxp/compare/v4.25.2...v4.25.3) (2026-08-11)
+
+### Bug Fixes
+
+- **scripts:** outillage LED exécutable — ts-node + retry ffprobe contre les 404 par edge du CDN ([#1161](https://github.com/Tallec7/madxp/issues/1161)) ([d59939d](https://github.com/Tallec7/madxp/commit/d59939de24f0b9d1d1f7c0eaa7052c6c6a09e57d)), closes [#1156](https://github.com/Tallec7/madxp/issues/1156)
+
 ## [4.25.2](https://github.com/Tallec7/madxp/compare/v4.25.1...v4.25.2) (2026-08-11)
 
 ### Bug Fixes
