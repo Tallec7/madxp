@@ -35,6 +35,7 @@ import {
   buildFoldExportFfmpegArgs,
   ledFoldService,
   type FoldGeometry,
+  computeSiteCanvas,
 } from './led-fold.service';
 
 describe('led-fold.service — géométrie pure', () => {
@@ -614,6 +615,36 @@ describe('led-fold.service — export (scale→pad→fold)', () => {
       expect(fc).toContain('scale=13334:160');
       expect(fc).toContain('vstack=inputs=7');
     });
+  });
+});
+
+describe('computeSiteCanvas — la largeur d’entrée se dérive du terrain', () => {
+  it('sans valeur figée, le canvas fait la largeur du plus long côté', () => {
+    // Piraths : 4 côtés de 10 m en P6.25 → 1600 px/côté. Le canvas plié
+    // fabriqué à la main sur place fait 1600×640, pas 1920×640.
+    const canvas = computeSiteCanvas({ sides: [10, 10, 10, 10], pitch: 'P6.25', height: 160 });
+    expect(canvas.canvasWidth).toBe(1600);
+    expect(canvas.derivedBandCount).toBe(4);
+    expect(canvas.canvasHeight).toBe(640);
+  });
+
+  it('des côtés inégaux se calent sur le plus long (aucun côté n’est coupé)', () => {
+    const canvas = computeSiteCanvas({ sides: [10, 6, 10, 6], pitch: 'P6.25', height: 160 });
+    expect(canvas.canvasWidth).toBe(1600);
+    // Chaque côté tient dans une bande, y compris les courts (padding à droite).
+    expect(canvas.derivedBandCount).toBe(4);
+  });
+
+  it('une largeur relevée à l’installation prime sur le dérivé', () => {
+    // Elle décrit ce qui est gravé dans le processeur — la corriger en douce
+    // ferait diverger le canvas émis de la config matérielle réelle.
+    const canvas = computeSiteCanvas({
+      sides: [10, 10, 10, 10],
+      pitch: 'P6.25',
+      height: 160,
+      canvas_in: { band_width: 1920 },
+    });
+    expect(canvas.canvasWidth).toBe(1920);
   });
 });
 

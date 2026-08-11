@@ -168,7 +168,9 @@ export const schemas = {
           // Le « contenu par côté » vit sur la variante d'une vidéo (révision ADR-135).
           // ⏳ Config processeur LED — lue à l'install (SPIKE), défauts provisoires.
           canvas_in: Joi.object({
-            band_width: Joi.number().integer().positive().max(7680).default(1920),
+            // PAS de défaut : 1920 se réinjectait à chaque sauvegarde et écrasait le
+            // dérivé du terrain. Absent = « dérive-le du plus long côté ».
+            band_width: Joi.number().integer().positive().max(7680).optional(),
             band_count: Joi.number().integer().positive().max(64).optional(), // dérivé
             order: Joi.string().valid('top-to-bottom', 'bottom-to-top').default('top-to-bottom'),
             mode: Joi.string().valid('A', 'B').default('B'),

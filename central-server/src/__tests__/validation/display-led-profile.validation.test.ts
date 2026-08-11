@@ -30,7 +30,7 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
     expect(value.displays[0].led.pitch).toBe('P6');
   });
 
-  it('applique les défauts provisoires de canvas_in (SPIKE-free)', () => {
+  it('ne force PAS de largeur d’entrée — elle se dérive du terrain', () => {
     const { value } = wrap({
       index: 1,
       name: 'LED',
@@ -38,9 +38,24 @@ describe('schemas.updateDisplays — profil LED (PROP-014)', () => {
       led: { ...ledMinimal, canvas_in: {} },
     });
     const canvas = value.displays[0].led.canvas_in;
-    expect(canvas.band_width).toBe(1920);
+    // `band_width` valait 1920 par défaut, ce qui le RÉINJECTAIT à chaque
+    // sauvegarde et écrasait silencieusement le dérivé. Chez un club dont les
+    // côtés ne font pas 1920 px (Piraths : 1600), ça ajoutait 320 px de noir par
+    // bande, sans aucun moyen de le corriger depuis le dashboard.
+    expect(canvas.band_width).toBeUndefined();
     expect(canvas.order).toBe('top-to-bottom');
     expect(canvas.mode).toBe('B');
+  });
+
+  it('conserve une largeur d’entrée relevée à l’installation', () => {
+    const { value } = wrap({
+      index: 1,
+      name: 'LED',
+      type: 'led-perimeter',
+      led: { ...ledMinimal, canvas_in: { band_width: 1600 } },
+    });
+    // La valeur figée décrit ce qui est gravé dans le processeur : elle prime.
+    expect(value.displays[0].led.canvas_in.band_width).toBe(1600);
   });
 
   it('accepte un canvas_in complet rempli post-SPIKE', () => {

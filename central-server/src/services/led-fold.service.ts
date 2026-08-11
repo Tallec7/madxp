@@ -405,7 +405,13 @@ export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
     throw new Error(`computeSiteCanvas: pitch illisible — ${String(profile.pitch)}`);
   }
 
-  const bandWidth = profile.canvas_in?.band_width ?? 1920;
+  // Largeur d'entrée : figée à l'install si l'installateur l'a relevée, sinon DÉRIVÉE
+  // du plus long côté — puisque le pliage met chaque côté dans son bloc de bandes.
+  // 1920 en dur était un pari sur « une sortie HDMI standard » : chez Piraths
+  // (10 m en P6.25 → 1600 px/côté), il ajoutait 320 px de noir par bande et décalait
+  // tout face à un processeur gravé pour 1600.
+  const bandWidth =
+    profile.canvas_in?.band_width ?? Math.round(Math.max(...profile.sides) * (1000 / pitchMm));
   const geometry = computeFoldGeometryPerSide({
     sides: profile.sides,
     pitchMm,

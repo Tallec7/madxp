@@ -184,7 +184,7 @@ export interface ReceiverConfig {
  * matériel (SPIKE-003). `order` réutilise l'enum du module fold() côté serveur.
  */
 export interface LedCanvasInConfig {
-  band_width: number;            // largeur d'entrée processeur (px), défaut 1920
+  band_width?: number;           // largeur d'entrée processeur (px) — absent = dérivé du plus long côté
   band_count?: number;           // nb de bandes — dérivé (ribbonWidth / band_width)
   order: 'top-to-bottom' | 'bottom-to-top';
   mode: 'A' | 'B';               // A = plug & play, B = pixel-perfect (PROP-014 §10)

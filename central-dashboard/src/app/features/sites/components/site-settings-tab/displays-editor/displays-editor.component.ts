@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DisplayConfig, ReceiverConfig, ReceiverInfo, LedProfileConfig } from '../../../../../core/models';
-import { ledPitchMm, ledRibbonWidth, ledBandWidth } from '../../../../../core/utils/led-geometry';
+import { ledPitchMm, ledRibbonWidth, ledBandWidth, ledDerivedBandWidth } from '../../../../../core/utils/led-geometry';
 import { environment } from '../../../../../../environments/environment';
 
 interface DisplayTemplate {
@@ -291,6 +291,22 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
               >
               <em class="led-adv-note">ruban déroulé {{ getLedRibbonWidth(display) }}×{{ display.led!.height }}</em>
             </div>
+            <label class="led-adv-item">
+              <span>Largeur d'entrée</span>
+              <input
+                #bandWidthInput
+                class="form-input led-adv-input-sm"
+                type="number"
+                min="1"
+                data-testid="led-adv-band-width"
+                [ngModel]="display.led!.canvas_in?.band_width ?? null"
+                (change)="updateBandWidth(display, bandWidthInput.value)"
+                [attr.placeholder]="getLedDerivedBandWidth(display)"
+              />
+              <em class="led-adv-note"
+                >vide = dérivé du plus long côté ({{ getLedDerivedBandWidth(display) }} px)</em
+              >
+            </label>
             <label class="led-adv-item">
               <span>Bandes</span>
               <input
@@ -1463,7 +1479,7 @@ export class DisplaysEditorComponent implements OnDestroy {
       pitch: 'P6',
       height: 160,
       spacing_m: 10,
-      canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' },
+      canvas_in: { order: 'top-to-bottom', mode: 'B' },
     };
   }
 
@@ -1473,7 +1489,7 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (display.led) {
       // Complète canvas_in si absent (rétro-compat profils partiels).
       if (!display.led.canvas_in) {
-        return { ...display, led: { ...display.led, canvas_in: { band_width: 1920, order: 'top-to-bottom', mode: 'B' } } };
+        return { ...display, led: { ...display.led, canvas_in: { order: 'top-to-bottom', mode: 'B' } } };
       }
       return display;
     }
@@ -1576,6 +1592,25 @@ export class DisplaysEditorComponent implements OnDestroy {
   updateServeFolded(display: DisplayConfig, on: boolean): void {
     if (!display.led?.canvas_in) return;
     display.led.canvas_in.serve_folded = on;
+    this.commitLed(display);
+  }
+
+  /** Largeur d'entrée dérivée (px) — le plus long côté. Exposé au template. */
+  getLedDerivedBandWidth(display: DisplayConfig): number {
+    return ledDerivedBandWidth(display.led);
+  }
+
+  /**
+   * Largeur d'entrée du processeur : vide → repasse sur le dérivé du terrain.
+   *
+   * Ce champ n'existait pas et valait 1920 en dur pour toute la flotte. Un club dont
+   * les côtés ne font pas 1920 px se retrouvait avec du padding dans chaque bande,
+   * sans aucun moyen de le corriger depuis le dashboard.
+   */
+  updateBandWidth(display: DisplayConfig, raw: string): void {
+    if (!display.led?.canvas_in) return;
+    const v = parseInt(String(raw).trim(), 10);
+    display.led.canvas_in.band_width = Number.isFinite(v) && v > 0 ? v : undefined;
     this.commitLed(display);
   }
 
