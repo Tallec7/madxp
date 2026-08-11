@@ -1,3 +1,9 @@
+## [4.21.1](https://github.com/Tallec7/madxp/compare/v4.21.0...v4.21.1) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** rendre au pixel sur un écran lu par un processeur (pas à l'échelle) ([#1144](https://github.com/Tallec7/madxp/issues/1144)) ([9bbccaf](https://github.com/Tallec7/madxp/commit/9bbccaf085fc66ebe20a6ce5d34d2d798c0dcd49))
+
 # [4.21.0](https://github.com/Tallec7/madxp/compare/v4.20.0...v4.21.0) (2026-08-11)
 
 ### Features
