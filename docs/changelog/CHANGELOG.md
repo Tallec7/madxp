@@ -1,3 +1,9 @@
+## [4.22.4](https://github.com/Tallec7/madxp/compare/v4.22.3...v4.22.4) (2026-08-11)
+
+### Bug Fixes
+
+- **led:** servir le canvas plié en chemin relatif — l'URL était doublée ([#1153](https://github.com/Tallec7/madxp/issues/1153)) ([fc3cf42](https://github.com/Tallec7/madxp/commit/fc3cf4202627185094a6ba9c8a31997c61f2d3ba))
+
 ## [4.22.3](https://github.com/Tallec7/madxp/compare/v4.22.2...v4.22.3) (2026-08-11)
 
 ### Bug Fixes
