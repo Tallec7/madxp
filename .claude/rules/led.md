@@ -58,6 +58,25 @@ ce qui est gravé dans le processeur.
   ni `filename` ; l'injecter produit un chemin `videos-led-perimeter/null` → MP4 noir.
 - **Composer un canvas (`applyPerSideFold` / `computeFoldGeometryPerSide`) ailleurs que dans
   `led-export-worker.service.ts`** et les scripts CLI/POC. La fabrication a un seul endroit.
+- **Retirer le verrou consultatif (`pg_try_advisory_xact_lock`) ou le comptage des jobs
+  `processing` de `ledExportJobRepository.claimNextQueued()`**, ni relever
+  `LED_EXPORT_MAX_CONCURRENCY` sans mesure. Un pliage ouvre **un décodeur ffmpeg par côté**
+  du ruban (4 chez Piraths) : quelques jobs concurrents suffisent à faire échouer les
+  décodeurs sur un conteneur Railway — « Error while opening decoder : Resource temporarily
+  unavailable », **24 pliages perdus sur 52 le 2026-08-11**. `FOR UPDATE SKIP LOCKED` ne
+  protège que du double-claim d'un **même** job, pas de deux jobs différents en parallèle ;
+  et la garde `let ticking = false` du worker ne vit que dans **un** process, donc elle ne
+  survit pas à un scale-up de replicas. **Le seul plafond qui traverse les processus est
+  celui en DB.**
+- **Retirer `touchProcessing()` ou son `setInterval` dans le worker.** Le seuil d'orphelin
+  (`LED_EXPORT_STALE_PROCESSING_MIN`, 15 min) est réévalué à chaque claim : sans battement
+  de cœur, un pliage plus long que le seuil serait remis en file et relancé par un autre
+  worker **pendant** qu'il tourne — la concurrence ffmpeg reviendrait par la porte de
+  derrière, et le garde-fou fabriquerait le bug qu'il prévient.
+- **Remplacer `pg_try_advisory_xact_lock` par `pg_advisory_lock` (verrou de session).**
+  Derrière PgBouncer en mode transaction (`DATABASE_URL` sur `:6543`), une session Node ne
+  garde pas la même connexion serveur d'une requête à l'autre : le verrou serait pris sur
+  un backend et relâché sur un autre — inopérant **en silence**.
 
 ## État du parc (vérifié en DB prod le 2026-08-10)
 
@@ -82,11 +101,11 @@ une photo suffisent à lire le contrat d'entrée réel du processeur, sans rien 
 mire : par un player concurrent (**B2B Alive**) qui tourne sur le matériel de Piraths
 et affiche correctement. Il donne la cible sans ambiguïté :
 
-| Ce que le processeur attend | Valeur observée chez Piraths |
-| --------------------------- | ---------------------------- |
-| Canvas plié                 | **1600 × 480** (4 bandes de 120) |
-| Largeur d'entrée            | **1600** = un côté (10 m à P6.25) |
-| Hauteur de dalle            | **120 px** = 75 cm, PAS 160 |
+| Ce que le processeur attend | Valeur observée chez Piraths                      |
+| --------------------------- | ------------------------------------------------- |
+| Canvas plié                 | **1600 × 480** (4 bandes de 120)                  |
+| Largeur d'entrée            | **1600** = un côté (10 m à P6.25)                 |
+| Hauteur de dalle            | **120 px** = 75 cm, PAS 160                       |
 | Placement du signal         | **1:1, ancré en haut à gauche**, le reste en noir |
 
 C'est le mode **B** : le processeur ne déplie pas, il attend un canvas déjà plié. La
@@ -115,5 +134,7 @@ contrat d'entrée réel des processeurs, pas seulement de le supposer.
 
 - [ADR-139](../../docs/adr/ADR-139-led-serve-folded-canvas.md) — étape D derrière `serve_folded`
 - Smoke : `central-server/src/__tests__/smoke/smoke-led-canvas-invariant.test.ts`
+- Concurrence du pliage : `central-server/src/repositories/led-export-job.repository.test.ts`
+  (comportement) + `smoke-led-export-async.test.ts` (garde-fou fichier)
 - Tests étape D : `central-server/src/utils/__tests__/config-secondary-variants-folded.test.ts`
 - Maquette du parcours cible : `docs/proposals/assets/led-mockups/03-parcours-simplifie-ecrans-led.html`
