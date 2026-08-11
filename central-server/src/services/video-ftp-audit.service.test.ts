@@ -103,7 +103,11 @@ describe('VideoFtpAuditService.auditAllVideos (PR2.2)', () => {
     expect((globalThis.fetch as jest.Mock).mock.calls.length).toBe(2);
     expect((globalThis.fetch as jest.Mock).mock.calls[0][1].method).toBe('HEAD');
     expect((globalThis.fetch as jest.Mock).mock.calls[1][1].method).toBe('GET');
-    expect((globalThis.fetch as jest.Mock).mock.calls[1][1].headers).toEqual({ Range: 'bytes=0-0' });
+    // Le Range doit être là ; on ne fige plus l'objet entier, qui porte aussi
+    // les en-têtes anti-cache.
+    expect((globalThis.fetch as jest.Mock).mock.calls[1][1].headers).toMatchObject({
+      Range: 'bytes=0-0',
+    });
     const lastCall = mockQuery.mock.calls[mockQuery.mock.calls.length - 1];
     expect(lastCall[1]).toEqual(expect.arrayContaining(['v-net', 'unreachable']));
   });
@@ -268,5 +272,63 @@ describe('VideoFtpAuditService.notifyMissingReferencedInProfiles', () => {
     expect(arg.message).not.toContain('7.mp4');
     // Celui qui traite l'incident a besoin de la liste entière.
     expect(arg.metadata).toEqual({ storage_paths: paths, count: 7 });
+  });
+});
+
+/**
+ * La sonde doit interroger l'ORIGINE, jamais un edge CDN.
+ *
+ * Incident du 2026-08-11 : neuf vidéos de Piraths supprimées de l'origine Hostinger
+ * répondaient 200 avec la bonne taille depuis un edge chaud. L'audit les déclarait
+ * saines — dont les deux sponsors ruban du club. Un audit qui confirme ce qu'on
+ * espère est pire que pas d'audit.
+ */
+describe('VideoFtpAuditService — la sonde contourne le cache CDN', () => {
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    originalFetch = globalThis.fetch;
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  /** Lance un audit sur une vidéo et rend les URLs réellement sondées. */
+  async function probedUrls(fetchImpl: jest.Mock): Promise<string[]> {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'v-cdn', storage_path: 'videos/ab/cd.mp4' }] } as never)
+      .mockResolvedValueOnce({ rowCount: 1 } as never);
+    globalThis.fetch = fetchImpl;
+    await videoFtpAuditService.auditAllVideos();
+    return fetchImpl.mock.calls.map((c) => String(c[0]));
+  }
+
+  it('ajoute un paramètre unique à chaque URL sondée', async () => {
+    const urls = await probedUrls(jest.fn().mockResolvedValue({ status: 200, ok: true } as Response));
+
+    expect(urls).toHaveLength(1);
+    // Le chemin réel doit rester intact — on ne sonde pas une autre ressource.
+    expect(urls[0]).toContain('videos/ab/cd.mp4');
+    // C'est CE paramètre qui force l'origine : sans lui, un edge chaud sert un
+    // fichier supprimé avec un 200 et l'audit conclut « sain ».
+    expect(urls[0]).toMatch(/[?&]_audit=[0-9a-f-]{36}/);
+  });
+
+  it('n’envoie jamais deux fois la même URL — un cache-buster réutilisé ne busterait rien', async () => {
+    // HEAD en échec → fallback Range : les deux sondes doivent être distinctes.
+    const urls = await probedUrls(jest.fn().mockRejectedValue(new Error('ECONNRESET')));
+
+    expect(urls).toHaveLength(2);
+    expect(new Set(urls).size).toBe(2);
+  });
+
+  it('accompagne la sonde d’en-têtes anti-cache', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ status: 200, ok: true } as Response);
+    await probedUrls(fetchImpl);
+
+    // Ceinture et bretelles : un edge peut ignorer ces en-têtes, d'où le
+    // paramètre d'URL — mais les envoyer ne coûte rien.
+    expect(fetchImpl.mock.calls[0][1].headers).toMatchObject({ 'Cache-Control': 'no-cache, no-store' });
   });
 });
