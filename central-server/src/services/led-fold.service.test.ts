@@ -304,6 +304,61 @@ describe('led-fold.service — composition par côté (buildPerSideFold*, ADR-13
     expect(args[args.length - 1]).toBe('/t/out.mp4');
   });
 
+  // ── Déduplication des décodeurs ffmpeg ──────────────────────────────────────
+  // Un `-i` par côté = un décodeur h264 par côté. Or les côtés diffusent presque
+  // toujours le MÊME fichier (motif répété tout autour) : 4 décodeurs chez Piraths
+  // pour une seule vidéo. Le décodeur est la ressource qui a lâché le 2026-08-11.
+
+  it('une source partagée par tous les côtés n’est ouverte qu’une fois', () => {
+    const args = buildPerSideFoldComposeArgs(geom(), {
+      inputs: ['/t/same.mp4', '/t/same.mp4', '/t/same.mp4'],
+      outputPath: '/t/out.mp4',
+    });
+    expect(args.filter((a) => a === '-i')).toHaveLength(1);
+    expect(args.filter((a) => a === '/t/same.mp4')).toHaveLength(1);
+  });
+
+  it('le flux décodé partagé est dupliqué par split, pas re-décodé', () => {
+    const g = buildPerSideFoldFilterGraph(geom(), 'black', 'stretched', undefined, [0, 0, 0]);
+    // une seule entrée lue, éclatée en 3 — et non `[1:v]` / `[2:v]`.
+    expect(g).toContain('[0:v]split=3[src0_0][src0_1][src0_2]');
+    expect(g).not.toContain('[1:v]');
+    expect(g).not.toContain('[2:v]');
+    // chaque côté consomme sa copie et garde exactement le même ruban qu’avant.
+    expect(g).toContain('[src0_0]scale=6667:160,setsar=1[rib0]');
+    expect(g).toContain('[src0_1]scale=3333:160,setsar=1[rib1]');
+    expect(g).toContain('[src0_2]scale=3333:160,setsar=1[rib2]');
+    // le split des SOURCES précède les clauses qui le consomment.
+    expect(g.indexOf('[0:v]split=3')).toBeLessThan(g.indexOf('[src0_0]'));
+  });
+
+  it('des sources distinctes restent des entrées distinctes, sans split parasite', () => {
+    const args = buildPerSideFoldComposeArgs(geom(), {
+      inputs: ['/t/c0.mp4', '/t/c1.mp4', '/t/c2.mp4'],
+      outputPath: '/t/out.mp4',
+    });
+    expect(args.filter((a) => a === '-i')).toHaveLength(3);
+    const graph = args[args.indexOf('-filter_complex') + 1];
+    expect(graph).not.toContain('[src');
+    // identique au graphe historique : aucune régression sur le cas par côté pur.
+    expect(graph).toBe(buildPerSideFoldFilterGraph(geom()));
+  });
+
+  it('sources partiellement partagées : une entrée par fichier distinct', () => {
+    // côtés 0 et 2 partagent un fichier, le côté 1 a le sien.
+    const args = buildPerSideFoldComposeArgs(geom(), {
+      inputs: ['/t/a.mp4', '/t/b.mp4', '/t/a.mp4'],
+      outputPath: '/t/out.mp4',
+    });
+    expect(args.filter((a) => a === '-i')).toHaveLength(2);
+    const graph = args[args.indexOf('-filter_complex') + 1];
+    expect(graph).toContain('[0:v]split=2[src0_0][src0_1]');
+    // le côté 1, seul consommateur de son entrée, la lit directement.
+    expect(graph).toContain('[1:v]scale=3333:160,setsar=1[rib1]');
+    expect(graph).toContain('[src0_0]scale=6667:160,setsar=1[rib0]');
+    expect(graph).toContain('[src0_1]scale=3333:160,setsar=1[rib2]');
+  });
+
   it('rejette un nombre de sources ≠ nombre de côtés', () => {
     expect(() =>
       buildPerSideFoldComposeArgs(geom(), { inputs: ['/t/a.mp4'], outputPath: '/t/o.mp4' })
