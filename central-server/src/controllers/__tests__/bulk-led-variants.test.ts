@@ -118,6 +118,77 @@ describe('bulkCreateLedVariants', () => {
     expect(variants.create).not.toHaveBeenCalled();
   });
 
+  /**
+   * Le bouton déclarait TOUTES les vidéos du club. Chez Piraths, les faits de jeu
+   * (CARTON JAUNE, TEMPS MORT…) sont des 16:9 destinés à la télécommande sur la TV :
+   * écrasés à 120 px de haut, ils donnent des vignettes noires illisibles.
+   */
+  describe('filtre de format', () => {
+    const led = { sides: [10, 10, 10, 10], pitch: 'P6.25', height: 120 };
+
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sites.getDisplays.mockResolvedValue([{ type: 'led-perimeter', led }] as any);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const withDims = (dims: Record<string, { width: number; height: number } | null>) =>
+      videos.findVideoById.mockImplementation(((id: string) =>
+        Promise.resolve({ ...video(id), metadata: dims[id] ?? {} })) as any);
+
+    it('écarte un 16:9 — c’est un clip TV, pas du contenu de ruban', async () => {
+      withVideos(['tv-clip']);
+      withDims({ 'tv-clip': { width: 1920, height: 1080 } });
+      const r = res();
+
+      await bulkCreateLedVariants(req, r as never);
+
+      expect(variants.create).not.toHaveBeenCalled();
+      const body = r.json.mock.calls[0][0];
+      expect(body).toEqual(expect.objectContaining({ created: 0, excluded: 1 }));
+      // Une exclusion muette se lit comme « tout a été traité » : le motif est le livrable.
+      expect(body.exclusions[0].video_id).toBe('tv-clip');
+      expect(body.exclusions[0].reason).toMatch(/1920×1080/);
+    });
+
+    it('NE PAS écarter une vidéo jamais mesurée — un null n’est pas un false', async () => {
+      withVideos(['jamais-mesuree']);
+      withDims({ 'jamais-mesuree': null });
+      const r = res();
+
+      await bulkCreateLedVariants(req, r as never);
+
+      // Tant que `backfill:video-dimensions` n'a pas tourné, aucun critère n'est
+      // fiable : mieux vaut déclarer et laisser l'opérateur retirer que sauter en silence.
+      expect(variants.create).toHaveBeenCalledTimes(1);
+      expect(r.json.mock.calls[0][0]).toEqual(
+        expect.objectContaining({ created: 1, excluded: 0, exclusions: [] })
+      );
+    });
+
+    it('garde une vidéo au format du ruban', async () => {
+      withVideos(['ruban']);
+      withDims({ ruban: { width: 1600, height: 120 } });
+      const r = res();
+
+      await bulkCreateLedVariants(req, r as never);
+
+      expect(r.json.mock.calls[0][0]).toEqual(expect.objectContaining({ created: 1, excluded: 0 }));
+    });
+
+    it('sans profil LED lisible, ne filtre rien plutôt que de filtrer à tort', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sites.getDisplays.mockResolvedValue([{ type: 'led-perimeter', led: null }] as any);
+      withVideos(['tv-clip']);
+      withDims({ 'tv-clip': { width: 1920, height: 1080 } });
+      const r = res();
+
+      await bulkCreateLedVariants(req, r as never);
+
+      expect(r.json.mock.calls[0][0]).toEqual(expect.objectContaining({ created: 1, excluded: 0 }));
+    });
+  });
+
   it('un club sans vidéo répond 0, sans erreur', async () => {
     withVideos([]);
     const r = res();
