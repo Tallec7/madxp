@@ -40,6 +40,13 @@
  */
 
 
+// DOIT rester le premier import. `config/ftp-storage` fige `process.env.FTP_*` dans
+// des const au chargement du module ; en CLI, `dotenv.config()` de `config/database`
+// s'exécute APRÈS `storage.service` (ordre des imports) et la config FTP est alors
+// déjà gelée à vide → `getVideoUrl` lève « FTP storage not configured » sur la
+// première vidéo. En serveur le problème n'existe pas : `server.ts` charge dotenv en tête.
+import 'dotenv/config';
+
 import { probeVideoDimensions, VideoDimensions } from '../utils/video-dimensions';
 import { getVideoUrl } from '../services/storage.service';
 import { query } from '../config/database';

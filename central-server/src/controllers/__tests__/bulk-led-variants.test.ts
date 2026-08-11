@@ -176,6 +176,35 @@ describe('bulkCreateLedVariants', () => {
       expect(r.json.mock.calls[0][0]).toEqual(expect.objectContaining({ created: 1, excluded: 0 }));
     });
 
+    /**
+     * Mesuré sur le parc le 2026-08-11. Un côté de Lanester fait 480×110 (4,36:1) :
+     * un 16:9 y remplit 41 % et passait le seuil RELATIF, alors que le même fichier
+     * était écarté chez Piraths (13,3:1, 13 %). Le sort d'un clip TV ne peut pas
+     * dépendre de la géométrie du club d'en face — d'où le critère absolu.
+     */
+    it('écarte un 16:9 même sur un ruban peu allongé (cas Lanester)', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sites.getDisplays.mockResolvedValue([
+        { type: 'led-perimeter', led: { sides: [4.8, 4.8], pitch: 'P10', height: 110 } },
+      ] as any);
+      withVideos(['tv-clip', 'ruban-4800']);
+      withDims({
+        'tv-clip': { width: 1920, height: 1080 },
+        'ruban-4800': { width: 4800, height: 800 }, // vrai contenu ruban de Lanester (6:1)
+      });
+      const r = res();
+
+      await bulkCreateLedVariants(req, r as never);
+
+      const body = r.json.mock.calls[0][0];
+      expect(body).toEqual(expect.objectContaining({ created: 1, excluded: 1 }));
+      expect(body.exclusions[0].video_id).toBe('tv-clip');
+      // Le 4800×800 est du ruban légitime : ne jamais l'emporter avec le clip TV.
+      expect(variants.create).toHaveBeenCalledWith(
+        expect.objectContaining({ video_id: 'ruban-4800' })
+      );
+    });
+
     it('sans profil LED lisible, ne filtre rien plutôt que de filtrer à tort', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sites.getDisplays.mockResolvedValue([{ type: 'led-perimeter', led: null }] as any);

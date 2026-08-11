@@ -9,6 +9,18 @@ import fs from 'fs';
 import logger from '../config/logger';
 import { runWithFfmpegSlot } from '../utils/ffmpeg-concurrency';
 
+/**
+ * `true` quand la source est une URL distante que ffprobe sait ouvrir lui-même.
+ *
+ * Sert à ne pas appliquer un test d'existence sur disque à quelque chose qui n'y
+ * est pas — un `https://…` n'est pas un fichier manquant, c'est une autre nature
+ * de source. Volontairement limité à http(s) : tout le reste (`/tmp/x.mp4`,
+ * `C:\…`, `file://`) reste soumis au guard local.
+ */
+export function isRemoteSource(source: string): boolean {
+  return /^https?:\/\//i.test(source);
+}
+
 export interface VideoMetadata {
   duration: number;
   width: number;
@@ -159,7 +171,12 @@ class ThumbnailService {
       hasAlpha: false,
     };
 
-    if (!fs.existsSync(videoPath)) {
+    // ffprobe lit nativement une URL http(s) — le guard « existe sur disque » ne
+    // s'applique donc qu'aux chemins locaux. Sans cette distinction, mesurer une
+    // vidéo déjà sur le FTP est impossible : `fs.existsSync('https://…')` est
+    // toujours faux, et l'appelant reçoit `0×0`, qu'il lit comme « illisible »
+    // (c'est ce qui rendait `backfill:video-dimensions` inopérant sur tout le parc).
+    if (!isRemoteSource(videoPath) && !fs.existsSync(videoPath)) {
       logger.error('Video file not found for metadata extraction', { videoPath });
       return defaultMetadata;
     }

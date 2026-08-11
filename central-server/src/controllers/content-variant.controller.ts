@@ -142,6 +142,22 @@ function ribbonGeometry(led: LedProfileConfig | null | undefined): RibbonGeometr
 const RIBBON_MIN_FILL_RATIO = 0.25;
 
 /**
+ * Élongation minimale, en absolu, pour qu'une vidéo puisse être du contenu de ruban.
+ *
+ * `RIBBON_MIN_FILL_RATIO` est RELATIF au ruban — il ne discrimine donc pas sur un
+ * ruban peu allongé. Mesuré sur le parc : un côté de Lanester fait 480×110, soit
+ * 4,36:1 ; un 16:9 y atteint 41 % de remplissage et passait le seuil relatif. Chez
+ * Piraths (13,3:1) le même 16:9 tombait à 13 % et était écarté. Le même fichier
+ * TV avait donc deux sorts selon le club, ce qui n'a aucun sens : un clip TV n'est
+ * jamais du contenu de ruban, quelle que soit la géométrie d'en face.
+ *
+ * `2.5` sépare largement les deux populations observées : le contenu de ruban le
+ * MOINS allongé du parc est un 4800×800 (6:1), le clip TV le PLUS allongé est un
+ * 16:9 (1,78:1). Aucune vidéo réelle ne tombe près de la frontière.
+ */
+const RIBBON_MIN_ASPECT_RATIO = 2.5;
+
+/**
  * Motif d'exclusion d'une vidéo du parc ruban, ou `null` s'il faut la déclarer.
  *
  * Renvoie `null` — donc DÉCLARE — dès qu'on ne sait pas : dimensions jamais
@@ -157,6 +173,22 @@ function ribbonExclusion(
 ): string | null {
   if (!ribbon || !dims.width || !dims.height) return null;
 
+  const suffixe = ` À déclarer à la main si c'est une erreur.`;
+
+  // 1) Critère ABSOLU — indépendant du ruban d'en face. Un 16:9 est un clip TV
+  //    à Lanester comme à Strasbourg ; le critère relatif seul lui donnait deux
+  //    sorts différents selon la géométrie du club.
+  const aspect = dims.width / dims.height;
+  if (aspect < RIBBON_MIN_ASPECT_RATIO) {
+    return (
+      `Format ${dims.width}×${dims.height} (${aspect.toFixed(2)}:1) : trop « carré » ` +
+      `pour un ruban, qui demande au moins ${RIBBON_MIN_ASPECT_RATIO}:1 — clip TV, ` +
+      `pas du contenu de ruban.${suffixe}`
+    );
+  }
+
+  // 2) Critère RELATIF — attrape ce qui est allongé mais pas assez pour CE ruban
+  //    (ex. le 4096×1416 de Piraths, 2,89:1 face à un ruban de 13,3:1).
   let rec: FitRecommendation;
   try {
     rec = classifyVideoForRibbon({
@@ -172,8 +204,8 @@ function ribbonExclusion(
 
   return (
     `Format ${dims.width}×${dims.height} : ne couvre que ${Math.round(rec.fillRatio * 100)} % ` +
-    `de la largeur du ruban (${rec.target.width}×${rec.target.height}) — clip TV, ` +
-    `pas du contenu de ruban. À déclarer à la main si c'est une erreur.`
+    `de la largeur du ruban (${rec.target.width}×${rec.target.height}) — beaucoup moins ` +
+    `allongé que le ruban de ce club.${suffixe}`
   );
 }
 
