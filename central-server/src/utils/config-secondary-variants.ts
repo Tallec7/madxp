@@ -20,6 +20,7 @@ import {
 } from '../services/led-fold.service';
 import { extractFilenameFromPath } from './config-video-paths';
 import logger from '../config/logger';
+import { getVideoUrl } from '../services/storage.service';
 
 /**
  * Résout les display types actifs pour un site en lisant sites.displays[].type.
@@ -63,6 +64,21 @@ export async function resolveDisplayTypesForSite(siteId: string): Promise<string
  * pliage en file. Le prochain déploiement servira le canvas. Un cache manquant
  * dégrade la qualité, il ne casse pas la diffusion.
  */
+/**
+ * Ramène une URL publique de stockage à son chemin relatif.
+ *
+ * Les chemins de la config sont TOUJOURS relatifs — la base publique est ajoutée
+ * au moment de servir (SaaS) ou de déployer (Pi). Y injecter une URL absolue la
+ * fait préfixer une seconde fois.
+ *
+ * On dérive la base depuis `getVideoUrl('')` plutôt que de la coder en dur : elle
+ * change entre environnements, et un préfixe figé ici casserait en silence.
+ */
+function toRelativeStoragePath(url: string): string {
+  const base = getVideoUrl('');
+  return base && url.startsWith(base) ? url.slice(base.length) : url;
+}
+
 async function substituteFoldedCanvas(
   variantMap: Map<string, VideoVariants>,
   siteId: string
@@ -109,7 +125,13 @@ async function substituteFoldedCanvas(
     try {
       const ready = await ledExportJobRepository.findReadyByGeometry(siteId, v.videoId ?? '', hash);
       if (ready?.output_url) {
-        v.path = ready.output_url;
+        // `output_url` est une URL PUBLIQUE complète, alors que `v.path` doit rester
+        // un chemin relatif : `saas.controller` (et le Pi) y ajoutent la base ensuite.
+        // Sans ce dépliage, la TV recevait
+        // `https://…/neopro-video/https://…/neopro-video/led-exports/…` → 404 sur
+        // chaque canvas, boucle d'erreurs et reset complet du player (Piraths,
+        // 2026-08-11).
+        v.path = toRelativeStoragePath(ready.output_url);
         v.folded = true;
         continue;
       }
