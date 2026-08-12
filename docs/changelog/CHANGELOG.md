@@ -1,3 +1,9 @@
+## [4.30.2](https://github.com/Tallec7/madxp/compare/v4.30.1...v4.30.2) (2026-08-12)
+
+### Bug Fixes
+
+- **raspberry:** fallback timeout for manual video reveal when master tab is backgrounded ([#1179](https://github.com/Tallec7/madxp/issues/1179)) ([74b849a](https://github.com/Tallec7/madxp/commit/74b849a235ca5f8a59ce9e6044c9ebfba1f26488))
+
 ## [4.30.1](https://github.com/Tallec7/madxp/compare/v4.30.0...v4.30.1) (2026-08-12)
 
 ### Bug Fixes
