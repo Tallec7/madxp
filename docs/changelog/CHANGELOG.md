@@ -1,3 +1,9 @@
+## [4.27.4](https://github.com/Tallec7/madxp/compare/v4.27.3...v4.27.4) (2026-08-12)
+
+### Bug Fixes
+
+- **storage:** les 4 sondes d'existence FTP interrogent l'origine, pas le cache ([#1170](https://github.com/Tallec7/madxp/issues/1170)) ([3725b7f](https://github.com/Tallec7/madxp/commit/3725b7ff6061a37bf8f05fa105ebde94ea088443)), closes [#1169](https://github.com/Tallec7/madxp/issues/1169)
+
 ## [4.27.3](https://github.com/Tallec7/madxp/compare/v4.27.2...v4.27.3) (2026-08-12)
 
 ### Bug Fixes

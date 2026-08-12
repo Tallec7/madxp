@@ -1,6 +1,6 @@
 {
   "name": "madxp-sync-agent",
-  "version": "v4.27.3",
+  "version": "v4.27.4",
   "description": "Agent de synchronisation NEOPRO pour Raspberry Pi",
   "main": "src/agent.js",
   "scripts": {
