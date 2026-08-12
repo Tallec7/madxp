@@ -127,6 +127,22 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 - Ajouter un nouveau canal de livraison (Chromecast, Android TV, ...) en modifiant `deployment.service.ts` (ADR-069 : créer `central-server/src/services/delivery/{name}.strategy.ts` implémentant `DeliveryStrategy`, puis l'ajouter à `DEFAULT_STRATEGIES` dans `strategy-registry.ts`. Le service principal ne doit JAMAIS savoir qu'un nouveau canal existe)
 - Retirer le throttle `METRICS_PERSIST_INTERVAL_MS` / `lastMetricsInsertAt` dans `heartbeat.handler.ts` (le heartbeat arrive toutes les 30s pour la liveness, mais persister chaque échantillon bloate la table `metrics` 10× sans valeur analytique — 1 INSERT/5min/site suffit pour l'historique 24h. Smoke test `heartbeat handler throttles metrics persistence` enforced)
 
+## Sonder l'existence d'un fichier FTP → TOUJOURS casser le cache
+
+`getVideoUrl()` pointe un CDN Hostinger. **Un 200 ne prouve pas que le fichier
+existe** : un edge chaud continue de servir un fichier supprimé de l'origine, avec
+la bonne taille. Toute sonde d'existence doit donc ajouter un paramètre unique
+(`?_audit=<uuid>`), sinon elle mesure le cache et non le stockage.
+
+Mesuré le 2026-08-11 sur les 9 vidéos disparues de Piraths : la sonde sans
+cache-buster n'en détectait que **6 sur 9** — les 3 ratées étant celles dont l'edge
+était chaud, dont les deux sponsors ruban du club. Aucun faux positif avec le
+cache-buster (les fichiers présents répondent 200 dans les deux cas).
+
+Appliqué dans `video-ftp-audit.service.ts` (`withCacheBuster`). **Même angle mort
+non corrigé** dans `deployment.service.ts` (pré-filtre FTP avant déploiement),
+`upload-verification.service.ts` et `scripts/audit-ftp-legacy-videos.ts`.
+
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 
 ### 1. Ne JAMAIS utiliser `socket.data`
