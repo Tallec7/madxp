@@ -207,20 +207,20 @@ describe('LedCanvasOverviewComponent', () => {
 
     it('le toggle est absent sans display led-perimeter', () => {
       openAndFlush([row()], []);
-      expect(fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-row"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-row-0"]')).toBeNull();
     });
 
     it('reflète scene_scaling du display led-perimeter', () => {
       openAndFlush([row()], [ledDisplay({ scene_scaling: true })]);
 
-      const checkbox = fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox"]');
+      const checkbox = fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox-0"]');
       expect(checkbox.checked).toBe(true);
     });
 
     it('cocher le toggle PATCH tout le tableau displays avec scene_scaling: true', () => {
       openAndFlush([row()], [ledDisplay()]);
 
-      fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox"]').click();
+      fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox-0"]').click();
 
       const patch = http.expectOne(`${environment.apiUrl}/sites/site-1/displays`);
       expect(patch.request.method).toBe('PATCH');
@@ -232,7 +232,37 @@ describe('LedCanvasOverviewComponent', () => {
       );
       patch.flush({});
 
-      expect(component.sceneScalingEnabled).toBe(true);
+      expect(component.ledDisplays[0].led?.canvas_in?.scene_scaling).toBe(true);
+    });
+
+    it('deux displays led-perimeter ont chacun leur propre toggle, indépendant l’un de l’autre', () => {
+      // Régression du bug signalé le 2026-08-12 : le toggle unique reflétait
+      // toujours le PREMIER display led-perimeter trouvé (`.find()` par type),
+      // donnant l'illusion que l'état du display #0 s'appliquait aussi au #1.
+      openAndFlush(
+        [row()],
+        [
+          { ...ledDisplay({ scene_scaling: true }), index: 0, name: 'LED Principale' },
+          { ...ledDisplay(), index: 1, name: 'Bandeau LED horizontal' },
+        ]
+      );
+
+      const checkbox0 = fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox-0"]');
+      const checkbox1 = fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox-1"]');
+      expect(checkbox0.checked).toBe(true);
+      expect(checkbox1.checked).toBe(false);
+
+      checkbox1.click();
+      const patch = http.expectOne(`${environment.apiUrl}/sites/site-1/displays`);
+      const body = patch.request.body as { displays: Array<{ index: number; led?: { canvas_in?: { scene_scaling?: boolean } } }> };
+      // Seul le display #1 doit changer ; le #0 reste intact.
+      expect(body.displays.find((d) => d.index === 1)?.led?.canvas_in?.scene_scaling).toBe(true);
+      expect(body.displays.find((d) => d.index === 0)?.led?.canvas_in?.scene_scaling).toBe(true);
+      patch.flush({});
+      fixture.detectChanges();
+
+      expect(component.ledDisplays.find((d) => d.index === 0)?.led?.canvas_in?.scene_scaling).toBe(true);
+      expect(component.ledDisplays.find((d) => d.index === 1)?.led?.canvas_in?.scene_scaling).toBe(true);
     });
   });
 });

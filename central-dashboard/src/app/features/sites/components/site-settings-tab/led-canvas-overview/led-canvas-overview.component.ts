@@ -75,17 +75,26 @@ interface CropProposal {
 
         <!-- Scale façon B2B (scène 1920px) — opt-in, jamais par défaut. Un scale != 1
              réintroduit un flou d'interpolation sur toute fenêtre PC != 1920px de large ;
-             à activer seulement après validation terrain (cf. .claude/rules/led.md). -->
-        <label class="lco__toggle-row" *ngIf="ledDisplayIndex !== null" data-testid="lco-scene-scaling-row">
+             à activer seulement après validation terrain (cf. .claude/rules/led.md).
+             Un toggle PAR display : un site peut avoir plusieurs rubans LED (ADR-143),
+             chacun avec son propre état — jamais un seul toggle partagé qui refléterait
+             silencieusement le premier display trouvé. -->
+        <label
+          class="lco__toggle-row"
+          *ngFor="let d of ledDisplays"
+          [attr.data-testid]="'lco-scene-scaling-row-' + d.index"
+        >
           <input
             type="checkbox"
-            data-testid="lco-scene-scaling-checkbox"
-            [checked]="sceneScalingEnabled"
-            [disabled]="savingSceneScaling"
-            (change)="toggleSceneScaling()"
+            [attr.data-testid]="'lco-scene-scaling-checkbox-' + d.index"
+            [checked]="!!d.led?.canvas_in?.scene_scaling"
+            [disabled]="savingSceneScaling === d.index"
+            (change)="toggleSceneScaling(d.index)"
           />
-          Scaler le rendu sur la largeur de fenêtre (façon B2B, scène 1920px) — expérimental,
-          désactivé par défaut. Peut introduire un flou si la fenêtre PC ne fait pas 1920px de large.
+          <span
+            >Scaler le rendu sur la largeur de fenêtre (façon B2B, scène 1920px) — {{ d.name }} — expérimental,
+            désactivé par défaut. Peut introduire un flou si la fenêtre PC ne fait pas 1920px de large.</span
+          >
         </label>
 
         <table class="lco__table" *ngIf="!loading && rows.length">
@@ -296,12 +305,15 @@ export class LedCanvasOverviewComponent {
   /** Propositions de détourage en attente d'arbitrage — jamais appliquées seules. */
   proposals: Record<string, CropProposal | null> = {};
 
-  /** Displays du site — chargés uniquement pour localiser le led-perimeter et son
-   * toggle scene_scaling (pas d'écran dédié à la config displays pour l'instant). */
+  /** Displays du site — chargés uniquement pour localiser les led-perimeter et leur
+   * toggle scene_scaling (pas d'écran dédié à la config displays pour l'instant).
+   * Un site peut avoir plusieurs rubans LED (ADR-143) : `ledDisplays` liste TOUS les
+   * displays `type === 'led-perimeter'`, chacun édité individuellement par son `index`
+   * — jamais un seul état partagé qui refléterait silencieusement le premier trouvé. */
   private displays: DisplayConfig[] = [];
-  ledDisplayIndex: number | null = null;
-  sceneScalingEnabled = false;
-  savingSceneScaling = false;
+  ledDisplays: DisplayConfig[] = [];
+  /** Index du display dont le PATCH est en cours, ou `null` si aucun. */
+  savingSceneScaling: number | null = null;
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
@@ -318,7 +330,8 @@ export class LedCanvasOverviewComponent {
     if (this.open && !this.displays.length) this.loadDisplays();
   }
 
-  /** Localise le display led-perimeter pour afficher/piloter `scene_scaling`. */
+  /** Localise TOUS les displays led-perimeter du site pour afficher/piloter leur
+   * `scene_scaling` individuellement. */
   private loadDisplays(): void {
     if (!this.siteId) return;
     this.http
@@ -328,9 +341,7 @@ export class LedCanvasOverviewComponent {
       .subscribe({
         next: (r) => {
           this.displays = r.displays ?? [];
-          const ledDisplay = this.displays.find((d) => d.type === 'led-perimeter');
-          this.ledDisplayIndex = ledDisplay ? ledDisplay.index : null;
-          this.sceneScalingEnabled = !!ledDisplay?.led?.canvas_in?.scene_scaling;
+          this.ledDisplays = this.displays.filter((d) => d.type === 'led-perimeter');
           this.cdr.markForCheck();
         },
         // Silencieux : ce toggle est secondaire, l'écran Canvas reste utilisable sans lui.
@@ -339,29 +350,32 @@ export class LedCanvasOverviewComponent {
   }
 
   /**
-   * Écrit `scene_scaling` sur le display led-perimeter. Le PATCH `/displays` remplace
-   * le tableau ENTIER (Joi `updateDisplays` — pas de patch partiel côté API) : on
-   * renvoie donc tous les displays chargés, avec un seul champ modifié.
+   * Écrit `scene_scaling` sur le display led-perimeter d'index `displayIndex`. Le
+   * PATCH `/displays` remplace le tableau ENTIER (Joi `updateDisplays` — pas de patch
+   * partiel côté API) : on renvoie donc tous les displays chargés, avec un seul champ
+   * modifié sur le display ciblé — les autres restent inchangés.
    */
-  toggleSceneScaling(): void {
-    if (this.ledDisplayIndex === null || this.savingSceneScaling || !this.siteId) return;
-    const next = !this.sceneScalingEnabled;
+  toggleSceneScaling(displayIndex: number): void {
+    if (this.savingSceneScaling !== null || !this.siteId) return;
+    const target = this.displays.find((d) => d.index === displayIndex);
+    if (!target?.led) return;
+    const next = !target.led.canvas_in?.scene_scaling;
     const displays = this.displays.map((d) => {
-      if (d.index !== this.ledDisplayIndex || !d.led) return d;
+      if (d.index !== displayIndex || !d.led) return d;
       return { ...d, led: { ...d.led, canvas_in: { ...d.led.canvas_in, scene_scaling: next } } } as DisplayConfig;
     });
-    this.savingSceneScaling = true;
+    this.savingSceneScaling = displayIndex;
     this.http
       .patch(`${environment.apiUrl}/sites/${this.siteId}/displays`, { displays }, { withCredentials: true })
       .subscribe({
         next: () => {
           this.displays = displays;
-          this.sceneScalingEnabled = next;
-          this.savingSceneScaling = false;
+          this.ledDisplays = displays.filter((d) => d.type === 'led-perimeter');
+          this.savingSceneScaling = null;
           this.cdr.markForCheck();
         },
         error: (e) => {
-          this.savingSceneScaling = false;
+          this.savingSceneScaling = null;
           this.error = e?.error?.error ?? 'Enregistrement impossible';
           this.cdr.markForCheck();
         },
