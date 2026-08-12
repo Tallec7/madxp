@@ -1,3 +1,9 @@
+## [4.30.1](https://github.com/Tallec7/madxp/compare/v4.30.0...v4.30.1) (2026-08-12)
+
+### Bug Fixes
+
+- **raspberry:** preserve aspect ratio in freeze-frame canvas capture ([#1178](https://github.com/Tallec7/madxp/issues/1178)) ([a2749d6](https://github.com/Tallec7/madxp/commit/a2749d6de5b7b463d9cc47f8fcfc89f7608d06a9))
+
 # [4.30.0](https://github.com/Tallec7/madxp/compare/v4.29.2...v4.30.0) (2026-08-12)
 
 ### Features
