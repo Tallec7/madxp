@@ -525,6 +525,33 @@ export class DoubleBufferVideoService {
   }
 
   /**
+   * Dessine `source` dans le canvas freeze-frame en respectant son ratio
+   * d'aspect (comme `object-fit: contain`), au lieu de l'étirer sur les
+   * dimensions fixes 1280×720 du canvas. Sans ça, une source non-16:9 (ex:
+   * ruban `led-perimeter` très large, ~3.33:1) est étirée dans le bitmap
+   * 16:9 puis re-fittée par le CSS `object-fit: contain` du canvas — le
+   * contenu apparaît agrandi/déformé pendant tout l'affichage du freeze-frame
+   * (~0.5s avant une vidéo manuelle, cf. `prepareSmoothManualTransition`).
+   */
+  private drawLetterboxed(source: HTMLVideoElement): void {
+    if (!this.freezeCanvas || !this.freezeCtx) return;
+    const canvasW = this.freezeCanvas.width;
+    const canvasH = this.freezeCanvas.height;
+    const srcW = source.videoWidth;
+    const srcH = source.videoHeight;
+    if (srcW === 0 || srcH === 0) return;
+
+    const scale = Math.min(canvasW / srcW, canvasH / srcH);
+    const drawW = srcW * scale;
+    const drawH = srcH * scale;
+    const offsetX = (canvasW - drawW) / 2;
+    const offsetY = (canvasH - drawH) / 2;
+
+    this.freezeCtx.clearRect(0, 0, canvasW, canvasH);
+    this.freezeCtx.drawImage(source, offsetX, offsetY, drawW, drawH);
+  }
+
+  /**
    * Capture silencieusement le frame actuel dans le canvas (sans l'afficher).
    * @param isManualMode whether the manual player is active
    * @param isLoopMode whether the loop is active
@@ -546,7 +573,7 @@ export class DoubleBufferVideoService {
     if (player.readyState < 2) return;
 
     try {
-      this.freezeCtx.drawImage(player, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      this.drawLetterboxed(player);
       this.hasValidLastFrame = true;
     } catch {
       // Silencieux - erreur CORS ou vidéo pas encore prête
@@ -587,7 +614,7 @@ export class DoubleBufferVideoService {
     }
 
     try {
-      this.freezeCtx.drawImage(sourceVideo, 0, 0, this.freezeCanvas.width, this.freezeCanvas.height);
+      this.drawLetterboxed(sourceVideo);
       this.freezeCanvas.style.opacity = '1';
       this.freezeCanvas.style.zIndex = '20';
       console.log('[DoubleBuffer] Freeze frame captured live and displayed');
