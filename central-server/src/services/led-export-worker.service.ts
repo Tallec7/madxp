@@ -42,10 +42,15 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 let timerHandle: NodeJS.Timeout | null = null;
 let stopping = false;
 
-/** Résout le profil LED (ruban + géométrie + params bruts) du display led-perimeter d'un site. */
-async function resolveGeometry(siteId: string) {
+/**
+ * Résout le profil LED (ruban + géométrie + params bruts) du display `displayType`
+ * exact d'un site. ADR-143 : un club peut avoir plusieurs rubans indépendants
+ * (`led-perimeter`, `led-perimeter-2`...) — jamais résoudre sur le premier trouvé,
+ * chaque ruban a sa propre géométrie.
+ */
+async function resolveGeometry(siteId: string, displayType: string) {
   const displays = await siteRepository.getDisplays(siteId);
-  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  const led = displays.find((d) => d.type === displayType)?.led;
   if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
     throw new Error('profil LED introuvable ou incomplet sur le site');
   }
@@ -108,7 +113,7 @@ async function performExport(job: LedExportJobRow): Promise<string> {
     uniformPath = video?.url ?? null;
   }
 
-  const { canvas, cellPx, sides } = await resolveGeometry(job.site_id);
+  const { canvas, cellPx, sides } = await resolveGeometry(job.site_id, job.display_type);
   const sideFiles = (variant?.side_files ?? []) as VideoVariantSideFile[];
 
   const tmpFiles: string[] = [];

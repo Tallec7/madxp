@@ -65,12 +65,13 @@ describe('Smoke — export LED async (PROP-014 étape 6)', () => {
     expect(server).toMatch(/stopLedExportWorker/);
   });
 
-  it('le controller expose enqueue (202) + status, gardé led-perimeter', () => {
+  it('le controller expose enqueue (202) + status, gardé led-perimeter (famille)', () => {
     const ctrl = read('controllers/content-variant.controller.ts');
     expect(ctrl).toMatch(/enqueueLedExport/);
     expect(ctrl).toMatch(/getLedExportJob/);
     expect(ctrl).toMatch(/status\(202\)/);
-    expect(ctrl).toMatch(/displayType !== 'led-perimeter'/);
+    // ADR-143 : un club peut avoir plusieurs rubans (led-perimeter, led-perimeter-2...).
+    expect(ctrl).toMatch(/!isLedPerimeterFamily\(displayType\)/);
   });
 
   it('les routes export + status sont montées', () => {

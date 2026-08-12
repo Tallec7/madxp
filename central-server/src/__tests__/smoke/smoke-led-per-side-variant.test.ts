@@ -41,11 +41,12 @@ describe('Smoke — variante LED « par côté » (ADR-135)', () => {
     expect(repo).toMatch(/DELETE FROM video_variants WHERE video_id/);
   });
 
-  it('le controller expose upload/delete par côté, gardé led-perimeter', () => {
+  it('le controller expose upload/delete par côté, gardé led-perimeter (famille)', () => {
     const ctrl = read('controllers/content-variant.controller.ts');
     expect(ctrl).toMatch(/export const uploadVideoVariantSide/);
     expect(ctrl).toMatch(/export const deleteVideoVariantSide/);
-    expect(ctrl).toMatch(/displayType !== 'led-perimeter'/);
+    // ADR-143 : un club peut avoir plusieurs rubans (led-perimeter, led-perimeter-2...).
+    expect(ctrl).toMatch(/!isLedPerimeterFamily\(displayType\)/);
     // getVideoVariants résout les URLs publiques des fichiers par côté.
     expect(ctrl).toMatch(/side_files: \(v\.side_files \?\? \[\]\)\.map/);
     // Choisir une vidéo existante par côté (sans upload).
