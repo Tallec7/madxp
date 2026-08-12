@@ -1,3 +1,9 @@
+## [4.27.3](https://github.com/Tallec7/madxp/compare/v4.27.2...v4.27.3) (2026-08-12)
+
+### Bug Fixes
+
+- **alerts:** l'audit FTP sonde l'origine, plus le cache CDN ([#1169](https://github.com/Tallec7/madxp/issues/1169)) ([d64edda](https://github.com/Tallec7/madxp/commit/d64edda6fd193fabc39b75342b85efe10e01a984))
+
 ## [4.27.2](https://github.com/Tallec7/madxp/compare/v4.27.1...v4.27.2) (2026-08-11)
 
 ### Bug Fixes
