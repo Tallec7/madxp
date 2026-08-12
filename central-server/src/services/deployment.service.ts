@@ -11,6 +11,7 @@ import { videoRepository } from '../repositories';
 import { deploymentRepository } from '../repositories/deployment.repository'; // ADR-117
 import { RETRY_CONFIG, isRetryableError, getRetryCount } from './deployment-retry.util';
 import { extractVideoPaths } from '../utils/config-video-paths'; // ADR-117
+import { withCacheBuster, NO_CACHE_HEADERS } from '../utils/cache-busted-url';
 import { SiteConfiguration } from '../types'; // ADR-117
 import { deliveryStrategyRegistry } from './delivery/strategy-registry';
 import { DeliveryContext, DeliveryDeployment } from './delivery/delivery-strategy.interface';
@@ -930,15 +931,23 @@ class DeploymentService {
       });
     }
 
-    // Parallel FTP HEAD check — pre-filter paths before any DB writes
+    // Parallel FTP HEAD check — pre-filter paths before any DB writes.
+    // Cache-buster obligatoire : sur l'URL nue, un edge CDN chaud rend 200 pour un
+    // fichier SUPPRIMÉ de l'origine (mesuré chez Piraths le 2026-08-11). Le
+    // pré-filtre laisserait alors passer une vidéo morte et on déploierait un 404
+    // vers le club — exactement ce que ce garde-fou est censé empêcher.
     const FTP_CHECK_TIMEOUT_MS = 5_000;
     const ftpResults = await Promise.allSettled(
       limited.map(async (storagePath) => {
-        const url = getVideoUrl(storagePath);
+        const url = withCacheBuster(getVideoUrl(storagePath));
         const controller = new AbortController();
         const tid = setTimeout(() => controller.abort(), FTP_CHECK_TIMEOUT_MS);
         try {
-          const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+          const res = await fetch(url, {
+            method: 'HEAD',
+            headers: NO_CACHE_HEADERS,
+            signal: controller.signal,
+          });
           return { storagePath, ok: res.ok, status: res.status };
         } finally {
           clearTimeout(tid);

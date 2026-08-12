@@ -10,6 +10,7 @@
 
 import { query } from '../config/database';
 import { getFtpPublicUrl } from '../config/ftp-storage';
+import { withCacheBuster, NO_CACHE_HEADERS } from '../utils/cache-busted-url';
 import logger from '../config/logger';
 
 // Types
@@ -62,8 +63,13 @@ class UploadVerificationService {
           VERIFICATION_CONFIG.httpTimeout
         );
 
-        const response = await fetch(url, {
+        // Cache-buster par TENTATIVE, et c'est le retry qui l'exige : ici le
+        // risque n'est pas le 200 fantôme mais son inverse — un 404 mis en cache
+        // avant l'arrivée du fichier. Rejouer la même URL rejouerait ce négatif
+        // périmé, et les 3 tentatives concluraient à un upload raté qui a réussi.
+        const response = await fetch(withCacheBuster(url), {
           method: 'HEAD',
+          headers: NO_CACHE_HEADERS,
           signal: controller.signal,
         });
 
