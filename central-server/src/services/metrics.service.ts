@@ -393,6 +393,24 @@ const videoFtpAuditCurrentOrphansGauge = new Gauge({
   registers: [register],
 });
 
+// Sous-ensemble des orphelins qui est RÉELLEMENT diffusé (référencé dans un profil
+// de config). C'est ce compteur qu'il faut regarder, pas le total ci-dessus : une
+// orpheline que plus aucune config ne référence est du ménage de base, celle-ci est
+// un écran noir en match. Le total masquait le signal (30 orphelines pour 16 réelles
+// au 2026-08-11) — c'est pour cette raison que l'alerte, elle, ne part que sur ce
+// sous-ensemble (PR #1165).
+const videoFtpMissingReferencedGauge = new Gauge({
+  name: 'madxp_video_ftp_missing_referenced_current',
+  help: 'Missing videos still referenced in a config profile (broadcast impact)',
+  registers: [register],
+});
+
+const videoFtpMissingReferencedSitesGauge = new Gauge({
+  name: 'madxp_video_ftp_missing_referenced_sites_current',
+  help: 'Sites having at least one broadcast video missing on storage',
+  registers: [register],
+});
+
 // ============= Métriques Test Render Cleanup (ADR-110 Phase 3 PUB-02) =============
 // CRON hebdomadaire qui purge les test renders FTP plus vieux que 7 jours
 // (ADR-110 Phase 3, PUB-02). Sans supervision, un bug silencieux du CRON
@@ -1293,6 +1311,18 @@ class MetricsService {
     videoFtpAuditDuration.observe(payload.durationMs / 1000);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'missing' }, payload.missing);
     videoFtpAuditCurrentOrphansGauge.set({ status: 'unreachable' }, payload.unreachable);
+  }
+
+  /**
+   * Fichiers manquants ET encore diffusés, à l'issue de la notification.
+   *
+   * Jauges et non compteurs : c'est un état courant (« combien d'écrans noirs
+   * maintenant »), pas un cumul. Un retour à 0 doit être visible immédiatement,
+   * d'où l'appel explicite à zéro quand plus rien n'est impacté.
+   */
+  recordVideoFtpMissingReferenced(videos: number, sites: number): void {
+    videoFtpMissingReferencedGauge.set(videos);
+    videoFtpMissingReferencedSitesGauge.set(sites);
   }
 
   /** ADR-110 Phase 3 PUB-02 : un fichier test render supprimé par le CRON cleanup. */
