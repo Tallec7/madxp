@@ -1,3 +1,10 @@
+## [4.30.6](https://github.com/Tallec7/madxp/compare/v4.30.5...v4.30.6) (2026-08-12)
+
+### Bug Fixes
+
+- **dashboard:** markForCheck() pour sortir la modale variantes LED de "Chargement..." ([#1183](https://github.com/Tallec7/madxp/issues/1183)) ([6d48041](https://github.com/Tallec7/madxp/commit/6d480419e6900a7eb7e78344770c44e7a979b09e))
+- **led:** auto-suffix duplicate display.type from the template menu ([#1184](https://github.com/Tallec7/madxp/issues/1184)) ([ef47681](https://github.com/Tallec7/madxp/commit/ef47681f0d591890ba12d2ab3f82565833588fcd)), closes [#1181](https://github.com/Tallec7/madxp/issues/1181)
+
 ## [4.30.5](https://github.com/Tallec7/madxp/compare/v4.30.4...v4.30.5) (2026-08-12)
 
 ### Bug Fixes
