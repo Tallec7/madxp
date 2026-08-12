@@ -121,6 +121,21 @@ ce qui est gravé dans le processeur.
   pas de marge à retirer, et suggérer une solution est pire que rien — la bonne réponse
   est le bouton « Retirer » de la vue Canvas. Gardé par `MIN_MARGIN_FRACTION` et
   `RATIO_TOLERANCE` dans `evaluateCropProposal`.
+- **Laisser le conteneur `object-fit: none` (`.tv--pixel-exact` dans
+  `tv.component.scss`) suivre `width/height: 100%`.** Un canvas plié 100% correct
+  (vérifié `ffprobe`) peut quand même s'afficher rogné/zoomé si la fenêtre qui l'affiche
+  ne fait pas exactement la taille du canvas — le cas normal pour un site SaaS
+  (`site_type='saas'`, pas de Pi/kiosk) affiché depuis un PC classique en fenêtre Chrome
+  standard, pas en kiosk plein écran verrouillé à la résolution du processeur (incident
+  Piraths, 2026-08-12 — reproduit en redimensionnant le navigateur : 1600×480 = parfait,
+  1000×280 = exactement l'effet "zoomé/rogné"). `TvComponent.pixelExactCanvasSize` fixe
+  désormais `--pixel-exact-w`/`--pixel-exact-h` en px depuis `led.canvas_in.band_width`
+  et `band_count × led.height` — jamais depuis `sides`/`pitch` recalculés à la main
+  (même règle que `computeSiteCanvas()` côté backend). **Ne pas revenir à
+  `object-fit: contain`** pour "corriger" ça : déjà essayé, déjà cassé le rendu sur le
+  vrai ruban au club (cf. commentaire `isPixelExactDisplay` — c'est le seul écart qui
+  restait entre notre player et B2B Alive côté fabrication du canvas ; le fix du
+  2026-08-12 est côté taille de conteneur, pas côté `object-fit`). PR #1171.
 
 ## État du parc (vérifié en DB prod le 2026-08-10)
 
@@ -184,3 +199,8 @@ contrat d'entrée réel des processeurs, pas seulement de le supposer.
   (comportement) + `smoke-led-export-async.test.ts` (garde-fou fichier)
 - Tests étape D : `central-server/src/utils/__tests__/config-secondary-variants-folded.test.ts`
 - Maquette du parcours cible : `docs/proposals/assets/led-mockups/03-parcours-simplifie-ecrans-led.html`
+- Taille de conteneur pixel-exact (2026-08-12) : `raspberry/src/app/components/tv/tv.component.ts`
+  (`pixelExactCanvasSize`), `tv.component.scss` (`--pixel-exact-w/h`) — [PR #1171](https://github.com/Tallec7/madxp/pull/1171).
+  Aucun script/doc équivalent à `kiosk-watchdog.sh` (Pi) n'existe côté PC classique SaaS pour
+  forcer la résolution d'écran/le mode kiosk — gap non comblé par ce fix (robustesse côté
+  rendu seulement, pas côté déploiement physique).
