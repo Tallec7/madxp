@@ -1,3 +1,9 @@
+## [4.29.2](https://github.com/Tallec7/madxp/compare/v4.29.1...v4.29.2) (2026-08-12)
+
+### Bug Fixes
+
+- **raspberry:** recover manual video state on master play() failure ([#1176](https://github.com/Tallec7/madxp/issues/1176)) ([b13a9b1](https://github.com/Tallec7/madxp/commit/b13a9b1865e34d7375d1d2bc7ddfbe1a00e86c47))
+
 ## [4.29.1](https://github.com/Tallec7/madxp/compare/v4.29.0...v4.29.1) (2026-08-12)
 
 ### Bug Fixes

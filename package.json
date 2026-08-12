@@ -1,6 +1,6 @@
 {
   "name": "madxp",
-  "version": "4.29.1",
+  "version": "4.29.2",
   "license": "PROPRIETARY",
   "engines": {
     "node": ">=20.19.0"
