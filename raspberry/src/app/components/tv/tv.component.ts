@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, Input, OnDestroy, OnInit, ViewChild, NgZone, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, Input, OnDestroy, OnInit, ViewChild, NgZone, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -42,6 +42,7 @@ import { environment } from '../../../environments/environment';
     '[class.tv--pixel-exact]': 'isPixelExactDisplay',
     '[style.--pixel-exact-w]': 'pixelExactCanvasWidth',
     '[style.--pixel-exact-h]': 'pixelExactCanvasHeight',
+    '[style.--pixel-exact-scale]': 'pixelExactScale',
   }
 })
 export class TvComponent implements OnInit, OnDestroy {
@@ -124,6 +125,43 @@ export class TvComponent implements OnInit, OnDestroy {
   public get pixelExactCanvasHeight(): string | null {
     const size = this.pixelExactCanvasSize;
     return size ? `${size.height}px` : null;
+  }
+
+  /**
+   * Largeur de la "scène" de référence pour `canvas_in.scene_scaling` — même
+   * convention que B2B Alive (vérifié via son panneau OUTPUT, 2026-08-12) :
+   * composer à 1920px de large, puis scaler UNIFORMÉMENT (jamais recentrer)
+   * pour occuper toute la largeur de fenêtre réelle.
+   *
+   * Option désactivée par défaut (cf. Joi `canvas_in.scene_scaling`) : un scale
+   * ≠ 1 réintroduit un flou d'interpolation sur le ruban si la fenêtre du PC ne
+   * fait pas exactement 1920px de large — précisément le risque que le rendu
+   * pixel-exact (taille fixe, ci-dessus) évite. À activer seulement pour
+   * l'aperçu/démo, ou après validation terrain que le flou est acceptable.
+   */
+  private static readonly SCENE_STAGE_WIDTH = 1920;
+
+  private windowWidth = window.innerWidth;
+
+  @HostListener('window:resize')
+  public onWindowResize(): void {
+    this.windowWidth = window.innerWidth;
+  }
+
+  public get sceneScalingEnabled(): boolean {
+    return !!this.configuration?.displays?.[this.displayIndex]?.led?.canvas_in?.scene_scaling;
+  }
+
+  /**
+   * `transform: scale()` — jamais `null` en sortie CSS (fallback `1` côté SCSS
+   * via `var(--pixel-exact-scale, 1)`) pour que l'option désactivée reproduise
+   * exactement le comportement pixel-exact précédent, sans écart.
+   */
+  public get pixelExactScale(): number | null {
+    if (!this.sceneScalingEnabled) {
+      return null;
+    }
+    return this.windowWidth / TvComponent.SCENE_STAGE_WIDTH;
   }
 
   // HDMI status — E-23 US-23.2.1: splash screen when no display connected

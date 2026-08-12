@@ -46,6 +46,13 @@ ce qui est gravé dans le processeur.
   `canvas_in.band_count = 1` figé par un installateur alors que le dérivé par côté vaut 2 :
   allumer sans re-confirmer doublerait la hauteur (110 → 220 px) face à un processeur gravé
   pour 110. L'activation se fait club par club, après la mire (`npm run led:mire`).
+- **Donner un défaut Joi à `canvas_in.scene_scaling`, ou centrer au lieu de scaler
+  depuis le coin haut-gauche.** `scene_scaling` (`tv.component.ts` → `pixelExactScale`)
+  scale tout le rendu pixel-exact façon B2B (scène de référence 1920px) — un défaut à
+  `true` réintroduirait le flou d'interpolation que le rendu à taille fixe évite
+  spécifiquement sur toute fenêtre PC ≠ 1920px de large. `transform-origin` DOIT rester
+  `top left` : un recentrage décale le mapping pixel attendu par le processeur, même
+  bug que l'ancien `object-fit: contain` (cf. commentaire `isPixelExactDisplay`).
 - **Exclure une vidéo aux dimensions inconnues du bouton « Créer les variantes LED
   manquantes »** (`ribbonExclusion`, `content-variant.controller.ts`). Un `null` de
   dimensions n'est pas un `false` : tant que `backfill:video-dimensions` n'a pas tourné
@@ -180,6 +187,20 @@ que la fenêtre PC fasse _exactement_ 1600×480 — juste qu'elle fasse **au moi
 (résolution standard, pas de mode custom à configurer sur le PC). Le gap noté plus haut
 (aucun `kiosk-watchdog.sh` équivalent côté PC SaaS) devient donc plus facile à combler :
 la cible est une résolution native ordinaire, pas une résolution exotique 1600×480.
+
+**Mécanisme de scale de B2B, inspecté en DOM le 2026-08-12** : B2B ne fait pas de
+`object-fit`. Son conteneur `.output` porte `transform: scale(largeur_fenêtre / 1920)`,
+`transform-origin: top left` — jamais de recentrage. À largeur de fenêtre exactement
+1920px, `scale = 1` = identique pixel pour pixel à notre rendu pixel-exact. À toute
+autre largeur, tout le canvas est rééchantillonné uniformément (flou d'interpolation),
+contre un simple rognage/marge noire chez nous. **`canvas_in.scene_scaling`**
+(`tv.component.ts` → `pixelExactScale`, Joi `scene_scaling: Joi.boolean().optional()`,
+PAS de défaut — même garde-fou que `serve_folded`) reproduit ce mécanisme derrière un
+interrupteur explicite, désactivé par défaut. Ne jamais l'allumer sur la sortie réelle
+vers un processeur sans avoir confirmé que la fenêtre PC tient une largeur stable et
+proche de 1920px — sinon on réintroduit exactement le flou que le rendu pixel-exact
+(taille fixe, ci-dessus) a été conçu pour éviter. Usage visé : aperçu/démo dans un
+onglet de taille quelconque, pas le kiosk de production.
 
 **Piraths est ACTIVÉ** depuis le 2026-08-11 (`serve_folded: true`, hauteur 120,
 largeur d'entrée 1600). **Lanester reste non observé** : son `band_count` figé à 1 diverge

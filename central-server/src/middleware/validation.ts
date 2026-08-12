@@ -180,6 +180,15 @@ export const schemas = {
             // led:mire`). `mode` ne pouvait pas servir de bascule — il vaut 'B'
             // par défaut sur tout le parc sans que personne l'ait choisi.
             serve_folded: Joi.boolean().optional(),
+            // Mode d'affichage écran SaaS (PC classique, pas de kiosk-watchdog) :
+            // scale le rendu sur une largeur de fenêtre réelle vs une "scène" de
+            // référence 1920px, comme B2B Alive. PAS de `.default()` — activation
+            // délibérée par site : un scale non-1:1 réintroduit un flou
+            // d'interpolation sur le ruban si la fenêtre PC n'est pas exactement
+            // 1920px de large (risque que le rendu pixel-exact par défaut évite
+            // justement — cf. tv.component.scss). Off = comportement actuel
+            // (taille fixe, marges noires, jamais de flou).
+            scene_scaling: Joi.boolean().optional(),
           }).optional(),
         }).optional().allow(null),
       })
