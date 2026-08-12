@@ -5,8 +5,8 @@
 > **Dernière revue** : 2026-04-29
 > **last_verified** : 2026-08-10
 > **verified_against_commit** : 8528e38bc
-> **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`), ADR-136 (drain multipart avant rejet précoce + allowlist image partagée + GIF animé)
-> **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url`), `smoke-content-upload-incident-2026-08-04.test.ts` (drain multipart + allowlist image + régime ffmpeg GIF)
+> **ADR liés** : ADR-022 (restructuration UX de l'onglet Contenu — site-content-tab), ADR-100 (alias `storage_path AS url` dans `findVideoById`), ADR-136 (drain multipart avant rejet précoce + allowlist image partagée + GIF animé), ADR-142 (le badge « vidéos manquantes » compte ce qui est diffusé)
+> **Smoke tests** : `smoke-wiring.test.ts` (upload-verification exports), `smoke-saas.test.ts` (replace path via `.url` + chaînage détecter→alerter→horodater), `smoke-content-upload-incident-2026-08-04.test.ts` (drain multipart + allowlist image + régime ffmpeg GIF), `smoke-video-ftp-badge-scope.test.ts` (périmètre du badge, ADR-142)
 > **`.claude/rules/` lié** : aucun dédié — invariants à formaliser si régression
 
 ## En une phrase
@@ -60,6 +60,7 @@ Une vidéo suit un cycle upload → vérification FTP → catégorisation → d�
 - **Catégories** : les vidéos peuvent appartenir à 0..N catégories (table junction). Filtres dashboard par catégorie.
 - **Cascade DELETE** : `DELETE /api/content/videos/:id` supprime la vidéo + ses variantes + ses déploiements + son fichier FTP. La table `video_plays` conserve l'historique (analytics, FK nullable).
 - **Audit FTP** : le CRON `video-ftp-audit.task` vérifie périodiquement que chaque `storage_path` existe sur le FTP Hostinger. Les vidéos introuvables sont marquées `❌ Introuvable FTP` — elles restent dans la boucle config jusqu'à action admin (Replace ou Unlink).
+- **Périmètre de rattachement à un site (ADR-142)** : un fichier absent concerne un site s'il est dans sa bibliothèque (`site_videos`) **OU** référencé par un de ses profils de config — prédicat partagé `LINKED_TO_SITE`, utilisé par `countActiveForSite()` (badge tab « Contenu »), `findActiveForSite()` (bannière **et** garde de `unlinkSiteFtpOrphan`) et le `reference_count` de `findAllActive()` (tri impact de la vue admin flotte). `site_videos` seul ne voyait que 3 des 51 lignes au 2026-08-11 : Mangin-Beaulieu affichait 0 pour 17 anomalies. L'union est nécessaire dans les deux sens — une vidéo assignée mais non diffusée plantera quand même si la télécommande la déclenche, et la garde d'unlink doit voir les vidéos référencées en config seule, sans quoi elles ne sont pas nettoyables. Supervision : `madxp_video_ftp_missing_referenced_current` + `..._sites_current`.
 - **Auto-déploiement sur sauvegarde profil Pi (ADR-117)** : quand un admin sauvegarde un profil de config Pi (`updateProfileConfiguration`) ou déploie un profil (`deployProfile`), le serveur calcule le diff des paths vidéo new/old et déclenche automatiquement un `content_deployments` pour chaque vidéo nouvelle non encore déployée. Pré-conditions : `site_type = 'pi'`, vidéo `upload_status = 'ready'`, fichier accessible sur FTP (HEAD check parallèle 5s), pas de déploiement `pending/in_progress/completed` existant. Paths synthétiques (`web_page:`, `livestream:`) ignorés. La réponse API inclut `pendingDeployments: number`.
 - **Throttle anti-storm (ADR-117 hardening, incident NLF 2026-05-13)** : 3 garde-fous superposés pour éviter qu'une cascade de déploiements écrase le Pi :
   - `MAX_AUTO_DEPLOY = 5` (cap candidats par appel — anciennement 10)

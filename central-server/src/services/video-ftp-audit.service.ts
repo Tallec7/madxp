@@ -184,9 +184,17 @@ class VideoFtpAuditService {
     const impacted = await videoFtpAuditRepository.findMissingReferencedInProfiles();
 
     if (impacted.length === 0) {
+      // Remettre les jauges à zéro explicitement : un retour à la normale doit se
+      // voir immédiatement en supervision, sinon le dernier pic reste affiché.
+      metricsService.recordVideoFtpMissingReferenced(0, 0);
       logger.info('Video FTP audit: aucun fichier manquant diffusé, pas d’alerte');
       return { sitesAlerted: 0, pathsNotified: 0 };
     }
+
+    metricsService.recordVideoFtpMissingReferenced(
+      new Set(impacted.flatMap(s => s.storage_paths)).size,
+      impacted.length,
+    );
 
     for (const site of impacted) {
       const noms = site.storage_paths.slice(0, MAX_PATHS_IN_MESSAGE).join(', ');

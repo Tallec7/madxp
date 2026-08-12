@@ -155,6 +155,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-139](ADR-139-led-serve-folded-canvas.md)                                            | Servir le canvas LED plié, derrière un interrupteur par site                                 | Accepté                           | Août 2026 |
 | [ADR-140](ADR-140-led-autocrop-on-validation.md)                                         | Détourer les marges d'une vidéo LED, sur validation humaine                                  | Accepté                           | Août 2026 |
 | [ADR-141](ADR-141-studio-render-concurrency-cap.md)                                      | Plafonner les rendus Studio en DB (révise « SKIP LOCKED gère » d'ADR-054)                    | Accepté                           | Août 2026 |
+| [ADR-142](ADR-142-missing-video-badge-counts-broadcast.md)                               | Le badge « vidéos manquantes » d'un site compte ce qui est diffusé                           | Accepté                           | Août 2026 |
 
 ### Supersédés
 

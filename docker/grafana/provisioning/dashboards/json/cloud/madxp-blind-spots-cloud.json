@@ -1424,6 +1424,70 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 131 },
+      "id": 900,
+      "title": "Vidéos manquantes DIFFUSÉES",
+      "description": "Fichiers absents du stockage ET encore référencés dans un profil de config = écran noir en match. Sous-ensemble de 'FTP orphans current' : une orpheline que plus aucune config ne référence est du ménage de base, celle-ci est une panne visible par le club. Toute valeur > 0 doit avoir une alerte 'video_missing_on_storage' active correspondante ; si le compteur monte sans alerte, l'émetteur est cassé.",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "expr": "madxp_video_ftp_missing_referenced_current",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "grafanacloud-tallec7-prom" },
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 131 },
+      "id": 901,
+      "title": "Sites avec vidéo diffusée morte",
+      "description": "Nombre de clubs dont au moins une vidéo diffusée est absente du stockage. Une alerte est émise par site (dédup ADR-111) ; ce compteur doit correspondre au nombre d'alertes 'video_missing_on_storage' actives.",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "expr": "madxp_video_ftp_missing_referenced_sites_current",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "1m",

@@ -18,12 +18,21 @@ export interface VideoFtpAuditWarning {
   last_checked_at: Date;
   notified_at: Date | null;
   reference_count: number;
+  /** Présent seulement sur `findActiveForSite` : rattachement via `site_videos`. */
+  linked_in_library?: boolean;
+  /** Présent seulement sur `findActiveForSite` : rattachement via un profil de config. */
+  referenced_in_config?: boolean;
 }
 
 class VideoFtpAuditRepository {
   /**
    * Liste toutes les warnings actives, enrichies avec le nom du fichier et
    * le nombre de sites qui référencent encore la vidéo (impact métier).
+   *
+   * `reference_count` compte les sites rattachés **par la bibliothèque OU par une
+   * config**. Il ne comptait que `site_videos`, donc renvoyait 0 pour 48 des 51
+   * lignes de prod : le tri « impact décroissant » rangeait les sponsors facturés
+   * réellement diffusés en bas de liste, derrière des orphelines sans effet.
    */
   async findAllActive(limit = 200): Promise<VideoFtpAuditWarning[]> {
     const result = await query<VideoFtpAuditWarning>(
@@ -38,7 +47,15 @@ class VideoFtpAuditRepository {
          w.first_detected_at,
          w.last_checked_at,
          w.notified_at,
-         (SELECT COUNT(*)::int FROM site_videos sv WHERE sv.video_id = w.video_id) AS reference_count
+         (SELECT COUNT(*)::int FROM sites s
+            WHERE EXISTS (SELECT 1 FROM site_videos sv
+                          WHERE sv.video_id = w.video_id AND sv.site_id = s.id)
+               OR EXISTS (SELECT 1 FROM config_profiles cp
+                          WHERE cp.site_id = s.id
+                            AND (strpos(cp.configuration::text, v.filename) > 0
+                                 OR (v.original_name IS NOT NULL
+                                     AND strpos(cp.configuration::text, v.original_name) > 0)))
+         ) AS reference_count
        FROM video_ftp_audit_warnings w
        JOIN videos v ON v.id = w.video_id
        ORDER BY reference_count DESC, w.first_detected_at ASC
@@ -49,25 +66,72 @@ class VideoFtpAuditRepository {
   }
 
   /**
-   * Count active FTP orphans referenced by a specific site, via `site_videos`.
-   * Source du badge tab "Contenu" sur `/sites/:id` (chantier vidéos manquantes) :
-   * une orpheline référencée par ce site = vidéo qui plantera quand quelqu'un
-   * tentera de la jouer côté TV.
+   * Prédicat « ce fichier absent concerne ce site » — bibliothèque OU diffusion.
+   *
+   * ## Pourquoi l'union, et pas `site_videos` seul
+   *
+   * `site_videos` est alimentée à l'upload ciblé et au déploiement (ADR-048) : une
+   * config copiée d'un autre club ou importée n'y laisse rien. Mesuré en prod le
+   * 2026-08-11, elle ne voyait que **3 des 51 lignes** de la table. Le badge du tab
+   * « Contenu » affichait donc **0 pour Mangin-Beaulieu (NLF) qui en diffusait 17**,
+   * et 1 pour Lanester qui en diffusait 15. Le tableau de bord ne se taisait pas :
+   * il rassurait. C'est le même constat qui a motivé l'alerting de la PR #1165 ;
+   * ici on le porte à la restitution qui reste, elle, branchée sur la pivot.
+   *
+   * ## Pourquoi pas la config seule non plus
+   *
+   * Ce serait le symétrique de la même erreur. Une vidéo assignée en bibliothèque
+   * mais pas encore dans la boucle plantera quand même si la télécommande la
+   * déclenche — ce que le texte de la bannière annonce explicitement.
+   *
+   * ## Détails SQL qui comptent
+   *
+   * - `strpos()` et non `LIKE` : les noms de fichiers sont pleins de `_`, qui est un
+   *   joker « n'importe quel caractère » en LIKE. `LIKE '%TV_PART03%'` matcherait
+   *   `TVxPART03`. `strpos()` cherche une sous-chaîne littérale, sans échappement.
+   * - `filename` **ET** `original_name` : la config référence le nom d'origine
+   *   (`TV_PART03_SPORT&WELNESS.mp4`) là où `storage_path` porte le nom assaini
+   *   (`TV_PART03_SPORTWELNESS.mp4`). Ne tester que l'un des deux rate une part
+   *   du parc.
+   */
+  private static readonly LINKED_TO_SITE = `(
+    EXISTS (SELECT 1 FROM site_videos sv WHERE sv.video_id = w.video_id AND sv.site_id = $1)
+    OR EXISTS (
+      SELECT 1 FROM config_profiles cp
+      WHERE cp.site_id = $1
+        AND (strpos(cp.configuration::text, v.filename) > 0
+             OR (v.original_name IS NOT NULL AND strpos(cp.configuration::text, v.original_name) > 0))
+    )
+  )`;
+
+  /**
+   * Compte les fichiers absents rattachés à ce site (bibliothèque OU diffusion).
+   * Source du badge tab « Contenu » sur `/sites/:id`.
    */
   async countActiveForSite(siteId: string): Promise<number> {
     const result = await query<{ count: string }>(
       `SELECT COUNT(DISTINCT w.video_id)::int AS count
        FROM video_ftp_audit_warnings w
-       JOIN site_videos sv ON sv.video_id = w.video_id
-       WHERE sv.site_id = $1`,
+       JOIN videos v ON v.id = w.video_id
+       WHERE ${VideoFtpAuditRepository.LINKED_TO_SITE}`,
       [siteId],
     );
     return parseInt(String(result.rows[0]?.count || '0'), 10) || 0;
   }
 
   /**
-   * List active FTP orphan warnings for a specific site (joined via site_videos).
-   * Alimente la bannière détaillée du tab "Contenu" sur `/sites/:id`.
+   * Liste les fichiers absents rattachés à ce site (bibliothèque OU diffusion).
+   *
+   * Alimente la bannière du tab « Contenu » **et** sert de garde à
+   * `unlinkSiteFtpOrphan`. Ce double usage rend l'union nécessaire : l'endpoint
+   * d'unlink purge déjà le JSONB des profils et le mirror (son
+   * `DELETE FROM site_videos` n'est qu'une de ses étapes, no-op sans lien), mais sa
+   * garde refusait justement les vidéos référencées en config seule — les seules
+   * que l'admin ne pouvait donc pas nettoyer.
+   *
+   * `linked_in_library` / `referenced_in_config` disent d'où vient le rattachement :
+   * utile pour distinguer « assignée mais pas diffusée » de « diffusée sans
+   * assignation », le cas majoritaire en prod.
    */
   async findActiveForSite(siteId: string, limit = 100): Promise<VideoFtpAuditWarning[]> {
     const result = await query<VideoFtpAuditWarning>(
@@ -82,11 +146,17 @@ class VideoFtpAuditRepository {
          w.first_detected_at,
          w.last_checked_at,
          w.notified_at,
-         1 AS reference_count
+         1 AS reference_count,
+         EXISTS (SELECT 1 FROM site_videos sv WHERE sv.video_id = w.video_id AND sv.site_id = $1) AS linked_in_library,
+         EXISTS (
+           SELECT 1 FROM config_profiles cp
+           WHERE cp.site_id = $1
+             AND (strpos(cp.configuration::text, v.filename) > 0
+                  OR (v.original_name IS NOT NULL AND strpos(cp.configuration::text, v.original_name) > 0))
+         ) AS referenced_in_config
        FROM video_ftp_audit_warnings w
        JOIN videos v ON v.id = w.video_id
-       JOIN site_videos sv ON sv.video_id = w.video_id
-       WHERE sv.site_id = $1
+       WHERE ${VideoFtpAuditRepository.LINKED_TO_SITE}
        ORDER BY w.first_detected_at ASC
        LIMIT $2`,
       [siteId, limit],
