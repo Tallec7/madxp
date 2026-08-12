@@ -36,12 +36,15 @@ describe('LedCanvasOverviewComponent', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  function openAndFlush(videos: unknown[]) {
+  function openAndFlush(videos: unknown[], displays: unknown[] = []) {
     fixture.detectChanges();
     component.toggle();
     http
       .expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`)
       .flush({ expected: { width: 1600, height: 120 }, videos });
+    // `toggle()` déclenche aussi loadDisplays() pour localiser le led-perimeter
+    // (toggle scene_scaling) — secondaire à l'écran Canvas, silencieux en erreur.
+    http.expectOne(`${environment.apiUrl}/sites/site-1/displays`).flush({ displays });
     fixture.detectChanges();
   }
 
@@ -180,10 +183,56 @@ describe('LedCanvasOverviewComponent', () => {
       { error: "Ce site n'a pas de ruban LED configuré" },
       { status: 400, statusText: 'Bad Request' }
     );
+    http.expectOne(`${environment.apiUrl}/sites/site-1/displays`).flush({ displays: [] });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('[data-testid="lco-error"]').textContent).toContain(
       'ruban LED'
     );
+  });
+
+  describe('scene_scaling (scale façon B2B, opt-in)', () => {
+    const ledDisplay = (canvasInOver: Partial<Record<string, unknown>> = {}) => ({
+      index: 0,
+      name: 'Ruban',
+      type: 'led-perimeter',
+      led: {
+        sides: [10, 10, 10, 10],
+        pitch: 'P6.25',
+        height: 120,
+        spacing_m: 10,
+        canvas_in: { band_width: 1600, band_count: 4, order: 'top-to-bottom', mode: 'B', ...canvasInOver },
+      },
+    });
+
+    it('le toggle est absent sans display led-perimeter', () => {
+      openAndFlush([row()], []);
+      expect(fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-row"]')).toBeNull();
+    });
+
+    it('reflète scene_scaling du display led-perimeter', () => {
+      openAndFlush([row()], [ledDisplay({ scene_scaling: true })]);
+
+      const checkbox = fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox"]');
+      expect(checkbox.checked).toBe(true);
+    });
+
+    it('cocher le toggle PATCH tout le tableau displays avec scene_scaling: true', () => {
+      openAndFlush([row()], [ledDisplay()]);
+
+      fixture.nativeElement.querySelector('[data-testid="lco-scene-scaling-checkbox"]').click();
+
+      const patch = http.expectOne(`${environment.apiUrl}/sites/site-1/displays`);
+      expect(patch.request.method).toBe('PATCH');
+      const body = patch.request.body as { displays: Array<{ led?: { canvas_in?: { scene_scaling?: boolean } } }> };
+      expect(body.displays[0].led?.canvas_in?.scene_scaling).toBe(true);
+      // Le reste de la géométrie ne doit pas être perdu dans l'aller-retour.
+      expect(body.displays[0].led?.canvas_in).toEqual(
+        jasmine.objectContaining({ band_width: 1600, band_count: 4 })
+      );
+      patch.flush({});
+
+      expect(component.sceneScalingEnabled).toBe(true);
+    });
   });
 });
