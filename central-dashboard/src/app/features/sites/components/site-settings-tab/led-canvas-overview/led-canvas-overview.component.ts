@@ -2,6 +2,7 @@ import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef } from '@a
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../../environments/environment';
+import { DisplayConfig } from '../../../../../core/models';
 
 /** Rectangle de détourage, en pixels de la source (PROP-015). */
 interface CropRect {
@@ -71,6 +72,21 @@ interface CropProposal {
           Format attendu par le ruban : <strong>{{ e.width }} × {{ e.height }} px</strong>
           — c'est le chiffre à donner aux agences.
         </p>
+
+        <!-- Scale façon B2B (scène 1920px) — opt-in, jamais par défaut. Un scale != 1
+             réintroduit un flou d'interpolation sur toute fenêtre PC != 1920px de large ;
+             à activer seulement après validation terrain (cf. .claude/rules/led.md). -->
+        <label class="lco__toggle-row" *ngIf="ledDisplayIndex !== null" data-testid="lco-scene-scaling-row">
+          <input
+            type="checkbox"
+            data-testid="lco-scene-scaling-checkbox"
+            [checked]="sceneScalingEnabled"
+            [disabled]="savingSceneScaling"
+            (change)="toggleSceneScaling()"
+          />
+          Scaler le rendu sur la largeur de fenêtre (façon B2B, scène 1920px) — expérimental,
+          désactivé par défaut. Peut introduire un flou si la fenêtre PC ne fait pas 1920px de large.
+        </label>
 
         <table class="lco__table" *ngIf="!loading && rows.length">
           <thead>
@@ -235,6 +251,8 @@ interface CropProposal {
     .lco__toggle { background: none; border: 0; font-weight: 600; cursor: pointer; color: #a35a10; }
     .lco__alert { margin-left: .5rem; font-weight: 500; color: #b45309; }
     .lco__expected { font-size: .85rem; color: #555; margin: .5rem 0; }
+    .lco__toggle-row { display: flex; align-items: flex-start; gap: .4rem; font-size: .8rem; color: #666; margin: .5rem 0 .75rem; cursor: pointer; }
+    .lco__toggle-row input { margin-top: .15rem; flex-shrink: 0; }
     .lco__table { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .lco__table th { text-align: left; font-weight: 600; padding: .25rem .4rem; color: #666; }
     .lco__table td { padding: .3rem .4rem; border-top: 1px solid rgba(0,0,0,.06); vertical-align: middle; }
@@ -278,6 +296,13 @@ export class LedCanvasOverviewComponent {
   /** Propositions de détourage en attente d'arbitrage — jamais appliquées seules. */
   proposals: Record<string, CropProposal | null> = {};
 
+  /** Displays du site — chargés uniquement pour localiser le led-perimeter et son
+   * toggle scene_scaling (pas d'écran dédié à la config displays pour l'instant). */
+  private displays: DisplayConfig[] = [];
+  ledDisplayIndex: number | null = null;
+  sceneScalingEnabled = false;
+  savingSceneScaling = false;
+
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   /** Compte ce qui mérite un coup d'œil : format inadapté OU canvas absent/en échec. */
@@ -290,6 +315,57 @@ export class LedCanvasOverviewComponent {
   toggle(): void {
     this.open = !this.open;
     if (this.open && !this.rows.length) this.load();
+    if (this.open && !this.displays.length) this.loadDisplays();
+  }
+
+  /** Localise le display led-perimeter pour afficher/piloter `scene_scaling`. */
+  private loadDisplays(): void {
+    if (!this.siteId) return;
+    this.http
+      .get<{ displays: DisplayConfig[] }>(`${environment.apiUrl}/sites/${this.siteId}/displays`, {
+        withCredentials: true,
+      })
+      .subscribe({
+        next: (r) => {
+          this.displays = r.displays ?? [];
+          const ledDisplay = this.displays.find((d) => d.type === 'led-perimeter');
+          this.ledDisplayIndex = ledDisplay ? ledDisplay.index : null;
+          this.sceneScalingEnabled = !!ledDisplay?.led?.canvas_in?.scene_scaling;
+          this.cdr.markForCheck();
+        },
+        // Silencieux : ce toggle est secondaire, l'écran Canvas reste utilisable sans lui.
+        error: () => this.cdr.markForCheck(),
+      });
+  }
+
+  /**
+   * Écrit `scene_scaling` sur le display led-perimeter. Le PATCH `/displays` remplace
+   * le tableau ENTIER (Joi `updateDisplays` — pas de patch partiel côté API) : on
+   * renvoie donc tous les displays chargés, avec un seul champ modifié.
+   */
+  toggleSceneScaling(): void {
+    if (this.ledDisplayIndex === null || this.savingSceneScaling || !this.siteId) return;
+    const next = !this.sceneScalingEnabled;
+    const displays = this.displays.map((d) => {
+      if (d.index !== this.ledDisplayIndex || !d.led) return d;
+      return { ...d, led: { ...d.led, canvas_in: { ...d.led.canvas_in, scene_scaling: next } } } as DisplayConfig;
+    });
+    this.savingSceneScaling = true;
+    this.http
+      .patch(`${environment.apiUrl}/sites/${this.siteId}/displays`, { displays }, { withCredentials: true })
+      .subscribe({
+        next: () => {
+          this.displays = displays;
+          this.sceneScalingEnabled = next;
+          this.savingSceneScaling = false;
+          this.cdr.markForCheck();
+        },
+        error: (e) => {
+          this.savingSceneScaling = false;
+          this.error = e?.error?.error ?? 'Enregistrement impossible';
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   load(): void {

@@ -190,6 +190,10 @@ export interface LedCanvasInConfig {
   mode: 'A' | 'B';               // A = plug & play, B = pixel-perfect (PROP-014 §10)
   /** ADR-139 étape D : diffuser le canvas plié. Éteint par défaut. */
   serve_folded?: boolean;
+  /** Scale façon B2B (scène de référence 1920px) au lieu du rendu pixel-exact
+   * taille fixe. Éteint par défaut — un scale != 1 réintroduit un flou si la
+   * fenêtre PC n'est pas exactement 1920px de large (cf. .claude/rules/led.md). */
+  scene_scaling?: boolean;
 }
 
 /** Profil LED périmétrique d'un display (PROP-014 §3) — GÉOMÉTRIE uniquement.
