@@ -1,3 +1,9 @@
+# [4.30.0](https://github.com/Tallec7/madxp/compare/v4.29.2...v4.30.0) (2026-08-12)
+
+### Features
+
+- **led:** plusieurs rubans led-perimeter par club (ADR-143) ([#1177](https://github.com/Tallec7/madxp/issues/1177)) ([9447aca](https://github.com/Tallec7/madxp/commit/9447aca86cc1b382d2e02568094677bfcb876f34))
+
 ## [4.29.2](https://github.com/Tallec7/madxp/compare/v4.29.1...v4.29.2) (2026-08-12)
 
 ### Bug Fixes
