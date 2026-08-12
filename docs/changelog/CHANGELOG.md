@@ -1,3 +1,9 @@
+## [4.29.1](https://github.com/Tallec7/madxp/compare/v4.29.0...v4.29.1) (2026-08-12)
+
+### Bug Fixes
+
+- **content:** reset blurBackground après conversion image→vidéo ([#1175](https://github.com/Tallec7/madxp/issues/1175)) ([bf46891](https://github.com/Tallec7/madxp/commit/bf468911eff61d414a62e1a3e3b16b0a621cdcc5))
+
 # [4.29.0](https://github.com/Tallec7/madxp/compare/v4.28.0...v4.29.0) (2026-08-12)
 
 ### Features
