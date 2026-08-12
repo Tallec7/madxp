@@ -6,6 +6,7 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { VideoVariantPanelComponent } from './video-variant-panel.component';
@@ -445,5 +446,80 @@ describe('VideoVariantPanelComponent — recommandation de cadrage', () => {
     component.openPanels['led-perimeter'] = true;
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-testid="fit-recommendation"]')).toBeNull();
+  });
+});
+
+/**
+ * Régression : la modale reste bloquée sur "Chargement..." en prod (site
+ * Piraths, PR club portal Contenu → badge "2nd") quand le panel est imbriqué
+ * sous des ancêtres OnPush (video-manager → site-content-tab → video-library
+ * → video-detail-panel, tous OnPush depuis le refactor du 2026-04-03).
+ *
+ * Le clic qui OUVRE la modale est un event DOM interne à la chaîne OnPush →
+ * elle est marquée dirty pour CE tick, donc `loading = true` s'affiche. Mais
+ * la réponse HTTP arrive sur un tick zone.js ultérieur qui n'a aucune raison
+ * de marquer l'ancêtre OnPush dirty : sans `markForCheck()` explicite, la
+ * mutation JS a bien lieu mais Angular s'arrête au premier ancêtre OnPush et
+ * ne redescend jamais rafraîchir la vue du panel.
+ *
+ * Le test reproduit ça avec 2 niveaux : un host EXTERNE (stratégie par
+ * défaut, simule le `ApplicationRef.tick()` racine) qui contient un wrapper
+ * OnPush (simule `video-manager`), qui contient le panel. Un second
+ * `detectChanges()` sur le host externe, SANS avoir remarqué le wrapper
+ * dirty, doit quand même révéler la fin du chargement — uniquement possible
+ * si `markForCheck()` a bien propagé la dirty flag jusqu'à la racine.
+ */
+describe('VideoVariantPanelComponent — imbriqué sous un ancêtre OnPush', () => {
+  @Component({
+    standalone: true,
+    selector: 'app-test-onpush-video-manager',
+    imports: [VideoVariantPanelComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `<app-video-variant-panel [videoId]="videoId" [autoOpen]="true"></app-video-variant-panel>`,
+  })
+  class OnPushWrapperComponent {
+    videoId = 'vid-1';
+  }
+
+  @Component({
+    standalone: true,
+    imports: [OnPushWrapperComponent],
+    template: `<app-test-onpush-video-manager></app-test-onpush-video-manager>`,
+  })
+  class RootHostComponent {}
+
+  let fixture: ComponentFixture<RootHostComponent>;
+  let httpMock: HttpTestingController;
+  const notificationStub = { success: jasmine.createSpy('success'), error: jasmine.createSpy('error') };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [RootHostComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NotificationService, useValue: notificationStub },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RootHostComponent);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('sort de "Chargement..." après la réponse HTTP, même sans re-cibler le panel directement', () => {
+    fixture.detectChanges(); // 1er CD : toujours dirty → descend jusqu'au ngOnInit → GET variants émis
+
+    expect(fixture.nativeElement.querySelector('.variant-loading')).toBeTruthy();
+
+    httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants`).flush({ variants: [] });
+
+    // 2e CD depuis la racine, SANS avoir touché le wrapper OnPush entre-temps :
+    // ne révèle la fin du chargement que si markForCheck() a marqué toute la
+    // chaîne d'ancêtres dirty depuis le panel.
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.variant-loading')).toBeNull();
   });
 });

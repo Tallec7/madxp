@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpEventType, HttpEvent } from '@angular/common/http';
@@ -115,6 +115,17 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
 
   private http = inject(HttpClient);
   private notificationService = inject(NotificationService);
+  /**
+   * Ce composant est imbriqué dans une chaîne d'ancêtres OnPush
+   * (video-manager → site-content-tab → video-library → video-detail-panel).
+   * Un clic ouvrant la modale marque cette chaîne dirty pour SON tick, mais les
+   * réponses HTTP arrivent sur un tick zone.js ultérieur non lié à un event
+   * DOM interne à cette chaîne — sans markForCheck() explicite, Angular
+   * s'arrête au premier ancêtre OnPush et ne redescend jamais jusqu'ici :
+   * la mutation JS (`loading = false`) a bien lieu mais ne s'affiche jamais
+   * (modale bloquée sur "Chargement...").
+   */
+  private cdr = inject(ChangeDetectorRef);
 
   isOpen = false;
   loading = false;
@@ -211,6 +222,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         error: (err) => {
           this.uploadingSide = null;
           this.notificationService.error(`Erreur upload côté : ${ErrorExtractor.getMessage(err)}`);
+          this.cdr.markForCheck();
         },
       });
   }
@@ -237,6 +249,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           this.linkingSide = null;
           select.value = '';
           this.notificationService.error(`Erreur association côté : ${ErrorExtractor.getMessage(err)}`);
+          this.cdr.markForCheck();
         },
       });
   }
@@ -249,8 +262,10 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => this.loadVariants(),
-        error: (err) =>
-          this.notificationService.error(`Erreur suppression côté : ${ErrorExtractor.getMessage(err)}`),
+        error: (err) => {
+          this.notificationService.error(`Erreur suppression côté : ${ErrorExtractor.getMessage(err)}`);
+          this.cdr.markForCheck();
+        },
       });
   }
 
@@ -338,10 +353,12 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         this.loaded = true;
         this.variants = response.variants.filter(v => v.display_type !== 'tv');
         this.emitChange();
+        this.cdr.markForCheck();
       },
       error: () => {
         this.loading = false;
         this.loaded = true;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -369,12 +386,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         this.emitChange();
         this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} associee`);
         select.value = '';
+        this.cdr.markForCheck();
       },
       error: (error) => {
         this.linkingType = null;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
         select.value = '';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -418,6 +437,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
       next: (event: HttpEvent<VideoVariant & { format_notice?: LedFormatNotice; fit_recommendation?: FitRecommendation }>) => {
         if (event.type === HttpEventType.UploadProgress && event.total) {
           this.uploadProgress = Math.round((event.loaded / event.total) * 100);
+          this.cdr.markForCheck();
         } else if (event.type === HttpEventType.Response && event.body) {
           this.uploadingType = null;
           const variant = event.body;
@@ -444,12 +464,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           }
           this.emitChange();
           this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} uploadee`);
+          this.cdr.markForCheck();
         }
       },
       error: (error) => {
         this.uploadingType = null;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur upload: ${message}`);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -496,6 +518,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           // rejouer à la main. Échouer bruyamment sur une suggestion serait pire
           // que de ne rien proposer.
           variant.layout = null;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -549,11 +572,13 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         this.variants = this.variants.filter(v => v.display_type !== displayType);
         this.emitChange();
         this.notificationService.success(`Variante ${this.getDisplayLabel(displayType)} supprimee`);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         this.deletingType = null;
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -577,12 +602,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         this.savingLayoutType = null;
         variant.layout = updated.layout ?? null;
         this.notificationService.success(`Mise en page ${this.getDisplayLabel(variant.display_type)} enregistrée`);
+        this.cdr.markForCheck();
       },
       error: (error) => {
         this.savingLayoutType = null;
         variant.layout = previous; // rollback optimiste
         const message = ErrorExtractor.getMessage(error);
         this.notificationService.error(`Erreur: ${message}`);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -621,10 +648,12 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
         } else {
           this.pollExport(type, res.job_id);
         }
+        this.cdr.markForCheck();
       },
       error: (error) => {
         this.exportStates[type] = { status: 'failed', error: ErrorExtractor.getMessage(error) };
         this.notificationService.error(`Erreur export: ${ErrorExtractor.getMessage(error)}`);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -648,9 +677,11 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
           this.exportStates[type] = { status: job.status === 'processing' ? 'processing' : 'queued' };
           this.exportPollTimers[type] = setTimeout(() => this.pollExport(type, jobId), 2000);
         }
+        this.cdr.markForCheck();
       },
       error: () => {
         this.exportStates[type] = { status: 'failed', error: 'Erreur de suivi du job' };
+        this.cdr.markForCheck();
       }
     });
   }
