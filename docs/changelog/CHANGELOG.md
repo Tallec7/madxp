@@ -1,3 +1,9 @@
+## [4.30.3](https://github.com/Tallec7/madxp/compare/v4.30.2...v4.30.3) (2026-08-12)
+
+### Bug Fixes
+
+- **led:** un toggle scene_scaling par display, pas partagé par type ([#1180](https://github.com/Tallec7/madxp/issues/1180)) ([658db3b](https://github.com/Tallec7/madxp/commit/658db3b8d4cde7bd5619d8fd3c2996fd78482e31))
+
 ## [4.30.2](https://github.com/Tallec7/madxp/compare/v4.30.1...v4.30.2) (2026-08-12)
 
 ### Bug Fixes
