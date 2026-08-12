@@ -89,8 +89,15 @@ export class TvComponent implements OnInit, OnDestroy {
    * Les autres types (TV, totem, mur LED) gardent le `contain` : leur sortie est
    * regardée par un humain, pas découpée par une machine.
    */
+  /**
+   * `led-perimeter` et tout ruban additionnel du même club (`led-perimeter-2`,
+   * `led-perimeter-3`, ...). ADR-143 : un club peut avoir plusieurs rubans
+   * indépendants (bord de terrain, tribune...), chacun avec son propre `type`
+   * distinct pour garder son propre `led.canvas_in` — mais tous partagent le
+   * même besoin de rendu pixel-exact.
+   */
   public get isPixelExactDisplay(): boolean {
-    return this.displayType === 'led-perimeter';
+    return this.displayType === 'led-perimeter' || this.displayType.startsWith('led-perimeter-');
   }
 
   /**

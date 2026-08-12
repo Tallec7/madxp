@@ -8,7 +8,7 @@
  * Phase 5 — PROP-002: generalized from secondary-only to N display types.
  */
 
-import { SiteConfiguration, VideoVariants } from '../types';
+import { SiteConfiguration, VideoVariants, DisplayConfig, LedProfileConfig } from '../types';
 import { videoVariantRepository } from '../repositories/video-variant.repository';
 import { siteRepository } from '../repositories/site.repository';
 import { ledExportJobRepository } from '../repositories/led-export-job.repository';
@@ -79,19 +79,45 @@ function toRelativeStoragePath(url: string): string {
   return base && url.startsWith(base) ? url.slice(base.length) : url;
 }
 
+/** Type d'écran du ruban périmétrique principal. */
+const LED_PERIMETER_DISPLAY_TYPE = 'led-perimeter';
+
+/**
+ * Vrai pour `led-perimeter` et tout ruban additionnel du même club
+ * (`led-perimeter-2`, `led-perimeter-3`, ...). ADR-143 : un club peut avoir
+ * plusieurs rubans indépendants (bord de terrain, tribune...), chacun avec sa
+ * propre géométrie — jamais celle du premier ruban trouvé sur le site.
+ */
+function isLedPerimeterFamily(displayType: string): boolean {
+  return displayType === LED_PERIMETER_DISPLAY_TYPE || displayType.startsWith(`${LED_PERIMETER_DISPLAY_TYPE}-`);
+}
+
 async function substituteFoldedCanvas(
   variantMap: Map<string, VideoVariants>,
   siteId: string
 ): Promise<void> {
-  let led;
+  let ledDisplays: DisplayConfig[];
   try {
     const displays = await siteRepository.getDisplays(siteId);
-    led = displays.find((d) => d.type === 'led-perimeter')?.led;
+    ledDisplays = displays.filter((d) => isLedPerimeterFamily(d.type));
   } catch (error) {
     logger.warn('folded canvas: profil LED illisible (fichier brut conservé)', { siteId, error });
     return;
   }
 
+  // Chaque ruban a sa propre géométrie — on ne peut jamais réutiliser celle du
+  // premier ruban trouvé pour substituer la variante d'un autre (ADR-143).
+  for (const display of ledDisplays) {
+    await substituteFoldedCanvasForRing(variantMap, siteId, display.type, display.led);
+  }
+}
+
+async function substituteFoldedCanvasForRing(
+  variantMap: Map<string, VideoVariants>,
+  siteId: string,
+  displayType: string,
+  led: LedProfileConfig | null | undefined
+): Promise<void> {
   if (!led?.canvas_in?.serve_folded) return; // interrupteur éteint = comportement historique
   if (!Array.isArray(led.sides) || led.sides.length === 0) return;
 
@@ -102,7 +128,7 @@ async function substituteFoldedCanvas(
   try {
     canvas = computeSiteCanvas(led);
   } catch (error) {
-    logger.warn('folded canvas: géométrie invalide (fichier brut conservé)', { siteId, error });
+    logger.warn('folded canvas: géométrie invalide (fichier brut conservé)', { siteId, displayType, error });
     return;
   }
 
@@ -113,7 +139,7 @@ async function substituteFoldedCanvas(
   const bandWidth = canvas.geometry.bandWidth;
 
   for (const variants of variantMap.values()) {
-    const v = variants['led-perimeter'];
+    const v = variants[displayType];
     if (!v?.path) continue;
 
     const hash = computeFoldedCanvasHash({
@@ -151,17 +177,17 @@ async function substituteFoldedCanvas(
         await ledExportJobRepository.create({
           site_id: siteId,
           video_id: v.videoId,
-          display_type: 'led-perimeter',
+          display_type: displayType,
           fit: fitFromLayout(layout),
           layout,
           created_by: null,
           geometry_hash: hash,
         });
-        logger.info('folded canvas: fabrication mise en file', { siteId, videoId: v.videoId, hash });
+        logger.info('folded canvas: fabrication mise en file', { siteId, displayType, videoId: v.videoId, hash });
       }
     } catch (error) {
       // Le déploiement ne doit JAMAIS tomber à cause du cache de pliage.
-      logger.warn('folded canvas: cache indisponible (fichier brut conservé)', { siteId, error });
+      logger.warn('folded canvas: cache indisponible (fichier brut conservé)', { siteId, displayType, error });
     }
   }
 }
@@ -261,7 +287,7 @@ export async function enrichConfigWithDisplayVariants(
       // Requis par l'étape D (ADR-139) pour retrouver/fabriquer le canvas plié.
       // Réservé au ruban : un `secondary` n'a pas de géométrie à plier, et ces
       // deux champs partiraient dans la config servie sans rien y signifier.
-      ...(v.display_type === 'led-perimeter'
+      ...(isLedPerimeterFamily(v.display_type)
         ? { videoId: v.video_id, layout: v.layout ?? null, crop: v.crop ?? null }
         : {}),
     };

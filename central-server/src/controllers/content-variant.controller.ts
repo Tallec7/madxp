@@ -32,9 +32,9 @@ async function computeLedFormatNotice(
   width: number | null,
   height: number | null,
 ): Promise<LedFormatNotice | null> {
-  if (displayType !== 'led-perimeter' || !siteId) return null;
+  if (!isLedPerimeterFamily(displayType) || !siteId) return null;
   const displays = await siteRepository.getDisplays(siteId);
-  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  const led = displays.find((d) => d.type === displayType)?.led;
   if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
 
   const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
@@ -68,9 +68,9 @@ async function computeFitRecommendation(
   width: number | null,
   height: number | null,
 ): Promise<FitRecommendation | null> {
-  if (displayType !== 'led-perimeter' || !siteId || !width || !height) return null;
+  if (!isLedPerimeterFamily(displayType) || !siteId || !width || !height) return null;
   const displays = await siteRepository.getDisplays(siteId);
-  const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+  const led = displays.find((d) => d.type === displayType)?.led;
   if (!led || !Array.isArray(led.sides) || led.sides.length === 0) return null;
 
   const pitchMm = parseFloat(String(led.pitch).replace(/^P/i, ''));
@@ -101,6 +101,17 @@ async function computeFitRecommendation(
  */
 /** Type d'écran du ruban périmétrique — la variante que le pliage consomme. */
 const LED_PERIMETER_DISPLAY_TYPE = 'led-perimeter';
+
+/**
+ * Vrai pour `led-perimeter` et tout ruban additionnel du même club
+ * (`led-perimeter-2`, `led-perimeter-3`, ...). ADR-143 : un club peut avoir
+ * plusieurs rubans indépendants (bord de terrain, tribune...) — chacun garde
+ * son propre `type` distinct pour conserver le pipeline pixel-exact/pliage,
+ * au lieu de tout perdre en le déclarant `led-banner`.
+ */
+function isLedPerimeterFamily(displayType: string): boolean {
+  return displayType === LED_PERIMETER_DISPLAY_TYPE || displayType.startsWith(`${LED_PERIMETER_DISPLAY_TYPE}-`);
+}
 
 /**
  * Plafond de vidéos traitées en une passe. Un club LED en a une dizaine ; la borne
@@ -1053,7 +1064,7 @@ export const uploadVideoVariantSide = async (req: AuthRequest, res: Response) =>
 
     const { id, displayType } = req.params;
     const sideIndex = parseInt(req.params.sideIndex, 10);
-    if (displayType !== 'led-perimeter') {
+    if (!isLedPerimeterFamily(displayType)) {
       return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
     }
 
@@ -1135,7 +1146,7 @@ export const setVideoVariantSideFromVideo = async (req: AuthRequest, res: Respon
     const sideIndex = parseInt(req.params.sideIndex, 10);
     const { source_video_id: sourceVideoId } = req.body as { source_video_id: string };
 
-    if (displayType !== 'led-perimeter') {
+    if (!isLedPerimeterFamily(displayType)) {
       return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
     }
     if (!sourceVideoId) {
@@ -1194,7 +1205,7 @@ export const deleteVideoVariantSide = async (req: AuthRequest, res: Response) =>
   try {
     const { id, displayType } = req.params;
     const sideIndex = parseInt(req.params.sideIndex, 10);
-    if (displayType !== 'led-perimeter') {
+    if (!isLedPerimeterFamily(displayType)) {
       return res.status(400).json({ error: 'Le contenu par côté n’existe que pour led-perimeter' });
     }
 
@@ -1225,7 +1236,7 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
   try {
     const { id, displayType } = req.params;
 
-    if (displayType !== 'led-perimeter') {
+    if (!isLedPerimeterFamily(displayType)) {
       return res.status(400).json({ error: "L'export plié n'existe que pour les écrans led-perimeter" });
     }
 
@@ -1257,11 +1268,12 @@ export const enqueueLedExport = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Accès refusé', message: 'Un club ne peut plier une vidéo que pour son propre site' });
     }
 
-    // Fail-fast : le club cible doit avoir un écran led-perimeter avec un profil.
+    // Fail-fast : le club cible doit avoir CE ruban (displayType exact — ADR-143,
+    // un club peut avoir plusieurs rubans led-perimeter-N) avec un profil.
     const displays = await siteRepository.getDisplays(targetSiteId);
-    const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+    const led = displays.find((d) => d.type === displayType)?.led;
     if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
-      return res.status(400).json({ error: 'Le club cible n’a pas de profil LED périmétrique configuré' });
+      return res.status(400).json({ error: 'Le club cible n’a pas de profil LED périmétrique configuré pour cet écran' });
     }
 
     const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType as DisplayType);
@@ -1316,17 +1328,24 @@ export const enqueueLedTestExport = async (req: AuthRequest, res: Response) => {
     if (!videoId) {
       return res.status(400).json({ error: 'video_id requis' });
     }
+    // Ruban visé — optionnel, défaut au ruban principal (ADR-143 : un club peut
+    // avoir plusieurs rubans led-perimeter-N, le banc d'essai doit pouvoir cibler
+    // l'un ou l'autre plutôt que de toujours prévisualiser sur le premier trouvé).
+    const displayType =
+      typeof req.body?.display_type === 'string' && isLedPerimeterFamily(req.body.display_type)
+        ? req.body.display_type
+        : LED_PERIMETER_DISPLAY_TYPE;
 
     const video = await videoRepository.findVideoById(videoId);
     if (!video) {
       return res.status(404).json({ error: 'Vidéo non trouvée' });
     }
 
-    // Fail-fast : le club doit avoir un écran led-perimeter avec un profil complet.
+    // Fail-fast : le club doit avoir CE ruban avec un profil complet.
     const displays = await siteRepository.getDisplays(siteId);
-    const led = displays.find((d) => d.type === 'led-perimeter')?.led;
+    const led = displays.find((d) => d.type === displayType)?.led;
     if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
-      return res.status(400).json({ error: 'Ce club n’a pas de profil LED périmétrique configuré' });
+      return res.status(400).json({ error: 'Ce club n’a pas de profil LED périmétrique configuré pour cet écran' });
     }
 
     const layout = normalizeLayout(req.body?.layout);
@@ -1346,7 +1365,7 @@ export const enqueueLedTestExport = async (req: AuthRequest, res: Response) => {
     const job = await ledExportJobRepository.create({
       site_id: siteId,
       video_id: videoId,
-      display_type: 'led-perimeter',
+      display_type: displayType,
       fit: fitFromLayout(layout),
       layout,
       created_by: req.user?.id ?? null,

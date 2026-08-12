@@ -65,6 +65,16 @@ const DISPLAY_ICONS: Record<string, string> = {
 /** Type d'écran LED périmétrique (PROP-014) — pilote l'affichage du sélecteur de mise en page. */
 const LED_PERIMETER_TYPE = 'led-perimeter';
 
+/**
+ * Vrai pour `led-perimeter` et tout ruban additionnel du même club
+ * (`led-perimeter-2`, `led-perimeter-3`, ...). ADR-143 : un club peut avoir
+ * plusieurs rubans indépendants (bord de terrain, tribune...), chacun avec sa
+ * propre géométrie — jamais celle du premier ruban trouvé sur le site.
+ */
+function isLedPerimeterFamily(displayType: string): boolean {
+  return displayType === LED_PERIMETER_TYPE || displayType.startsWith(`${LED_PERIMETER_TYPE}-`);
+}
+
 /** Options de mise en page LED (PROP-014 §8 / ADR-134). Slugs alignés sur l'API. */
 const LAYOUT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   // `centered` manquait alors que l'API l'accepte depuis toujours
@@ -141,14 +151,19 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
 
   /** Le sélecteur de mise en page n'apparaît QUE pour les variantes led-perimeter (PROP-014 §8 : piloté par TYPE). */
   isLedPerimeter(type: string): boolean {
-    return type === LED_PERIMETER_TYPE;
+    return isLedPerimeterFamily(type);
   }
 
   // --- Contenu LED « par côté » (ADR-135) ---
 
-  /** Côtés du ruban LED du site (longueurs en m). Vide si pas de display led-perimeter. */
-  get ledSides(): number[] {
-    const d = this.siteDisplays?.find((x) => x.type === LED_PERIMETER_TYPE);
+  /**
+   * Côtés du ruban LED de CE display précis (longueurs en m). Vide si pas de
+   * display de ce type exact. ADR-143 : un club peut avoir plusieurs rubans
+   * (`led-perimeter`, `led-perimeter-2`...), chacun avec ses propres côtés —
+   * ne jamais retomber sur le premier display `led-perimeter` du site.
+   */
+  ledSides(displayType: string): number[] {
+    const d = this.siteDisplays?.find((x) => x.type === displayType);
     return d?.led?.sides ?? [];
   }
 
@@ -174,7 +189,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSideFileSelected(event: Event, sideIndex: number): void {
+  onSideFileSelected(event: Event, sideIndex: number, variant: VideoVariant): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
@@ -183,7 +198,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
     formData.append('video', file);
     this.http
       .post(
-        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}`,
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/sides/${sideIndex}`,
         formData,
         { withCredentials: true }
       )
@@ -201,14 +216,14 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   }
 
   /** Associe une vidéo existante de la bibliothèque à un côté (sans upload). */
-  onSideSourceSelected(event: Event, sideIndex: number): void {
+  onSideSourceSelected(event: Event, sideIndex: number, variant: VideoVariant): void {
     const select = event.target as HTMLSelectElement;
     const sourceVideoId = select.value;
     if (!sourceVideoId) return;
     this.linkingSide = sideIndex;
     this.http
       .post(
-        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}/from-video`,
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/sides/${sideIndex}/from-video`,
         { source_video_id: sourceVideoId },
         { withCredentials: true }
       )
@@ -229,7 +244,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   removeSideFile(variant: VideoVariant, sideIndex: number): void {
     this.http
       .delete(
-        `${environment.apiUrl}/videos/${this.videoId}/variants/${LED_PERIMETER_TYPE}/sides/${sideIndex}`,
+        `${environment.apiUrl}/videos/${this.videoId}/variants/${variant.display_type}/sides/${sideIndex}`,
         { withCredentials: true }
       )
       .subscribe({
@@ -294,7 +309,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
    * standard reste la bonne réponse.
    */
   getFormatHint(display: DisplayConfig): string | null {
-    if (display.type === LED_PERIMETER_TYPE) return ledSourceFormat(display.led);
+    if (isLedPerimeterFamily(display.type)) return ledSourceFormat(display.led);
     return display.resolution || null;
   }
 
@@ -485,14 +500,18 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Profil LED du site consulté (géométrie du ruban), ou `null`. */
-  private get ledProfile() {
-    return this.siteDisplays?.find((d) => d.type === LED_PERIMETER_TYPE)?.led ?? null;
+  /**
+   * Profil LED de CE display précis (géométrie du ruban), ou `null`. ADR-143 :
+   * ne jamais retomber sur le premier `led-perimeter` du site — un club peut
+   * en avoir plusieurs, chacun avec sa propre géométrie.
+   */
+  private ledProfileFor(displayType: string) {
+    return this.siteDisplays?.find((d) => d.type === displayType)?.led ?? null;
   }
 
   /** Cadence du motif en px, pour que l'aperçu montre le BON nombre de copies. */
-  get ledCellPx(): number {
-    return ledCellPx(this.ledProfile);
+  ledCellPx(displayType: string): number {
+    return ledCellPx(this.ledProfileFor(displayType));
   }
 
   /**
@@ -502,7 +521,7 @@ export class VideoVariantPanelComponent implements OnInit, OnDestroy {
   previewTarget(displayType: string): { width: number; height: number } | null {
     const reco = this.fitRecommendations[displayType];
     if (reco) return reco.target;
-    const led = this.ledProfile;
+    const led = this.ledProfileFor(displayType);
     if (!led || !led.sides?.length) return null;
     const mm = parseFloat(String(led.pitch).replace(/^P/i, ''));
     if (!Number.isFinite(mm) || mm <= 0) return null;
