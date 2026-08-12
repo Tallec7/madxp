@@ -179,7 +179,26 @@ export class ManualVideoService {
         // Un seul rAF pour laisser le frame vidéo être décodé avant reveal.
         // Le setTimeout(200) + double rAF historiques ajoutaient ~230ms perçus
         // sans bénéfice vs un rAF simple post-play() sur Pi 4/5 (hardware decode).
-        requestAnimationFrame(() => {
+        //
+        // Filet de sécurité : requestAnimationFrame est gelé par le navigateur
+        // sur un onglet en arrière-plan (Page Visibility). En kiosk Pi ce cas
+        // n'arrive jamais (fenêtre toujours visible), mais en test navigateur
+        // (plusieurs onglets ouverts pour remote + N displays), si le tab
+        // "master" n'est pas l'onglet actif, ce rAF peut ne JAMAIS se déclencher
+        // → play() résolu mais reveal jamais émis → tous les slaves restent
+        // bloqués indéfiniment en "waiting for reveal signal" (aucune erreur,
+        // rien à catch). Le fallback force la suite après 500ms si le rAF n'a
+        // pas eu l'occasion de tourner.
+        let rafDone = false;
+        const runOnce = () => {
+          if (rafDone) return;
+          rafDone = true;
+          onFrameReady();
+        };
+        requestAnimationFrame(runOnce);
+        setTimeout(runOnce, 500);
+
+        const onFrameReady = () => {
           // Palier 3 : sync barrier master-side. Master attend
           // MANUAL_REVEAL_BARRIER_MS avant de révéler ET d'émettre
           // visible:true, pour absorber le cold-start des slaves browser
@@ -241,7 +260,7 @@ export class ManualVideoService {
           } else {
             revealAndEmit();
           }
-        });
+        };
       }).catch(err => {
         console.error('tv player : error playing manual video', err);
         this.doubleBufferService.hideFreezeFrame();
