@@ -90,6 +90,7 @@ describe('computeFoldedCanvasHash — l’invalidation vient de la clé, pas d�
     order: 'top-to-bottom' as const,
     sourcePath: BRUT,
     layout: 'repeated',
+    spacingM: 10,
   };
 
   it('même géométrie + même source → même empreinte', () => {
@@ -104,6 +105,10 @@ describe('computeFoldedCanvasHash — l’invalidation vient de la clé, pas d�
     ['l’ordre des bandes', { order: 'bottom-to-top' as const }],
     ['la source', { sourcePath: 'videos-led-perimeter/autre.mp4' }],
     ['le cadrage', { layout: 'stretched' }],
+    // Incident 2026-08-12 : `spacing_m` pilote la cadence du motif repeated/
+    // scrolling (`cellPx`) mais n'était pas dans l'empreinte — un changement
+    // seul ne périmait jamais l'ancien canvas.
+    ['l’espacement du motif', { spacingM: 8 }],
   ])('changer %s périme le canvas', (_label, patch) => {
     // C'est TOUT le mécanisme d'invalidation : un canvas dont la clé a changé
     // devient inatteignable. Pas de TTL, pas de purge à écrire.
@@ -161,6 +166,7 @@ describe('substituteFoldedCanvas — le canvas plié derrière l’interrupteur'
         order: 'top-to-bottom',
         sourcePath: BRUT,
         layout: 'repeated',
+        spacingM: 10,
       });
       mockDisplays(LED_ON);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -199,8 +205,32 @@ describe('substituteFoldedCanvas — le canvas plié derrière l’interrupteur'
       const attendu1600 = computeFoldedCanvasHash({
         sides: [10, 10, 10, 10], pitch: '6.25', height: 120,
         bandWidth: 1600, order: 'top-to-bottom', sourcePath: BRUT, layout: 'repeated',
+        spacingM: 10,
       });
       expect(jobs.findReadyByGeometry).toHaveBeenCalledWith(SITE, VIDEO, attendu1600);
+    });
+
+    it('changer spacing_m seul périme le canvas (incident 2026-08-12)', async () => {
+      // Avant le fix : spacing_m n'entrait pas dans l'empreinte, donc
+      // findReadyByGeometry retrouvait l'ancien job `ready` (ancienne cadence
+      // de motif) malgré le changement de config — le canvas restait figé.
+      mockDisplays({ ...LED_ON, spacing_m: 7 });
+      const c = config();
+
+      await enrichConfigWithDisplayVariants(c, ['led-perimeter'], { siteId: SITE });
+
+      const attenduSpacing7 = computeFoldedCanvasHash({
+        sides: LED_ON.sides, pitch: LED_ON.pitch, height: LED_ON.height,
+        bandWidth: 1920, order: 'top-to-bottom', sourcePath: BRUT, layout: 'repeated',
+        spacingM: 7,
+      });
+      const attenduDefaut = computeFoldedCanvasHash({
+        sides: LED_ON.sides, pitch: LED_ON.pitch, height: LED_ON.height,
+        bandWidth: 1920, order: 'top-to-bottom', sourcePath: BRUT, layout: 'repeated',
+        spacingM: 10,
+      });
+      expect(jobs.findReadyByGeometry).toHaveBeenCalledWith(SITE, VIDEO, attenduSpacing7);
+      expect(attenduSpacing7).not.toBe(attenduDefaut);
     });
 
     it('canvas manquant → brut servi ET fabrication mise en file', async () => {

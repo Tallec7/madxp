@@ -70,6 +70,7 @@ describe('Smoke — détourage LED : proposé, jamais appliqué seul', () => {
       bandWidth: 1600,
       sourcePath: 'STRASOL_2025_08_1600x120px.mp4',
       layout: 'centered',
+      spacingM: 10,
     };
 
     it('valider un détourage rend inatteignables les canvas d’avant', () => {

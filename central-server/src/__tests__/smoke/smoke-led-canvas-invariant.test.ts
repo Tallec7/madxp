@@ -148,9 +148,21 @@ describe('Smoke — invariant : le canvas LED ne dépend pas du contenu', () => 
       // L'empreinte couvre géométrie + source + layout + détourage : changer la
       // hauteur d'un ruban, ou valider un détourage (PROP-015), doit suffire à
       // périmer tous ses canvas, sans logique d'expiration.
-      for (const k of ['sides', 'height', 'bandWidth', 'sourcePath', 'layout', 'crop']) {
+      for (const k of ['sides', 'height', 'bandWidth', 'sourcePath', 'layout', 'crop', 'spacingM']) {
         expect(fold.slice(fold.indexOf('computeFoldedCanvasHash'))).toContain(k);
       }
+    });
+
+    it('l’empreinte utilise le même défaut d’espacement que le worker (effectiveSpacingM)', () => {
+      // Incident 2026-08-12 : `spacing_m` pilote la cadence du motif repeated/
+      // scrolling au pliage (`cellPx`) mais était absent de l'empreinte — un
+      // changement seul laissait l'ancien canvas (ancienne cadence) servi
+      // indéfiniment. Un défaut réécrit séparément aux deux endroits pourrait
+      // diverger — un seul helper exporté élimine la classe de bug.
+      const src = read(DEPLOY);
+      const worker = read('services/led-export-worker.service.ts');
+      expect(src).toMatch(/effectiveSpacingM/);
+      expect(worker).toMatch(/effectiveSpacingM/);
     });
 
     it('l’enrichissement saute toujours les variantes par côté sans binaire', () => {

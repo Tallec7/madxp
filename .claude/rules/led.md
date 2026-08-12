@@ -74,9 +74,18 @@ ce qui est gravé dans le processeur.
   vue dit aux AGENCES quel format livrer, l'écart aurait fait produire des fichiers que
   le worker ne consomme pas, sur tout club dont un côté dépasse 1920 px.
 - **Retirer un champ de `computeFoldedCanvasHash`** (côtés, pitch, hauteur, largeur de bande,
-  ordre, source, cadrage). L'empreinte EST le mécanisme d'invalidation : un canvas dont la clé
-  a changé devient inatteignable. Retirer `height`, par exemple, ferait servir un canvas
-  fabriqué pour l'ancienne hauteur de ruban.
+  ordre, source, cadrage, `spacingM`). L'empreinte EST le mécanisme d'invalidation : un canvas
+  dont la clé a changé devient inatteignable. Retirer `height`, par exemple, ferait servir un
+  canvas fabriqué pour l'ancienne hauteur de ruban.
+- **Réécrire le défaut d'espacement (`10` m) séparément du helper `effectiveSpacingM()`
+  (`led-fold.service.ts`).** Incident 2026-08-12 : `spacing_m` pilote la cadence du motif
+  `repeated`/`scrolling` (`cellPx`, `led-export-worker.service.ts`) mais était absent de
+  l'empreinte — changer `spacing_m` seul ne périmait jamais l'ancien canvas, qui restait
+  servi indéfiniment (pas de TTL) avec l'ancienne cadence. `effectiveSpacingM()` est la
+  source de vérité UNIQUE du défaut, utilisée à la fois par le worker et par le calcul de
+  l'empreinte (`config-secondary-variants.ts`) — un défaut dupliqué à la main aux deux
+  endroits pourrait diverger à nouveau, même classe de bug que `bandWidth ?? 1920` avant
+  ADR-139.
 - **Retirer `if (!v.storage_path && !v.filename) continue;`** de
   `config-secondary-variants.ts` — une variante « par côté pure » n'a ni `storage_path`
   ni `filename` ; l'injecter produit un chemin `videos-led-perimeter/null` → MP4 noir.
