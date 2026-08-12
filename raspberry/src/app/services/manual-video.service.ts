@@ -247,6 +247,26 @@ export class ManualVideoService {
         this.doubleBufferService.hideFreezeFrame();
         this.doubleBufferService.hideBlackOverlay();
         targetPlayer.style.opacity = '0';
+
+        // Sans ce reset, le master reste bloqué en isManualMode=true et
+        // n'émet plus jamais de tv-loop-update : tous les slaves (ex.
+        // led-perimeter) restent en attente indéfinie du reveal
+        // (`waiting for reveal signal`) sans jamais pouvoir cleanup ni
+        // revenir à la boucle. On dégrade vers la boucle plutôt que de
+        // casser la synchro master-slave.
+        this._isManualMode = false;
+        if (this.callbacks?.getTvRole() === 'master') {
+          this.callbacks.emitLoopUpdate({
+            videoIndex: this.playbackService.currentLoopIndex,
+            videoPath: this.playbackService.currentLoopVideos[this.playbackService.currentLoopIndex]?.path || '',
+            videoStartedAt: Date.now(),
+            isManualMode: false,
+            manualVideoPath: null,
+            manualVideoStartedAt: null,
+            manualVideoVisible: false,
+            updatedAt: Date.now()
+          });
+        }
       });
     };
 
