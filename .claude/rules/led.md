@@ -166,10 +166,20 @@ et affiche correctement. Il donne la cible sans ambiguïté :
 | Largeur d'entrée            | **1600** = un côté (10 m à P6.25)                 |
 | Hauteur de dalle            | **120 px** = 75 cm, PAS 160                       |
 | Placement du signal         | **1:1, ancré en haut à gauche**, le reste en noir |
+| Résolution écran PC         | **1920 × 1080** (Full HD standard, PAS 1600×480)  |
 
 C'est le mode **B** : le processeur ne déplie pas, il attend un canvas déjà plié. La
 question n'est donc plus « qu'attend le matériel » mais « produit-on la même chose que
 B2B » — ce qui se compare entre deux navigateurs, sans hardware.
+
+**Confirmé le 2026-08-12** (panneau OUTPUT de l'admin B2B) : le PC qui pilote le
+processeur tourne en **1920×1080**, pas en 1600×480 — les 4 bandes de 1600×120 sont
+positionnées en haut-gauche de cet écran Full HD (Y=0/120/240/360), le reste (droite +
+bas) reste noir/inutilisé. `pixelExactCanvasSize` (`tv.component.ts`) n'a donc pas besoin
+que la fenêtre PC fasse _exactement_ 1600×480 — juste qu'elle fasse **au moins** 1920×1080
+(résolution standard, pas de mode custom à configurer sur le PC). Le gap noté plus haut
+(aucun `kiosk-watchdog.sh` équivalent côté PC SaaS) devient donc plus facile à combler :
+la cible est une résolution native ordinaire, pas une résolution exotique 1600×480.
 
 **Piraths est ACTIVÉ** depuis le 2026-08-11 (`serve_folded: true`, hauteur 120,
 largeur d'entrée 1600). **Lanester reste non observé** : son `band_count` figé à 1 diverge
