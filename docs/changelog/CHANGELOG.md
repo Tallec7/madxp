@@ -1,3 +1,9 @@
+# [4.28.0](https://github.com/Tallec7/madxp/compare/v4.27.5...v4.28.0) (2026-08-12)
+
+### Features
+
+- **led:** toggle scene_scaling pour scaler le rendu façon B2B (opt-in) ([#1173](https://github.com/Tallec7/madxp/issues/1173)) ([e21b45d](https://github.com/Tallec7/madxp/commit/e21b45db0f1247a8381d13072289a5c7e16820d1))
+
 ## [4.27.5](https://github.com/Tallec7/madxp/compare/v4.27.4...v4.27.5) (2026-08-12)
 
 ### Bug Fixes
