@@ -1,3 +1,9 @@
+## [4.30.4](https://github.com/Tallec7/madxp/compare/v4.30.3...v4.30.4) (2026-08-12)
+
+### Bug Fixes
+
+- **led:** reject duplicate display.type in sites.displays validation ([#1181](https://github.com/Tallec7/madxp/issues/1181)) ([4e7690f](https://github.com/Tallec7/madxp/commit/4e7690f74435487e7ec8c0a51ab67e4e66484993))
+
 ## [4.30.3](https://github.com/Tallec7/madxp/compare/v4.30.2...v4.30.3) (2026-08-12)
 
 ### Bug Fixes
