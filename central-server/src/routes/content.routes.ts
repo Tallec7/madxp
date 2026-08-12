@@ -53,8 +53,8 @@ router.post('/videos/:id/variants/:displayType/export', authenticate, requireRol
 // elle télécharge le MP4 et lance ffmpeg dans le cycle HTTP. Assez large pour
 // passer en revue la dizaine de vidéos d'un club, assez serré pour qu'une boucle
 // ne sature pas les décodeurs (cf. la garde `ticking` du worker d'export).
-router.post('/videos/:id/variants/led-perimeter/crop/detect', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), sensitiveRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCropDetect), contentController.detectLedVariantCrop);
-router.put('/videos/:id/variants/led-perimeter/crop', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCrop), contentController.setLedVariantCrop);
+router.post('/videos/:id/variants/:displayType/crop/detect', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), sensitiveRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCropDetect), contentController.detectLedVariantCrop);
+router.put('/videos/:id/variants/:displayType/crop', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, validateParams(paramSchemas.id), validate(schemas.ledVariantCrop), contentController.setLedVariantCrop);
 // ADR-135 (révision) : contenu LED « par côté » — upload/suppression d'un fichier par côté.
 router.post('/videos/:id/variants/:displayType/sides/:sideIndex', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('upload_video'), uploadRateLimit, uploadVideo.single('video'), contentController.uploadVideoVariantSide);
 router.post('/videos/:id/variants/:displayType/sides/:sideIndex/from-video', authenticate, requireRole('admin', 'operator', 'club'), requireClubPermission('edit_loop'), adminRateLimit, contentController.setVideoVariantSideFromVideo);

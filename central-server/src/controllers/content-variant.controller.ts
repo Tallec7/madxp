@@ -490,10 +490,21 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
   try {
     const { siteId } = req.params;
 
+    // Un club peut avoir plusieurs rubans (ADR-143) : cette vue est TOUJOURS
+    // scopée à UN ruban — jamais le premier `led-perimeter` trouvé, sans quoi
+    // le panneau du 2e ruban afficherait par erreur les chiffres du 1er.
+    const displayType =
+      typeof req.query?.display_type === 'string' && req.query.display_type
+        ? req.query.display_type
+        : LED_PERIMETER_DISPLAY_TYPE;
+    if (!isLedPerimeterFamily(displayType)) {
+      return res.status(400).json({ error: "Type d'écran invalide pour cette opération (attendu : led-perimeter*)" });
+    }
+
     const displays = await siteRepository.getDisplays(siteId);
-    const led = displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led;
+    const led = displays.find((d) => d.type === displayType)?.led;
     if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
-      return res.status(400).json({ error: "Ce site n'a pas de ruban LED configuré" });
+      return res.status(400).json({ error: "Ce site n'a pas ce ruban LED configuré" });
     }
 
     // Format ATTENDU = la largeur d'entrée réellement utilisée pour plier, pas un
@@ -514,9 +525,9 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
         const video = await videoRepository.findVideoById(id);
         if (!video) return null;
 
-        const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+        const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType);
         const source = dimensionsFromVideo(video);
-        const job = await ledExportJobRepository.findLatestForVideo(siteId, id, LED_PERIMETER_DISPLAY_TYPE);
+        const job = await ledExportJobRepository.findLatestForVideo(siteId, id, displayType);
 
         const sourcePath = variant?.storage_path || video.url || null;
 
@@ -546,7 +557,7 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
       })
     );
 
-    res.json({ site_id: siteId, expected, videos: rows.filter(Boolean) });
+    res.json({ site_id: siteId, display_type: displayType, expected, videos: rows.filter(Boolean) });
   } catch (error) {
     logger.error('Error building LED canvas overview:', error);
     res.status(500).json({ error: 'Erreur lors de la lecture des canvas LED' });
@@ -561,7 +572,8 @@ export const getLedCanvasOverview = async (req: AuthRequest, res: Response) => {
  */
 async function resolveLedTarget(
   req: AuthRequest,
-  video: { uploaded_for_site_id: string | null }
+  video: { uploaded_for_site_id: string | null },
+  displayType: string
 ): Promise<{ siteId: string; expected: { width: number; height: number } } | { error: string }> {
   const siteId =
     (typeof req.body?.target_site_id === 'string' ? req.body.target_site_id : null) ||
@@ -574,10 +586,11 @@ async function resolveLedTarget(
     return { error: 'Un club ne peut agir que sur son propre site' };
   }
 
+  // Chaque ruban a sa propre géométrie (ADR-143) — jamais celle du premier trouvé.
   const displays = await siteRepository.getDisplays(siteId);
-  const led = displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led;
+  const led = displays.find((d) => d.type === displayType)?.led;
   if (!led || !Array.isArray(led.sides) || led.sides.length === 0) {
-    return { error: "Le club cible n'a pas de profil LED périmétrique configuré" };
+    return { error: "Le club cible n'a pas de profil LED périmétrique configuré pour cet écran" };
   }
   try {
     // Cible = la largeur d'entrée réellement utilisée par le pliage, jamais un
@@ -609,6 +622,10 @@ export const detectLedVariantCrop = async (req: AuthRequest, res: Response) => {
   let tmpFile: string | null = null;
   try {
     const { id } = req.params;
+    const displayType = req.params.displayType || LED_PERIMETER_DISPLAY_TYPE;
+    if (!isLedPerimeterFamily(displayType)) {
+      return res.status(400).json({ error: "Type d'écran invalide pour cette opération (attendu : led-perimeter*)" });
+    }
 
     const video = await videoRepository.findVideoById(id);
     if (!video) {
@@ -619,12 +636,12 @@ export const detectLedVariantCrop = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
     }
 
-    const target = await resolveLedTarget(req, video);
+    const target = await resolveLedTarget(req, video, displayType);
     if ('error' in target) {
       return res.status(400).json({ error: target.error });
     }
 
-    const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType);
     // La source analysée est celle que le pliage consomme : la variante ruban si
     // elle porte un binaire, sinon le fichier principal de la vidéo.
     const storagePath = variant?.storage_path || video.url || null;
@@ -714,6 +731,10 @@ export const detectLedVariantCrop = async (req: AuthRequest, res: Response) => {
 export const setLedVariantCrop = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const displayType = req.params.displayType || LED_PERIMETER_DISPLAY_TYPE;
+    if (!isLedPerimeterFamily(displayType)) {
+      return res.status(400).json({ error: "Type d'écran invalide pour cette opération (attendu : led-perimeter*)" });
+    }
     const rawCrop = (req.body as { crop?: CropRect | null }).crop ?? null;
 
     const video = await videoRepository.findVideoById(id);
@@ -725,7 +746,7 @@ export const setLedVariantCrop = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Accès refusé', message: ownershipError });
     }
 
-    const variant = await videoVariantRepository.findByVideoAndDisplay(id, LED_PERIMETER_DISPLAY_TYPE);
+    const variant = await videoVariantRepository.findByVideoAndDisplay(id, displayType);
     if (!variant) {
       return res.status(404).json({ error: 'Variante led-perimeter non trouvée pour cette vidéo' });
     }
@@ -743,7 +764,7 @@ export const setLedVariantCrop = async (req: AuthRequest, res: Response) => {
 
     const updated = await videoVariantRepository.updateCrop(
       id,
-      LED_PERIMETER_DISPLAY_TYPE,
+      displayType,
       rawCrop as VideoVariantCrop | null
     );
 
@@ -764,20 +785,32 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
   try {
     const { siteId } = req.params;
 
-    // Le site doit réellement avoir un ruban déclaré : sinon la variante serait
+    // Un club peut avoir plusieurs rubans (ADR-143, `led-perimeter`, `led-perimeter-2`,
+    // ...) — chacun avec ses propres vidéos à déclarer. Défaut sur le ruban principal
+    // pour ne pas casser les appels existants (banc d'essai avant ce paramètre).
+    const displayType =
+      typeof req.body?.display_type === 'string' && req.body.display_type
+        ? req.body.display_type
+        : LED_PERIMETER_DISPLAY_TYPE;
+    if (!isLedPerimeterFamily(displayType)) {
+      return res.status(400).json({ error: "Type d'écran invalide pour cette opération (attendu : led-perimeter*)" });
+    }
+
+    // Le site doit réellement avoir CE ruban déclaré : sinon la variante serait
     // rejetée une par une par `getAllowedDisplayTypes`, autant le dire tout de suite.
     const displays = await siteRepository.getDisplays(siteId);
     const allowedTypes = displaysToAllowedTypes(displays);
-    if (!allowedTypes.includes(LED_PERIMETER_DISPLAY_TYPE)) {
+    if (!allowedTypes.includes(displayType)) {
       return res.status(400).json({
-        error: "Ce site n'a pas d'écran LED périmétrique déclaré",
+        error: "Ce site n'a pas cet écran LED périmétrique déclaré",
         message: `Types d'écran du site : ${allowedTypes.join(', ') || 'aucun'}`,
       });
     }
 
-    // Géométrie du ruban — sert à écarter les clips TV (cf. `ribbonExclusion`).
+    // Géométrie DE CE RUBAN — sert à écarter les clips TV (cf. `ribbonExclusion`).
+    // Jamais celle du premier ruban trouvé : chaque ruban a sa propre géométrie.
     // Absente ou illisible → aucun filtrage : on préfère tout déclarer.
-    const ribbon = ribbonGeometry(displays.find((d) => d.type === LED_PERIMETER_DISPLAY_TYPE)?.led);
+    const ribbon = ribbonGeometry(displays.find((d) => d.type === displayType)?.led);
 
     // `findIdsOwnedBySite` filtre RÉELLEMENT sur `uploaded_for_site_id`. Ne jamais
     // revenir à `findForSitePaginated` : malgré son nom, elle ne filtre pas — le
@@ -789,7 +822,7 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
     const counts = await videoVariantRepository.findVariantCountsByVideoIds(videoIds);
     const candidates = videoIds.filter(
-      (id) => !counts.get(id)?.types.includes(LED_PERIMETER_DISPLAY_TYPE)
+      (id) => !counts.get(id)?.types.includes(displayType)
     );
 
     const created: Array<{ video_id: string; variant_id: string }> = [];
@@ -820,7 +853,7 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
         const variant = await videoVariantRepository.create({
           video_id: video.id,
-          display_type: LED_PERIMETER_DISPLAY_TYPE,
+          display_type: displayType,
           filename: video.filename,
           original_name: video.original_name,
           storage_path: video.url || video.filename,
@@ -849,6 +882,7 @@ export const bulkCreateLedVariants = async (req: AuthRequest, res: Response) => 
 
     logger.info('Bulk LED variants created', {
       siteId,
+      displayType,
       total: videoIds.length,
       created: created.length,
       skipped: videoIds.length - candidates.length,

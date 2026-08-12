@@ -378,7 +378,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
         <!-- Vue d'ensemble des canvas : format livré vs attendu, état, aperçu.
              Placée ici parce que c'est l'écran où l'on règle déjà la géométrie —
              et parce que l'écart de format est la première cause de rendu raté. -->
-        <app-led-canvas-overview [siteId]="siteId"></app-led-canvas-overview>
+        <app-led-canvas-overview [siteId]="siteId" [displayType]="display.type"></app-led-canvas-overview>
 
         <!-- Déclaration en masse des variantes ruban.
              Le pliage automatique (ADR-139) ne s'applique qu'aux vidéos AYANT une
@@ -391,7 +391,7 @@ const DISPLAY_TEMPLATES: DisplayTemplate[] = [
             class="btn btn-sm btn-secondary"
             data-testid="led-bulk-btn"
             [disabled]="bulkBusy"
-            (click)="createLedVariantsInBulk()"
+            (click)="createLedVariantsInBulk(display.type)"
           >
             {{ bulkBusy ? 'Création…' : '⚡ Créer les variantes LED manquantes' }}
           </button>
@@ -1684,7 +1684,8 @@ export class DisplaysEditorComponent implements OnDestroy {
   bulkResult: string | null = null;
 
   /**
-   * Déclare la variante `led-perimeter` manquante sur toutes les vidéos du club.
+   * Déclare la variante manquante sur toutes les vidéos du club, pour LE RUBAN de
+   * ce panneau (`displayType` — un club peut en avoir plusieurs, ADR-143).
    *
    * Ce n'est pas un encodage : la variante pointe vers la vidéo elle-même, puisque
    * le fichier EST déjà le ruban. Ce qu'on lève, c'est le prérequis du pliage
@@ -1693,7 +1694,7 @@ export class DisplaysEditorComponent implements OnDestroy {
    * Les vidéos ayant déjà une variante sont laissées intactes côté serveur : un
    * opérateur a pu y mettre un recadrage manuel qu'on ne doit pas écraser.
    */
-  createLedVariantsInBulk(): void {
+  createLedVariantsInBulk(displayType: string): void {
     if (!this.siteId || this.bulkBusy) return;
     this.bulkBusy = true;
     this.bulkResult = null;
@@ -1707,7 +1708,7 @@ export class DisplaysEditorComponent implements OnDestroy {
         exclusions?: Array<{ filename: string; reason: string }>;
       }>(
         `${environment.apiUrl}/sites/${this.siteId}/led-variants/bulk`,
-        {},
+        { display_type: displayType },
         { withCredentials: true }
       )
       .subscribe({
