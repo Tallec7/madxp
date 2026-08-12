@@ -38,7 +38,11 @@ import { environment } from '../../../environments/environment';
   styleUrl: './tv.component.scss',
   imports: [CommonModule, LicenseBlockComponent, WaitingScreenComponent, WrongPortScreenComponent, ScoreOverlayComponent, HotspotQrComponent],
   encapsulation: ViewEncapsulation.None, // Désactiver l'encapsulation pour le double-buffer
-  host: { '[class.tv--pixel-exact]': 'isPixelExactDisplay' }
+  host: {
+    '[class.tv--pixel-exact]': 'isPixelExactDisplay',
+    '[style.--pixel-exact-w]': 'pixelExactCanvasWidth',
+    '[style.--pixel-exact-h]': 'pixelExactCanvasHeight',
+  }
 })
 export class TvComponent implements OnInit, OnDestroy {
   private readonly socketService = inject(SocketService);
@@ -86,6 +90,40 @@ export class TvComponent implements OnInit, OnDestroy {
    */
   public get isPixelExactDisplay(): boolean {
     return this.displayType === 'led-perimeter';
+  }
+
+  /**
+   * Taille réelle du canvas plié (band_width × band_count×height), en pixels CSS.
+   *
+   * `object-fit: none` rend à la taille native mais le conteneur restait en
+   * `width/height: 100%` — donc calé sur la fenêtre du PC, pas sur le canvas. Une
+   * fenêtre plus petite/grande que le canvas donnait un rognage/zoom visible malgré
+   * un fichier source correct (Piraths, 2026-08-12 — le fichier fait bien 1600×480
+   * en sortie ffprobe). En fixant width/height à la géométrie confirmée du site, le
+   * rendu reste pixel-exact quelle que soit la fenêtre : ancré haut-gauche, marges
+   * noires (`:host { background:#000 }`) au lieu d'un rognage.
+   *
+   * `band_count` doit être la valeur CONFIRMÉE côté site (jamais recalculée ici à
+   * partir de `sides`/`pitch` — cf. règle LED "ne jamais recalculer un côté en px
+   * à la main"). Absent → fallback silencieux au comportement précédent (100%).
+   */
+  public get pixelExactCanvasSize(): { width: number; height: number } | null {
+    const led = this.configuration?.displays?.[this.displayIndex]?.led;
+    const canvasIn = led?.canvas_in;
+    if (!led?.height || !canvasIn?.band_width || !canvasIn?.band_count) {
+      return null;
+    }
+    return { width: canvasIn.band_width, height: canvasIn.band_count * led.height };
+  }
+
+  public get pixelExactCanvasWidth(): string | null {
+    const size = this.pixelExactCanvasSize;
+    return size ? `${size.width}px` : null;
+  }
+
+  public get pixelExactCanvasHeight(): string | null {
+    const size = this.pixelExactCanvasSize;
+    return size ? `${size.height}px` : null;
   }
 
   // HDMI status — E-23 US-23.2.1: splash screen when no display connected

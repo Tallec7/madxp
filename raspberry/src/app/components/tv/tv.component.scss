@@ -289,6 +289,14 @@
 //
 // `object-fit: none` + `object-position: 0 0` rend à la taille native, ancré en
 // haut à gauche, le reste en noir — exactement ce que le processeur attend.
+//
+// Ça ne suffit pas seul : sans largeur/hauteur fixées, l'élément restait calé sur
+// `width/height: 100%` (donc sur la fenêtre du PC). Une fenêtre plus petite ou plus
+// grande que le canvas réel donnait un rognage/zoom visible malgré un fichier
+// source correct (Piraths, 2026-08-12). `--pixel-exact-w/h` (posées par
+// `TvComponent.pixelExactCanvasSize`, dérivées de `led.canvas_in.band_width` et
+// `band_count × led.height`) figent la taille au canvas réel, quelle que soit la
+// fenêtre — fallback 100% (ancien comportement) si la géométrie n'est pas connue.
 // ============================================================================
 
 .tv--pixel-exact {
@@ -298,5 +306,7 @@
   video {
     object-fit: none;
     object-position: 0 0;
+    width: var(--pixel-exact-w, 100%);
+    height: var(--pixel-exact-h, 100%);
   }
 }
