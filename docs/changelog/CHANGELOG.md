@@ -1,3 +1,9 @@
+## [4.30.9](https://github.com/Tallec7/madxp/compare/v4.30.8...v4.30.9) (2026-08-12)
+
+### Bug Fixes
+
+- **led:** include spacing_m in folded canvas cache hash ([#1187](https://github.com/Tallec7/madxp/issues/1187)) ([ea06de4](https://github.com/Tallec7/madxp/commit/ea06de461680bcc4e9667cc7c7535c68f046e273))
+
 ## [4.30.8](https://github.com/Tallec7/madxp/compare/v4.30.7...v4.30.8) (2026-08-12)
 
 ### Bug Fixes
