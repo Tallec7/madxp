@@ -1,3 +1,10 @@
+## [4.27.5](https://github.com/Tallec7/madxp/compare/v4.27.4...v4.27.5) (2026-08-12)
+
+### Bug Fixes
+
+- **dashboard:** le badge « vidéos manquantes » compte ce qui est diffusé (ADR-142) ([#1168](https://github.com/Tallec7/madxp/issues/1168)) ([65e68f8](https://github.com/Tallec7/madxp/commit/65e68f85626710be8a91815d8c4be2f78a3f4658)), closes [#1165](https://github.com/Tallec7/madxp/issues/1165) [#1165](https://github.com/Tallec7/madxp/issues/1165)
+- **led:** fixer la taille du conteneur pixel-exact au canvas plié réel ([#1171](https://github.com/Tallec7/madxp/issues/1171)) ([ab0faef](https://github.com/Tallec7/madxp/commit/ab0faef22d4f41ed46bba68ba5e9cb9badd0476c))
+
 ## [4.27.4](https://github.com/Tallec7/madxp/compare/v4.27.3...v4.27.4) (2026-08-12)
 
 ### Bug Fixes
