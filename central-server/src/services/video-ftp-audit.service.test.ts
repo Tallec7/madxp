@@ -9,8 +9,8 @@ jest.mock('./storage.service', () => ({
 
 jest.mock('./metrics.service', () => ({
   __esModule: true,
-  default: { recordVideoFtpAudit: jest.fn() },
-  metricsService: { recordVideoFtpAudit: jest.fn() },
+  default: { recordVideoFtpAudit: jest.fn(), recordVideoFtpMissingReferenced: jest.fn() },
+  metricsService: { recordVideoFtpAudit: jest.fn(), recordVideoFtpMissingReferenced: jest.fn() },
 }));
 
 jest.mock('../repositories', () => ({
