@@ -203,6 +203,7 @@ export class VideoUploadService {
           this.notificationService.success(`${successCount} image(s) convertie(s) avec succès !`);
           onSuccess();
         }
+        this.imageForm.blurBackground = false;
         return;
       }
 
