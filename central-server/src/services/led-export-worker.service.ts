@@ -32,6 +32,7 @@ import {
   normalizeLayout,
   computeSiteCanvas,
   parsePitchMm,
+  effectiveSpacingM,
 } from './led-fold.service';
 
 const POLL_INTERVAL_MS = 2_000;
@@ -71,7 +72,7 @@ async function resolveGeometry(siteId: string, displayType: string) {
   }
 
   // Cadence du motif en px (= espacement_m × px/m) pour le pavage repeated/scrolling.
-  const spacingM = typeof led.spacing_m === 'number' && led.spacing_m > 0 ? led.spacing_m : 10;
+  const spacingM = effectiveSpacingM(led.spacing_m);
   const cellPx = Math.max(1, Math.round(spacingM * (1000 / pitchMm)));
 
   return { canvas, cellPx, sides: led.sides.length };

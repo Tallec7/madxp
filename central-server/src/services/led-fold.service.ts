@@ -389,6 +389,16 @@ export function parsePitchMm(pitch: string | number): number {
 }
 
 /**
+ * Espacement effectif (m) du motif `repeated`/`scrolling`, avec le même défaut
+ * qu'au pliage. Source de vérité UNIQUE — un défaut réécrit séparément à
+ * l'empreinte de cache aurait pu diverger de celui du worker (même risque que
+ * `bandWidth ?? 1920` avant ADR-139 : la géométrie change sans que la clé bouge).
+ */
+export function effectiveSpacingM(spacingM: number | null | undefined): number {
+  return typeof spacingM === 'number' && spacingM > 0 ? spacingM : 10;
+}
+
+/**
  * Canvas processeur d'un site — **toujours plié par côté** (ADR-138).
  *
  * C'est LE point d'entrée unique. Avant, la géométrie était choisie par le
@@ -461,6 +471,12 @@ export function computeSiteCanvas(profile: SiteLedProfile): SiteCanvas {
  * la validation ont été pliés sur le fichier entier, marges comprises. Sans le
  * `crop` dans l'empreinte ils resteraient servis — indéfiniment, puisqu'il n'y a
  * pas de TTL — et l'opérateur verrait son détourage validé sans effet.
+ *
+ * Inclut `spacingM` (incident 2026-08-12) : la cadence du motif `repeated`/
+ * `scrolling` (`cellPx = spacing_m × px/m`, `led-export-worker.service.ts`)
+ * influence directement les pixels produits mais ne faisait pas partie de
+ * l'empreinte — changer `spacing_m` seul laissait `findReadyByGeometry`
+ * retrouver l'ancien job `ready` et servir indéfiniment l'ancienne cadence.
  */
 export function computeFoldedCanvasHash(input: {
   sides: number[];
@@ -473,6 +489,8 @@ export function computeFoldedCanvasHash(input: {
   layout?: string | null;
   /** Détourage validé, en px de la source. `null`/omis = fichier entier. */
   crop?: { x: number; y: number; w: number; h: number } | null;
+  /** Espacement du motif (m) — effectif, cf. `effectiveSpacingM()`. */
+  spacingM: number;
 }): string {
   const payload = [
     input.sides.join(','),
@@ -483,6 +501,7 @@ export function computeFoldedCanvasHash(input: {
     input.sourcePath,
     input.layout ?? 'default',
     input.crop ? `${input.crop.x},${input.crop.y},${input.crop.w},${input.crop.h}` : 'nocrop',
+    input.spacingM,
   ].join('|');
   return createHash('sha256').update(payload).digest('hex').slice(0, 32);
 }
@@ -1269,6 +1288,7 @@ export const ledFoldService = {
   computeSiteCanvas,
   computeFoldedCanvasHash,
   parsePitchMm,
+  effectiveSpacingM,
   computeRibbonDimensions,
   buildPerSideFoldFilterGraph,
   buildPerSideFoldComposeArgs,

@@ -17,6 +17,7 @@ import {
   computeSiteCanvas,
   normalizeLayout,
   fitFromLayout,
+  effectiveSpacingM,
 } from '../services/led-fold.service';
 import { extractFilenameFromPath } from './config-video-paths';
 import logger from '../config/logger';
@@ -137,6 +138,11 @@ async function substituteFoldedCanvasForRing(
   // (côtés et pitch sont dans l'empreinte), mais « une empreinte = une géométrie »
   // devenait faux dans le détail — et c'est ce qu'ADR-139 revendique.
   const bandWidth = canvas.geometry.bandWidth;
+  // Même défaut que le worker (`effectiveSpacingM`, source de vérité unique) :
+  // sans ça, changer `spacing_m` seul ne changeait pas l'empreinte, et l'ancien
+  // canvas (ancienne cadence de motif) restait servi indéfiniment (incident
+  // 2026-08-12).
+  const spacingM = effectiveSpacingM(led.spacing_m);
 
   for (const variants of variantMap.values()) {
     const v = variants[displayType];
@@ -155,6 +161,7 @@ async function substituteFoldedCanvasForRing(
       // `crop` ici, ces canvas resteraient servis indéfiniment (pas de TTL) et la
       // validation de l'opérateur n'aurait aucun effet visible.
       crop: v.crop ?? null,
+      spacingM,
     });
 
     try {
