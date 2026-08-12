@@ -96,7 +96,9 @@
                Visible seulement si le ruban a au moins 2 côtés. -->
           <div
             class="led-perside"
-            *ngIf="isLedPerimeter(variant.display_type) && ledSides.length > 1"
+            *ngIf="
+              isLedPerimeter(variant.display_type) && ledSides(variant.display_type).length > 1
+            "
             data-testid="led-perside"
           >
             <div class="led-perside-modes">
@@ -124,7 +126,7 @@
             <div class="led-perside-slots" *ngIf="showPerSide(variant)">
               <div
                 class="led-perside-slot"
-                *ngFor="let s of ledSides; let i = index"
+                *ngFor="let s of ledSides(variant.display_type); let i = index"
                 [attr.data-testid]="'led-perside-slot-' + i"
               >
                 <span class="led-perside-label"
@@ -144,7 +146,7 @@
                   <select
                     class="source-select"
                     [attr.data-testid]="'led-perside-select-' + i"
-                    (change)="onSideSourceSelected($event, i)"
+                    (change)="onSideSourceSelected($event, i, variant)"
                     [disabled]="linkingSide === i"
                   >
                     <option value="">-- Choisir une vidéo existante --</option>
@@ -157,7 +159,7 @@
                     <input
                       type="file"
                       accept="video/*"
-                      (change)="onSideFileSelected($event, i)"
+                      (change)="onSideFileSelected($event, i, variant)"
                       hidden
                       [disabled]="uploadingSide === i"
                     />
@@ -208,8 +210,8 @@
             [targetWidth]="target.width"
             [targetHeight]="target.height"
             [layout]="variant.layout"
-            [sidesCount]="ledSides.length"
-            [cellPx]="ledCellPx"
+            [sidesCount]="ledSides(variant.display_type).length"
+            [cellPx]="ledCellPx(variant.display_type)"
           ></app-led-ribbon-preview>
 
           <!-- Export plié async (PROP-014 §6 / étape 6) — bouton + téléchargement.

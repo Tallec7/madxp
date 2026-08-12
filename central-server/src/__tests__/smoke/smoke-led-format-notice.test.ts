@@ -19,9 +19,11 @@ describe('Smoke — format_notice LED (PROP-014 §6)', () => {
     expect(ctrl).toMatch(/computeRibbonDimensions/);
   });
 
-  it('le helper ne juge que les displays led-perimeter avec profil', () => {
+  it('le helper ne juge que les displays led-perimeter (famille) avec profil', () => {
     expect(ctrl).toMatch(/computeLedFormatNotice/);
-    expect(ctrl).toMatch(/displayType !== 'led-perimeter'/);
+    // ADR-143 : un club peut avoir plusieurs rubans (led-perimeter, led-perimeter-2...) —
+    // le garde-fou accepte toute la famille, pas seulement le type exact.
+    expect(ctrl).toMatch(/!isLedPerimeterFamily\(displayType\)/);
   });
 
   it("joint format_notice à la réponse d'upload (non bloquant, spread conditionnel)", () => {

@@ -308,7 +308,11 @@ describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
   it('uploader un côté POST sur .../sides/:i puis recharge', () => {
     openLed();
     const file = new File(['x'], 'side.mp4', { type: 'video/mp4' });
-    component.onSideFileSelected({ target: { files: [file], value: '' } } as unknown as Event, 1);
+    component.onSideFileSelected(
+      { target: { files: [file], value: '' } } as unknown as Event,
+      1,
+      component.variants[0] as never
+    );
     const req = httpMock.expectOne(`${environment.apiUrl}/videos/vid-1/variants/led-perimeter/sides/1`);
     expect(req.request.method).toBe('POST');
     req.flush({ side_files: [{ side_index: 1, filename: 'side.mp4' }] });
@@ -327,7 +331,7 @@ describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
   });
 
   it('ledSides lit les côtés du display led-perimeter du site', () => {
-    expect(component.ledSides).toEqual([40, 20, 20]);
+    expect(component.ledSides('led-perimeter')).toEqual([40, 20, 20]);
   });
 
   it('un côté vide propose un select bibliothèque alimenté par availableVideos', () => {
@@ -350,7 +354,8 @@ describe('VideoVariantPanelComponent — contenu par côté (ADR-135)', () => {
     fixture.detectChanges();
     component.onSideSourceSelected(
       { target: { value: 'v-a' } } as unknown as Event,
-      2
+      2,
+      component.variants[0] as never
     );
     const req = httpMock.expectOne(
       `${environment.apiUrl}/videos/vid-1/variants/led-perimeter/sides/2/from-video`

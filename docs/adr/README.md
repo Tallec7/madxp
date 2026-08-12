@@ -156,6 +156,7 @@ Un ADR documente une décision technique importante avec :
 | [ADR-140](ADR-140-led-autocrop-on-validation.md)                                         | Détourer les marges d'une vidéo LED, sur validation humaine                                  | Accepté                           | Août 2026 |
 | [ADR-141](ADR-141-studio-render-concurrency-cap.md)                                      | Plafonner les rendus Studio en DB (révise « SKIP LOCKED gère » d'ADR-054)                    | Accepté                           | Août 2026 |
 | [ADR-142](ADR-142-missing-video-badge-counts-broadcast.md)                               | Le badge « vidéos manquantes » d'un site compte ce qui est diffusé                           | Accepté                           | Août 2026 |
+| [ADR-143](ADR-143-led-perimeter-multiple-rings-per-site.md)                              | Plusieurs rubans `led-perimeter` sur un même club — convention `led-perimeter-N`             | Proposé                           | Août 2026 |
 
 ### Supersédés
 
@@ -195,7 +196,7 @@ Un ADR documente une décision technique importante avec :
 
 1. Décider du format avec la [grille de décision](BEST_PRACTICES.md#quand-créer-un-adr-)
 2. Copier le template approprié (complet ou léger)
-3. Numéroter séquentiellement (prochain : **ADR-096**)
+3. Numéroter séquentiellement (prochain : **ADR-144**)
 4. Remplir les sections
 5. Commiter avec le code dans la même PR
 6. Mettre à jour ce README après merge
