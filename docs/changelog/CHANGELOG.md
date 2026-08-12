@@ -1,3 +1,9 @@
+## [4.30.7](https://github.com/Tallec7/madxp/compare/v4.30.6...v4.30.7) (2026-08-12)
+
+### Bug Fixes
+
+- **led:** treat led-perimeter-N as part of the LED family in displays-editor ([#1185](https://github.com/Tallec7/madxp/issues/1185)) ([933500d](https://github.com/Tallec7/madxp/commit/933500d7b394fb9f81ff1562f3f92fbc866fe02d)), closes [#1181](https://github.com/Tallec7/madxp/issues/1181)
+
 ## [4.30.6](https://github.com/Tallec7/madxp/compare/v4.30.5...v4.30.6) (2026-08-12)
 
 ### Bug Fixes
