@@ -192,7 +192,28 @@ export const schemas = {
           }).optional(),
         }).optional().allow(null),
       })
-    ).min(1).max(20).required(),
+    ).min(1).max(20).required().custom((displays, helpers) => {
+      // Deux displays avec le même `type` exact partagent la même clé de
+      // variante vidéo (video_variants.display_type) — indistinguables au
+      // rendu (tv.component.ts resolveDisplayVariant). ADR-143 anticipait ce
+      // trou explicitement ; incident réel : deux 'led-perimeter' en doublon
+      // sur un même site (le 2e doit être 'led-perimeter-2', etc.).
+      // `type: 'tv'` est exclu : resolveDisplayVariant() court-circuite le
+      // lookup de variante pour 'tv' (sert le path brut), donc plusieurs TV
+      // physiques du même type (TV principale + TV bar) sont un cas légitime,
+      // pas le bug visé ici (cf. sites-displays-emit-command.test.ts).
+      const seen = new Set<string>();
+      for (const display of displays) {
+        if (display.type === 'tv') continue;
+        if (seen.has(display.type)) {
+          return helpers.error('array.duplicateType', { type: display.type });
+        }
+        seen.add(display.type);
+      }
+      return displays;
+    }, 'unique display type').messages({
+      'array.duplicateType': 'Type de display en doublon : "{{#type}}". Chaque display doit avoir un type distinct (ex: led-perimeter, led-perimeter-2).',
+    }),
   }),
 
   createGroup: Joi.object({
