@@ -52,4 +52,14 @@ describe('schemas.updateDisplays — anti-doublon de type', () => {
     expect(error).toBeDefined();
     expect(error!.message).toMatch(/doublon/);
   });
+
+  it('accepte deux displays type "tv" (résolution bypass les variantes, cas TV principale + TV bar légitime)', () => {
+    const { error } = schemas.updateDisplays.validate({
+      displays: [
+        { index: 0, name: 'TV 1', type: 'tv' },
+        { index: 1, name: 'Bar', type: 'tv' },
+      ],
+    });
+    expect(error).toBeUndefined();
+  });
 });

@@ -198,8 +198,13 @@ export const schemas = {
       // rendu (tv.component.ts resolveDisplayVariant). ADR-143 anticipait ce
       // trou explicitement ; incident réel : deux 'led-perimeter' en doublon
       // sur un même site (le 2e doit être 'led-perimeter-2', etc.).
+      // `type: 'tv'` est exclu : resolveDisplayVariant() court-circuite le
+      // lookup de variante pour 'tv' (sert le path brut), donc plusieurs TV
+      // physiques du même type (TV principale + TV bar) sont un cas légitime,
+      // pas le bug visé ici (cf. sites-displays-emit-command.test.ts).
       const seen = new Set<string>();
       for (const display of displays) {
+        if (display.type === 'tv') continue;
         if (seen.has(display.type)) {
           return helpers.error('array.duplicateType', { type: display.type });
         }
