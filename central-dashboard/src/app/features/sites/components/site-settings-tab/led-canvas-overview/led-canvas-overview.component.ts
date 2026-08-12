@@ -295,6 +295,10 @@ interface CropProposal {
 })
 export class LedCanvasOverviewComponent {
   @Input() siteId: string | null = null;
+  /** Ruban ciblé par cette vue (ADR-143 : un club peut en avoir plusieurs,
+   * `led-perimeter`, `led-perimeter-2`...). Chaque instance du composant est
+   * scopée à UN ruban — jamais le premier trouvé sur le site. */
+  @Input() displayType = 'led-perimeter';
 
   open = false;
   loading = false;
@@ -330,8 +334,8 @@ export class LedCanvasOverviewComponent {
     if (this.open && !this.displays.length) this.loadDisplays();
   }
 
-  /** Localise TOUS les displays led-perimeter du site pour afficher/piloter leur
-   * `scene_scaling` individuellement. */
+  /** Localise le display CIBLÉ par cette instance (`displayType`) pour afficher/piloter
+   * son `scene_scaling` — jamais tous les rubans du site : une instance = un ruban. */
   private loadDisplays(): void {
     if (!this.siteId) return;
     this.http
@@ -341,7 +345,7 @@ export class LedCanvasOverviewComponent {
       .subscribe({
         next: (r) => {
           this.displays = r.displays ?? [];
-          this.ledDisplays = this.displays.filter((d) => d.type === 'led-perimeter');
+          this.ledDisplays = this.displays.filter((d) => d.type === this.displayType);
           this.cdr.markForCheck();
         },
         // Silencieux : ce toggle est secondaire, l'écran Canvas reste utilisable sans lui.
@@ -370,7 +374,7 @@ export class LedCanvasOverviewComponent {
       .subscribe({
         next: () => {
           this.displays = displays;
-          this.ledDisplays = displays.filter((d) => d.type === 'led-perimeter');
+          this.ledDisplays = displays.filter((d) => d.type === this.displayType);
           this.savingSceneScaling = null;
           this.cdr.markForCheck();
         },
@@ -388,7 +392,7 @@ export class LedCanvasOverviewComponent {
     this.error = null;
     this.http
       .get<{ expected: { width: number; height: number } | null; videos: CanvasRow[] }>(
-        `${environment.apiUrl}/sites/${this.siteId}/led-canvases`,
+        `${environment.apiUrl}/sites/${this.siteId}/led-canvases?display_type=${this.displayType}`,
         { withCredentials: true }
       )
       .subscribe({
@@ -416,7 +420,7 @@ export class LedCanvasOverviewComponent {
     if (!r.has_variant || this.busy[r.video_id]) return;
     this.busy = { ...this.busy, [r.video_id]: true };
     this.http
-      .post(`${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/export`, {}, { withCredentials: true })
+      .post(`${environment.apiUrl}/videos/${r.video_id}/variants/${this.displayType}/export`, {}, { withCredentials: true })
       .subscribe({
         next: () => {
           this.busy = { ...this.busy, [r.video_id]: false };
@@ -441,7 +445,7 @@ export class LedCanvasOverviewComponent {
     if (!r.has_variant || this.busy[r.video_id]) return;
     this.busy = { ...this.busy, [r.video_id]: true };
     this.http
-      .delete(`${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter`, { withCredentials: true })
+      .delete(`${environment.apiUrl}/videos/${r.video_id}/variants/${this.displayType}`, { withCredentials: true })
       .subscribe({
         next: () => {
           this.busy = { ...this.busy, [r.video_id]: false };
@@ -468,7 +472,7 @@ export class LedCanvasOverviewComponent {
     this.busy = { ...this.busy, [r.video_id]: true };
     this.http
       .post<CropProposal>(
-        `${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/crop/detect`,
+        `${environment.apiUrl}/videos/${r.video_id}/variants/${this.displayType}/crop/detect`,
         { target_site_id: this.siteId },
         { withCredentials: true }
       )
@@ -535,7 +539,7 @@ export class LedCanvasOverviewComponent {
     this.busy = { ...this.busy, [r.video_id]: true };
     this.http
       .put(
-        `${environment.apiUrl}/videos/${r.video_id}/variants/led-perimeter/crop`,
+        `${environment.apiUrl}/videos/${r.video_id}/variants/${this.displayType}/crop`,
         { crop },
         { withCredentials: true }
       )

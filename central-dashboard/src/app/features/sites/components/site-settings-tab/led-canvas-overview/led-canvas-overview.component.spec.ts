@@ -40,7 +40,7 @@ describe('LedCanvasOverviewComponent', () => {
     fixture.detectChanges();
     component.toggle();
     http
-      .expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`)
+      .expectOne(`${environment.apiUrl}/sites/site-1/led-canvases?display_type=led-perimeter`)
       .flush({ expected: { width: 1600, height: 120 }, videos });
     // `toggle()` déclenche aussi loadDisplays() pour localiser le led-perimeter
     // (toggle scene_scaling) — secondaire à l'écran Canvas, silencieux en erreur.
@@ -86,7 +86,7 @@ describe('LedCanvasOverviewComponent', () => {
     const del = http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter`);
     expect(del.request.method).toBe('DELETE');
     del.flush({});
-    http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+    http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases?display_type=led-perimeter`).flush({ expected: null, videos: [] });
   });
 
   it('« Retirer » n’apparaît pas sans variante — rien à retirer', () => {
@@ -130,7 +130,7 @@ describe('LedCanvasOverviewComponent', () => {
       expect(put.request.body).toEqual({ crop: BANDEAU });
       put.flush({});
       // On relit : le canvas fabriqué avant le détourage est devenu inatteignable.
-      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases?display_type=led-perimeter`).flush({ expected: null, videos: [] });
     });
 
     it('un plein cadre 16:9 ne se voit proposer AUCUN détourage', () => {
@@ -160,7 +160,7 @@ describe('LedCanvasOverviewComponent', () => {
       const put = http.expectOne(`${environment.apiUrl}/videos/v1/variants/led-perimeter/crop`);
       expect(put.request.body).toEqual({ crop: null });
       put.flush({});
-      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush({ expected: null, videos: [] });
+      http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases?display_type=led-perimeter`).flush({ expected: null, videos: [] });
     });
 
     it('l’aperçu « après » cadre exactement le rectangle, comme le fera ffmpeg', () => {
@@ -179,7 +179,7 @@ describe('LedCanvasOverviewComponent', () => {
   it('affiche le message serveur, pas un « erreur » générique', () => {
     fixture.detectChanges();
     component.toggle();
-    http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases`).flush(
+    http.expectOne(`${environment.apiUrl}/sites/site-1/led-canvases?display_type=led-perimeter`).flush(
       { error: "Ce site n'a pas de ruban LED configuré" },
       { status: 400, statusText: 'Bad Request' }
     );

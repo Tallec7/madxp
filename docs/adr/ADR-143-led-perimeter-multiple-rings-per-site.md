@@ -25,12 +25,17 @@ Les ~8 checks à correspondance exacte deviennent des checks par préfixe (`star
 
 ## Conséquences
 
-- Un opérateur qui déclare un 2ᵉ ruban DOIT lui donner un type distinct (`led-perimeter-2`) — pas de garde-fou UI empêchant un doublon exact aujourd'hui, à ajouter si ça arrive en pratique.
+- Un opérateur qui déclare un 2ᵉ ruban DOIT lui donner un type distinct (`led-perimeter-2`) — **fait respecter côté backend** depuis (#1181) : `schemas.updateDisplays` rejette un doublon exact de `type` (sauf `'tv'`, où plusieurs écrans physiques du même type sont légitimes). Côté dashboard, le bouton "+ Ajouter un écran" (#1184) auto-suffixe désormais le type quand le gabarit choisi existe déjà, au lieu de recréer le doublon que le backend refuse.
+- **Gap découvert après coup (2026-08-12)** : le renommage de `type` seul ne suffit pas à rendre un 2ᵉ ruban opérationnel. `displays-editor.component.ts` comparait encore `display.type` en égalité stricte (#1185, panneau LED/profil invisible pour `led-perimeter-2`), et surtout l'outillage de fabrication en masse (`bulkCreateLedVariants`, `getLedCanvasOverview`, le détourage `detect`/`crop`) était câblé en dur sur le type exact `led-perimeter` — un 2ᵉ ruban n'avait donc AUCUN moyen de recevoir ses `video_variants`/`led_export_jobs`, et diffusait le fichier brut une seule fois (jamais plié), constaté en prod sur Piraths Strasbourg ATH. Fermé par le paramètre `display_type` (body/query/route selon l'endpoint), validé par `isLedPerimeterFamily()`.
 - `video_variants` reste sans colonne `site_id` (limite connue, non traitée ici) : si une même vidéo était un jour partagée entre deux clubs `led-perimeter` aux géométries différentes, ils partageraient la même variante. Pas de cas connu actuellement.
 
 ## Fichiers impactés
 
-- `central-server/src/controllers/content-variant.controller.ts` — checks exacts → préfixe, `.find()` → type exact
+- `central-server/src/controllers/content-variant.controller.ts` — checks exacts → préfixe, `.find()` → type exact ; `bulkCreateLedVariants`/`getLedCanvasOverview`/`resolveLedTarget`/`detectLedVariantCrop`/`setLedVariantCrop` scopés par `display_type` explicite (défaut `led-perimeter` pour rétrocompat)
+- `central-server/src/routes/content.routes.ts` — routes crop `.../variants/led-perimeter/crop*` → `.../variants/:displayType/crop*`
 - `central-server/src/utils/config-secondary-variants.ts` — `substituteFoldedCanvas` : résoudre par type exact, pas premier trouvé
+- `central-server/src/middleware/validation.ts` — `schemas.updateDisplays` : rejet des doublons exacts de `type` (hors `'tv'`)
 - `raspberry/src/app/components/tv/tv.component.ts` — `isPixelExactDisplay` : `=== 'led-perimeter'` → `startsWith('led-perimeter')`
 - `central-dashboard/src/app/features/content/video-variant-panel.component.ts` — `isLedPerimeter()` : idem
+- `central-dashboard/src/app/features/sites/components/site-settings-tab/displays-editor/displays-editor.component.ts` — `uniquifyType()` (auto-suffixe à l'ajout), `isLedPerimeterFamily()` (panneau/profil/résolution), bouton bulk-create scopé au ruban édité
+- `central-dashboard/src/app/features/sites/components/site-settings-tab/led-canvas-overview/led-canvas-overview.component.ts` — `@Input() displayType` : une instance = un ruban (canvas overview, redo, remove, crop)

@@ -6,7 +6,7 @@
  * parce qu'une vidéo échoue — l'opérateur veut avancer, pas recommencer.
  */
 
-import { bulkCreateLedVariants, getLedCanvasOverview } from '../content-variant.controller';
+import { bulkCreateLedVariants, getLedCanvasOverview, setLedVariantCrop } from '../content-variant.controller';
 import { videoRepository, videoVariantRepository, siteRepository, ledExportJobRepository } from '../../repositories';
 import { AuthRequest } from '../../types';
 
@@ -227,6 +227,79 @@ describe('bulkCreateLedVariants', () => {
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ created: 0, total: 0 }));
     expect(variants.create).not.toHaveBeenCalled();
   });
+
+  /**
+   * Régression (2026-08-12) : un club peut avoir plusieurs rubans (ADR-143,
+   * `led-perimeter`, `led-perimeter-2`...). Avant ce fix, le bouton était codé en
+   * dur sur `led-perimeter` — aucun moyen de déclarer les vidéos du 2e ruban, qui
+   * restait donc sans variante ni canvas plié (diffusion brute, une seule fois).
+   */
+  describe('plusieurs rubans (ADR-143)', () => {
+    const reqRing2 = {
+      params: { siteId: SITE },
+      user: { id: 'u1' },
+      body: { display_type: 'led-perimeter-2' },
+    } as unknown as AuthRequest;
+
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sites.getDisplays.mockResolvedValue([
+        { type: 'led-perimeter', led: { sides: [10], pitch: 'P6.25', height: 120 } },
+        { type: 'led-perimeter-2', led: { sides: [10], pitch: 'P6.25', height: 120 } },
+      ] as any);
+    });
+
+    it('crée la variante sur le ruban ciblé par display_type, pas le premier trouvé', async () => {
+      withVideos(['a']);
+      await bulkCreateLedVariants(reqRing2, res() as never);
+
+      expect(variants.create).toHaveBeenCalledWith(
+        expect.objectContaining({ video_id: 'a', display_type: 'led-perimeter-2' })
+      );
+    });
+
+    it('un ruban avec ses variantes déjà en place n’empêche pas de peupler l’autre', async () => {
+      // La vidéo a déjà une variante 'led-perimeter' (ruban #1) mais aucune pour
+      // 'led-perimeter-2' (ruban #2) — le 2e ruban doit quand même la recevoir.
+      withVideos(['a'], { a: ['led-perimeter'] });
+      const r = res();
+
+      await bulkCreateLedVariants(reqRing2, r as never);
+
+      expect(variants.create).toHaveBeenCalledWith(
+        expect.objectContaining({ video_id: 'a', display_type: 'led-perimeter-2' })
+      );
+      expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ created: 1, skipped: 0 }));
+    });
+
+    it('rejette un display_type hors famille led-perimeter', async () => {
+      const req2 = {
+        params: { siteId: SITE },
+        user: { id: 'u1' },
+        body: { display_type: 'led-banner' },
+      } as unknown as AuthRequest;
+      const r = res();
+
+      await bulkCreateLedVariants(req2, r as never);
+
+      expect(r.status).toHaveBeenCalledWith(400);
+      expect(variants.create).not.toHaveBeenCalled();
+    });
+
+    it('refuse un ruban non déclaré sur ce site (ex: led-perimeter-3 absent)', async () => {
+      const req3 = {
+        params: { siteId: SITE },
+        user: { id: 'u1' },
+        body: { display_type: 'led-perimeter-3' },
+      } as unknown as AuthRequest;
+      const r = res();
+
+      await bulkCreateLedVariants(req3, r as never);
+
+      expect(r.status).toHaveBeenCalledWith(400);
+      expect(variants.create).not.toHaveBeenCalled();
+    });
+  });
 });
 
 /**
@@ -309,5 +382,106 @@ describe('getLedCanvasOverview', () => {
     const r = res();
     await getLedCanvasOverview(req, r as never);
     expect(r.status).toHaveBeenCalledWith(400);
+  });
+
+  /**
+   * Régression (2026-08-12) : sans `display_type`, cette vue prenait TOUJOURS le
+   * premier `led-perimeter` trouvé — le panneau du 2e ruban affichait donc les
+   * chiffres du 1er, alors que chaque ruban a sa propre géométrie (ADR-143).
+   */
+  describe('plusieurs rubans (ADR-143)', () => {
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sites.getDisplays.mockResolvedValue([
+        { type: 'led-perimeter', led: { sides: [10, 10, 10, 10], pitch: 'P6.25', height: 120 } },
+        { type: 'led-perimeter-2', led: { sides: [20], pitch: 'P10', height: 160 } },
+      ] as any);
+    });
+
+    it('lit la géométrie du ruban demandé via ?display_type, pas le premier trouvé', async () => {
+      const reqRing2 = {
+        params: { siteId: SITE },
+        user: { id: 'u1' },
+        query: { display_type: 'led-perimeter-2' },
+      } as unknown as AuthRequest;
+      withVideos(['a']);
+      variants.findByVideoAndDisplay.mockResolvedValue(null);
+      jobs.findLatestForVideo.mockResolvedValue(null);
+      const r = res();
+
+      await getLedCanvasOverview(reqRing2, r as never);
+
+      const body = r.json.mock.calls[0][0];
+      // 20 m à P10 = 2000 px, plafonné à MAX_LED_BAND_WIDTH (1920), dalle 160 —
+      // la géométrie du RUBAN #2, pas celle du #1 (1600×120).
+      expect(body.expected).toEqual({ width: 1920, height: 160 });
+      expect(body.display_type).toBe('led-perimeter-2');
+      expect(variants.findByVideoAndDisplay).toHaveBeenCalledWith('a', 'led-perimeter-2');
+      expect(jobs.findLatestForVideo).toHaveBeenCalledWith(SITE, 'a', 'led-perimeter-2');
+    });
+
+    it('rejette un display_type hors famille led-perimeter', async () => {
+      const req2 = {
+        params: { siteId: SITE },
+        user: { id: 'u1' },
+        query: { display_type: 'led-banner' },
+      } as unknown as AuthRequest;
+      const r = res();
+
+      await getLedCanvasOverview(req2, r as never);
+
+      expect(r.status).toHaveBeenCalledWith(400);
+    });
+  });
+});
+
+/**
+ * Route `/videos/:id/variants/:displayType/crop` — anciennement câblée en dur sur
+ * `led-perimeter`, désormais paramétrée (ADR-143) pour que le crop d'un 2e ruban
+ * n'écrive pas silencieusement sur la variante du 1er.
+ */
+describe('setLedVariantCrop', () => {
+  const cropVideo = (id: string) => ({
+    id, uploaded_for_site_id: null, metadata: {},
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    videos.findVideoById.mockImplementation(((id: string) => Promise.resolve(cropVideo(id))) as any);
+  });
+
+  it('lit et écrit la variante du ruban demandé par l’URL, pas toujours led-perimeter', async () => {
+    const req2 = {
+      params: { id: 'v1', displayType: 'led-perimeter-2' },
+      user: { id: 'u1' },
+      body: { crop: { x: 0, y: 0, w: 10, h: 10 } },
+    } as unknown as AuthRequest;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    variants.findByVideoAndDisplay.mockResolvedValue({ id: 'var-1', width: 100, height: 100 } as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    variants.updateCrop.mockResolvedValue({ id: 'var-1' } as any);
+    const r = res();
+
+    await setLedVariantCrop(req2, r as never);
+
+    expect(variants.findByVideoAndDisplay).toHaveBeenCalledWith('v1', 'led-perimeter-2');
+    expect(variants.updateCrop).toHaveBeenCalledWith(
+      'v1', 'led-perimeter-2', { x: 0, y: 0, w: 10, h: 10 }
+    );
+  });
+
+  it('rejette un displayType hors famille led-perimeter', async () => {
+    const req2 = {
+      params: { id: 'v1', displayType: 'led-banner' },
+      user: { id: 'u1' },
+      body: { crop: null },
+    } as unknown as AuthRequest;
+    const r = res();
+
+    await setLedVariantCrop(req2, r as never);
+
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(variants.updateCrop).not.toHaveBeenCalled();
   });
 });
