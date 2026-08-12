@@ -1,6 +1,6 @@
 {
   "name": "madxp-socket-server",
-  "version": "v4.30.7",
+  "version": "v4.30.8",
   "description": "Socket.IO server for Neopro application",
   "main": "server.js",
   "scripts": {

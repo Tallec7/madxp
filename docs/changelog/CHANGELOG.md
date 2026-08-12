@@ -1,3 +1,9 @@
+## [4.30.8](https://github.com/Tallec7/madxp/compare/v4.30.7...v4.30.8) (2026-08-12)
+
+### Bug Fixes
+
+- **led:** scope LED admin tooling (bulk-create, canvas overview, autocrop) per ring ([#1186](https://github.com/Tallec7/madxp/issues/1186)) ([5ef63f8](https://github.com/Tallec7/madxp/commit/5ef63f8d848478fcc414173750c7e2cf2dc4a4ee))
+
 ## [4.30.7](https://github.com/Tallec7/madxp/compare/v4.30.6...v4.30.7) (2026-08-12)
 
 ### Bug Fixes
