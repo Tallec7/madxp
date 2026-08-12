@@ -517,6 +517,34 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     expect(types).toEqual(['led-perimeter', 'led-perimeter-2', 'led-perimeter-3']);
   });
 
+  it('a suffixed led-perimeter-2 still gets its LED panel, profile and derived resolution (ADR-143 family)', () => {
+    // Sans le helper isLedPerimeterFamily(), 'led-perimeter-2' est traité comme
+    // un type inconnu par isLedPerimeter() (égalité stricte) : pas de panneau
+    // LED, pas de profil par défaut, résolution jamais dérivée — régression
+    // constatée juste après l'auto-suffixage (#1181).
+    component.displays = [{ index: 0, name: 'LED', type: 'led-perimeter' }];
+    fixture.detectChanges();
+
+    // Simule le vrai parcours utilisateur (clic, pas appel direct) pour que
+    // l'auto-marquage dirty OnPush d'Angular se déclenche comme en prod.
+    (fixture.nativeElement.querySelector('.add-display-trigger') as HTMLElement).click();
+    fixture.detectChanges();
+    const ledOption = Array.from(fixture.nativeElement.querySelectorAll('.template-option')).find(
+      (el) => (el as HTMLElement).textContent?.includes('LED périmétrique')
+    ) as HTMLElement;
+    ledOption.click();
+    fixture.detectChanges();
+
+    const second = component.displays.find((d) => d.type === 'led-perimeter-2')!;
+    expect(second).toBeTruthy();
+    expect(component.isLedPerimeter(second)).toBe(true);
+    expect(second.led).toBeTruthy();
+    expect(second.led?.pitch).toBe('P6');
+
+    const panels = fixture.nativeElement.querySelectorAll('[data-testid="led-panel"]');
+    expect(panels.length).toBe(2);
+  });
+
   it('does not suffix a 2nd "tv" template (multiple physical TVs are legitimate)', () => {
     component.displays = [{ index: 0, name: 'TV', type: 'tv' }];
     fixture.detectChanges();

@@ -29,6 +29,18 @@ interface DisplayTemplate {
 const LED_PERIMETER_TYPE = 'led-perimeter';
 
 /**
+ * Vrai pour `led-perimeter` et tout ruban additionnel du même club
+ * (`led-perimeter-2`, `led-perimeter-3`, ...). ADR-143 : un club peut avoir
+ * plusieurs rubans indépendants (bord de terrain, tribune...). Même helper que
+ * `video-variant-panel.component.ts` / `content-variant.controller.ts` — sans
+ * lui, un display uniquifié par `uniquifyType()` (#1181) perd son panneau LED,
+ * son profil par défaut et sa résolution dérivée.
+ */
+function isLedPerimeterFamily(type: string): boolean {
+  return type === LED_PERIMETER_TYPE || type.startsWith(`${LED_PERIMETER_TYPE}-`);
+}
+
+/**
  * Gabarits d'écran. `resolution` est la résolution STANDARD du type, écrite à la
  * création — sauf pour `led-perimeter`, dont la résolution ne peut pas être une
  * constante : elle se DÉRIVE du profil du terrain (côtés × pitch → bandes × hauteur).
@@ -1321,7 +1333,7 @@ export class DisplaysEditorComponent implements OnDestroy {
     if (tpl?.resolution) display.resolution = tpl.resolution;
     else delete display.resolution;
 
-    if (type === LED_PERIMETER_TYPE) {
+    if (isLedPerimeterFamily(type)) {
       if (!display.led) display.led = this.defaultLedProfile();
     } else if (display.led) {
       delete display.led;
@@ -1522,7 +1534,7 @@ export class DisplaysEditorComponent implements OnDestroy {
   // --- LED perimeter profile (PROP-014) ---
 
   isLedPerimeter(display: DisplayConfig): boolean {
-    return display.type === LED_PERIMETER_TYPE;
+    return isLedPerimeterFamily(display.type);
   }
 
   /** Profil LED par défaut (canvas_in provisoire jusqu'au SPIKE — PROP-014 §13). */
@@ -1538,7 +1550,7 @@ export class DisplaysEditorComponent implements OnDestroy {
 
   /** Garantit qu'un display led-perimeter porte un profil led complet. */
   private normalizeLed(display: DisplayConfig): DisplayConfig {
-    if (display.type !== LED_PERIMETER_TYPE) return display;
+    if (!isLedPerimeterFamily(display.type)) return display;
     if (display.led) {
       // Complète canvas_in si absent (rétro-compat profils partiels).
       if (!display.led.canvas_in) {
