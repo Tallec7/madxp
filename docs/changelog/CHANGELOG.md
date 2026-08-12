@@ -1,3 +1,9 @@
+# [4.29.0](https://github.com/Tallec7/madxp/compare/v4.28.0...v4.29.0) (2026-08-12)
+
+### Features
+
+- **dashboard:** toggle scene_scaling dans la vue Canvas LED ([#1174](https://github.com/Tallec7/madxp/issues/1174)) ([196e3a5](https://github.com/Tallec7/madxp/commit/196e3a5544c92da56672f729c069850f838e312c)), closes [#1173](https://github.com/Tallec7/madxp/issues/1173)
+
 # [4.28.0](https://github.com/Tallec7/madxp/compare/v4.27.5...v4.28.0) (2026-08-12)
 
 ### Features
