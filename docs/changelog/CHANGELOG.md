@@ -1,3 +1,9 @@
+## [4.30.5](https://github.com/Tallec7/madxp/compare/v4.30.4...v4.30.5) (2026-08-12)
+
+### Bug Fixes
+
+- **content:** markForCheck sur video-variant-panel — modale bloquée sur "Chargement..." (OnPush) ([#1182](https://github.com/Tallec7/madxp/issues/1182)) ([f51b93e](https://github.com/Tallec7/madxp/commit/f51b93e7e0916e2cf7a71bfe307a7b56aa633b34))
+
 ## [4.30.4](https://github.com/Tallec7/madxp/compare/v4.30.3...v4.30.4) (2026-08-12)
 
 ### Bug Fixes
