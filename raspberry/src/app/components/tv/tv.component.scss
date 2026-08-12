@@ -297,6 +297,17 @@
 // `TvComponent.pixelExactCanvasSize`, dérivées de `led.canvas_in.band_width` et
 // `band_count × led.height`) figent la taille au canvas réel, quelle que soit la
 // fenêtre — fallback 100% (ancien comportement) si la géométrie n'est pas connue.
+//
+// `--pixel-exact-scale` (option `canvas_in.scene_scaling`, désactivée par défaut)
+// scale le tout UNIFORMÉMENT depuis le coin haut-gauche (jamais de recentrage —
+// ça décalerait le mapping pixel du processeur, cf. commentaire plus haut) pour
+// remplir la fenêtre PC quelle que soit sa largeur, comme B2B Alive (scène de
+// référence 1920px). Fallback `1` = comportement pixel-exact strict ci-dessus,
+// inchangé quand l'option est désactivée. `translateZ(0)` reste combiné dans LA
+// MÊME déclaration `transform` : une règle plus spécifique remplace, elle ne
+// fusionne pas avec le `transform: translateZ(0)` des classes de base
+// (`.double-buffer-player`/`.manual-player`) — l'omettre désactiverait
+// l'accélération GPU documentée dans raspberry-tv.md.
 // ============================================================================
 
 .tv--pixel-exact {
@@ -308,5 +319,7 @@
     object-position: 0 0;
     width: var(--pixel-exact-w, 100%);
     height: var(--pixel-exact-h, 100%);
+    transform: scale(var(--pixel-exact-scale, 1)) translateZ(0);
+    transform-origin: top left;
   }
 }

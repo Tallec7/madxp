@@ -136,6 +136,7 @@ export interface LedProfileConfig {
     order: 'top-to-bottom' | 'bottom-to-top';
     mode: 'A' | 'B';
     serve_folded?: boolean;
+    scene_scaling?: boolean;
   };
 }
 
