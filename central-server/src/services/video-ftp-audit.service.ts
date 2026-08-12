@@ -13,8 +13,8 @@
  * Appelé par le CRON `video_ftp_audit` (quotidien 03:00).
  */
 
-import { randomUUID } from 'crypto';
 import { query } from '../config/database';
+import { withCacheBuster, NO_CACHE_HEADERS } from '../utils/cache-busted-url';
 import { getVideoUrl } from './storage.service';
 import metricsService from './metrics.service';
 import logger from '../config/logger';
@@ -37,35 +37,10 @@ interface ProbeResult {
 }
 
 /**
- * Rend l'URL **unique à chaque sonde**, pour interroger l'ORIGINE et non un edge CDN.
- *
- * ## Sans ça, l'audit est aveugle à ce qu'il cherche
- *
- * Hostinger sert les fichiers derrière un cache. Un edge chaud continue de rendre
- * un fichier **supprimé de l'origine**, avec un 200 et la bonne taille. Mesuré le
- * 2026-08-11 sur `STRASOL_2025_08_1600x120px.mp4` (Piraths) :
- *
- *   sans cache-buster : 200, 8 638 728 octets (3 fois sur 3)
- *   avec cache-buster : 404,     4 511 octets (3 fois sur 3)
- *
- * Neuf des 39 vidéos du club étaient dans ce cas — dont ses deux sponsors ruban —
- * et l'audit les déclarait saines. Un audit qui confirme ce qu'on espère plutôt que
- * de mesurer ce qui est, c'est pire que pas d'audit : il endort.
- *
- * Le paramètre est bien honoré dans les DEUX sens (vérifié sur un fichier présent :
- * 200 avec cache-buster), donc il ne fabrique pas de faux positifs.
- *
- * Les en-têtes `no-cache` accompagnent la mesure, sans s'y substituer : ce sont des
- * directives qu'un edge est libre d'ignorer, là où une URL jamais vue ne peut pas
- * être servie depuis un cache.
+ * Sonde une URL. Le cache-buster est appliqué ICI, donc chaque sonde — HEAD comme
+ * repli Range — porte sa propre URL et interroge réellement l'origine
+ * (cf. `utils/cache-busted-url.ts` pour la mesure qui l'a rendu nécessaire).
  */
-function withCacheBuster(url: string): string {
-  return `${url}${url.includes('?') ? '&' : '?'}_audit=${randomUUID()}`;
-}
-
-/** En-têtes anti-cache, en complément du paramètre d'URL. */
-const NO_CACHE_HEADERS = { 'Cache-Control': 'no-cache, no-store', Pragma: 'no-cache' };
-
 async function probe(url: string, method: 'HEAD' | 'GET', extraHeaders?: Record<string, string>): Promise<ProbeResult> {
   try {
     const ctrl = new AbortController();

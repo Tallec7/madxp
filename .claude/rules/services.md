@@ -127,21 +127,30 @@ Le smoke test #30 vérifie automatiquement cette complétude.
 - Ajouter un nouveau canal de livraison (Chromecast, Android TV, ...) en modifiant `deployment.service.ts` (ADR-069 : créer `central-server/src/services/delivery/{name}.strategy.ts` implémentant `DeliveryStrategy`, puis l'ajouter à `DEFAULT_STRATEGIES` dans `strategy-registry.ts`. Le service principal ne doit JAMAIS savoir qu'un nouveau canal existe)
 - Retirer le throttle `METRICS_PERSIST_INTERVAL_MS` / `lastMetricsInsertAt` dans `heartbeat.handler.ts` (le heartbeat arrive toutes les 30s pour la liveness, mais persister chaque échantillon bloate la table `metrics` 10× sans valeur analytique — 1 INSERT/5min/site suffit pour l'historique 24h. Smoke test `heartbeat handler throttles metrics persistence` enforced)
 
-## Sonder l'existence d'un fichier FTP → TOUJOURS casser le cache
+## Sonder l'existence d'un fichier FTP → TOUJOURS passer par `withCacheBuster`
 
-`getVideoUrl()` pointe un CDN Hostinger. **Un 200 ne prouve pas que le fichier
-existe** : un edge chaud continue de servir un fichier supprimé de l'origine, avec
-la bonne taille. Toute sonde d'existence doit donc ajouter un paramètre unique
-(`?_audit=<uuid>`), sinon elle mesure le cache et non le stockage.
+`getVideoUrl()` pointe un CDN Hostinger, et un edge ment **dans les deux sens** :
 
-Mesuré le 2026-08-11 sur les 9 vidéos disparues de Piraths : la sonde sans
-cache-buster n'en détectait que **6 sur 9** — les 3 ratées étant celles dont l'edge
-était chaud, dont les deux sponsors ruban du club. Aucun faux positif avec le
-cache-buster (les fichiers présents répondent 200 dans les deux cas).
+- **200 fantôme** — il sert un fichier supprimé de l'origine, avec la bonne taille.
+  Mesuré le 2026-08-11 sur les 9 vidéos disparues de Piraths : la sonde sans
+  cache-buster n'en détectait que **6 sur 9**, les 3 ratées étant celles dont
+  l'edge était chaud — dont les deux sponsors ruban du club.
+- **404 fantôme** — un négatif caché survit à l'arrivée du fichier. C'est le risque
+  des vérifications post-upload, aggravé par le retry : rejouer la même URL rejoue
+  le cache, donc les 3 tentatives concluent à un upload raté qui a réussi.
 
-Appliqué dans `video-ftp-audit.service.ts` (`withCacheBuster`). **Même angle mort
-non corrigé** dans `deployment.service.ts` (pré-filtre FTP avant déploiement),
-`upload-verification.service.ts` et `scripts/audit-ftp-legacy-videos.ts`.
+Helper unique : `utils/cache-busted-url.ts` (`withCacheBuster` + `NO_CACHE_HEADERS`).
+**Un UUID par appel** — deux sondes successives (HEAD puis repli Range) doivent
+porter deux URLs distinctes, un cache-buster rejoué ne buste rien. Aucun faux
+positif : les fichiers présents répondent 200 dans les deux cas.
+
+Les **4 sondeurs** l'utilisent, verrouillé par `utils/__tests__/cache-busted-url.test.ts` :
+`video-ftp-audit.service.ts`, `deployment.service.ts` (pré-filtre avant déploiement),
+`upload-verification.service.ts`, `scripts/audit-ftp-legacy-videos.ts`.
+
+**Ne PAS l'appliquer aux URLs servies aux clients** (config Pi/SaaS, dashboard) : le
+cache y est un allié, et une URL unique par requête ferait tomber chaque lecture sur
+l'origine.
 
 ## ⛔ Anti-Patterns Socket.IO (NE JAMAIS FAIRE)
 

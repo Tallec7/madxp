@@ -18,6 +18,7 @@
  */
 
 import pool, { query } from '../config/database';
+import { withCacheBuster, NO_CACHE_HEADERS } from '../utils/cache-busted-url';
 
 interface VideoRow {
   id: string;
@@ -42,7 +43,13 @@ async function headCheck(url: string): Promise<200 | 404 | number> {
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch(url, { method: 'HEAD', signal: ctrl.signal });
+    // Sonde l'origine, pas l'edge : sur l'URL nue, un fichier supprimé peut
+    // encore répondre 200 depuis le cache et fausser tout le rapport.
+    const res = await fetch(withCacheBuster(url), {
+      method: 'HEAD',
+      headers: NO_CACHE_HEADERS,
+      signal: ctrl.signal,
+    });
     clearTimeout(timeout);
     return res.status as 200 | 404 | number;
   } catch {
