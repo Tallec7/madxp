@@ -501,6 +501,34 @@ describe('DisplaysEditorComponent — LED perimeter profile (PROP-014)', () => {
     expect(added?.resolution).toBeUndefined();
   });
 
+  it('auto-suffixes a 2nd led-perimeter added from the template menu (regression #1181)', () => {
+    // Le backend rejette depuis #1181 deux displays au type strictement identique.
+    // Sans uniquification côté frontend, cliquer 2x sur le même gabarit recrée le
+    // doublon exact que la validation refuse désormais.
+    component.displays = [{ index: 0, name: 'LED', type: 'led-perimeter' }];
+    fixture.detectChanges();
+
+    const tpl = component.templates.find((t) => t.type === 'led-perimeter')!;
+    component.addFromTemplate(tpl);
+    component.addFromTemplate(tpl);
+    fixture.detectChanges();
+
+    const types = component.displays.map((d) => d.type);
+    expect(types).toEqual(['led-perimeter', 'led-perimeter-2', 'led-perimeter-3']);
+  });
+
+  it('does not suffix a 2nd "tv" template (multiple physical TVs are legitimate)', () => {
+    component.displays = [{ index: 0, name: 'TV', type: 'tv' }];
+    fixture.detectChanges();
+
+    const tpl = component.templates.find((t) => t.type === 'tv')!;
+    component.addFromTemplate(tpl);
+    fixture.detectChanges();
+
+    const types = component.displays.map((d) => d.type);
+    expect(types).toEqual(['tv', 'tv']);
+  });
+
   // --- Résolution dérivée + type éditable (chantiers A/B) ---
 
   it('derives the LED resolution from the profile instead of a frozen template value', () => {

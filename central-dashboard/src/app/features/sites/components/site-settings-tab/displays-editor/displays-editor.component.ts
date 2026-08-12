@@ -1334,12 +1334,31 @@ export class DisplaysEditorComponent implements OnDestroy {
     const nextIndex = this.getNextIndex();
     // `resolution` n'est PAS persistée quand elle se dérive (led-perimeter) : une
     // valeur figée en base redeviendrait fausse au premier changement de côté.
-    const display: DisplayConfig = { index: nextIndex, name: tpl.label, type: tpl.type };
+    const display: DisplayConfig = { index: nextIndex, name: tpl.label, type: this.uniquifyType(tpl.type) };
     if (tpl.resolution) display.resolution = tpl.resolution;
     // Le setter `displays` normalise déjà le profil LED (`normalizeLed`).
     this.displays = [...this.displays, display];
     this.showTemplateMenu = false;
     this.displaysChange.emit(this.displays);
+  }
+
+  /**
+   * Rend un type de gabarit unique parmi les écrans existants (ex: `led-perimeter`
+   * → `led-perimeter-2`, `-3`...). Le backend rejette depuis #1181 deux displays
+   * au type strictement identique (deux `led-perimeter` partagent la même clé de
+   * variante vidéo, indistinguables au rendu Pi) — sans cette uniquification, le
+   * bouton "LED périmétrique" du menu de gabarits recrée le doublon exact que la
+   * validation refuse désormais, bloquant l'ajout d'un 2e écran du même gabarit.
+   * `type: 'tv'` est exclu, comme côté backend : plusieurs TV physiques du même
+   * type sont un cas légitime (TV principale + TV bar).
+   */
+  private uniquifyType(type: string): string {
+    if (type === 'tv') return type;
+    const existing = new Set(this.displays.map(d => d.type));
+    if (!existing.has(type)) return type;
+    let n = 2;
+    while (existing.has(`${type}-${n}`)) n++;
+    return `${type}-${n}`;
   }
 
   openCustomForm(): void {
