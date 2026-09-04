@@ -1,0 +1,512 @@
+<title>Avant / Après</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 1060px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 32px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 44px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 66ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 30px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 46px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 30px 0 10px; }
+  p { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  .lede {
+    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
+    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px; margin: 0 0 24px; max-width: 66ch;
+  }
+
+  /* le tableau avant/après */
+  .swap { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 18px; }
+  .shead {
+    display: grid; grid-template-columns: 168px 1fr 1fr; gap: 22px;
+    background: var(--surface-2); padding: 11px 18px;
+    border-bottom: 1px solid var(--rule-strong);
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+  }
+  .shead .b { color: var(--live); }
+  .shead .a { color: var(--ready); }
+  .srow {
+    display: grid; grid-template-columns: 168px 1fr 1fr; gap: 22px;
+    background: var(--surface); padding: 15px 18px; border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+  .srow .topic {
+    font-family: var(--f-display); font-weight: 600; font-size: 15px;
+    line-height: 1.3; letter-spacing: -0.005em;
+  }
+  .srow .topic span {
+    display: block; font-family: var(--f-mono); font-size: 10px; font-weight: 400;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 5px;
+  }
+  .srow .col { font-size: 14.5px; line-height: 1.48; }
+  .srow .col.before { color: var(--ink-soft); border-left: 2px solid var(--live-wash); padding-left: 13px; }
+  .srow .col.after { color: var(--ink-soft); border-left: 2px solid var(--ready-wash); padding-left: 13px; }
+  .srow .col b { color: var(--ink); font-weight: 600; }
+  .srow .col .ev {
+    display: block; margin-top: 6px; font-family: var(--f-mono);
+    font-size: 11px; line-height: 1.5; color: var(--muted);
+  }
+  @media (max-width: 860px) {
+    .shead { display: none; }
+    .srow { grid-template-columns: 1fr; gap: 10px; padding: 17px 16px 19px; }
+    .srow .col.before::before { content: "AVANT · "; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--live); }
+    .srow .col.after::before { content: "APRÈS · "; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ready); }
+  }
+
+  /* le mois type */
+  .rhythm { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 18px; }
+  .beat {
+    background: var(--surface); border-bottom: 1px solid var(--rule); padding: 16px 18px;
+    display: grid; grid-template-columns: 186px 1fr; gap: 22px; align-items: start;
+  }
+  .beat .when {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.04em; color: var(--accent); line-height: 1.5; padding-top: 2px;
+  }
+  .beat .when span { display: block; color: var(--muted); font-weight: 400; margin-top: 3px; }
+  .beat .what { font-size: 15.5px; line-height: 1.52; color: var(--ink-soft); max-width: 74ch; }
+  .beat .what b { color: var(--ink); font-weight: 600; }
+  .beat .what strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 720px) {
+    .beat { grid-template-columns: 1fr; gap: 7px; }
+  }
+
+  /* ce qui ne change pas */
+  .keep { border: 1px solid var(--rule); border-left: 3px solid var(--ready); background: var(--surface); margin-bottom: 18px; }
+  .kitem { padding: 14px 20px; border-bottom: 1px solid var(--rule); }
+  .kitem:last-child { border-bottom: none; }
+  .kitem .kt { font-family: var(--f-display); font-weight: 600; font-size: 15.5px; line-height: 1.3; margin-bottom: 4px; }
+  .kitem .kd { font-size: 14.5px; line-height: 1.48; color: var(--ink-soft); max-width: 78ch; }
+  .kitem .kd b { color: var(--ink); font-weight: 600; }
+
+  /* signaux */
+  .sig { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-bottom: 18px; }
+  .sitem {
+    background: var(--surface); padding: 15px 18px;
+    display: grid; grid-template-columns: 1fr 210px; gap: 20px; align-items: start;
+  }
+  .sitem .q { font-family: var(--f-display); font-weight: 600; font-size: 15.5px; line-height: 1.35; }
+  .sitem .q span { display: block; font-family: var(--f-body); font-weight: 400; font-size: 14.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+  .sitem .now {
+    font-family: var(--f-mono); font-size: 12px; line-height: 1.6; color: var(--muted);
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .sitem .now b { display: block; font-size: 20px; font-weight: 500; color: var(--live); margin-bottom: 2px; }
+  .sitem .now .tgt { color: var(--ready); }
+  @media (max-width: 700px) {
+    .sitem { grid-template-columns: 1fr; gap: 8px; }
+    .sitem .now { text-align: left; }
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent); padding: 20px 22px; margin: 0 0 15px;
+  }
+  .panel.warn { border-top-color: var(--live); }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--accent); margin: 0 0 6px;
+  }
+  .panel.warn .ref { color: var(--live); }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 9px; line-height: 1.3; }
+  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 78ch; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 74ch; }
+
+  footer {
+    margin-top: 38px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">La page à projeter · entretien d'arbitrage</p>
+    <h1>Avant / Après</h1>
+    <p class="standfirst">
+      À gauche, l'état relevé aujourd'hui. À droite, <b>à quoi ressemble le quotidien
+      dans un mois, quand tout tourne</b> — pas la décision qui y mène, la routine telle
+      qu'elle se vit. Chaque « avant » est daté : c'est un état, pas un jugement.
+    </p>
+    <div class="slugline">
+      <span>Établie le <b>03/09/2026</b></span>
+      <span>Sources <b>Linear b2b-alive · Notion B2B-Broadcast</b></span>
+      <span>Statut <b>proposition — rien n'a été écrit nulle part</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Avant de lire le tableau</h2>
+    <p class="h2-note">Ce que ce document n'est pas</p>
+
+    <p>
+      Une colonne « avant » écrite par quelqu'un qui arrive se lit facilement comme un
+      reproche à celui qui était là. Ce n'en est pas un, et la meilleure preuve est dans
+      les chiffres eux-mêmes : entre le 15 août et aujourd'hui, <strong>l'équipe a ouvert
+      près de cent quatre-vingts tickets</strong> — le carnet est passé d'environ BRO-249
+      à BRO-430. Ce n'est pas une équipe qui a laissé filer son organisation. C'est une
+      équipe qui a livré un match de Ligue 2 et un tournoi international en trois
+      semaines, et qui n'a pas eu une heure pour ranger.
+    </p>
+    <p class="lede">
+      Rien dans la colonne de droite ne demande d'écrire plus. Presque tout demande
+      d'écrire au même endroit, et de décider une fois.
+    </p>
+  </section>
+
+  <section>
+    <h2>Les neuf changements</h2>
+    <p class="h2-note">Chaque ligne est une décision à prendre en séance</p>
+
+    <div class="swap">
+      <div class="shead">
+        <div>Sur quoi</div>
+        <div class="b">Aujourd'hui</div>
+        <div class="a">Dans un mois, en régime</div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Qui porte quoi<span>attribution</span></div>
+        <div class="col before"><b>113 tickets en attente ne portent aucun nom.</b> La distribution se fait de vive voix, donc elle ne se voit pas et ne se transmet pas.<span class="ev">relevé le 03/09 · c'était 128 le 02/09</span></div>
+        <div class="col after">On ouvre le carnet et on voit qui fait quoi. <b>Un ticket qui démarre porte un nom, sinon il ne démarre pas.</b> Le reste dort dans une réserve assumée — et personne ne demande plus « où on en est ? » de vive voix.<span class="ev">le filtre « urgent sans propriétaire » revient vide</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Le second développeur<span>capacité</span></div>
+        <div class="col before"><b>Amine attend qu'on lui donne du travail</b>, alors que cinq tickets écrits sont dans son métier et quatre sont en priorité haute.<span class="ev">quatre semaines de capacité déjà passées</span></div>
+        <div class="col after">Amine ouvre sa file le matin et prend le suivant. <b>Il ne demande plus.</b> Quand elle descend sous trois tickets, c'est moi qui la remplis — c'est devenu une de mes tâches, pas une conversation.<span class="ev">sa file ne tombe jamais à zéro</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Combien de fronts<span>concentration</span></div>
+        <div class="col before">Une vingtaine de projets ouverts, quatre ou cinq réellement entamés. Tout paraît en cours, donc rien n'est prioritaire.<span class="ev">relevé le 02/09, à reconfirmer</span></div>
+        <div class="col after">Cinq paris tenus jusqu'à Noël, et tout le monde sait les nommer. <b>Une demande qui arrive se range dans l'un des cinq, ou attend le prochain trimestre</b> — et dire « pas maintenant » ne demande plus de se justifier.<span class="ev">la page des projets tient sur un écran</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Comment on décide<span>arbitrage</span></div>
+        <div class="col before">Au fil de l'eau, dans la conversation. Personne ne peut dire pourquoi un chantier est passé devant un autre trois semaines plus tard.</div>
+        <div class="col after">Une demi-heure le lendemain de chaque match suffit à trancher, parce que le classement existe déjà et qu'on ne fait que le corriger. <b>Trois mois après, on peut encore dire pourquoi un chantier est passé devant un autre</b> — le compte rendu le dit.<span class="ev">un compte rendu d'une page par réunion, aucun relevé de discussion</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Ce qui déclenche le travail<span>cadence</span></div>
+        <div class="col before">Un récap de match excellent est écrit, puis converti en tickets par bribes, quand quelqu'un y pense. <b>Deux manques signalés le 15 août n'ont eu de ticket que plus tard.</b><span class="ev">BRO-251 et BRO-252</span></div>
+        <div class="col after">Le lendemain de match est un rendez-vous. Deux heures : le récap est lu, chaque manque devient un ticket ou une décision de ne rien faire. <b>Rien de ce qui s'est vu sur un mur ne reste dans un document sans suite.</b><span class="ev">chaque récap affiche les tickets qu'il a produits</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Où on lit l'état<span>outils</span></div>
+        <div class="col before">Notion et Linear disent tous les deux quelque chose de l'état, et se contredisent sans qu'on le voie. <b>Un récap daté a été lu comme une situation courante — trois semaines d'écart.</b></div>
+        <div class="col after">Quand quelqu'un veut savoir où en est une chose, il ouvre Linear — le réflexe est acquis et personne n'y pense plus. <b>Notion sert à comprendre, jamais à s'informer</b>, et les pages figées le disent d'elles-mêmes en première ligne.<span class="ev">plus personne ne cite un récap pour justifier un état</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Quand une doc est fausse<span>outils</span></div>
+        <div class="col before">On ne le sait pas. Une page reste vraie jusqu'à ce que quelqu'un se casse dessus.</div>
+        <div class="col after">Une page se signale toute seule : son « périmé si » s'est produit, donc on la relit ou on l'archive dans la semaine. <b>Une doctrine fausse ne survit plus des mois</b>, parce qu'on n'attend plus que quelqu'un se casse dessus.<span class="ev">une relecture de dix minutes par mois, sans rouvrir de débat</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">Ce qu'un nouveau lit<span>transmission</span></div>
+        <div class="col before">Tout, ou rien, ou ce qu'on lui explique de vive voix. La doctrine existe et elle est bonne — <b>rien ne dit à quel moment la lire</b>.</div>
+        <div class="col after">Un nouveau lit quatre pages en deux heures, puis se débrouille avec la table de routage. <b>Florent n'explique plus la même chose à chaque arrivée</b> — et quand une question revient deux fois, elle devient une ligne de la table.<span class="ev">la table s'allonge toute seule</span></div>
+      </div>
+
+      <div class="srow">
+        <div class="topic">« C'est fini »<span>qualité</span></div>
+        <div class="col before">Fini veut dire codé, parfois déployé. La preview de régie <b>compose des couches que le mur ne compose pas</b> — elle ne dit pas la vérité de l'antenne.<span class="ev">BRO-244, toujours ouvert</span></div>
+        <div class="col after">« Fini » veut dire <b>prêt pour un match</b>, et les cinq cases sont cochées avant qu'on le dise. <b>On ne découvre plus au stade ce qu'on aurait pu voir la veille</b> — et personne ne demande plus « c'est déployé ou juste codé ? ».<span class="ev">un ticket fermé ne se rouvre plus le soir du match</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Un mois plus tard, à quoi ça ressemble</h2>
+    <p class="h2-note">Le rythme réel · calé sur le calendrier des matchs, pas sur les jours de la semaine</p>
+
+    <p>
+      Le tableau dit ce qui change. Ceci dit à quoi ressemble une période normale une
+      fois que c'est installé — <strong>et la première chose à remarquer, c'est le peu
+      de rendez-vous</strong>. Rien d'hebdomadaire, rien de récurrent pour le principe :
+      la cadence est portée par le calendrier sportif, parce que c'est lui qui décide
+      quand la vérité se voit.
+    </p>
+
+    <div class="rhythm">
+      <div class="beat">
+        <div class="when">Le lendemain de match<span>deux heures · le seul rendez-vous fixe</span></div>
+        <div class="what">
+          Le récap est écrit — <b>ça, ça ne change pas, c'est déjà leur pratique</b>. Ce
+          qui change, c'est qu'on le lit ensemble le lendemain et qu'on le convertit :
+          chaque manque devient un ticket, ou une décision assumée de ne rien faire.
+          Puis trente minutes d'arbitrage : ce qui monte, ce qui descend, ce qu'on ferme.
+          <strong>C'est la seule réunion récurrente de tout le dispositif.</strong>
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="when">Les jours ordinaires<span>rien de prévu</span></div>
+        <div class="what">
+          Amine ouvre sa file et prend le suivant. Florent code sur l'un des cinq paris.
+          Je remplis la file quand elle descend sous trois tickets, je réponds aux
+          prospects, et je prépare les sites. <b>Personne n'a de point d'équipe, de
+          rapport d'avancement ni de tour de table</b> — l'état se lit dans le carnet,
+          et il est à jour parce que c'est le seul endroit où il vit.
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="when">Quand une demande arrive<span>club, annonceur, prospect</span></div>
+        <div class="what">
+          Elle se range dans l'un des cinq paris, ou elle attend le trimestre suivant.
+          <strong>Dire « pas maintenant » ne demande plus de se justifier</strong>,
+          parce que les cinq paris ont été choisis ensemble et que tout le monde peut les
+          nommer. C'est le bénéfice le moins visible et le plus reposant.
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="when">Quand je pars sur un site<span>une à deux fois par mois</span></div>
+        <div class="what">
+          Je rapporte le fichier de configuration, les photos de plaques, la topologie —
+          et ça atterrit dans la fiche du stade, avec la date et la mention « relevé sur
+          place ». <b>Le parc grossit d'une fiche à chaque déplacement</b>, au lieu de
+          rester dans mon téléphone. Quand Philippe engage un délai devant un client, il
+          le fait sur du relevé, pas sur du déclaratif.
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="when">Une fois par mois<span>dix minutes, pas plus</span></div>
+        <div class="what">
+          On regarde les pages dont le « périmé si » s'est produit, et les risques encore
+          dans aucun état. On ne rouvre aucun débat : on constate, on relit ou on
+          archive. <b>Si ça prend plus de dix minutes, c'est qu'on en a trop posé</b> —
+          et il faut en retirer, pas allonger la réunion.
+        </div>
+      </div>
+
+      <div class="beat">
+        <div class="when">Ce qui a disparu<span>et qu'on ne regrette pas</span></div>
+        <div class="what">
+          Les « où on en est ? » de couloir. Les tickets qu'on redécouvre trois semaines
+          plus tard. Les récaps excellents qui ne produisent rien. Les questions posées
+          deux fois parce que la réponse était de vive voix. Et <strong>le soir de match
+          où l'on découvre un défaut qu'on aurait pu voir la veille</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="ref">CE QUI N'AURA PAS CHANGÉ EN UN MOIS</p>
+      <h4>Et qu'il vaut mieux dire tout de suite</h4>
+      <p>
+        Un mois ne suffit pas pour trois choses, et prétendre le contraire décrédibilise
+        tout le reste. <b>Le déploiement</b> demandera toujours trois paquets et un
+        redémarrage — ça ne se fait pas un jour de match, et c'est un chantier
+        d'ingénierie. <b>Mes journées d'implémentation sur site</b> resteront les
+        miennes tant que le produit n'est pas empaqueté. Et <b>le nombre de clients
+        payants</b> ne dépend d'aucune ligne de ce document.
+      </p>
+      <p>
+        Ce dispositif rend l'équipe lisible et régulière. Il ne la rend pas plus rapide
+        à livrer, et il ne vend rien. C'est déjà ce dont elle a besoin — mais il faut
+        savoir ce qu'on achète.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce à quoi on ne touche pas</h2>
+    <p class="h2-note">Cinq choses qui marchent, et qu'un nouveau arrivant casse souvent par excès de zèle</p>
+
+    <div class="keep">
+      <div class="kitem">
+        <div class="kt">Le récap après chaque événement</div>
+        <div class="kd">C'est la meilleure pratique de cette maison et elle est rare. Neuf jours de préparation racontés en chiffres, les trois défauts qui ont pesé, le modèle d'exploitation réel du club. <b>On n'y ajoute qu'une ligne : les tickets qu'il a produits.</b></div>
+      </div>
+      <div class="kitem">
+        <div class="kt">Les plans de chantier dans le dépôt</div>
+        <div class="kd">Ils sont à côté du code, là où on les relit au moment de les violer. C'est leur place. On ne les déplace pas dans Notion.</div>
+      </div>
+      <div class="kitem">
+        <div class="kt">Le serveur MCP du master</div>
+        <div class="kd">Quarante-six outils pour piloter une salle depuis un agent. Peu d'équipes de cette taille en sont là, et rien de ce qui précède ne le concerne.</div>
+      </div>
+      <div class="kitem">
+        <div class="kt">Qui tranche l'architecture</div>
+        <div class="kd">Le lead dev. Un rôle de produit décide de <em>ce qu'on fait</em> et de <em>dans quel ordre</em> — jamais de comment c'est construit. Cette frontière est le contrat, et elle vaut dans les deux sens.</div>
+      </div>
+      <div class="kitem">
+        <div class="kt">La qualité d'écriture des tickets</div>
+        <div class="kd">Ils portent des mesures datées prises sur la machine de production et intègrent leurs propres contre-arguments. <b>Rien de ce qui précède ne demande d'écrire autrement — seulement d'écrire au même endroit, et d'y mettre un nom.</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Comment on saura que ça roule</h2>
+    <p class="h2-note">Quatre chiffres à relire dans un mois · ils se lisent dans Linear, sans rien instrumenter</p>
+
+    <div class="sig">
+      <div class="sitem">
+        <div class="q">Tickets en attente sans propriétaire
+          <span>Le seul indicateur qui dit si la distribution est passée de la voix à l'écrit.</span></div>
+        <div class="now"><b>113</b>cible <span class="tgt">&lt; 40</span></div>
+      </div>
+      <div class="sitem">
+        <div class="q">Projets ouverts
+          <span>Cinq, c'est un choix. Vingt, c'est l'absence de choix.</span></div>
+        <div class="now"><b>~19</b>cible <span class="tgt">5</span></div>
+      </div>
+      <div class="sitem">
+        <div class="q">Risques dans aucun état
+          <span>Ni portés, ni acceptés, ni atténués — connus de tous, traités par personne.</span></div>
+        <div class="now"><b>12</b>cible <span class="tgt">0</span></div>
+      </div>
+      <div class="sitem">
+        <div class="q">Délai entre un défaut vu en match et son ticket
+          <span>La mesure de la cadence. Elle se calcule sur les dates de création, rien à installer.</span></div>
+        <div class="now"><b>jours</b>cible <span class="tgt">&lt; 48 h</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="ref">LE SEUL QUI COMPTE VRAIMENT</p>
+      <h4>Le quatrième, et pourquoi il est le meilleur</h4>
+      <p>
+        Les trois premiers mesurent du rangement. Le quatrième mesure la boucle
+        elle-même : combien de temps met une chose vue sur un mur, un soir de match, à
+        devenir un travail que quelqu'un porte. <b>C'est la seule mesure de ce
+        dispositif qui ait un rapport direct avec ce que le club voit</b> — et elle se
+        lit dans Linear sans rien ajouter.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce que ça coûte</h2>
+    <p class="h2-note">Et ce qu'il ne faut surtout pas faire</p>
+
+    <p>
+      Quatre-vingt-dix minutes d'entretien, une après-midi de réglages dans les deux
+      outils, puis deux heures le lendemain de chaque match. <strong>Aucun outil
+      nouveau, aucun rituel hebdomadaire, aucune estimation en points.</strong>
+    </p>
+
+    <div class="panel warn">
+      <p class="ref">LA MISE EN GARDE</p>
+      <h4>Tout appliquer donnerait un moins bon résultat qu'en appliquer la moitié</h4>
+      <p>
+        Le dossier propose douze réglages, trois familles d'étiquettes, un modèle de
+        ticket, une définition de fini, une notation, un registre et trois cartes de
+        flux. <b>Sur deux développeurs, en deux semaines, c'est de l'administration.</b>
+      </p>
+      <p>
+        Le tiers qui compte : <b>la file d'Amine, les cinq paris, et les deux étiquettes
+        de classe.</b> Le reste se justifiera tout seul quand l'équipe sera douze. Si
+        quelque chose doit tomber, c'est le signal que la méthode ne tient pas — mieux
+        vaut en poser moins et le tenir.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <p class="h2-note">Ce qui est daté, ce qui est estimé</p>
+
+    <ul class="plain">
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> <strong>113 tickets en attente sans propriétaire</strong>, relevé dans Linear le 03/09/2026. C'était 128 le 02/09 : <b>le carnet bouge vite, et tout chiffre de ce document se reconfirme en une requête</b> avant d'être montré.</li>
+      <li><span class="cf cf-est">À RECONFIRMER</span> Le nombre de projets ouverts et le délai « défaut vu → ticket écrit » viennent de relevés du 02/09 ou d'une estimation. À recalculer le matin de l'entretien, pas la veille.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Les cibles à un mois sont les miennes et n'engagent personne. Elles ne valent que si Florent les reprend à son compte en séance — sinon ce sont mes chiffres sur son équipe, ce qui est la meilleure façon de perdre l'adhésion.</li>
+      <li><span class="cf cf-no">ASSUMÉ</span> <strong>Aucune colonne « avant » ne mentionne un manque de rigueur, et c'est délibéré.</strong> Tout ce qui figure à gauche s'explique par la cadence des événements de l'été, pas par la façon de travailler. Un document qui laisserait entendre l'inverse serait faux, et il serait lu comme tel.</li>
+    </ul>
+
+    <footer>
+      Chiffres relevés dans <b>Linear b2b-alive</b> le 03/09/2026 · contexte tiré du <b>Notion B2B-Broadcast</b>.<br>
+      Ce qui n'a pas été fait — <b>aucune écriture dans Linear, aucune dans Notion</b>. Ce document est une proposition.<br>
+      À faire avant de le montrer — <b>recalculer les quatre chiffres</b> : ils vieillissent en quelques jours.
+    </footer>
+  </section>
+
+</div>

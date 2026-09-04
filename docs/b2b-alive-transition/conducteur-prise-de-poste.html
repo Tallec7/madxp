@@ -1,0 +1,871 @@
+<title>Conducteur de prise de poste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F9;
+    --ink: #141A21;
+    --ink-soft: #3E4A57;
+    --muted: #6B7885;
+    --rule: #D3DAE1;
+    --rule-strong: #A9B4BF;
+    --accent: #A8620E;
+    --accent-wash: #F5E7D4;
+    --live: #BC332E;
+    --live-wash: #F7E0DF;
+    --ready: #1F6A4B;
+    --ready-wash: #DCEDE4;
+
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319;
+      --surface: #151B22;
+      --surface-2: #1B222A;
+      --ink: #E4EAF1;
+      --ink-soft: #B4C0CC;
+      --muted: #8492A0;
+      --rule: #262F39;
+      --rule-strong: #3B4753;
+      --accent: #E3A24A;
+      --accent-wash: #33281A;
+      --live: #E4655E;
+      --live-wash: #351E1D;
+      --ready: #52AC80;
+      --ready-wash: #17301F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0E1319;
+    --surface: #151B22;
+    --surface-2: #1B222A;
+    --ink: #E4EAF1;
+    --ink-soft: #B4C0CC;
+    --muted: #8492A0;
+    --rule: #262F39;
+    --rule-strong: #3B4753;
+    --accent: #E3A24A;
+    --accent-wash: #33281A;
+    --live: #E4655E;
+    --live-wash: #351E1D;
+    --ready: #52AC80;
+    --ready-wash: #17301F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 56px 0 26px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 38px;
+  }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 30px;
+  }
+
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 34px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* ---------- sections ---------- */
+
+  section { margin-bottom: 54px; }
+
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+  }
+
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 26px;
+  }
+
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.008em;
+    margin: 34px 0 10px;
+  }
+
+  p { margin: 0 0 17px; max-width: 68ch; }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+
+  strong { font-weight: 600; }
+
+  code, .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18.5px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 26px;
+    max-width: 62ch;
+  }
+
+  /* ---------- mandate box ---------- */
+
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 0 0 42px;
+  }
+  .rule-box h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16.5px;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .rule-box p {
+    margin: 0 0 12px;
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 76ch;
+  }
+  .rule-box p:last-child { margin-bottom: 0; }
+
+  /* ---------- confidence markers ---------- */
+
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+    vertical-align: 0.08em;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  /* ---------- findings list ---------- */
+
+  .findings {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  .findings li {
+    background: var(--surface);
+    padding: 15px 18px;
+    display: grid;
+    grid-template-columns: 62px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .findings .tag {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding-top: 3px;
+  }
+  .findings .body { font-size: 16px; line-height: 1.55; }
+  .findings .body b { font-weight: 600; }
+
+  @media (max-width: 560px) {
+    .findings li { grid-template-columns: 1fr; gap: 6px; }
+  }
+
+  /* ---------- rundown (roadmap) ---------- */
+
+  .rundown {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 0;
+  }
+
+  .rd-window {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    padding: 22px 16px 0 0;
+    text-align: right;
+    letter-spacing: 0.01em;
+  }
+  .rd-window span {
+    display: block;
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 3px;
+  }
+
+  .rd-body {
+    border-left: 1px solid var(--rule-strong);
+    padding: 22px 0 30px 24px;
+    position: relative;
+  }
+  .rd-body::before {
+    content: "";
+    position: absolute;
+    left: -4.5px;
+    top: 28px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+  }
+  .rundown > .rd-body:last-child { padding-bottom: 4px; }
+
+  .rd-title {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18px;
+    margin: 0 0 4px;
+    letter-spacing: -0.008em;
+  }
+  .rd-goal {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .rd-body ul { margin: 0; padding-left: 19px; }
+  .rd-body li { margin-bottom: 7px; font-size: 16px; line-height: 1.55; }
+  .rd-out {
+    margin-top: 14px;
+    padding: 11px 14px;
+    background: var(--surface-2);
+    border-left: 2px solid var(--rule-strong);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .rd-out b {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  @media (max-width: 620px) {
+    .rundown { grid-template-columns: 1fr; }
+    .rd-window { text-align: left; padding: 26px 0 6px; }
+    .rd-body { border-left: none; padding-left: 0; }
+    .rd-body::before { display: none; }
+  }
+
+  /* ---------- actions ---------- */
+
+  .actions { counter-reset: act; display: grid; gap: 0; }
+  .act {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .act:first-child { border-top: 1px solid var(--rule); }
+  .act::before {
+    counter-increment: act;
+    content: counter(act, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .act h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 5px;
+  }
+  .act p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--ink-soft); }
+
+  /* ---------- table ---------- */
+
+  .scroller { overflow-x: auto; margin: 0 0 8px; }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 600px;
+    font-size: 15px;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule-strong);
+    padding-bottom: 9px;
+  }
+  td:first-child { font-weight: 600; font-family: var(--f-display); font-size: 15px; }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .p-live { background: var(--live-wash); color: var(--live); }
+  .p-ready { background: var(--ready-wash); color: var(--ready); }
+  .p-queue { background: var(--accent-wash); color: var(--accent); }
+  .p-none { background: var(--surface-2); color: var(--muted); }
+
+  /* ---------- decisions ---------- */
+
+  .decisions { display: grid; gap: 14px; }
+  .dec {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--live);
+    padding: 18px 20px;
+  }
+  .dec .ref {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--live);
+    margin: 0 0 6px;
+  }
+  .dec h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 8px;
+    line-height: 1.3;
+  }
+  .dec p { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); }
+
+  /* ---------- kpi ---------- */
+
+  .kpis { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .kpi {
+    background: var(--surface);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    align-items: center;
+  }
+  .kpi .name { font-size: 16px; line-height: 1.4; }
+  .kpi .target {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* ---------- unknowns ---------- */
+
+  .unknowns { margin: 0; padding-left: 19px; }
+  .unknowns li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; }
+
+  footer {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Prise de poste · Business Owner / Product Owner</p>
+    <h1>Conducteur de prise de poste</h1>
+    <p class="standfirst">
+      Quatre-vingt-dix jours chez B2B Alive, à partir de ce que le Linear dit
+      réellement de l'équipe — et de ce que les prospects MadXP attendent
+      d'une solution qui change de nom.
+    </p>
+    <div class="slugline">
+      <span>Révisé le <b>02/09/2026</b></span>
+      <span>Équipe <b>Broadcaster (BRO)</b></span>
+      <span>Source <b>Linear b2b-alive · 412 tickets</b></span>
+    </div>
+  </header>
+
+  <div class="rule-box">
+    <h3>Mon mandat, tel qu'il est posé aujourd'hui</h3>
+    <p>
+      Florent veut un product owner — ce n'est pas une fonction dont il hérite, c'est
+      une fonction qu'il demande. J'ai déjà deux semaines de travail en doublure avec
+      lui, donc la phase d'observation est largement faite : ce document démarre à
+      l'étape de cadrage, pas à l'étape de découverte.
+    </p>
+    <p>
+      <strong>Je n'écris rien dans Linear.</strong> Ni ticket, ni priorité, ni
+      attribution, ni rangement. Je lis, j'analyse, je propose — Florent décide et
+      applique. Tous les livrables ci-dessous vivent donc hors de l'outil, et chaque
+      action que je recommande est formulée pour être exécutée par lui en quelques
+      minutes. Cette contrainte n'affaiblit pas le rôle : elle m'oblige à ne proposer
+      que ce qui est assez clair pour être appliqué sans moi.
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Ce que je vois avant d'avoir parlé à qui que ce soit</h2>
+    <p class="h2-note">Relevé en lecture seule dans Linear, le 02/09/2026</p>
+
+    <ul class="findings">
+      <li>
+        <span class="tag">ÉQUIPE</span>
+        <span class="body"><b>Deux développeurs, deux métiers nets.</b> Florent Quillien est lead : il a écrit l'intégralité des projets, documents et tickets, et tient le master, la régie, le conducteur et le produit. Amine Ghannouchi tient le temps réel — compositeur Qt, textures GPU, transitions, verrouillage sur l'horloge du bus, ingestion des flux. La séparation est déjà propre dans les faits ; elle n'est écrite nulle part.</span>
+      </li>
+      <li>
+        <span class="tag">CHARGE</span>
+        <span class="body"><b>Un développeur sur deux attend qu'on lui donne du travail.</b> Les douze tickets d'Amine sont tous terminés, le dernier début août ; aucun ticket ouvert ne lui est assigné. Pendant ce temps Florent mène deux chantiers en cours et deux en relecture. Quatre semaines de capacité sur le temps réel, perdues faute d'attribution.</span>
+      </li>
+      <li>
+        <span class="tag">STOCK</span>
+        <span class="body"><b>Sa file est pourtant déjà écrite.</b> Le projet « Moteur d'animation » — le seul projet priorisé de l'espace — contient quatre tickets en priorité haute, rédigés, jamais pris : la composition sur le canvas d'écran (<span class="mono">BRO-71</span>), la synchronisation inter-lecteurs sur le ruban (<span class="mono">BRO-38</span>), les animations simultanées par ligne (<span class="mono">BRO-37</span>) et l'arbitrage repli/transitions avec l'empaquetage Windows du compositeur (<span class="mono">BRO-229</span>). Le flux live en offre un cinquième, <span class="mono">BRO-73</span>, en cours et sans propriétaire.</span>
+      </li>
+      <li>
+        <span class="tag">PROPRIÉTÉ</span>
+        <span class="body"><b>Cent dix tickets en attente, zéro assigné.</b> Pas un seul ticket du Backlog ne porte de nom — deux marqués urgents compris. Le travail se distribue donc de vive voix, et le seul qui sache ce que contient la réserve est celui qui l'a écrite. C'est la cause mécanique du point précédent : Amine ne peut pas se servir seul, rien ne lui dit ce qui lui revient.</span>
+      </li>
+      <li>
+        <span class="tag">CADENCE</span>
+        <span class="body"><b>Aucun cycle, aucun sprint.</b> Le rythme réel est le calendrier sportif : le rush Guingamp du 6 au 14 août, l'Europ'A Cup des 21-23 août, la J6 EAG–Annecy du 30 août. C'est déjà un train de livraison — il n'y en a pas d'autre à inventer.</span>
+      </li>
+      <li>
+        <span class="tag">FRONTS</span>
+        <span class="body"><b>20 projets, 4 ouverts simultanément, presque aucun arbitré.</b> La quasi-totalité est en <span class="mono">No priority</span> et sans date. La « Semaine de consolidation post-Guingamp » visait le 24/08 : elle est toujours ouverte.</span>
+      </li>
+      <li>
+        <span class="tag">FLUX</span>
+        <span class="body"><b>Le terrain entre dans Linear sans se ranger.</b> Les tickets nés d'un match — <span class="mono">BRO-367</span>, <span class="mono">368</span>, <span class="mono">383</span>, <span class="mono">397</span>, <span class="mono">407</span> à <span class="mono">409</span> — n'appartiennent à aucun projet. Ce n'est pas un défaut d'hygiène : c'est le signe que la maille « projet » ne décrit pas le travail réel.</span>
+      </li>
+      <li>
+        <span class="tag">EN L'AIR</span>
+        <span class="body"><b>Deux urgences ouvertes portent sur l'horloge</b>, en pleine saison : une fenêtre partagée par tous les matchs d'un couple (<span class="mono">BRO-367</span>, 16 dates sur 17 pointent un instant qui n'est pas le leur) et un démarrage automatique muet (<span class="mono">BRO-368</span>, 15 dates sur 17). Le produit se joue à l'heure du coup d'envoi.</span>
+      </li>
+      <li>
+        <span class="tag">QUALITÉ</span>
+        <span class="body"><b>L'écriture des tickets est remarquable.</b> Mesures datées sur la machine de production, contre-arguments intégrés, relecture adverse citée. Le backlog n'est pas en désordre — il est <b>non arbitré</b>.</span>
+      </li>
+    </ul>
+
+    <p class="lede" style="margin-top:26px">
+      Conclusion de cadrage : le goulot n'est ni l'écriture, ni la capacité, ni la
+      qualité. C'est l'attribution. Ma valeur n'est donc pas d'écrire des tickets —
+      Florent les écrit mieux que moi — mais de dire qui prend quoi, de fermer des
+      fronts, et de tenir la promesse faite aux clients.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Le piège que je refuse d'installer</h2>
+    <p class="h2-note">Argument vérifié, tiré de notre propre historique</p>
+
+    <p>
+      MadXP a archivé sa règle d'auto-mise à jour SAFe le 25/04/2026 après le constat
+      suivant : <strong>735 commits <span class="mono">feat</span>/<span class="mono">fix</span>
+      depuis février, zéro application de la règle.</strong> Le pilotage réel se faisait
+      ailleurs. La règle alourdissait chaque session sans retour.
+    </p>
+    <p>
+      Je prends la leçon telle quelle. Dans une équipe de deux développeurs, tout rituel
+      qui n'est pas utilisé dès le lendemain est une taxe nette. Donc : pas de sprints,
+      pas d'estimation en points, pas de cérémonie hebdomadaire de plus d'une demi-heure.
+      Les deux seules disciplines que je vais défendre sont <strong>le nombre de fronts
+      ouverts en même temps</strong> et <strong>le fait que chacun ait toujours un
+      prochain ticket</strong> — les seules qui rendent du temps au lieu d'en prendre.
+    </p>
+  </section>
+
+  <section>
+    <h2>3. Ce que je fais dans les dix jours</h2>
+    <p class="h2-note">Aucune de ces actions n'écrit dans Linear · la doublure a déjà tenu lieu d'observation</p>
+
+    <div class="actions">
+      <div class="act">
+        <div>
+          <h4>Débloquer Amine cette semaine</h4>
+          <p>Une conversation de vingt minutes avec Florent, cinq numéros de tickets sur la table : <span class="mono">BRO-71</span>, <span class="mono">BRO-38</span>, <span class="mono">BRO-37</span>, <span class="mono">BRO-229</span> et <span class="mono">BRO-73</span>. Tous écrits, tous dans son métier, quatre en priorité haute. Il ne s'agit pas de créer du travail : il s'agit de dire à voix haute qui prend celui qui existe déjà. C'est Florent qui assigne.</p>
+        </div>
+      </div>
+      <div class="act">
+        <div>
+          <h4>Proposer une carte de propriété du backlog</h4>
+          <p>Cent dix tickets en attente, aucun propriétaire. Je produis hors Linear une répartition lisible — ce qui relève du temps réel, ce qui relève du master et de la régie, ce qui n'a pas encore de main — et je la soumets. Florent l'applique s'il la valide, en bloc ou pas du tout.</p>
+        </div>
+      </div>
+      <div class="act">
+        <div>
+          <h4>Aller à un match, si la doublure ne l'a pas déjà couvert</h4>
+          <p>Deux semaines aux côtés de Florent apprennent le produit, pas la salle. Un samedi au Roudourou, en régie puis en tribune, reste le seul endroit où l'on comprend pourquoi une fenêtre d'horloge fausse est une urgence et pas un bug de plus.</p>
+        </div>
+      </div>
+      <div class="act">
+        <div>
+          <h4>Obtenir un accès en lecture complet</h4>
+          <p>Mon compte est en invité, ce qui ferme l'accès aux initiatives. Je ne demande aucun droit d'écriture — seulement de pouvoir tout lire. Sans cela, une partie de la structure m'échappe et j'analyse sur un périmètre tronqué.</p>
+        </div>
+      </div>
+      <div class="act">
+        <div>
+          <h4>Cinq entretiens, une seule question par personne</h4>
+          <p>Florent et Amine sont accessibles au quotidien — inutile d'en faire un rituel. Les entretiens qui manquent sont dehors : les deux clients installés (EAG, Piraths Strasbourg), trois prospects MadXP, et si possible un opérateur bénévole. Ce sont eux que personne n'a encore écoutés en tant que tels.</p>
+        </div>
+      </div>
+      <div class="act">
+        <div>
+          <h4>Écrire une page, la faire corriger</h4>
+          <p>« Ce que je crois avoir compris » : le produit, les clients, les contraintes, les promesses en cours. Une page. La faire démolir par Florent. C'est mon premier livrable et mon examen d'entrée.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Ce que j'apporte que personne n'a encore écrit</h2>
+    <p class="h2-note">Cinq documents existent dans leur Linear — tous techniques</p>
+
+    <p>
+      Doctrine de compatibilité de flotte, audit de modèle, décisions UX contenus,
+      plan d'implémentation des maquettes, état du modèle annonceurs. Excellents,
+      et tous écrits depuis le moteur. <strong>Aucun persona, aucun « job to be done »,
+      aucun cas d'usage catalogué, aucun parcours client.</strong> C'est exactement
+      le matériau que MadXP possède déjà — dix personae, quarante-quatre cas d'usage
+      identifiés, trois parcours émotionnels — et qu'il suffit de transposer.
+    </p>
+
+    <h3>Livrable A — Personae et jobs, unifiés</h3>
+    <p>
+      Le but n'est pas documentaire : c'est de donner aux deux développeurs un critère
+      d'arbitrage opposable. « Ce ticket sert quel persona, sur quel job ? » tranche
+      plus vite qu'un débat de priorité.
+    </p>
+
+    <h3>Livrable B — Matrice de parité MadXP → B2B Alive</h3>
+    <p>
+      Le document qui protège les prospects. Pour chaque promesse commerciale en cours,
+      l'état réel côté B2B et la date d'engagement. Première version, à partir de l'analyse
+      du backlog :
+    </p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Attente client</th>
+            <th>État chez B2B Alive</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Habillage matchday, score et faits de jeu</td>
+            <td>Couvert et supérieur : scoreboard multi-sport, faits personnalisables, incrustation multi-couches, moteur de transitions</td>
+            <td><span class="pill p-ready">Acquis</span></td>
+          </tr>
+          <tr>
+            <td>Ruban LED et découpage vidéoprocesseur</td>
+            <td>Compositeur GPU multi-écrans, rendu splitté générique, mapping configurable</td>
+            <td><span class="pill p-ready">Acquis</span></td>
+          </tr>
+          <tr>
+            <td>Déclenchement à distance pendant le match</td>
+            <td>Télécommande existante, mais pensée pour un opérateur de régie — pas pour un bénévole sans formation</td>
+            <td><span class="pill p-queue">Partiel</span></td>
+          </tr>
+          <tr>
+            <td>Rotation pondérée des annonceurs</td>
+            <td>Existe sous le nom de composition de boucle, avec poids et exclusions par événement</td>
+            <td><span class="pill p-ready">Acquis</span></td>
+          </tr>
+          <tr>
+            <td>Preuve de diffusion et rapport sponsor</td>
+            <td>La preuve remonte déjà au cloud ; le rapport, le tableau de bord annonceur et la facturation n'existent pas</td>
+            <td><span class="pill p-live">Absent</span></td>
+          </tr>
+          <tr>
+            <td>Autonomie du site hors connexion</td>
+            <td>Cache d'assets et coquille précachée livrés ; surveillance et redémarrage encore en chantier</td>
+            <td><span class="pill p-queue">Partiel</span></td>
+          </tr>
+          <tr>
+            <td>Supervision d'une flotte de sites</td>
+            <td>La box ne sait pas encore dire ce qu'elle fait ; journaux non bornés, pas d'état interrogeable</td>
+            <td><span class="pill p-live">Absent</span></td>
+          </tr>
+          <tr>
+            <td>Réseau multi-clubs, agence, fédération</td>
+            <td>Socle multi-régie posé (partition par jeton) ; aucune interface</td>
+            <td><span class="pill p-none">Non amorcé</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Livrable C — Vingt projets ramenés à cinq paris</h3>
+    <p>
+      Non pas supprimer, mais nommer ce qui est <em>en l'air</em>, ce qui est <em>en file</em>,
+      et ce qui est <em>rangé au magasin</em>. Un projet sans date ni priorité depuis deux
+      mois n'est pas un projet : c'est une note. Il ira dans un magasin d'idées assumé,
+      pas dans le tableau de bord.
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Feuille de route</h2>
+    <p class="h2-note">Quatre phases · départ 02/09/2026 · sortie exigible à chaque fenêtre</p>
+
+    <div class="rundown">
+
+      <div class="rd-window">J1 → J10<span>12 sept.</span></div>
+      <div class="rd-body">
+        <p class="rd-title">Déblocage</p>
+        <p class="rd-goal">Rendre de la capacité avant de demander quoi que ce soit</p>
+        <ul>
+          <li>Les cinq tickets du temps réel posés sur la table, pour que Florent les attribue.</li>
+          <li>Carte de propriété des cent dix tickets en attente, soumise hors Linear.</li>
+          <li>Accès en lecture complet, initiatives comprises.</li>
+          <li>Un matchday sur site, si la doublure ne l'a pas déjà couvert.</li>
+        </ul>
+        <div class="rd-out"><b>Sortie</b>Amine a repris, et la répartition du travail existant est sur la table — écrite par moi, appliquée par Florent.</div>
+      </div>
+
+      <div class="rd-window">J10 → J30<span>2 oct.</span></div>
+      <div class="rd-body">
+        <p class="rd-title">Cadrage</p>
+        <p class="rd-goal">Poser le critère d'arbitrage</p>
+        <ul>
+          <li>Personae et jobs unifiés, transposés depuis MadXP.</li>
+          <li>Matrice de parité — la première version existe ; il reste à dater les quatorze promesses « à requalifier », prospect par prospect.</li>
+          <li>Proposition de cadence : le calendrier des matchs comme train de livraison, avec une définition de « prêt pour un match ».</li>
+          <li>Carte des vingt projets, proposition de cinq paris, répartis sur les deux métiers déjà en place — le master et la régie d'un côté, le rendu temps réel de l'autre.</li>
+        </ul>
+        <div class="rd-out"><b>Sortie</b>Trois documents, une réunion d'arbitrage d'une heure, trois décisions demandées.</div>
+      </div>
+
+      <div class="rd-window">J30 → J60<span>1<sup>er</sup> nov.</span></div>
+      <div class="rd-body">
+        <p class="rd-title">Arbitrage et hygiène</p>
+        <p class="rd-goal">Proposer, mesurer si c'est appliqué, recommencer</p>
+        <ul>
+          <li>Deux fronts ouverts par développeur au maximum ; les autres explicitement fermés ou rangés.</li>
+          <li>Chacun a en permanence son prochain ticket, arbitré et prêt.</li>
+          <li>Tout ticket rattaché à un projet, priorité obligatoire sur ce qui est en cours.</li>
+          <li>Triage hebdomadaire de trente minutes, calé sur le lendemain de match.</li>
+          <li>Lancement du lot commercial — créneau vendu, preuve de diffusion, rapport — si l'arbitrage le retient.</li>
+        </ul>
+        <div class="rd-out"><b>Sortie</b>Un tableau de bord Linear qui dit la vérité sur ce qui est en l'air, sans que personne ait à demander. Si mes propositions ne sont pas appliquées, c'est le signal que le rôle est mal calibré — et c'est à moi de le dire le premier.</div>
+      </div>
+
+      <div class="rd-window">J60 → J90<span>1<sup>er</sup> déc.</span></div>
+      <div class="rd-body">
+        <p class="rd-title">Première preuve commerciale</p>
+        <p class="rd-goal">Rendre la promesse démontrable</p>
+        <ul>
+          <li>Un rapport sponsor automatique produit sur un club réel, présentable en rendez-vous.</li>
+          <li>Plan de reprise des prospects MadXP : ce qu'on tient, ce qu'on décale, ce qu'on retire du discours.</li>
+          <li>Décision matérielle tranchée et écrite.</li>
+        </ul>
+        <div class="rd-out"><b>Sortie</b>Un rendez-vous prospect mené sur la nouvelle solution, sans rien promettre qui n'existe.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Trois décisions que je ne peux pas prendre seul</h2>
+    <p class="h2-note">À faire trancher avant J30 — elles conditionnent tout le reste</p>
+
+    <div class="decisions">
+      <div class="dec">
+        <p class="ref">DÉCISION 1</p>
+        <h4>Quel matériel sous un club amateur ?</h4>
+        <p>
+          Une box Windows avec compositeur et cartes d'acquisition n'a ni le prix ni le
+          niveau d'intervention d'un boîtier autonome à cinquante euros. Tant que ce
+          choix n'est pas fait, je ne peux annoncer ni tarif, ni délai d'installation,
+          ni promesse d'autonomie. C'est la décision la plus structurante des quatre-vingt-dix jours.
+        </p>
+      </div>
+      <div class="dec">
+        <p class="ref">DÉCISION 2</p>
+        <h4>Que devient la flotte MadXP installée ?</h4>
+        <p>
+          Migration, coexistence, ou fin de vie accompagnée ? Les clubs équipés jouent
+          cette saison. Le sujet est autant contractuel que technique, et je n'ai
+          aujourd'hui aucune visibilité sur les engagements en cours.
+        </p>
+      </div>
+      <div class="dec">
+        <p class="ref">DÉCISION 3</p>
+        <h4>Le lot commercial monte-t-il, et contre quoi ?</h4>
+        <p>
+          Facturation, rapport annonceur et portail en libre-service portent la valeur
+          perçue numéro un de mes prospects, et le chantier est aujourd'hui marqué
+          « non planifié ». Je demanderai qu'il monte — en désignant moi-même ce que
+          j'accepte de fermer en échange. Un arbitrage sans contrepartie n'en est pas un.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Les cinq chiffres que je tiendrai</h2>
+    <p class="h2-note">Peu, et tenables par une équipe d'une personne</p>
+
+    <div class="kpis">
+      <div class="kpi"><span class="name">Matchs dégradés — écran noir, contenu manquant, retard au coup d'envoi</span><span class="target">0</span></div>
+      <div class="kpi"><span class="name">Fronts ouverts en même temps, par développeur</span><span class="target">≤ 2</span></div>
+      <div class="kpi"><span class="name">Jours pendant lesquels un développeur est sans prochain ticket</span><span class="target">0</span></div>
+      <div class="kpi"><span class="name">Tickets rattachés à un projet</span><span class="target">100 %</span></div>
+      <div class="kpi"><span class="name">Délai entre un constat de terrain et son arbitrage</span><span class="target">&lt; 72 h</span></div>
+      <div class="kpi"><span class="name">Promesses prospects tenues sur promesses faites</span><span class="target">100 %</span></div>
+    </div>
+
+    <p style="margin-top:20px">
+      Le premier est le seul qui compte vraiment. Les quatre autres n'existent que
+      parce qu'ils le protègent.
+    </p>
+  </section>
+
+  <section>
+    <h2>8. Ce que je ne sais pas encore</h2>
+    <p class="h2-note">À lever pendant l'immersion — aucune de ces zones n'est neutre</p>
+
+    <ul class="unknowns">
+      <li><span class="cf cf-ok">LEVÉ</span> Florent demande un product owner — il n'en hérite pas. La posture change : je n'ai pas à gagner le droit de proposer, j'ai à proposer vite et juste.</li>
+      <li><span class="cf cf-ok">LEVÉ</span> Amine n'est ni indisponible ni occupé ailleurs : il attend qu'on lui donne du travail. Ce n'est donc pas un problème de personne, c'est un poste vacant — le mien.</li>
+      <li><span class="cf cf-no">INCONNU</span> Jusqu'où va le mandat dans le temps : la lecture seule est-elle une phase d'observation ou le régime permanent du rôle ? Ma capacité à tenir les indicateurs ci-dessus en dépend directement.</li>
+      <li><span class="cf cf-no">INCONNU</span> L'hébergement et la politique de conservation des données chez B2B Alive — bloquant pour tout rendez-vous avec une collectivité.</li>
+      <li><span class="cf cf-no">INCONNU</span> La transférabilité contractuelle des clients et prospects MadXP.</li>
+      <li><span class="cf cf-no">INCONNU</span> Le modèle tarifaire de B2B Alive et sa marge par site installé.</li>
+      <li><span class="cf cf-no">INCONNU</span> Les engagements déjà pris auprès de l'EAG et de Piraths Strasbourg pour la saison en cours.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Que la part de tickets hors projet dépasse un tiers des tickets récents — compté à la main sur les cent derniers, à confirmer sur l'ensemble.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Que la répartition des cent dix tickets en attente épouse la frontière temps réel / master déjà visible dans l'historique. C'est mon hypothèse de travail pour la carte de propriété — elle doit être corrigée par les deux intéressés avant d'être proposée.</li>
+      <li><span class="cf cf-ok">LEVÉ</span> <strong>Il existe une documentation d'exploitation, et elle vaut mieux que le carnet.</strong> Modes de rendu du player, référentiel des stades et des écrans, récaps de match, briefs d'intervention. Elle n'est ni dans Linear ni sur le site public, et elle a corrigé trois verdicts de la matrice de parité plus le goulot principal de la carte des flux. <b>Premier réflexe désormais : chercher la note avant de déduire du ticket.</b></li>
+      <li><span class="cf cf-ok">LEVÉ</span> <strong>Ce document a été écrit depuis Linear seul, et c'était un angle mort.</strong> B2B Alive fabrique et pose du LED depuis 2013 ; le logiciel est venu après. Deux conséquences que je n'avais pas vues : le logiciel se vend sur <em>n'importe quel</em> écran LED, y compris celui d'un concurrent — c'est le plus grand des deux marchés — et le goulot d'entrée n'est pas l'installation mais la qualification du matériel, qui mobilise le lead dev à chaque affaire. Corrigé dans la carte des flux le 03/09.</li>
+      <li><span class="cf cf-ok">LEVÉ</span> <strong>Six à huit affaires sur dix portent sur un parc LED que B2B Alive n'a pas posé</strong> — ordre de grandeur donné le 03/09. Le parc qu'on installe soi-même est donc l'exception, pas la règle. C'est le chiffre qui fait passer l'empaquetage devant.</li>
+      <li><span class="cf cf-ok">LEVÉ</span> <strong>Qualifier un processeur inconnu coûte une heure d'analyse — plus une matinée sur site pour aller chercher de quoi la faire.</strong> Le brief d'intervention à la Mosson le montre en clair : la mission première d'une journée de constat est de déterminer la technologie et le constructeur, et l'objet le plus précieux à ramener est le fichier de configuration copié en régie. Ce n'est pas du temps de développeur.</li>
+      <li><span class="cf cf-ok">LEVÉ</span> <strong>Le goulot d'implémentation n'est pas l'installation du logiciel : c'est la préparation des médias.</strong> Pour un contenu plein cadre, on colle une URL et le mode hors-ligne est livré. Ce qui coûte des journées, c'est de transférer, dédoublonner, ré-encoder et re-plier les fichiers — <b>« le poste de temps le plus lourd de la semaine », de l'aveu du récap du dernier match, et sans aucun ticket</b>.</li>
+      <li><span class="cf cf-no">À DIRE</span> <strong>Le logiciel n'a aucun client payant installé</strong> — deux démos et un prospect. La qualité est démontrée par un match de Ligue 2 diffusé de bout en bout, mais c'est une référence, pas un parc. Cela change ce que je peux répondre à « qui l'utilise déjà ? », et c'est à cadrer avec le commercial avant le prochain rendez-vous.</li>
+      <li><span class="cf cf-no">INCONNU</span> Laquelle des trois formes de vente — logiciel seul, avec matériel, avec exploitation — signe le plus. Aucune n'a encore assez d'historique pour se détacher ; question reposée dans trois mois.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Tout le reste de ce document est relevé dans Linear le 02/09/2026 et peut être rouvert ticket par ticket.</li>
+    </ul>
+
+    <footer>
+      Sources : espace Linear b2b-alive, équipe Broadcaster — 20 projets, 412 tickets dont 230 terminés et 110 en attente sans propriétaire, 5 documents, 3 comptes humains.<br>
+      Références croisées MadXP : catalogue des cas d'usage, règles internes archivées, décisions d'architecture 111, 120 et 133.
+    </footer>
+  </section>
+
+</div>

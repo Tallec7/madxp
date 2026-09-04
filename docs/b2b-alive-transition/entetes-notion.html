@@ -1,0 +1,452 @@
+<title>En-têtes des pages Notion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 940px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 32px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 30px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 46px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 30px 0 10px; }
+  p { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  .lede {
+    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
+    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px; margin: 0 0 24px; max-width: 64ch;
+  }
+
+  /* l'en-tête, tel qu'il s'afficherait */
+  .hdr {
+    background: var(--surface-2); border-left: 3px solid var(--accent);
+    padding: 16px 20px; margin: 0 0 14px;
+  }
+  .hdr.journal { border-left-color: var(--live); }
+  .hdr.parc { border-left-color: var(--gain); }
+  .hdr .kicker {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 11px;
+  }
+  .hdr.journal .kicker { color: var(--live); }
+  .hdr.parc .kicker { color: var(--gain); }
+  .hdr .row {
+    display: grid; grid-template-columns: 190px 1fr; gap: 16px;
+    padding: 7px 0; align-items: baseline;
+  }
+  .hdr .row + .row { border-top: 1px solid var(--rule); }
+  .hdr .f {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.03em; color: var(--muted);
+  }
+  .hdr .v { font-size: 15.5px; line-height: 1.45; color: var(--ink); }
+  .hdr .v em { font-style: normal; color: var(--muted); }
+  @media (max-width: 640px) {
+    .hdr .row { grid-template-columns: 1fr; gap: 3px; }
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent); padding: 20px 22px; margin: 0 0 15px;
+  }
+  .panel.warn { border-top-color: var(--live); }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--accent); margin: 0 0 6px;
+  }
+  .panel.warn .ref { color: var(--live); }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 9px; line-height: 1.3; }
+  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  /* pages pré-remplies */
+  .filled { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 16px; }
+  .fpage { background: var(--surface); border-bottom: 1px solid var(--rule); padding: 16px 18px; }
+  .fpage .pn {
+    font-family: var(--f-display); font-weight: 600; font-size: 16px;
+    line-height: 1.3; margin: 0 0 3px;
+  }
+  .fpage .conf { margin-bottom: 10px; }
+  .fpage dl { margin: 0; display: grid; grid-template-columns: 176px 1fr; gap: 6px 16px; }
+  .fpage dt {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    color: var(--muted); padding-top: 2px;
+  }
+  .fpage dd { margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
+  .fpage dd b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 640px) {
+    .fpage dl { grid-template-columns: 1fr; gap: 2px; }
+    .fpage dd { margin-bottom: 8px; }
+  }
+
+  pre.tpl {
+    background: var(--surface-2); border: 1px solid var(--rule); border-left: 3px solid var(--rule-strong);
+    padding: 18px 20px; margin: 0 0 18px; overflow-x: auto;
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.75; color: var(--ink-soft);
+    white-space: pre; tab-size: 2;
+  }
+  pre.tpl b { color: var(--ink); font-weight: 500; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 72ch; }
+
+  footer {
+    margin-top: 38px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Brouillon · à coller dans Notion par quelqu'un qui en a le droit</p>
+    <h1>En-têtes des pages Notion</h1>
+    <p class="standfirst">
+      Trois natures de pages, trois en-têtes. Un seul modèle ne marcherait pas : une page
+      de doctrine se périme quand le produit change, un récap ne se périme jamais, et un
+      relevé de terrain se dégrade tout seul. <b>Chacun se remplit en moins d'une minute
+      — au-delà, personne ne le remplira.</b>
+    </p>
+    <div class="slugline">
+      <span>Rédigés le <b>03/09/2026</b></span>
+      <span>Source <b>espace Notion B2B-Broadcast</b></span>
+      <span>Statut <b>rien n'a été écrit dans Notion</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Le champ que j'ai ajouté depuis hier</h2>
+    <p class="h2-note">Et pourquoi il vaut mieux que la date de relecture</p>
+
+    <p>
+      Je proposais trois lignes : vérifié le, projet Linear, ce que cette page ne dit pas.
+      J'en ajoute une quatrième, et c'est la plus importante : <strong>« Périmé si »</strong>.
+    </p>
+
+    <div class="panel">
+      <p class="ref">POURQUOI</p>
+      <h4>Une date de relecture se dégrade en silence. Une condition se déclenche.</h4>
+      <p>
+        « Vérifié le 3 septembre » ne dit rien à celui qui lit la page en février : il ne
+        sait pas si cinq mois l'ont périmée ou pas du tout. <b>« Périmé si le compositeur
+        natif est empaqueté »</b> le dit exactement — et le jour où ce ticket passe à
+        « fait », quelqu'un sait qu'il y a une page à relire.
+      </p>
+      <p>
+        C'est la même idée que la règle du récap, appliquée à la doctrine : au lieu de
+        demander aux gens de se souvenir de vérifier, on écrit d'avance ce qui rendra la
+        page fausse. Et c'est aussi le seul champ qui donne du mordant aux trois autres —
+        sans lui, « vérifié le » devient une décoration au bout de six mois.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Les trois en-têtes</h2>
+    <p class="h2-note">Tels qu'ils s'afficheraient en haut de page</p>
+
+    <h3>1 · Doctrine — comment ça marche</h3>
+    <p>
+      Pour les pages qui décrivent le fonctionnement du système. Quatre lignes.
+    </p>
+
+    <div class="hdr">
+      <p class="kicker">▲ Doctrine</p>
+      <div class="row"><div class="f">Vérifié le</div><div class="v">03/09/2026 · Florent</div></div>
+      <div class="row"><div class="f">Périmé si</div><div class="v">le compositeur natif est empaqueté et devient le chemin par défaut</div></div>
+      <div class="row"><div class="f">Travail associé</div><div class="v">Projet <em>Moteur d'animation 2D/3D</em> · BRO-70, BRO-71</div></div>
+      <div class="row"><div class="f">Ce qu'elle ne dit pas</div><div class="v">Rien sur le son. Rien sur ce qui déclenche un rendu — seulement sur la façon dont il est dessiné.</div></div>
+    </div>
+
+    <h3>2 · Journal — ce qui s'est passé</h3>
+    <p>
+      Pour les récaps d'événement et les briefs d'intervention. <strong>Trois lignes, et la
+      première est un avertissement</strong> — c'est celle qui m'aurait évité une fiche
+      entière.
+    </p>
+
+    <div class="hdr journal">
+      <p class="kicker">■ Journal — page figée</p>
+      <div class="row"><div class="f">Décrit l'état au</div><div class="v">15/08/2026. <b>Cette page ne sera jamais mise à jour.</b> Pour l'état courant, ouvrir Linear.</div></div>
+      <div class="row"><div class="f">Tickets produits</div><div class="v">BRO-227 → BRO-249 · <em>les manques signalés sans ticket ont été ouverts depuis : BRO-251, BRO-252</em></div></div>
+      <div class="row"><div class="f">Ce qu'elle ne dit pas</div><div class="v">Rien de ce qui a été décidé après le 15/08. Toute affirmation de manque est à revérifier dans le carnet.</div></div>
+    </div>
+
+    <h3>3 · Parc — ce qu'il y a sur place</h3>
+    <p>
+      Pour les fiches de stade, d'écran, d'environnement. Un relevé se dégrade sans que
+      personne n'y touche : quelqu'un change un câble, remplace une carte, déplace une
+      machine. D'où la distinction entre <strong>relevé sur place</strong> et
+      <strong>déclaré à distance</strong> — les deux n'ont pas la même valeur devant un
+      client.
+    </p>
+
+    <div class="hdr parc">
+      <p class="kicker">● Parc</p>
+      <div class="row"><div class="f">Relevé le</div><div class="v">26/08/2026 · Gwenvael · <b>sur place</b></div></div>
+      <div class="row"><div class="f">Sources</div><div class="v">Photos de plaques · fichier de configuration récupéré en régie · déclaratif du club</div></div>
+      <div class="row"><div class="f">Non vérifié</div><div class="v">Le nombre exact de cabinets HS avant l'incident — déclaratif, jamais compté.</div></div>
+      <div class="row"><div class="f">Prochain passage</div><div class="v"><em>à programmer</em></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>La règle qui leur donne du mordant</h2>
+    <p class="h2-note">Sans elle, ces en-têtes deviennent de la décoration en six mois</p>
+
+    <div class="panel warn">
+      <p class="ref">TROIS CAS, TROIS RÉFLEXES</p>
+      <h4>Ce qu'on fait quand un en-tête parle</h4>
+      <p>
+        <b>La condition « périmé si » s'est produite</b> → la page est relue dans la
+        semaine, ou archivée. Pas d'entre-deux : une doctrine fausse est pire que pas de
+        doctrine, parce qu'on la croit.
+      </p>
+      <p>
+        <b>Un récap a zéro ticket produit, trois semaines après</b> → personne ne l'a
+        converti. C'est le signal le plus utile de tout ce dispositif, et c'est
+        exactement le travail que le rôle de produit existe pour faire.
+      </p>
+      <p>
+        <b>Une fiche de parc n'a que du déclaratif</b> → aucune promesse technique ne se
+        fait dessus devant un client. On y va, ou on ne s'engage pas.
+      </p>
+    </div>
+
+    <p class="lede">
+      Un seul rendez-vous suffit à tenir tout ça : une relecture de dix minutes par mois,
+      où l'on ne rouvre aucun débat — on regarde seulement quels en-têtes ont parlé.
+    </p>
+  </section>
+
+  <section>
+    <h2>Les trois blocs, prêts à coller</h2>
+    <p class="h2-note">Dans Notion, un bloc « callout » gris · <span class="mono">/callout</span></p>
+
+    <pre class="tpl"><b>▲ DOCTRINE</b>
+**Vérifié le** — [date] · [prénom]
+**Périmé si** — [l'évènement précis qui rendrait cette page fausse]
+**Travail associé** — [projet Linear, ou « aucun — page stable »]
+**Ce qu'elle ne dit pas** — [deux phrases sur ses angles morts]
+
+<b>■ JOURNAL — PAGE FIGÉE</b>
+**Décrit l'état au** — [date]. Cette page ne sera jamais mise à jour.
+Pour l'état courant, ouvrir Linear.
+**Tickets produits** — [identifiants, ou « aucun — à convertir »]
+**Ce qu'elle ne dit pas** — rien de ce qui a été décidé après [date].
+Toute affirmation de manque est à revérifier dans le carnet.
+
+<b>● PARC</b>
+**Relevé le** — [date] · [prénom] · [sur place / à distance]
+**Sources** — [photos, fichier de config, déclaratif du club…]
+**Non vérifié** — [ce qui n'a pas pu être constaté de ses yeux]
+**Prochain passage** — [date, ou « à programmer »]</pre>
+  </section>
+
+  <section>
+    <h2>Pré-remplis pour les pages qui existent</h2>
+    <p class="h2-note">Neuf pages · à corriger par ceux qui les ont écrites</p>
+
+    <p>
+      Ce qui suit est ma proposition pour chaque page de l'espace, pour éviter que
+      l'installation commence par une page blanche. <strong>Le champ « périmé si » est
+      celui à corriger en priorité</strong> : c'est un jugement technique, et je le fais
+      depuis l'extérieur.
+    </p>
+
+    <div class="filled">
+
+      <div class="fpage">
+        <p class="pn">Modes de rendu du player — déploiements &amp; cas d'usage</p>
+        <p class="conf"><span class="cf cf-ok">PAGE LUE EN ENTIER</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>07/07/2026 · <em>date de dernière modification, à reconfirmer</em></dd>
+          <dt>Périmé si</dt><dd><b>le compositeur natif est empaqueté</b> et cesse d'être un prototype — le tableau des sept modes change alors de nature</dd>
+          <dt>Travail associé</dt><dd>BRO-70 <em>(fait)</em> · BRO-321, BRO-322 <em>(empaquetage en cours)</em></dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur ce qui déclenche un rendu, seulement sur la façon dont il est dessiné. Rien sur le son.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Modèle de rendu — de la surface au player</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>06/07/2026</dd>
+          <dt>Périmé si</dt><dd>le pliage cesse d'être un générateur et devient un stockage — l'invariant central de la page</dd>
+          <dt>Travail associé</dt><dd>BRO-35 <em>(clôturé)</em> · projet <em>Moteur d'animation 2D/3D</em></dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur les modes de déploiement — c'est la page fille qui les porte.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Vidéo live — Fan cam, cartes d'acquisition &amp; flux réseau</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>06/07/2026</dd>
+          <dt>Périmé si</dt><dd>la source d'un flux cesse d'être déclarée par la régie — chantier en cours</dd>
+          <dt>Travail associé</dt><dd>Projet <em>Flux live — production</em> · BRO-75, BRO-76 <em>(en cours)</em> · BRO-233</dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur le son des flux live, qui a son propre chantier.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">La chaîne de lancement — pourquoi un appui met du temps à atteindre le mur</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>17/08/2026</dd>
+          <dt>Périmé si</dt><dd>la mesure change — la page annonce ~55 ms de médiane, <b>c'est un chiffre daté</b></dd>
+          <dt>Travail associé</dt><dd>BRO-248, BRO-257 <em>(faits)</em> · BRO-249 <em>(fait)</em></dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur la latence perçue en salle, mesurée depuis le mur plutôt que depuis le code.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">B2B Broadcast — Piloter une salle par le MCP</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>19/08/2026</dd>
+          <dt>Périmé si</dt><dd>le nombre ou le nom des outils change, ou si les écritures cessent d'être limitées au master local</dd>
+          <dt>Travail associé</dt><dd>Projet <em>Implémentation MCP</em> · BRO-216 <em>(fait)</em> · BRO-100</dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur ce qu'un agent ne doit pas faire un soir de match.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Bancs de diagnostic player — les trois URL</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>20/08/2026</dd>
+          <dt>Périmé si</dt><dd>une des trois URL change, ou si un quatrième banc apparaît</dd>
+          <dt>Travail associé</dt><dd>Projet <em>Observabilité de la box</em> · BRO-240 <em>(en cours)</em></dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur l'interprétation des résultats — une rampe qui décroche ne dit pas encore pourquoi.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Rognage de la tribune du Roudourou — la convention -9840</p>
+        <p class="conf"><span class="cf cf-est">TITRE ET EXTRAITS SEULEMENT</span></p>
+        <dl>
+          <dt>Vérifié le</dt><dd>20/08/2026</dd>
+          <dt>Périmé si</dt><dd><b>les modules éteints sont réparés</b>, ou si le pré-pliage devient automatique à l'entrée des fichiers</dd>
+          <dt>Travail associé</dt><dd><em>aucun aujourd'hui</em> — c'est la lacune de la chaîne des médias</dd>
+          <dt>Ce qu'elle ne dit pas</dt><dd>Rien sur ce qu'il faut refaire quand la géométrie change à nouveau. C'est pourtant ce qui a coûté une journée le 13 août.</dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Machine de test Windows — app-broadcast</p>
+        <p class="conf"><span class="cf cf-est">TITRE SEULEMENT</span></p>
+        <dl>
+          <dt>Relevé le</dt><dd><em>à compléter</em> — page de parc, pas de doctrine</dd>
+          <dt>Périmé si</dt><dd>la machine change, ou si l'empaquetage supprime les étapes manuelles décrites</dd>
+          <dt>Travail associé</dt><dd>Projet <em>Empaquetage &amp; publication</em></dd>
+          <dt>Non vérifié</dt><dd><em>à compléter par celui qui s'en sert</em></dd>
+        </dl>
+      </div>
+
+      <div class="fpage">
+        <p class="pn">Récaps de match et briefs d'intervention <em>(Guingamp, Europ'A Cup, PiratHs, Mosson)</em></p>
+        <p class="conf"><span class="cf cf-ok">GUINGAMP ET MOSSON LUS</span> <span class="cf cf-est">LES DEUX AUTRES NON</span></p>
+        <dl>
+          <dt>En-tête</dt><dd><b>Journal — page figée.</b> Les quatre en reçoivent un, sans exception.</dd>
+          <dt>Tickets produits</dt><dd>Guingamp : BRO-227 → BRO-249, plus BRO-251 et BRO-252 ouverts depuis. <b>Les trois autres sont à renseigner</b> — et ce simple exercice dira si quelqu'un les a convertis.</dd>
+          <dt>Le cas d'école</dt><dd>Le récap de Guingamp affirme « pas de ticket » sur la chaîne des médias. C'était vrai le 15/08. C'est ce qui rend la première ligne de l'en-tête obligatoire.</dd>
+        </dl>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <p class="h2-note">Surtout sur les champs « périmé si »</p>
+
+    <ul class="plain">
+      <li><span class="cf cf-no">À CORRIGER</span> <strong>Sept des neuf pages, je ne les ai pas lues en entier</strong> — seulement leur titre et les extraits remontés par la recherche. Les conditions de péremption que je propose sont des paris raisonnables, pas des jugements informés. Celui qui a écrit la page mettra dix secondes à les corriger, et ces dix secondes valent plus que ma proposition.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Les rattachements aux tickets Linear viennent d'une recherche par mots-clés le 03/09. Un projet mieux adapté peut exister sous un nom que je n'ai pas deviné.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Les dates de « vérifié le » sont les dates de dernière modification relevées dans Notion. <b>Ce n'est pas la même chose qu'une relecture</b> : une page modifiée pour corriger une faute de frappe n'a pas été revérifiée. À reprendre à la main, une fois, puis à tenir.</li>
+      <li><span class="cf cf-no">INCONNU</span> Si un quatrième type de page existe dans l'espace « Documentation B2B Alive », auquel je n'ai pas accès. Le cas échéant il lui faudra son propre en-tête, et pas un des trois.</li>
+    </ul>
+
+    <footer>
+      Établis sur — <b>l'espace Notion B2B-Broadcast</b> lu le 03/09/2026 · <b>Linear b2b-alive</b> pour les identifiants et les états de tickets.<br>
+      Ce qui n'a pas été fait — <b>aucune écriture dans Notion, aucune dans Linear</b>. Ces en-têtes sont des brouillons à coller.<br>
+      Le champ qui compte — <b>« périmé si »</b> : une date de relecture se dégrade en silence, une condition se déclenche.
+    </footer>
+  </section>
+
+</div>

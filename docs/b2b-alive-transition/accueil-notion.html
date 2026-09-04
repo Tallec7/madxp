@@ -1,0 +1,464 @@
+<title>Page d'accueil Notion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 960px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 32px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 30px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 46px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 28px 0 10px; }
+  p { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  /* la maquette de page */
+  .mock {
+    background: var(--surface); border: 1px solid var(--rule-strong);
+    padding: 30px 34px 34px; margin-bottom: 20px;
+  }
+  .mock .flag {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 12px; margin-bottom: 22px; border-bottom: 1px solid var(--rule);
+  }
+  .mock h3.pt {
+    font-family: var(--f-display); font-weight: 700; font-size: 27px;
+    letter-spacing: -0.018em; margin: 0 0 16px;
+  }
+  .mock h4 {
+    font-family: var(--f-display); font-weight: 600; font-size: 18px;
+    margin: 28px 0 10px; letter-spacing: -0.008em;
+  }
+  .mock h4:first-of-type { margin-top: 0; }
+  .mock p { font-size: 16px; line-height: 1.58; margin: 0 0 13px; max-width: 74ch; }
+  .mock ul { margin: 0 0 13px; padding-left: 20px; }
+  .mock li { font-size: 16px; line-height: 1.55; margin-bottom: 7px; max-width: 74ch; }
+
+  .callout {
+    background: var(--surface-2); border-left: 3px solid var(--accent);
+    padding: 15px 18px; margin: 0 0 15px;
+  }
+  .callout.stop { border-left-color: var(--live); }
+  .callout.ok { border-left-color: var(--ready); }
+  .callout p { margin: 0 0 9px; font-size: 15.5px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .k {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    display: block; margin-bottom: 6px;
+  }
+  .callout.stop .k { color: var(--live); }
+  .callout.ok .k { color: var(--ready); }
+
+  /* la règle en quatre lignes */
+  .rule4 { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 0 0 15px; }
+  .r4 {
+    background: var(--surface); padding: 12px 16px;
+    display: grid; grid-template-columns: 116px 1fr; gap: 16px; align-items: baseline;
+  }
+  .r4 .tool {
+    font-family: var(--f-mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.05em; color: var(--accent);
+  }
+  .r4 .say { font-size: 15.5px; line-height: 1.45; }
+  .r4 .say b { font-weight: 600; }
+  @media (max-width: 620px) { .r4 { grid-template-columns: 1fr; gap: 3px; } }
+
+  /* table de routage */
+  .scroller { overflow-x: auto; margin-bottom: 15px; }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; }
+  caption {
+    caption-side: top; text-align: left;
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 9px;
+  }
+  th {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    text-align: left; padding: 0 16px 9px 0; border-bottom: 1px solid var(--rule-strong);
+  }
+  td {
+    padding: 11px 16px 11px 0; border-bottom: 1px solid var(--rule);
+    font-size: 15px; line-height: 1.45; vertical-align: top;
+  }
+  td.dom { font-family: var(--f-display); font-weight: 600; width: 38%; }
+  td.src { color: var(--ink-soft); }
+  td.src b { color: var(--ink); font-weight: 600; }
+  td.src em { font-style: normal; font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); display: block; margin-top: 2px; }
+
+  pre.tpl {
+    background: var(--surface-2); border: 1px solid var(--rule); border-left: 3px solid var(--rule-strong);
+    padding: 18px 20px; margin: 0 0 18px; overflow-x: auto;
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.75; color: var(--ink-soft);
+    white-space: pre; tab-size: 2;
+  }
+  pre.tpl b { color: var(--ink); font-weight: 500; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 72ch; }
+
+  footer {
+    margin-top: 38px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Brouillon · à coller dans Notion par quelqu'un qui en a le droit</p>
+    <h1>Page d'accueil Notion</h1>
+    <p class="standfirst">
+      La page qui remplace « Bienvenue sur Notion ! ». Elle dit ce qu'on trouve dans cet
+      espace, quel outil fait foi sur quoi, et — le plus utile — <b>ce qu'il faut lire
+      avant de toucher à quelque chose</b>.
+    </p>
+    <div class="slugline">
+      <span>Rédigée le <b>03/09/2026</b></span>
+      <span>Source <b>espace Notion B2B-Broadcast, lu le 03/09</b></span>
+      <span>Statut <b>rien n'a été écrit dans Notion</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>La page, telle qu'elle se lirait</h2>
+    <p class="h2-note">Maquette · le texte prêt à coller est plus bas</p>
+
+    <div class="mock">
+      <p class="flag">↓ Ce qui suit est le contenu de la page Notion</p>
+
+      <h3 class="pt">B2B Broadcast — l'espace de l'équipe</h3>
+
+      <p>
+        Ici vit <strong>ce qu'on a compris</strong> : comment le système marche, ce qu'il
+        y a dans les salles, et ce qui s'est passé les soirs de match. Ce qu'on <em>fait</em>
+        vit dans Linear.
+      </p>
+
+      <h4>Quel outil fait foi</h4>
+
+      <div class="rule4">
+        <div class="r4">
+          <div class="tool">Linear</div>
+          <div class="say">Ce qu'on va faire. <b>Un travail qui n'a pas de ticket n'existe pas.</b> C'est le seul endroit où on lit un état.</div>
+        </div>
+        <div class="r4">
+          <div class="tool">Notion</div>
+          <div class="say">Ce qu'on a compris. Doctrine, parc, journal. Daté, durable — <b>jamais un état</b>.</div>
+        </div>
+        <div class="r4">
+          <div class="tool">Slack</div>
+          <div class="say">Ce qu'on se dit maintenant. Éphémère. <b>Si une décision y reste, c'est qu'il manque un ticket.</b></div>
+        </div>
+        <div class="r4">
+          <div class="tool">plans/</div>
+          <div class="say">Comment on va le coder. Dans le dépôt, à côté du code, là où on le relira au moment de le violer.</div>
+        </div>
+      </div>
+
+      <p>Le test, quand on hésite :</p>
+      <ul>
+        <li>L'information devient fausse quand <strong>quelqu'un termine une tâche</strong> → Linear.</li>
+        <li>Elle devient fausse quand <strong>le produit évolue</strong> → Notion.</li>
+        <li>Elle ne devient <strong>jamais</strong> fausse parce qu'elle date d'un jour → Notion, section Journal, et on n'y touche plus.</li>
+      </ul>
+
+      <div class="callout stop">
+        <span class="k">Les deux règles qui coûtent le plus cher quand on les oublie</span>
+        <p>
+          <strong>On ne met jamais à jour un récap. On en écrit un nouveau.</strong> Un
+          récap corrigé n'est plus une photographie, c'est un état à date incertaine.
+        </p>
+        <p>
+          <strong>On ne lit jamais un récap pour connaître l'état courant.</strong> Le
+          récap du 15 août dit « pas de ticket » sur la chaîne des médias. Il avait raison
+          ce jour-là. Trois semaines plus tard, quatre de ces tickets existaient. <b>Avant
+          d'affirmer qu'il manque quelque chose, on regarde Linear.</b>
+        </p>
+      </div>
+
+      <h4>Ce qu'on trouve ici</h4>
+      <ul>
+        <li><strong>Comment ça marche</strong> — la doctrine. Rendu et pliage, flux live, son, conduite, box et exploitation.</li>
+        <li><strong>Le parc</strong> — les stades, les écrans, les environnements, les fiches d'installation.</li>
+        <li><strong>Le journal</strong> — les récaps d'événement et les briefs d'intervention. Datés, jamais modifiés.</li>
+      </ul>
+
+      <div class="callout ok">
+        <span class="k">Nouveau dans l'équipe ? Quatre pages, dans cet ordre</span>
+        <p>
+          <strong>1.</strong> Modèle de rendu — de la surface au player · <strong>2.</strong> Modes
+          de rendu du player · <strong>3.</strong> le récap du dernier match · <strong>4.</strong> la
+          fiche du stade sur lequel tu vas travailler.
+        </p>
+        <p>
+          Deux heures. Après ça, la table ci-dessous répond au reste.
+        </p>
+      </div>
+
+      <h4>Avant de toucher à quelque chose, lis d'abord</h4>
+
+      <div class="scroller">
+        <table>
+          <caption>Table de routage — si le sujet n'est pas dans cette liste, il manque probablement une page</caption>
+          <thead>
+            <tr><th>Si tu touches à…</th><th>Lis d'abord</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="dom">Le rendu d'un écran, une surface, une route</td>
+              <td class="src"><b>Modèle de rendu — de la surface au player</b><em>le fold y est un générateur, pas un stockage</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Le pliage d'un ruban, un crop, le choix navigateur ou compositeur</td>
+              <td class="src"><b>Modes de rendu du player</b><em>la règle resolveHost, et le repli qui ne laisse jamais un écran noir</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Le mode hors-ligne, le rechargement automatique d'un écran</td>
+              <td class="src"><b>Modes de rendu du player</b>, section réglages transverses<em>?standalone — assets, base persistée, coque précachée</em></td>
+            </tr>
+            <tr>
+              <td class="dom">La géométrie d'un écran du Roudourou</td>
+              <td class="src"><b>Rognage de la tribune — la convention -9840</b><em>13 modules × 40 px éteints de chaque côté</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Un flux live, la fan cam, une carte d'acquisition</td>
+              <td class="src"><b>Vidéo live — fan cam, cartes d'acquisition & flux réseau</b></td>
+            </tr>
+            <tr>
+              <td class="dom">La latence d'un bouton, la réplication vers les players</td>
+              <td class="src"><b>La chaîne de lancement</b><em>pourquoi un appui met du temps à atteindre le mur</em></td>
+            </tr>
+            <tr>
+              <td class="dom">La résolution d'une playlist, une sous-phase, le repli sur le Master</td>
+              <td class="src">Récap Guingamp, <b>§3.1 et §4.1</b> + ticket BRO-247<em>le conducteur audio déclenche le défaut à chaque match</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Une conduite audio, une fenêtre de sous-phase, un calage horaire</td>
+              <td class="src">Récap Guingamp, <b>§4.1 et §4.4</b><em>leur outil détient déjà le minutage — ne pas le réinventer</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Une rotation d'annonceurs, l'attribution de facturation</td>
+              <td class="src">Récap Guingamp, <b>§8.7</b><em>une piste sans clé d'attribution casse la facture, pas le mur</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Piloter une salle depuis un agent</td>
+              <td class="src"><b>Piloter une salle par le MCP</b><em>écritures sur master local uniquement</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Diagnostiquer un player qui gèle ou qui perd des images</td>
+              <td class="src"><b>Bancs de diagnostic player — les trois URL</b></td>
+            </tr>
+            <tr>
+              <td class="dom">Un déplacement sur un parc qu'on n'a pas posé</td>
+              <td class="src"><b>Brief d'intervention Mosson</b> + la base <b>Stades</b><em>le fichier de configuration est l'objet le plus précieux de la journée</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Une installation, un processeur, une sending box</td>
+              <td class="src">La <b>fiche du stade</b> et ses configs LED<em>puis la base Écrans pour la résolution et le mapping</em></td>
+            </tr>
+            <tr>
+              <td class="dom">Un environnement, une machine de test, un identifiant</td>
+              <td class="src"><b>Environnements</b></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>L'en-tête de toute page de doctrine</h4>
+      <ul>
+        <li><strong>Vérifié le</strong> — une date. Personne ne peut affirmer « à jour » ; tout le monde peut dater sa dernière relecture.</li>
+        <li><strong>Projet Linear</strong> — le lien. Une page sans travail associé est finie ou morte, et il vaut mieux savoir laquelle.</li>
+        <li><strong>Ce que cette page ne dit pas</strong> — deux phrases sur ses angles morts.</li>
+      </ul>
+
+      <p class="flag" style="margin-top:26px;padding:12px 0 0;border-top:1px solid var(--rule);border-bottom:none;">↑ Fin du contenu de la page Notion</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Le texte, prêt à coller</h2>
+    <p class="h2-note">Markdown · Notion convertit les titres, les listes et le tableau</p>
+
+    <pre class="tpl"><b># B2B Broadcast — l'espace de l'équipe</b>
+
+Ici vit **ce qu'on a compris** : comment le système marche, ce qu'il y a
+dans les salles, et ce qui s'est passé les soirs de match.
+Ce qu'on *fait* vit dans Linear.
+
+<b>## Quel outil fait foi</b>
+
+| Outil | Ce qu'il dit |
+| --- | --- |
+| **Linear** | Ce qu'on va faire. Un travail qui n'a pas de ticket n'existe pas. Le seul endroit où on lit un état. |
+| **Notion** | Ce qu'on a compris. Doctrine, parc, journal. Daté, durable — jamais un état. |
+| **Slack** | Ce qu'on se dit maintenant. Éphémère. Si une décision y reste, c'est qu'il manque un ticket. |
+| **plans/** | Comment on va le coder. Dans le dépôt, à côté du code. |
+
+Le test, quand on hésite :
+
+- L'information devient fausse quand **quelqu'un termine une tâche** → Linear
+- Elle devient fausse quand **le produit évolue** → Notion
+- Elle ne devient **jamais** fausse parce qu'elle date d'un jour → Notion,
+  section Journal, et on n'y touche plus
+
+> ⚠️ **Les deux règles qui coûtent le plus cher quand on les oublie**
+>
+> **On ne met jamais à jour un récap. On en écrit un nouveau.**
+> Un récap corrigé n'est plus une photographie, c'est un état à date incertaine.
+>
+> **On ne lit jamais un récap pour connaître l'état courant.**
+> Le récap du 15 août dit « pas de ticket » sur la chaîne des médias.
+> Il avait raison ce jour-là. Trois semaines plus tard, quatre de ces
+> tickets existaient. Avant d'affirmer qu'il manque quelque chose,
+> on regarde Linear.
+
+<b>## Ce qu'on trouve ici</b>
+
+- **Comment ça marche** — la doctrine. Rendu et pliage, flux live, son,
+  conduite, box et exploitation.
+- **Le parc** — les stades, les écrans, les environnements, les fiches
+  d'installation.
+- **Le journal** — les récaps d'événement et les briefs d'intervention.
+  Datés, jamais modifiés.
+
+> ✅ **Nouveau dans l'équipe ? Quatre pages, dans cet ordre**
+>
+> 1. Modèle de rendu — de la surface au player
+> 2. Modes de rendu du player
+> 3. Le récap du dernier match
+> 4. La fiche du stade sur lequel tu vas travailler
+>
+> Deux heures. Après ça, la table ci-dessous répond au reste.
+
+<b>## Avant de toucher à quelque chose, lis d'abord</b>
+
+| Si tu touches à… | Lis d'abord |
+| --- | --- |
+| Le rendu d'un écran, une surface, une route | **Modèle de rendu — de la surface au player** |
+| Le pliage d'un ruban, un crop, navigateur ou compositeur | **Modes de rendu du player** (règle resolveHost) |
+| Le mode hors-ligne, le rechargement auto d'un écran | **Modes de rendu du player**, réglages transverses |
+| La géométrie d'un écran du Roudourou | **Rognage de la tribune — la convention -9840** |
+| Un flux live, la fan cam, une carte d'acquisition | **Vidéo live — fan cam, cartes d'acquisition & flux réseau** |
+| La latence d'un bouton, la réplication vers les players | **La chaîne de lancement** |
+| La résolution d'une playlist, une sous-phase, le Master | Récap Guingamp §3.1 et §4.1 + BRO-247 |
+| Une conduite audio, une fenêtre de sous-phase, un calage | Récap Guingamp §4.1 et §4.4 |
+| Une rotation d'annonceurs, l'attribution de facturation | Récap Guingamp §8.7 |
+| Piloter une salle depuis un agent | **Piloter une salle par le MCP** |
+| Diagnostiquer un player qui gèle ou perd des images | **Bancs de diagnostic player — les trois URL** |
+| Un déplacement sur un parc qu'on n'a pas posé | **Brief Mosson** + base **Stades** |
+| Une installation, un processeur, une sending box | La **fiche du stade** et ses configs LED |
+| Un environnement, une machine de test, un identifiant | **Environnements** |
+
+Si le sujet n'est pas dans cette liste, il manque probablement une page.
+
+<b>## L'en-tête de toute page de doctrine</b>
+
+- **Vérifié le** — une date. Personne ne peut affirmer « à jour » ;
+  tout le monde peut dater sa dernière relecture.
+- **Projet Linear** — le lien. Une page sans travail associé est finie
+  ou morte, et il vaut mieux savoir laquelle.
+- **Ce que cette page ne dit pas** — deux phrases sur ses angles morts.</pre>
+  </section>
+
+  <section>
+    <h2>Ce qu'il faut faire avant de coller</h2>
+    <p class="h2-note">Quatre gestes, une après-midi, rien à réécrire</p>
+
+    <ul class="plain">
+      <li><strong>Créer les trois conteneurs</strong> — <em>Comment ça marche</em>, <em>Le parc</em>, <em>Le journal</em> — et y glisser les pages qui existent déjà. Rien à récrire : elles sont bonnes, elles n'ont pas de toit.</li>
+      <li><strong>Faire du Journal une base de données</strong>, pas une liste de pages, avec quatre propriétés : date, lieu, type (récap ou brief), et <b>le nombre de tickets qu'il a produits</b>. Cette dernière colonne rend visible le seul travail que personne ne fait — un récap à zéro ticket trois semaines après est une alerte.</li>
+      <li><strong>Sortir la conception de la timeline multi-piste du récap</strong> et la mettre dans <span class="mono">plans/</span>, à côté du code. Le récap n'en garde qu'un renvoi. C'est six mille mots qui engagent l'architecture, enterrés dans la section 8 d'un compte rendu de match.</li>
+      <li><strong>Archiver « Bienvenue sur Notion ! »</strong> et mettre cette page à la place.</li>
+    </ul>
+
+    <h3>Mes réserves</h3>
+    <ul class="plain">
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Toutes les pages citées dans la table de routage existent : je les ai ouvertes le 03/09/2026. Les sections de récap citées (§3.1, §4.1, §4.4, §8.7) portent bien le contenu annoncé.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> L'ordre de lecture des quatre pages pour un nouvel arrivant est le mien. Florent le corrigera peut-être — c'est le genre de chose qu'on sait seulement quand on a vu quelqu'un arriver.</li>
+      <li><span class="cf cf-no">INCONNU</span> Le contenu de <span class="mono">plans/</span> — vingt-huit plans que cette session ne peut pas ouvrir. Il s'y trouve peut-être déjà une doctrine qui recouvre une partie de la table, auquel cas la ligne pointe au mauvais endroit.</li>
+      <li><span class="cf cf-no">INCONNU</span> L'espace « Documentation B2B Alive » et sa base <em>Installations</em>, auxquels je n'ai pas accès. La table de routage envoie vers la base <em>Stades</em> pour le parc ; si <em>Installations</em> fait mieux ce travail, c'est elle qu'il faut citer.</li>
+    </ul>
+
+    <footer>
+      Contenu établi sur — <b>l'espace Notion B2B-Broadcast</b> lu le 03/09/2026 · <b>Linear b2b-alive</b> pour les identifiants cités.<br>
+      Ce qui n'a pas été fait — <b>aucune écriture dans Notion, aucune dans Linear</b>. Cette page est un brouillon à coller.<br>
+      Deux endroits non consultés — <span class="mono">plans/</span> dans le dépôt, et l'espace <b>Documentation B2B Alive</b>.
+    </footer>
+  </section>
+
+</div>

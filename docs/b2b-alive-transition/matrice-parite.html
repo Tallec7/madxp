@@ -1,0 +1,988 @@
+<title>Matrice de parité prospects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F9;
+    --ink: #141A21;
+    --ink-soft: #3E4A57;
+    --muted: #6B7885;
+    --rule: #D6DCE3;
+    --rule-strong: #A9B4BF;
+    --accent: #A8620E;
+    --accent-wash: #F5E7D4;
+    --live: #BC332E;
+    --live-wash: #F8E1E0;
+    --ready: #1F6A4B;
+    --ready-wash: #DCEDE4;
+    --gain: #1A6272;
+    --gain-wash: #DCEBEF;
+
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319;
+      --surface: #151B22;
+      --surface-2: #1B222A;
+      --ink: #E4EAF1;
+      --ink-soft: #B4C0CC;
+      --muted: #8492A0;
+      --rule: #262F39;
+      --rule-strong: #3B4753;
+      --accent: #E3A24A;
+      --accent-wash: #33281A;
+      --live: #E4655E;
+      --live-wash: #351E1D;
+      --ready: #52AC80;
+      --ready-wash: #17301F;
+      --gain: #6BBACB;
+      --gain-wash: #16292F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0E1319;
+    --surface: #151B22;
+    --surface-2: #1B222A;
+    --ink: #E4EAF1;
+    --ink-soft: #B4C0CC;
+    --muted: #8492A0;
+    --rule: #262F39;
+    --rule-strong: #3B4753;
+    --accent: #E3A24A;
+    --accent-wash: #33281A;
+    --live: #E4655E;
+    --live-wash: #351E1D;
+    --ready: #52AC80;
+    --ready-wash: #17301F;
+    --gain: #6BBACB;
+    --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet { max-width: 1060px; margin: 0 auto; padding: 0 26px 90px; }
+
+  /* masthead */
+  .masthead {
+    padding: 52px 0 24px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 34px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700;
+    font-size: clamp(32px, 5vw, 44px); line-height: 1.05;
+    letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 18px;
+  }
+  .standfirst {
+    font-size: 18.5px; line-height: 1.55; color: var(--ink-soft);
+    max-width: 64ch; margin: 0 0 26px;
+  }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 32px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  /* rule of use */
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 18px 22px;
+    margin: 0 0 40px;
+  }
+  .rule-box h3 {
+    font-family: var(--f-display); font-weight: 600; font-size: 16px;
+    margin: 0 0 8px; letter-spacing: -0.005em;
+  }
+  .rule-box p { margin: 0; font-size: 16px; line-height: 1.55; max-width: 78ch; }
+
+  /* legend */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+    gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule); margin-bottom: 44px;
+  }
+  .lg { background: var(--surface); padding: 14px 16px; }
+  .lg .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .lg .count {
+    font-family: var(--f-mono); font-size: 19px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .lg p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+
+  /* verdict pills */
+  .pill {
+    display: inline-block; font-family: var(--f-mono);
+    font-size: 10.5px; font-weight: 500; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 3px 7px; border-radius: 2px; white-space: nowrap;
+  }
+  .v-hold { background: var(--ready-wash); color: var(--ready); }
+  .v-gain { background: var(--gain-wash); color: var(--gain); }
+  .v-req  { background: var(--accent-wash); color: var(--accent); }
+  .v-drop { background: var(--live-wash); color: var(--live); }
+
+  /* chapters */
+  .chapter { margin-bottom: 46px; }
+  .chapter > h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 24px;
+    letter-spacing: -0.015em; margin: 0 0 4px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .chapter > .sub {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 20px;
+  }
+
+  /* matrix */
+  .matrix { border: 1px solid var(--rule); border-bottom: none; }
+
+  .mhead, .mrow {
+    display: grid;
+    grid-template-columns: 1.35fr 1.15fr 1.15fr 128px;
+    gap: 18px;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--rule);
+    align-items: start;
+  }
+  .mhead {
+    background: var(--surface-2);
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .mrow { background: var(--surface); }
+  .mrow .promise {
+    font-family: var(--f-display); font-weight: 600; font-size: 15.5px;
+    line-height: 1.35; letter-spacing: -0.005em;
+  }
+  .mrow .cell { font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
+  .mrow .cell b { color: var(--ink); font-weight: 600; }
+  .mrow .verdict { text-align: right; }
+
+  .lbl { display: none; }
+
+  @media (max-width: 860px) {
+    .mhead { display: none; }
+    .mrow { grid-template-columns: 1fr; gap: 10px; padding: 16px 16px 18px; }
+    .mrow .verdict { text-align: left; }
+    .lbl {
+      display: block; font-family: var(--f-mono); font-size: 9.5px;
+      font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 3px;
+    }
+  }
+
+  /* break panels */
+  .break {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--live);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+  }
+  .break .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--live); margin: 0 0 6px;
+  }
+  .break h4 {
+    font-family: var(--f-display); font-weight: 600; font-size: 17.5px;
+    margin: 0 0 9px; line-height: 1.3;
+  }
+  .break p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .break p:last-child { margin-bottom: 0; }
+  .break .say {
+    margin-top: 12px; padding: 12px 15px;
+    background: var(--surface-2); border-left: 2px solid var(--rule-strong);
+    font-size: 15px; line-height: 1.5; color: var(--ink);
+  }
+  .break .say b {
+    display: block; font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+
+  .gainpanel { border-top-color: var(--gain); }
+  .gainpanel .ref { color: var(--gain); }
+
+  p.body { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  footer {
+    margin-top: 42px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Livrable B · Transition MadXP → B2B Alive</p>
+    <h1>Matrice de parité prospects</h1>
+    <p class="standfirst">
+      Quarante-neuf promesses commerciales MadXP, confrontées une à une à ce que
+      MadXP livre réellement aujourd'hui et à ce que B2B Alive livre réellement
+      aujourd'hui. Un verdict par ligne, opposable en rendez-vous.
+    </p>
+    <div class="slugline">
+      <span>Établie le <b>02/09/2026</b>, corrigée sur pièces le <b>03/09</b></span>
+      <span>Sources <b>code MadXP + Linear b2b-alive</b></span>
+      <span>Périmètre <b>prospects et clients en cours</b></span>
+    </div>
+  </header>
+
+  <div class="rule-box">
+    <h3>La règle d'usage</h3>
+    <p>
+      En rendez-vous, je ne promets que ce qui figure dans la colonne <strong>B2B Alive</strong>.
+      La colonne MadXP ne sert qu'à mesurer l'écart et à repérer où un client déjà équipé
+      constaterait une régression. Une ligne « à retirer » n'est pas une ligne perdue :
+      c'est une ligne qu'on cesse de vendre avant qu'elle ne se retourne contre nous.
+    </p>
+  </div>
+
+  <div class="legend">
+    <div class="lg">
+      <div class="top"><span class="pill v-hold">Tenable</span><span class="count">11</span></div>
+      <p>La promesse passe telle quelle. Rien à changer au discours.</p>
+    </div>
+    <div class="lg">
+      <div class="top"><span class="pill v-gain">Renforcée</span><span class="count">13</span></div>
+      <p>B2B Alive fait mieux que MadXP. Argument à muscler, pas seulement à maintenir.</p>
+    </div>
+    <div class="lg">
+      <div class="top"><span class="pill v-req">À requalifier</span><span class="count">14</span></div>
+      <p>La promesse tient, mais avec une réserve ou un délai qu'il faut énoncer soi-même.</p>
+    </div>
+    <div class="lg">
+      <div class="top"><span class="pill v-drop">À retirer</span><span class="count">11</span></div>
+      <p>Ne plus la formuler tant qu'elle n'est pas construite. Onze lignes, dont quatre critiques.</p>
+    </div>
+  </div>
+
+  <!-- ============ CHAPITRE 1 ============ -->
+  <section class="chapter">
+    <h2>1. La régie technique matchday</h2>
+    <p class="sub">Ce qui fait adopter · Personae 3b et 4</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Score en temps réel, multi-sport</div>
+        <div class="cell"><span class="lbl">MadXP</span>Overlay 6 sports, 9 positions, logos d'équipe, présets réutilisables</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Plus complet</b> — scoreboard multi-sport, variante verticale, journal de match avec états dérivés</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Chronomètre et périodes automatiques</div>
+        <div class="cell"><span class="lbl">MadXP</span>Timer générique ; pas de prolongations automatiques</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Nettement plus fin</b> — temps-morts déduits du chrono, gel, correction de dérive sur l'arbitre officiel</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Animations déclenchées sur les faits de jeu</div>
+        <div class="cell"><span class="lbl">MadXP</span>Jingles vidéo déclenchés depuis la télécommande, 3 styles d'animation de but</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Plus riche</b> — faits génériques et personnalisés par l'opérateur, vidéo par joueur, incrustation multi-couches</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">L'animation part toute seule quand l'action se produit</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Lacune reconnue</b> face à Bodet dans notre propre benchmark — tout déclenchement est manuel</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Natif</b> — un fait de jeu est associé à un modèle par écran, avec dégradation gracieuse si la donnée manque</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Un bénévole pilote depuis la tribune, sans PC ni formation</div>
+        <div class="cell"><span class="lbl">MadXP</span>Remote V2, local et cloud, utilisable à une main ; « bénévole opérationnel sans formation » confirmé terrain</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Télécommande existante, mais conçue pour un opérateur de régie : boutons à armer, conducteur, câblage préalable</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Boucles vidéo différentes selon le moment du match</div>
+        <div class="cell"><span class="lbl">MadXP</span>Phases avant / pendant / après avec playlists dédiées</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Conducteur à phases et sous-phases, playlists rattachées, fenêtres horaires</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Annonces texte à l'écran pendant le match</div>
+        <div class="cell"><span class="lbl">MadXP</span>Bandeau défilant en temps réel depuis la télécommande</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Pas d'équivalent direct identifié ; passerait par un modèle à saisir</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Habillage à la charte du club, réutilisable d'un match à l'autre</div>
+        <div class="cell"><span class="lbl">MadXP</span>Template Studio V1, modèles pilotés par le code, variables club</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Plus ouvert</b> — catalogue de modèles, format document déclaratif, import Lottie, Rive et After Effects</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Ambiance sonore et gestion du son</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Absent</b> — aucun lecteur audio, aucun contrôle de volume. Le son reste sur l'enceinte du bénévole</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Chaîne complète</b> — mixette de régie, niveaux par écran, atténuation automatique sur déclenchement, sortie physique</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Vidéo en direct dans l'habillage</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Absent</b> — diffusion de contenu préparé uniquement</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Opérationnel</b> — caméra supporter, capture mobile, entrée HDMI, flux affiché dans une zone de modèle</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Le score se lit tout seul depuis la table de marque, sans double saisie</div>
+        <div class="cell"><span class="lbl">MadXP</span>Annoncé comme bloquant commercial, <b>proposé et non codé</b> — 15 à 20 jours de développement plus un sourcing matériel</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Également au backlog, mais <b>mieux préparé</b> — le pipeline d'événements de match et l'état live existent déjà, il ne manque que la source externe</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 2 ============ -->
+  <section class="chapter">
+    <h2>2. La régie publicitaire locale</h2>
+    <p class="sub">Ce qui fait rester · Persona 3c, le levier commercial du club</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Diffusion des partenaires en boucle continue</div>
+        <div class="cell"><span class="lbl">MadXP</span>Boucle sponsors sur l'ensemble du parc</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Composition de boucle, playlists d'annonceurs, cycle de vie des spots</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Rotation pondérée : un pack premium passe plus souvent</div>
+        <div class="cell"><span class="lbl">MadXP</span>Livré — playlist pondérée avec espacement. Réserve interne : l'équité de la rotation n'est pas garantie et reste un chantier ouvert</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Livré — poids par défaut, surcharges et exclusions par événement</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Preuve de diffusion certifiée, opposable au partenaire</div>
+        <div class="cell"><span class="lbl">MadXP</span>Livré et revendiqué comme <b>différenciateur n°3</b> — capture horodatée, certificat SHA-256, écran confirmé allumé par HDMI-CEC</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>La donnée de diffusion remonte au cloud, mais <b>ni certification, ni restitution</b>. La preuve existe sans être opposable</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Rapport PDF mensuel envoyé automatiquement au sponsor</div>
+        <div class="cell"><span class="lbl">MadXP</span>Livré — rapport annonceur dédié, rapports mensuels automatiques, certification numérique</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Inexistant</b>, et le chantier qui le porterait est marqué « non planifié »</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Tableau de bord live des impressions, montré en rendez-vous</div>
+        <div class="cell"><span class="lbl">MadXP</span>Livré — c'est l'outil qui fait passer un ticket de 3 000 à 8 000 € par an</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Inexistant</b> — aucun tableau de bord annonceur</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Portail en libre-service pour le partenaire</div>
+        <div class="cell"><span class="lbl">MadXP</span>Portail sponsor livré, accès par rôle, vidéos et sites de diffusion visibles</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Portail partenaires cadré et déployé en pré-production — dépôt de spots, « Ma saison », gestion d'équipe. <b>Sans les chiffres de diffusion</b></div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Packs commerciaux différenciés, du bronze au premium</div>
+        <div class="cell"><span class="lbl">MadXP</span>Verrouillage par option et packs documentés de 100 à 1 000 € par mois</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Modèle différent</b> — la vente se fait en temps d'antenne sur un créneau, pas en nombre de passages. Plus juste, mais à réexpliquer au client</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Diffuser un partenaire seulement les jours de match</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Absent</b> — la planification horaire existe pour le filigrane, pas pour les sponsors</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Natif</b> — le créneau est défini par phase, par événement et par date</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Un spot s'arrête automatiquement à la fin du contrat</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Absent</b> — reconnu en interne : un contenu expiré « continue de tourner si personne ne l'enlève »</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Livré</b> — cycle de vie des spots complet : auditer, corriger, supprimer, remplacer le fichier</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Facturation des partenaires depuis l'outil</div>
+        <div class="cell"><span class="lbl">MadXP</span>Hors périmètre, jamais promis</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Hors périmètre également ; identifié au backlog, non planifié</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 3 ============ -->
+  <section class="chapter">
+    <h2>3. La régie réseau — le modèle « JCDecaux des gymnases »</h2>
+    <p class="sub">Le cœur du modèle économique · C'est ici que se situe la rupture</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Une campagne nationale déployée en un clic sur tout le réseau</div>
+        <div class="cell"><span class="lbl">MadXP</span>Association annonceur ↔ N clubs, déploiement multi-sites opérationnel</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Le socle technique existe — comptes annonceurs multi-organisations, partition par jeton. <b>Aucune interface, aucune notion de campagne</b></div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Le club touche un revenu ou une remise grâce aux annonceurs du réseau</div>
+        <div class="cell"><span class="lbl">MadXP</span>Modèle documenté, garantie contractuelle d'un pourcentage local minimum</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Aucun équivalent</b> — le modèle est mono-salle : une régie vend son propre inventaire</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Distinguer les annonceurs du réseau des partenaires du club</div>
+        <div class="cell"><span class="lbl">MadXP</span>Type d'annonceur et origine marquée dans la boucle</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Secteurs et étiquettes d'annonceur existent, mais aucun axe réseau contre local</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">« Le premier réseau publicitaire du sport amateur en France »</div>
+        <div class="cell"><span class="lbl">MadXP</span>Positionnement de marque revendiqué — mais aucun annonceur réseau à date, la régie est manuelle</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Positionnement inverse — un éditeur d'outil de régie, vendu salle par salle</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 4 ============ -->
+  <section class="chapter">
+    <h2>4. L'exploitation et la flotte</h2>
+    <p class="sub">Ce qui rassure le président · Personae 1 et 2</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Un incident se diagnostique à distance en trente secondes</div>
+        <div class="cell"><span class="lbl">MadXP</span>Vue parc temps réel, battement de cœur, alertes dédupliquées, supervision Grafana</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Impossible aujourd'hui</b> — la box ne sait pas dire ce qu'elle fait, journaux non bornés, remontée d'erreurs au backlog</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Une flotte de cinquante sites pilotée depuis un seul écran</div>
+        <div class="cell"><span class="lbl">MadXP</span>Dashboard central, vue parc, alertes prédictives, commandes à distance</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Console par box ; le multi-salle existe côté cloud mais sans vue d'exploitation</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Le site fonctionne même sans internet le jour du match</div>
+        <div class="cell"><span class="lbl">MadXP</span>Fondation d'architecture — le boîtier est autonome par conception, source de vérité de sa config locale</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Cache des médias et coquille pré-chargée livrés ; la surveillance et le redémarrage sans réseau sont encore en chantier</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Mises à jour poussées à distance, sans déplacement</div>
+        <div class="cell"><span class="lbl">MadXP</span>Chaîne de mise à jour à distance opérationnelle sur le parc</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>En cours — l'empaquetage et la publication versionnée sont un chantier ouvert, aujourd'hui une box est un dépôt de développement compilé à la main</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Envoyer une vidéo depuis le bureau, elle arrive au club</div>
+        <div class="cell"><span class="lbl">MadXP</span>Dépôt cloud puis synchronisation vers le site</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Descente des fichiers du portail vers la salle, chaîne entièrement en flux</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Sauvegarde et restauration d'un site</div>
+        <div class="cell"><span class="lbl">MadXP</span>Base cloud centralisée, le site est reconstructible depuis le cloud</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Identifié mais non fait — la sauvegarde restaurable d'une salle est au backlog</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 5 — ENGAGEMENTS ============ -->
+  <section class="chapter">
+    <h2>5. Les engagements chiffrés</h2>
+    <p class="sub">La partie la plus opposable du discours — celle qui finit dans un contrat</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Engagement publié</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Télécommande : moins de 10 ms en local, moins de 500 ms à distance</div>
+        <div class="cell"><span class="lbl">MadXP</span>Engagement publié et mesuré</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Autre logique — une avance d'environ 1,2 s est <b>volontairement introduite</b> pour synchroniser plusieurs écrans au même instant. Plus lent en apparence, plus juste en réalité</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Battement de cœur toutes les 30 s, alerte au-delà de 90 s</div>
+        <div class="cell"><span class="lbl">MadXP</span>En production, avec escalade et notification</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Aucun équivalent</b> — c'est le chantier d'observabilité, non démarré</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Au moins 24 h de fonctionnement sans le serveur central</div>
+        <div class="cell"><span class="lbl">MadXP</span>Engagement formel : lecture vidéo, télécommande locale et scores restent disponibles</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Médias et coquille en cache, base répliquée dans la page. <b>Durée non caractérisée</b>, redémarrage sans réseau encore en chantier</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Disponibilité de la plateforme supérieure à 99 %</div>
+        <div class="cell"><span class="lbl">MadXP</span>Cible interne, mesurée en continu</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Non mesurable aujourd'hui</b> — sans état interrogeable, aucun taux ne peut être affirmé</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-drop">À retirer</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Mise à jour à distance en moins de 10 min, avec retour arrière</div>
+        <div class="cell"><span class="lbl">MadXP</span>Déploiement progressif, vérification après coup, retour arrière automatique</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Le chantier d'empaquetage prévoit explicitement le retour arrière, <b>il n'est pas encore livré</b></div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Hébergement en Union européenne, durées de conservation publiées</div>
+        <div class="cell"><span class="lbl">MadXP</span>Hébergement UE, rétention documentée par nature de donnée, procédure d'effacement sous 30 jours</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>À vérifier avant tout rendez-vous</b> — je n'ai aucune information sur l'hébergement ni sur la politique de conservation</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 6 ============ -->
+  <section class="chapter">
+    <h2>6. Le matériel, le prix et l'installation</h2>
+    <p class="sub">Ce qui fixe le tarif et le délai de mise en service</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Un petit boîtier discret derrière la télé existante du club</div>
+        <div class="cell"><span class="lbl">MadXP</span>Raspberry Pi, image préparée, expédié au club. Facturé 350 € pour un coût matériel de 150 €</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Existe</b> — image Raspberry Pi documentée : agent local, Chromium sous <span class="mono">cage</span>, cache d'assets sur disque, résistant à la coupure. La box Windows n'est requise que pour plier un ruban ou cropper</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Installation en dix minutes, premier match sous trois semaines</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Promesse déjà fragile</b> — l'accueil réel se fait aujourd'hui en SSH manuel, deux à trois jours par club. Le provisionnement automatique est au backlog, non livré</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Dépend du cas.</b> Contenu plein cadre : on colle une URL, zéro install, mode hors-ligne complet livré. Ruban plié ou multi-écrans : repérage de salle, relevé réseau, et un compositeur natif non encore empaqueté</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Garder les écrans LED déjà posés par un autre prestataire</div>
+        <div class="cell"><span class="lbl">MadXP</span><b>Jamais promis</b> — le discours supposait notre boîtier sous notre installation. Un parc existant n'était pas un cas envisagé</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Le cas normal</b> — le logiciel se branche sur du LED quel qu'en soit le poseur. La qualification du processeur se fait affaire par affaire</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Formule sans matériel, un simple navigateur suffit</div>
+        <div class="cell"><span class="lbl">MadXP</span>Mode SaaS livré, sites en production sans boîtier</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Plus abouti</b> — le lecteur web tient hors ligne : assets en cache, base persistée, coque précachée, et rechargement automatique à chaque nouvelle version sans toucher aux écrans</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Piloter un ruban LED périmétrique</div>
+        <div class="cell"><span class="lbl">MadXP</span>Deux sites en production, pliage par côté, activation site par site après contrôle</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Plus avancé</b> — compositeur GPU multi-écrans, découpage générique, quatre écrans pilotés en stade</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Plusieurs écrans dans la salle, pilotés ensemble</div>
+        <div class="cell"><span class="lbl">MadXP</span>Écrans secondaires et variantes par affichage</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Bien plus loin</b> — scène, topologie de salle, câblage par sport, lecture synchronisée entre lecteurs</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHAPITRE 6 ============ -->
+  <section class="chapter">
+    <h2>7. Le réseau, les agences et les fédérations</h2>
+    <p class="sub">L'expansion promise · Personae 7 à 10, majoritairement en roadmap des deux côtés</p>
+
+    <div class="matrix">
+      <div class="mhead">
+        <div>Promesse faite au prospect</div>
+        <div>MadXP aujourd'hui</div>
+        <div>B2B Alive aujourd'hui</div>
+        <div style="text-align:right">Verdict</div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Comptes distincts pour l'agence, l'annonceur et le club</div>
+        <div class="cell"><span class="lbl">MadXP</span>Multi-locataire livré, portails agence et annonceur en production</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Identité, organisations et membres livrés ; invitations par code e-mail et rôles cumulables</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Une agence gère plusieurs clubs avec un seul accès</div>
+        <div class="cell"><span class="lbl">MadXP</span>Portail agence livré, vue consolidée des clubs gérés</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Socle multi-organisation posé, <b>sans vue agence</b></div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-req">À requalifier</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Le club gère ses vidéos en autonomie</div>
+        <div class="cell"><span class="lbl">MadXP</span>Portail club livré — dépôt, suppression, déploiement sur son propre écran</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Médiathèque complète et gestion des contenus depuis la régie ; dépôt partenaire par le portail</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Partenariat de ligue poussé à toutes les salles membres</div>
+        <div class="cell"><span class="lbl">MadXP</span>Annoncé en perspective, jamais livré</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Non amorcé</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Le spectateur interagit depuis son téléphone (vote, pronostic)</div>
+        <div class="cell"><span class="lbl">MadXP</span>Annoncé à six ou neuf mois, jamais livré</div>
+        <div class="cell"><span class="lbl">B2B Alive</span>Non amorcé</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-hold">Tenable</span></div>
+      </div>
+
+      <div class="mrow">
+        <div class="promise">Import automatique des effectifs et photos de joueurs</div>
+        <div class="cell"><span class="lbl">MadXP</span>Saisie manuelle</div>
+        <div class="cell"><span class="lbl">B2B Alive</span><b>Déjà éprouvé</b> — import des effectifs, logos, couleurs et photos détourées de huit clubs sur un tournoi international</div>
+        <div class="verdict"><span class="lbl">Verdict</span><span class="pill v-gain">Renforcée</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RUPTURES ============ -->
+  <section class="chapter">
+    <h2>Les trois ruptures à traiter en priorité</h2>
+    <p class="sub">Celles qu'un client déjà équipé remarquerait — ou qui bloquent une signature</p>
+
+    <div class="break">
+      <p class="ref">RUPTURE 1 · MODÈLE ÉCONOMIQUE</p>
+      <h4>La double régie publicitaire n'existe pas chez B2B Alive</h4>
+      <p>
+        C'est le cœur du modèle MadXP : l'éditeur vend des campagnes nationales sur
+        le réseau, le club vend ses partenaires locaux, les deux cohabitent dans la
+        même boucle, et le revenu réseau finance une partie de l'abonnement du club.
+        Chez B2B Alive, le modèle est mono-salle : une régie vend son propre inventaire.
+        Le socle technique du multi-organisation est là, mais ni le modèle de campagne,
+        ni l'interface, ni le reversement.
+      </p>
+      <p>
+        Conséquence directe : <strong>le reversement de 10 à 20 % annoncé aux clubs
+        n'a plus de mécanisme derrière lui.</strong> C'est l'argument qui fait rester
+        un club, pas celui qui le fait signer — mais c'est celui qui protège le
+        renouvellement. À noter, il était déjà théorique : aucun annonceur réseau
+        n'est actif à ce jour côté MadXP, la régie y est manuelle.
+      </p>
+      <div class="say"><b>Ce que je dis en rendez-vous</b>La vente d'espaces reste entièrement au club, sur son propre inventaire, avec un outil de programmation plus fin qu'aujourd'hui. Le volet campagnes réseau n'est pas ouvert à ce stade.</div>
+    </div>
+
+    <div class="break">
+      <p class="ref">RUPTURE 2 · OUTIL DE VENTE</p>
+      <h4>Aucun chiffre ne revient au partenaire</h4>
+      <p>
+        La preuve de diffusion remonte déjà au cloud chez B2B Alive — la donnée existe.
+        Ce qui manque, c'est tout ce qui la transforme en argument : la certification
+        horodatée, le tableau de bord, le rapport mensuel, le portail chiffré. Or
+        c'est exactement la chaîne que nous revendiquons comme troisième
+        différenciateur, celle censée faire passer le renouvellement des partenaires
+        de 60 à 85 %.
+      </p>
+      <p>
+        C'est aussi la rupture la <strong>plus facile à refermer</strong> : la donnée
+        circule, il manque la restitution. C'est le premier lot que je demanderai à
+        faire monter en priorité, et la première preuve commerciale visée à trois mois.
+      </p>
+      <div class="say"><b>Ce que je dis en rendez-vous</b>La mesure est collectée dès le premier match. La restitution au partenaire arrive dans un second temps — je m'engage sur une date, pas sur une capture d'écran.</div>
+    </div>
+
+    <div class="break">
+      <p class="ref">RUPTURE 3 · EXPLOITATION</p>
+      <h4>On ne sait pas encore dire à distance ce qu'un site est en train de faire</h4>
+      <p>
+        MadXP vend la tranquillité : un président appelle, on regarde, on rassure,
+        sans déplacement. Chez B2B Alive cette capacité n'existe pas encore — les
+        journaux ne sont pas bornés, l'état n'est pas interrogeable, et la remontée
+        d'erreurs est au backlog. Sur un site unique avec un opérateur présent, cela
+        ne se voit pas. Sur une flotte, cela se paie immédiatement.
+      </p>
+      <p>
+        C'est la rupture la plus dangereuse pour un <strong>client déjà équipé</strong>,
+        parce qu'elle ne se découvre pas en démonstration : elle se découvre un
+        samedi soir.
+      </p>
+      <div class="say"><b>Ce que je dis en rendez-vous</b>Rien — c'est une promesse que je cesse simplement de faire, jusqu'à ce que le chantier d'observabilité ait livré.</div>
+    </div>
+  </section>
+
+  <!-- ============ GAINS ============ -->
+  <section class="chapter">
+    <h2>Les cinq arguments que je gagne</h2>
+    <p class="sub">À intégrer au discours dès le premier rendez-vous — ils n'ont jamais existé chez MadXP</p>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 1</p>
+      <h4>Le son entre enfin dans le produit</h4>
+      <p>
+        Mixette de régie, niveaux par écran, atténuation automatique quand un contenu
+        sonore se déclenche. Aujourd'hui le bénévole gère l'ambiance avec son téléphone
+        et une enceinte Bluetooth. C'est un irritant que tous les clubs connaissent
+        et que personne ne leur avait proposé de résoudre.
+      </p>
+    </div>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 2</p>
+      <h4>La vidéo en direct, sans camion régie</h4>
+      <p>
+        Caméra supporter depuis un téléphone, entrée HDMI, flux affiché dans une zone
+        de l'habillage. C'est l'argument qui change la nature du produit aux yeux d'un
+        président : on ne vend plus de l'affichage, on vend du spectacle.
+      </p>
+    </div>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 3</p>
+      <h4>Les effectifs et les photos arrivent tout seuls</h4>
+      <p>
+        Import des rosters, logos, couleurs et photos de joueurs détourées — éprouvé
+        sur huit clubs européens en trois jours de tournoi. Côté MadXP, c'était de la
+        saisie manuelle, et c'était le premier point de friction de la préparation
+        d'avant-match.
+      </p>
+    </div>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 4</p>
+      <h4>Un habillage qu'un graphiste peut livrer sans développeur</h4>
+      <p>
+        Import Lottie, Rive et After Effects dans un format de document ouvert. Un club
+        qui a déjà une agence graphique peut faire produire son habillage ailleurs et
+        l'importer. C'est la réponse à l'objection « on a déjà notre charte et notre
+        prestataire ».
+      </p>
+    </div>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 5</p>
+      <h4>L'animation part sur l'action, et le spot s'arrête à la fin du contrat</h4>
+      <p>
+        Deux manques que notre propre analyse concurrentielle reconnaissait noir sur
+        blanc : le déclenchement automatique sur un fait de jeu, que Bodet sait faire
+        et pas nous, et l'expiration d'un contenu en fin de contrat — aujourd'hui un
+        spot périmé continue de tourner tant que personne ne l'enlève. Les deux
+        existent chez B2B Alive.
+      </p>
+    </div>
+
+    <div class="break">
+      <p class="ref">LA LIGNE QUE JE NE DIRAI PAS EN RENDEZ-VOUS</p>
+      <h4>Le logiciel n'a aujourd'hui aucun client payant installé</h4>
+      <p>
+        Le référentiel des stades est sans ambiguïté : <b>Guingamp — démo</b>,
+        <b>Rhénus Sport — démo</b> (l'Europ'A Cup, trois jours de handball),
+        <b>la Mosson — prospect</b>. Trois sites, aucun en exploitation payante sur le
+        logiciel. Ce que j'ai vu de la qualité du produit ne change pas ; ce qui change,
+        c'est ce que je peux répondre à « qui l'utilise déjà ? ».
+      </p>
+      <p>
+        <b>Ce n'est pas la même chose qu'un produit sans preuve.</b> Le 14 août, un
+        match de Ligue 2 a été diffusé de bout en bout au Roudourou sur quatre surfaces
+        plus la sortie son, l'animation de but a joué, et aucun incident n'a été visible
+        sur les murs. C'est une référence solide — mais c'est une <em>référence</em>, pas
+        un parc. La formule honnête en rendez-vous est « déployé sur un match de Ligue 2
+        en août », jamais « utilisé par des clubs ».
+      </p>
+      <p>
+        ⚠️ Réserve sur ce constat : ce référentiel ne couvre que les stades où l'on
+        opère le logiciel. <b>Le parc matériel de B2B Alive vit dans une autre base, à
+        laquelle je n'ai pas accès</b> — il est probablement bien plus large, et il ne
+        dit rien sur le logiciel.
+      </p>
+    </div>
+
+    <div class="break gainpanel">
+      <p class="ref">GAIN 6</p>
+      <h4>Un prospect n'a plus besoin d'acheter du matériel pour devenir client</h4>
+      <p>
+        C'est le gain que j'avais manqué, parce que je raisonnais encore en boîtier
+        sous notre installation. Le logiciel se branche sur <b>n'importe quel écran
+        LED, y compris celui qu'un concurrent a posé</b>. Une salle déjà équipée n'a
+        donc rien à racheter : elle change de logiciel, pas de mur.
+      </p>
+      <p>
+        L'effet commercial est considérable et joue dans les deux sens. Il ouvre les
+        enceintes déjà équipées — <b>six à huit affaires sur dix</b> en relèvent déjà,
+        chiffre donné le 03/09 : ce n'est pas un marché à conquérir, c'est le marché
+        courant. Et il retire l'objection la plus
+        coûteuse du cycle MadXP — « on vient d'investir dans nos écrans » — qui n'était
+        pas une objection tarifaire mais une objection de calendrier : on arrivait
+        toujours trop tard après l'achat du mur.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ MÉTHODE ============ -->
+  <section class="chapter">
+    <h2>Méthode et réserves</h2>
+    <p class="sub">Ce document est opposable — donc il doit dire comment il a été fait</p>
+
+    <p class="body">
+      La colonne <strong>MadXP</strong> a été établie en lisant le code et les décisions
+      d'architecture, pas la documentation commerciale : le plan stratégique de février
+      2026 décrivait plusieurs briques comme absentes alors qu'elles ont depuis été
+      livrées — la rotation pondérée, le rapport annonceur, les rapports mensuels
+      automatiques et le portail sponsor existent bel et bien dans le code aujourd'hui.
+      L'inverse est vrai aussi : le son et le contrôle du volume, annoncés en phase 3,
+      n'ont jamais été construits.
+    </p>
+    <p class="body">
+      La colonne <strong>B2B Alive</strong> ne retient que des tickets effectivement
+      terminés, jamais un chantier en cours ou un projet cadré. Un projet documenté
+      avec soin n'est pas une fonctionnalité livrée — c'est précisément la confusion
+      qu'une matrice de parité doit empêcher.
+    </p>
+    <p class="body">
+      <strong>Réserve n°1 — les dates.</strong> Les quatorze verdicts « à requalifier »
+      supposent une date d'engagement que je ne peux pas encore donner, faute
+      d'arbitrage de priorité. Chacun devra porter une date avant d'être utilisé en
+      rendez-vous : sans date, un « à requalifier » se comporte exactement comme un
+      « à retirer ».
+    </p>
+    <p class="body">
+      <strong>Réserve n°2 — la taille réelle du parc.</strong> Nos propres documents
+      se contredisent : le document de cadrage produit parle de trois clubs en
+      production, d'autres évoquent une flotte de cinquante boîtiers. Tant que ce
+      chiffre n'est pas tranché, je ne l'utilise dans aucun argumentaire — un chiffre
+      de parc invérifiable est le plus facile à démonter par un prospect.
+    </p>
+    <p class="body">
+      <strong>Réserve n°3 — le tarif.</strong> Le prix du boîtier apparaît à deux
+      valeurs différentes selon les documents, et la grille par formule
+      (Essentiel, Autonomie, Premium) n'est chiffrée nulle part. Aucun tarif ne doit
+      sortir de ma bouche avant que la question du matériel soit tranchée : c'est
+      elle qui détermine le prix, pas l'inverse.
+    </p>
+    <p class="body">
+      <strong>Réserve n°4 — j'ai comparé deux produits en oubliant deux métiers.</strong>
+      Cette matrice a été bâtie en confrontant MadXP au carnet de développement de
+      B2B Alive. Or B2B Alive fabrique et pose du LED depuis 2013 ; le logiciel est
+      venu ensuite. Aucun verdict de la matrice ne s'en trouve invalidé — je les ai
+      tous relus — mais le chapitre 6 changeait de sens : je le lisais comme « leur
+      installation contre la nôtre », alors que la vraie nouvelle est qu'<b>un prospect
+      n'a plus besoin d'acheter de matériel du tout</b> si sa salle est déjà équipée.
+      C'est l'objet du sixième gain, ajouté le 03/09, et de la ligne « garder les
+      écrans déjà posés par un autre prestataire ».
+    </p>
+    <p class="body">
+      <strong>Réserve n°6 — cette matrice a été bâtie sans la documentation d'exploitation.</strong>
+      Le 03/09 j'ai lu l'espace Notion de l'équipe : modes de rendu du player, référentiel
+      des stades et des écrans, récaps de Guingamp et de l'Europ'A Cup, brief d'intervention
+      à la Mosson. <b>Trois verdicts en sont sortis faux</b> — le boîtier Raspberry, qui
+      existe et que j'avais déclaré sans équivalent ; le délai d'installation, qui est nul
+      pour un contenu plein cadre ; et la formule sans matériel, plus aboutie que je ne le
+      disais. Je les ai corrigés. Cela veut aussi dire que <b>les verdicts restants sont
+      établis sur une base plus étroite que je ne le croyais</b> : un carnet de tickets
+      décrit ce qu'on répare, pas ce qui marche.
+    </p>
+    <p class="body">
+      <strong>Réserve n°5 — levée le jour même.</strong> J'écrivais ci-dessus que la
+      taille de ce marché n'était pas mesurée. Elle l'est désormais, en ordre de
+      grandeur : <b>six à huit affaires sur dix portent sur un parc LED que B2B Alive
+      n'a pas posé</b>. Le sixième gain n'est donc pas un argument d'appoint, c'est la
+      description du cas normal. Ce chiffre est donné de mémoire par quelqu'un qui suit
+      les affaires — il suffit à orienter un discours commercial, il ne suffirait pas à
+      bâtir un prévisionnel.
+    </p>
+
+    <footer>
+      Colonne MadXP — code des trois composants, décisions d'architecture 035, 041, 042, 093, 111, 120, 123 à 128, 133, 134 à 140, catalogue des cas d'usage et plan « régie tout-en-un ».<br>
+      Colonne B2B Alive — espace Linear <b>b2b-alive</b>, équipe Broadcaster : 230 tickets terminés, 20 projets, 5 documents de cadrage, relevé le 02/09/2026 · <b>Notion B2B-Broadcast</b> : modes de rendu du player, bases Stades et Écrans, récaps Guingamp et Europ'A Cup, brief Mosson, lus le 03/09/2026.<br>
+      Verdicts — <b>11 tenables</b> · <b>13 renforcées</b> · <b>14 à requalifier</b> · <b>11 à retirer</b>, sur 49 promesses examinées.
+    </footer>
+  </section>
+
+</div>
