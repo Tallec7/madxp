@@ -1,0 +1,458 @@
+<title>Compte rendu d'arbitrage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --blank: #B9C3CC;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --blank: #4A5866;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --blank: #4A5866;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 820px; margin: 0 auto; padding: 0 26px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 32px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 42px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18px; line-height: 1.55; color: var(--ink-soft); max-width: 62ch; margin: 0; }
+
+  section { margin-bottom: 46px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 24px;
+    letter-spacing: -0.015em; margin: 0 0 4px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  p { margin: 0 0 15px; max-width: 70ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  /* rules */
+  .rules { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+  .rl { background: var(--surface); padding: 15px 18px; display: grid; grid-template-columns: 26px 1fr; gap: 14px; align-items: start; }
+  .rl .n { font-family: var(--f-mono); font-size: 12.5px; font-weight: 500; color: var(--accent); padding-top: 2px; }
+  .rl .b { font-size: 15.5px; line-height: 1.5; }
+  .rl .b b { font-family: var(--f-display); font-weight: 600; }
+
+  /* form template */
+  .form {
+    background: var(--surface); border: 1px solid var(--rule-strong);
+    padding: 26px 28px; margin-bottom: 18px;
+  }
+  .form-head {
+    border-bottom: 2px solid var(--rule-strong); padding-bottom: 12px; margin-bottom: 20px;
+  }
+  .form-head .t {
+    font-family: var(--f-display); font-weight: 700; font-size: 19px;
+    letter-spacing: -0.01em; margin: 0 0 8px;
+  }
+  .meta { font-family: var(--f-mono); font-size: 12px; line-height: 1.9; color: var(--muted); }
+
+  .bl { color: var(--blank); border-bottom: 1px dotted var(--blank); }
+
+  .blk { margin-bottom: 22px; }
+  .blk:last-child { margin-bottom: 0; }
+  .blk > .lbl {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 5px; border-bottom: 1px solid var(--rule); margin-bottom: 11px;
+  }
+  .dec { margin-bottom: 15px; }
+  .dec .q {
+    font-family: var(--f-display); font-weight: 600; font-size: 15.5px;
+    line-height: 1.35; margin-bottom: 5px;
+  }
+  .dec .a {
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.75; color: var(--ink-soft);
+  }
+  .dec .a .opt { color: var(--accent); }
+  .note {
+    font-size: 13.5px; line-height: 1.45; color: var(--muted);
+    font-style: italic; margin-top: 4px; max-width: 66ch;
+  }
+
+  .health { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.9; color: var(--ink-soft); }
+  .health b { color: var(--ink); font-weight: 500; }
+
+  /* copy block */
+  .copywrap { margin-top: 8px; }
+  .copybar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  button {
+    font-family: var(--f-mono); font-size: 12px; font-weight: 500;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    background: var(--ink); color: var(--ground);
+    border: none; padding: 9px 16px; border-radius: 2px; cursor: pointer;
+  }
+  button:hover { background: var(--accent); color: #fff; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+
+  textarea {
+    width: 100%; min-height: 560px;
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.62;
+    color: var(--ink); background: var(--surface);
+    border: 1px solid var(--rule-strong); border-radius: 2px;
+    padding: 18px; resize: vertical;
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--live); padding: 19px 22px; margin-bottom: 14px;
+  }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--live); margin: 0 0 6px;
+  }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 16.5px; margin: 0 0 8px; line-height: 1.3; }
+  .panel p { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 74ch; }
+
+  footer {
+    margin-top: 38px; padding-top: 17px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Modèle réutilisable · à envoyer le jour même</p>
+    <h1>Compte rendu d'arbitrage</h1>
+    <p class="standfirst">
+      Une page, sept décisions, aucun relevé de discussion. Le modèle ci-dessous se
+      remplit en dix minutes à la sortie de la réunion et se lit en une minute par
+      celui qui doit l'appliquer.
+    </p>
+  </header>
+
+  <section>
+    <h2>Les quatre règles de ce document</h2>
+    <p class="h2-note">Elles expliquent tout ce qui n'y figure pas</p>
+
+    <div class="rules">
+      <div class="rl">
+        <span class="n">01</span>
+        <span class="b"><b>Le jour même, ou rien.</b> Un compte rendu envoyé trois jours après n'est plus un relevé de décisions, c'est un résumé — et un résumé se discute. Envoyé le soir, il fait foi.</span>
+      </div>
+      <div class="rl">
+        <span class="n">02</span>
+        <span class="b"><b>Des décisions, pas des débats.</b> On note ce qui a été tranché, jamais pourquoi ni par qui l'idée est venue. Si une décision a besoin d'être justifiée, une ligne suffit ; au-delà, c'est qu'elle n'est pas tranchée.</span>
+      </div>
+      <div class="rl">
+        <span class="n">03</span>
+        <span class="b"><b>Tout report porte une date.</b> Un report sans date est un refus qui n'ose pas dire son nom. Le modèle ne prévoit aucune case pour reporter sans dater — c'est volontaire.</span>
+      </div>
+      <div class="rl">
+        <span class="n">04</span>
+        <span class="b"><b>Les trois mêmes chiffres à chaque fois.</b> Fronts ouverts, tickets sans propriétaire, urgences orphelines. Répétés d'une réunion à l'autre, ils rendent la dérive visible sans qu'on ait à la chercher.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Le modèle, annoté</h2>
+    <p class="h2-note">Les zones grisées se remplissent · les annotations en italique ne s'envoient pas</p>
+
+    <div class="form">
+      <div class="form-head">
+        <p class="t">Compte rendu — arbitrage produit</p>
+        <p class="meta">
+          Date · <span class="bl">JJ/MM/AAAA</span> &nbsp;·&nbsp; Durée · <span class="bl">90 min</span><br>
+          Présents · Florent Quillien, Gwenvael Le Tallec<br>
+          Documents de référence · conducteur de prise de poste, matrice de parité, carte de propriété
+        </p>
+      </div>
+
+      <div class="blk">
+        <p class="lbl">État d'entrée → sortie</p>
+        <p class="health">
+          Fronts ouverts en parallèle &nbsp;<b>13</b> → <span class="bl">__</span><br>
+          Tickets ouverts sans propriétaire &nbsp;<b>128</b> → <span class="bl">__</span><br>
+          Urgences sans porteur &nbsp;<b>7</b> → <span class="bl">__</span>
+        </p>
+        <p class="note">Ces trois lignes sont le seul indicateur du compte rendu. Si aucune ne bouge, la réunion n'a rien produit — et il faut l'écrire.</p>
+      </div>
+
+      <div class="blk">
+        <p class="lbl">Décisions</p>
+
+        <div class="dec">
+          <p class="q">1 · File du temps réel — BRO-71, 38, 37, 229, 73</p>
+          <p class="a">
+            <span class="opt">[ DÉCIDÉ / REPORTÉ au __ / REFUSÉ ]</span> <span class="bl">………………………………</span><br>
+            Qui en parle à Amine · <span class="bl">…………</span> &nbsp; Quand · <span class="bl">…………</span>
+          </p>
+        </div>
+
+        <div class="dec">
+          <p class="q">2 · Les neuf chantiers commencés sans propriétaire</p>
+          <p class="a">
+            Attribués · <span class="bl">………………………………………………</span><br>
+            Arrêtés · <span class="bl">…………………………………………………</span><br>
+            Non tranchés · <span class="bl">………………</span> reprise le <span class="bl">……</span>
+          </p>
+        </div>
+
+        <div class="dec">
+          <p class="q">3 · Les sept urgences sans porteur</p>
+          <p class="a">
+            Prises · <span class="bl">……………………………………………………</span><br>
+            Déclassées · <span class="bl">………………………………………………</span>
+          </p>
+          <p class="note">Si les sept ressortent urgentes et non prises, l'écrire tel quel : c'est le constat le plus important de la séance.</p>
+        </div>
+
+        <div class="dec">
+          <p class="q">4 · Le lot de cadrage du 11 juillet — BRO-167 à 183</p>
+          <p class="a">
+            Encore la cible · <span class="bl">………………………………………</span><br>
+            Remplacés par la timeline · <span class="bl">………………………</span><br>
+            Fermés · <span class="bl">……………………………………………………</span>
+          </p>
+        </div>
+
+        <div class="dec">
+          <p class="q">5 · Les cinq paris ouverts jusqu'à la fin de l'année</p>
+          <p class="a">
+            1 · <span class="bl">………………………</span> &nbsp; 2 · <span class="bl">………………………</span><br>
+            3 · <span class="bl">………………………</span> &nbsp; 4 · <span class="bl">………………………</span><br>
+            5 · <span class="bl">………………………</span><br>
+            Sort des autres projets · <span class="bl">………………………………</span>
+          </p>
+        </div>
+
+        <div class="dec">
+          <p class="q">6 · Les trois décisions structurantes</p>
+          <p class="a">
+            Matériel sous un club amateur · <span class="opt">[ TRANCHÉ / REPORTÉ au __ ]</span> <span class="bl">…………</span><br>
+            Sort de la flotte MadXP · <span class="opt">[ TRANCHÉ / REPORTÉ au __ ]</span> <span class="bl">…………</span><br>
+            Montée du lot commercial · <span class="opt">[ TRANCHÉ / REPORTÉ au __ ]</span> <span class="bl">…………</span><br>
+            Contrepartie acceptée · <span class="bl">………………………………………</span><br>
+            Personnes manquantes · <span class="bl">………………………………………</span>
+          </p>
+        </div>
+
+        <div class="dec">
+          <p class="q">7 · Tranches de délai pour les quatorze promesses à requalifier</p>
+          <p class="a">
+            Ce trimestre · <span class="bl">…………………………………………</span><br>
+            Ce semestre · <span class="bl">……………………………………………</span><br>
+            Pas avant un an · <span class="bl">………………………………………</span><br>
+            Sans tranche, donc retirées du discours · <span class="bl">…………</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="blk">
+        <p class="lbl">Non tranché</p>
+        <p class="a" style="font-family:var(--f-mono);font-size:12.5px;line-height:1.75;color:var(--ink-soft)">
+          <span class="bl">………………………………………………</span> reprise le <span class="bl">……</span><br>
+          <span class="bl">………………………………………………</span> reprise le <span class="bl">……</span>
+        </p>
+        <p class="note">Une section vide est un bon signe. Une section pleine sans dates est une réunion à refaire.</p>
+      </div>
+
+      <div class="blk">
+        <p class="lbl">Suites</p>
+        <p class="a" style="font-family:var(--f-mono);font-size:12.5px;line-height:1.75;color:var(--ink-soft)">
+          Florent applique dans Linear · avant le <span class="bl">……</span><br>
+          Gwenvael met à jour la matrice de parité · avant le <span class="bl">……</span><br>
+          Prochain point, 30 min, lendemain de match · le <span class="bl">……</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Version à copier</h2>
+    <p class="h2-note">Texte brut · se colle dans un courriel ou un message sans mise en forme</p>
+
+    <div class="copywrap">
+      <div class="copybar">
+        <button id="cp" type="button">Copier le modèle</button>
+        <span class="hint">ou modifiez directement le texte ci-dessous</span>
+      </div>
+      <textarea id="raw" spellcheck="false" aria-label="Modèle de compte rendu en texte brut">CR — ARBITRAGE PRODUIT
+Date · __/__/____   Durée · 90 min
+Présents · Florent Quillien, Gwenvael Le Tallec
+Références · conducteur de prise de poste, matrice de parité, carte de propriété
+
+ÉTAT D'ENTRÉE → SORTIE
+  Fronts ouverts en parallèle .............. 13  → __
+  Tickets ouverts sans propriétaire ....... 128  → __
+  Urgences sans porteur ..................... 7  → __
+
+DÉCISIONS
+
+1. FILE DU TEMPS RÉEL — BRO-71, 38, 37, 229, 73
+   [ DÉCIDÉ / REPORTÉ au __ / REFUSÉ ] ......................
+   Qui en parle à Amine · ............  Quand · ............
+
+2. LES NEUF CHANTIERS COMMENCÉS SANS PROPRIÉTAIRE
+   Attribués · ..............................................
+   Arrêtés · ................................................
+   Non tranchés · ....................... reprise le ........
+
+3. LES SEPT URGENCES SANS PORTEUR
+   Prises · .................................................
+   Déclassées · .............................................
+
+4. LOT DE CADRAGE DU 11 JUILLET — BRO-167 à 183
+   Encore la cible · ........................................
+   Remplacés par la timeline · ..............................
+   Fermés · .................................................
+
+5. LES CINQ PARIS OUVERTS JUSQU'À LA FIN DE L'ANNÉE
+   1. ....................   2. ....................
+   3. ....................   4. ....................
+   5. ....................
+   Sort des autres projets · ................................
+
+6. LES TROIS DÉCISIONS STRUCTURANTES
+   Matériel sous un club amateur · [ TRANCHÉ / REPORTÉ au __ ]
+     ........................................................
+   Sort de la flotte MadXP · [ TRANCHÉ / REPORTÉ au __ ]
+     ........................................................
+   Montée du lot commercial · [ TRANCHÉ / REPORTÉ au __ ]
+     ........................................................
+   Contrepartie acceptée · ..................................
+   Personnes manquantes · ...................................
+
+7. TRANCHES DE DÉLAI — 14 PROMESSES À REQUALIFIER
+   Ce trimestre · ...........................................
+   Ce semestre · ............................................
+   Pas avant un an · ........................................
+   Sans tranche, donc retirées du discours · ................
+
+NON TRANCHÉ
+   ..................................... reprise le ........
+   ..................................... reprise le ........
+
+SUITES
+   Florent applique dans Linear ............ avant le ........
+   Gwenvael met à jour la matrice .......... avant le ........
+   Prochain point (30 min, lendemain de match) ..... le ......
+</textarea>
+    </div>
+  </section>
+
+  <section>
+    <h2>Les trois façons de rater ce compte rendu</h2>
+    <p class="h2-note">Toutes les trois sont des réflexes naturels</p>
+
+    <div class="panel">
+      <p class="ref">PIÈGE 1</p>
+      <h4>Y raconter la discussion</h4>
+      <p>
+        C'est le réflexe le plus courant, et le plus coûteux. Un compte rendu qui
+        restitue les échanges rouvre le débat au lieu de le clore : chacun y relit
+        ses arguments et se croit autorisé à les rejouer. On note la décision et
+        rien d'autre — le raisonnement vit dans les documents de référence, pas ici.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">PIÈGE 2</p>
+      <h4>Adoucir un refus en report</h4>
+      <p>
+        Écrire « à revoir » plutôt que « refusé » ménage la conversation du jour et
+        empoisonne les trois suivantes. Un refus clair libère de l'attention ; un
+        faux report la consomme indéfiniment. Si aucune date ne peut être posée,
+        c'est un refus, et il faut l'écrire ainsi.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">PIÈGE 3</p>
+      <h4>Se noter des actions à soi-même</h4>
+      <p>
+        Sous mandat de lecture seule, la seule suite qui m'appartient est la mise à
+        jour de mes propres documents. Tout le reste s'applique dans Linear par
+        Florent. Un compte rendu où je m'attribue des actions dans l'outil serait un
+        engagement que je ne peux pas tenir — et la première brèche dans la règle qui
+        rend le rôle acceptable.
+      </p>
+    </div>
+
+    <footer>
+      Format — une page, sept décisions, trois indicateurs, aucun relevé de discussion.<br>
+      Rythme — envoi le soir même, puis un point de <b>30 minutes</b> au lendemain de chaque match.<br>
+      Ce modèle sert pour toutes les réunions suivantes : seuls les chiffres d'entrée changent.
+    </footer>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('cp');
+    var ta = document.getElementById('raw');
+    if (!btn || !ta) return;
+    var reset;
+    btn.addEventListener('click', function () {
+      ta.focus();
+      ta.select();
+      var done = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(ta.value).then(function () {
+            btn.textContent = 'Copié';
+          })["catch"](function () {
+            btn.textContent = 'Sélectionné — Ctrl/Cmd + C';
+          });
+          done = true;
+        }
+      } catch (e) { done = false; }
+      if (!done) {
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+        btn.textContent = ok ? 'Copié' : 'Sélectionné — Ctrl/Cmd + C';
+      }
+      clearTimeout(reset);
+      reset = setTimeout(function () { btn.textContent = 'Copier le modèle'; }, 3000);
+    });
+  })();
+</script>

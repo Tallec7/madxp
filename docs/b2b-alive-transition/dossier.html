@@ -1,0 +1,401 @@
+<title>Dossier de prise de poste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 880px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 34px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 62ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 30px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 44px; }
+  .moment {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    padding-top: 14px; border-top: 1px solid var(--rule-strong); margin: 0 0 4px;
+  }
+  .moment-sub {
+    font-size: 15px; line-height: 1.5; color: var(--muted); margin: 0 0 18px; max-width: 70ch;
+  }
+
+  .docs { border: 1px solid var(--rule); border-bottom: none; }
+  .doc {
+    background: var(--surface); border-bottom: 1px solid var(--rule);
+    padding: 16px 18px; display: grid; grid-template-columns: 30px 1fr 116px; gap: 16px; align-items: start;
+  }
+  .doc .n { font-family: var(--f-mono); font-size: 12px; font-weight: 500; color: var(--muted); padding-top: 3px; }
+  .doc .t {
+    font-family: var(--f-display); font-weight: 600; font-size: 17px;
+    line-height: 1.25; margin: 0 0 5px; letter-spacing: -0.008em;
+  }
+  .doc .t a { color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--accent); }
+  .doc .t a:hover { color: var(--accent); }
+  .doc .t a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .doc .d { font-size: 15px; line-height: 1.45; color: var(--ink-soft); margin: 0; }
+  .doc .d b { color: var(--ink); font-weight: 600; }
+  .doc .meta { text-align: right; }
+  .tag {
+    display: inline-block; font-family: var(--f-mono); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px;
+    margin-bottom: 4px;
+  }
+  .a-flo { background: var(--accent-wash); color: var(--accent); }
+  .a-moi { background: var(--surface-2); color: var(--muted); }
+  .a-pro { background: var(--gain-wash); color: var(--gain); }
+  .a-deux { background: var(--ready-wash); color: var(--ready); }
+  .rev { display: block; font-family: var(--f-mono); font-size: 9.5px; color: var(--muted); }
+
+  @media (max-width: 680px) {
+    .doc { grid-template-columns: 30px 1fr; }
+    .doc .meta { grid-column: 2; text-align: left; }
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--live); padding: 19px 22px; margin: 0 0 14px;
+  }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--live); margin: 0 0 6px;
+  }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 16.5px; margin: 0 0 8px; line-height: 1.3; }
+  .panel p { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .panel p + p { margin-top: 11px; }
+
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 24px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 14px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 20px;
+  }
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 74ch; }
+  p { margin: 0 0 15px; max-width: 72ch; }
+
+  footer {
+    margin-top: 36px; padding-top: 17px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Index · treize documents</p>
+    <h1>Dossier de prise de poste</h1>
+    <p class="standfirst">
+      Tout ce qui a été produit, rangé par le moment où l'on s'en sert. Les quatre
+      premiers sont ceux à envoyer avant l'entretien d'arbitrage.
+    </p>
+    <div class="slugline">
+      <span>Arrêté le <b>02/09/2026</b>, dossier revu le <b>03/09</b></span>
+      <span>Contexte <b>B2B Alive · équipe Broadcaster</b></span>
+      <span>Mandat <b>lecture seule dans Linear</b></span>
+    </div>
+  </header>
+
+  <section>
+    <p class="moment">Moment 1 · à envoyer 48 h avant l'entretien</p>
+    <p class="moment-sub">
+      Ces quatre-là ne se présentent pas en séance : ils se lisent avant. S'ils n'ont
+      pas été lus, la réunion se reporte — elle ne se raccourcit pas.
+    </p>
+
+    <div class="docs">
+      <div class="doc">
+        <span class="n">01</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/a2427cd4-d7ac-4c56-ba21-9e07b157f381" target="_blank" rel="noopener">Conducteur de prise de poste</a></p>
+          <p class="d">Le diagnostic d'entrée et la feuille de route à quatre-vingt-dix jours. <b>Contient les trois décisions que je ne peux pas prendre seul.</b> Un angle mort levé le 03/09, et deux inconnues fermées par mesure le même jour.</p>
+        </div>
+        <div class="meta"><span class="tag a-flo">Florent</span><span class="rev">révisé 4 fois</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">02</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/a92af5d2-02fc-4504-8c5d-9561be27edc4" target="_blank" rel="noopener">Matrice de parité prospects</a></p>
+          <p class="d">Quarante-neuf promesses confrontées au livré réel des deux produits. <b>Onze à retirer du discours, quatorze à dater.</b> Trois verdicts corrigés le 03/09 — j'avais sous-estimé le produit dans les trois cas.</p>
+        </div>
+        <div class="meta"><span class="tag a-pro">Prospects</span><span class="rev">corrigé · 03/09</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">03</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/124919aa-4c87-4ba2-8c64-787ac82684d4" target="_blank" rel="noopener">Carte de propriété du backlog</a></p>
+          <p class="d">Les cent vingt-huit tickets ouverts sans propriétaire, répartis en quatre voies. <b>Dont les cinq qui rendent sa file à Amine.</b></p>
+        </div>
+        <div class="meta"><span class="tag a-flo">Florent</span></div>
+      </div>
+      <div class="doc">
+        <span class="n">09</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/336c47a8-3139-460a-82eb-99da1ca790d8" target="_blank" rel="noopener">Ingest des médias</a></p>
+          <p class="d">La fiche du chantier que la documentation d'exploitation a fait apparaître. <b>Le seul candidat du dossier dont la valeur est affirmée par l'équipe, pas déduite par moi</b> — et il n'a aucun ticket. Contient le texte prêt à coller, à écrire par quelqu'un qui en a le droit.</p>
+        </div>
+        <div class="meta"><span class="tag a-flo">Florent</span><span class="rev">créé · 03/09</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="moment">Moment 2 · pendant l'entretien</p>
+    <p class="moment-sub">
+      La trame minutée vit dans la partie 3 du document 04. Le support de notation
+      s'ouvre à l'écran au moment de choisir les cinq paris.
+    </p>
+
+    <div class="docs">
+      <div class="doc">
+        <span class="n">10</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/483644bc-8088-4d84-a2d6-56692749e9f5" target="_blank" rel="noopener">Page d'accueil Notion</a></p>
+          <p class="d">Le brouillon qui remplace « Bienvenue sur Notion ! » : quel outil fait foi, ce qu'on trouve où, et <b>la table de routage — quatorze lignes disant quoi lire avant de toucher à quoi</b>. Texte prêt à coller, rien écrit dans Notion.</p>
+        </div>
+        <div class="meta"><span class="tag a-moi">Moi</span><span class="rev">à installer</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">11</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/cd442184-dcc8-41fe-8f00-b4e71e0c3de6" target="_blank" rel="noopener">En-têtes des pages Notion</a></p>
+          <p class="d">Trois en-têtes — doctrine, journal, parc — parce qu'ils ne se périment pas de la même façon. <b>Le champ « périmé si » remplace la date de relecture</b> : une date se dégrade en silence, une condition se déclenche. Pré-remplis pour les neuf pages existantes.</p>
+        </div>
+        <div class="meta"><span class="tag a-moi">Moi</span><span class="rev">à installer</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">12</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/7a2e2da9-6d59-4f96-a8f1-182284c80f45" target="_blank" rel="noopener">Avant / Après</a></p>
+          <p class="d"><b>La page à projeter en séance</b> — et celle qui peut remplacer la lecture des trois autres. Neuf changements, l'état daté d'aujourd'hui face au quotidien tel qu'il se vivra dans un mois, cinq choses auxquelles on ne touche pas, et ce qui n'aura pas changé.</p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">créé · 03/09</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">13</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/96f249c2-ac1f-4689-be68-589de952f85f" target="_blank" rel="noopener">Linear, une fois rangé</a></p>
+          <p class="d">La maquette : la vue « En vol », les trois initiatives, les cinq paris, les étiquettes, un ticket complet. <b>Tous les tickets montrés sont réels</b> — et la maquette fait apparaître toute seule que le flux qui rapporte de l'argent porte un pari sur cinq.</p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">créé · 03/09</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">04</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/4bc7c0be-2fbe-4f4f-abe3-f8b481eb3922" target="_blank" rel="noopener">Comment cette équipe devrait travailler</a></p>
+          <p class="d">La méthode retenue et écartée, douze réglages Linear, et <b>la trame minutée de l'entretien</b> — quatre-vingt-dix minutes, sept décisions. Plus trois questions de couloir : <b>deux ont déjà leur réponse, et elles ont modifié quatre documents.</b></p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">révisé 3 fois</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">05</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/0fc7b5eb-a14c-45bc-a93a-f3abf1b3e463" target="_blank" rel="noopener">Choisir cinq paris sur dix-neuf</a></p>
+          <p class="d">Support de notation interactif. <b>Premier geste : appuyer sur « Vider »</b> — il est pré-rempli d'un exemple qui n'est pas une proposition. Et un absent qui compte : <b>l'ingest des médias n'a aucun ticket, donc aucune ligne à noter.</b></p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">outil de séance · noté 03/09</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="moment">Moment 3 · le soir même</p>
+    <p class="moment-sub">
+      Un compte rendu envoyé trois jours après n'est plus un relevé de décisions,
+      c'est un résumé — et un résumé se discute.
+    </p>
+
+    <div class="docs">
+      <div class="doc">
+        <span class="n">06</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/49cb412c-fb61-453d-9ee8-d27a28cda67e" target="_blank" rel="noopener">Compte rendu d'arbitrage</a></p>
+          <p class="d">Modèle d'une page, réutilisable à chaque réunion, avec une version texte à copier. <b>Aucune case pour reporter sans dater.</b></p>
+        </div>
+        <div class="meta"><span class="tag a-moi">Moi</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="moment">En référence permanente</p>
+    <p class="moment-sub">
+      Deux cartes du terrain, à rouvrir chaque fois qu'un arbitrage se discute ou
+      qu'un risque se réalise.
+    </p>
+
+    <div class="docs">
+      <div class="doc">
+        <span class="n">07</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/58b15915-e0e1-4847-8de0-dc86de4b365e" target="_blank" rel="noopener">Les trois flux de valeur</a></p>
+          <p class="d">Où la valeur se crée et où elle se perd. <b>Le flux annonceur fabrique sa preuve puis la jette</b>, une étape avant sa raison d'être. Le goulot d'adoption a changé trois fois le 03/09 pour finir sur <b>la préparation des médias</b> — le seul chantier que l'équipe désigne elle-même comme le plus rentable.</p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">refondu 2× · 03/09</span></div>
+      </div>
+
+      <div class="doc">
+        <span class="n">08</span>
+        <div>
+          <p class="t"><a href="https://claude.ai/code/artifact/c8204e06-f655-4236-b3f6-276e584f47ef" target="_blank" rel="noopener">Vingt-cinq risques, quatre états</a></p>
+          <p class="d">Registre ROAM. <b>Douze risques ne sont dans aucun état</b> — ni portés, ni acceptés, ni atténués. Six ajoutés le 03/09, dont la préparation des médias et l'absence de client payant.</p>
+        </div>
+        <div class="meta"><span class="tag a-deux">À deux</span><span class="rev">étendu 2× · 03/09</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="ref">CE QUE LA JOURNÉE DU 03/09 A CHANGÉ DANS LE DOSSIER</p>
+      <h4>Trois sources successives, et chacune a déplacé la précédente</h4>
+      <p>
+        Les huit documents avaient été bâtis sur le carnet Linear seul — donc sur le
+        travail des développeurs, donc sur le milieu de la chaîne. Trois sources sont
+        venues s'ajouter dans la journée, dans cet ordre : <b>le métier d'origine</b>
+        (B2B Alive fabrique du LED depuis 2013, le logiciel est venu après),
+        <b>deux chiffres obtenus en posant la question</b>, et enfin
+        <b>la documentation d'exploitation de l'équipe</b> — modes de rendu du player,
+        référentiel des stades et des écrans, récaps de match, briefs d'intervention.
+        Cette dernière n'est ni dans Linear ni sur le site public, et c'est de loin la
+        meilleure du dossier.
+      </p>
+      <p>
+        <b>Le goulot d'adoption a changé trois fois.</b> L'installation, puis la
+        qualification du matériel, puis — corrigé en dernier — <b>la préparation des
+        médias</b>. Installer le logiciel ne coûte rien dans le cas courant : on colle
+        une URL, le mode hors-ligne est livré. Ce qui coûte des journées, c'est de
+        transférer, dédoublonner, ré-encoder et re-plier les fichiers. Le récap du
+        dernier match l'appelle « le poste de temps le plus lourd de la semaine » et
+        conclut qu'un ingest ferait gagner plus que n'importe quel correctif de sa
+        propre liste. <b>Ce chantier n'a aucun ticket, donc aucune ligne dans la
+        notation WSJF.</b>
+      </p>
+      <p>
+        <b>Trois verdicts de la matrice de parité étaient faux</b>, tous dans le même
+        sens — j'avais sous-estimé le produit. Le boîtier Raspberry existe, alors que je
+        l'avais déclaré sans équivalent ; le délai d'installation est nul pour un contenu
+        plein cadre ; la formule sans matériel tient hors ligne mieux que je ne le
+        disais. Corrigés : la matrice compte 11 promesses tenables au lieu de 10, et 11 à
+        retirer au lieu de 12.
+      </p>
+      <p>
+        <b>Et une vérité à dire en rendez-vous.</b> Le référentiel des stades donne trois
+        sites : Guingamp et le Rhénus en démo, Montpellier en prospect. <b>Aucun client
+        payant installé sur le logiciel.</b> La qualité est démontrée — un match de
+        Ligue 2 diffusé de bout en bout sur quatre surfaces plus le son — mais c'est une
+        référence, pas un parc. Réserve : ce référentiel ne couvre que le logiciel ; le
+        parc matériel vit dans une base que je n'ai pas pu ouvrir.
+      </p>
+      <p>
+        Le registre passe de 21 à 25 risques : la préparation des médias, la perte
+        possible de l'attribution de facturation dans la refonte de l'éditeur, l'absence
+        de client payant — et B5 rétabli sous une autre forme, l'heure d'analyse
+        supposant une matinée sur place. Deux documents n'ont pas bougé : la carte de
+        propriété (03) ne parle que d'attribution de tickets, le compte rendu type (06)
+        est un formulaire vierge. Les laisser intacts est un choix, pas un oubli.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce qui reste ouvert</h2>
+    <p class="h2-note">Les fils que ces huit documents laissent pendants</p>
+
+    <ul class="plain">
+      <li><strong>Les quatorze promesses sans date.</strong> Tant qu'aucune tranche de délai ne leur est associée, elles se comportent comme les douze déjà retirées — soit vingt-six lignes invendables sur quarante-huit. Le point 7 de l'entretien existe pour ça.</li>
+      <li><strong>L'hébergement et la conservation des données chez B2B Alive.</strong> Inconnus, éliminatoires face à une collectivité, et probablement réglés en un courriel. À poser avant le prochain rendez-vous prospect.</li>
+      <li><strong>Les trois décisions structurantes</strong> — le matériel sous un club amateur, le sort de la flotte MadXP installée, la montée du lot commercial. Elles conditionnent tout le discours commercial.</li>
+      <li><strong>Les durées manquantes sur les cartes de flux.</strong> Récupérables : les temps de traversée déjà calculés par Linear donneraient le flux de développement en entier.</li>
+      <li><strong>La taxonomie d'étiquettes est-elle réellement portée par les tickets ?</strong> Je ne l'ai pas vérifié, et cela change la valeur de deux des douze réglages proposés.</li>
+      <li><strong>Un ordre de grandeur n'est pas un prévisionnel.</strong> « Six à huit sur dix » suffit à orienter un discours commercial et à classer des chantiers. Il ne suffirait pas à bâtir un plan de charge ou un budget. Si une décision d'investissement s'appuie dessus, il faudra le compter pour de vrai.</li>
+      <li><strong>Ce que fait B2B Alive « de base », en source directe.</strong> Le site de la société n'est pas joignable depuis mon environnement de travail : l'histoire de la maison, les effectifs et les implantations viennent de résumés de recherche. Une phrase de Florent suffit à confirmer ou à corriger.</li>
+      <li><strong>Laquelle des trois formes de vente se vend le plus</strong> — logiciel seul, logiciel avec matériel, logiciel avec exploitation. Question posée le 03/09 : aucune n'a encore assez d'historique. Le document 07 garde donc une seule carte, et la question se repose dans trois mois — c'est le seul rendez-vous que ce dossier se donne à lui-même.</li>
+    </ul>
+
+    <div class="panel">
+      <p class="ref">LA RÉSERVE QUI VAUT POUR LES HUIT</p>
+      <h4>Tout ceci suppose que Linear reflète le travail réel</h4>
+      <p>
+        L'ensemble de l'analyse repose sur ce que l'outil contient. Si des chantiers
+        vivent ailleurs — de vive voix, dans un carnet, dans une autre application —
+        alors les neuf travaux « sans propriétaire » en ont peut-être un, et plusieurs
+        conclusions s'affaiblissent. Deux semaines en doublure te placent mieux que moi
+        pour le dire.
+      </p>
+      <p>
+        La refonte du 03/09 en donne l'illustration : sept documents ont été écrits
+        depuis le carnet, et il a suffi de regarder le métier d'origine pour que le
+        goulot principal change de place. <b>Ce qui est dans l'outil est vrai ; ce n'est
+        pas suffisant.</b>
+      </p>
+    </div>
+
+    <footer>
+      Treize documents · <b>cinq créés, un refondu, six repris deux fois</b> après tes corrections, tes mesures et la documentation d'exploitation — le mandat en lecture seule, la reprise des pièces de SAFe, le vocabulaire « site » plutôt que « salle », et le recul sur le métier d'origine.<br>
+      Sources — espace Linear <b>b2b-alive</b> relevé le 02/09/2026, <b>Notion B2B-Broadcast</b> lu le 03/09/2026, code et décisions d'architecture MadXP.<br>
+      Ce que je n'ai jamais fait — <b>aucune écriture dans Linear</b> : ni ticket, ni priorité, ni attribution.
+    </footer>
+  </section>
+
+</div>

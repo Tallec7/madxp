@@ -1,0 +1,500 @@
+<title>Carte de propriété du backlog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F9;
+    --ink: #141A21;
+    --ink-soft: #3E4A57;
+    --muted: #6B7885;
+    --rule: #D6DCE3;
+    --rule-strong: #A9B4BF;
+    --accent: #A8620E;
+    --accent-wash: #F5E7D4;
+    --live: #BC332E;
+    --live-wash: #F8E1E0;
+    --ready: #1F6A4B;
+    --ready-wash: #DCEDE4;
+    --gain: #1A6272;
+    --gain-wash: #DCEBEF;
+
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: var(--f-body); font-size: 16.5px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 900px; margin: 0 auto; padding: 0 26px 90px; }
+
+  .masthead { padding: 52px 0 24px; border-bottom: 3px double var(--rule-strong); margin-bottom: 34px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700;
+    font-size: clamp(32px, 5vw, 44px); line-height: 1.05;
+    letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 18px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 26px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 32px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  .rule-box {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent); padding: 20px 24px; margin: 0 0 40px;
+  }
+  .rule-box h3 { font-family: var(--f-display); font-weight: 600; font-size: 16.5px; margin: 0 0 10px; }
+  .rule-box p { margin: 0 0 12px; font-size: 16px; line-height: 1.55; max-width: 78ch; }
+  .rule-box p:last-child { margin-bottom: 0; }
+
+  /* headline stats */
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-bottom: 44px;
+  }
+  .stat { background: var(--surface); padding: 16px 18px; }
+  .stat .n {
+    font-family: var(--f-mono); font-size: 27px; font-weight: 500;
+    font-variant-numeric: tabular-nums; line-height: 1.1; display: block; margin-bottom: 6px;
+  }
+  .stat .n.alarm { color: var(--live); }
+  .stat p { margin: 0; font-size: 14.5px; line-height: 1.4; color: var(--muted); }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.015em; margin: 0 0 4px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 30px 0 10px; }
+  p.body { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  /* lane header */
+  .lane-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; padding-top: 15px; border-top: 1px solid var(--rule-strong); }
+  .lane-head h2 { border: none; padding: 0; margin: 0; }
+  .lane-tag {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px;
+  }
+  .t-a { background: var(--gain-wash); color: var(--gain); }
+  .t-b { background: var(--accent-wash); color: var(--accent); }
+  .t-c { background: var(--surface-2); color: var(--muted); border: 1px solid var(--rule); }
+  .t-d { background: var(--live-wash); color: var(--live); }
+
+  .lane-why {
+    font-size: 16px; line-height: 1.55; color: var(--ink-soft);
+    max-width: 74ch; margin: 0 0 20px;
+  }
+
+  /* ticket groups */
+  .grp { margin-bottom: 22px; }
+  .grp > .name {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 6px; border-bottom: 1px solid var(--rule); margin-bottom: 0;
+  }
+  ul.tix { list-style: none; margin: 0; padding: 0; }
+  ul.tix li {
+    display: grid; grid-template-columns: 74px 1fr 74px; gap: 12px;
+    padding: 9px 0; border-bottom: 1px solid var(--rule); align-items: baseline;
+  }
+  ul.tix .id { font-family: var(--f-mono); font-size: 12.5px; font-weight: 500; color: var(--ink); }
+  ul.tix .t { font-size: 15px; line-height: 1.4; color: var(--ink-soft); }
+  ul.tix .p { text-align: right; }
+
+  .prio {
+    display: inline-block; font-family: var(--f-mono); font-size: 9.5px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; white-space: nowrap;
+  }
+  .p-urg { background: var(--live-wash); color: var(--live); }
+  .p-high { background: var(--accent-wash); color: var(--accent); }
+  .p-med { background: var(--surface-2); color: var(--muted); }
+  .p-low { background: transparent; color: var(--muted); }
+  .p-run { background: var(--ready-wash); color: var(--ready); }
+
+  @media (max-width: 620px) {
+    ul.tix li { grid-template-columns: 70px 1fr; }
+    ul.tix .p { grid-column: 2; text-align: left; margin-top: -4px; }
+  }
+
+  /* theme table for lane B */
+  .themes { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 20px; }
+  .theme-row {
+    display: grid; grid-template-columns: 1fr 58px; gap: 14px;
+    padding: 12px 16px; border-bottom: 1px solid var(--rule); background: var(--surface); align-items: baseline;
+  }
+  .theme-row .nm { font-size: 15.5px; line-height: 1.4; }
+  .theme-row .nm b { font-family: var(--f-display); font-weight: 600; }
+  .theme-row .ct {
+    font-family: var(--f-mono); font-size: 13px; font-weight: 500;
+    text-align: right; font-variant-numeric: tabular-nums; color: var(--muted);
+  }
+
+  /* alarm panel */
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--live); padding: 20px 22px; margin-bottom: 16px;
+  }
+  .panel.calm { border-top-color: var(--accent); }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--live); margin: 0 0 6px;
+  }
+  .panel.calm .ref { color: var(--accent); }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 0 0 9px; line-height: 1.3; }
+  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; }
+
+  footer {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Proposition · à corriger avant d'être appliquée</p>
+    <h1>Carte de propriété du backlog</h1>
+    <p class="standfirst">
+      Cent vingt-huit tickets ouverts n'appartiennent à personne. Voici où je
+      propose de les envoyer, ce qu'il faut trancher d'abord, et ce que je
+      recommande de ne donner à personne.
+    </p>
+    <div class="slugline">
+      <span>Établie le <b>02/09/2026</b></span>
+      <span>Source <b>Linear b2b-alive · équipe Broadcaster</b></span>
+      <span>Portée <b>tickets ouverts sans assigné</b></span>
+    </div>
+  </header>
+
+  <div class="rule-box">
+    <h3>Comment lire, et ce que ce document n'est pas</h3>
+    <p>
+      Je ne modifie rien dans Linear. Ceci est une <strong>proposition de
+      répartition</strong>, écrite dehors, à appliquer par Florent s'il la valide —
+      en bloc, partiellement, ou pas du tout. Elle repose sur une hypothèse de
+      frontière entre les deux métiers, déduite de l'historique : elle doit être
+      corrigée par les deux intéressés avant d'être appliquée.
+    </p>
+    <p>
+      Un ticket rangé dans une voie n'est pas un ticket planifié. La carte dit
+      <em>à qui il revient</em>, pas <em>quand il se fait</em>. Le « quand » est
+      l'objet du cadrage suivant.
+    </p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="n">128</span>
+      <p>tickets ouverts sans propriétaire, sur 412 au total</p>
+    </div>
+    <div class="stat">
+      <span class="n alarm">7</span>
+      <p>marqués urgents, et sans personne pour les porter</p>
+    </div>
+    <div class="stat">
+      <span class="n alarm">9</span>
+      <p>déjà démarrés — du travail en cours que personne ne détient</p>
+    </div>
+    <div class="stat">
+      <span class="n">19</span>
+      <p>relèvent du temps réel, donc du métier resté sans file</p>
+    </div>
+  </div>
+
+  <!-- ===== URGENCES ===== -->
+  <section>
+    <h2>Ce qui saute aux yeux avant toute répartition</h2>
+    <p class="h2-note">Deux constats qui ne demandent pas d'arbitrage, seulement une décision</p>
+
+    <div class="panel">
+      <p class="ref">CONSTAT 1</p>
+      <h4>Sept tickets urgents n'ont pas de porteur — dont la CI, à l'arrêt</h4>
+      <p>
+        <span class="mono">BRO-315</span> dit que l'intégration continue « ne se
+        déclenche sur AUCUN push de ce dépôt ». Quatre autres urgences appartiennent au
+        même chantier d'empaquetage — l'identité de release (<span class="mono">BRO-316</span>),
+        la sortie des données de l'arbre installé (<span class="mono">BRO-317</span>),
+        le paquet de box lui-même (<span class="mono">BRO-318</span>). S'y ajoutent une
+        fuite de sockets qui épuise les ports après une coupure du master
+        (<span class="mono">BRO-238</span>), un garde-fou absent sur la porte SDI
+        (<span class="mono">BRO-335</span>) et un défaut de remplissage dans le
+        render-kit (<span class="mono">BRO-283</span>).
+      </p>
+      <p>
+        Aucun de ces sept n'est en cours. « Urgent » sans propriétaire ne veut rien
+        dire : c'est une étiquette qui se regarde elle-même.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">CONSTAT 2</p>
+      <h4>Neuf chantiers sont commencés, et personne ne les détient</h4>
+      <p>
+        Parmi eux le routeur de flux <span class="mono">BRO-73</span>, l'audio des flux
+        live <span class="mono">BRO-233</span>, les gardiens de service par système
+        <span class="mono">BRO-240</span>, la base répliquée hors ligne
+        <span class="mono">BRO-78</span>. Un travail démarré sans nom attaché ne
+        s'arrête jamais formellement — il se dilue. C'est la catégorie que je
+        traiterais en premier, avant même les urgences : elle consomme déjà du temps.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== VOIE A ===== -->
+  <section>
+    <div class="lane-head">
+      <h2>Voie A — Temps réel, rendu et média</h2>
+      <span class="lane-tag t-a">19 tickets · Amine</span>
+    </div>
+    <p class="lane-why">
+      Le périmètre se lit directement dans l'historique : compositeur Qt, textures GPU,
+      transitions, verrouillage sur l'horloge du bus, ingestion des flux. Tout ce qui
+      touche au pixel, à l'image décodée et au signal entrant. C'est la voie à ouvrir
+      en premier, parce que c'est celle dont le titulaire attend.
+    </p>
+
+    <div class="grp">
+      <p class="name">Moteur d'animation — le projet déjà priorisé</p>
+      <ul class="tix">
+        <li><span class="id">BRO-71</span><span class="t">Composition sur le canvas d'écran : placements, zones, répétition, timeline partagée</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-38</span><span class="t">Synchronisation inter-lecteurs : horloge et timeline communes sur le ruban</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-37</span><span class="t">Multi-animations simultanées par ligne (composition de couches)</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-229</span><span class="t">Repli en page et transitions par shaders s'excluent — arbitrer, et empaqueter le compositeur pour Windows</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-91</span><span class="t">Budget de textures simultanées et portabilité cible</span><span class="p"><span class="prio p-low">Basse</span></span></li>
+      </ul>
+    </div>
+
+    <div class="grp">
+      <p class="name">Flux live, capture et SDI</p>
+      <ul class="tix">
+        <li><span class="id">BRO-335</span><span class="t">Porte SDI : le plancher d'énergie n'existe pas — une piste qui transporte des zéros passe tous les autres tests</span><span class="p"><span class="prio p-urg">Urgent</span></span></li>
+        <li><span class="id">BRO-73</span><span class="t">MediaMTX en routeur général : caméra supporter, télécommande, cartes d'acquisition</span><span class="p"><span class="prio p-run">En cours</span></span></li>
+        <li><span class="id">BRO-233</span><span class="t">Audio des flux live : WHEP démuté, caméra supporter sonore, audio embarqué des cartes</span><span class="p"><span class="prio p-run">En cours</span></span></li>
+        <li><span class="id">BRO-336</span><span class="t">Armer une entrée SDI depuis la régie — rien ne l'écrit aujourd'hui</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-333</span><span class="t">MediaMTX : activer l'API et les métriques pour observer les flux en direct</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+        <li><span class="id">BRO-334</span><span class="t">Encodeurs de capture : statistiques temps réel et détection de gel</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+      </ul>
+    </div>
+
+    <div class="grp">
+      <p class="name">Chaîne image — décodage, encodage, ingestion</p>
+      <ul class="tix">
+        <li><span class="id">BRO-283</span><span class="t">Le remplissage par répétition coupe la dernière copie — compte explicite et remplissage exact</span><span class="p"><span class="prio p-urg">Urgent</span></span></li>
+        <li><span class="id">BRO-313</span><span class="t">Frames noires entre deux vidéos de playlist — constat mesuré et plan</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+        <li><span class="id">BRO-288</span><span class="t">Vérifier et probablement scinder la règle « dimensions multiples de 16 » du décodage matériel</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+        <li><span class="id">BRO-144</span><span class="t">Mapping vidéoprocesseur vers régions et lecteurs, générique et par écran</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+        <li><span class="id">BRO-158</span><span class="t">Pipeline d'ingestion PSD vers PNG et JPEG</span><span class="p"><span class="prio p-low">Aucune</span></span></li>
+      </ul>
+    </div>
+
+    <div class="grp">
+      <p class="name">Son bas niveau — sortie physique et persistance</p>
+      <ul class="tix">
+        <li><span class="id">BRO-235</span><span class="t">Sortie audio physique du lecteur : aucun serveur son dans l'image Pi, et choix du périphérique</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+        <li><span class="id">BRO-337</span><span class="t">« Couper tout » ne survit pas à un rechargement du lecteur — le direct se dé-coupe en silence</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+        <li><span class="id">BRO-291</span><span class="t">Normalisation de niveau : mesurer à l'ingestion, appliquer un gain au rendu</span><span class="p"><span class="prio p-low">Basse</span></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== VOIE B ===== -->
+  <section>
+    <div class="lane-head">
+      <h2>Voie B — Master, régie et produit</h2>
+      <span class="lane-tag t-b">86 tickets · Florent</span>
+    </div>
+    <p class="lane-why">
+      Tout le reste : le domaine, le conducteur, les playlists, le portail, la
+      réplication, l'empaquetage, l'exploitation. Je ne détaille pas les
+      quatre-vingt-six lignes, et c'est volontaire — <strong>une voie de cette
+      taille n'est pas une file de travail, c'est un aveu</strong>. La ranger ne la
+      rend pas faisable. Le vrai geste sur cette voie n'est pas de l'attribuer mais
+      de la réduire, et c'est l'objet du cadrage suivant.
+    </p>
+
+    <div class="themes">
+      <div class="theme-row"><span class="nm"><b>Empaquetage et publication</b> — faire de la box un produit installable, dont la CI et l'identité de release</span><span class="ct">14</span></div>
+      <div class="theme-row"><span class="nm"><b>Playlists, conducteur et timeline</b> — l'éditeur unique et ce qui s'y rattache</span><span class="ct">13</span></div>
+      <div class="theme-row"><span class="nm"><b>Régie et surfaces</b> — journal de match, aperçu, Stream Deck, fuites mémoire</span><span class="ct">13</span></div>
+      <div class="theme-row"><span class="nm"><b>Observabilité de la box</b> — journaux bornés, état interrogeable, remontée d'erreurs</span><span class="ct">9</span></div>
+      <div class="theme-row"><span class="nm"><b>Vente et annonceurs</b> — parts vendues, bouche-trous, poids, notifications</span><span class="ct">8</span></div>
+      <div class="theme-row"><span class="nm"><b>Résilience des lecteurs</b> — veille, redémarrage sans coupure, identité de machine</span><span class="ct">6</span></div>
+      <div class="theme-row"><span class="nm"><b>Modèles et habillage</b> — scoreboard Rive, panneaux d'avant-match, import Figma</span><span class="ct">6</span></div>
+      <div class="theme-row"><span class="nm"><b>Réplication et données</b> — poids des documents, pierres tombales, verrous</span><span class="ct">5</span></div>
+      <div class="theme-row"><span class="nm"><b>Exploitation terrain</b> — déploiements au Roudourou, sauvegarde de salle, sons muets</span><span class="ct">5</span></div>
+      <div class="theme-row"><span class="nm"><b>Langue et pilotage par agent</b> — socle d'internationalisation, serveur MCP en anglais</span><span class="ct">4</span></div>
+      <div class="theme-row"><span class="nm"><b>Son côté régie</b> — écoute en cabine, commandes au doigt, routage vers la sono</span><span class="ct">3</span></div>
+    </div>
+
+    <p class="body">
+      Les sept urgences se répartissent ainsi : <strong>quatre dans l'empaquetage</strong>
+      (<span class="mono">BRO-315</span>, <span class="mono">316</span>,
+      <span class="mono">317</span>, <span class="mono">318</span>), une dans la
+      réplication (<span class="mono">BRO-238</span>), et les deux dernières en voie A
+      (<span class="mono">BRO-335</span>, <span class="mono">BRO-283</span>).
+    </p>
+  </section>
+
+  <!-- ===== VOIE C ===== -->
+  <section>
+    <div class="lane-head">
+      <h2>Voie C — À trancher avant d'attribuer</h2>
+      <span class="lane-tag t-c">6 tickets</span>
+    </div>
+    <p class="lane-why">
+      Ces six-là ne sont pas du travail, ce sont des questions. Les donner à quelqu'un
+      revient à lui demander de décider seul, ce qui est la meilleure façon de les
+      voir stagner. Ils appellent une réponse en réunion, pas une assignation.
+    </p>
+
+    <ul class="tix">
+      <li><span class="id">BRO-401</span><span class="t">Qui a le droit de relancer le master, sur quelle preuve, et pendant un match ? — le ticket dit lui-même « DÉCISION à prendre »</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+      <li><span class="id">BRO-385</span><span class="t">Conception : une cible devrait dire à quelle couche elle joue, et un écran pouvoir en porter plusieurs</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+      <li><span class="id">BRO-279</span><span class="t">Exploration : playlists composées depuis les médias d'équipe — le second générateur</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+      <li><span class="id">BRO-149</span><span class="t">Modèles handball : audit de l'existant et création des manquants — le tournoi qui l'a motivé est terminé, la cible reste à confirmer</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+      <li><span class="id">BRO-302</span><span class="t">Conception du modèle de conversion entre le râtelier et la piste</span><span class="p"><span class="prio p-low">Basse</span></span></li>
+      <li><span class="id">BRO-63</span><span class="t">Exploration : un bouton pause directement sur la phase ?</span><span class="p"><span class="prio p-low">Basse</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ===== VOIE D ===== -->
+  <section>
+    <div class="lane-head">
+      <h2>Voie D — À ne donner à personne en l'état</h2>
+      <span class="lane-tag t-d">17 tickets</span>
+    </div>
+    <p class="lane-why">
+      Attribuer un ticket périmé, c'est fabriquer de la dette d'attention. Ces
+      dix-sept méritent d'être fermés, rangés au magasin, ou re-décidés — mais pas
+      distribués. Ils sont déjà comptés hors de la voie B : les retirer allège
+      l'attention de toute l'équipe, un huitième du backlog d'un seul geste.
+    </p>
+
+    <h3>Le lot « UX contenus » — treize tickets doublés par un cadrage plus récent</h3>
+    <p class="body">
+      Le cadrage du 11 juillet a produit treize tickets — médiathèque, explorateur de
+      contenus, création pilotée par la cible, portail partenaires, banc de test —
+      dont le découpage était marqué « fait ». <strong>Aucun n'a démarré, et aucun ne
+      porte de priorité.</strong> Depuis, le cadrage du 15 août sur la timeline
+      multi-piste a livré une douzaine de tickets qui recouvrent partiellement le
+      même terrain, et qui, eux, sont terminés.
+    </p>
+    <p class="body">
+      Deux cadrages successifs sur le même sujet, dont le premier n'a jamais été ni
+      fait ni fermé : c'est un huitième du backlog en suspens. La question à poser
+      n'est pas « qui les prend », c'est <strong>« lesquels sont encore la
+      cible ? »</strong> — <span class="mono">BRO-167</span> à
+      <span class="mono">BRO-183</span>.
+    </p>
+
+    <h3>Quatre résidus dont le contexte est passé</h3>
+    <ul class="tix">
+      <li><span class="id">BRO-394</span><span class="t">Journée 6 contre Annecy — le match a eu lieu le 30 août</span><span class="p"><span class="prio p-high">Haute</span></span></li>
+      <li><span class="id">BRO-153</span><span class="t">Surveillance et preuve de diffusion pendant le tournoi — l'Europ'A Cup est terminée et son projet clos</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+      <li><span class="id">BRO-274</span><span class="t">Étapes speaker du conducteur — en attente d'un document que Guingamp n'a pas fourni</span><span class="p"><span class="prio p-med">Moyenne</span></span></li>
+      <li><span class="id">BRO-272</span><span class="t">Troisième voie de transport en canal datagramme — le titre commence par « Parking »</span><span class="p"><span class="prio p-low">Aucune</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ===== CE QUE ÇA DIT ===== -->
+  <section>
+    <h2>Ce que la carte révèle, et qu'elle ne résout pas</h2>
+    <p class="h2-note">La conclusion honnête de l'exercice</p>
+
+    <div class="panel calm">
+      <p class="ref">LE POINT DUR</p>
+      <h4>Répartir ne suffit pas — la voie B reste hors d'atteinte d'une seule personne</h4>
+      <p>
+        Sur cent vingt-huit tickets sans propriétaire, dix-neuf seulement relèvent du
+        temps réel. Même en fermant les dix-sept de la voie D et en tranchant les six
+        de la voie C, il reste <strong>quatre-vingt-six lignes devant un seul
+        développeur</strong>, qui porte déjà quatre chantiers ouverts.
+      </p>
+      <p>
+        Ce n'est donc pas un problème d'attribution mais de volume. La carte rend sa
+        file au temps réel — un gain réel et immédiat — et met en évidence que le
+        reste appelle une décision d'un autre ordre : <strong>fermer des fronts</strong>,
+        pas mieux les ranger. C'est exactement ce que doit produire le cadrage des cinq
+        paris.
+      </p>
+    </div>
+
+    <h3>Ce que je propose comme suite immédiate</h3>
+    <ul class="plain">
+      <li><strong>Donner la voie A</strong> — cinq tickets nommés suffisent pour la semaine, le reste vient ensuite.</li>
+      <li><strong>Attacher un nom aux neuf chantiers déjà en cours</strong> avant tout le reste : ils consomment du temps sans être tenus.</li>
+      <li><strong>Décider du sort des sept urgences</strong> — soit elles sont prises, soit elles cessent d'être urgentes. Les deux réponses sont acceptables, l'immobilité ne l'est pas.</li>
+      <li><strong>Poser la question du lot de juillet</strong> en réunion, pas ticket par ticket : treize lignes se règlent en une décision.</li>
+    </ul>
+
+    <h3>Mes réserves</h3>
+    <ul class="plain">
+      <li><span class="cf cf-est">ESTIMÉ</span> La frontière entre les deux voies est déduite de l'historique des tickets terminés, pas d'une conversation. Elle décrit ce qui <em>a été</em>, pas forcément ce que chacun <em>veut</em> faire. À corriger par les deux intéressés avant toute application.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Le classement en voie D repose sur des contextes que je crois passés — un match joué, un tournoi clos, un document jamais reçu. Chacun de ces quatre peut avoir une raison de vivre que j'ignore.</li>
+      <li><span class="cf cf-no">INCONNU</span> Si des tickets sont travaillés hors Linear. Toute cette analyse suppose que l'outil reflète le travail réel ; si ce n'est pas le cas, les neuf chantiers « sans propriétaire » en ont peut-être un.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Les identifiants, priorités, états et projets sont relevés dans Linear le 02/09/2026 et se rouvrent ticket par ticket.</li>
+    </ul>
+
+    <footer>
+      Périmètre — <b>110</b> tickets en réserve, <b>9</b> à faire, <b>9</b> en cours, tous sans assigné.<br>
+      Répartition proposée — voie A <b>19</b> · voie B <b>86</b> · voie C <b>6</b> · voie D <b>17</b>, soit les 128.<br>
+      Les quatre voies sont disjointes : trancher C et fermer D n'allège pas la voie B, seule une décision produit le peut.
+    </footer>
+  </section>
+
+</div>

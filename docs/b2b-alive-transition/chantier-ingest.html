@@ -1,0 +1,643 @@
+<title>Ingest des médias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 940px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 34px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 30px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 48px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 30px 0 10px; }
+  p { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  .lede {
+    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
+    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px; margin: 0 0 24px; max-width: 64ch;
+  }
+
+  /* faits mesurés */
+  .facts { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 18px; }
+  .fhead, .frow {
+    display: grid; grid-template-columns: 1.25fr 1fr 104px; gap: 18px;
+    padding: 13px 17px; border-bottom: 1px solid var(--rule); align-items: start;
+  }
+  .fhead {
+    background: var(--surface-2); font-family: var(--f-mono); font-size: 10px;
+    font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--rule-strong);
+  }
+  .frow { background: var(--surface); }
+  .frow .w { font-family: var(--f-display); font-weight: 600; font-size: 15px; line-height: 1.35; }
+  .frow .c { font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
+  .frow .c b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .frow .t {
+    font-family: var(--f-mono); font-size: 11px; color: var(--muted);
+    text-align: right; line-height: 1.5;
+  }
+  @media (max-width: 760px) {
+    .fhead { display: none; }
+    .frow { grid-template-columns: 1fr; gap: 7px; padding: 15px 15px 17px; }
+    .frow .t { text-align: left; }
+  }
+
+  /* pipeline */
+  .steps { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-bottom: 18px; }
+  .step {
+    background: var(--surface); padding: 16px 18px;
+    display: grid; grid-template-columns: 30px 1fr 120px; gap: 18px; align-items: start;
+  }
+  .step .n {
+    font-family: var(--f-mono); font-size: 12px; font-weight: 500;
+    color: var(--accent); padding-top: 3px;
+  }
+  .step h4 { font-family: var(--f-display); font-weight: 600; font-size: 16px; margin: 0 0 6px; line-height: 1.3; }
+  .step p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-soft); max-width: 62ch; }
+  .step .st {
+    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase; text-align: right; line-height: 1.7;
+  }
+  .st-have { color: var(--ready); }
+  .st-part { color: var(--accent); }
+  .st-none { color: var(--live); }
+  @media (max-width: 700px) {
+    .step { grid-template-columns: 30px 1fr; }
+    .step .st { grid-column: 2; text-align: left; }
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent); padding: 20px 22px; margin: 0 0 15px;
+  }
+  .panel.warn { border-top-color: var(--live); }
+  .panel.good { border-top-color: var(--ready); }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--accent); margin: 0 0 6px;
+  }
+  .panel.warn .ref { color: var(--live); }
+  .panel.good .ref { color: var(--ready); }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 9px; line-height: 1.3; }
+  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  /* définition de fini */
+  .dod { border: 1px solid var(--rule); border-left: 3px solid var(--ready); background: var(--surface); padding: 4px 0; margin-bottom: 18px; }
+  .dod .item {
+    display: grid; grid-template-columns: 26px 1fr; gap: 14px;
+    padding: 13px 20px; border-bottom: 1px solid var(--rule);
+  }
+  .dod .item:last-child { border-bottom: none; }
+  .dod .box {
+    width: 15px; height: 15px; border: 1.5px solid var(--rule-strong);
+    border-radius: 2px; margin-top: 4px;
+  }
+  .dod .cr { font-family: var(--f-display); font-weight: 600; font-size: 15.5px; line-height: 1.35; margin-bottom: 4px; }
+  .dod .wy { font-size: 14.5px; line-height: 1.45; color: var(--muted); max-width: 66ch; }
+  .dod .wy b { color: var(--ink-soft); font-weight: 600; }
+
+  pre.tpl {
+    background: var(--surface-2); border: 1px solid var(--rule); border-left: 3px solid var(--rule-strong);
+    padding: 18px 20px; margin: 0 0 18px; overflow-x: auto;
+    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.75; color: var(--ink-soft);
+    white-space: pre; tab-size: 2;
+  }
+  pre.tpl b { color: var(--ink); font-weight: 500; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 72ch; }
+
+  footer {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Fiche de chantier · proposition, à arbitrer avec Florent</p>
+    <h1>Ingest des médias</h1>
+    <p class="standfirst">
+      Le poste de temps le plus lourd d'une semaine de préparation de match. Écrite en
+      croyant qu'il n'avait aucun ticket — vérification faite, <b>il en a sept</b>,
+      répartis dans quatre projets. Il manque une étape, et il manque surtout quelqu'un
+      pour tenir la chaîne comme un tout.
+    </p>
+    <div class="slugline">
+      <span>Rédigée puis corrigée le <b>03/09/2026</b></span>
+      <span>Sources <b>récap du 15/08 · carnet Linear au 03/09</b></span>
+      <span>Statut <b>aucune écriture dans Linear</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>La correction, avant tout le reste</h2>
+    <p class="h2-note">Cette fiche a été écrite sur un récap daté du 15 août · le carnet a trois semaines d'avance</p>
+
+    <div class="panel warn">
+      <p class="ref">CE QUE LA VÉRIFICATION A DÉMENTI</p>
+      <h4>« Aucun ticket » était vrai le 15 août. Ce ne l'est plus.</h4>
+      <p>
+        J'ai bâti la première version de cette fiche sur le récap du rush de Guingamp, qui
+        écrit noir sur blanc « pas de ticket aujourd'hui » à propos de la chaîne
+        d'approvisionnement des médias. C'était exact <em>le jour où il a été écrit</em>.
+        Depuis, l'équipe a ouvert environ <b>cent soixante-cinq tickets</b> — le carnet
+        est passé d'environ BRO-249 à BRO-415 — et les deux manques que le récap
+        signalait explicitement comme « toujours manquants, pas de ticket » en ont un
+        chacun : <b>BRO-251</b> pour l'alerte des coupes manquantes, <b>BRO-252</b> pour
+        la désactivation d'une ligne de playlist.
+      </p>
+      <p>
+        <b>Même classe d'erreur que celles corrigées plus tôt dans la journée</b> : j'ai
+        pris une source excellente pour une source actuelle. Un récap de match est un
+        instantané daté ; il décrit un état, pas une situation. La règle qui manquait est
+        simple — <em>vérifier l'état courant du carnet avant d'affirmer qu'il lui manque
+        quelque chose</em>.
+      </p>
+    </div>
+
+    <p>
+      La fiche garde tout son intérêt, mais elle change de nature. Elle ne propose plus
+      de créer un chantier absent : elle montre qu'<strong>un chantier existe en pièces
+      détachées, réparties dans quatre projets, et que personne ne le tient comme un
+      tout</strong>. C'est un problème différent, et il est plus difficile à voir depuis
+      le carnet — ce qui est précisément ce qu'un rôle de produit sert à corriger.
+    </p>
+    <p class="lede">
+      Sur les cinq étapes, trois sont couvertes, une est faite pour l'essentiel, et
+      <b>une seule n'a aucun ticket : le pré-pliage à la source</b>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Le constat</h2>
+    <p class="h2-note">Ce qui se passe, mesuré · où, quand, sur quelle machine</p>
+
+    <p>
+      Entre le 6 et le 14 août, la préparation du match EA Guingamp — US Boulogne au
+      Roudourou a demandé d'acheminer, corriger et remettre au format des dizaines de
+      fichiers : musique définitive, fiches de but, fiches de composition, bandeaux
+      annonceurs, boucle publicitaire, nouveaux annonceurs entrés en cours de semaine.
+      <strong>Chacune de ces opérations a été faite à la main</strong>, en ligne de
+      commande, depuis un poste vers la machine de diffusion, plusieurs fois.
+    </p>
+    <p class="lede">
+      Le récap de cette semaine le dit en une phrase : « le poste de temps le plus lourd
+      de la semaine, et il est presque entièrement manuel ».
+    </p>
+
+    <div class="facts">
+      <div class="fhead">
+        <div>Ce qui manque</div>
+        <div>Ce que ça a produit en août</div>
+        <div>Relevé</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Aucun dépôt outillé</div>
+        <div class="c">Transferts répétés du stockage partagé vers la machine, en ligne de commande, à chaque nouvel arrivage de la semaine.</div>
+        <div class="t">6 au 14 août</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Aucune déduplication</div>
+        <div class="c">Doublons dans la médiathèque, sans outil pour les repérer. L'identité d'un fichier <em>est</em> déjà son empreinte — la suppression serait sûre, elle n'est simplement pas outillée.</div>
+        <div class="t">constaté</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Aucune sonde technique fiable</div>
+        <div class="c">Six passages portaient <b>29 s</b> de durée déclarée pour des fichiers d'environ <b>15 s</b>. La fin de vidéo était tenue à l'écran — d'où les flashs de couleur en bout de bandeau, <b>pendant le match</b>.</div>
+        <div class="t">20:58, 14/08</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Aucun pré-pliage à la source</div>
+        <div class="c">Ce qui arrive du client n'est jamais au format que l'écran attend. Après le rognage de la tribune à <b>9 840 px</b> — 13 modules × 40 px éteints de chaque côté — il a fallu re-plier et remettre à l'échelle <em>tous</em> les bandeaux annonceurs.</div>
+        <div class="t">13 août</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Aucun contrôle des coupes</div>
+        <div class="c">Rien n'alerte « il manque une coupe pour cet écran » <em>avant</em> publication. On le découvre après, quand la liste est déjà en ligne.</div>
+        <div class="t">manque connu, sans ticket</div>
+      </div>
+
+      <div class="frow">
+        <div class="w">Fichiers non ré-encodés</div>
+        <div class="c">Le lecteur se déplace dans une vidéo au lieu de la lire d'un bout à l'autre ; les fichiers d'origine ne le supportent pas et doivent être ré-encodés un par un.</div>
+        <div class="t">systématique</div>
+      </div>
+    </div>
+
+    <p>
+      Ces six lignes ne sont pas six anecdotes : c'est <strong>une seule chaîne, dont
+      aucun maillon n'est outillé</strong>. Un fichier arrive, quelqu'un le déplace, le
+      renomme, le mesure à l'œil, le ré-encode, le replie pour chaque écran, puis vérifie
+      de mémoire qu'il n'en manque aucun. À chaque match.
+    </p>
+  </section>
+
+  <section>
+    <h2>Ce que ça coûte</h2>
+    <p class="h2-note">Le soir du 14 août, entre 20 h 21 et 20 h 58</p>
+
+    <div class="panel warn">
+      <p class="ref">20:21 · VINGT-QUATRE MINUTES AVANT LE COUP D'ENVOI</p>
+      <h4>Les compositions officielles n'ont pas pu être mises à jour</h4>
+      <p>
+        Les listes de composition n'avaient pas bougé depuis 11 h 13, soit avant l'annonce
+        des équipes. Les mettre à jour aurait demandé de <b>re-fabriquer et redéposer
+        trente-et-un fichiers</b> — les compositions sont des médias figés, pas un
+        gabarit qu'on remplit. À vingt-quatre minutes du coup d'envoi, c'était hors de
+        portée.
+      </p>
+      <p>
+        Le club, lui, avait fini de saisir ses compositions <b>une minute</b> avant de
+        vouloir les lancer. Leur rythme normal — la composition connue une heure avant —
+        est déjà très serré pour cette chaîne. Leur rythme réel ne l'est pas du tout.
+      </p>
+    </div>
+
+    <div class="panel warn">
+      <p class="ref">20:58 · TREIZE MINUTES APRÈS LE COUP D'ENVOI</p>
+      <h4>Des flashs de couleur en bout de bandeau, en direct</h4>
+      <p>
+        Six passages portaient une durée fausse. Corrigé à chaud pendant le match : 29 s
+        ramenées à 14 s, offsets réécrits sur <b>185 items</b>, cycle du bandeau passé de
+        <b>44,98 à 43,48 minutes</b>. Une correction menée pendant que le match tournait,
+        sur une donnée qu'une sonde à l'entrée aurait donnée juste dès le départ.
+      </p>
+    </div>
+
+    <p>
+      <strong>Aucun de ces deux incidents n'est un bug de code.</strong> Ce sont deux
+      conséquences d'une même absence : rien, à l'entrée, ne mesure ni ne met en forme ce
+      qui va être diffusé. C'est ce qui distingue ce chantier des vingt-trois tickets
+      ouverts pendant la même semaine — eux réparent des défauts, celui-ci supprime une
+      classe entière de défauts.
+    </p>
+  </section>
+
+  <section>
+    <h2>Ce qu'on sait déjà</h2>
+    <p class="h2-note">Le chantier part de plus haut qu'il n'en a l'air</p>
+
+    <div class="panel good">
+      <p class="ref">TROIS PIÈCES EXISTENT DÉJÀ</p>
+      <h4>Ce n'est pas une construction depuis zéro</h4>
+      <p>
+        <b>L'identité par empreinte est en place.</b> Un fichier est adressé par son
+        hachage, pas par son nom. La déduplication n'a donc pas à être inventée : les
+        doublons sont des lignes de répertoire, jamais des octets distincts, et les
+        supprimer est sûr par construction.
+      </p>
+      <p>
+        <b>Un outil de re-pliage existe.</b> Il a servi au rognage de la tribune en août.
+        Il est aujourd'hui lancé à la main, dans un dossier séparé, avec un suffixe de
+        nommage — ce qui manque n'est pas l'algorithme, c'est sa place dans une chaîne.
+      </p>
+      <p>
+        <b>Une sonde technique existe, incomplète.</b> Elle ne regarde que la piste
+        vidéo : on ne sait pas dire quels fichiers ont du son. Ce manque a déjà son
+        ticket, et il est <em>en amont</em> de toute la chaîne audio prévue.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Le périmètre</h2>
+    <p class="h2-note">Cinq étapes, dans cet ordre — chacune livrable seule</p>
+
+    <p>
+      L'ordre n'est pas décoratif : chaque étape rend la suivante possible, et chacune
+      prise isolément supprime déjà du travail manuel. La colonne de droite donne
+      l'état réel au 03/09 — <strong>le chantier est aux trois quarts couvert par des
+      tickets qui existent déjà</strong>, dispersés entre la semaine de consolidation,
+      l'UX contenus, la chaîne audio et la médiathèque.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <div>
+          <h4>Un dépôt, à la place d'une ligne de commande</h4>
+          <p>Poser un fichier depuis un navigateur, et qu'il soit pris en charge sans que personne n'ouvre un terminal. Le chemin portail → salle existe déjà de bout en bout ; ce qui reste ouvert est le dépôt côté annonceur et le miroir local des fichiers sur la machine.</p>
+        </div>
+        <div class="st st-have">BRO-187 · 188 faits<br>BRO-177 · 342 ouverts</div>
+      </div>
+
+      <div class="step">
+        <div class="n">02</div>
+        <div>
+          <h4>Empreinte et dédoublonnage à l'entrée</h4>
+          <p>Le fichier déposé est haché ; s'il existe déjà, on le dit au lieu de le redéposer. Le ticket existe et attend d'être pris — il porte aussi le renommage et le déplacement d'une fiche.</p>
+        </div>
+        <div class="st st-part">BRO-309 · à faire</div>
+      </div>
+
+      <div class="step">
+        <div class="n">03</div>
+        <div>
+          <h4>Une sonde complète, et sa durée fait foi</h4>
+          <p>Dimensions, durée réelle, présence d'une piste son. Les deux morceaux qui manquaient sont faits : la durée d'un passage suit désormais le fichier, et la sonde regarde la piste audio. Reste la mesure de niveau, en réserve basse.</p>
+        </div>
+        <div class="st st-have">BRO-31 · 236 faits<br>BRO-291 en réserve</div>
+      </div>
+
+      <div class="step">
+        <div class="n">04</div>
+        <div>
+          <h4>Pliage et mise à l'échelle par écran, à la source</h4>
+          <p>Un fichier déposé une fois produit ses coupes pour chaque écran de la salle, sans dossier séparé ni suffixe manuel. L'outil de re-pliage existe et a servi au rognage de la tribune — il est lancé à la main. <b>C'est la seule étape qui n'a aucun ticket.</b></p>
+        </div>
+        <div class="st st-none">aucun ticket</div>
+      </div>
+
+      <div class="step">
+        <div class="n">05</div>
+        <div>
+          <h4>Le contrôle des coupes manquantes, avant publication</h4>
+          <p>Publier une liste dit d'abord ce qui lui manque, écran par écran. Le ticket est ouvert en priorité haute dans la semaine de consolidation, et un second propose de combler les trous avec un contenu de remplacement plutôt que de les signaler seulement.</p>
+        </div>
+        <div class="st st-part">BRO-251 · haute<br>BRO-395 ouvert</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce que ce chantier n'est pas</h2>
+    <p class="h2-note">Trois voisins qu'il ne faut pas y absorber</p>
+
+    <ul class="plain">
+      <li><strong>Ce n'est pas la refonte des compositions d'équipe en gabarit.</strong> Faire qu'un changement de titulaire soit une saisie et non trente-et-un rendus est un chantier de modèle de données, pas d'entrée de fichiers. Il est au moins aussi important — il mérite sa propre fiche, pas une ligne dans celle-ci.</li>
+      <li><strong>Ce n'est pas l'unification de l'éditeur en timeline multi-piste.</strong> Cette cible est décrite en détail par le lead dev, elle touche la résolution et les collections répliquées, et elle a ses propres préalables. L'ingest est en amont d'elle et ne l'attend pas.</li>
+      <li><strong>Ce n'est pas l'import du conducteur du club.</strong> Récupérer le minutage plutôt qu'un gros fichier audio opaque est le second chantier de fond sans ticket. Il partage avec celui-ci l'idée d'« arrêter de perdre à l'entrée ce que la source détient déjà » — mais il vise la conduite, pas les médias.</li>
+    </ul>
+
+    <div class="panel">
+      <p class="ref">POURQUOI CE DÉCOUPAGE</p>
+      <h4>Trois chantiers séparés se défendent ; un seul gros ne se défend pas</h4>
+      <p>
+        Les trois se ressemblent assez pour qu'on soit tenté d'en faire un seul « grand
+        chantier des médias ». Ce serait une erreur d'arbitrage : un projet dont personne
+        ne peut estimer la fin ne se choisit jamais contre un correctif urgent. Découpé,
+        l'ingest est notable, comparable, et sa première étape est livrable seule.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Prêt pour un match</h2>
+    <p class="h2-note">La définition de fini, appliquée à ce chantier</p>
+
+    <p>
+      Les cinq critères sont ceux du dossier ; ce qui suit dit ce que chacun veut dire
+      ici. Un chantier d'entrée de fichiers a une manière particulière d'échouer : tout
+      marche sur le poste de celui qui l'a écrit, et rien n'a jamais traversé un vrai
+      arrivage de veille de match.
+    </p>
+
+    <div class="dod">
+      <div class="item">
+        <div class="box"></div>
+        <div>
+          <div class="cr">Déployé sur le site concerné, pas seulement construit</div>
+          <div class="wy">Sur la machine de diffusion du club, pas sur un poste de développement. <b>Le déploiement lui-même est un obstacle connu</b> : trois paquets à reconstruire et un redémarrage pour toute modification du domaine. Ça ne se fait pas un jour de match.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="box"></div>
+        <div>
+          <div class="cr">Vu sur le lecteur, jamais dans l'aperçu de régie</div>
+          <div class="wy">Une coupe produite par l'ingest doit être regardée <em>sur l'écran</em>. L'aperçu a menti pendant toute la semaine d'août — il compose des couches que le lecteur ne compose pas.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="box"></div>
+        <div>
+          <div class="cr">Survit à un rechargement du lecteur et à une coupure du serveur</div>
+          <div class="wy">Un fichier déposé, plié et mis en cache doit rester jouable après une coupure. C'est déjà l'engagement du mode hors-ligne du lecteur ; l'ingest ne doit pas introduire un état qui ne survit pas.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="box"></div>
+        <div>
+          <div class="cr">Testé sur une date réelle du calendrier</div>
+          <div class="wy">Pas sur trois fichiers d'essai : sur <b>un arrivage réel de veille de match</b> — la boucle publicitaire, les bandeaux d'annonceurs entrés dans la semaine, les fiches. C'est le volume et le désordre qui font le test, pas le mécanisme.</div>
+        </div>
+      </div>
+      <div class="item">
+        <div class="box"></div>
+        <div>
+          <div class="cr">Quelqu'un d'autre que l'auteur sait le déclencher</div>
+          <div class="wy">Le critère qui compte le plus ici. Si déposer un fichier suppose encore de savoir se connecter à la machine, le chantier a produit un outil de plus pour la même personne — <b>et n'a rien supprimé du poste de temps qu'il visait</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="ref">UN SIXIÈME CRITÈRE, PROPRE À CE CHANTIER</p>
+      <h4>La durée mesurée doit avoir remplacé la durée déclarée</h4>
+      <p>
+        Tant que les deux coexistent, le défaut du 14 août peut revenir : une durée saisie
+        à la main survit à une sonde qui dit autre chose. Le chantier n'est fini que
+        lorsque, sur au moins une liste réelle en production, <b>plus aucun passage ne
+        porte une durée que le fichier contredit</b>.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce qu'il reste à porter</h2>
+    <p class="h2-note">Un ticket manquant, et une chaîne que personne ne tient</p>
+
+    <div class="panel warn">
+      <p class="ref">LE SEUL VRAI TROU</p>
+      <h4>Le pré-pliage à la source n'a aucun ticket</h4>
+      <p>
+        Ce qui arrive du client n'est jamais au format que l'écran attend, et personne
+        n'a écrit qu'il faudrait que ça le devienne à l'entrée. L'outil de re-pliage
+        existe pourtant : il a servi au rognage de la tribune en août, lancé à la main,
+        dans un dossier séparé, avec un suffixe de nommage. <b>Ce qui manque n'est pas
+        l'algorithme, c'est sa place dans une chaîne.</b>
+      </p>
+      <p>
+        C'est aussi l'étape qui a coûté le plus cher en août : treize modules éteints de
+        chaque côté du bandeau tribune ont imposé de re-plier et remettre à l'échelle
+        <em>tous</em> les bandeaux annonceurs. Une géométrie d'écran qui change ne devrait
+        pas déclencher une journée de retouches manuelles.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">LE PROBLÈME QUI RESTE APRÈS CE TICKET</p>
+      <h4>Cinq étapes, quatre projets, aucun propriétaire de la chaîne</h4>
+      <p>
+        Le dépôt vit dans « UX contenus », le dédoublonnage nulle part en particulier, la
+        sonde dans « Chaîne audio », le contrôle des coupes dans « Semaine de
+        consolidation ». Chacun de ces tickets est légitime là où il est. Mais
+        <strong>personne ne regarde la chaîne entière</strong>, et c'est exactement
+        pourquoi le récap du 15 août a pu écrire « pas de ticket » alors que plusieurs
+        existaient déjà : vue depuis un projet, la chaîne est invisible.
+      </p>
+      <p>
+        C'est le genre de constat qui justifie un rôle de produit mieux qu'un discours
+        sur la méthode. Je n'apporte pas un chantier que l'équipe aurait oublié —
+        <b>j'apporte le fait que cinq tickets dispersés forment un chantier que personne
+        ne voit comme tel</b>, et qu'il en manque un pour le fermer.
+      </p>
+      <p>
+        Deux réponses possibles, et je ne tranche pas : soit ces tickets se regroupent
+        sous un projet unique, soit ils restent où ils sont et quelqu'un tient une vue
+        qui les rassemble. La seconde coûte moins cher et se défait plus facilement.
+      </p>
+    </div>
+
+    <h3>Le texte du ticket manquant, prêt à coller</h3>
+    <p>
+      Réduit à l'étape 04 — le seul trou réel. Au format « Constat » du dossier.
+      <strong>À écrire par Florent ou par quelqu'un qui a le droit d'écrire</strong> —
+      mon mandat est en lecture seule, et cette fiche ne change rien à ça.
+    </p>
+
+    <pre class="tpl"><b>Pré-pliage à la source : un fichier déposé sort déjà aux formats
+de la salle</b>
+
+<b>## Le constat</b>
+Ce qui arrive du client n'est jamais au format que l'écran
+attend. Le re-pliage et la mise à l'échelle par écran se font
+à la main, dans un dossier séparé, avec un suffixe de nommage.
+L'outil existe (il a servi au rognage de la tribune) ; il n'est
+pas branché sur l'entrée des fichiers.
+
+<b>## Ce que ça coûte</b>
+13 août 2026, Roudourou : le rognage de la tribune à 9 840 px
+(13 modules × 40 px éteints de chaque côté) a imposé de re-plier
+et remettre à l'échelle TOUS les bandeaux annonceurs, la veille
+d'un match de Ligue 2. Une géométrie d'écran qui change ne
+devrait pas déclencher une journée de retouches manuelles.
+
+<b>## Ce qu'on sait déjà</b>
+- L'outil de re-pliage existe, lancé à la main.
+- Le dépôt portail → salle fonctionne (BRO-187, BRO-188).
+- La sonde donne dimensions et durée réelles (BRO-31, BRO-236).
+- Le contrôle des coupes manquantes est ouvert (BRO-251).
+Cette étape est la dernière non couverte de la chaîne.
+
+<b>## Périmètre</b>
+Au dépôt d'un fichier, produire ses coupes pour chaque écran
+déclaré de la salle, sans dossier séparé ni suffixe manuel,
+et les re-produire quand la géométrie d'un écran change.
+
+Hors périmètre : le contrôle des coupes manquantes (BRO-251),
+le dédoublonnage (BRO-309), la mesure de niveau (BRO-291).
+
+<b>---</b>
+<b>Prêt pour un match</b>
+- [ ] Déployé sur la machine du club, pas seulement construit
+- [ ] Une coupe produite automatiquement vue sur le mur
+- [ ] Survit à un rechargement et à une coupure du serveur
+- [ ] Rejoué sur le cas réel du 13/08 : changer la géométrie
+      de la tribune ne demande aucune retouche manuelle
+- [ ] Quelqu'un d'autre que l'auteur sait déposer un fichier
+      et vérifier ses coupes</pre>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <p class="h2-note">Ce que je n'ai pas vérifié, et ce que je déduis</p>
+
+    <ul class="plain">
+      <li><span class="cf cf-no">DÉMENTI</span> <strong>« Ce chantier n'a aucun ticket » — c'était faux au moment où je l'ai écrit.</strong> Vrai le 15 août, date du récap ; démenti le 03/09 par le carnet lui-même. Sept tickets couvrent quatre des cinq étapes. Je laisse la trace de l'erreur plutôt que de la corriger en silence : c'est la troisième fois de la journée qu'une source excellente mais datée m'induit en erreur, et c'est le motif qui compte plus que le cas.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Les faits du constat et des deux incidents viennent du récap du rush de Guingamp, écrit le 15/08/2026 par l'équipe. Les chiffres — 29 s contre 15 s, 185 items, 44,98 à 43,48 minutes, 31 fichiers, 9 840 px — y figurent tels quels.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Les états de tickets sont relevés dans Linear le 03/09/2026 : BRO-187, 188, 31, 236 <em>faits</em> ; BRO-309 <em>à faire</em> ; BRO-251, 252, 177, 342, 291, 395 <em>ouverts</em>. Le carnet va au moins jusqu'à BRO-415.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Que le pré-pliage à la source n'a aucun ticket. Je l'affirme après plusieurs recherches par mots-clés, pas après une revue exhaustive des quelque quatre cents tickets. <b>Un titre que je n'aurais pas deviné suffirait à me démentir</b> — première chose à faire confirmer par Florent.</li>
+      <li><span class="cf cf-no">INCONNU</span> Les 28 plans de chantier du dépôt <span class="mono">apps/b2b-broadcast</span>. Ce dépôt n'est pas dans ceux auxquels cette session a accès, et le Notion n'en porte aucune copie. <b>Un plan d'ingest peut donc exister sans que je puisse le voir</b> — c'est la réserve la plus sérieuse de cette fiche.</li>
+      <li><span class="cf cf-no">INCONNU</span> Le coût en jours de l'étape manquante. Je n'ai aucune base pour l'estimer et je ne le ferai pas à la place de ceux qui écriront le code.</li>
+    </ul>
+
+    <footer>
+      Sources — <b>récap du rush de Guingamp</b> (Notion, 15/08/2026) pour le constat · <b>carnet Linear</b> relevé le 03/09/2026 pour l'état des tickets.<br>
+      Non consulté — les <b>28 plans de chantier</b> du dépôt applicatif, hors de portée de cette session.<br>
+      Format — modèle de ticket « Constat » et définition de fini « prêt pour un match », dossier de prise de poste.<br>
+      Mandat — <b>aucune écriture dans Linear</b> : cette fiche propose un ticket, elle n'en crée pas.
+    </footer>
+  </section>
+
+</div>

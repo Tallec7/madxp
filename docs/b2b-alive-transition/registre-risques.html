@@ -1,0 +1,588 @@
+<title>Vingt-cinq risques, quatre états</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
+    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
+    --rule: #D6DCE3; --rule-strong: #A9B4BF;
+    --accent: #A8620E; --accent-wash: #F5E7D4;
+    --live: #BC332E; --live-wash: #F8E1E0;
+    --ready: #1F6A4B; --ready-wash: #DCEDE4;
+    --gain: #1A6272; --gain-wash: #DCEBEF;
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+      --rule: #262F39; --rule-strong: #3B4753;
+      --accent: #E3A24A; --accent-wash: #33281A;
+      --live: #E4655E; --live-wash: #351E1D;
+      --ready: #52AC80; --ready-wash: #17301F;
+      --gain: #6BBACB; --gain-wash: #16292F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
+    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
+    --rule: #262F39; --rule-strong: #3B4753;
+    --accent: #E3A24A; --accent-wash: #33281A;
+    --live: #E4655E; --live-wash: #351E1D;
+    --ready: #52AC80; --ready-wash: #17301F;
+    --gain: #6BBACB; --gain-wash: #16292F;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--f-body);
+    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 980px; margin: 0 auto; padding: 0 24px 88px; }
+
+  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 32px; }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+  }
+  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 24px; }
+  .slugline {
+    display: flex; flex-wrap: wrap; gap: 0 32px;
+    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+  }
+  .slugline b { font-weight: 500; color: var(--ink); }
+
+  section { margin-bottom: 50px; }
+  h2 {
+    font-family: var(--f-display); font-weight: 600; font-size: 25px;
+    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
+    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+  }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 30px 0 10px; }
+  p { margin: 0 0 16px; max-width: 72ch; }
+  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+
+  .lede {
+    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
+    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px; margin: 0 0 24px; max-width: 64ch;
+  }
+
+  /* états — définitions */
+  .states { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-bottom: 20px; }
+  .stt {
+    background: var(--surface); padding: 14px 17px;
+    display: grid; grid-template-columns: 132px 1fr 42px; gap: 16px; align-items: baseline;
+  }
+  .stt .d { font-size: 15px; line-height: 1.45; color: var(--ink-soft); }
+  .stt .c {
+    font-family: var(--f-mono); font-size: 16px; font-weight: 500;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 620px) {
+    .stt { grid-template-columns: 1fr auto; }
+    .stt .d { grid-column: 1 / -1; }
+  }
+
+  .pill {
+    display: inline-block; font-family: var(--f-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.07em; text-transform: uppercase; padding: 3px 7px; border-radius: 2px; white-space: nowrap;
+  }
+  .s-res { background: var(--ready-wash); color: var(--ready); }
+  .s-pri { background: var(--accent-wash); color: var(--accent); }
+  .s-att { background: var(--gain-wash); color: var(--gain); }
+  .s-acc { background: var(--surface-2); color: var(--muted); border: 1px solid var(--rule); }
+  .s-non { background: var(--live-wash); color: var(--live); }
+
+  /* registre */
+  .fam { font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    margin: 30px 0 8px; }
+  .reg { border: 1px solid var(--rule); border-bottom: none; }
+  .rhead, .row {
+    display: grid; grid-template-columns: 40px 1fr 128px 108px; gap: 16px;
+    padding: 13px 16px; border-bottom: 1px solid var(--rule); align-items: start;
+  }
+  .rhead {
+    background: var(--surface-2); font-family: var(--f-mono); font-size: 10px;
+    font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--rule-strong);
+  }
+  .row { background: var(--surface); }
+  .row .id { font-family: var(--f-mono); font-size: 12px; font-weight: 500; color: var(--muted); padding-top: 2px; }
+  .row .r { font-family: var(--f-display); font-weight: 600; font-size: 15px; line-height: 1.35; margin-bottom: 4px; }
+  .row .cq { font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
+  .row .cq b { color: var(--live); font-weight: 600; }
+  .row .own { font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+
+  @media (max-width: 780px) {
+    .rhead { display: none; }
+    .row { grid-template-columns: 40px 1fr; gap: 10px; padding: 15px 15px 17px; }
+    .row .stw, .row .own { grid-column: 2; }
+    .row .own::before { content: "Porteur · "; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+  }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--live); padding: 19px 22px; margin: 0 0 14px;
+  }
+  .panel.calm { border-top-color: var(--accent); }
+  .panel .ref {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.09em; color: var(--live); margin: 0 0 6px;
+  }
+  .panel.calm .ref { color: var(--accent); }
+  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 8px; line-height: 1.3; }
+  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  .cf {
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+  }
+  .cf-ok { background: var(--ready-wash); color: var(--ready); }
+  .cf-est { background: var(--accent-wash); color: var(--accent); }
+  .cf-no { background: var(--live-wash); color: var(--live); }
+
+  ul.plain { margin: 0 0 16px; padding-left: 19px; }
+  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 74ch; }
+
+  footer {
+    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+  }
+  footer b { color: var(--ink); font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <p class="eyebrow">Emprunt à SAFe · pièce 4 sur 4</p>
+    <h1>Vingt-cinq risques, quatre états</h1>
+    <p class="standfirst">
+      Un risque n'existe vraiment que s'il est dans un état. Résolu, pris en charge,
+      accepté, atténué — ou, comme douze des vingt-cinq qui suivent, dans aucun des
+      quatre.
+    </p>
+    <div class="slugline">
+      <span>Établi le <b>02/09/2026</b>, étendu deux fois le <b>03/09</b></span>
+      <span>Méthode <b>ROAM, quatre états</b></span>
+      <span>Statut <b>proposition d'états, à valider</b></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Pourquoi quatre états, et pas une échelle de gravité</h2>
+    <p class="h2-note">La différence entre un registre qui sert et un registre qui décore</p>
+
+    <p>
+      La plupart des registres de risques notent une probabilité et un impact, les
+      multiplient, et produisent un classement que personne ne relit. Le mécanisme à
+      quatre états fait autre chose : il oblige à dire <strong>ce qu'on fait de chaque
+      risque</strong>. Un risque ne peut pas rester « connu » — il doit être traité,
+      confié, assumé, ou réduit.
+    </p>
+
+    <div class="states">
+      <div class="stt">
+        <span><span class="pill s-res">Résolu</span></span>
+        <span class="d">Le risque n'existe plus. On le garde inscrit pour se souvenir qu'il a existé.</span>
+        <span class="c">1</span>
+      </div>
+      <div class="stt">
+        <span><span class="pill s-pri">Pris en charge</span></span>
+        <span class="d">Quelqu'un le porte, avec une action identifiée et une échéance.</span>
+        <span class="c">4</span>
+      </div>
+      <div class="stt">
+        <span><span class="pill s-att">Atténué</span></span>
+        <span class="d">La cause demeure, l'impact a été réduit. On vit avec, en connaissance de cause.</span>
+        <span class="c">3</span>
+      </div>
+      <div class="stt">
+        <span><span class="pill s-acc">Accepté</span></span>
+        <span class="d">On sait, on ne fait rien, et c'est une décision — pas un oubli. Le plus difficile à assumer à voix haute.</span>
+        <span class="c">5</span>
+      </div>
+      <div class="stt">
+        <span><span class="pill s-non">Non classé</span></span>
+        <span class="d">Le cinquième état, que la méthode ne prévoit pas — parce qu'il n'est pas censé exister. C'est le constat du jour.</span>
+        <span class="c">12</span>
+      </div>
+    </div>
+
+    <p class="lede">
+      Douze risques sur vingt-cinq ne sont ni portés, ni acceptés, ni atténués. Ils sont
+      connus de tous et traités par personne — l'état le plus coûteux, parce qu'il
+      donne l'impression que quelque chose est fait.
+    </p>
+  </section>
+
+  <!-- ============ REGISTRE ============ -->
+  <section>
+    <h2>Le registre</h2>
+    <p class="h2-note">Vingt-cinq risques · état proposé par moi, à confirmer ou corriger</p>
+
+    <p class="fam">A · Exploitation et technique</p>
+    <div class="reg">
+      <div class="rhead">
+        <div>Réf</div><div>Risque et conséquence concrète</div><div>État proposé</div><div>Porteur</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A1</div>
+        <div>
+          <div class="r">L'intégration continue ne se déclenche sur aucun push</div>
+          <div class="cq">Aucune régression n'est détectée avant le terrain. <b>Ce risque multiplie tous les autres risques techniques</b> — chacun devient plus probable et plus tardif à voir.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A2</div>
+        <div>
+          <div class="r">Aucun état interrogeable d'un site</div>
+          <div class="cq">Un incident se découvre par téléphone, un samedi soir, par le client. Le temps de diagnostic n'est pas mesurable parce qu'il n'y a rien à mesurer.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A3</div>
+        <div>
+          <div class="r">Journaux et télémétrie non bornés</div>
+          <div class="cq">Environ 350 Mo de journal par jour et 1,2 Go de télémétrie par saison. À terme, le disque se remplit et le site s'arrête — <b>sans que rien ne prévienne</b>, faute d'observabilité.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A4</div>
+        <div>
+          <div class="r">Aucune sauvegarde restaurable d'un site</div>
+          <div class="cq">Une machine perdue, c'est un site à reconstruire à la main — sans procédure et sans mesure du temps que cela prend.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A5</div>
+        <div>
+          <div class="r">Fuite de sockets à la reconnexion du bus</div>
+          <div class="cq">La reconnexion double à chaque essai et épuise les ports après une coupure du master. <b>Se déclenche précisément quand ça va déjà mal</b>, donc pendant un match.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A6</div>
+        <div>
+          <div class="r">Une box est un dépôt de développement compilé à la main</div>
+          <div class="cq">Aucune installation n'est reproductible, aucune mise à jour n'est sûre, aucun retour arrière n'existe. Neuf pièces tournent sur la machine et aucune ne voyage.</div>
+        </div>
+        <div class="stw"><span class="pill s-pri">Pris en charge</span></div>
+        <div class="own">Florent — chantier en cours</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A7</div>
+        <div>
+          <div class="r">Les fenêtres d'horloge pointaient le mauvais instant</div>
+          <div class="cq">Seize dates sur dix-sept visaient un instant qui n'était pas le leur, et quinze démarrages automatiques restaient muets. Corrigé le 2 septembre.</div>
+        </div>
+        <div class="stw"><span class="pill s-res">Résolu</span></div>
+        <div class="own">Florent</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A8</div>
+        <div>
+          <div class="r">La préparation des médias est manuelle de bout en bout</div>
+          <div class="cq">Ajouté le 03/09 sur la documentation d'exploitation. Transferts en ligne de commande répétés, doublons qu'aucun outil ne détecte, ré-encodage systématique, bandeaux à re-plier après un rognage de tribune. Le récap du dernier match l'appelle « le poste de temps le plus lourd de la semaine ». <b>Aucun ticket ne le porte — et c'est le seul risque du registre dont la source affirme elle-même qu'il coûte plus que tous les correctifs réunis.</b></div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">A9</div>
+        <div>
+          <div class="r">La refonte de l'éditeur peut faire perdre l'attribution de facturation</div>
+          <div class="cq">Ajouté le 03/09. L'attribution — réservation, diffusion, annonceur — vit aujourd'hui sur l'item de playlist, et la preuve de diffusion remonte dessus. L'architecture cible ferait passer les rotations d'annonceurs dans un objet qui ne porte aucune de ces clés. <b>Une facturation qui casse ne se voit pas sur un mur : elle se voit trois mois plus tard, sur une facture.</b> Le risque est nommé dans la note de conception ; il ne l'est nulle part dans le carnet.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+    </div>
+
+    <p class="fam">B · Équipe</p>
+    <div class="reg">
+      <div class="rhead">
+        <div>Réf</div><div>Risque et conséquence concrète</div><div>État proposé</div><div>Porteur</div>
+      </div>
+
+      <div class="row">
+        <div class="id">B1</div>
+        <div>
+          <div class="r">Une seule personne détient le contexte</div>
+          <div class="cq">Florent a écrit la totalité des projets, des documents et des tickets. Son indisponibilité, même courte, arrête le produit et la relation client. <b>Aucune atténuation réaliste à deux personnes</b> — d'où l'acceptation, qui doit être dite plutôt que subie.</div>
+        </div>
+        <div class="stw"><span class="pill s-acc">Accepté</span></div>
+        <div class="own">À nommer en réunion</div>
+      </div>
+
+      <div class="row">
+        <div class="id">B2</div>
+        <div>
+          <div class="r">Le second développeur attend qu'on lui donne du travail</div>
+          <div class="cq">Quatre semaines de capacité perdues sur le temps réel. Et un risque en cascade : un spécialiste inoccupé finit par partir, ce qui aggraverait directement B1.</div>
+        </div>
+        <div class="stw"><span class="pill s-pri">Pris en charge</span></div>
+        <div class="own">Moi — cinq tickets nommés</div>
+      </div>
+
+      <div class="row">
+        <div class="id">B3</div>
+        <div>
+          <div class="r">Cent vingt-huit tickets ouverts sans propriétaire</div>
+          <div class="cq">Dont neuf déjà démarrés. Un travail commencé sans nom attaché ne s'arrête jamais formellement : il se dilue et consomme du temps sans jamais rien livrer.</div>
+        </div>
+        <div class="stw"><span class="pill s-pri">Pris en charge</span></div>
+        <div class="own">Moi — carte de propriété</div>
+      </div>
+
+      <div class="row">
+        <div class="id">B4</div>
+        <div>
+          <div class="r">Deux cadrages successifs sur le même sujet, aucun fermé</div>
+          <div class="cq">Le lot de juillet n'a jamais démarré, celui d'août recouvre une partie du même terrain et il est livré. Risque de refaire ce qui existe, ou de livrer deux fois la même chose autrement.</div>
+        </div>
+        <div class="stw"><span class="pill s-pri">Pris en charge</span></div>
+        <div class="own">Moi — entretien, point 4</div>
+      </div>
+
+      <div class="row">
+        <div class="id">B5</div>
+        <div>
+          <div class="r">Instruire un parc étranger demande une matinée sur place</div>
+          <div class="cq">Posé puis retiré le 03/09, rétabli le soir. L'analyse d'un processeur inconnu coûte une heure — mais elle suppose un fichier de configuration et des photos de plaques qu'il faut aller chercher : le brief d'intervention à la Mosson est une matinée entière dont la mission première est « déterminer la technologie et le constructeur ». <b>Ce n'est pas le temps d'un développeur, c'est le mien et celui d'un technicien</b> — donc le nombre d'affaires instruites par saison est borné par des déplacements, pas par de l'ingénierie.</div>
+        </div>
+        <div class="stw"><span class="pill s-acc">Accepté</span></div>
+        <div class="own">Moi — tant qu'il y a peu d'affaires</div>
+      </div>
+    </div>
+
+    <p class="fam">C · Commercial et transition depuis MadXP</p>
+    <div class="reg">
+      <div class="rhead">
+        <div>Réf</div><div>Risque et conséquence concrète</div><div>État proposé</div><div>Porteur</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C1</div>
+        <div>
+          <div class="r">Douze promesses ne peuvent plus être tenues</div>
+          <div class="cq">Si elles continuent d'être vendues, le client le découvre à l'usage et l'affaire devient un litige. Le risque tombe dès l'instant où je cesse de les prononcer — c'est pourquoi il est atténué et non résolu : les promesses déjà faites restent à traiter.</div>
+        </div>
+        <div class="stw"><span class="pill s-att">Atténué</span></div>
+        <div class="own">Moi — matrice de parité</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C2</div>
+        <div>
+          <div class="r">Quatorze promesses n'ont aucune date d'engagement</div>
+          <div class="cq">Sans tranche de délai, elles se comportent exactement comme les douze précédentes. <b>Vingt-six lignes sur quarante-huit</b> deviendraient alors invendables.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Dépend de l'entretien</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C3</div>
+        <div>
+          <div class="r">Le modèle de double régie publicitaire n'existe pas</div>
+          <div class="cq">L'argument qui fait rester un club — un revenu réseau qui rembourse une partie de l'abonnement — disparaît. Rien à construire à court terme : la seule réponse est de le dire aux clients avant qu'ils ne le constatent.</div>
+        </div>
+        <div class="stw"><span class="pill s-acc">Accepté</span></div>
+        <div class="own">Moi — discours commercial</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C4</div>
+        <div>
+          <div class="r">Hébergement et conservation des données inconnus</div>
+          <div class="cq">Éliminatoire face à une collectivité ou à un club structuré, qui posera la question au premier rendez-vous. <b>Se lève probablement en un courriel</b> — d'où l'absurdité de le laisser non classé.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Personne</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C5</div>
+        <div>
+          <div class="r">Le matériel sous un club amateur n'est pas tranché</div>
+          <div class="cq">Impossible d'annoncer un tarif, un délai d'installation ou une promesse d'autonomie. Bloque l'intégralité du discours commercial, donc toute signature.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Décision à prendre</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C6</div>
+        <div>
+          <div class="r">Les clubs MadXP équipés jouent cette saison sans décision sur leur sort</div>
+          <div class="cq">Migration, coexistence ou fin de vie accompagnée : tant que rien n'est tranché, la situation est subie et chaque semaine réduit les options.</div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Décision à prendre</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C7</div>
+        <div>
+          <div class="r">Le chiffre du parc se contredit d'un document à l'autre</div>
+          <div class="cq">Trois clubs en production ici, cinquante boîtiers là. Un chiffre invérifiable est le plus facile à démonter par un prospect, et il emporte la crédibilité du reste.</div>
+        </div>
+        <div class="stw"><span class="pill s-att">Atténué</span></div>
+        <div class="own">Moi — je ne l'utilise plus</div>
+      </div>
+
+      <div class="row">
+        <div class="id">C8</div>
+        <div>
+          <div class="r">Le logiciel n'a aucun client payant installé</div>
+          <div class="cq">Ajouté le 03/09. Le référentiel des stades donne trois sites : Guingamp et le Rhénus en <b>démo</b>, Montpellier en <b>prospect</b>. La qualité est démontrée — un match de Ligue 2 diffusé de bout en bout sur quatre surfaces plus la sortie son — mais c'est une référence, pas un parc. Un prospect qui demande « qui l'utilise déjà ? » doit obtenir la vraie réponse, sinon il la trouvera seul. <b>Réserve : ce référentiel ne couvre que le logiciel ; le parc matériel vit dans une base que je n'ai pas pu ouvrir.</b></div>
+        </div>
+        <div class="stw"><span class="pill s-non">Non classé</span></div>
+        <div class="own">Philippe — à cadrer</div>
+      </div>
+    </div>
+
+    <p class="fam">D · Mon propre rôle</p>
+    <div class="reg">
+      <div class="rhead">
+        <div>Réf</div><div>Risque et conséquence concrète</div><div>État proposé</div><div>Porteur</div>
+      </div>
+
+      <div class="row">
+        <div class="id">D1</div>
+        <div>
+          <div class="r">Un mandat en lecture seule peut rendre le rôle inopérant</div>
+          <div class="cq">Si mes propositions ne se traduisent pas dans l'outil, je produis des documents que personne n'applique — et je suis le dernier à m'en apercevoir. J'accepte le risque, avec un signal de sortie défini : <b>si rien n'a bougé une semaine après l'entretien, je le dis le premier.</b></div>
+        </div>
+        <div class="stw"><span class="pill s-acc">Accepté</span></div>
+        <div class="own">Moi</div>
+      </div>
+
+      <div class="row">
+        <div class="id">D2</div>
+        <div>
+          <div class="r">Je deviens moi-même le goulot que je dénonce</div>
+          <div class="cq">Ajouté le 03/09. C'est moi qui ferai les implémentations logicielles sur site. Tant que le produit n'est pas empaqueté, chaque nouveau site me coûte des journées — et j'aurai simplement déplacé un plafond d'ingénierie vers un plafond de personne, en croyant l'avoir levé. <b>Le signal d'alerte est précis : le jour où je refuse un rendez-vous prospect faute de temps, ce risque s'est réalisé.</b></div>
+        </div>
+        <div class="stw"><span class="pill s-acc">Accepté</span></div>
+        <div class="own">Moi — jusqu'à l'empaquetage</div>
+      </div>
+
+      <div class="row">
+        <div class="id">D3</div>
+        <div>
+          <div class="r">J'analyse le carnet de tickets plutôt que le métier</div>
+          <div class="cq">Ajouté le 03/09, après l'avoir constaté sur moi-même. Sept des huit documents de ce dossier ont été bâtis depuis Linear seul, et il a suffi de regarder ce que B2B Alive fabrique depuis 2013 pour que le goulot principal change de place. <b>Un carnet de tickets dit ce que l'équipe fait ; il ne dit pas ce que la maison vend.</b> Atténuation : toute conclusion structurante doit citer une source hors de l'outil.</div>
+        </div>
+        <div class="stw"><span class="pill s-att">Atténué</span></div>
+        <div class="own">Moi — règle de méthode</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ESCALADE ============ -->
+  <section>
+    <h2>Les trois que je remonterais d'abord</h2>
+    <p class="h2-note">Choisis pour leur rapport entre le coût de traitement et l'ampleur du dégât</p>
+
+    <div class="panel">
+      <p class="ref">A1 · L'INTÉGRATION CONTINUE</p>
+      <h4>Elle ne coûte pas cher à réparer et elle multiplie tout le reste</h4>
+      <p>
+        Tant qu'aucun contrôle ne se déclenche, chaque autre risque technique devient
+        plus probable et se découvre plus tard — c'est-à-dire en salle ou au stade.
+        C'est le seul risque du registre dont le traitement <strong>réduit
+        mécaniquement la probabilité de six autres</strong>. À traiter en premier
+        même s'il n'est pas le plus spectaculaire.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">C4 · HÉBERGEMENT ET DONNÉES</p>
+      <h4>Éliminatoire, et probablement réglé en un courriel</h4>
+      <p>
+        Un club structuré ou une collectivité pose la question au premier rendez-vous.
+        Ne pas savoir y répondre disqualifie, quelle que soit la qualité du produit.
+        C'est le meilleur rapport du registre entre l'effort — poser la question à
+        Florent — et le dégât évité.
+      </p>
+    </div>
+
+    <div class="panel">
+      <p class="ref">C5 · LE MATÉRIEL</p>
+      <h4>Il bloque tout ce que je suis censé faire</h4>
+      <p>
+        Sans décision sur ce qui se branche derrière l'écran d'un club amateur, je ne
+        peux annoncer ni prix, ni délai, ni autonomie. Ce n'est pas un risque
+        technique mais un risque d'inaction : chaque semaine sans trancher est une
+        semaine sans prospection possible.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ USAGE ============ -->
+  <section>
+    <h2>Comment ce registre se tient</h2>
+    <p class="h2-note">Sinon il rejoindra les registres qui décorent</p>
+
+    <ul class="plain">
+      <li><strong>Une relecture par mois, dix minutes.</strong> On ne rouvre pas la discussion sur chaque ligne : on vérifie seulement que chacune est toujours dans le bon état, et on traite celles qui ont glissé vers « non classé ».</li>
+      <li><strong>Un risque nouveau entre avec un état, jamais sans.</strong> C'est la règle qui empêche le registre de gonfler : si personne ne sait quoi en faire au moment où on l'écrit, c'est qu'il n'est pas encore assez clair pour être inscrit.</li>
+      <li><strong>« Accepté » se prononce à voix haute.</strong> Les cinq acceptations de ce registre — la dépendance à une seule personne, l'absence de régie réseau, mon propre mandat — ne valent que si elles sont dites, et redites au moment où elles se réalisent.</li>
+      <li><strong>Zéro « non classé » est l'objectif, pas zéro risque.</strong> Un registre sain peut contenir vingt risques ; il ne peut pas en contenir un seul dont personne ne sait quoi faire.</li>
+    </ul>
+
+    <h3>Mes réserves</h3>
+    <ul class="plain">
+      <li><span class="cf cf-est">ESTIMÉ</span> Les états que je propose sont les miens. Trois d'entre eux — les acceptations — engagent l'entreprise et ne m'appartiennent pas : elles doivent être confirmées ou refusées en réunion, pas héritées de ce document.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> Je n'ai coté ni probabilité ni impact chiffré. À deux développeurs, une cotation à trois décimales serait une fausse précision ; l'ordre de traitement se lit mieux dans les trois escalades ci-dessus.</li>
+      <li><span class="cf cf-no">INCONNU</span> Les risques contractuels et financiers — trésorerie, engagements signés avec l'EAG et Piraths, clauses de la transition MadXP. Je n'y ai aucun accès et ils manquent probablement à ce registre.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> Les faits techniques et organisationnels s'appuient sur des tickets identifiés, relevés dans Linear le 02/09/2026, et sur le code et les décisions d'architecture de MadXP.</li>
+      <li><span class="cf cf-ok">VÉRIFIÉ</span> <strong>B5 a été posé, retiré, puis rétabli dans la journée du 03/09.</strong> Inscrit le matin comme « le nombre d'affaires est borné par le temps du lead dev », retiré l'après-midi sur la réponse « une heure », rétabli le soir sous une autre forme : l'heure d'analyse suppose une matinée sur place pour aller chercher le fichier de configuration. <b>Trois états en un jour, sur la même question.</b> Je le laisse visible plutôt que de présenter la version finale comme si elle était sortie juste du premier coup — c'est le comportement attendu d'un registre.</li>
+      <li><span class="cf cf-est">ESTIMÉ</span> <strong>D2 et D3 ne viennent pas de Linear.</strong> Ils sont nés du recul pris sur le métier d'origine de B2B Alive — la fabrication de LED depuis 2013 — et non d'un ticket. Ils restent les moins étayés du registre, et le sort de B5 montre qu'ils sont réfutables de la même manière : par une question.</li>
+    </ul>
+
+    <footer>
+      Répartition — <b>1</b> résolu · <b>4</b> pris en charge · <b>3</b> atténués · <b>5</b> acceptés · <b>12</b> non classés. Six risques ajoutés le 03/09 — trois du recul sur le métier, trois de la documentation d'exploitation.<br>
+      Sources — Linear <b>b2b-alive</b> et <b>Notion B2B-Broadcast</b> : modes de rendu du player, référentiel des stades, récaps de match, brief d'intervention.<br>
+      Quatre pièces empruntées à SAFe, désormais complètes — calcul WSJF, distinction socle et produit, cartes des flux de valeur, registre à quatre états.<br>
+      Ce qui reste écarté du cadre — planification d'incrément, points d'équipe et vélocité, hiérarchie à trois niveaux, miroir dans un second outil.
+    </footer>
+  </section>
+
+</div>
