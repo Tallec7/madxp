@@ -1,292 +1,706 @@
 <title>Comment cette équipe devrait travailler</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
 <style>
   :root {
-    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
-    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
-    --rule: #D6DCE3; --rule-strong: #A9B4BF;
-    --accent: #A8620E; --accent-wash: #F5E7D4;
-    --live: #BC332E; --live-wash: #F8E1E0;
-    --ready: #1F6A4B; --ready-wash: #DCEDE4;
-    --gain: #1A6272; --gain-wash: #DCEBEF;
-    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
-    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --gain: #1a6272;
+    --gain-wash: #dcebef;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
-      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
-      --rule: #262F39; --rule-strong: #3B4753;
-      --accent: #E3A24A; --accent-wash: #33281A;
-      --live: #E4655E; --live-wash: #351E1D;
-      --ready: #52AC80; --ready-wash: #17301F;
-      --gain: #6BBACB; --gain-wash: #16292F;
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --gain: #6bbacb;
+      --gain-wash: #16292f;
     }
   }
-  :root[data-theme="dark"] {
-    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
-    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
-    --rule: #262F39; --rule-strong: #3B4753;
-    --accent: #E3A24A; --accent-wash: #33281A;
-    --live: #E4655E; --live-wash: #351E1D;
-    --ready: #52AC80; --ready-wash: #17301F;
-    --gain: #6BBACB; --gain-wash: #16292F;
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --gain: #6bbacb;
+    --gain-wash: #16292f;
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
   body {
-    background: var(--ground); color: var(--ink); font-family: var(--f-body);
-    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
-  .sheet { max-width: 880px; margin: 0 auto; padding: 0 26px 90px; }
+  .sheet {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 26px 90px;
+  }
 
-  .masthead { padding: 52px 0 24px; border-bottom: 3px double var(--rule-strong); margin-bottom: 36px; }
+  .masthead {
+    padding: 52px 0 24px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 36px;
+  }
   .eyebrow {
-    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
-    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 16px;
   }
   h1 {
-    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 4.8vw, 43px);
-    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 18px;
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 4.8vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 18px;
   }
-  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 26px; }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 64ch;
+    margin: 0 0 26px;
+  }
   .slugline {
-    display: flex; flex-wrap: wrap; gap: 0 32px;
-    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 32px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
   }
-  .slugline b { font-weight: 500; color: var(--ink); }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
 
   .partnum {
-    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
-    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent);
-    padding-top: 16px; border-top: 1px solid var(--rule-strong); margin: 0 0 8px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+    margin: 0 0 8px;
   }
   h2 {
-    font-family: var(--f-display); font-weight: 600; font-size: 27px;
-    letter-spacing: -0.018em; line-height: 1.18; margin: 0 0 8px; text-wrap: balance;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.018em;
+    line-height: 1.18;
+    margin: 0 0 8px;
+    text-wrap: balance;
   }
   .h2-note {
-    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--muted); margin: 0 0 24px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 24px;
   }
-  h3 { font-family: var(--f-display); font-weight: 600; font-size: 18px; margin: 34px 0 10px; letter-spacing: -0.008em; }
-  h4 { font-family: var(--f-display); font-weight: 600; font-size: 16px; margin: 24px 0 8px; }
-  p { margin: 0 0 16px; max-width: 72ch; }
-  .mono { font-family: var(--f-mono); font-size: 0.87em; }
-  section { margin-bottom: 56px; }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18px;
+    margin: 34px 0 10px;
+    letter-spacing: -0.008em;
+  }
+  h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16px;
+    margin: 24px 0 8px;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 72ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+  section {
+    margin-bottom: 56px;
+  }
 
   .lede {
-    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
-    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
-    padding: 2px 0 2px 18px; margin: 0 0 26px; max-width: 62ch;
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 26px;
+    max-width: 62ch;
   }
 
   /* ordre de marche */
-  .now { border: 1px solid var(--rule); border-bottom: none; margin-bottom: 20px; }
+  .now {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    margin-bottom: 20px;
+  }
   .now-h {
-    background: var(--surface-2); padding: 11px 18px;
+    background: var(--surface-2);
+    padding: 11px 18px;
     border-bottom: 1px solid var(--rule-strong);
-    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .now-h b { color: var(--ink); font-weight: 500; }
+  .now-h b {
+    color: var(--ink);
+    font-weight: 500;
+  }
   .act2 {
-    background: var(--surface); border-bottom: 1px solid var(--rule); padding: 14px 18px;
-    display: grid; grid-template-columns: 26px 1fr 96px; gap: 14px; align-items: baseline;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 26px 1fr 96px;
+    gap: 14px;
+    align-items: baseline;
   }
-  .act2 .k { font-family: var(--f-mono); font-size: 12px; font-weight: 500; color: var(--accent); }
-  .act2 .w { font-size: 15.5px; line-height: 1.45; color: var(--ink-soft); }
-  .act2 .w b { font-family: var(--f-display); font-weight: 600; color: var(--ink); }
-  .act2 .dur { font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); text-align: right; }
+  .act2 .k {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .act2 .w {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .act2 .w b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .act2 .dur {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    text-align: right;
+  }
   @media (max-width: 620px) {
-    .act2 { grid-template-columns: 26px 1fr; }
-    .act2 .dur { grid-column: 2; text-align: left; }
+    .act2 {
+      grid-template-columns: 26px 1fr;
+    }
+    .act2 .dur {
+      grid-column: 2;
+      text-align: left;
+    }
   }
 
   /* modèle de ticket */
   pre.tpl {
-    font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7;
-    background: var(--surface); border: 1px solid var(--rule-strong);
-    border-radius: 2px; padding: 20px 22px; overflow-x: auto;
-    color: var(--ink); white-space: pre-wrap; margin: 0 0 18px;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: 2px;
+    padding: 20px 22px;
+    overflow-x: auto;
+    color: var(--ink);
+    white-space: pre-wrap;
+    margin: 0 0 18px;
   }
   .tplname {
-    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
     margin: 0 0 8px;
   }
-  .tplname b { color: var(--ink); font-weight: 500; }
+  .tplname b {
+    color: var(--ink);
+    font-weight: 500;
+  }
 
   /* fiche étiquettes */
-  .labgrp { border: 1px solid var(--rule); border-bottom: none; margin: 0 0 18px; }
-  .labgrp-h {
-    background: var(--surface-2); padding: 11px 18px;
-    border-bottom: 1px solid var(--rule-strong);
-    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+  .labgrp {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    margin: 0 0 18px;
   }
-  .labgrp-h b { color: var(--ink); font-weight: 500; }
+  .labgrp-h {
+    background: var(--surface-2);
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--rule-strong);
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .labgrp-h b {
+    color: var(--ink);
+    font-weight: 500;
+  }
   .labrow {
-    background: var(--surface); border-bottom: 1px solid var(--rule); padding: 12px 18px;
-    display: grid; grid-template-columns: 176px 1fr 86px; gap: 16px; align-items: baseline;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: 176px 1fr 86px;
+    gap: 16px;
+    align-items: baseline;
   }
   .labrow .nm {
-    font-family: var(--f-display); font-weight: 600; font-size: 15px;
-    display: flex; align-items: center; gap: 8px;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
-  .labrow .ds { font-size: 14.5px; line-height: 1.45; color: var(--ink-soft); }
-  .labrow .ds em { color: var(--muted); font-style: normal; }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    flex: none;
+  }
+  .labrow .ds {
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+  .labrow .ds em {
+    color: var(--muted);
+    font-style: normal;
+  }
   .labrow .st {
-    font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.07em;
-    text-transform: uppercase; text-align: right; color: var(--muted);
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    text-align: right;
+    color: var(--muted);
   }
-  .labrow .st.new { color: var(--accent); font-weight: 500; }
+  .labrow .st.new {
+    color: var(--accent);
+    font-weight: 500;
+  }
   @media (max-width: 700px) {
-    .labrow { grid-template-columns: 1fr; gap: 5px; }
-    .labrow .st { text-align: left; }
+    .labrow {
+      grid-template-columns: 1fr;
+      gap: 5px;
+    }
+    .labrow .st {
+      text-align: left;
+    }
   }
 
   /* vocabulaire */
-  .vocab { border: 1px solid var(--rule); border-bottom: none; margin: 0 0 20px; }
+  .vocab {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    margin: 0 0 20px;
+  }
   .vc {
-    background: var(--surface); border-bottom: 1px solid var(--rule); padding: 12px 18px;
-    display: grid; grid-template-columns: 150px 150px 1fr; gap: 18px; align-items: baseline;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: 150px 150px 1fr;
+    gap: 18px;
+    align-items: baseline;
   }
   .vc.h {
-    background: var(--surface-2); border-bottom: 1px solid var(--rule-strong);
-    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule-strong);
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .vc .a { font-size: 15px; color: var(--muted); }
-  .vc .b { font-family: var(--f-display); font-weight: 600; font-size: 15px; }
-  .vc .c { font-size: 15px; color: var(--ink-soft); line-height: 1.45; }
+  .vc .a {
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .vc .b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .vc .c {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
   @media (max-width: 660px) {
-    .vc { grid-template-columns: 1fr 1fr; }
-    .vc .c { grid-column: 1 / -1; }
-    .vc.h { display: none; }
+    .vc {
+      grid-template-columns: 1fr 1fr;
+    }
+    .vc .c {
+      grid-column: 1 / -1;
+    }
+    .vc.h {
+      display: none;
+    }
   }
 
   .saidit {
-    background: var(--surface); border: 1px solid var(--rule);
-    border-left: 3px solid var(--ready); padding: 16px 20px; margin: 0 0 22px;
-    font-family: var(--f-display); font-weight: 500; font-size: 17px; line-height: 1.5;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ready);
+    padding: 16px 20px;
+    margin: 0 0 22px;
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 17px;
+    line-height: 1.5;
     max-width: 66ch;
   }
   .saidit span {
-    display: block; font-family: var(--f-mono); font-size: 10px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    display: block;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
     margin-bottom: 7px;
   }
 
   /* era timeline */
-  .eras { border: 1px solid var(--rule); border-bottom: none; margin: 0 0 22px; }
-  .era {
-    display: grid; grid-template-columns: 118px 1fr 96px; gap: 18px;
-    padding: 14px 18px; border-bottom: 1px solid var(--rule);
-    background: var(--surface); align-items: baseline;
+  .eras {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    margin: 0 0 22px;
   }
-  .era .yr { font-family: var(--f-mono); font-size: 12px; font-weight: 500; color: var(--muted); }
-  .era .what { font-size: 15.5px; line-height: 1.45; }
-  .era .what b { font-family: var(--f-display); font-weight: 600; }
-  .era .verdict { text-align: right; }
+  .era {
+    display: grid;
+    grid-template-columns: 118px 1fr 96px;
+    gap: 18px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface);
+    align-items: baseline;
+  }
+  .era .yr {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .era .what {
+    font-size: 15.5px;
+    line-height: 1.45;
+  }
+  .era .what b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .era .verdict {
+    text-align: right;
+  }
   @media (max-width: 700px) {
-    .era { grid-template-columns: 1fr; gap: 6px; }
-    .era .verdict { text-align: left; }
+    .era {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .era .verdict {
+      text-align: left;
+    }
   }
 
   .tag {
-    display: inline-block; font-family: var(--f-mono); font-size: 9.5px; font-weight: 500;
-    letter-spacing: 0.07em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; white-space: nowrap;
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
   }
-  .k-keep { background: var(--ready-wash); color: var(--ready); }
-  .k-drop { background: var(--live-wash); color: var(--live); }
-  .k-part { background: var(--accent-wash); color: var(--accent); }
+  .k-keep {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .k-drop {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+  .k-part {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
 
   /* settings list */
-  .settings { counter-reset: st; }
+  .settings {
+    counter-reset: st;
+  }
   .set {
-    display: grid; grid-template-columns: 34px 1fr; gap: 16px;
-    padding: 17px 0; border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 16px;
+    padding: 17px 0;
+    border-bottom: 1px solid var(--rule);
   }
-  .set:first-child { border-top: 1px solid var(--rule); }
+  .set:first-child {
+    border-top: 1px solid var(--rule);
+  }
   .set::before {
-    counter-increment: st; content: counter(st, decimal-leading-zero);
-    font-family: var(--f-mono); font-size: 12.5px; font-weight: 500;
-    color: var(--accent); padding-top: 3px;
+    counter-increment: st;
+    content: counter(st, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+    padding-top: 3px;
   }
-  .set h4 { margin: 0 0 5px; font-size: 16.5px; }
-  .set p { margin: 0 0 8px; font-size: 15.5px; line-height: 1.5; color: var(--ink-soft); }
-  .set p:last-child { margin-bottom: 0; }
+  .set h4 {
+    margin: 0 0 5px;
+    font-size: 16.5px;
+  }
+  .set p {
+    margin: 0 0 8px;
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .set p:last-child {
+    margin-bottom: 0;
+  }
   .set .fix {
-    display: inline-block; font-family: var(--f-mono); font-size: 11.5px;
-    background: var(--surface-2); border-left: 2px solid var(--rule-strong);
-    padding: 7px 11px; line-height: 1.45; color: var(--ink); margin-top: 2px;
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    background: var(--surface-2);
+    border-left: 2px solid var(--rule-strong);
+    padding: 7px 11px;
+    line-height: 1.45;
+    color: var(--ink);
+    margin-top: 2px;
   }
 
   /* agenda */
-  .agenda { border: 1px solid var(--rule); border-bottom: none; }
-  .seg { border-bottom: 1px solid var(--rule); background: var(--surface); padding: 16px 18px; }
+  .agenda {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+  }
+  .seg {
+    border-bottom: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 16px 18px;
+  }
   .seg-top {
-    display: grid; grid-template-columns: 52px 1fr; gap: 16px; align-items: baseline; margin-bottom: 9px;
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 16px;
+    align-items: baseline;
+    margin-bottom: 9px;
   }
   .seg .min {
-    font-family: var(--f-mono); font-size: 13px; font-weight: 500;
-    color: var(--accent); font-variant-numeric: tabular-nums;
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
   }
-  .seg .ttl { font-family: var(--f-display); font-weight: 600; font-size: 16.5px; line-height: 1.3; }
-  .seg-body { padding-left: 68px; }
-  @media (max-width: 620px) { .seg-body { padding-left: 0; } }
-  .seg-body dl { margin: 0; display: grid; gap: 7px; }
+  .seg .ttl {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16.5px;
+    line-height: 1.3;
+  }
+  .seg-body {
+    padding-left: 68px;
+  }
+  @media (max-width: 620px) {
+    .seg-body {
+      padding-left: 0;
+    }
+  }
+  .seg-body dl {
+    margin: 0;
+    display: grid;
+    gap: 7px;
+  }
   .seg-body dt {
-    font-family: var(--f-mono); font-size: 9.5px; font-weight: 500;
-    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .seg-body dd { margin: 0 0 4px; font-size: 15px; line-height: 1.5; color: var(--ink-soft); }
-  .seg-body dd.q { color: var(--ink); font-style: italic; }
+  .seg-body dd {
+    margin: 0 0 4px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .seg-body dd.q {
+    color: var(--ink);
+    font-style: italic;
+  }
 
   .panel {
-    background: var(--surface); border: 1px solid var(--rule);
-    border-top: 3px solid var(--accent); padding: 20px 22px; margin: 0 0 16px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    margin: 0 0 16px;
   }
-  .panel.warn { border-top-color: var(--live); }
+  .panel.warn {
+    border-top-color: var(--live);
+  }
   .panel .ref {
-    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
-    letter-spacing: 0.09em; color: var(--accent); margin: 0 0 6px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 6px;
   }
-  .panel.warn .ref { color: var(--live); }
-  .panel h4 { margin: 0 0 9px; font-size: 17px; }
-  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 76ch; }
-  .panel p:last-child { margin-bottom: 0; }
+  .panel.warn .ref {
+    color: var(--live);
+  }
+  .panel h4 {
+    margin: 0 0 9px;
+    font-size: 17px;
+  }
+  .panel p {
+    margin: 0 0 10px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 76ch;
+  }
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
 
-  .cf { font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
-    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap; }
-  .cf-ok { background: var(--ready-wash); color: var(--ready); }
-  .cf-est { background: var(--accent-wash); color: var(--accent); }
-  ul.plain { margin: 0 0 16px; padding-left: 19px; }
-  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; }
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
 
   footer {
-    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
-    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--muted);
   }
-  footer b { color: var(--ink); font-weight: 500; }
+  footer b {
+    color: var(--ink);
+    font-weight: 500;
+  }
 
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 </style>
 
 <div class="sheet">
-
   <header class="masthead">
     <p class="eyebrow">Recommandation · méthode, outillage, arbitrage</p>
     <h1>Comment cette équipe devrait travailler</h1>
     <p class="standfirst">
-      Onze actions d'abord, le raisonnement ensuite. Deux développeurs, un calendrier
-      sportif qu'on ne choisit pas, un backlog de quatre cent douze tickets — et un
-      entretien de quatre-vingt-dix minutes qui tranche ce qui reste ouvert.
+      Onze actions d'abord, le raisonnement ensuite. Deux développeurs, un calendrier sportif qu'on
+      ne choisit pas, un backlog de quatre cent douze tickets — et un entretien de quatre-vingt-dix
+      minutes qui tranche ce qui reste ouvert.
     </p>
     <div class="slugline">
       <span>Rédigé le <b>02/09/2026</b></span>
@@ -299,29 +713,44 @@
   <section>
     <p class="partnum">Partie 0</p>
     <h2>Quoi faire, dans quel ordre, et par qui</h2>
-    <p class="h2-note">Onze actions · les trois parties qui suivent ne servent qu'à les justifier</p>
+    <p class="h2-note">
+      Onze actions · les trois parties qui suivent ne servent qu'à les justifier
+    </p>
 
     <p>
-      Les trois parties suivantes expliquent <em>pourquoi</em>. Celle-ci dit
-      <em>quoi</em>. Si tu ne lis qu'une page de ce document, que ce soit celle-ci —
-      le reste est de la matière pour répondre aux objections, pas pour agir.
+      Les trois parties suivantes expliquent <em>pourquoi</em>. Celle-ci dit <em>quoi</em>. Si tu ne
+      lis qu'une page de ce document, que ce soit celle-ci — le reste est de la matière pour
+      répondre aux objections, pas pour agir.
     </p>
 
     <div class="now">
       <div class="now-h">Cette semaine · <b>toi seul, sans autorisation de personne</b></div>
       <div class="act2">
         <span class="k">01</span>
-        <span class="w"><b>Débloquer Amine.</b> Poser cinq numéros de tickets à Florent — <span class="mono">BRO-71</span>, <span class="mono">38</span>, <span class="mono">37</span>, <span class="mono">229</span>, <span class="mono">73</span> — et lui demander de les lui assigner. Tu ne crées rien, tu nommes ce qui existe déjà.</span>
+        <span class="w"
+          ><b>Débloquer Amine.</b> Poser cinq numéros de tickets à Florent —
+          <span class="mono">BRO-71</span>, <span class="mono">38</span>,
+          <span class="mono">37</span>, <span class="mono">229</span>,
+          <span class="mono">73</span> — et lui demander de les lui assigner. Tu ne crées rien, tu
+          nommes ce qui existe déjà.</span
+        >
         <span class="dur">20 min</span>
       </div>
       <div class="act2">
         <span class="k">02</span>
-        <span class="w"><b>Caler l'entretien.</b> Envoyer les trois documents de lecture préalable et bloquer quatre-vingt-dix minutes dans l'agenda.</span>
+        <span class="w"
+          ><b>Caler l'entretien.</b> Envoyer les trois documents de lecture préalable et bloquer
+          quatre-vingt-dix minutes dans l'agenda.</span
+        >
         <span class="dur">10 min</span>
       </div>
       <div class="act2">
         <span class="k">03</span>
-        <span class="w"><b>Poser les deux questions qui ne dépendent de personne d'autre.</b> L'hébergement et la conservation des données chez B2B Alive, et l'usage réel de la taxonomie d'étiquettes. Par écrit, pour avoir la réponse par écrit.</span>
+        <span class="w"
+          ><b>Poser les deux questions qui ne dépendent de personne d'autre.</b> L'hébergement et la
+          conservation des données chez B2B Alive, et l'usage réel de la taxonomie d'étiquettes. Par
+          écrit, pour avoir la réponse par écrit.</span
+        >
         <span class="dur">5 min</span>
       </div>
       <div class="act2">
@@ -335,17 +764,26 @@
       <div class="now-h">La semaine suivante · <b>l'entretien et sa trace</b></div>
       <div class="act2">
         <span class="k">05</span>
-        <span class="w"><b>Animer les quatre-vingt-dix minutes</b> avec la trame de la partie 3, sans rien présenter — les documents ont été lus avant.</span>
+        <span class="w"
+          ><b>Animer les quatre-vingt-dix minutes</b> avec la trame de la partie 3, sans rien
+          présenter — les documents ont été lus avant.</span
+        >
         <span class="dur">90 min</span>
       </div>
       <div class="act2">
         <span class="k">06</span>
-        <span class="w"><b>Remplir le support de notation à deux</b>, après avoir appuyé sur « Vider ». C'est le passage qui produit les cinq paris.</span>
+        <span class="w"
+          ><b>Remplir le support de notation à deux</b>, après avoir appuyé sur « Vider ». C'est le
+          passage qui produit les cinq paris.</span
+        >
         <span class="dur">inclus</span>
       </div>
       <div class="act2">
         <span class="k">07</span>
-        <span class="w"><b>Envoyer le compte rendu le soir même.</b> Sept décisions, trois chiffres, aucun relevé de discussion.</span>
+        <span class="w"
+          ><b>Envoyer le compte rendu le soir même.</b> Sept décisions, trois chiffres, aucun relevé
+          de discussion.</span
+        >
         <span class="dur">15 min</span>
       </div>
     </div>
@@ -354,22 +792,35 @@
       <div class="now-h">Ensuite · <b>quatre rendez-vous récurrents, et rien d'autre</b></div>
       <div class="act2">
         <span class="k">08</span>
-        <span class="w"><b>Un contact utilisateur par semaine.</b> Un opérateur, un client, un prospect — même court. C'est la seule chose de tout ce document qui ne dépend que de toi et ne demande l'accord de personne.</span>
+        <span class="w"
+          ><b>Un contact utilisateur par semaine.</b> Un opérateur, un client, un prospect — même
+          court. C'est la seule chose de tout ce document qui ne dépend que de toi et ne demande
+          l'accord de personne.</span
+        >
         <span class="dur">30 min/sem</span>
       </div>
       <div class="act2">
         <span class="k">09</span>
-        <span class="w"><b>Un point de trente minutes au lendemain de chaque match.</b> Pas un rituel hebdomadaire fixe : la cadence suit le calendrier sportif.</span>
+        <span class="w"
+          ><b>Un point de trente minutes au lendemain de chaque match.</b> Pas un rituel
+          hebdomadaire fixe : la cadence suit le calendrier sportif.</span
+        >
         <span class="dur">30 min</span>
       </div>
       <div class="act2">
         <span class="k">10</span>
-        <span class="w"><b>Une relecture du registre de risques par mois.</b> On ne rediscute pas chaque ligne : on traite celles qui ont glissé vers « non classé ».</span>
+        <span class="w"
+          ><b>Une relecture du registre de risques par mois.</b> On ne rediscute pas chaque ligne :
+          on traite celles qui ont glissé vers « non classé ».</span
+        >
         <span class="dur">10 min/mois</span>
       </div>
       <div class="act2">
         <span class="k">11</span>
-        <span class="w"><b>Une notation WSJF par trimestre.</b> Plus souvent, elle mesurerait l'humeur plutôt que la valeur.</span>
+        <span class="w"
+          ><b>Une notation WSJF par trimestre.</b> Plus souvent, elle mesurerait l'humeur plutôt que
+          la valeur.</span
+        >
         <span class="dur">60 min/trim.</span>
       </div>
     </div>
@@ -378,17 +829,16 @@
       <p class="ref">CE QUI N'EST PAS À TOI</p>
       <h4>Les douze réglages Linear ne t'appartiennent pas — et c'est normal</h4>
       <p>
-        Sous mandat de lecture seule, <strong>aucun des douze n'est de ton fait</strong>.
-        Ils se font en une heure, à deux, devant le même écran : tu proposes, il clique.
-        Ce n'est pas une limite du rôle, c'est ce qui le rend acceptable au départ.
+        Sous mandat de lecture seule, <strong>aucun des douze n'est de ton fait</strong>. Ils se
+        font en une heure, à deux, devant le même écran : tu proposes, il clique. Ce n'est pas une
+        limite du rôle, c'est ce qui le rend acceptable au départ.
       </p>
       <p>
-        Si l'heure ne se trouve pas et que tu ne dois en obtenir que trois, prends
-        ceux-là : <strong>le tri d'entrée</strong> (il agit dès le prochain match),
-        <strong>la règle « ni projet, ni propriétaire, ni sortie »</strong> (elle
-        n'est même pas un réglage, c'est une phrase), et <strong>la vue « En vol »
-        groupée par personne</strong> (elle rend la limite d'encours visible sans que
-        personne ait à la défendre).
+        Si l'heure ne se trouve pas et que tu ne dois en obtenir que trois, prends ceux-là :
+        <strong>le tri d'entrée</strong> (il agit dès le prochain match),
+        <strong>la règle « ni projet, ni propriétaire, ni sortie »</strong> (elle n'est même pas un
+        réglage, c'est une phrase), et <strong>la vue « En vol » groupée par personne</strong> (elle
+        rend la limite d'encours visible sans que personne ait à la défendre).
       </p>
     </div>
 
@@ -396,10 +846,9 @@
       <p class="ref">CE QU'IL N'Y A RIEN À FAIRE</p>
       <h4>Les quatre règles de méthode ne s'installent pas</h4>
       <p>
-        Elles s'annoncent une fois et se tiennent ensuite en pointant une vue du doigt.
-        Rien à configurer, rien à documenter, aucun outil à ouvrir. La cadence
-        existe déjà — c'est le calendrier des matchs ; il s'agit seulement d'arrêter
-        d'en chercher une autre.
+        Elles s'annoncent une fois et se tiennent ensuite en pointant une vue du doigt. Rien à
+        configurer, rien à documenter, aucun outil à ouvrir. La cadence existe déjà — c'est le
+        calendrier des matchs ; il s'agit seulement d'arrêter d'en chercher une autre.
       </p>
     </div>
   </section>
@@ -413,125 +862,162 @@
     <h3>Le nom : Kanban</h3>
 
     <p>
-      Pas le tableau à colonnes — la méthode, au sens du pilotage par le flux. Ce que
-      le tri ci-dessous fait émerger, ce sont très exactement ses six pratiques :
-      visualiser le travail (les deux vues Linear), limiter l'encours (deux fronts par
-      personne), gérer le flux (les temps de traversée déjà calculés), rendre les
-      règles explicites (« ni projet, ni propriétaire, ni sortie »), installer des
-      boucles de retour (le point au lendemain de match) et s'améliorer ensemble
-      (l'entretien, puis la notation trimestrielle).
+      Pas le tableau à colonnes — la méthode, au sens du pilotage par le flux. Ce que le tri
+      ci-dessous fait émerger, ce sont très exactement ses six pratiques : visualiser le travail
+      (les deux vues Linear), limiter l'encours (deux fronts par personne), gérer le flux (les temps
+      de traversée déjà calculés), rendre les règles explicites (« ni projet, ni propriétaire, ni
+      sortie »), installer des boucles de retour (le point au lendemain de match) et s'améliorer
+      ensemble (l'entretien, puis la notation trimestrielle).
     </p>
 
     <p class="saidit">
       <span>La phrase à dire quand on demande « vous faites quoi ? »</span>
-      « On ne travaille pas en sprints. On limite le nombre de choses en cours, chaque
-      chose a un propriétaire, et la cadence, c'est le calendrier des matchs. »
+      « On ne travaille pas en sprints. On limite le nombre de choses en cours, chaque chose a un
+      propriétaire, et la cadence, c'est le calendrier des matchs. »
     </p>
 
     <p>
-      Deux choses s'y ajoutent qui n'en viennent pas : <strong>la découverte
-      continue</strong>, parce que Kanban ne dit rien du produit et seulement du flux ;
-      et <strong>quatre outils empruntés à SAFe</strong>, qui ne sont pas une seconde
-      méthode mais des aides à trancher, sorties au moment de décider et rangées
-      ensuite.
+      Deux choses s'y ajoutent qui n'en viennent pas : <strong>la découverte continue</strong>,
+      parce que Kanban ne dit rien du produit et seulement du flux ; et
+      <strong>quatre outils empruntés à SAFe</strong>, qui ne sont pas une seconde méthode mais des
+      aides à trancher, sorties au moment de décider et rangées ensuite.
     </p>
 
     <h3>Le vocabulaire : aucun niveau supprimé, aucun nom ajouté</h3>
 
     <p>
-      La question revient toujours : faut-il parler d'epics, de features, de stories ?
-      Non — non pas parce que ces notions seraient mauvaises, mais parce que
-      <strong>Linear porte déjà la hiérarchie complète sous d'autres noms</strong>.
-      Ajouter un second vocabulaire par-dessus, c'est garantir que personne n'utilise
-      ni l'un ni l'autre.
+      La question revient toujours : faut-il parler d'epics, de features, de stories ? Non — non pas
+      parce que ces notions seraient mauvaises, mais parce que
+      <strong>Linear porte déjà la hiérarchie complète sous d'autres noms</strong>. Ajouter un
+      second vocabulaire par-dessus, c'est garantir que personne n'utilise ni l'un ni l'autre.
     </p>
 
     <div class="vocab">
-      <div class="vc h"><div>Vocabulaire agile</div><div>Objet Linear</div><div>Chez eux, concrètement</div></div>
-      <div class="vc"><div class="a">Epic, thème</div><div class="b">Initiative</div><div class="c">Les quatre à créer — diffusion, socle temps réel, exploitation, commercialisation</div></div>
-      <div class="vc"><div class="a">Feature</div><div class="b">Projet</div><div class="c">Les dix-neuf ouverts, à ramener à cinq</div></div>
-      <div class="vc"><div class="a">Story</div><div class="b">Ticket</div><div class="c">Les quatre cent douze, dont cent vingt-huit sans propriétaire</div></div>
-      <div class="vc"><div class="a">Tâche</div><div class="b">Sous-ticket</div><div class="c">Disponible, peu utilisé — et ce n'est pas un problème</div></div>
+      <div class="vc h">
+        <div>Vocabulaire agile</div>
+        <div>Objet Linear</div>
+        <div>Chez eux, concrètement</div>
+      </div>
+      <div class="vc">
+        <div class="a">Epic, thème</div>
+        <div class="b">Initiative</div>
+        <div class="c">
+          Les quatre à créer — diffusion, socle temps réel, exploitation, commercialisation
+        </div>
+      </div>
+      <div class="vc">
+        <div class="a">Feature</div>
+        <div class="b">Projet</div>
+        <div class="c">Les dix-neuf ouverts, à ramener à cinq</div>
+      </div>
+      <div class="vc">
+        <div class="a">Story</div>
+        <div class="b">Ticket</div>
+        <div class="c">Les quatre cent douze, dont cent vingt-huit sans propriétaire</div>
+      </div>
+      <div class="vc">
+        <div class="a">Tâche</div>
+        <div class="b">Sous-ticket</div>
+        <div class="c">Disponible, peu utilisé — et ce n'est pas un problème</div>
+      </div>
     </div>
 
     <p>
-      <strong>Trois notions agiles sont gardées</strong>, parce qu'elles nomment
-      quelque chose que l'outil ne nomme pas : le <strong>socle</strong> — l'enabler de
-      SAFe, sans lequel l'empaquetage et l'observabilité perdent en silence ; le
-      <strong>spike</strong>, qu'ils utilisent déjà et définissent eux-mêmes comme
-      « exploration ou décision technique avant de coder » ; et la
-      <strong>définition de « prêt »</strong>, ancrée sur le match plutôt que sur une
-      liste abstraite — est-ce que cela survit à un samedi vingt heures.
+      <strong>Trois notions agiles sont gardées</strong>, parce qu'elles nomment quelque chose que
+      l'outil ne nomme pas : le <strong>socle</strong> — l'enabler de SAFe, sans lequel
+      l'empaquetage et l'observabilité perdent en silence ; le <strong>spike</strong>, qu'ils
+      utilisent déjà et définissent eux-mêmes comme « exploration ou décision technique avant de
+      coder » ; et la <strong>définition de « prêt »</strong>, ancrée sur le match plutôt que sur
+      une liste abstraite — est-ce que cela survit à un samedi vingt heures.
     </p>
 
     <p>
-      Ce qui n'est pas repris : les points d'équipe et la vélocité, l'historique des
-      temps de traversée disant mieux et gratuitement ; le gabarit « en tant que…, je
-      veux…, afin de… », parce que leurs tickets sont mieux écrits que ce que ce moule
-      produirait — le point de vue utilisateur se comble par les personae, pas par une
-      phrase type ; et toutes les cérémonies.
+      Ce qui n'est pas repris : les points d'équipe et la vélocité, l'historique des temps de
+      traversée disant mieux et gratuitement ; le gabarit « en tant que…, je veux…, afin de… »,
+      parce que leurs tickets sont mieux écrits que ce que ce moule produirait — le point de vue
+      utilisateur se comble par les personae, pas par une phrase type ; et toutes les cérémonies.
     </p>
 
     <p class="lede">
-      Le principe : on ne prend le vocabulaire d'une méthode qu'à l'endroit où il
-      nomme quelque chose que l'outil ne nomme pas déjà.
+      Le principe : on ne prend le vocabulaire d'une méthode qu'à l'endroit où il nomme quelque
+      chose que l'outil ne nomme pas déjà.
     </p>
 
     <div class="panel calm">
       <p class="ref">LA NUANCE QUI CONTREDIT À MOITIÉ CE QUI PRÉCÈDE</p>
       <h4>Chez MadXP, le vocabulaire d'epic a très bien fonctionné</h4>
       <p>
-        Les codes d'epic y survivent dans le document d'exigences sept mois après leur
-        création. Mais MadXP n'avait pas d'outil de suivi : ses epics vivaient dans des
-        fichiers texte qui alimentaient un tableau de bord, et le vocabulaire y
-        remplissait un vide réel. Chez B2B Alive, ce vide n'existe pas.
-        <strong>La recommandation dépend donc du contexte, pas d'une position de
-        principe</strong> — et si l'outil venait à changer, elle changerait avec lui.
+        Les codes d'epic y survivent dans le document d'exigences sept mois après leur création.
+        Mais MadXP n'avait pas d'outil de suivi : ses epics vivaient dans des fichiers texte qui
+        alimentaient un tableau de bord, et le vocabulaire y remplissait un vide réel. Chez B2B
+        Alive, ce vide n'existe pas.
+        <strong>La recommandation dépend donc du contexte, pas d'une position de principe</strong> —
+        et si l'outil venait à changer, elle changerait avec lui.
       </p>
     </div>
 
     <h3>Le tri, cadre par cadre</h3>
 
     <p class="lede">
-      Le vrai risque n'est pas de choisir la mauvaise méthode. C'est d'en installer
-      une — n'importe laquelle — dans une équipe trop petite pour l'amortir.
+      Le vrai risque n'est pas de choisir la mauvaise méthode. C'est d'en installer une — n'importe
+      laquelle — dans une équipe trop petite pour l'amortir.
     </p>
 
     <p>
-      Chaque cycle méthodologique des vingt dernières années a produit une chose
-      utile et une taxe. À cette échelle, la taxe est toujours plus lourde que
-      l'utile. Le tri est donc brutal :
+      Chaque cycle méthodologique des vingt dernières années a produit une chose utile et une taxe.
+      À cette échelle, la taxe est toujours plus lourde que l'utile. Le tri est donc brutal :
     </p>
 
     <div class="eras">
       <div class="era">
         <span class="yr">2005 → 2012</span>
-        <span class="what"><b>Scrum industrialisé.</b> Apporte la cadence et l'engagement collectif. Coûte quatre cérémonies et une unité de mesure artificielle.</span>
+        <span class="what"
+          ><b>Scrum industrialisé.</b> Apporte la cadence et l'engagement collectif. Coûte quatre
+          cérémonies et une unité de mesure artificielle.</span
+        >
         <span class="verdict"><span class="tag k-drop">Écarté</span></span>
       </div>
       <div class="era">
         <span class="yr">2010 → 2018</span>
-        <span class="what"><b>Kanban et pensée flux.</b> Limite d'encours, temps de traversée, rendre le travail visible. La seule famille dont le coût d'installation est proche de zéro.</span>
+        <span class="what"
+          ><b>Kanban et pensée flux.</b> Limite d'encours, temps de traversée, rendre le travail
+          visible. La seule famille dont le coût d'installation est proche de zéro.</span
+        >
         <span class="verdict"><span class="tag k-keep">Retenu</span></span>
       </div>
       <div class="era">
         <span class="yr">2011 → 2020</span>
-        <span class="what"><b>Mise à l'échelle (SAFe et consorts).</b> Le cadre entier répond à un problème de cinquante personnes. Mais quatre de ses pièces se démontent et fonctionnent seules — c'est exactement ce que MadXP a fait.</span>
+        <span class="what"
+          ><b>Mise à l'échelle (SAFe et consorts).</b> Le cadre entier répond à un problème de
+          cinquante personnes. Mais quatre de ses pièces se démontent et fonctionnent seules — c'est
+          exactement ce que MadXP a fait.</span
+        >
         <span class="verdict"><span class="tag k-part">Démonté</span></span>
       </div>
       <div class="era">
         <span class="yr">2015 → 2022</span>
-        <span class="what"><b>Prévision probabiliste plutôt qu'estimation.</b> On ne demande plus « combien de points » : on regarde l'historique réel des temps de traversée et on annonce une fourchette.</span>
+        <span class="what"
+          ><b>Prévision probabiliste plutôt qu'estimation.</b> On ne demande plus « combien de
+          points » : on regarde l'historique réel des temps de traversée et on annonce une
+          fourchette.</span
+        >
         <span class="verdict"><span class="tag k-keep">Retenu</span></span>
       </div>
       <div class="era">
         <span class="yr">2019 → aujourd'hui</span>
-        <span class="what"><b>Découverte continue.</b> Parler aux utilisateurs en continu, pas au moment du cadrage. C'est la moitié qui manque ici — et c'est la seule chose que je vais réellement ajouter.</span>
+        <span class="what"
+          ><b>Découverte continue.</b> Parler aux utilisateurs en continu, pas au moment du cadrage.
+          C'est la moitié qui manque ici — et c'est la seule chose que je vais réellement
+          ajouter.</span
+        >
         <span class="verdict"><span class="tag k-keep">Retenu</span></span>
       </div>
       <div class="era">
         <span class="yr">Permanent</span>
-        <span class="what"><b>Traces de décision.</b> Écrire pourquoi on a tranché, pas seulement quoi. Déjà pratiqué ici, et mieux que dans la plupart des équipes de trente.</span>
+        <span class="what"
+          ><b>Traces de décision.</b> Écrire pourquoi on a tranché, pas seulement quoi. Déjà
+          pratiqué ici, et mieux que dans la plupart des équipes de trente.</span
+        >
         <span class="verdict"><span class="tag k-part">Déjà là</span></span>
       </div>
     </div>
@@ -539,168 +1025,159 @@
     <h3>Les quatre règles que je poserais, et rien d'autre</h3>
 
     <p>
-      <strong>1. Le calendrier des matchs est la cadence.</strong> Il ne faut pas en
-      inventer une seconde. Dans le logiciel d'événement live, le train de livraison
-      est le calendrier sportif — il est externe, non négociable, et parfaitement
-      connu à l'avance. La méthode consiste à le nommer : une fenêtre de gel avant
-      les jours de match, une fenêtre de consolidation après. L'équipe l'a déjà
-      inventée toute seule sous le nom de « semaine de consolidation » ; il suffit
+      <strong>1. Le calendrier des matchs est la cadence.</strong> Il ne faut pas en inventer une
+      seconde. Dans le logiciel d'événement live, le train de livraison est le calendrier sportif —
+      il est externe, non négociable, et parfaitement connu à l'avance. La méthode consiste à le
+      nommer : une fenêtre de gel avant les jours de match, une fenêtre de consolidation après.
+      L'équipe l'a déjà inventée toute seule sous le nom de « semaine de consolidation » ; il suffit
       de la rendre récurrente au lieu de réactive.
     </p>
 
     <p>
-      <strong>2. Limiter l'encours, jamais le périmètre.</strong> À deux, c'est la
-      règle qui rend le plus de temps. Aujourd'hui le système porte environ treize
-      choses en vol pour deux personnes — quatre chantiers ouverts chez Florent, neuf
-      démarrés sans propriétaire. Le goulot n'est pas le débit, c'est le coût de
-      bascule d'un contexte à l'autre. Deux fronts par personne, et pour en ouvrir
-      un troisième il faut en fermer un.
+      <strong>2. Limiter l'encours, jamais le périmètre.</strong> À deux, c'est la règle qui rend le
+      plus de temps. Aujourd'hui le système porte environ treize choses en vol pour deux personnes —
+      quatre chantiers ouverts chez Florent, neuf démarrés sans propriétaire. Le goulot n'est pas le
+      débit, c'est le coût de bascule d'un contexte à l'autre. Deux fronts par personne, et pour en
+      ouvrir un troisième il faut en fermer un.
     </p>
 
     <p>
-      <strong>3. Un objet commencé porte exactement un nom.</strong> Pas deux, pas
-      zéro. C'est la règle qui supprime d'un coup les neuf chantiers orphelins, et
-      celle qui coûte le moins cher à respecter.
+      <strong>3. Un objet commencé porte exactement un nom.</strong> Pas deux, pas zéro. C'est la
+      règle qui supprime d'un coup les neuf chantiers orphelins, et celle qui coûte le moins cher à
+      respecter.
     </p>
 
     <p>
-      <strong>4. On prévoit, on n'estime pas.</strong> Deux cent trente tickets
-      terminés constituent un historique suffisant pour annoncer une fourchette de
-      délai à partir du temps de traversée réel — Linear le calcule déjà. Demander
-      une estimation à deux développeurs qui se connaissent, c'est acheter une
-      illusion de précision au prix d'une réunion.
+      <strong>4. On prévoit, on n'estime pas.</strong> Deux cent trente tickets terminés constituent
+      un historique suffisant pour annoncer une fourchette de délai à partir du temps de traversée
+      réel — Linear le calcule déjà. Demander une estimation à deux développeurs qui se connaissent,
+      c'est acheter une illusion de précision au prix d'une réunion.
     </p>
 
     <div class="panel warn">
       <p class="ref">LA PREUVE MAISON</p>
       <h4>Un contrat de méthode non appliqué est pire que pas de méthode</h4>
       <p>
-        Côté MadXP, une règle d'auto-mise à jour documentaire a été archivée en avril
-        après le constat suivant : sept cent trente-cinq commits concernés,
-        <strong>zéro application</strong>. Le pilotage réel se faisait ailleurs.
-        La règle n'a rien produit d'autre qu'une charge de lecture à chaque session.
+        Côté MadXP, une règle d'auto-mise à jour documentaire a été archivée en avril après le
+        constat suivant : sept cent trente-cinq commits concernés,
+        <strong>zéro application</strong>. Le pilotage réel se faisait ailleurs. La règle n'a rien
+        produit d'autre qu'une charge de lecture à chaque session.
       </p>
       <p>
-        C'est la raison pour laquelle je ne propose ici aucun rituel de plus d'une
-        demi-heure, aucun champ obligatoire supplémentaire, et aucun outil nouveau.
-        Toute règle qui n'est pas appliquée le lendemain de sa création doit être
-        retirée sans discussion.
+        C'est la raison pour laquelle je ne propose ici aucun rituel de plus d'une demi-heure, aucun
+        champ obligatoire supplémentaire, et aucun outil nouveau. Toute règle qui n'est pas
+        appliquée le lendemain de sa création doit être retirée sans discussion.
       </p>
     </div>
 
     <h3>Ce que SAFe laisse quand on le démonte — l'expérience MadXP</h3>
 
     <p>
-      J'ai écarté le cadre trop vite. MadXP est allé loin : quatorze documents,
-      quatorze epics chiffrés en WSJF, deux flux de valeur cartographiés, un registre
-      de risques, et jusqu'à trois analyseurs en TypeScript avec leurs tables en base
-      pour alimenter un tableau de bord. Ce n'était pas un essai timide, et il y a de
-      quoi apprendre.
+      J'ai écarté le cadre trop vite. MadXP est allé loin : quatorze documents, quatorze epics
+      chiffrés en WSJF, deux flux de valeur cartographiés, un registre de risques, et jusqu'à trois
+      analyseurs en TypeScript avec leurs tables en base pour alimenter un tableau de bord. Ce
+      n'était pas un essai timide, et il y a de quoi apprendre.
     </p>
 
     <p>
-      <strong>Ce qui a survécu à l'usage : le vocabulaire et les scores.</strong> Les
-      codes d'epic se retrouvent aujourd'hui dans le document d'exigences produit et
-      dans la feuille de route, sept mois après leur création. L'ordre WSJF des
-      quatorze epics a été établi une fois — et il tient encore.
+      <strong>Ce qui a survécu à l'usage : le vocabulaire et les scores.</strong> Les codes d'epic
+      se retrouvent aujourd'hui dans le document d'exigences produit et dans la feuille de route,
+      sept mois après leur création. L'ordre WSJF des quatorze epics a été établi une fois — et il
+      tient encore.
     </p>
 
     <p>
-      <strong>Ce qui est mort : tout ce qui demandait une synchronisation.</strong> Le
-      contrat d'auto-mise à jour a été archivé en avril après sept cent trente-cinq
-      commits sans une seule application. Et la cadence a décroché : les trois
-      incréments planifiés — février-mars, avril-mai, juin-juillet — sont tous passés,
-      et l'affectation d'un même sujet diverge désormais entre trois documents. Le
-      portail sponsor est classé sur le premier incrément dans l'un, sur le troisième
-      dans l'autre.
+      <strong>Ce qui est mort : tout ce qui demandait une synchronisation.</strong> Le contrat
+      d'auto-mise à jour a été archivé en avril après sept cent trente-cinq commits sans une seule
+      application. Et la cadence a décroché : les trois incréments planifiés — février-mars,
+      avril-mai, juin-juillet — sont tous passés, et l'affectation d'un même sujet diverge désormais
+      entre trois documents. Le portail sponsor est classé sur le premier incrément dans l'un, sur
+      le troisième dans l'autre.
     </p>
 
     <p class="lede">
-      La ligne de partage est nette, et elle s'applique telle quelle : ce qui s'écrit
-      une fois survit, ce qui demande une synchronisation récurrente meurt.
+      La ligne de partage est nette, et elle s'applique telle quelle : ce qui s'écrit une fois
+      survit, ce qui demande une synchronisation récurrente meurt.
     </p>
 
     <div class="panel warn">
       <p class="ref">RÉSERVE DE MÉTHODE</p>
       <h4>Je voulais mesurer, je n'ai pas pu</h4>
       <p>
-        J'ai tenté de dater la dernière modification réelle des quatorze documents
-        pour objectiver leur fraîcheur. Le dépôt dont je dispose est un
-        <strong>clone superficiel</strong> — cinquante commits, tous portant la même
-        date. La mesure est impossible ici, et je l'abandonne plutôt que d'en tirer
-        une conclusion fausse. Tout ce qui précède s'appuie sur les constats écrits
-        dans le dépôt, pas sur l'historique.
+        J'ai tenté de dater la dernière modification réelle des quatorze documents pour objectiver
+        leur fraîcheur. Le dépôt dont je dispose est un
+        <strong>clone superficiel</strong> — cinquante commits, tous portant la même date. La mesure
+        est impossible ici, et je l'abandonne plutôt que d'en tirer une conclusion fausse. Tout ce
+        qui précède s'appuie sur les constats écrits dans le dépôt, pas sur l'historique.
       </p>
     </div>
 
     <h4>Les quatre pièces que je reprends</h4>
 
     <p>
-      <strong>Un — le calcul WSJF.</strong> Une note par chantier, obtenue en divisant
-      la valeur perçue par l'effort. MadXP a scoré quatorze epics de 5 à 20, une fois,
-      sans cérémonie. C'est précisément l'outil qui manque au passage le plus difficile
-      de l'entretien d'arbitrage : choisir cinq paris parmi vingt projets sans que ce
-      soit un débat d'opinion. Une heure de notation à deux, et l'ordre existe.
+      <strong>Un — le calcul WSJF.</strong> Une note par chantier, obtenue en divisant la valeur
+      perçue par l'effort. MadXP a scoré quatorze epics de 5 à 20, une fois, sans cérémonie. C'est
+      précisément l'outil qui manque au passage le plus difficile de l'entretien d'arbitrage :
+      choisir cinq paris parmi vingt projets sans que ce soit un débat d'opinion. Une heure de
+      notation à deux, et l'ordre existe.
     </p>
 
     <p>
-      <strong>Deux — la distinction entre le socle et le produit.</strong> C'est la
-      reprise la plus utile, et de loin. SAFe appelle « enabler » un travail qui ne
-      délivre aucune valeur visible mais rend possible celle d'après. Chez B2B Alive,
-      l'empaquetage, l'observabilité et la résilience représentent au bas mot vingt-neuf
-      tickets de cette nature — un quart du backlog qui concourt aujourd'hui, invisible
-      et sans étiquette, contre du travail directement visible par un client. Nommer
-      cette catégorie, c'est pouvoir décider d'y consacrer une part assumée plutôt que
-      de la voir perdre chaque arbitrage en silence.
+      <strong>Deux — la distinction entre le socle et le produit.</strong> C'est la reprise la plus
+      utile, et de loin. SAFe appelle « enabler » un travail qui ne délivre aucune valeur visible
+      mais rend possible celle d'après. Chez B2B Alive, l'empaquetage, l'observabilité et la
+      résilience représentent au bas mot vingt-neuf tickets de cette nature — un quart du backlog
+      qui concourt aujourd'hui, invisible et sans étiquette, contre du travail directement visible
+      par un client. Nommer cette catégorie, c'est pouvoir décider d'y consacrer une part assumée
+      plutôt que de la voir perdre chaque arbitrage en silence.
     </p>
 
     <p>
-      <strong>Trois — la carte des flux de valeur.</strong> MadXP en a tracé deux :
-      du club à l'écran, du sponsor à l'impression. Écrite une fois, une telle carte
-      dit où la valeur se crée et où elle se bloque. Pour B2B Alive ce serait « de la
-      salle à l'écran » et « de l'annonceur à la preuve » — et c'est, sous un autre nom,
-      exactement le livrable que je prévoyais avec les personae.
+      <strong>Trois — la carte des flux de valeur.</strong> MadXP en a tracé deux : du club à
+      l'écran, du sponsor à l'impression. Écrite une fois, une telle carte dit où la valeur se crée
+      et où elle se bloque. Pour B2B Alive ce serait « de la salle à l'écran » et « de l'annonceur à
+      la preuve » — et c'est, sous un autre nom, exactement le livrable que je prévoyais avec les
+      personae.
     </p>
 
     <p>
-      <strong>Quatre — le registre de risques en quatre états</strong> : résolu, pris
-      en charge, accepté, atténué. Une colonne, quatre valeurs. À deux développeurs
-      avec une intégration continue à l'arrêt et une seule personne qui détient le
-      contexte, c'est moins cher qu'un registre et plus honnête qu'un silence.
+      <strong>Quatre — le registre de risques en quatre états</strong> : résolu, pris en charge,
+      accepté, atténué. Une colonne, quatre valeurs. À deux développeurs avec une intégration
+      continue à l'arrêt et une seule personne qui détient le contexte, c'est moins cher qu'un
+      registre et plus honnête qu'un silence.
     </p>
 
     <p>
-      Ce que je continue d'écarter, en revanche : l'événement de planification
-      d'incrément, les points d'équipe et la vélocité — MadXP s'était fixé une cible
-      de vingt-sept points par sprint, ce qui ne veut rien dire sans sprints — la
-      hiérarchie obligatoire à trois niveaux, et le miroir Notion. Ce dernier mérite
-      une mention : MadXP en a construit un, et c'est une seconde source de vérité à
-      tenir à jour. Le coût est réel, le bénéfice décoratif.
+      Ce que je continue d'écarter, en revanche : l'événement de planification d'incrément, les
+      points d'équipe et la vélocité — MadXP s'était fixé une cible de vingt-sept points par sprint,
+      ce qui ne veut rien dire sans sprints — la hiérarchie obligatoire à trois niveaux, et le
+      miroir Notion. Ce dernier mérite une mention : MadXP en a construit un, et c'est une seconde
+      source de vérité à tenir à jour. Le coût est réel, le bénéfice décoratif.
     </p>
 
     <h3>Ce que j'ajoute vraiment : la découverte</h3>
     <p>
-      C'est le seul manque structurel. L'équipe a une discipline de livraison
-      remarquable — tickets mesurés sur la machine de production, relecture adverse,
-      contre-arguments intégrés — et <strong>aucune discipline de découverte</strong> :
-      pas de persona, pas d'entretien utilisateur, pas de parcours documenté. Les cinq
-      documents de cadrage existants sont tous écrits depuis le moteur.
+      C'est le seul manque structurel. L'équipe a une discipline de livraison remarquable — tickets
+      mesurés sur la machine de production, relecture adverse, contre-arguments intégrés — et
+      <strong>aucune discipline de découverte</strong> : pas de persona, pas d'entretien
+      utilisateur, pas de parcours documenté. Les cinq documents de cadrage existants sont tous
+      écrits depuis le moteur.
     </p>
     <p>
-      Le rythme que je tiendrais est celui de la découverte continue : <strong>un
-      contact utilisateur par semaine, sans exception, même court</strong> — un
-      opérateur, un client, un prospect. Pas une phase d'étude, une habitude. C'est
-      la seule addition méthodologique que je défends, parce que c'est la seule dont
-      l'équipe n'a aucun substitut.
+      Le rythme que je tiendrais est celui de la découverte continue :
+      <strong>un contact utilisateur par semaine, sans exception, même court</strong> — un
+      opérateur, un client, un prospect. Pas une phase d'étude, une habitude. C'est la seule
+      addition méthodologique que je défends, parce que c'est la seule dont l'équipe n'a aucun
+      substitut.
     </p>
     <h3>La définition de « prêt pour un match »</h3>
 
     <p>
-      C'est la seule liste de contrôle que je propose, et chacun de ses cinq points
-      vient d'un incident réel de leur historique — pas d'un gabarit. Elle tient sur
-      une règle centrale : <strong>« terminé » veut dire en place sur le site qui en a
-      besoin, pas fusionné.</strong> L'Europ'A Cup a tourné sur une version antérieure
-      au correctif des durées : le travail était fait, il n'était pas là.
+      C'est la seule liste de contrôle que je propose, et chacun de ses cinq points vient d'un
+      incident réel de leur historique — pas d'un gabarit. Elle tient sur une règle centrale :
+      <strong>« terminé » veut dire en place sur le site qui en a besoin, pas fusionné.</strong>
+      L'Europ'A Cup a tourné sur une version antérieure au correctif des durées : le travail était
+      fait, il n'était pas là.
     </p>
 
     <div class="now">
@@ -712,32 +1189,41 @@
       </div>
       <div class="act2">
         <span class="k">02</span>
-        <span class="w"><b>Il a été vu sur le lecteur</b>, jamais dans l'aperçu de régie — l'aperçu compose des couches que le lecteur ne compose pas.</span>
+        <span class="w"
+          ><b>Il a été vu sur le lecteur</b>, jamais dans l'aperçu de régie — l'aperçu compose des
+          couches que le lecteur ne compose pas.</span
+        >
         <span class="dur">BRO-244</span>
       </div>
       <div class="act2">
         <span class="k">03</span>
-        <span class="w"><b>Il survit à un rechargement du lecteur et à une coupure du master.</b> Les deux incidents les plus fréquents, et ils arrivent quand ça va déjà mal.</span>
+        <span class="w"
+          ><b>Il survit à un rechargement du lecteur et à une coupure du master.</b> Les deux
+          incidents les plus fréquents, et ils arrivent quand ça va déjà mal.</span
+        >
         <span class="dur">BRO-337 · 238</span>
       </div>
       <div class="act2">
         <span class="k">04</span>
-        <span class="w"><b>Il a été testé sur une date réelle du calendrier</b>, pas sur aujourd'hui.</span>
+        <span class="w"
+          ><b>Il a été testé sur une date réelle du calendrier</b>, pas sur aujourd'hui.</span
+        >
         <span class="dur">BRO-367</span>
       </div>
       <div class="act2">
         <span class="k">05</span>
-        <span class="w"><b>Quelqu'un d'autre que son auteur sait le déclencher</b> le soir du match.</span>
+        <span class="w"
+          ><b>Quelqu'un d'autre que son auteur sait le déclencher</b> le soir du match.</span
+        >
         <span class="dur">bus factor</span>
       </div>
     </div>
 
     <p>
-      Pour ce qui ne part pas en salle ou au stade — l'outillage interne — on s'arrête
-      au point 2. Et tant que l'intégration continue ne se déclenche pas, ces cinq
-      points se vérifient <strong>à la main, à chaque fois</strong> : c'est l'argument
-      le plus concret en faveur de sa réparation, et il vaut mieux qu'un discours sur
-      les bonnes pratiques.
+      Pour ce qui ne part pas en salle ou au stade — l'outillage interne — on s'arrête au point 2.
+      Et tant que l'intégration continue ne se déclenche pas, ces cinq points se vérifient
+      <strong>à la main, à chaque fois</strong> : c'est l'argument le plus concret en faveur de sa
+      réparation, et il vaut mieux qu'un discours sur les bonnes pratiques.
     </p>
   </section>
 
@@ -745,115 +1231,237 @@
   <section>
     <p class="partnum">Partie 2</p>
     <h2>Linear : douze réglages, aucun outil de plus</h2>
-    <p class="h2-note">Tous réversibles · deux ajouts assumés, chacun répond à une question réellement posée</p>
-
-    <p>
-      L'instance n'est pas mal tenue — elle est <em>sous-utilisée dans les fonctions
-      qui règleraient précisément ses problèmes</em>. Les réglages ci-dessous
-      s'appliquent en une heure environ.
+    <p class="h2-note">
+      Tous réversibles · deux ajouts assumés, chacun répond à une question réellement posée
     </p>
 
     <p>
-      Ma première version disait « aucun ajout ». C'était appliquer trop brutalement
-      un principe qui, correctement formulé, dit autre chose : <strong>n'ajoute pas
-      un champ que personne ne remplira</strong>. Un ajout se justifie quand il répond
-      à une question que l'équipe se pose déjà et à laquelle l'outil ne sait pas
-      répondre. Deux passent ce test — les initiatives et deux étiquettes. Le reste
-      des propositions n'ajoute rien.
+      L'instance n'est pas mal tenue — elle est
+      <em>sous-utilisée dans les fonctions qui règleraient précisément ses problèmes</em>. Les
+      réglages ci-dessous s'appliquent en une heure environ.
+    </p>
+
+    <p>
+      Ma première version disait « aucun ajout ». C'était appliquer trop brutalement un principe
+      qui, correctement formulé, dit autre chose :
+      <strong>n'ajoute pas un champ que personne ne remplira</strong>. Un ajout se justifie quand il
+      répond à une question que l'équipe se pose déjà et à laquelle l'outil ne sait pas répondre.
+      Deux passent ce test — les initiatives et deux étiquettes. Le reste des propositions n'ajoute
+      rien.
     </p>
 
     <div class="settings">
-
       <div class="set">
         <div>
           <h4>Activer le tri d'entrée pour l'équipe</h4>
-          <p>C'est le correctif de fond au problème des tickets nés du terrain qui n'atterrissent nulle part. Tout ce qui arrive d'un match tombe dans une file d'entrée au lieu de se disperser dans la réserve. Rien ne se perd, et rien ne se range tout seul au mauvais endroit.</p>
-          <p class="fix">Réglage d'équipe → Triage activé. Coût : nul. Effet : immédiat sur le prochain match.</p>
+          <p>
+            C'est le correctif de fond au problème des tickets nés du terrain qui n'atterrissent
+            nulle part. Tout ce qui arrive d'un match tombe dans une file d'entrée au lieu de se
+            disperser dans la réserve. Rien ne se perd, et rien ne se range tout seul au mauvais
+            endroit.
+          </p>
+          <p class="fix">
+            Réglage d'équipe → Triage activé. Coût : nul. Effet : immédiat sur le prochain match.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Une règle de sortie : ni projet, ni propriétaire, ni sortie</h4>
-          <p>Rien ne quitte la file d'entrée sans un projet et un nom. Cette seule phrase supprime à la source les cent vingt-huit orphelins — elle ne les répare pas, elle empêche les suivants.</p>
-          <p class="fix">Règle humaine, pas un champ obligatoire. Un champ obligatoire se contourne ; une règle énoncée à deux se tient.</p>
+          <p>
+            Rien ne quitte la file d'entrée sans un projet et un nom. Cette seule phrase supprime à
+            la source les cent vingt-huit orphelins — elle ne les répare pas, elle empêche les
+            suivants.
+          </p>
+          <p class="fix">
+            Règle humaine, pas un champ obligatoire. Un champ obligatoire se contourne ; une règle
+            énoncée à deux se tient.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Une vue « En vol », groupée par personne</h4>
-          <p>Filtrée sur tout ce qui est démarré, groupée par assigné. C'est le tableau de bord de la limite d'encours : si une colonne dépasse deux, quelque chose doit se fermer avant que quoi que ce soit ne s'ouvre. La limite devient visible au lieu d'être une intention.</p>
-          <p class="fix">Vue partagée, épinglée. Aujourd'hui elle afficherait une colonne « sans personne » à neuf lignes.</p>
+          <p>
+            Filtrée sur tout ce qui est démarré, groupée par assigné. C'est le tableau de bord de la
+            limite d'encours : si une colonne dépasse deux, quelque chose doit se fermer avant que
+            quoi que ce soit ne s'ouvre. La limite devient visible au lieu d'être une intention.
+          </p>
+          <p class="fix">
+            Vue partagée, épinglée. Aujourd'hui elle afficherait une colonne « sans personne » à
+            neuf lignes.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Une vue « Sans propriétaire » en alarme permanente</h4>
-          <p>Filtrée sur ouvert et non assigné. Elle doit tendre vers zéro sur ce qui est démarré, et rester tolérée sur la réserve. C'est l'indicateur le plus honnête de la santé du système.</p>
-          <p class="fix">Deux vues valent mieux qu'un rituel : elles disent la vérité sans que personne ait à la demander.</p>
+          <p>
+            Filtrée sur ouvert et non assigné. Elle doit tendre vers zéro sur ce qui est démarré, et
+            rester tolérée sur la réserve. C'est l'indicateur le plus honnête de la santé du
+            système.
+          </p>
+          <p class="fix">
+            Deux vues valent mieux qu'un rituel : elles disent la vérité sans que personne ait à la
+            demander.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Ramener les projets ouverts au nombre de paris réellement en cours</h4>
-          <p>Vingt projets, quatre démarrés, presque aucun avec date ni priorité. Un projet sans date n'est pas un projet, c'est une note — et vingt notes présentées comme des projets rendent le tableau illisible. Cinq projets actifs au maximum ; les autres passent en réserve ou deviennent des jalons à l'intérieur d'un projet plus large.</p>
-          <p class="fix">Ce réglage-là n'est pas de la cosmétique : c'est l'arbitrage produit lui-même, et il appartient à l'entretien de la partie 3.</p>
+          <p>
+            Vingt projets, quatre démarrés, presque aucun avec date ni priorité. Un projet sans date
+            n'est pas un projet, c'est une note — et vingt notes présentées comme des projets
+            rendent le tableau illisible. Cinq projets actifs au maximum ; les autres passent en
+            réserve ou deviennent des jalons à l'intérieur d'un projet plus large.
+          </p>
+          <p class="fix">
+            Ce réglage-là n'est pas de la cosmétique : c'est l'arbitrage produit lui-même, et il
+            appartient à l'entretien de la partie 3.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Créer trois initiatives — une par flux de valeur</h4>
-          <p>C'est la couche qui manque, et elle résout le problème des dix-neuf projets sans en supprimer aucun : les projets se rangent dessous et le niveau supérieur redevient lisible. Les initiatives portent ce qui change rarement ; les projets portent les paris, qui changent chaque trimestre.</p>
-          <p class="fix">Du LED installé à l'écran qui vit · De l'annonceur à la preuve · Du constat au correctif.</p>
-          <p>La répartition entre les deux développeurs n'a pas à y figurer : elle est déjà portée par l'assignation. Une initiative répond à « pour qui cela existe », pas à « qui le fait ».</p>
-          <p><strong>Correction d'une version précédente</strong> — j'avais proposé quatre initiatives découpées par domaine technique, en affirmant que chacune se lisait comme un flux de valeur. C'était faux : deux d'entre elles servaient le même flux, ce qui donnait deux réponses concurrentes à « où range-t-on ce projet » et reléguait les cartes de flux au rang de décoration. Les initiatives doivent être les flux eux-mêmes.</p>
-          <p><strong>Le nom du premier flux a changé le 03/09</strong> — il s'appelait « Du club à l'écran », il s'appelle maintenant « Du LED installé à l'écran qui vit ». Ce n'est pas cosmétique : « du club » supposait que l'affaire commence quand un club nous achète une installation. Elle commence quand une enceinte <em>dispose</em> de LED, le nôtre ou celui d'un concurrent. Le premier nom fermait le plus grand des deux marchés sans qu'on s'en aperçoive.</p>
-          <p><strong>Ce que ce rattachement fait apparaître immédiatement</strong> : le flux « De l'annonceur à la preuve » n'a aujourd'hui aucun projet démarré — le seul qui le serve est marqué « non planifié » — et « Du constat au correctif » n'en a qu'un sur deux entamé. Presque tout le travail en cours sert le premier flux. Les deux qui décident du revenu et de la vitesse sont à l'arrêt, et cela ne se voyait pas tant que les couches n'étaient pas reliées.</p>
+          <p>
+            C'est la couche qui manque, et elle résout le problème des dix-neuf projets sans en
+            supprimer aucun : les projets se rangent dessous et le niveau supérieur redevient
+            lisible. Les initiatives portent ce qui change rarement ; les projets portent les paris,
+            qui changent chaque trimestre.
+          </p>
+          <p class="fix">
+            Du LED installé à l'écran qui vit · De l'annonceur à la preuve · Du constat au
+            correctif.
+          </p>
+          <p>
+            La répartition entre les deux développeurs n'a pas à y figurer : elle est déjà portée
+            par l'assignation. Une initiative répond à « pour qui cela existe », pas à « qui le fait
+            ».
+          </p>
+          <p>
+            <strong>Correction d'une version précédente</strong> — j'avais proposé quatre
+            initiatives découpées par domaine technique, en affirmant que chacune se lisait comme un
+            flux de valeur. C'était faux : deux d'entre elles servaient le même flux, ce qui donnait
+            deux réponses concurrentes à « où range-t-on ce projet » et reléguait les cartes de flux
+            au rang de décoration. Les initiatives doivent être les flux eux-mêmes.
+          </p>
+          <p>
+            <strong>Le nom du premier flux a changé le 03/09</strong> — il s'appelait « Du club à
+            l'écran », il s'appelle maintenant « Du LED installé à l'écran qui vit ». Ce n'est pas
+            cosmétique : « du club » supposait que l'affaire commence quand un club nous achète une
+            installation. Elle commence quand une enceinte <em>dispose</em> de LED, le nôtre ou
+            celui d'un concurrent. Le premier nom fermait le plus grand des deux marchés sans qu'on
+            s'en aperçoive.
+          </p>
+          <p>
+            <strong>Ce que ce rattachement fait apparaître immédiatement</strong> : le flux « De
+            l'annonceur à la preuve » n'a aujourd'hui aucun projet démarré — le seul qui le serve
+            est marqué « non planifié » — et « Du constat au correctif » n'en a qu'un sur deux
+            entamé. Presque tout le travail en cours sert le premier flux. Les deux qui décident du
+            revenu et de la vitesse sont à l'arrêt, et cela ne se voyait pas tant que les couches
+            n'étaient pas reliées.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Trois axes d'étiquetage — et trois usages qu'il ne faut pas confondre</h4>
-          <p>La confusion habituelle consiste à vouloir un seul axe qui répondrait à tout. Il en faut trois, et ce qui les distingue n'est pas leur contenu mais <strong>ce à quoi ils servent</strong> : c'est ce qui permet de les faire coexister sans alourdir la saisie.</p>
-          <p><strong>La nature</strong> — Tech, UX, Spike, Doc, Install, et l'axe matériel. Existe déjà et fonctionne. Sert à <b>retrouver</b> un ticket, jamais à décider. Ne pas y toucher.</p>
-          <p><strong>La classe</strong> — <span class="mono">Antenne</span> et <span class="mono">Socle</span>, deux valeurs seulement. Sert à <b>décider</b>, à chaque entrée. « Antenne » désigne ce qui dégrade la diffusion maintenant ou ce soir : ça passe devant tout, une seule à la fois. « Socle » désigne ce qui ne produit rien de visible mais rend la suite possible. Le reste n'a pas de classe, et une échéance de match se porte par la date d'échéance, pas par une étiquette.</p>
-          <p><strong>L'apport</strong> — <span class="mono">Bug</span>, <span class="mono">Feature</span>, <span class="mono">Improvement</span> existent déjà et sont utilisées ; il manque <span class="mono">Exploitation</span>, pour tout ce qui n'est ni créer ni réparer : déployer sur un site, préparer un match, importer des effectifs, répéter. Sert à <b>mesurer</b> une fois par trimestre, jamais à décider.</p>
-          <p><strong>Un axe « Site »</strong> s'y ajoute — Guingamp, Strasbourg, Lanester. La question « qu'est-ce qui bloque Guingamp samedi ? » se pose chaque semaine et l'outil ne sait pas y répondre.</p>
-          <p class="fix">Trois valeurs nouvelles en tout : Antenne, Socle, Exploitation. Le reste consiste à ranger Bug, Feature et Improvement sous un parent commun — aujourd'hui ils flottent à côté du groupe Type sans qu'on voie qu'ils forment un axe.</p>
-          <p>Deux vérifications qui justifient de séparer classe et apport plutôt que de les fondre : <span class="mono">BRO-369</span> et <span class="mono">BRO-243</span> portent l'étiquette Bug alors que ce sont des chantiers d'observabilité — donc du socle ; <span class="mono">BRO-339</span> porte Feature alors que c'est du socle également. L'un ne prédit jamais l'autre.</p>
+          <p>
+            La confusion habituelle consiste à vouloir un seul axe qui répondrait à tout. Il en faut
+            trois, et ce qui les distingue n'est pas leur contenu mais
+            <strong>ce à quoi ils servent</strong> : c'est ce qui permet de les faire coexister sans
+            alourdir la saisie.
+          </p>
+          <p>
+            <strong>La nature</strong> — Tech, UX, Spike, Doc, Install, et l'axe matériel. Existe
+            déjà et fonctionne. Sert à <b>retrouver</b> un ticket, jamais à décider. Ne pas y
+            toucher.
+          </p>
+          <p>
+            <strong>La classe</strong> — <span class="mono">Antenne</span> et
+            <span class="mono">Socle</span>, deux valeurs seulement. Sert à <b>décider</b>, à chaque
+            entrée. « Antenne » désigne ce qui dégrade la diffusion maintenant ou ce soir : ça passe
+            devant tout, une seule à la fois. « Socle » désigne ce qui ne produit rien de visible
+            mais rend la suite possible. Le reste n'a pas de classe, et une échéance de match se
+            porte par la date d'échéance, pas par une étiquette.
+          </p>
+          <p>
+            <strong>L'apport</strong> — <span class="mono">Bug</span>,
+            <span class="mono">Feature</span>, <span class="mono">Improvement</span> existent déjà
+            et sont utilisées ; il manque <span class="mono">Exploitation</span>, pour tout ce qui
+            n'est ni créer ni réparer : déployer sur un site, préparer un match, importer des
+            effectifs, répéter. Sert à <b>mesurer</b> une fois par trimestre, jamais à décider.
+          </p>
+          <p>
+            <strong>Un axe « Site »</strong> s'y ajoute — Guingamp, Strasbourg, Lanester. La
+            question « qu'est-ce qui bloque Guingamp samedi ? » se pose chaque semaine et l'outil ne
+            sait pas y répondre.
+          </p>
+          <p class="fix">
+            Trois valeurs nouvelles en tout : Antenne, Socle, Exploitation. Le reste consiste à
+            ranger Bug, Feature et Improvement sous un parent commun — aujourd'hui ils flottent à
+            côté du groupe Type sans qu'on voie qu'ils forment un axe.
+          </p>
+          <p>
+            Deux vérifications qui justifient de séparer classe et apport plutôt que de les fondre :
+            <span class="mono">BRO-369</span> et <span class="mono">BRO-243</span> portent
+            l'étiquette Bug alors que ce sont des chantiers d'observabilité — donc du socle ;
+            <span class="mono">BRO-339</span> porte Feature alors que c'est du socle également. L'un
+            ne prédit jamais l'autre.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Utiliser la date d'échéance pour ce qu'un match impose</h4>
-          <p>Plutôt qu'une troisième étiquette du type « bloquant pour le prochain match », la date du match <em>est</em> l'échéance. Le champ existe et ne semble pas servir. Il transforme l'urgence en information vérifiable — une date passée se voit, une étiquette « urgent » se contemple, comme le montrent les sept qui traînent aujourd'hui.</p>
+          <p>
+            Plutôt qu'une troisième étiquette du type « bloquant pour le prochain match », la date
+            du match <em>est</em> l'échéance. Le champ existe et ne semble pas servir. Il transforme
+            l'urgence en information vérifiable — une date passée se voit, une étiquette « urgent »
+            se contemple, comme le montrent les sept qui traînent aujourd'hui.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Ne renseigner priorité et date que sur les projets actifs</h4>
-          <p>Un champ rempli partout par défaut ne dit plus rien ; un champ vide partout non plus. La priorité doit exister uniquement là où elle discrimine — sur les cinq paris. Ailleurs, l'absence de priorité est une information juste.</p>
+          <p>
+            Un champ rempli partout par défaut ne dit plus rien ; un champ vide partout non plus. La
+            priorité doit exister uniquement là où elle discrimine — sur les cinq paris. Ailleurs,
+            l'absence de priorité est une information juste.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Utiliser les jalons plutôt que de multiplier les projets</h4>
-          <p>Les grands chantiers — empaquetage, observabilité, timeline — méritent trois ou quatre jalons internes plutôt qu'un éclatement en projets frères. On lit alors l'avancement d'un chantier au lieu de compter des projets.</p>
+          <p>
+            Les grands chantiers — empaquetage, observabilité, timeline — méritent trois ou quatre
+            jalons internes plutôt qu'un éclatement en projets frères. On lit alors l'avancement
+            d'un chantier au lieu de compter des projets.
+          </p>
         </div>
       </div>
 
       <div class="set">
         <div>
           <h4>Regarder les temps de traversée déjà calculés</h4>
-          <p>Deux cent trente tickets terminés alimentent des mesures de flux que Linear produit sans qu'on lui demande rien. C'est de là que sortiront les dates que je dois donner aux prospects — pas d'une estimation, d'un historique.</p>
+          <p>
+            Deux cent trente tickets terminés alimentent des mesures de flux que Linear produit sans
+            qu'on lui demande rien. C'est de là que sortiront les dates que je dois donner aux
+            prospects — pas d'une estimation, d'un historique.
+          </p>
           <p class="fix">Une lecture par mois suffit. Aucune saisie, aucune cérémonie.</p>
         </div>
       </div>
@@ -861,39 +1469,50 @@
       <div class="set">
         <div>
           <h4>Ne pas toucher à la taxonomie existante — et se servir de « Postponed »</h4>
-          <p>L'axe matériel — achat, stock, préparation, installation, dépannage, réforme — est une vraie trouvaille : peu d'équipes logicielles pensent à suivre leur parc dans le même outil que leur code. Les deux étiquettes que je propose s'ajoutent à côté, sans rien remplacer.</p>
-          <p>Une étiquette existante mérite d'être réactivée : <span class="mono">Postponed</span>, décrite dans leur propre configuration comme un axe de cycle de vie destiné à retrouver et redistribuer plus tard. C'est exactement le magasin dont j'ai besoin pour les dix-sept tickets de la voie D. Ils ont déjà inventé le mécanisme ; il suffit de s'en servir.</p>
-          <p class="fix">Question ouverte à leur poser : la taxonomie est-elle réellement portée par les tickets, ou existe-t-elle sans être utilisée ? Je ne l'ai pas vérifié.</p>
+          <p>
+            L'axe matériel — achat, stock, préparation, installation, dépannage, réforme — est une
+            vraie trouvaille : peu d'équipes logicielles pensent à suivre leur parc dans le même
+            outil que leur code. Les deux étiquettes que je propose s'ajoutent à côté, sans rien
+            remplacer.
+          </p>
+          <p>
+            Une étiquette existante mérite d'être réactivée : <span class="mono">Postponed</span>,
+            décrite dans leur propre configuration comme un axe de cycle de vie destiné à retrouver
+            et redistribuer plus tard. C'est exactement le magasin dont j'ai besoin pour les
+            dix-sept tickets de la voie D. Ils ont déjà inventé le mécanisme ; il suffit de s'en
+            servir.
+          </p>
+          <p class="fix">
+            Question ouverte à leur poser : la taxonomie est-elle réellement portée par les tickets,
+            ou existe-t-elle sans être utilisée ? Je ne l'ai pas vérifié.
+          </p>
         </div>
       </div>
-
     </div>
 
     <div class="panel calm">
       <p class="ref">CE QUE CES TROIS AXES PERMETTENT ENFIN</p>
       <h4>Défendre le socle par une part réservée, et non ticket par ticket</h4>
       <p>
-        Mis en concurrence pièce à pièce avec une urgence de diffusion, le socle perd
-        toujours — et il a raison de perdre : un écran noir un samedi soir passe avant
-        un journal qui grossit. Le mettre à l'abri suppose une décision d'un autre
-        ordre, prise une fois et non rediscutée à chaque incident :
-        <strong>« ce trimestre, un tiers de la capacité va au socle »</strong>. Le
-        classement WSJF dit dans quel ordre ; la part réservée dit combien. Les deux
-        sont nécessaires, et aucun ne remplace l'autre.
+        Mis en concurrence pièce à pièce avec une urgence de diffusion, le socle perd toujours — et
+        il a raison de perdre : un écran noir un samedi soir passe avant un journal qui grossit. Le
+        mettre à l'abri suppose une décision d'un autre ordre, prise une fois et non rediscutée à
+        chaque incident :
+        <strong>« ce trimestre, un tiers de la capacité va au socle »</strong>. Le classement WSJF
+        dit dans quel ordre ; la part réservée dit combien. Les deux sont nécessaires, et aucun ne
+        remplace l'autre.
       </p>
       <p>
-        <strong>Mesurer avant de fixer la part.</strong> Personne ne peut dire
-        aujourd'hui quelle fraction du temps part en antenne ou en exploitation, faute
-        d'étiquetage. Un trimestre de mesure donne le chiffre réel — probablement plus
-        élevé que chacun ne le croit. Fixer un quota avant de le connaître revient à
-        inventer une contrainte.
+        <strong>Mesurer avant de fixer la part.</strong> Personne ne peut dire aujourd'hui quelle
+        fraction du temps part en antenne ou en exploitation, faute d'étiquetage. Un trimestre de
+        mesure donne le chiffre réel — probablement plus élevé que chacun ne le croit. Fixer un
+        quota avant de le connaître revient à inventer une contrainte.
       </p>
       <p>
-        <strong>Et une mise en garde sur le ratio correction / création.</strong> Sur
-        un produit jeune et diffusé en direct, un fort taux de correction est sain :
-        il signifie que le produit rencontre le réel. C'est un signal à observer dans
-        la durée, jamais une note à optimiser — en faire un objectif pousse
-        mécaniquement à déclarer les défauts comme des nouveautés.
+        <strong>Et une mise en garde sur le ratio correction / création.</strong> Sur un produit
+        jeune et diffusé en direct, un fort taux de correction est sain : il signifie que le produit
+        rencontre le réel. C'est un signal à observer dans la durée, jamais une note à optimiser —
+        en faire un objectif pousse mécaniquement à déclarer les défauts comme des nouveautés.
       </p>
     </div>
 
@@ -901,56 +1520,89 @@
       <p class="ref">CE QUE JE N'ACTIVE PAS</p>
       <h4>Les cycles, les estimations, et tout champ obligatoire</h4>
       <p>
-        Les cycles imposeraient une cadence artificielle par-dessus le calendrier
-        sportif, qui en est déjà une. Les estimations coûteraient une réunion pour
-        produire moins d'information que l'historique. Et tout champ rendu obligatoire
-        finit rempli n'importe comment, ce qui est pire que vide : un champ faux se
-        croit vrai.
+        Les cycles imposeraient une cadence artificielle par-dessus le calendrier sportif, qui en
+        est déjà une. Les estimations coûteraient une réunion pour produire moins d'information que
+        l'historique. Et tout champ rendu obligatoire finit rempli n'importe comment, ce qui est
+        pire que vide : un champ faux se croit vrai.
       </p>
     </div>
     <h3>Fiche de création des étiquettes</h3>
 
     <p>
-      Prête à appliquer telle quelle, en une quinzaine de minutes, à deux devant le
-      même écran. Rien n'est irréversible : une étiquette se renomme et se supprime
-      sans toucher aux tickets qui la portent. Les couleurs sont indicatives — aucune
-      règle ne s'y attache, elles servent seulement à ce que les trois axes ne se
-      confondent pas au premier regard.
+      Prête à appliquer telle quelle, en une quinzaine de minutes, à deux devant le même écran. Rien
+      n'est irréversible : une étiquette se renomme et se supprime sans toucher aux tickets qui la
+      portent. Les couleurs sont indicatives — aucune règle ne s'y attache, elles servent seulement
+      à ce que les trois axes ne se confondent pas au premier regard.
     </p>
 
+    <div class="panel warn">
+      <p class="ref">VÉRIFICATION TECHNIQUE — 04/09</p>
+      <h4>Un groupe d'étiquettes ne peut pas mélanger les portées</h4>
+      <p>
+        Testé en pratique sur un espace Linear séparé, sans toucher au carnet B2B Alive : un groupe
+        d'étiquettes et ses enfants doivent être de
+        <strong>la même portée</strong> — tous à l'échelle de l'équipe, ou tous à l'échelle du
+        workspace. Impossible de les mélanger ; impossible aussi de faire changer un label existant
+        de portée après coup, seulement de le renommer ou de le laisser où il est.
+      </p>
+      <p>
+        <strong>Ce que ça implique ici :</strong> Bug, Feature et Improvement existent déjà — mais à
+        quelle portée ? Si c'est à l'échelle du workspace et qu'Apport est créé à l'échelle de
+        l'équipe (ou l'inverse), le regroupement échoue net devant Florent. Une question à trancher
+        avant de commencer les quinze minutes, pas pendant :
+        <strong
+          >Antenne, Socle, Site et Apport se créent tous à la même portée que
+          Bug/Feature/Improvement</strong
+        >, quelle qu'elle soit.
+      </p>
+    </div>
+
     <div class="labgrp">
-      <div class="labgrp-h">Groupe <b>Classe</b> · à créer · sert à décider, se pose au tri d'entrée</div>
+      <div class="labgrp-h">
+        Groupe <b>Classe</b> · à créer · sert à décider, se pose au tri d'entrée
+      </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#F5222D"></span>Antenne</span>
-        <span class="ds">Dégrade la diffusion maintenant, ou lors du prochain match. Passe devant tout, une seule à la fois, et casse volontairement la limite d'encours.</span>
+        <span class="nm"><span class="dot" style="background: #f5222d"></span>Antenne</span>
+        <span class="ds"
+          >Dégrade la diffusion maintenant, ou lors du prochain match. Passe devant tout, une seule
+          à la fois, et casse volontairement la limite d'encours.</span
+        >
         <span class="st new">à créer</span>
       </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#B45309"></span>Socle</span>
-        <span class="ds">Ne produit rien de visible mais rend la suite possible : empaquetage, observabilité, résilience, outillage. Se défend par une part réservée, jamais ticket par ticket.</span>
+        <span class="nm"><span class="dot" style="background: #b45309"></span>Socle</span>
+        <span class="ds"
+          >Ne produit rien de visible mais rend la suite possible : empaquetage, observabilité,
+          résilience, outillage. Se défend par une part réservée, jamais ticket par ticket.</span
+        >
         <span class="st new">à créer</span>
       </div>
     </div>
 
     <div class="labgrp">
-      <div class="labgrp-h">Groupe <b>Apport</b> · trois existent, à regrouper · sert à mesurer, une fois par trimestre</div>
+      <div class="labgrp-h">
+        Groupe <b>Apport</b> · trois existent, à regrouper · sert à mesurer, une fois par trimestre
+      </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#EB5757"></span>Bug</span>
+        <span class="nm"><span class="dot" style="background: #eb5757"></span>Bug</span>
         <span class="ds">Le produit ne tient pas sa promesse. <em>Subi.</em></span>
         <span class="st">existe · décrire</span>
       </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#5B7C99"></span>Exploitation</span>
-        <span class="ds">Ni créer ni réparer : faire tourner. Déployer sur un site, préparer un match, importer des effectifs, répéter sur place. <em>Subi.</em></span>
+        <span class="nm"><span class="dot" style="background: #5b7c99"></span>Exploitation</span>
+        <span class="ds"
+          >Ni créer ni réparer : faire tourner. Déployer sur un site, préparer un match, importer
+          des effectifs, répéter sur place. <em>Subi.</em></span
+        >
         <span class="st new">à créer</span>
       </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#BB87FC"></span>Feature</span>
+        <span class="nm"><span class="dot" style="background: #bb87fc"></span>Feature</span>
         <span class="ds">Quelque chose qui n'existait pas. <em>Choisi.</em></span>
         <span class="st">existe · décrire</span>
       </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#4EA7FC"></span>Improvement</span>
+        <span class="nm"><span class="dot" style="background: #4ea7fc"></span>Improvement</span>
         <span class="ds">L'existant tient sa promesse, on le rend meilleur. <em>Choisi.</em></span>
         <span class="st">existe · décrire</span>
       </div>
@@ -958,71 +1610,102 @@
 
     <p>
       Le ratio qui compte sur cet axe n'est pas « bugs contre fonctionnalités » mais
-      <strong>subi contre choisi</strong> — Bug et Exploitation d'un côté, Feature et
-      Improvement de l'autre. C'est lui qui dit si l'équipe construit ou si elle court
-      derrière son produit.
+      <strong>subi contre choisi</strong> — Bug et Exploitation d'un côté, Feature et Improvement de
+      l'autre. C'est lui qui dit si l'équipe construit ou si elle court derrière son produit.
     </p>
 
     <div class="labgrp">
-      <div class="labgrp-h">Groupe <b>Site</b> · à créer · sert à retrouver, se pose quand le ticket naît d'un lieu</div>
+      <div class="labgrp-h">
+        Groupe <b>Site</b> · à créer · sert à retrouver, se pose quand le ticket naît d'un lieu
+      </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#C0392B"></span>Guingamp</span>
-        <span class="ds">EA Guingamp, stade du Roudourou. Football, saison en cours — c'est le site le plus actif.</span>
+        <span class="nm"><span class="dot" style="background: #c0392b"></span>Guingamp</span>
+        <span class="ds"
+          >EA Guingamp, stade du Roudourou. Football, saison en cours — c'est le site le plus
+          actif.</span
+        >
         <span class="st new">à créer</span>
       </div>
       <div class="labrow">
-        <span class="nm"><span class="dot" style="background:#2D7D9A"></span>Strasbourg</span>
-        <span class="ds">Rhénus Sport. Handball, Europ'A Cup — à créer seulement si l'enceinte revient au calendrier.</span>
+        <span class="nm"><span class="dot" style="background: #2d7d9a"></span>Strasbourg</span>
+        <span class="ds"
+          >Rhénus Sport. Handball, Europ'A Cup — à créer seulement si l'enceinte revient au
+          calendrier.</span
+        >
         <span class="st new">optionnel</span>
       </div>
     </div>
 
     <p>
-      Une seule valeur suffit pour commencer. Créer cinq sites qui resteront vides
-      apprend à tout le monde que les étiquettes ne veulent rien dire — on en ajoute
-      une quand une enceinte s'équipe, jamais avant.
+      Une seule valeur suffit pour commencer. Créer cinq sites qui resteront vides apprend à tout le
+      monde que les étiquettes ne veulent rien dire — on en ajoute une quand une enceinte s'équipe,
+      jamais avant.
     </p>
 
     <div class="panel warn">
       <p class="ref">CORRECTION D'UNE ERREUR DE MA PART</p>
       <h4>Lanester n'est pas un site B2B Alive</h4>
       <p>
-        Je l'avais listé dans une version précédente : c'est un site <strong>MadXP</strong>,
-        au même titre que Piraths Strasbourg. J'ai mélangé les deux parcs. Les enceintes
-        B2B Alive relevées dans leur Linear sont le Roudourou à Guingamp, le Rhénus Sport
-        à Strasbourg et Bouaye — attention d'ailleurs au piège des deux Strasbourg, qui
-        désignent deux clubs différents dans les deux entreprises.
+        Je l'avais listé dans une version précédente : c'est un site <strong>MadXP</strong>, au même
+        titre que Piraths Strasbourg. J'ai mélangé les deux parcs. Les enceintes B2B Alive relevées
+        dans leur Linear sont le Roudourou à Guingamp, le Rhénus Sport à Strasbourg et Bouaye —
+        attention d'ailleurs au piège des deux Strasbourg, qui désignent deux clubs différents dans
+        les deux entreprises.
       </p>
     </div>
 
     <h4>Les règles de saisie, par axe</h4>
     <ul class="plain">
-      <li><strong>La classe se pose au tri d'entrée, quand elle s'applique.</strong> L'absence de classe est une information juste : cela veut dire « standard ». Ne jamais créer de valeur « Standard », elle ne serait qu'un synonyme du vide.</li>
-      <li><strong>L'apport se pose quand c'est évident</strong>, et on ne se bat pas sur les cas mixtes — beaucoup de leurs tickets décrivent un problème plutôt qu'une tâche, et relèvent des deux. Un axe qui sert à mesurer tolère l'approximation ; un axe qui sert à décider, non.</li>
-      <li><strong>Le site se pose seulement si le ticket naît d'un lieu.</strong> La plupart n'en portent pas, et c'est normal.</li>
-      <li><strong>Aucun de ces champs n'est rendu obligatoire.</strong> Un champ obligatoire finit rempli n'importe comment, ce qui est pire que vide.</li>
+      <li>
+        <strong>La classe se pose au tri d'entrée, quand elle s'applique.</strong> L'absence de
+        classe est une information juste : cela veut dire « standard ». Ne jamais créer de valeur «
+        Standard », elle ne serait qu'un synonyme du vide.
+      </li>
+      <li>
+        <strong>L'apport se pose quand c'est évident</strong>, et on ne se bat pas sur les cas
+        mixtes — beaucoup de leurs tickets décrivent un problème plutôt qu'une tâche, et relèvent
+        des deux. Un axe qui sert à mesurer tolère l'approximation ; un axe qui sert à décider, non.
+      </li>
+      <li>
+        <strong>Le site se pose seulement si le ticket naît d'un lieu.</strong> La plupart n'en
+        portent pas, et c'est normal.
+      </li>
+      <li>
+        <strong>Aucun de ces champs n'est rendu obligatoire.</strong> Un champ obligatoire finit
+        rempli n'importe comment, ce qui est pire que vide.
+      </li>
     </ul>
 
     <h4>Ce qu'on ne crée pas</h4>
     <ul class="plain">
-      <li>Aucune étiquette d'échéance : la <strong>date d'échéance</strong> porte le cas « avant tel match », et une date passée se voit là où une étiquette se contemple.</li>
-      <li>Aucune étiquette de sévérité ni de composant : la <strong>priorité</strong> et le <strong>projet</strong> les couvrent déjà.</li>
-      <li>Aucune modification du groupe <strong>Type</strong> existant, ni de <span class="mono">Postponed</span> : ils fonctionnent, et <span class="mono">Postponed</span> est justement le magasin dont la voie D a besoin.</li>
+      <li>
+        Aucune étiquette d'échéance : la <strong>date d'échéance</strong> porte le cas « avant tel
+        match », et une date passée se voit là où une étiquette se contemple.
+      </li>
+      <li>
+        Aucune étiquette de sévérité ni de composant : la <strong>priorité</strong> et le
+        <strong>projet</strong> les couvrent déjà.
+      </li>
+      <li>
+        Aucune modification du groupe <strong>Type</strong> existant, ni de
+        <span class="mono">Postponed</span> : ils fonctionnent, et
+        <span class="mono">Postponed</span> est justement le magasin dont la voie D a besoin.
+      </li>
     </ul>
 
     <h3>Modèle de ticket — le porteur du « prêt pour un match »</h3>
 
     <p>
-      Aucun modèle n'existe aujourd'hui. Celui-ci n'est pas fait pour Florent, dont
-      les tickets sont déjà d'une qualité rare : il est fait pour que les autres
-      écrivent au même niveau, et pour que la définition de « prêt » cesse d'être un
-      document qu'on oublie. <strong>Il reste facultatif</strong> — on le choisit à la
-      création, il n'est jamais appliqué d'office, sinon il devient une friction un
-      samedi soir.
+      Aucun modèle n'existe aujourd'hui. Celui-ci n'est pas fait pour Florent, dont les tickets sont
+      déjà d'une qualité rare : il est fait pour que les autres écrivent au même niveau, et pour que
+      la définition de « prêt » cesse d'être un document qu'on oublie.
+      <strong>Il reste facultatif</strong> — on le choisit à la création, il n'est jamais appliqué
+      d'office, sinon il devient une friction un samedi soir.
     </p>
 
     <p class="tplname">Nom du modèle · <b>Constat</b></p>
-    <pre class="tpl">## Le constat
+    <pre class="tpl">
+## Le constat
 
 Ce qui se passe, mesuré. Où, quand, sur quelle machine.
 Pour une tâche d'exploitation : ce qu'il faut faire, et pour quelle échéance.
@@ -1046,37 +1729,35 @@ Fichiers concernés, tickets liés, pistes écartées et pourquoi.
 - [ ] Quelqu'un d'autre que l'auteur sait le déclencher
 
 *Les points 3 à 5 ne valent que pour ce qui part sur un site.
-Pour l'outillage interne, s'arrêter au point 2.*</pre>
+Pour l'outillage interne, s'arrêter au point 2.*</pre
+    >
 
     <h4>La convention de titre, qui ne tient pas dans un modèle</h4>
     <p>
-      Un modèle ne peut pas imposer un titre, et c'est pourtant là que se joue
-      l'essentiel. Leurs meilleurs titres suivent tous la même forme :
-      <strong>le symptôme observable, puis la mesure</strong> — « une fenêtre
-      d'horloge est partagée par tous les matchs du couple : seize dates sur dix-sept
-      pointent un instant qui n'est pas le leur », « master.log grossit sans limite,
-      environ 350 Mo par jour ». Jamais « corriger l'horloge ». C'est une convention à
-      énoncer une fois, pas un champ à remplir.
+      Un modèle ne peut pas imposer un titre, et c'est pourtant là que se joue l'essentiel. Leurs
+      meilleurs titres suivent tous la même forme :
+      <strong>le symptôme observable, puis la mesure</strong> — « une fenêtre d'horloge est partagée
+      par tous les matchs du couple : seize dates sur dix-sept pointent un instant qui n'est pas le
+      leur », « master.log grossit sans limite, environ 350 Mo par jour ». Jamais « corriger
+      l'horloge ». C'est une convention à énoncer une fois, pas un champ à remplir.
     </p>
 
     <h4>Pourquoi un seul modèle, et pas trois</h4>
     <p>
-      La tentation serait d'en faire un par classe — un pour l'antenne, un pour le
-      socle, un pour l'exploitation. À deux développeurs, trois modèles produisent une
-      hésitation au moment de créer, et aucun n'est utilisé. Le cas de l'antenne se
-      règle autrement : <strong>le ticket se crée nu pendant le match</strong>, en une
-      ligne, et se complète au tri du lendemain. C'est une règle de conduite, pas un
-      gabarit.
+      La tentation serait d'en faire un par classe — un pour l'antenne, un pour le socle, un pour
+      l'exploitation. À deux développeurs, trois modèles produisent une hésitation au moment de
+      créer, et aucun n'est utilisé. Le cas de l'antenne se règle autrement :
+      <strong>le ticket se crée nu pendant le match</strong>, en une ligne, et se complète au tri du
+      lendemain. C'est une règle de conduite, pas un gabarit.
     </p>
 
     <h4>Que faire des quatre cent vingt-cinq tickets existants</h4>
     <p>
-      <strong>Ne pas rétro-étiqueter.</strong> Une seule passe est utile, et elle est
-      courte : poser <span class="mono">Socle</span> sur la trentaine de tickets
-      d'empaquetage, d'observabilité et de résilience déjà identifiés dans la carte de
-      propriété, pour que la discussion sur la part réservée s'appuie sur un chiffre
-      plutôt que sur une impression. Tout le reste se pose au fil de l'eau, sur les
-      nouveaux — et le backlog en produit une douzaine par semaine, donc la mesure
+      <strong>Ne pas rétro-étiqueter.</strong> Une seule passe est utile, et elle est courte : poser
+      <span class="mono">Socle</span> sur la trentaine de tickets d'empaquetage, d'observabilité et
+      de résilience déjà identifiés dans la carte de propriété, pour que la discussion sur la part
+      réservée s'appuie sur un chiffre plutôt que sur une impression. Tout le reste se pose au fil
+      de l'eau, sur les nouveaux — et le backlog en produit une douzaine par semaine, donc la mesure
       devient parlante en un trimestre.
     </p>
   </section>
@@ -1091,55 +1772,71 @@ Pour l'outillage interne, s'arrêter au point 2.*</pre>
       <p class="ref">AVANT LA RÉUNION</p>
       <h4>Trois conditions, sinon on la reporte</h4>
       <p>
-        <strong>Un.</strong> Les trois documents — conducteur de prise de poste,
-        matrice de parité, carte de propriété — sont envoyés quarante-huit heures
-        avant. On ne les présente pas en séance : s'ils n'ont pas été lus, la réunion
-        est reportée, pas raccourcie. Une réunion qui commence par une présentation
-        n'est plus un arbitrage, c'est un exposé.
+        <strong>Un.</strong> Les trois documents — conducteur de prise de poste, matrice de parité,
+        carte de propriété — sont envoyés quarante-huit heures avant. On ne les présente pas en
+        séance : s'ils n'ont pas été lus, la réunion est reportée, pas raccourcie. Une réunion qui
+        commence par une présentation n'est plus un arbitrage, c'est un exposé.
       </p>
       <p>
-        <strong>Deux.</strong> La règle de sortie est annoncée dès la première minute :
-        chaque point ressort <em>décidé</em>, <em>reporté avec une date</em>, ou
-        <em>refusé</em>. « On verra » n'est pas une sortie valable, et je le dis avant
-        de commencer, pas pendant.
+        <strong>Deux.</strong> La règle de sortie est annoncée dès la première minute : chaque point
+        ressort <em>décidé</em>, <em>reporté avec une date</em>, ou <em>refusé</em>. « On verra »
+        n'est pas une sortie valable, et je le dis avant de commencer, pas pendant.
       </p>
       <p>
-        <strong>Trois.</strong> Je note, il décide. Je n'écris rien dans Linear ni
-        pendant ni après — ce qui est décidé, c'est lui qui l'applique. Le dire à
-        voix haute au début désamorce la question implicite du territoire.
+        <strong>Trois.</strong> Je note, il décide. Je n'écris rien dans Linear ni pendant ni après
+        — ce qui est décidé, c'est lui qui l'applique. Le dire à voix haute au début désamorce la
+        question implicite du territoire.
       </p>
     </div>
 
     <div class="agenda">
-
       <div class="seg">
         <div class="seg-top"><span class="min">00-05</span><span class="ttl">Le cadre</span></div>
         <div class="seg-body">
           <dl>
             <dt>Ce que je dis</dt>
-            <dd>Ce que je viens chercher, comment on tranche, et ce que je ne demande pas — aucun accès en écriture, aucune réorganisation de son outil.</dd>
+            <dd>
+              Ce que je viens chercher, comment on tranche, et ce que je ne demande pas — aucun
+              accès en écriture, aucune réorganisation de son outil.
+            </dd>
             <dt>Ce que je lui offre en échange</dt>
-            <dd>Un filtre entre le terrain et lui, quelqu'un qui dit non aux prospects à sa place, et son second développeur remis au travail. C'est ce qu'il gagne, et il faut le nommer d'emblée.</dd>
+            <dd>
+              Un filtre entre le terrain et lui, quelqu'un qui dit non aux prospects à sa place, et
+              son second développeur remis au travail. C'est ce qu'il gagne, et il faut le nommer
+              d'emblée.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">05-15</span><span class="ttl">La voie A — rendre sa file à Amine</span></div>
+        <div class="seg-top">
+          <span class="min">05-15</span><span class="ttl">La voie A — rendre sa file à Amine</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Ces cinq tickets sont écrits, ils sont dans son métier, quatre sont en priorité haute. Est-ce qu'il y a une raison que j'ignore pour qu'ils ne soient pas à lui ? »</dd>
+            <dd class="q">
+              « Ces cinq tickets sont écrits, ils sont dans son métier, quatre sont en priorité
+              haute. Est-ce qu'il y a une raison que j'ignore pour qu'ils ne soient pas à lui ? »
+            </dd>
             <dt>Sortie attendue</dt>
             <dd>Oui ou non sur les cinq. Et qui lui parle — lui ou moi.</dd>
             <dt>Le piège</dt>
-            <dd>Commencer par là n'est pas un hasard : c'est le point le moins contesté et le plus rentable. S'il bloque ici, tout le reste de la réunion change de nature, et il vaut mieux le savoir à la dixième minute qu'à la quatre-vingtième.</dd>
+            <dd>
+              Commencer par là n'est pas un hasard : c'est le point le moins contesté et le plus
+              rentable. S'il bloque ici, tout le reste de la réunion change de nature, et il vaut
+              mieux le savoir à la dixième minute qu'à la quatre-vingtième.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">15-25</span><span class="ttl">Les neuf chantiers commencés sans propriétaire</span></div>
+        <div class="seg-top">
+          <span class="min">15-25</span
+          ><span class="ttl">Les neuf chantiers commencés sans propriétaire</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
@@ -1147,132 +1844,256 @@ Pour l'outillage interne, s'arrêter au point 2.*</pre>
             <dt>Sortie attendue</dt>
             <dd>Neuf réponses binaires. Aucune troisième option.</dd>
             <dt>Le piège</dt>
-            <dd>Il va vouloir expliquer chacun techniquement. Ce n'est pas le sujet — la question n'est pas ce que fait le ticket, mais qui le tient. Recadrer poliment dès le premier.</dd>
+            <dd>
+              Il va vouloir expliquer chacun techniquement. Ce n'est pas le sujet — la question
+              n'est pas ce que fait le ticket, mais qui le tient. Recadrer poliment dès le premier.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">25-35</span><span class="ttl">Les sept urgences orphelines</span></div>
+        <div class="seg-top">
+          <span class="min">25-35</span><span class="ttl">Les sept urgences orphelines</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Sept tickets sont marqués urgents et personne ne les porte, dont l'intégration continue qui ne se déclenche sur aucun push. Lesquels sont vraiment urgents ? »</dd>
+            <dd class="q">
+              « Sept tickets sont marqués urgents et personne ne les porte, dont l'intégration
+              continue qui ne se déclenche sur aucun push. Lesquels sont vraiment urgents ? »
+            </dd>
             <dt>Sortie attendue</dt>
-            <dd>Chacune devient prise, ou cesse d'être urgente. Les deux réponses sont bonnes ; l'immobilité ne l'est pas.</dd>
+            <dd>
+              Chacune devient prise, ou cesse d'être urgente. Les deux réponses sont bonnes ;
+              l'immobilité ne l'est pas.
+            </dd>
             <dt>Ce que ça teste</dt>
-            <dd>Si les sept restent urgentes et non prises à la sortie de la réunion, alors l'étiquette « urgent » ne veut rien dire dans cette équipe — et c'est un constat plus important que les sept tickets.</dd>
+            <dd>
+              Si les sept restent urgentes et non prises à la sortie de la réunion, alors
+              l'étiquette « urgent » ne veut rien dire dans cette équipe — et c'est un constat plus
+              important que les sept tickets.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">35-50</span><span class="ttl">Le lot de juillet — treize tickets, une décision</span></div>
+        <div class="seg-top">
+          <span class="min">35-50</span
+          ><span class="ttl">Le lot de juillet — treize tickets, une décision</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Le cadrage du 11 juillet a produit treize tickets, aucun n'a démarré. Celui du 15 août recouvre une partie du même terrain et il est livré. Lesquels des treize sont encore la cible ? »</dd>
+            <dd class="q">
+              « Le cadrage du 11 juillet a produit treize tickets, aucun n'a démarré. Celui du 15
+              août recouvre une partie du même terrain et il est livré. Lesquels des treize sont
+              encore la cible ? »
+            </dd>
             <dt>Sortie attendue</dt>
-            <dd>Trois piles : encore la cible, remplacé par la timeline, à fermer. Une décision de quinze minutes qui règle un huitième du backlog.</dd>
+            <dd>
+              Trois piles : encore la cible, remplacé par la timeline, à fermer. Une décision de
+              quinze minutes qui règle un huitième du backlog.
+            </dd>
             <dt>Le piège</dt>
-            <dd>C'est son propre travail de cadrage qu'on remet en cause. Formuler la question comme une évolution du produit, jamais comme un audit de ce qui n'a pas été fait.</dd>
+            <dd>
+              C'est son propre travail de cadrage qu'on remet en cause. Formuler la question comme
+              une évolution du produit, jamais comme un audit de ce qui n'a pas été fait.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">50-70</span><span class="ttl">Les cinq paris — quels fronts restent ouverts</span></div>
+        <div class="seg-top">
+          <span class="min">50-70</span
+          ><span class="ttl">Les cinq paris — quels fronts restent ouverts</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Vingt projets, quatre démarrés. Si on n'en gardait que cinq ouverts jusqu'à Noël, lesquels ? »</dd>
+            <dd class="q">
+              « Vingt projets, quatre démarrés. Si on n'en gardait que cinq ouverts jusqu'à Noël,
+              lesquels ? »
+            </dd>
             <dt>Sortie attendue</dt>
-            <dd>Cinq noms, et ce qu'on fait des quinze autres — réserve, jalon d'un autre projet, ou fermeture.</dd>
+            <dd>
+              Cinq noms, et ce qu'on fait des quinze autres — réserve, jalon d'un autre projet, ou
+              fermeture.
+            </dd>
             <dt>Le piège</dt>
-            <dd>Ne pas arriver avec ma propre liste de cinq. Il connaît le produit mieux que moi ; mon rôle est de tenir le chiffre cinq, pas de choisir à sa place. Si je propose la liste, je perds l'adhésion et je gagne un désaccord.</dd>
+            <dd>
+              Ne pas arriver avec ma propre liste de cinq. Il connaît le produit mieux que moi ; mon
+              rôle est de tenir le chiffre cinq, pas de choisir à sa place. Si je propose la liste,
+              je perds l'adhésion et je gagne un désaccord.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">70-82</span><span class="ttl">Les trois décisions structurantes</span></div>
+        <div class="seg-top">
+          <span class="min">70-82</span><span class="ttl">Les trois décisions structurantes</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Le matériel sous un club amateur, le sort de la flotte MadXP installée, et la montée du lot commercial. Lesquelles peux-tu trancher, et pour les autres, qui doit être dans la pièce ? »</dd>
+            <dd class="q">
+              « Le matériel sous un club amateur, le sort de la flotte MadXP installée, et la montée
+              du lot commercial. Lesquelles peux-tu trancher, et pour les autres, qui doit être dans
+              la pièce ? »
+            </dd>
             <dt>Sortie attendue</dt>
-            <dd>Pour chacune : tranchée, ou une date de décision et le nom des personnes manquantes. Ces trois-là conditionnent tout mon discours commercial ; sans elles je ne peux annoncer ni prix, ni délai, ni promesse d'autonomie.</dd>
+            <dd>
+              Pour chacune : tranchée, ou une date de décision et le nom des personnes manquantes.
+              Ces trois-là conditionnent tout mon discours commercial ; sans elles je ne peux
+              annoncer ni prix, ni délai, ni promesse d'autonomie.
+            </dd>
             <dt>Ce que j'apporte</dt>
-            <dd>Sur la troisième, je nomme moi-même ce que j'accepte de fermer en échange de la montée. Un arbitrage sans contrepartie n'en est pas un, et le proposer d'avance change complètement la conversation.</dd>
+            <dd>
+              Sur la troisième, je nomme moi-même ce que j'accepte de fermer en échange de la
+              montée. Un arbitrage sans contrepartie n'en est pas un, et le proposer d'avance change
+              complètement la conversation.
+            </dd>
           </dl>
         </div>
       </div>
 
       <div class="seg">
-        <div class="seg-top"><span class="min">82-90</span><span class="ttl">Les dates que j'emporte</span></div>
+        <div class="seg-top">
+          <span class="min">82-90</span><span class="ttl">Les dates que j'emporte</span>
+        </div>
         <div class="seg-body">
           <dl>
             <dt>La question</dt>
-            <dd class="q">« Quatorze promesses sont à requalifier auprès des prospects. Sur lesquelles peux-tu me donner un ordre de grandeur — ce trimestre, ce semestre, pas avant un an ? »</dd>
+            <dd class="q">
+              « Quatorze promesses sont à requalifier auprès des prospects. Sur lesquelles peux-tu
+              me donner un ordre de grandeur — ce trimestre, ce semestre, pas avant un an ? »
+            </dd>
             <dt>Sortie attendue</dt>
-            <dd>Pas des dates fermes : des tranches. Une tranche suffit pour parler à un prospect honnêtement ; l'absence de tranche transforme les quatorze en promesses à retirer.</dd>
+            <dd>
+              Pas des dates fermes : des tranches. Une tranche suffit pour parler à un prospect
+              honnêtement ; l'absence de tranche transforme les quatorze en promesses à retirer.
+            </dd>
             <dt>Clôture</dt>
-            <dd>Je relis les sept décisions à voix haute, sans commentaire. Ce qui n'a pas été tranché est nommé comme tel, avec sa date de reprise.</dd>
+            <dd>
+              Je relis les sept décisions à voix haute, sans commentaire. Ce qui n'a pas été tranché
+              est nommé comme tel, avec sa date de reprise.
+            </dd>
           </dl>
         </div>
       </div>
-
     </div>
 
     <h3>Trois questions à poser en dehors de cette réunion</h3>
     <p>
-      Elles sont venues du recul pris le 03/09 sur le métier d'origine, et aucune ne
-      méritait une minute des quatre-vingt-dix. Ce sont des questions de couloir, à
-      poser un midi ou dans une voiture — et leurs réponses ont valu plus cher que
-      plusieurs des sept décisions ci-dessus. <b>Deux ont été posées le 03/09 ; elles
-      ont modifié quatre documents du dossier le jour même.</b>
+      Elles sont venues du recul pris le 03/09 sur le métier d'origine, et aucune ne méritait une
+      minute des quatre-vingt-dix. Ce sont des questions de couloir, à poser un midi ou dans une
+      voiture — et leurs réponses ont valu plus cher que plusieurs des sept décisions ci-dessus.
+      <b
+        >Deux ont été posées le 03/09 ; elles ont modifié quatre documents du dossier le jour
+        même.</b
+      >
     </p>
     <ul class="plain">
-      <li><span class="cf cf-ok">RÉPONDU</span> <strong>« Sur dix affaires, combien portent sur un LED qu'on n'a pas posé ? »</strong> — <b>six à huit sur dix</b>. Le parc qu'on installe soi-même est l'exception. Ce chiffre fait passer l'empaquetage devant dans la notation WSJF, avec un argument de marché et non de socle.</li>
-      <li><span class="cf cf-ok">RÉPONDU</span> <strong>« Qualifier un processeur qu'on ne connaît pas, ça te prend combien de temps ? »</strong> — <b>une heure</b>. J'avais parié sur une journée et bâti un risque dessus ; il est sorti du registre le jour même. Pris avec la réponse précédente : l'entrée du marché principal est bon marché, et le seul obstacle qui reste est l'implémentation.</li>
-      <li><span class="cf cf-est">EN ATTENTE</span> <strong>« Sur les trois formes de vente — logiciel seul, avec matériel, avec exploitation — laquelle signe le plus ? »</strong> — aucune n'a assez d'historique pour se détacher. On garde une carte de flux unique et on repose la question dans trois mois.</li>
+      <li>
+        <span class="cf cf-ok">RÉPONDU</span>
+        <strong>« Sur dix affaires, combien portent sur un LED qu'on n'a pas posé ? »</strong> —
+        <b>six à huit sur dix</b>. Le parc qu'on installe soi-même est l'exception. Ce chiffre fait
+        passer l'empaquetage devant dans la notation WSJF, avec un argument de marché et non de
+        socle.
+      </li>
+      <li>
+        <span class="cf cf-ok">RÉPONDU</span>
+        <strong
+          >« Qualifier un processeur qu'on ne connaît pas, ça te prend combien de temps ? »</strong
+        >
+        — <b>une heure</b>. J'avais parié sur une journée et bâti un risque dessus ; il est sorti du
+        registre le jour même. Pris avec la réponse précédente : l'entrée du marché principal est
+        bon marché, et le seul obstacle qui reste est l'implémentation.
+      </li>
+      <li>
+        <span class="cf cf-est">EN ATTENTE</span>
+        <strong
+          >« Sur les trois formes de vente — logiciel seul, avec matériel, avec exploitation —
+          laquelle signe le plus ? »</strong
+        >
+        — aucune n'a assez d'historique pour se détacher. On garde une carte de flux unique et on
+        repose la question dans trois mois.
+      </li>
     </ul>
     <p>
-      Deux réponses sur trois en une conversation, et l'une des deux m'a donné tort.
-      C'est le meilleur rendement de tout ce dossier : le coût d'une question posée est
-      nul, celui d'une hypothèse gardée trois mois ne l'est pas.
+      Deux réponses sur trois en une conversation, et l'une des deux m'a donné tort. C'est le
+      meilleur rendement de tout ce dossier : le coût d'une question posée est nul, celui d'une
+      hypothèse gardée trois mois ne l'est pas.
     </p>
 
     <h3>Ce que la documentation d'exploitation ajoute à cette réunion</h3>
     <p>
-      Lue le 03/09, elle n'était ni dans Linear ni sur le site public : modes de rendu du
-      player, référentiel des stades et des écrans, récaps de Guingamp et de l'Europ'A Cup,
-      brief d'intervention à la Mosson. Trois points en sortent, et ils déplacent la séance
-      plus que n'importe quel réglage d'outil.
+      Lue le 03/09, elle n'était ni dans Linear ni sur le site public : modes de rendu du player,
+      référentiel des stades et des écrans, récaps de Guingamp et de l'Europ'A Cup, brief
+      d'intervention à la Mosson. Trois points en sortent, et ils déplacent la séance plus que
+      n'importe quel réglage d'outil.
     </p>
     <ul class="plain">
-      <li><strong>Un huitième point à ajouter : l'ingest des médias.</strong> Le récap du dernier match désigne « la chaîne d'approvisionnement des médias » comme le poste de temps le plus lourd de sa semaine, et conclut qu'un ingest qui plie, dédoublonne et vérifie les coupes ferait gagner plus que n'importe quel correctif de sa propre liste. <b>Ce chantier n'a aucun ticket.</b> La question n'est pas « combien vaut-il », c'est « pourquoi n'existe-t-il pas ».</li>
-      <li><strong>Le ticket urgent n°1 est structurel, pas cosmétique.</strong> Leur conducteur audio est le référentiel de temps de la soirée, et c'est précisément sa présence qui substitue le Master à la bonne liste sur le ruban et la tribune. Autrement dit : <b>leur façon de travailler déclenche le bug à chaque match</b>, avant-match puis mi-temps. Ce n'est pas un défaut de résolution parmi d'autres, c'est le produit qui ne colle pas à l'exploitation.</li>
-      <li><strong>Deux chantiers de fond sans ticket, déjà nommés par le lead dev</strong> — importer l'export du conducteur du club plutôt que d'en recevoir un fichier audio opaque, et faire des compositions d'équipe un gabarit alimenté en données plutôt que des fichiers rendus. Je n'ai pas à les proposer : j'ai à demander pourquoi ils ne sont écrits nulle part.</li>
+      <li>
+        <strong>Un huitième point à ajouter : l'ingest des médias.</strong> Le récap du dernier
+        match désigne « la chaîne d'approvisionnement des médias » comme le poste de temps le plus
+        lourd de sa semaine, et conclut qu'un ingest qui plie, dédoublonne et vérifie les coupes
+        ferait gagner plus que n'importe quel correctif de sa propre liste.
+        <b>Ce chantier n'a aucun ticket.</b> La question n'est pas « combien vaut-il », c'est «
+        pourquoi n'existe-t-il pas ».
+      </li>
+      <li>
+        <strong>Le ticket urgent n°1 est structurel, pas cosmétique.</strong> Leur conducteur audio
+        est le référentiel de temps de la soirée, et c'est précisément sa présence qui substitue le
+        Master à la bonne liste sur le ruban et la tribune. Autrement dit :
+        <b>leur façon de travailler déclenche le bug à chaque match</b>, avant-match puis mi-temps.
+        Ce n'est pas un défaut de résolution parmi d'autres, c'est le produit qui ne colle pas à
+        l'exploitation.
+      </li>
+      <li>
+        <strong>Deux chantiers de fond sans ticket, déjà nommés par le lead dev</strong> — importer
+        l'export du conducteur du club plutôt que d'en recevoir un fichier audio opaque, et faire
+        des compositions d'équipe un gabarit alimenté en données plutôt que des fichiers rendus. Je
+        n'ai pas à les proposer : j'ai à demander pourquoi ils ne sont écrits nulle part.
+      </li>
     </ul>
     <p>
-      Ces trois points ont un air de famille avec les cent vingt-huit tickets sans
-      propriétaire : <strong>ce qui compte le plus n'est pas écrit là où on décide</strong>.
-      C'est, au fond, le seul argument dont j'ai besoin pour justifier le rôle.
+      Ces trois points ont un air de famille avec les cent vingt-huit tickets sans propriétaire :
+      <strong>ce qui compte le plus n'est pas écrit là où on décide</strong>. C'est, au fond, le
+      seul argument dont j'ai besoin pour justifier le rôle.
     </p>
 
     <h3>Après la réunion</h3>
     <ul class="plain">
-      <li>Un compte rendu d'une page, envoyé le jour même : les sept décisions, les reports avec leur date, rien d'autre. Pas de relevé de discussion.</li>
-      <li>Aucune écriture de ma part dans Linear. Si les décisions ne s'y traduisent pas sous une semaine, ce n'est pas un oubli à rattraper — c'est un signal sur le mandat, et c'est à moi de le dire le premier.</li>
-      <li>La réunion suivante est calée avant de quitter la pièce, sur le lendemain d'un jour de match. Trente minutes, pas quatre-vingt-dix : celle-ci est la seule qui a besoin d'être longue.</li>
+      <li>
+        Un compte rendu d'une page, envoyé le jour même : les sept décisions, les reports avec leur
+        date, rien d'autre. Pas de relevé de discussion.
+      </li>
+      <li>
+        Aucune écriture de ma part dans Linear. Si les décisions ne s'y traduisent pas sous une
+        semaine, ce n'est pas un oubli à rattraper — c'est un signal sur le mandat, et c'est à moi
+        de le dire le premier.
+      </li>
+      <li>
+        La réunion suivante est calée avant de quitter la pièce, sur le lendemain d'un jour de
+        match. Trente minutes, pas quatre-vingt-dix : celle-ci est la seule qui a besoin d'être
+        longue.
+      </li>
     </ul>
 
     <footer>
-      Méthode retenue — <b>flux et limite d'encours</b>, cadence portée par le calendrier sportif, prévision par historique, découverte continue hebdomadaire, plus quatre pièces reprises à SAFe : WSJF, distinction socle/produit, carte des flux de valeur, registre de risques à quatre états.<br>
-      Méthode écartée — cycles, estimations et vélocité, cérémonies, événement de planification d'incrément, hiérarchie obligatoire à trois niveaux, miroir dans un second outil.<br>
-      Outils — <b>aucun outil nouveau</b>. Douze réglages dans Linear, dont deux ajouts assumés (trois initiatives — une par flux —, et les étiquettes de classe et d'apport), tous réversibles.
+      Méthode retenue — <b>flux et limite d'encours</b>, cadence portée par le calendrier sportif,
+      prévision par historique, découverte continue hebdomadaire, plus quatre pièces reprises à SAFe
+      : WSJF, distinction socle/produit, carte des flux de valeur, registre de risques à quatre
+      états.<br />
+      Méthode écartée — cycles, estimations et vélocité, cérémonies, événement de planification
+      d'incrément, hiérarchie obligatoire à trois niveaux, miroir dans un second outil.<br />
+      Outils — <b>aucun outil nouveau</b>. Douze réglages dans Linear, dont deux ajouts assumés
+      (trois initiatives — une par flux —, et les étiquettes de classe et d'apport), tous
+      réversibles.
     </footer>
   </section>
-
 </div>
