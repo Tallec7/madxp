@@ -1,8 +1,8 @@
 # Transition B2B Alive — dossier de prise de poste
 
-> ⚠️ **Ce dossier contient une analyse concurrentielle** (backlog, faiblesses produit, pipeline commercial de B2B Alive) et une stratégie de transition personnelle. Le repo `madxp` est **public** — ce contenu est donc visible publiquement. Décision assumée par le propriétaire du repo.
+> ⚠️ **Ce dossier contient une analyse commerciale et opérationnelle sensible** (backlog, pipeline commercial de B2B Alive, stratégie de transition personnelle). Le repo `madxp` est **public** — ce contenu est donc visible publiquement. Décision assumée par le propriétaire du repo.
 
-Travail transitoire, sans lien avec le code MadXP : MadXP sert de banque de comparaison pour analyser B2B Alive, pas l'inverse. Voir `contexte-reprise.md` pour le contexte complet (mandat, sources, règles de vérification, prochaines étapes).
+**Ce n'est pas un audit d'un concurrent.** MadXP est le travail personnel de six mois de Gwenvael. Le rapprochement avec B2B Alive est un rapprochement stratégique : leur équipe de développement et une solution existante plus avancée sur plusieurs plans, sa vision produit MadXP et ses prospects. MadXP va s'effacer comme produit ; ce dossier sert à faire en sorte que sa vision survive, absorbée dans un existant qui va plus loin. Voir `contexte-reprise.md` pour le contexte complet.
 
 ## Les 14 documents
 
