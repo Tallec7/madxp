@@ -1,0 +1,235 @@
+<title>Modules chiffrés et upsell</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F6F2EA; --surface:#FFFDF9; --surface-2:#FBF5EA;
+    --ink:#1E1A12; --ink-soft:#5E5748; --ink-faint:#8C8371;
+    --line:#E2D8C4; --accent:#E0700C; --accent-ink:#7A3A05; --accent-soft:#FBE3C4;
+    --mkt:#8A5CB8; --mkt-soft:#EEE3F6; --mkt-ink:#5A3980;
+    --fan:#2E8A78; --fan-soft:#DDF0EB; --fan-ink:#1D5A4D;
+    --ok:#3E7A4C; --ok-soft:#DEEEE0; --ok-ink:#26542F;
+    --warn:#B8863A; --warn-soft:#F4E7CE; --warn-ink:#7A5518;
+    --shadow: 0 1px 2px rgba(30,26,18,0.06), 0 10px 28px -14px rgba(30,26,18,0.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+      --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+      --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+      --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+      --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+      --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+      --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+    --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+    --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+    --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+    --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+    --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+    --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{ background:var(--bg); color:var(--ink); font-family:'Public Sans','Segoe UI',system-ui,sans-serif; line-height:1.55; padding:0 0 4rem; }
+  h1,h2,h3{ font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; color:var(--ink); }
+  .wrap{ max-width:1040px; margin:0 auto; padding:0 1.5rem; }
+
+  header{ padding:3rem 0 1.6rem; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); display:inline-block; padding:0.3rem 0.7rem; border-radius:3px; margin-bottom:1.1rem; }
+  h1{ font-size:clamp(1.9rem,4.6vw,2.5rem); line-height:1.03; margin:0 0 0.8rem; max-width:24ch; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:68ch; margin:0; }
+
+  .section-head{ display:flex; align-items:baseline; gap:0.7rem; margin:3rem 0 0.4rem; padding-bottom:0.5rem; border-bottom:2px solid var(--ink); }
+  .section-num{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; }
+  .section-title{ font-size:1.05rem; margin:0; }
+  .section-desc{ color:var(--ink-faint); font-size:0.85rem; margin:0.6rem 0 1.3rem; max-width:70ch; }
+
+  /* --- pricing modules --- */
+  .price-card{
+    background:var(--surface); border:1.5px solid var(--mkt); border-radius:14px;
+    padding:1.8rem 2rem; box-shadow:var(--shadow); margin-bottom:1.4rem;
+    display:grid; grid-template-columns:1.4fr 1fr; gap:2rem;
+  }
+  .price-card.fan{ border-color:var(--fan); }
+  .pc-head{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.5rem; }
+  .pc-badge{ font-family:'IBM Plex Mono',monospace; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em; background:var(--mkt-soft); color:var(--mkt-ink); padding:0.22rem 0.6rem; border-radius:99px; }
+  .price-card.fan .pc-badge{ background:var(--fan-soft); color:var(--fan-ink); }
+  .price-card h3{ font-size:1.3rem; margin:0; }
+  .pc-lead{ color:var(--ink-soft); font-size:0.9rem; margin:0 0 1.1rem; }
+  .pc-list{ list-style:none; margin:0; padding:0; }
+  .pc-list li{ font-size:0.86rem; padding:0.35rem 0; border-top:1px solid var(--line); display:flex; gap:0.5rem; }
+  .pc-list li:first-child{ border-top:none; }
+  .pc-list li::before{ content:"·"; color:var(--mkt-ink); font-weight:700; }
+  .price-card.fan .pc-list li::before{ color:var(--fan-ink); }
+
+  .pc-side{ border-left:1px solid var(--line); padding-left:2rem; }
+  .pc-price{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.7rem; color:var(--mkt-ink); line-height:1.1; }
+  .price-card.fan .pc-price{ color:var(--fan-ink); }
+  .pc-price small{ font-family:'Public Sans',sans-serif; font-weight:500; font-size:0.5em; color:var(--ink-faint); }
+  .pc-price-note{ color:var(--ink-faint); font-size:0.8rem; margin:0.2rem 0 1rem; }
+  .pc-fee{ background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.82rem; margin-bottom:0.8rem; }
+  .pc-fee b{ display:block; font-family:'IBM Plex Mono',monospace; font-size:0.75em; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.2rem; }
+
+  .conf{
+    display:inline-flex; align-items:center; gap:0.35rem;
+    font-family:'IBM Plex Mono',monospace; font-size:0.7rem; font-weight:600;
+    padding:0.15rem 0.5rem; border-radius:5px; margin-right:0.3rem;
+  }
+  .conf.ok{ background:var(--ok-soft); color:var(--ok-ink); }
+  .conf.warn{ background:var(--warn-soft); color:var(--warn-ink); }
+
+  .notes{ margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--line); font-size:0.84rem; color:var(--ink-soft); }
+  .notes p{ margin:0.4rem 0; }
+  .caution{ background:var(--warn-soft); border:1px solid var(--warn); border-radius:10px; padding:1rem 1.2rem; font-size:0.85rem; color:var(--ink); margin-top:1.2rem; }
+  .caution b{ color:var(--warn-ink); }
+
+  /* --- upsell table --- */
+  .utable-wrap{ overflow-x:auto; margin-bottom:1rem; }
+  table.utable{ width:100%; min-width:920px; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:0.83rem; }
+  table.utable th{ text-align:left; padding:0.6rem 0.8rem; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-faint); background:var(--surface-2); }
+  table.utable td{ padding:0.65rem 0.8rem; border-top:1px solid var(--line); vertical-align:top; }
+  table.utable tr:first-child td{ border-top:none; }
+  .tier-cell{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; text-transform:uppercase; font-size:0.95rem; color:var(--ink); white-space:nowrap; }
+  .tier-cell span{ display:block; font-family:'IBM Plex Mono',monospace; font-weight:500; text-transform:none; font-size:0.68rem; color:var(--ink-faint); margin-top:0.15rem; }
+  .signal{ color:var(--ink-soft); font-style:italic; }
+  .chip{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:4px; margin:0.1rem 0.25rem 0.1rem 0; white-space:nowrap; }
+  .chip.up{ background:var(--accent-soft); color:var(--accent-ink); }
+  .chip.mkt{ background:var(--mkt-soft); color:var(--mkt-ink); }
+  .chip.fan{ background:var(--fan-soft); color:var(--fan-ink); }
+  .chip.devis{ background:var(--surface-2); color:var(--ink-faint); border:1px solid var(--line); }
+
+  footer{ max-width:1040px; margin:2.8rem auto 0; padding:1.4rem 1.5rem 0; border-top:1px solid var(--line); font-size:0.78rem; color:var(--ink-faint); }
+
+  @media (max-width:760px){
+    .price-card{ grid-template-columns:1fr; }
+    .pc-side{ border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:1.2rem; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Suite du regroupement en paliers</span>
+    <h1>Prix des deux modules, et où pousser chaque client</h1>
+    <p class="subtitle">Les deux modules qui ne rentraient dans aucun palier (Marketplace Annonceur, Fan Engagement) reçoivent ici un prix de travail — <span class="conf warn">⚠️ estimé</span> partout où le chiffre n'est pas un tarif négocié. Ensuite, un tableau d'upsell : pour chaque palier de départ, ce qui pousse vers le palier du dessus, ce qui se vend à côté sans changer de palier, et ce qui reste hors-catalogue sur devis.</p>
+  <p class="subtitle" style="margin-top:0.6rem;font-size:0.85rem;color:var(--ink-faint);"><span class="conf ok">✓ vérifié</span> Taux de transaction contrôlés le 2026-09-06 contre les tarifs publics Stripe France et Weezevent (sources en bas de section A) — les deux frais de transaction ci-dessous ont été corrigés suite à cette vérification.</p>
+  </header>
+
+  <div class="section-head"><span class="section-num">A</span><h2 class="section-title">Chiffrage des modules transverses</h2></div>
+  <p class="section-desc">Logique de prix différente de la grille principale : pas une commission sur du CA que B2B est allé chercher (comme +Régie B2B, 20%), mais un abonnement plateforme + des frais de transaction qui couvrent le coût réel de l'encaissement — parce qu'ici, c'est le club ou le sponsor qui déclenche l'achat, pas B2B.</p>
+
+  <div class="price-card">
+    <div class="pc-body">
+      <div class="pc-head"><span class="pc-badge">Module transverse</span><h3>Marketplace Annonceur</h3></div>
+      <p class="pc-lead">L'annonceur local achète et paie son spot en ligne, sans appel commercial. Activable à partir de Confort.</p>
+      <ul class="pc-list">
+        <li>Catalogue des créneaux disponibles, en self-service</li>
+        <li>Paiement carte en ligne, facture générée automatiquement</li>
+        <li>Proof-of-play + reporting ROI joints à la facture</li>
+      </ul>
+      <div class="notes">
+        <p><span class="conf ok">✓ vérifié</span> Le portail magic link et les rapports PDF mensuels sponsor existent déjà (<code>sponsor-portal.controller.ts</code>, CRON mensuel — cf. spec Sponsors &amp; Pubs) : la brique « preuve de diffusion » n'est pas à reconstruire, seul le tunnel d'achat + paiement manque.</p>
+        <p><span class="conf ok">✓ vérifié</span> Le dashboard annonceur réseau a son backend prêt, il manque l'UI cross-club (même spec, section Roadmap) — accélère aussi la version réseau de ce module.</p>
+        <p><span class="conf ok">✓ vérifié</span> Coût plancher réel (Stripe France, tarifs publics 2026) : carte française standard 1,5 % + 0,25 €, carte française premium 2,8 % + 0,25 € (relevé le 21/10/2026, en hausse depuis 1,9 %), carte internationale 3,15 % + 0,25 €.</p>
+        <p><span class="conf warn">⚠️ à trancher</span> Le taux ci-contre ne couvre pas les cartes internationales (3,15 % de coût > 3,5 % facturé si le prélèvement se fait hors zone euro, marge quasi nulle) — acceptable tant que l'annonceur est un commerçant local, à revoir si la version réseau (dashboard annonceur multi-clubs) attire des cartes pro/étrangères.</p>
+      </div>
+    </div>
+    <div class="pc-side">
+      <div class="pc-price">29 €<small>/mois</small></div>
+      <div class="pc-price-note">module, en plus du palier — à partir de Confort</div>
+      <div class="pc-fee"><b>Frais de transaction</b>3,5 % + 0,30 € par paiement encaissé<br><span style="color:var(--ink-faint);font-size:0.85em;">Corrigé au 2026-09-06 : plancher Stripe FR 1,5–2,8 % + 0,25 € (source stripe.com/pricing) → marge ~0,7–2 pt + 0,05 € sur les cartes françaises. Cartes internationales (3,15 %) : marge quasi nulle, cas rare pour un annonceur local.</span></div>
+    </div>
+  </div>
+
+  <div class="price-card fan">
+    <div class="pc-body">
+      <div class="pc-head"><span class="pc-badge">Module transverse</span><h3>Fan Engagement</h3></div>
+      <p class="pc-lead">S'adresse au supporter, pas au sponsor — cycle de vente différent, deux profondeurs.</p>
+      <ul class="pc-list">
+        <li><strong>Essentiel</strong> : appli compagnon, notifications à chaque but, gamification (pronostics, vote du match)</li>
+        <li><strong>Pro</strong> : + billetterie intégrée, programme fidélité, cagnotte / dons club</li>
+      </ul>
+      <div class="notes">
+        <p><span class="conf warn">⚠️ estimé</span> Aucune brique de ce module n'existe dans le code actuel (absente de la spec Sponsors &amp; Pubs et du reste du dossier consulté) — chiffrage à l'aveugle, pas d'ancrage terrain comme pour la Marketplace.</p>
+        <p><span class="conf ok">✓ vérifié</span> Le comparable initial était faux : Weezevent facture réellement 2,5 % TTC par billet (minimum 0,99 € sous 40 €, gratuit pour les événements gratuits), pas « 2–5 % » — corrigé ci-contre au 2026-09-06 (source support.weezevent.com).</p>
+      </div>
+    </div>
+    <div class="pc-side">
+      <div class="pc-price">39 €<small>/mois</small></div>
+      <div class="pc-price-note">Essentiel — en plus du palier</div>
+      <div class="pc-price" style="margin-top:0.8rem;">79 €<small>/mois</small></div>
+      <div class="pc-price-note">Pro — en plus du palier</div>
+      <div class="pc-fee"><b>Frais billetterie</b>2,9 % + 0,25 €, minimum 0,99 € par billet<br><span style="color:var(--ink-faint);font-size:0.85em;">Aligné sur Weezevent (2,5 % TTC, min. 0,99 €) tout en couvrant le coût carte premium Stripe FR (2,8 % + 0,25 €) — marge fine sur carte premium, correcte sur carte standard (1,5 %).</span></div>
+    </div>
+  </div>
+
+  <div class="caution">
+    <b>Un point à trancher avant de figer le prix des dons/cagnotte :</b> HelloAsso, la référence du secteur associatif, encaisse les dons gratuitement pour le club (le donateur choisit un pourboire optionnel). Facturer une commission sur les dons à un club amateur se compare mal à ce standard gratuit et peut être perçu comme abusif. Piste : garder la commission sur la <em>billetterie</em> (marché déjà payant, aligné Weezevent 2,5 %) mais passer les <em>dons</em> en modèle pourboire, comme HelloAsso — à valider avant d'annoncer un prix.
+  </div>
+
+  <div class="section-head"><span class="section-num">B</span><h2 class="section-title">Tableau d'upsell</h2></div>
+  <p class="section-desc">Pour chaque palier de départ : le signal qui indique qu'un club est mûr pour monter, le palier supérieur à proposer, les modules transverses activables sans changer de palier, et ce qui reste hors-catalogue (sur devis, à qualifier au cas par cas).</p>
+
+  <div class="utable-wrap">
+    <table class="utable">
+      <tr>
+        <th>Palier de départ</th>
+        <th>Signal de montée en gamme</th>
+        <th>Upsell palier supérieur</th>
+        <th>Modules activables sans changer de palier</th>
+        <th>Hors-catalogue / sur devis</th>
+      </tr>
+      <tr>
+        <td class="tier-cell">Essentiel<span>49 €/mois</span></td>
+        <td class="signal">Plus de 5 sponsors à gérer, veut cibler les jours de match</td>
+        <td><span class="chip up">→ Confort</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur</span></td>
+        <td><span class="chip devis">Académie en ligne</span></td>
+      </tr>
+      <tr>
+        <td class="tier-cell">Confort<span>89 €/mois</span></td>
+        <td class="signal">Double écran à piloter, ou LED déjà posée par un tiers</td>
+        <td><span class="chip up">→ Avancé</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Essentiel</span></td>
+        <td><span class="chip devis">Connecteur CRM/emailing</span></td>
+      </tr>
+      <tr>
+        <td class="tier-cell">Avancé<span>139 €/mois</span></td>
+        <td class="signal">Envie d'un ruban LED, ou plusieurs sites à gérer sous un seul contrat</td>
+        <td><span class="chip up">→ LED / Multi-sites</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Essentiel ou Pro</span></td>
+        <td><span class="chip devis">Dashboard revenus vs coûts (sur mesure)</span></td>
+      </tr>
+      <tr>
+        <td class="tier-cell">LED / Multi-sites<span>250 €/mois</span></td>
+        <td class="signal">Affluence qui grimpe, ambition broadcast (streaming, fan cam)</td>
+        <td><span class="chip up">→ Production Pro (National)</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Pro</span></td>
+        <td><span class="chip devis">Kit LED plug &amp; play nouvelle génération</span></td>
+      </tr>
+      <tr>
+        <td class="tier-cell">Production Pro<span>300–950 €/mois</span></td>
+        <td class="signal">Plusieurs sources fan cam ne suffisent plus, veut des sponsors hors de son bassin local</td>
+        <td><span class="chip up">→ Option +Régie B2B</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Pro</span></td>
+        <td><span class="chip devis">Réalisation IA automatique</span><span class="chip devis">Technicien sur place</span></td>
+      </tr>
+      <tr>
+        <td class="tier-cell">+ Régie B2B<span>20 % sur le CA nouveau</span></td>
+        <td class="signal">Plusieurs clubs du réseau, veut vendre une campagne groupée</td>
+        <td><span class="chip up">→ Réseau (campagnes multi-clubs)</span></td>
+        <td><span class="chip mkt">Marketplace Annonceur (v. réseau)</span></td>
+        <td><span class="chip devis">Enchères programmatiques</span><span class="chip devis">Portail fédération/ligue</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <footer>
+    Prix des modules non négociés avec un prestataire de paiement — à traiter comme une base de discussion, pas un tarif publiable en l'état. Les <em>taux</em> de transaction, eux, sont vérifiés contre les tarifs publics au 2026-09-06 : Stripe France (<a href="https://stripe.com/pricing" style="color:inherit;">stripe.com/pricing</a>, cartes FR standard 1,5 %+0,25 €, premium 2,8 %+0,25 € depuis le 21/10/2026, internationales 3,15 %+0,25 €) et Weezevent (<a href="https://support.weezevent.com/fr/gerer-les-frais-sur-mes-tarifs" style="color:inherit;">support.weezevent.com</a>, 2,5 % TTC, min. 0,99 € sous 40 €, gratuit sur événement gratuit). Le tableau d'upsell part de l'hypothèse qu'un signal d'achat déclenche une conversation commerciale, pas une bascule automatique de facturation.
+  </footer>
+</div>

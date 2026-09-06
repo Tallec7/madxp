@@ -1,0 +1,507 @@
+<title>Dossier paliers &amp; modules B2B</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F6F2EA; --surface:#FFFDF9; --surface-2:#FBF5EA;
+    --ink:#1E1A12; --ink-soft:#5E5748; --ink-faint:#8C8371;
+    --line:#E2D8C4; --accent:#E0700C; --accent-ink:#7A3A05; --accent-soft:#FBE3C4;
+    --mkt:#8A5CB8; --mkt-soft:#EEE3F6; --mkt-ink:#5A3980;
+    --fan:#2E8A78; --fan-soft:#DDF0EB; --fan-ink:#1D5A4D;
+    --ok:#3E7A4C; --ok-soft:#DEEEE0; --ok-ink:#26542F;
+    --warn:#B8863A; --warn-soft:#F4E7CE; --warn-ink:#7A5518;
+    --risk:#B0503F; --risk-soft:#F5E0DA; --risk-ink:#7A3323;
+    --shadow: 0 1px 2px rgba(30,26,18,0.06), 0 10px 28px -14px rgba(30,26,18,0.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+      --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+      --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+      --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+      --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+      --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+      --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+      --risk:#E0876F; --risk-soft:#331C15; --risk-ink:#F5C3B2;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+    --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+    --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+    --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+    --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+    --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+    --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+    --risk:#E0876F; --risk-soft:#331C15; --risk-ink:#F5C3B2;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{ background:var(--bg); color:var(--ink); font-family:'Public Sans','Segoe UI',system-ui,sans-serif; line-height:1.55; padding:0 0 4rem; }
+  h1,h2,h3{ font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; color:var(--ink); }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 1.5rem; }
+  a{ color:inherit; }
+
+  header{ padding:3rem 0 1.6rem; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); display:inline-block; padding:0.3rem 0.7rem; border-radius:3px; margin-bottom:1.1rem; }
+  h1{ font-size:clamp(2rem,4.8vw,2.8rem); line-height:1.02; margin:0 0 0.8rem; max-width:22ch; }
+  .subtitle{ color:var(--ink-soft); font-size:1.02rem; max-width:70ch; margin:0; }
+
+  /* deck nav */
+  nav.deck-nav{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:0.8rem;
+    margin:2.2rem 0 0.6rem;
+  }
+  nav.deck-nav a{
+    display:block; background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:0.9rem 1rem; text-decoration:none; box-shadow:var(--shadow);
+  }
+  .nav-num{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--accent-ink); font-weight:700; }
+  .nav-label{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; text-transform:uppercase; font-size:0.98rem; margin-top:0.2rem; }
+  .nav-sub{ font-size:0.76rem; color:var(--ink-faint); margin-top:0.15rem; }
+
+  /* deck part divider */
+  .part{ margin-top:4.4rem; padding-top:2rem; border-top:4px solid var(--ink); }
+  .part-eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent-ink); }
+  .part h2.part-title{ font-size:clamp(1.5rem,3.4vw,2rem); margin:0.3rem 0 0.6rem; max-width:26ch; }
+  .part-desc{ color:var(--ink-soft); font-size:0.94rem; max-width:70ch; margin:0 0 1.6rem; }
+
+  .section-head{ display:flex; align-items:baseline; gap:0.7rem; margin:2.6rem 0 0.4rem; padding-bottom:0.5rem; border-bottom:2px solid var(--ink); }
+  .section-num{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; }
+  .section-title{ font-size:1.05rem; margin:0; }
+  .section-desc{ color:var(--ink-faint); font-size:0.85rem; margin:0.6rem 0 1.2rem; max-width:72ch; }
+
+  .conf{ display:inline-flex; align-items:center; gap:0.35rem; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; font-weight:600; padding:0.16rem 0.5rem; border-radius:5px; white-space:nowrap; }
+  .conf.ok{ background:var(--ok-soft); color:var(--ok-ink); }
+  .conf.warn{ background:var(--warn-soft); color:var(--warn-ink); }
+  .conf.risk{ background:var(--risk-soft); color:var(--risk-ink); }
+
+  /* ladder (part I) */
+  .ladder{ display:flex; flex-direction:column; gap:0.9rem; }
+  .tier{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.3rem 1.5rem; box-shadow:var(--shadow); display:grid; grid-template-columns:180px 1fr; gap:1.4rem; align-items:start; }
+  .tier-id{ display:flex; flex-direction:column; gap:0.25rem; }
+  .tier-name{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:1.25rem; text-transform:uppercase; color:var(--ink); line-height:1.05; }
+  .tier-audience{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-faint); }
+  .tier-price{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; margin-top:0.3rem; }
+  .tier-body{ display:flex; flex-direction:column; gap:0.7rem; }
+  .row-label{ font-family:'IBM Plex Mono',monospace; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); margin-bottom:0.3rem; }
+  .today{ font-size:0.86rem; color:var(--ink-soft); }
+  .next{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.35rem; }
+  .next li{ font-size:0.88rem; display:flex; gap:0.5rem; align-items:flex-start; }
+  .next li::before{ content:"→"; color:var(--accent-ink); font-weight:700; flex-shrink:0; }
+
+  .module{ background:var(--surface); border:1.5px solid var(--mkt); border-radius:14px; padding:1.6rem 1.8rem; box-shadow:var(--shadow); margin-bottom:1rem; }
+  .module.fan{ border-color:var(--fan); }
+  .module-head{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.4rem; }
+  .module-badge{ font-family:'IBM Plex Mono',monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; background:var(--mkt-soft); color:var(--mkt-ink); padding:0.25rem 0.6rem; border-radius:99px; }
+  .module.fan .module-badge{ background:var(--fan-soft); color:var(--fan-ink); }
+  .module h3{ font-size:1.2rem; margin:0; }
+  .module-lead{ color:var(--ink-soft); font-size:0.9rem; margin:0.5rem 0 1rem; max-width:66ch; }
+  .module-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0.4rem 1.6rem; }
+  .module-grid li{ font-size:0.86rem; list-style:none; display:flex; gap:0.5rem; }
+  .module-grid li::before{ content:"✓"; color:var(--mkt-ink); font-weight:700; flex-shrink:0; }
+  .module.fan .module-grid li::before{ color:var(--fan-ink); }
+  .module-note{ font-size:0.78rem; color:var(--ink-faint); margin-top:1rem; }
+
+  .found{ background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:1.2rem 1.4rem; }
+  .found ul{ margin:0.5rem 0 0; padding-left:1.2rem; font-size:0.86rem; color:var(--ink-soft); }
+  .found li{ margin:0.25rem 0; }
+  .parking{ font-size:0.86rem; color:var(--ink-soft); }
+
+  /* pricing cards (part II) */
+  .price-card{ background:var(--surface); border:1.5px solid var(--mkt); border-radius:14px; padding:1.8rem 2rem; box-shadow:var(--shadow); margin-bottom:1.4rem; display:grid; grid-template-columns:1.4fr 1fr; gap:2rem; }
+  .price-card.fan{ border-color:var(--fan); }
+  .pc-head{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.5rem; }
+  .pc-badge{ font-family:'IBM Plex Mono',monospace; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em; background:var(--mkt-soft); color:var(--mkt-ink); padding:0.22rem 0.6rem; border-radius:99px; }
+  .price-card.fan .pc-badge{ background:var(--fan-soft); color:var(--fan-ink); }
+  .price-card h3{ font-size:1.3rem; margin:0; }
+  .pc-lead{ color:var(--ink-soft); font-size:0.9rem; margin:0 0 1.1rem; }
+  .pc-list{ list-style:none; margin:0; padding:0; }
+  .pc-list li{ font-size:0.86rem; padding:0.35rem 0; border-top:1px solid var(--line); display:flex; gap:0.5rem; }
+  .pc-list li:first-child{ border-top:none; }
+  .pc-list li::before{ content:"·"; color:var(--mkt-ink); font-weight:700; }
+  .price-card.fan .pc-list li::before{ color:var(--fan-ink); }
+  .pc-side{ border-left:1px solid var(--line); padding-left:2rem; }
+  .pc-price{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.7rem; color:var(--mkt-ink); line-height:1.1; }
+  .price-card.fan .pc-price{ color:var(--fan-ink); }
+  .pc-price small{ font-family:'Public Sans',sans-serif; font-weight:500; font-size:0.5em; color:var(--ink-faint); }
+  .pc-price-note{ color:var(--ink-faint); font-size:0.8rem; margin:0.2rem 0 1rem; }
+  .pc-fee{ background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:0.7rem 0.9rem; font-size:0.82rem; margin-bottom:0.8rem; }
+  .pc-fee b{ display:block; font-family:'IBM Plex Mono',monospace; font-size:0.75em; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.2rem; }
+  .notes{ margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--line); font-size:0.84rem; color:var(--ink-soft); }
+  .notes p{ margin:0.4rem 0; }
+  .caution{ background:var(--warn-soft); border:1px solid var(--warn); border-radius:10px; padding:1rem 1.2rem; font-size:0.85rem; color:var(--ink); margin-top:1.2rem; }
+  .caution b{ color:var(--warn-ink); }
+
+  /* upsell table (part III) */
+  .utable-wrap{ overflow-x:auto; margin-bottom:1rem; }
+  table.utable{ width:100%; min-width:920px; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:0.83rem; }
+  table.utable th{ text-align:left; padding:0.6rem 0.8rem; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--ink-faint); background:var(--surface-2); }
+  table.utable td{ padding:0.65rem 0.8rem; border-top:1px solid var(--line); vertical-align:top; }
+  table.utable tr:first-child td{ border-top:none; }
+  .tier-cell{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; text-transform:uppercase; font-size:0.95rem; color:var(--ink); white-space:nowrap; }
+  .tier-cell span{ display:block; font-family:'IBM Plex Mono',monospace; font-weight:500; text-transform:none; font-size:0.68rem; color:var(--ink-faint); margin-top:0.15rem; }
+  .signal{ color:var(--ink-soft); font-style:italic; }
+  .chip{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:4px; margin:0.1rem 0.25rem 0.1rem 0; white-space:nowrap; }
+  .chip.up{ background:var(--accent-soft); color:var(--accent-ink); }
+  .chip.mkt{ background:var(--mkt-soft); color:var(--mkt-ink); }
+  .chip.fan{ background:var(--fan-soft); color:var(--fan-ink); }
+  .chip.devis{ background:var(--surface-2); color:var(--ink-faint); border:1px solid var(--line); }
+
+  /* hors-catalogue items (part IV) */
+  .item{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.3rem 1.5rem; margin-bottom:0.8rem; box-shadow:var(--shadow); }
+  .item-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem; }
+  .item-name{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:1.1rem; text-transform:uppercase; color:var(--ink); }
+  .item-nature{ font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.03em; margin-top:0.15rem; }
+  .item-price{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.15rem; color:var(--accent-ink); text-align:right; white-space:nowrap; }
+  .item-price small{ display:block; font-family:'Public Sans',sans-serif; font-weight:500; font-size:0.62em; color:var(--ink-faint); text-transform:none; letter-spacing:0; }
+  .item-calc{ font-size:0.8rem; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; margin-bottom:0.5rem; }
+  .item-note{ font-size:0.85rem; color:var(--ink-soft); }
+  .item-tags{ margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap; }
+  .method{ background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:1rem 1.3rem; font-size:0.85rem; color:var(--ink-soft); margin-bottom:1.5rem; }
+  .method b{ color:var(--ink); }
+
+  footer{ max-width:1080px; margin:3.2rem auto 0; padding:1.6rem 1.5rem 0; border-top:1px solid var(--line); font-size:0.78rem; color:var(--ink-faint); }
+  footer p{ margin:0.4rem 0; }
+
+  @media (max-width:760px){
+    nav.deck-nav{ grid-template-columns:1fr 1fr; }
+    .tier{ grid-template-columns:1fr; }
+    .price-card{ grid-template-columns:1fr; }
+    .pc-side{ border-left:none; border-top:1px solid var(--line); padding-left:0; padding-top:1.2rem; }
+    .module-grid{ grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Dossier consolidé · construction de la grille B2B</span>
+    <h1>Des paliers augmentés au chiffrage du sur-devis</h1>
+    <p class="subtitle">Les trois documents de travail réunis en un seul : où chaque idée du brainstorm vient enrichir la grille actuelle, ce que coûtent les deux modules transverses et le sur-devis, et comment pousser chaque client vers l'étape suivante. Base commune : grille en cours (Essentiel → Production Pro → +Régie B2B), inchangée dans son prix et son découpage.</p>
+
+    <nav class="deck-nav">
+      <a href="#partie-1"><div class="nav-num">I</div><div class="nav-label">Paliers augmentés</div><div class="nav-sub">La grille + les prochaines briques</div></a>
+      <a href="#partie-2"><div class="nav-num">II</div><div class="nav-label">Modules chiffrés</div><div class="nav-sub">Marketplace &amp; Fan Engagement</div></a>
+      <a href="#partie-3"><div class="nav-num">III</div><div class="nav-label">Upsell</div><div class="nav-sub">Signal → palier → add-on</div></a>
+      <a href="#partie-4"><div class="nav-num">IV</div><div class="nav-label">Sur-devis</div><div class="nav-sub">Chaque item, chiffré</div></a>
+    </nav>
+  </header>
+
+  <!-- ================= PARTIE I ================= -->
+  <section id="partie-1" class="part">
+    <span class="part-eyebrow">Partie I</span>
+    <h2 class="part-title">Où range-t-on chaque idée sur la grille actuelle</h2>
+    <p class="part-desc">Même grille que l'offre en cours. Pour chaque palier : ce qu'il fait déjà, et les 3-4 briques du brainstorm qui l'enrichiraient en premier — celles qui parlent le plus à l'acheteur de ce palier, pas les plus spectaculaires. Deux idées ne rentrent dans aucun palier existant : elles deviennent les modules transverses de la Partie II.</p>
+
+    <div class="ladder">
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">Essentiel</span><span class="tier-audience">Club amateur</span><span class="tier-price">49 €/mois</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Boîtier, score temps réel, diffusion sponsors en boucle, club autonome sur ses vidéos.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Diagnostic à distance + redémarrage automatique — moins de tickets support sur le palier le plus peuplé</li>
+            <li>Académie en ligne — le bénévole se forme seul, sans mobiliser le support</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">Confort</span><span class="tier-audience">Amateur structuré</span><span class="tier-price">89 €/mois</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Diffusion ciblée jours de match, spot qui s'arrête seul, habillage réutilisable.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Contenu interactif supporter — QR code, sondage mi-temps affiché à l'écran</li>
+            <li>Habillage saisonnier automatique — playoffs, derby, sans y toucher</li>
+            <li>Chaîne club 24/7 — grille de programme même hors match</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">Avancé</span><span class="tier-audience">Semi-pro / pro régional</span><span class="tier-price">139 €/mois</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Rotation pondérée, double écran piloté, compatible écrans LED déjà posés.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Booking publicitaire — flights, fréquence garantie, calendrier de réservation</li>
+            <li>Ciblage contextuel — le bon spot au bon moment du match</li>
+            <li>Dashboard revenus vs coûts club — la marge réelle, pas juste le CA</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">LED / Multi-sites</span><span class="tier-audience">Pro régional</span><span class="tier-price">250 €/mois</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Ruban LED périmétrique, jusqu'à 2 sites sous un contrat, mise en service accélérée.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Auto-calibration LED à l'installation — plus de mire manuelle</li>
+            <li>Synchronisation LED + écran + réseaux sociaux — un seul visuel, trois canaux</li>
+            <li>Permissions par écran — pas juste par site</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">Production Pro</span><span class="tier-audience">National → Élite</span><span class="tier-price">300–950 €/mois</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Fan cam multi-source, régie cloud, jusqu'à instant replay et multiview au niveau Élite.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Détection auto des faits de jeu — le score se saisit tout seul</li>
+            <li>Réalisation automatique par IA — le switch caméra suit l'action sans technicien</li>
+            <li>Streaming multi-plateforme + VOD auto découpée</li>
+            <li>Import calendrier fédération — plus de ressaisie de match</li>
+          </ul></div>
+        </div>
+      </div>
+
+      <div class="tier">
+        <div class="tier-id"><span class="tier-name">+ Régie B2B</span><span class="tier-audience">Option Confort et +</span><span class="tier-price">20 % sur le CA nouveau</span></div>
+        <div class="tier-body">
+          <div><div class="row-label">Aujourd'hui</div><div class="today">Prospection active de nouveaux sponsors, 0% sur les sponsors déjà en place du club.</div></div>
+          <div><div class="row-label">Prochaines briques</div><ul class="next">
+            <li>Campagne réseau en un clic — un annonceur achète sur plusieurs clubs d'un coup</li>
+            <li>Dashboard agence multi-clients</li>
+            <li>Benchmark inter-clubs anonymisé</li>
+            <li>Portail fédération/ligue</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head"><span class="section-num">I.B</span><h2 class="section-title">Fondations transverses &amp; laissé de côté</h2></div>
+    <p class="section-desc">Ce qui soutient toute la grille sans être vendable en soi, et ce qui est honnêtement mis de côté pour l'instant.</p>
+    <div class="found" style="margin-bottom:1rem;">
+      <strong style="font-size:0.9rem;">Fondations transverses</strong>
+      <ul>
+        <li>Provisioning zéro-touch — un nouveau site s'auto-configure au branchement</li>
+        <li>Failover 4G/5G automatique — moins de « TV coupée » côté club</li>
+        <li>Boîtier nouvelle génération + caméra intégrée + kit LED plug &amp; play</li>
+        <li>IA embarquée sur le boîtier — traitement local, moins de dépendance cloud</li>
+      </ul>
+    </div>
+    <div class="parking">Laissé de côté pour l'instant : réalité augmentée / filtres écran (pas de signal de demande), marketplace de templates communautaire (utile seulement à grande échelle réseau).</div>
+  </section>
+
+  <!-- ================= PARTIE II ================= -->
+  <section id="partie-2" class="part">
+    <span class="part-eyebrow">Partie II</span>
+    <h2 class="part-title">Prix des deux modules transverses</h2>
+    <p class="part-desc">Logique de prix différente de la grille principale : pas une commission sur du CA que B2B est allé chercher (comme +Régie B2B, 20 %), mais un abonnement plateforme + des frais de transaction qui couvrent le coût réel de l'encaissement — parce qu'ici, c'est le club ou le sponsor qui déclenche l'achat, pas B2B. <span class="conf ok">✓ vérifié</span> Taux de transaction contrôlés le 2026-09-06 contre les tarifs publics Stripe France et Weezevent (sources en pied de page).</p>
+
+    <div class="price-card">
+      <div class="pc-body">
+        <div class="pc-head"><span class="pc-badge">Module transverse</span><h3>Marketplace Annonceur</h3></div>
+        <p class="pc-lead">L'annonceur local achète et paie son spot en ligne, sans appel commercial. Activable à partir de Confort.</p>
+        <ul class="pc-list">
+          <li>Catalogue des créneaux disponibles, en self-service</li>
+          <li>Paiement carte en ligne, facture générée automatiquement</li>
+          <li>Proof-of-play + reporting ROI joints à la facture</li>
+        </ul>
+        <div class="notes">
+          <p><span class="conf ok">✓ vérifié</span> Le portail magic link et les rapports PDF mensuels sponsor existent déjà (<code>sponsor-portal.controller.ts</code>, CRON mensuel — cf. spec Sponsors &amp; Pubs) : la brique « preuve de diffusion » n'est pas à reconstruire, seul le tunnel d'achat + paiement manque.</p>
+          <p><span class="conf ok">✓ vérifié</span> Le dashboard annonceur réseau a son backend prêt, il manque l'UI cross-club (même spec, section Roadmap).</p>
+          <p><span class="conf ok">✓ vérifié</span> Coût plancher réel (Stripe France, tarifs publics 2026) : carte FR standard 1,5 % + 0,25 €, carte FR premium 2,8 % + 0,25 € (depuis le 21/10/2026), carte internationale 3,15 % + 0,25 €.</p>
+        </div>
+      </div>
+      <div class="pc-side">
+        <div class="pc-price">29 €<small>/mois</small></div>
+        <div class="pc-price-note">module, en plus du palier — à partir de Confort</div>
+        <div class="pc-fee"><b>Frais de transaction</b>3,5 % + 0,30 € par paiement encaissé<br><span style="color:var(--ink-faint);font-size:0.85em;">Marge ~0,7–2 pt + 0,05 € sur cartes FR ; quasi nulle sur cartes internationales, cas rare pour un annonceur local.</span></div>
+      </div>
+    </div>
+
+    <div class="price-card fan">
+      <div class="pc-body">
+        <div class="pc-head"><span class="pc-badge">Module transverse</span><h3>Fan Engagement</h3></div>
+        <p class="pc-lead">S'adresse au supporter, pas au sponsor — cycle de vente différent, deux profondeurs.</p>
+        <ul class="pc-list">
+          <li><strong>Essentiel</strong> : appli compagnon, notifications à chaque but, gamification (pronostics, vote du match)</li>
+          <li><strong>Pro</strong> : + billetterie intégrée, programme fidélité, cagnotte / dons club</li>
+        </ul>
+        <div class="notes">
+          <p><span class="conf warn">⚠️ estimé</span> Aucune brique de ce module n'existe dans le code actuel — chiffrage à l'aveugle, pas d'ancrage terrain comme pour la Marketplace.</p>
+          <p><span class="conf ok">✓ vérifié</span> Weezevent facture réellement 2,5 % TTC par billet (minimum 0,99 € sous 40 €, gratuit sur événement gratuit) — source support.weezevent.com.</p>
+        </div>
+      </div>
+      <div class="pc-side">
+        <div class="pc-price">39 €<small>/mois</small></div>
+        <div class="pc-price-note">Essentiel — en plus du palier</div>
+        <div class="pc-price" style="margin-top:0.8rem;">79 €<small>/mois</small></div>
+        <div class="pc-price-note">Pro — en plus du palier</div>
+        <div class="pc-fee"><b>Frais billetterie</b>2,9 % + 0,25 €, minimum 0,99 € par billet<br><span style="color:var(--ink-faint);font-size:0.85em;">Aligné Weezevent tout en couvrant le coût carte premium Stripe FR.</span></div>
+      </div>
+    </div>
+
+    <div class="caution">
+      <b>Un point à trancher avant de figer le prix des dons/cagnotte :</b> HelloAsso, la référence du secteur associatif, encaisse les dons gratuitement pour le club (pourboire optionnel côté donateur). Facturer une commission sur les dons à un club amateur se compare mal à ce standard gratuit. Piste : commission sur la billetterie seule, dons en modèle pourboire comme HelloAsso — à valider avant d'annoncer un prix.
+    </div>
+  </section>
+
+  <!-- ================= PARTIE III ================= -->
+  <section id="partie-3" class="part">
+    <span class="part-eyebrow">Partie III</span>
+    <h2 class="part-title">Tableau d'upsell</h2>
+    <p class="part-desc">Pour chaque palier de départ : le signal qui indique qu'un club est mûr pour monter, le palier supérieur à proposer, les modules transverses activables sans changer de palier, et ce qui reste hors-catalogue (détail des prix en Partie IV).</p>
+
+    <div class="utable-wrap">
+      <table class="utable">
+        <tr><th>Palier de départ</th><th>Signal de montée en gamme</th><th>Upsell palier supérieur</th><th>Modules activables sans changer de palier</th><th>Hors-catalogue / sur devis</th></tr>
+        <tr>
+          <td class="tier-cell">Essentiel<span>49 €/mois</span></td>
+          <td class="signal">Plus de 5 sponsors à gérer, veut cibler les jours de match</td>
+          <td><span class="chip up">→ Confort</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur</span></td>
+          <td><span class="chip devis">Académie en ligne</span></td>
+        </tr>
+        <tr>
+          <td class="tier-cell">Confort<span>89 €/mois</span></td>
+          <td class="signal">Double écran à piloter, ou LED déjà posée par un tiers</td>
+          <td><span class="chip up">→ Avancé</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Essentiel</span></td>
+          <td><span class="chip devis">Connecteur CRM/emailing</span></td>
+        </tr>
+        <tr>
+          <td class="tier-cell">Avancé<span>139 €/mois</span></td>
+          <td class="signal">Envie d'un ruban LED, ou plusieurs sites à gérer sous un seul contrat</td>
+          <td><span class="chip up">→ LED / Multi-sites</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Essentiel ou Pro</span></td>
+          <td><span class="chip devis">Dashboard revenus vs coûts (sur mesure)</span></td>
+        </tr>
+        <tr>
+          <td class="tier-cell">LED / Multi-sites<span>250 €/mois</span></td>
+          <td class="signal">Affluence qui grimpe, ambition broadcast (streaming, fan cam)</td>
+          <td><span class="chip up">→ Production Pro (National)</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Pro</span></td>
+          <td><span class="chip devis">Kit LED plug &amp; play nouvelle génération</span></td>
+        </tr>
+        <tr>
+          <td class="tier-cell">Production Pro<span>300–950 €/mois</span></td>
+          <td class="signal">Plusieurs sources fan cam ne suffisent plus, veut des sponsors hors de son bassin local</td>
+          <td><span class="chip up">→ Option +Régie B2B</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur</span><span class="chip fan">Fan Engagement Pro</span></td>
+          <td><span class="chip devis">Réalisation IA automatique</span><span class="chip devis">Technicien sur place</span></td>
+        </tr>
+        <tr>
+          <td class="tier-cell">+ Régie B2B<span>20 % sur le CA nouveau</span></td>
+          <td class="signal">Plusieurs clubs du réseau, veut vendre une campagne groupée</td>
+          <td><span class="chip up">→ Réseau (campagnes multi-clubs)</span></td>
+          <td><span class="chip mkt">Marketplace Annonceur (v. réseau)</span></td>
+          <td><span class="chip devis">Enchères programmatiques</span><span class="chip devis">Portail fédération/ligue</span></td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= PARTIE IV ================= -->
+  <section id="partie-4" class="part">
+    <span class="part-eyebrow">Partie IV</span>
+    <h2 class="part-title">Ce qui reste sur devis, avec un ordre de grandeur</h2>
+    <p class="part-desc">Les items « hors-catalogue » du tableau ci-dessus n'ont pas de logique de transaction comme les modules — ce sont des chantiers de développement ou des prestations de service. Chiffrés en jours-homme × TJM, pas en abonnement.</p>
+    <div class="method"><b>Méthode</b> — TJM vérifiés au 2026-09-06 (barèmes freelance France, sources en pied de page) : <b>550 €/jour</b> développement généraliste, <b>720 €/jour</b> expertise rare (vision par ordinateur, ad-tech temps réel). Les jours-homme restent des estimations d'ordre de grandeur, à affiner en cadrage avant tout engagement.</div>
+
+    <div class="section-head"><span class="section-num">IV.A</span><h2 class="section-title">Chiffrage raisonnablement fiable</h2></div>
+    <p class="section-desc">Périmètre connu, risque technique faible — l'incertitude porte sur le nombre de jours, pas sur la faisabilité.</p>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Académie en ligne</div><div class="item-nature">Forfait unique · production de contenu</div></div><div class="item-price">3 000 – 4 500 €<small>forfait, une fois</small></div></div>
+      <div class="item-calc">5–8 jours (script, tournage, montage) × 550 €/j — pas de code</div>
+      <div class="item-note">Coût récurrent quasi nul ensuite. Bon candidat pour financer avec le palier Essentiel, qui en a le plus besoin.</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Connecteur CRM / emailing</div><div class="item-nature">Forfait unique · intégration API standard</div></div><div class="item-price">2 200 – 3 300 €<small>forfait, une fois</small></div></div>
+      <div class="item-calc">4–6 jours × 550 €/j + ~50 €/mois de maintenance</div>
+      <div class="item-note">Le plus prévisible du lot — API tierces stables (Mailchimp/HubSpot).</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Connecteur comptabilité (Sage, QuickBooks)</div><div class="item-nature">Forfait unique · intégration API moins standardisée</div></div><div class="item-price">3 300 – 5 500 €<small>forfait, une fois</small></div></div>
+      <div class="item-calc">6–10 jours × 550 €/j</div>
+      <div class="item-note">Fourchette large tant qu'un club-pilote n'a pas précisé son logiciel compta réel.</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Dashboard revenus vs coûts sur mesure</div><div class="item-nature">Forfait par club · intégration comptable club</div></div><div class="item-price">2 750 – 4 400 €<small>par club, une fois</small></div></div>
+      <div class="item-calc">5–8 jours × 550 €/j — se répète à chaque club</div>
+      <div class="item-note">Pas un produit générique livrable une fois pour tous : chaque déploiement est un mini-projet.</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Accessibilité WCAG / RGAA</div><div class="item-nature">Audit + remédiation · conformité</div></div><div class="item-price">4 000 – 8 000 €<small>HT, une fois</small></div></div>
+      <div class="item-calc"><span class="conf ok">✓ vérifié</span> Audit RGAA officiel DINUM 2 000–5 000 € HT pour un site courant, jusqu'à 9 900 € pour un site complexe — MadXP couvre 3 interfaces, positionné en milieu de fourchette.</div>
+      <div class="item-note">Prix de l'audit seul ; la remédiation du code s'ajoute par-dessus.</div>
+      <div class="item-tags"><span class="conf ok">✓ vérifié (repère)</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Technicien production sur place, jour de match</div><div class="item-nature">Service · jour-homme récurrent</div></div><div class="item-price">350 – 550 €<small>/jour + déplacement</small></div></div>
+      <div class="item-calc">Repère métier technicien audiovisuel événementiel — pas de recherche ciblée sur ce chiffre précis</div>
+      <div class="item-note">Déjà « toujours sur devis » sur la grille de production pro actuelle — point de départ pour chiffrer un devis, pas un tarif public.</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé, non recherché</span></div>
+    </div>
+
+    <div class="section-head"><span class="section-num">IV.B</span><h2 class="section-title">Chiffrage plus incertain</h2></div>
+    <p class="section-desc">Périmètre flou tant qu'il n'a pas été cadré, ou dépendance à un tiers hors du contrôle de MadXP. Fourchettes larges par construction.</p>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Marketplace de templates communautaire</div><div class="item-nature">Forfait unique · feature produit</div></div><div class="item-price">8 250 – 11 000 €<small>forfait, une fois</small></div></div>
+      <div class="item-calc">15–20 jours × 550 €/j — modération humaine continue non incluse</div>
+      <div class="item-note">Utile seulement une fois assez de clubs sur le réseau pour que le partage ait un sens.</div>
+      <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Enchères programmatiques</div><div class="item-nature">Forfait unique · infra ad-tech temps réel</div></div><div class="item-price">14 000 – 22 000 €<small>MVP, une fois</small></div></div>
+      <div class="item-calc">20–30 jours × 720 €/j — probablement optimiste</div>
+      <div class="item-note">Risque de sous-estimation le plus élevé : un vrai ad-exchange va bien au-delà d'un MVP.</div>
+      <div class="item-tags"><span class="conf risk">⚠️ forte incertitude</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Portail fédération / ligue</div><div class="item-nature">Forfait unique · intégration, dépendance externe</div></div><div class="item-price">8 250 – 13 750 €<small>MVP, une fois</small></div></div>
+      <div class="item-calc">15–25 jours × 550 €/j — <strong>conditionné à l'existence d'une API côté fédération</strong></div>
+      <div class="item-note">Beaucoup de fédérations n'ont pas d'API moderne exploitable — à vérifier fédération par fédération avant de vendre.</div>
+      <div class="item-tags"><span class="conf risk">⚠️ dépendance externe non vérifiée</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Kit LED plug &amp; play nouvelle génération</div><div class="item-nature">Pari R&amp;D · logiciel + matériel</div></div><div class="item-price">14 000 – 28 000 €<small>logiciel seul, hors matériel</small></div></div>
+      <div class="item-calc">25–40 jours × 550–700 €/j — coût matériel (BOM) séparé, non chiffrable sans fournisseur</div>
+      <div class="item-note">Pas un devis client, un investissement produit : seuls 2 sites LED en prod actuellement.</div>
+      <div class="item-tags"><span class="conf risk">⚠️ pari stratégique, pas un devis</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Réalisation automatique par IA (switch caméra)</div><div class="item-nature">Pari R&amp;D · vision par ordinateur</div></div><div class="item-price">28 000 – 42 000 €<small>MVP, une fois</small></div></div>
+      <div class="item-calc">40–60 jours × 720 €/j — expertise rare, haute variance</div>
+      <div class="item-note">Vérifier d'abord le coût d'une licence existante (type Pixellot, Veo — cités de mémoire, non vérifiés) avant de construire.</div>
+      <div class="item-tags"><span class="conf risk">⚠️ buy vs. build à trancher</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Réalité augmentée / filtres écran</div><div class="item-nature">Pari R&amp;D · niche, demande non vérifiée</div></div><div class="item-price">13 000 – 22 750 €<small>MVP, une fois</small></div></div>
+      <div class="item-calc">20–35 jours × 650 €/j</div>
+      <div class="item-note">Aucun signal de demande client observé — à vérifier avant de chiffrer plus finement.</div>
+      <div class="item-tags"><span class="conf risk">⚠️ demande non vérifiée</span></div>
+    </div>
+
+    <div class="item">
+      <div class="item-head"><div><div class="item-name">Programme de parrainage club → club</div><div class="item-nature">Levier commercial · pas un développement</div></div><div class="item-price">Pas de €<small>coût = valeur du geste offert</small></div></div>
+      <div class="item-calc">Aucun jour-homme dev significatif — un formulaire de code de parrainage suffit</div>
+      <div class="item-note">Nature différente des autres lignes : le « prix » ici est ce qu'on offre (ex. 1 mois de palier offert), pas un coût de développement.</div>
+      <div class="item-tags"><span class="conf ok">nature différente — pas un devis dev</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>Grille de départ inchangée</strong> dans son prix et son découpage (Partie I) — ce dossier ajoute des couches « et ensuite », pas une nouvelle grille.</p>
+    <p><strong>Sources des taux vérifiés</strong> : Stripe France, <a href="https://stripe.com/pricing">stripe.com/pricing</a> (cartes FR 1,5–2,8 % + 0,25 €, internationales 3,15 % + 0,25 €) · Weezevent, <a href="https://support.weezevent.com/fr/gerer-les-frais-sur-mes-tarifs">support.weezevent.com</a> (2,5 % TTC, min. 0,99 € sous 40 €) · TJM développeur France 2026, <a href="https://www.freelance-solution.fr/tarif-freelance/tarif-freelance-developpeur/">freelance-solution.fr</a> et <a href="https://extradev.fr/blog/tjm-developpeur-freelance-vrais-tarifs-2026-techno-seniorite">extradev.fr</a> (médiane 485–525 €, jusqu'à 700 €+ expertise rare) · Audit RGAA, <a href="https://sk-web.fr/article/prix-audit-rgaa-2026">sk-web.fr</a> (chiffre officiel DINUM, 2 000–5 000 € HT).</p>
+    <p>Prix des modules (Partie II) et jours-homme (Partie IV) restent des estimations de travail, non négociées avec un prestataire ou une équipe technique — base de discussion, pas un tarif publiable en l'état.</p>
+  </footer>
+</div>

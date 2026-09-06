@@ -1,0 +1,218 @@
+<title>Le sur-devis, chiffré</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F6F2EA; --surface:#FFFDF9; --surface-2:#FBF5EA;
+    --ink:#1E1A12; --ink-soft:#5E5748; --ink-faint:#8C8371;
+    --line:#E2D8C4; --accent:#E0700C; --accent-ink:#7A3A05; --accent-soft:#FBE3C4;
+    --ok:#3E7A4C; --ok-soft:#DEEEE0; --ok-ink:#26542F;
+    --warn:#B8863A; --warn-soft:#F4E7CE; --warn-ink:#7A5518;
+    --risk:#B0503F; --risk-soft:#F5E0DA; --risk-ink:#7A3323;
+    --shadow: 0 1px 2px rgba(30,26,18,0.06), 0 10px 28px -14px rgba(30,26,18,0.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+      --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+      --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+      --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+      --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+      --risk:#E0876F; --risk-soft:#331C15; --risk-ink:#F5C3B2;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+    --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+    --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+    --ok:#7FC492; --ok-soft:#1B3020; --ok-ink:#BEE8C7;
+    --warn:#E0B361; --warn-soft:#332512; --warn-ink:#F3D8A0;
+    --risk:#E0876F; --risk-soft:#331C15; --risk-ink:#F5C3B2;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{ background:var(--bg); color:var(--ink); font-family:'Public Sans','Segoe UI',system-ui,sans-serif; line-height:1.55; padding:0 0 4rem; }
+  h1,h2{ font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; color:var(--ink); }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 1.5rem; }
+
+  header{ padding:3rem 0 1.6rem; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); display:inline-block; padding:0.3rem 0.7rem; border-radius:3px; margin-bottom:1.1rem; }
+  h1{ font-size:clamp(1.9rem,4.4vw,2.5rem); line-height:1.03; margin:0 0 0.8rem; max-width:24ch; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:70ch; margin:0 0 0.6rem; }
+  .method{ background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:1rem 1.3rem; font-size:0.85rem; color:var(--ink-soft); margin-top:1.2rem; }
+  .method b{ color:var(--ink); }
+
+  .section-head{ display:flex; align-items:baseline; gap:0.7rem; margin:2.6rem 0 0.4rem; padding-bottom:0.5rem; border-bottom:2px solid var(--ink); }
+  .section-num{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; }
+  .section-title{ font-size:1.05rem; margin:0; }
+  .section-desc{ color:var(--ink-faint); font-size:0.85rem; margin:0.6rem 0 1.2rem; max-width:72ch; }
+
+  .conf{ display:inline-flex; align-items:center; gap:0.35rem; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; font-weight:600; padding:0.16rem 0.5rem; border-radius:5px; white-space:nowrap; }
+  .conf.ok{ background:var(--ok-soft); color:var(--ok-ink); }
+  .conf.warn{ background:var(--warn-soft); color:var(--warn-ink); }
+  .conf.risk{ background:var(--risk-soft); color:var(--risk-ink); }
+
+  .item{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.3rem 1.5rem; margin-bottom:0.8rem; box-shadow:var(--shadow); }
+  .item-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem; }
+  .item-name{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:1.1rem; text-transform:uppercase; color:var(--ink); }
+  .item-nature{ font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.03em; margin-top:0.15rem; }
+  .item-price{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.15rem; color:var(--accent-ink); text-align:right; white-space:nowrap; }
+  .item-price small{ display:block; font-family:'Public Sans',sans-serif; font-weight:500; font-size:0.62em; color:var(--ink-faint); text-transform:none; letter-spacing:0; }
+  .item-calc{ font-size:0.8rem; color:var(--ink-faint); font-family:'IBM Plex Mono',monospace; margin-bottom:0.5rem; }
+  .item-note{ font-size:0.85rem; color:var(--ink-soft); }
+  .item-tags{ margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap; }
+
+  footer{ max-width:1080px; margin:2.8rem auto 0; padding:1.4rem 1.5rem 0; border-top:1px solid var(--line); font-size:0.78rem; color:var(--ink-faint); }
+  footer a{ color:inherit; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Suite du tableau d'upsell — colonne « hors-catalogue »</span>
+    <h1>Ce qui reste sur devis, avec un ordre de grandeur</h1>
+    <p class="subtitle">Les items « hors-catalogue » du tableau d'upsell n'ont pas de logique de transaction comme les modules Marketplace/Fan Engagement — ce sont des chantiers de développement ou des prestations de service. Chiffrés ici en jours-homme × TJM, pas en abonnement.</p>
+    <div class="method"><b>Méthode</b> — TJM retenus, vérifiés au 2026-09-06 (barèmes freelance France, sources en bas de page) : <b>550 €/jour</b> pour du développement généraliste (médiane marché 485–525 €, arrondi avec marge), <b>720 €/jour</b> pour une expertise rare (vision par ordinateur, ad-tech temps réel — médiane marché &gt;700 €). Les jours-homme eux-mêmes sont des estimations d'ordre de grandeur, pas un chiffrage projet — à affiner en cadrage avant tout engagement.</div>
+  </header>
+
+  <div class="section-head"><span class="section-num">A</span><h2 class="section-title">Prestations et intégrations — chiffrage raisonnablement fiable</h2></div>
+  <p class="section-desc">Le périmètre est connu, le risque technique est faible : l'incertitude porte sur le nombre de jours, pas sur la faisabilité.</p>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Académie en ligne</div><div class="item-nature">Forfait unique · production de contenu</div></div>
+      <div class="item-price">3 000 – 4 500 €<small>forfait, une fois</small></div>
+    </div>
+    <div class="item-calc">5–8 jours (script, tournage, montage) × 550 €/j — pas de code, essentiellement de la production vidéo</div>
+    <div class="item-note">Coût récurrent quasi nul ensuite (hébergement des vidéos). Bon candidat pour financer avec le palier Essentiel, qui en a le plus besoin.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Connecteur CRM / emailing</div><div class="item-nature">Forfait unique · intégration API standard</div></div>
+      <div class="item-price">2 200 – 3 300 €<small>forfait, une fois</small></div>
+    </div>
+    <div class="item-calc">4–6 jours × 550 €/j (API Mailchimp/HubSpot bien documentées) + ~50 €/mois de maintenance</div>
+    <div class="item-note">Le plus prévisible du lot — API tierces stables et bien couvertes par la doc éditeur.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Connecteur comptabilité (Sage, QuickBooks)</div><div class="item-nature">Forfait unique · intégration API moins standardisée</div></div>
+      <div class="item-price">3 300 – 5 500 €<small>forfait, une fois</small></div>
+    </div>
+    <div class="item-calc">6–10 jours × 550 €/j — APIs compta plus hétérogènes et moins bien documentées que le marketing</div>
+    <div class="item-note">Fourchette large tant qu'un club-pilote n'a pas précisé quel logiciel compta il utilise réellement.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Dashboard revenus vs coûts sur mesure</div><div class="item-nature">Forfait par club · intégration comptable club</div></div>
+      <div class="item-price">2 750 – 4 400 €<small>par club, une fois</small></div>
+    </div>
+    <div class="item-calc">5–8 jours × 550 €/j — se répète à chaque club car chaque comptabilité club est différente</div>
+    <div class="item-note">Pas un produit générique livrable une fois pour tous : chaque déploiement est un mini-projet.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Accessibilité WCAG / RGAA</div><div class="item-nature">Audit + remédiation · conformité</div></div>
+      <div class="item-price">4 000 – 8 000 €<small>HT, une fois</small></div>
+    </div>
+    <div class="item-calc">Repère marché <span class="conf ok">✓ vérifié</span> : audit RGAA officiel DINUM 2 000–5 000 € HT pour un site courant, jusqu'à 9 900 € pour un site complexe multi-gabarits — MadXP couvre 3 interfaces (dashboard central, admin Pi :8080, remote), positionné en milieu de fourchette.</div>
+    <div class="item-note">Prix de l'audit seul ; la remédiation du code (jours dev pour corriger ce que l'audit trouve) s'ajoute par-dessus, non incluse ici.</div>
+    <div class="item-tags"><span class="conf ok">✓ vérifié (repère)</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Technicien production sur place, jour de match</div><div class="item-nature">Service · jour-homme récurrent, pas un forfait dev</div></div>
+      <div class="item-price">350 – 550 €<small>/jour + déplacement</small></div>
+    </div>
+    <div class="item-calc">Repère métier technicien audiovisuel événementiel freelance France — pas de recherche ciblée sur ce chiffre précis, à confirmer avec un prestataire régie réel</div>
+    <div class="item-note">Déjà mentionné « toujours sur devis » sur la grille de production pro actuelle — cette fourchette sert de point de départ pour chiffrer un devis, pas de tarif public.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé, non recherché</span></div>
+  </div>
+
+  <div class="section-head"><span class="section-num">B</span><h2 class="section-title">Fonctionnalités produit — chiffrage plus incertain</h2></div>
+  <p class="section-desc">Le périmètre est flou tant qu'il n'a pas été cadré, ou dépend d'un tiers hors du contrôle de MadXP. Fourchettes larges par construction.</p>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Marketplace de templates communautaire</div><div class="item-nature">Forfait unique · feature produit</div></div>
+      <div class="item-price">8 250 – 11 000 €<small>forfait, une fois</small></div>
+    </div>
+    <div class="item-calc">15–20 jours × 550 €/j (upload, partage, catalogue) — coût de modération humaine continue non inclus</div>
+    <div class="item-note">Utile seulement une fois qu'il y a assez de clubs sur le réseau pour que le partage ait un sens (cf. section D du document précédent) — investir avant serait prématuré.</div>
+    <div class="item-tags"><span class="conf warn">⚠️ estimé</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Enchères programmatiques</div><div class="item-nature">Forfait unique · infra ad-tech temps réel</div></div>
+      <div class="item-price">14 000 – 22 000 €<small>MVP, une fois</small></div>
+    </div>
+    <div class="item-calc">20–30 jours × 720 €/j (expertise rare, enchère temps réel) — un vrai ad-exchange va bien au-delà d'un MVP, cette fourchette est probablement optimiste</div>
+    <div class="item-note">Risque de sous-estimation le plus élevé de la liste : les enchères publicitaires temps réel sont un domaine entier ailleurs (Google Ad Manager, The Trade Desk) — construire un MVP simplifié est réaliste, égaler ces plateformes ne l'est pas.</div>
+    <div class="item-tags"><span class="conf risk">⚠️ forte incertitude</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Portail fédération / ligue</div><div class="item-nature">Forfait unique · intégration, dépendance externe</div></div>
+      <div class="item-price">8 250 – 13 750 €<small>MVP, une fois</small></div>
+    </div>
+    <div class="item-calc">15–25 jours × 550 €/j — <strong>conditionné à l'existence d'une API côté fédération</strong></div>
+    <div class="item-note">Beaucoup de fédérations sportives françaises n'ont pas d'API moderne exploitable ; sans elle, ce chiffrage tombe et le sujet redevient de la ressaisie manuelle, pas un produit industrialisable. À vérifier fédération par fédération avant de vendre quoi que ce soit.</div>
+    <div class="item-tags"><span class="conf risk">⚠️ dépendance externe non vérifiée</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Kit LED plug &amp; play nouvelle génération</div><div class="item-nature">Pari R&amp;D · logiciel + matériel</div></div>
+      <div class="item-price">14 000 – 28 000 €<small>logiciel seul, hors matériel</small></div>
+    </div>
+    <div class="item-calc">25–40 jours × 550–700 €/j pour l'auto-calibration logicielle — le coût du matériel (BOM processeur LED) est une ligne séparée, non chiffrable sans fournisseur retenu</div>
+    <div class="item-note">Pas un devis client, un investissement produit : le parc actuel ne compte que 2 sites LED en prod (cf. <code>.claude/rules/led.md</code>) — un tel chantier se justifie pour l'avenir du réseau, pas pour un club isolé.</div>
+    <div class="item-tags"><span class="conf risk">⚠️ pari stratégique, pas un devis</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Réalisation automatique par IA (switch caméra)</div><div class="item-nature">Pari R&amp;D · vision par ordinateur</div></div>
+      <div class="item-price">28 000 – 42 000 €<small>MVP, une fois</small></div>
+    </div>
+    <div class="item-calc">40–60 jours × 720 €/j — expertise rare, haute variance du chiffrage</div>
+    <div class="item-note">Avant de construire : vérifier le coût de licencier une solution existante (type Pixellot, Veo — noms cités de mémoire, non vérifiés dans cette session) plutôt que de la développer en interne. Construire n'est peut-être pas le bon choix ici.</div>
+    <div class="item-tags"><span class="conf risk">⚠️ forte incertitude, buy vs. build à trancher</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Réalité augmentée / filtres écran</div><div class="item-nature">Pari R&amp;D · niche, demande non vérifiée</div></div>
+      <div class="item-price">13 000 – 22 750 €<small>MVP, une fois</small></div>
+    </div>
+    <div class="item-calc">20–35 jours × 650 €/j</div>
+    <div class="item-note">Aucun signal de demande client observé dans le dossier consulté — avant de chiffrer plus finement, vaudrait la peine de vérifier qu'un club l'a déjà demandé.</div>
+    <div class="item-tags"><span class="conf risk">⚠️ demande non vérifiée</span></div>
+  </div>
+
+  <div class="item">
+    <div class="item-head">
+      <div><div class="item-name">Programme de parrainage club → club</div><div class="item-nature">Levier commercial · pas un développement</div></div>
+      <div class="item-price">Pas de €<small>coût = valeur du geste offert</small></div>
+    </div>
+    <div class="item-calc">Aucun jour-homme dev significatif — un formulaire de code de parrainage suffit</div>
+    <div class="item-note">Nature différente des autres lignes : le "prix" ici est ce qu'on offre (ex. 1 mois de palier offert au parrain et au filleul), pas un coût de développement. Ne pas le chiffrer comme les autres brouillerait la lecture du tableau.</div>
+    <div class="item-tags"><span class="conf ok">nature différente — pas un devis dev</span></div>
+  </div>
+
+  <footer>
+    TJM sources vérifiées au 2026-09-06 : <a href="https://www.freelance-solution.fr/tarif-freelance/tarif-freelance-developpeur/">freelance-solution.fr</a> et <a href="https://extradev.fr/blog/tjm-developpeur-freelance-vrais-tarifs-2026-techno-seniorite">extradev.fr</a> (TJM médian développeur France 2026, ~485–525 €, jusqu'à 700 €+ sur expertise rare) ; audit RGAA sur <a href="https://sk-web.fr/article/prix-audit-rgaa-2026">sk-web.fr</a> (chiffre officiel DINUM, 2 000–5 000 € HT). Le nombre de jours par item reste une estimation d'ordre de grandeur, pas un chiffrage de cadrage — à retravailler avec l'équipe technique avant tout engagement client.
+  </footer>
+</div>
