@@ -1,181 +1,454 @@
 <title>Les trois flux de valeur</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
 <style>
   :root {
-    --ground: #ECEFF3; --surface: #FFFFFF; --surface-2: #F4F6F9;
-    --ink: #141A21; --ink-soft: #3E4A57; --muted: #6B7885;
-    --rule: #D6DCE3; --rule-strong: #A9B4BF;
-    --accent: #A8620E; --accent-wash: #F5E7D4;
-    --live: #BC332E; --live-wash: #F8E1E0;
-    --ready: #1F6A4B; --ready-wash: #DCEDE4;
-    --ghost: #A6B0BA;
-    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-    --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
-    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --ghost: #a6b0ba;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
-      --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
-      --rule: #262F39; --rule-strong: #3B4753;
-      --accent: #E3A24A; --accent-wash: #33281A;
-      --live: #E4655E; --live-wash: #351E1D;
-      --ready: #52AC80; --ready-wash: #17301F;
-      --ghost: #55636F;
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --ghost: #55636f;
     }
   }
-  :root[data-theme="dark"] {
-    --ground: #0E1319; --surface: #151B22; --surface-2: #1B222A;
-    --ink: #E4EAF1; --ink-soft: #B4C0CC; --muted: #8492A0;
-    --rule: #262F39; --rule-strong: #3B4753;
-    --accent: #E3A24A; --accent-wash: #33281A;
-    --live: #E4655E; --live-wash: #351E1D;
-    --ready: #52AC80; --ready-wash: #17301F;
-    --ghost: #55636F;
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --ghost: #55636f;
   }
 
-  * { box-sizing: border-box; }
+  * {
+    box-sizing: border-box;
+  }
   body {
-    background: var(--ground); color: var(--ink); font-family: var(--f-body);
-    font-size: 16.5px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
-  .sheet { max-width: 1040px; margin: 0 auto; padding: 0 24px 88px; }
+  .sheet {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 24px 88px;
+  }
 
-  .masthead { padding: 50px 0 22px; border-bottom: 3px double var(--rule-strong); margin-bottom: 34px; }
+  .masthead {
+    padding: 50px 0 22px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 34px;
+  }
   .eyebrow {
-    font-family: var(--f-mono); font-size: 11.5px; font-weight: 500;
-    letter-spacing: 0.13em; text-transform: uppercase; color: var(--accent); margin: 0 0 15px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 15px;
   }
   h1 {
-    font-family: var(--f-display); font-weight: 700; font-size: clamp(31px, 5vw, 43px);
-    line-height: 1.06; letter-spacing: -0.022em; text-wrap: balance; margin: 0 0 17px;
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 17px;
   }
-  .standfirst { font-size: 18.5px; line-height: 1.55; color: var(--ink-soft); max-width: 64ch; margin: 0 0 24px; }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 64ch;
+    margin: 0 0 24px;
+  }
   .slugline {
-    display: flex; flex-wrap: wrap; gap: 0 32px;
-    font-family: var(--f-mono); font-size: 12px; line-height: 2.1; color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 32px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
   }
-  .slugline b { font-weight: 500; color: var(--ink); }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
 
-  section { margin-bottom: 52px; }
+  section {
+    margin-bottom: 52px;
+  }
   h2 {
-    font-family: var(--f-display); font-weight: 600; font-size: 26px;
-    letter-spacing: -0.016em; margin: 0 0 5px; padding-top: 15px;
-    border-top: 1px solid var(--rule-strong); text-wrap: balance;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 26px;
+    letter-spacing: -0.016em;
+    margin: 0 0 5px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule-strong);
+    text-wrap: balance;
   }
   .h2-note {
-    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--muted); margin: 0 0 22px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
   }
-  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 30px 0 10px; }
-  p { margin: 0 0 16px; max-width: 74ch; }
-  .mono { font-family: var(--f-mono); font-size: 0.87em; }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17.5px;
+    margin: 30px 0 10px;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 74ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
 
   .lede {
-    font-family: var(--f-display); font-weight: 500; font-size: 18px; line-height: 1.5;
-    letter-spacing: -0.005em; border-left: 3px solid var(--accent);
-    padding: 2px 0 2px 18px; margin: 0 0 24px; max-width: 64ch;
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 24px;
+    max-width: 64ch;
   }
 
   /* figures */
-  figure { margin: 0 0 20px; }
-  .scroller { overflow-x: auto; padding-bottom: 4px; }
-  .scroller svg { display: block; width: 100%; min-width: 880px; height: auto; }
-  figcaption {
-    font-size: 14.5px; line-height: 1.5; color: var(--muted);
-    margin-top: 12px; max-width: 76ch;
+  figure {
+    margin: 0 0 20px;
   }
-  figcaption b { color: var(--ink-soft); font-weight: 600; }
+  .scroller {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .scroller svg {
+    display: block;
+    width: 100%;
+    min-width: 880px;
+    height: auto;
+  }
+  figcaption {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-top: 12px;
+    max-width: 76ch;
+  }
+  figcaption b {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
 
   /* svg semantic classes */
-  .bx { fill: var(--surface); stroke: currentColor; stroke-width: 1.4; }
-  .bx-brk { fill: var(--surface); stroke: var(--live); stroke-width: 2.2; }
-  .bx-good { fill: var(--ready-wash); stroke: var(--ready); stroke-width: 1.8; }
-  .bx-ghost { fill: none; stroke: var(--ghost); stroke-width: 1.4; stroke-dasharray: 5 4; }
-  .lb { fill: currentColor; font-family: "Archivo", sans-serif; font-size: 12px; font-weight: 600; }
-  .lb-ghost { fill: var(--ghost); font-family: "Archivo", sans-serif; font-size: 12px; font-weight: 600; }
-  .num { fill: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
-  .st { font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: 0.04em; }
-  .st-ok { fill: var(--muted); }
-  .st-brk { fill: var(--live); font-weight: 500; }
-  .st-good { fill: var(--ready); font-weight: 500; }
-  .st-ghost { fill: var(--ghost); }
-  .flow { stroke: currentColor; stroke-width: 1.4; fill: none; }
-  .flow-brk { stroke: var(--live); stroke-width: 2; fill: none; }
-  .wall { stroke: var(--live); stroke-width: 3.5; }
-  .alab { fill: var(--live); font-family: "IBM Plex Mono", monospace; font-size: 10px; font-weight: 500; }
-  .alab-n { fill: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 10px; }
-  .ends { fill: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: 0.06em; }
+  .bx {
+    fill: var(--surface);
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .bx-brk {
+    fill: var(--surface);
+    stroke: var(--live);
+    stroke-width: 2.2;
+  }
+  .bx-good {
+    fill: var(--ready-wash);
+    stroke: var(--ready);
+    stroke-width: 1.8;
+  }
+  .bx-ghost {
+    fill: none;
+    stroke: var(--ghost);
+    stroke-width: 1.4;
+    stroke-dasharray: 5 4;
+  }
+  .lb {
+    fill: currentColor;
+    font-family: 'Archivo', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .lb-ghost {
+    fill: var(--ghost);
+    font-family: 'Archivo', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .num {
+    fill: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+  .st {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+  }
+  .st-ok {
+    fill: var(--muted);
+  }
+  .st-brk {
+    fill: var(--live);
+    font-weight: 500;
+  }
+  .st-good {
+    fill: var(--ready);
+    font-weight: 500;
+  }
+  .st-ghost {
+    fill: var(--ghost);
+  }
+  .flow {
+    stroke: currentColor;
+    stroke-width: 1.4;
+    fill: none;
+  }
+  .flow-brk {
+    stroke: var(--live);
+    stroke-width: 2;
+    fill: none;
+  }
+  .wall {
+    stroke: var(--live);
+    stroke-width: 3.5;
+  }
+  .alab {
+    fill: var(--live);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .alab-n {
+    fill: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+  .ends {
+    fill: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+  }
 
   /* câblage */
-  .wire { border: 1px solid var(--rule); border-bottom: none; margin: 0 0 20px; }
+  .wire {
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    margin: 0 0 20px;
+  }
   .wrow {
-    background: var(--surface); border-bottom: 1px solid var(--rule); padding: 12px 18px;
-    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: baseline;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: baseline;
   }
   .wrow.h {
-    background: var(--surface-2); border-bottom: 1px solid var(--rule-strong);
-    font-family: var(--f-mono); font-size: 10px; font-weight: 500;
-    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule-strong);
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
-  .wrow .m { font-size: 15px; line-height: 1.4; color: var(--ink-soft); }
-  .wrow .l { font-family: var(--f-display); font-weight: 600; font-size: 15px; line-height: 1.35; }
-  .wrow .l em { font-family: var(--f-body); font-weight: 400; font-style: normal; color: var(--muted); font-size: 14px; }
-  .wrow.none .l { color: var(--live); }
+  .wrow .m {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+  .wrow .l {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .wrow .l em {
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-style: normal;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .wrow.none .l {
+    color: var(--live);
+  }
   @media (max-width: 640px) {
-    .wrow { grid-template-columns: 1fr; gap: 4px; }
-    .wrow.h { display: none; }
+    .wrow {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+    .wrow.h {
+      display: none;
+    }
   }
 
   .panel {
-    background: var(--surface); border: 1px solid var(--rule);
-    border-top: 3px solid var(--accent); padding: 20px 22px; margin: 0 0 15px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    margin: 0 0 15px;
   }
-  .panel.warn { border-top-color: var(--live); }
+  .panel.warn {
+    border-top-color: var(--live);
+  }
   .panel .ref {
-    font-family: var(--f-mono); font-size: 11px; font-weight: 500;
-    letter-spacing: 0.09em; color: var(--accent); margin: 0 0 6px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 6px;
   }
-  .panel.warn .ref { color: var(--live); }
-  .panel h4 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 9px; line-height: 1.3; }
-  .panel p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; color: var(--ink-soft); max-width: 78ch; }
-  .panel p:last-child { margin-bottom: 0; }
+  .panel.warn .ref {
+    color: var(--live);
+  }
+  .panel h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 9px;
+    line-height: 1.3;
+  }
+  .panel p {
+    margin: 0 0 10px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
 
   .cf {
-    font-family: var(--f-mono); font-size: 10.5px; font-weight: 500;
-    letter-spacing: 0.06em; padding: 2px 5px; border-radius: 2px; white-space: nowrap;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
   }
-  .cf-ok { background: var(--ready-wash); color: var(--ready); }
-  .cf-est { background: var(--accent-wash); color: var(--accent); }
-  .cf-no { background: var(--live-wash); color: var(--live); }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
 
-  ul.plain { margin: 0 0 16px; padding-left: 19px; }
-  ul.plain li { margin-bottom: 9px; font-size: 16px; line-height: 1.5; max-width: 74ch; }
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 74ch;
+  }
 
   footer {
-    margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--rule);
-    font-family: var(--f-mono); font-size: 11.5px; line-height: 1.85; color: var(--muted);
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--muted);
   }
-  footer b { color: var(--ink); font-weight: 500; }
+  footer b {
+    color: var(--ink);
+    font-weight: 500;
+  }
 
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 </style>
 
 <div class="sheet">
-
   <header class="masthead">
     <p class="eyebrow">Emprunt à SAFe · pièce 3 sur 4</p>
     <h1>Les trois flux de valeur</h1>
     <p class="standfirst">
-      Où la valeur se crée chez B2B Alive, et où elle se perd. Deux flux tournés
-      vers le client, un flux tourné vers le produit — et, dans chacun, l'endroit
-      précis où la chaîne casse. Version corrigée après avoir regardé le métier
-      d'origine plutôt que le seul carnet de tickets. Ce ne sont pas les flux d'un
-      concurrent qu'on note de l'extérieur : ce sont les flux dans lesquels la
-      vision MadXP va devoir s'insérer — d'où l'attention portée aux jointures
-      plutôt qu'au verdict.
+      Où la valeur se crée chez B2B Alive, et où elle se perd. Deux flux tournés vers le client, un
+      flux tourné vers le produit — et, dans chacun, l'endroit précis où la chaîne casse. Version
+      corrigée après avoir regardé le métier d'origine plutôt que le seul carnet de tickets. Ce ne
+      sont pas les flux d'un concurrent qu'on note de l'extérieur : ce sont les flux dans lesquels
+      la vision MadXP va devoir s'insérer — d'où l'attention portée aux jointures plutôt qu'au
+      verdict.
     </p>
     <div class="slugline">
       <span>Établie le <b>02/09</b>, refondue et corrigée trois fois le <b>03/09/2026</b></span>
@@ -189,44 +462,40 @@
     <p class="h2-note">Ce n'est ni un organigramme, ni une architecture</p>
 
     <p>
-      Une carte de flux de valeur suit une chose depuis son déclencheur jusqu'au
-      moment où quelqu'un en tire un bénéfice. Son intérêt n'est pas de montrer les
-      étapes — tout le monde les connaît — mais <strong>de montrer où le temps
-      s'accumule et où la chaîne se rompt</strong>. Une étape qui marche est un
-      détail ; une étape qui bloque tout le reste est une décision.
+      Une carte de flux de valeur suit une chose depuis son déclencheur jusqu'au moment où quelqu'un
+      en tire un bénéfice. Son intérêt n'est pas de montrer les étapes — tout le monde les connaît —
+      mais <strong>de montrer où le temps s'accumule et où la chaîne se rompt</strong>. Une étape
+      qui marche est un détail ; une étape qui bloque tout le reste est une décision.
     </p>
     <p class="lede">
-      Les trois cartes qui suivent racontent la même histoire sous trois angles :
-      cette équipe est excellente au milieu de ses chaînes et fragile à leurs
-      extrémités.
+      Les trois cartes qui suivent racontent la même histoire sous trois angles : cette équipe est
+      excellente au milieu de ses chaînes et fragile à leurs extrémités.
     </p>
 
     <div class="panel warn">
       <p class="ref">CE QUE J'AVAIS MANQUÉ</p>
       <h4>B2B Alive fabrique du LED. Le logiciel n'est pas le métier d'origine</h4>
       <p>
-        La première version de ces cartes a été construite à partir du carnet Linear,
-        c'est-à-dire à partir du travail des développeurs. C'était partir du milieu.
-        <b>Le métier d'origine est la fabrication et l'installation d'écrans LED</b> —
-        une maison née à Londres en 2013, une vingtaine d'ingénieurs, techniciens et
-        régisseurs, plusieurs milliers de mètres carrés de dalles posés par an, des
-        implantations en France, en Tunisie, au Bahreïn et en Chine. Le logiciel est
-        venu après, pour piloter ce qui était posé.
+        La première version de ces cartes a été construite à partir du carnet Linear, c'est-à-dire à
+        partir du travail des développeurs. C'était partir du milieu.
+        <b>Le métier d'origine est la fabrication et l'installation d'écrans LED</b> — une maison
+        née à Londres en 2013, une vingtaine d'ingénieurs, techniciens et régisseurs, plusieurs
+        milliers de mètres carrés de dalles posés par an, des implantations en France, en Tunisie,
+        au Bahreïn et en Chine. Le logiciel est venu après, pour piloter ce qui était posé.
       </p>
       <p>
-        Cette antériorité explique deux choses. Elle explique la qualité du milieu de
-        chaîne : quand on a câblé cent salles, on sait ce qu'un soir de match exige.
-        Elle explique aussi la faiblesse des extrémités : une maison de matériel
-        instruit chaque affaire au cas par cas et n'a jamais eu besoin de superviser
-        un parc à distance, puisqu'un technicien s'y déplaçait.
+        Cette antériorité explique deux choses. Elle explique la qualité du milieu de chaîne : quand
+        on a câblé cent salles, on sait ce qu'un soir de match exige. Elle explique aussi la
+        faiblesse des extrémités : une maison de matériel instruit chaque affaire au cas par cas et
+        n'a jamais eu besoin de superviser un parc à distance, puisqu'un technicien s'y déplaçait.
       </p>
       <p>
-        <b>La conséquence pour nous est la suivante.</b> Le logiciel — appelons-le le
-        Broadcaster — se vend sur n'importe quel écran LED, y compris ceux posés par
-        un concurrent. Il n'est donc pas un sous-produit de la vente de matériel : il
-        a son propre marché, beaucoup plus large que le parc que B2B Alive installe.
-        Les trois flux ci-dessous sont ceux du <em>logiciel</em>. La fabrication de
-        LED reste le contexte qui les nourrit, pas l'un d'entre eux.
+        <b>La conséquence pour nous est la suivante.</b> Le logiciel — appelons-le le Broadcaster —
+        se vend sur n'importe quel écran LED, y compris ceux posés par un concurrent. Il n'est donc
+        pas un sous-produit de la vente de matériel : il a son propre marché, beaucoup plus large
+        que le parc que B2B Alive installe. Les trois flux ci-dessous sont ceux du
+        <em>logiciel</em>. La fabrication de LED reste le contexte qui les nourrit, pas l'un d'entre
+        eux.
       </p>
     </div>
   </section>
@@ -234,14 +503,29 @@
   <!-- ================= OVS-1 ================= -->
   <section>
     <h2>Flux 1 — Du LED installé à l'écran qui vit</h2>
-    <p class="h2-note">Déclencheur : une enceinte dispose de LED — les nôtres ou celles d'un autre · Valeur : le public voit un habillage qui tient, un soir de match</p>
+    <p class="h2-note">
+      Déclencheur : une enceinte dispose de LED — les nôtres ou celles d'un autre · Valeur : le
+      public voit un habillage qui tient, un soir de match
+    </p>
 
     <figure>
       <div class="scroller">
-        <svg viewBox="0 0 1000 152" role="img" aria-label="Chaîne en sept étapes, d'une enceinte équipée en LED jusqu'au match habillé ; la qualification du matériel ne coûte qu'une heure, l'implémentation logicielle et l'absence de retour après le match sont les deux goulots.">
+        <svg
+          viewBox="0 0 1000 152"
+          role="img"
+          aria-label="Chaîne en sept étapes, d'une enceinte équipée en LED jusqu'au match habillé ; la qualification du matériel ne coûte qu'une heure, l'implémentation logicielle et l'absence de retour après le match sont les deux goulots."
+        >
           <defs>
-            <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+            <marker
+              id="a1"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <polygon points="0,1 9,5 0,9" fill="currentColor" />
             </marker>
           </defs>
 
@@ -250,56 +534,56 @@
 
           <!-- 1 -->
           <text class="num" x="12" y="30">01</text>
-          <rect class="bx" x="12" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="12" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="71" y="63" text-anchor="middle">Qualification</text>
           <text class="lb" x="71" y="79" text-anchor="middle">du matériel</text>
           <text class="st st-ok" x="71" y="116" text-anchor="middle">1 h au bureau</text>
           <text class="alab-n" x="71" y="132" text-anchor="middle">+ 1 matinée sur site</text>
-          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a1)" />
 
           <!-- 2 -->
           <text class="num" x="155" y="30">02</text>
-          <rect class="bx" x="155" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="155" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="214" y="71" text-anchor="middle">Vente</text>
           <text class="st st-ok" x="214" y="116" text-anchor="middle">trois formes</text>
-          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a1)" />
 
           <!-- 3 -->
           <text class="num" x="298" y="30">03</text>
-          <rect class="bx-brk" x="298" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-brk" x="298" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="357" y="63" text-anchor="middle">Préparation</text>
           <text class="lb" x="357" y="79" text-anchor="middle">des médias</text>
           <text class="st st-brk" x="357" y="116" text-anchor="middle">GOULOT</text>
           <text class="alab" x="357" y="132" text-anchor="middle">entièrement manuel</text>
-          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a1)" />
 
           <!-- 4 -->
           <text class="num" x="441" y="30">04</text>
-          <rect class="bx" x="441" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="441" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="500" y="63" text-anchor="middle">Scène et</text>
           <text class="lb" x="500" y="79" text-anchor="middle">câblage</text>
           <text class="st st-ok" x="500" y="116" text-anchor="middle">en place</text>
-          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a1)" />
 
           <!-- 5 -->
           <text class="num" x="584" y="30">05</text>
-          <rect class="bx" x="584" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="584" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="643" y="63" text-anchor="middle">Données et</text>
           <text class="lb" x="643" y="79" text-anchor="middle">habillage</text>
           <text class="st st-ok" x="643" y="116" text-anchor="middle">en place</text>
-          <line class="flow" x1="704" y1="67" x2="723" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="704" y1="67" x2="723" y2="67" marker-end="url(#a1)" />
 
           <!-- 6 -->
           <text class="num" x="727" y="30">06</text>
-          <rect class="bx" x="727" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="727" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="786" y="63" text-anchor="middle">Répétition</text>
           <text class="lb" x="786" y="79" text-anchor="middle">sur site</text>
           <text class="st st-ok" x="786" y="116" text-anchor="middle">éprouvé</text>
-          <line class="flow" x1="847" y1="67" x2="866" y2="67" marker-end="url(#a1)"/>
+          <line class="flow" x1="847" y1="67" x2="866" y2="67" marker-end="url(#a1)" />
 
           <!-- 7 -->
           <text class="num" x="870" y="30">07</text>
-          <rect class="bx-brk" x="870" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-brk" x="870" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="929" y="63" text-anchor="middle">Match et</text>
           <text class="lb" x="929" y="79" text-anchor="middle">saison</text>
           <text class="st st-brk" x="929" y="116" text-anchor="middle">SANS RETOUR</text>
@@ -307,51 +591,50 @@
         </svg>
       </div>
       <figcaption>
-        <b>Deux goulots, et le second n'est pas celui qu'on croit.</b> À l'entrée,
-        qualifier le matériel coûte une heure d'analyse — mais seulement une fois qu'on a
-        le fichier de configuration et les photos, ce qui suppose une matinée sur place.
-        Au milieu, le goulot n'est pas l'installation du logiciel : pour un contenu plein
-        cadre, on colle une URL et le mode hors-ligne est livré. <b>C'est la préparation
-        des médias qui coûte</b> — transferts à la main, doublons, ré-encodage, pliage à
-        refaire. À la sortie, personne ne peut dire à distance ce qu'un site fait. Les
-        étapes centrales, elles, ont tenu sur un match de Ligue 2 et un tournoi
-        international.
+        <b>Deux goulots, et le second n'est pas celui qu'on croit.</b> À l'entrée, qualifier le
+        matériel coûte une heure d'analyse — mais seulement une fois qu'on a le fichier de
+        configuration et les photos, ce qui suppose une matinée sur place. Au milieu, le goulot
+        n'est pas l'installation du logiciel : pour un contenu plein cadre, on colle une URL et le
+        mode hors-ligne est livré. <b>C'est la préparation des médias qui coûte</b> — transferts à
+        la main, doublons, ré-encodage, pliage à refaire. À la sortie, personne ne peut dire à
+        distance ce qu'un site fait. Les étapes centrales, elles, ont tenu sur un match de Ligue 2
+        et un tournoi international.
       </figcaption>
     </figure>
 
     <p>
-      Ce flux ne commence pas là où je le croyais. Il ne commence pas à la vente d'un
-      écran : il commence <strong>à l'existence d'un écran LED, quel qu'il soit</strong>.
-      Le logiciel se branche sur du LED — le nôtre ou celui d'un autre installateur.
-      C'est un produit autonome, pas l'accessoire d'une vente de matériel. Cette
-      distinction change tout ce qui suit, parce qu'elle change qui est le client.
+      Ce flux ne commence pas là où je le croyais. Il ne commence pas à la vente d'un écran : il
+      commence <strong>à l'existence d'un écran LED, quel qu'il soit</strong>. Le logiciel se
+      branche sur du LED — le nôtre ou celui d'un autre installateur. C'est un produit autonome, pas
+      l'accessoire d'une vente de matériel. Cette distinction change tout ce qui suit, parce qu'elle
+      change qui est le client.
     </p>
 
     <div class="panel">
       <p class="ref">DEUX GISEMENTS</p>
       <h4>Les enceintes qu'on équipe, et celles qui sont déjà équipées</h4>
       <p>
-        <strong>Le premier gisement</strong>, ce sont les salles et stades où B2B Alive
-        pose elle-même le LED. La qualification technique y est facile : c'est notre
-        matériel, on sait ce qu'il fait. Mais ce gisement est borné par la capacité de
-        production et de pose — quelques enceintes par saison.
+        <strong>Le premier gisement</strong>, ce sont les salles et stades où B2B Alive pose
+        elle-même le LED. La qualification technique y est facile : c'est notre matériel, on sait ce
+        qu'il fait. Mais ce gisement est borné par la capacité de production et de pose — quelques
+        enceintes par saison.
       </p>
       <p>
-        <strong>Le second gisement</strong>, ce sont les enceintes déjà équipées par un
-        concurrent. Elles n'ont besoin de rien acheter d'autre que le logiciel.
-        <b>Six à huit affaires sur dix en relèvent</b> — chiffre donné le 03/09, de
-        mémoire et sans mesure formelle, mais par quelqu'un qui suit les affaires.
-        C'est le gisement principal, et le nôtre est l'exception.
+        <strong>Le second gisement</strong>, ce sont les enceintes déjà équipées par un concurrent.
+        Elles n'ont besoin de rien acheter d'autre que le logiciel.
+        <b>Six à huit affaires sur dix en relèvent</b> — chiffre donné le 03/09, de mémoire et sans
+        mesure formelle, mais par quelqu'un qui suit les affaires. C'est le gisement principal, et
+        le nôtre est l'exception.
       </p>
       <p>
-        <b>Et son accès est en deux temps</b>, ce que ni ma première ni ma deuxième
-        version ne disait. L'analyse d'un processeur inconnu coûte une heure — mais elle
-        s'appuie sur un fichier de configuration et des photos de plaques qu'il faut
-        aller chercher sur place. Le brief d'intervention à la Mosson est explicite :
-        une matinée, dont la mission première est de « déterminer la technologie et le
-        constructeur », et dont l'objet le plus précieux à ramener est le fichier de
-        configuration copié en régie. <strong>Une heure au bureau, une matinée sur le
-        terrain</strong> — et cette matinée n'est pas celle d'un développeur.
+        <b>Et son accès est en deux temps</b>, ce que ni ma première ni ma deuxième version ne
+        disait. L'analyse d'un processeur inconnu coûte une heure — mais elle s'appuie sur un
+        fichier de configuration et des photos de plaques qu'il faut aller chercher sur place. Le
+        brief d'intervention à la Mosson est explicite : une matinée, dont la mission première est
+        de « déterminer la technologie et le constructeur », et dont l'objet le plus précieux à
+        ramener est le fichier de configuration copié en régie.
+        <strong>Une heure au bureau, une matinée sur le terrain</strong> — et cette matinée n'est
+        pas celle d'un développeur.
       </p>
     </div>
 
@@ -359,72 +642,86 @@
       <p class="ref">LE CANAL QUE JE N'AVAIS PAS VU</p>
       <h4>Une panne est une porte d'entrée commerciale</h4>
       <p>
-        Le 26 août, un périmétrique tour de terrain est tombé au stade de la Mosson dans
-        une rafale de vent. Il n'a pas été posé par B2B Alive — c'est du Euro Display,
-        installé en 2019 par un tiers. B2B Alive est allée constater. <b>Le référentiel
-        classe Montpellier en « prospect ».</b>
+        Le 26 août, un périmétrique tour de terrain est tombé au stade de la Mosson dans une rafale
+        de vent. Il n'a pas été posé par B2B Alive — c'est du Euro Display, installé en 2019 par un
+        tiers. B2B Alive est allée constater.
+        <b>Le référentiel classe Montpellier en « prospect ».</b>
       </p>
       <p>
-        C'est le second gisement en action, avec un mécanisme d'entrée que je n'avais pas
-        imaginé : on ne démarche pas un parc étranger, <em>on y est appelé quand il
-        casse</em>. Et l'intervention produit exactement ce que la qualification exige —
-        le constructeur, la technologie, le fichier de configuration, la topologie. Le
-        dépannage matériel <b>finance et alimente la qualification logicielle</b>.
+        C'est le second gisement en action, avec un mécanisme d'entrée que je n'avais pas imaginé :
+        on ne démarche pas un parc étranger, <em>on y est appelé quand il casse</em>. Et
+        l'intervention produit exactement ce que la qualification exige — le constructeur, la
+        technologie, le fichier de configuration, la topologie. Le dépannage matériel
+        <b>finance et alimente la qualification logicielle</b>.
       </p>
       <p>
-        Cela dit aussi qui fait quoi, et ce n'est pas l'équipe de développement. Sur ce
-        terrain il y a un technicien, un électricien recruté pour l'occasion, moi pour
-        documenter — et le commercial reste au téléphone, jamais sur place. La consigne
-        du brief est nette : aucun engagement de délai ni de prix devant le client.
+        Cela dit aussi qui fait quoi, et ce n'est pas l'équipe de développement. Sur ce terrain il y
+        a un technicien, un électricien recruté pour l'occasion, moi pour documenter — et le
+        commercial reste au téléphone, jamais sur place. La consigne du brief est nette : aucun
+        engagement de délai ni de prix devant le client.
       </p>
     </div>
 
     <p>
       Trois formes de vente coexistent, et toutes les trois sont possibles :
-      <strong>le logiciel seul</strong>, sur un parc existant ; <strong>le logiciel avec
-      le matériel</strong>, quand B2B Alive équipe l'enceinte ; <strong>le logiciel
-      avec l'exploitation</strong>, quand le club ne veut pas conduire ses propres
-      soirs de match. Elles n'ont ni le même cycle, ni le même interlocuteur, ni le
-      même risque. La carte ci-dessus les traite comme une seule chaîne : c'est une
-      simplification qu'il faudra défaire, mais pas avant d'avoir vérifié laquelle des
-      trois se vend réellement le plus.
+      <strong>le logiciel seul</strong>, sur un parc existant ;
+      <strong>le logiciel avec le matériel</strong>, quand B2B Alive équipe l'enceinte ;
+      <strong>le logiciel avec l'exploitation</strong>, quand le club ne veut pas conduire ses
+      propres soirs de match. Elles n'ont ni le même cycle, ni le même interlocuteur, ni le même
+      risque. La carte ci-dessus les traite comme une seule chaîne : c'est une simplification qu'il
+      faudra défaire, mais pas avant d'avoir vérifié laquelle des trois se vend réellement le plus.
     </p>
 
     <p>
       Et l'étape 03 — celle que je faisais porter à l'implémentation logicielle —
-      <strong>a changé de nom le 03/09</strong>. Installer le logiciel ne coûte rien dans
-      le cas courant : on colle une URL, la page tient hors ligne et se met à jour toute
-      seule. Ce qui n'est pas empaqueté, c'est le compositeur natif, et il n'est requis
-      que pour plier un ruban ou cropper une sous-région.
+      <strong>a changé de nom le 03/09</strong>. Installer le logiciel ne coûte rien dans le cas
+      courant : on colle une URL, la page tient hors ligne et se met à jour toute seule. Ce qui
+      n'est pas empaqueté, c'est le compositeur natif, et il n'est requis que pour plier un ruban ou
+      cropper une sous-région.
     </p>
     <p>
       Le vrai coût est ailleurs, et le récap du rush de Guingamp le nomme sans détour :
-      <strong>la chaîne d'approvisionnement des médias est « le poste de temps le plus
-      lourd de la semaine, et il est presque entièrement manuel »</strong>. Transferts du
-      Drive vers la machine en ligne de commande, plusieurs fois ; doublons qu'aucun
-      outil ne détecte ; fichiers à ré-encoder parce qu'un lecteur qui se déplace dans une
-      vidéo n'accepte pas n'importe quel encodage ; bandeaux à re-plier et re-mettre à
-      l'échelle après un rognage de tribune. <b>Et ce chantier n'a aucun ticket.</b>
+      <strong
+        >la chaîne d'approvisionnement des médias est « le poste de temps le plus lourd de la
+        semaine, et il est presque entièrement manuel »</strong
+      >. Transferts du Drive vers la machine en ligne de commande, plusieurs fois ; doublons
+      qu'aucun outil ne détecte ; fichiers à ré-encoder parce qu'un lecteur qui se déplace dans une
+      vidéo n'accepte pas n'importe quel encodage ; bandeaux à re-plier et re-mettre à l'échelle
+      après un rognage de tribune. <b>Et ce chantier n'a aucun ticket.</b>
     </p>
     <p>
-      C'est bien moi que ça mobilise, donc mon raisonnement d'hier tient — mais il
-      visait la mauvaise cible. Empaqueter le compositeur ne me rendrait pas ces
-      journées ; <em>un ingest qui plie, dédoublonne et vérifie les coupes par écran</em>,
-      oui.
+      C'est bien moi que ça mobilise, donc mon raisonnement d'hier tient — mais il visait la
+      mauvaise cible. Empaqueter le compositeur ne me rendrait pas ces journées ;
+      <em>un ingest qui plie, dédoublonne et vérifie les coupes par écran</em>, oui.
     </p>
   </section>
 
   <!-- ================= OVS-2 ================= -->
   <section>
     <h2>Flux 2 — De l'annonceur à la preuve</h2>
-    <p class="h2-note">Déclencheur : le club vend un créneau à un annonceur · Valeur : l'annonceur obtient la preuve que son spot est passé, et le club se fait payer</p>
+    <p class="h2-note">
+      Déclencheur : le club vend un créneau à un annonceur · Valeur : l'annonceur obtient la preuve
+      que son spot est passé, et le club se fait payer
+    </p>
 
     <figure>
       <div class="scroller">
-        <svg viewBox="0 0 1000 152" role="img" aria-label="Chaîne de sept étapes de la vente d'un créneau à la facturation ; la chaîne s'interrompt après la remontée de la preuve, les deux dernières étapes n'existent pas.">
+        <svg
+          viewBox="0 0 1000 152"
+          role="img"
+          aria-label="Chaîne de sept étapes de la vente d'un créneau à la facturation ; la chaîne s'interrompt après la remontée de la preuve, les deux dernières étapes n'existent pas."
+        >
           <defs>
-            <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+            <marker
+              id="a2"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <polygon points="0,1 9,5 0,9" fill="currentColor" />
             </marker>
           </defs>
 
@@ -433,70 +730,78 @@
 
           <!-- 1 -->
           <text class="num" x="12" y="30">01</text>
-          <rect class="bx" x="12" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="12" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="71" y="63" text-anchor="middle">Créneau</text>
           <text class="lb" x="71" y="79" text-anchor="middle">vendable</text>
           <text class="st st-ok" x="71" y="116" text-anchor="middle">livré</text>
-          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a2)"/>
+          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a2)" />
 
           <!-- 2 -->
           <text class="num" x="155" y="30">02</text>
-          <rect class="bx" x="155" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="155" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="214" y="63" text-anchor="middle">Vente au</text>
           <text class="lb" x="214" y="79" text-anchor="middle">temps d'antenne</text>
           <text class="st st-ok" x="214" y="116" text-anchor="middle">livré</text>
-          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a2)"/>
+          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a2)" />
 
           <!-- 3 -->
           <text class="num" x="298" y="30">03</text>
-          <rect class="bx" x="298" y="36" width="118" height="62" rx="2" stroke-dasharray="6 3"/>
+          <rect class="bx" x="298" y="36" width="118" height="62" rx="2" stroke-dasharray="6 3" />
           <text class="lb" x="357" y="63" text-anchor="middle">Dépôt du spot</text>
           <text class="lb" x="357" y="79" text-anchor="middle">au portail</text>
           <text class="st st-ok" x="357" y="116" text-anchor="middle">partiel · en test</text>
-          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a2)"/>
+          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a2)" />
 
           <!-- 4 -->
           <text class="num" x="441" y="30">04</text>
-          <rect class="bx" x="441" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="441" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="500" y="63" text-anchor="middle">Diffusion</text>
           <text class="lb" x="500" y="79" text-anchor="middle">en boucle</text>
           <text class="st st-ok" x="500" y="116" text-anchor="middle">livré</text>
-          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a2)"/>
+          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a2)" />
 
           <!-- 5 -->
           <text class="num" x="584" y="30">05</text>
-          <rect class="bx" x="584" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="584" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="643" y="63" text-anchor="middle">Preuve remontée</text>
           <text class="lb" x="643" y="79" text-anchor="middle">au cloud</text>
           <text class="st st-ok" x="643" y="116" text-anchor="middle">livré</text>
 
           <!-- wall -->
-          <line class="flow-brk" x1="704" y1="67" x2="716" y2="67"/>
-          <line class="wall" x1="722" y1="34" x2="722" y2="100"/>
+          <line class="flow-brk" x1="704" y1="67" x2="716" y2="67" />
+          <line class="wall" x1="722" y1="34" x2="722" y2="100" />
           <text class="alab" x="722" y="116" text-anchor="middle">la chaîne</text>
           <text class="alab" x="722" y="129" text-anchor="middle">s'arrête ici</text>
 
           <!-- 6 ghost -->
           <text class="num" x="745" y="30">06</text>
-          <rect class="bx-ghost" x="745" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-ghost" x="745" y="36" width="118" height="62" rx="2" />
           <text class="lb-ghost" x="804" y="63" text-anchor="middle">Restitution à</text>
           <text class="lb-ghost" x="804" y="79" text-anchor="middle">l'annonceur</text>
           <text class="st st-ghost" x="804" y="116" text-anchor="middle">n'existe pas</text>
-          <line x1="865" y1="67" x2="884" y2="67" stroke="var(--ghost)" stroke-width="1.4" stroke-dasharray="5 4" fill="none"/>
+          <line
+            x1="865"
+            y1="67"
+            x2="884"
+            y2="67"
+            stroke="var(--ghost)"
+            stroke-width="1.4"
+            stroke-dasharray="5 4"
+            fill="none"
+          />
 
           <!-- 7 ghost -->
           <text class="num" x="888" y="30">07</text>
-          <rect class="bx-ghost" x="888" y="36" width="100" height="62" rx="2"/>
+          <rect class="bx-ghost" x="888" y="36" width="100" height="62" rx="2" />
           <text class="lb-ghost" x="938" y="71" text-anchor="middle">Facturation</text>
           <text class="st st-ghost" x="938" y="116" text-anchor="middle">n'existe pas</text>
         </svg>
       </div>
       <figcaption>
-        Le cas d'école du flux qui <b>fabrique sa valeur puis la jette</b>. Tout est en
-        place jusqu'à la remontée de la preuve de diffusion — la donnée existe, elle
-        arrive au cloud, elle est même réconciliée avec les réservations. Puis rien :
-        aucun rapport, aucun tableau de bord, aucune facture. Celui qui a payé
-        n'apprend jamais ce qu'il a obtenu.
+        Le cas d'école du flux qui <b>fabrique sa valeur puis la jette</b>. Tout est en place
+        jusqu'à la remontée de la preuve de diffusion — la donnée existe, elle arrive au cloud, elle
+        est même réconciliée avec les réservations. Puis rien : aucun rapport, aucun tableau de
+        bord, aucune facture. Celui qui a payé n'apprend jamais ce qu'il a obtenu.
       </figcaption>
     </figure>
 
@@ -504,17 +809,17 @@
       <p class="ref">QUI VEND, QUI OUTILLE</p>
       <h4>Ce n'est pas nous qui vendons la publicité — c'est le club</h4>
       <p>
-        Le créneau est vendu par l'enceinte à ses propres partenaires : l'équipementier
-        local, le concessionnaire, l'assureur du coin. <b>Nous ne sommes pas la régie,
-        nous sommes son outil</b> — nous fournissons le moyen de diffuser et la preuve
-        que c'est passé. C'est une position plus modeste et plus solide : on ne dispute
-        pas au club sa relation commerciale, on la rend défendable.
+        Le créneau est vendu par l'enceinte à ses propres partenaires : l'équipementier local, le
+        concessionnaire, l'assureur du coin.
+        <b>Nous ne sommes pas la régie, nous sommes son outil</b> — nous fournissons le moyen de
+        diffuser et la preuve que c'est passé. C'est une position plus modeste et plus solide : on
+        ne dispute pas au club sa relation commerciale, on la rend défendable.
       </p>
       <p>
-        Cela change ce que valent les deux étapes manquantes. Un tableau de bord
-        annonceur n'est pas un confort de reporting : c'est <em>l'argument de
-        renouvellement du club auprès de son partenaire</em>. Sans lui, le club revend
-        chaque saison sur sa seule parole. Avec lui, il revend sur des chiffres. Nous ne
+        Cela change ce que valent les deux étapes manquantes. Un tableau de bord annonceur n'est pas
+        un confort de reporting : c'est
+        <em>l'argument de renouvellement du club auprès de son partenaire</em>. Sans lui, le club
+        revend chaque saison sur sa seule parole. Avec lui, il revend sur des chiffres. Nous ne
         touchons pas cette recette, mais elle décide si le club garde le logiciel.
       </p>
     </div>
@@ -523,31 +828,28 @@
       <p class="ref">CE QUE CETTE CARTE CHANGE DANS L'ARBITRAGE</p>
       <h4>Les deux étapes manquantes ne sont pas des fonctionnalités de plus</h4>
       <p>
-        Vues isolément dans un backlog, « tableau de bord annonceur » et
-        « facturation » ressemblent à deux tickets parmi cent vingt-huit. Vues sur la
-        carte, ce sont <strong>les deux seules étapes qui séparent tout ce flux de sa
-        raison d'être</strong>. Cinq étapes livrées ne produisent aucune valeur tant
-        que la sixième manque.
+        Vues isolément dans un backlog, « tableau de bord annonceur » et « facturation » ressemblent
+        à deux tickets parmi cent vingt-huit. Vues sur la carte, ce sont
+        <strong>les deux seules étapes qui séparent tout ce flux de sa raison d'être</strong>. Cinq
+        étapes livrées ne produisent aucune valeur tant que la sixième manque.
       </p>
       <p>
-        C'est l'argument que je porterai à l'entretien d'arbitrage : il ne s'agit pas
-        de monter deux tickets en priorité, il s'agit de terminer un flux déjà payé
-        aux quatre cinquièmes.
+        C'est l'argument que je porterai à l'entretien d'arbitrage : il ne s'agit pas de monter deux
+        tickets en priorité, il s'agit de terminer un flux déjà payé aux quatre cinquièmes.
       </p>
       <p>
-        <b>Vérifié le 03/09, et c'est encore plus vrai que je ne le pensais.</b> La
-        documentation d'exploitation montre que l'attribution existe déjà au niveau de
-        l'item de playlist — identifiant de réservation, identifiant de diffusion, clé
-        d'annonceur — et que la preuve de diffusion remonte là-dessus. Les cinq
-        premières étapes ne sont donc pas « à peu près en place » : elles sont
-        <em>construites pour</em> facturer. Il ne manque que la restitution.
+        <b>Vérifié le 03/09, et c'est encore plus vrai que je ne le pensais.</b> La documentation
+        d'exploitation montre que l'attribution existe déjà au niveau de l'item de playlist —
+        identifiant de réservation, identifiant de diffusion, clé d'annonceur — et que la preuve de
+        diffusion remonte là-dessus. Les cinq premières étapes ne sont donc pas « à peu près en
+        place » : elles sont <em>construites pour</em> facturer. Il ne manque que la restitution.
       </p>
-      <p class="lede" style="margin-top:14px">
-        Et une alerte que je n'aurais pas vue sans cette lecture : la refonte prévue de
-        l'éditeur ferait passer les rotations d'annonceurs dans un nouvel objet
-        <b>qui ne porte aujourd'hui aucune de ces clés</b>. Si personne ne le dit,
-        l'attribution se perd — et une facturation qui casse ne se voit pas sur un mur.
-        Elle se voit trois mois plus tard, sur une facture.
+      <p class="lede" style="margin-top: 14px">
+        Et une alerte que je n'aurais pas vue sans cette lecture : la refonte prévue de l'éditeur
+        ferait passer les rotations d'annonceurs dans un nouvel objet
+        <b>qui ne porte aujourd'hui aucune de ces clés</b>. Si personne ne le dit, l'attribution se
+        perd — et une facturation qui casse ne se voit pas sur un mur. Elle se voit trois mois plus
+        tard, sur une facture.
       </p>
     </div>
   </section>
@@ -555,14 +857,29 @@
   <!-- ================= DVS ================= -->
   <section>
     <h2>Flux 3 — Du constat au correctif</h2>
-    <p class="h2-note">Déclencheur : quelque chose se voit un soir de match · Valeur : le correctif tourne sur le site</p>
+    <p class="h2-note">
+      Déclencheur : quelque chose se voit un soir de match · Valeur : le correctif tourne sur le
+      site
+    </p>
 
     <figure>
       <div class="scroller">
-        <svg viewBox="0 0 1000 152" role="img" aria-label="Chaîne de sept étapes du constat de terrain jusqu'au retour sur site ; l'attribution, la publication et la vérification sont les trois ruptures, tandis que l'écriture et le développement sont des points forts.">
+        <svg
+          viewBox="0 0 1000 152"
+          role="img"
+          aria-label="Chaîne de sept étapes du constat de terrain jusqu'au retour sur site ; l'attribution, la publication et la vérification sont les trois ruptures, tandis que l'écriture et le développement sont des points forts."
+        >
           <defs>
-            <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+            <marker
+              id="a3"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <polygon points="0,1 9,5 0,9" fill="currentColor" />
             </marker>
           </defs>
 
@@ -571,53 +888,53 @@
 
           <!-- 1 -->
           <text class="num" x="12" y="30">01</text>
-          <rect class="bx" x="12" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="12" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="71" y="71" text-anchor="middle">Constat</text>
           <text class="st st-ok" x="71" y="116" text-anchor="middle">terrain</text>
-          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="132" y1="67" x2="151" y2="67" marker-end="url(#a3)" />
 
           <!-- 2 -->
           <text class="num" x="155" y="30">02</text>
-          <rect class="bx-good" x="155" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-good" x="155" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="214" y="63" text-anchor="middle">Écriture</text>
           <text class="lb" x="214" y="79" text-anchor="middle">du ticket</text>
           <text class="st st-good" x="214" y="116" text-anchor="middle">POINT FORT</text>
-          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="275" y1="67" x2="294" y2="67" marker-end="url(#a3)" />
 
           <!-- 3 -->
           <text class="num" x="298" y="30">03</text>
-          <rect class="bx-brk" x="298" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-brk" x="298" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="357" y="63" text-anchor="middle">Rangement et</text>
           <text class="lb" x="357" y="79" text-anchor="middle">attribution</text>
           <text class="st st-brk" x="357" y="116" text-anchor="middle">RUPTURE</text>
           <text class="alab" x="357" y="132" text-anchor="middle">128 sans propriétaire</text>
-          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="418" y1="67" x2="437" y2="67" marker-end="url(#a3)" />
 
           <!-- 4 -->
           <text class="num" x="441" y="30">04</text>
-          <rect class="bx-good" x="441" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-good" x="441" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="500" y="71" text-anchor="middle">Développement</text>
           <text class="st st-good" x="500" y="116" text-anchor="middle">POINT FORT</text>
-          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="561" y1="67" x2="580" y2="67" marker-end="url(#a3)" />
 
           <!-- 5 -->
           <text class="num" x="584" y="30">05</text>
-          <rect class="bx" x="584" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx" x="584" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="643" y="71" text-anchor="middle">Relecture</text>
           <text class="st st-ok" x="643" y="116" text-anchor="middle">en place</text>
-          <line class="flow" x1="704" y1="67" x2="723" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="704" y1="67" x2="723" y2="67" marker-end="url(#a3)" />
 
           <!-- 6 -->
           <text class="num" x="727" y="30">06</text>
-          <rect class="bx-brk" x="727" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-brk" x="727" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="786" y="71" text-anchor="middle">Publication</text>
           <text class="st st-brk" x="786" y="116" text-anchor="middle">RUPTURE</text>
           <text class="alab" x="786" y="132" text-anchor="middle">intégration à l'arrêt</text>
-          <line class="flow" x1="847" y1="67" x2="866" y2="67" marker-end="url(#a3)"/>
+          <line class="flow" x1="847" y1="67" x2="866" y2="67" marker-end="url(#a3)" />
 
           <!-- 7 -->
           <text class="num" x="870" y="30">07</text>
-          <rect class="bx-brk" x="870" y="36" width="118" height="62" rx="2"/>
+          <rect class="bx-brk" x="870" y="36" width="118" height="62" rx="2" />
           <text class="lb" x="929" y="63" text-anchor="middle">Retour</text>
           <text class="lb" x="929" y="79" text-anchor="middle">sur site</text>
           <text class="st st-brk" x="929" y="116" text-anchor="middle">RUPTURE</text>
@@ -626,37 +943,35 @@
       </div>
       <figcaption>
         Le flux interne dit exactement la même chose que les deux autres, en plus net.
-        <b>Écrire et coder sont excellents</b> — les tickets portent des mesures datées
-        prises sur la machine de production et intègrent leurs propres
-        contre-arguments. <b>Ranger, publier et vérifier sont artisanaux.</b> Le talent
-        est au milieu, la perte est aux jointures.
+        <b>Écrire et coder sont excellents</b> — les tickets portent des mesures datées prises sur
+        la machine de production et intègrent leurs propres contre-arguments.
+        <b>Ranger, publier et vérifier sont artisanaux.</b> Le talent est au milieu, la perte est
+        aux jointures.
       </figcaption>
     </figure>
 
     <p>
-      C'est le flux le plus rentable à réparer, parce qu'il conditionne la vitesse des
-      deux autres. Chaque correctif des flux 1 et 2 passe par celui-ci : tant que
-      l'attribution et la publication restent manuelles, toute amélioration ailleurs
-      arrive plus lentement qu'elle ne le devrait.
+      C'est le flux le plus rentable à réparer, parce qu'il conditionne la vitesse des deux autres.
+      Chaque correctif des flux 1 et 2 passe par celui-ci : tant que l'attribution et la publication
+      restent manuelles, toute amélioration ailleurs arrive plus lentement qu'elle ne le devrait.
     </p>
 
     <div class="panel">
       <p class="ref">MA PLACE DANS CETTE CHAÎNE</p>
       <h4>Je suis à la première étape et à la dernière</h4>
       <p>
-        C'est moi qui fais les implémentations logicielles sur site, donc c'est moi qui
-        serai là un soir de match quand quelque chose se verra. <b>Je suis le
-        constat</b> — le premier maillon, celui qui rapporte du terrain une mesure
-        plutôt qu'une impression. Et je suis aussi <b>le retour sur site</b> : c'est
-        moi qui vérifie qu'un correctif tourne réellement là où il devait tourner.
+        C'est moi qui fais les implémentations logicielles sur site, donc c'est moi qui serai là un
+        soir de match quand quelque chose se verra. <b>Je suis le constat</b> — le premier maillon,
+        celui qui rapporte du terrain une mesure plutôt qu'une impression. Et je suis aussi
+        <b>le retour sur site</b> : c'est moi qui vérifie qu'un correctif tourne réellement là où il
+        devait tourner.
       </p>
       <p>
-        Cela me donne deux devoirs et un privilège. Devoir d'écrire le constat avec la
-        même exigence de mesure que les tickets existants — l'endroit, l'heure, la
-        machine, ce qu'on a vu à l'écran, pas au tableau de bord. Devoir de ne jamais
-        déclarer terminé ce que je n'ai pas vu tourner. Et le privilège d'être la
-        seule personne à voir la chaîne entière, ce qui est exactement la position
-        depuis laquelle on peut dire où elle casse sans le deviner.
+        Cela me donne deux devoirs et un privilège. Devoir d'écrire le constat avec la même exigence
+        de mesure que les tickets existants — l'endroit, l'heure, la machine, ce qu'on a vu à
+        l'écran, pas au tableau de bord. Devoir de ne jamais déclarer terminé ce que je n'ai pas vu
+        tourner. Et le privilège d'être la seule personne à voir la chaîne entière, ce qui est
+        exactement la position depuis laquelle on peut dire où elle casse sans le deviner.
       </p>
     </div>
   </section>
@@ -667,156 +982,290 @@
     <p class="h2-note">La même forme, trois fois</p>
 
     <p>
-      Les trois chaînes ont la même silhouette : <strong>un milieu solide, des
-      extrémités molles</strong>. Ce n'est pas une coïncidence, c'est la signature
-      d'une équipe qui a passé deux ans à construire un moteur et pas encore le temps
-      d'industrialiser ce qui l'entoure. C'est un bon problème — l'inverse serait
-      irrattrapable — mais il faut le nommer, parce qu'il oriente tout l'arbitrage.
+      Les trois chaînes ont la même silhouette :
+      <strong>un milieu solide, des extrémités molles</strong>. Ce n'est pas une coïncidence, c'est
+      la signature d'une équipe qui a passé deux ans à construire un moteur et pas encore le temps
+      d'industrialiser ce qui l'entoure. C'est un bon problème — l'inverse serait irrattrapable —
+      mais il faut le nommer, parce qu'il oriente tout l'arbitrage.
     </p>
 
     <div class="panel">
       <p class="ref">LECTURE POUR L'ARBITRAGE</p>
       <h4>Trois goulots, dans cet ordre</h4>
       <p>
-        <strong>Un — terminer le flux 2.</strong> Deux étapes manquantes séparent un
-        flux livré aux quatre cinquièmes de sa raison d'être. C'est le meilleur rapport
-        entre l'effort et la valeur perçue par un client, et c'est ce que mes prospects
-        attendent.
+        <strong>Un — terminer le flux 2.</strong> Deux étapes manquantes séparent un flux livré aux
+        quatre cinquièmes de sa raison d'être. C'est le meilleur rapport entre l'effort et la valeur
+        perçue par un client, et c'est ce que mes prospects attendent.
       </p>
       <p>
-        <strong>Deux — l'attribution, dans le flux 3.</strong> Elle ne coûte pas de
-        développement, seulement une décision. Elle accélère tout le reste et rend sa
-        file au second développeur.
+        <strong>Deux — l'attribution, dans le flux 3.</strong> Elle ne coûte pas de développement,
+        seulement une décision. Elle accélère tout le reste et rend sa file au second développeur.
       </p>
       <p>
-        <strong>Trois — l'ingest des médias, au milieu du flux 1.</strong> C'est le
-        chantier que la lecture de la documentation d'exploitation a fait apparaître, et
-        il n'a <b>aucun ticket</b> alors qu'il est, de l'aveu du récap de match lui-même,
-        le premier poste de temps humain d'une semaine de préparation. Un ingest qui
-        plie à la source, dédoublonne et vérifie les coupes par écran rendrait plus que
-        n'importe quel correctif de la liste.
+        <strong>Trois — l'ingest des médias, au milieu du flux 1.</strong> C'est le chantier que la
+        lecture de la documentation d'exploitation a fait apparaître, et il n'a
+        <b>aucun ticket</b> alors qu'il est, de l'aveu du récap de match lui-même, le premier poste
+        de temps humain d'une semaine de préparation. Un ingest qui plie à la source, dédoublonne et
+        vérifie les coupes par écran rendrait plus que n'importe quel correctif de la liste.
       </p>
       <p>
-        <strong>Quatre — l'observabilité, à la sortie.</strong> Personne ne peut dire à
-        distance ce qu'un site est en train de faire. Tant qu'il y a trois sites, on le
-        supporte ; c'est ce qui plafonne le nombre de salles qu'on peut exploiter sans
-        y être.
+        <strong>Quatre — l'observabilité, à la sortie.</strong> Personne ne peut dire à distance ce
+        qu'un site est en train de faire. Tant qu'il y a trois sites, on le supporte ; c'est ce qui
+        plafonne le nombre de salles qu'on peut exploiter sans y être.
       </p>
-      <p class="lede" style="margin-top:14px">
-        Si tu ne dois retenir qu'une ligne de tout ce document pour la réunion, c'est
-        celle-là : le chantier le plus rentable du flux d'adoption n'existe nulle part
-        dans le carnet, et personne ne l'a inventé — il est écrit, en toutes lettres,
-        dans le récap du dernier match.
+      <p class="lede" style="margin-top: 14px">
+        Si tu ne dois retenir qu'une ligne de tout ce document pour la réunion, c'est celle-là : le
+        chantier le plus rentable du flux d'adoption n'existe nulle part dans le carnet, et personne
+        ne l'a inventé — il est écrit, en toutes lettres, dans le récap du dernier match.
       </p>
     </div>
 
     <div class="panel warn">
       <p class="ref">CE QUE LA RELECTURE A DÉPLACÉ</p>
-      <h4>Trois corrections, et la troisième vient d'une source que je n'avais pas lue</h4>
+      <h4>Trois corrections qui déplacent le goulot, une quatrième qui le rétrécit</h4>
       <p>
-        La première version accusait <em>l'installation</em> : montage sur mesure, pose
-        au cas par cas. C'était lire le métier du matériel et l'attribuer au logiciel.
-        Le logiciel n'installe rien — il se branche. J'ai donc déplacé le goulot vers
-        l'amont.
+        La première version accusait <em>l'installation</em> : montage sur mesure, pose au cas par
+        cas. C'était lire le métier du matériel et l'attribuer au logiciel. Le logiciel n'installe
+        rien — il se branche. J'ai donc déplacé le goulot vers l'amont.
       </p>
       <p>
-        <b>J'ai ensuite eu tort une seconde fois, et dans l'autre sens.</b> J'avais posé
-        la qualification du matériel comme le second goulot, en supposant qu'instruire
-        un processeur inconnu était une enquête à chaque affaire. Mesuré le 03/09 :
-        une heure. Ce n'est pas un plafond, c'est une tâche — et le risque que j'en
-        avais tiré est sorti du registre le jour même où je l'y avais mis.
+        <b>J'ai ensuite eu tort une seconde fois, et dans l'autre sens.</b> J'avais posé la
+        qualification du matériel comme le second goulot, en supposant qu'instruire un processeur
+        inconnu était une enquête à chaque affaire. Mesuré le 03/09 : une heure. Ce n'est pas un
+        plafond, c'est une tâche — et le risque que j'en avais tiré est sorti du registre le jour
+        même où je l'y avais mis.
       </p>
       <p>
-        <b>Il n'en reste donc qu'un, et il porte mon nom.</b> L'implémentation
-        logicielle me mobilise, moi. Un plafond déplacé n'est pas un plafond levé : si
-        chaque site me coûte des journées, j'ai simplement remplacé un goulot
-        d'ingénierie par un goulot de personne. L'empaquetage est ce qui transforme
-        cette dépendance en une procédure que quelqu'un d'autre peut suivre.
+        <b>Il n'en reste donc qu'un, et il porte mon nom.</b> L'implémentation logicielle me
+        mobilise, moi. Un plafond déplacé n'est pas un plafond levé : si chaque site me coûte des
+        journées, j'ai simplement remplacé un goulot d'ingénierie par un goulot de personne.
+        L'empaquetage est ce qui transforme cette dépendance en une procédure que quelqu'un d'autre
+        peut suivre.
       </p>
       <p>
-        <b>Puis j'ai lu la documentation d'exploitation, et le goulot a bougé une
-        troisième fois.</b> Installer le logiciel ne coûte rien dans le cas courant —
-        une URL suffit, l'offline est livré. Ce qui coûte des journées, c'est la
-        <em>préparation des médias</em> : le récap du rush de Guingamp l'appelle « le
-        poste de temps le plus lourd de la semaine », entièrement manuel, et sans
-        ticket. J'accusais l'empaquetage du logiciel ; le vrai chantier est un ingest.
+        <b
+          >Puis j'ai lu la documentation d'exploitation, et le goulot a bougé une troisième fois.</b
+        >
+        Installer le logiciel ne coûte rien dans le cas courant — une URL suffit, l'offline est
+        livré. Ce qui coûte des journées, c'est la <em>préparation des médias</em> : le récap du
+        rush de Guingamp l'appelle « le poste de temps le plus lourd de la semaine », entièrement
+        manuel, et sans ticket. J'accusais l'empaquetage du logiciel ; le vrai chantier est un
+        ingest.
       </p>
       <p>
-        <b>La leçon vaut mieux que la carte.</b> Trois fois de suite, j'ai désigné un
-        goulot depuis le carnet de tickets, et trois fois une source extérieure l'a
-        déplacé — le métier d'origine, puis une question posée, puis la documentation
-        d'exploitation. Un carnet de tickets dit ce qu'une équipe répare. Il ne dit ni
-        ce que la maison vend, ni où passent les journées.
+        <b>La leçon vaut mieux que la carte.</b> Trois fois de suite, j'ai désigné un goulot depuis
+        le carnet de tickets, et trois fois une source extérieure l'a déplacé — le métier d'origine,
+        puis une question posée, puis la documentation d'exploitation. Un carnet de tickets dit ce
+        qu'une équipe répare. Il ne dit ni ce que la maison vend, ni où passent les journées.
+      </p>
+      <div style="height: 2px; background: var(--live); margin: 16px 0 14px; max-width: 76ch"></div>
+      <p>
+        <b
+          >Une quatrième correction, le 05/09 — par observation directe cette fois, pas par
+          lecture.</b
+        >
+        J'ai vu un fichier brut, jamais retouché à la main, jouer correctement sur un écran d'une
+        résolution différente de la source. La description Linear du projet
+        <em>Poids des médias &amp; cache des players</em> dit pourtant le plan de ré-encodage
+        <span class="mono">video-normalize.ts</span> « consommé par personne » et
+        <span class="mono">normalizePending</span> « jamais lu ». Les deux ne peuvent pas être vrais
+        en même temps sous cette forme — <b>à confirmer avec Florent avant la séance</b> : soit la
+        normalisation tourne quelque part que l'audit de code n'a pas vu, soit son constat est
+        antérieur à un correctif, soit ce que j'ai vu n'était pas aussi brut que je le croyais.
+      </p>
+      <p>
+        <b>Ça ne réfute qu'un sous-point, pas tout le chantier.</b> Le goulot ingest empile quatre
+        choses : transferts manuels, absence de dédoublonnage, ré-encodage pour la compatibilité
+        lecteur, et re-pliage des bandeaux après un rognage de tribune. Seule l'adaptation au format
+        écran est mise en doute ici — le dédoublonnage et la logistique de transfert restent non
+        retestés. Ce chantier garde sa place dans la carte, en plus étroit qu'écrit tant que Florent
+        n'a pas confirmé.
       </p>
     </div>
 
     <h3>Le câblage — ce qui porte quoi</h3>
 
     <p>
-      Une carte de flux reste décorative tant qu'aucun objet concret ne la porte.
-      Voici où chaque notion de méthode atterrit dans l'outil. Le premier rang est le
-      plus important : <strong>les initiatives doivent être les flux eux-mêmes</strong>,
-      sinon deux découpages concurrents cohabitent et la carte redevient une image.
+      Une carte de flux reste décorative tant qu'aucun objet concret ne la porte. Voici où chaque
+      notion de méthode atterrit dans l'outil. Le premier rang est le plus important :
+      <strong>les initiatives doivent être les flux eux-mêmes</strong>, sinon deux découpages
+      concurrents cohabitent et la carte redevient une image.
     </p>
 
     <div class="wire">
-      <div class="wrow h"><div>Notion de méthode</div><div>Ce qui la porte dans Linear</div></div>
-      <div class="wrow"><div class="m">Flux de valeur</div><div class="l">Initiative <em>— trois, une par flux</em></div></div>
-      <div class="wrow"><div class="m">Pari du trimestre, choisi au WSJF</div><div class="l">Projet <em>+ priorité + date cible</em></div></div>
-      <div class="wrow"><div class="m">Étape d'un pari</div><div class="l">Jalon <em>— aucun défini aujourd'hui</em></div></div>
-      <div class="wrow"><div class="m">Unité de travail, limite d'encours</div><div class="l">Issue <em>+ la vue « En vol »</em></div></div>
-      <div class="wrow"><div class="m">Classe de service</div><div class="l">Étiquette Classe <em>— Antenne, Socle</em></div></div>
-      <div class="wrow"><div class="m">Ratio subi / choisi</div><div class="l">Étiquette Apport</div></div>
-      <div class="wrow"><div class="m">Cadence portée par le calendrier sportif</div><div class="l">Date d'échéance</div></div>
-      <div class="wrow"><div class="m">Tri d'entrée</div><div class="l">Triage</div></div>
-      <div class="wrow"><div class="m">Magasin des tickets rangés</div><div class="l">Postponed <em>+ projet dormant</em></div></div>
-      <div class="wrow"><div class="m">Prévision sans estimation</div><div class="l">Temps de traversée</div></div>
-      <div class="wrow"><div class="m">Point au lendemain de match</div><div class="l">Mise à jour de statut de projet</div></div>
-      <div class="wrow"><div class="m">Résolution d'un doublon de cadrage</div><div class="l">Statut Duplicate</div></div>
-      <div class="wrow none"><div class="m">Part réservée au socle</div><div class="l">Aucun support <em>— vit dans le compte rendu, se vérifie par une vue</em></div></div>
-      <div class="wrow none"><div class="m">Définition de « prêt pour un match »</div><div class="l">Aucun support <em>— à porter par un modèle de ticket</em></div></div>
-      <div class="wrow none"><div class="m">Découverte continue</div><div class="l">Aucun support <em>— et c'est normal : elle produit du jugement, pas des tickets</em></div></div>
+      <div class="wrow h">
+        <div>Notion de méthode</div>
+        <div>Ce qui la porte dans Linear</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Flux de valeur</div>
+        <div class="l">Initiative <em>— trois, une par flux</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Pari du trimestre, choisi au WSJF</div>
+        <div class="l">Projet <em>+ priorité + date cible</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Étape d'un pari</div>
+        <div class="l">Jalon <em>— aucun défini aujourd'hui</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Unité de travail, limite d'encours</div>
+        <div class="l">Issue <em>+ la vue « En vol »</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Classe de service</div>
+        <div class="l">Étiquette Classe <em>— Antenne, Socle</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Ratio subi / choisi</div>
+        <div class="l">Étiquette Apport</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Cadence portée par le calendrier sportif</div>
+        <div class="l">Date d'échéance</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Tri d'entrée</div>
+        <div class="l">Triage</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Magasin des tickets rangés</div>
+        <div class="l">Postponed <em>+ projet dormant</em></div>
+      </div>
+      <div class="wrow">
+        <div class="m">Prévision sans estimation</div>
+        <div class="l">Temps de traversée</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Point au lendemain de match</div>
+        <div class="l">Mise à jour de statut de projet</div>
+      </div>
+      <div class="wrow">
+        <div class="m">Résolution d'un doublon de cadrage</div>
+        <div class="l">Statut Duplicate</div>
+      </div>
+      <div class="wrow none">
+        <div class="m">Part réservée au socle</div>
+        <div class="l">
+          Aucun support <em>— vit dans le compte rendu, se vérifie par une vue</em>
+        </div>
+      </div>
+      <div class="wrow none">
+        <div class="m">Définition de « prêt pour un match »</div>
+        <div class="l">Aucun support <em>— à porter par un modèle de ticket</em></div>
+      </div>
+      <div class="wrow none">
+        <div class="m">Découverte continue</div>
+        <div class="l">
+          Aucun support <em>— et c'est normal : elle produit du jugement, pas des tickets</em>
+        </div>
+      </div>
     </div>
 
     <div class="panel">
       <p class="ref">CE QUE LE CÂBLAGE RÉVÈLE</p>
       <h4>Le flux qui rapporte de l'argent n'a aucun projet démarré</h4>
       <p>
-        En rattachant les dix-neuf projets ouverts à leur flux, le déséquilibre saute
-        aux yeux : presque tout le travail en cours sert le premier flux. Le second —
-        de l'annonceur à la preuve — n'a qu'un projet pour le porter, et il est marqué
-        « non planifié ». Le troisième n'a qu'un chantier entamé sur deux.
+        En rattachant les dix-neuf projets ouverts à leur flux, le déséquilibre saute aux yeux :
+        presque tout le travail en cours sert le premier flux. Le second — de l'annonceur à la
+        preuve — n'a qu'un projet pour le porter, et il est marqué « non planifié ». Le troisième
+        n'a qu'un chantier entamé sur deux.
       </p>
       <p>
-        Ce n'est pas un choix, c'est une conséquence de l'absence d'arbitrage : sans
-        classement, l'attention va naturellement là où le travail est le plus visible.
-        <strong>Le mécanisme correctif existe déjà</strong> — dans la notation
-        d'illustration du support WSJF, les cinq premiers étaient précisément les
-        chantiers des deux flux affamés. Il n'y a donc pas d'action supplémentaire à
-        inventer : il faut faire la notation.
+        Ce n'est pas un choix, c'est une conséquence de l'absence d'arbitrage : sans classement,
+        l'attention va naturellement là où le travail est le plus visible.
+        <strong>Le mécanisme correctif existe déjà</strong> — dans la notation d'illustration du
+        support WSJF, les cinq premiers étaient précisément les chantiers des deux flux affamés. Il
+        n'y a donc pas d'action supplémentaire à inventer : il faut faire la notation.
       </p>
     </div>
 
     <h3>Ce que je n'ai pas mis sur ces cartes</h3>
     <ul class="plain">
-      <li><span class="cf cf-no">ABSENT</span> <strong>Les durées.</strong> Une vraie carte de flux porte, à chaque étape, le temps de traitement et le temps d'attente — c'est ce qui révèle que quatre-vingts pour cent du délai se passe entre les étapes, pas dedans. Je n'ai aucune mesure de ce genre et je préfère une carte sans chiffres qu'une carte avec des chiffres inventés.</li>
-      <li><span class="cf cf-est">À FAIRE</span> Ces durées sont récupérables : les temps de traversée que Linear calcule déjà sur deux cent trente tickets terminés donneraient le flux 3 en entier. Les flux 1 et 2 demanderaient de chronométrer une vraie installation et une vraie vente.</li>
-      <li><span class="cf cf-est">ESTIMÉ</span> Le découpage en étapes est le mien, déduit des tickets terminés et du vocabulaire de l'équipe. Florent en retirera ou en ajoutera — c'est le premier usage de ces cartes que de se faire corriger.</li>
-      <li><span class="cf cf-ok">VÉRIFIÉ</span> Chaque état — livré, partiel, rupture — s'appuie sur des tickets identifiés, relevés dans Linear le 02/09/2026.</li>
-      <li><span class="cf cf-ok">SOURCE NOUVELLE</span> <strong>Ces cartes ont été refaites le 03/09 sur la documentation d'exploitation de l'équipe</strong> — modes de rendu du player, référentiel des stades et des écrans, récap du rush de Guingamp, récap de l'Europ'A Cup, brief d'intervention à la Mosson. C'est de loin la meilleure source du dossier, et elle n'est ni dans Linear ni sur le site public.</li>
-      <li><span class="cf cf-no">À DIRE</span> <strong>Le logiciel n'a aucun client payant installé.</strong> Le référentiel donne trois sites : Guingamp et le Rhénus en <em>démo</em>, Montpellier en <em>prospect</em>. La qualité est démontrée — un match de Ligue 2 diffusé de bout en bout sur quatre surfaces — mais c'est une référence, pas un parc. Réserve sur la réserve : ce référentiel ne couvre que le logiciel ; le parc matériel vit dans une base que je n'ai pas pu ouvrir.</li>
-            <li><span class="cf cf-no">NON VÉRIFIÉ</span> <strong>Ce que fait B2B Alive « de base ».</strong> Le site de la société n'est pas joignable depuis cet environnement : tout ce que dit le panneau d'ouverture — Londres 2013, une vingtaine de personnes, les implantations, les surfaces posées — vient de résumés de recherche, pas de la source. À confirmer en une phrase auprès de Florent, ou en ouvrant la page vous-même.</li>
-      <li><span class="cf cf-est">EN ATTENTE</span> <strong>Les trois formes de vente restent une seule chaîne, et c'est assumé.</strong> Logiciel seul, logiciel avec matériel, logiciel avec exploitation n'ont ni le même cycle ni le même interlocuteur : la bonne carte en ferait trois. Question posée le 03/09, réponse : aucune n'a encore assez d'historique pour se détacher. On garde donc une carte unique et on repose la question dans trois mois — séparer maintenant fabriquerait deux cartes mortes et une vivante.</li>
-      <li><span class="cf cf-ok">RENSEIGNÉ</span> <strong>La taille du second gisement.</strong> Six à huit affaires sur dix portent sur un parc LED que B2B Alive n'a pas posé — donné le 03/09. Ce n'est pas un comptage, c'est un ordre de grandeur de mémoire ; il suffit à trancher la hiérarchie du document, il ne suffirait pas à bâtir un plan commercial chiffré.</li>
-      <li><span class="cf cf-est">NUANCÉ DEUX FOIS</span> <strong>Le coût de qualification du matériel.</strong> Posé comme un goulot le matin du 03/09, retiré l'après-midi sur la réponse « une heure », puis rétabli à moitié le soir : le brief d'intervention à la Mosson montre qu'obtenir de quoi faire cette heure d'analyse demande <b>une matinée sur place</b>. Une heure au bureau, une matinée sur le terrain — et la matinée n'est pas celle d'un développeur. <b>Trois versions en un jour : la mesure vaut mieux que ma déduction, à chaque fois.</b></li>
+      <li>
+        <span class="cf cf-no">ABSENT</span> <strong>Les durées.</strong> Une vraie carte de flux
+        porte, à chaque étape, le temps de traitement et le temps d'attente — c'est ce qui révèle
+        que quatre-vingts pour cent du délai se passe entre les étapes, pas dedans. Je n'ai aucune
+        mesure de ce genre et je préfère une carte sans chiffres qu'une carte avec des chiffres
+        inventés.
+      </li>
+      <li>
+        <span class="cf cf-est">À FAIRE</span> Ces durées sont récupérables : les temps de traversée
+        que Linear calcule déjà sur deux cent trente tickets terminés donneraient le flux 3 en
+        entier. Les flux 1 et 2 demanderaient de chronométrer une vraie installation et une vraie
+        vente.
+      </li>
+      <li>
+        <span class="cf cf-est">ESTIMÉ</span> Le découpage en étapes est le mien, déduit des tickets
+        terminés et du vocabulaire de l'équipe. Florent en retirera ou en ajoutera — c'est le
+        premier usage de ces cartes que de se faire corriger.
+      </li>
+      <li>
+        <span class="cf cf-ok">VÉRIFIÉ</span> Chaque état — livré, partiel, rupture — s'appuie sur
+        des tickets identifiés, relevés dans Linear le 02/09/2026.
+      </li>
+      <li>
+        <span class="cf cf-ok">SOURCE NOUVELLE</span>
+        <strong
+          >Ces cartes ont été refaites le 03/09 sur la documentation d'exploitation de
+          l'équipe</strong
+        >
+        — modes de rendu du player, référentiel des stades et des écrans, récap du rush de Guingamp,
+        récap de l'Europ'A Cup, brief d'intervention à la Mosson. C'est de loin la meilleure source
+        du dossier, et elle n'est ni dans Linear ni sur le site public.
+      </li>
+      <li>
+        <span class="cf cf-no">À DIRE</span>
+        <strong>Le logiciel n'a aucun client payant installé.</strong> Le référentiel donne trois
+        sites : Guingamp et le Rhénus en <em>démo</em>, Montpellier en <em>prospect</em>. La qualité
+        est démontrée — un match de Ligue 2 diffusé de bout en bout sur quatre surfaces — mais c'est
+        une référence, pas un parc. Réserve sur la réserve : ce référentiel ne couvre que le
+        logiciel ; le parc matériel vit dans une base que je n'ai pas pu ouvrir.
+      </li>
+      <li>
+        <span class="cf cf-no">NON VÉRIFIÉ</span>
+        <strong>Ce que fait B2B Alive « de base ».</strong> Le site de la société n'est pas
+        joignable depuis cet environnement : tout ce que dit le panneau d'ouverture — Londres 2013,
+        une vingtaine de personnes, les implantations, les surfaces posées — vient de résumés de
+        recherche, pas de la source. À confirmer en une phrase auprès de Florent, ou en ouvrant la
+        page vous-même.
+      </li>
+      <li>
+        <span class="cf cf-est">EN ATTENTE</span>
+        <strong>Les trois formes de vente restent une seule chaîne, et c'est assumé.</strong>
+        Logiciel seul, logiciel avec matériel, logiciel avec exploitation n'ont ni le même cycle ni
+        le même interlocuteur : la bonne carte en ferait trois. Question posée le 03/09, réponse :
+        aucune n'a encore assez d'historique pour se détacher. On garde donc une carte unique et on
+        repose la question dans trois mois — séparer maintenant fabriquerait deux cartes mortes et
+        une vivante.
+      </li>
+      <li>
+        <span class="cf cf-ok">RENSEIGNÉ</span> <strong>La taille du second gisement.</strong> Six à
+        huit affaires sur dix portent sur un parc LED que B2B Alive n'a pas posé — donné le 03/09.
+        Ce n'est pas un comptage, c'est un ordre de grandeur de mémoire ; il suffit à trancher la
+        hiérarchie du document, il ne suffirait pas à bâtir un plan commercial chiffré.
+      </li>
+      <li>
+        <span class="cf cf-est">NUANCÉ DEUX FOIS</span>
+        <strong>Le coût de qualification du matériel.</strong> Posé comme un goulot le matin du
+        03/09, retiré l'après-midi sur la réponse « une heure », puis rétabli à moitié le soir : le
+        brief d'intervention à la Mosson montre qu'obtenir de quoi faire cette heure d'analyse
+        demande <b>une matinée sur place</b>. Une heure au bureau, une matinée sur le terrain — et
+        la matinée n'est pas celle d'un développeur.
+        <b>Trois versions en un jour : la mesure vaut mieux que ma déduction, à chaque fois.</b>
+      </li>
     </ul>
 
     <footer>
-      Flux opérationnels — <b>du LED installé à l'écran qui vit</b> (adoption) · <b>de l'annonceur à la preuve</b> (revenu).<br>
-      Goulots au 03/09 — <b>la préparation des médias</b> (sans ticket) · <b>la restitution à l'annonceur</b> · <b>l'observabilité à distance</b>.<br>
-      Flux de développement — <b>du constat au correctif</b>, qui conditionne la vitesse des deux autres.<br>
-      Prochaine pièce empruntée à SAFe — le registre de risques à quatre états : résolu, pris en charge, accepté, atténué.
+      Flux opérationnels — <b>du LED installé à l'écran qui vit</b> (adoption) ·
+      <b>de l'annonceur à la preuve</b> (revenu).<br />
+      Goulots au 03/09 — <b>la préparation des médias</b> (sans ticket) ·
+      <b>la restitution à l'annonceur</b> · <b>l'observabilité à distance</b>.<br />
+      Flux de développement — <b>du constat au correctif</b>, qui conditionne la vitesse des deux
+      autres.<br />
+      Prochaine pièce empruntée à SAFe — le registre de risques à quatre états : résolu, pris en
+      charge, accepté, atténué.
     </footer>
   </section>
-
 </div>
