@@ -1,0 +1,260 @@
+<title>Paliers d'offre, prochaine génération</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F6F2EA; --surface:#FFFDF9; --surface-2:#FBF5EA;
+    --ink:#1E1A12; --ink-soft:#5E5748; --ink-faint:#8C8371;
+    --line:#E2D8C4; --accent:#E0700C; --accent-ink:#7A3A05; --accent-soft:#FBE3C4;
+    --mkt:#8A5CB8; --mkt-soft:#EEE3F6; --mkt-ink:#5A3980;
+    --fan:#2E8A78; --fan-soft:#DDF0EB; --fan-ink:#1D5A4D;
+    --shadow: 0 1px 2px rgba(30,26,18,0.06), 0 10px 28px -14px rgba(30,26,18,0.22);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+      --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+      --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+      --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+      --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181510; --surface:#211D16; --surface-2:#26221A;
+    --ink:#F3ECDD; --ink-soft:#C9BFA9; --ink-faint:#8F8570;
+    --line:#3A3325; --accent:#FF9A3C; --accent-ink:#FFD9A8; --accent-soft:#3D2A12;
+    --mkt:#C79FE8; --mkt-soft:#2B2038; --mkt-ink:#E4D2F7;
+    --fan:#7FCBB8; --fan-soft:#132821; --fan-ink:#BFEBE0;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 14px 32px -16px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{ background:var(--bg); color:var(--ink); font-family:'Public Sans','Segoe UI',system-ui,sans-serif; line-height:1.55; padding:0 0 4rem; }
+  h1,h2,h3{ font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:0.01em; text-wrap:balance; color:var(--ink); }
+  .wrap{ max-width:960px; margin:0 auto; padding:0 1.5rem; }
+
+  header{ padding:3rem 0 1.6rem; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-ink); background:var(--accent-soft); display:inline-block; padding:0.3rem 0.7rem; border-radius:3px; margin-bottom:1.1rem; }
+  h1{ font-size:clamp(1.9rem,4.6vw,2.6rem); line-height:1.02; margin:0 0 0.8rem; max-width:22ch; }
+  .subtitle{ color:var(--ink-soft); font-size:1rem; max-width:66ch; margin:0; }
+
+  h2.section-title{ font-size:1.05rem; margin:0; }
+  .section-head{ display:flex; align-items:baseline; gap:0.7rem; margin:3rem 0 0.4rem; padding-bottom:0.5rem; border-bottom:2px solid var(--ink); }
+  .section-num{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; }
+  .section-desc{ color:var(--ink-faint); font-size:0.85rem; margin:0.6rem 0 1.3rem; max-width:68ch; }
+
+  .ladder{ display:flex; flex-direction:column; gap:0.9rem; }
+  .tier{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.3rem 1.5rem; box-shadow:var(--shadow); display:grid; grid-template-columns:180px 1fr; gap:1.4rem; align-items:start; }
+  .tier-id{ display:flex; flex-direction:column; gap:0.25rem; }
+  .tier-name{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:1.25rem; text-transform:uppercase; color:var(--ink); line-height:1.05; }
+  .tier-audience{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-faint); }
+  .tier-price{ font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:var(--accent-ink); font-weight:600; margin-top:0.3rem; }
+
+  .tier-body{ display:flex; flex-direction:column; gap:0.7rem; }
+  .row-label{ font-family:'IBM Plex Mono',monospace; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-faint); margin-bottom:0.3rem; }
+  .today{ font-size:0.86rem; color:var(--ink-soft); }
+  .next{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0.35rem; }
+  .next li{ font-size:0.88rem; display:flex; gap:0.5rem; align-items:flex-start; }
+  .next li::before{ content:"→"; color:var(--accent-ink); font-weight:700; flex-shrink:0; }
+
+  .module{ background:var(--surface); border:1.5px solid var(--mkt); border-radius:14px; padding:1.6rem 1.8rem; box-shadow:var(--shadow); margin-bottom:1rem; }
+  .module.fan{ border-color:var(--fan); }
+  .module-head{ display:flex; align-items:center; gap:0.7rem; margin-bottom:0.4rem; }
+  .module-badge{ font-family:'IBM Plex Mono',monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em; background:var(--mkt-soft); color:var(--mkt-ink); padding:0.25rem 0.6rem; border-radius:99px; }
+  .module.fan .module-badge{ background:var(--fan-soft); color:var(--fan-ink); }
+  .module h3{ font-size:1.2rem; margin:0; }
+  .module-lead{ color:var(--ink-soft); font-size:0.9rem; margin:0.5rem 0 1rem; max-width:66ch; }
+  .module-grid{ display:grid; grid-template-columns:1fr 1fr; gap:0.4rem 1.6rem; }
+  .module-grid li{ font-size:0.86rem; list-style:none; display:flex; gap:0.5rem; }
+  .module-grid li::before{ content:"✓"; color:var(--mkt-ink); font-weight:700; flex-shrink:0; }
+  .module.fan .module-grid li::before{ color:var(--fan-ink); }
+  .module-note{ font-size:0.78rem; color:var(--ink-faint); margin-top:1rem; }
+
+  .found{ background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:1.2rem 1.4rem; }
+  .found ul{ margin:0.5rem 0 0; padding-left:1.2rem; font-size:0.86rem; color:var(--ink-soft); }
+  .found li{ margin:0.25rem 0; }
+
+  .parking{ font-size:0.86rem; color:var(--ink-soft); }
+  .parking ul{ margin:0.6rem 0 0; padding-left:1.2rem; }
+  .parking li{ margin:0.3rem 0; }
+
+  footer{ max-width:960px; margin:2.8rem auto 0; padding:1.4rem 1.5rem 0; border-top:1px solid var(--line); font-size:0.78rem; color:var(--ink-faint); }
+
+  @media (max-width:680px){
+    .tier{ grid-template-columns:1fr; }
+    .module-grid{ grid-template-columns:1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Depuis le brainstorm sans limite → des paliers vendables</span>
+    <h1>Où range-t-on chaque idée sur la grille actuelle</h1>
+    <p class="subtitle">Même grille que l'offre en cours (Essentiel → Élite, + option Régie B2B). Pour chaque palier : ce qu'il fait déjà, et les 3-4 briques du brainstorm qui l'enrichiraient en premier — celles qui parlent le plus à l'acheteur de ce palier, pas les plus spectaculaires. Deux idées ne rentrent dans aucun palier existant : elles deviennent des modules à part, vendables en travers de toute la grille.</p>
+  </header>
+
+  <div class="section-head"><span class="section-num">A</span><h2 class="section-title">La grille existante, augmentée</h2></div>
+  <p class="section-desc">Chaque palier garde son prix et son public actuels. Les flèches sont les prochaines briques qui le feraient monter en valeur — pas un engagement de date.</p>
+
+  <div class="ladder">
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">Essentiel</span>
+        <span class="tier-audience">Club amateur</span>
+        <span class="tier-price">49 €/mois</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Boîtier, score temps réel, diffusion sponsors en boucle, club autonome sur ses vidéos.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Diagnostic à distance + redémarrage automatique — moins de tickets support sur le palier le plus peuplé</li>
+            <li>Académie en ligne — le bénévole se forme seul, sans mobiliser le support</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">Confort</span>
+        <span class="tier-audience">Amateur structuré</span>
+        <span class="tier-price">89 €/mois</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Diffusion ciblée jours de match, spot qui s'arrête seul, habillage réutilisable.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Contenu interactif supporter — QR code, sondage mi-temps affiché à l'écran</li>
+            <li>Habillage saisonnier automatique — playoffs, derby, sans y toucher</li>
+            <li>Chaîne club 24/7 — grille de programme même hors match</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">Avancé</span>
+        <span class="tier-audience">Semi-pro / pro régional</span>
+        <span class="tier-price">139 €/mois</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Rotation pondérée, double écran piloté, compatible écrans LED déjà posés.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Booking publicitaire — flights, fréquence garantie, calendrier de réservation</li>
+            <li>Ciblage contextuel — le bon spot au bon moment du match</li>
+            <li>Dashboard revenus vs coûts club — la marge réelle, pas juste le CA</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">LED / Multi-sites</span>
+        <span class="tier-audience">Pro régional</span>
+        <span class="tier-price">250 €/mois</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Ruban LED périmétrique, jusqu'à 2 sites sous un contrat, mise en service accélérée.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Auto-calibration LED à l'installation — plus de mire manuelle</li>
+            <li>Synchronisation LED + écran + réseaux sociaux — un seul visuel, trois canaux</li>
+            <li>Permissions par écran — pas juste par site</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">Production Pro</span>
+        <span class="tier-audience">National → Élite</span>
+        <span class="tier-price">300–950 €/mois</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Fan cam multi-source, régie cloud, jusqu'à instant replay et multiview au niveau Élite.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Détection auto des faits de jeu — le score se saisit tout seul</li>
+            <li>Réalisation automatique par IA — le switch caméra suit l'action sans technicien</li>
+            <li>Streaming multi-plateforme + VOD auto découpée</li>
+            <li>Import calendrier fédération — plus de ressaisie de match</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier">
+      <div class="tier-id">
+        <span class="tier-name">+ Régie B2B</span>
+        <span class="tier-audience">Option Confort et +</span>
+        <span class="tier-price">20 % sur le CA nouveau</span>
+      </div>
+      <div class="tier-body">
+        <div><div class="row-label">Aujourd'hui</div><div class="today">Prospection active de nouveaux sponsors, 0% sur les sponsors déjà en place du club.</div></div>
+        <div><div class="row-label">Prochaines briques</div>
+          <ul class="next">
+            <li>Campagne réseau en un clic — un annonceur achète sur plusieurs clubs d'un coup</li>
+            <li>Dashboard agence multi-clients</li>
+            <li>Benchmark inter-clubs anonymisé</li>
+            <li>Portail fédération/ligue</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head"><span class="section-num">B</span><h2 class="section-title">Deux idées qui ne rentrent dans aucun palier</h2></div>
+  <p class="section-desc">Elles ne s'adressent pas au même public que la grille (l'annonceur qui achète lui-même, ou le supporter) — elles se vendent en travers, comme des modules, pas comme un 5ᵉ ou 6ᵉ palier.</p>
+
+  <div class="module">
+    <div class="module-head"><span class="module-badge">Module transverse</span><h3>Marketplace Annonceur</h3></div>
+    <p class="module-lead">L'annonceur local achète et paie son spot directement en ligne, sans appel commercial — vendable dès Confort, obligatoire dès que la Régie B2B tourne à l'échelle réseau.</p>
+    <ul class="module-grid">
+      <li>Achat + paiement en ligne du spot</li>
+      <li>Facturation automatique, sans ressaisie</li>
+      <li>Proof-of-play certifié, exportable</li>
+      <li>Reporting ROI croisé à l'affluence</li>
+    </ul>
+    <p class="module-note">Prérequis technique commun à la fois pour ce module et pour les enchères programmatiques du palier +Régie B2B — un seul chantier de paiement en ligne sert les deux.</p>
+  </div>
+
+  <div class="module fan">
+    <div class="module-head"><span class="module-badge">Module transverse</span><h3>Fan Engagement — appli supporter</h3></div>
+    <p class="module-lead">S'adresse au public du club, pas à ses sponsors — un produit à part, avec son propre cycle de vente (le club l'achète pour ses supporters, pas pour ses annonceurs).</p>
+    <ul class="module-grid">
+      <li>Appli compagnon, notifications à chaque but</li>
+      <li>Billetterie intégrée</li>
+      <li>Programme fidélité supporter</li>
+      <li>Cagnotte / dons club</li>
+      <li>Gamification — pronostics, vote du match</li>
+    </ul>
+    <p class="module-note">À ne pas lancer avant que la Marketplace Annonceur tourne — même brique de paiement en ligne, un seul chantier à financer avant l'autre.</p>
+  </div>
+
+  <div class="section-head"><span class="section-num">C</span><h2 class="section-title">Ce qui ne se vend pas en ligne, mais soutient toute la grille</h2></div>
+  <p class="section-desc">Invisible pour le client, mais ça change le coût de service sur chaque palier — pas un argument de vente en soi.</p>
+  <div class="found">
+    <strong style="font-size:0.9rem;">Fondations transverses</strong>
+    <ul>
+      <li>Provisioning zéro-touch — un nouveau site s'auto-configure au branchement</li>
+      <li>Failover 4G/5G automatique — moins de "TV coupée" côté club</li>
+      <li>Boîtier nouvelle génération + caméra intégrée + kit LED plug &amp; play</li>
+      <li>IA embarquée sur le boîtier — traitement local, moins de dépendance cloud</li>
+    </ul>
+  </div>
+
+  <div class="section-head"><span class="section-num">D</span><h2 class="section-title">Laissé de côté pour l'instant</h2></div>
+  <p class="section-desc">Honnêtement, pas assez mûr ou pas assez différenciant pour figurer dans une grille commerciale aujourd'hui.</p>
+  <div class="parking">
+    Accessibilité WCAG (nécessaire, pas vendable) · Connecteurs CRM/compta tiers (dépend des priorités clients réelles, pas encore demandées) · Programme de parrainage club → club (levier commercial, pas une fonctionnalité produit) · Réalité augmentée / filtres écran (gadget tant que la base — chaîne club, contenu interactif — n'est pas là) · Marketplace de templates communautaire (utile seulement une fois qu'il y a assez de clubs pour que le partage ait un sens).
+  </div>
+
+  <footer>
+    Grille de départ inchangée dans son prix et son découpage — ce document ajoute une couche « et ensuite », pas une nouvelle grille. Les modules B ne sont pas chiffrés : ils demandent d'abord un choix de modèle (abonnement à part ? commission ? inclus à partir d'un palier ?) avant de leur donner un prix.
+  </footer>
+</div>
