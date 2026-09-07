@@ -1,0 +1,652 @@
+<title>Mode opératoire des solutions concurrentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --gain: #1a6272;
+    --gain-wash: #dcebef;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --gain: #6bbacb;
+      --gain-wash: #16292f;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --gain: #6bbacb;
+    --gain-wash: #16292f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px 88px;
+  }
+
+  .masthead {
+    padding: 50px 0 22px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 17px;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 24px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 30px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 46px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -0.016em;
+    margin: 0 0 5px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule-strong);
+    text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17.5px;
+    margin: 30px 0 10px;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 74ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 24px;
+    max-width: 64ch;
+  }
+
+  .hdr {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 0 0 30px;
+  }
+  .hdr .kicker {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 11px;
+  }
+  .hdr .row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 16px;
+    padding: 7px 0;
+    align-items: baseline;
+  }
+  .hdr .row + .row {
+    border-top: 1px solid var(--rule);
+  }
+  .hdr .f {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .hdr .v {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  @media (max-width: 640px) {
+    .hdr .row {
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    margin: 0 0 18px;
+  }
+  .panel.warn {
+    border-top-color: var(--live);
+  }
+  .panel.ok {
+    border-top-color: var(--ready);
+  }
+  .panel .ref {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  .panel.warn .ref {
+    color: var(--live);
+  }
+  .panel.ok .ref {
+    color: var(--ready);
+  }
+  .panel h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 9px;
+    line-height: 1.3;
+  }
+  .panel p {
+    margin: 0 0 10px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
+
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+
+  .scroller {
+    overflow-x: auto;
+    margin-bottom: 18px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 760px;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 9px;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 16px 9px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  td {
+    padding: 11px 16px 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.8px;
+    line-height: 1.5;
+    vertical-align: top;
+  }
+  td.fam {
+    font-family: var(--f-display);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 74ch;
+  }
+
+  footer {
+    margin-top: 38px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--muted);
+  }
+  footer b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <p class="eyebrow">Doctrine · brouillon Notion · Comment ça marche</p>
+    <h1>Mode opératoire des solutions concurrentes</h1>
+    <p class="standfirst">
+      Une seule fabrication a été réellement inspectée à ce jour : celle de B2B Alive elle-même, sur
+      son propre matériel de production à Piraths Strasbourg. Ce document en fait la référence, la
+      met en regard de l'approche MadXP — vérifiée elle aussi — et nomme honnêtement ce qui n'est,
+      pour l'instant, qu'une catégorie de marché non inspectée.
+    </p>
+    <div class="slugline">
+      <span>Rédigé le <b>07/09/2026</b></span>
+      <span>Fondé sur <b>.claude/rules/led.md</b> — inspection DOM directe du 2026-08-12</span>
+      <span>Statut <b>brouillon, rien écrit dans Notion</b></span>
+    </div>
+  </header>
+
+  <div class="hdr">
+    <p class="kicker">▲ Doctrine</p>
+    <div class="row">
+      <div class="f">Vérifié le</div>
+      <div class="v">07/09/2026 · Gwenvael, depuis le dépôt <span class="mono">madxp</span></div>
+    </div>
+    <div class="row">
+      <div class="f">Périmé si</div>
+      <div class="v">
+        le mécanisme de scale de B2B Alive change côté front, ou si une deuxième solution
+        concurrente est inspectée sur un site réel
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Travail associé</div>
+      <div class="v">aucun ticket Linear — document de doctrine, pas de chantier en cours</div>
+    </div>
+    <div class="row">
+      <div class="f">Ce qu'elle ne dit pas</div>
+      <div class="v">
+        Rien sur le pricing ou le go-to-market des concurrents. Rien sur des solutions dont la
+        fabrication n'a pas été inspectée en direct — elles sont nommées comme catégories, pas
+        décrites en mécanisme.
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>1. B2B Alive — la seule fabrication inspectée</h2>
+    <p class="h2-note">Inspection DOM directe, panneau OUTPUT, le 2026-08-11 et 2026-08-12</p>
+
+    <p>
+      B2B Alive tourne en production sur le processeur de Piraths Strasbourg, et cette installation
+      a servi de référence pour calibrer la propre chaîne de pliage de MadXP — pas l'inverse. Le
+      mécanisme a été lu directement dans le navigateur qui pilote l'écran, pas déduit d'une
+      documentation commerciale.
+    </p>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Ce qui a été observé, mécanisme par mécanisme
+        </caption>
+        <thead>
+          <tr>
+            <th>Élément</th>
+            <th>Observation</th>
+            <th>Confiance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">Résolution du PC de régie</td>
+            <td>
+              1920×1080, Full HD standard — <b>pas</b> une résolution custom 1600×480. Le PC qui
+              pilote le processeur n'a besoin d'aucun mode d'écran exotique à configurer.
+            </td>
+            <td><span class="cf cf-ok">VÉRIFIÉ</span></td>
+          </tr>
+          <tr>
+            <td class="fam">Placement du canvas</td>
+            <td>
+              Les 4 bandes de 1600×120 sont positionnées en <b>haut-gauche</b> de cette sortie
+              1920×1080 (Y = 0 / 120 / 240 / 360). Le reste — droite et bas — reste noir, inutilisé.
+            </td>
+            <td><span class="cf cf-ok">VÉRIFIÉ</span></td>
+          </tr>
+          <tr>
+            <td class="fam">Mécanisme de mise à l'échelle</td>
+            <td>
+              Le conteneur <span class="mono">.output</span> porte
+              <span class="mono">transform: scale(largeur_fenêtre / 1920)</span>,
+              <span class="mono">transform-origin: top left</span>. <b>Jamais de recentrage.</b> À
+              largeur de fenêtre exactement 1920px, l'échelle vaut 1 : rendu identique pixel pour
+              pixel. À toute autre largeur, <b>tout</b> le canvas est rééchantillonné uniformément
+              (flou d'interpolation).
+            </td>
+            <td><span class="cf cf-ok">VÉRIFIÉ</span></td>
+          </tr>
+          <tr>
+            <td class="fam"><span class="mono">object-fit</span></td>
+            <td>
+              B2B Alive <b>n'utilise pas</b> <span class="mono">object-fit</span> — le scale CSS
+              explicite en tient lieu. C'est la différence structurelle avec l'ancienne approche
+              MadXP (<span class="mono">object-fit: contain</span>), qui recentrait et donc décalait
+              le mapping attendu par le processeur.
+            </td>
+            <td><span class="cf cf-ok">VÉRIFIÉ</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel ok">
+      <p class="ref">CE QUE CETTE INSPECTION A DIRECTEMENT CORRIGÉ CÔTÉ MADXP</p>
+      <h4>Deux bugs de conteneur, pas de fabrication du canvas</h4>
+      <p>
+        L'inspection de B2B Alive a montré que le canvas plié de MadXP (1600×480, vérifié par
+        ffprobe) était déjà correct — le problème restant était uniquement
+        <b>la taille du conteneur qui l'affiche</b>. Un canvas parfait peut apparaître rogné ou
+        zoomé si la fenêtre qui l'affiche ne fait pas la taille attendue, typiquement un site SaaS
+        affiché depuis un PC classique en fenêtre Chrome standard, pas en kiosk verrouillé. Le
+        correctif MadXP fixe désormais la taille du conteneur en pixels absolus depuis la géométrie
+        déclarée (<span class="mono">band_width</span>,
+        <span class="mono">band_count × height</span>), jamais recalculée à la main — même principe
+        que <span class="mono">computeSiteCanvas()</span>
+        côté serveur.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. MadXP — l'approche miroir, vérifiée côté serveur</h2>
+    <p class="h2-note">
+      Pour comparer, pas pour se substituer à la doctrine complète du pliage (voir la fiche
+      technique)
+    </p>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Deux approches, deux endroits où se fait le pliage
+        </caption>
+        <thead>
+          <tr>
+            <th>Étape</th>
+            <th>B2B Alive</th>
+            <th>MadXP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">Où le canvas est composé</td>
+            <td>
+              Côté navigateur de régie, en CSS (scale + ancrage haut-gauche) — la composition finale
+              se fait au rendu, dans le navigateur qui pilote le processeur.
+            </td>
+            <td>
+              Côté serveur, en amont (ffmpeg, worker dédié) — un canvas déjà plié est produit et mis
+              en cache, puis servi tel quel au lecteur.
+            </td>
+          </tr>
+          <tr>
+            <td class="fam">Ce que la régie affiche</td>
+            <td>La scène complète, redimensionnée par le navigateur au moment de l'affichage.</td>
+            <td>
+              Un fichier vidéo déjà plié (mode B), ou le fichier brut si le pliage n'est pas activé
+              pour ce site — jamais de composition en direct côté lecteur.
+            </td>
+          </tr>
+          <tr>
+            <td class="fam">Bascule / activation</td>
+            <td>Non applicable — mécanisme permanent du player B2B Alive.</td>
+            <td>
+              Derrière un interrupteur explicite par site, <span class="mono">serve_folded</span>,
+              sans défaut Joi — activé site par site après confirmation du contrat d'entrée réel du
+              processeur.
+            </td>
+          </tr>
+          <tr>
+            <td class="fam">Point commun</td>
+            <td colspan="2">
+              Aucun recentrage. Ancrage haut-gauche stable. Le canvas ne dépend que de la géométrie
+              du site, jamais du contenu diffusé.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Le reste du marché — catégories nommées, mécanismes non inspectés</h2>
+    <p class="h2-note">
+      Discipline : ne jamais présenter une catégorie de marché comme une fabrication observée
+    </p>
+
+    <p>
+      Le catalogue des vidéoprocesseurs (document séparé) liste les familles de cartes d'envoi
+      connues. Ce document-ci porte sur les <em>logiciels</em> qui pilotent ces cartes — et sur ce
+      plan, une seule fabrication concurrente a été inspectée en direct : celle de B2B Alive,
+      décrite ci-dessus. Le reste du marché du contenu LED périmétrique sportif se répartit, sans
+      que le mécanisme d'aucun de ces fournisseurs n'ait été observé, en deux catégories plausibles
+      :
+    </p>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Catégories de marché — non inspectées, à qualifier au cas par cas
+        </caption>
+        <thead>
+          <tr>
+            <th>Catégorie</th>
+            <th>Hypothèse de fonctionnement</th>
+            <th>Confiance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">Intégrateurs LED avec logiciel propriétaire</td>
+            <td>
+              Le fabricant qui pose le ruban (cf. le catalogue des fabricants sport — Novastar,
+              Colorlight et intégrateurs) fournit souvent un logiciel de diffusion propriétaire calé
+              sur son propre matériel. Le pliage serait alors probablement fait en amont par ce
+              logiciel, sur le même principe que MadXP — mais rien n'a été inspecté pour le
+              confirmer.
+            </td>
+            <td><span class="cf cf-no">INCONNU</span></td>
+          </tr>
+          <tr>
+            <td class="fam">Logiciels de diffusion génériques (agnostiques matériel)</td>
+            <td>
+              Des solutions logicielles vendues indépendamment du matériel LED, pensées pour
+              s'adapter à un processeur existant plutôt que d'être livrées avec. Ce sont elles qui,
+              en théorie, doivent le plus soigner la qualification du processeur inconnu à
+              l'installation — mais aucun nom précis ni mécanisme n'a été identifié à date.
+            </td>
+            <td><span class="cf cf-no">INCONNU</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel warn">
+      <p class="ref">CE QU'IL NE FAUT PAS FAIRE AVEC CE TABLEAU</p>
+      <h4>Une catégorie n'est pas un concurrent nommé</h4>
+      <p>
+        Contrairement à la section 1 (B2B Alive, mesuré pixel pour pixel), cette section 3 ne doit
+        jamais être citée devant un client ou un prospect comme une connaissance du marché — c'est
+        une absence de connaissance, nommée honnêtement. La bonne prochaine étape, si un concurrent
+        nommé doit être ajouté ici, est la même que celle qui a fonctionné pour B2B Alive :
+        l'observer tourner en production sur un site réel, pas lire sa plaquette commerciale.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <ul class="plain">
+      <li>
+        <span class="cf cf-ok">VÉRIFIÉ</span> Toute la section 1 (mécanisme B2B Alive) et les deux
+        premières lignes de la section 2 (approche MadXP) viennent de
+        <span class="mono">.claude/rules/led.md</span>, établi par mesure directe (DOM, panneau
+        OUTPUT, ffprobe) entre le 2026-08-10 et le 2026-08-12.
+      </li>
+      <li>
+        <span class="cf cf-no">INCONNU</span> Toute la section 3. Aucun concurrent autre que B2B
+        Alive n'a été observé en fabrication réelle à ce jour. Les deux catégories citées sont des
+        hypothèses de structuration du marché, pas des faits.
+      </li>
+      <li>
+        <span class="cf cf-no">INCONNU</span> Si B2B Alive applique le même mécanisme de scale sur
+        tous ses sites, ou si Piraths est un cas particulier. Un seul site a été inspecté.
+      </li>
+    </ul>
+
+    <footer>
+      Établi sur — <b>.claude/rules/led.md</b> du dépôt <span class="mono">madxp</span>, section «
+      Mécanisme de scale de B2B, inspecté en DOM le 2026-08-12 ».<br />
+      Ce qui n'a pas été fait — <b>aucune inspection d'un concurrent autre que B2B Alive</b>. Ce
+      document distingue explicitement le vérifié (section 1-2) de l'inconnu nommé comme tel
+      (section 3).<br />
+      Le principe qui tient tout le reste —
+      <b
+        >observer un concurrent qui tourne déjà sur le matériel cible vaut mieux que toute
+        documentation commerciale</b
+      >, comme l'a montré Piraths.
+    </footer>
+  </section>
+</div>

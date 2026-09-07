@@ -1,0 +1,790 @@
+<title>Comprendre le pliage LED périmétrique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --gain: #1a6272;
+    --gain-wash: #dcebef;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --gain: #6bbacb;
+      --gain-wash: #16292f;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --gain: #6bbacb;
+    --gain-wash: #16292f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px 88px;
+  }
+
+  .masthead {
+    padding: 50px 0 22px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 17px;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 24px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 30px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 46px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -0.016em;
+    margin: 0 0 5px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule-strong);
+    text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17.5px;
+    margin: 30px 0 10px;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 74ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 24px;
+    max-width: 64ch;
+  }
+
+  .hdr {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 0 0 30px;
+  }
+  .hdr .kicker {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 11px;
+  }
+  .hdr .row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 16px;
+    padding: 7px 0;
+    align-items: baseline;
+  }
+  .hdr .row + .row {
+    border-top: 1px solid var(--rule);
+  }
+  .hdr .f {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .hdr .v {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  @media (max-width: 640px) {
+    .hdr .row {
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+  }
+
+  /* pipeline en 3 étapes */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 0 0 8px;
+  }
+  .pstep {
+    background: var(--surface);
+    padding: 20px 18px;
+  }
+  .pstep .pn {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  .pstep h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16.5px;
+    margin: 0 0 8px;
+    line-height: 1.25;
+  }
+  .pstep p {
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: none;
+  }
+  .parrow {
+    text-align: center;
+    font-family: var(--f-mono);
+    font-size: 20px;
+    color: var(--muted);
+    padding: 2px 0 16px;
+  }
+  @media (max-width: 720px) {
+    .pipeline {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    margin: 0 0 18px;
+  }
+  .panel.warn {
+    border-top-color: var(--live);
+  }
+  .panel.ok {
+    border-top-color: var(--ready);
+  }
+  .panel .ref {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  .panel.warn .ref {
+    color: var(--live);
+  }
+  .panel.ok .ref {
+    color: var(--ready);
+  }
+  .panel h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 9px;
+    line-height: 1.3;
+  }
+  .panel p {
+    margin: 0 0 10px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
+
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+
+  .scroller {
+    overflow-x: auto;
+    margin-bottom: 18px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 640px;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 9px;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 16px 9px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  td {
+    padding: 11px 16px 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.8px;
+    line-height: 1.5;
+    vertical-align: top;
+  }
+  td.fam {
+    font-family: var(--f-display);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* schéma géométrie ruban */
+  .geom {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 22px 24px;
+    margin: 0 0 20px;
+    font-family: var(--f-mono);
+    font-size: 13px;
+    line-height: 1.9;
+  }
+  .geom .row {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 12px;
+    padding: 4px 0;
+  }
+  .geom .row b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .geom .row span {
+    color: var(--ink-soft);
+  }
+
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 74ch;
+  }
+
+  .qsteps {
+    counter-reset: qs;
+    margin: 0 0 20px;
+  }
+  .qs {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 16px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .qs:first-child {
+    border-top: 1px solid var(--rule);
+  }
+  .qs::before {
+    counter-increment: qs;
+    content: counter(qs, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+  .qs h4 {
+    margin: 0 0 5px;
+    font-size: 16px;
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .qs p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  footer {
+    margin-top: 38px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--muted);
+  }
+  footer b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <p class="eyebrow">Doctrine · brouillon Notion · Comment ça marche</p>
+    <h1>Comprendre le pliage LED périmétrique</h1>
+    <p class="standfirst">
+      Pour quelqu'un qui découvre le sujet : pourquoi un ruban LED de bord de terrain a besoin qu'on
+      lui « plie » son image avant de la lui envoyer, et ce que ça veut dire concrètement. Synthèse
+      pédagogique, sans réinventer — tout le contenu technique vient de
+      <span class="mono">.claude/rules/led.md</span>, vulgarisé ici.
+    </p>
+    <div class="slugline">
+      <span>Rédigé le <b>07/09/2026</b></span>
+      <span>Fondé sur <b>ADR-134/135/138/139/140</b> et le parc réel Piraths / Lanester</span>
+      <span>Statut <b>brouillon, rien écrit dans Notion</b></span>
+    </div>
+  </header>
+
+  <div class="hdr">
+    <p class="kicker">▲ Doctrine</p>
+    <div class="row">
+      <div class="f">Vérifié le</div>
+      <div class="v">
+        07/09/2026 · Gwenvael, synthèse depuis <span class="mono">.claude/rules/led.md</span>
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Périmé si</div>
+      <div class="v">
+        le canvas plié de Lanester est activé après observation (à date, jamais observé, band_count
+        figé divergent du dérivé)
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Travail associé</div>
+      <div class="v">aucun ticket Linear — document pédagogique, pas un chantier</div>
+    </div>
+    <div class="row">
+      <div class="f">Ce qu'elle ne dit pas</div>
+      <div class="v">
+        Rien sur la fabrication technique (ffmpeg, filtres, concurrence de décodeurs) — c'est la
+        doctrine <span class="mono">led.md</span> elle-même qui la porte, en détail, pour qui code
+        dessus.
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>1. Le problème, en une image</h2>
+    <p class="h2-note">Un ruban n'est pas un écran</p>
+
+    <p>
+      Un écran de salon a une seule forme : un rectangle, large et court. Un ruban LED de bord de
+      terrain, lui, fait le tour du terrain —
+      <strong>c'est une seule surface continue, très longue et très fine</strong>, souvent pliée en
+      plusieurs côtés (un pour chaque bord du terrain). Chez Piraths Strasbourg, c'est concrètement
+      <span class="cf cf-ok">VÉRIFIÉ</span> : 4 côtés de 10 mètres chacun, soit un ruban qui déroule
+      40 mètres de LED autour du terrain.
+    </p>
+
+    <p>
+      Le problème :
+      <strong
+        >le contenu vidéo qu'on veut y afficher n'est jamais filmé ni fabriqué sous cette
+        forme</strong
+      >. Une bannière de sponsor, une animation de but, un habillage de match — tout ça se pense et
+      se produit comme une image classique, large et courte. Il faut donc un mécanisme qui prenne
+      cette image normale et la redécoupe en tranches, une par côté du ruban, dans le bon ordre.
+      <strong>C'est ça, le pliage.</strong>
+    </p>
+
+    <div class="lede">
+      Le fait le plus important de toute cette doctrine tient en une phrase : le pliage dépend
+      uniquement de la <b>géométrie du terrain</b> — nombre de côtés, longueur, hauteur de la dalle
+      LED — jamais du contenu qu'on y affiche. On configure le processeur une fois, à
+      l'installation, et on ne le retouche plus ensuite.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Le chemin d'une vidéo, en trois étapes</h2>
+    <p class="h2-note">De la source à ce qui s'allume réellement sur le ruban</p>
+
+    <div class="pipeline">
+      <div class="pstep">
+        <p class="pn">Étape 1 · Source</p>
+        <h4>Une vidéo, pensée normalement</h4>
+        <p>
+          Le fichier tel qu'il est produit ou uploadé — un habillage 16:9, un sponsor plein cadre.
+          Rien à voir, à ce stade, avec la forme du ruban.
+        </p>
+      </div>
+      <div class="pstep">
+        <p class="pn">Étape 2 · Canvas plié</p>
+        <h4>La même image, redécoupée par côté</h4>
+        <p>
+          Une image composite où chaque bande horizontale correspond à un côté du terrain, empilées
+          dans l'ordre où le ruban les affichera. Chez Piraths : 4 bandes de 1600×120 px, soit un
+          canvas de 1600×480.
+        </p>
+      </div>
+      <div class="pstep">
+        <p class="pn">Étape 3 · Sortie processeur</p>
+        <h4>Ce que le matériel affiche réellement</h4>
+        <p>
+          Le canvas plié, placé 1:1 en haut-gauche d'une sortie standard (1920×1080 chez Piraths),
+          le reste en noir. Le processeur ne fait plus rien d'autre que scanner cette zone vers les
+          dalles physiques.
+        </p>
+      </div>
+    </div>
+    <p class="parrow">
+      ↓ chaque étape est une fonction pure de la précédente + la géométrie du site ↓
+    </p>
+
+    <p>
+      L'étape qui surprend le plus, pour qui découvre le sujet :
+      <strong>l'étape 2 est un générateur, jamais un stockage</strong>. On ne « garde » pas un
+      fichier plié comme on garderait une master ; on le fabrique, on le met en cache, et si le
+      cache manque ou que la fabrication échoue,
+      <strong>on sert le fichier brut de l'étape 1 en repli</strong> — dégradé, jamais cassé. Le
+      pliage ne doit jamais empêcher la diffusion.
+    </p>
+  </section>
+
+  <section>
+    <h2>3. La géométrie d'un site, pas à pas</h2>
+    <p class="h2-note">Le calcul, tel qu'observé et vérifié sur Piraths Strasbourg</p>
+
+    <div class="geom">
+      <div class="row"><b>Terrain</b><span>4 côtés × 10 m chacun</span></div>
+      <div class="row">
+        <b>Pitch (pas de pixel)</b><span>P6.25 — un pixel LED physique tous les 6,25 mm</span>
+      </div>
+      <div class="row">
+        <b>→ Largeur d'un côté en pixels</b><span>10 m ÷ 6,25 mm ≈ 1600 px</span>
+      </div>
+      <div class="row">
+        <b>Hauteur de la dalle</b
+        ><span
+          >120 px (≈ 75 cm — pas 160, une valeur qui avait été supposée à tort avant mesure)</span
+        >
+      </div>
+      <div class="row"><b>Nombre de bandes</b><span>4 (une par côté)</span></div>
+      <div class="row">
+        <b>→ Canvas plié</b><span>1600 × 480 px (4 bandes de 120 empilées)</span>
+      </div>
+      <div class="row">
+        <b>→ Sortie processeur attendue</b
+        ><span>1920×1080, canvas ancré en haut-gauche, reste en noir</span>
+      </div>
+    </div>
+
+    <p>
+      Chaque valeur de ce calcul vient d'une mesure réelle, pas d'une estimation à partir du nom
+      d'un fichier — la doctrine <span class="mono">led.md</span> note explicitement que les noms de
+      fichiers « mentent dans les deux sens » (un fichier nommé
+      <span class="mono">1600x120px.mp4</span> peut mesurer 4096×1416 à l'ouverture). Le calcul se
+      refait toujours par la géométrie déclarée du site, jamais par déduction du nom d'un fichier.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Les deux modes de sortie processeur</h2>
+    <p class="h2-note">Ce que le catalogue des vidéoprocesseurs détaille — ici, la vulgarisation</p>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Mode A vs Mode B
+        </caption>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>En une phrase</th>
+            <th>Chez Piraths</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">A — déplié</td>
+            <td>Le processeur reçoit l'image d'origine et fait lui-même le découpage en bandes.</td>
+            <td>Non observé — ce n'est pas le mode utilisé.</td>
+          </tr>
+          <tr>
+            <td class="fam">B — plié</td>
+            <td>
+              Le processeur ne déplie rien : il attend directement le canvas déjà découpé, placé
+              pixel pour pixel.
+            </td>
+            <td>
+              <span class="cf cf-ok">VÉRIFIÉ</span> — c'est le mode confirmé par l'observation
+              directe de B2B Alive tournant sur ce matériel.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      C'est pour ça que « qui plie » est la première question à se poser sur un site inconnu : dans
+      certaines installations, le pliage se ferait côté processeur ; chez Piraths, il se fait
+      entièrement en amont, côté logiciel. Le mode d'entrée réel ne se devine pas — il se vérifie
+      (voir le catalogue des vidéoprocesseurs, section « qualifier un processeur inconnu »).
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Ce qu'il faut retenir avant de coder ou de vendre quoi que ce soit</h2>
+    <p class="h2-note">Cinq points, chacun payé par un incident réel de la doctrine MadXP</p>
+
+    <div class="qsteps">
+      <div class="qs">
+        <div>
+          <h4>Le canvas ne dépend que de la géométrie, jamais du contenu</h4>
+          <p>
+            Le processeur est configuré une fois à l'installation. Envoyer tantôt un canvas, tantôt
+            un autre pour la même géométrie le rend immappable.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Un pliage raté doit dégrader, jamais casser la diffusion</h4>
+          <p>
+            Cache manquant, DB injoignable → on sert le fichier brut et on prévient en journal. Le
+            pliage n'est jamais un point de défaillance de la diffusion elle-même.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Le conteneur qui affiche le canvas compte autant que le canvas</h4>
+          <p>
+            Un canvas parfait peut apparaître rogné si la fenêtre qui l'affiche ne fait pas la bonne
+            taille — vérifié en incident réel le 2026-08-12, reproduit en redimensionnant simplement
+            le navigateur.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>
+            Une valeur figée par l'installateur décrit le matériel réel, pas un calcul théorique
+          </h4>
+          <p>
+            Si le nombre de bandes calculé diverge de ce qu'un installateur a figé à la pose, c'est
+            la valeur figée qui prime — elle décrit ce qui est physiquement gravé dans le
+            processeur.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>
+            Activer le pliage sur un nouveau site suppose d'avoir observé son contrat d'entrée
+          </h4>
+          <p>
+            Lanester (l'autre site LED du parc) n'a jamais été activé en mode plié : son nombre de
+            bandes figé diverge du dérivé, et personne n'a encore observé son contrat d'entrée réel
+            comme cela a été fait à Piraths.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <ul class="plain">
+      <li>
+        <span class="cf cf-ok">VÉRIFIÉ</span> L'intégralité des faits sur Piraths Strasbourg
+        (géométrie, pitch, canvas 1600×480, hauteur 120 px, mode plié, sortie 1920×1080) vient de
+        mesures directes citées dans <span class="mono">.claude/rules/led.md</span> — DB prod,
+        ffprobe, panneau OUTPUT B2B Alive, entre le 2026-08-10 et le 2026-08-12.
+      </li>
+      <li>
+        <span class="cf cf-ok">VÉRIFIÉ</span> Le statut de Lanester (band_count figé à 1, dérivé à
+        2, jamais activé en mode plié) — même source.
+      </li>
+      <li>
+        <span class="cf cf-est">ESTIMÉ</span> Que l'expérience Piraths / Lanester se généralise à
+        d'autres sites LED périmétriques sportifs. Ce n'est vérifié que sur ces deux points de
+        mesure ; le catalogue des vidéoprocesseurs détaille les limites de cette généralisation.
+      </li>
+      <li>
+        <span class="cf cf-no">INCONNU</span> Toute installation LED périmétrique en dehors du parc
+        B2B Alive documenté — cette fiche ne prétend décrire que ce qui a été observé, pas une norme
+        universelle du secteur.
+      </li>
+    </ul>
+
+    <div class="panel">
+      <p class="ref">POUR ALLER PLUS LOIN</p>
+      <h4>Cette fiche vulgarise, elle ne remplace rien</h4>
+      <p>
+        Pour la fabrication technique complète (concurrence de décodeurs ffmpeg, verrouillage de
+        concurrence en base, empreinte d'invalidation du cache, détourage sur validation humaine),
+        la source de vérité reste
+        <span class="mono">.claude/rules/led.md</span> dans le dépôt
+        <span class="mono">madxp</span> — cette fiche n'en est qu'une entrée pédagogique, pas un
+        substitut pour qui code sur ce chemin.
+      </p>
+    </div>
+
+    <footer>
+      Établi sur — <b>.claude/rules/led.md</b> (ADR-134/135/138/139/140) du dépôt
+      <span class="mono">madxp</span>, lu le 07/09/2026.<br />
+      Ce qui n'a pas été fait — <b>aucune vérification indépendante</b> : ce document synthétise et
+      vulgarise une doctrine déjà établie, il ne l'a pas re-mesurée.<br />
+      Le principe qui tient tout le reste —
+      <b
+        >le canvas processeur est une fonction pure du terrain, jamais du contenu qu'on y
+        diffuse.</b
+      >
+    </footer>
+  </section>
+</div>
