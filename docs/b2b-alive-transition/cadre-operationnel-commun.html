@@ -1,0 +1,700 @@
+<title>Cadre opérationnel commun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f7e0df;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --wait: #6b5fb5;
+    --wait-wash: #e8e5f7;
+
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --wait: #9c90e0;
+      --wait-wash: #251f3b;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --wait: #9c90e0;
+    --wait-wash: #251f3b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  .masthead {
+    padding: 56px 0 26px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 38px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 30px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 34px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 54px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 26px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -0.008em;
+    margin: 36px 0 12px;
+  }
+  h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.003em;
+    margin: 22px 0 8px;
+    color: var(--ink-soft);
+  }
+  p {
+    margin: 0 0 17px;
+    max-width: 70ch;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code,
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18.5px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 26px;
+    max-width: 64ch;
+  }
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 0 0 32px;
+  }
+  .rule-box h3 {
+    margin: 0 0 10px;
+    font-size: 16.5px;
+  }
+  .rule-box p {
+    margin: 0 0 12px;
+    font-size: 16px;
+    max-width: 76ch;
+  }
+  .rule-box p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* confidence markers, same convention as conducteur-prise-de-poste.html */
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+  .cf-wait {
+    background: var(--wait-wash);
+    color: var(--wait);
+  }
+
+  /* matrix */
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 8px;
+    font-size: 15px;
+  }
+  table.matrix th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 12px 10px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  table.matrix td {
+    padding: 13px 12px 13px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  table.matrix td:first-child,
+  table.matrix th:first-child {
+    padding-left: 0;
+    font-weight: 600;
+    font-family: var(--f-display);
+    font-size: 14.5px;
+  }
+  table.matrix tr:last-child td {
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    margin: 0 0 22px;
+  }
+  .team-card > .team-name {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 21px;
+    margin: 0 0 4px;
+  }
+  .team-card > .team-people {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .dim-block {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dim-block:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .dim-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .dim-body {
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+  .dim-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .glossary {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 0 0 8px;
+  }
+  .glossary .row {
+    background: var(--surface);
+    padding: 13px 16px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .glossary .row b {
+    font-family: var(--f-mono);
+    font-size: 14px;
+  }
+  .glossary .row span {
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 560px) {
+    .glossary .row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <div class="masthead">
+    <p class="eyebrow">Cadre de travail · trois équipes, un rôle qui les traverse</p>
+    <h1>Cadre opérationnel commun</h1>
+    <p class="standfirst">
+      Trois équipes ne partagent aujourd'hui ni outil, ni cadence, ni vocabulaire — et rien ne les y
+      oblige : chacune a un métier différent. Ce document ne cherche pas à les unifier de force. Il
+      dit, équipe par équipe, ce qui existe déjà, ce qui manque, et ce que moi seul dois porter
+      puisque je suis le seul point qui les traverse toutes les trois.
+    </p>
+    <div class="slugline">
+      <span>Ouvert le <b>06/09/2026</b></span>
+      <span>Équipes <b>Broadcaster · Commercial/Direction · Installation LED</b></span>
+      <span>Statut <b>proposition, rien d'écrit ailleurs</b></span>
+    </div>
+  </div>
+
+  <div class="rule-box">
+    <h3>Le principe qui tient tout le document</h3>
+    <p>
+      Un cadre commun ne veut pas dire un outil commun. MadXP a construit un miroir Notion en plus
+      de son outil de suivi : une seconde source de vérité à tenir à jour, pour un bénéfice resté
+      décoratif. La règle retenue dans <code>régime-de-travail.html</code> tient ici aussi :
+      <strong
+        >on ne crée un pont entre deux équipes que là où l'une des deux pose déjà une question à
+        laquelle l'autre ne sait pas répondre.</strong
+      >
+      Pour beaucoup de cases ci-dessous, la bonne réponse est qu'aucun pont n'est nécessaire — trois
+      cadres qui ne se parlent pas ne sont un problème que si quelque chose circule mal entre eux.
+    </p>
+  </div>
+
+  <div class="rule-box">
+    <h3>Le principe qui explique la colonne « Outils », pour les trois équipes</h3>
+    <p>
+      Avant de demander quel outil chaque équipe utilise, il faut savoir ce qui distingue un bon
+      choix d'outil d'un mauvais — sinon la colonne Outils de la section 1 n'est qu'une liste de
+      noms de logiciels. La distinction qui compte, détaillée dans
+      <code>régime-de-travail.html</code> (section « Raison d'être ») :
+      <strong>ce qu'une équipe va faire</strong> a besoin d'un état à jour et d'un seul endroit où
+      le lire ; <strong>ce qu'elle a compris</strong> — sa doctrine, son terrain — ne change presque
+      jamais mais personne ne pense à le maintenir « à jour » au sens strict. Mélanger les deux dans
+      un même outil fait pourrir l'un ou mentir l'autre.
+    </p>
+    <p>
+      Ce principe vaut pour Broadcaster (Linear = faire, Notion = comprendre) — il n'est pas encore
+      vérifié pour Commercial/Direction ni Installation/LED, faute d'avoir vu leurs outils. C'est la
+      première question à poser en les rencontrant : où vivent-elles chacune leur « ce qu'on va
+      faire » et leur « ce qu'on a compris » — et est-ce déjà séparé, ou mélangé quelque part ?
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Vue d'ensemble</h2>
+    <p class="h2-note">
+      Où en est chaque case — <span class="cf cf-ok">fait</span>
+      <span class="cf cf-est">à compléter</span> <span class="cf cf-no">inconnu</span>
+    </p>
+
+    <table class="matrix">
+      <tr>
+        <th>Équipe</th>
+        <th>Outils</th>
+        <th>Rituels</th>
+        <th>Gouvernance</th>
+        <th>Vocabulaire</th>
+      </tr>
+      <tr>
+        <td>
+          Broadcaster<br /><span
+            style="
+              font-weight: 400;
+              font-family: var(--f-body);
+              color: var(--muted);
+              font-size: 13px;
+            "
+            >Florent, Amine</span
+          >
+        </td>
+        <td><span class="cf cf-ok">fait</span></td>
+        <td><span class="cf cf-ok">fait</span></td>
+        <td><span class="cf cf-est">partiel</span></td>
+        <td><span class="cf cf-ok">fait</span></td>
+      </tr>
+      <tr>
+        <td>Commercial / Direction</td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td><span class="cf cf-est">partiel</span></td>
+        <td><span class="cf cf-no">inconnu</span></td>
+      </tr>
+      <tr>
+        <td>Installation / matériel LED</td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td><span class="cf cf-no">inconnu</span></td>
+      </tr>
+    </table>
+    <p style="font-size: 14.5px; color: var(--muted); margin-top: 14px">
+      La colonne Broadcaster est pleine parce qu'elle vient d'un diagnostic Linear réel
+      (<code>régime-de-travail.html</code>, <code>conducteur-prise-de-poste.html</code>). Les deux
+      autres colonnes de droite sont vides pour une seule raison : je n'ai encore parlé à personne
+      de ces deux équipes. Rien ci-dessous n'invente ce qui n'a pas été vérifié — voir section 5.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Broadcaster — Florent, Amine</h2>
+    <p class="h2-note">Déjà cadré ailleurs · ce qui suit est un résumé, pas une nouvelle version</p>
+
+    <div class="team-card">
+      <p class="team-name">Broadcaster</p>
+      <p class="team-people">Florent Quillien (lead) · Amine Ghannouchi (temps réel)</p>
+
+      <div class="dim-block">
+        <p class="dim-label">Outils <span class="cf cf-ok">fait</span></p>
+        <div class="dim-body">
+          <p>
+            Linear seul, aucun outil de plus. Douze réglages proposés (tri d'entrée, vue « En vol »,
+            trois initiatives, axes de labels classe/apport/site) — détail complet dans
+            <code>régime-de-travail.html</code> partie 2.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Rituels <span class="cf cf-ok">fait</span></p>
+        <div class="dim-body">
+          <p>
+            Cadence = calendrier des matchs, pas un cycle inventé. Un point de 30 min au lendemain
+            de chaque match, un contact utilisateur par semaine, une relecture du registre de
+            risques par mois, une notation WSJF par trimestre. Le détail des onze actions est dans
+            <code>régime-de-travail.html</code> partie 0.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Gouvernance <span class="cf cf-est">partiel</span></p>
+        <div class="dim-body">
+          <p>
+            Je note, je propose ; Florent décide et applique — je n'écris rien dans Linear. Ce qui
+            reste <strong>non tranché</strong> : jusqu'où va ce mandat dans le temps (phase
+            d'observation ou régime permanent ?), question posée dans
+            <code>conducteur-prise-de-poste.html</code> section 8 et toujours ouverte. Deux trous
+            identifiés le 06/09 : qui décide un soir de match si Florent est indisponible, et qui
+            arbitre si nous désaccordons sur une décision structurante — à poser à Florent, pas à
+            trancher seul. Une première proposition pour les deux existe désormais dans
+            <code>organisation-cible.html</code> section 6.
+            <span class="cf cf-no">correction du 08/09</span> — ces deux trous étaient cités ici
+            comme « ajoutés dans régime-de-travail.html, section Continuité et escalade » ; cette
+            section n'existe pas dans ce fichier ni dans son historique git. Seule l'attribution
+            était fausse, la question reste réelle.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Vocabulaire <span class="cf cf-ok">fait</span></p>
+        <div class="dim-body">
+          <p>
+            Aucun mot ajouté par-dessus Linear — epic = initiative, feature = projet, story =
+            ticket. Trois notions gardées parce qu'elles nomment ce que l'outil ne nomme pas :
+            <code>socle</code>, <code>spike</code>, « prêt pour un match ». Glossaire complet dans
+            <code>régime-de-travail.html</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Commercial / Direction</h2>
+    <p class="h2-note">
+      Le volet stratégie tarifaire avance en parallèle — ce qui suit ne le duplique pas
+    </p>
+
+    <div class="team-card">
+      <p class="team-name">Commercial / Direction</p>
+      <p class="team-people">Interlocuteurs non identifiés ici — à nommer</p>
+
+      <div class="dim-block">
+        <p class="dim-label">Outils <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Aucun CRM, tableur ou outil de suivi commercial connu à ce jour. Je ne sais pas si un
+            existe déjà et m'échappe, ou s'il n'y en a simplement pas.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Rituels <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Aucune cadence connue de point avec la direction (hebdo ? mensuel ? au fil de l'eau ?).
+            À poser dès le premier échange.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Gouvernance <span class="cf cf-est">partiel</span></p>
+        <div class="dim-body">
+          <p>
+            Ce qui est déjà su : je co-construis l'offre et la grille tarifaire avec la direction,
+            je ne la fixe pas seul (volet 4 du mandat, cf. mémoire
+            <code>user_role_b2b_alive_sport_vertical</code>). La méthode détaillée pour ce volet est
+            en cours de cadrage dans une session dédiée (<code>methode-grille-tarifaire.html</code>,
+            à paraître) — ne pas la refaire ici, seulement noter le pont : la décision 3 du
+            conducteur (« le lot commercial monte-t-il ? ») est la jonction entre ce cadre et ce
+            chantier.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Vocabulaire <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Aucun terme commercial B2B Alive vérifié (comment ils nomment un prospect, une affaire,
+            un cycle de vente). À collecter au premier échange plutôt qu'à supposer — le vocabulaire
+            dev (« antenne », « socle ») ne se transpose pas forcément côté commercial.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Installation / matériel LED</h2>
+    <p class="h2-note">Équipe la moins documentée des trois — aucun contact identifié à ce jour</p>
+
+    <div class="team-card">
+      <p class="team-name">Installation / matériel LED</p>
+      <p class="team-people">
+        Personne identifiée — probablement recoupe en partie le rôle de Florent (qualification
+        matériel mesurée à ~1h par affaire, cf. conducteur-prise-de-poste.html)
+      </p>
+
+      <div class="dim-block">
+        <p class="dim-label">Outils <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Pas de trace d'un outil de suivi de parc/stock dans ce qui a été lu jusqu'ici. L'axe
+            matériel des labels Linear (achat, stock, préparation, installation, dépannage, réforme)
+            suggère qu'une partie de ce suivi transite déjà par Linear côté Broadcaster — à
+            confirmer si c'est la seule trace ou s'il existe un outil dédié ailleurs.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Rituels <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body"><p>Aucune cadence connue.</p></div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Gouvernance <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Qui décide du choix matériel pour un nouveau club n'est pas su — c'est pourtant la
+            décision 1 du conducteur (« quel matériel sous un club amateur ? »), la plus
+            structurante des trois. Impossible de proposer un cadre de gouvernance ici sans avoir
+            d'abord identifié qui porte cette compétence.
+          </p>
+        </div>
+      </div>
+
+      <div class="dim-block">
+        <p class="dim-label">Vocabulaire <span class="cf cf-no">inconnu</span></p>
+        <div class="dim-body">
+          <p>
+            Aucun terme technique matériel/installation vérifié au-delà de ce qui figure déjà dans
+            l'axe de labels Linear.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Ce que je dois lever avant de compléter ce cadre</h2>
+    <p class="h2-note">Questions concrètes, pas des rubriques à deviner</p>
+
+    <div class="glossary">
+      <div class="row">
+        <b>Commercial</b
+        ><span
+          >Qui, côté direction, co-construit la grille tarifaire avec moi — et à quelle fréquence se
+          voit-on ?</span
+        >
+      </div>
+      <div class="row">
+        <b>Commercial</b
+        ><span>Existe-t-il déjà un CRM ou tableur de suivi prospects/clients, même informel ?</span>
+      </div>
+      <div class="row">
+        <b>Installation</b
+        ><span
+          >Qui qualifie le matériel sur une affaire — Florent seul, ou une personne/équipe dédiée
+          que je n'ai pas encore croisée ?</span
+        >
+      </div>
+      <div class="row">
+        <b>Installation</b
+        ><span
+          >Le suivi de parc (stock, dépannage) passe-t-il uniquement par les labels Linear de
+          Broadcaster, ou existe-t-il un outil séparé ?</span
+        >
+      </div>
+      <div class="row">
+        <b>Transverse</b
+        ><span
+          >Une réunion existe-t-elle déjà où les trois équipes se croisent (même rarement) — ou
+          est-ce moi qui, de fait, en tiens lieu ?</span
+        >
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Ce que je ne fais pas</h2>
+    <p class="h2-note">Le même garde-fou que partout ailleurs dans ce dossier</p>
+    <ul style="max-width: 70ch; padding-left: 20px">
+      <li style="margin-bottom: 10px">
+        Pas de quatrième outil « fédérateur » qui prétendrait unifier les trois — c'est exactement
+        le miroir Notion que MadXP a construit et jamais tenu à jour.
+      </li>
+      <li style="margin-bottom: 10px">
+        Pas de vocabulaire imposé entre équipes tant qu'aucune des deux ne pose de question à
+        laquelle l'autre ne sait pas répondre.
+      </li>
+      <li style="margin-bottom: 10px">
+        Pas de rituel commun aux trois équipes avant d'avoir vérifié qu'aucun n'existe déjà de fait.
+      </li>
+      <li>
+        Pas de proposition de gouvernance pour l'installation tant que je n'ai pas identifié qui la
+        porte aujourd'hui.
+      </li>
+    </ul>
+  </section>
+</div>

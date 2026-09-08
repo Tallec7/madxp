@@ -1,0 +1,539 @@
+<title>Carnet de suivi personnel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f7e0df;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --wait: #6b5fb5;
+    --wait-wash: #e8e5f7;
+
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --wait: #9c90e0;
+      --wait-wash: #251f3b;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --wait: #9c90e0;
+    --wait-wash: #251f3b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  .masthead {
+    padding: 56px 0 26px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 38px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 64ch;
+    margin: 0 0 30px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 34px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 54px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 26px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: -0.008em;
+    margin: 30px 0 10px;
+  }
+  p {
+    margin: 0 0 17px;
+    max-width: 68ch;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code,
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18.5px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 26px;
+    max-width: 62ch;
+  }
+
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 0 0 32px;
+  }
+  .rule-box h3 {
+    margin: 0 0 10px;
+    font-size: 16.5px;
+  }
+  .rule-box p {
+    margin: 0 0 12px;
+    font-size: 16px;
+    max-width: 76ch;
+  }
+  .rule-box p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* ---- status pills ---- */
+  .pill {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .pill-open {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+  .pill-wait {
+    background: var(--wait-wash);
+    color: var(--wait);
+  }
+  .pill-done {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .pill-todo {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  /* ---- tracker tables ---- */
+  table.tracker {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 8px;
+    font-size: 15.5px;
+  }
+  table.tracker th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 14px 8px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  table.tracker td {
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  table.tracker td:first-child,
+  table.tracker th:first-child {
+    padding-left: 0;
+  }
+  table.tracker tr:last-child td {
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .col-narrow {
+    width: 108px;
+  }
+  .empty-row td {
+    color: var(--muted);
+    font-style: italic;
+    font-family: var(--f-mono);
+    font-size: 13px;
+  }
+
+  /* ---- journal ---- */
+  .journal-entry {
+    border-left: 2px solid var(--rule-strong);
+    padding: 2px 0 22px 20px;
+    margin-left: 2px;
+    position: relative;
+  }
+  .journal-entry::before {
+    content: '';
+    position: absolute;
+    left: -4.5px;
+    top: 6px;
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+  }
+  .journal-date {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .journal-body {
+    font-size: 16px;
+    max-width: 66ch;
+  }
+  .journal-body ul {
+    margin: 6px 0 0;
+    padding-left: 19px;
+  }
+  .journal-body li {
+    margin-bottom: 4px;
+  }
+
+  .howto {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    padding: 16px 20px;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0 0 20px;
+  }
+  .howto b {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+</style>
+
+<div class="sheet">
+  <div class="masthead">
+    <p class="eyebrow">Outil de travail personnel · à tenir à jour à la main</p>
+    <h1>Carnet de suivi</h1>
+    <p class="standfirst">
+      Ce que Linear ne peut pas dire sur mon propre travail, tant que je suis en lecture seule : ce
+      qui attend un arbitrage, qui j'ai vu et ce que j'en retiens, qui je dois relancer et quand.
+      Persistance = ce fichier, rien d'autre — pas de mémoire d'une session à l'autre sans lui.
+    </p>
+    <div class="slugline">
+      <span>Ouvert le <b>06/09/2026</b></span>
+      <span>Rôle <b>Head of Sport &amp; Events, B2B Alive</b></span>
+      <span>Statut Linear <b>lecture seule</b></span>
+    </div>
+  </div>
+
+  <div class="howto">
+    <b>Mode d'emploi</b>
+    Une entrée par ligne, jamais de paragraphe. Je mets à jour les tableaux au fil de l'eau — pas de
+    rituel de tenue à jour en plus, ce serait la même erreur que la règle SAFe abandonnée chez MadXP
+    (voir <code>régime-de-travail.html</code>). Le journal chronologique en bas de page est la seule
+    section qu'on n'édite jamais rétroactivement : on y ajoute, on n'y corrige pas.
+  </div>
+
+  <section>
+    <h2>1. Décisions en attente d'arbitrage</h2>
+    <p class="h2-note">Mise à jour à chaque changement de statut, pas à date fixe</p>
+
+    <table class="tracker">
+      <tr>
+        <th>Décision</th>
+        <th class="col-narrow">Statut</th>
+        <th class="col-narrow">Proposé le</th>
+        <th>Notes</th>
+      </tr>
+      <tr>
+        <td>Quel matériel sous un club amateur (box Windows vs boîtier low-cost) ?</td>
+        <td><span class="pill pill-open">ouverte</span></td>
+        <td>02/09/2026</td>
+        <td>
+          La plus structurante des trois — conditionne tarif, délai d'installation, promesse
+          d'autonomie.
+        </td>
+      </tr>
+      <tr>
+        <td>Que devient la flotte MadXP installée (migration / coexistence / fin de vie) ?</td>
+        <td><span class="pill pill-open">ouverte</span></td>
+        <td>02/09/2026</td>
+        <td>
+          Autant contractuel que technique — vérifier les engagements en cours avant de trancher.
+        </td>
+      </tr>
+      <tr>
+        <td>Le lot commercial (facturation, rapport annonceur, portail) monte-t-il ?</td>
+        <td><span class="pill pill-open">ouverte</span></td>
+        <td>02/09/2026</td>
+        <td>
+          Je dois nommer moi-même la contrepartie — un arbitrage sans contrepartie n'en est pas un.
+        </td>
+      </tr>
+      <tr class="empty-row">
+        <td colspan="4">— ajouter une ligne dès qu'une nouvelle décision se pose —</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>2. Contacts &amp; entretiens</h2>
+    <p class="h2-note">Les cinq de la feuille de route J1→J10, plus ce qui s'ajoute</p>
+
+    <table class="tracker">
+      <tr>
+        <th>Qui</th>
+        <th class="col-narrow">Statut</th>
+        <th class="col-narrow">Date</th>
+        <th>Ce qu'on en retient</th>
+      </tr>
+      <tr>
+        <td>
+          Florent — entretien d'arbitrage (90 min, trame <code>régime-de-travail.html</code> partie
+          3)
+        </td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Amine — déblocage des 5 tickets temps réel</td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Club EAG (Guingamp) — client installé</td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Club Piraths Strasbourg — client installé</td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Prospect Mosson</td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Opérateur bénévole (un club, à identifier)</td>
+        <td><span class="pill pill-todo">à faire</span></td>
+        <td>—</td>
+        <td></td>
+      </tr>
+      <tr class="empty-row">
+        <td colspan="4">
+          — un contact utilisateur par semaine, sans exception (règle retenue dans
+          régime-de-travail.html) —
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Prochaines relances</h2>
+    <p class="h2-note">Qui je dois recontacter, et sur quoi</p>
+
+    <table class="tracker">
+      <tr>
+        <th>Qui</th>
+        <th>Sujet</th>
+        <th class="col-narrow">Relancer le</th>
+      </tr>
+      <tr class="empty-row">
+        <td colspan="3">— aucune relance en attente —</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>4. Chiffres à revérifier avant réutilisation</h2>
+    <p class="h2-note">
+      Le carnet bouge vite côté Linear — ne jamais réutiliser un chiffre sans le recompter le jour
+      même
+    </p>
+
+    <table class="tracker">
+      <tr>
+        <th>Chiffre</th>
+        <th class="col-narrow">Daté du</th>
+      </tr>
+      <tr>
+        <td>110 tickets sans propriétaire (était 128 le 02/09, 113 le 03/09)</td>
+        <td>03/09/2026</td>
+      </tr>
+      <tr>
+        <td>412 tickets au total, 230 terminés, 20 projets, 5 documents</td>
+        <td>02/09/2026</td>
+      </tr>
+      <tr>
+        <td>~15 tickets/jour de mouvement dans le carnet Linear</td>
+        <td>03/09/2026</td>
+      </tr>
+      <tr>
+        <td>6 à 8 affaires sur 10 portent sur un LED non posé par B2B Alive</td>
+        <td>03/09/2026</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>5. Journal chronologique</h2>
+    <p class="h2-note">On ajoute, on ne corrige jamais une entrée passée</p>
+
+    <div class="journal-entry">
+      <div class="journal-date">06/09/2026</div>
+      <div class="journal-body">
+        Mandat clarifié avec Gwenvael : responsable de la verticale Sport &amp; Events chez B2B
+        Alive (pas seulement PO sur l'équipe Broadcaster) — quatre volets : pilotage produit,
+        relation client, développement marché, stratégie tarifaire. Le dossier de transition
+        existant ne couvrait que le premier volet côté diagnostic Linear.
+        <ul>
+          <li>
+            Contradiction repérée dans <code>contexte-reprise.md</code> : le fichier dit le dossier
+            "jamais committé" au repo madxp, alors qu'il l'est déjà (PR #1193→#1197) — à corriger.
+          </li>
+          <li>
+            Priorités retenues pour la suite : compléter le pilotage produit (ce carnet) +
+            construire le volet relation client (playbook onboarding, checklist déploiement,
+            registre clients). Stratégie tarifaire reportée à une session dédiée.
+          </li>
+          <li>
+            Ce carnet créé pour combler le manque d'état courant sur mon propre travail, tant que je
+            suis en lecture seule dans Linear.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="journal-entry">
+      <div class="journal-date">—</div>
+      <div class="journal-body">— prochaine entrée ici —</div>
+    </div>
+  </section>
+</div>
