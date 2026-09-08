@@ -1,0 +1,739 @@
+<title>Catalogue des vidéoprocesseurs LED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --gain: #1a6272;
+    --gain-wash: #dcebef;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --gain: #6bbacb;
+      --gain-wash: #16292f;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --gain: #6bbacb;
+    --gain-wash: #16292f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 0 24px 88px;
+  }
+
+  .masthead {
+    padding: 50px 0 22px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 17px;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 24px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 30px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 46px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -0.016em;
+    margin: 0 0 5px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule-strong);
+    text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17.5px;
+    margin: 30px 0 10px;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 74ch;
+  }
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 24px;
+    max-width: 64ch;
+  }
+
+  /* en-tête doctrine (convention établie du dossier) */
+  .hdr {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 0 0 30px;
+  }
+  .hdr .kicker {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 11px;
+  }
+  .hdr .row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 16px;
+    padding: 7px 0;
+    align-items: baseline;
+  }
+  .hdr .row + .row {
+    border-top: 1px solid var(--rule);
+  }
+  .hdr .f {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .hdr .v {
+    font-size: 15.5px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  @media (max-width: 640px) {
+    .hdr .row {
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 20px 22px;
+    margin: 0 0 18px;
+  }
+  .panel.warn {
+    border-top-color: var(--live);
+  }
+  .panel .ref {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    color: var(--accent);
+    margin: 0 0 6px;
+  }
+  .panel.warn .ref {
+    color: var(--live);
+  }
+  .panel h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 9px;
+    line-height: 1.3;
+  }
+  .panel p {
+    margin: 0 0 10px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
+
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+
+  .scroller {
+    overflow-x: auto;
+    margin-bottom: 18px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 760px;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 9px;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 16px 9px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  td {
+    padding: 11px 16px 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.8px;
+    line-height: 1.5;
+    vertical-align: top;
+  }
+  td.fam {
+    font-family: var(--f-display);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td b {
+    color: var(--ink);
+  }
+  td em {
+    font-style: normal;
+    color: var(--muted);
+    font-family: var(--f-mono);
+    font-size: 12px;
+  }
+
+  /* checklist qualification */
+  .qsteps {
+    counter-reset: qs;
+    margin: 0 0 20px;
+  }
+  .qs {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 16px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .qs:first-child {
+    border-top: 1px solid var(--rule);
+  }
+  .qs::before {
+    counter-increment: qs;
+    content: counter(qs, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+  .qs h4 {
+    margin: 0 0 5px;
+    font-size: 16px;
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .qs p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 74ch;
+  }
+
+  footer {
+    margin-top: 38px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: var(--muted);
+  }
+  footer b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <p class="eyebrow">Doctrine · brouillon Notion · Comment ça marche</p>
+    <h1>Catalogue des vidéoprocesseurs LED</h1>
+    <p class="standfirst">
+      Le goulot identifié dans le conducteur de prise de poste : qualifier un processeur inconnu sur
+      site coûte environ une heure d'analyse, plus une matinée pour aller chercher de quoi la faire.
+      Ce catalogue ne remplace pas cette heure — il la raccourcit, en donnant les familles connues
+      et les deux questions qui tranchent l'essentiel avant même d'ouvrir un logiciel de
+      configuration.
+    </p>
+    <div class="slugline">
+      <span>Rédigé le <b>07/09/2026</b></span>
+      <span
+        >Fondé sur <b>.claude/rules/led.md</b> (parc B2B Alive vérifié) + recherche marché
+        générale</span
+      >
+      <span>Statut <b>brouillon, rien écrit dans Notion</b></span>
+    </div>
+  </header>
+
+  <div class="hdr">
+    <p class="kicker">▲ Doctrine</p>
+    <div class="row">
+      <div class="f">Vérifié le</div>
+      <div class="v">
+        07/09/2026 · Gwenvael, depuis le dépôt <span class="mono">madxp</span> et une recherche web
+        générale
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Périmé si</div>
+      <div class="v">
+        un fabricant change sa gamme de cartes d'envoi, ou si un troisième club B2B Alive équipé LED
+        est observé (le tableau des faits vérifiés ne couvre que Piraths et Lanester)
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Travail associé</div>
+      <div class="v">
+        aucun ticket Linear identifié — ce document nait de la doctrine
+        <span class="mono">.claude/rules/led.md</span> du dépôt MadXP, pas d'un chantier B2B Alive
+        en cours
+      </div>
+    </div>
+    <div class="row">
+      <div class="f">Ce qu'elle ne dit pas</div>
+      <div class="v">
+        Rien sur le prix ni la disponibilité des cartes. Rien sur les processeurs vidéo intérieurs
+        (écran géant plein cadre) — le sujet est le ruban périmétrique.
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>1. Le distinguo qui tranche tout le reste</h2>
+    <p class="h2-note">Avant de regarder une marque, une seule question compte</p>
+
+    <p>
+      Un vidéoprocesseur LED périmétrique se configure
+      <strong>une seule fois, à l'installation</strong>, pixel par pixel sur le ruban physique. Ce
+      qui varie d'un modèle à l'autre — et qui détermine tout le travail de préparation logicielle
+      en amont — c'est <strong>où se fait le pliage</strong> : est-ce le processeur qui reçoit une
+      image logique et la découpe lui-même en bandes selon sa configuration enregistrée, ou est-ce
+      qu'il attend un flux déjà mis en forme, bande par bande, dans l'ordre où le ruban les affiche
+      ?
+    </p>
+
+    <div class="lede">
+      C'est exactement la distinction que la doctrine MadXP a vérifiée chez Piraths Strasbourg : le
+      processeur en place là-bas <b>n'y déplie rien</b> — il attend un canvas déjà plié, 1600×480,
+      calé en haut-gauche d'une sortie 1920×1080. C'est le mode que la doctrine MadXP appelle
+      <b>mode B</b>.
+    </div>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Les deux modes d'entrée, vulgarisés
+        </caption>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>Ce que le processeur fait</th>
+            <th>Ce que la régie doit fournir</th>
+            <th>Où c'est vérifié</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">Mode « déplié »<br /><em>processeur actif</em></td>
+            <td>
+              Reçoit une image logique unique (souvent la scène telle quelle) et la
+              <b>découpe lui-même</b> en bandes selon un mapping enregistré dans le processeur au
+              moment de l'installation.
+            </td>
+            <td>
+              Une seule sortie, résolution native de la scène. Le processeur porte la complexité du
+              mapping.
+            </td>
+            <td>
+              <span class="cf cf-est">ESTIMÉ</span> — mode générique attendu chez la plupart des
+              fabricants sur leurs gammes standard (NovaLCT "Screen Configuration", terminologie
+              Novastar)
+            </td>
+          </tr>
+          <tr>
+            <td class="fam">Mode « plié »<br /><em>processeur passif</em></td>
+            <td>
+              Ne déplie rien. Affiche <b>1:1, ancré en haut-gauche</b>, un canvas déjà composé bande
+              par bande — le reste de la sortie reste noir/inutilisé.
+            </td>
+            <td>
+              Une image déjà pliée dans l'ordre exact du ruban : côtés, pitch, hauteur de dalle. La
+              complexité est reportée en amont, côté logiciel.
+            </td>
+            <td>
+              <span class="cf cf-ok">VÉRIFIÉ</span> — Piraths Strasbourg, observé via le concurrent
+              B2B Alive lui-même en régie (panneau OUTPUT), le 2026-08-11/12
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      Un même constructeur propose en général les deux modes selon la gamme ou la configuration
+      logicielle de la carte d'envoi — ce n'est donc pas une question de marque, mais de
+      <strong>configuration installée sur ce processeur précis, sur ce site précis</strong>. D'où le
+      besoin d'un catalogue de repères plutôt que d'une règle universelle.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Les familles connues du marché</h2>
+    <p class="h2-note">Cartes d'envoi (sending cards) pour LED périmétrique sportif</p>
+
+    <div class="scroller">
+      <table>
+        <caption>
+          Familles de contrôleurs LED pertinentes pour du périmétrique — non exhaustif
+        </caption>
+        <thead>
+          <tr>
+            <th>Famille</th>
+            <th>Ce qu'on sait de son positionnement</th>
+            <th>Confiance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fam">Novastar<br /><em>MCTRL / H series</em></td>
+            <td>
+              Le plus cité dans l'industrie du LED événementiel/sportif. Logiciel de configuration
+              <b>NovaLCT</b> : la page « Screen Configuration » permet de régler résolution, taux de
+              rafraîchissement, profondeur de couleur et mapping pixel-à-pixel de la carte d'envoi —
+              la configuration installée décide donc si le processeur agit en mode déplié ou plié.
+              Gamme 4K (ex. MCTRL4K) en entrée DP/HDMI jusqu'à 4096×2160.
+            </td>
+            <td>
+              <span class="cf cf-est">ESTIMÉ</span> — recherche web du 07/09, non vérifié sur un
+              site B2B Alive
+            </td>
+          </tr>
+          <tr>
+            <td class="fam">Colorlight<br /><em>S / X / Z series</em></td>
+            <td>
+              Concurrent direct de Novastar sur le même segment. Ses cartes de réception supportent
+              un mécanisme propre appelé <b>« data fold »</b> — attention, c'est une notion
+              différente de celle utilisée dans la doctrine MadXP : chez Colorlight le « fold »
+              optimise le câblage/scan interne entre la carte de réception et les modules, pas la
+              composition de l'image envoyée par la régie. Ne pas confondre les deux couches.
+            </td>
+            <td><span class="cf cf-est">ESTIMÉ</span> — recherche web du 07/09</td>
+          </tr>
+          <tr>
+            <td class="fam">Linsn</td>
+            <td>
+              Cité comme alternative d'entrée de gamme dans les guides de configuration marché
+              (souvent en comparaison directe avec Novastar). Aucun repère de mode d'entrée trouvé
+              spécifiquement pour de l'événementiel sportif.
+            </td>
+            <td><span class="cf cf-no">INCONNU</span> — nom relevé, positionnement non creusé</td>
+          </tr>
+          <tr>
+            <td class="fam">Huidu, MSD, autres cartes génériques</td>
+            <td>
+              Familles de cartes de contrôle couramment intégrées par des revendeurs génériques
+              (panneaux LED bas coût, affichage publicitaire). Présence sur le marché du sport
+              amateur plausible mais non vérifiée.
+            </td>
+            <td><span class="cf cf-no">INCONNU</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel warn">
+      <p class="ref">RÉSERVE MÉTHODOLOGIQUE</p>
+      <h4>Ce tableau est une recherche générale, pas un audit de parc</h4>
+      <p>
+        Il vient d'une recherche web ponctuelle le 07/09/2026, pas d'une lecture de documentation
+        constructeur exhaustive ni d'un inventaire du parc B2B Alive au-delà des deux sites déjà
+        documentés. <b>Le seul fait vérifié de ce document est celui de la section 1</b> (Piraths,
+        mode plié) — tout le reste doit être traité comme un point de départ à confirmer face au
+        processeur réel, jamais comme une fiche technique engageante devant un client.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Qualifier un processeur inconnu — la version courte</h2>
+    <p class="h2-note">Objectif : réduire l'heure d'analyse, pas la remplacer</p>
+
+    <p>
+      La doctrine MadXP a établi une méthode de substitution à un achat de matériel de test (le
+      SPIKE-003 jamais commandé) : <strong>la mire</strong> (<span class="mono"
+        >npm run led:mire</span
+      >
+      côté MadXP) — une grille diffusée sur le ruban d'un club déjà installé, photographiée, qui
+      révèle le contrat d'entrée réel du processeur sans rien acheter. À défaut de mire, la séquence
+      ci-dessous condense ce qu'il faut ramener d'une visite de site.
+    </p>
+
+    <div class="qsteps">
+      <div class="qs">
+        <div>
+          <h4>Photographier la plaque du processeur</h4>
+          <p>
+            Marque, modèle, numéro de série. Permet de retrouver la doc constructeur après coup
+            plutôt que de deviner sur place.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Récupérer le fichier de configuration en régie</h4>
+          <p>
+            C'est <b>l'objet le plus précieux de la visite</b> — le brief d'intervention Mosson de
+            la doctrine MadXP le désigne explicitement comme la priorité de mission, avant même
+            l'observation visuelle.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Lire la résolution de sortie déclarée du PC de régie</h4>
+          <p>
+            Chez Piraths, le PC pilote en 1920×1080 standard — pas une résolution custom. C'est un
+            repère à vérifier en premier : la plupart des installations tournent probablement sur
+            une résolution d'écran ordinaire, le pliage se faisant ensuite dans le placement du
+            contenu, pas dans le mode d'affichage du PC.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Repérer où le contenu est ancré dans cette sortie</h4>
+          <p>
+            Haut-gauche avec du noir tout autour (mode plié, comme B2B Alive/Piraths) ou plein cadre
+            redimensionné (mode déplié, ou pas de pliage du tout) ? C'est l'indice visuel le plus
+            rapide à collecter sans toucher à rien.
+          </p>
+        </div>
+      </div>
+      <div class="qs">
+        <div>
+          <h4>Mesurer un côté du ruban et le rapprocher du canvas affiché</h4>
+          <p>
+            Chez Piraths : 4 côtés × 10 m à pitch P6.25 → 1600 px/côté → canvas 1600×480 (4 bandes
+            de 120 px). Le calcul se refait pareil sur n'importe quel ruban : largeur en pixels d'un
+            côté = longueur physique ÷ pas de pixel (pitch), jamais recalculé à la main autrement
+            que par cette règle.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="ref">CE QUE CETTE MÉTHODE NE DIT PAS</p>
+      <h4>Un concurrent qui tourne déjà sur le matériel vaut mieux qu'une mire</h4>
+      <p>
+        Le contrat d'entrée du processeur de Piraths n'a pas été découvert par la mire ni par du
+        matériel commandé — il a été lu
+        <b>en observant B2B Alive elle-même tourner sur ce matériel</b>, DOM et panneau OUTPUT à
+        l'appui. Quand un site à qualifier a déjà un concurrent en place et fonctionnel, c'est la
+        source la plus fiable et la moins chère : elle donne la cible sans ambiguïté, pas une
+        hypothèse à vérifier.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mes réserves</h2>
+    <ul class="plain">
+      <li>
+        <span class="cf cf-ok">VÉRIFIÉ</span> Tout ce qui concerne Piraths Strasbourg (mode plié,
+        1600×480, ancrage haut-gauche, sortie PC 1920×1080) vient de
+        <span class="mono">.claude/rules/led.md</span>, lui-même établi par mesure directe (DB prod,
+        ffprobe, panneau OUTPUT B2B Alive) — dates de vérification au 2026-08-10/12.
+      </li>
+      <li>
+        <span class="cf cf-est">ESTIMÉ</span> Toute la section 2 (familles
+        Novastar/Colorlight/Linsn/autres) vient d'une recherche web générale du 07/09/2026, non
+        recoupée avec un site B2B Alive réel ni avec de la documentation constructeur téléchargée.
+      </li>
+      <li>
+        <span class="cf cf-no">INCONNU</span> Le ou les processeurs réellement installés chez les
+        autres clients B2B Alive au-delà de Piraths et Lanester. Ce catalogue ne couvre que deux
+        points de mesure sur un parc dont la taille reste à documenter.
+      </li>
+      <li>
+        <span class="cf cf-no">INCONNU</span> Si Lanester (band_count figé à 1, dérivé à 2, jamais
+        activé en mode plié) tourne sur la même famille de processeur que Piraths ou sur une famille
+        différente — la doctrine MadXP ne l'a pas observé, faute de mire passée sur ce site.
+      </li>
+    </ul>
+
+    <footer>
+      Établi sur — <b>.claude/rules/led.md</b> du dépôt
+      <span class="mono">madxp</span> (ADR-134/135/138/139/140, faits vérifiés Piraths/Lanester) +
+      recherche web générale le 07/09/2026.<br />
+      Ce qui n'a pas été fait —
+      <b
+        >aucune vérification sur un site B2B Alive au-delà de Piraths/Lanester, aucune lecture de
+        documentation constructeur exhaustive</b
+      >. Ce document est un point de départ, pas un audit.<br />
+      Le principe qui tient tout le reste —
+      <b>un canvas processeur ne dépend que de la géométrie du site, jamais du contenu</b> ; le
+      distinguer du mode d'entrée (plié / déplié) est la première question à trancher sur tout site
+      inconnu.
+    </footer>
+  </section>
+</div>
