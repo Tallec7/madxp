@@ -1,0 +1,423 @@
+<title>Registre clients</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f7e0df;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --wait: #6b5fb5;
+    --wait-wash: #e8e5f7;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --wait: #9c90e0;
+      --wait-wash: #251f3b;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --wait: #9c90e0;
+    --wait-wash: #251f3b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  .masthead {
+    padding: 56px 0 26px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 38px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 30px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 34px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 54px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 26px;
+  }
+  p {
+    margin: 0 0 17px;
+    max-width: 70ch;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code,
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 0 0 32px;
+  }
+  .rule-box h3 {
+    margin: 0 0 10px;
+    font-size: 16.5px;
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .rule-box p {
+    margin: 0 0 12px;
+    font-size: 16px;
+    max-width: 76ch;
+  }
+  .rule-box p:last-child {
+    margin-bottom: 0;
+  }
+  .rule-box.warn {
+    border-left-color: var(--live);
+  }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .pill-demo {
+    background: var(--wait-wash);
+    color: var(--wait);
+  }
+  .pill-prospect {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .pill-payant {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .pill-unknown {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+
+  .club-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    margin: 0 0 16px;
+    padding: 20px 24px;
+  }
+  .club-card .name {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 19px;
+    margin: 0 0 2px;
+  }
+  .club-card .sub {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .club-grid {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 8px 16px;
+    font-size: 15.5px;
+  }
+  .club-grid dt {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+  .club-grid dd {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+  .club-grid dd.empty {
+    font-style: italic;
+    color: var(--muted);
+  }
+  @media (max-width: 560px) {
+    .club-grid {
+      grid-template-columns: 1fr;
+    }
+    .club-grid dt {
+      padding-top: 8px;
+    }
+  }
+
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="sheet">
+  <div class="masthead">
+    <p class="eyebrow">Outil de travail personnel · à tenir à jour à la main</p>
+    <h1>Registre clients</h1>
+    <p class="standfirst">
+      L'état par club B2B Alive — statut, contact, engagements pris, prochaine action. Le volet
+      "relation client" du mandat n'a aujourd'hui aucun outil de suivi ; celui-ci comble le manque
+      en local, en attendant de savoir si un CRM existe déjà côté commercial (cf.
+      <code>cadre-operationnel-commun.html</code>, section Commercial/Direction).
+    </p>
+    <div class="slugline">
+      <span>Ouvert le <b>06/09/2026</b></span>
+      <span>Portée <b>clients et prospects B2B Alive uniquement</b></span>
+      <span>Statut <b>0 client payant à ce jour</b></span>
+    </div>
+  </div>
+
+  <div class="rule-box warn">
+    <h3>Contradiction à lever avant de compléter ce registre</h3>
+    <p>
+      <code>conducteur-prise-de-poste.html</code> liste "les deux clients installés (EAG,
+      <strong>Piraths Strasbourg</strong>)" parmi les cinq entretiens à mener. Mais
+      <code>régime-de-travail.html</code> corrige, le lendemain (03/09) :
+      <strong>Piraths Strasbourg est un site MadXP, pas B2B Alive</strong> — "je l'avais mélangé
+      avec Lanester". Les enceintes B2B Alive relevées dans Linear sont le Roudourou (Guingamp), le
+      Rhénus Sport (Strasbourg) et <strong>Bouaye</strong>, jamais qualifié plus précisément depuis.
+    </p>
+    <p>
+      Ce registre suit donc la version corrigée (Guingamp, Rhénus Strasbourg, Bouaye) —
+      <strong>pas</strong> Piraths Strasbourg. Si les cinq entretiens prévus visaient en réalité un
+      vrai client B2B Alive à Strasbourg distinct du Rhénus, il manque une fiche ici : à confirmer
+      avec Florent.
+    </p>
+  </div>
+
+  <section>
+    <h2>Les clubs</h2>
+    <p class="h2-note">
+      Un seul prospect, deux démos, aucun client payant — matrice de parité, 03/09
+    </p>
+
+    <div class="club-card">
+      <p class="name">EA Guingamp — stade du Roudourou</p>
+      <p class="sub">Football · site le plus actif · démo</p>
+      <dl class="club-grid">
+        <dt>Statut</dt>
+        <dd><span class="pill pill-demo">Démo</span></dd>
+        <dt>Contact club</dt>
+        <dd class="empty">— à renseigner —</dd>
+        <dt>Dernier point</dt>
+        <dd class="empty">— aucun direct, connu via doublure Florent —</dd>
+        <dt>Engagements pris</dt>
+        <dd class="empty">— aucun connu, à vérifier —</dd>
+        <dt>Prochaine action</dt>
+        <dd>Entretien prévu (carnet de suivi, item "Club EAG")</dd>
+      </dl>
+    </div>
+
+    <div class="club-card">
+      <p class="name">Rhénus Sport — Strasbourg</p>
+      <p class="sub">Handball · Europ'A Cup (21-23 août) · démo</p>
+      <dl class="club-grid">
+        <dt>Statut</dt>
+        <dd><span class="pill pill-demo">Démo</span></dd>
+        <dt>Contact club</dt>
+        <dd class="empty">— à renseigner —</dd>
+        <dt>Dernier point</dt>
+        <dd class="empty">— aucun direct —</dd>
+        <dt>Engagements pris</dt>
+        <dd class="empty">— aucun connu, à vérifier —</dd>
+        <dt>Prochaine action</dt>
+        <dd class="empty">— à caler —</dd>
+      </dl>
+    </div>
+
+    <div class="club-card">
+      <p class="name">Bouaye</p>
+      <p class="sub">Sport non précisé · relevé dans Linear, jamais qualifié depuis</p>
+      <dl class="club-grid">
+        <dt>Statut</dt>
+        <dd><span class="pill pill-unknown">Inconnu</span></dd>
+        <dt>Contact club</dt>
+        <dd class="empty">— à renseigner —</dd>
+        <dt>Dernier point</dt>
+        <dd class="empty">— aucun —</dd>
+        <dt>Engagements pris</dt>
+        <dd class="empty">— inconnu —</dd>
+        <dt>Prochaine action</dt>
+        <dd>Demander à Florent : démo, client, ou test technique ?</dd>
+      </dl>
+    </div>
+
+    <div class="club-card">
+      <p class="name">Montpellier — stade de la Mosson</p>
+      <p class="sub">Prospect · brief d'intervention déjà mené (constat matériel)</p>
+      <dl class="club-grid">
+        <dt>Statut</dt>
+        <dd><span class="pill pill-prospect">Prospect</span></dd>
+        <dt>Contact club</dt>
+        <dd class="empty">— à renseigner —</dd>
+        <dt>Dernier point</dt>
+        <dd>Brief d'intervention (qualification matériel, fichier de config récupéré en régie)</dd>
+        <dt>Engagements pris</dt>
+        <dd class="empty">— aucun connu —</dd>
+        <dt>Prochaine action</dt>
+        <dd>Entretien prévu (carnet de suivi, item "Prospect Mosson")</dd>
+      </dl>
+    </div>
+
+    <div class="club-card">
+      <p class="name">— nouveau club —</p>
+      <p class="sub">Gabarit à dupliquer</p>
+      <dl class="club-grid">
+        <dt>Statut</dt>
+        <dd class="empty">démo / prospect / client payant / inconnu</dd>
+        <dt>Contact club</dt>
+        <dd class="empty">—</dd>
+        <dt>Dernier point</dt>
+        <dd class="empty">—</dd>
+        <dt>Engagements pris</dt>
+        <dd class="empty">—</dd>
+        <dt>Prochaine action</dt>
+        <dd class="empty">—</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ce que ce registre ne couvre pas</h2>
+    <p class="h2-note">Pour ne pas le laisser passer pour plus qu'il n'est</p>
+    <ul class="plain">
+      <li>
+        <strong>Les clubs MadXP</strong> (Piraths Strasbourg, Lanester) — parc distinct, cf.
+        décision 2 du conducteur de prise de poste ("que devient la flotte MadXP installée").
+      </li>
+      <li>
+        <strong>Les prospects "réseau" (agence, fédération)</strong> — pas encore un flux actif, cf.
+        le flux latent noté dans <code>régime-de-travail.html</code>.
+      </li>
+      <li><strong>La grille tarifaire</strong> — chantier séparé, mené dans une autre session.</li>
+    </ul>
+  </section>
+</div>

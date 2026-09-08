@@ -1,0 +1,785 @@
+<title>Organisation cible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f7e0df;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --wait: #6b5fb5;
+    --wait-wash: #e8e5f7;
+
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --wait: #9c90e0;
+      --wait-wash: #251f3b;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --wait: #9c90e0;
+    --wait-wash: #251f3b;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  .masthead {
+    padding: 56px 0 26px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 38px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(34px, 5.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 30px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 34px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  section {
+    margin-bottom: 54px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 26px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -0.008em;
+    margin: 36px 0 12px;
+  }
+  h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.003em;
+    margin: 22px 0 8px;
+    color: var(--ink-soft);
+  }
+  p {
+    margin: 0 0 17px;
+    max-width: 70ch;
+  }
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code,
+  .mono {
+    font-family: var(--f-mono);
+    font-size: 0.87em;
+  }
+
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18.5px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 26px;
+    max-width: 64ch;
+  }
+  .rule-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 0 0 32px;
+  }
+  .rule-box h3 {
+    margin: 0 0 10px;
+    font-size: 16.5px;
+  }
+  .rule-box p {
+    margin: 0 0 12px;
+    font-size: 16px;
+    max-width: 76ch;
+  }
+  .rule-box p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* confidence markers, same convention as conducteur-prise-de-poste.html */
+  .cf {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .cf-ok {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .cf-est {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .cf-no {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+  .cf-wait {
+    background: var(--wait-wash);
+    color: var(--wait);
+  }
+
+  /* matrix */
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 8px;
+    font-size: 15px;
+  }
+  table.matrix th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 12px 10px 0;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  table.matrix td {
+    padding: 13px 12px 13px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  table.matrix td:first-child,
+  table.matrix th:first-child {
+    padding-left: 0;
+    font-weight: 600;
+    font-family: var(--f-display);
+    font-size: 14.5px;
+  }
+  table.matrix tr:last-child td {
+    border-bottom: 1px solid var(--rule-strong);
+  }
+
+  .team-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 24px 26px;
+    margin: 0 0 22px;
+  }
+  .team-card > .team-name {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 21px;
+    margin: 0 0 4px;
+  }
+  .team-card > .team-people {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .dim-block {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dim-block:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .dim-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .dim-body {
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+  .dim-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .glossary {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 0 0 8px;
+  }
+  .glossary .row {
+    background: var(--surface);
+    padding: 13px 16px;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .glossary .row b {
+    font-family: var(--f-mono);
+    font-size: 14px;
+  }
+  .glossary .row span {
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 560px) {
+    .glossary .row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <div class="masthead">
+    <p class="eyebrow">Proposition personnelle · à faire trancher par Florent</p>
+    <h1>Organisation cible</h1>
+    <p class="standfirst">
+      Ce n'est pas un constat, comme <code>cadre-opérationnel-commun.html</code> : c'est ma
+      proposition — les rôles, les décisions et les deux trous d'escalade que je poserais sur la
+      table à Florent. Rien n'est appliqué tant qu'il ne l'a pas validée, en bloc ou en partie.
+    </p>
+    <div class="slugline">
+      <span>Ouvert le <b>08/09/2026</b></span>
+      <span>Périmètre <b>Broadcaster — Florent, Amine, moi</b></span>
+      <span>Statut <b>proposition, à porter en réunion d'arbitrage</b></span>
+    </div>
+  </div>
+
+  <div class="rule-box">
+    <h3>Le problème que ça résout</h3>
+    <p>
+      Aujourd'hui, la séparation de métiers entre Florent et Amine est réelle dans les faits mais
+      <strong>écrite nulle part</strong> — c'est déjà noté dans
+      <code>conducteur-prise-de-poste.html</code>. Mon propre rôle l'est encore moins : « je note,
+      je propose ; Florent décide et applique » est une posture, pas une organisation. Deux
+      questions précises restent ouvertes : qui décide un soir de match si Florent est indisponible,
+      et qui arbitre si nous désaccordons sur une décision structurante. Ce document répond aux deux
+      — en proposition, pas en fait acquis.
+    </p>
+    <p style="font-size: 14.5px; color: var(--muted); margin-bottom: 0">
+      <span class="cf cf-no">correction du 08/09</span> — ces deux questions étaient citées
+      jusqu'ici comme « ajoutées le 06/09 dans <code>régime-de-travail.html</code>, section
+      Continuité et escalade ». Vérifié à la relecture de ce document : cette section n'existe pas
+      dans le fichier ni dans son historique git. La question reste réelle, seule l'attribution
+      était fausse — corrigée ici et dans <code>cadre-opérationnel-commun.html</code>.
+    </p>
+  </div>
+
+  <section>
+    <h2>1. Le principe</h2>
+    <p class="h2-note">Nommer ce qui existe déjà, ajouter seulement ce qui manque</p>
+    <p>
+      Je ne propose pas un organigramme neuf. Je propose d'<strong>écrire</strong>
+      la séparation de métiers qui existe déjà entre Florent et Amine, et d'ajouter un rôle
+      transverse — le mien — sur trois choses qu'aucun des deux ne fait aujourd'hui faute de temps :
+      arbitrer le portefeuille de 110 tickets sans propriétaire, porter la voix du client/prospect,
+      et mesurer si ce qu'on décide tient (les cinq chiffres de
+      <code>conducteur-prise-de-poste.html</code> section 7). Je ne touche pas à la décision
+      technique, qui reste chez ceux qui l'ont toujours prise.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Les trois rôles</h2>
+    <p class="h2-note">Tels que je les vois — à corriger par Florent, pas à lui imposer</p>
+
+    <div class="team-card">
+      <p class="team-name">Florent Quillien — Lead, master &amp; régie</p>
+      <p class="team-people">Ce qu'il fait déjà · rien de nouveau ici</p>
+      <div class="dim-block">
+        <p class="dim-label">Scope <span class="cf cf-ok">déjà en place</span></p>
+        <div class="dim-body">
+          <p>
+            Architecture, master, régie, décision technique finale. Point d'entrée unique côté
+            produit tant que rien n'est délégué. Décideur final sur l'attribution des tickets — je
+            propose une carte de propriété, il l'applique ou pas, en bloc ou pas (cf.
+            carte-de-propriété déjà soumise).
+          </p>
+        </div>
+      </div>
+      <div class="dim-block">
+        <p class="dim-label">Ce que je lui demande de trancher ici</p>
+        <div class="dim-body">
+          <p>
+            Les deux trous de continuité/escalade (section 6), et jusqu'où va mon mandat en écriture
+            au-delà de J30 — aujourd'hui zéro écriture dans Linear, cf.
+            <code>conducteur-prise-de-poste.html</code> section 8, question toujours ouverte.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card">
+      <p class="team-name">Amine Ghannouchi — Temps réel</p>
+      <p class="team-people">Compositeur GPU, textures, transitions, horloge du bus</p>
+      <div class="dim-block">
+        <p class="dim-label">Scope <span class="cf cf-ok">déjà en place</span></p>
+        <div class="dim-body">
+          <p>
+            Le métier ne change pas. Ce qui change : un propriétaire nommé sur le projet « Moteur
+            d'animation » (BRO-71, BRO-38, BRO-37, BRO-229) et sur BRO-73 — les cinq tickets déjà
+            écrits, déjà dans son métier, jamais assignés (cf. section « Débloquer Amine » du
+            conducteur). Rien de plus à inventer, juste à lui donner ce qui l'attend.
+          </p>
+        </div>
+      </div>
+      <div class="dim-block">
+        <p class="dim-label">Nouveauté proposée ici <span class="cf cf-est">à discuter</span></p>
+        <div class="dim-body">
+          <p>
+            Le rendre point de continuité pour tout incident temps réel un soir de match si Florent
+            est indisponible (section 6) — à condition qu'il soit d'accord et que ça reste limité à
+            « stabiliser », pas « décider ».
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="team-card">
+      <p class="team-name">Gwenvael (moi) — Business Owner / Product Owner</p>
+      <p class="team-people">Rôle demandé par Florent, pas hérité — cf. conducteur section 8</p>
+      <div class="dim-block">
+        <p class="dim-label">Scope proposé <span class="cf cf-est">à valider</span></p>
+        <div class="dim-body">
+          <p>
+            Priorisation <strong>proposée</strong>, jamais imposée : carte de propriété, matrice de
+            parité, personae/JTBD comme critère d'arbitrage. Interface client/prospect (les cinq
+            entretiens du conducteur). Mesure des cinq indicateurs. Zéro écriture dans Linear en
+            phase actuelle — je porte, Florent applique.
+          </p>
+        </div>
+      </div>
+      <div class="dim-block">
+        <p class="dim-label">Ce que je ne demande pas <span class="cf cf-no">hors scope</span></p>
+        <div class="dim-body">
+          <p>
+            Aucune autorité sur l'architecture technique, aucun droit d'assignation directe des
+            tickets, aucun rôle sur Commercial/Direction ou Installation/LED tant que je n'ai pas
+            rencontré ces deux équipes (cf. <code>cadre-opérationnel-commun.html</code> section 5).
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Outils</h2>
+    <p class="h2-note">Ce que j'utilise déjà, ce que je ne demande pas d'ajouter</p>
+
+    <div class="rule-box">
+      <h3>Le principe, avant la liste</h3>
+      <p>
+        Même règle que dans <code>cadre-opérationnel-commun.html</code> : on n'ajoute un outil que
+        là où une question reste sans réponse. Je n'en ai trouvé aucune ici — donc je ne propose
+        <strong>aucun outil nouveau</strong>. Ce qui suit ne fait que rendre lisible ce qui existe
+        déjà, dispersé entre Linear, mes fichiers personnels et mon niveau d'accès.
+      </p>
+    </div>
+
+    <table class="matrix">
+      <tr>
+        <th>Outil</th>
+        <th>Qui l'utilise</th>
+        <th>Statut proposé</th>
+      </tr>
+      <tr>
+        <td>Linear</td>
+        <td>Florent, Amine (écriture) · moi (lecture)</td>
+        <td>
+          Inchangé sur l'écriture. Mon accès est aujourd'hui en <strong>invité</strong>, sans vue
+          sur les initiatives — je propose que la <strong>lecture complète</strong> devienne
+          permanente dans l'organisation cible, pas seulement une action ponctuelle des dix premiers
+          jours (cf. conducteur, section 3).
+        </td>
+      </tr>
+      <tr>
+        <td>Notion (doctrine)</td>
+        <td>Florent, Amine (écriture) · moi (lecture)</td>
+        <td>
+          Même règle que Linear. Je consulte, je n'édite pas — pas de proposition de changement ici.
+        </td>
+      </tr>
+      <tr>
+        <td><code>carnet-de-suivi.html</code>, <code>registre-clients.html</code></td>
+        <td>Moi seul</td>
+        <td>
+          Personnels, hors Linear/Notion. Je ne demande pas qu'ils deviennent des outils d'équipe —
+          leur contenu remonte via les rituels (section 4), jamais comme un système que Florent ou
+          Amine devraient aller consulter eux-mêmes.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <code>wsjf.html</code>, <code>compte-rendu-arbitrage.html</code>,
+          <code>matrice-parite.html</code>, <code>carte-propriete.html</code>
+        </td>
+        <td>Moi, pour préparer un rendez-vous à deux ou trois</td>
+        <td>
+          Des supports de séance, pas des outils vivants. Ils s'utilisent une fois par rituel
+          (section 4), jamais entre deux.
+        </td>
+      </tr>
+    </table>
+    <p style="font-size: 14.5px; color: var(--muted); margin-top: 14px">
+      Ce que je ne propose <strong>pas</strong> : un board partagé « à moi » que Florent ou Amine
+      devraient consulter en dehors des rituels ci-dessous. Ce serait exactement le miroir Notion
+      que MadXP a construit et jamais tenu à jour — le même argument que
+      <code>cadre-opérationnel-commun.html</code>
+      invoque déjà contre un quatrième outil « fédérateur ».
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Rituels</h2>
+    <p class="h2-note">
+      Comment je m'insère dans un rythme qui existe déjà, plutôt que d'en inventer un
+    </p>
+
+    <table class="matrix">
+      <tr>
+        <th>Rituel</th>
+        <th>Cadence</th>
+        <th>Porté par</th>
+        <th>Statut</th>
+      </tr>
+      <tr>
+        <td>Contact utilisateur (opérateur, client, prospect)</td>
+        <td>Hebdo, 30 min</td>
+        <td>Moi</td>
+        <td>
+          <span class="cf cf-ok">déjà mien de facto</span> — la seule action de tout le dispositif
+          qui ne dépend de l'accord de personne (conducteur, action 08). Je le tiens déjà ; ce que
+          je propose ici, c'est de l'écrire comme faisant partie du rôle, pas comme une initiative
+          personnelle temporaire.
+        </td>
+      </tr>
+      <tr>
+        <td>Point de 30 min au lendemain de chaque match</td>
+        <td>Calendrier sportif, pas un cycle fixe</td>
+        <td>Florent anime · Amine et moi présents</td>
+        <td>
+          <span class="cf cf-ok">déjà en place</span> — je n'y change rien, j'y assiste en portant
+          ce que j'ai entendu côté client cette semaine-là.
+        </td>
+      </tr>
+      <tr>
+        <td>Relecture du registre de risques</td>
+        <td>Mensuelle, 10 min</td>
+        <td>Moi je le tiens à jour · les deux le relisent</td>
+        <td><span class="cf cf-ok">déjà en place</span>, rôle de tenue à jour explicité ici.</td>
+      </tr>
+      <tr>
+        <td>Notation WSJF</td>
+        <td>Trimestrielle, 60 min</td>
+        <td>Moi je prépare et anime avec <code>wsjf.html</code> · Florent arbitre le résultat</td>
+        <td>
+          <span class="cf cf-ok">déjà en place</span>, rôle d'animation explicité ici — Florent
+          garde la décision finale, je ne fais que tenir le format.
+        </td>
+      </tr>
+      <tr>
+        <td>Point de portefeuille à trois</td>
+        <td>Mensuelle, 20 min</td>
+        <td>Moi je présente carte de propriété + matrice de parité mises à jour</td>
+        <td>
+          <span class="cf cf-est">nouveau, proposé ici</span> — justifié uniquement par une question
+          récurrente que je suis seul à pouvoir répondre : le backlog reflète-t-il encore le terrain
+          ? Si cette question s'arrête de se poser, ce rituel s'arrête aussi — même règle que celle
+          qui a fait abandonner l'auto-mise à jour SAFe chez MadXP.
+        </td>
+      </tr>
+    </table>
+    <p style="font-size: 14.5px; color: var(--muted); margin-top: 14px">
+      Un seul ajout, donc, sur quatre rituels déjà en place — cohérent avec la leçon de
+      <code>régime-de-travail.html</code> : « aucun rituel de plus d'une demi-heure, aucun outil
+      nouveau ». Le point de portefeuille tient en 20 minutes et n'ajoute aucun outil — seulement
+      une lecture de documents qui existent déjà.
+    </p>
+  </section>
+
+  <section>
+    <h2>5. Qui décide quoi</h2>
+    <p class="h2-note">Une ligne par décision qui revient — pas une matrice RACI complète</p>
+    <table class="matrix">
+      <tr>
+        <th>Décision</th>
+        <th>Décide</th>
+        <th>Consulté</th>
+        <th>Applique</th>
+      </tr>
+      <tr>
+        <td>Priorité produit (quel ticket avant quel autre)</td>
+        <td>Florent</td>
+        <td>Moi (proposition)</td>
+        <td>Florent</td>
+      </tr>
+      <tr>
+        <td>Architecture technique</td>
+        <td>Florent</td>
+        <td>Amine</td>
+        <td>Florent / Amine</td>
+      </tr>
+      <tr>
+        <td>Attribution quotidienne des tickets</td>
+        <td>Florent</td>
+        <td>—</td>
+        <td>Florent</td>
+      </tr>
+      <tr>
+        <td>Choix matériel LED pour un club (décision 1 du conducteur)</td>
+        <td><span class="cf cf-no">inconnu</span></td>
+        <td>Florent, moi</td>
+        <td><span class="cf cf-no">inconnu</span></td>
+      </tr>
+      <tr>
+        <td>Grille tarifaire</td>
+        <td>Direction B2B Alive</td>
+        <td>Moi (co-construction, volet 4 du mandat)</td>
+        <td>Direction</td>
+      </tr>
+      <tr>
+        <td>Écriture dans Linear</td>
+        <td>Florent</td>
+        <td>Moi</td>
+        <td>Florent seul, en phase actuelle</td>
+      </tr>
+      <tr>
+        <td>Désaccord structurant entre Florent et moi</td>
+        <td><span class="cf cf-est">proposé section 6</span></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Continuité un soir de match, Florent indisponible</td>
+        <td><span class="cf cf-est">proposé section 6</span></td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. Continuité et escalade — ma proposition pour les deux trous</h2>
+    <p class="h2-note">
+      Deux questions ouvertes, réelles — mais jamais écrites ailleurs avant ce document (cf.
+      correction du 08/09 ci-dessus)
+    </p>
+
+    <h3>Un soir de match, si Florent est indisponible</h3>
+    <p>
+      Amine reste le point de contact pour tout incident temps réel — il stabilise (redémarre,
+      contourne), il ne prend pas de décision produit. Je reste le point de contact pour le club ou
+      l'opérateur au téléphone — je rassure, je documente l'incident pour le brief du lendemain, je
+      ne touche à rien techniquement. Si l'incident dépasse ce que ces deux rôles couvrent, il
+      attend le lendemain matin — cf. l'objectif « zéro match dégradé » reste la mesure, pas la
+      garantie d'un dépannage en temps réel par n'importe qui.
+    </p>
+
+    <h3>Désaccord structurant entre Florent et moi</h3>
+    <p>
+      Le format existe déjà : <code>compte-rendu-arbitrage.html</code>, une page, faits + options +
+      recommandation, à porter devant qui de droit. Ce qui manque, c'est
+      <strong>qui</strong> tranche si le compte rendu ne suffit pas à nous mettre d'accord. Je n'ai
+      pas la réponse — je ne sais pas si B2B Alive a une direction produit au-dessus de Florent
+      capable de jouer ce rôle, ou si c'est un cas qui n'est simplement jamais arrivé encore.
+      <span class="cf cf-no">À poser directement à Florent</span>, ce n'est pas une case que je peux
+      remplir seul.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. Vocabulaire</h2>
+    <p class="h2-note">Rien de nouveau à ajouter</p>
+    <p>
+      Le glossaire de <code>régime-de-travail.html</code> (initiative, projet, ticket,
+      <code>socle</code>, <code>spike</code>, « prêt pour un match ») reste la seule référence — je
+      n'y ajoute aucun terme d'organisation. Le seul concept que je fais entrer, c'est
+      <strong>persona / job to be done</strong> comme critère d'arbitrage (Livrable A du conducteur)
+      : un réflexe de discussion pendant le point de portefeuille (section 4), pas un champ Linear
+      obligatoire. S'il finit par valoir un label ou un champ, ce sera une décision de Florent à ce
+      moment-là — pas une exigence posée dans cette fiche.
+    </p>
+  </section>
+
+  <section>
+    <h2>8. Calendrier de bascule</h2>
+    <p class="h2-note">Deux régimes, pas une transition graduelle floue</p>
+    <div class="glossary">
+      <div class="row">
+        <b>Aujourd'hui</b
+        ><span
+          >Lecture seule, zéro écriture. Je propose hors Linear (carte de propriété, matrice de
+          parité), Florent applique s'il valide.</span
+        >
+      </div>
+      <div class="row">
+        <b>Réunion d'arbitrage (J30)</b
+        ><span
+          >Cette fiche est un des supports proposés — à valider, amender ou rejeter en bloc, comme
+          les trois décisions du conducteur.</span
+        >
+      </div>
+      <div class="row">
+        <b>Régime cible, si validé</b
+        ><span
+          >Les rôles de la section 2, les outils de la section 3, les rituels de la section 4 et la
+          table de décision de la section 5 deviennent la référence écrite — remplacent la posture
+          informelle actuelle. Rouvert si l'un des deux trous de la section 6 se révèle mal calibré
+          à l'usage.</span
+        >
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>9. Ce que je ne demande pas</h2>
+    <p class="h2-note">Le même garde-fou que partout ailleurs dans ce dossier</p>
+    <ul style="max-width: 70ch; padding-left: 20px">
+      <li style="margin-bottom: 10px">
+        Pas de titre, de niveau hiérarchique ou d'organigramme formel — B2B Alive n'a peut-être pas
+        cette culture, et rien ne l'exige pour que les décisions ci-dessus fonctionnent.
+      </li>
+      <li style="margin-bottom: 10px">
+        Pas de droit d'écriture dans Linear tant que Florent ne l'a pas explicitement accordé —
+        cette fiche ne le demande pas non plus, elle le laisse ouvert à sa décision.
+      </li>
+      <li style="margin-bottom: 10px">
+        Pas d'outil nouveau, ni de board partagé, ni de vocabulaire imposé (sections 3 et 7) — un
+        seul rituel ajouté (section 4), justifié par une question précise, pas par principe.
+      </li>
+      <li style="margin-bottom: 10px">
+        Pas d'extension de ce rôle vers Commercial/Direction ou Installation/LED ici — c'est le
+        sujet de <code>cadre-opérationnel-commun.html</code>, pas de celui-ci.
+      </li>
+      <li>
+        Pas de réponse définitive sur l'arbitrage d'un désaccord structurant — la question reste
+        posée à Florent, faute d'avoir vu qui, chez B2B Alive, pourrait jouer ce rôle.
+      </li>
+    </ul>
+  </section>
+</div>
