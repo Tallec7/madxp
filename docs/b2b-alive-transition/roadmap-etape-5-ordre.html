@@ -1,0 +1,1238 @@
+<meta charset="utf-8" />
+<title>Ordre des Epics Broadcaster</title>
+<meta
+  name="description"
+  content="Roadmap, étape 5 : le coût d'un mois de retard pour chaque Epic, la taille, les trois vagues et la limite d'en-cours par couloir."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --ok: #1f6a4b;
+    --ok-wash: #dcede4;
+    --part: #8a6a00;
+    --part-wash: #f4ecd0;
+    --bad: #b3261e;
+    --bad-wash: #f6dedb;
+    --man: #3f5b7a;
+    --man-wash: #e1e8f0;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --ok: #5cb68a;
+      --ok-wash: #17301f;
+      --part: #d9b24a;
+      --part-wash: #2f2812;
+      --bad: #f08a80;
+      --bad-wash: #3a1b18;
+      --man: #8fb2e8;
+      --man-wash: #1b2738;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --ok: #5cb68a;
+    --ok-wash: #17301f;
+    --part: #d9b24a;
+    --part-wash: #2f2812;
+    --bad: #f08a80;
+    --bad-wash: #3a1b18;
+    --man: #8fb2e8;
+    --man-wash: #1b2738;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 66ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: block;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 48ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .th {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 7px;
+    align-content: start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .th b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .th p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .th .okr {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+  }
+  .th .okr i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+  }
+  .theme-block {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 900px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 210px;
+  }
+  .t tbody th small {
+    display: block;
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .c-livré {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .c-partiel {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .c-absent {
+    color: var(--bad);
+    background: var(--bad-wash);
+  }
+  .c-en {
+    color: var(--man);
+    background: var(--man-wash);
+  }
+  .hz {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .h-Socle {
+    color: var(--accent);
+  }
+  .h-Extension {
+    color: var(--ink-soft);
+  }
+  .h-Réseau {
+    color: var(--man);
+  }
+  .h-Long {
+    color: var(--muted);
+  }
+  .t td.dem {
+    color: var(--ink-soft);
+    min-width: 220px;
+  }
+  .t td.mx {
+    min-width: 210px;
+  }
+  .enablers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .enablers li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--man);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .enablers b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .enablers p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .enablers .st {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 6px;
+  }
+  .enablers .st i,
+  .enablers .mx i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .enablers .mx {
+    font-size: 13.5px;
+  }
+  .dl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .dl li {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .dl p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  @media (max-width: 700px) {
+    .dl li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+  .decisions {
+    list-style: none;
+    counter-reset: q;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: q;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(q);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 78ch;
+  }
+  .decisions p + p {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .hyp {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+  }
+  .hyp li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 12px 15px;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .hyp b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .hyp p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .hyp .src {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  table.ord {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 960px;
+  }
+  .ord th,
+  .ord td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .ord thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .ord tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+    min-width: 200px;
+  }
+  .ord tbody th span {
+    font-family: var(--f-mono);
+    font-weight: 400;
+    font-size: 11.5px;
+    color: var(--accent);
+    display: block;
+  }
+  .ord td.sz {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    text-align: center;
+  }
+  .ord td.cl {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+  .ord tr.v1 {
+    background: var(--accent-wash);
+  }
+  .vagues {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .vg {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 15px 17px 17px;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .vg:nth-child(2) {
+    border-top-color: var(--rule-strong);
+  }
+  .vg:nth-child(3) {
+    border-top-color: var(--muted);
+  }
+  .vg b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 19px;
+  }
+  .vg .codes {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    color: var(--accent);
+    border-top: 1px solid var(--rule);
+    padding-top: 8px;
+  }
+  .vg p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .vg .rule {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .regles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .regles li {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 22px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .regles b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .regles p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 80ch;
+  }
+  .maj {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin: 30px 0 0;
+    max-width: 86ch;
+  }
+  .maj b {
+    font-family: var(--f-display);
+    font-weight: 700;
+  }
+  .maj p {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .maj p:last-child {
+    margin-bottom: 0;
+  }
+  @media (max-width: 760px) {
+    .regles li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Roadmap · étape 5 sur 7</b><span>Rôle A · consultant</span><span>12 septembre 2026</span
+      ><span>Statut : proposition à corriger</span><span>Mis à jour le 13/09/2026</span>
+    </div>
+    <h1>Par quoi on commence</h1>
+    <p class="lede">
+      Pas une notation, une conversation : pour chaque Epic, ce que coûte un mois de retard,
+      l'échéance qui compte, et ce qu'il débloque. Puis trois vagues, quatre couloirs, et une limite
+      d'en-cours qui se calibre sur la mesure.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>Pourquoi pas de points</dt>
+        <dd>
+          À notre taille, il n'y a pas d'équipes à départager : le rituel de notation relative est
+          un coût pur. On garde la question du coût du retard, et on y répond en euros quand on
+          peut.
+        </dd>
+      </div>
+      <div>
+        <dt>Ce qui fixe le calendrier</dt>
+        <dd>
+          La saison. Une preuve non rendue en juin ne sauve aucun renouvellement, et une signature
+          se décide avant la saison, pas pendant.
+        </dd>
+      </div>
+      <div>
+        <dt>La suite</dt>
+        <dd>
+          L'étape 6 date tout ça en releases mensuelles, sur des couloirs qui avancent en parallèle.
+        </dd>
+      </div>
+    </dl>
+    <div class="maj">
+      <p>
+        <b>Mise à jour du 13/09/2026.</b> Gwenvael a validé trois changements qui modifient l'ordre
+        de cette page. Le récit du 12/09 est conservé&nbsp;; les passages qui induiraient en erreur
+        sont corrigés et signalés.
+      </p>
+      <p>
+        <b>Le produit a deux faces.</b> La face club — le match s'anime sans nous — est le
+        cœur&nbsp;; la face annonceur — ce qui est vendu passe, et c'est prouvé — est le levier.
+        Toute priorité se juge sur les deux. Le 12/09, cette page mettait la preuve devant et
+        traitait le match comme une précondition&nbsp;: cette lecture est abandonnée.
+      </p>
+      <p>
+        <b>L'objectif du trimestre change.</b> «&nbsp;Chaque match d'un club client est animé sans
+        nous, et ses partenaires reçoivent la preuve de leur diffusion.&nbsp;» Un gymnase et un club
+        de handball ou de basket arrivent d'ici la fin 2026. M5, M6 et P3 entrent dans l'ordre. M4
+        remonte de la vague&nbsp;3 à la vague&nbsp;1. M1 reste en vague&nbsp;2, mais n'attend plus
+        qu'un prospect signe. S3 n'est plus un Epic&nbsp;: c'est une Feature de S2.
+      </p>
+      <p>
+        <b>Les Epics ont maintenant une note WSJF.</b> Elle départage&nbsp;; les dépendances passent
+        d'abord. Le détail, Epic par Epic, est dans la
+        <a href="revue-wsjf-epics.html">revue WSJF du 13/09/2026</a>.
+      </p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="these" aria-labelledby="these-h">
+    <p class="kicker" id="these-h">En une phrase</p>
+    <p class="thesis">
+      On commence par ce qui <em>multiplie tout le reste</em> — la mise en service continue et le
+      média au format — et par le premier maillon de la preuve, parce qu'une journée de championnat
+      perdue ne se rattrape pas.
+    </p>
+    <p class="thesis-note prose">
+      <strong>Corrigé le 13/09/2026&nbsp;:</strong> on commence aussi par la face club — le pilotage
+      du match au téléphone, puis l'écran qui tient sans réseau. Sans match animé, il n'y a ni écran
+      allumé, ni public, ni rien à vendre.
+    </p>
+  </section>
+
+  <section id="hypotheses" aria-labelledby="hyp-h">
+    <h2 id="hyp-h">Les hypothèses économiques</h2>
+    <p class="intro prose">
+      Tout le chiffrage repose sur elles. Elles viennent des propositions tarifaires du 6 septembre
+      et de repères de marché : à confirmer avant d'en faire une décision.
+    </p>
+    <ul class="hyp">
+      <li>
+        <b>La grille tarifaire</b>
+        <p>
+          Essentiel 49 €/mois · Confort 89 · Avancé 139 · LED et multi-sites 250 · Production 300 à
+          950. Un club rapporte donc entre 590 et 11 400 € par an.
+        </p>
+        <span class="src">⚠️ grille proposée le 06/09, à confirmer</span>
+      </li>
+      <li>
+        <b>Le coût d&#x27;une journée</b>
+        <p>
+          550 € pour du développement courant, 720 € pour une expertise rare, 350 à 550 € pour une
+          journée de technicien sur place.
+        </p>
+        <span class="src">⚠️ repères de marché du 06/09</span>
+      </li>
+      <li>
+        <b>Le rythme des matchs</b>
+        <p>
+          Un match à domicile toutes les deux semaines environ en championnat, une quinzaine par
+          saison, plus les tournois.
+        </p>
+        <span class="src">✅ mesuré sur la saison en cours</span>
+      </li>
+      <li>
+        <b>Ce qu&#x27;on ne sait pas chiffrer</b>
+        <p>
+          Ce qu&#x27;un club facture à ses partenaires, donc ce que la preuve lui rapporte.
+          C&#x27;est le chiffre qui manque le plus.
+        </p>
+        <span class="src">❌ inconnu</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="cout" aria-labelledby="cout-h">
+    <h2 id="cout-h">Ce que coûte un mois de retard</h2>
+    <p class="intro prose">
+      Les six premières lignes forment la vague 1. La taille est relative : XS se compte en heures,
+      M en jours, L en semaines.
+      <em
+        >Mis à jour le 13/09/2026&nbsp;: lignes réordonnées selon les nouvelles vagues, M5, M6 et V0
+        ajoutés (tailles ⚠️ estimées d&#x27;après la revue WSJF), couloirs renommés
+        «&nbsp;Club&nbsp;» et «&nbsp;Annonceur&nbsp;». L&#x27;ancienne vague est indiquée quand elle
+        a changé.</em
+      >
+    </p>
+    <div class="tbl-wrap">
+      <table class="ord">
+        <thead>
+          <tr>
+            <th scope="col">Epic</th>
+            <th scope="col">Couloir</th>
+            <th scope="col">Un mois de retard coûte</th>
+            <th scope="col">L'échéance qui compte</th>
+            <th scope="col">Ce que ça débloque</th>
+            <th scope="col">Taille</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="v1">
+            <th scope="row"><span>S1 · vague 1</span>Mettre en service en continu, par site</th>
+            <td class="cl">Socle</td>
+            <td>
+              Deux jours d&#x27;équipe par mois passés à déployer, et un risque d&#x27;incident
+              visible un soir de match. Surtout, tous les autres Epics attendent trois à douze jours
+              de plus.
+            </td>
+            <td>Chaque match à domicile est une fenêtre où l&#x27;on ne déploie pas.</td>
+            <td>Tout le reste : c&#x27;est le multiplicateur de la roadmap.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr class="v1">
+            <th scope="row"><span>P1 · vague 1</span>Le média au format de chaque surface</th>
+            <td class="cl">Annonceur</td>
+            <td>
+              Deux à trois jours par mois de mise au format, soit environ 1 100 à 1 650 € ⚠️, et des
+              reprises quand une géométrie change.
+            </td>
+            <td>À chaque match, sinon le travail revient.</td>
+            <td>
+              V0, V1, P2, P3 et le troisième résultat clé du trimestre
+              <em>(numérotation du 13/09/2026)</em>.
+            </td>
+            <td class="sz">L</td>
+          </tr>
+          <tr class="v1">
+            <th scope="row">
+              <span>V0 · vague 1 · en cours · ajouté le 13/09</span>Tenir l&#x27;inventaire vendable
+              de la saison
+            </th>
+            <td class="cl">Annonceur</td>
+            <td>Sans inventaire, la rotation ne peut pas se composer depuis les ventes.</td>
+            <td>Déjà en cours au 13/09/2026.</td>
+            <td>V1, puis toute la chaîne de la preuve.</td>
+            <td class="sz">M ⚠️</td>
+          </tr>
+          <tr class="v1">
+            <th scope="row"><span>M2 · vague 1 · en cours</span>Répéter le match avant le match</th>
+            <td class="cl">Club</td>
+            <td>
+              Une trentaine de tickets dans les 48 h autour de chaque match, dont une part évitable
+              : un à deux jours par mois ⚠️.
+            </td>
+            <td>Chaque match. Le chantier est déjà commencé.</td>
+            <td>V1 : on ne compose pas depuis les ventes sans pouvoir vérifier.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr class="v1">
+            <th scope="row">
+              <span>M5 · vague 1 · ajouté le 13/09</span>Piloter le match depuis un téléphone
+            </th>
+            <td class="cl">Club</td>
+            <td>
+              Chaque match joué sans elle est un match où le lieu dépend de nous. Un gymnase sans
+              régie ne peut pas tenir son match&nbsp;: la télécommande actuelle est conçue pour un
+              opérateur, pas pour un bénévole.
+            </td>
+            <td>
+              Le premier match du gymnase et du club de handball ou de basket, d&#x27;ici la fin
+              2026.
+            </td>
+            <td>Tous les lieux tenus par des bénévoles, et le deuxième résultat clé.</td>
+            <td class="sz">M ⚠️</td>
+          </tr>
+          <tr class="v1">
+            <th scope="row">
+              <span>M4 · vague 1 · était vague 3</span>L&#x27;écran ne s&#x27;arrête pas si le
+              réseau tombe
+            </th>
+            <td class="cl">Club</td>
+            <td>
+              Un incident réseau un soir de match coûte la crédibilité d&#x27;une saison. Non mesuré
+              tant qu&#x27;il ne s&#x27;est pas produit.
+            </td>
+            <td>
+              Avant un lieu au réseau incertain — un gymnase, typiquement. Un gymnase arrive
+              d&#x27;ici la fin 2026 <em>(précisé le 13/09/2026)</em>.
+            </td>
+            <td>La vente hors des stades bien équipés.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>S2 · vague 2</span>Savoir ce qui tourne où, et ce qui va tomber
+            </th>
+            <td class="cl">Socle</td>
+            <td>
+              Chaque vérification passe par une connexion technique au boîtier, et sept tickets sur
+              treize ont été fermés sans être en service.
+            </td>
+            <td>Avant d&#x27;ouvrir un deuxième puis un troisième lieu.</td>
+            <td>M3, R1, et la vérification de tous les autres.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>V1 · vague 2 · était vague 1</span>Ce qui est vendu passe à l&#x27;écran
+            </th>
+            <td class="cl">Annonceur</td>
+            <td>
+              Un à deux matchs sans passage rattaché à une vente. Le seul client payant est un stade
+              dont l&#x27;abonnement vaut 3 000 à 11 400 € par an ⚠️, et son renouvellement repose
+              sur cette chaîne.
+            </td>
+            <td>
+              Chaque journée de championnat qui passe est perdue : on ne rattrape pas une preuve.
+            </td>
+            <td>V2, V3, puis toute la facturation.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>M6 · vague 2 · ajouté le 13/09</span>Habiller le match : score, chrono, faits de
+              jeu
+            </th>
+            <td class="cl">Club</td>
+            <td>
+              C&#x27;est ce que le public voit à chaque match&nbsp;: un habillage qui ne suit pas le
+              sport ou la surface se voit tout de suite.
+            </td>
+            <td>
+              Chaque match. Le bandeau peut démarrer avec un score saisi&nbsp;; les faits de jeu
+              nominatifs attendent M1.
+            </td>
+            <td>La visibilité des partenaires pendant le match, et le deuxième résultat clé.</td>
+            <td class="sz">M ⚠️</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>M1 · vague 2</span>Le score vient de la table de marque</th>
+            <td class="cl">Club</td>
+            <td>
+              Les clubs de handball, de basket, de futsal ou de hockey n&#x27;ont pas de match
+              exploitable&nbsp;: saisi à la main, le score y demande trop de double saisie.
+              <em
+                >Le 12/09, la ligne parlait d&#x27;une objection de prospect&nbsp;; corrigé le
+                13/09/2026.</em
+              >
+            </td>
+            <td>
+              Un gymnase et un club de handball ou de basket arrivent d&#x27;ici la fin 2026. La
+              lecture doit couvrir Bodet et Stramatel en priorité.
+            </td>
+            <td>Les faits de jeu nominatifs de M6, et le deuxième résultat clé.</td>
+            <td class="sz">L</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>V2 · vague 2</span>La preuve sort du lieu et retrouve la vente
+            </th>
+            <td class="cl">Annonceur</td>
+            <td>
+              Tant qu&#x27;elle ne sort pas, la preuve ne sert à rien : le travail de V1 reste
+              invisible pour le club comme pour l&#x27;annonceur.
+            </td>
+            <td>
+              Avant la fin de la saison : une preuve rendue en juin ne sauve aucun renouvellement.
+            </td>
+            <td>V3 et V4, donc tout le thème de la preuve.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>V3 · vague 3 · était vague 2</span>L&#x27;annonceur reçoit sa preuve, sans
+              compte
+            </th>
+            <td class="cl">Annonceur</td>
+            <td>
+              Le club revend ses partenaires sur sa parole une saison de plus, et nous n&#x27;avons
+              rien à montrer en démonstration.
+            </td>
+            <td>Avant la campagne de renouvellement des partenaires, au printemps.</td>
+            <td>
+              La promesse commerciale entière, et le cinquième résultat clé
+              <em>(numérotation du 13/09/2026)</em>.
+            </td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>P3 · vague 3</span>Habiller sans savoir faire du motion design
+            </th>
+            <td class="cl">Club</td>
+            <td>
+              Chaque visuel demandé nous passe par les mains. Sept concurrents proposent un studio :
+              c&#x27;est une attente de base.
+            </td>
+            <td>
+              Deux nouveaux clubs arrivent d&#x27;ici la fin 2026
+              <em>(le 12/09 : «&nbsp;pas d&#x27;échéance propre&nbsp;», corrigé le 13/09/2026)</em>.
+            </td>
+            <td>
+              L&#x27;autonomie du club sur le contenu, et le gabarit sponsor qui met les partenaires
+              en valeur.
+            </td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>M3 · vague 3 · était vague 2</span>Le club se dépanne seul</th>
+            <td class="cl">Club</td>
+            <td>
+              Chaque geste courant passe par nous : c&#x27;est le plafond du nombre de lieux, plus
+              qu&#x27;un coût direct.
+            </td>
+            <td>Avant le lieu suivant.</td>
+            <td>R1 et la tenue de plusieurs lieux à la fois.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <span>P2 · vague 3 · était vague 2</span>Une régie pour toutes les surfaces, sans
+              sur-mesure
+            </th>
+            <td class="cl">Club</td>
+            <td>
+              Chaque nouveau lieu coûte plusieurs jours de câblage sur mesure, et les deux
+              géométries documentées ont dû être corrigées sur place.
+            </td>
+            <td>Avant le prochain lieu équipé, et avant l&#x27;appel d&#x27;offres en cours.</td>
+            <td>R1, et la promesse « du gymnase au stade ».</td>
+            <td class="sz">L</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>R1 · vague 3</span>Ouvrir un lieu sans déplacement</th>
+            <td class="cl">Réseau</td>
+            <td>
+              Cinquante-neuf jours entre le premier signal et le premier match, et plusieurs
+              jours-homme par lieu : c&#x27;est le plafond du volume.
+            </td>
+            <td>Dès qu&#x27;on vise plus de trois ou quatre lieux.</td>
+            <td>R2, R3 et toute la thèse du réseau.</td>
+            <td class="sz">L</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>V4 · vague 3</span>Facturer sur la preuve, reverser au club</th>
+            <td class="cl">Annonceur</td>
+            <td>
+              Rien tant que V3 n&#x27;existe pas. Ensuite, c&#x27;est la condition d&#x27;un partage
+              de recette.
+            </td>
+            <td>Quand un premier contrat de réseau se profile.</td>
+            <td>R2 et R3.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>R2 · vague 3</span>Vendre un pack de lieux à une marque</th>
+            <td class="cl">Réseau</td>
+            <td>
+              Aucun revenu perdu aujourd&#x27;hui : aucun contrat de ce type n&#x27;existe.
+              C&#x27;est un pari.
+            </td>
+            <td>Pas avant d&#x27;avoir assez de lieux.</td>
+            <td>La thèse économique du produit.</td>
+            <td class="sz">L</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>R3 · vague 3</span>Deux niveaux de vente sur le même écran</th>
+            <td class="cl">Réseau</td>
+            <td>Aucun revenu perdu aujourd&#x27;hui. Pari, comme R2.</td>
+            <td>Quand un annonceur de réseau et un partenaire local se disputent le même écran.</td>
+            <td>Le modèle à deux niveaux.</td>
+            <td class="sz">M</td>
+          </tr>
+          <tr>
+            <th scope="row"><span>S3 · n&#x27;est plus un Epic (13/09)</span>Mesurer le flux</th>
+            <td class="cl">Socle</td>
+            <td>
+              Rien directement. Mais sans mesure, on discute de l&#x27;ordre au lieu de le
+              constater.
+            </td>
+            <td>Avant la première revue mensuelle, sinon elle se tient sans chiffres.</td>
+            <td>La revue mensuelle et les décisions d&#x27;ordre.</td>
+            <td class="sz">XS</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="vagues" aria-labelledby="vag-h">
+    <h2 id="vag-h">Trois vagues</h2>
+    <p class="intro prose">
+      Une vague n'est pas un trimestre : c'est un ordre. Les couloirs avancent en parallèle, et un
+      Epic terminé libère la place au suivant de son couloir.
+    </p>
+    <div class="vagues">
+      <div class="vg">
+        <span class="kicker">Vague 1</span><b>Maintenant</b>
+        <p>
+          Ce qui débloque le reste, ce qui fait tenir le match chez les clubs qui arrivent, et le
+          premier maillon de la preuve.
+        </p>
+        <span class="codes">S1 · M5 → M4 · P1 → V0 · M2</span
+        ><span class="rule"
+          >Trois couloirs actifs : le socle, la face club, la face annonceur. Le réseau attend. V0
+          et M2 sont déjà en cours.</span
+        >
+      </div>
+      <div class="vg">
+        <span class="kicker">Vague 2</span><b>Ensuite</b>
+        <p>
+          Le match habillé et le score lu sur la table de marque&nbsp;; la preuve rattachée à la
+          vente, puis sortie du lieu&nbsp;; la supervision du parc.
+        </p>
+        <span class="codes">M6 → M1 · V1 → V2 · S2</span
+        ><span class="rule"
+          >Même règle : un Epic en cours par couloir. M1 passe avant les faits de jeu de M6, qui en
+          tirent leur donnée.</span
+        >
+      </div>
+      <div class="vg">
+        <span class="kicker">Vague 3</span><b>Plus tard</b>
+        <p>
+          Le rapport à l&#x27;annonceur, l&#x27;autonomie du club, l&#x27;état du matériel&nbsp;;
+          puis le volume et le réseau, une fois que le produit tient tout seul.
+        </p>
+        <span class="codes">V3 · P3 → M3 · S5 · P2 · R1 · V4 · R2 · R3</span
+        ><span class="rule"
+          >V3 attend V2&nbsp;: il n&#x27;a rien à envoyer sans elle. Le couloir réseau s&#x27;ouvre
+          quand la preuve est rendue à un annonceur au moins.</span
+        >
+      </div>
+    </div>
+    <p class="intro prose" style="margin-top: 16px">
+      <strong>L'ordre par couloir, au 13/09/2026.</strong> Face club&nbsp;: M5, M4, M6, M1 (avant
+      les faits de jeu de M6), P3, puis M3. Socle&nbsp;: S1, S2, S5. Face annonceur&nbsp;: P1 et S1,
+      V0 (en cours), V1, V2, V3. Les dépendances fixent cet ordre&nbsp;; la note WSJF départage
+      ensuite. Les Epics absents de cette liste suivent le classement de la
+      <a href="revue-wsjf-epics.html">revue WSJF</a>.
+    </p>
+  </section>
+
+  <section id="regles" aria-labelledby="reg-h">
+    <h2 id="reg-h">Les règles du couloir</h2>
+    <ul class="regles">
+      <li>
+        <b>Un Epic en cours par couloir</b>
+        <p>
+          Quatre couloirs : socle, face club, face annonceur, réseau
+          <em>(renommés le 13/09/2026 ; ils s&#x27;appelaient surfaces et fiabilité, et preuve)</em
+          >. Un seul Epic en cours dans chacun, et au plus trois couloirs actifs en même temps.
+        </p>
+      </li>
+      <li>
+        <b>La limite se calibre sur la mesure, pas sur l&#x27;effectif</b>
+        <p>
+          Si le temps de flux augmente quand on ouvre un couloir de plus, la limite était trop
+          haute. C&#x27;est la revue mensuelle qui tranche, avec la mesure du flux
+          <em>(ex-S3, désormais Feature de S2)</em>.
+        </p>
+      </li>
+      <li>
+        <b>Un Epic n&#x27;entre pas sans son indicateur</b>
+        <p>
+          Pas d&#x27;hypothèse mesurable, pas d&#x27;entrée dans le couloir. C&#x27;est la seule
+          barrière à l&#x27;entrée.
+        </p>
+      </li>
+      <li>
+        <b>Ce qui fait remonter un Epic</b>
+        <p>
+          Une signature qui en dépend, une échéance de saison, ou un Epic bloqué par lui depuis deux
+          revues.
+        </p>
+      </li>
+      <li>
+        <b>Ce qui fait sortir un Epic</b>
+        <p>
+          Deux revues mensuelles sans mouvement : il ressort du couloir et retourne dans
+          l&#x27;entonnoir, avec la raison écrite.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="valider" aria-labelledby="val-h">
+    <h2 id="val-h">Pour valider l'étape 5</h2>
+    <ol class="decisions">
+      <li>
+        <div>
+          <p><strong>La grille tarifaire est-elle la bonne ?</strong></p>
+          <p>
+            Tout le chiffrage du coût du retard repose dessus. Si les prix pratiqués diffèrent,
+            l&#x27;ordre peut changer.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Que rapporte un partenaire à un club ?</strong></p>
+          <p>
+            C&#x27;est le chiffre qui manque le plus : il dit ce que vaut vraiment la preuve, donc
+            si le thème 1 est correctement placé.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Quel Epic déplacerais-tu ?</strong></p>
+          <p>
+            L&#x27;ordre est une proposition argumentée, pas un calcul. Un déplacement, avec sa
+            raison, vaut mieux qu&#x27;un accord poli.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>La règle d&#x27;un Epic par couloir te va-t-elle ?</strong></p>
+          <p>
+            C&#x27;est le seul endroit où la question de la capacité revient — et volontairement
+            sous forme de règle, pas d&#x27;effectif.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="methode" aria-labelledby="met-h">
+    <h2 id="met-h">Méthode et limites</h2>
+    <div class="method">
+      <p>
+        L'ordre reprend l'esprit du WSJF — le coût du retard rapporté à la taille — sans son rituel
+        de notation. Trois questions par Epic : quel revenu attend, quelle échéance le rend
+        périssable, et qu'est-ce qu'il débloque.
+      </p>
+      <ul>
+        <li>
+          Les euros sont des ordres de grandeur, fondés sur une grille tarifaire proposée en
+          septembre et non confirmée.
+        </li>
+        <li>
+          Ce qu'un club facture à ses partenaires n'est pas connu : c'est le chiffre qui pèserait le
+          plus sur l'ordre.
+        </li>
+        <li>Aucune durée, aucune date : c'est l'objet de l'étape 6.</li>
+        <li>Rien n'a été écrit dans Linear ni dans Notion.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Roadmap · étape 5 sur 7 · 12 septembre 2026, mis à jour le 13/09/2026 · proposition à corriger ·
+    docs/b2b-alive-transition/roadmap-etape-5-ordre.html
+  </footer>
+</main>
