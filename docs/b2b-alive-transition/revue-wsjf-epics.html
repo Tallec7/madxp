@@ -1,0 +1,1918 @@
+<title>Revue des notes WSJF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d6dce3;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --live: #bc332e;
+    --live-wash: #f8e1e0;
+    --ready: #1f6a4b;
+    --ready-wash: #dcede4;
+    --gain: #1a6272;
+    --gain-wash: #dcebef;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --live: #e4655e;
+      --live-wash: #351e1d;
+      --ready: #52ac80;
+      --ready-wash: #17301f;
+      --gain: #6bbacb;
+      --gain-wash: #16292f;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --live: #e4655e;
+    --live-wash: #351e1d;
+    --ready: #52ac80;
+    --ready-wash: #17301f;
+    --gain: #6bbacb;
+    --gain-wash: #16292f;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 0 24px 88px;
+  }
+  .masthead {
+    padding: 50px 0 22px;
+    border-bottom: 3px double var(--rule-strong);
+    margin-bottom: 34px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 15px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(31px, 5vw, 43px);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 17px;
+  }
+  .standfirst {
+    font-size: 18.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 22px;
+  }
+  .slugline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 30px;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    line-height: 2.1;
+    color: var(--muted);
+  }
+  .slugline b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+  section {
+    margin-bottom: 52px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -0.016em;
+    margin: 0 0 5px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule-strong);
+    text-wrap: balance;
+  }
+  .h2-note {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18px;
+    margin: 30px 0 10px;
+    text-wrap: balance;
+  }
+  p {
+    margin: 0 0 16px;
+    max-width: 72ch;
+  }
+  .lede {
+    font-family: var(--f-display);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.5;
+    border-left: 3px solid var(--accent);
+    padding: 2px 0 2px 18px;
+    margin: 0 0 24px;
+    max-width: 66ch;
+  }
+  .formula {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 18px 24px;
+    margin-bottom: 18px;
+  }
+  .formula .f1 {
+    font-family: var(--f-mono);
+    font-size: 15px;
+    line-height: 2;
+  }
+  .formula .f1 b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .formula .f2 {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  /* grille */
+  .grid-col {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    margin-bottom: 16px;
+  }
+  .grid-col header {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    align-items: baseline;
+  }
+  .grid-col header h3 {
+    margin: 0;
+    font-size: 17px;
+  }
+  .grid-col header span {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .lvl {
+    display: grid;
+    grid-template-columns: 46px 1fr minmax(160px, 30%);
+    gap: 14px;
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+  .lvl:last-child {
+    border-bottom: none;
+  }
+  .lvl .n {
+    font-family: var(--f-mono);
+    font-size: 15px;
+    font-weight: 500;
+    text-align: right;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .lvl .d {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .lvl .who {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+  .lvl .who.none {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .grid-col footer {
+    padding: 10px 18px 12px;
+    background: var(--surface-2);
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 700px) {
+    .lvl {
+      grid-template-columns: 36px 1fr;
+    }
+    .lvl .who {
+      grid-column: 2;
+    }
+  }
+
+  /* constats */
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--accent);
+    padding: 17px 22px;
+    margin-bottom: 12px;
+  }
+  .finding h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16.5px;
+    margin: 0 0 6px;
+    line-height: 1.3;
+  }
+  .finding p {
+    margin: 0;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+
+  /* classement */
+  .scroller {
+    overflow-x: auto;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 760px;
+  }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 0 10px 9px 0;
+    border-bottom: 1px solid var(--rule-strong);
+    vertical-align: bottom;
+  }
+  td {
+    padding: 7px 10px 7px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+    font-size: 14.5px;
+  }
+  td.num,
+  th.num {
+    font-family: var(--f-mono);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  td.rk {
+    font-family: var(--f-mono);
+    color: var(--muted);
+    text-align: center;
+    width: 36px;
+    font-variant-numeric: tabular-nums;
+  }
+  td.nm b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  td.nm .code {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+  td.old {
+    color: var(--muted);
+  }
+  td.moved {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .barcell {
+    width: 190px;
+  }
+  .bar {
+    position: relative;
+    height: 12px;
+    background: var(--surface-2);
+  }
+  .bar i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+  }
+  .bar i.o {
+    background: transparent;
+    border-right: 2px solid var(--rule-strong);
+  }
+  .bar i.n {
+    background: var(--accent);
+    opacity: 0.75;
+    top: 3px;
+    bottom: 3px;
+  }
+  tr.sep td {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 20px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .legend {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 10px 0 0;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .legend i {
+    display: inline-block;
+    width: 18px;
+    height: 10px;
+    vertical-align: -1px;
+    margin-right: 6px;
+  }
+
+  /* chips */
+  .chip {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .c-keep {
+    background: var(--ready-wash);
+    color: var(--ready);
+  }
+  .c-fix {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .c-discuss {
+    background: var(--gain-wash);
+    color: var(--gain);
+  }
+  .c-out {
+    background: var(--live-wash);
+    color: var(--live);
+  }
+  .c-plain {
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+
+  /* filtres */
+  .bar-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 0 0 18px;
+  }
+  .bar-tools button {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--rule-strong);
+    padding: 7px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .bar-tools button[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--ground);
+    border-color: var(--ink);
+  }
+  .bar-tools button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* epics */
+  .theme-head {
+    margin: 34px 0 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+  }
+  .theme-head h3 {
+    margin: 0;
+  }
+  .theme-head span {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .epic {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    margin-bottom: 14px;
+  }
+  .epic.v-fix {
+    border-left: 3px solid var(--accent);
+  }
+  .epic.v-out {
+    border-left: 3px solid var(--live);
+  }
+  .epic.v-discuss {
+    border-left: 3px solid var(--gain);
+  }
+  .epic-head {
+    padding: 14px 18px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 18px;
+    align-items: start;
+    border-bottom: 1px solid var(--rule);
+  }
+  .epic-head h4 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.3;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .epic-head h4 .code {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--accent);
+    margin-right: 8px;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .score {
+    text-align: right;
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .score .big {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .score .was {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .score .was s {
+    text-decoration-thickness: 1px;
+  }
+  .hyp {
+    padding: 10px 18px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .hyp b {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .notes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .note {
+    padding: 12px 16px 14px;
+    border-right: 1px solid var(--rule);
+  }
+  .note:last-child {
+    border-right: none;
+  }
+  .note .lab {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .note .val {
+    font-family: var(--f-mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .note .val s {
+    color: var(--muted);
+    font-size: 14px;
+    margin-right: 4px;
+    font-weight: 400;
+  }
+  .note.changed .val {
+    color: var(--accent);
+  }
+  .note p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .note.changed {
+    background: color-mix(in srgb, var(--accent-wash) 45%, transparent);
+  }
+  .verdict {
+    padding: 11px 18px;
+    border-top: 1px solid var(--rule);
+    font-size: 14.5px;
+    line-height: 1.5;
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .verdict .chip {
+    flex: none;
+  }
+  @media (max-width: 860px) {
+    .notes {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .note:nth-child(2) {
+      border-right: none;
+    }
+    .note:nth-child(-n + 2) {
+      border-bottom: 1px solid var(--rule);
+    }
+  }
+  @media (max-width: 520px) {
+    .notes {
+      grid-template-columns: 1fr;
+    }
+    .note {
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+    }
+    .epic-head {
+      grid-template-columns: 1fr;
+    }
+    .score {
+      text-align: left;
+    }
+  }
+
+  ul.plain {
+    margin: 0 0 16px;
+    padding-left: 19px;
+  }
+  ul.plain li {
+    margin-bottom: 9px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 76ch;
+  }
+  .conf {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  footer {
+    margin-top: 38px;
+    padding-top: 17px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.9;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <header class="masthead">
+    <p class="eyebrow">Portefeuille Broadcaster · base Epics Notion · revue du 13/09/2026</p>
+    <h1>Revue des notes WSJF des 34 Epics</h1>
+    <p class="standfirst">
+      Les notes relues à partir de la raison d'être du produit : un écran qui fait gagner de
+      l'argent au club, par ses deux faces — le match qu'il anime, et les partenaires qu'il diffuse
+      et prouve. Chaque note est justifiée.
+    </p>
+    <div class="slugline">
+      <span>Lu en base : <b>34 Epics · 81 Features · 4 thèmes</b></span>
+      <span
+        >Corrigés : <b>17</b> · hors classement : <b>2</b> · à discuter : <b>1</b> · maintenus :
+        <b>14</b></span
+      >
+      <span>Appliqué dans Notion le 13/09/2026</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Pourquoi Broadcaster existe</h2>
+    <p class="h2-note">Repris du pitch deck NEOPRO v3.2, avril 2026</p>
+    <p class="lede">
+      Le problème n'est pas l'écran. C'est le sponsoring des clubs : 1,78 Md€ en France, payé à 59 %
+      par des PME, et pourtant 10 % seulement du budget d'un club amateur.
+    </p>
+    <p>
+      Le sponsor ne renouvelle pas pour trois raisons : il n'est pas mis en valeur, il ne voit aucun
+      résultat, et il n'a aucun canal local. Le produit y répond par deux faces qui se renforcent.
+    </p>
+    <div class="faces">
+      <div class="face">
+        <p class="face-k">Face club · le cœur</p>
+        <h3>Le match s'anime, sans nous</h3>
+        <p>
+          Score en direct, faits de jeu, annonces du club, habillage, ambiance, partenaires
+          visibles. Piloté au téléphone par un bénévole ou un opérateur. Écran allumé à chaque
+          match, même sans réseau.
+        </p>
+        <p class="face-n">Paie les coûts : 61 % du chiffre d'affaires visé</p>
+      </div>
+      <div class="face">
+        <p class="face-k">Face annonceur · le levier</p>
+        <h3>Ce qui est vendu passe, et c'est prouvé</h3>
+        <p>
+          La rotation vient des ventes, la preuve de diffusion remonte, l'annonceur reçoit son
+          rapport. Puis un contrat pour plusieurs salles.
+        </p>
+        <p class="face-n">Fait monter le revenu par club : 28 % visé</p>
+      </div>
+    </div>
+    <p>
+      <b>Conséquence pour les notes :</b> la valeur métier se juge sur les deux faces. La première
+      revue ne regardait que la preuve (le thème actif) et sous-notait tout ce qui fait tenir et
+      vivre le match. Sans match animé, il n'y a ni écran allumé, ni public, ni rien à vendre.
+    </p>
+    <p class="small">
+      ⚠️ Les chiffres du deck sont des projections pour des investisseurs. Le parc réel est plus
+      petit, et la cible s'est élargie depuis à tout stade et tout gymnase. La raison d'être, elle,
+      n'a pas changé.
+    </p>
+  </section>
+
+  <section>
+    <h2>Comment lire un score</h2>
+    <p class="h2-note">L'échelle note les critères, pas le résultat</p>
+    <div class="formula">
+      <div class="f1">
+        WSJF = ( <b>Valeur métier</b> + <b>Criticité temporelle</b> + <b>Réduction de risque</b> ) ÷
+        <b>Taille</b>
+      </div>
+      <div class="f2">
+        Chaque critère : 1 · 2 · 3 · 5 · 8 · 13 · 20 — le score va donc de 0,15 à 60
+      </div>
+    </div>
+    <p>
+      Le haut du calcul dit ce que coûte l'attente ; le bas, ce que coûte le travail. Une taille
+      sous-estimée pèse bien plus lourd qu'une valeur surestimée.
+    </p>
+    <p>
+      <b>Le score ne gère pas les dépendances.</b> L'ordre des cartes les applique d'abord, le WSJF
+      départage ensuite.
+    </p>
+    <h3>Les règles de cette revue</h3>
+    <ul class="plain">
+      <li><b>La valeur se juge sur les deux faces</b> : le match et la preuve.</li>
+      <li><b>Ce qui existe ne compte que s'il est exploitable en match</b> par le club visé.</li>
+      <li>
+        <b>Rien n'est repris du code MadXp</b>, seulement des idées : aucune taille ne s'appuie sur
+        un existant MadXp.
+      </li>
+      <li>
+        <b>La taille couvre l'Epic entier</b> : toutes ses Features (par exemple toutes les marques
+        de table de marque), jamais sa seule première version, jamais ses prérequis.
+      </li>
+      <li><b>On ne découpe pas un Epic en Epics</b> : son découpage, ce sont ses Features.</li>
+      <li>
+        <b>La criticité nomme une perte et une date</b> ; appartenir au thème actif n'en donne pas.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>La grille : ce que chaque note veut dire</h2>
+    <p class="h2-note">Les Epics cités sont ceux qui ont la note après correction</p>
+    <div id="grid"></div>
+  </section>
+
+  <section>
+    <h2>Ce qui a été corrigé, et pourquoi</h2>
+    <p class="h2-note">Huit défauts dans les notes du 13/09</p>
+    <div id="findings"></div>
+  </section>
+
+  <section>
+    <h2>Classement avant et après</h2>
+    <p class="h2-note">30 Epics classés · 2 en cours à part · 2 hors portefeuille</p>
+    <div class="scroller"><table id="rank"></table></div>
+    <div class="legend">
+      <span><i style="background: var(--accent); opacity: 0.75"></i>Score proposé</span>
+      <span><i style="border-right: 2px solid var(--rule-strong)"></i>Score du 13/09</span>
+    </div>
+    <h3>L'ordre des cartes, dépendances d'abord</h3>
+    <ul class="plain">
+      <li>
+        <b>Face annonceur :</b> P1 et S1 → V0 → V1 → V2 → V3. V3 a un bon score mais n'a rien à
+        envoyer sans V2.
+      </li>
+      <li>
+        <b>Face club :</b> M5 et M1 peuvent démarrer tout de suite. M1 passe avant les faits de jeu
+        de M6, qui en tirent leur donnée.
+      </li>
+      <li><b>Socle :</b> S1 → S2 → S5.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Epic par Epic</h2>
+    <p class="h2-note">Les 34 · une case orange = note modifiée par rapport au 13/09</p>
+    <div class="bar-tools" role="group" aria-label="Filtrer les Epics">
+      <button type="button" data-f="all" aria-pressed="true">Tous (34)</button>
+      <button type="button" data-f="fix" aria-pressed="false">Corrigés</button>
+      <button type="button" data-f="out" aria-pressed="false">Hors classement</button>
+      <button type="button" data-f="discuss" aria-pressed="false">À discuter</button>
+      <button type="button" data-f="keep" aria-pressed="false">Maintenus</button>
+    </div>
+    <div id="epics"></div>
+  </section>
+
+  <section>
+    <h2>Ce qui reste à trancher</h2>
+    <ul class="plain">
+      <li>
+        <b>M6 : ce qui est exploitable en match aujourd’hui.</b> Ce qui existe ne compte que si un
+        club peut s’en servir pendant un match réel.
+      </li>
+      <li>
+        <b>P2 et R1 se recouvrent.</b> Les deux visent le même plafond (ouvrir un lieu sans
+        sur-mesure) : fixer la frontière entre les deux, pour ne pas compter deux fois la même
+        valeur.
+      </li>
+      <li><b>V5 : quel thème ?</b> Il sert P1 (la régie) plus que la preuve.</li>
+      <li>
+        <b>P3, P4, P5, P7 : poursuivre ou geler</b> les projets Linear déjà démarrés, malgré des
+        scores entre 1,20 et 1,50.
+      </li>
+      <li>
+        <b>La taille :</b> aucune note n'a été relue par un développeur, et aucune Feature n'est
+        reliée à Linear. C'est la note la moins fiable.
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    Sources : bases Epics, Features et Thèmes stratégiques (Notion, lues le 13/09) · étapes 4 et 5
+    de la roadmap · matrice de parité · pitch deck NEOPRO v3.2 (avril 2026). Notes revues avec
+    Gwenvael le 13/09/2026 et reportées dans Notion ; statut « Proposé — à valider » jusqu'au
+    passage en « Validé en revue ».
+  </footer>
+</div>
+
+<style>
+  .faces {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 0 0 20px;
+  }
+  .face {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--gain);
+    padding: 16px 20px;
+  }
+  .face + .face {
+    border-top-color: var(--accent);
+  }
+  .face h3 {
+    margin: 4px 0 8px;
+  }
+  .face p {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0 0 10px;
+  }
+  .face-k {
+    font-family: var(--f-mono);
+    font-size: 10.5px !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted) !important;
+    margin: 0 !important;
+  }
+  .face-n {
+    font-family: var(--f-mono);
+    font-size: 12px !important;
+    color: var(--ink) !important;
+    margin: 0 !important;
+  }
+  .small {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  @media (max-width: 700px) {
+    .faces {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  var GRID = [
+    {
+      k: 'Valeur métier',
+      q: 'Ce que l’Epic apporte au club ou à l’annonceur — sur les deux faces.',
+      lv: [
+        [
+          20,
+          'Le cœur d’une face : sans lui, cette face n’existe pas pour le client.',
+          'M5 · M1 (face club) · V2 (face annonceur)',
+        ],
+        [13, 'Ce que le client voit à chaque match ou exige pour signer.', 'M4 · M6 · V1 · V3'],
+        [
+          8,
+          'Rend une face fiable, autonome, activable par le club, ou vendable à plusieurs lieux.',
+          'V0 · M2 · M3 · P1 · P2 · P3 · R1 · R2 · S1',
+        ],
+        [
+          5,
+          'Valeur réelle mais dérivée d’un autre Epic, ou perte d’exploitation évitée.',
+          'V4 · V5 · P5 · S2',
+        ],
+        [3, 'Un complément ou un revenu additionnel.', 'P4 · P6 · P7 · P9 · R3 · S4 · S5'],
+        [2, 'Demande ponctuelle, ou déjà en partie servie.', 'P8 · R4 · R5 · R7'],
+        [1, 'Aucune valeur pour un client aujourd’hui.', 'R6 · (S3 · E10)'],
+      ],
+      foot: 'Deux règles. Une valeur n’est comptée qu’une fois : quand deux Epics livrent ensemble le même résultat, elle va au maillon sans lequel rien n’existe (V2 plutôt que V3). Et ce qui existe déjà ne baisse la valeur que s’il est exploitable en match par le client visé : un score qui s’affiche mais qu’on ne peut pas tenir à la main ne compte pas.',
+    },
+    {
+      k: 'Criticité temporelle',
+      q: 'Ce qu’on perd à attendre, et quand.',
+      lv: [
+        [20, 'Perte irréversible sous quelques semaines.', null],
+        [
+          13,
+          'Chaque journée de la saison perd une valeur qui ne se rattrape pas, chez un client déjà en place.',
+          'V1 · V2 · V3',
+        ],
+        [
+          8,
+          'Un coût qui revient à chaque match chez un client en place, ou une fenêtre commerciale datée.',
+          'V0 · M1 · M2 · M3 · M4 · M5 · M6 · P1 · P2 · S1 · S2',
+        ],
+        [5, 'Un coût qui grandit avec le nombre de lieux, sans date.', 'V5'],
+        [3, 'Une échéance lointaine, ou un risque qui n’est pas certain.', 'V4 · R1 · S4 · S5'],
+        [2, 'Rien ne presse, mais une attente de marché existe.', 'P3 · P4 · P5 · R2 · (S3)'],
+        [1, 'Aucun coût à attendre.', 'P6 · P7 · P8 · P9 · R3 · R4 · R5 · R6 · R7 · (E10)'],
+      ],
+      foot: 'Pourquoi 13 pour la preuve et 8 pour le match : le seul client payant est un stade avec opérateur. Une preuve non enregistrée chez lui est perdue pour toujours ; la télécommande bénévole, elle, sert d’abord les prochains clients.',
+    },
+    {
+      k: 'Réduction de risque',
+      q: 'Ce que l’Epic débloque, ou ouvre.',
+      lv: [
+        [20, 'Supprime un risque qui menace l’existence du produit.', null],
+        [
+          13,
+          'Préalable de plusieurs Epics, ou supprime un risque présent sur tous les lieux à chaque match.',
+          'V0 · M2 · P1 · S1 · S2',
+        ],
+        [
+          8,
+          'Débloque un Epic de valeur 8 ou plus, ouvre un segment de la cible, ou couvre un risque nommé.',
+          'V1 · V2 · V5 · M1 · M4 · M5 · P2 · R1',
+        ],
+        [
+          5,
+          'Débloque un Epic de valeur plus basse, ou sert l’autre face.',
+          'M3 · M6 · S5 · (S3 · E10)',
+        ],
+        [3, 'Débloque un Epic du vivier, ou couvre un pari.', 'V3 · P5 · R2 · S4'],
+        [2, 'Ouvre peu de chose.', 'V4 · P3 · P7 · R3 · R4 · R7'],
+        [1, 'N’ouvre rien.', 'P4 · P6 · P8 · P9 · R5 · R6'],
+      ],
+      foot: 'C’est ici que se comptent les préconditions : P1 est le préalable de V1, donc de toute la face annonceur.',
+    },
+    {
+      k: 'Taille',
+      q: 'L’effort relatif de l’Epic entier.',
+      lv: [
+        [1, 'Quelques jours, une seule Feature : c’est une tâche.', '(S3)'],
+        [2, 'Une petite brique technique, sans Feature.', '(E10)'],
+        [3, 'Deux Features qui étendent un existant.', 'P9 · R4'],
+        [
+          5,
+          'Trois ou quatre Features sur une couche, une Feature techniquement dure, ou une base déjà là.',
+          'V0 · V3 · V5 · M4 · M5 · M6 · P4 · P7 · P8 · S1 · S2 · S4 · S5',
+        ],
+        [
+          8,
+          'Plusieurs couches (boîtier et serveur), un matériel tiers, ou des règles de contrat.',
+          'V1 · V2 · V4 · M1 · M2 · M3 · P1 · P3 · P5 · P6 · R2 · R3 · R5 · R6',
+        ],
+        [13, 'Refonte d’un modèle, ou une Feature déjà marquée « à découper ».', 'P2 · R1'],
+        [20, 'Hors d’échelle, conditionné, rien d’écrit.', 'R7'],
+      ],
+      foot: 'On mesure l’Epic entier, jamais sa première version, et jamais le travail de ses prérequis.',
+    },
+  ];
+
+  var FINDINGS = [
+    [
+      'Une seule face était regardée',
+      'Les notes hautes allaient à la preuve (le thème actif). M5, M6, M1 et M4 — ce qui fait tenir et vivre le match, le cœur du produit — plafonnaient à 8 en valeur. M5 et M1 passent à 20 (sans lecture automatique, le score n’est pas exploitable dans les sports à nombreux buts), M4 et M6 à 13.',
+    ],
+    [
+      'Les préconditions n’étaient pas comptées',
+      'L’étape 4 écrit que V1 dépend de P1 et M2. P1 n’avait que 8 en réduction de risque, pour le seul risque A8. Il passe à 13.',
+    ],
+    [
+      'Des tailles notées sur la première version',
+      'V3 avait 3 parce que sa « première version est petite ». L’Epic entier porte trois Features. Il passe à 5.',
+    ],
+    [
+      'Des tailles qui comptaient les prérequis ou une image',
+      'R2 avait 13 parce qu’il « dépend de toute la chaîne V0 à V3 », P3 avait 13 pour un « studio de création » qui tient en deux Features. Les deux passent à 8. M1, lui, garde 8 : il doit lire tout type de table de marque.',
+    ],
+    [
+      'Des Epics incohérents entre eux',
+      'M2 (défauts découverts le jour du match) avait une valeur de 8 pour « rendre le match fiable », S1 (déploiements qui cassent en match : écrans noirs, sono coupée) seulement 5, pour la même perte. S1 passe à 8. M3 avait 5 en criticité alors que le client payant dépend de l’équipe pour chaque correction, à chaque match : il passe à 8.',
+    ],
+    [
+      'Des tâches mêlées aux Epics',
+      'S3 (une Feature, planifiée du 14 au 16/09) et E10 (aucune Feature) passaient 2ᵉ et 9ᵉ grâce à leur taille de 1 et 2. Ils sortent du classement.',
+    ],
+    [
+      'Une criticité héritée du thème',
+      'V5 avait 13 en criticité sans échéance nommée, parce qu’il est rangé dans le thème actif. Il passe à 5, sa valeur à 5 (elle dérive de P1), son risque à 8.',
+    ],
+    [
+      'Des revenus oubliés',
+      'Le deck vend la marque blanche en option (P9) et l’habillage sponsor comme réponse au sponsor « jamais mis en valeur » (P3). P9 passe de 1 à 3, P3 de 5 à 8.',
+    ],
+  ];
+
+  var TH = {
+    M: [
+      'Face club : le soir du match tient sans nous',
+      'Le cœur du produit · le lieu produit son match seul',
+    ],
+    V: [
+      'Face annonceur : la preuve rend le sponsoring renouvelable',
+      'Thème actif · « un annonceur peut prouver qu’il a été diffusé »',
+    ],
+    P: ['Une régie pour toutes les surfaces', 'Sert les deux faces · du gymnase au stade'],
+    R: ['Un réseau de salles, vendable d’un seul contrat', 'La face annonceur à l’échelle'],
+    S: ['Socle, sans thème', 'Fait tenir les deux faces'],
+  };
+
+  // [code, nom, type, état, thème, VM, CT, RR, Taille ([13/09, proposé, raison]), verdict, conclusion, contexte]
+  var E = [
+    [
+      'M5',
+      'Piloter le match depuis un téléphone',
+      'Epic',
+      'En analyse',
+      'M',
+      [
+        8,
+        20,
+        'C’est la vision du produit mot pour mot : « plus jamais un bénévole seul face à son écran ». Sans pilotage au téléphone, un gymnase sans régie ne peut pas tenir son match : la face club n’existe pas pour lui. L’apport MadXp le plus utilisé.',
+      ],
+      [
+        5,
+        8,
+        'Chaque match joué sans elle est un match où le club dépend de nous. Pas 13 : le client payant actuel est un stade avec opérateur ; ce sont les prochains lieux qui l’attendent.',
+      ],
+      [3, 8, 'Ouvre un segment entier de la cible : tous les lieux tenus par des bénévoles.'],
+      [
+        3,
+        5,
+        'Trois Features, dont « les gestes du match sous le pouce ». Rien n’est repris du code MadXp, seulement l’idée : la télécommande Broadcaster existe mais est conçue pour un opérateur de régie : pas exploitable par un bénévole, elle ne réduit pas la taille.',
+      ],
+      'fix',
+      'Quatre notes corrigées : 5,33 → 7,20. Premier du classement.',
+      'Matrice : télécommande Broadcaster conçue pour un opérateur de régie, « à requalifier » pour un bénévole.',
+    ],
+    [
+      'M1',
+      'Le score vient de la table de marque',
+      'Epic',
+      'Prêt',
+      'M',
+      [
+        13,
+        20,
+        'Le cœur de la face club pour les sports à nombreux buts et faits de jeu (handball, basket, futsal, hockey). Broadcaster affiche déjà le score, mais saisi à la main il n’est pas exploitable : trop de double saisie, trop de gestion pendant le match. Sans lecture automatique, ces clubs n’ont pas de match animé, et même la télécommande (M5) reste un poste de saisie.',
+      ],
+      [
+        8,
+        8,
+        'Fenêtre datée : un gymnase et un club de handball ou de basket arrivent d’ici la fin de l’année. Sans lecture automatique du score, ces clubs n’ont pas de match exploitable.',
+      ],
+      [
+        5,
+        8,
+        'Ouvre un segment entier de la cible, et M6 en tire sa donnée (faits de jeu nominatifs).',
+      ],
+      [
+        8,
+        8,
+        'Il faut lire tout type de table de marque : Bodet et Stramatel en priorité (les deux clubs attendus d’ici la fin de l’année), une troisième marque à venir : un connecteur et un simulateur par protocole, avec du matériel tiers. Le pipeline d’événements de match existant évite de repartir de zéro, mais ne réduit pas le nombre de marques à couvrir.',
+      ],
+      'fix',
+      'Deux notes corrigées : 3,25 → 4,50. Sa taille reflète toutes les marques : elles sont ses Features, pas des Epics séparés. Passe avant les faits de jeu de M6.',
+      'Indicateur : matchs produits sans saisie manuelle du score, 0 aujourd’hui.',
+    ],
+    [
+      'M6',
+      'Habiller le match : score, chrono, faits de jeu',
+      'Epic',
+      'En analyse',
+      'M',
+      [
+        8,
+        13,
+        'C’est ce que le public voit à chaque match, et la table d’entrée du marché (quatre concurrents). Sur la face club, c’est l’écran lui-même.',
+      ],
+      [
+        5,
+        8,
+        'Le coût revient à chaque match : un habillage qui ne suit pas le sport ou la surface se voit tout de suite.',
+      ],
+      [
+        2,
+        5,
+        'Sert l’autre face : l’habillage est ce qui rend les partenaires visibles pendant le match.',
+      ],
+      [
+        5,
+        5,
+        'Trois Features sur la couche d’affichage : bandeau par sport et surface, faits de jeu nominatifs, journal exportable.',
+      ],
+      'fix',
+      'Trois notes corrigées : 3,00 → 5,20. Peut démarrer avant M1, avec un score saisi.',
+      'Des fonctions d’habillage existent déjà, mais elles ne sont comptées que si elles sont exploitables en match : ce n’est pas le cas dès que le score est saisi à la main.',
+    ],
+    [
+      'M4',
+      'L’écran ne s’arrête pas si le réseau tombe',
+      'Epic',
+      'En analyse',
+      'M',
+      [
+        8,
+        13,
+        'Le deck en fait la base de l’offre : le boîtier fonctionne sans WiFi pour 80 % des clubs, et « un cloud-only tombe pendant les matchs ». Pour un gymnase, c’est ce qui décide de la vente.',
+      ],
+      [
+        3,
+        8,
+        'Fenêtre datée : un gymnase arrive d’ici la fin de l’année, et un gymnase a typiquement un réseau incertain.',
+      ],
+      [8, 8, 'Couvre un risque de panne en direct, et ouvre les gymnases.'],
+      [5, 5, 'Une Feature, techniquement dure : à prouver par une coupure volontaire.'],
+      'fix',
+      'Valeur et criticité corrigées : 3,80 → 5,80.',
+      'Indicateur : minutes d’antenne perdues pendant une coupure de test, non mesuré.',
+    ],
+    [
+      'M2',
+      'Répéter le match avant le match',
+      'Enabler',
+      'En cours',
+      'M',
+      [
+        3,
+        8,
+        'Rend la face club fiable : une trentaine de tickets naissent dans les 48 h de chaque match, et deux bloquants au dernier lancement.',
+      ],
+      [8, 8, 'Le coût revient à chaque match.'],
+      [
+        13,
+        13,
+        'Supprime un risque présent sur tous les lieux et tous les matchs, et c’est une précondition de V1.',
+      ],
+      [
+        8,
+        8,
+        'Trois Features : rejeu sur copie de configuration, lecture des écrans, balayage des boutons.',
+      ],
+      'fix',
+      'Valeur corrigée : 3,00 → 3,63. Déjà en cours (BRO-563) : classé à part.',
+      'Résultat clé de l’objectif actif : aucun défaut bloquant découvert le jour du match.',
+    ],
+    [
+      'M3',
+      'Le club se dépanne seul',
+      'Epic',
+      'En analyse',
+      'M',
+      [
+        8,
+        8,
+        'Rend la face club autonome : tant que le club ne corrige rien seul, chaque lieu ajouté coûte une personne.',
+      ],
+      [
+        5,
+        8,
+        'Le coût revient à chaque match chez le client en place : remplacer un média ou refaire une playlist passe par l’équipe, et l’accès distant est en lecture seule. L’exploitant du Roudourou veut pouvoir corriger lui-même.',
+      ],
+      [5, 5, 'Réduit la dépendance à l’équipe.'],
+      [
+        8,
+        8,
+        'Trois Features qui ouvrent l’écriture au club : droits et garde-fous sur plusieurs couches.',
+      ],
+      'fix',
+      'Criticité corrigée : 2,25 → 2,63.',
+      'Indicateur : gestes faits par le club sans nous, par match, 0 aujourd’hui.',
+    ],
+
+    [
+      'V0',
+      'Tenir l’inventaire vendable de la saison',
+      'Epic',
+      'En cours',
+      'V',
+      [8, 8, 'Rend la face annonceur vendable, mais le revenu se réalise dans V1 à V3.'],
+      [8, 8, 'La saison a commencé : sans inventaire, V1 ne peut rien générer.'],
+      [13, 13, 'Préalable de V1, V2, V3 et V4.'],
+      [5, 5, 'Trois Features sur le modèle de données, huit tickets déjà terminés.'],
+      'keep',
+      'Notes maintenues, 5,80. En cours : classé à part.',
+      'V1 génère la rotation depuis les ventes, mais rien ne dit où ces ventes sont saisies.',
+    ],
+    [
+      'V1',
+      'Ce qui est vendu passe à l’écran',
+      'Epic',
+      'En analyse',
+      'V',
+      [
+        13,
+        13,
+        'Ce que l’annonceur exige : que ce qu’il a payé passe. Aujourd’hui, la rotation se compose à la main sept minutes avant le coup d’envoi.',
+      ],
+      [
+        13,
+        13,
+        'Chez le client payant, chaque journée produit un écart vendu/diffusé qui ne se rattrape pas.',
+      ],
+      [8, 8, 'Débloque V2, qui vaut 20.'],
+      [
+        8,
+        8,
+        'Trois Features, dont la mise à jour quand une vente change : logique de rotation sur plusieurs surfaces.',
+      ],
+      'keep',
+      'Notes maintenues, 4,25. Démarre après P1 et V0.',
+      'Dépend de P1 et M2 (étape 4).',
+    ],
+    [
+      'V2',
+      'La preuve sort du lieu et retrouve la vente',
+      'Epic',
+      'Prêt',
+      'V',
+      [
+        20,
+        20,
+        'Le cœur de la face annonceur : répond au « zéro reporting » du deck. 353 971 lignes de preuve, 0,011 % rattachées à une vente, rien ne sort du boîtier.',
+      ],
+      [13, 13, 'Chaque journée non rattachée manque au bilan de saison, pour toujours.'],
+      [8, 8, 'Débloque V3 et V4, couvre le risque A9.'],
+      [8, 8, 'Trois Features côté boîtier et côté serveur.'],
+      'keep',
+      'Notes maintenues, 5,13. Passe avant V3 dans l’ordre des cartes.',
+      'Indicateur : lignes rattachées à une vente, 0,011 % → plus de 95 %.',
+    ],
+    [
+      'V3',
+      'L’annonceur reçoit sa preuve, sans compte',
+      'Epic',
+      'En analyse',
+      'V',
+      [
+        13,
+        13,
+        'Ce que l’annonceur voit, et un différenciateur (aucun concurrent sans compte). Pas 20 : la valeur de la preuve est déjà comptée dans V2.',
+      ],
+      [
+        13,
+        13,
+        'Aucun annonceur n’a reçu de preuve ; le renouvellement se décide sur la saison en cours.',
+      ],
+      [3, 3, 'Ne débloque que V4, au vivier.'],
+      [
+        3,
+        5,
+        'Le 3 mesurait la première version. L’Epic porte trois Features, dont un lien révocable et une vue club.',
+      ],
+      'fix',
+      'Taille corrigée : 9,67 → 5,80. Ne démarre qu’après V2.',
+      'Indicateur : annonceurs ayant reçu leur preuve, 0 aujourd’hui.',
+    ],
+    [
+      'V4',
+      'Facturer sur la preuve, reverser au club',
+      'Epic',
+      'Vivier',
+      'V',
+      [5, 5, 'Condition du partage de recette : valeur dérivée de V2 et V3.'],
+      [3, 3, 'Aucune facturation sur preuve attendue avant la fin de saison.'],
+      [2, 2, 'Ouvre peu tant que le réseau n’existe pas.'],
+      [8, 8, 'Touche au contrat et à la comptabilité du club.'],
+      'keep',
+      'Notes maintenues, 1,25.',
+      'Le club facture ses partenaires hors de l’outil.',
+    ],
+    [
+      'V5',
+      'Ranger, nommer et retrouver les médias',
+      'Epic',
+      'En analyse',
+      'V',
+      [8, 5, 'Sa valeur, selon sa propre hypothèse, est de rendre P1 utile : elle dérive de P1.'],
+      [13, 5, 'Aucune échéance nommée : le 13 venait du rangement dans le thème actif.'],
+      [13, 8, 'Débloque un seul Epic, P1.'],
+      [5, 5, 'Trois Features, deux tickets démarrés.'],
+      'fix',
+      'Trois notes corrigées : 6,80 → 3,60. Sert plutôt la régie que la preuve : son thème est à revoir.',
+      'Sans médiathèque, P1 met au format des fichiers que personne ne retrouve.',
+    ],
+
+    [
+      'P1',
+      'Le média au format de chaque surface, automatiquement',
+      'Epic',
+      'En analyse',
+      'P',
+      [
+        8,
+        8,
+        'Rend les deux faces fiables : 0 média sur 17 utilisable sans retouche au Rhénus, premier poste de temps de l’équipe.',
+      ],
+      [8, 8, 'Se paie à chaque événement.'],
+      [8, 13, 'Précondition de V1 (étape 4), donc de toute la face annonceur, et de P2 et P3.'],
+      [8, 8, 'Quatre Features : contrôle, pliage, dédoublonnage, écran des refus.'],
+      'fix',
+      'Risque corrigé : 3,00 → 3,63. Passe avant V1 dans l’ordre des cartes : c’est sa place dans l’ordre, pas son score, qui porte sa priorité.',
+      'Résultat clé de l’objectif actif : neuf médias sur dix utilisables sans retouche.',
+    ],
+    [
+      'P2',
+      'Une régie pour toutes les surfaces, sans travail sur mesure',
+      'Epic',
+      'À l’étude',
+      'P',
+      [8, 8, 'Rend le produit vendable à plusieurs lieux sans installation sur mesure.'],
+      [
+        3,
+        8,
+        'Fenêtre datée : « avant le prochain lieu équipé, et avant l’appel d’offres en cours » (étape 5).',
+      ],
+      [8, 8, 'Débloque R1 et la promesse « du gymnase au stade ».'],
+      [13, 13, 'Refonte du modèle de lieu.'],
+      'fix',
+      'Criticité corrigée : 1,46 → 1,85. Reste bas à cause de sa taille. Recoupe R1 : fixer la frontière entre les deux.',
+      'Indicateur : corrections de géométrie après installation, 2 sur 2 → 0.',
+    ],
+    [
+      'P3',
+      'Habiller sans savoir faire du motion design',
+      'Epic',
+      'À l’étude',
+      'P',
+      [
+        5,
+        13,
+        'Cœur de la face club : ses cinq gabarits sont le but, la composition, le score, le sponsor et le message — les faits de jeu et les annonces du club que le public voit à chaque match. Sans eux, chaque changement passe par nous (principe « un changement de titulaire doit être une saisie, pas un rendu à refaire »).',
+      ],
+      [
+        2,
+        8,
+        'Le coût revient à chaque match chez le client en place, et deux nouveaux clubs arrivent d’ici la fin de l’année.',
+      ],
+      [2, 5, 'Sert l’autre face : le gabarit sponsor répond au sponsor « jamais mis en valeur ».'],
+      [
+        13,
+        8,
+        'Deux Features seulement ; le 13 venait de l’image d’un « studio de création ». Les modèles existants de Broadcaster (import Lottie, After Effects) supposent un graphiste : ils ne sont pas exploitables par un club seul et ne réduisent rien.',
+      ],
+      'fix',
+      'Quatre notes corrigées : 0,69 → 3,25. Projet Linear en cours : à poursuivre. Frontière à fixer avec M6 (bandeau de score et faits de jeu).',
+      'Indicateur : visuels produits par le club sans nous, 0 aujourd’hui.',
+    ],
+    [
+      'P4',
+      'Le son du lieu se pilote comme l’image',
+      'Epic',
+      'À l’étude',
+      'P',
+      [
+        2,
+        3,
+        'Un complément de la face club : l’ambiance fait partie du jour de match, et chez MadXp le son restait sur l’enceinte du bénévole.',
+      ],
+      [2, 2, 'Rien ne presse.'],
+      [1, 1, 'N’ouvre rien.'],
+      [5, 5, 'Trois Features sur une couche.'],
+      'fix',
+      'Valeur corrigée : 1,00 → 1,20. Projet Linear en cours : poursuivre ou geler.',
+      'Première version : le son d’une vidéo sort sur la sono.',
+    ],
+    [
+      'P5',
+      'Écrire la conduite du match sur une timeline',
+      'Epic',
+      'À l’étude',
+      'P',
+      [5, 5, 'Geste central de l’opérateur, mais les matchs se tiennent sans.'],
+      [2, 2, 'Aucune échéance.'],
+      [3, 3, 'Prépare P6, au vivier.'],
+      [8, 8, 'Trois Features, dont l’édition pendant le match.'],
+      'keep',
+      'Notes maintenues, 1,25.',
+      'BRO-281 démarré dans Linear.',
+    ],
+    [
+      'P6',
+      'Les gestes d’une régie de direct',
+      'Epic',
+      'Vivier',
+      'P',
+      [
+        3,
+        8,
+        'Rend la face club pilotable en direct : un message du club qui passe devant tout, et une séquence déclenchée par un fait de jeu. La cible inclut les stades, et le client payant en est un.',
+      ],
+      [1, 5, 'Le coût grandit avec les lieux tenus en direct, sans date précise.'],
+      [1, 2, 'Sert M6 : un fait de jeu déclenche une séquence complète.'],
+      [
+        8,
+        8,
+        'Trois Features : aperçu puis antenne, message prioritaire sur toutes les surfaces, séquence déclenchée.',
+      ],
+      'fix',
+      'Trois notes corrigées : 0,63 → 1,88. Sort du vivier.',
+      'Horizon inscrit : décembre 2026 — à revoir.',
+    ],
+    [
+      'P7',
+      'Faire entrer une image vivante dans l’habillage',
+      'Epic',
+      'À l’étude',
+      'P',
+      [3, 3, 'Un complément différenciant, pas demandé.'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [2, 2, 'Ouvre peu.'],
+      [5, 5, 'Deux Features, POC terminé.'],
+      'keep',
+      'Notes maintenues, 1,20.',
+      '« Flux live — production » en cours dans Linear.',
+    ],
+    [
+      'P8',
+      'Afficher ce qui vit sans le produire',
+      'Epic',
+      'Vivier',
+      'P',
+      [
+        2,
+        5,
+        'Complète les annonces du club : classement, horloge, réseaux du club, page du sponsor. Demandé par l’exploitant du client en place. (Qu’elle existe chez MadXp ne change rien pour Broadcaster.)',
+      ],
+      [1, 2, 'Rien ne presse, mais la demande existe.'],
+      [1, 1, 'N’ouvre rien.'],
+      [
+        3,
+        5,
+        'Deux Features. Le 3 supposait un portage de MadXp : on ne reprend que les idées, pas le code.',
+      ],
+      'fix',
+      'Valeur, criticité et taille corrigées : 1,33 → 1,60.',
+      'Horizon inscrit : décembre 2026.',
+    ],
+    [
+      'P9',
+      'L’écran porte la marque du club, pas la nôtre',
+      'Epic',
+      'Vivier',
+      'P',
+      [
+        1,
+        3,
+        'Un revenu additionnel : le deck vend la marque blanche en option, avec une marge de 92,5 %.',
+      ],
+      [1, 1, 'Aucun coût à attendre.'],
+      [1, 1, 'N’ouvre rien.'],
+      [3, 3, 'Deux Features.'],
+      'fix',
+      'Valeur corrigée : 1,00 → 1,67.',
+      'Feature : « notre marque devient optionnelle, par formule ».',
+    ],
+
+    [
+      'R1',
+      'Ouvrir un lieu sans déplacement',
+      'Epic',
+      'À l’étude',
+      'R',
+      [
+        8,
+        8,
+        'Rend le produit vendable à plusieurs lieux : 59 jours entre le premier signal et le premier match habillé, contre « installation en 10 minutes » promise.',
+      ],
+      [3, 3, 'Pas d’échéance datée.'],
+      [8, 8, 'Débloque R2 et R7.'],
+      [
+        13,
+        13,
+        'Refonte du parcours d’ouverture : sa Feature principale est déjà marquée « à découper » en plusieurs Features.',
+      ],
+      'discuss',
+      'Notes maintenues, 1,46. Recoupe P2 : fixer la frontière entre les deux Epics.',
+      'Indicateur : 59 jours → moins de 15.',
+    ],
+    [
+      'R2',
+      'Vendre un pack de lieux à une marque',
+      'Epic',
+      'Vivier',
+      'R',
+      [
+        5,
+        8,
+        'Rend la face annonceur vendable à plusieurs lieux : c’est le levier de la régie dans le deck (« un contrat = N gymnases »).',
+      ],
+      [2, 2, 'Rien ne presse tant qu’un lieu ne produit pas sa preuve.'],
+      [3, 3, 'Couvre un pari, le risque C3.'],
+      [13, 8, 'Le 13 comptait la chaîne V0 à V3. Reste deux Features.'],
+      'fix',
+      'Valeur et taille corrigées : 0,77 → 1,63.',
+      'Contrats de réseau signés : 0 aujourd’hui.',
+    ],
+    [
+      'R3',
+      'Deux niveaux de vente sur le même écran',
+      'Epic',
+      'Vivier',
+      'R',
+      [3, 3, 'Un complément (la part club dans la régie).'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [2, 2, 'Ouvre peu.'],
+      [8, 8, 'Règles de contrat.'],
+      'keep',
+      'Notes maintenues, 0,75.',
+      'Suit R2.',
+    ],
+    [
+      'R4',
+      'S’ouvrir aux autres systèmes : API et agents',
+      'Epic',
+      'À l’étude',
+      'R',
+      [2, 2, 'Déjà en partie en service.'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [2, 2, 'Ouvre peu.'],
+      [3, 3, 'Étend un existant.'],
+      'keep',
+      'Notes maintenues, 1,67.',
+      'À vérifier : ce qui est réellement livré.',
+    ],
+    [
+      'R5',
+      'Faire participer le spectateur depuis son téléphone',
+      'Epic',
+      'Vivier',
+      'R',
+      [2, 2, 'Aucune demande observée.'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [1, 1, 'N’ouvre rien.'],
+      [8, 8, 'Aucune Feature : estimation à l’aveugle.'],
+      'keep',
+      'Notes maintenues, 0,50.',
+      'Horizon 2027-2028.',
+    ],
+    [
+      'R6',
+      'Exposer les données de match à des tiers',
+      'Epic',
+      'Vivier',
+      'R',
+      [1, 1, 'Référence basse : le deck en fait un « moat futur », mais aucun client ne l’attend.'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [1, 1, 'N’ouvre rien.'],
+      [8, 8, 'Aucune Feature.'],
+      'keep',
+      'Notes maintenues, 0,38.',
+      'Suppose M1 et un volume de lieux.',
+    ],
+    [
+      'R7',
+      'Agir sur le matériel à distance, sous garde-fou',
+      'Epic',
+      'Vivier',
+      'R',
+      [2, 2, 'Rien ne le mesure encore.'],
+      [1, 1, 'Conditionné, pas daté.'],
+      [2, 2, 'Ouvre peu sans S5.'],
+      [20, 20, 'Hors d’échelle, aucune Feature.'],
+      'keep',
+      'Notes maintenues, 0,25.',
+      'Historique d’interventions inexistant.',
+    ],
+
+    [
+      'S1',
+      'Mettre en service en continu, par site',
+      'Enabler',
+      'Prêt',
+      'S',
+      [
+        5,
+        8,
+        'Rend la face club fiable : les déploiements en gros lot cassent en match (écrans noirs, sono coupée quinze minutes, neuf incidents). Même nature de perte que M2, qui a 8.',
+      ],
+      [8, 8, 'Chaque déploiement peut tomber un soir de match.'],
+      [13, 13, 'Débloque S2, S4 et la vérification de V2.'],
+      [5, 5, 'Trois Features sur une couche.'],
+      'fix',
+      'Valeur corrigée : 5,20 → 5,80.',
+      'Indicateur : 3,1 jours → moins d’un jour.',
+    ],
+    [
+      'S2',
+      'Savoir ce qui tourne où, et ce qui va tomber',
+      'Enabler',
+      'Prêt',
+      'S',
+      [5, 5, 'Perte d’exploitation évitée : les pannes se découvrent par l’appel du club.'],
+      [8, 8, 'À chaque match.'],
+      [13, 13, 'Préalable de S4 et S5, couvre A2 et A3.'],
+      [5, 5, 'Trois Features.'],
+      'keep',
+      'Notes maintenues, 5,20.',
+      'Tickets fermés sans être en service : 7 sur 13.',
+    ],
+    [
+      'S4',
+      'Publier des engagements de service tenables',
+      'Epic',
+      'À l’étude',
+      'S',
+      [3, 3, 'Un complément commercial.'],
+      [3, 3, 'Risque non certain.'],
+      [3, 3, 'Couvre un pari.'],
+      [5, 5, 'Quatre Features.'],
+      'keep',
+      'Notes maintenues, 1,80.',
+      'Rien de mesurable avant S2 et S5.',
+    ],
+    [
+      'S5',
+      'Lire l’état du matériel qui affiche',
+      'Epic',
+      'En analyse',
+      'S',
+      [3, 3, 'Un complément : la panne matérielle se découvre par le public.'],
+      [3, 3, 'Aucune date.'],
+      [5, 5, 'Rend S4 écrivable.'],
+      [5, 5, 'Première version bornée.'],
+      'keep',
+      'Notes maintenues, 2,20.',
+      'Dépend de S2.',
+    ],
+    [
+      'S3',
+      'Mesurer le flux',
+      'Enabler',
+      'Prêt',
+      'S',
+      [1, 1, 'Aucune valeur pour un client.'],
+      [2, 2, 'Réglage planifié du 14 au 16/09.'],
+      [5, 5, 'Rend lisibles les autres mesures.'],
+      [1, 1, 'Une seule Feature.'],
+      'out',
+      'Hors classement : c’est une tâche. À faire comme prévu, puis rattacher à S2.',
+      'Efficience du flux ≈ 2 %.',
+    ],
+    [
+      'E10',
+      'Une identité de surface partagée',
+      'Enabler',
+      'En analyse',
+      'S',
+      [1, 1, 'Aucune valeur pour un client.'],
+      [1, 1, 'Aucun coût à attendre.'],
+      [8, 5, 'Ne débloque que S5, de valeur 3.'],
+      [2, 2, 'Une brique technique.'],
+      'out',
+      'Hors classement : une brique de S5, à y rattacher comme Feature.',
+      'Aucune Feature, aucun indicateur.',
+    ],
+  ];
+
+  function wsjf(a, i) {
+    return (a[5][i] + a[6][i] + a[7][i]) / a[8][i];
+  }
+  function fr(x) {
+    return x.toFixed(2).replace('.', ',');
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  }
+  var VLAB = { keep: 'Maintenu', fix: 'Corrigé', discuss: 'À discuter', out: 'Hors classement' };
+
+  function who(gi, v) {
+    var inn = [],
+      outs = [];
+    E.forEach(function (e) {
+      if (e[5 + gi][1] === v) (e[9] === 'out' ? outs : inn).push(e[0]);
+    });
+    return (
+      inn.join(' · ') +
+      (outs.length ? (inn.length ? ' · ' : '') + '(' + outs.join(' · ') + ')' : '')
+    );
+  }
+  document.getElementById('grid').innerHTML = GRID.map(function (g, gi) {
+    return (
+      '<div class="grid-col"><header><h3>' +
+      g.k +
+      '</h3><span>' +
+      g.q +
+      '</span></header>' +
+      g.lv
+        .map(function (l) {
+          return (
+            '<div class="lvl"><div class="n">' +
+            l[0] +
+            '</div><div class="d">' +
+            l[1] +
+            '</div><div class="who' +
+            (who(gi, l[0]) ? '' : ' none') +
+            '">' +
+            (who(gi, l[0]) || 'aucun Epic') +
+            '</div></div>'
+          );
+        })
+        .join('') +
+      '<footer>' +
+      g.foot +
+      '</footer></div>'
+    );
+  }).join('');
+
+  document.getElementById('findings').innerHTML = FINDINGS.map(function (f) {
+    return '<div class="finding"><h4>' + f[0] + '</h4><p>' + f[1] + '</p></div>';
+  }).join('');
+
+  var ranked = E.filter(function (e) {
+    return e[9] !== 'out' && e[3] !== 'En cours';
+  }).sort(function (a, b) {
+    return wsjf(b, 1) - wsjf(a, 1) || wsjf(b, 0) - wsjf(a, 0);
+  });
+  var apart = E.filter(function (e) {
+    return e[9] === 'out' || e[3] === 'En cours';
+  });
+  var oldOrder = E.slice()
+    .sort(function (a, b) {
+      return wsjf(b, 0) - wsjf(a, 0);
+    })
+    .map(function (e) {
+      return e[0];
+    });
+  var MAX = 10;
+  function row(e, rk) {
+    var o = wsjf(e, 0),
+      n = e[9] === 'out' ? null : wsjf(e, 1);
+    var moved = n !== null && Math.abs(o - n) > 0.001;
+    return (
+      '<tr><td class="rk">' +
+      rk +
+      '</td>' +
+      '<td class="nm"><span class="code">' +
+      e[0] +
+      '</span><b>' +
+      esc(e[1]) +
+      '</b></td>' +
+      '<td><span class="chip c-' +
+      e[9] +
+      '">' +
+      VLAB[e[9]] +
+      '</span></td>' +
+      '<td class="num old">' +
+      (oldOrder.indexOf(e[0]) + 1) +
+      '</td>' +
+      '<td class="num old">' +
+      fr(o) +
+      '</td>' +
+      '<td class="num' +
+      (moved ? ' moved' : '') +
+      '">' +
+      (n === null ? '—' : fr(n)) +
+      '</td>' +
+      '<td class="barcell"><div class="bar"><i class="o" style="width:' +
+      Math.min(o / MAX, 1) * 100 +
+      '%"></i>' +
+      (n === null ? '' : '<i class="n" style="width:' + Math.min(n / MAX, 1) * 100 + '%"></i>') +
+      '</div></td></tr>'
+    );
+  }
+  var html =
+    '<thead><tr><th>Rang</th><th>Epic</th><th>Verdict</th><th class="num">Rang 13/09</th><th class="num">WSJF 13/09</th><th class="num">Proposé</th><th>Échelle 0 → 10</th></tr></thead><tbody>';
+  var prev = null,
+    rk = 0;
+  ranked.forEach(function (e, i) {
+    var s = fr(wsjf(e, 1));
+    if (s !== prev) rk = i + 1;
+    prev = s;
+    html += row(e, rk);
+  });
+  html += '<tr class="sep"><td colspan="7">Classés à part</td></tr>';
+  apart.forEach(function (e) {
+    html += row(e, e[3] === 'En cours' ? '▶' : '×');
+  });
+  document.getElementById('rank').innerHTML = html + '</tbody>';
+
+  var LAB = ['Valeur métier', 'Criticité', 'Risque', 'Taille'];
+  var out = '',
+    cur = null;
+  E.forEach(function (e) {
+    if (e[4] !== cur) {
+      cur = e[4];
+      out +=
+        '<div class="theme-head" data-theme-group="' +
+        cur +
+        '"><h3>' +
+        TH[cur][0] +
+        '</h3><span>' +
+        TH[cur][1] +
+        '</span></div>';
+    }
+    var o = wsjf(e, 0),
+      n = wsjf(e, 1),
+      changed = Math.abs(o - n) > 0.001;
+    out +=
+      '<article class="epic v-' +
+      e[9] +
+      '" data-v="' +
+      e[9] +
+      '" data-g="' +
+      cur +
+      '">' +
+      '<div class="epic-head"><div><h4><span class="code">' +
+      e[0] +
+      '</span>' +
+      esc(e[1]) +
+      '</h4>' +
+      '<div class="meta"><span class="chip c-' +
+      e[9] +
+      '">' +
+      VLAB[e[9]] +
+      '</span><span class="chip c-plain">' +
+      e[2] +
+      '</span><span class="chip c-plain">' +
+      e[3] +
+      '</span></div></div>' +
+      '<div class="score"><div class="big">' +
+      (e[9] === 'out' ? '—' : fr(n)) +
+      '</div>' +
+      '<div class="was">' +
+      (changed || e[9] === 'out' ? '13/09 : <s>' + fr(o) + '</s>' : 'inchangé') +
+      '</div></div></div>' +
+      '<div class="hyp"><b>Contexte</b>' +
+      esc(e[11]) +
+      '</div><div class="notes">' +
+      [5, 6, 7, 8]
+        .map(function (k, j) {
+          var c = e[k],
+            ch = c[0] !== c[1];
+          return (
+            '<div class="note' +
+            (ch ? ' changed' : '') +
+            '"><div class="lab"><span>' +
+            LAB[j] +
+            '</span><span class="val">' +
+            (ch ? '<s>' + c[0] + '</s>' : '') +
+            c[1] +
+            '</span></div><p>' +
+            esc(c[2]) +
+            '</p></div>'
+          );
+        })
+        .join('') +
+      '</div>' +
+      '<div class="verdict"><span class="chip c-' +
+      e[9] +
+      '">' +
+      VLAB[e[9]] +
+      '</span><span>' +
+      esc(e[10]) +
+      '</span></div></article>';
+  });
+  document.getElementById('epics').innerHTML = out;
+
+  var btns = document.querySelectorAll('.bar-tools button');
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-f');
+      btns.forEach(function (x) {
+        x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      });
+      var groups = {};
+      document.querySelectorAll('.epic').forEach(function (el) {
+        var show = f === 'all' || el.getAttribute('data-v') === f;
+        el.hidden = !show;
+        if (show) groups[el.getAttribute('data-g')] = true;
+      });
+      document.querySelectorAll('.theme-head').forEach(function (h) {
+        h.hidden = !groups[h.getAttribute('data-theme-group')];
+      });
+    });
+  });
+  var counts = {};
+  E.forEach(function (e) {
+    counts[e[9]] = (counts[e[9]] || 0) + 1;
+  });
+  btns.forEach(function (b) {
+    var f = b.getAttribute('data-f');
+    if (f !== 'all') b.textContent += ' (' + (counts[f] || 0) + ')';
+  });
+</script>

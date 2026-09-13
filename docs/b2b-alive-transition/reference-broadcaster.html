@@ -1,0 +1,3449 @@
+<meta charset="utf-8" />
+<title>Référence Broadcaster</title>
+<meta
+  name="description"
+  content="Le document de référence de la verticale Sport &amp; Events de B2B Alive&#8239;: ce qu'est Broadcaster, ce qu'il fait aujourd'hui, la cible produit, le portefeuille complet, le cadre de travail et le flux."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&amp;display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --ok: #1f6a4b;
+    --ok-wash: #dcede4;
+    --part: #8a6a00;
+    --part-wash: #f4ecd0;
+    --bad: #b3261e;
+    --bad-wash: #f6dedb;
+    --man: #3f5b7a;
+    --man-wash: #e1e8f0;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --ok: #5cb68a;
+      --ok-wash: #17301f;
+      --part: #d9b24a;
+      --part-wash: #2f2812;
+      --bad: #f08a80;
+      --bad-wash: #3a1b18;
+      --man: #8fb2e8;
+      --man-wash: #1b2738;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --ok: #5cb68a;
+    --ok-wash: #17301f;
+    --part: #d9b24a;
+    --part-wash: #2f2812;
+    --bad: #f08a80;
+    --bad-wash: #3a1b18;
+    --man: #8fb2e8;
+    --man-wash: #1b2738;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 66ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: block;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 48ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .th {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 7px;
+    align-content: start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .th b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .th p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .th .okr {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+  }
+  .th .okr i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+  }
+  .theme-block {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 900px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 210px;
+  }
+  .t tbody th small {
+    display: block;
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .c-livré {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .c-partiel {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .c-absent {
+    color: var(--bad);
+    background: var(--bad-wash);
+  }
+  .c-en {
+    color: var(--man);
+    background: var(--man-wash);
+  }
+  .hz {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .h-Socle {
+    color: var(--accent);
+  }
+  .h-Extension {
+    color: var(--ink-soft);
+  }
+  .h-Réseau {
+    color: var(--man);
+  }
+  .h-Long {
+    color: var(--muted);
+  }
+  .t td.dem {
+    color: var(--ink-soft);
+    min-width: 220px;
+  }
+  .t td.mx {
+    min-width: 210px;
+  }
+  .enablers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .enablers li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--man);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .enablers b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .enablers p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .enablers .st {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 6px;
+  }
+  .enablers .st i,
+  .enablers .mx i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .enablers .mx {
+    font-size: 13.5px;
+  }
+  .dl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .dl li {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .dl p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  @media (max-width: 700px) {
+    .dl li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+  .decisions {
+    list-style: none;
+    counter-reset: q;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: q;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(q);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 78ch;
+  }
+  .decisions p + p {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .toc {
+    margin: 26px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 2px 20px;
+    border-top: 1px solid var(--rule);
+    padding-top: 14px;
+  }
+  .toc li {
+    font-size: 14.5px;
+  }
+  .toc a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  .toc a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .toc i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-right: 7px;
+  }
+  section > h2 {
+    scroll-margin-top: 18px;
+  }
+  .grp {
+    border-top: 1px solid var(--rule);
+    margin-top: 26px;
+    padding-top: 18px;
+  }
+  .grp-h {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 4px;
+  }
+  .grp-h h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 21px;
+    margin: 0;
+  }
+  .grp-h .code {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .grp-h .nb {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .grp > p.intro {
+    margin: 0 0 16px;
+    max-width: 76ch;
+  }
+  .epics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 14px;
+  }
+  .epic {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 13px 16px 14px;
+  }
+  .epic > b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.25;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .epic > b i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-right: 8px;
+    font-weight: 500;
+  }
+  .epic ol {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 5px;
+  }
+  .epic li {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .viv {
+    border-left-color: var(--muted);
+  }
+  .viv p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .caps {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+    padding-top: 16px;
+  }
+  .caps > header {
+    margin-bottom: 12px;
+  }
+  .caps h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  .caps .res {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    max-width: 70ch;
+  }
+  .caps .res b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .rules {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .rules li {
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .rules b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15.5px;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .rules p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px 34px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+  }
+  .card b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    display: block;
+    margin-bottom: 5px;
+  }
+  .card p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .card ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 5px;
+  }
+  .card li {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .card.neg {
+    border-top-color: var(--rule-strong);
+  }
+  .card.man {
+    border-top-color: var(--man);
+  }
+  .t td b,
+  .t td strong {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .t.narrow {
+    min-width: 640px;
+  }
+  .lead-num {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .sig {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.4;
+    border-left: 3px solid var(--accent);
+    padding-left: 16px;
+    margin: 18px 0 22px;
+    max-width: 60ch;
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Référence</b><span>Verticale Sport &amp; Events</span><span>B2B Alive</span
+      ><span>Document unique</span>
+    </div>
+    <h1>Broadcaster</h1>
+    <p class="lede">
+      La régie qui fait vivre tous les écrans d'une enceinte sportive&nbsp;: ruban LED de bord de
+      terrain, écrans géants, TV de tribune et sonorisation, pilotés ensemble. Ce document dit ce
+      qu'est le produit, ce qu'il fait aujourd'hui, où il va, et comment on travaille.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>Ce qu'on y trouve</dt>
+        <dd>
+          Le produit et ses surfaces, la cible en quatre thèmes et vingt-deux capacités, le
+          portefeuille complet — 32&nbsp;Epics et 85&nbsp;Features — le cadre, le flux et les
+          rituels.
+        </dd>
+      </div>
+      <div>
+        <dt>La règle qui tient tout</dt>
+        <dd>
+          Notion porte l'intention, Linear porte l'état. Jamais les deux au même endroit. Tout le
+          reste en découle.
+        </dd>
+      </div>
+      <div>
+        <dt>Pour qui</dt>
+        <dd>
+          Celui qui arrive — développeur, produit ou support — et qui doit pouvoir travailler après
+          l'avoir lu.
+        </dd>
+      </div>
+    </dl>
+    <ul class="toc">
+      <li>
+        <a href="#produit"><i>01</i>Ce qu'est Broadcaster</a>
+      </li>
+      <li>
+        <a href="#aujourdhui"><i>02</i>Ce que le produit fait aujourd'hui</a>
+      </li>
+      <li>
+        <a href="#cible"><i>03</i>La cible produit</a>
+      </li>
+      <li>
+        <a href="#portefeuille"><i>04</i>Le portefeuille</a>
+      </li>
+      <li>
+        <a href="#cadre"><i>05</i>Le cadre de travail</a>
+      </li>
+      <li>
+        <a href="#outils"><i>06</i>Notion et Linear</a>
+      </li>
+      <li>
+        <a href="#flux"><i>07</i>Le flux</a>
+      </li>
+      <li>
+        <a href="#rituels"><i>08</i>Les rituels et le quotidien</a>
+      </li>
+      <li>
+        <a href="#nommage"><i>09</i>Les règles de nommage</a>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="produit" aria-labelledby="pro-h">
+    <span class="kicker">01</span>
+    <h2 id="pro-h">Ce qu'est Broadcaster, et pour qui</h2>
+    <p class="sig">Tous les écrans du stade. Une seule régie.</p>
+    <div class="prose">
+      <p>
+        Broadcaster est le logiciel de la verticale Sport &amp; Events de B2B Alive. Il pilote,
+        depuis un seul poste, l'ensemble des surfaces d'une enceinte sportive&nbsp;: le ruban LED de
+        bord de terrain, les écrans géants, les TV de tribune et la sonorisation. Chaque surface a
+        son contenu propre&nbsp;; toutes partent au même instant.
+      </p>
+      <p>
+        Le produit ne remplace rien. Il ne vend pas d'écran, il n'impose aucun matériel&nbsp;: il
+        pilote le LED déjà posé, quel que soit celui qui l'a posé, et parle aux processeurs du
+        marché. Un club qui a déjà ses écrans les garde.
+      </p>
+      <p>
+        La cible est <strong>tout stade et tout gymnase</strong>. Le produit est le même du gymnase
+        au stade&nbsp;: le niveau de jeu ne change ni le logiciel, ni les gestes. Deux formes
+        d'installation cohabitent — une box sur place, qui tient le match sans dépendre d'internet,
+        ou une régie hébergée pour un événement.
+      </p>
+      <p>
+        <strong>Pourquoi le produit existe.</strong> Le problème n'est pas l'écran, c'est le
+        sponsoring des clubs&nbsp;: 1,78&nbsp;Md€ en France, payé à 59&nbsp;% par des PME, et
+        pourtant 10&nbsp;% seulement du budget d'un club amateur. Le sponsor ne renouvelle pas pour
+        trois raisons&nbsp;: il n'est pas mis en valeur, il ne voit aucun résultat, et il n'a pas de
+        canal local.
+        <em
+          >(Chiffres repris d'un deck investisseur NEOPRO d'avril 2026, à revérifier avant tout
+          usage externe.)</em
+        >
+      </p>
+      <p>Le produit y répond par <strong>deux faces qui se renforcent</strong>&nbsp;:</p>
+      <ul>
+        <li>
+          <strong>La face club, le cœur&nbsp;: le match s'anime sans nous.</strong> Le score lu
+          automatiquement sur la table de marque, les faits de jeu qui nomment le bon joueur et
+          lancent leur animation, les annonces du club, l'habillage, l'ambiance, les partenaires
+          visibles. Un bénévole ou un opérateur pilote depuis son téléphone. L'écran tient même sans
+          réseau. C'est ce que le club achète et utilise à chaque match&nbsp;; sans elle, pas
+          d'écran allumé, pas de public, rien à vendre.
+        </li>
+        <li>
+          <strong
+            >La face annonceur, le levier&nbsp;: ce qui est vendu passe, et c'est prouvé.</strong
+          >
+          La preuve de diffusion remonte, l'annonceur reçoit son rapport. Ensuite, un contrat pour
+          plusieurs salles.
+        </li>
+      </ul>
+      <p>
+        Toute priorisation se juge sur les deux faces. Ce qui fait tenir et vivre le match n'est pas
+        une simple précondition de la preuve&nbsp;: c'est la moitié du produit.
+        <em>(Décision du 13/09/2026.)</em>
+      </p>
+    </div>
+    <h3 class="kicker" style="margin-top: 24px">Les publics</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Qui</th>
+            <th scope="col">Ce qu'il attend du produit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Le club, et l'exploitant du lieu</th>
+            <td>
+              Il achète un écran qui travaille pour lui&nbsp;: qui anime son match et qui diffuse ce
+              qu'il a vendu. Il veut un seul point d'entrée, et pouvoir corriger lui-même.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">L'opérateur de régie</th>
+            <td>
+              Il tient le direct. Il a besoin de gestes rapides, prévisibles, et d'un outil qui ne
+              le surprenne pas sous pression.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Le bénévole en tribune</th>
+            <td>
+              Il n'a ni compte, ni formation, ni PC. Il pilote depuis son téléphone, souvent en
+              tenant aussi le micro.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">L'annonceur, et son agence</th>
+            <td>
+              Il achète du temps d'antenne à un moment du match, pas la présence d'un écran. Il veut
+              savoir que son spot est passé.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">L'équipe B2B Alive</th>
+            <td>
+              Elle prépare, vérifie et dépanne à distance, et accompagne le premier match d'un lieu.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="aujourdhui" aria-labelledby="auj-h">
+    <span class="kicker">02</span>
+    <h2 id="auj-h">Ce que le produit fait aujourd'hui</h2>
+    <p class="intro prose">
+      Le produit tourne en match. Ce qui suit décrit ce qu'il sait faire, surface par surface puis
+      usage par usage, et se termine par ce qui n'est pas disponible — la liste est aussi utile que
+      la première, parce qu'elle dit ce qu'on ne promet pas.
+    </p>
+
+    <h3 class="kicker">Par surface</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Surface</th>
+            <th scope="col">Ce que Broadcaster en fait</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Le ruban LED périmétrique</th>
+            <td>
+              Broadcaster lui envoie l'image au format exact attendu par son processeur, pliée côté
+              par côté, posée au pixel près. Il parle aux processeurs du marché — Linsn, NovaStar —
+              et pilote le ruban déjà installé, quel que soit celui qui l'a posé&nbsp;: aucun écran
+              n'est à changer.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les écrans géants</th>
+            <td>
+              Chaque géant est une surface à part entière, avec son contenu propre. Deux géants
+              tournent ensemble au Roudourou, à soixante images par seconde, et partent au même top
+              que le reste du lieu.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les TV de tribune</th>
+            <td>
+              Elles se pilotent comme les autres surfaces, avec leur playlist et leur habillage,
+              depuis la même régie.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">La sonorisation</th>
+            <td>
+              Le son du lieu est une sortie de la régie&nbsp;: il part au même instant que l'image,
+              et il est diffusé à chaque match au Roudourou.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Par usage</h3>
+    <ul class="dl">
+      <li>
+        <b>L'habillage du match</b>
+        <p>
+          Le score est affiché en temps réel, pour plusieurs sports, avec sa variante verticale et
+          son journal de match. Le chronomètre et les périodes suivent les règles du sport&nbsp;:
+          temps morts déduits, gel, correction de dérive sur l'arbitre officiel. Les faits de jeu —
+          but, temps mort, mi-temps, entrée des joueurs — déclenchent chacun leur animation, sur les
+          écrans choisis, et l'animation de but peut porter la vidéo du joueur qui vient de marquer.
+          La présentation d'équipe part des effectifs saisis dans la régie&nbsp;: photo, numéro,
+          poste. La fan cam met le public sur l'écran géant. Les habillages se font à la charte du
+          club, et les animations produites sous After Effects, Lottie ou Rive s'y intègrent.
+        </p>
+      </li>
+      <li>
+        <b>La conduite du soir</b>
+        <p>
+          Un conducteur par phases et sous-phases — avant-match, mi-temps, après-match — enchaîne
+          les contenus de chaque phase tout seul. Une playlist par écran s'avance, se recule et se
+          met en pause en plein match. Les boucles vidéo changent avec la phase, sans intervention.
+        </p>
+      </li>
+      <li>
+        <b>La régie publicitaire</b>
+        <p>
+          Les créneaux se définissent par phase de match, par événement et par saison. La rotation
+          est pondérée&nbsp;: chaque annonceur passe en proportion de ce qu'il a acheté, avec un
+          poids par défaut, des surcharges et des exclusions par événement. Un partenaire peut
+          n'être diffusé que les jours de match. Un spot s'arrête tout seul à la fin de son contrat,
+          et le cycle de vie complet d'un spot — auditer, corriger, supprimer, remplacer — se tient
+          depuis la régie. Chaque passage est enregistré, écran par écran et annonceur par
+          annonceur.
+        </p>
+      </li>
+      <li>
+        <b>La télécommande</b>
+        <p>
+          Elle tient dans la main&nbsp;: pas de PC à maîtriser en plein match. À l'Europ'A&nbsp;Cup,
+          au Rhénus Sport de Strasbourg, un tournoi de trois jours a été piloté entièrement depuis
+          un téléphone, par un bénévole.
+        </p>
+      </li>
+      <li>
+        <b>L'exploitation à distance</b>
+        <p>
+          Une vidéo envoyée depuis le bureau arrive au club&nbsp;: la chaîne va du portail à la
+          salle. Les comptes sont distincts pour l'agence, l'annonceur et le club. L'équipe peut
+          intervenir à distance sur un lieu. Avant chaque coup d'envoi, des outils de préparation
+          contrôlent les spots, les playlists et le câblage des animations, écran par écran&nbsp;;
+          un assistant interroge la régie en langage naturel et sert à cette préparation.
+        </p>
+      </li>
+      <li>
+        <b>L'installation</b>
+        <p>
+          Deux formes, selon l'enceinte. Une box sur place, qui tourne sur le réseau du stade&nbsp;:
+          pendant le match, rien ne dépend d'internet, et les médias sont déjà là. Ou une régie
+          hébergée, pour un tournoi ou un événement&nbsp;: sur place, il ne reste que les écrans à
+          brancher. Une formule sans matériel existe aussi&nbsp;: un simple navigateur suffit.
+        </p>
+      </li>
+    </ul>
+
+    <h3 class="kicker" style="margin-top: 26px">Où il tourne</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Lieu</th>
+            <th scope="col">Discipline</th>
+            <th scope="col">Ce qui est piloté</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">EA Guingamp · Roudourou</th>
+            <td>Football, Ligue&nbsp;2</td>
+            <td>
+              Ruban périmétrique, tribune, deux écrans géants et son, pilotés ensemble à chaque
+              match à domicile, depuis une box au stade.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Europ'A&nbsp;Cup · Rhénus Sport</th>
+            <td>Handball, tournoi international</td>
+            <td>
+              Strasbourg, huit clubs, trois jours. Ruban de quarante mètres, tribunes, écran géant
+              et fan cam, en régie hébergée, pilotés depuis une télécommande.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Tournoi 4x4 · Bouaye</th>
+            <td>Handball, tournoi</td>
+            <td>Faits de jeu et playlists déclenchés en direct.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Ce qui n'est pas disponible aujourd'hui</h3>
+    <p class="intro prose">
+      Quand un club le demande, la réponse est «&nbsp;ce n'est pas disponible aujourd'hui&nbsp;», la
+      demande se note, et elle part au Triage.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Sujet</th>
+            <th scope="col">État</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Le replay, le ralenti et le multiview</th>
+            <td>Ils ne sont pas disponibles.</td>
+          </tr>
+          <tr>
+            <th scope="row">Le mélangeur de direct — préparé puis antenne, incrustation, faders</th>
+            <td>Il n'est pas disponible&nbsp;: tout part directement à l'antenne.</td>
+          </tr>
+          <tr>
+            <th scope="row">La lecture de la table de marque</th>
+            <td>
+              Le score se saisit depuis la régie. Saisi à la main, il est inexploitable dans les
+              sports à nombreux buts et faits de jeu — handball, basket, futsal, hockey&nbsp;: trop
+              de double saisie. La lecture automatique doit couvrir tout type de table de marque,
+              Bodet et Stramatel en priorité.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">La restitution de la preuve à l'annonceur</th>
+            <td>
+              Les passages sont enregistrés dans le lieu. Ils n'en sortent pas, et aucun rapport,
+              tableau de bord ou portail chiffré ne les rend à l'annonceur.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">La facturation et la réservation d'emplacements</th>
+            <td>Elles ne sont pas disponibles.</td>
+          </tr>
+          <tr>
+            <th scope="row">La médiathèque</th>
+            <td>Ce qui existe est un dépôt de médias et leur câblage depuis la régie.</td>
+          </tr>
+          <tr>
+            <th scope="row">L'import des effectifs et des photos depuis une source externe</th>
+            <td>
+              Ce qui est automatique, c'est la préparation des fichiers fournis&nbsp;: détourage,
+              cadrage, mise au format.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">
+              La chaîne audio de production — normalisation des niveaux, écoute en cabine, mixage
+              par sortie
+            </th>
+            <td>
+              Elle est en construction. Ce qui sort aujourd'hui, c'est le son de ce qui est diffusé.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">La vidéo en direct dans l'habillage</th>
+            <td>Elle est démontrable&nbsp;; elle n'est pas en production.</td>
+          </tr>
+          <tr>
+            <th scope="row">La gestion de plusieurs sites dans une même régie</th>
+            <td>Elle n'est pas en production.</td>
+          </tr>
+          <tr>
+            <th scope="row">La supervision de la flotte</th>
+            <td>Aucun état ne remonte d'un lieu sans connexion technique à sa box.</td>
+          </tr>
+          <tr>
+            <th scope="row">Les TV de hall et de buvette</th>
+            <td>Techniquement possibles, jamais déployées.</td>
+          </tr>
+          <tr>
+            <th scope="row">Les engagements de service chiffrés</th>
+            <td>Ils ne sont pas arrêtés.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="cible" aria-labelledby="cib-h">
+    <span class="kicker">03</span>
+    <h2 id="cib-h">La cible produit</h2>
+    <p class="intro prose">
+      Ce que le logiciel doit savoir faire, indépendamment de l'équipe et du carnet de tickets.
+      Vingt-deux capacités, rattachées à quatre thèmes stratégiques. Un thème est une direction qui
+      tient plusieurs années et se formule en résultat pour le client&nbsp;; une capacité est ce que
+      le produit sait faire, écrit du point de vue du client.
+    </p>
+    <div class="themes">
+      <div class="th">
+        <b>1 · La preuve rend le sponsoring renouvelable</b>
+        <p>Le club revend ses partenaires sur des chiffres, plus sur sa parole.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Un annonceur peut prouver qu'il a été diffusé.</span
+        >
+      </div>
+      <div class="th">
+        <b>2 · Le soir du match tient sans nous</b>
+        <p>Le lieu produit son match seul, avec les gens qu'il a.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Un match se produit de bout en bout sans intervention de
+          l'éditeur.</span
+        >
+      </div>
+      <div class="th">
+        <b>3 · Une régie pour toutes les surfaces</b>
+        <p>Du gymnase au stade, le même moteur et les mêmes gestes.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Toute surface d'un lieu se pilote depuis la même régie, sans
+          travail sur mesure.</span
+        >
+      </div>
+      <div class="th">
+        <b>4 · Un réseau de salles, vendable d'un seul contrat</b>
+        <p>La destination économique&nbsp;: l'inventaire agrégé, pas l'outil vendu à l'unité.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Une marque achète plusieurs lieux en un contrat, et chaque club
+          touche sa part.</span
+        >
+      </div>
+    </div>
+    <p class="thesis-note prose">
+      Le thème&nbsp;1 rend le sponsoring renouvelable, donc vendable plus cher. Le thème&nbsp;2
+      permet de multiplier les lieux sans multiplier les présences. Le thème&nbsp;3 couvre toutes
+      les surfaces pour que la promesse vaille du gymnase au stade. Le thème&nbsp;4 transforme des
+      clubs équipés en inventaire vendable d'un seul contrat.
+    </p>
+    <p class="thesis-note prose">
+      La numérotation ne dit pas l'ordre. Les thèmes&nbsp;1 et&nbsp;2 portent les deux faces du
+      produit — l'annonceur et le club — et aucun ne passe devant l'autre. L'objectif du trimestre,
+      fixé le 13/09/2026, les couvre ensemble&nbsp;:
+      <strong
+        >«&nbsp;Chaque match d'un club client est animé sans nous, et ses partenaires reçoivent la
+        preuve de leur diffusion.&nbsp;»</strong
+      >
+      Il remplace l'ancien objectif «&nbsp;Un annonceur peut prouver qu'il a été diffusé&nbsp;», qui
+      ne regardait qu'une face. Un gymnase et un club de handball ou de basket arrivent d'ici la fin
+      2026.
+    </p>
+    <div class="tbl-wrap" style="margin-top: 14px">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Résultat clé</th>
+            <th scope="col">Point de départ</th>
+            <th scope="col">Epics</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              Club — les matchs du client se tiennent sans intervention de notre équipe, et sans
+              défaut bloquant
+            </th>
+            <td>Non mesuré&nbsp;; 2 défauts bloquants au dernier lancement</td>
+            <td>M2 · M3 · S1</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Club — un premier match en gymnase et un en handball ou basket, tenus par un bénévole
+              au téléphone, avec le score lu automatiquement, Bodet et Stramatel
+            </th>
+            <td>0</td>
+            <td>M5 · M1 · M6 · M4</td>
+          </tr>
+          <tr>
+            <th scope="row">Les deux faces — neuf médias sur dix utilisables sans retouche</th>
+            <td>0 sur 17</td>
+            <td>P1</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Annonceur — 95&nbsp;% des passages rattachés à leur vente et remontés hors du lieu
+            </th>
+            <td>0,011&nbsp;% rattachés, 0&nbsp;% remontés</td>
+            <td>V1 · V2 · S1</td>
+          </tr>
+          <tr>
+            <th scope="row">Annonceur — trois annonceurs ont reçu leur rapport sans compte</th>
+            <td>0</td>
+            <td>V3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="caps">
+      <header>
+        <span class="kicker">Thème&nbsp;1 · 5 capacités</span>
+        <h3>La preuve rend le sponsoring renouvelable</h3>
+        <p class="res">
+          <b>Résultat attendu&nbsp;:</b> Un annonceur peut prouver qu'il a été diffusé.
+        </p>
+      </header>
+      <div class="tbl-wrap">
+        <table class="t">
+          <thead>
+            <tr>
+              <th scope="col">Capacité</th>
+              <th scope="col">Ce que ça veut dire pour le client</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Vendre un créneau et savoir ce qui reste à vendre</th>
+              <td>
+                Le club voit l'inventaire de sa saison&nbsp;: emplacements, parts, ce qui est pris.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Ce qui est vendu passe à l'écran, sans geste humain</th>
+              <td>
+                La rotation du match se compose depuis les ventes, et prévient si une vente n'a pas
+                de passage.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Prouver à l'annonceur que son spot est passé</th>
+              <td>Une preuve horodatée, rattachée à sa vente, qui sort du lieu et lui arrive.</td>
+            </tr>
+            <tr>
+              <th scope="row">Donner à l'annonceur son espace, sans lui créer de compte</th>
+              <td>Le partenaire ouvre un lien et voit ses passages, ses vidéos, sa période.</td>
+            </tr>
+            <tr>
+              <th scope="row">Facturer sur la preuve, et reverser au club</th>
+              <td>La facture s'appuie sur ce qui est passé, et la part du club est calculée.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="caps">
+      <header>
+        <span class="kicker">Thème&nbsp;2 · 6 capacités</span>
+        <h3>Le soir du match tient sans nous</h3>
+        <p class="res">
+          <b>Résultat attendu&nbsp;:</b> Un match se produit de bout en bout sans intervention de
+          l'éditeur.
+        </p>
+      </header>
+      <div class="tbl-wrap">
+        <table class="t">
+          <thead>
+            <tr>
+              <th scope="col">Capacité</th>
+              <th scope="col">Ce que ça veut dire pour le client</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">L'écran ne s'arrête pas si internet tombe</th>
+              <td>Le match se joue même quand le réseau du gymnase lâche.</td>
+            </tr>
+            <tr>
+              <th scope="row">Un bénévole pilote depuis son téléphone, sans compte ni formation</th>
+              <td>Personne n'est bloqué devant un PC de régie pendant le match.</td>
+            </tr>
+            <tr>
+              <th scope="row">Le score et le chrono viennent de la table de marque</th>
+              <td>Plus de double saisie, plus de score faux à l'écran.</td>
+            </tr>
+            <tr>
+              <th scope="row">Répéter le match avant le match</th>
+              <td>On voit ce qui sortirait, la veille, sans attendre le coup d'envoi.</td>
+            </tr>
+            <tr>
+              <th scope="row">Le club se dépanne seul</th>
+              <td>
+                Remplacer un média, refaire une playlist, corriger une composition&nbsp;: sans nous.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Savoir qu'un écran va tomber avant que le club n'appelle</th>
+              <td>La panne se voit depuis le bureau, pas depuis la tribune.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="caps">
+      <header>
+        <span class="kicker">Thème&nbsp;3 · 6 capacités</span>
+        <h3>Une régie pour toutes les surfaces</h3>
+        <p class="res">
+          <b>Résultat attendu&nbsp;:</b> Toute surface d'un lieu se pilote depuis la même régie,
+          sans travail sur mesure.
+        </p>
+      </header>
+      <div class="tbl-wrap">
+        <table class="t">
+          <thead>
+            <tr>
+              <th scope="col">Capacité</th>
+              <th scope="col">Ce que ça veut dire pour le client</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Piloter ruban, écran géant, TV secondaires et sono ensemble</th>
+              <td>Une seule régie tient tout le lieu, au lieu d'un outil par surface.</td>
+            </tr>
+            <tr>
+              <th scope="row">Adapter un média au format exact de chaque surface</th>
+              <td>
+                L'agence livre ce qu'elle veut&nbsp;; le logiciel met au format, plie et vérifie.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Habiller le match&nbsp;: score à l'écran, faits de jeu, gabarits</th>
+              <td>Le match a l'air d'une retransmission, pas d'un diaporama.</td>
+            </tr>
+            <tr>
+              <th scope="row">
+                Créer un habillage aux couleurs du club sans savoir faire du motion design
+              </th>
+              <td>Le club change ses visuels sans passer par un prestataire.</td>
+            </tr>
+            <tr>
+              <th scope="row">Afficher autre chose qu'une vidéo&nbsp;: page web, flux, image</th>
+              <td>Classement, météo, réseaux du club, sans produire de vidéo.</td>
+            </tr>
+            <tr>
+              <th scope="row">Vidéo live, caméra, replay, multiview</th>
+              <td>Le lieu produit sa propre image, au-delà des contenus préparés.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="caps">
+      <header>
+        <span class="kicker">Thème&nbsp;4 · 5 capacités</span>
+        <h3>Un réseau de salles, vendable d'un seul contrat</h3>
+        <p class="res">
+          <b>Résultat attendu&nbsp;:</b> Une marque achète plusieurs lieux en un contrat, et chaque
+          club touche sa part.
+        </p>
+      </header>
+      <div class="tbl-wrap">
+        <table class="t">
+          <thead>
+            <tr>
+              <th scope="col">Capacité</th>
+              <th scope="col">Ce que ça veut dire pour le client</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Ouvrir un nouveau lieu sans déplacement ni ligne de commande</th>
+              <td>Un club démarre seul, en une demi-journée au lieu de plusieurs semaines.</td>
+            </tr>
+            <tr>
+              <th scope="row">Piloter et dépanner tous les lieux depuis un seul écran</th>
+              <td>Un parc se tient à distance, sans se déplacer.</td>
+            </tr>
+            <tr>
+              <th scope="row">
+                Vendre un pack de lieux à une marque, avec ciblage et rapport consolidé
+              </th>
+              <td>Un annonceur régional signe un contrat et touche tout le réseau.</td>
+            </tr>
+            <tr>
+              <th scope="row">Vendre le même écran à deux niveaux, avec reversement au club</th>
+              <td>
+                Les partenaires du club et les annonceurs du réseau cohabitent sans se marcher
+                dessus.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">S'ouvrir aux autres systèmes&nbsp;: API et agents</th>
+              <td>Le club, la ligue ou un média branchent leurs outils sans nous demander.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="portefeuille" aria-labelledby="por-h">
+    <span class="kicker">04</span>
+    <h2 id="por-h">Le portefeuille</h2>
+    <p class="intro prose">
+      L'écart entre la cible et l'état du produit, transformé en paris. Un <strong>Epic</strong> est
+      un pari qui dure&nbsp;: une hypothèse réfutable, une première version, un indicateur. Il ne se
+      termine pas à une date. Une <strong>Feature</strong> est ce qui se livre et s'annonce&nbsp;:
+      un service livré, une hypothèse de bénéfice, des critères d'acceptation, et une taille qui
+      tient dans une release mensuelle, vérifiable sur un site. Le portefeuille compte 32&nbsp;Epics
+      — 29 découpés, 3 au vivier — et 85&nbsp;Features, réparties sur les quatre thèmes et un socle.
+      <em
+        >(Recompté après les décisions du 13/09/2026&nbsp;: S3 et E10 requalifiés en Features, P3,
+        P6, P8 et V5 changés de thème. La base Notion est à aligner.)</em
+      >
+    </p>
+    <p class="intro prose">
+      Chaque Epic porte un code&nbsp;: c'est ainsi qu'on en parle. Sous chaque Epic, ses Features,
+      nommées par le service qu'elles livrent.
+    </p>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Le socle</span>
+        <h3>Un socle qui ne casse pas</h3>
+        <span class="nb">4 Epics · 16 Features</span>
+      </div>
+      <p class="intro">
+        Ce qui ne se vend pas, et sans quoi rien d'autre n'avance&nbsp;: la mise en service, le
+        suivi de la flotte, les engagements de service, et la lecture de l'état du matériel. Depuis
+        le 13/09/2026, la mesure du flux (ex-S3) est une Feature de S2, et l'identité de surface
+        partagée (ex-E10) une Feature de S5&nbsp;: ni l'une ni l'autre n'était un pari.
+      </p>
+      <div class="epics">
+        <article class="epic">
+          <b><i>S1</i>Mettre en service en continu, par site</b>
+          <ol>
+            <li>Recette de déploiement en une commande</li>
+            <li>Page d'état des versions par site</li>
+            <li>Retour arrière scripté</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>S2</i>Savoir ce qui tourne où, et ce qui va tomber</b>
+          <ol>
+            <li>Battement de cœur par site</li>
+            <li>Page «&nbsp;ce qui tourne où&nbsp;»</li>
+            <li>Alerte quand un écran ou la sono meurt</li>
+            <li>Statut terminal unique et deux horodatages exportables <em>(ex-Epic S3)</em></li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>S4</i>Publier des engagements de service tenables</b>
+          <ol>
+            <li>Tableau de bord des quatre engagements, mis à jour tout seul</li>
+            <li>Fiche d'engagements de service, publiable à un client</li>
+            <li>Alerte quand un engagement se dégrade avant d'être manqué</li>
+            <li>
+              L'engagement de service dit ce qu'il couvre sur le matériel, et ce qu'il ne couvre pas
+            </li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>S5</i>Lire l'état du matériel qui affiche</b>
+          <ol>
+            <li>Sonde d'état pour une famille de processeur</li>
+            <li>Un écran noir dit s'il est logiciel ou matériel</li>
+            <li>L'état des surfaces entre dans la checklist J-3</li>
+            <li>Une page d'état par surface, adressable par son nom</li>
+            <li>Une identité de surface partagée <em>(ex-Enabler E10)</em></li>
+          </ol>
+        </article>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Thème&nbsp;1</span>
+        <h3>La preuve rend le sponsoring renouvelable</h3>
+        <span class="nb">5 Epics · 14 Features</span>
+      </div>
+      <p class="intro">
+        Le club revend ses partenaires sur des chiffres, plus sur sa parole. Résultat attendu&nbsp;:
+        un annonceur peut prouver qu'il a été diffusé. C'est la face annonceur du produit. La
+        médiathèque (V5) a rejoint le thème&nbsp;3 le 13/09/2026.
+      </p>
+      <div class="epics">
+        <article class="epic">
+          <b><i>V0</i>Tenir l'inventaire vendable de la saison</b>
+          <ol>
+            <li>La saison du lieu&nbsp;: événements, créneaux, emplacements</li>
+            <li>Ce qui est vendu, ce qui reste à vendre</li>
+            <li>Une vente datée s'arrête toute seule</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>V1</i>Ce qui est vendu passe à l'écran</b>
+          <ol>
+            <li>Génération de la rotation d'une journée depuis ses ventes</li>
+            <li>Alerte des ventes sans passage</li>
+            <li>Mise à jour de la rotation quand une vente change</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>V2</i>La preuve sort du lieu et retrouve la vente</b>
+          <ol>
+            <li>Identifiant de vente sur chaque ligne de preuve</li>
+            <li>Remontée de la preuve hors du lieu</li>
+            <li>Rapprochement vendu contre diffusé</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>V3</i>L'annonceur reçoit sa preuve, sans compte</b>
+          <ol>
+            <li>Rapport de diffusion par annonceur</li>
+            <li>Lien d'accès sans compte, révocable</li>
+            <li>Vue club de ses annonceurs et de leurs rapports</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>V4</i>Facturer sur la preuve, reverser au club</b>
+          <ol>
+            <li>État de facturation calculé sur le diffusé</li>
+            <li>Calcul de la part du club</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Thème&nbsp;2</span>
+        <h3>Le soir du match tient sans nous</h3>
+        <span class="nb">9 Epics · 22 Features</span>
+      </div>
+      <p class="intro">
+        Le lieu produit son match seul, avec les gens qu'il a. Résultat attendu&nbsp;: un match se
+        produit de bout en bout sans intervention de l'éditeur. C'est la face club du produit. Les
+        gabarits (P3), les gestes de direct portant les messages du club (P6) et les contenus
+        vivants (P8) l'ont rejoint le 13/09/2026&nbsp;; ils gardent leur code.
+      </p>
+      <div class="epics">
+        <article class="epic">
+          <b><i>M1</i>Le score vient de la table de marque</b>
+          <ol>
+            <li>Connecteur table de marque Bodet</li>
+            <li>Simulateur Bodet pour la recette</li>
+            <li>Connecteur table de marque Stramatel</li>
+            <li>Simulateur Stramatel pour la recette</li>
+            <li>Connecteur d&#x27;une troisième table de marque (marque à confirmer)</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>M2</i>Répéter le match avant le match</b>
+          <ol>
+            <li>Rejeu d'une journée sur copie de configuration</li>
+            <li>Lecture des écrans dans le rejeu</li>
+            <li>Balayage de tous les boutons</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>M3</i>Le club se dépanne seul</b>
+          <ol>
+            <li>Remplacement d'un média depuis le portail club</li>
+            <li>Composition d'une playlist par le club</li>
+            <li>Correction des compositions jusqu'au coup d'envoi</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>M4</i>L'écran ne s'arrête pas si le réseau tombe</b>
+          <ol>
+            <li>File d'attente et reprise hors ligne</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>M5</i>Piloter le match depuis un téléphone</b>
+          <ol>
+            <li>Télécommande ouverte par un code, sans compte</li>
+            <li>Les gestes du match sous le pouce</li>
+            <li>La télécommande dit si elle est reliée</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>M6</i>Habiller le match&nbsp;: score, chrono, faits de jeu</b>
+          <ol>
+            <li>Bandeau de score paramétrable, par sport et par surface</li>
+            <li>Un fait de jeu nomme la bonne personne, ou ne nomme personne</li>
+            <li>Journal du match corrigeable, et exportable en fin de rencontre</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P3</i>Habiller sans savoir faire du motion design</b>
+          <ol>
+            <li>Cinq gabarits paramétrables</li>
+            <li>Aperçu avant diffusion</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P6</i>Les gestes d'une régie de direct</b>
+          <ol>
+            <li>Préparer avant d'envoyer&nbsp;: aperçu, puis antenne</li>
+            <li>Un message qui passe devant tout, sur toutes les surfaces</li>
+            <li>Une action déclenche une séquence, pas un seul écran</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P8</i>Afficher ce qui vit sans le produire</b>
+          <ol>
+            <li>Une page web vivante dans la boucle, comme un média</li>
+            <li>Quatre blocs prêts à poser&nbsp;: heure, météo, classement, réseaux du club</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Thème&nbsp;3</span>
+        <h3>Une régie pour toutes les surfaces</h3>
+        <span class="nb">7 Epics · 21 Features</span>
+      </div>
+      <p class="intro">
+        Du gymnase au stade, le même moteur et les mêmes gestes. Résultat attendu&nbsp;: toute
+        surface d'un lieu se pilote depuis la même régie, sans travail sur mesure. La médiathèque
+        (V5) l'a rejoint le 13/09/2026&nbsp;; elle garde son code.
+      </p>
+      <div class="epics">
+        <article class="epic">
+          <b><i>P1</i>Le média au format de chaque surface</b>
+          <ol>
+            <li>Contrôle de format à l'envoi</li>
+            <li>Pliage automatique au format du ruban</li>
+            <li>Dédoublonnage et empreinte des médias</li>
+            <li>Écran des médias refusés, côté club</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P2</i>Une régie pour toutes les surfaces, sans sur-mesure</b>
+          <ol>
+            <li>Fiche de lieu&nbsp;: surfaces et géométrie</li>
+            <li>Câblage type, applicable à un nouveau lieu</li>
+            <li>Contrôle de géométrie avant le match</li>
+            <li>Changement de phase sur toutes les surfaces</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P4</i>Le son du lieu se pilote comme l'image</b>
+          <ol>
+            <li>Le son d'une vidéo sort sur la sono, sans extraction</li>
+            <li>Niveaux tenus&nbsp;: mesure à l'envoi, gain appliqué au rendu</li>
+            <li>Écouter une sortie en cabine sans l'envoyer à l'antenne</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P5</i>Écrire la conduite du match sur une timeline</b>
+          <ol>
+            <li>Une timeline par événement, avec une piste par surface</li>
+            <li>Déclencher un bloc sur un temps de chronomètre</li>
+            <li>Éditer la conduite pendant que le match tourne</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P7</i>Faire entrer une image vivante dans l'habillage</b>
+          <ol>
+            <li>Une source live déclarée, armée depuis la télécommande</li>
+            <li>Voir ce que chaque surface rend vraiment</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>P9</i>L'écran porte la marque du club, pas la nôtre</b>
+          <ol>
+            <li>Charte du lieu appliquée à tous les gabarits</li>
+            <li>Notre marque devient optionnelle, par formule</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>V5</i>Ranger, nommer et retrouver les médias</b>
+          <ol>
+            <li>Une médiathèque par contextes, avec un geste «&nbsp;diffuser&nbsp;»</li>
+            <li>Remplacer un fichier sans rien recâbler</li>
+            <li>Renommer, déplacer, supprimer — et dédoublonner</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Thème&nbsp;4</span>
+        <h3>Un réseau de salles, vendable d'un seul contrat</h3>
+        <span class="nb">4 Epics · 9 Features</span>
+      </div>
+      <p class="intro">
+        La destination économique&nbsp;: l'inventaire agrégé, pas l'outil vendu à l'unité. Résultat
+        attendu&nbsp;: une marque achète plusieurs lieux en un contrat, et chaque club touche sa
+        part.
+      </p>
+      <div class="epics">
+        <article class="epic">
+          <b><i>R1</i>Ouvrir un lieu sans déplacement</b>
+          <ol>
+            <li>Parcours d'ouverture d'un lieu, sans ligne de commande</li>
+            <li>Qualification du matériel à distance</li>
+            <li>Procédure de premier match pour le club</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>R2</i>Vendre un pack de lieux à une marque</b>
+          <ol>
+            <li>Campagne sur plusieurs lieux</li>
+            <li>Rapport consolidé multi-lieux</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>R3</i>Deux niveaux de vente sur le même écran</b>
+          <ol>
+            <li>Règle de part locale garantie</li>
+            <li>Arbitrage entre partenaires du club et annonceurs de réseau</li>
+          </ol>
+        </article>
+        <article class="epic">
+          <b><i>R4</i>S'ouvrir aux autres systèmes&nbsp;: API et agents</b>
+          <ol>
+            <li>Le pilotage par agent couvre la configuration d'un lieu</li>
+            <li>Ce que voit un agent est ce que voit un opérateur</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+    <div class="grp">
+      <div class="grp-h">
+        <span class="code">Le vivier</span>
+        <h3>Trois Epics inscrits, sans Features</h3>
+        <span class="nb">3 Epics</span>
+      </div>
+      <p class="intro">
+        Leur horizon dépasse l'année, ou leurs conditions ne sont pas levées. Ils sont inscrits au
+        portefeuille et n'ont pas de Features&nbsp;: découper aujourd'hui un Epic lointain
+        produirait des critères d'acceptation périmés avant d'être lus. Ils se découpent quand leur
+        horizon se rapproche.
+      </p>
+      <div class="epics">
+        <article class="epic viv">
+          <b><i>R5</i>Faire participer le spectateur depuis son téléphone</b>
+          <p>
+            Prono, vote du meilleur joueur, quiz&nbsp;: un code en tribune ouvre une page, les
+            réponses remontent à l'écran.
+          </p>
+        </article>
+        <article class="epic viv">
+          <b><i>R6</i>Exposer les données de match à des tiers</b>
+          <p>
+            Les scores et les faits saisis dans les salles deviennent une donnée qu'une application
+            de club, un média local ou une ligue peut consommer. Le sujet est conditionné à la
+            lecture de la table de marque, et la clause de licence se fait valider avant tout
+            engagement.
+          </p>
+        </article>
+        <article class="epic viv">
+          <b><i>R7</i>Agir sur le matériel à distance, sous garde-fou</b>
+          <p>
+            Savoir à distance quel module est mort et lequel il faut, pour qu'un déplacement sur
+            deux devienne un colis. Deux conditions&nbsp;: que l'état du matériel soit mesuré, et
+            que le métier de la pose dispose d'un outil de parc. Aucun chemin d'action ne devra
+            pouvoir modifier la géométrie.
+          </p>
+        </article>
+      </div>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 30px">Les Enablers</h3>
+    <p class="intro prose">
+      Des chantiers qui ne livrent aucun service directement, et sans lesquels plusieurs Epics ne
+      tiennent pas. Ils vivent dans la même base que les Epics, marqués Enabler, et se réalisent
+      comme eux par des projets Linear. Depuis le 13/09/2026, «&nbsp;Mesurer le flux de bout en
+      bout&nbsp;» et «&nbsp;Une identité de surface partagée&nbsp;» ne figurent plus ici&nbsp;: ce
+      sont des Features de S2 et de S5.
+    </p>
+    <ul class="enablers">
+      <li>
+        <b>Mettre en service en continu, par petits lots</b>
+        <p>
+          Un correctif arrive sur le site le jour même, la version installée se lit par site, et un
+          retour arrière est toujours possible.
+        </p>
+      </li>
+      <li>
+        <b>Traiter la preuve comme une donnée de production</b>
+        <p>
+          Empreinte par lecture, rétention par palier, agrégats quotidiens&nbsp;: la preuve survit
+          et garde son intégrité.
+        </p>
+      </li>
+      <li>
+        <b>Compositeur et moteur d'animation</b>
+        <p>
+          Composition sur canvas, couches simultanées, horloge commune entre players. Socle de la
+          conduite, des gestes de direct et de l'image live.
+        </p>
+      </li>
+      <li>
+        <b>Langue et internationalisation</b>
+        <p>
+          Sortir le français des identifiants, poser le socle multilingue, écrire en anglais les
+          outils exposés aux agents.
+        </p>
+      </li>
+      <li>
+        <b>Sauvegarde et restauration d'une salle</b>
+        <p>
+          Une archive restaurable — base et médias — au lieu d'une copie manuelle. On n'ouvre pas
+          des lieux qu'on ne sait pas restaurer.
+        </p>
+      </li>
+      <li>
+        <b>Import des données d'équipe et de joueurs</b>
+        <p>
+          Effectifs, photos et logos depuis une source externe, sans écraser les corrections faites
+          sur place.
+        </p>
+      </li>
+      <li>
+        <b>Hébergement et conservation des données</b>
+        <p>Où vivent les données, combien de temps, et sous quel régime — publié, pas supposé.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="cadre" aria-labelledby="cad-h">
+    <span class="kicker">05</span>
+    <h2 id="cad-h">Le cadre de travail</h2>
+    <p class="intro prose">
+      Le vocabulaire est celui de SAFe&nbsp;; le cadre n'est pas adopté. On lui emprunte des mots
+      partagés et quelques mécanismes éprouvés, et rien d'autre&nbsp;: le framework ne descend
+      jamais en dessous d'un train de cinquante à cent vingt-cinq personnes, et son bénéfice
+      démontré est la coordination entre équipes — ce que nous n'avons pas à coordonner. Chaque mot
+      emprunté a une définition «&nbsp;chez nous&nbsp;» et une ligne sur ce qu'on n'en prend pas.
+      C'est la contre-mesure la moins chère contre la dérive de vocabulaire.
+    </p>
+
+    <h3 class="kicker">Les objets</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Objet</th>
+            <th scope="col">Ce que ça veut dire chez nous</th>
+            <th scope="col">Ce qu'on n'en prend pas</th>
+            <th scope="col">Domicile</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Thème stratégique</th>
+            <td>
+              Une direction qui tient plusieurs années et se formule en résultat pour le client. Il
+              y en a quatre.
+            </td>
+            <td>Le lien avec un budget de portefeuille&nbsp;: il n'y a qu'un budget.</td>
+            <td>Notion</td>
+          </tr>
+          <tr>
+            <th scope="row">Flux de valeur</th>
+            <td>
+              Le chemin d'un déclencheur jusqu'à la valeur reçue. Trois flux opérationnels, un flux
+              de développement.
+            </td>
+            <td>Le découpage en trains et les budgets par flux.</td>
+            <td>Notion (canvas) · Linear (initiative)</td>
+          </tr>
+          <tr>
+            <th scope="row">Capacité</th>
+            <td>
+              Ce que le produit sait faire, écrit du point de vue du client, avec son état réel et
+              sa preuve de demande.
+            </td>
+            <td>
+              La distinction entre capacité et fonctionnalité de solution&nbsp;: un seul niveau
+              suffit.
+            </td>
+            <td>Notion (base)</td>
+          </tr>
+          <tr>
+            <th scope="row">Epic</th>
+            <td>
+              Un pari qui dure&nbsp;: une hypothèse réfutable, une première version, un indicateur,
+              et les Features qui le réalisent. Il ne se termine pas à une date.
+            </td>
+            <td>
+              Le dossier d'investissement complet et le comité d'approbation. Et le fait d'en faire
+              un projet daté.
+            </td>
+            <td>Notion (page) · Linear (étiquette de projet)</td>
+          </tr>
+          <tr>
+            <th scope="row">Feature</th>
+            <td>
+              Ce qui se livre et s'annonce&nbsp;: un service livré, une hypothèse de bénéfice, des
+              critères d'acceptation, une taille qui tient dans une release.
+            </td>
+            <td>
+              L'estimation en points et le découpage imposé par un intervalle de planification.
+            </td>
+            <td>Notion (l'énoncé) · Linear (projet)</td>
+          </tr>
+          <tr>
+            <th scope="row">Étape</th>
+            <td>
+              Une phase à l'intérieur d'une Feature&nbsp;: un nom, des tickets, une date
+              facultative, un pourcentage d'avancement. Si elle grossit, elle devient un projet.
+            </td>
+            <td>Rien&nbsp;: c'est le jalon de projet, tel quel.</td>
+            <td>Linear (jalon de projet)</td>
+          </tr>
+          <tr>
+            <th scope="row">Story</th>
+            <td>Ce qui se fait dans la semaine. Le vocabulaire des tickets ne change pas.</td>
+            <td>Le format imposé «&nbsp;en tant que… je veux…&nbsp;».</td>
+            <td>Linear (ticket)</td>
+          </tr>
+          <tr>
+            <th scope="row">Enabler</th>
+            <td>
+              Un travail qui ne se vend pas mais sans lequel le reste n'avance pas&nbsp;: socle,
+              mesure, outillage.
+            </td>
+            <td>Les quatre catégories officielles&nbsp;: une étiquette suffit.</td>
+            <td>Notion (base des Epics, marqué Enabler) · Linear (étiquette)</td>
+          </tr>
+          <tr>
+            <th scope="row">Triage</th>
+            <td>
+              La porte d'entrée. Tout ce qui n'a pas encore d'intention y arrive&nbsp;: e-mail,
+              Slack, terrain, idée.
+            </td>
+            <td>Les rotations d'astreinte.</td>
+            <td>Linear (Triage de l'équipe)</td>
+          </tr>
+          <tr>
+            <th scope="row">Release</th>
+            <td>
+              La version du mois, et sa mise en service par site. Un ticket a un projet — pourquoi —
+              et une release — quand c'est parti.
+            </td>
+            <td>Le train de livraison et ses dates imposées à toutes les équipes.</td>
+            <td>Linear (pipelines)</td>
+          </tr>
+          <tr>
+            <th scope="row">Risque</th>
+            <td>
+              Un risque dans l'un des quatre états&nbsp;: résolu, pris en charge, accepté, atténué.
+              Aucun risque ne reste sans état.
+            </td>
+            <td>Rien&nbsp;: le mécanisme se prend tel quel.</td>
+            <td>Notion (base)</td>
+          </tr>
+          <tr>
+            <th scope="row">Décision</th>
+            <td>
+              Une décision orale écrite sous vingt-quatre heures&nbsp;: date, décision, qui l'a
+              prise, périmètre, lien.
+            </td>
+            <td>Rien&nbsp;: c'est un ajout, pas un emprunt.</td>
+            <td>Notion (base)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les six états d'un Epic</h3>
+    <p class="intro prose">
+      Le kanban de portefeuille. Le dernier état est le plus important&nbsp;: un Epic ne se ferme
+      pas quand il est livré, mais quand son indicateur a parlé.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">État</th>
+            <th scope="col">Ce que ça veut dire</th>
+            <th scope="col">Pour y entrer</th>
+            <th scope="col">Limite</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Entonnoir</th>
+            <td>Toute idée, d'où qu'elle vienne.</td>
+            <td>Une phrase écrite du point de vue du client.</td>
+            <td>Aucune limite.</td>
+          </tr>
+          <tr>
+            <th scope="row">En analyse</th>
+            <td>On cherche si le pari tient.</td>
+            <td>Une hypothèse réfutable et un indicateur proposé.</td>
+            <td>Trois au plus.</td>
+          </tr>
+          <tr>
+            <th scope="row">Prêt</th>
+            <td>Le pari est écrit, il attend son tour.</td>
+            <td>Première version définie, dépendances connues, propriétaire nommé.</td>
+            <td>Aucune limite.</td>
+          </tr>
+          <tr>
+            <th scope="row">En cours</th>
+            <td>Quelqu'un le construit.</td>
+            <td>Une place libre dans son couloir.</td>
+            <td>Un Epic par couloir, trois couloirs actifs au plus.</td>
+          </tr>
+          <tr>
+            <th scope="row">En service</th>
+            <td>Ça tourne sur un site, et quelqu'un l'a vu tourner.</td>
+            <td>Vérifié sur le site, pas au banc d'essai.</td>
+            <td>Aucune limite.</td>
+          </tr>
+          <tr>
+            <th scope="row">Mesuré</th>
+            <td>L'indicateur a bougé, ou non.</td>
+            <td>Une décision écrite&nbsp;: on continue, on corrige, on arrête.</td>
+            <td>C'est le seul état qui ferme un Epic.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les gabarits</h3>
+    <p class="intro prose">
+      Quatre gabarits suffisent. Ils sont volontairement courts&nbsp;: un champ de plus, c'est un
+      champ vide de plus dans trois mois.
+    </p>
+    <div class="cols">
+      <div class="card">
+        <b>Epic</b>
+        <ul>
+          <li>Titre — une phrase côté client</li>
+          <li>Thème · Flux traversés · Capacités couvertes</li>
+          <li>
+            Hypothèse — pour qui, quel problème, ce que ce chantier change, et pourquoi on pense que
+            ça marchera
+          </li>
+          <li>Première version — la plus petite chose qui vérifie l'hypothèse</li>
+          <li>Indicateur — ce qu'on mesure, son point de départ daté, la valeur visée</li>
+          <li>Dépendances — ce qui doit exister avant</li>
+          <li>Ses Features — les projets Linear successifs qui le réalisent</li>
+          <li>Propriétaire · État du kanban · Date d'entrée en cours</li>
+          <li>Décision de sortie — ce qu'on décide quand l'indicateur a parlé</li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Feature</b>
+        <ul>
+          <li>Intitulé côté client, tel qu'on l'annoncerait</li>
+          <li>Epic parent · Flux · Responsable · Date de fin visée</li>
+          <li>Hypothèse de bénéfice — ce qu'on attend, formulé comme une supposition</li>
+          <li>
+            Critères d'acceptation observables — ce qu'on doit voir à l'écran ou dans un rapport,
+            avec leur seuil
+          </li>
+          <li>Sur quel site et à quelle occasion ce sera vérifié</li>
+          <li>Étapes — les jalons, si le découpage aide</li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Capacité</b>
+        <ul>
+          <li>Nom — ce que le produit sait faire, côté client</li>
+          <li>Thème</li>
+          <li>État aujourd'hui — livré, partiel, absent — avec sa preuve</li>
+          <li>Ce que la reprise apporte</li>
+          <li>
+            Preuve de demande — un concurrent, un persona, un refus de prospect — ou «&nbsp;pari
+            assumé&nbsp;»
+          </li>
+          <li>Horizon</li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Décision</b>
+        <ul>
+          <li>Date · Décision en une phrase</li>
+          <li>Qui l'a prise · Périmètre</li>
+          <li>Ce qu'elle remplace, si elle en renverse une autre</li>
+          <li>Lien vers le ticket, l'Epic ou la page concernée</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Le vocabulaire emprunté</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Terme d'origine</th>
+            <th scope="col">Notre mot</th>
+            <th scope="col">Ce que ça veut dire chez nous</th>
+            <th scope="col">Ce qu'on n'en prend pas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Strategic Theme</th>
+            <td>Thème stratégique</td>
+            <td>Une direction produit sur plusieurs années, formulée en résultat client.</td>
+            <td>Aucun budget, aucune allocation.</td>
+          </tr>
+          <tr>
+            <th scope="row">Operational / Development Value Stream</th>
+            <td>Flux de valeur</td>
+            <td>Trois flux vécus par le client, un flux qui produit le logiciel.</td>
+            <td>Pas de découpage organisationnel&nbsp;: personne n'appartient à un flux.</td>
+          </tr>
+          <tr>
+            <th scope="row">Epic</th>
+            <td>Epic</td>
+            <td>Un pari, avec hypothèse, première version et indicateur.</td>
+            <td>Pas de comité d'approbation, pas de dossier d'investissement complet.</td>
+          </tr>
+          <tr>
+            <th scope="row">Feature</th>
+            <td>Feature</td>
+            <td>Ce qui se livre et s'annonce, avec une date de fin&nbsp;: un projet Linear.</td>
+            <td>
+              Aucune estimation en points, aucun découpage imposé par un calendrier de
+              planification.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Project milestone</th>
+            <td>Étape</td>
+            <td>Une phase dans une Feature, avec ses tickets et son avancement.</td>
+            <td>Rien&nbsp;; elle devient un projet à part si elle grossit.</td>
+          </tr>
+          <tr>
+            <th scope="row">Triage</th>
+            <td>Triage</td>
+            <td>La porte d'entrée unique&nbsp;: e-mail, Slack, terrain, idée.</td>
+            <td>Les rotations d'astreinte.</td>
+          </tr>
+          <tr>
+            <th scope="row">Enabler</th>
+            <td>Enabler</td>
+            <td>Le travail de socle, de mesure ou d'outillage.</td>
+            <td>Une étiquette, pas quatre catégories.</td>
+          </tr>
+          <tr>
+            <th scope="row">Portfolio Kanban</th>
+            <td>Kanban de portefeuille</td>
+            <td>Six états, de l'entonnoir au mesuré.</td>
+            <td>Pas de comité de portefeuille.</td>
+          </tr>
+          <tr>
+            <th scope="row">WIP limit</th>
+            <td>Limite d'en-cours</td>
+            <td>Un Epic par couloir, trois couloirs actifs au plus.</td>
+            <td>Elle se calibre sur le temps de flux, jamais sur l'effectif.</td>
+          </tr>
+          <tr>
+            <th scope="row">Release on Demand</th>
+            <td>Mise en service à la demande</td>
+            <td>
+              Déployer et mettre en service sont deux gestes distincts&nbsp;; mesurer et apprendre
+              comptent autant que déployer.
+            </td>
+            <td>Pas de train de livraison.</td>
+          </tr>
+          <tr>
+            <th scope="row">Flow Time / Flow Efficiency</th>
+            <td>Temps de flux / efficience du flux</td>
+            <td>
+              Le temps entre l'entrée dans le flux et la mise en service, et la part de ce temps
+              réellement travaillée.
+            </td>
+            <td>
+              Pas de prédictibilité du flux&nbsp;: elle suppose un intervalle de planification.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">OKR</th>
+            <td>OKR</td>
+            <td>
+              Un seul objectif mesurable par trimestre, qui couvre les deux faces du produit — le
+              club et l'annonceur. Il n'est pas réservé à un thème.
+            </td>
+            <td>Rien en dessous.</td>
+          </tr>
+          <tr>
+            <th scope="row">Inspect &amp; Adapt</th>
+            <td>Revue mensuelle</td>
+            <td>
+              Une heure à la release&nbsp;: les chiffres, une démonstration, une cause racine, une
+              expérimentation décidée.
+            </td>
+            <td>Pas d'événement de fin d'intervalle de planification.</td>
+          </tr>
+          <tr>
+            <th scope="row">Customer demo</th>
+            <td>Démonstration client</td>
+            <td>
+              La revue mensuelle se tient devant un club ou un annonceur quand c'est possible.
+            </td>
+            <td>Rien à retirer.</td>
+          </tr>
+          <tr>
+            <th scope="row">ROAM</th>
+            <td>Registre de risques ROAM</td>
+            <td>Quatre états&nbsp;: résolu, pris en charge, accepté, atténué.</td>
+            <td>Pris tel quel.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les mots qu'on n'écrit pas</h3>
+    <div class="tbl-wrap">
+      <table class="t narrow">
+        <thead>
+          <tr>
+            <th scope="col">Mot</th>
+            <th scope="col">Pourquoi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Program Increment</th>
+            <td>Devenu Planning Interval, et de toute façon nous n'en faisons pas.</td>
+          </tr>
+          <tr>
+            <th scope="row">Program Level</th>
+            <td>Supprimé du cadre d'origine.</td>
+          </tr>
+          <tr>
+            <th scope="row">Participatory Budgeting</th>
+            <td>Devenu Strategic Investment Planning.</td>
+          </tr>
+          <tr>
+            <th scope="row">Done</th>
+            <td>
+              Remplacé par «&nbsp;En service&nbsp;». Un ticket fusionné n'est pas un ticket en
+              service.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les renommages liés à l'IA qui circulent</th>
+            <td>Ils ne figurent dans aucun communiqué officiel&nbsp;: on ne les inscrit pas.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose" style="margin-top: 14px">
+      Le contenu officiel du cadre d'origine est sous licence&nbsp;: on ne copie ni ses textes ni
+      ses schémas. Dans Notion, on reformule avec nos mots et on met un lien.
+    </p>
+
+    <h3 class="kicker" style="margin-top: 26px">Les mécanismes écartés</h3>
+    <div class="tbl-wrap">
+      <table class="t narrow">
+        <thead>
+          <tr>
+            <th scope="col">Mécanisme</th>
+            <th scope="col">Pourquoi il reste dehors</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Le train de livraison</th>
+            <td>Il suppose cinq à quinze équipes et cinquante à cent vingt-cinq personnes.</td>
+          </tr>
+          <tr>
+            <th scope="row">La planification d'intervalle</th>
+            <td>
+              Un événement de deux jours pour aligner des équipes qu'on n'a pas&nbsp;; et un lot de
+              dix semaines est précisément ce qu'on cherche à éviter.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les rôles dédiés</th>
+            <td>Ni responsable de train, ni coach, ni architecte système.</td>
+          </tr>
+          <tr>
+            <th scope="row">Les points de story et la vélocité</th>
+            <td>
+              Les mesures de flux retenues n'exigent aucune estimation. Le classement du
+              portefeuille passe par un WSJF minimal, qui n'en demande pas non plus — ses règles
+              sont en section&nbsp;06.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les budgets par flux et le canevas de portefeuille</th>
+            <td>Ils résolvent une comptabilité par flux que nous n'avons pas.</td>
+          </tr>
+          <tr>
+            <th scope="row">La mesure de l'adoption du cadre</th>
+            <td>
+              On mesure le délai de mise en service et la preuve rendue, jamais le respect du cadre.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="outils" aria-labelledby="out-h">
+    <span class="kicker">06</span>
+    <h2 id="out-h">Notion et Linear</h2>
+    <p class="sig">
+      Notion porte l'intention. Linear porte l'état. Jamais les deux au même endroit.
+    </p>
+    <p class="intro prose">
+      Il n'y a pas de robot de synchronisation&nbsp;: à cette taille, ce serait une machine de plus
+      à réparer. Il y a une règle de domicile —
+      <strong>chaque objet vit à un seul endroit</strong> — et les deux outils se rejoignent par un
+      lien porté des deux côtés. Le coût est d'un rendez-vous par mois et de deux champs à remplir à
+      la création. Aucun automatisme, aucun jeton d'API, rien à maintenir.
+    </p>
+
+    <h3 class="kicker">Le domicile de chaque objet</h3>
+    <p class="intro prose">
+      Si un objet ne figure pas dans ce tableau, il n'a pas de domicile — et il faut lui en choisir
+      un avant de le créer, pas après.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Objet</th>
+            <th scope="col">Domicile</th>
+            <th scope="col">Chez lui</th>
+            <th scope="col">Ce que l'autre outil en voit</th>
+            <th scope="col">Jointure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Thème stratégique</th>
+            <td>Notion</td>
+            <td>Base <i>Thèmes</i></td>
+            <td>Rien. Un thème n'existe pas dans Linear.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Flux de valeur</th>
+            <td>Notion</td>
+            <td>Page <i>Flux de valeur</i></td>
+            <td>Une initiative Linear, dont la description porte l'URL de la page.</td>
+            <td>l'URL</td>
+          </tr>
+          <tr>
+            <th scope="row">Capacité</th>
+            <td>Notion</td>
+            <td>Base <i>Capacités</i></td>
+            <td>Rien. Elle vit dans la page de l'Epic qui la sert.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Epic</th>
+            <td>Notion</td>
+            <td>Une page dans la base <i>Epics</i></td>
+            <td>Une étiquette de projet, dont la description porte l'URL de la page.</td>
+            <td>l'URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <th scope="row">Feature</th>
+            <td>Partagé</td>
+            <td>Notion pour l'énoncé — les quatre champs</td>
+            <td>
+              Un projet Linear qui porte l'exécution, et l'URL de la page en tête de sa description.
+            </td>
+            <td>l'URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <th scope="row">Enabler</th>
+            <td>Notion</td>
+            <td>Base <i>Epics</i>, marqué Enabler</td>
+            <td>Un projet Linear, comme une Feature.</td>
+            <td>l'URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <th scope="row">Ticket</th>
+            <td>Linear</td>
+            <td>Rien. Un ticket n'a jamais de page Notion.</td>
+            <td>Une issue, dans le projet de sa Feature.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Release</th>
+            <td>Linear</td>
+            <td>Rien à créer&nbsp;; citée dans le compte rendu mensuel.</td>
+            <td>Une release Linear, nommée par son mois.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Décision</th>
+            <td>Notion</td>
+            <td>Base <i>Décisions</i></td>
+            <td>Rien. Un lien dans la description, au plus.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Risque</th>
+            <td>Notion</td>
+            <td>Base <i>Risques</i></td>
+            <td>Rien.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Mesure de flux</th>
+            <td>Linear</td>
+            <td>Relevée chaque mois dans la page de revue.</td>
+            <td>Deux horodatages sur l'issue, calculés par Linear.</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose" style="margin-top: 14px">
+      Un seul objet est partagé, la Feature — et encore, en deux moitiés qui ne se recouvrent
+      pas&nbsp;: Notion tient <strong>ce qu'on livre et pourquoi</strong>, Linear tient
+      <strong>où ça en est</strong>. On ne recopie jamais l'énoncé dans Linear, et jamais l'état
+      dans Notion.
+    </p>
+
+    <h3 class="kicker" style="margin-top: 26px">
+      La clé de jointure&nbsp;: l'identifiant, dans les deux sens
+    </h3>
+    <div class="prose">
+      <p>
+        Une page Notion et son objet Linear se reconnaissent par
+        <strong>un lien, porté des deux côtés</strong>. La page Notion d'une Feature contient l'URL
+        de son projet&nbsp;; la description du projet contient l'URL de la page. Même chose pour un
+        Epic et son étiquette de projet, pour un flux de valeur et son initiative.
+      </p>
+      <p>
+        Une URL de page Notion contient son identifiant&nbsp;: c'est donc une jointure par
+        identifiant, avec l'avantage d'être cliquable. Le double sens est ce qui compte&nbsp;:
+        depuis n'importe lequel des deux outils on atteint l'autre en un clic, et une jointure
+        cassée se voit — le lien ne mène nulle part, au lieu de mener silencieusement au mauvais
+        objet.
+      </p>
+      <p>
+        Le nom reste, comme convention de lecture. Un projet Linear porte le même nom que sa Feature
+        parce que c'est confortable dans une liste, pas parce que le système en dépend.
+        <strong>Renommer est donc un geste ordinaire.</strong>
+      </p>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">
+      Les deux seuls moments où l'information traverse
+    </h3>
+    <p class="intro prose">
+      En dehors de ces deux moments, rien ne circule. C'est ce qui rend la méthode tenable sans
+      outil&nbsp;: il n'y a pas de flux continu à surveiller.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Quand</th>
+            <th scope="col">Sens</th>
+            <th scope="col">Ce qui passe</th>
+            <th scope="col">Fréquence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">À la création d'un Epic ou d'une Feature</th>
+            <td>Notion → Linear</td>
+            <td>
+              La page Notion existe d'abord. Elle donne son nom à l'étiquette (Epic) ou au projet
+              (Feature) créé dans Linear, et les deux liens se posent dans le même geste.
+            </td>
+            <td>Une fois. Jamais rejoué.</td>
+          </tr>
+          <tr>
+            <th scope="row">À la revue mensuelle</th>
+            <td>Linear → Notion</td>
+            <td>
+              L'état, les dates et les deux mesures de flux remontent dans la page de revue du mois.
+              Les pages d'Epic ne sont pas modifiées&nbsp;: on écrit un compte rendu, on ne met pas
+              à jour des champs.
+            </td>
+            <td>Une fois par mois, au même rendez-vous.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">
+      Deux ordres, jamais le même objet classé deux fois
+    </h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Quel ordre</th>
+            <th scope="col">Sur quoi</th>
+            <th scope="col">Où</th>
+            <th scope="col">À quelle fréquence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">L'ordre du portefeuille</th>
+            <td>Les Epics&nbsp;: lesquels on ouvre, et combien à la fois.</td>
+            <td>Notion</td>
+            <td>Par trimestre. Il change peu — c'est une décision, pas une file d'attente.</td>
+          </tr>
+          <tr>
+            <th scope="row">L'ordre d'exécution</th>
+            <td>Les Features et les tickets du mois en cours.</td>
+            <td>Linear</td>
+            <td>
+              Chaque semaine. Il change tout le temps — c'est une file d'attente, pas une décision.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose" style="margin-top: 14px">
+      La règle qui les tient&nbsp;: <strong>aucun objet n'est classé deux fois.</strong> Un Epic n'a
+      pas de priorité dans Linear&nbsp;; une Feature n'a pas de rang dans Notion. Ouvrir un Epic
+      dans le portefeuille Notion, c'est créer ou activer ses projets dans Linear&nbsp;: c'est
+      l'acte qui relie les deux ordres, et il va dans un seul sens. Côté Notion, le portefeuille est
+      un tableau à six colonnes — vivier, à l'étude, en analyse, prêt, en cours, fait — et l'ordre
+      est le rang des cartes dans chaque colonne.
+    </p>
+
+    <h3 class="kicker" style="margin-top: 26px">Classer les Epics&nbsp;: le WSJF et ses règles</h3>
+    <p class="intro prose">
+      WSJF = (valeur métier + criticité temporelle + réduction de risque) ÷ taille. Chaque critère
+      se note sur l'échelle 1, 2, 3, 5, 8, 13, 20. Les règles ci-dessous ont été fixées le
+      13/09/2026&nbsp;; la <a href="revue-wsjf-epics.html">revue WSJF des Epics</a> les applique
+      Epic par Epic.
+    </p>
+    <ul class="rules">
+      <li>
+        <b>La valeur se juge sur les deux faces.</b>
+        <p>
+          Le match que le club anime, et les partenaires qu'il diffuse et prouve. Ce qui fait tenir
+          le match n'est pas noté comme une simple précondition de la preuve.
+        </p>
+      </li>
+      <li>
+        <b>Ce qui existe ne compte que s'il est exploitable en match.</b>
+        <p>
+          Une fonction présente, mais inutilisable pendant un match réel par le club visé, ne réduit
+          ni la taille ni la valeur à produire.
+        </p>
+      </li>
+      <li>
+        <b>Rien n'est repris du code MadXp.</b>
+        <p>Seulement des idées. Aucune taille ne s'appuie sur un existant MadXp.</p>
+      </li>
+      <li>
+        <b>La taille couvre l'Epic entier.</b>
+        <p>
+          Toutes ses Features — par exemple toutes les marques de table de marque. Jamais sa seule
+          première version, jamais ses prérequis.
+        </p>
+      </li>
+      <li>
+        <b>On ne découpe pas un Epic en Epics.</b>
+        <p>Son découpage, ce sont ses Features.</p>
+      </li>
+      <li>
+        <b>La criticité nomme une perte et une date.</b>
+        <p>Appartenir au thème actif n'en donne pas.</p>
+      </li>
+      <li>
+        <b>Une valeur n'est comptée qu'une fois.</b>
+        <p>
+          Les préconditions se comptent en réduction de risque, pas une deuxième fois en valeur.
+        </p>
+      </li>
+      <li>
+        <b>Le score ne gère pas les dépendances.</b>
+        <p>L'ordre des cartes les applique d'abord&nbsp;; le WSJF départage ensuite.</p>
+      </li>
+    </ul>
+
+    <h3 class="kicker" style="margin-top: 26px">Les quatre espaces Notion</h3>
+    <p class="intro prose">
+      Une page ne s'y trouve que si quelqu'un la tient. Aucune de ces pages n'affiche l'avancement
+      d'un chantier&nbsp;: ça, c'est Linear.
+    </p>
+    <div class="cols">
+      <div class="card man">
+        <b>Comprendre le produit</b>
+        <p>Ce qu'on a compris du produit et de son marché.</p>
+        <ul>
+          <li>
+            <strong>Thèmes stratégiques</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Les quatre thèmes, avec leur résultat attendu. L'objectif du trimestre couvre les deux
+            faces du produit.
+          </li>
+          <li>
+            <strong>Capacités</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Les vingt-deux capacités&nbsp;: état, preuve de demande, apport de la reprise,
+            horizon.
+          </li>
+          <li>
+            <strong>Epics</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Les paris&nbsp;: hypothèse, première version, indicateur, dépendances, état du kanban.
+          </li>
+          <li>
+            <strong>Flux de valeur</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >4 canvas</i
+            >
+            — Un canvas par flux&nbsp;: déclencheur, valeur, étapes, goulots mesurés, lien vers
+            l'initiative Linear.
+          </li>
+          <li>
+            <strong>Personas &amp; cas d'usage</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Les personas et leurs cas d'usage. C'est cette base qui fait foi.
+          </li>
+          <li>
+            <strong>Doctrine technique</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >pages</i
+            >
+            — Les partis pris techniques, avec leurs liens vers les tickets cités.
+          </li>
+        </ul>
+      </div>
+      <div class="card man">
+        <b>Clubs et terrain</b>
+        <p>Ce qui est installé, et ce qui se passe les soirs de match.</p>
+        <ul>
+          <li>
+            <strong>Clubs &amp; sites</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Un club par ligne&nbsp;: statut, contrat, contacts, abonnement, projet Linear.
+          </li>
+          <li>
+            <strong>Écrans</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Chaque surface&nbsp;: dimensions réelles, processeur, conventions.
+          </li>
+          <li>
+            <strong>Catalogue matériel</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Ce qu'on pose et ce qu'on rencontre chez les autres.
+          </li>
+          <li>
+            <strong>Journal d'exploitation</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Un récap par match, écrit pour être lisible par le club.
+          </li>
+          <li>
+            <strong>Procédures terrain</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >pages</i
+            >
+            — Installation, prise de poste, dépannage.
+          </li>
+        </ul>
+      </div>
+      <div class="card man">
+        <b>Commercial</b>
+        <p>Ce qui se vend, et à qui.</p>
+        <ul>
+          <li>
+            <strong>Annonceurs &amp; contrats</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Un annonceur par ligne&nbsp;: période, montant, parts vendues, contact, preuve rendue.
+          </li>
+          <li>
+            <strong>Concurrence — Écosystème</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Les acteurs du marché, et le comparatif par critères.
+          </li>
+        </ul>
+      </div>
+      <div class="card man">
+        <b>Pilotage</b>
+        <p>Ce qu'on décide, ce qu'on risque, ce qu'on mesure.</p>
+        <ul>
+          <li>
+            <strong>Décisions</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Une décision par ligne, écrite sous vingt-quatre heures.
+          </li>
+          <li>
+            <strong>Risques</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >base</i
+            >
+            — Le registre unique, quatre états ROAM, un propriétaire par risque.
+          </li>
+          <li>
+            <strong>Indicateurs</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >page</i
+            >
+            — Temps de flux, efficience, et l'objectif du trimestre. Relevé à chaque revue
+            mensuelle.
+          </li>
+          <li>
+            <strong>Journal de mise en place</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >page</i
+            >
+            — Chaque création faite par une session assistée y est tracée.
+          </li>
+          <li>
+            <strong>Accueil et table de routage</strong>
+            <i
+              style="
+                font-family: var(--f-mono);
+                font-size: 11px;
+                color: var(--muted);
+                font-style: normal;
+              "
+              >page</i
+            >
+            — La porte d'entrée de l'espace. Aucun lien mort.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">
+      Ce qui casse la jointure, et le contrôle mensuel
+    </h3>
+    <p class="intro prose">
+      Le contrôle ne synchronise rien&nbsp;: il compare et il signale. Quatre requêtes, quelques
+      minutes, rien qui s'écrive sans avoir été lu.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t narrow">
+        <thead>
+          <tr>
+            <th scope="col">Le contrôle</th>
+            <th scope="col">Ce qu'il attrape</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Les projets Linear sans Epic</th>
+            <td>
+              Un projet dont l'étiquette ne correspond à aucune page Notion. C'est le plus
+              important&nbsp;: il attrape le travail qui repart sans intention.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les Epics «&nbsp;en cours&nbsp;» sans aucun projet Linear</th>
+            <td>
+              Un Epic déclaré ouvert dont rien n'a démarré. Soit il n'est pas vraiment ouvert, soit
+              le travail se fait ailleurs que dans Linear.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les noms proches mais pas identiques</th>
+            <td>
+              Une majuscule, une apostrophe, un espace en trop&nbsp;: la jointure est cassée et rien
+              ne le dit. Une comparaison approchée les remonte.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Les deux dates de flux manquantes</th>
+            <td>
+              Les issues terminées sans horodatage d'entrée ou de mise en service. Sans elles,
+              l'efficience du flux reste un souvenir au lieu d'un signal.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="flux" aria-labelledby="flu-h">
+    <span class="kicker">07</span>
+    <h2 id="flu-h">Le flux&nbsp;: par où le travail entre, par où il sort</h2>
+    <p class="intro prose">
+      Le Triage décide de ce qui entre&nbsp;; deux dates mesurent ce qui traverse. Le flux porte le
+      logiciel, et l'exploitation des événements que l'équipe produit elle-même — repérage de salle,
+      montage, exploitation sur site, inventaire — quand ce travail est daté, fini, et rattaché à un
+      projet.
+    </p>
+
+    <h3 class="kicker">Ce qui entre en Triage</h3>
+    <p class="intro prose">
+      La distinction tient en une phrase&nbsp;:
+      <strong>le Triage reçoit ce qui n'a pas encore d'intention.</strong> Le travail qui découle
+      d'une Feature déjà ouverte en a une&nbsp;: il va directement dans son projet, sans passer par
+      la case décision.
+    </p>
+    <div class="cols">
+      <div class="card">
+        <b>Ce qui entre</b>
+        <ul>
+          <li><strong>Ce que dit un club</strong> — Note vocale de l'exploitant, mail, appel.</li>
+          <li>
+            <strong>Ce qu'on constate un soir de match</strong> — Un écran noir, un bouton inerte,
+            un spot qui n'est pas passé — avec l'heure, l'écran, ce qu'on a vu.
+          </li>
+          <li>
+            <strong>Ce que demande un annonceur ou une agence</strong> — Un spot refusé, un passage
+            qui n'a pas eu lieu.
+          </li>
+          <li>
+            <strong>Ce que promet le commercial</strong> — Une fonctionnalité annoncée en
+            rendez-vous.
+          </li>
+          <li><strong>Ce que remonte le support</strong> — Une panne, une question récurrente.</li>
+        </ul>
+      </div>
+      <div class="card neg">
+        <b>Ce qui n'entre pas</b>
+        <ul>
+          <li>
+            <strong>Le travail né d'une Feature déjà ouverte</strong> — Il a déjà son intention, son
+            Epic et son projet. Il va directement dans le projet.
+          </li>
+          <li>
+            <strong>Une découverte de développeur en cours de route</strong> — Un défaut trouvé en
+            codant, rattaché à ce qu'il était en train de faire. Directement dans le projet.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les quatre sorties</h3>
+    <p class="intro prose">
+      Trier, c'est choisir entre quatre destinations en cinq minutes. Ce n'est pas estimer, ni
+      planifier, ni résoudre.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Sortie</th>
+            <th scope="col">Quand</th>
+            <th scope="col">Ce qui se passe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Rattaché</th>
+            <td>Ça sert une Feature déjà ouverte.</td>
+            <td>
+              Le ticket rejoint son projet Linear, avec un propriétaire. C'est la sortie la plus
+              fréquente et la plus saine.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Promu</th>
+            <td>Ça sert un Epic du portefeuille, mais aucune Feature ouverte ne le couvre.</td>
+            <td>
+              Il devient une Feature candidate&nbsp;: une page Notion à écrire avant que le travail
+              commence. Le ticket attend, il ne part pas.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Refusé, avec un motif</th>
+            <td>Ça ne sert aucun Epic, ou ça sert un Epic du vivier.</td>
+            <td>
+              Le refus est écrit et lisible par celui qui l'a demandé. Un refus motivé vaut mieux
+              qu'un backlog qui absorbe tout.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Fusionné</th>
+            <td>C'est déjà connu.</td>
+            <td>
+              Le ticket est rattaché au ticket existant, qui gagne un signal de récurrence — c'est
+              ce qui fait remonter un irritant.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les règles du Triage</h3>
+    <ul class="rules">
+      <li>
+        <b>Un ticket ne sort du Triage que s'il a un projet et un propriétaire.</b>
+        <p>
+          Un ticket sans projet n'a pas d'intention&nbsp;; un ticket sans propriétaire n'a personne
+          pour en porter la conséquence.
+        </p>
+      </li>
+      <li>
+        <b>Quarante-huit heures ouvrées pour trier, pas pour résoudre.</b>
+        <p>
+          Trier prend cinq minutes. Le délai n'engage à rien d'autre qu'à décider. Ce qui dépasse
+          remonte à la revue mensuelle, avec son âge.
+        </p>
+      </li>
+      <li>
+        <b
+          >Rien n'entre au Backlog sans être passé par le Triage — sauf le travail d'une Feature
+          ouverte.</b
+        >
+        <p>Sans cette règle, le Triage reste vide et tout continue d'arriver directement.</p>
+      </li>
+      <li>
+        <b>Le tri se partage par nature.</b>
+        <p>
+          Ce qui vient du client, du marché ou du commercial va au produit. Ce qui est technique va
+          au développement.
+        </p>
+      </li>
+      <li>
+        <b>Le Triage n'est pas un backlog.</b>
+        <p>
+          Au-delà d'une dizaine de tickets, ce n'est plus une file d'attente de décision, c'est une
+          deuxième réserve. Le nombre se relit chaque semaine.
+        </p>
+      </li>
+    </ul>
+
+    <h3 class="kicker" style="margin-top: 26px">La suite des statuts</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Statut</th>
+            <th scope="col">Nature</th>
+            <th scope="col">Ce que ça veut dire</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Triage</th>
+            <td>porte d'entrée</td>
+            <td>
+              Ce qui n'a pas encore d'intention. On accepte, on promeut, on refuse avec un motif, ou
+              on fusionne.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Backlog</th>
+            <td>pas engagé</td>
+            <td>
+              Rangé dans un projet, en attente. Le temps passé ici ne compte pas dans le temps de
+              flux.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">À faire</th>
+            <td>pas engagé</td>
+            <td>Le moment où l'on s'engage à le faire. C'est la première des deux dates.</td>
+          </tr>
+          <tr>
+            <th scope="row">En cours</th>
+            <td>type «&nbsp;en cours&nbsp;»</td>
+            <td>Quelqu'un le construit.</td>
+          </tr>
+          <tr>
+            <th scope="row">En revue</th>
+            <td>type «&nbsp;en cours&nbsp;»</td>
+            <td>La relecture de la pull request.</td>
+          </tr>
+          <tr>
+            <th scope="row">Fusionné</th>
+            <td>type «&nbsp;en cours&nbsp;»</td>
+            <td>
+              Le code est dans la branche principale. Il ne tourne nulle part. Ce statut ne doit
+              jamais être du type «&nbsp;terminé&nbsp;»&nbsp;: sinon le délai entre la fusion et la
+              mise en service disparaît de la mesure.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">En service</th>
+            <td>seul statut terminal</td>
+            <td>
+              La release a atteint un site, et le déploiement a été vérifié. C'est la seconde des
+              deux dates.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les deux dates</h3>
+    <div class="prose">
+      <p>
+        <strong>Date&nbsp;1 — l'entrée dans le flux.</strong> La première entrée du ticket au statut
+        «&nbsp;À faire&nbsp;». C'est le moment où l'on s'engage à le faire&nbsp;: ni avant, ni
+        après. La date de création du ticket a été écartée — elle ferait du temps de flux une mesure
+        de la longueur du Backlog. La date de démarrage aussi — entre le démarrage et la fusion, il
+        ne s'écoule que quelques heures, et ce segment mesure la vitesse à laquelle on code, qui n'a
+        jamais été le problème.
+      </p>
+      <p>
+        <strong>Date&nbsp;2 — la mise en service.</strong> L'entrée au statut «&nbsp;En
+        service&nbsp;». C'est le moment où le club en bénéficie&nbsp;; «&nbsp;Fusionné&nbsp;» ne
+        veut rien dire pour lui. Ce qui la déclenche est
+        <strong>le déploiement vérifié, pas le déploiement lancé</strong>.
+      </p>
+      <p>
+        <strong>Aucune saisie à la main.</strong> Les deux dates se lisent dans l'historique d'états
+        que Linear tient déjà pour chaque ticket. Une date qu'il faut taper est une date que
+        personne ne tape&nbsp;: il n'y a donc aucun champ personnalisé. La contrepartie est une
+        habitude, et c'est le seul effort demandé par tout ce cadre&nbsp;:
+        <strong>rien ne passe du Backlog directement à «&nbsp;En cours&nbsp;».</strong>
+      </p>
+      <p>
+        <strong>La bascule se fait par lot.</strong> Personne ne passe un ticket «&nbsp;En
+        service&nbsp;» un par un&nbsp;: on bascule tous les tickets d'une release au moment du
+        déploiement, un geste par site et par version. Un ticket qui n'est ni du code ni déployable
+        — un achat, une décision, un document — bascule à sa fusion et sort du calcul du délai de
+        mise en service, pas du temps de flux.
+      </p>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Ce qu'on relève chaque mois</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Mesure</th>
+            <th scope="col">Calcul</th>
+            <th scope="col">Ce qu'elle dit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Temps de flux</th>
+            <td>Date&nbsp;2 − Date&nbsp;1</td>
+            <td>
+              Le temps que met une demande engagée à devenir un service rendu. C'est le chiffre
+              qu'on cherche à réduire.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Temps de process</th>
+            <td>durée en «&nbsp;En cours&nbsp;» + «&nbsp;En revue&nbsp;»</td>
+            <td>La part réellement travaillée.</td>
+          </tr>
+          <tr>
+            <th scope="row">Efficience du flux</th>
+            <td>process ÷ flux</td>
+            <td>
+              La part du temps de flux qui a servi à quelque chose. Le reste est de l'attente.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Délai de mise en service</th>
+            <td>Date&nbsp;2 − entrée en «&nbsp;Fusionné&nbsp;»</td>
+            <td>
+              Le segment entièrement sous notre contrôle&nbsp;: du code fusionné au club qui en
+              bénéficie.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Âge du Backlog</th>
+            <td>aujourd'hui − date de création</td>
+            <td>
+              La seule mesure qui parte de la création du ticket. C'est une mesure d'encombrement,
+              pas de flux&nbsp;: un temps de flux qui s'améliore pendant que l'âge du Backlog enfle
+              n'est pas une amélioration, c'est un tri plus sévère à l'entrée.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="rituels" aria-labelledby="rit-h">
+    <span class="kicker">08</span>
+    <h2 id="rit-h">Les rituels et le quotidien</h2>
+    <p class="intro prose">
+      Cinq rendez-vous, et une semaine ordinaire qui part toujours du Triage. Un rituel qui saute
+      deux fois est simplifié ou supprimé, pas maintenu pour la forme.
+    </p>
+
+    <h3 class="kicker">Les rituels</h3>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Quand</th>
+            <th scope="col">Quoi</th>
+            <th scope="col">Qui</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Chaque jour, 10 min</th>
+            <td>Le Triage est vidé.</td>
+            <td>Le produit</td>
+          </tr>
+          <tr>
+            <th scope="row">Chaque lundi, 30 min</th>
+            <td>Le cycle de la semaine est planifié&nbsp;; rien n'y est ajouté après coup.</td>
+            <td>Le produit et le développement</td>
+          </tr>
+          <tr>
+            <th scope="row">Chaque match</th>
+            <td>Checklist à J-3, récap à J+1.</td>
+            <td>Le support et le développement</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin de mois, 1 h</th>
+            <td>
+              Revue de release&nbsp;: les chiffres de flux, une démonstration devant un club ou un
+              annonceur, une cause racine, un accélérateur choisi, une expérimentation décidée,
+              l'OKR mis à jour.
+            </td>
+            <td>L'équipe, direction invitée</td>
+          </tr>
+          <tr>
+            <th scope="row">Chaque trimestre, 2 h</th>
+            <td>
+              Revue des thèmes, de la cible et des paris&nbsp;: ce qu'on garde, ce qu'on abandonne,
+              ce qu'on ouvre.
+            </td>
+            <td>Le produit et la direction</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Une semaine ordinaire</h3>
+    <ul class="dl">
+      <li>
+        <b>Chaque matin</b>
+        <p>
+          Le Triage est vidé. Une demande de club arrivée par e-mail, un constat de match, une
+          idée&nbsp;: chaque entrée devient un ticket rangé dans un projet, repart avec un mot, ou
+          attend en veille. Si c'est un pari neuf, il va dans l'entonnoir, côté Notion.
+        </p>
+      </li>
+      <li>
+        <b>Lundi</b>
+        <p>
+          On planifie le cycle avec des tickets tirés des projets en cours. Rien ne s'y ajoute
+          après&nbsp;: c'est le réglage qui change tout.
+        </p>
+      </li>
+      <li>
+        <b>Dans la semaine</b>
+        <p>
+          Un ticket part en branche, la pull request se fusionne, le ticket passe
+          «&nbsp;Fusionné&nbsp;» et rejoint la release du mois.
+        </p>
+      </li>
+      <li>
+        <b>J-3 et J+1 d'un match</b>
+        <p>
+          La checklist de préparation, puis le récap du lendemain, dans le projet du club. Le récap
+          est écrit pour le club, pas pour l'équipe de développement.
+        </p>
+      </li>
+      <li>
+        <b>Quand une Feature se termine</b>
+        <p>
+          Elle s'annonce&nbsp;: note de version, démonstration. Son Epic se met à jour dans Notion —
+          l'indicateur a-t-il bougé&nbsp;?
+        </p>
+      </li>
+      <li>
+        <b>Fin de mois</b>
+        <p>
+          La release part sur les sites, les notes de version sont relues, et la revue se tient.
+        </p>
+      </li>
+      <li>
+        <b>Fin de trimestre</b>
+        <p>
+          Les thèmes, la cible et les paris&nbsp;: ce qu'on garde, ce qu'on abandonne, ce qu'on
+          ouvre.
+        </p>
+      </li>
+    </ul>
+
+    <h3 class="kicker" style="margin-top: 26px">Qui fait quoi</h3>
+    <div class="cols">
+      <div class="card">
+        <b>Le développement</b>
+        <ul>
+          <li>Le point de départ est le cycle de la semaine, pas le Triage.</li>
+          <li>
+            Une branche par ticket, une pull request, une relecture, une fusion. Le ticket passe
+            «&nbsp;Fusionné&nbsp;».
+          </li>
+          <li>
+            Un ticket ne se ferme pas parce que le code est fusionné&nbsp;: il se ferme quand il
+            tourne sur un site.
+          </li>
+          <li>On ne déploie pas un jour de match. À J-3, la checklist se passe avec le support.</li>
+          <li>
+            Un défaut trouvé en passant s'écrit dans le Triage&nbsp;; il ne se corrige pas en
+            silence.
+          </li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Le produit</b>
+        <ul>
+          <li>
+            Le Triage se vide chaque matin&nbsp;: accepter, promouvoir, refuser avec un mot,
+            fusionner, mettre en veille.
+          </li>
+          <li>
+            Les Epics se tiennent dans Notion&nbsp;: l'hypothèse, la première version, l'indicateur
+            et son point de départ.
+          </li>
+          <li>Le lundi, le cycle se planifie. Rien ne s'y ajoute après.</li>
+          <li>Les décisions orales s'écrivent sous vingt-quatre heures.</li>
+          <li>
+            La revue de fin de mois s'anime&nbsp;: les chiffres de flux, une démonstration, une
+            cause racine, une expérimentation décidée.
+          </li>
+        </ul>
+      </div>
+      <div class="card">
+        <b>Le support</b>
+        <ul>
+          <li>
+            C'est la porte d'entrée des clubs&nbsp;: tout ce qu'ils disent finit dans le Triage,
+            avec le site, l'écran, l'heure.
+          </li>
+          <li>Le projet du club et son jalon par match à domicile se tiennent ici.</li>
+          <li>À J-3, la checklist&nbsp;; à J+1, le récap.</li>
+          <li>
+            On ne déploie pas et on ne corrige pas la configuration en production&nbsp;: on escalade
+            par le Triage.
+          </li>
+          <li>Quand un annonceur demande une preuve, la demande se note.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="kicker" style="margin-top: 26px">Les cinq choses à ne pas faire</h3>
+    <ul class="rules">
+      <li>
+        <b>Créer un projet pour ranger des tickets</b>
+        <p>
+          Un projet est une Feature&nbsp;: un résultat clair, une date de fin, quelqu'un qui
+          l'annonce.
+        </p>
+      </li>
+      <li>
+        <b>Écrire l'avancement dans Notion</b>
+        <p>Notion porte l'intention. L'état est dans Linear, et nulle part ailleurs.</p>
+      </li>
+      <li>
+        <b>Fermer un ticket parce que la pull request est fusionnée</b>
+        <p>Fusionné n'est pas en service.</p>
+      </li>
+      <li>
+        <b>Ajouter au cycle en cours</b>
+        <p>Ce qui arrive en cours de semaine attend le lundi suivant, sauf urgence de match.</p>
+      </li>
+      <li>
+        <b>Déployer un jour de match</b>
+        <p>
+          Un déploiement se prépare&nbsp;: sauvegarde, ordre des bundles, vérification écran par
+          écran.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="nommage" aria-labelledby="nom-h">
+    <span class="kicker">09</span>
+    <h2 id="nom-h">Les règles de nommage</h2>
+    <p class="intro prose">
+      Le nom est la seule chose qui relie les deux outils. Il porte donc plus de charge qu'on ne le
+      croit, et ces règles sont ce qui l'empêche de céder.
+    </p>
+    <ul class="rules">
+      <li>
+        <b>La page Notion et son objet Linear portent le même nom, par confort de lecture.</b>
+        <p>
+          Le nom n'est pas la jointure&nbsp;: la jointure est le lien, porté des deux côtés. Le nom
+          sert à reconnaître un projet dans une liste, rien de plus. Renommer est donc un geste
+          ordinaire, sans conséquence.
+        </p>
+      </li>
+      <li>
+        <b>Un Epic porte un code&nbsp;: une lettre de groupe, puis un numéro.</b>
+        <p>
+          S pour le socle, V pour la preuve, M pour le soir du match, P pour les surfaces, R pour le
+          réseau. Le code ne change jamais&nbsp;; il sert à parler d'un pari sans réciter son titre.
+        </p>
+      </li>
+      <li>
+        <b>Un thème se nomme par un résultat pour le client.</b>
+        <p>Pas par un domaine technique, pas par un nom d'équipe.</p>
+      </li>
+      <li>
+        <b>Une capacité se nomme du point de vue du client&nbsp;: ce que le produit sait faire.</b>
+        <p>
+          «&nbsp;Prouver à l'annonceur que son spot est passé&nbsp;», pas «&nbsp;module de
+          reporting&nbsp;».
+        </p>
+      </li>
+      <li>
+        <b>Une Feature se nomme par le service qu'elle livre, tel qu'on l'annoncerait.</b>
+        <p>
+          Le test&nbsp;: le titre s'écrit dans une note de version, juste après
+          «&nbsp;Nouveau&nbsp;: &nbsp;». S'il faut une phrase d'explication, ce n'est pas encore un
+          service livré.
+        </p>
+      </li>
+      <li>
+        <b>Une initiative Linear porte le nom de son flux de valeur.</b>
+        <p>Une release porte le nom de son mois.</p>
+      </li>
+      <li>
+        <b>Les textes du cadre d'origine se reformulent, ils ne se recopient pas.</b>
+        <p>On écrit la définition avec nos mots et on met un lien vers la source.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    Référence Broadcaster · verticale Sport &amp; Events · B2B Alive ·
+    docs/b2b-alive-transition/reference-broadcaster.html
+  </footer>
+</main>

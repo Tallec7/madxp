@@ -1,0 +1,1406 @@
+<meta charset="utf-8" />
+<title>Epics Broadcaster</title>
+<meta
+  name="description"
+  content="Roadmap, étape 4 : dix-sept Epics avec hypothèse, première version, indicateur et dépendances, plus l'objectif du trimestre."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --ok: #1f6a4b;
+    --ok-wash: #dcede4;
+    --part: #8a6a00;
+    --part-wash: #f4ecd0;
+    --bad: #b3261e;
+    --bad-wash: #f6dedb;
+    --man: #3f5b7a;
+    --man-wash: #e1e8f0;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --ok: #5cb68a;
+      --ok-wash: #17301f;
+      --part: #d9b24a;
+      --part-wash: #2f2812;
+      --bad: #f08a80;
+      --bad-wash: #3a1b18;
+      --man: #8fb2e8;
+      --man-wash: #1b2738;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --ok: #5cb68a;
+    --ok-wash: #17301f;
+    --part: #d9b24a;
+    --part-wash: #2f2812;
+    --bad: #f08a80;
+    --bad-wash: #3a1b18;
+    --man: #8fb2e8;
+    --man-wash: #1b2738;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 66ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: block;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 48ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .th {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 7px;
+    align-content: start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .th b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .th p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .th .okr {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+  }
+  .th .okr i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+  }
+  .theme-block {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 900px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 210px;
+  }
+  .t tbody th small {
+    display: block;
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .c-livré {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .c-partiel {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .c-absent {
+    color: var(--bad);
+    background: var(--bad-wash);
+  }
+  .c-en {
+    color: var(--man);
+    background: var(--man-wash);
+  }
+  .hz {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .h-Socle {
+    color: var(--accent);
+  }
+  .h-Extension {
+    color: var(--ink-soft);
+  }
+  .h-Réseau {
+    color: var(--man);
+  }
+  .h-Long {
+    color: var(--muted);
+  }
+  .t td.dem {
+    color: var(--ink-soft);
+    min-width: 220px;
+  }
+  .t td.mx {
+    min-width: 210px;
+  }
+  .enablers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .enablers li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--man);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .enablers b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .enablers p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .enablers .st {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 6px;
+  }
+  .enablers .st i,
+  .enablers .mx i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .enablers .mx {
+    font-size: 13.5px;
+  }
+  .dl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .dl li {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .dl p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  @media (max-width: 700px) {
+    .dl li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+  .decisions {
+    list-style: none;
+    counter-reset: q;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: q;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(q);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 78ch;
+  }
+  .decisions p + p {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .fig {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 18px;
+    overflow-x: auto;
+  }
+  .fig svg {
+    width: 100%;
+    min-width: 760px;
+    max-width: 1040px;
+    height: auto;
+    display: block;
+    color: var(--ink);
+  }
+  .fig figcaption {
+    font-size: 14.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    max-width: 80ch;
+  }
+  .fg-box {
+    fill: var(--surface-2);
+    stroke: var(--rule-strong);
+    stroke-width: 1.5;
+  }
+  .fg-t {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 15px;
+    fill: currentColor;
+  }
+  .fg-c {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    fill: var(--ink-soft);
+  }
+  .fg-a {
+    stroke: var(--accent);
+    stroke-width: 2;
+    fill: none;
+  }
+  .fg-l {
+    font-family: var(--f-body);
+    font-style: italic;
+    font-size: 13px;
+    fill: var(--ink-soft);
+  }
+  .grp {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .epics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 14px;
+  }
+  .ep {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 15px 17px 16px;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .ep.c-man {
+    border-left-color: var(--man);
+  }
+  .ep.c-ok {
+    border-left-color: var(--ok);
+  }
+  .ep.c-part {
+    border-left-color: var(--part);
+  }
+  .ep-h {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ep-code {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .ep-t {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 17px;
+    line-height: 1.25;
+  }
+  .ep-type {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ep p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .ep .lab {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .ep .f {
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+    font-size: 14.5px;
+  }
+  .ep .f b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .okr {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--ok);
+    padding: 18px 20px 20px;
+  }
+  .okr h3 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: 22px;
+    margin: 4px 0 10px;
+  }
+  .okr ol {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+  .okr li {
+    font-size: 15.5px;
+  }
+  .okr li span {
+    display: block;
+    font-size: 13.5px;
+    color: var(--muted);
+    font-family: var(--f-mono);
+  }
+  .park {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .park li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 280px 1fr 150px;
+    gap: 20px;
+    align-items: start;
+  }
+  .park b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .park p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .park .hz {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--part);
+  }
+  @media (max-width: 800px) {
+    .park li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Roadmap · étape 4 sur 7</b><span>Rôle A · consultant</span><span>12 septembre 2026</span
+      ><span>Statut : proposition à corriger</span><span>Mis à jour le 13/09/2026</span>
+    </div>
+    <h1>Dix-sept Epics</h1>
+    <p class="lede">
+      L'écart entre la cible et l'état réel, transformé en paris. Chaque Epic dit ce qu'il suppose,
+      la plus petite version qui le vérifie, et l'indicateur qui tranchera — avec son point de
+      départ mesuré.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>Ce qui a servi</dt>
+        <dd>
+          Les vingt-deux capacités de la cible, les onze goulots des cartes de flux, et les mesures
+          du 11 septembre pour les points de départ.
+        </dd>
+      </div>
+      <div>
+        <dt>L'ordre que tu as posé</dt>
+        <dd>
+          Le thème de la preuve est la promesse, mais il ne vaut rien tant que le match ne tient pas
+          et que les surfaces demandent du sur-mesure. C'est traduit en dépendances, et dans les
+          résultats clés.
+        </dd>
+      </div>
+      <div>
+        <dt>La suite</dt>
+        <dd>
+          L'étape 5 ordonne : coût du retard, limite d'en-cours, et des couloirs qui avancent en
+          parallèle.
+        </dd>
+      </div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <div
+    style="
+      max-width: var(--wrap, 1080px);
+      margin: 0 auto 12px;
+      padding: 14px 18px;
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      font-size: 14.5px;
+      line-height: 1.55;
+    "
+  >
+    <strong style="font-family: var(--f-display)"
+      >Mise à jour du 13/09/2026 — l'objectif, les préconditions et quatre rattachements ont
+      changé.</strong
+    >
+    <br /><b>Le match n'est plus une précondition de la preuve.</b> Le produit a deux faces qui se
+    renforcent&nbsp;: la face club, le cœur (le match s'anime sans nous), et la face annonceur, le
+    levier (ce qui est vendu passe, et c'est prouvé). La phrase-thèse et l'encadré «&nbsp;L'ordre
+    que tu as posé&nbsp;» ci-dessous racontent la lecture du 12/09, abandonnée depuis. <br /><b
+      >L'objectif du trimestre est remplacé</b
+    >
+    (section «&nbsp;L'objectif du trimestre&nbsp;», corrigée plus bas)&nbsp;: il couvre désormais
+    les deux faces, et ce qui était compté comme précondition devient des résultats clés côté club.
+    <br /><b>S3 et E10 ne sont plus des Epics.</b> «&nbsp;Mesurer le flux&nbsp;» devient une Feature
+    de S2, «&nbsp;Une identité de surface partagée&nbsp;» une Feature de S5. <br /><b
+      >Quatre Epics changent de thème, pas de code.</b
+    >
+    P3 (gabarits), P6 (gestes de direct, dont les messages du club) et P8 (contenus vivants)
+    rejoignent «&nbsp;Le soir du match tient sans nous&nbsp;». V5 (médiathèque) rejoint «&nbsp;Une
+    régie pour toutes les surfaces&nbsp;». <br />Notes WSJF et ordre en vigueur&nbsp;:
+    <a href="revue-wsjf-epics.html">revue WSJF du 13/09/2026</a> et
+    <a href="roadmap-etape-5-ordre.html">étape 5, mise à jour le même jour</a>.
+  </div>
+  <div
+    style="
+      max-width: var(--wrap, 1080px);
+      margin: 0 auto;
+      padding: 14px 18px;
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--part);
+      background: var(--surface);
+      font-size: 14.5px;
+      line-height: 1.55;
+    "
+  >
+    <strong style="font-family: var(--f-display)"
+      >Instantané du 11 septembre — dépassé sur un point.</strong
+    >
+    L'audit de couverture du 12/09 a trouvé douze Epics manquants — le son, la conduite du match,
+    les gestes de direct, l'image live, les contenus vivants, la marque du club, la télécommande,
+    l'habillage des faits de jeu, l'inventaire vendable, la médiathèque, l'ouverture aux agents et
+    les engagements de service. La référence à jour est
+    <a href="couverture-de-la-cible.html">Couverture de la cible</a> pour le diagnostic, et
+    <a href="epics-en-features.html">Les Features&nbsp;· v3</a> pour le portefeuille complet
+    (29&nbsp;Epics, 76&nbsp;Features, 2 au vivier). Cette page reste le compte rendu de l'étape
+    telle qu'elle a été construite.
+  </div>
+
+  <section id="these" aria-labelledby="these-h">
+    <p class="kicker" id="these-h">En une phrase</p>
+    <p class="thesis">
+      Quatre groupes, un seul sens de lecture :
+      <em>ce qui rend le match fiable rend la preuve possible</em>, et la preuve rend le réseau
+      vendable.
+    </p>
+  </section>
+
+  <section id="chaine" aria-labelledby="ch-h">
+    <h2 id="ch-h">Ce qui doit exister avant quoi</h2>
+    <p class="intro prose">
+      Les dépendances ne disent pas le calendrier : plusieurs groupes peuvent avancer en même temps,
+      et c'est même le but. Elles disent ce qui rend un Epic inutile s'il arrive trop tôt.
+    </p>
+
+    <figure class="fig">
+      <svg
+        viewBox="0 0 1040 250"
+        role="img"
+        aria-label="Chaîne de dépendances entre les quatre groupes d'Epics : le socle (mise en service continue, suivi à distance, mesure du flux) conditionne les surfaces et la fiabilité (ingest, régie unique, table de marque, répétition, autonomie du club) ; ceux-ci conditionnent la preuve (composition depuis les ventes, remontée, rapport annonceur, facturation) ; la preuve et les surfaces conditionnent le réseau (ouverture d'un lieu, packs de lieux, deux niveaux de vente)."
+      >
+        <rect class="fg-box" x="8" y="60" width="210" height="96" rx="3" />
+        <text class="fg-t" x="24" y="88">Socle</text>
+        <text class="fg-c" x="24" y="112">S1 · S2 · S3</text>
+        <text class="fg-c" x="24" y="132">mise en service, suivi,</text>
+        <text class="fg-c" x="24" y="148">mesure</text>
+
+        <rect class="fg-box" x="272" y="40" width="230" height="136" rx="3" />
+        <text class="fg-t" x="288" y="68">Surfaces et fiabilité</text>
+        <text class="fg-c" x="288" y="92">P1 · P2 · P3</text>
+        <text class="fg-c" x="288" y="112">M1 · M2 · M3 · M4</text>
+        <text class="fg-c" x="288" y="140">le match tient,</text>
+        <text class="fg-c" x="288" y="156">les surfaces suivent</text>
+
+        <rect class="fg-box" x="556" y="52" width="210" height="112" rx="3" />
+        <text class="fg-t" x="572" y="80">La preuve</text>
+        <text class="fg-c" x="572" y="104">V1 · V2 · V3 · V4</text>
+        <text class="fg-c" x="572" y="130">vendu, diffusé,</text>
+        <text class="fg-c" x="572" y="146">prouvé, facturé</text>
+
+        <rect class="fg-box" x="820" y="60" width="200" height="96" rx="3" />
+        <text class="fg-t" x="836" y="88">Le réseau</text>
+        <text class="fg-c" x="836" y="112">R1 · R2 · R3</text>
+        <text class="fg-c" x="836" y="138">l'inventaire agrégé</text>
+
+        <path class="fg-a" d="M218 108 L266 108" marker-end="url(#ar)" />
+        <path class="fg-a" d="M502 108 L550 108" marker-end="url(#ar)" />
+        <path class="fg-a" d="M766 108 L814 108" marker-end="url(#ar)" />
+        <path class="fg-a" d="M387 30 C387 14, 920 14, 920 54" marker-end="url(#ar)" />
+        <text class="fg-l" x="620" y="14">P2 conditionne aussi l'ouverture d'un lieu</text>
+        <text class="fg-l" x="228" y="200">sans version visible,</text>
+        <text class="fg-l" x="228" y="218">rien n'est vérifiable</text>
+        <text class="fg-l" x="512" y="200">sans média au format</text>
+        <text class="fg-l" x="512" y="218">ni match qui tient, la preuve ne vaut rien</text>
+        <defs>
+          <marker
+            id="ar"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+          </marker>
+        </defs>
+      </svg>
+      <figcaption>
+        Les flèches disent ce qui doit exister avant, pas l'ordre du calendrier : plusieurs groupes
+        avancent en parallèle. L'étape 5 pose les couloirs et les priorités.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="grp" id="socle" aria-labelledby="socle-h">
+    <span class="kicker">3 Epics</span>
+    <h2 id="socle-h">Socle</h2>
+    <p class="intro prose">Des capacités qui ne se vendent pas, mais dont tout le reste dépend.</p>
+    <div class="epics">
+      <article class="ep c-man">
+        <div class="ep-h">
+          <span class="ep-code">S1</span
+          ><span class="ep-t">Mettre en service en continu, par site</span
+          ><span class="ep-type">enabler</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Aujourd&#x27;hui, trois jours en médiane séparent un
+          correctif terminé de son arrivée sur le site, douze au pire, et la mise à jour se fait en
+          un gros lot qui casse : écrans noirs, sono coupée quinze minutes, neuf incidents ouverts
+          dans la foulée. Livrer par petits lots, à la demande, avec un retour arrière, ramène ce
+          délai à la journée et supprime le déploiement-événement.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un pipeline par site qui publie à la demande, enregistre la
+          version installée et permet de revenir en arrière. Le Roudourou d&#x27;abord.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Délai « terminé → en service » : 3,1 jours aujourd&#x27;hui (médiane
+          mesurée) → moins d&#x27;un jour.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+      <article class="ep c-man">
+        <div class="ep-h">
+          <span class="ep-code">S2</span
+          ><span class="ep-t">Savoir ce qui tourne où, et ce qui va tomber</span
+          ><span class="ep-type">enabler</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Rien ne remonte d&#x27;un lieu sans connexion technique
+          au boîtier : une panne se découvre quand le club appelle, et un ticket peut être fermé
+          sans être en service — sept sur treize récemment. Un état lisible à distance rend la panne
+          visible avant l&#x27;appel et rend vérifiable qu&#x27;un correctif tourne vraiment.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Une page « ce qui tourne où » : version, écrans, sono, dernière
+          diffusion, avec une alerte quand un écran meurt.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Tickets fermés sans être en service : 7 sur 13 → 0. Pannes détectées
+          avant l&#x27;appel du club : 0 → la majorité.
+        </p>
+        <p class="f"><b>Dépend de.</b> S1 pour la version</p>
+      </article>
+      <article class="ep c-man">
+        <div class="ep-h">
+          <span class="ep-code">S3</span><span class="ep-t">Mesurer le flux</span
+          ><span class="ep-type">enabler</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>On sait aujourd&#x27;hui, par une mesure ponctuelle, que
+          l&#x27;efficience du flux est d&#x27;environ 2 %. Instrumenter deux dates transforme ce
+          constat en signal permanent, sans estimation et sans points de story.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Deux horodatages dans Linear — entrée dans le flux, mise en
+          service — et une vue relue à chaque revue mensuelle.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Efficience du flux : ≈ 2 % aujourd&#x27;hui. Temps de flux médian : 4,6
+          jours.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+    </div>
+  </section>
+  <section class="grp" id="surfaces" aria-labelledby="surfaces-h">
+    <span class="kicker">7 Epics</span>
+    <h2 id="surfaces-h">Surfaces et fiabilité</h2>
+    <p class="intro prose">
+      Ce qui doit marcher avant que la preuve ait une valeur. C&#x27;est l&#x27;ordre que tu as
+      posé.
+    </p>
+    <div class="epics">
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">P1</span
+          ><span class="ep-t">Le média au format de chaque surface, automatiquement</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>La mise au format des fichiers est le premier poste de
+          temps de l&#x27;équipe : transferts, ré-encodages, pliages refaits. Dix-sept bandeaux sur
+          dix-sept sont arrivés hors format au Rhénus, et un changement de géométrie a imposé de
+          replier 183 films. Une chaîne d&#x27;ingest qui mesure, plie et refuse à l&#x27;envoi rend
+          ce travail invisible.
+        </p>
+        <p class="f">
+          <b>Première version.</b> À l&#x27;envoi : contrôle du format par surface, pliage
+          automatique, dédoublonnage, et un rapport de ce qui ne passe pas. Les briques existent
+          chez MadXp.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Médias utilisables sans retouche : 0 sur 17 au dernier événement → 9
+          sur 10.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">P2</span
+          ><span class="ep-t">Une régie pour toutes les surfaces, sans travail sur mesure</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Chaque lieu est aujourd&#x27;hui câblé à la main, et les
+          deux géométries documentées ont dû être corrigées sur place. Décrire un lieu une fois —
+          surfaces, géométrie, câblage — et rejouer cette description ailleurs supprime
+          l&#x27;installation sur mesure, qui est le vrai plafond du nombre de lieux.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un modèle de lieu applicable à un nouveau lieu sans intervention
+          de développement, sur les quatre surfaces déjà tenues.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Corrections de géométrie après installation : 2 sur 2 → 0. Délai
+          description du lieu → première diffusion.
+        </p>
+        <p class="f"><b>Dépend de.</b> P1, S2</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">P3</span
+          ><span class="ep-t">Habiller sans savoir faire du motion design</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Sept concurrents proposent un studio de création :
+          c&#x27;est une attente de base du marché. Un club sans graphiste doit pouvoir changer ses
+          visuels sans passer par nous.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Cinq gabarits paramétrables — score, but, composition, sponsor,
+          message — modifiables par le club.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Visuels produits par le club sans nous : 0 aujourd&#x27;hui.
+        </p>
+        <p class="f"><b>Dépend de.</b> P1</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">M1</span
+          ><span class="ep-t">Le score vient de la table de marque</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Le score se tient à la main, trois gestes par but, et un
+          score faux s&#x27;affiche devant le stade. Surtout, le refus est écrit dans les business
+          cases MadXp : « sans lecture automatique, pas de signature ». Trois concurrents le font
+          déjà.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Bodet d&#x27;abord, dont le protocole est publié : score, chrono,
+          période lus et affichés sans saisie. Un simulateur pour la recette.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Matchs produits sans saisie manuelle du score : 0 aujourd&#x27;hui.
+          Prospects qui citent ce manque comme bloquant.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">M2</span><span class="ep-t">Répéter le match avant le match</span
+          ><span class="ep-type">enabler</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Les défauts se découvrent le jour du match — deux
+          bloquants au dernier lancement — et reviennent d&#x27;un match à l&#x27;autre. Rejouer une
+          journée entière sur la configuration réelle, en quelques minutes, les fait tomber la
+          veille.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Rejeu des gestes manuels et de ce qu&#x27;affichent les écrans,
+          sur une copie de la configuration du lieu, avec un rapport par instant. Chantier déjà
+          commencé.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Défauts trouvés avant le match plutôt qu&#x27;après : aujourd&#x27;hui,
+          une trentaine de tickets dans les 48 h autour de chaque match.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">M3</span><span class="ep-t">Le club se dépanne seul</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Le club ne peut rien corriger seul : remplacer un média
+          ou refaire une playlist passe par nous, et l&#x27;accès distant est en lecture. Tant que
+          c&#x27;est vrai, chaque lieu supplémentaire coûte une personne.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Les gestes courants depuis le club : remplacer un média, refaire
+          une playlist, corriger une composition — sans ligne de commande.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Gestes faits par le club sans nous, par match : 0 aujourd&#x27;hui.
+        </p>
+        <p class="f"><b>Dépend de.</b> S2</p>
+      </article>
+      <article class="ep">
+        <div class="ep-h">
+          <span class="ep-code">M4</span
+          ><span class="ep-t">L&#x27;écran ne s&#x27;arrête pas si le réseau tombe</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>C&#x27;est l&#x27;argument historique du boîtier, et le
+          seul critère où la reprise de MadXp fait passer un concurrent de « partiel » à « oui ». Il
+          n&#x27;est aujourd&#x27;hui pas garanti de bout en bout côté Broadcaster.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un soir de match complet sans réseau sur un lieu, vérifié par une
+          coupure volontaire, reconnexion comprise.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Minutes d&#x27;antenne perdues pendant une coupure de test : non mesuré
+          aujourd&#x27;hui.
+        </p>
+        <p class="f"><b>Dépend de.</b> —</p>
+      </article>
+    </div>
+  </section>
+  <section class="grp" id="preuve" aria-labelledby="preuve-h">
+    <span class="kicker">4 Epics</span>
+    <h2 id="preuve-h">La preuve</h2>
+    <p class="intro prose">
+      La promesse qui rend le sponsoring renouvelable — et qui n&#x27;existe aujourd&#x27;hui nulle
+      part.
+    </p>
+    <div class="epics">
+      <article class="ep c-ok">
+        <div class="ep-h">
+          <span class="ep-code">V1</span
+          ><span class="ep-t">Ce qui est vendu passe à l&#x27;écran</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>La rotation d&#x27;un match ne se compose pas depuis les
+          ventes : c&#x27;est un geste manuel d&#x27;une seule personne, fait au dernier moment —
+          sept minutes avant le coup d&#x27;envoi au dernier match mesuré, et pas du tout à J-2 du
+          suivant. L&#x27;écart entre vendu et diffusé reste invisible jusqu&#x27;au lendemain,
+          voire jamais.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Génération automatique de la rotation d&#x27;une journée depuis
+          ses ventes, et alerte à J-7 puis J-2 si une vente n&#x27;a aucun passage.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Ventes avec passages programmés à J-2 : 0 % à la dernière journée → 100
+          %.
+        </p>
+        <p class="f"><b>Dépend de.</b> P1, M2</p>
+      </article>
+      <article class="ep c-ok">
+        <div class="ep-h">
+          <span class="ep-code">V2</span
+          ><span class="ep-t">La preuve sort du lieu et retrouve la vente</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>La preuve existe — 353 971 lignes — mais un dix-millième
+          porte une vente, et aucune ne sort du boîtier : le cloud n&#x27;est pas raccordé. Sans ce
+          maillon, ni rapport, ni facture, ni renouvellement.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Rattachement systématique de chaque passage à sa vente, remontée
+          hors du lieu, et rapprochement vendu contre diffusé par match.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Lignes rattachées à une vente : 0,011 % → plus de 95 %. Lignes
+          remontées : 0 % → 100 %.
+        </p>
+        <p class="f"><b>Dépend de.</b> V1, S1, S2</p>
+      </article>
+      <article class="ep c-ok">
+        <div class="ep-h">
+          <span class="ep-code">V3</span
+          ><span class="ep-t">L&#x27;annonceur reçoit sa preuve, sans compte</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Aucun annonceur n&#x27;a jamais reçu de preuve, sur
+          aucun site, vingt-huit jours après le premier match. Aucun des dix concurrents
+          cartographiés ne propose d&#x27;accès sans création de compte : c&#x27;est un
+          différenciateur, et le rapport PDF existe déjà chez MadXp.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un rapport par match et par annonceur — passages, dates, surfaces
+          — accessible par un simple lien, sans compte.
+        </p>
+        <p class="f"><b>Indicateur.</b> Annonceurs ayant reçu leur preuve : 0 aujourd&#x27;hui.</p>
+        <p class="f"><b>Dépend de.</b> V2</p>
+      </article>
+      <article class="ep c-ok">
+        <div class="ep-h">
+          <span class="ep-code">V4</span
+          ><span class="ep-t">Facturer sur la preuve, reverser au club</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Le club facture ses partenaires hors de l&#x27;outil,
+          sans lien avec ce qui est passé. Facturer sur le réalisé est la condition d&#x27;un
+          partage de recette, donc du réseau.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Une facture construite à partir du diffusé, et la part du club
+          calculée.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Factures émises à partir d&#x27;une preuve : 0 aujourd&#x27;hui.
+        </p>
+        <p class="f"><b>Dépend de.</b> V3</p>
+      </article>
+    </div>
+  </section>
+  <section class="grp" id="reseau" aria-labelledby="reseau-h">
+    <span class="kicker">3 Epics</span>
+    <h2 id="reseau-h">Le réseau</h2>
+    <p class="intro prose">
+      La destination économique. Trois paris assumés, aucune preuve de demande à ce jour.
+    </p>
+    <div class="epics">
+      <article class="ep c-part">
+        <div class="ep-h">
+          <span class="ep-code">R1</span><span class="ep-t">Ouvrir un lieu sans déplacement</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Cinquante-neuf jours ont séparé le premier signal du
+          premier match habillé, et chaque installation reste une intervention sur mesure. Tant que
+          c&#x27;est vrai, le nombre de lieux est plafonné par le nombre de personnes.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un lieu s&#x27;ouvre depuis une page : surfaces, câblage,
+          contenus de départ, sans ligne de commande.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Délai « décision → premier match habillé » : 59 jours au dernier cas →
+          moins de 15.
+        </p>
+        <p class="f"><b>Dépend de.</b> P2, S1, S2</p>
+      </article>
+      <article class="ep c-part">
+        <div class="ep-h">
+          <span class="ep-code">R2</span
+          ><span class="ep-t">Vendre un pack de lieux à une marque</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>C&#x27;est la thèse économique du produit, écrite chez
+          MadXp et jamais construite : une marque signe un contrat et touche plusieurs lieux. Pari
+          assumé : aucun contrat de ce type n&#x27;existe aujourd&#x27;hui.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Une campagne sur plusieurs lieux, avec ciblage et rapport
+          consolidé.
+        </p>
+        <p class="f"><b>Indicateur.</b> Contrats de réseau signés : 0 aujourd&#x27;hui.</p>
+        <p class="f"><b>Dépend de.</b> V3, R1</p>
+      </article>
+      <article class="ep c-part">
+        <div class="ep-h">
+          <span class="ep-code">R3</span
+          ><span class="ep-t">Deux niveaux de vente sur le même écran</span
+          ><span class="ep-type">business</span>
+        </div>
+        <p>
+          <span class="lab">Hypothèse</span>Les partenaires du club et les annonceurs du réseau
+          doivent cohabiter sans se marcher dessus, avec une part locale garantie. Décision du 11/09
+          : les deux vendeurs coexistent. Pari assumé.
+        </p>
+        <p class="f">
+          <b>Première version.</b> Un arbitrage dans la rotation entre les deux niveaux, et une part
+          locale garantie au club.
+        </p>
+        <p class="f">
+          <b>Indicateur.</b> Lieux où les deux niveaux coexistent sans conflit : 0 aujourd&#x27;hui.
+        </p>
+        <p class="f"><b>Dépend de.</b> V1, R2</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="objectif" aria-labelledby="ob-h">
+    <h2 id="ob-h">L'objectif du trimestre</h2>
+    <div class="okr">
+      <span class="kicker">Objectif en vigueur · 13/09/2026</span>
+      <h3>
+        Chaque match d&#x27;un club client est animé sans nous, et ses partenaires reçoivent la
+        preuve de leur diffusion.
+      </h3>
+      <ol>
+        <li>
+          Club — les matchs du client se tiennent sans intervention de notre équipe, et sans défaut
+          bloquant<span>non mesuré ; 2 défauts bloquants au dernier lancement · M2, M3, S1</span>
+        </li>
+        <li>
+          Club — un premier match en gymnase et un en handball ou basket, tenus par un bénévole au
+          téléphone, avec le score lu automatiquement, Bodet et Stramatel<span
+            >0 aujourd&#x27;hui · M5, M1, M6, M4</span
+          >
+        </li>
+        <li>
+          Les deux faces — neuf médias sur dix utilisables sans retouche<span
+            >0 sur 17 au dernier événement · P1</span
+          >
+        </li>
+        <li>
+          Annonceur — 95 % des passages rattachés à leur vente et remontés hors du lieu<span
+            >0,011 % rattachés, 0 % remontés · V1, V2, S1</span
+          >
+        </li>
+        <li>
+          Annonceur — trois annonceurs ont reçu leur rapport sans compte<span
+            >0 aujourd&#x27;hui · V3</span
+          >
+        </li>
+      </ol>
+    </div>
+    <p class="intro prose" style="margin-top: 18px">
+      <strong>Corrigé le 13/09/2026.</strong> L&#x27;objectif ci-dessus remplace celui du 12/09,
+      conservé ci-dessous pour mémoire. Il ne relève plus d&#x27;un seul thème actif&nbsp;: il
+      couvre les deux faces du produit. Les anciennes «&nbsp;préconditions&nbsp;» (P1, M2) ne sont
+      plus traitées comme telles&nbsp;: la face club a ses propres résultats clés. Contexte&nbsp;:
+      un gymnase et un club de handball ou de basket arrivent d&#x27;ici la fin 2026.
+    </p>
+    <p class="intro prose">
+      Un seul objectif formel à la fois, celui du thème actif. Les trois autres thèmes gardent leur
+      résultat attendu en une phrase, sans résultats clés à tenir. Les deux derniers résultats clés
+      sont les préconditions que tu as posées : sans elles, la preuve ne vaut rien.
+    </p>
+    <div class="okr">
+      <span class="kicker">Objectif du 12/09 · remplacé</span>
+      <h3>Un annonceur peut prouver qu&#x27;il a été diffusé.</h3>
+      <ol>
+        <li>
+          95 % des passages rattachés à leur vente<span>0,011 % aujourd&#x27;hui · V1, V2</span>
+        </li>
+        <li>
+          La preuve de chaque match sort du lieu automatiquement<span
+            >0 % aujourd&#x27;hui · V2, S1</span
+          >
+        </li>
+        <li>
+          Trois annonceurs ont reçu leur rapport sans compte<span>0 aujourd&#x27;hui · V3</span>
+        </li>
+        <li>
+          Neuf médias sur dix utilisables sans retouche<span
+            >0 sur 17 au dernier événement · P1</span
+          >
+        </li>
+        <li>
+          Aucun défaut bloquant découvert le jour du match<span>2 au dernier lancement · M2</span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="parking" aria-labelledby="pk-h">
+    <h2 id="pk-h">Gardé dans l'ambition, hors des prochains mois</h2>
+    <ul class="park">
+      <li>
+        <b>Publicité virtuelle dans le flux TV</b>
+        <p>
+          Deux concurrents la vendent (Supponor, AIM Sport), elle vise le haut du marché, et elle
+          n&#x27;existe ni chez nous ni chez MadXp. Gardée dans l&#x27;ambition, hors des dix-huit
+          prochains mois.
+        </p>
+        <span class="hz">Pari, horizon long</span>
+      </li>
+      <li>
+        <b>Vidéo live, replay, multiview</b>
+        <p>
+          Un seul concurrent la propose sur les grands stades. Un POC de flux live existe côté
+          Broadcaster.
+        </p>
+        <span class="hz">Horizon long</span>
+      </li>
+      <li>
+        <b>Synchronisation à l&#x27;image près entre écrans</b>
+        <p>Absente des deux produits, demandée par personne à ce jour.</p>
+        <span class="hz">Pari, horizon long</span>
+      </li>
+    </ul>
+  </section>
+
+  <section id="valider" aria-labelledby="val-h">
+    <h2 id="val-h">Pour valider l'étape 4</h2>
+    <ol class="decisions">
+      <li>
+        <div>
+          <p><strong>Dix-sept Epics : lesquels n&#x27;en sont pas ?</strong></p>
+          <p>
+            Un Epic qui ne change rien pour un client ni pour le flux n&#x27;a rien à faire là.
+            Barre, fusionne, renomme.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Les hypothèses sont-elles justes ?</strong></p>
+          <p>
+            Chacune affirme un lien de cause à effet. Si tu en trouves une qui te paraît fausse,
+            c&#x27;est le meilleur retour possible : c&#x27;est ce qui évite de construire pour
+            rien.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Les préconditions de l&#x27;objectif te vont-elles ?</strong></p>
+          <p>
+            J&#x27;ai mis P1 et M2 dans les résultats clés du thème 1 pour traduire ton point. Si tu
+            vois d&#x27;autres préconditions, dis-les.
+          </p>
+          <p>
+            <strong>Tranché le 13/09/2026 :</strong> il n&#x27;y a plus de préconditions dans
+            l&#x27;objectif. Le match est la moitié du produit, avec ses propres résultats clés ; en
+            notation WSJF, une précondition se compte en réduction de risque.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>La publicité virtuelle : dans l&#x27;ambition ou hors cible ?</strong></p>
+          <p>
+            Je l&#x27;ai gardée dans l&#x27;ambition, horizon long. C&#x27;est l&#x27;interprétation
+            de ta réponse 4, à confirmer.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="methode" aria-labelledby="met-h">
+    <h2 id="met-h">Méthode et limites</h2>
+    <div class="method">
+      <p>
+        Un Epic par écart significatif entre la cible et l'état mesuré. Chaque hypothèse affirme un
+        lien de cause à effet réfutable, et chaque indicateur porte son point de départ, pour qu'on
+        puisse dire dans trois mois si le pari était juste.
+      </p>
+      <ul>
+        <li>
+          Aucune charge, aucune durée, aucune affectation : c'est volontaire, l'ordre et le rythme
+          viennent à l'étape 5.
+        </li>
+        <li>
+          Les points de départ viennent des mesures du 11 septembre ; certains ne sont pas
+          instrumentés en continu, c'est l'objet de S3.
+        </li>
+        <li>
+          Trois Epics du réseau sont des paris assumés : aucun client ne les a demandés à ce jour.
+        </li>
+        <li>Rien n'a été écrit dans Linear ni dans Notion.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Roadmap · étape 4 sur 7 · 12 septembre 2026 · proposition à corriger ·
+    docs/b2b-alive-transition/roadmap-etape-4-epics.html
+  </footer>
+</main>

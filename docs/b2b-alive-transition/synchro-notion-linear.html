@@ -1,0 +1,1381 @@
+<meta charset="utf-8" />
+<title>Synchro Notion Linear</title>
+<meta
+  name="description"
+  content="Qui tient quoi entre Notion et Linear, la clé de jointure, les deux seuls moments de traversée, et où doit vivre l'ordre."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --ok: #1f6a4b;
+    --ok-wash: #dcede4;
+    --part: #8a6a00;
+    --part-wash: #f4ecd0;
+    --bad: #b3261e;
+    --bad-wash: #f6dedb;
+    --man: #3f5b7a;
+    --man-wash: #e1e8f0;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --ok: #5cb68a;
+      --ok-wash: #17301f;
+      --part: #d9b24a;
+      --part-wash: #2f2812;
+      --bad: #f08a80;
+      --bad-wash: #3a1b18;
+      --man: #8fb2e8;
+      --man-wash: #1b2738;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --ok: #5cb68a;
+    --ok-wash: #17301f;
+    --part: #d9b24a;
+    --part-wash: #2f2812;
+    --bad: #f08a80;
+    --bad-wash: #3a1b18;
+    --man: #8fb2e8;
+    --man-wash: #1b2738;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 66ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: block;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 48ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .th {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 7px;
+    align-content: start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .th b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .th p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .th .okr {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+  }
+  .th .okr i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+  }
+  .theme-block {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 900px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 210px;
+  }
+  .t tbody th small {
+    display: block;
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .c-livré {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .c-partiel {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .c-absent {
+    color: var(--bad);
+    background: var(--bad-wash);
+  }
+  .c-en {
+    color: var(--man);
+    background: var(--man-wash);
+  }
+  .hz {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .h-Socle {
+    color: var(--accent);
+  }
+  .h-Extension {
+    color: var(--ink-soft);
+  }
+  .h-Réseau {
+    color: var(--man);
+  }
+  .h-Long {
+    color: var(--muted);
+  }
+  .t td.dem {
+    color: var(--ink-soft);
+    min-width: 220px;
+  }
+  .t td.mx {
+    min-width: 210px;
+  }
+  .enablers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .enablers li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--man);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .enablers b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .enablers p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .enablers .st {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 6px;
+  }
+  .enablers .st i,
+  .enablers .mx i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .enablers .mx {
+    font-size: 13.5px;
+  }
+  .dl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .dl li {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .dl p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  @media (max-width: 700px) {
+    .dl li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+  .decisions {
+    list-style: none;
+    counter-reset: q;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: q;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(q);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 78ch;
+  }
+  .decisions p + p {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  figure {
+    margin: 22px 0 8px;
+  }
+  figure svg {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    display: block;
+  }
+  figcaption {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    max-width: 78ch;
+  }
+  .sy-h {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 13.5px;
+    fill: currentColor;
+    letter-spacing: 0.04em;
+  }
+  .sy-s {
+    font-size: 11.5px;
+    fill: currentColor;
+    opacity: 0.55;
+  }
+  .sy-col {
+    fill: none;
+    stroke: currentColor;
+    stroke-opacity: 0.22;
+  }
+  .sy-b {
+    fill: none;
+    stroke: currentColor;
+    stroke-opacity: 0.38;
+  }
+  .sy-key {
+    stroke-opacity: 0.9;
+    stroke-width: 1.6;
+  }
+  .sy-t {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 13px;
+    fill: currentColor;
+  }
+  .sy-t2 {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    fill: currentColor;
+    opacity: 0.8;
+  }
+  .sy-n {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    fill: currentColor;
+    opacity: 0.42;
+  }
+  .sy-lbl {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    fill: currentColor;
+    opacity: 0.6;
+    letter-spacing: 0.04em;
+  }
+  .sy-j {
+    stroke: currentColor;
+    stroke-opacity: 0.5;
+    stroke-dasharray: 4 4;
+  }
+  .sy-a {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.4;
+  }
+  .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  .tbl th {
+    text-align: left;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 0 12px 7px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .tbl td {
+    padding: 11px 12px 11px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .tbl td:last-child,
+  .tbl th:last-child {
+    padding-right: 0;
+  }
+  .tbl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .tbl .cmt {
+    color: var(--ink-soft);
+  }
+  .scroll {
+    overflow-x: auto;
+  }
+  .scroll .tbl {
+    min-width: 760px;
+  }
+  .dom {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .d-notion {
+    color: var(--accent);
+    background: var(--accent-wash);
+  }
+  .d-linear {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .d-deux {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .trav {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .trav > li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+  }
+  .trav header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .trav h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0;
+  }
+  .trav .sens {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .trav p {
+    margin: 0 0 5px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .trav .freq {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--accent);
+    margin: 0;
+  }
+  .casse {
+    list-style: none;
+    margin: 16px 0 0;
+    padding: 0;
+  }
+  .casse > li {
+    display: grid;
+    grid-template-columns: 260px 1fr 1fr;
+    gap: 20px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.5px;
+  }
+  .casse > li:first-child {
+    border-top: 1px solid var(--rule);
+  }
+  .casse b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+  .casse span {
+    color: var(--ink-soft);
+  }
+  .casse .fix {
+    color: var(--ink);
+  }
+  .casse .lab {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 3px;
+  }
+  @media (max-width: 900px) {
+    .casse > li {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+  }
+  .reserve {
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--bad);
+    background: var(--surface);
+    padding: 16px 20px;
+    margin: 18px 0;
+  }
+  .reserve p {
+    margin: 0 0 8px;
+    font-size: 15.5px;
+  }
+  .reserve p:last-child {
+    margin: 0;
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Méthode</b><span>Rôle A&nbsp;· consultant</span><span>12 septembre 2026</span
+      ><span>Statut&nbsp;: v2 — jointure par identifiant</span>
+    </div>
+    <h1>Qui tient quoi</h1>
+    <p class="lede">
+      Le diagnostic du 11 septembre relevait que Linear et Notion étaient déconnectés. La réponse
+      n'est pas un robot de synchronisation&nbsp;: à trois personnes, c'est une machine de plus à
+      réparer. La réponse est une règle de domicile —
+      <strong>chaque objet vit à un seul endroit</strong>, et les deux outils se rejoignent par un
+      lien porté des deux côtés.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>Le principe, déjà décidé</dt>
+        <dd>
+          Décision du 12/09&nbsp;: «&nbsp;Notion porte l'intention, Linear porte l'état. Jamais les
+          deux au même endroit.&nbsp;» Tout ce qui suit n'en est que l'application.
+        </dd>
+      </div>
+      <div>
+        <dt>Ce que ça coûte</dt>
+        <dd>
+          Un rendez-vous par mois, et deux champs à remplir à la création. Aucun automatisme, aucun
+          jeton d'API, rien à maintenir.
+        </dd>
+      </div>
+      <div>
+        <dt>Ce que ça ne fait pas</dt>
+        <dd>
+          Les deux outils ne sont jamais identiques, et ce n'est pas le but. Ils ne disent pas la
+          même chose.
+        </dd>
+      </div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="carte" aria-labelledby="car-h">
+    <h2 id="car-h">La carte</h2>
+    <figure>
+      <svg
+        viewBox="0 0 980 470"
+        role="img"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-label="Notion tient l'intention — thèmes, flux, capacités, Epics et l'énoncé des Features. Linear tient l'état — initiatives, projets, tickets, releases. Trois objets sont reliés par un lien porté des deux côtés : le flux à son initiative, l'Epic à son étiquette de projet, la Feature à son projet. L'information ne traverse qu'à deux moments : à la création, de Notion vers Linear, et à la revue mensuelle, de Linear vers Notion."
+      >
+        <defs>
+          <marker
+            id="fl"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+          </marker>
+        </defs>
+
+        <text class="sy-h" x="20" y="26">NOTION — l'intention</text>
+        <text class="sy-s" x="20" y="44">pourquoi on le fait. Change rarement.</text>
+        <rect class="sy-col" x="14" y="56" width="360" height="336" rx="3" />
+
+        <text class="sy-h" x="606" y="26">LINEAR — l'état</text>
+        <text class="sy-s" x="606" y="44">où ça en est. Change tous les jours.</text>
+        <rect class="sy-col" x="600" y="56" width="366" height="336" rx="3" />
+
+        <rect class="sy-b" x="34" y="74" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="96">Thème stratégique</text>
+        <text class="sy-n" x="342" y="96" text-anchor="end">ne traverse pas</text>
+
+        <rect class="sy-b" x="34" y="118" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="140">Flux de valeur</text>
+        <rect class="sy-b" x="620" y="118" width="326" height="34" rx="2" />
+        <text class="sy-t" x="632" y="140">Initiative</text>
+        <line class="sy-j" x1="354" y1="135" x2="620" y2="135" />
+
+        <rect class="sy-b" x="34" y="162" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="184">Capacité</text>
+        <text class="sy-n" x="342" y="184" text-anchor="end">ne traverse pas</text>
+
+        <rect class="sy-b sy-key" x="34" y="206" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="228">Epic — une page</text>
+        <rect class="sy-b sy-key" x="620" y="206" width="326" height="34" rx="2" />
+        <text class="sy-t" x="632" y="228">Étiquette de projet</text>
+        <line class="sy-j" x1="354" y1="223" x2="620" y2="223" />
+
+        <rect class="sy-b sy-key" x="34" y="250" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="272">Feature — les 4 champs</text>
+        <rect class="sy-b sy-key" x="620" y="250" width="326" height="34" rx="2" />
+        <text class="sy-t" x="632" y="272">Projet</text>
+        <line class="sy-j" x1="354" y1="267" x2="620" y2="267" />
+
+        <rect class="sy-b" x="620" y="294" width="326" height="34" rx="2" />
+        <text class="sy-t" x="632" y="316">Ticket</text>
+        <text class="sy-n" x="946" y="316" text-anchor="end">ne traverse pas</text>
+
+        <rect class="sy-b" x="34" y="294" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="316">Décision · Risque</text>
+        <text class="sy-n" x="342" y="316" text-anchor="end">ne traverse pas</text>
+
+        <rect class="sy-b" x="620" y="338" width="326" height="34" rx="2" />
+        <text class="sy-t" x="632" y="360">Release · dates de flux</text>
+
+        <rect class="sy-b" x="34" y="338" width="320" height="34" rx="2" />
+        <text class="sy-t" x="46" y="360">Revue du mois</text>
+
+        <text class="sy-lbl" x="487" y="196" text-anchor="middle">
+          un lien, porté des deux côtés
+        </text>
+
+        <path class="sy-a" d="M 380 424 L 594 424" marker-end="url(#fl)" />
+        <text class="sy-t2" x="487" y="416" text-anchor="middle">à la création — une fois</text>
+        <path class="sy-a" d="M 594 452 L 380 452" marker-end="url(#fl)" />
+        <text class="sy-t2" x="487" y="444" text-anchor="middle">
+          à la revue — une fois par mois
+        </text>
+      </svg>
+      <figcaption>
+        Chaque objet a un seul domicile. Les trois objets reliés le sont par un lien porté des deux
+        côtés, et l'information ne traverse qu'à deux moments — jamais en continu.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="domiciles" aria-labelledby="dom-h">
+    <h2 id="dom-h">Le domicile de chaque objet</h2>
+    <p class="intro prose">
+      C'est la règle entière. Si un objet n'y figure pas, il n'a pas de domicile — et il faut lui en
+      choisir un avant de le créer, pas après.
+    </p>
+    <div class="scroll">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Objet</th>
+            <th>Domicile</th>
+            <th>Chez lui</th>
+            <th>Ce que l'autre outil en voit</th>
+            <th>Jointure</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Thème stratégique</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Base <i>Thèmes</i></td>
+            <td class="cmt">Rien. Un thème n'existe pas dans Linear.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Flux de valeur</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Page <i>Flux de valeur</i></td>
+            <td class="cmt">Une initiative Linear, dont la description porte l'URL de la page.</td>
+            <td class="cmt">l&#x27;URL</td>
+          </tr>
+          <tr>
+            <td><b>Capacité</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Base <i>Capacités</i></td>
+            <td class="cmt">Rien. Elle vit dans la page de l'Epic qui la sert.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Epic</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Une page dans la base <i>Epics</i></td>
+            <td class="cmt">
+              Une étiquette de projet, dont la description porte l'URL de la page.
+            </td>
+            <td class="cmt">l&#x27;URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <td><b>Feature</b></td>
+            <td><span class="dom d-deux">partagé</span></td>
+            <td class="cmt">Notion pour l'énoncé — les quatre champs de SAFe</td>
+            <td class="cmt">
+              Un projet Linear qui porte l'exécution, et l'URL de la page en tête de sa description.
+            </td>
+            <td class="cmt">l&#x27;URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <td><b>Enabler</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Base <i>Epics</i>, marqué Enabler</td>
+            <td class="cmt">Un projet Linear, comme une Feature.</td>
+            <td class="cmt">l&#x27;URL, des deux côtés</td>
+          </tr>
+          <tr>
+            <td><b>Ticket</b></td>
+            <td><span class="dom d-linear">Linear</span></td>
+            <td class="cmt">Rien. Un ticket n'a jamais de page Notion.</td>
+            <td class="cmt">Une issue, dans le projet de sa Feature.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Release</b></td>
+            <td><span class="dom d-linear">Linear</span></td>
+            <td class="cmt">Rien à créer ; citée dans le compte rendu mensuel.</td>
+            <td class="cmt">Une release Linear, nommée par son mois.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Décision</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Base <i>Décisions</i></td>
+            <td class="cmt">Rien. Un lien dans la description, au plus.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Risque</b></td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">Base <i>Risques</i></td>
+            <td class="cmt">Rien.</td>
+            <td class="cmt">—</td>
+          </tr>
+          <tr>
+            <td><b>Mesure de flux</b></td>
+            <td><span class="dom d-linear">Linear</span></td>
+            <td class="cmt">Relevée chaque mois dans la page de revue.</td>
+            <td class="cmt">Deux horodatages sur l'issue, calculés par Linear.</td>
+            <td class="cmt">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose">
+      Un seul objet est partagé, la Feature — et encore, en deux moitiés qui ne se recouvrent
+      pas&nbsp;: Notion tient <em>ce qu'on livre et pourquoi</em> (les quatre champs de SAFe),
+      Linear tient <em>où ça en est</em> (l'état, les tickets, les dates). On ne recopie jamais
+      l'énoncé dans Linear, et on ne recopie jamais l'état dans Notion.
+    </p>
+  </section>
+
+  <section id="jointure" aria-labelledby="joi-h">
+    <h2 id="joi-h">La clé de jointure&nbsp;: l'identifiant, dans les deux sens</h2>
+    <p class="intro prose">
+      La première version de cette méthode joignait par le nom. C'était une erreur, et elle imposait
+      une règle inutile — ne jamais renommer.
+      <strong>La jointure se fait par l'identifiant</strong>, et elle est portée des deux côtés.
+    </p>
+    <div class="scroll">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Objet</th>
+            <th>Ce que Notion porte</th>
+            <th>Ce que Linear porte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Feature</b></td>
+            <td class="cmt">Champ <i>Projet&nbsp;Linear</i>, l'URL du projet.</td>
+            <td class="cmt">L'URL de la page Notion, en tête de la description du projet.</td>
+          </tr>
+          <tr>
+            <td><b>Epic</b></td>
+            <td class="cmt">Champ <i>Étiquette&nbsp;Linear</i>, l'URL de l'étiquette.</td>
+            <td class="cmt">
+              L'URL de la page Notion, dans la description de l'étiquette de projet.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Flux de valeur</b></td>
+            <td class="cmt">L'URL de l'initiative, dans le canvas du flux.</td>
+            <td class="cmt">L'URL de la page Notion, dans la description de l'initiative.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose">
+      Une URL de page Notion contient son identifiant&nbsp;: c'est donc bien une jointure par
+      identifiant, avec l'avantage d'être cliquable. Le double sens est ce qui compte&nbsp;: depuis
+      n'importe lequel des deux outils, on atteint l'autre en un clic, et une jointure cassée se
+      voit — le lien ne mène nulle part, au lieu de mener silencieusement au mauvais objet.
+    </p>
+    <p class="intro prose">
+      <strong>Le nom reste, mais comme convention de lecture, plus comme mécanisme.</strong> Un
+      projet Linear porte le même nom que sa Feature parce que c'est confortable dans une liste, pas
+      parce que le système en dépend. Conséquence directe&nbsp;:
+      <strong>la règle «&nbsp;on ne renomme jamais&nbsp;» disparaît.</strong> Renommer devient un
+      geste ordinaire — c'est le gain de ce changement, plus encore que la robustesse.
+    </p>
+    <p class="intro prose">
+      Ce que ça coûte&nbsp;: deux champs à remplir à la création, une fois. Le contrôle mensuel s'en
+      trouve simplifié — il suit les liens au lieu de comparer des chaînes de caractères.
+    </p>
+  </section>
+
+  <section id="traversees" aria-labelledby="tra-h">
+    <h2 id="tra-h">Les deux seuls moments où l'information traverse</h2>
+    <p class="intro prose">
+      En dehors de ces deux moments, rien ne circule. C'est ce qui rend la méthode tenable sans
+      outil&nbsp;: il n'y a pas de flux continu à surveiller.
+    </p>
+    <ul class="trav">
+      <li>
+        <header>
+          <h3>À la création d&#x27;un Epic ou d&#x27;une Feature</h3>
+          <span class="sens">Notion &rarr; Linear</span>
+        </header>
+        <p>
+          La page Notion existe d'abord. Elle donne son nom exact à l'étiquette (Epic) ou au projet
+          (Feature) créé dans Linear.
+        </p>
+        <p class="freq">Une fois. Jamais rejoué.</p>
+      </li>
+      <li>
+        <header>
+          <h3>À la revue mensuelle</h3>
+          <span class="sens">Linear &rarr; Notion</span>
+        </header>
+        <p>
+          L'état, les dates et les deux mesures de flux remontent dans la page de revue du mois. Les
+          pages d'Epic ne sont pas modifiées&nbsp;: on écrit un compte rendu, on ne met pas à jour
+          des champs.
+        </p>
+        <p class="freq">Une fois par mois, au même rendez-vous.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="ordre" aria-labelledby="ord-h">
+    <h2 id="ord-h">Où vit l'ordre</h2>
+    <div class="reserve">
+      <p>
+        <strong>Une réserve sur ta consigne, avant de répondre.</strong> Tu dis vouloir faire
+        l'ordre toi-même «&nbsp;dans Notion et Linear&nbsp;». Si cela veut dire classer
+        <em>les mêmes objets</em> dans les deux outils, ça divergera en un mois&nbsp;— c'est
+        exactement le mécanisme qui a déconnecté les deux outils la première fois, et aucune règle
+        de nommage n'y peut quoi que ce soit.
+      </p>
+      <p>
+        Mais il y a une lecture de ta consigne qui tient parfaitement, et je pense que c'est celle
+        que tu as en tête&nbsp;: <strong>il n'y a pas un ordre, il y en a deux</strong>, et ils ne
+        portent pas sur les mêmes objets.
+      </p>
+    </div>
+    <div class="scroll">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Quel ordre</th>
+            <th>Sur quoi</th>
+            <th>Où</th>
+            <th>À quelle fréquence</th>
+            <th>Qui le voit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>L'ordre du portefeuille</b></td>
+            <td class="cmt">
+              Les 31 Epics&nbsp;: lesquels on ouvre, dans quel ordre, et combien à la fois.
+            </td>
+            <td><span class="dom d-notion">Notion</span></td>
+            <td class="cmt">
+              Par trimestre. Il change peu — c'est une décision, pas une file d'attente.
+            </td>
+            <td class="cmt">Toi, et quiconque veut comprendre la stratégie.</td>
+          </tr>
+          <tr>
+            <td><b>L'ordre d'exécution</b></td>
+            <td class="cmt">Les Features et les tickets du mois en cours.</td>
+            <td><span class="dom d-linear">Linear</span></td>
+            <td class="cmt">
+              Chaque semaine. Il change tout le temps — c'est une file d'attente, pas une décision.
+            </td>
+            <td class="cmt">Ceux qui développent.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose">
+      La règle qui les tient&nbsp;: <strong>aucun objet n'est classé deux fois.</strong> Un Epic n'a
+      pas de priorité dans Linear — son étiquette ne porte aucun rang. Une Feature n'a pas de rang
+      dans Notion — sa page ne porte aucune priorité. Quand tu ouvres un Epic dans le portefeuille
+      Notion, tu crées ou tu actives ses projets dans Linear&nbsp;; c'est l'acte qui relie les deux
+      ordres, et il va dans un seul sens.
+    </p>
+    <p class="intro prose">
+      Concrètement, côté Notion&nbsp;: le portefeuille est un tableau à six colonnes — vivier, à
+      l'étude, en analyse, prêt, en cours, fait — et l'ordre est le rang des cartes dans chaque
+      colonne. Une limite au nombre de cartes en «&nbsp;en cours&nbsp;» est ce qui empêche d'ouvrir
+      trente chantiers&nbsp;; c'est la seule contrainte que je te recommande de vous imposer. Côté
+      Linear&nbsp;: la priorité de projet et les jalons suffisent, il n'y a rien à inventer.
+    </p>
+
+    <h3 style="margin-top: 26px">Un WSJF minimal, pour classer les Epics</h3>
+    <p class="intro prose">
+      Pas de points de story, pas de vélocité — ils mesurent une capacité d'équipe et ne servent à
+      rien à trois personnes. Mais le classement du portefeuille a besoin d'un peu plus que
+      l'intuition, et SAFe donne l'outil le plus simple qui existe pour ça. Quatre chiffres par
+      Epic, une division.
+    </p>
+    <div class="scroll">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Ce qu'on estime</th>
+            <th>La question posée</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Valeur métier</b></td>
+            <td class="cmt">Ce que ça rapporte, ou ce que ça évite de perdre.</td>
+          </tr>
+          <tr>
+            <td><b>Criticité temporelle</b></td>
+            <td class="cmt">
+              Ce qu'on perd à attendre&nbsp;: une saison qui passe, un contrat qui se signe
+              ailleurs, un match qui a lieu de toute façon.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Réduction de risque</b></td>
+            <td class="cmt">
+              Ce que l'Epic débloque ou dérisque pour les autres. C'est la colonne qui fait remonter
+              les Enablers.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Taille</b></td>
+            <td class="cmt">
+              L'effort, relatif. Jamais des points de story&nbsp;: un nombre, comparé aux autres
+              Epics.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="intro prose">
+      Le score est <span class="mono">(valeur + criticité + risque) ÷ taille</span>, calculé
+      automatiquement dans la base Epics. Les quatre champs existent déjà, la formule aussi.
+    </p>
+    <p class="intro prose">
+      <strong>Trois règles sans lesquelles ça ne vaut rien.</strong> Les chiffres sont
+      <em>relatifs</em>, pris dans l'échelle 1, 2, 3, 5, 8, 13, 20 — et chaque colonne doit contenir
+      au moins un 1, sinon tout dérive vers le haut et l'écart disparaît.
+      <em>Précision du 13/09/2026&nbsp;:</em> la règle du 1 vaut pour la valeur, la criticité et le
+      risque, pas pour la taille. Les plus petites tailles étaient S3 (1) et E10 (2), qui ne sont
+      plus des Epics mais des Features de S2 et S5&nbsp;; la plus petite taille est désormais 3.
+      Forcer un 1 en taille recréerait la distorsion qu'on vient de corriger&nbsp;: un Epic
+      minuscule à la taille, donc au score gonflé. On estime <em>colonne par colonne</em>, jamais
+      Epic par Epic&nbsp;: on compare vingt-neuf valeurs métier entre elles, puis vingt-neuf
+      criticités. Et on estime <em>en une seule fois</em>&nbsp;: un WSJF étalé sur trois semaines
+      compare des Epics qui n'ont pas été jugés dans le même état d'esprit.
+    </p>
+    <p class="intro prose">
+      Ce que le WSJF n'est pas&nbsp;: une décision. C'est un révélateur de désaccord. Quand le
+      classement obtenu heurte l'intuition, la bonne réaction n'est pas de le suivre, c'est de
+      chercher laquelle des quatre notes est fausse — c'est là que la conversation devient utile.
+      Compter&nbsp;: une bonne heure pour vingt-neuf Epics, une fois par trimestre.
+    </p>
+    <p class="intro prose">
+      <strong>Les règles de notation, fixées le 13/09/2026.</strong> La formule ne change pas. Ce
+      qui change, c'est ce qu'on a le droit de compter. La
+      <a href="revue-wsjf-epics.html">revue WSJF des Epics</a> les applique Epic par Epic.
+    </p>
+    <div class="scroll">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>La règle</th>
+            <th>Ce qu'elle veut dire</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>La valeur se juge sur les deux faces</b></td>
+            <td class="cmt">
+              Le club dont le match s'anime sans nous, et l'annonceur dont la diffusion est prouvée.
+              Ce qui fait tenir et vivre le match est la moitié du produit, pas une précondition de
+              la preuve.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Ce qui existe ne compte que s'il est exploitable en match</b></td>
+            <td class="cmt">
+              Par le club visé, pendant un match réel. Sinon, ça ne réduit ni la taille ni la valeur
+              à produire.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Rien n'est repris du code MadXp</b></td>
+            <td class="cmt">
+              Seulement des idées. Aucune taille ne s'appuie sur un existant MadXp.
+            </td>
+          </tr>
+          <tr>
+            <td><b>La taille couvre l'Epic entier</b></td>
+            <td class="cmt">
+              Toutes ses Features. Jamais sa seule première version, jamais ses prérequis.
+            </td>
+          </tr>
+          <tr>
+            <td><b>On ne découpe pas un Epic en Epics</b></td>
+            <td class="cmt">Son découpage, ce sont ses Features.</td>
+          </tr>
+          <tr>
+            <td><b>La criticité nomme une perte et une date</b></td>
+            <td class="cmt">Appartenir au thème actif n'en donne pas.</td>
+          </tr>
+          <tr>
+            <td><b>Une valeur n'est comptée qu'une fois</b></td>
+            <td class="cmt">
+              Les préconditions se comptent en réduction de risque, pas une deuxième fois en valeur.
+            </td>
+          </tr>
+          <tr>
+            <td><b>Le score ne gère pas les dépendances</b></td>
+            <td class="cmt">
+              L'ordre des cartes les applique d'abord&nbsp;; le WSJF départage ensuite.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="casse" aria-labelledby="cas-h">
+    <h2 id="cas-h">Ce qui casse ça, et ce qui l'empêche</h2>
+    <p class="intro prose">
+      Cinq pannes, dont quatre silencieuses. Une méthode sans automatisme ne prévient pas toute
+      seule&nbsp;: elle a besoin qu'on regarde.
+    </p>
+    <ul class="casse">
+      <li>
+        <b>Un objet est créé sans son lien retour</b
+        ><span
+          ><span class="lab">Ce qui se passe</span>La jointure ne marche que dans un sens. Depuis
+          Linear, personne ne retrouve l'intention&nbsp;; et le contrôle mensuel ne peut pas
+          distinguer un projet sans Epic d'un projet dont le lien manque.</span
+        ><span class="fix"
+          ><span class="lab">Ce qui l'empêche</span>Les deux champs se remplissent dans le même
+          geste que la création. Le contrôle mensuel liste les liens manquants dans chaque sens —
+          c'est devenu sa première requête.</span
+        >
+      </li>
+      <li>
+        <b>Un projet Linear est créé sans page Notion</b
+        ><span
+          ><span class="lab">Ce qui se passe</span>Une Feature existe dans l'exécution sans énoncé
+          ni hypothèse. C'est exactement l'état d'avant&nbsp;: on répare sans savoir pourquoi.</span
+        ><span class="fix"
+          ><span class="lab">Ce qui l'empêche</span>Le contrôle mensuel liste les projets sans Epic.
+          C'est le contrôle le plus utile des cinq.</span
+        >
+      </li>
+      <li>
+        <b>Une page Notion est créée sans projet Linear</b
+        ><span
+          ><span class="lab">Ce qui se passe</span>Un Epic ou une Feature qui n'existe nulle part
+          dans le travail réel. Moins grave&nbsp;: c'est l'état normal d'un Epic au vivier.</span
+        ><span class="fix"
+          ><span class="lab">Ce qui l'empêche</span>Le contrôle le signale, sans le traiter comme
+          une anomalie tant que l'Epic n'est pas «&nbsp;en cours&nbsp;».</span
+        >
+      </li>
+      <li>
+        <b>Un champ est mis à jour dans les deux outils</b
+        ><span
+          ><span class="lab">Ce qui se passe</span>Les deux divergent, et personne ne sait lequel a
+          raison. C'est la panne qui a tué le lien Linear↔Notion la première fois.</span
+        ><span class="fix"
+          ><span class="lab">Ce qui l'empêche</span>Aucun champ n'a deux domiciles. Le tableau
+          ci-dessus est la règle&nbsp;; s'il faut y ajouter une ligne, on choisit un seul
+          côté.</span
+        >
+      </li>
+      <li>
+        <b>La revue mensuelle est sautée</b
+        ><span
+          ><span class="lab">Ce qui se passe</span>L'écart s'accumule en silence pendant deux mois,
+          puis la remise à niveau coûte une journée.</span
+        ><span class="fix"
+          ><span class="lab">Ce qui l'empêche</span>Le rendez-vous existe déjà&nbsp;: un rappel de
+          mise à jour d'initiative est configuré chaque vendredi de 14 h à 15 h. La revue mensuelle
+          s'y adosse.</span
+        >
+      </li>
+    </ul>
+  </section>
+
+  <section id="controle" aria-labelledby="con-h">
+    <h2 id="con-h">Le contrôle mensuel, en quatre requêtes</h2>
+    <p class="intro prose">
+      Il ne synchronise rien&nbsp;: il compare et il signale. Il tient en quelques minutes, et je
+      peux le lancer à la demande — les deux outils sont accessibles depuis cette session. Ce n'est
+      pas un robot&nbsp;: rien ne s'écrit sans que tu l'aies lu.
+    </p>
+    <ol class="decisions">
+      <li>
+        <div>
+          <p><strong>Les projets Linear sans lien vers Notion.</strong></p>
+          <p>
+            Un projet dont la description ne porte aucune URL de page. C'est le contrôle le plus
+            important&nbsp;: il attrape le travail qui repart sans intention.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Les Epics Notion «&nbsp;en cours&nbsp;» sans aucun projet Linear.</strong></p>
+          <p>
+            Un Epic déclaré ouvert dont rien n'a démarré. Soit il n'est pas vraiment ouvert, soit le
+            travail se fait ailleurs que dans Linear.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Les liens qui ne mènent nulle part.</strong></p>
+          <p>
+            Une page supprimée, un projet archivé&nbsp;: le lien existe mais l'objet n'est plus là.
+            On suit chaque lien et on signale les impasses.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Les deux dates de flux manquantes.</strong></p>
+          <p>
+            Les issues terminées sans horodatage d'entrée ou de mise en service. Sans elles,
+            l'efficience du flux — environ 2&nbsp;% à la dernière mesure — reste un souvenir au lieu
+            d'un signal.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="methode" aria-labelledby="met-h">
+    <h2 id="met-h">Méthode et limites</h2>
+    <div class="method">
+      <p>
+        Cette méthode applique la décision du 12/09 et les correspondances vérifiées dans la
+        documentation de Linear&nbsp;: une Feature est un projet, un Epic est une étiquette de
+        projet — les sous-initiatives, qui auraient été le support naturel d'un Epic, sont réservées
+        au plan Enterprise.
+      </p>
+      <ul>
+        <li>
+          Elle suppose le plan Business. Si le compte s'avérait Enterprise, l'Epic deviendrait une
+          sous-initiative et la jointure par le nom disparaîtrait au profit d'un vrai lien. Ce
+          serait mieux&nbsp;; ce n'est pas vérifiable depuis un compte membre.
+        </li>
+        <li>
+          Elle ne dit rien du Triage, qui reste manuel par ta décision du 12/09. Les règles de
+          Triage restent à écrire.
+        </li>
+        <li>
+          La limite du nombre d'Epics ouverts simultanément est une recommandation sans
+          chiffre&nbsp;: je ne propose pas de valeur tant qu'on n'a pas un mois de mesure.
+        </li>
+        <li>Rien n'a été écrit dans Linear ni dans Notion.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Méthode de synchro&nbsp;· 12 septembre 2026&nbsp;· à valider avant le go&nbsp;·
+    docs/b2b-alive-transition/synchro-notion-linear.html
+  </footer>
+</main>

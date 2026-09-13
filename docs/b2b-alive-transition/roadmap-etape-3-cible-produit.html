@@ -1,0 +1,1280 @@
+<meta charset="utf-8" />
+<title>Cible produit Broadcaster</title>
+<meta
+  name="description"
+  content="Roadmap, étape 3 : les capacités du produit visé, rattachées à quatre thèmes stratégiques, avec leur état réel et leur preuve de demande."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --ok: #1f6a4b;
+    --ok-wash: #dcede4;
+    --part: #8a6a00;
+    --part-wash: #f4ecd0;
+    --bad: #b3261e;
+    --bad-wash: #f6dedb;
+    --man: #3f5b7a;
+    --man-wash: #e1e8f0;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --ok: #5cb68a;
+      --ok-wash: #17301f;
+      --part: #d9b24a;
+      --part-wash: #2f2812;
+      --bad: #f08a80;
+      --bad-wash: #3a1b18;
+      --man: #8fb2e8;
+      --man-wash: #1b2738;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --ok: #5cb68a;
+    --ok-wash: #17301f;
+    --part: #d9b24a;
+    --part-wash: #2f2812;
+    --bad: #f08a80;
+    --bad-wash: #3a1b18;
+    --man: #8fb2e8;
+    --man-wash: #1b2738;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 66ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 6px;
+    display: block;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 48ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .th {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 4px solid var(--accent);
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 7px;
+    align-content: start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .th b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+  .th p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .th .okr {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 7px;
+  }
+  .th .okr i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+  }
+  .theme-block {
+    border-top: 1px solid var(--rule);
+    margin-top: 22px;
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+    min-width: 900px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 210px;
+  }
+  .t tbody th small {
+    display: block;
+    font-family: var(--f-body);
+    font-weight: 400;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    display: inline-block;
+    margin-bottom: 4px;
+  }
+  .c-livré {
+    color: var(--ok);
+    background: var(--ok-wash);
+  }
+  .c-partiel {
+    color: var(--part);
+    background: var(--part-wash);
+  }
+  .c-absent {
+    color: var(--bad);
+    background: var(--bad-wash);
+  }
+  .c-en {
+    color: var(--man);
+    background: var(--man-wash);
+  }
+  .hz {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .h-Socle {
+    color: var(--accent);
+  }
+  .h-Extension {
+    color: var(--ink-soft);
+  }
+  .h-Réseau {
+    color: var(--man);
+  }
+  .h-Long {
+    color: var(--muted);
+  }
+  .t td.dem {
+    color: var(--ink-soft);
+    min-width: 220px;
+  }
+  .t td.mx {
+    min-width: 210px;
+  }
+  .enablers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    gap: 14px;
+  }
+  .enablers li {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--man);
+    padding: 14px 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .enablers b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+  }
+  .enablers p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  .enablers .st {
+    font-size: 13.5px;
+    border-top: 1px solid var(--rule);
+    padding-top: 6px;
+  }
+  .enablers .st i,
+  .enablers .mx i {
+    font-style: normal;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .enablers .mx {
+    font-size: 13.5px;
+  }
+  .dl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .dl li {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dl b {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .dl p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 86ch;
+  }
+  @media (max-width: 700px) {
+    .dl li {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+  }
+  .decisions {
+    list-style: none;
+    counter-reset: q;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: q;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(q);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 78ch;
+  }
+  .decisions p + p {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Roadmap · étape 3 sur 7</b><span>Rôle A · consultant</span><span>12 septembre 2026</span
+      ><span>Statut : proposition à corriger</span><span>Mis à jour le 13/09/2026</span>
+    </div>
+    <h1>La cible produit</h1>
+    <p class="lede">
+      Ce que le logiciel doit savoir faire, sans tenir compte de l'équipe ni du carnet de tickets.
+      22 capacités rattachées à quatre thèmes stratégiques, chacune avec son état réel, ce que la
+      reprise de MadXp apporte, et la preuve qu'elle est demandée.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>D'où ça vient</dt>
+        <dd>
+          Les trente capacités écrites de MadXp, les vingt-trois critères de la cartographie
+          concurrentielle, les onze goulots des cartes de flux, et les décisions des 11 et 12
+          septembre.
+        </dd>
+      </div>
+      <div>
+        <dt>La règle</dt>
+        <dd>
+          Chaque capacité porte une preuve de demande — un concurrent qui la vend, un persona, un
+          refus de prospect — ou l'étiquette « pari assumé ».
+        </dd>
+      </div>
+      <div>
+        <dt>La suite</dt>
+        <dd>
+          Tu corriges la liste ; l'étape 4 transforme l'écart en Epics, avec hypothèse, première
+          version et indicateur.
+        </dd>
+      </div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <div
+    style="
+      max-width: var(--wrap, 1080px);
+      margin: 0 auto 12px;
+      padding: 14px 18px;
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      font-size: 14.5px;
+      line-height: 1.55;
+    "
+  >
+    <strong style="font-family: var(--f-display)"
+      >Mise à jour du 13/09/2026 — deux réponses de cette étape sont remplacées.</strong
+    >
+    Gwenvael a tranché les deux premières questions de la section «&nbsp;Pour valider&nbsp;».
+    <br /><b>Aucun thème ne «&nbsp;passe devant&nbsp;».</b> Le produit a deux faces qui se
+    renforcent&nbsp;: la face club (thème&nbsp;2, le cœur — le match s'anime sans nous) et la face
+    annonceur (thème&nbsp;1, le levier — ce qui est vendu passe, et c'est prouvé). Toute priorité se
+    juge sur les deux. L'avis «&nbsp;le thème&nbsp;1 d'abord&nbsp;» est abandonné. <br /><b
+      >L'objectif du trimestre n'est plus «&nbsp;un annonceur peut prouver qu'il a été
+      diffusé&nbsp;».</b
+    >
+    Il devient&nbsp;: «&nbsp;Chaque match d'un club client est animé sans nous, et ses partenaires
+    reçoivent la preuve de leur diffusion.&nbsp;» La phrase-promesse ci-dessous reste le récit du
+    12/09&nbsp;; elle ne dit plus l'ordre. <br /><b>Trois lignes du tableau à lire avec réserve.</b>
+    «&nbsp;Un bénévole pilote depuis son téléphone&nbsp;» est noté livré&nbsp;: la télécommande
+    existe, mais elle est conçue pour un opérateur de régie, pas pour un bénévole. «&nbsp;Habiller
+    le match&nbsp;» est noté livré&nbsp;: dans les sports à nombreux buts, avec un score saisi à la
+    main, il n'est pas exploitable en match. Et la colonne «&nbsp;Ce que la reprise de MadXp
+    apporte&nbsp;» ne vaut plus que pour les idées&nbsp;: rien n'est repris du code MadXp.
+    <br />Détail et notes des Epics&nbsp;:
+    <a href="revue-wsjf-epics.html">revue WSJF du 13/09/2026</a>.
+  </div>
+  <div
+    style="
+      max-width: var(--wrap, 1080px);
+      margin: 0 auto;
+      padding: 14px 18px;
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--part);
+      background: var(--surface);
+      font-size: 14.5px;
+      line-height: 1.55;
+    "
+  >
+    <strong style="font-family: var(--f-display)"
+      >Instantané du 11 septembre — dépassé sur un point.</strong
+    >
+    L'audit de couverture du 12/09 a trouvé trois capacités de plus, entrées le 12/09 : la marque du
+    club sur l'écran, la participation du spectateur, et l'ouverture des données à des tiers. La
+    référence à jour est <a href="couverture-de-la-cible.html">Couverture de la cible</a> pour le
+    diagnostic, et <a href="epics-en-features.html">Les Features&nbsp;· v3</a> pour le portefeuille
+    complet (29&nbsp;Epics, 76&nbsp;Features, 2 au vivier). Cette page reste le compte rendu de
+    l'étape telle qu'elle a été construite.
+  </div>
+
+  <section id="these" aria-labelledby="these-h">
+    <p class="kicker" id="these-h">En une phrase</p>
+    <p class="thesis">
+      Le produit visé tient en une promesse que personne ne tient aujourd'hui :
+      <em>vous vendez, ça passe, c'est prouvé</em> — et le soir du match, ça tourne sans nous.
+    </p>
+    <p class="thesis-note prose">
+      Le reste en découle. Le thème 1 rend le sponsoring renouvelable, donc vendable plus cher. Le
+      thème 2 permet de multiplier les lieux sans multiplier les présences. Le thème 3 couvre toutes
+      les surfaces pour que la promesse vaille du gymnase au stade. Le thème 4 transforme des clubs
+      équipés en inventaire vendable d'un seul contrat.
+    </p>
+  </section>
+
+  <section id="themes" aria-labelledby="themes-h">
+    <h2 id="themes-h">Quatre thèmes stratégiques</h2>
+    <p class="intro prose">
+      Ce sont les tiroirs du haut, dans Notion. Chacun porte un résultat attendu, formulé du point
+      de vue du client.
+    </p>
+    <div class="themes">
+      <a class="th" href="#t1"
+        ><span class="kicker">Thème 1</span><b>La preuve rend le sponsoring renouvelable</b>
+        <p>Le club revend ses partenaires sur des chiffres, plus sur sa parole.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Un annonceur peut prouver qu&#x27;il a été diffusé.</span
+        ></a
+      ><a class="th" href="#t2"
+        ><span class="kicker">Thème 2</span><b>Le soir du match tient sans nous</b>
+        <p>Le lieu produit son match seul, avec les gens qu&#x27;il a.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Un match se produit de bout en bout sans intervention de
+          l&#x27;éditeur.</span
+        ></a
+      ><a class="th" href="#t3"
+        ><span class="kicker">Thème 3</span><b>Une régie pour toutes les surfaces</b>
+        <p>Du gymnase au stade, le même moteur et les mêmes gestes.</p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Toute surface d&#x27;un lieu se pilote depuis la même régie, sans
+          travail sur mesure.</span
+        ></a
+      ><a class="th" href="#t4"
+        ><span class="kicker">Thème 4</span
+        ><b>Un réseau de salles, vendable d&#x27;un seul contrat</b>
+        <p>
+          La destination économique : l&#x27;inventaire agrégé, pas l&#x27;outil vendu à
+          l&#x27;unité.
+        </p>
+        <span class="okr"
+          ><i>Résultat attendu</i>Une marque achète plusieurs lieux en un contrat, et chaque club
+          touche sa part.</span
+        ></a
+      >
+    </div>
+  </section>
+
+  <section class="theme-block" id="t1" aria-labelledby="t1-h">
+    <span class="kicker">Thème 1 · 5 capacités</span>
+    <h2 id="t1-h">La preuve rend le sponsoring renouvelable</h2>
+    <p class="intro prose">
+      Le club revend ses partenaires sur des chiffres, plus sur sa parole.
+      <strong>Résultat attendu :</strong> Un annonceur peut prouver qu&#x27;il a été diffusé.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Capacité</th>
+            <th scope="col">Aujourd'hui</th>
+            <th scope="col">Ce que la reprise de MadXp apporte</th>
+            <th scope="col">Preuve de demande</th>
+            <th scope="col">Horizon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              Vendre un créneau et savoir ce qui reste à vendre<small
+                >Le club voit son inventaire de la saison : emplacements, parts, ce qui est
+                pris.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-livré">livré</span><br />L&#x27;inventaire existe ; au Roudourou,
+              une seule liste de créneau sur onze rotations s&#x27;en sert. ✅
+            </td>
+            <td class="mx">
+              Des sponsors avec montant et dates de contrat, séparés des annonceurs de réseau.
+            </td>
+            <td class="dem">Trois concurrents le vendent (LDS, Supponor, AIM Sport).</td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Ce qui est vendu passe à l&#x27;écran, sans geste humain<small
+                >La rotation du match se compose depuis les ventes, et prévient si une vente
+                n&#x27;a pas de passage.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Fait à la main, par une personne. À J-2
+              du dernier match, la liste n&#x27;existait pas. ✅
+            </td>
+            <td class="mx">
+              Une rotation pondérée qui garantit un nombre de passages, pas une simple présence.
+            </td>
+            <td class="dem">
+              L&#x27;incident du Roudourou : des annonceurs payants sans passage rattaché à leur
+              vente.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Prouver à l&#x27;annonceur que son spot est passé<small
+                >Une preuve horodatée, rattachée à sa vente, qui sort du lieu et lui arrive.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />La preuve s&#x27;écrit dans la box :
+              0,011 % des lignes sont rattachées à une vente, aucune ne remonte. ✅
+            </td>
+            <td class="mx">
+              Une preuve par lecture rattachée au sponsor, un rapport PDF, un lien d&#x27;accès sans
+              compte.
+            </td>
+            <td class="dem">
+              Trois concurrents la vendent ; un tableau de bord de preuve a été demandé après
+              l&#x27;Europ&#x27;A Cup.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Donner à l&#x27;annonceur son espace, sans lui créer de compte<small
+                >Le partenaire ouvre un lien et voit ses passages, ses vidéos, sa période.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Le portail n&#x27;existe qu&#x27;en
+              pré-production. ⚠️
+            </td>
+            <td class="mx">
+              Un lien d&#x27;accès sans compte, déjà livré et jamais utilisé (onze liens créés, zéro
+              ouvert).
+            </td>
+            <td class="dem">
+              Aucun des dix concurrents cartographiés ne le propose : c&#x27;est un différenciateur.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Facturer sur la preuve, et reverser au club<small
+                >La facture s&#x27;appuie sur ce qui est passé, et la part du club est
+                calculée.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Aucun lien entre preuve et facture ; le
+              club facture hors outil. ✅
+            </td>
+            <td class="mx">Rien : MadXp ne facture que des abonnements de clubs.</td>
+            <td class="dem">Pari assumé. Condition de la vente en réseau.</td>
+            <td class="hz h-Réseau">Réseau</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="theme-block" id="t2" aria-labelledby="t2-h">
+    <span class="kicker">Thème 2 · 6 capacités</span>
+    <h2 id="t2-h">Le soir du match tient sans nous</h2>
+    <p class="intro prose">
+      Le lieu produit son match seul, avec les gens qu&#x27;il a.
+      <strong>Résultat attendu :</strong> Un match se produit de bout en bout sans intervention de
+      l&#x27;éditeur.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Capacité</th>
+            <th scope="col">Aujourd'hui</th>
+            <th scope="col">Ce que la reprise de MadXp apporte</th>
+            <th scope="col">Preuve de demande</th>
+            <th scope="col">Horizon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              L&#x27;écran ne s&#x27;arrête pas si internet tombe<small
+                >Le match se joue même quand le réseau du gymnase lâche.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Tenu sur les événements observés,
+              mais non garanti hors ligne de bout en bout. ⚠️
+            </td>
+            <td class="mx">
+              L&#x27;autonomie hors ligne complète : c&#x27;est le seul critère où la reprise fait
+              passer un « partiel » à « oui ».
+            </td>
+            <td class="dem">
+              Cinq concurrents l&#x27;affichent ; c&#x27;est l&#x27;argument de vente historique du
+              boîtier.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Un bénévole pilote depuis son téléphone, sans compte ni formation<small
+                >Personne n&#x27;est bloqué devant un PC de régie pendant le match.</small
+              >
+            </th>
+            <td><span class="chip c-livré">livré</span><br />La télécommande existe et sert. ✅</td>
+            <td class="mx">
+              Un code par profil, un jeton par appareil révocable, vérifiable hors ligne.
+            </td>
+            <td class="dem">
+              Trois concurrents le vendent ; c&#x27;est le besoin du persona opérateur bénévole.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Le score et le chrono viennent de la table de marque<small
+                >Plus de double saisie, plus de score faux à l&#x27;écran.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Le score se tient à la main : trois
+              gestes par but. ✅
+            </td>
+            <td class="mx">
+              Une architecture multi-constructeurs, deux simulateurs (Bodet, Stramatel), un POC
+              d&#x27;écoute — jamais branché.
+            </td>
+            <td class="dem">
+              « Sans lecture automatique, pas de signature » : refus de prospects écrit dans les
+              business cases. Trois concurrents l&#x27;ont.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Répéter le match avant le match<small
+                >On voit ce qui sortirait, la veille, sans attendre le coup d&#x27;envoi.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-en">en cours</span><br />Un outil de répétition éclair est en
+              construction depuis le 11/09. ✅
+            </td>
+            <td class="mx">Rien d&#x27;équivalent.</td>
+            <td class="dem">
+              Les défauts reviennent d&#x27;un match à l&#x27;autre ; deux ont été découverts le
+              jour même.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Le club se dépanne seul<small
+                >Remplacer un média, refaire une playlist, corriger une compo : sans nous.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Le club ne peut rien corriger seul ;
+              l&#x27;accès distant est en lecture. ✅
+            </td>
+            <td class="mx">
+              Un portail club livré et un panneau d&#x27;administration local sur le boîtier.
+            </td>
+            <td class="dem">
+              Le persona exploitant demande « un seul point d&#x27;entrée ». C&#x27;est la condition
+              du volume.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Savoir qu&#x27;un écran va tomber avant que le club n&#x27;appelle<small
+                >La panne se voit depuis le bureau, pas depuis la tribune.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Rien ne remonte sans connexion
+              technique au boîtier. ✅
+            </td>
+            <td class="mx">Battement de cœur, alertes dédupliquées, modèle de connectivité.</td>
+            <td class="dem">
+              Deux concurrents vendent la supervision et un engagement de service.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="theme-block" id="t3" aria-labelledby="t3-h">
+    <span class="kicker">Thème 3 · 6 capacités</span>
+    <h2 id="t3-h">Une régie pour toutes les surfaces</h2>
+    <p class="intro prose">
+      Du gymnase au stade, le même moteur et les mêmes gestes.
+      <strong>Résultat attendu :</strong> Toute surface d&#x27;un lieu se pilote depuis la même
+      régie, sans travail sur mesure.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Capacité</th>
+            <th scope="col">Aujourd'hui</th>
+            <th scope="col">Ce que la reprise de MadXp apporte</th>
+            <th scope="col">Preuve de demande</th>
+            <th scope="col">Horizon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              Piloter ruban, écran géant, TV secondaires et sono ensemble<small
+                >Une seule régie tient tout le lieu, au lieu d&#x27;un outil par surface.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-livré">livré</span><br />Quatre surfaces tenues au Roudourou. ✅
+              La synchronisation multi-écrans reste partielle. ⚠️
+            </td>
+            <td class="mx">Le double écran et le ruban LED plié, en production sur deux sites.</td>
+            <td class="dem">
+              Cinq concurrents sur les écrans secondaires. À la Mosson, deux fournisseurs se
+              partagent le lieu.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Adapter un média au format exact de chaque surface<small
+                >L&#x27;agence livre ce qu&#x27;elle veut ; le logiciel met au format, plie et
+                vérifie.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Entièrement manuel : c&#x27;est le
+              premier poste de temps de l&#x27;équipe. ✅
+            </td>
+            <td class="mx">
+              Dédoublonnage, sonde de dimensions et pliage par côté à l&#x27;envoi ; détection des
+              marges.
+            </td>
+            <td class="dem">
+              Un seul concurrent le fait. Dix-sept bandeaux sur dix-sept sont arrivés hors format au
+              Rhénus.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Habiller le match : score à l&#x27;écran, faits de jeu, templates<small
+                >Le match a l&#x27;air d&#x27;une retransmission, pas d&#x27;un diaporama.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-livré">livré</span><br />Incrustations et faits de jeu en service.
+              ✅
+            </td>
+            <td class="mx">Six sports couverts, sessions de match persistées.</td>
+            <td class="dem">Quatre concurrents. C&#x27;est la table d&#x27;entrée du marché.</td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Créer un habillage aux couleurs du club sans savoir faire du motion design<small
+                >Le club change ses visuels sans passer par un prestataire.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Un éditeur de templates existe,
+              encore réservé aux initiés. ⚠️
+            </td>
+            <td class="mx">
+              Un studio de templates, un rendu serveur, une bibliothèque d&#x27;assets.
+            </td>
+            <td class="dem">
+              Sept concurrents proposent un studio : c&#x27;est une attente de base du marché.
+            </td>
+            <td class="hz h-Extension">Extension</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Afficher autre chose qu&#x27;une vidéo : page web, flux, image<small
+                >Classement, météo, réseaux du club, sans produire de vidéo.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Non mesuré côté Broadcaster. ❌
+            </td>
+            <td class="mx">Contenus web et flux dans la boucle, livrés.</td>
+            <td class="dem">Demande du persona exploitant (« un écran qui vit »).</td>
+            <td class="hz h-Extension">Extension</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Vidéo live, caméra, replay, multiview<small
+                >Le lieu produit sa propre image, au-delà des contenus préparés.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Un POC de flux live existe ; le
+              replay et le multiview sont hors horizon. ⚠️
+            </td>
+            <td class="mx">Rien.</td>
+            <td class="dem">Un seul concurrent (Daktronics), sur les grands stades.</td>
+            <td class="hz h-Long">Long</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="theme-block" id="t4" aria-labelledby="t4-h">
+    <span class="kicker">Thème 4 · 5 capacités</span>
+    <h2 id="t4-h">Un réseau de salles, vendable d&#x27;un seul contrat</h2>
+    <p class="intro prose">
+      La destination économique : l&#x27;inventaire agrégé, pas l&#x27;outil vendu à l&#x27;unité.
+      <strong>Résultat attendu :</strong> Une marque achète plusieurs lieux en un contrat, et chaque
+      club touche sa part.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Capacité</th>
+            <th scope="col">Aujourd'hui</th>
+            <th scope="col">Ce que la reprise de MadXp apporte</th>
+            <th scope="col">Preuve de demande</th>
+            <th scope="col">Horizon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              Ouvrir un nouveau lieu sans déplacement ni ligne de commande<small
+                >Un club démarre seul, en une demi-journée au lieu de plusieurs semaines.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Chaque installation est une
+              intervention sur mesure. ✅
+            </td>
+            <td class="mx">
+              Installation scriptée d&#x27;un boîtier, mises à jour à distance, mode sans matériel
+              via un navigateur.
+            </td>
+            <td class="dem">
+              C&#x27;est le verrou du volume : sans lui, pas de réseau. Promesse écrite chez MadXp,
+              jamais tenue.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Piloter et dépanner tous les lieux depuis un seul écran<small
+                >Un parc se tient à distance, sans se déplacer.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-partiel">partiel</span><br />Le multi-régie n&#x27;existe
+              qu&#x27;en pré-production. ⚠️
+            </td>
+            <td class="mx">
+              Un tableau de bord multi-clients en service sur quinze sites, avec rôles et droits.
+            </td>
+            <td class="dem">
+              Cinq concurrents vendent le multi-sites. C&#x27;est l&#x27;apport le plus reconnu de
+              la reprise.
+            </td>
+            <td class="hz h-Socle">Socle</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Vendre un pack de lieux à une marque, avec ciblage et rapport consolidé<small
+                >Un annonceur régional signe un contrat et touche tout le réseau.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-absent">absent</span><br />Aucun contrat, aucun ticket, le modèle
+              multi-lieux dort depuis juillet. ✅
+            </td>
+            <td class="mx">
+              Le modèle est écrit — packs de gymnases, ciblage, partage de recette — jamais
+              construit.
+            </td>
+            <td class="dem">Pari assumé, et c&#x27;est la thèse économique du produit.</td>
+            <td class="hz h-Réseau">Réseau</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              Vendre le même écran à deux niveaux, avec reversement au club<small
+                >Les partenaires du club et les annonceurs du réseau cohabitent sans se marcher
+                dessus.</small
+              >
+            </th>
+            <td><span class="chip c-absent">absent</span><br />N&#x27;existe nulle part. ✅</td>
+            <td class="mx">
+              Le modèle à deux niveaux et un partage de recette écrits dès février.
+            </td>
+            <td class="dem">Pari assumé. Décision du 11/09 : les deux vendeurs coexistent.</td>
+            <td class="hz h-Réseau">Réseau</td>
+          </tr>
+          <tr>
+            <th scope="row">
+              S&#x27;ouvrir aux autres systèmes : API et agents<small
+                >Le club, la ligue ou un média branchent leurs outils sans nous demander.</small
+              >
+            </th>
+            <td>
+              <span class="chip c-livré">livré</span><br />Pilotage par agents déjà en service. ✅
+            </td>
+            <td class="mx">Rien de plus.</td>
+            <td class="dem">Aucun concurrent ne le propose : différenciateur à garder.</td>
+            <td class="hz h-Extension">Extension</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="enablers" aria-labelledby="en-h">
+    <h2 id="en-h">Quatre capacités de socle</h2>
+    <p class="intro prose">
+      En vocabulaire SAFe, ce sont des <em>enablers</em> : elles ne se vendent pas, mais sans elles
+      les quatre thèmes avancent au rythme d'aujourd'hui.
+    </p>
+    <ul class="enablers">
+      <li>
+        <b>Mettre en service en continu, par petits lots</b>
+        <p>
+          Un correctif arrive sur le site le jour même, pas douze jours après, et on sait quelle
+          version tourne où.
+        </p>
+        <span class="st"
+          ><i>Aujourd'hui</i>Le déploiement est manuel et par gros lots : trois jours en médiane
+          entre « terminé » et « en service », douze au pire. ✅</span
+        ><span class="mx"
+          ><i>MadXp</i>Une release à chaque fusion, une mise à jour à distance avec retour arrière,
+          et la version remontée par chaque site.</span
+        >
+      </li>
+      <li>
+        <b>Mesurer le flux de bout en bout</b>
+        <p>
+          Deux horodatages — entrée, mise en service — et l&#x27;on sait où le temps
+          s&#x27;accumule, sans estimation ni points.
+        </p>
+        <span class="st"
+          ><i>Aujourd'hui</i>Efficience actuelle : environ 2 %. Mesure ponctuelle, pas instrumentée.
+          ✅</span
+        ><span class="mx"><i>MadXp</i>Rien : à construire dans Linear.</span>
+      </li>
+      <li>
+        <b>Traiter la preuve comme une donnée de production</b>
+        <p>
+          La preuve survit, garde son intégrité et se conserve plus longtemps quand elle est
+          rattachée à une vente.
+        </p>
+        <span class="st"
+          ><i>Aujourd'hui</i>Journal local sans rétention ni remontée ; des lignes tronquées
+          corrigées début septembre. ✅</span
+        ><span class="mx"
+          ><i>MadXp</i>Empreinte par lecture, rétention par palier, agrégats quotidiens.</span
+        >
+      </li>
+      <li>
+        <b>Garder le socle ouvert à la fusion avec le logiciel retail</b>
+        <p>
+          Aucune décision d&#x27;architecture ne doit rendre impossible un noyau commun sport et
+          retail à 12-24 mois.
+        </p>
+        <span class="st"
+          ><i>Aujourd'hui</i>Le sujet a été validé puis refermé en juin, sans décision écrite.
+          ⚠️</span
+        ><span class="mx"
+          ><i>MadXp</i>Un pack de convergence documenté, à rouvrir le moment venu.</span
+        >
+      </li>
+    </ul>
+  </section>
+
+  <section id="decisions" aria-labelledby="dec-h">
+    <h2 id="dec-h">Les décisions déjà prises</h2>
+    <ul class="dl">
+      <li>
+        <b>Vocabulaire</b>
+        <p>
+          On garde les mots de SAFe. Cadre pur documenté dans Notion, adaptation dans Linear : un
+          flux devient une initiative, un Epic un projet, une Feature un jalon, une Story un ticket.
+        </p>
+      </li>
+      <li>
+        <b>Portefeuille</b>
+        <p>
+          L&#x27;ancien portefeuille SAFe de MadXp est archivé. On repart de zéro, en gardant deux
+          outils vides et bons de forme : la notation WSJF et le registre de risques ROAM.
+        </p>
+      </li>
+      <li>
+        <b>Retail</b>
+        <p>
+          Le logiciel retail de B2B Alive reste un sujet sérieux. Fusion des socles techniques
+          envisageable à 12, 18 ou 24 mois — pas avant. D&#x27;ici là, aucune décision
+          d&#x27;architecture ne doit la fermer.
+        </p>
+      </li>
+      <li>
+        <b>Tarification</b>
+        <p>
+          Par fonctionnalité. Gymnase ou stade, amateur ou professionnel : même produit, même
+          grille. Le prix ne dépend ni du lieu ni du niveau.
+        </p>
+      </li>
+      <li>
+        <b>Réseau</b>
+        <p>Le seuil de quinze clubs pour ouvrir la régie de réseau est un repère, pas une règle.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="valider" aria-labelledby="val-h">
+    <h2 id="val-h">Pour valider l'étape 3</h2>
+    <ol class="decisions">
+      <li>
+        <div>
+          <p><strong>Quelles capacités manquent, et lesquelles sautent ?</strong></p>
+          <p>
+            Vingt-deux capacités, c&#x27;est une proposition, pas une liste fermée. Barre ce qui
+            n&#x27;est pas la cible, ajoute ce que j&#x27;ai oublié.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Quel thème passe devant ?</strong></p>
+          <p>
+            Les quatre ne peuvent pas démarrer au même rythme. Mon avis : le thème 1, parce que
+            c&#x27;est la seule promesse que personne ne tient et qu&#x27;elle se mesure. Le tien ?
+          </p>
+          <p>
+            <strong>Tranché le 13/09/2026 :</strong> aucun thème ne passe devant ; les thèmes 1 et 2
+            sont les deux faces du produit, jugées ensemble.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Un seul objectif mesurable en haut du cadre.</strong></p>
+          <p>
+            SAFe déconseille de descendre les OKR plus bas. Mon candidat : « un annonceur peut
+            prouver qu&#x27;il a été diffusé ». Tu en vois un meilleur ?
+          </p>
+          <p>
+            <strong>Tranché le 13/09/2026 :</strong> « Chaque match d&#x27;un club client est animé
+            sans nous, et ses partenaires reçoivent la preuve de leur diffusion. »
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>La publicité virtuelle dans le flux TV, on la met hors cible ?</strong></p>
+          <p>
+            Deux concurrents la vendent, elle vise le haut du marché, et elle n&#x27;existe ni chez
+            nous ni chez MadXp. Je la laisserais hors de la cible à trois ans.
+          </p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="methode" aria-labelledby="met-h">
+    <h2 id="met-h">Méthode et limites</h2>
+    <div class="method">
+      <p>
+        La cible part de ce qui était déjà écrit : la vision produit de MadXp et ses business cases,
+        la grille de vingt-trois critères sur dix concurrents, et les quatre cartes de flux. Les
+        états « aujourd'hui » viennent des mesures du 11 septembre, pas des documents.
+      </p>
+      <ul>
+        <li>
+          Le corpus MadXp date de mai et juin 2026, et se contredit lui-même sur les prix, les
+          paliers et la taille du parc. Seules ses intentions ont été reprises, jamais ses chiffres.
+        </li>
+        <li>
+          La cible ne tient pas compte de l'équipe ni du calendrier : c'est volontaire, c'est le
+          rôle de l'étape 5.
+        </li>
+        <li>
+          La note de prospective 2030-2040 n'alimente pas cette cible : elle reste exploratoire.
+        </li>
+        <li>Rien n'a été écrit dans Linear ni dans Notion.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Roadmap · étape 3 sur 7 · 12 septembre 2026 · proposition à corriger ·
+    docs/b2b-alive-transition/roadmap-etape-3-cible-produit.html
+  </footer>
+</main>

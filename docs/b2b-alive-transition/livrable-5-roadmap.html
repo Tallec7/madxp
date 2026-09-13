@@ -1,0 +1,1868 @@
+<meta charset="utf-8" />
+<title>Roadmap Broadcaster 2026-2027</title>
+<meta
+  name="description"
+  content="Livrable 5 — treize releases mensuelles, de septembre 2026 à septembre 2027 : existant B2B Alive, reprise MadXp, nouveau, dépendances, risque."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"
+/>
+<style>
+  :root {
+    --ground: #eceff3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f9;
+    --ink: #141a21;
+    --ink-soft: #3e4a57;
+    --muted: #6b7885;
+    --rule: #d3dae1;
+    --rule-strong: #a9b4bf;
+    --accent: #a8620e;
+    --accent-wash: #f5e7d4;
+    --b2b: #2a4a7a;
+    --b2b-wash: #e2eaf6;
+    --new: #1f6a4b;
+    --new-wash: #dcede4;
+    --high: #bc332e;
+    --high-wash: #f7e0df;
+    --focus: #2c6fd6;
+    --f-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --f-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --ground: #0e1319;
+      --surface: #151b22;
+      --surface-2: #1b222a;
+      --ink: #e4eaf1;
+      --ink-soft: #b4c0cc;
+      --muted: #8492a0;
+      --rule: #262f39;
+      --rule-strong: #3b4753;
+      --accent: #e3a24a;
+      --accent-wash: #33281a;
+      --b2b: #8fb2e8;
+      --b2b-wash: #1b2638;
+      --new: #5cb68a;
+      --new-wash: #17301f;
+      --high: #e8716a;
+      --high-wash: #351e1d;
+      --focus: #6ea3ff;
+    }
+  }
+  :root[data-theme='dark'] {
+    --ground: #0e1319;
+    --surface: #151b22;
+    --surface-2: #1b222a;
+    --ink: #e4eaf1;
+    --ink-soft: #b4c0cc;
+    --muted: #8492a0;
+    --rule: #262f39;
+    --rule-strong: #3b4753;
+    --accent: #e3a24a;
+    --accent-wash: #33281a;
+    --b2b: #8fb2e8;
+    --b2b-wash: #1b2638;
+    --new: #5cb68a;
+    --new-wash: #17301f;
+    --high: #e8716a;
+    --high-wash: #351e1d;
+    --focus: #6ea3ff;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a {
+    color: inherit;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--rule-strong);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+  .prose {
+    max-width: 70ch;
+  }
+
+  .masthead {
+    padding: 56px 0 36px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .series {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  .series b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 16px;
+    text-wrap: balance;
+  }
+  .lede {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 64ch;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px 32px;
+    margin: 30px 0 0;
+    padding: 0;
+  }
+  .meta div {
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+  .meta dt {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  section {
+    padding: 44px 0 8px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  .intro {
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+  }
+  .thesis {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 2.6vw, 27px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0;
+    max-width: 44ch;
+    text-wrap: balance;
+  }
+  .thesis em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .thesis-note {
+    margin: 16px 0 0;
+    color: var(--ink-soft);
+  }
+
+  /* Hypothèses */
+  .maj {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    margin: 30px 0 0;
+    max-width: 90ch;
+  }
+  .maj p {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+  .maj p:last-child {
+    margin-bottom: 0;
+  }
+  .maj b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .hyp {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 0 32px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .hyp li {
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .hyp b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    display: block;
+    font-size: 15.5px;
+  }
+  .hyp p {
+    margin: 3px 0 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+
+  /* Frise */
+  .strip-wrap {
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .strip {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(13, minmax(112px, 1fr));
+    gap: 6px;
+    min-width: 1500px;
+  }
+  .cell {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 10px 10px 12px;
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    min-height: 150px;
+  }
+  .cell .mid {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .cell .mname {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .cell b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 13.5px;
+    line-height: 1.25;
+  }
+  .cell .rk {
+    margin-top: auto;
+    justify-self: start;
+  }
+  .c-eng {
+    border-top: 4px solid var(--ink);
+  }
+  .c-int {
+    border-top: 4px solid var(--rule-strong);
+  }
+  .c-ori {
+    border-top: 4px dashed var(--rule-strong);
+    background: var(--surface-2);
+  }
+  .strip-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin: 12px 0 0;
+  }
+  .strip-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .strip-legend i {
+    display: inline-block;
+    width: 26px;
+    height: 0;
+    border-top: 4px solid var(--ink);
+  }
+  .strip-legend i.int {
+    border-top-color: var(--rule-strong);
+  }
+  .strip-legend i.ori {
+    border-top: 4px dashed var(--rule-strong);
+  }
+
+  .rk {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .r-low {
+    color: var(--new);
+    background: var(--new-wash);
+  }
+  .r-mid {
+    color: var(--accent);
+    background: var(--accent-wash);
+  }
+  .r-high {
+    color: var(--high);
+    background: var(--high-wash);
+  }
+
+  /* Chiffres */
+  .figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 40px;
+    margin: 22px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .figures li {
+    display: grid;
+  }
+  .figures b {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: 30px;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+  .figures span {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .figures .f-b2b b {
+    color: var(--b2b);
+  }
+  .figures .f-mad b {
+    color: var(--accent);
+  }
+  .figures .f-new b {
+    color: var(--new);
+  }
+
+  /* Continu */
+  .cont {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px 32px;
+  }
+  .cont div b {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 14.5px;
+    display: block;
+  }
+  .cont div p {
+    margin: 2px 0 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+
+  /* Cartes mensuelles */
+  .months {
+    display: grid;
+    gap: 18px;
+  }
+  .month {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+  .month header {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px 24px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .month .when {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+  }
+  .month .rid {
+    font-family: var(--f-mono);
+    font-size: 22px;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .month .mo {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .month h3 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 20px;
+    margin: 0;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+  .month .obj {
+    margin: 4px 0 8px;
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    max-width: 78ch;
+  }
+  .month .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .ini {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+  }
+  .conf {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    padding: 1px 8px;
+    border-radius: 4px;
+  }
+  .conf.c-eng {
+    color: var(--surface);
+    background: var(--ink);
+    border: 0;
+  }
+  .conf.c-int {
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--rule-strong);
+  }
+  .conf.c-ori {
+    color: var(--muted);
+    background: transparent;
+    border: 1px dashed var(--rule-strong);
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .col {
+    padding: 14px 20px 16px;
+    border-right: 1px solid var(--rule);
+  }
+  .col:last-child {
+    border-right: 0;
+  }
+  .col h4 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+    padding-top: 8px;
+    border-top: 3px solid;
+  }
+  .col-b2b h4 {
+    color: var(--b2b);
+    border-color: var(--b2b);
+  }
+  .col-mad h4 {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .col-new h4 {
+    color: var(--new);
+    border-color: var(--new);
+  }
+  .col ul,
+  .foot ul {
+    margin: 0;
+    padding-left: 17px;
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .col li + li,
+  .foot li + li {
+    margin-top: 4px;
+  }
+  .col .none {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .foot {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 10px 32px;
+    padding: 12px 20px 16px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--rule);
+  }
+  .foot .lbl {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin: 0 0 3px;
+  }
+  .foot p {
+    margin: 0 0 8px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 820px) {
+    .cols,
+    .foot,
+    .month header {
+      grid-template-columns: 1fr;
+    }
+    .col {
+      border-right: 0;
+      border-bottom: 1px solid var(--rule);
+    }
+  }
+
+  /* Tables */
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.t {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    font-size: 14.5px;
+  }
+  .t th,
+  .t td {
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .t thead th {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .t tbody th {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 13px;
+    white-space: nowrap;
+    color: var(--accent);
+  }
+  .t td.for {
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .notp {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .notp li {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15.5px;
+    max-width: 80ch;
+  }
+  .notp b {
+    font-family: var(--f-display);
+    font-weight: 600;
+  }
+
+  .decisions {
+    list-style: none;
+    counter-reset: d;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .decisions li {
+    counter-increment: d;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .decisions li::before {
+    content: 'Q' counter(d);
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .decisions p {
+    margin: 0;
+    max-width: 76ch;
+  }
+  .decisions p + p {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+  .method {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px 40px;
+  }
+  .method p,
+  .method li {
+    font-size: 15.5px;
+    color: var(--ink-soft);
+  }
+  .method ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  footer {
+    margin: 48px 0 0;
+    padding: 22px 0 56px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="series">
+      <b>Livrable 5 sur 8</b><span>Rôle A · consultant</span><span>11 septembre 2026</span
+      ><span>Statut : validé le 11/09</span><span>Mis à jour le 13/09/2026</span>
+    </div>
+    <h1>Roadmap 2026-2027</h1>
+    <p class="lede">
+      Treize releases mensuelles, de septembre 2026 à septembre 2027. Pour chacune : son objectif,
+      ce qu'elle doit à l'existant B2B Alive, ce qu'elle reprend de MadXp, ce qu'il faut inventer,
+      ce dont elle dépend, et le risque de ne pas tenir.
+    </p>
+    <dl class="meta">
+      <div>
+        <dt>Cadre</dt>
+        <dd>
+          Celui du livrable 4 : une release par mois, quatre initiatives (Adoption, Revenu,
+          Fiabilité, Transition MadXp), des projets datés au mois.
+        </dd>
+      </div>
+      <div>
+        <dt>Capacité supposée</dt>
+        <dd>
+          Florent à plein temps, Amine à temps partiel, Houssem à la demande pour le design :
+          environ un développeur et demi, sans recrutement.
+        </dd>
+      </div>
+      <div>
+        <dt>Ce qu'elle ne fait pas</dt>
+        <dd>
+          Elle ne promet rien aux clients au-delà de trois mois. Au-delà, c'est une intention, puis
+          une orientation.
+        </dd>
+      </div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="maj" role="note">
+    <p>
+      <b>Mise à jour du 13/09/2026.</b> Des décisions prises ce jour contredisent une partie de
+      cette roadmap. Le calendrier du 11/09 est conservé tel qu'il a été validé&nbsp;; les phrases
+      devenues fausses sont signalées sur place. Il reste à redater les releases.
+    </p>
+    <p>
+      <b>Le produit a deux faces, jugées ensemble.</b> La face club — le match s'anime sans nous —
+      est le cœur&nbsp;; la face annonceur — ce qui est vendu passe, et c'est prouvé — est le
+      levier. L'objectif du trimestre devient&nbsp;: «&nbsp;Chaque match d'un club client est animé
+      sans nous, et ses partenaires reçoivent la preuve de leur diffusion.&nbsp;»
+    </p>
+    <p>
+      <b>La face club remonte.</b> Un gymnase et un club de handball ou de basket arrivent d'ici la
+      fin 2026. Le pilotage au téléphone par un bénévole (prévu ici en avril 2027) et l'écran qui
+      tient sans réseau (prévu en mars 2027) passent en tête de l'ordre, avec la lecture automatique
+      du score. Les deux mois concernés ne sont plus la date visée.
+    </p>
+    <p>
+      <b>Stramatel devient prioritaire, au même titre que Bodet.</b> La lecture doit couvrir tout
+      type de table de marque. La condition «&nbsp;pas avant un accord commercial&nbsp;» n'est donc
+      plus un ordre de priorité&nbsp;; elle reste une contrainte à lever, sans date connue.
+    </p>
+    <p>
+      <b>Rien n'est repris du code MadXp, seulement des idées.</b> Les colonnes «&nbsp;Repris de
+      MadXp&nbsp;» se lisent désormais comme «&nbsp;idées reprises de MadXp&nbsp;», pas comme du
+      code porté.
+    </p>
+    <p>
+      Ordre en vigueur&nbsp;: <a href="roadmap-etape-5-ordre.html">étape 5 de la roadmap</a>. Notes
+      et raisons&nbsp;: <a href="revue-wsjf-epics.html">revue WSJF du 13/09/2026</a>.
+    </p>
+  </div>
+
+  <section id="these" aria-labelledby="these-h">
+    <p class="kicker" id="these-h">En une phrase</p>
+    <p class="thesis">
+      D'abord <em>arrêter de perdre de l'argent</em>, puis lire la table de marque, rendre la preuve
+      aux annonceurs et fédérer les surfaces d'un stade ; reprendre MadXp au moment où une fonction
+      sert un club précis, jamais en bloc.
+    </p>
+    <p class="thesis-note prose">
+      L'ordre suit trois contraintes : les fuites de revenu mesurées au livrable 3, tes décisions du
+      11/09 (table de marque prioritaire, cible de tout stade et gymnase, flotte MadXp en
+      transition), et la saison sportive, qui ouvre deux fenêtres de déploiement lourd : la trêve
+      d'hiver et l'intersaison.
+    </p>
+  </section>
+
+  <section id="frise" aria-labelledby="frise-h">
+    <h2 id="frise-h">L'année en une frise</h2>
+    <p class="intro prose">
+      Une release par mois, livrée en fin de mois. Le trait du haut dit le niveau d'engagement ; la
+      pastille, le risque de ne pas tenir.
+    </p>
+    <div class="strip-wrap">
+      <ol class="strip">
+        <li class="cell c-eng">
+          <span class="mid">2026.09</span><span class="mname">sept. 26</span
+          ><b>Plus d'annonceur payé sans antenne</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-eng">
+          <span class="mid">2026.10</span><span class="mname">oct. 26</span
+          ><b>Lire la table de marque (Bodet)</b><span class="rk r-high">risque élevé</span>
+        </li>
+        <li class="cell c-eng">
+          <span class="mid">2026.11</span><span class="mname">nov. 26</span
+          ><b>La preuve de diffusion rendue</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-int">
+          <span class="mid">2026.12</span><span class="mname">déc. 26</span
+          ><b>Une régie pour deux surfaces</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-int">
+          <span class="mid">2027.01</span><span class="mname">janv. 27</span
+          ><b>Transition MadXp : Piraths et les écrans du club</b
+          ><span class="rk r-high">risque élevé</span>
+        </li>
+        <li class="cell c-int">
+          <span class="mid">2027.02</span><span class="mname">févr. 27</span
+          ><b>Vendre et facturer l'inventaire</b><span class="rk r-high">risque élevé</span>
+        </li>
+        <li class="cell c-int">
+          <span class="mid">2027.03</span><span class="mname">mars 27</span
+          ><b>Tenir un soir de match sans réseau</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.04</span><span class="mname">avr. 27</span
+          ><b>L'offre club amateur</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.05</span><span class="mname">mai 27</span
+          ><b>Le bilan de saison qui fait renouveler</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.06</span><span class="mname">juin 27</span
+          ><b>Intersaison : les médias et les installations</b
+          ><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.07</span><span class="mname">juil. 27</span
+          ><b>Régie live : PGM/PVW et DSK</b><span class="rk r-high">risque élevé</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.08</span><span class="mname">août 27</span
+          ><b>Europ'A Cup et rentrée des clubs</b><span class="rk r-mid">risque moyen</span>
+        </li>
+        <li class="cell c-ori">
+          <span class="mid">2027.09</span><span class="mname">sept. 27</span
+          ><b>Saison 2027-28 : le réseau</b><span class="rk r-high">risque élevé</span>
+        </li>
+      </ol>
+    </div>
+    <div class="strip-legend">
+      <span><i></i>Engagement : on peut le dire à un club</span
+      ><span><i class="int"></i>Intention : le plan, révisable</span
+      ><span><i class="ori"></i>Orientation : la direction, pas une date</span>
+    </div>
+    <ul class="figures">
+      <li class="f-b2b"><b>28</b><span>chantiers de l'existant B2B Alive</span></li>
+      <li class="f-mad"><b>20</b><span>fonctions reprises de MadXp</span></li>
+      <li class="f-new"><b>18</b><span>nouveaux développements</span></li>
+    </ul>
+  </section>
+
+  <section id="hypotheses" aria-labelledby="hyp-h">
+    <h2 id="hyp-h">Les hypothèses qui tiennent la roadmap</h2>
+    <ul class="hyp">
+      <li>
+        <b>Un thème majeur par release</b>
+        <p>
+          Avec un développeur et demi, deux chantiers de fond en parallèle ne tiennent pas. Chaque
+          mois a un seul thème, le reste est du fond de roulement.
+        </p>
+      </li>
+      <li>
+        <b>Un cinquième du temps réservé au terrain</b>
+        <p>
+          Préparations et soirs de match, déploiements, incidents : 19 des 30 tickets les plus
+          récents parlent d'un club, d'un match ou d'un déploiement. La roadmap réserve environ 20 %
+          du temps à ce terrain et ne compte pas dessus.
+        </p>
+      </li>
+      <li>
+        <b>MadXp repris à la demande</b>
+        <p>
+          Une fonction MadXp n'est portée que lorsqu'un club ou un annonceur précis en a besoin ce
+          mois-là. Plusieurs ont peu servi en production : 5 rapports PDF générés au total, par
+          exemple.
+        </p>
+      </li>
+      <li>
+        <b>Un recrutement possible</b>
+        <p>
+          Si le marché sport se révèle concluant. Un développeur de plus ferait remonter d'environ
+          un trimestre la régie live et le réseau ; la roadmap ne le suppose pas.
+        </p>
+      </li>
+      <li>
+        <b>La confiance décroît avec l'horizon</b>
+        <p>
+          Trois mois d'engagement, quatre d'intention, six d'orientation. Chaque release mensuelle
+          révise les suivantes.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="continu" aria-labelledby="continu-h">
+    <h2 id="continu-h">En continu, chaque mois</h2>
+    <p class="intro prose">
+      Le fond de roulement : des projets en cours qui avancent chaque mois sans être le thème de la
+      release.
+    </p>
+    <div class="cont">
+      <div>
+        <b>Terrain</b>
+        <p>Préparation de match, déploiements, incidents : environ 20 % du temps.</p>
+      </div>
+      <div>
+        <b>Playlists en timeline, chaîne audio</b>
+        <p>Projets en cours, repris au fil des cycles (existant B2B Alive).</p>
+      </div>
+      <div>
+        <b>Templates ouverts, moteur d'animation</b>
+        <p>Avec Houssem, selon sa disponibilité (existant B2B Alive).</p>
+      </div>
+      <div>
+        <b>Langue, pilotage par agent (MCP)</b>
+        <p>Avancent quand un besoin client les tire (existant B2B Alive).</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="mois" aria-labelledby="mois-h">
+    <h2 id="mois-h">Mois par mois</h2>
+    <p class="intro prose">
+      Chaque release avec son objectif, ses trois origines de contenu, ses dépendances et son
+      risque. Les numéros de ticket renvoient à Linear ; les ADR, au dépôt MadXp.
+    </p>
+    <div class="months">
+      <article class="month" id="r2026-09">
+        <header>
+          <div class="when">
+            <span class="rid">2026.09</span><span class="mo">Septembre 2026</span>
+          </div>
+          <div class="head">
+            <h3>Plus d'annonceur payé sans antenne</h3>
+            <p class="obj">
+              Aucun annonceur payant sans passage ; la box du Roudourou joue la version à jour.
+            </p>
+            <div class="tags">
+              <span class="ini">Revenu</span><span class="ini">Fiabilité</span
+              ><span class="conf c-eng">Engagement</span><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Composer les playlists depuis les ventes (BRO-358), cas BRO-394</li>
+              <li>Cycle de vie des spots : un spot couvre bien ses dates (BRO-308)</li>
+              <li>Box du Roudourou à jour et changement de joueur câblé (BRO-534, BRO-537)</li>
+              <li>Réparer la CI, urgente depuis le 21/08 (BRO-315)</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <p class="none">Rien de MadXp ce mois-ci.</p>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <p class="none">Rien de neuf : le mois consolide l'existant.</p>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Matchs EAG en cours : déployer hors semaine de match</li>
+              <li>Aucune écriture Linear avant ton go (fin des huit livrables)</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>
+              Une panne en production, gardée en tête malgré l'inversion revenu / table de marque :
+              chaque match sans correction coûte des passages payés.
+            </p>
+            <span class="lbl">Sur le terrain</span>
+            <p>EAG : J6 le 12/09, J7 dans la foulée</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2026-10">
+        <header>
+          <div class="when">
+            <span class="rid">2026.10</span><span class="mo">Octobre 2026</span>
+          </div>
+          <div class="head">
+            <h3>Lire la table de marque (Bodet)</h3>
+            <p class="obj">
+              Le score s'affiche sans saisie manuelle dans une salle équipée d'une console Bodet.
+            </p>
+            <div class="tags">
+              <span class="ini">Adoption</span><span class="conf c-eng">Engagement</span
+              ><span class="rk r-high">Risque élevé</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Scoreboard et score-bug graphiques, aujourd'hui saisis à la main</li>
+              <li>Projet « Sources de données de match » (BRO-117 à 121)</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>
+                État de match normalisé pour plusieurs marques, simulateurs Bodet et Stramatel
+                (ADR-088, ADR-090)
+              </li>
+              <li>Leçon ADR-049 : aucune fédération n'expose d'API, prévoir le hors-ligne</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Connecteur Scorepad TCP/IP, d'après le protocole public de Bodet (608264J)</li>
+              <li>Cadre Linear installé : pipeline mensuel et pipelines par site (livrable 7)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>
+                Une console Bodet réelle pour les essais : aucun site client identifié ; prêt
+                fabricant ou club à trouver avant fin septembre
+              </li>
+              <li>
+                Stramatel (installé au Rhénus) : pas avant un accord commercial.
+                <em
+                  >Mis à jour le 13/09/2026 : Stramatel est désormais prioritaire au même titre que
+                  Bodet ; l&#x27;accord reste à obtenir, sans date.</em
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>
+              Protocole documenté, mais aucun matériel d'essai identifié, et trois semaines
+              seulement pour en trouver un.
+            </p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Saison en cours</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2026-11">
+        <header>
+          <div class="when">
+            <span class="rid">2026.11</span><span class="mo">Novembre 2026</span>
+          </div>
+          <div class="head">
+            <h3>La preuve de diffusion rendue</h3>
+            <p class="obj">
+              Chaque annonceur reçoit le rapport de ce qui a été diffusé pour lui, sans rien
+              demander.
+            </p>
+            <div class="tags">
+              <span class="ini">Revenu</span><span class="conf c-eng">Engagement</span
+              ><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>
+                Registre de preuve de diffusion déjà collecté en production (BRO-472, BRO-473)
+              </li>
+              <li>Fiche annonceur de la régie</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Rapport PDF sponsor, lien sans compte, export CSV</li>
+              <li>Règle : ne compter une diffusion que si l'écran est allumé (ADR-010, ADR-021)</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Rapport mensuel par annonceur et par club</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Base Annonceurs &amp; contrats tenue par un propriétaire commercial, à nommer</li>
+              <li>Qualité de la donnée collectée, à vérifier sur un mois</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>La donnée existe depuis des mois ; le risque est dans sa qualité.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Saison en cours</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2026-12">
+        <header>
+          <div class="when">
+            <span class="rid">2026.12</span><span class="mo">Décembre 2026</span>
+          </div>
+          <div class="head">
+            <h3>Une régie pour deux surfaces</h3>
+            <p class="obj">
+              Dans n'importe quel stade, piloter bord de terrain et écran géant depuis une seule
+              régie, avec une rotation sponsor synchronisée et un seul rapport.
+            </p>
+            <div class="tags">
+              <span class="ini">Adoption</span><span class="conf c-int">Intention</span
+              ><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>
+                Compositeur multi-surfaces : ruban plié, géants et son synchronisés au Roudourou
+              </li>
+              <li>Mapping vers le vidéoprocesseur (BRO-144)</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>
+                Pliage LED côté serveur, mis en cache, en service chez Piraths (ADR-134 à 139)
+              </li>
+              <li>Détourage des marges noires sur validation humaine (ADR-140)</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>
+                Offre « deux surfaces », argument de la réponse à l'appel d'offres de la Mosson, où
+                Large Display Solutions tient le bord de terrain et EMITY l'écran géant
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>
+                Appel d'offres de la Mosson en cours, calendrier inconnu : si la soutenance tombe
+                avant décembre, démonstrateur au banc à partir du Roudourou
+              </li>
+              <li>
+                Contrat d'entrée des processeurs de la Mosson, relevé par une mire si l'accès est
+                donné
+              </li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>
+              Le moteur existe des deux côtés ; l'inconnue est commerciale : l'appel d'offres ne dit
+              pas encore quand ni comment.
+            </p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Trêve de Ligue 2 : fenêtre de déploiement</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-01">
+        <header>
+          <div class="when">
+            <span class="rid">2027.01</span><span class="mo">Janvier 2027</span>
+          </div>
+          <div class="head">
+            <h3>Transition MadXp : Piraths et les écrans du club</h3>
+            <p class="obj">
+              Premier site MadXp servi par Broadcaster ; les TV du hall et de la buvette pilotées
+              par la même régie.
+            </p>
+            <div class="tags">
+              <span class="ini">Transition MadXp</span><span class="ini">Adoption</span
+              ><span class="conf c-int">Intention</span><span class="rk r-high">Risque élevé</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Régie cloud Piraths en cours (BRO-195)</li>
+              <li>Multi-régie, en staging</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Écrans secondaires : TV par navigateur ou boîtier</li>
+              <li>Télécommande à code PIN, sans compte (ADR-058, ADR-062)</li>
+              <li>Tableau de bord multi-sites</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Procédure de migration d'un site MadXp : sponsors, profils, écrans</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Accord de Piraths et contrat de transition (décision D5)</li>
+              <li>Saison de handball en cours : migrer entre deux matchs</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Premier transfert réel d'un client entre les deux produits.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Reprise de la Ligue 2</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-02">
+        <header>
+          <div class="when">
+            <span class="rid">2027.02</span><span class="mo">Février 2027</span>
+          </div>
+          <div class="head">
+            <h3>Vendre et facturer l'inventaire</h3>
+            <p class="obj">
+              Un annonceur réserve, reçoit sa preuve et sa facture sans échange manuel.
+            </p>
+            <div class="tags">
+              <span class="ini">Revenu</span><span class="conf c-int">Intention</span
+              ><span class="rk r-high">Risque élevé</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Régie annonceurs : saisons, phases, écrans</li>
+              <li>Portail annonceur, en staging (BRO-175 à 178)</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Portail sponsor sans compte et rôle annonceur (ADR-035, ADR-036)</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Facturation (BRO-128)</li>
+              <li>Réservation par flights (BRO-127)</li>
+              <li>Tableau de bord annonceur (BRO-129)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Grille tarifaire arbitrée avec la direction avant fin décembre</li>
+              <li>Propriétaire commercial nommé</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Aucune grille arbitrée aujourd'hui ; la facturation n'a jamais démarré.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Saison en cours</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-03">
+        <header>
+          <div class="when"><span class="rid">2027.03</span><span class="mo">Mars 2027</span></div>
+          <div class="head">
+            <h3>Tenir un soir de match sans réseau</h3>
+            <p class="obj">
+              Une box qui perd internet continue ; une panne est vue avant que le club ne la
+              signale.
+            </p>
+            <div class="tags">
+              <span class="ini">Fiabilité</span><span class="conf c-int">Intention</span
+              ><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Résilience du player, base locale persistée (BRO-78)</li>
+              <li>Observabilité de la box</li>
+              <li>Chien de garde qui relance enfin un écran tombé (BRO-536)</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Modèle hors ligne et relance du kiosque (Pi, grille box / cloud ADR-120)</li>
+              <li>Alertes dédupliquées (ADR-111), file de commandes</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>
+                Supervision de flotte avec un engagement de service : aucun SLA aujourd'hui, alors
+                que le site public promet une intervention en moins de 2 h
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>SLA défini avec le support et la direction avant fin février</li>
+              <li>
+                <em
+                  >Mis à jour le 13/09/2026 : l&#x27;écran qui tient sans réseau remonte en tête de
+                  l&#x27;ordre, un gymnase arrivant d&#x27;ici la fin 2026. Mars 2027 n&#x27;est
+                  plus la date visée pour cette partie.</em
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Briques connues des deux côtés ; l'engagement de service reste à écrire.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Fin de saison en vue</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-04">
+        <header>
+          <div class="when"><span class="rid">2027.04</span><span class="mo">Avril 2027</span></div>
+          <div class="head">
+            <h3>L'offre club amateur</h3>
+            <p class="obj">
+              Un gymnase sans régie PC diffuse ses sponsors et son score, piloté au téléphone.
+            </p>
+            <div class="tags">
+              <span class="ini">Adoption</span><span class="ini">Revenu</span
+              ><span class="conf c-ori">Orientation</span><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Player web</li>
+              <li>Télécommande utilisée par un bénévole à l'Europ'A Cup</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Mode navigateur et boîtier bas coût (Pi, Fire Stick, PROP-012)</li>
+              <li>Rotation sponsor pondérée, boucles avant, pendant et après match</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>L'offre empaquetée : installation en autonomie, prise en main guidée</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>
+                <em
+                  >Mis à jour le 13/09/2026 : le pilotage au téléphone par un bénévole remonte en
+                  tête de l&#x27;ordre, pour un gymnase et un club de handball ou de basket attendus
+                  d&#x27;ici la fin 2026. Avril 2027 n&#x27;est plus la date visée pour cette
+                  partie.</em
+                >
+              </li>
+              <li>
+                Décision « quel matériel sous un club amateur », travaillée en septembre-octobre
+                2026
+              </li>
+              <li>Grille tarifaire arbitrée</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>La décision matérielle est lancée dès septembre ; reste la grille tarifaire.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Préparation des ventes pour la saison suivante</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-05">
+        <header>
+          <div class="when"><span class="rid">2027.05</span><span class="mo">Mai 2027</span></div>
+          <div class="head">
+            <h3>Le bilan de saison qui fait renouveler</h3>
+            <p class="obj">
+              Chaque club et chaque annonceur reçoit un bilan de saison qui prépare le
+              renouvellement.
+            </p>
+            <div class="tags">
+              <span class="ini">Revenu</span><span class="ini">Adoption</span
+              ><span class="conf c-ori">Orientation</span><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Journal des lancements (BRO-430)</li>
+              <li>Preuve de diffusion collectée toute la saison</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Historique des matchs (ADR-093)</li>
+              <li>Rapports sponsors</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Bilan de saison consolidé, par club et par annonceur</li>
+              <li>Import des effectifs et des statistiques (BRO-122)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Campagne de renouvellement commerciale, mai-juin</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Surtout de la restitution de données déjà collectées.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Fin de saison</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-06">
+        <header>
+          <div class="when"><span class="rid">2027.06</span><span class="mo">Juin 2027</span></div>
+          <div class="head">
+            <h3>Intersaison : les médias et les installations</h3>
+            <p class="obj">
+              Un média s'adapte seul au format de chaque écran ; les installations d'été se font
+              vite.
+            </p>
+            <div class="tags">
+              <span class="ini">Adoption</span><span class="conf c-ori">Orientation</span
+              ><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Médiathèque et ingest</li>
+              <li>Templates ouverts et moteur d'animation, avec Houssem</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Variantes LED et détourage des marges noires (ADR-140, PROP-015)</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Pré-pliage à la source : aucun ticket aujourd'hui (chantier ingest)</li>
+              <li>Éditeur de templates pour non-développeurs, avec Houssem</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Fenêtre d'installation estivale</li>
+              <li>Disponibilité de Houssem</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Le chantier que l'équipe désigne elle-même comme le plus coûteux en temps.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Intersaison : installations</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-07">
+        <header>
+          <div class="when">
+            <span class="rid">2027.07</span><span class="mo">Juillet 2027</span>
+          </div>
+          <div class="head">
+            <h3>Régie live : PGM/PVW et DSK</h3>
+            <p class="obj">
+              Ce que les pages d'offre vendaient trop tôt commence à exister, en commençant par le
+              programme et l'incrustation.
+            </p>
+            <div class="tags">
+              <span class="ini">Adoption</span><span class="conf c-ori">Orientation</span
+              ><span class="rk r-high">Risque élevé</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Flux live en production (BRO-73, 75, 76), fan cam</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Pages web et flux live en boucle (ADR-103), apport marginal</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Programme et préparation, PGM/PVW (BRO-107)</li>
+              <li>Incrustation DSK (BRO-110)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>
+                Cartes d'acquisition SDI, en attente depuis juillet 2026 (BRO-9) : à commander avant
+                mai
+              </li>
+              <li>Essai grandeur nature à l'Europ'A Cup</li>
+              <li>Replay (BRO-108) et multiview (BRO-113) : pas avant octobre 2027</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Développement neuf, matériel à acheter, aucune brique livrée à ce jour.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Intersaison</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-08">
+        <header>
+          <div class="when"><span class="rid">2027.08</span><span class="mo">Août 2027</span></div>
+          <div class="head">
+            <h3>Europ'A Cup et rentrée des clubs</h3>
+            <p class="obj">
+              Un événement et une rentrée sans surprise ; la transition MadXp bouclée.
+            </p>
+            <div class="tags">
+              <span class="ini">Fiabilité</span><span class="ini">Transition MadXp</span
+              ><span class="conf c-ori">Orientation</span><span class="rk r-mid">Risque moyen</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Trame de déploiement événement, les cinq jalons de l'Europ'A Cup 2026</li>
+              <li>Préparation de match</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>Derniers sites MadXp migrés ou arrêtés (décision D5)</li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>Release de stabilisation, version gelée avant l'événement</li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Dates de l'Europ'A Cup 2027, supposées fin août, à confirmer</li>
+              <li>Installations d'été terminées</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Mois d'exploitation plus que de développement.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Europ'A Cup (à confirmer), reprise des championnats</p>
+          </div>
+        </div>
+      </article>
+      <article class="month" id="r2027-09">
+        <header>
+          <div class="when">
+            <span class="rid">2027.09</span><span class="mo">Septembre 2027</span>
+          </div>
+          <div class="head">
+            <h3>Saison 2027-28 : le réseau</h3>
+            <p class="obj">Vendre un même annonceur sur plusieurs clubs à la fois.</p>
+            <div class="tags">
+              <span class="ini">Revenu</span><span class="conf c-ori">Orientation</span
+              ><span class="rk r-high">Risque élevé</span>
+            </div>
+          </div>
+        </header>
+        <div class="cols">
+          <div class="col col-b2b">
+            <h4>Existant B2B Alive</h4>
+            <ul>
+              <li>Multi-régie</li>
+              <li>Régie annonceurs</li>
+            </ul>
+          </div>
+          <div class="col col-mad">
+            <h4>Repris de MadXp</h4>
+            <ul>
+              <li>
+                Tableau de bord multi-clubs, campagnes ciblées par critères pour un annonceur réseau
+                (ADR-035)
+              </li>
+            </ul>
+          </div>
+          <div class="col col-new">
+            <h4>Nouveau</h4>
+            <ul>
+              <li>
+                Inventaire publicitaire multi-clubs, pour l'annonceur réseau et l'agence multi-clubs
+                (personas encore non observés)
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="foot">
+          <div>
+            <span class="lbl">Dépend de</span>
+            <ul>
+              <li>Au moins cinq clubs équipés</li>
+              <li>Offre réseau définie avec la direction</li>
+            </ul>
+          </div>
+          <div>
+            <span class="lbl">Pourquoi ce niveau de risque</span>
+            <p>Le pari le plus lointain : il suppose que tout le reste ait tenu.</p>
+            <span class="lbl">Sur le terrain</span>
+            <p>Début de saison</p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="echeances" aria-labelledby="ech-h">
+    <h2 id="ech-h">Les décisions qui conditionnent le calendrier</h2>
+    <p class="intro prose">
+      Chaque release suppose une décision prise avant elle. Si une date glisse, la release
+      correspondante glisse avec.
+    </p>
+    <div class="tbl-wrap">
+      <table class="t">
+        <thead>
+          <tr>
+            <th scope="col">Avant le</th>
+            <th scope="col">Décision</th>
+            <th scope="col">Pour</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Fin septembre 2026</th>
+            <td>Trouver une console Bodet pour les essais : club client ou prêt fabricant</td>
+            <td class="for">Octobre : table de marque</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin octobre 2026</th>
+            <td>Nommer les propriétaires commercial et support (question ouverte du livrable 4)</td>
+            <td class="for">Novembre : preuve de diffusion rendue</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin octobre 2026</th>
+            <td>Trancher « quel matériel sous un club amateur », travaillé en septembre-octobre</td>
+            <td class="for">Avril : offre club amateur</td>
+          </tr>
+          <tr>
+            <th scope="row">Selon l'appel d'offres</th>
+            <td>Répondre à l'appel d'offres de la Mosson ; calendrier inconnu</td>
+            <td class="for">Décembre : deux surfaces</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin décembre 2026</th>
+            <td>Accord de Piraths et contrat de transition MadXp → B2B Alive</td>
+            <td class="for">Janvier : premier site migré</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin décembre 2026</th>
+            <td>Grille tarifaire arbitrée avec la direction</td>
+            <td class="for">Février : vendre et facturer</td>
+          </tr>
+          <tr>
+            <th scope="row">Fin février 2027</th>
+            <td>Écrire l'engagement de service avec le support et la direction</td>
+            <td class="for">Mars : supervision</td>
+          </tr>
+          <tr>
+            <th scope="row">Avant mai 2027</th>
+            <td>Commander les cartes d'acquisition SDI (BRO-9)</td>
+            <td class="for">Juillet : régie live</td>
+          </tr>
+          <tr>
+            <th scope="row">Avant juin 2027</th>
+            <td>
+              Définir l'offre réseau avec la direction ; décider d'un recrutement si le marché sport
+              est concluant
+            </td>
+            <td class="for">Septembre 2027 : le réseau</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="pas" aria-labelledby="pas-h">
+    <h2 id="pas-h">Ce que la roadmap ne promet pas</h2>
+    <ul class="notp">
+      <li>
+        <b>Replay et multiview avant octobre 2027.</b> Ils figuraient dans les pages d'offre ; ils
+        restent au-delà de cet horizon.
+      </li>
+      <li>
+        <b>La table de marque Stramatel sans accord commercial.</b> Son protocole est fermé ; le
+        Rhénus attendra cet accord.
+        <em
+          >Mis à jour le 13/09/2026 : Stramatel est désormais prioritaire avec Bodet. La contrainte
+          d&#x27;accord demeure ; elle devient un risque à lever vite, plus une raison
+          d&#x27;attendre.</em
+        >
+      </li>
+      <li>
+        <b>L'offre club amateur sans décision matérielle.</b> Tant que « quel matériel sous un club
+        amateur » reste ouvert, avril 2027 n'est qu'une orientation.
+      </li>
+      <li>
+        <b>Une date précise au-delà de mars 2027.</b> Au-delà, les mois disent une direction, pas un
+        engagement envers un club.
+      </li>
+    </ul>
+  </section>
+
+  <section id="questions" aria-labelledby="questions-h">
+    <h2 id="questions-h">Décisions prises le 11/09</h2>
+    <ol class="decisions">
+      <li>
+        <div>
+          <p><strong>L'ordre de tête.</strong></p>
+          <p>
+            Tranché : la table de marque passe avant le revenu. Octobre : table de marque ; novembre
+            : preuve de diffusion rendue. La correction de septembre (annonceurs payés sans antenne)
+            reste en tête : c'est une panne en production.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Le calendrier de la Mosson.</strong></p>
+          <p>
+            Précisé : appel d'offres en cours, rien de certain. Décembre devient une capacité
+            générique « deux surfaces » ; un démonstrateur au banc est prêt si la soutenance tombe
+            plus tôt.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>La décision matérielle club amateur.</strong></p>
+          <p>
+            Tranché : travaillée en septembre-octobre. Le risque d'avril passe de élevé à moyen.
+          </p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <p><strong>Un recrutement.</strong></p>
+          <p>Précisé : possible si le marché sport est concluant ; la roadmap ne le suppose pas.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="methode" aria-labelledby="methode-h">
+    <h2 id="methode-h">Méthode et limites</h2>
+    <div class="method">
+      <div>
+        <p>
+          Construite à partir des projets et tickets Linear existants (état du 11/09), des fonctions
+          MadXp dont on a vérifié l'existence dans le code et en base (livrable 2), des blocages du
+          livrable 3, du cadre du livrable 4 et de tes décisions du 11/09.
+        </p>
+      </div>
+      <div>
+        <ul>
+          <li>
+            Aucun chiffrage des tickets n'existe dans Linear : la charge par mois est un jugement,
+            pas une somme d'estimations.
+          </li>
+          <li>
+            Le calendrier sportif est un calendrier type (saison août-mai, trêve d'hiver,
+            intersaison) ; les dates de l'Europ'A Cup 2027 sont supposées.
+          </li>
+          <li>
+            Le calendrier commercial (Mosson, renouvellements, nouveaux clubs) n'est pas connu
+            d'ici.
+          </li>
+          <li>
+            Rien n'est écrit dans Linear : les releases et les projets datés y seront créés au
+            livrable 7.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Livrable 5 sur 8 · 11 septembre 2026, mis à jour le 13/09/2026 · proposition, lecture seule ·
+    docs/b2b-alive-transition/livrable-5-roadmap.html
+  </footer>
+</main>
